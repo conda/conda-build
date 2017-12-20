@@ -3,7 +3,6 @@ ending up with a configuration matrix"""
 
 from collections import OrderedDict
 from itertools import product
-import logging
 import os
 from os.path import abspath, expanduser, expandvars
 from pkg_resources import parse_version
@@ -13,7 +12,7 @@ import sys
 import six
 import yaml
 
-from conda_build.utils import ensure_list, trim_empty_keys
+from conda_build.utils import ensure_list, trim_empty_keys, get_logger
 from conda_build.conda_interface import string_types
 from conda_build.conda_interface import subdir
 from conda_build.conda_interface import cc_conda_build
@@ -166,7 +165,8 @@ def find_config_files(metadata_or_path, additional_files=None, ignore_system_con
     return files
 
 
-def _combine_spec_dictionaries(specs, extend_keys=None, filter_keys=None, zip_keys=None):
+def _combine_spec_dictionaries(specs, extend_keys=None, filter_keys=None, zip_keys=None,
+                               log_output=True):
     # each spec is a dictionary.  Each subsequent spec replaces the previous one.
     #     Only the last one with the key stays.
     values = {}
@@ -175,6 +175,9 @@ def _combine_spec_dictionaries(specs, extend_keys=None, filter_keys=None, zip_ke
 
     for spec_source, spec in specs.items():
         if spec:
+            if log_output:
+                log = get_logger(__name__)
+                log.info("Adding in variants from {}".format(spec_source))
             for k, v in spec.items():
                 if not keys or k in keys:
                     if k in extend_keys:
@@ -231,7 +234,7 @@ def _combine_spec_dictionaries(specs, extend_keys=None, filter_keys=None, zip_ke
     return values
 
 
-def combine_specs(specs):
+def combine_specs(specs, log_output=True):
     """With arbitrary sets of sources, combine into a single aggregate spec.
 
     Later specs in the input set have priority and overwrite duplicate entries.
@@ -248,8 +251,10 @@ def combine_specs(specs):
     #   below, keeping the size of related fields identical, or else the zipping makes no sense
 
     zip_keys = _combine_spec_dictionaries(specs, extend_keys=extend_keys,
-                                          filter_keys=['zip_keys']).get('zip_keys', [])
-    values = _combine_spec_dictionaries(specs, extend_keys=extend_keys, zip_keys=zip_keys)
+                                          filter_keys=['zip_keys'],
+                                          log_output=log_output).get('zip_keys', [])
+    values = _combine_spec_dictionaries(specs, extend_keys=extend_keys, zip_keys=zip_keys,
+                                        log_output=log_output)
     if 'extend_keys' in values:
         del values['extend_keys']
     return values, set(extend_keys)
@@ -360,7 +365,7 @@ def filter_by_key_value(variants, key, values, source_name):
             if variant.get(key) and variant.get(key) in values:
                 reduced_variants.append(variant)
             else:
-                log = logging.getLogger(__name__)
+                log = get_logger(__name__)
                 log.debug('Filtering variant with key {key} not matching target value(s) '
                           '({tgt_vals}) from {source_name}, actual {actual_val}'.format(
                               key=key, tgt_vals=values, source_name=source_name,
@@ -458,7 +463,7 @@ def get_package_variants(recipedir_or_metadata, config=None, variants=None):
     files = find_config_files(recipedir_or_metadata, ensure_list(config.variant_config_files),
                               ignore_system_config=config.ignore_system_variants)
 
-    specs = OrderedDict(default=get_default_variant(config))
+    specs = OrderedDict(internal_defaults=get_default_variant(config))
 
     for f in files:
         specs[f] = parse_config_file(f, config)
@@ -477,13 +482,13 @@ def get_package_variants(recipedir_or_metadata, config=None, variants=None):
 
     # this merges each of the specs, providing a debug message when a given setting is overridden
     #      by a later spec
-    combined_spec, extend_keys = combine_specs(specs)
+    combined_spec, extend_keys = combine_specs(specs, log_output=config.verbose)
 
     extend_keys.update({'zip_keys', 'extend_keys'})
 
     # delete the default specs, so that they don't unnecessarily limit the matrix
     specs = specs.copy()
-    del specs['default']
+    del specs['internal_defaults']
 
     combined_spec = dict_of_lists_to_list_of_dicts(combined_spec, extend_keys=extend_keys)
     for source, source_specs in reversed(specs.items()):

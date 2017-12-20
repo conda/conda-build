@@ -24,9 +24,9 @@ import yaml
 from . import conda_interface, utils
 from .conda_interface import (CondaHTTPError, VersionOrder, get_index, human_bytes, md5_file,
                               url_path)
-from .utils import file_info, get_lock, rm_rf, try_acquire_locks
+from .utils import file_info, get_lock, rm_rf, try_acquire_locks, get_logger
 
-log = logging.getLogger(__name__)
+log = get_logger(__name__)
 
 local_index_timestamp = 0
 cached_index = None
