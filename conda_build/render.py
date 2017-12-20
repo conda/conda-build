@@ -28,7 +28,7 @@ from .conda_interface import conda_43
 from .conda_interface import specs_from_url
 
 from conda_build import exceptions, utils, environ
-from conda_build.metadata import MetaData
+from conda_build.metadata import MetaData, combine_top_level_metadata_with_output
 import conda_build.source as source
 from conda_build.variants import (get_package_variants, list_of_dicts_to_dict_of_lists,
                                   filter_by_key_value)
@@ -350,18 +350,27 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
     extract_pattern = r'(.*)package:'
     template_string = '\n'.join((m.get_recipe_text(extract_pattern=extract_pattern,
                                                    force_top_level=True),
-                                 # second item: the requirements text for this particular metadata
+                                 # second item: the output text for this metadata
                                  #    object (might be output)
-                                m.extract_requirements_text()))
+                                 m.extract_single_output_text(m.name()))).rstrip()
 
-    requirements = (yaml.safe_load(m._get_contents(permit_undefined_jinja=False,
-                            template_string=template_string)) or {}).get('requirements', {})
-    requirements = utils.expand_reqs(requirements)
+    output = (yaml.safe_load(m._get_contents(permit_undefined_jinja=False,
+                            template_string=template_string)) or {})
+    if isinstance(output, list):
+        output = output[0]
+
+    if 'package' in output or 'name' not in output:
+        # it's just a top-level recipe
+        output = {'name': m.name()}
+
+    rendered_metadata = m.copy()
+    parent_recipe = m.meta.get('extra', {}).get('parent_recipe')
+    if not parent_recipe or parent_recipe['name'] == m.name():
+        combine_top_level_metadata_with_output(rendered_metadata, output)
+    requirements = utils.expand_reqs(output.get('requirements', {}))
 
     if isfile(m.requirements_path) and not requirements.get('run'):
         requirements['run'] = specs_from_url(m.requirements_path)
-
-    rendered_metadata = m.copy()
 
     rendered_metadata.meta['requirements'] = requirements
     utils.insert_variant_versions(rendered_metadata.meta['requirements'],
