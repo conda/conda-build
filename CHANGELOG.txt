@@ -1,3 +1,35 @@
+2017-12-21 3.2.0:
+
+This release bumps the minor version to reflect the change in splitting the
+build and host folders originally introduced by 3.1.4. That change has proven to
+be disruptive to many users, and we felt it necessary to bump a minor version to
+indicate that people should pay attention to this change. There's more info in
+our docs at
+https://conda.io/docs/user-guide/tasks/build-packages/define-metadata.html#host
+
+Enhancements:
+-------------
+
+* Add log messages for each source of variants, so that you know where values are coming from  #2597
+
+Bug fixes:
+----------
+
+* remove unnecessary looped rm_rf when cleaning out prefixes between outputs  #2587
+* fix meta.yaml not found errors when trying to test packages built with --no-include-recipe  #2590
+* fix zipped key group with single entry causing a list to be passed later for single string values  #2596
+* fix incomplete change to splitting build and host envs  #2595
+* fix merging of top-level requirements and output reqs when output named same as top-level  #2595
+* fix handling of outputs with templates in their name (they were losing their requirements)  #2595
+* fix test file copying to avoid re-provisioning source during tests  #2595
+* tweak requirements regex to avoid misinterpreting python executable usage in test commands as usage of the python variant  #2595
+
+Contributors:
+-------------
+
+* @msarahan
+
+
 2017-12-15 3.1.6:
 
 Bug fixes:
