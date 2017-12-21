@@ -28,7 +28,7 @@ from .conda_interface import conda_43
 from .conda_interface import specs_from_url
 
 from conda_build import exceptions, utils, environ
-from conda_build.metadata import MetaData
+from conda_build.metadata import MetaData, combine_top_level_metadata_with_output
 import conda_build.source as source
 from conda_build.variants import (get_package_variants, list_of_dicts_to_dict_of_lists,
                                   filter_by_key_value)
@@ -64,9 +64,6 @@ def get_env_dependencies(m, env, variant, exclude_pattern=None,
                          merge_build_host_on_same_platform=True):
     dash_or_under = re.compile("[-_]")
     specs = [ms.spec for ms in m.ms_depends(env)]
-    if (merge_build_host_on_same_platform and env == 'build' and m.is_cross and
-             m.config.build_subdir == m.config.host_subdir):
-        specs.extend([ms.spec for ms in m.ms_depends('host')])
     # replace x.x with our variant's numpy version, or else conda tries to literally go get x.x
     if env in ('build', 'host'):
         no_xx_specs = []
@@ -175,6 +172,22 @@ def _filter_run_exports(specs, ignore_list):
     return filtered_specs
 
 
+def find_pkg_dir_or_file_in_pkgs_dirs(pkg_dist, m):
+    _pkgs_dirs = pkgs_dirs + list(m.config.bldpkgs_dirs)
+    pkg_loc = None
+    for pkgs_dir in _pkgs_dirs:
+        pkg_dir = os.path.join(pkgs_dir, pkg_dist)
+        pkg_file = os.path.join(pkgs_dir, pkg_dist + '.tar.bz2')
+
+        if os.path.isfile(pkg_file):
+            pkg_loc = pkg_file
+            break
+        elif os.path.isdir(pkg_dir):
+            pkg_loc = pkg_dir
+            break
+    return pkg_loc
+
+
 def get_upstream_pins(m, actions, env):
     """Download packages from specs, then inspect each downloaded package for additional
     downstream dependency specs.  Return these additional specs."""
@@ -214,25 +227,14 @@ def get_upstream_pins(m, actions, env):
         execute_actions(actions, index, verbose=m.config.debug)
     ignore_list = utils.ensure_list(m.get_value('build/ignore_run_exports'))
 
-    _pkgs_dirs = pkgs_dirs + list(m.config.bldpkgs_dirs)
     additional_specs = {}
     for pkg in linked_packages:
-        pkg_loc = None
         if hasattr(pkg, 'dist_name'):
             pkg_dist = pkg.dist_name
         else:
             pkg = strip_channel(pkg)
             pkg_dist = pkg.split(' ')[0]
-        for pkgs_dir in _pkgs_dirs:
-            pkg_dir = os.path.join(pkgs_dir, pkg_dist)
-            pkg_file = os.path.join(pkgs_dir, pkg_dist + '.tar.bz2')
-
-            if os.path.isdir(pkg_dir):
-                pkg_loc = pkg_dir
-                break
-            elif os.path.isfile(pkg_file):
-                pkg_loc = pkg_file
-                break
+        pkg_loc = find_pkg_dir_or_file_in_pkgs_dirs(pkg_dist, m)
 
         # ran through all pkgs_dirs, and did not find package or folder.  Download it.
         # TODO: this is a vile hack reaching into conda's internals. Replace with
@@ -255,7 +257,7 @@ def get_upstream_pins(m, actions, env):
 
         specs = {}
         if os.path.isdir(pkg_loc):
-            downstream_file = os.path.join(pkg_dir, 'info/run_exports')
+            downstream_file = os.path.join(pkg_loc, 'info/run_exports')
             if os.path.isfile(downstream_file):
                 with open(downstream_file) as f:
                     specs = {'weak': [spec.rstrip() for spec in f.readlines()]}
@@ -263,9 +265,9 @@ def get_upstream_pins(m, actions, env):
             elif os.path.isfile(downstream_file + '.yaml'):
                 with open(downstream_file + '.yaml') as f:
                     specs = yaml.safe_load(f)
-        elif os.path.isfile(pkg_file):
-            legacy_specs = utils.package_has_file(pkg_file, 'info/run_exports')
-            specs_yaml = utils.package_has_file(pkg_file, 'info/run_exports.yaml')
+        if not specs and os.path.isfile(pkg_loc):
+            legacy_specs = utils.package_has_file(pkg_loc, 'info/run_exports')
+            specs_yaml = utils.package_has_file(pkg_loc, 'info/run_exports.yaml')
             if specs:
                 # exclude packages pinning themselves (makes no sense)
                 specs = {'weak': [spec.rstrip() for spec in legacy_specs.splitlines()
@@ -285,7 +287,7 @@ def _read_upstream_pin_files(m, env, permit_unsatisfiable_variants, exclude_patt
     # extend host deps with strong build run exports.  This is important for things like
     #    vc feature activation to work correctly in the host env.
     extra_run_specs = get_upstream_pins(m, actions, env)
-    return deps or m.meta.get('requirements', {}).get(env), unsat, extra_run_specs
+    return deps or m.meta.get('requirements', {}).get(env, []), unsat, extra_run_specs
 
 
 def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
@@ -344,33 +346,48 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
         exclude_pattern = re.compile('|'.join('(?:^{}(?:\s|$|\Z))'.format(exc)
                                           for exc in excludes | output_excludes))
 
-    # extract the topmost section where variables are defined, and put it on top of the
-    #     requirements for a particular output
-    # Re-parse the output from the original recipe, so that we re-consider any jinja2 stuff
-    extract_pattern = r'(.*)package:'
-    template_string = '\n'.join((m.get_recipe_text(extract_pattern=extract_pattern,
-                                                   force_top_level=True),
-                                 # second item: the requirements text for this particular metadata
-                                 #    object (might be output)
-                                m.extract_requirements_text()))
-
-    requirements = (yaml.safe_load(m._get_contents(permit_undefined_jinja=False,
-                            template_string=template_string)) or {}).get('requirements', {})
-    requirements = utils.expand_reqs(requirements)
-
-    if isfile(m.requirements_path) and not requirements.get('run'):
-        requirements['run'] = specs_from_url(m.requirements_path)
-
     rendered_metadata = m.copy()
+    parent_recipe = m.meta.get('extra', {}).get('parent_recipe', {})
+    if parent_recipe:
+        # extract the topmost section where variables are defined, and put it on top of the
+        #     requirements for a particular output
+        # Re-parse the output from the original recipe, so that we re-consider any jinja2 stuff
+        extract_pattern = r'(.*)package:'
+        template_string = '\n'.join((m.get_recipe_text(extract_pattern=extract_pattern,
+                                                    force_top_level=True),
+                                    # second item: the output text for this metadata
+                                    #    object (might be output)
+                                    m.extract_outputs_text())).rstrip()
 
-    rendered_metadata.meta['requirements'] = requirements
-    utils.insert_variant_versions(rendered_metadata.meta['requirements'],
-                                  rendered_metadata.config.variant, 'build')
-    utils.insert_variant_versions(rendered_metadata.meta['requirements'],
-                                  rendered_metadata.config.variant, 'host')
+        outputs = (yaml.safe_load(m._get_contents(permit_undefined_jinja=False,
+                                template_string=template_string)) or {}).get('outputs', [])
+
+        output = None
+        for output_ in outputs:
+            if output_.get('name') == m.name():
+                output = output_
+                break
+
+        if output:
+            if 'package' in output or 'name' not in output:
+                # it's just a top-level recipe
+                output = {'name': m.name()}
+
+            if not parent_recipe or parent_recipe['name'] == m.name():
+                combine_top_level_metadata_with_output(rendered_metadata, output)
+            requirements = utils.expand_reqs(output.get('requirements', {}))
+
+            rendered_metadata.meta['requirements'] = requirements
+            utils.insert_variant_versions(rendered_metadata.meta['requirements'],
+                                        rendered_metadata.config.variant, 'build')
+            utils.insert_variant_versions(rendered_metadata.meta['requirements'],
+                                        rendered_metadata.config.variant, 'host')
 
     build_unsat, host_unsat = add_upstream_pins(rendered_metadata, permit_unsatisfiable_variants,
                                                  exclude_pattern)
+    # getting this AFTER add_upstream_pins is important, because that function adds deps
+    #     to the metadata.
+    requirements = rendered_metadata.meta.get('requirements', {})
 
     # here's where we pin run dependencies to their build time versions.  This happens based
     #     on the keys in the 'pin_run_as_build' key in the variant, which is a list of package
@@ -393,13 +410,13 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
                                         permit_unsatisfiable_variants=permit_unsatisfiable_variants)
     full_build_dep_versions = {dep.split()[0]: " ".join(dep.split()[1:]) for dep in full_build_deps}
 
-    run_deps = rendered_metadata.meta.get('requirements', {}).get('run', [])
+    if isfile(m.requirements_path) and not requirements.get('run'):
+        requirements['run'] = specs_from_url(m.requirements_path)
+    run_deps = requirements.get('run', [])
 
     versioned_run_deps = [get_pin_from_build(rendered_metadata, dep, full_build_dep_versions)
                           for dep in run_deps]
     versioned_run_deps = [utils.ensure_valid_spec(spec, warn=True) for spec in versioned_run_deps]
-
-    requirements = rendered_metadata.meta.get('requirements', {})
     requirements['run'] = versioned_run_deps
 
     rendered_metadata.meta['requirements'] = requirements

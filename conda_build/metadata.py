@@ -590,25 +590,11 @@ def toposort(output_metadata_map):
     return result
 
 
-def output_dict_from_top_level_meta(m):
-    requirements = m.meta.get('requirements', {})
-    output_d = {'name': m.name(), 'requirements': requirements,
-                'noarch_python': m.get_value('build/noarch_python'),
-                'noarch': m.get_value('build/noarch'),
-                'type': 'conda',
-                }
-
-    run_exports = m.meta.get('build', {}).get('run_exports')
-    if run_exports:
-        output_d['run_exports'] = run_exports
-    return output_d
-
-
 def get_output_dicts_from_metadata(metadata):
     outputs = metadata.get_section('outputs')
 
     if not outputs:
-        outputs = [output_dict_from_top_level_meta(metadata)]
+        outputs = [{'name': metadata.name()}]
     else:
         assert not hasattr(outputs, 'keys'), ('outputs specified as dictionary, but must be a '
                                               'list of dictionaries.  YAML syntax is: \n\n'
@@ -619,14 +605,10 @@ def get_output_dicts_from_metadata(metadata):
         # but only if a matching output name is not explicitly provided
         if metadata.uses_subpackage and not any(metadata.name() == out.get('name', '')
                                             for out in outputs):
-            outputs.append(output_dict_from_top_level_meta(metadata))
+            outputs.append({'name': metadata.name()})
     for out in outputs:
-        if (metadata.name() == out.get('name', '') and not (out.get('files') or
-                                                            out.get('script'))):
-            out['requirements'] = out.get('requirements', metadata.meta.get('requirements', {}))
-            out['noarch_python'] = out.get('noarch_python',
-                                            metadata.get_value('build/noarch_python'))
-            out['noarch'] = out.get('noarch', metadata.get_value('build/noarch'))
+        if out.get('name') == metadata.name():
+            combine_top_level_metadata_with_output(metadata, out)
     return outputs
 
 
@@ -710,6 +692,23 @@ def read_meta_file(meta_path):
 def _output_filter_pattern(output_name):
     return r'(^\s*\-\sname:\s+{}\n.*?)(^test:|^extra:|^about:|\Z|\s*\-\sname:)'.format(
         output_name)
+
+
+def combine_top_level_metadata_with_output(metadata, output):
+    """Merge top-level metadata into output when output is same name as top-level"""
+    sections = ('requirements', 'build', 'about')
+    for section in sections:
+        metadata_section = metadata.meta.get(section, {})
+        output_section = utils.expand_reqs(output.get(section, {}))
+        for k, v in metadata_section.items():
+            if k in output_section and v != output_section[k]:
+                raise ValueError("You have the '{}' entry defined in both the top-level {} "
+                                    "section and the output which has the same name as the "
+                                    "top-level recipe.  You can only have a given entry in "
+                                    "a section defined in one of those 2 places.".format(
+                                        k, section))
+            output_section[k] = v
+        output[section] = output_section
 
 
 class MetaData(object):
@@ -1324,6 +1323,7 @@ class MetaData(object):
         env = jinja2.Environment(loader=loader, undefined=undefined_type)
 
         env.globals.update(ns_cfg(self.config))
+        env.globals.update({"CONDA_BUILD_STATE": "RENDER"})
         env.globals.update(context_processor(self, path, config=self.config,
                                              permit_undefined_jinja=permit_undefined_jinja,
                                              allow_no_other_outputs=allow_no_other_outputs,
@@ -1340,8 +1340,10 @@ class MetaData(object):
         try:
             if template_string:
                 template = env.from_string(template_string)
-            else:
+            elif filename:
                 template = env.get_or_select_template(filename)
+            else:
+                template = env.from_string("")
 
             rendered = template.render(environment=env)
 
@@ -1652,8 +1654,6 @@ class MetaData(object):
                                     output_metadata.config.variant, env)
         output_metadata.meta['package']['version'] = output.get('version') or self.version()
         extra = self.meta.get('extra', {})
-        if self.name() == output.get('name') and 'requirements' not in output:
-            output['requirements'] = requirements
         output_metadata.meta['extra'] = extra
         output_metadata.final = False
         if self.name() != output_metadata.name() or (output.get('script') or output.get('files')):
