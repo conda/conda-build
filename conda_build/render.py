@@ -172,6 +172,22 @@ def _filter_run_exports(specs, ignore_list):
     return filtered_specs
 
 
+def find_pkg_dir_or_file_in_pkgs_dirs(pkg_dist, m):
+    _pkgs_dirs = pkgs_dirs + list(m.config.bldpkgs_dirs)
+    pkg_loc = None
+    for pkgs_dir in _pkgs_dirs:
+        pkg_dir = os.path.join(pkgs_dir, pkg_dist)
+        pkg_file = os.path.join(pkgs_dir, pkg_dist + '.tar.bz2')
+
+        if os.path.isfile(pkg_file):
+            pkg_loc = pkg_file
+            break
+        elif os.path.isdir(pkg_dir):
+            pkg_loc = pkg_dir
+            break
+    return pkg_loc
+
+
 def get_upstream_pins(m, actions, env):
     """Download packages from specs, then inspect each downloaded package for additional
     downstream dependency specs.  Return these additional specs."""
@@ -211,25 +227,14 @@ def get_upstream_pins(m, actions, env):
         execute_actions(actions, index, verbose=m.config.debug)
     ignore_list = utils.ensure_list(m.get_value('build/ignore_run_exports'))
 
-    _pkgs_dirs = pkgs_dirs + list(m.config.bldpkgs_dirs)
     additional_specs = {}
     for pkg in linked_packages:
-        pkg_loc = None
         if hasattr(pkg, 'dist_name'):
             pkg_dist = pkg.dist_name
         else:
             pkg = strip_channel(pkg)
             pkg_dist = pkg.split(' ')[0]
-        for pkgs_dir in _pkgs_dirs:
-            pkg_dir = os.path.join(pkgs_dir, pkg_dist)
-            pkg_file = os.path.join(pkgs_dir, pkg_dist + '.tar.bz2')
-
-            if os.path.isdir(pkg_dir):
-                pkg_loc = pkg_dir
-                break
-            elif os.path.isfile(pkg_file):
-                pkg_loc = pkg_file
-                break
+        pkg_loc = find_pkg_dir_or_file_in_pkgs_dirs(pkg_dist, m)
 
         # ran through all pkgs_dirs, and did not find package or folder.  Download it.
         # TODO: this is a vile hack reaching into conda's internals. Replace with
@@ -252,7 +257,7 @@ def get_upstream_pins(m, actions, env):
 
         specs = {}
         if os.path.isdir(pkg_loc):
-            downstream_file = os.path.join(pkg_dir, 'info/run_exports')
+            downstream_file = os.path.join(pkg_loc, 'info/run_exports')
             if os.path.isfile(downstream_file):
                 with open(downstream_file) as f:
                     specs = {'weak': [spec.rstrip() for spec in f.readlines()]}
@@ -260,9 +265,9 @@ def get_upstream_pins(m, actions, env):
             elif os.path.isfile(downstream_file + '.yaml'):
                 with open(downstream_file + '.yaml') as f:
                     specs = yaml.safe_load(f)
-        elif os.path.isfile(pkg_file):
-            legacy_specs = utils.package_has_file(pkg_file, 'info/run_exports')
-            specs_yaml = utils.package_has_file(pkg_file, 'info/run_exports.yaml')
+        if not specs and os.path.isfile(pkg_loc):
+            legacy_specs = utils.package_has_file(pkg_loc, 'info/run_exports')
+            specs_yaml = utils.package_has_file(pkg_loc, 'info/run_exports.yaml')
             if specs:
                 # exclude packages pinning themselves (makes no sense)
                 specs = {'weak': [spec.rstrip() for spec in legacy_specs.splitlines()
