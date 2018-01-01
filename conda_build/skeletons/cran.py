@@ -51,6 +51,7 @@ source:
 build:
   # If this is a new build for the same version, increment the build number.
   number: {build_number}
+  {noarch_generic}
 
   # This is required to make R link correctly on Linux.
   rpaths:
@@ -798,6 +799,11 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 d['homeurl'] = ' {}'.format(location)
             else:
                 d['homeurl'] = ' https://CRAN.R-project.org/package={}'.format(package)
+
+        if cran_package.get("NeedsCompilation", 'no') == 'yes':
+            d['noarch_generic'] = ''
+        else:
+            d['noarch_generic'] = 'noarch: generic'
 
         if 'Description' in cran_package:
             d['summary_comment'] = ''
