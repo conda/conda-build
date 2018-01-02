@@ -593,18 +593,11 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
         for env in ('build', 'host', 'run'):
             utils.insert_variant_versions(mv.meta.get('requirements', {}),
                                           mv.config.variant, env)
-
-        fm = mv.copy()
-        # HACK: trick conda-build into thinking this is final, and computing a hash based
-        #     on the current meta.yaml.  The accuracy doesn't matter, all that matters is
-        #     our ability to differentiate configurations
-        fm.final = True
-        rendered_metadata[(fm.dist(),
-                           fm.config.variant.get('target_platform', fm.config.subdir),
-                           tuple((var, fm.config.variant[var])
-                                 for var in fm.get_used_loop_vars()))] = \
+        rendered_metadata[(mv.dist(),
+                           mv.config.variant.get('target_platform', mv.config.subdir),
+                           tuple((var, mv.config.variant[var])
+                                 for var in mv.get_used_loop_vars()))] = \
                                     (mv, need_source_download, None)
-
     # list of tuples.
     # each tuple item is a tuple of 3 items:
     #    metadata, need_download, need_reparse_in_env
