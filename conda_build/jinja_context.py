@@ -281,7 +281,19 @@ def pin_subpackage(metadata, subpackage_name, min_pin='x.x.x.x.x.x', max_pin='x'
     For example, given a compiler package, allow it to specify either a compatible or exact
     pinning on the runtime package that is also created by the compiler package recipe
     """
-    if not hasattr(metadata, 'other_outputs'):
+    pin = None
+    try:
+        metadata_name = metadata.name()
+    except SystemExit:
+        # in very early passes, we can't yet evaluate the name() attribute.
+        metadata_name = None
+    if metadata_name and subpackage_name == metadata_name:
+        if exact:
+            pin = ' '.join(metadata.dist().rsplit('-', 2))
+        else:
+            pin = ' '.join((subpackage_name,
+                            apply_pin_expressions(metadata.version(), min_pin, max_pin)))
+    elif not hasattr(metadata, 'other_outputs'):
         if allow_no_other_outputs:
             pin = subpackage_name
         else:
@@ -296,9 +308,10 @@ def pin_subpackage(metadata, subpackage_name, min_pin='x.x.x.x.x.x', max_pin='x'
         matching_package_keys = [k for k in keys if k[0] == subpackage_name]
         if len(matching_package_keys) == 1:
             key = matching_package_keys[0]
-
-        pin = pin_subpackage_against_outputs(key, metadata.other_outputs, min_pin, max_pin,
-                                                exact, permit_undefined_jinja)
+            pin = pin_subpackage_against_outputs(key, metadata.other_outputs, min_pin, max_pin,
+                                                 exact, permit_undefined_jinja)
+    if not pin:
+        pin = subpackage_name
     return pin
 
 

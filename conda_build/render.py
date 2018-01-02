@@ -331,139 +331,145 @@ def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
 
 def finalize_metadata(m, permit_unsatisfiable_variants=False):
     """Fully render a recipe.  Fill in versions for build/host dependencies."""
-    exclude_pattern = None
-    excludes = set(m.config.variant.get('ignore_version', []))
-
-    for key in m.config.variant.get('pin_run_as_build', {}).keys():
-        if key in excludes:
-            excludes.remove(key)
-
-    output_excludes = set()
-    if hasattr(m, 'other_outputs'):
-        output_excludes = set(name for (name, variant) in m.other_outputs.keys())
-
-    if excludes or output_excludes:
-        exclude_pattern = re.compile('|'.join('(?:^{}(?:\s|$|\Z))'.format(exc)
-                                          for exc in excludes | output_excludes))
-
     rendered_metadata = m.copy()
-    parent_recipe = m.meta.get('extra', {}).get('parent_recipe', {})
-    if parent_recipe:
-        # extract the topmost section where variables are defined, and put it on top of the
-        #     requirements for a particular output
-        # Re-parse the output from the original recipe, so that we re-consider any jinja2 stuff
-        extract_pattern = r'(.*)package:'
-        template_string = '\n'.join((m.get_recipe_text(extract_pattern=extract_pattern,
-                                                    force_top_level=True),
-                                    # second item: the output text for this metadata
-                                    #    object (might be output)
-                                    m.extract_outputs_text())).rstrip()
+    if m.skip():
+        rendered_metadata.final = True
+    else:
+        exclude_pattern = None
+        excludes = set(m.config.variant.get('ignore_version', []))
 
-        outputs = (yaml.safe_load(m._get_contents(permit_undefined_jinja=False,
-                                template_string=template_string)) or {}).get('outputs', [])
+        for key in m.config.variant.get('pin_run_as_build', {}).keys():
+            if key in excludes:
+                excludes.remove(key)
 
-        output = None
-        for output_ in outputs:
-            if output_.get('name') == m.name():
-                output = output_
-                break
+        output_excludes = set()
+        if hasattr(m, 'other_outputs'):
+            output_excludes = set(name for (name, variant) in m.other_outputs.keys())
 
-        if output:
-            if 'package' in output or 'name' not in output:
-                # it's just a top-level recipe
-                output = {'name': m.name()}
+        if excludes or output_excludes:
+            exclude_pattern = re.compile('|'.join('(?:^{}(?:\s|$|\Z))'.format(exc)
+                                            for exc in excludes | output_excludes))
 
-            if not parent_recipe or parent_recipe['name'] == m.name():
-                combine_top_level_metadata_with_output(rendered_metadata, output)
-            requirements = utils.expand_reqs(output.get('requirements', {}))
+        parent_recipe = m.meta.get('extra', {}).get('parent_recipe', {})
+        if parent_recipe:
+            # extract the topmost section where variables are defined, and put it on top of the
+            #     requirements for a particular output
+            # Re-parse the output from the original recipe, so that we re-consider any jinja2 stuff
+            extract_pattern = r'(.*)package:'
+            template_string = '\n'.join((m.get_recipe_text(extract_pattern=extract_pattern,
+                                                        force_top_level=True),
+                                        # second item: the output text for this metadata
+                                        #    object (might be output)
+                                        m.extract_outputs_text())).rstrip()
 
-            rendered_metadata.meta['requirements'] = requirements
-            utils.insert_variant_versions(rendered_metadata.meta['requirements'],
-                                        rendered_metadata.config.variant, 'build')
-            utils.insert_variant_versions(rendered_metadata.meta['requirements'],
-                                        rendered_metadata.config.variant, 'host')
+            outputs = (yaml.safe_load(m._get_contents(permit_undefined_jinja=False,
+                                    template_string=template_string)) or {}).get('outputs', [])
 
-    build_unsat, host_unsat = add_upstream_pins(rendered_metadata, permit_unsatisfiable_variants,
-                                                 exclude_pattern)
-    # getting this AFTER add_upstream_pins is important, because that function adds deps
-    #     to the metadata.
-    requirements = rendered_metadata.meta.get('requirements', {})
+            output = None
+            for output_ in outputs:
+                if output_.get('name') == m.name():
+                    output = output_
+                    break
 
-    # here's where we pin run dependencies to their build time versions.  This happens based
-    #     on the keys in the 'pin_run_as_build' key in the variant, which is a list of package
-    #     names to have this behavior.
-    if output_excludes:
-        exclude_pattern = re.compile('|'.join('(?:^{}(?:\s|$|\Z))'.format(exc)
-                                          for exc in output_excludes))
-    pinning_env = 'host' if m.is_cross else 'build'
+            if output:
+                if 'package' in output or 'name' not in output:
+                    # it's just a top-level recipe
+                    output = {'name': m.name()}
 
-    build_reqs = requirements.get(pinning_env, [])
-    # if python is in the build specs, but doesn't have a specific associated
-    #    version, make sure to add one
-    if build_reqs and 'python' in build_reqs:
-        build_reqs.append('python {}'.format(m.config.variant['python']))
-        rendered_metadata.meta['requirements'][pinning_env] = build_reqs
+                if not parent_recipe or parent_recipe['name'] == m.name():
+                    combine_top_level_metadata_with_output(rendered_metadata, output)
+                requirements = utils.expand_reqs(output.get('requirements', {}))
 
-    full_build_deps, _, _ = get_env_dependencies(rendered_metadata, pinning_env,
+                rendered_metadata.meta['requirements'] = requirements
+                utils.insert_variant_versions(rendered_metadata.meta['requirements'],
+                                            rendered_metadata.config.variant, 'build')
+                utils.insert_variant_versions(rendered_metadata.meta['requirements'],
+                                            rendered_metadata.config.variant, 'host')
+
+        build_unsat, host_unsat = add_upstream_pins(rendered_metadata,
+                                                    permit_unsatisfiable_variants,
+                                                    exclude_pattern)
+        # getting this AFTER add_upstream_pins is important, because that function adds deps
+        #     to the metadata.
+        requirements = rendered_metadata.meta.get('requirements', {})
+
+        # here's where we pin run dependencies to their build time versions.  This happens based
+        #     on the keys in the 'pin_run_as_build' key in the variant, which is a list of package
+        #     names to have this behavior.
+        if output_excludes:
+            exclude_pattern = re.compile('|'.join('(?:^{}(?:\s|$|\Z))'.format(exc)
+                                            for exc in output_excludes))
+        pinning_env = 'host' if m.is_cross else 'build'
+
+        build_reqs = requirements.get(pinning_env, [])
+        # if python is in the build specs, but doesn't have a specific associated
+        #    version, make sure to add one
+        if build_reqs and 'python' in build_reqs:
+            build_reqs.append('python {}'.format(m.config.variant['python']))
+            rendered_metadata.meta['requirements'][pinning_env] = build_reqs
+
+        full_build_deps, _, _ = get_env_dependencies(rendered_metadata, pinning_env,
                                         rendered_metadata.config.variant,
                                         exclude_pattern=exclude_pattern,
                                         permit_unsatisfiable_variants=permit_unsatisfiable_variants)
-    full_build_dep_versions = {dep.split()[0]: " ".join(dep.split()[1:]) for dep in full_build_deps}
+        full_build_dep_versions = {dep.split()[0]: " ".join(dep.split()[1:])
+                                   for dep in full_build_deps}
 
-    if isfile(m.requirements_path) and not requirements.get('run'):
-        requirements['run'] = specs_from_url(m.requirements_path)
-    run_deps = requirements.get('run', [])
+        if isfile(m.requirements_path) and not requirements.get('run'):
+            requirements['run'] = specs_from_url(m.requirements_path)
+        run_deps = requirements.get('run', [])
 
-    versioned_run_deps = [get_pin_from_build(rendered_metadata, dep, full_build_dep_versions)
-                          for dep in run_deps]
-    versioned_run_deps = [utils.ensure_valid_spec(spec, warn=True) for spec in versioned_run_deps]
-    requirements['run'] = versioned_run_deps
+        versioned_run_deps = [get_pin_from_build(rendered_metadata, dep, full_build_dep_versions)
+                            for dep in run_deps]
+        versioned_run_deps = [utils.ensure_valid_spec(spec, warn=True)
+                              for spec in versioned_run_deps]
+        requirements['run'] = versioned_run_deps
 
-    rendered_metadata.meta['requirements'] = requirements
+        rendered_metadata.meta['requirements'] = requirements
 
-    # append other requirements, such as python.app, appropriately
-    rendered_metadata.append_requirements()
+        # append other requirements, such as python.app, appropriately
+        rendered_metadata.append_requirements()
 
-    if rendered_metadata.pin_depends == 'strict':
-        rendered_metadata.meta['requirements']['run'] = environ.get_pinned_deps(rendered_metadata,
-                                                                                'run')
-    test_deps = rendered_metadata.get_value('test/requires')
-    if test_deps:
-        versioned_test_deps = list({get_pin_from_build(m, dep, full_build_dep_versions)
-                                    for dep in test_deps})
-        versioned_test_deps = [utils.ensure_valid_spec(spec, warn=True)
-                               for spec in versioned_test_deps]
-        rendered_metadata.meta['test']['requires'] = versioned_test_deps
-    extra = rendered_metadata.meta.get('extra', {})
-    extra['copy_test_source_files'] = m.config.copy_test_source_files
-    rendered_metadata.meta['extra'] = extra
+        if rendered_metadata.pin_depends == 'strict':
+            rendered_metadata.meta['requirements']['run'] = environ.get_pinned_deps(
+                rendered_metadata, 'run')
+        test_deps = rendered_metadata.get_value('test/requires')
+        if test_deps:
+            versioned_test_deps = list({get_pin_from_build(m, dep, full_build_dep_versions)
+                                        for dep in test_deps})
+            versioned_test_deps = [utils.ensure_valid_spec(spec, warn=True)
+                                for spec in versioned_test_deps]
+            rendered_metadata.meta['test']['requires'] = versioned_test_deps
+        extra = rendered_metadata.meta.get('extra', {})
+        extra['copy_test_source_files'] = m.config.copy_test_source_files
+        rendered_metadata.meta['extra'] = extra
 
-    # if source/path is relative, then the output package makes no sense at all.  The next
-    #   best thing is to hard-code the absolute path.  This probably won't exist on any
-    #   system other than the original build machine, but at least it will work there.
-    if m.meta.get('source'):
-        if 'path' in m.meta['source'] and not os.path.isabs(m.meta['source']['path']):
-            rendered_metadata.meta['source']['path'] = os.path.normpath(
-                os.path.join(m.path, m.meta['source']['path']))
-        elif ('git_url' in m.meta['source'] and not (
-                # absolute paths are not relative paths
-                os.path.isabs(m.meta['source']['git_url']) or
-                # real urls are not relative paths
-                ":" in m.meta['source']['git_url'])):
-            rendered_metadata.meta['source']['git_url'] = os.path.normpath(
-                os.path.join(m.path, m.meta['source']['git_url']))
+        # if source/path is relative, then the output package makes no sense at all.  The next
+        #   best thing is to hard-code the absolute path.  This probably won't exist on any
+        #   system other than the original build machine, but at least it will work there.
+        if m.meta.get('source'):
+            if 'path' in m.meta['source'] and not os.path.isabs(m.meta['source']['path']):
+                rendered_metadata.meta['source']['path'] = os.path.normpath(
+                    os.path.join(m.path, m.meta['source']['path']))
+            elif ('git_url' in m.meta['source'] and not (
+                    # absolute paths are not relative paths
+                    os.path.isabs(m.meta['source']['git_url']) or
+                    # real urls are not relative paths
+                    ":" in m.meta['source']['git_url'])):
+                rendered_metadata.meta['source']['git_url'] = os.path.normpath(
+                    os.path.join(m.path, m.meta['source']['git_url']))
 
-    if not rendered_metadata.meta.get('build'):
-        rendered_metadata.meta['build'] = {}
+        if not rendered_metadata.meta.get('build'):
+            rendered_metadata.meta['build'] = {}
 
-    if build_unsat or host_unsat:
-        rendered_metadata.final = False
-        log = utils.get_logger(__name__)
-        log.warn("Returning non-final recipe for {}; one or more dependencies "
-                 "was unsatisfiable:\nBuild: {}\nHost: {}".format(rendered_metadata.dist(),
-                                                                  build_unsat, host_unsat))
-    else:
-        rendered_metadata.final = True
+        if build_unsat or host_unsat:
+            rendered_metadata.final = False
+            log = utils.get_logger(__name__)
+            log.warn("Returning non-final recipe for {}; one or more dependencies "
+                    "was unsatisfiable:\nBuild: {}\nHost: {}".format(rendered_metadata.dist(),
+                                                                    build_unsat, host_unsat))
+        else:
+            rendered_metadata.final = True
     return rendered_metadata
 
 

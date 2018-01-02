@@ -172,3 +172,12 @@ def test_setting_condarc_vars_with_env_var_expansion(testing_workdir):
     finally:
         cc_conda_build.clear()
         cc_conda_build.update(cc_conda_build_backup)
+
+
+def test_self_reference_run_exports_pin_subpackage_picks_up_version_correctly():
+    recipe = os.path.join(metadata_dir, '_self_reference_run_exports')
+    m = api.render(recipe)[0][0]
+    run_exports = m.meta.get('build', {}).get('run_exports', [])
+    assert run_exports
+    assert len(run_exports) == 1
+    assert run_exports[0].split()[1] == '>=1.0.0,<2.0a0'
