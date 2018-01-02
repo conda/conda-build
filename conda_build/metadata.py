@@ -1084,7 +1084,7 @@ class MetaData(object):
         # used variables - anything with a value in conda_build_config.yaml that applies to this
         #    recipe.  Includes compiler if compiler jinja2 function is used.
         """
-        dependencies = self.get_used_vars(add_zip_keys=False)
+        dependencies = self.get_used_vars()
 
         # filter out ignored versions
         build_string_excludes = ['python', 'r_base', 'perl', 'lua', 'numpy', 'target_platform']
@@ -1800,11 +1800,10 @@ class MetaData(object):
         return variants.get_vars(_variants, loop_only=True)
 
     def get_used_loop_vars(self, force_top_level=False):
-        return {var for var in self.get_used_vars(force_top_level=force_top_level,
-                                                  add_zip_keys=False)
+        return {var for var in self.get_used_vars(force_top_level=force_top_level)
                 if var in self.get_loop_vars()}
 
-    def get_used_vars(self, force_top_level=False, add_zip_keys=True):
+    def get_used_vars(self, force_top_level=False):
         global used_vars_cache
         if (self.name(), force_top_level, self.config.subdir) in used_vars_cache:
             used_vars = used_vars_cache[(self.name(), force_top_level, self.config.subdir)]
@@ -1824,18 +1823,7 @@ class MetaData(object):
                         self.get_variants_as_dict_of_lists()['target_platform'])):
                 used_vars.add('target_platform')
             used_vars_cache[(self.name(), force_top_level, self.config.subdir)] = used_vars
-
-        zip_reqs = set()
-        if add_zip_keys:
-            # each group looks like {key1#key2: [val1_1#val2_1, val1_2#val2_2]
-            for group in variants._get_zip_groups(self.config.variant):
-                # get the keys to each dict
-                for group_key in group:
-                    # break those keys into individual keys - these are the keys in the config
-                    individual_keys = set(group_key.split('#'))
-                    if any(k in used_vars for k in individual_keys):
-                        zip_reqs.update(individual_keys)
-        return used_vars | zip_reqs
+        return used_vars
 
     def _get_used_vars_meta_yaml(self, force_top_level=False):
         # recipe text is the best, because variables can be used anywhere in it.
