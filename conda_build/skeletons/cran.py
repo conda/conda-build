@@ -419,8 +419,13 @@ def get_package_metadata(cran_url, package, session):
 
 
 def get_latest_git_tag(config):
-    p = subprocess.Popen(['git', 'describe', '--tags', '--abbrev=0'],
-                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=config.work_dir)
+    # SO says to use taggerdate instead of committerdate, but that is invalid for lightweight tags.
+    p = subprocess.Popen(['git', 'for-each-ref',
+                                 'refs/tags',
+                                 '--sort=-committerdate',
+                                 '--format=%(refname:short)',
+                                 '--count=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=config.work_dir)
+
     stdout, stderr = p.communicate()
     stdout = stdout.decode('utf-8')
     stderr = stderr.decode('utf-8')
