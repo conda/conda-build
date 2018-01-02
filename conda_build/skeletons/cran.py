@@ -61,6 +61,8 @@ build:
 requirements:
   build:{build_depends}
 
+  host:{host_depends}
+
   run:{run_depends}
 
 test:
@@ -159,19 +161,19 @@ CRAN_KEYS = [
 # between versions.
 R_BASE_PACKAGE_NAMES = (
     'base',
-    'tools',
-    'utils',
-    'grDevices',
-    'graphics',
-    'stats',
+    'compiler',
     'datasets',
-    'methods',
+    'graphics',
+    'grDevices',
     'grid',
+    'methods',
+    'parallel',
     'splines',
+    'stats',
     'stats4',
     'tcltk',
-    'compiler',
-    'parallel',
+    'tools',
+    'utils',
 )
 
 R_RECOMMENDED_PACKAGE_NAMES = (
@@ -417,8 +419,13 @@ def get_package_metadata(cran_url, package, session):
 
 
 def get_latest_git_tag(config):
-    p = subprocess.Popen(['git', 'describe', '--tags', '--abbrev=0'],
-                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=config.work_dir)
+    # SO says to use taggerdate instead of committerdate, but that is invalid for lightweight tags.
+    p = subprocess.Popen(['git', 'for-each-ref',
+                                 'refs/tags',
+                                 '--sort=-committerdate',
+                                 '--format=%(refname:short)',
+                                 '--count=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=config.work_dir)
+
     stdout, stderr = p.communicate()
     stdout = stdout.decode('utf-8')
     stderr = stderr.decode('utf-8')
@@ -675,6 +682,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 'patches': '',
                 'build_number': 0,
                 'build_depends': '',
+                'host_depends': '',
                 'run_depends': '',
                 # CRAN doesn't seem to have this metadata :(
                 'home_comment': '#',
@@ -851,7 +859,14 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                         for f in tf])
         else:
             need_c = need_cxx = need_f = need_autotools = need_make = False
-        for dep_type in ['build', 'run']:
+
+        if 'Rcpp' in dep_dict or 'RcppArmadillo' in dep_dict:
+            need_cxx = True
+
+        if need_cxx:
+            need_c = True
+
+        for dep_type in ['build', 'host', 'run']:
 
             deps = []
             # Put non-R dependencies first.
@@ -879,7 +894,8 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     deps.append("{indent}{{{{posix}}}}grep              # [win]".format(
                         indent=INDENT))
                     deps.append("{indent}{{{{posix}}}}autoconf".format(indent=INDENT))
-                    deps.append("{indent}{{{{posix}}}}automake".format(indent=INDENT))
+                    deps.append("{indent}{{{{posix}}}}automake-wrapper  # [win]".format(indent=INDENT))
+                    deps.append("{indent}{{{{posix}}}}automake          # [not win]".format(indent=INDENT))
                     deps.append("{indent}{{{{posix}}}}pkg-config".format(indent=INDENT))
                 if need_make:
                     deps.append("{indent}{{{{posix}}}}make".format(indent=INDENT))
@@ -888,39 +904,40 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     deps.append("{indent}{{{{native}}}}gcc-libs         # [win]".format(
                         indent=INDENT))
 
-            for name in sorted(dep_dict):
-                if name in R_BASE_PACKAGE_NAMES:
-                    continue
-                if name == 'R':
-                    # Put R first
-                    # Regarless of build or run, and whether this is a recommended package or not,
-                    # it can only depend on 'r-base' since anything else can and will cause cycles
-                    # in the dependency graph. The cran metadata lists all dependencies anyway, even
-                    # those packages that are in the recommended group.
-                    r_name = 'r-base'
-                    # We don't include any R version restrictions because we
-                    # always build R packages against an exact R version
-                    deps.insert(0, '{indent}{r_name}'.format(indent=INDENT, r_name=r_name))
-                else:
-                    conda_name = 'r-' + name.lower()
-
-                    if dep_dict[name]:
-                        deps.append('{indent}{name} {version}'.format(name=conda_name,
-                            version=dep_dict[name], indent=INDENT))
+            if dep_type == 'host' or dep_type == 'run':
+                for name in sorted(dep_dict):
+                    if name in R_BASE_PACKAGE_NAMES:
+                        continue
+                    if name == 'R':
+                        # Put R first
+                        # Regarless of build or run, and whether this is a recommended package or not,
+                        # it can only depend on 'r-base' since anything else can and will cause cycles
+                        # in the dependency graph. The cran metadata lists all dependencies anyway, even
+                        # those packages that are in the recommended group.
+                        r_name = 'r-base'
+                        # We don't include any R version restrictions because we
+                        # always build R packages against an exact R version
+                        deps.insert(0, '{indent}{r_name}'.format(indent=INDENT, r_name=r_name))
                     else:
-                        deps.append('{indent}{name}'.format(name=conda_name,
-                            indent=INDENT))
-                    if recursive:
-                        lower_name = name.lower()
-                        if lower_name not in package_dicts:
-                            inputs_dict = package_to_inputs_dict(output_dir, output_suffix, git_tag,
-                                                                 lower_name)
-                            assert lower_name == inputs_dict['pkg-name'], \
-                                "name %s != inputs_dict['pkg-name'] %s" % (name,
-                                                                           inputs_dict['pkg-name'])
-                            assert lower_name not in package_list
-                            package_dicts.update({lower_name: {'inputs': inputs_dict}})
-                            package_list.append(lower_name)
+                        conda_name = 'r-' + name.lower()
+
+                        if dep_dict[name]:
+                            deps.append('{indent}{name} {version}'.format(name=conda_name,
+                                version=dep_dict[name], indent=INDENT))
+                        else:
+                            deps.append('{indent}{name}'.format(name=conda_name,
+                                indent=INDENT))
+                        if recursive:
+                            lower_name = name.lower()
+                            if lower_name not in package_dicts:
+                                inputs_dict = package_to_inputs_dict(output_dir, output_suffix, git_tag,
+                                                                     lower_name)
+                                assert lower_name == inputs_dict['pkg-name'], \
+                                    "name %s != inputs_dict['pkg-name'] %s" % (name,
+                                                                               inputs_dict['pkg-name'])
+                                assert lower_name not in package_list
+                                package_dicts.update({lower_name: {'inputs': inputs_dict}})
+                                package_list.append(lower_name)
 
             d['%s_depends' % dep_type] = ''.join(deps)
 
@@ -939,7 +956,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         elif update_policy == 'skip-existing' and d['inputs']['old-metadata']:
             continue
 
-    # Normalize the metadata values
+        # Normalize the metadata values
         d = {k: unicodedata.normalize("NFKD", text_type(v)).encode('ascii', 'ignore')
              .decode() for k, v in iteritems(d)}
         try:
