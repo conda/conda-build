@@ -49,7 +49,8 @@ from conda_build import __version__
 from conda_build import environ, source, tarcheck, utils
 from conda_build.index import get_build_index, update_index
 from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse, finalize_metadata,
-                                distribute_variants, expand_outputs, try_download)
+                                distribute_variants, expand_outputs, try_download,
+                                add_upstream_pins)
 import conda_build.os_utils.external as external
 from conda_build.metadata import FIELDS, MetaData
 from conda_build.post import (post_process, post_build,
@@ -1010,6 +1011,22 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
 
         utils.insert_variant_versions(m.meta.get('requirements', {}), m.config.variant, 'build')
         utils.insert_variant_versions(m.meta.get('requirements', {}), m.config.variant, 'host')
+
+        exclude_pattern = None
+        excludes = set(m.config.variant.get('ignore_version', []))
+
+        for key in m.config.variant.get('pin_run_as_build', {}).keys():
+            if key in excludes:
+                excludes.remove(key)
+
+        output_excludes = set()
+        if hasattr(m, 'other_outputs'):
+            output_excludes = set(name for (name, variant) in m.other_outputs.keys())
+
+        if excludes or output_excludes:
+            exclude_pattern = re.compile('|'.join('(?:^{}(?:\s|$|\Z))'.format(exc)
+                                            for exc in excludes | output_excludes))
+        add_upstream_pins(m, False, exclude_pattern)
 
         build_ms_deps = m.ms_depends('build')
 

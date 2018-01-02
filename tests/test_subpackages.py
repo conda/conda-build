@@ -283,3 +283,9 @@ def test_build_script_and_script_env(testing_config):
     recipe = os.path.join(subpackage_dir, '_build_script')
     os.environ['TEST_FN'] = 'test'
     api.build(recipe, config=testing_config)
+
+
+@pytest.mark.skipif(sys.platform != 'darwin', reason="only implemented for mac")
+def test_strong_run_exports_from_build_applies_to_host(testing_config):
+    recipe = os.path.join(subpackage_dir, '_strong_run_exports_applies_from_build_to_host')
+    api.build(recipe, config=testing_config)

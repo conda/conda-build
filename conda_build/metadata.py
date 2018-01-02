@@ -1760,35 +1760,19 @@ class MetaData(object):
             # early stages don't need to do the finalization.  Skip it until the later stages
             #     when we need it.
             if not permit_undefined_jinja:
-                # The loop above gives us enough info to determine the build order.  After that,
-                #    we can "finalize" the metadata (fill in version pins) for the build metadata.
-                #    This does not, however, account for circular dependencies
-                #    where a runtime exact dependency pin on a downstream build
-                #    subpackage in an upstream subpackage changes the upstream's
-                #    hash, which then changes the downstream package's hash, which
-                #    then recurses infinitely
-
-                # In general, given upstream a and downstream b, b can depend on a
-                # exactly, but a can only have version constraints on b at run or
-                # run_exports, not exact=True
-
-                # 3 passes here:
-                #    1. fill in fully-resolved build-time dependencies
-                #    2. fill in fully-resolved run-time dependencies.  Note that circular deps
-                #       are allowed, but you can't have exact=True for circular run-time deps
-                #    3. finally, everything should be filled in and done.
                 conda_packages = finalize_outputs_pass(self, conda_packages, pass_no=0,
                                     permit_unsatisfiable_variants=permit_unsatisfiable_variants)
 
                 # Sanity check: if any exact pins of any subpackages, make sure that they match
                 ensure_matching_hashes(conda_packages)
-            # We arbitrarily mark all output metadata as final, regardless of if it truly is or not.
-            #    This is done to add sane hashes to unfinalizable packages, so that they are
-            #    differentiable from one another.  This is mostly a test concern than an actual one,
-            #    as any "final" recipe returned here will still barf if anyone tries to actually
-            #    build it.
             final_conda_packages = []
             for (out_d, m) in conda_packages.values():
+                # We arbitrarily mark all output metadata as final, regardless
+                #    of if it truly is or not. This is done to add sane hashes
+                #    to unfinalizable packages, so that they are differentiable
+                #    from one another. This is mostly a test concern than an
+                #    actual one, as any "final" recipe returned here will still
+                #    barf if anyone tries to actually build it.
                 m.final = True
                 final_conda_packages.append((out_d, m))
             output_tuples = final_conda_packages + non_conda_packages
