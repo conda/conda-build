@@ -119,7 +119,7 @@ CDTs = dict({'centos5': {'dirname': 'centos5',
                          'checksummer': hashlib.sha1,
                          'checksummer_name': "sha1",
                          'macros': {}},
-            'centos6':  {'dirname': 'centos6',
+             'centos6': {'dirname': 'centos6',
                          'short_name': 'cos6',
                          'base_url': 'http://mirror.centos.org/centos/6.9/os/{base_architecture}/CentOS/',  # noqa
                          'sbase_url': 'http://vault.centos.org/6.9/os/Source/SPackages/',
@@ -135,7 +135,7 @@ CDTs = dict({'centos5': {'dirname': 'centos5',
                          # gives nothing nor does rpm --showrc | grep gdk
                          'macros': {'pyver': '2.6.6',
                                     'gdk_pixbuf_base_version': '2.24.1'}},
-            'centos7':  {'dirname': 'centos7',
+             'centos7': {'dirname': 'centos7',
                          'short_name': 'cos7',
                          'base_url': 'http://mirror.centos.org/altarch/7/os/{base_architecture}/CentOS/',  # noqa
                          'sbase_url': 'http://vault.centos.org/7.4.1708/os/Source/SPackages/',
