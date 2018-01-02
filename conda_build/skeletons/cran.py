@@ -424,7 +424,8 @@ def get_latest_git_tag(config):
                                  'refs/tags',
                                  '--sort=-committerdate',
                                  '--format=%(refname:short)',
-                                 '--count=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=config.work_dir)
+                                 '--count=1'], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                         cwd=config.work_dir)
 
     stdout, stderr = p.communicate()
     stdout = stdout.decode('utf-8')
@@ -894,8 +895,10 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     deps.append("{indent}{{{{posix}}}}grep              # [win]".format(
                         indent=INDENT))
                     deps.append("{indent}{{{{posix}}}}autoconf".format(indent=INDENT))
-                    deps.append("{indent}{{{{posix}}}}automake-wrapper  # [win]".format(indent=INDENT))
-                    deps.append("{indent}{{{{posix}}}}automake          # [not win]".format(indent=INDENT))
+                    deps.append("{indent}{{{{posix}}}}automake-wrapper  # [win]".format(
+                        indent=INDENT))
+                    deps.append("{indent}{{{{posix}}}}automake          # [not win]".format(
+                        indent=INDENT))
                     deps.append("{indent}{{{{posix}}}}pkg-config".format(indent=INDENT))
                 if need_make:
                     deps.append("{indent}{{{{posix}}}}make".format(indent=INDENT))
@@ -910,10 +913,12 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                         continue
                     if name == 'R':
                         # Put R first
-                        # Regarless of build or run, and whether this is a recommended package or not,
-                        # it can only depend on 'r-base' since anything else can and will cause cycles
-                        # in the dependency graph. The cran metadata lists all dependencies anyway, even
-                        # those packages that are in the recommended group.
+                        # Regarless of build or run, and whether this is a
+                        # recommended package or not, it can only depend on
+                        # 'r-base' since anything else can and will cause
+                        # cycles in the dependency graph. The cran metadata
+                        # lists all dependencies anyway, even those packages
+                        # that are in the recommended group.
                         r_name = 'r-base'
                         # We don't include any R version restrictions because we
                         # always build R packages against an exact R version
@@ -930,11 +935,11 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                         if recursive:
                             lower_name = name.lower()
                             if lower_name not in package_dicts:
-                                inputs_dict = package_to_inputs_dict(output_dir, output_suffix, git_tag,
-                                                                     lower_name)
+                                inputs_dict = package_to_inputs_dict(output_dir, output_suffix,
+                                                                     git_tag, lower_name)
                                 assert lower_name == inputs_dict['pkg-name'], \
-                                    "name %s != inputs_dict['pkg-name'] %s" % (name,
-                                                                               inputs_dict['pkg-name'])
+                                    "name %s != inputs_dict['pkg-name'] %s" % (
+                                        name, inputs_dict['pkg-name'])
                                 assert lower_name not in package_list
                                 package_dicts.update({lower_name: {'inputs': inputs_dict}})
                                 package_list.append(lower_name)
