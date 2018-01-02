@@ -148,7 +148,7 @@ def test_build_output_build_path_multiple_recipes(testing_workdir, testing_metad
     test_path = lambda pkg: os.path.join(sys.prefix, "conda-bld", testing_config.host_subdir, pkg)
     test_paths = [test_path(
         "test_build_output_build_path_multiple_recipes-1.0-1.tar.bz2"),
-        "Skipped: {} defines build/skip for this configuration ({{}}).".format(
+        "Skipped: conda-build-skip from {} defines build/skip for this configuration ({{}}).".format(
             os.path.abspath(skip_recipe))]
 
     output, error = capfd.readouterr()

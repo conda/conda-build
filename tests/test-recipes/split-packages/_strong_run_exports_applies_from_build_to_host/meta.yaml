@@ -1,0 +1,9 @@
+package:
+  name: test
+  version: 1.0.0
+
+requirements:
+  host:
+   - make
+  build:
+   - {{ compiler('cxx') }}
