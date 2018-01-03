@@ -1,3 +1,28 @@
+2018-01-02 3.2.1:
+
+Enhancements:
+-------------
+
+* Improve "BUILD" environment variable value (especially on powerpc)  #2615
+* Implement CentOS 7 ppc64le distro for conda skeleton rpm  #2615
+* Improve handling of outputs that use the build/skip key to skip building  #2616
+
+Bug fixes:
+----------
+
+* Don't loop in all zipped keys when collecting used vars.  Leave it to consumers to decide what to do.  #2612
+* Fix run_exports using pin_subpackage not applying versioning for the implicit top-level output  #2613
+* Fix run_exports not applying to build-time environment creation for top-level recipe (as opposed to outputs)  #2613
+* Fix CRAN skeleton to better use host/build envs appropriately  #2614
+* fix outputs not loading hash input info from files at test time correctly, leading to incorrect hashes and unresolved packages.  #2616
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @msarahan
+
+
 2017-12-21 3.2.0:
 
 This release bumps the minor version to reflect the change in splitting the
