@@ -308,8 +308,8 @@ def pin_subpackage(metadata, subpackage_name, min_pin='x.x.x.x.x.x', max_pin='x'
         matching_package_keys = [k for k in keys if k[0] == subpackage_name]
         if len(matching_package_keys) == 1:
             key = matching_package_keys[0]
-            pin = pin_subpackage_against_outputs(key, metadata.other_outputs, min_pin, max_pin,
-                                                 exact, permit_undefined_jinja)
+        pin = pin_subpackage_against_outputs(key, metadata.other_outputs, min_pin, max_pin,
+                                             exact, permit_undefined_jinja)
     if not pin:
         pin = subpackage_name
     return pin

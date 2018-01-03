@@ -44,22 +44,24 @@ def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variant
                                     permit_unsatisfiable_variants=permit_unsatisfiable_variants)
     output_metas = OrderedDict()
     for meta, download, render_in_env in metadata_tuples:
-        for od, om in meta.get_output_metadata_set(
-                permit_unsatisfiable_variants=permit_unsatisfiable_variants,
-                permit_undefined_jinja=not finalize):
-            # only show conda packages right now
-            if 'type' not in od or od['type'] == 'conda':
-                if finalize and not om.final:
-                    try:
-                        om = finalize_metadata(om,
+        if not meta.skip():
+            for od, om in meta.get_output_metadata_set(
+                    permit_unsatisfiable_variants=permit_unsatisfiable_variants,
+                    permit_undefined_jinja=not finalize):
+                if not om.skip():
+                    # only show conda packages right now
+                    if 'type' not in od or od['type'] == 'conda':
+                        if finalize and not om.final:
+                            try:
+                                om = finalize_metadata(om,
                                         permit_unsatisfiable_variants=permit_unsatisfiable_variants)
-                    except (DependencyNeedsBuildingError, NoPackagesFoundError):
-                        if not permit_unsatisfiable_variants:
-                            raise
-                output_metas[om.dist(), om.config.variant.get('target_platform'),
-                             tuple((var, om.config.variant[var])
-                                 for var in om.get_used_loop_vars())] = \
-                    ((om, download, render_in_env))
+                            except (DependencyNeedsBuildingError, NoPackagesFoundError):
+                                if not permit_unsatisfiable_variants:
+                                    raise
+                        output_metas[om.dist(), om.config.variant.get('target_platform'),
+                                    tuple((var, om.config.variant[var])
+                                        for var in om.get_used_loop_vars())] = \
+                            ((om, download, render_in_env))
     return list(output_metas.values())
 
 
