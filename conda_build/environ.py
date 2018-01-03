@@ -5,6 +5,7 @@ import json
 import logging
 import multiprocessing
 import os
+import platform
 import re
 import subprocess
 import sys
@@ -527,7 +528,21 @@ def osx_vars(compiler_vars, config, get_default):
 
 def linux_vars(compiler_vars, config, get_default):
     """This is setting variables on a dict that is part of the get_default function"""
-    linux_arch = 'i686' if str(config.host_arch) == '32' else 'x86_64'
+    build_arch = platform.machine()
+    # Python reports x86_64 when running a i686 Python binary on a 64-bit CPU
+    # unless run through linux32. Issue a warning when we detect this.
+    if build_arch == 'x86_64' and platform.architecture()[0] == '32bit':
+        print("Warning: You are running 32-bit Python on a 64-bit linux installation")
+        print("         but have not launched it via linux32. Various qeuries *will*")
+        print("         give unexpected results (uname -m, platform.machine() etc)")
+        build_arch = 'i686'
+    # the GNU triplet is powerpc, not ppc. This matters.
+    if build_arch.startswith('ppc'):
+        build_arch = build_arch.replace('ppc', 'powerpc')
+    if build_arch.startswith('powerpc'):
+        build_distro = 'cos7'
+    else:
+        build_distro = 'cos6'
     # There is also QEMU_SET_ENV, but that needs to be
     # filtered so it only contains the result of `linux_vars`
     # which, before this change was empty, and after it only
@@ -540,7 +555,7 @@ def linux_vars(compiler_vars, config, get_default):
     get_default('DEJAGNU')
     get_default('DISPLAY')
     get_default('LD_RUN_PATH', config.host_prefix + '/lib')
-    get_default('BUILD', linux_arch + '-conda_cos6-linux-gnu')
+    get_default('BUILD', build_arch + '-conda_' + build_distro + '-linux-gnu')
 
 
 def set_from_os_or_variant(out_dict, key, variant, default):
