@@ -980,9 +980,9 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                         "are already built in {0}, skipping.".format(package_locations))
                 return default_return
             else:
-                package_locations = [bldpkg_path(om) for _, om in output_metas]
+                package_locations = [bldpkg_path(om) for _, om in output_metas if not om.skip()]
         else:
-            package_locations = [bldpkg_path(om) for _, om in output_metas]
+            package_locations = [bldpkg_path(om) for _, om in output_metas if not om.skip()]
 
         print("BUILD START:", [os.path.basename(pkg) for pkg in package_locations])
 
@@ -1243,6 +1243,9 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                                 os.path.join(prefix_files_backup, f),
                                 symlinks=True)
             for (output_d, m) in outputs:
+                if m.skip():
+                    print(utils.get_skip_message(m))
+                    continue
                 if (top_level_meta.name() == output_d.get('name') and not (output_d.get('files') or
                                                                            output_d.get('script'))):
                     output_d['files'] = (utils.prefix_files(prefix=m.config.host_prefix) -

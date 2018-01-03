@@ -2,10 +2,12 @@ package:
   name: test
   version: 1.0.0
 
+build:
+
 outputs:
   - name: test-split1
     build:
-      skip: True  # [blas_impl == 'openblas' and win]
+      skip: True  # [blas_impl != 'mkl' and win]
       # conda > 4.4 might be able to use this
       requires_features:
         blas: {{ blas_impl }}
