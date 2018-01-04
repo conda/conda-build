@@ -619,6 +619,8 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
     # each of these outputs can have a different set of dependency versions from each other,
     #    but also from base_metadata
     for output_d, metadata in render_order.values():
+        if metadata.skip():
+            continue
         try:
             log = utils.get_logger(__name__)
             # We should reparse the top-level recipe to get all of our dependencies fixed up.
@@ -1741,9 +1743,9 @@ class MetaData(object):
                     conda_packages[m.name(), HashableDict(m.config.variant)] = (output_d, m)
                 elif output_d.get('type') == 'wheel':
                     if (not output_d.get('requirements', {}).get('build') or
-                            not any('wheel' in req for req in output_d['requirements']['build'])):
+                            not any('pip' in req for req in output_d['requirements']['build'])):
                         build_reqs = output_d.get('requirements', {}).get('build', [])
-                        build_reqs.extend(['wheel', 'python {}'.format(m.config.variant['python'])])
+                        build_reqs.extend(['pip', 'python {}'.format(m.config.variant['python'])])
                         output_d['requirements'] = output_d.get('requirements', {})
                         output_d['requirements']['build'] = build_reqs
                         m.meta['requirements'] = m.meta.get('requirements', {})
@@ -1759,7 +1761,7 @@ class MetaData(object):
 
             # early stages don't need to do the finalization.  Skip it until the later stages
             #     when we need it.
-            if not permit_undefined_jinja:
+            if not permit_undefined_jinja and not self.skip():
                 conda_packages = finalize_outputs_pass(self, conda_packages, pass_no=0,
                                     permit_unsatisfiable_variants=permit_unsatisfiable_variants)
 
