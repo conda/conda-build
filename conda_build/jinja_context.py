@@ -300,14 +300,27 @@ def pin_subpackage(metadata, subpackage_name, min_pin='x.x.x.x.x.x', max_pin='x'
             raise ValueError("Bug in conda-build: we need to have info about other outputs in "
                              "order to allow pinning to them.  It's not here.")
     else:
-        key = (subpackage_name, HashableDict(metadata.config.variant))
         # two ways to match:
         #    1. only one other output named the same as the subpackage_name from the key
         #    2. whole key matches (both subpackage name and variant)
         keys = list(metadata.other_outputs.keys())
+        key = (subpackage_name, HashableDict(metadata.config.variant))
         matching_package_keys = [k for k in keys if k[0] == subpackage_name]
         if len(matching_package_keys) == 1:
             key = matching_package_keys[0]
+        elif len(matching_package_keys) > 1:
+            key = None
+            for pkg_name, variant in matching_package_keys:
+                shared_vars = set(variant.keys()) & set(metadata.config.variant.keys())
+                if all(variant[sv] == metadata.config.variant[sv] for sv in shared_vars):
+                    key = (pkg_name, variant)
+                    break
+
+        if not key and not allow_no_other_outputs:
+            import ipdb; ipdb.set_trace()
+            raise ValueError("didn't find matching subpackage for name {} with variant {} - this "
+                             "is probably a conda-build bug.".format(subpackage_name,
+                                                                     metadata.config.variant))
         pin = pin_subpackage_against_outputs(key, metadata.other_outputs, min_pin, max_pin,
                                              exact, permit_undefined_jinja)
     if not pin:

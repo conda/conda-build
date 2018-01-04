@@ -637,16 +637,23 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
                 om.other_outputs = OrderedDict()
             om.other_outputs.update(outputs)
             om.final = False
-            om.parse_until_resolved()
             # get the new output_d from the reparsed top-level metadata, so that we have any
             #    exact subpackage version/hash info
-            recipe_outputs = get_output_dicts_from_metadata(om)
-            output_d = get_updated_output_dict_from_reparsed_metadata(output_d,
-                                                                      recipe_outputs)
-            om = om.get_output_metadata(output_d)
+            this_output = {}
+            this_output_text = om.extract_single_output_text(metadata.name())
+            if this_output_text:
+                this_output = yaml.safe_load(om._get_contents(permit_undefined_jinja=True,
+                                                              template_string=this_output_text,
+                                                              skip_build_id=True,
+                                                              allow_no_other_outputs=True))
+            if isinstance(this_output, list):
+                this_output = this_output[0]
+
+            om = om.get_output_metadata(this_output)
             fm = finalize_metadata(om, permit_unsatisfiable_variants=permit_unsatisfiable_variants)
             if not output_d.get('type') or output_d.get('type') == 'conda':
-                outputs[(fm.name(), HashableDict(fm.config.variant))] = (output_d, fm)
+                outputs[(fm.name(), HashableDict({k: fm.config.variant[k]
+                                                  for k in fm.get_used_vars()}))] = (output_d, fm)
         except exceptions.DependencyNeedsBuildingError as e:
             if not permit_unsatisfiable_variants:
                 raise
@@ -1740,7 +1747,8 @@ class MetaData(object):
             non_conda_packages = []
             for output_d, m in render_order.items():
                 if not output_d.get('type') or output_d['type'] == 'conda':
-                    conda_packages[m.name(), HashableDict(m.config.variant)] = (output_d, m)
+                    conda_packages[m.name(), HashableDict({k: m.config.variant[k]
+                                                  for k in m.get_used_vars()})] = (output_d, m)
                 elif output_d.get('type') == 'wheel':
                     if (not output_d.get('requirements', {}).get('build') or
                             not any('pip' in req for req in output_d['requirements']['build'])):
@@ -1869,7 +1877,8 @@ class MetaData(object):
         if this_output_text:
             this_output = yaml.safe_load(self._get_contents(permit_undefined_jinja=True,
                                                             template_string=this_output_text,
-                                                            skip_build_id=True))
+                                                            skip_build_id=True,
+                                                            allow_no_other_outputs=True))
         if isinstance(this_output, list):
             this_output = this_output[0]
         used_vars = set()
