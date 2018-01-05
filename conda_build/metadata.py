@@ -1868,11 +1868,11 @@ class MetaData(object):
         if is_output and not force_top_level:
             recipe_text = self.extract_single_output_text(self.name())
         else:
-            recipe_text = self.get_recipe_text(force_top_level=force_top_level).replace(
-                self.extract_outputs_text().strip(), '')
-
-        recipe_text_without_requirements = recipe_text.replace(
-            self.extract_requirements_text(force_top_level=force_top_level).strip(), "")
+            recipe_text = (self.get_recipe_text(force_top_level=force_top_level).replace(
+                                self.extract_outputs_text().strip(), '') +
+                           self.extract_single_output_text(self.name()))
+        reqs_re = re.compile(r"requirements:.+?(?=^\w|\Z|^\s+-\s(?:name|type))", flags=re.M | re.S)
+        recipe_text_without_requirements = reqs_re.sub('', recipe_text)
 
         all_used = variants.find_used_variables_in_text(self.config.variant, recipe_text)
         outside_reqs_used = variants.find_used_variables_in_text(self.config.variant,

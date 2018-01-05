@@ -60,7 +60,7 @@ def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variant
                                     raise
                         output_metas[om.dist(), om.config.variant.get('target_platform'),
                                     tuple((var, om.config.variant[var])
-                                        for var in om.get_used_loop_vars())] = \
+                                        for var in om.get_used_vars())] = \
                             ((om, download, render_in_env))
     return list(output_metas.values())
 

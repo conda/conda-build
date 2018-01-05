@@ -386,7 +386,7 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
         if output_excludes:
             exclude_pattern = re.compile('|'.join('(?:^{}(?:\s|$|\Z))'.format(exc)
                                             for exc in output_excludes))
-        pinning_env = 'host' if m.is_cross else 'build'
+        pinning_env = 'host' if rendered_metadata.is_cross else 'build'
 
         build_reqs = requirements.get(pinning_env, [])
         # if python is in the build specs, but doesn't have a specific associated
