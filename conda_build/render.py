@@ -352,40 +352,26 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
                                             for exc in excludes | output_excludes))
 
         parent_recipe = m.meta.get('extra', {}).get('parent_recipe', {})
-        if parent_recipe:
-            # extract the topmost section where variables are defined, and put it on top of the
-            #     requirements for a particular output
-            # Re-parse the output from the original recipe, so that we re-consider any jinja2 stuff
-            extract_pattern = r'(.*)package:'
-            template_string = '\n'.join((m.get_recipe_text(extract_pattern=extract_pattern,
-                                                        force_top_level=True),
-                                        # second item: the output text for this metadata
-                                        #    object (might be output)
-                                        m.extract_outputs_text())).rstrip()
+        # extract the topmost section where variables are defined, and put it on top of the
+        #     requirements for a particular output
+        # Re-parse the output from the original recipe, so that we re-consider any jinja2 stuff
+        output = m.get_rendered_output(m.name())
 
-            outputs = (yaml.safe_load(m._get_contents(permit_undefined_jinja=False,
-                                    template_string=template_string)) or {}).get('outputs', [])
+        if output:
+            if 'package' in output or 'name' not in output:
+                # it's just a top-level recipe
+                output = {'name': m.name()}
 
-            output = None
-            for output_ in outputs:
-                if output_.get('name') == m.name():
-                    output = output_
-                    break
+            if not parent_recipe or parent_recipe['name'] == m.name():
+                combine_top_level_metadata_with_output(rendered_metadata, output)
+            requirements = utils.expand_reqs(output.get('requirements', {}))
+            rendered_metadata.meta['requirements'] = requirements
 
-            if output:
-                if 'package' in output or 'name' not in output:
-                    # it's just a top-level recipe
-                    output = {'name': m.name()}
-
-                if not parent_recipe or parent_recipe['name'] == m.name():
-                    combine_top_level_metadata_with_output(rendered_metadata, output)
-                requirements = utils.expand_reqs(output.get('requirements', {}))
-
-                rendered_metadata.meta['requirements'] = requirements
-                utils.insert_variant_versions(rendered_metadata.meta['requirements'],
-                                            rendered_metadata.config.variant, 'build')
-                utils.insert_variant_versions(rendered_metadata.meta['requirements'],
-                                            rendered_metadata.config.variant, 'host')
+        if rendered_metadata.meta.get('requirements'):
+            utils.insert_variant_versions(rendered_metadata.meta['requirements'],
+                                          rendered_metadata.config.variant, 'build')
+            utils.insert_variant_versions(rendered_metadata.meta['requirements'],
+                                        rendered_metadata.config.variant, 'host')
 
         build_unsat, host_unsat = add_upstream_pins(rendered_metadata,
                                                     permit_unsatisfiable_variants,
@@ -577,11 +563,11 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
                                 bypass_env_check=bypass_env_check)
         need_source_download = (not mv.needs_source_for_render or not mv.source_provided)
 
-        # if python is in the build specs, but doesn't have a specific associated
-        #    version, make sure to add one to newly parsed 'requirements/build'.
-        for env in ('build', 'host', 'run'):
-            utils.insert_variant_versions(mv.meta.get('requirements', {}),
-                                          mv.config.variant, env)
+        # # if python is in the build specs, but doesn't have a specific associated
+        # #    version, make sure to add one to newly parsed 'requirements/build'.
+        # for env in ('build', 'host', 'run'):
+        #     utils.insert_variant_versions(mv.meta.get('requirements', {}),
+        #                                   mv.config.variant, env)
         rendered_metadata[(mv.dist(),
                            mv.config.variant.get('target_platform', mv.config.subdir),
                            tuple((var, mv.config.variant[var])

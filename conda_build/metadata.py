@@ -44,6 +44,9 @@ on_win = (sys.platform == 'win32')
 ARCH_MAP = {'32': 'x86',
             '64': 'x86_64'}
 
+output_re = re.compile(r"^\s+-\s(?:name|type):.+?(?=^\w|\Z|^\s+-\s(?:name|type))",
+                       flags=re.M | re.S)
+
 # used to avoid recomputing/rescanning recipe contents for used variables
 used_vars_cache = {}
 
@@ -590,8 +593,8 @@ def toposort(output_metadata_map):
     return result
 
 
-def get_output_dicts_from_metadata(metadata):
-    outputs = metadata.get_section('outputs')
+def get_output_dicts_from_metadata(metadata, outputs=None):
+    outputs = outputs or metadata.get_section('outputs')
 
     if not outputs:
         outputs = [{'name': metadata.name()}]
@@ -609,6 +612,7 @@ def get_output_dicts_from_metadata(metadata):
     for out in outputs:
         if out.get('name') == metadata.name():
             combine_top_level_metadata_with_output(metadata, out)
+    [trim_empty_keys(out) for out in outputs]
     return outputs
 
 
@@ -628,28 +632,18 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
             if base_metadata.config.verbose:
                 log.info("Attempting to finalize metadata for {}".format(metadata.name()))
             om = base_metadata.copy()
+            om.other_outputs = metadata.other_outputs
             # store a copy of the metadata before finalization, so that we know what is
             #     original stuff.  This is especially important for only applying run_exports
             #     to things that are actually specified in the recipe, not installed as deps.
             # match up the old variant with the current one from this output
             om.config.variant = metadata.config.variant
-            if not hasattr(om, 'other_outputs'):
-                om.other_outputs = OrderedDict()
             om.other_outputs.update(outputs)
             om.final = False
             # get the new output_d from the reparsed top-level metadata, so that we have any
-            #    exact subpackage version/hash info
-            this_output = {}
-            this_output_text = om.extract_single_output_text(metadata.name())
-            if this_output_text:
-                this_output = yaml.safe_load(om._get_contents(permit_undefined_jinja=True,
-                                                              template_string=this_output_text,
-                                                              skip_build_id=True,
-                                                              allow_no_other_outputs=True))
-            if isinstance(this_output, list):
-                this_output = this_output[0]
-
-            om = om.get_output_metadata(this_output)
+            #    exact subpackage version/build string info
+            output_d = om.get_rendered_output(metadata.name()) or {'name': metadata.name()}
+            om = om.get_output_metadata(output_d)
             fm = finalize_metadata(om, permit_unsatisfiable_variants=permit_unsatisfiable_variants)
             if not output_d.get('type') or output_d.get('type') == 'conda':
                 outputs[(fm.name(), HashableDict({k: fm.config.variant[k]
@@ -661,7 +655,8 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
                 log = utils.get_logger(__name__)
                 log.warn("Could not finalize metadata due to missing dependencies: "
                             "{}".format(e.packages))
-                outputs[(metadata.name(), HashableDict(metadata.config.variant))] = (
+                outputs[(metadata.name(), HashableDict({k: metadata.config.variant[k]
+                                                        for k in metadata.get_used_vars()}))] = (
                     output_d, metadata)
     # in-place modification
     base_metadata.other_outputs = outputs
@@ -669,7 +664,8 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
     base_metadata.parse_until_resolved()
     final_outputs = OrderedDict()
     for k, (out_d, m) in outputs.items():
-        final_outputs[(m.name(), HashableDict(m.config.variant))] = out_d, m
+        final_outputs[(m.name(), HashableDict({k: m.config.variant[k]
+                                               for k in m.get_used_vars()}))] = out_d, m
     return final_outputs
 
 
@@ -698,25 +694,24 @@ def read_meta_file(meta_path):
     return recipe_text
 
 
-def _output_filter_pattern(output_name):
-    return r'(^\s*\-\sname:\s+{}\n.*?)(^test:|^extra:|^about:|\Z|\s*\-\sname:)'.format(
-        output_name)
-
-
 def combine_top_level_metadata_with_output(metadata, output):
     """Merge top-level metadata into output when output is same name as top-level"""
     sections = ('requirements', 'build', 'about')
     for section in sections:
         metadata_section = metadata.meta.get(section, {})
-        output_section = utils.expand_reqs(output.get(section, {}))
+        if section == 'requirements':
+            output_section = utils.expand_reqs(output.get(section, {}))
+        else:
+            output_section = output.get(section, {})
         for k, v in metadata_section.items():
-            if k in output_section and v != output_section[k]:
-                raise ValueError("You have the '{}' entry defined in both the top-level {} "
-                                    "section and the output which has the same name as the "
-                                    "top-level recipe.  You can only have a given entry in "
-                                    "a section defined in one of those 2 places.".format(
-                                        k, section))
-            output_section[k] = v
+            # if k in output_section and v != output_section[k]:
+            #     raise ValueError("You have the '{}' entry defined in both the top-level {} "
+            #                         "section and the output which has the same name as the "
+            #                         "top-level recipe.  You can only have a given entry in "
+            #                         "a section defined in one of those 2 places.".format(
+            #                             k, section))
+            if k not in output_section and v:
+                output_section[k] = v
         output[section] = output_section
 
 
@@ -1460,12 +1455,14 @@ class MetaData(object):
         return None
 
     def get_recipe_text(self, extract_pattern=None, force_top_level=False):
-        is_output = self.meta.get('extra', {}).get('parent_recipe', {}).get('path')
-        meta_path = self.meta_path or (os.path.join(is_output, 'meta.yaml') if is_output else '')
+        parent_recipe = self.meta.get('extra', {}).get('parent_recipe', {})
+        is_output = parent_recipe.get('path') and self.name() != parent_recipe.get('name')
+        meta_path = self.meta_path or (os.path.join(parent_recipe.get('path'), 'meta.yaml')
+                                       if is_output else '')
         if meta_path:
             recipe_text = read_meta_file(meta_path)
             if is_output and not force_top_level:
-                recipe_text = _filter_recipe_text(recipe_text, _output_filter_pattern(self.name()))
+                recipe_text = self.extract_single_output_text(self.name())
         else:
             recipe_text = yaml.dump(dict(self.meta), default_flow_style=False)
         recipe_text = _filter_recipe_text(recipe_text, extract_pattern)
@@ -1495,7 +1492,17 @@ class MetaData(object):
         return self.get_recipe_text(r'(^.*?)(^requirements:|^test:|^extra:|^about:|^outputs:|\Z)')
 
     def extract_single_output_text(self, output_name):
-        return self.get_recipe_text(_output_filter_pattern(output_name))
+        # first, need to figure out which index in our list of outputs the name matches.
+        #    We have to do this on rendered data, because templates can be used in output names
+        recipe_text = self.extract_outputs_text()
+        output_matches = output_re.findall(recipe_text)
+        try:
+            output_index = [out.get('name') for out in
+                            self.meta.get('outputs', [])].index(output_name)
+            output = output_matches[output_index] if output_matches else ''
+        except ValueError:
+            output = ''
+        return output
 
     @property
     def numpy_xx(self):
@@ -1650,18 +1657,21 @@ class MetaData(object):
                 #   can depend on subpackages, make sure that we filter out
                 #   subpackages so that they don't depend on themselves
                 subpackage_pattern = re.compile(r'(?:^{}(?:\s|$|\Z))'.format(output['name']))
-                build_reqs = [req for req in build_reqs if not subpackage_pattern.match(req)]
-                host_reqs = [req for req in host_reqs if not subpackage_pattern.match(req)]
-                run_reqs = [req for req in run_reqs if not subpackage_pattern.match(req)]
+                if build_reqs:
+                    build_reqs = [req for req in build_reqs if not subpackage_pattern.match(req)]
+                if host_reqs:
+                    host_reqs = [req for req in host_reqs if not subpackage_pattern.match(req)]
+                if run_reqs:
+                    run_reqs = [req for req in run_reqs if not subpackage_pattern.match(req)]
 
             requirements = {'build': build_reqs, 'host': host_reqs, 'run': run_reqs}
             if constrain_reqs:
                 requirements['run_constrained'] = constrain_reqs
             requirements.update(other_reqs)
             output_metadata.meta['requirements'] = requirements
-            for env in ('build', 'host'):
-                insert_variant_versions(output_metadata.meta.get('requirements', {}),
-                                        output_metadata.config.variant, env)
+            # for env in ('build', 'host'):
+            #     insert_variant_versions(output_metadata.meta.get('requirements', {}),
+            #                             output_metadata.config.variant, env)
             output_metadata.meta['package']['version'] = output.get('version') or self.version()
             extra = self.meta.get('extra', {})
             output_metadata.meta['extra'] = extra
@@ -1715,6 +1725,7 @@ class MetaData(object):
             outputs = get_output_dicts_from_metadata(self)[0]
             output_tuples = [(outputs, self)]
         else:
+            all_output_metadata = OrderedDict()
             for variant in (self.config.variants if hasattr(self.config, 'variants')
                             else [self.config.variant]):
                 om = self.copy()
@@ -1729,10 +1740,18 @@ class MetaData(object):
 
                 try:
                     for out in outputs:
-                        for env in ('build', 'host', 'run'):
-                            insert_variant_versions(utils.expand_reqs(out.get('requirements', {})),
-                                                    variant, env)
-                        out_metadata_map[HashableDict(out)] = om.get_output_metadata(out)
+                        requirements = out.get('requirements')
+                        if requirements:
+                            requirements = utils.expand_reqs(requirements)
+                            for env in ('build', 'host', 'run'):
+                                insert_variant_versions(requirements, variant, env)
+                            out['requirements'] = requirements
+                        out_metadata = om.get_output_metadata(out)
+                        all_output_metadata[(out_metadata.name(),
+                                             HashableDict({k: out_metadata.config.variant[k]
+                                    for k in out_metadata.get_used_vars()}))] = out, out_metadata
+                        out_metadata.other_outputs = all_output_metadata
+                        out_metadata_map[HashableDict(out)] = out_metadata
                 except SystemExit:
                     if not permit_undefined_jinja:
                         raise
@@ -1798,6 +1817,27 @@ class MetaData(object):
     def get_used_loop_vars(self, force_top_level=False):
         return {var for var in self.get_used_vars(force_top_level=force_top_level)
                 if var in self.get_loop_vars()}
+
+    def get_rendered_outputs_section(self):
+        extract_pattern = r'(.*)package:'
+        template_string = '\n'.join((self.get_recipe_text(extract_pattern=extract_pattern,
+                                                          force_top_level=True),
+                                    # second item: the output text for this metadata
+                                    #    object (might be output)
+                                    self.extract_outputs_text())).rstrip()
+
+        outputs = (yaml.safe_load(self._get_contents(permit_undefined_jinja=False,
+                                template_string=template_string)) or {}).get('outputs', [])
+        self.parse_until_resolved()
+        return get_output_dicts_from_metadata(self, outputs=outputs)
+
+    def get_rendered_output(self, name):
+        output = None
+        for output_ in self.get_rendered_outputs_section():
+            if output_.get('name') == name:
+                output = output_
+                break
+        return output
 
     def get_used_vars(self, force_top_level=False):
         global used_vars_cache

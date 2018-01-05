@@ -1009,9 +1009,6 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                                     " does not yet support Python 3.  Please handle all of "
                                     "your mercurial actions outside of your build script.")
 
-        utils.insert_variant_versions(m.meta.get('requirements', {}), m.config.variant, 'build')
-        utils.insert_variant_versions(m.meta.get('requirements', {}), m.config.variant, 'host')
-
         exclude_pattern = None
         excludes = set(m.config.variant.get('ignore_version', []))
 

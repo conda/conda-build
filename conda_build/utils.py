@@ -1356,6 +1356,5 @@ def match_peer_job(target_matchspec, other_m, this_m=None):
 def expand_reqs(reqs_entry):
     if not hasattr(reqs_entry, 'keys'):
         original = ensure_list(reqs_entry)[:]
-        reqs_entry = {'host': original,
-                        'run': original}
+        reqs_entry = {'host': original, 'run': original} if original else {}
     return reqs_entry
