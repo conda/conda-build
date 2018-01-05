@@ -291,8 +291,10 @@ def test_strong_run_exports_from_build_applies_to_host(testing_config):
     api.build(recipe, config=testing_config)
 
 
-def test_python_line_up_with_compiled_lib(testing_config):
-    recipe = os.path.join(subpackage_dir, '_line_up_python_compiled_libs')
+@pytest.mark.parametrize("recipe", ('_line_up_python_compiled_libs',
+                                    '_line_up_python_compiled_libs_top_level_same_name_output'))
+def test_python_line_up_with_compiled_lib(recipe, testing_config):
+    recipe = os.path.join(subpackage_dir, recipe)
     ms = api.render(recipe, config=testing_config, platform='win', arch='64')
     # 2 libxyz, 3 py-xyz, 3 xyz
     assert len(ms) == 8
@@ -300,8 +302,9 @@ def test_python_line_up_with_compiled_lib(testing_config):
         if m.name() in ('py-xyz' or 'xyz'):
             deps = m.meta['requirements']['run']
             assert any(dep.startswith('libxyz ') and len(dep.split()) == 3 for dep in deps), (m.name(), deps)
-            assert any(dep.startswith('zlib >') for dep in deps)
+            assert any(dep.startswith('python >') for dep in deps), (m.name(), deps)
+            assert any(dep.startswith('zlib >') for dep in deps), (m.name(), deps)
         if m.name() == 'xyz':
             deps = m.meta['requirements']['run']
             assert any(dep.startswith('py-xyz ') and len(dep.split()) == 3 for dep in deps), (m.name(), deps)
-            assert any(dep.startswith('zlib >') for dep in deps)
+            assert any(dep.startswith('python >') for dep in deps), (m.name(), deps)

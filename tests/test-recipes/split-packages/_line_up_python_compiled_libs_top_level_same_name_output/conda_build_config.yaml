@@ -1,0 +1,12 @@
+c_compiler:
+  - vs2008                     # [win]
+  - vs2015                     # [win]
+  - vs2015                     # [win]
+python:
+  - 2.7
+  - 3.5
+  - 3.6
+zip_keys:
+  -                             # [win]
+    - c_compiler                # [win]
+    - python                    # [win]

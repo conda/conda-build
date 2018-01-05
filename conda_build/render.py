@@ -26,6 +26,7 @@ from .conda_interface import execute_actions
 from .conda_interface import pkgs_dirs
 from .conda_interface import conda_43
 from .conda_interface import specs_from_url
+from .conda_interface import memoized
 
 from conda_build import exceptions, utils, environ
 from conda_build.metadata import MetaData, combine_top_level_metadata_with_output
@@ -188,23 +189,36 @@ def find_pkg_dir_or_file_in_pkgs_dirs(pkg_dist, m):
     return pkg_loc
 
 
+@memoized
+def _read_specs_from_package(pkg_loc, pkg_dist):
+    specs = {}
+    if os.path.isdir(pkg_loc):
+        downstream_file = os.path.join(pkg_loc, 'info/run_exports')
+        if os.path.isfile(downstream_file):
+            with open(downstream_file) as f:
+                specs = {'weak': [spec.rstrip() for spec in f.readlines()]}
+        # a later attempt: record more info in the yaml file, to support "strong" run exports
+        elif os.path.isfile(downstream_file + '.yaml'):
+            with open(downstream_file + '.yaml') as f:
+                specs = yaml.safe_load(f)
+    if not specs and os.path.isfile(pkg_loc):
+        specs_yaml = utils.package_has_file(pkg_loc, 'info/run_exports.yaml')
+        if specs_yaml:
+            specs = yaml.safe_load(specs_yaml)
+        else:
+            legacy_specs = utils.package_has_file(pkg_loc, 'info/run_exports')
+            # exclude packages pinning themselves (makes no sense)
+            if legacy_specs:
+                specs = {'weak': [spec.rstrip() for spec in legacy_specs.splitlines()
+                                if not spec.startswith(pkg_dist.rsplit('-', 2)[0])]}
+    return specs
+
+
 def get_upstream_pins(m, actions, env):
     """Download packages from specs, then inspect each downloaded package for additional
     downstream dependency specs.  Return these additional specs."""
 
-    # this attribute is added in the first pass of finalize_outputs_pass
-    extract_pattern = r'(.*)package:'
-    template_string = '\n'.join((m.get_recipe_text(extract_pattern=extract_pattern,
-                                                   force_top_level=True),
-                                 # second item: the requirements text for this particular metadata
-                                 #    object (might be output)
-                                m.extract_requirements_text())).rstrip()
-    raw_specs = {}
-    if template_string:
-        raw_specs = yaml.safe_load(m._get_contents(permit_undefined_jinja=False,
-                                    template_string=template_string)) or {}
-
-    env_specs = utils.expand_reqs(raw_specs.get('requirements', {})).get(env, [])
+    env_specs = m.meta.get('requirements', {}).get(env, [])
     explicit_specs = [req.split(' ')[0] for req in env_specs] if env_specs else []
     linked_packages = actions.get('LINK', [])
     linked_packages = [pkg for pkg in linked_packages if pkg.name in explicit_specs]
@@ -255,26 +269,7 @@ def get_upstream_pins(m, actions, env):
                     pkg_loc = _loc
                     break
 
-        specs = {}
-        if os.path.isdir(pkg_loc):
-            downstream_file = os.path.join(pkg_loc, 'info/run_exports')
-            if os.path.isfile(downstream_file):
-                with open(downstream_file) as f:
-                    specs = {'weak': [spec.rstrip() for spec in f.readlines()]}
-            # a later attempt: record more info in the yaml file, to support "strong" run exports
-            elif os.path.isfile(downstream_file + '.yaml'):
-                with open(downstream_file + '.yaml') as f:
-                    specs = yaml.safe_load(f)
-        if not specs and os.path.isfile(pkg_loc):
-            specs_yaml = utils.package_has_file(pkg_loc, 'info/run_exports.yaml')
-            if specs_yaml:
-                specs = yaml.safe_load(specs_yaml)
-            else:
-                legacy_specs = utils.package_has_file(pkg_loc, 'info/run_exports')
-                # exclude packages pinning themselves (makes no sense)
-                if legacy_specs:
-                    specs = {'weak': [spec.rstrip() for spec in legacy_specs.splitlines()
-                                    if not spec.startswith(pkg_dist.rsplit('-', 2)[0])]}
+        specs = _read_specs_from_package(pkg_loc, pkg_dist)
 
         additional_specs = utils.merge_dicts_of_lists(additional_specs,
                                                       _filter_run_exports(specs, ignore_list))
@@ -303,6 +298,7 @@ def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
         # this must come before we read upstream pins, because it will enforce things
         #      like vc version from the compiler.
         m.meta['requirements']['host'].extend(extra_run_specs_from_build.get('strong', []))
+
         host_deps, host_unsat, extra_run_specs_from_host = _read_upstream_pin_files(m, 'host',
                                                     permit_unsatisfiable_variants, exclude_pattern)
         extra_run_specs = set(extra_run_specs_from_host.get('strong', []) +
@@ -563,11 +559,6 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
                                 bypass_env_check=bypass_env_check)
         need_source_download = (not mv.needs_source_for_render or not mv.source_provided)
 
-        # # if python is in the build specs, but doesn't have a specific associated
-        # #    version, make sure to add one to newly parsed 'requirements/build'.
-        # for env in ('build', 'host', 'run'):
-        #     utils.insert_variant_versions(mv.meta.get('requirements', {}),
-        #                                   mv.config.variant, env)
         rendered_metadata[(mv.dist(),
                            mv.config.variant.get('target_platform', mv.config.subdir),
                            tuple((var, mv.config.variant[var])

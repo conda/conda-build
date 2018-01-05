@@ -704,15 +704,11 @@ def combine_top_level_metadata_with_output(metadata, output):
         else:
             output_section = output.get(section, {})
         for k, v in metadata_section.items():
-            # if k in output_section and v != output_section[k]:
-            #     raise ValueError("You have the '{}' entry defined in both the top-level {} "
-            #                         "section and the output which has the same name as the "
-            #                         "top-level recipe.  You can only have a given entry in "
-            #                         "a section defined in one of those 2 places.".format(
-            #                             k, section))
             if k not in output_section and v:
                 output_section[k] = v
         output[section] = output_section
+        # synchronize them
+        metadata.meta[section] = output_section
 
 
 class MetaData(object):

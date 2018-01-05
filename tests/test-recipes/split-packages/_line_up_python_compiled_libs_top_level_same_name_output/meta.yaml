@@ -1,0 +1,34 @@
+package:
+  # having this package name be the same as the output below exercises a lot of corner cases
+  name: xyz
+  version: 1.0
+
+outputs:
+  - name: libxyz
+    build:
+      run_exports:
+        - {{ pin_subpackage('libxyz') }}
+    requirements:
+      build:
+        - {{ compiler('c') }}
+  - name: py-xyz
+    requirements:
+      build:
+        - {{ compiler('c') }}
+      host:
+        - python
+        # to test run_exports
+        - zlib
+      run:
+        - {{ pin_subpackage('libxyz', exact=True) }}
+        - python
+  - name: xyz
+    requirements:
+      host:
+        - python
+        # to test run_exports
+        - zlib
+      run:
+        - {{ pin_subpackage('libxyz', exact=True) }}
+        - {{ pin_subpackage('py-xyz', exact=True) }}
+        - python
