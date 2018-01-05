@@ -266,14 +266,15 @@ def get_upstream_pins(m, actions, env):
                 with open(downstream_file + '.yaml') as f:
                     specs = yaml.safe_load(f)
         if not specs and os.path.isfile(pkg_loc):
-            legacy_specs = utils.package_has_file(pkg_loc, 'info/run_exports')
             specs_yaml = utils.package_has_file(pkg_loc, 'info/run_exports.yaml')
-            if specs:
-                # exclude packages pinning themselves (makes no sense)
-                specs = {'weak': [spec.rstrip() for spec in legacy_specs.splitlines()
-                                  if not spec.startswith(pkg_dist.rsplit('-', 2)[0])]}
-            elif specs_yaml:
+            if specs_yaml:
                 specs = yaml.safe_load(specs_yaml)
+            else:
+                legacy_specs = utils.package_has_file(pkg_loc, 'info/run_exports')
+                # exclude packages pinning themselves (makes no sense)
+                if legacy_specs:
+                    specs = {'weak': [spec.rstrip() for spec in legacy_specs.splitlines()
+                                    if not spec.startswith(pkg_dist.rsplit('-', 2)[0])]}
 
         additional_specs = utils.merge_dicts_of_lists(additional_specs,
                                                       _filter_run_exports(specs, ignore_list))
@@ -522,7 +523,6 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
     # These are always the full set.  just 'variants' is the one that gets
     #     used mostly, and can be reduced
     metadata.config.input_variants = variants
-    squished_variants = list_of_dicts_to_dict_of_lists(variants)
 
     recipe_requirements = metadata.extract_requirements_text()
     recipe_package_and_build_text = metadata.extract_package_and_build_text()
@@ -543,26 +543,9 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
             #     variant mapping
             conform_dict[key] = variant[key]
 
-        # handle grouping from zip_keys for everything in conform_dict
-        if 'zip_keys' in variant:
-            zip_key_groups = variant['zip_keys']
-            if zip_key_groups and not isinstance(zip_key_groups[0], list):
-                zip_key_groups = [zip_key_groups]
-            for key in list(conform_dict.keys()):
-                zipped_keys = None
-                for group in zip_key_groups:
-                    if key in group:
-                        zipped_keys = group
-                    if zipped_keys:
-                        # here we zip the values of the keys, so that we can match the combination
-                        zipped_values = list(zip(*[squished_variants[key] for key in zipped_keys]))
-                        variant_index = zipped_values.index(tuple(variant[key]
-                                                                  for key in zipped_keys))
-                        for zipped_key in zipped_keys:
-                            conform_dict[zipped_key] = squished_variants[zipped_key][variant_index]
-
         build_reqs = mv.meta.get('requirements', {}).get('build', [])
         host_reqs = mv.meta.get('requirements', {}).get('host', [])
+
         if 'python' in build_reqs or 'python' in host_reqs:
             conform_dict['python'] = variant['python']
         if 'r-base' in build_reqs or 'r-base' in host_reqs:

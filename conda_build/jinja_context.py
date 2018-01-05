@@ -317,7 +317,6 @@ def pin_subpackage(metadata, subpackage_name, min_pin='x.x.x.x.x.x', max_pin='x'
                     break
 
         if not key and not allow_no_other_outputs:
-            import ipdb; ipdb.set_trace()
             raise ValueError("didn't find matching subpackage for name {} with variant {} - this "
                              "is probably a conda-build bug.".format(subpackage_name,
                                                                      metadata.config.variant))

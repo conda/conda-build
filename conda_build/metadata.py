@@ -1625,82 +1625,84 @@ class MetaData(object):
     def get_output_metadata(self, output):
         output_metadata = self.copy()
 
-        output_reqs = utils.expand_reqs(output.get('requirements', {}))
-        build_reqs = output_reqs.get('build', [])
-        host_reqs = output_reqs.get('host', [])
-        run_reqs = output_reqs.get('run', [])
-        constrain_reqs = output_reqs.get('run_constrained', [])
-        # pass through any other unrecognized req types
-        other_reqs = {k: v for k, v in output_reqs.items() if k not in
-                        ('build', 'host', 'run', 'run_constrained')}
+        if output:
+            output_reqs = utils.expand_reqs(output.get('requirements', {}))
+            build_reqs = output_reqs.get('build', [])
+            host_reqs = output_reqs.get('host', [])
+            run_reqs = output_reqs.get('run', [])
+            constrain_reqs = output_reqs.get('run_constrained', [])
+            # pass through any other unrecognized req types
+            other_reqs = {k: v for k, v in output_reqs.items() if k not in
+                            ('build', 'host', 'run', 'run_constrained')}
 
-        if output.get('target'):
-            output_metadata.config.target_subdir = output['target']
+            if output.get('target'):
+                output_metadata.config.target_subdir = output['target']
 
-        if self.name() != output.get('name') or (output.get('script') or output.get('files')):
-            self.reconcile_metadata_with_output_dict(output_metadata, output)
+            if self.name() != output.get('name') or (output.get('script') or output.get('files')):
+                self.reconcile_metadata_with_output_dict(output_metadata, output)
 
-        if 'type' in output and output['type'] != 'conda':
-            name = output.get('name', self.name()) + '_' + output['type']
-            output_metadata.meta['package']['name'] = name
+            if 'type' in output and output['type'] != 'conda':
+                name = output.get('name', self.name()) + '_' + output['type']
+                output_metadata.meta['package']['name'] = name
 
-        if 'name' in output:
-            # since we are copying reqs from the top-level package, which
-            #   can depend on subpackages, make sure that we filter out
-            #   subpackages so that they don't depend on themselves
-            subpackage_pattern = re.compile(r'(?:^{}(?:\s|$|\Z))'.format(output['name']))
-            build_reqs = [req for req in build_reqs if not subpackage_pattern.match(req)]
-            host_reqs = [req for req in host_reqs if not subpackage_pattern.match(req)]
-            run_reqs = [req for req in run_reqs if not subpackage_pattern.match(req)]
+            if 'name' in output:
+                # since we are copying reqs from the top-level package, which
+                #   can depend on subpackages, make sure that we filter out
+                #   subpackages so that they don't depend on themselves
+                subpackage_pattern = re.compile(r'(?:^{}(?:\s|$|\Z))'.format(output['name']))
+                build_reqs = [req for req in build_reqs if not subpackage_pattern.match(req)]
+                host_reqs = [req for req in host_reqs if not subpackage_pattern.match(req)]
+                run_reqs = [req for req in run_reqs if not subpackage_pattern.match(req)]
 
-        requirements = {'build': build_reqs, 'host': host_reqs, 'run': run_reqs}
-        if constrain_reqs:
-            requirements['run_constrained'] = constrain_reqs
-        requirements.update(other_reqs)
-        output_metadata.meta['requirements'] = requirements
-        for env in ('build', 'host'):
-            insert_variant_versions(output_metadata.meta.get('requirements', {}),
-                                    output_metadata.config.variant, env)
-        output_metadata.meta['package']['version'] = output.get('version') or self.version()
-        extra = self.meta.get('extra', {})
-        output_metadata.meta['extra'] = extra
-        output_metadata.final = False
-        if self.name() != output_metadata.name() or (output.get('script') or output.get('files')):
+            requirements = {'build': build_reqs, 'host': host_reqs, 'run': run_reqs}
+            if constrain_reqs:
+                requirements['run_constrained'] = constrain_reqs
+            requirements.update(other_reqs)
+            output_metadata.meta['requirements'] = requirements
+            for env in ('build', 'host'):
+                insert_variant_versions(output_metadata.meta.get('requirements', {}),
+                                        output_metadata.config.variant, env)
+            output_metadata.meta['package']['version'] = output.get('version') or self.version()
             extra = self.meta.get('extra', {})
-            extra['parent_recipe'] = {'path': self.path, 'name': self.name(),
-                                      'version': self.version()}
             output_metadata.meta['extra'] = extra
-        output_metadata.noarch = output.get('noarch', False)
-        output_metadata.noarch_python = output.get('noarch_python', False)
-        # primarily for tests - make sure that we keep the platform consistent (setting noarch
-        #      would reset it)
-        if (not (output_metadata.noarch or output_metadata.noarch_python) and
-                self.config.platform != output_metadata.config.platform):
-            output_metadata.config.platform = self.config.platform
+            output_metadata.final = False
+            if (self.name() != output_metadata.name() or
+                    (output.get('script') or output.get('files'))):
+                extra = self.meta.get('extra', {})
+                extra['parent_recipe'] = {'path': self.path, 'name': self.name(),
+                                        'version': self.version()}
+                output_metadata.meta['extra'] = extra
+            output_metadata.noarch = output.get('noarch', False)
+            output_metadata.noarch_python = output.get('noarch_python', False)
+            # primarily for tests - make sure that we keep the platform consistent (setting noarch
+            #      would reset it)
+            if (not (output_metadata.noarch or output_metadata.noarch_python) and
+                    self.config.platform != output_metadata.config.platform):
+                output_metadata.config.platform = self.config.platform
 
-        build = output_metadata.meta.get('build', {})
-        # legacy (conda build 2.1.x - 3.0.25). Newer stuff should just emulate
-        #   the top-level recipe, with full sections for build, test, about
-        if 'number' in output:
-            build['number'] = output['number']
-        if 'string' in output:
-            build['string'] = output['string']
-        if 'run_exports' in output and output['run_exports']:
-            build['run_exports'] = output['run_exports']
-        if 'track_features' in output and output['track_features']:
-            build['track_features'] = output['track_features']
-        if 'features' in output and output['features']:
-            build['features'] = output['features']
+            build = output_metadata.meta.get('build', {})
+            # legacy (conda build 2.1.x - 3.0.25). Newer stuff should just emulate
+            #   the top-level recipe, with full sections for build, test, about
+            if 'number' in output:
+                build['number'] = output['number']
+            if 'string' in output:
+                build['string'] = output['string']
+            if 'run_exports' in output and output['run_exports']:
+                build['run_exports'] = output['run_exports']
+            if 'track_features' in output and output['track_features']:
+                build['track_features'] = output['track_features']
+            if 'features' in output and output['features']:
+                build['features'] = output['features']
 
-        # 3.0.26+ - just pass through the whole build section from the output.
-        #    It clobbers everything else.
-        if 'build' in output:
-            build = output['build']
-        output_metadata.meta['build'] = build
-        if 'test' in output:
-            output_metadata.meta['test'] = output['test']
-        if 'about' in output:
-            output_metadata.meta['about'] = output['about']
+            # 3.0.26+ - just pass through the whole build section from the output.
+            #    It clobbers everything else.
+            if 'build' in output:
+                build = output['build']
+            output_metadata.meta['build'] = build
+            if 'test' in output:
+                output_metadata.meta['test'] = output['test']
+            if 'about' in output:
+                output_metadata.meta['about'] = output['about']
 
         return output_metadata
 
