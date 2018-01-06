@@ -902,18 +902,19 @@ def test_run_exports(testing_metadata, testing_config, testing_workdir):
 
     #    2. host present.  Use run_exports from host, ignore 'weak' ones from build.  All are
     #           weak by default.
-    testing_metadata.meta['requirements']['build'] = ['test_has_run_exports_implicit_weak']
+    testing_metadata.meta['requirements']['build'] = ['test_has_run_exports_implicit_weak',
+                                                      '{{ compiler("c") }}']
     testing_metadata.meta['requirements']['host'] = ['python']
-    api.output_yaml(testing_metadata, 'meta.yaml')
-    m = api.render(testing_workdir, config=testing_config)[0][0]
+    api.output_yaml(testing_metadata, 'host_present_weak/meta.yaml')
+    m = api.render(os.path.join(testing_workdir, 'host_present_weak'), config=testing_config)[0][0]
     assert 'weak_pinned_package 2.0.*' not in m.meta['requirements'].get('run', [])
 
     #    3. host present, and deps in build have "strong" run_exports section.  use host, add
     #           in "strong" from build.
-    testing_metadata.meta['requirements']['build'] = ['test_has_run_exports']
+    testing_metadata.meta['requirements']['build'] = ['test_has_run_exports', '{{ compiler("c") }}']
     testing_metadata.meta['requirements']['host'] = ['test_has_run_exports_implicit_weak']
-    api.output_yaml(testing_metadata, 'meta.yaml')
-    m = api.render(testing_workdir, config=testing_config)[0][0]
+    api.output_yaml(testing_metadata, 'host_present_strong/meta.yaml')
+    m = api.render(os.path.join(testing_workdir, 'host_present_strong'), config=testing_config)[0][0]
     assert any('strong_pinned_package 1.0' in req for req in m.meta['requirements']['host'])
     assert 'strong_pinned_package 1.0.*' in m.meta['requirements']['run']
     # weak one from test_has_run_exports should be excluded, since it is a build dep

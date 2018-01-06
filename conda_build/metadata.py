@@ -636,7 +636,7 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
             # store a copy of the metadata before finalization, so that we know what is
             #     original stuff.  This is especially important for only applying run_exports
             #     to things that are actually specified in the recipe, not installed as deps.
-            # match up the old variant with the current one from this output
+            # Using base_metadata is important for keeping the reference to the parent recipe
             om.config.variant = metadata.config.variant
             om.other_outputs.update(outputs)
             om.final = False
@@ -1613,12 +1613,14 @@ class MetaData(object):
             if 'imports' in test:
                 del test['imports']
 
-        # make sure that subpackages do not duplicate top-level entry-points
+        # make sure that subpackages do not duplicate top-level entry-points or run_exports
         build = output_metadata.meta.get('build', {})
-        if 'entry_points' in output_dict:
-            build['entry_points'] = output_dict['entry_points']
-        elif 'entry_points' in build:
-            del build['entry_points']
+        transfer_keys = 'entry_points', 'run_exports'
+        for key in transfer_keys:
+            if key in output_dict:
+                build[key] = output_dict[key]
+            elif key in build:
+                del build[key]
         output_metadata.meta['build'] = build
 
         # reset these so that reparsing does not reset the metadata name
