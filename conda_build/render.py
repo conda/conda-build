@@ -305,16 +305,12 @@ def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
                               extra_run_specs_from_host.get('weak', []) +
                               extra_run_specs_from_build.get('strong', []))
     else:
-        # redo this, but lump in the host deps too, to catch any run_exports stuff that gets merged
-        #    when build platform is same as host
-        build_deps, build_actions, build_unsat = get_env_dependencies(m, 'build', m.config.variant,
-                                        exclude_pattern,
-                                        permit_unsatisfiable_variants=permit_unsatisfiable_variants)
         m.config.build_prefix_override = not m.uses_new_style_compiler_activation
         host_deps = []
         host_unsat = []
-        extra_run_specs = set(extra_run_specs_from_build.get('strong', []) +
-                              extra_run_specs_from_build.get('weak', []))
+        extra_run_specs = set(extra_run_specs_from_build.get('strong', []))
+        if m.config.build_prefix_override:
+            extra_run_specs.update(extra_run_specs_from_build.get('weak', []))
 
     run_deps = extra_run_specs | set(utils.ensure_list(requirements.get('run')))
 

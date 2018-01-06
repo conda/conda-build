@@ -1667,12 +1667,7 @@ class MetaData(object):
                 requirements['run_constrained'] = constrain_reqs
             requirements.update(other_reqs)
             output_metadata.meta['requirements'] = requirements
-            # for env in ('build', 'host'):
-            #     insert_variant_versions(output_metadata.meta.get('requirements', {}),
-            #                             output_metadata.config.variant, env)
             output_metadata.meta['package']['version'] = output.get('version') or self.version()
-            extra = self.meta.get('extra', {})
-            output_metadata.meta['extra'] = extra
             output_metadata.final = False
             if (self.name() != output_metadata.name() or
                     (output.get('script') or output.get('files'))):
@@ -1934,7 +1929,7 @@ class MetaData(object):
             else:
                 log = utils.get_logger(__name__)
                 log.warn('Not detecting used variables in output script {}; conda-build only knows '
-                         'how to search .sh and .bat files right now.'.format(path))
+                         'how to search .sh and .bat files right now.'.format(script))
         return used_vars
 
     def get_variants_as_dict_of_lists(self):
