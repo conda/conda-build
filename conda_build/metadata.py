@@ -44,6 +44,12 @@ on_win = (sys.platform == 'win32')
 ARCH_MAP = {'32': 'x86',
             '64': 'x86_64'}
 
+# we originally matched outputs based on output name. Unfortunately, that
+#    doesn't work when outputs are templated - we want to match un-rendered
+#    text, but we have rendered names.
+# We overcome that divide by finding the output index in a rendered set of
+#    outputs, so our names match, then we use that numeric index with this
+#    regex, which extract all outputs in order.
 output_re = re.compile(r"^\s+-\s(?:name|type):.+?(?=^\w|\Z|^\s+-\s(?:name|type))",
                        flags=re.M | re.S)
 
@@ -612,7 +618,12 @@ def get_output_dicts_from_metadata(metadata, outputs=None):
     for out in outputs:
         if out.get('name') == metadata.name():
             combine_top_level_metadata_with_output(metadata, out)
-    [trim_empty_keys(out) for out in outputs]
+
+        # TODO: Outputs are coming up with None values for some fields. That trips
+        # up later things, and makes checking values more annoying. This is a
+        # band-aid. The right fix is to fix the creation of those None values.
+        trim_empty_keys(out)
+
     return outputs
 
 
@@ -631,12 +642,14 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
             # we base things on base_metadata because it has the record of the full origin recipe
             if base_metadata.config.verbose:
                 log.info("Attempting to finalize metadata for {}".format(metadata.name()))
-            om = base_metadata.copy()
-            om.other_outputs = metadata.other_outputs
-            # store a copy of the metadata before finalization, so that we know what is
-            #     original stuff.  This is especially important for only applying run_exports
-            #     to things that are actually specified in the recipe, not installed as deps.
             # Using base_metadata is important for keeping the reference to the parent recipe
+            om = base_metadata.copy()
+            # other_outputs is the context of what's available for
+            # pin_subpackage. It's stored on the metadata object here, but not
+            # on base_metadata, which om is a copy of. Before we do
+            # re-rendering of om's metadata, we need to have other_outputs in
+            # place, so it can refer to it for any pin_subpackage stuff it has.
+            om.other_outputs = metadata.other_outputs
             om.config.variant = metadata.config.variant
             om.other_outputs.update(outputs)
             om.final = False
@@ -1740,6 +1753,11 @@ class MetaData(object):
                                 insert_variant_versions(requirements, variant, env)
                             out['requirements'] = requirements
                         out_metadata = om.get_output_metadata(out)
+                        # keeping track of other outputs is necessary for correct functioning of the
+                        #    pin_subpackage jinja2 function.  It's important that we store all of
+                        #    our outputs so that they can be referred to in later rendering.  We
+                        #    also refine this collection as each output metadata object is
+                        #    finalized - see the finalize_outputs_pass function
                         all_output_metadata[(out_metadata.name(),
                                              HashableDict({k: out_metadata.config.variant[k]
                                     for k in out_metadata.get_used_vars()}))] = out, out_metadata
@@ -1825,6 +1843,10 @@ class MetaData(object):
         return get_output_dicts_from_metadata(self, outputs=outputs)
 
     def get_rendered_output(self, name):
+        """This is for obtaining the rendered, parsed, dictionary-object representation of an
+        output. It's not useful for saying what variables are used. You need earlier, more raw
+        versions of the metadata for that. It is useful, however, for getting updated, re-rendered
+        contents of outputs."""
         output = None
         for output_ in self.get_rendered_outputs_section():
             if output_.get('name') == name:
