@@ -74,14 +74,13 @@ test_script:
   - set LUA=
   - set R=
   # cache several files to avoid race condition errors
-  #   safety checks is a conda 4.4 flag
-  # - conda config --set safety_checks disabled
-  - conda config --set local_repodata_ttl 1800
-  - conda create -n blarg1 -yq python=2.7
-  - conda create -n blarg2 -yq python=3.4
-  - conda create -n blarg3 -yq python=3.5
-  - conda create -n blarg4 -yq python=3.6
-  - conda create -n blarg5 -yq libpng=1.6.17
+  - echo "safety_checks: disabled" >> ~/.condarc
+  - echo "local_repodata_ttl: 1800" >> ~/.condarc
+  - conda create -n blarg -yq --download-only python=2.7 libpng=1.6.17
+  - conda create -n blarg -yq --download-only python=3.4 libpng=1.6.17
+  - conda create -n blarg -yq --download-only python=3.5 libpng=1.6.17
+  # no libpng here because we already have the right version from the 3.5 install
+  - conda create -n blarg -yq --download-only python=3.6
   - py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp -n 0 -m "serial"
   # remove all folders to avoid permission errors.  Leave root files (may have coverage info there)
   - for /d %%F in (c:\cbtmp\*) do rd /s /q "%%F"
