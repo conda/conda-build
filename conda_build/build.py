@@ -1023,6 +1023,12 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
         if excludes or output_excludes:
             exclude_pattern = re.compile('|'.join('(?:^{}(?:\s|$|\Z))'.format(exc)
                                             for exc in excludes | output_excludes))
+
+        # this metadata object may not be finalized - the outputs are, but this is the
+        #     top-level metadata.  We need to make sure that the variant pins are added in.
+        if m.meta.get('requirements'):
+            utils.insert_variant_versions(m.meta['requirements'], m.config.variant, 'build')
+            utils.insert_variant_versions(m.meta['requirements'], m.config.variant, 'host')
         add_upstream_pins(m, False, exclude_pattern)
 
         build_ms_deps = m.ms_depends('build')

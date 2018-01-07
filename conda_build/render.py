@@ -305,18 +305,17 @@ def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
                               extra_run_specs_from_host.get('weak', []) +
                               extra_run_specs_from_build.get('strong', []))
     else:
-        m.config.build_prefix_override = not m.uses_new_style_compiler_activation
         host_deps = []
         host_unsat = []
         extra_run_specs = set(extra_run_specs_from_build.get('strong', []))
-        if m.config.build_prefix_override:
+        if not m.uses_new_style_compiler_activation:
             extra_run_specs.update(extra_run_specs_from_build.get('weak', []))
 
     run_deps = extra_run_specs | set(utils.ensure_list(requirements.get('run')))
 
-    requirements.update({'build': [utils.ensure_valid_spec(spec, warn=True) for spec in build_deps],
-                         'host': [utils.ensure_valid_spec(spec, warn=True) for spec in host_deps],
-                         'run': [utils.ensure_valid_spec(spec, warn=True) for spec in run_deps]})
+    for section, deps in (('build', build_deps), ('host', host_deps), ('run', run_deps)):
+        if deps:
+            requirements[section] = list(deps)
 
     m.meta['requirements'] = requirements
     return build_unsat, host_unsat

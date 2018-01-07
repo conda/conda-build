@@ -138,12 +138,12 @@ def test_cross_recipe_with_only_build_section(testing_config):
     metadata = api.render(recipe, config=testing_config, bypass_env_check=True)[0][0]
     assert metadata.config.host_subdir != subdir
     assert metadata.config.build_prefix == metadata.config.host_prefix
-    assert metadata.config.build_prefix_override
+    assert metadata.config.build_is_host
     recipe = os.path.join(metadata_dir, '_cross_prefix_elision_compiler_used')
     metadata = api.render(recipe, config=testing_config, bypass_env_check=True)[0][0]
     assert metadata.config.host_subdir != subdir
     assert metadata.config.build_prefix != metadata.config.host_prefix
-    assert not metadata.config.build_prefix_override
+    assert not metadata.config.build_is_host
 
 
 @pytest.mark.serial

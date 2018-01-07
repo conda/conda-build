@@ -1323,7 +1323,8 @@ def insert_variant_versions(requirements_dict, variant, env):
             if x:
                 del reqs[i]
                 reqs.insert(i, ensure_valid_spec(' '.join((x.group(1), variant.get(x.group(1))))))
-    requirements_dict[env] = reqs
+    if reqs:
+        requirements_dict[env] = reqs
 
 
 def match_peer_job(target_matchspec, other_m, this_m=None):
