@@ -243,18 +243,27 @@ def pin_compatible(m, package_name, lower_bound=None, upper_bound=None, min_pin=
     return "  ".join((package_name, compatibility)) if compatibility is not None else package_name
 
 
-def pin_subpackage_against_outputs(key, outputs, min_pin, max_pin, exact, permit_undefined_jinja):
-    # If we can finalize the metadata at the same time as we create metadata.other_outputs then
-    # this function is not necessary and can be folded back into pin_subpackage.
-    pin = None
-    subpackage_name, _ = key
+def pin_subpackage_against_outputs(metadata, matching_package_keys, outputs, min_pin, max_pin,
+                                   exact, permit_undefined_jinja):
     # two ways to match:
     #    1. only one other output named the same as the subpackage_name from the key
-    #    2. whole key matches (both subpackage name and variant)
-    keys = list(outputs.keys())
-    matching_package_keys = [k for k in keys if k[0] == subpackage_name]
+    #    2. whole key matches (both subpackage name and variant (used keys only))
+
     if len(matching_package_keys) == 1:
         key = matching_package_keys[0]
+    elif len(matching_package_keys) > 1:
+        key = None
+        for pkg_name, variant in matching_package_keys:
+            # This matches other outputs with any keys that are common to both
+            # metadata objects. For debugging, the keys are always the (package
+            # name, used vars+values). It used to be (package name, variant) -
+            # but that was really big and hard to look at.
+            shared_vars = set(variant.keys()) & set(metadata.config.variant.keys())
+            if not shared_vars or all(variant[sv] == metadata.config.variant[sv]
+                                        for sv in shared_vars):
+                key = (pkg_name, variant)
+                break
+
     if key in outputs:
         sp_m = outputs[key][1]
         if permit_undefined_jinja and not sp_m.version():
@@ -263,15 +272,12 @@ def pin_subpackage_against_outputs(key, outputs, min_pin, max_pin, exact, permit
             if exact:
                 pin = " ".join([sp_m.name(), sp_m.version(), sp_m.build_id()])
             else:
-                pin = "{0} {1}".format(subpackage_name,
+                pin = "{0} {1}".format(sp_m.name(),
                                        apply_pin_expressions(sp_m.version(), min_pin,
                                                              max_pin))
     else:
-        pin = subpackage_name
+        pin = matching_package_keys[0][0]
     return pin
-
-
-subpackage_cache = {}
 
 
 def pin_subpackage(metadata, subpackage_name, min_pin='x.x.x.x.x.x', max_pin='x',
@@ -300,15 +306,13 @@ def pin_subpackage(metadata, subpackage_name, min_pin='x.x.x.x.x.x', max_pin='x'
             raise ValueError("Bug in conda-build: we need to have info about other outputs in "
                              "order to allow pinning to them.  It's not here.")
     else:
-        key = (subpackage_name, HashableDict(metadata.config.variant))
         # two ways to match:
         #    1. only one other output named the same as the subpackage_name from the key
         #    2. whole key matches (both subpackage name and variant)
         keys = list(metadata.other_outputs.keys())
         matching_package_keys = [k for k in keys if k[0] == subpackage_name]
-        if len(matching_package_keys) == 1:
-            key = matching_package_keys[0]
-        pin = pin_subpackage_against_outputs(key, metadata.other_outputs, min_pin, max_pin,
+        pin = pin_subpackage_against_outputs(metadata, matching_package_keys,
+                                             metadata.other_outputs, min_pin, max_pin,
                                              exact, permit_undefined_jinja)
     if not pin:
         pin = subpackage_name

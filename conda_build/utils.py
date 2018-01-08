@@ -1323,7 +1323,8 @@ def insert_variant_versions(requirements_dict, variant, env):
             if x:
                 del reqs[i]
                 reqs.insert(i, ensure_valid_spec(' '.join((x.group(1), variant.get(x.group(1))))))
-    requirements_dict[env] = reqs
+    if reqs:
+        requirements_dict[env] = reqs
 
 
 def match_peer_job(target_matchspec, other_m, this_m=None):
@@ -1356,6 +1357,5 @@ def match_peer_job(target_matchspec, other_m, this_m=None):
 def expand_reqs(reqs_entry):
     if not hasattr(reqs_entry, 'keys'):
         original = ensure_list(reqs_entry)[:]
-        reqs_entry = {'host': original,
-                        'run': original}
+        reqs_entry = {'host': original, 'run': original} if original else {}
     return reqs_entry
