@@ -278,6 +278,12 @@ different sets of packages."""
               "the source archive(s) containing the files could become unavailable sometime "
               "in the future.")
     )
+    p.add_argument(
+        '--merge-build-host', action="store_true",
+        help=('Merge the build and host directories, even when host section or compiler '
+              'jinja2 is present'),
+        default=cc_conda_build.get('merge_build_host', 'false').lower() == 'true',
+    )
 
     add_parser_channels(p)
 

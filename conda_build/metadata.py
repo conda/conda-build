@@ -840,7 +840,8 @@ class MetaData(object):
             if self.config.bootstrap:
                 dependencies = _get_dependencies_from_environment(self.config.bootstrap)
                 self.append_metadata_sections(dependencies, merge=True)
-            if (self.config.build_prefix_override or
+            if (self.config.merge_build_host or
+                self.meta.get('build', {}).get('merge_build_host', False) or
                 (not self.meta.get('requirements', {}).get('host', []) and not
                         self.uses_new_style_compiler_activation)):
                 self.config.build_is_host = True
