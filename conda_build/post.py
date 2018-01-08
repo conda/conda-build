@@ -278,9 +278,11 @@ def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
     print("Fixing linking of %s in %s" % (link, path))
     if build_prefix != host_prefix and link.startswith(build_prefix):
         link = link.replace(build_prefix, host_prefix)
-        print(".. seems to be linking to a compiler runtime, replacing build prefix with host prefix and")
+        print(".. seems to be linking to a compiler runtime, replacing build prefix with "
+              "host prefix and")
         if not is_obj(link):
-            sys.exit("Error: Compiler runtime library in build prefix not found in host prefix %s" % link)
+            sys.exit("Error: Compiler runtime library in build prefix not found in host prefix %s"
+                     % link)
         else:
             print(".. fixing linking of %s in %s instead" % (link, path))
 
@@ -456,7 +458,8 @@ def post_build(m, files, build_python, config):
 
     for f in files:
         if f.startswith('bin/'):
-            fix_shebang(f, prefix=config.host_prefix, build_python=build_python, osx_is_app=osx_is_app)
+            fix_shebang(f, prefix=config.host_prefix, build_python=build_python,
+                        osx_is_app=osx_is_app)
         if binary_relocation is True or (isinstance(binary_relocation, list) and
                                          f in binary_relocation):
             mk_relative(m, f, prefix_files, config)
