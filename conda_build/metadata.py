@@ -712,10 +712,9 @@ def combine_top_level_metadata_with_output(metadata, output):
     sections = ('requirements', 'build', 'about')
     for section in sections:
         metadata_section = metadata.meta.get(section, {})
+        output_section = output.get(section, {})
         if section == 'requirements':
             output_section = utils.expand_reqs(output.get(section, {}))
-        else:
-            output_section = output.get(section, {})
         for k, v in metadata_section.items():
             if k not in output_section and v:
                 output_section[k] = v
