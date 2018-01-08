@@ -273,10 +273,20 @@ def find_lib(link, prefix, files, path=None):
     print("Don't know how to find %s, skipping" % link)
 
 
-def osx_ch_link(path, link_dict, prefix, files):
+def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
     link = link_dict['name']
     print("Fixing linking of %s in %s" % (link, path))
-    link_loc = find_lib(link, prefix, files, path)
+    if build_prefix != host_prefix and link.startswith(build_prefix):
+        link = link.replace(build_prefix, host_prefix)
+        print(".. seems to be linking to a compiler runtime, replacing build prefix with "
+              "host prefix and")
+        if not is_obj(link):
+            sys.exit("Error: Compiler runtime library in build prefix not found in host prefix %s"
+                     % link)
+        else:
+            print(".. fixing linking of %s in %s instead" % (link, path))
+
+    link_loc = find_lib(link, host_prefix, files, path)
     if not link_loc:
         return
 
@@ -312,31 +322,22 @@ def osx_ch_link(path, link_dict, prefix, files):
     return ret
 
 
-def mk_relative_osx(path, prefix, files, build_prefix=None):
-    '''
-    if build_prefix is None, then this is a standard conda build. The path
-    and all dependencies are in the build_prefix.
-
-    if package is built in develop mode, build_prefix is specified. Object
-    specified by 'path' needs to relink runtime dependences to libs found in
-    build_prefix/lib/. Also, in develop mode, 'path' is not in 'build_prefix'
-    '''
-    if build_prefix is None:
-        assert path.startswith(prefix + '/')
-    else:
-        prefix = build_prefix
-
+def mk_relative_osx(path, host_prefix, build_prefix, files):
     assert sys.platform == 'darwin' and is_obj(path)
 
     names = macho.otool(path)
-    s = macho.install_name_change(path, partial(osx_ch_link, prefix=prefix, files=files),
+    s = macho.install_name_change(path,
+                                  partial(osx_ch_link,
+                                          host_prefix=host_prefix,
+                                          build_prefix=build_prefix,
+                                          files=files),
                                   dylibs=names)
 
     if names:
         # Add an rpath to every executable to increase the chances of it
         # being found.
         rpath = os.path.join('@loader_path',
-                     os.path.relpath(os.path.join(prefix, 'lib'),
+                     os.path.relpath(os.path.join(host_prefix, 'lib'),
                              os.path.dirname(path)), '').replace('/./', '/')
         macho.add_rpath(path, rpath, verbose=True)
 
@@ -348,7 +349,7 @@ def mk_relative_osx(path, prefix, files, build_prefix=None):
     if s:
         # Skip for stub files, which have to use binary_has_prefix_files to be
         # made relocatable.
-        assert_relative_osx(path, prefix)
+        assert_relative_osx(path, host_prefix)
 
 
 def mk_relative_linux(f, prefix, rpaths=('lib',)):
@@ -401,16 +402,16 @@ def assert_relative_osx(path, prefix):
         assert not name.startswith(prefix), path
 
 
-def mk_relative(m, f, prefix, files):
+def mk_relative(m, f, files, config):
     assert sys.platform != 'win32'
-    path = os.path.join(prefix, f)
+    path = os.path.join(config.host_prefix, f)
     if not is_obj(path):
         return
 
     if sys.platform.startswith('linux'):
-        mk_relative_linux(f, prefix=prefix, rpaths=m.get_value('build/rpaths', ['lib']))
+        mk_relative_linux(f, config.host_prefix, rpaths=m.get_value('build/rpaths', ['lib']))
     elif sys.platform == 'darwin':
-        mk_relative_osx(path, prefix=prefix, files=files)
+        mk_relative_osx(path, config.host_prefix, config.build_prefix, files=files)
 
 
 def fix_permissions(files, prefix):
@@ -437,12 +438,12 @@ def fix_permissions(files, prefix):
                 log.warn(str(e))
 
 
-def post_build(m, files, prefix, build_python, croot):
+def post_build(m, files, build_python, config):
     print('number of files:', len(files))
-    fix_permissions(files, prefix)
+    fix_permissions(files, config.host_prefix)
 
     for f in files:
-        make_hardlink_copy(f, prefix)
+        make_hardlink_copy(f, config.host_prefix)
 
     if sys.platform == 'win32':
         return
@@ -452,15 +453,16 @@ def post_build(m, files, prefix, build_python, croot):
         print("Skipping binary relocation logic")
     osx_is_app = bool(m.get_value('build/osx_is_app', False)) and sys.platform == 'darwin'
 
-    check_symlinks(files, prefix, croot)
-    prefix_files = utils.prefix_files(prefix)
+    check_symlinks(files, config.host_prefix, config.croot)
+    prefix_files = utils.prefix_files(config.host_prefix)
 
     for f in files:
         if f.startswith('bin/'):
-            fix_shebang(f, prefix=prefix, build_python=build_python, osx_is_app=osx_is_app)
+            fix_shebang(f, prefix=config.host_prefix, build_python=build_python,
+                        osx_is_app=osx_is_app)
         if binary_relocation is True or (isinstance(binary_relocation, list) and
                                          f in binary_relocation):
-            mk_relative(m, f, prefix, prefix_files)
+            mk_relative(m, f, prefix_files, config)
 
 
 def check_symlinks(files, prefix, croot):
