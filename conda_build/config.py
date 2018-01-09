@@ -136,7 +136,7 @@ DEFAULTS = [Setting('activate', True),
             # This is to make older recipes still work with cross-compiling.  True cross-compiling
             # involving compilers (not just python) will still require recipe modification to have
             # distinct host and build sections, but simple python stuff should work without.
-            Setting('build_prefix_override', False)
+            Setting('merge_build_host', False)
             ]
 
 

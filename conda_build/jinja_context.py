@@ -245,38 +245,39 @@ def pin_compatible(m, package_name, lower_bound=None, upper_bound=None, min_pin=
 
 def pin_subpackage_against_outputs(metadata, matching_package_keys, outputs, min_pin, max_pin,
                                    exact, permit_undefined_jinja):
-    # two ways to match:
-    #    1. only one other output named the same as the subpackage_name from the key
-    #    2. whole key matches (both subpackage name and variant (used keys only))
+    pin = None
+    if matching_package_keys:
+        # two ways to match:
+        #    1. only one other output named the same as the subpackage_name from the key
+        #    2. whole key matches (both subpackage name and variant (used keys only))
+        if len(matching_package_keys) == 1:
+            key = matching_package_keys[0]
+        elif len(matching_package_keys) > 1:
+            key = None
+            for pkg_name, variant in matching_package_keys:
+                # This matches other outputs with any keys that are common to both
+                # metadata objects. For debugging, the keys are always the (package
+                # name, used vars+values). It used to be (package name, variant) -
+                # but that was really big and hard to look at.
+                shared_vars = set(variant.keys()) & set(metadata.config.variant.keys())
+                if not shared_vars or all(variant[sv] == metadata.config.variant[sv]
+                                            for sv in shared_vars):
+                    key = (pkg_name, variant)
+                    break
 
-    if len(matching_package_keys) == 1:
-        key = matching_package_keys[0]
-    elif len(matching_package_keys) > 1:
-        key = None
-        for pkg_name, variant in matching_package_keys:
-            # This matches other outputs with any keys that are common to both
-            # metadata objects. For debugging, the keys are always the (package
-            # name, used vars+values). It used to be (package name, variant) -
-            # but that was really big and hard to look at.
-            shared_vars = set(variant.keys()) & set(metadata.config.variant.keys())
-            if not shared_vars or all(variant[sv] == metadata.config.variant[sv]
-                                        for sv in shared_vars):
-                key = (pkg_name, variant)
-                break
-
-    if key in outputs:
-        sp_m = outputs[key][1]
-        if permit_undefined_jinja and not sp_m.version():
-            pin = None
-        else:
-            if exact:
-                pin = " ".join([sp_m.name(), sp_m.version(), sp_m.build_id()])
+        if key in outputs:
+            sp_m = outputs[key][1]
+            if permit_undefined_jinja and not sp_m.version():
+                pin = None
             else:
-                pin = "{0} {1}".format(sp_m.name(),
-                                       apply_pin_expressions(sp_m.version(), min_pin,
-                                                             max_pin))
-    else:
-        pin = matching_package_keys[0][0]
+                if exact:
+                    pin = " ".join([sp_m.name(), sp_m.version(), sp_m.build_id()])
+                else:
+                    pin = "{0} {1}".format(sp_m.name(),
+                                        apply_pin_expressions(sp_m.version(), min_pin,
+                                                                max_pin))
+        else:
+            pin = matching_package_keys[0][0]
     return pin
 
 
