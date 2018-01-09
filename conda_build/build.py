@@ -1030,14 +1030,16 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
         add_upstream_pins(m, False, exclude_pattern)
 
         build_ms_deps = m.ms_depends('build')
+        build_ms_deps = [utils.ensure_valid_spec(spec) for spec in build_ms_deps]
 
         if m.is_cross:
             if VersionOrder(conda_version) < VersionOrder('4.3.2'):
                 raise RuntimeError("Non-native subdir support only in conda >= 4.3.2")
 
             host_ms_deps = m.ms_depends('host')
+            combined_ms_deps = host_ms_deps + (build_ms_deps if m.config.build_is_host else [])
             host_actions = environ.get_install_actions(m.config.host_prefix,
-                                                       tuple(host_ms_deps), 'host',
+                                                       tuple(combined_ms_deps), 'host',
                                                        subdir=m.config.host_subdir,
                                                        debug=m.config.debug,
                                                        verbose=m.config.verbose,
@@ -1051,9 +1053,8 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
             environ.create_env(m.config.host_prefix, host_actions, env='host', config=m.config,
                                subdir=m.config.host_subdir, is_cross=m.is_cross,
                                is_conda=m.name() == 'conda')
-        build_ms_deps = tuple(utils.ensure_valid_spec(spec) for spec in build_ms_deps)
         build_actions = environ.get_install_actions(m.config.build_prefix,
-                                                    build_ms_deps, 'build',
+                                                    tuple(build_ms_deps), 'build',
                                                     subdir=m.config.build_subdir,
                                                     debug=m.config.debug,
                                                     verbose=m.config.verbose,
