@@ -8,79 +8,79 @@ def test_pin_default(testing_metadata, mocker):
     get_env_dependencies = mocker.patch.object(jinja_context, 'get_env_dependencies')
     get_env_dependencies.return_value = ['test 1.2.3'], [], None
     pin = jinja_context.pin_compatible(testing_metadata, 'test')
-    assert pin == 'test  >=1.2.3,<2.0a0'
+    assert pin == 'test >=1.2.3,<2.0a0'
 
 
 def test_pin_compatible_exact(testing_metadata, mocker):
     get_env_dependencies = mocker.patch.object(jinja_context, 'get_env_dependencies')
     get_env_dependencies.return_value = ['test 1.2.3 abc_0'], [], None
     pin = jinja_context.pin_compatible(testing_metadata, 'test', exact=True)
-    assert pin == 'test  1.2.3 abc_0'
+    assert pin == 'test 1.2.3 abc_0'
 
 
 def test_pin_jpeg_style_default(testing_metadata, mocker):
     get_env_dependencies = mocker.patch.object(jinja_context, 'get_env_dependencies')
     get_env_dependencies.return_value = ['jpeg 9d 0'], [], None
     pin = jinja_context.pin_compatible(testing_metadata, 'jpeg')
-    assert pin == 'jpeg  >=9d,<10a'
+    assert pin == 'jpeg >=9d,<10a'
 
 
 def test_pin_jpeg_style_minor(testing_metadata, mocker):
     get_env_dependencies = mocker.patch.object(jinja_context, 'get_env_dependencies')
     get_env_dependencies.return_value = ['jpeg 9d 0'], [], None
     pin = jinja_context.pin_compatible(testing_metadata, 'jpeg', max_pin='x.x')
-    assert pin == 'jpeg  >=9d,<9e'
+    assert pin == 'jpeg >=9d,<9e'
 
 
 def test_pin_openssl_style_bugfix(testing_metadata, mocker):
     get_env_dependencies = mocker.patch.object(jinja_context, 'get_env_dependencies')
     get_env_dependencies.return_value = ['openssl 1.0.2j 0'], [], None
     pin = jinja_context.pin_compatible(testing_metadata, 'openssl', max_pin='x.x.x')
-    assert pin == 'openssl  >=1.0.2j,<1.0.3a'
+    assert pin == 'openssl >=1.0.2j,<1.0.3a'
     pin = jinja_context.pin_compatible(testing_metadata, 'openssl', max_pin='x.x.x.x')
-    assert pin == 'openssl  >=1.0.2j,<1.0.2k'
+    assert pin == 'openssl >=1.0.2j,<1.0.2k'
 
 
 def test_pin_major_minor(testing_metadata, mocker):
     get_env_dependencies = mocker.patch.object(jinja_context, 'get_env_dependencies')
     get_env_dependencies.return_value = ['test 1.2.3'], [], None
     pin = jinja_context.pin_compatible(testing_metadata, 'test', max_pin='x.x')
-    assert pin == 'test  >=1.2.3,<1.3.0a0'
+    assert pin == 'test >=1.2.3,<1.3.0a0'
 
 
 def test_pin_excessive_max_pin(testing_metadata, mocker):
     get_env_dependencies = mocker.patch.object(jinja_context, 'get_env_dependencies')
     get_env_dependencies.return_value = ['test 1.2.3'], [], None
     pin = jinja_context.pin_compatible(testing_metadata, 'test', max_pin='x.x.x.x.x.x')
-    assert pin == 'test  >=1.2.3,<1.2.4.0a0'
+    assert pin == 'test >=1.2.3,<1.2.4.0a0'
 
 
 def test_pin_upper_bound(testing_metadata, mocker):
     get_env_dependencies = mocker.patch.object(jinja_context, 'get_env_dependencies')
     get_env_dependencies.return_value = ['test 1.2.3'], [], None
     pin = jinja_context.pin_compatible(testing_metadata, 'test', upper_bound="3.0")
-    assert pin == 'test  >=1.2.3,<3.0'
+    assert pin == 'test >=1.2.3,<3.0'
 
 
 def test_pin_lower_bound(testing_metadata, mocker):
     get_env_dependencies = mocker.patch.object(jinja_context, 'get_env_dependencies')
     get_env_dependencies.return_value = ['test 1.2.3'], [], None
     pin = jinja_context.pin_compatible(testing_metadata, 'test', lower_bound=1.0)
-    assert pin == 'test  >=1.0,<2.0a0'
+    assert pin == 'test >=1.0,<2.0a0'
 
 
 def test_pin_none_min(testing_metadata, mocker):
     get_env_dependencies = mocker.patch.object(jinja_context, 'get_env_dependencies')
     get_env_dependencies.return_value = ['test 1.2.3'], [], None
     pin = jinja_context.pin_compatible(testing_metadata, 'test', min_pin=None)
-    assert pin == 'test  <2.0a0'
+    assert pin == 'test <2.0a0'
 
 
 def test_pin_none_max(testing_metadata, mocker):
     get_env_dependencies = mocker.patch.object(jinja_context, 'get_env_dependencies')
     get_env_dependencies.return_value = ['test 1.2.3'], [], None
     pin = jinja_context.pin_compatible(testing_metadata, 'test', max_pin=None)
-    assert pin == 'test  >=1.2.3'
+    assert pin == 'test >=1.2.3'
 
 
 def test_pin_subpackage_exact(testing_metadata):

@@ -777,8 +777,11 @@ def bundle_conda(output, metadata, env, **kw):
                 raise ValueError("env var '{}' specified in script_env, but is not set."
                                     .format(var))
             env_output[var] = os.environ[var]
-        utils.check_call_env(interpreter.split(' ') +
-                    [os.path.join(metadata.config.work_dir, output['script'])],
+        dest_file = os.path.join(metadata.config.work_dir, output['script'])
+        recipe_dir = (metadata.path or
+                      metadata.meta.get('extra', {}).get('parent_recipe', {}).get('path'))
+        utils.copy_into(os.path.join(recipe_dir, output['script']), dest_file)
+        utils.check_call_env(interpreter.split(' ') + [dest_file],
                             cwd=metadata.config.work_dir, env=env_output)
     elif files:
         # Files is specified by the output

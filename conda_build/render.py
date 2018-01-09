@@ -559,7 +559,7 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
         rendered_metadata[(mv.dist(),
                            mv.config.variant.get('target_platform', mv.config.subdir),
                            tuple((var, mv.config.variant[var])
-                                 for var in mv.get_used_loop_vars()))] = \
+                                 for var in mv.get_used_vars()))] = \
                                     (mv, need_source_download, None)
     # list of tuples.
     # each tuple item is a tuple of 3 items:
@@ -698,8 +698,6 @@ else:
 
 def output_yaml(metadata, filename=None):
     utils.trim_empty_keys(metadata.meta)
-    if metadata.meta.get('outputs'):
-        del metadata.meta['outputs']
     output = yaml.dump(_MetaYaml(metadata.meta), Dumper=_IndentDumper,
                        default_flow_style=False, indent=4)
     if filename:
