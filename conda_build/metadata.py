@@ -616,7 +616,7 @@ def get_output_dicts_from_metadata(metadata, outputs=None):
                                             for out in outputs):
             outputs.append({'name': metadata.name()})
     for out in outputs:
-        if out.get('name') == metadata.name():
+        if 'package:' in metadata.get_recipe_text() and out.get('name') == metadata.name():
             combine_top_level_metadata_with_output(metadata, out)
 
         # TODO: Outputs are coming up with None values for some fields. That trips
