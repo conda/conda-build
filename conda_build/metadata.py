@@ -1478,7 +1478,7 @@ class MetaData(object):
         return recipe_text.rstrip()
 
     def extract_requirements_text(self, force_top_level=False):
-        is_output = self.meta.get('extra', {}).get('parent_recipe', {}).get('path')
+        is_output = 'package:' not in self.get_recipe_text()
         if not is_output:
             # start of line means top-level requirements
             filter_ = r'(^requirements:.*?)(^\s*test:|^\s*extra:|^\s*about:|^outputs:|\Z)'
@@ -1626,7 +1626,7 @@ class MetaData(object):
 
         # make sure that subpackages do not duplicate top-level entry-points or run_exports
         build = output_metadata.meta.get('build', {})
-        transfer_keys = 'entry_points', 'run_exports'
+        transfer_keys = 'entry_points', 'run_exports', 'script'
         for key in transfer_keys:
             if key in output_dict:
                 build[key] = output_dict[key]
@@ -1858,7 +1858,7 @@ class MetaData(object):
             used_vars = used_vars_cache[(self.name(), force_top_level, self.config.subdir)]
         else:
             meta_yaml_reqs = self._get_used_vars_meta_yaml(force_top_level=force_top_level)
-            is_output = bool(self.meta.get('extra', {}).get('parent_recipe', {}).get('path'))
+            is_output = 'package:' not in self.get_recipe_text()
 
             if is_output:
                 script_reqs = self._get_used_vars_output_script()
@@ -1877,7 +1877,7 @@ class MetaData(object):
     def _get_used_vars_meta_yaml(self, force_top_level=False):
         # recipe text is the best, because variables can be used anywhere in it.
         #   we promise to detect anything in meta.yaml, but not elsewhere.
-        is_output = bool(self.meta.get('extra', {}).get('parent_recipe', {}).get('path'))
+        is_output = 'package:' not in self.get_recipe_text()
         if is_output and not force_top_level:
             recipe_text = self.extract_single_output_text(self.name())
         else:

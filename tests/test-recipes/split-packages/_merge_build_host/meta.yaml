@@ -1,0 +1,59 @@
+package:
+  name: test_build_host_merge
+  version: 1
+
+build:
+  script:
+    - set -ex    # [unix]
+    - test -e "$PREFIX/lib/libz.dylib"      # [osx]
+    - test -e "$PREFIX/lib/libjpeg.dylib"   # [osx]
+    - test -e "$PREFIX/lib/libz.so"         # [linux]
+    - test -e "$PREFIX/lib/libjpeg.so"      # [linux]
+    - |
+      [ "$PREFIX" == "$BUILD_PREFIX" ] || exit 1  # [unix]
+    - if "%PREFIX% NEQ "%BUILD_PREFIX%" exit 1  # [win]
+    - if not exist %PREFIX%\Library\bin\zlib.dll exit 1  # [win]
+    - if not exist %PREFIX%\Library\bin\libjpeg.dll exit 1  # [win]
+    - if exist %BUILD_PREFIX%\Library\bin\zlib.dll exit 1  # [win]
+    - if exist %BUILD_PREFIX%\Library\bin\libjpeg.dll exit 1  # [win]
+  ignore_run_exports:
+    - jpeg
+    - libpng
+  # this key does apply to the outputs.  Most do.  entry_points, run_exports and script do not.
+  #     See reconcile_metadata_with_output_dict function
+  merge_build_host: True
+
+requirements:
+  build:
+    - zlib
+  host:
+    - jpeg
+
+outputs:
+  - name: test_build_host_merge
+  - name: test_merge_uses_run_exports
+    build:
+      script:
+        - set -ex
+        - |
+          [ "$PREFIX" == "$BUILD_PREFIX" ] || exit 1  # [unix]
+        - if "%PREFIX% NEQ "%BUILD_PREFIX%" exit 1  # [win]
+        - test -e "$PREFIX/lib/libz.dylib"      # [osx]
+        - test -e "$PREFIX/lib/libjpeg.dylib"   # [osx]
+        - test -e "$PREFIX/lib/libz.so"         # [linux]
+        - test -e "$PREFIX/lib/libjpeg.so"      # [linux]
+        - if not exist %PREFIX%\Library\bin\zlib.dll exit 1  # [win]
+        - if not exist %PREFIX%\Library\bin\libjpeg.dll exit 1  # [win]
+        - if exist %BUILD_PREFIX%\Library\bin\zlib.dll exit 1  # [win]
+        - if exist %BUILD_PREFIX%\Library\bin\libjpeg.dll exit 1  # [win]
+      run_exports:
+        - {{ pin_compatible('jpeg') }}
+        - {{ pin_compatible('zlib') }}
+    requirements:
+      build:
+        - zlib
+      host:
+        - jpeg
+      run:
+        - {{ pin_compatible('jpeg') }}
+        - {{ pin_compatible('zlib') }}

@@ -308,3 +308,22 @@ def test_python_line_up_with_compiled_lib(recipe, testing_config):
             deps = m.meta['requirements']['run']
             assert any(dep.startswith('py-xyz ') and len(dep.split()) == 3 for dep in deps), (m.name(), deps)
             assert any(dep.startswith('python >') for dep in deps), (m.name(), deps)
+
+
+def test_merge_build_host_applies_in_outputs(testing_config):
+    recipe = os.path.join(subpackage_dir, '_merge_build_host')
+    ms = api.render(recipe, config=testing_config)
+    for m, _, _ in ms:
+        # top level
+        if m.name() == 'test_build_host_merge':
+            assert not m.meta.get('requirements', {}).get('run')
+        # output
+        else:
+            run_exports = set(m.meta.get('build', {}).get('run_exports', []))
+            assert len(run_exports) == 2
+            assert all(len(export.split()) > 1 for export in run_exports)
+            run_deps = set(m.meta.get('requirements', {}).get('run', []))
+            assert len(run_deps) == 2
+            assert all(len(dep.split()) > 1 for dep in run_deps)
+
+    api.build(recipe, config=testing_config)
