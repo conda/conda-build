@@ -49,6 +49,7 @@ source:
   {patches}
 
 build:
+  merge_build_host: True  # [win]
   # If this is a new build for the same version, increment the build number.
   number: {build_number}
   {noarch_generic}
