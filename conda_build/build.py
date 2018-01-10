@@ -777,8 +777,11 @@ def bundle_conda(output, metadata, env, **kw):
                 raise ValueError("env var '{}' specified in script_env, but is not set."
                                     .format(var))
             env_output[var] = os.environ[var]
-        utils.check_call_env(interpreter.split(' ') +
-                    [os.path.join(metadata.config.work_dir, output['script'])],
+        dest_file = os.path.join(metadata.config.work_dir, output['script'])
+        recipe_dir = (metadata.path or
+                      metadata.meta.get('extra', {}).get('parent_recipe', {}).get('path'))
+        utils.copy_into(os.path.join(recipe_dir, output['script']), dest_file)
+        utils.check_call_env(interpreter.split(' ') + [dest_file],
                             cwd=metadata.config.work_dir, env=env_output)
     elif files:
         # Files is specified by the output
@@ -1030,12 +1033,14 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
         add_upstream_pins(m, False, exclude_pattern)
 
         build_ms_deps = m.ms_depends('build')
+        build_ms_deps = [utils.ensure_valid_spec(spec) for spec in build_ms_deps]
+        host_ms_deps = m.ms_depends('host')
+        host_ms_deps = [utils.ensure_valid_spec(spec) for spec in host_ms_deps]
 
-        if m.is_cross:
+        if m.is_cross and not m.config.build_is_host:
             if VersionOrder(conda_version) < VersionOrder('4.3.2'):
                 raise RuntimeError("Non-native subdir support only in conda >= 4.3.2")
 
-            host_ms_deps = m.ms_depends('host')
             host_actions = environ.get_install_actions(m.config.host_prefix,
                                                        tuple(host_ms_deps), 'host',
                                                        subdir=m.config.host_subdir,
@@ -1051,9 +1056,10 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
             environ.create_env(m.config.host_prefix, host_actions, env='host', config=m.config,
                                subdir=m.config.host_subdir, is_cross=m.is_cross,
                                is_conda=m.name() == 'conda')
-        build_ms_deps = tuple(utils.ensure_valid_spec(spec) for spec in build_ms_deps)
+        if m.config.build_is_host:
+            build_ms_deps.extend(host_ms_deps)
         build_actions = environ.get_install_actions(m.config.build_prefix,
-                                                    build_ms_deps, 'build',
+                                                    tuple(build_ms_deps), 'build',
                                                     subdir=m.config.build_subdir,
                                                     debug=m.config.debug,
                                                     verbose=m.config.verbose,
@@ -1283,8 +1289,9 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                         utils.rm_rf(m.config.build_prefix)
                         utils.rm_rf(m.config.test_prefix)
 
-                        if m.is_cross:
-                            host_ms_deps = m.ms_depends('host')
+                        host_ms_deps = m.ms_depends('host')
+                        sub_build_ms_deps = m.ms_depends('build')
+                        if m.is_cross and not m.config.build_is_host:
                             host_actions = environ.get_install_actions(m.config.host_prefix,
                                                     tuple(host_ms_deps), 'host',
                                                     subdir=m.config.host_subdir,
@@ -1300,10 +1307,9 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                             environ.create_env(m.config.host_prefix, host_actions, env='host',
                                                config=m.config, subdir=subdir, is_cross=m.is_cross,
                                                is_conda=m.name() == 'conda')
-                            sub_build_ms_deps = m.ms_depends('build')
                         else:
                             # When not cross-compiling, the build deps aggregate 'build' and 'host'.
-                            sub_build_ms_deps = m.ms_depends('build') + m.ms_depends('host')
+                            sub_build_ms_deps.extend(host_ms_deps)
                         build_actions = environ.get_install_actions(m.config.build_prefix,
                                                     tuple(sub_build_ms_deps), 'build',
                                                     subdir=m.config.build_subdir,

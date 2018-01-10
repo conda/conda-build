@@ -201,21 +201,6 @@ def test_toplevel_entry_points_do_not_apply_to_subpackages(testing_config):
             raise ValueError("Didn't see any of the 3 expected filenames.  Filename was {}".format(fn))
 
 
-# with cb3.1, this no longer raises an error, because the subpackage hashes no
-# longer depend on each other, only the external info in
-# conda_build_config.yaml. Thus there is no cyclical issue here.
-
-# def test_cyclical_exact_subpackage_pins_raises_error(testing_config):
-#     recipe_dir = os.path.join(subpackage_dir, '_intradependencies_circular')
-#     with pytest.raises(exceptions.RecipeError):
-#         ms = api.render(recipe_dir, config=testing_config)
-
-
-def test_toplevel_subpackage_exact_does_not_raise_infinite_loop_error(testing_config):
-    recipe_dir = os.path.join(subpackage_dir, '_intradependencies_toplevel_circular')
-    api.render(recipe_dir, config=testing_config)
-
-
 def test_subpackage_hash_inputs(testing_config):
     recipe_dir = os.path.join(subpackage_dir, '_hash_inputs')
     outputs = api.build(recipe_dir, config=testing_config)
@@ -308,3 +293,22 @@ def test_python_line_up_with_compiled_lib(recipe, testing_config):
             deps = m.meta['requirements']['run']
             assert any(dep.startswith('py-xyz ') and len(dep.split()) == 3 for dep in deps), (m.name(), deps)
             assert any(dep.startswith('python >') for dep in deps), (m.name(), deps)
+
+
+def test_merge_build_host_applies_in_outputs(testing_config):
+    recipe = os.path.join(subpackage_dir, '_merge_build_host')
+    ms = api.render(recipe, config=testing_config)
+    for m, _, _ in ms:
+        # top level
+        if m.name() == 'test_build_host_merge':
+            assert not m.meta.get('requirements', {}).get('run')
+        # output
+        else:
+            run_exports = set(m.meta.get('build', {}).get('run_exports', []))
+            assert len(run_exports) == 2
+            assert all(len(export.split()) > 1 for export in run_exports)
+            run_deps = set(m.meta.get('requirements', {}).get('run', []))
+            assert len(run_deps) == 2
+            assert all(len(dep.split()) > 1 for dep in run_deps)
+
+    api.build(recipe, config=testing_config)

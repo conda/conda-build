@@ -1,0 +1,38 @@
+package:
+  name: lizzy
+  version: {{ ctng_gcc }}
+
+outputs:
+  - name: gcc_{{ ctng_target_platform }}
+    requirements:
+      run:
+        # for activation of binutils env vars
+        - {{ pin_subpackage('binutils_' ~ ctng_target_platform, exact=True) }}
+    about:
+      summary: GNU C Compiler (activation scripts)
+      home: https://gcc.gnu.org/
+      license: GPL
+
+  - name: gfortran_{{ ctng_target_platform }}
+    requirements:
+      host:
+        # So that pin_compatible has something to work with:
+        - zlib {{ zlib }}.*
+      run:
+        # for activation of gcc env vars:
+        - {{ pin_subpackage('gcc_' ~ ctng_target_platform, exact=True) }}
+        # for activation of binutils env vars:
+        - {{ pin_subpackage('binutils_' ~ ctng_target_platform, exact=True) }}
+    run_exports:
+      strong:
+        - {{ pin_compatible('zlib', min_pin='x') }}
+    about:
+      summary: GNU Fortran Compiler (activation scripts)
+      home: https://gcc.gnu.org/
+      license: GPL
+
+  - name: binutils_{{ ctng_target_platform }}
+    about:
+      summary: The GNU Binutils are a collection of binary tools (activation scripts)
+      home: https://www.gnu.org/software/binutils/
+      license: GPL

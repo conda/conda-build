@@ -323,8 +323,8 @@ def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
 
 def finalize_metadata(m, permit_unsatisfiable_variants=False):
     """Fully render a recipe.  Fill in versions for build/host dependencies."""
-    rendered_metadata = m.copy()
     if m.skip():
+        rendered_metadata = m.copy()
         rendered_metadata.final = True
     else:
         exclude_pattern = None
@@ -343,10 +343,12 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
                                             for exc in excludes | output_excludes))
 
         parent_recipe = m.meta.get('extra', {}).get('parent_recipe', {})
+
         # extract the topmost section where variables are defined, and put it on top of the
         #     requirements for a particular output
         # Re-parse the output from the original recipe, so that we re-consider any jinja2 stuff
         output = m.get_rendered_output(m.name())
+        rendered_metadata = m.get_output_metadata(output)
 
         if output:
             if 'package' in output or 'name' not in output:
@@ -557,7 +559,7 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
         rendered_metadata[(mv.dist(),
                            mv.config.variant.get('target_platform', mv.config.subdir),
                            tuple((var, mv.config.variant[var])
-                                 for var in mv.get_used_loop_vars()))] = \
+                                 for var in mv.get_used_vars()))] = \
                                     (mv, need_source_download, None)
     # list of tuples.
     # each tuple item is a tuple of 3 items:
@@ -696,8 +698,6 @@ else:
 
 def output_yaml(metadata, filename=None):
     utils.trim_empty_keys(metadata.meta)
-    if metadata.meta.get('outputs'):
-        del metadata.meta['outputs']
     output = yaml.dump(_MetaYaml(metadata.meta), Dumper=_IndentDumper,
                        default_flow_style=False, indent=4)
     if filename:

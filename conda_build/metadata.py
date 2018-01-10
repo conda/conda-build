@@ -616,7 +616,7 @@ def get_output_dicts_from_metadata(metadata, outputs=None):
                                             for out in outputs):
             outputs.append({'name': metadata.name()})
     for out in outputs:
-        if out.get('name') == metadata.name():
+        if 'package:' in metadata.get_recipe_text() and out.get('name') == metadata.name():
             combine_top_level_metadata_with_output(metadata, out)
 
         # TODO: Outputs are coming up with None values for some fields. That trips
@@ -655,8 +655,10 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
             om.final = False
             # get the new output_d from the reparsed top-level metadata, so that we have any
             #    exact subpackage version/build string info
+            base_metadata.append_parent_metadata(om)
             output_d = om.get_rendered_output(metadata.name()) or {'name': metadata.name()}
             om = om.get_output_metadata(output_d)
+            base_metadata.append_parent_metadata(om)
             fm = finalize_metadata(om, permit_unsatisfiable_variants=permit_unsatisfiable_variants)
             if not output_d.get('type') or output_d.get('type') == 'conda':
                 outputs[(fm.name(), HashableDict({k: fm.config.variant[k]
@@ -1463,22 +1465,23 @@ class MetaData(object):
 
     def get_recipe_text(self, extract_pattern=None, force_top_level=False):
         parent_recipe = self.meta.get('extra', {}).get('parent_recipe', {})
-        is_output = parent_recipe.get('path') and self.name() != parent_recipe.get('name')
-        meta_path = self.meta_path or (os.path.join(parent_recipe.get('path'), 'meta.yaml')
+        is_output = self.name() != parent_recipe.get('name') and parent_recipe.get('path')
+        meta_path = self.meta_path or (os.path.join(parent_recipe['path'], 'meta.yaml')
                                        if is_output else '')
         if meta_path:
             recipe_text = read_meta_file(meta_path)
             if is_output and not force_top_level:
                 recipe_text = self.extract_single_output_text(self.name())
         else:
-            recipe_text = yaml.dump(dict(self.meta), default_flow_style=False)
+            from conda_build.render import output_yaml
+            recipe_text = output_yaml(self)
         recipe_text = _filter_recipe_text(recipe_text, extract_pattern)
         recipe_text = select_lines(recipe_text, ns_cfg(self.config),
                                    variants_in_place=bool(self.config.variant))
         return recipe_text.rstrip()
 
     def extract_requirements_text(self, force_top_level=False):
-        is_output = self.meta.get('extra', {}).get('parent_recipe', {}).get('path')
+        is_output = 'package:' not in self.get_recipe_text()
         if not is_output:
             # start of line means top-level requirements
             filter_ = r'(^requirements:.*?)(^\s*test:|^\s*extra:|^\s*about:|^outputs:|\Z)'
@@ -1626,7 +1629,7 @@ class MetaData(object):
 
         # make sure that subpackages do not duplicate top-level entry-points or run_exports
         build = output_metadata.meta.get('build', {})
-        transfer_keys = 'entry_points', 'run_exports'
+        transfer_keys = 'entry_points', 'run_exports', 'script'
         for key in transfer_keys:
             if key in output_dict:
                 build[key] = output_dict[key]
@@ -1680,12 +1683,6 @@ class MetaData(object):
             output_metadata.meta['requirements'] = requirements
             output_metadata.meta['package']['version'] = output.get('version') or self.version()
             output_metadata.final = False
-            if (self.name() != output_metadata.name() or
-                    (output.get('script') or output.get('files'))):
-                extra = self.meta.get('extra', {})
-                extra['parent_recipe'] = {'path': self.path, 'name': self.name(),
-                                        'version': self.version()}
-                output_metadata.meta['extra'] = extra
             output_metadata.noarch = output.get('noarch', False)
             output_metadata.noarch_python = output.get('noarch_python', False)
             # primarily for tests - make sure that we keep the platform consistent (setting noarch
@@ -1720,6 +1717,12 @@ class MetaData(object):
 
         return output_metadata
 
+    def append_parent_metadata(self, out_metadata):
+        extra = self.meta.get('extra', {})
+        extra['parent_recipe'] = {'path': self.path, 'name': self.name(),
+                                  'version': self.version()}
+        out_metadata.meta['extra'] = extra
+
     def get_output_metadata_set(self, permit_undefined_jinja=False,
                                 permit_unsatisfiable_variants=False):
         from conda_build.source import provide
@@ -1751,6 +1754,8 @@ class MetaData(object):
                                 insert_variant_versions(requirements, variant, env)
                             out['requirements'] = requirements
                         out_metadata = om.get_output_metadata(out)
+                        self.append_parent_metadata(out_metadata)
+                        out_metadata.other_outputs = all_output_metadata
                         # keeping track of other outputs is necessary for correct functioning of the
                         #    pin_subpackage jinja2 function.  It's important that we store all of
                         #    our outputs so that they can be referred to in later rendering.  We
@@ -1759,7 +1764,6 @@ class MetaData(object):
                         all_output_metadata[(out_metadata.name(),
                                              HashableDict({k: out_metadata.config.variant[k]
                                     for k in out_metadata.get_used_vars()}))] = out, out_metadata
-                        out_metadata.other_outputs = all_output_metadata
                         out_metadata_map[HashableDict(out)] = out_metadata
                 except SystemExit:
                     if not permit_undefined_jinja:
@@ -1858,7 +1862,7 @@ class MetaData(object):
             used_vars = used_vars_cache[(self.name(), force_top_level, self.config.subdir)]
         else:
             meta_yaml_reqs = self._get_used_vars_meta_yaml(force_top_level=force_top_level)
-            is_output = bool(self.meta.get('extra', {}).get('parent_recipe', {}).get('path'))
+            is_output = 'package:' not in self.get_recipe_text()
 
             if is_output:
                 script_reqs = self._get_used_vars_output_script()
@@ -1877,7 +1881,7 @@ class MetaData(object):
     def _get_used_vars_meta_yaml(self, force_top_level=False):
         # recipe text is the best, because variables can be used anywhere in it.
         #   we promise to detect anything in meta.yaml, but not elsewhere.
-        is_output = bool(self.meta.get('extra', {}).get('parent_recipe', {}).get('path'))
+        is_output = 'package:' not in self.get_recipe_text()
         if is_output and not force_top_level:
             recipe_text = self.extract_single_output_text(self.name())
         else:
@@ -1927,15 +1931,7 @@ class MetaData(object):
         return used_vars
 
     def _get_used_vars_output_script(self):
-        this_output = {}
-        this_output_text = self.extract_single_output_text(self.name())
-        if this_output_text:
-            this_output = yaml.safe_load(self._get_contents(permit_undefined_jinja=True,
-                                                            template_string=this_output_text,
-                                                            skip_build_id=True,
-                                                            allow_no_other_outputs=True))
-        if isinstance(this_output, list):
-            this_output = this_output[0]
+        this_output = self.get_rendered_output(self.name()) or {}
         used_vars = set()
         if 'script' in this_output:
             path = self.meta.get('extra', {}).get('parent_recipe', {}).get('path')

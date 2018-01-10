@@ -213,10 +213,13 @@ def pin_compatible(m, package_name, lower_bound=None, upper_bound=None, min_pin=
         if key in cached_env_dependencies:
             pins = cached_env_dependencies[key]
         else:
-            if m.is_cross:
+            if m.is_cross and not m.config.build_is_host:
                 pins, _, _ = get_env_dependencies(m, 'host', m.config.variant)
             else:
                 pins, _, _ = get_env_dependencies(m, 'build', m.config.variant)
+                if m.config.build_is_host:
+                    host_pins, _, _ = get_env_dependencies(m, 'host', m.config.variant)
+                    pins.extend(host_pins)
             cached_env_dependencies[key] = pins
         versions = {p.split(' ')[0]: p.split(' ')[1:] for p in pins}
         if versions:
@@ -240,7 +243,7 @@ def pin_compatible(m, package_name, lower_bound=None, upper_bound=None, min_pin=
             'pin_compatible' in m.extract_requirements_text()):
         raise RuntimeError("Could not get compatibility information for {} package.  "
                            "Is it one of your build dependencies?".format(package_name))
-    return "  ".join((package_name, compatibility)) if compatibility is not None else package_name
+    return " ".join((package_name, compatibility)) if compatibility is not None else package_name
 
 
 def pin_subpackage_against_outputs(metadata, matching_package_keys, outputs, min_pin, max_pin,

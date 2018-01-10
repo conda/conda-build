@@ -103,7 +103,7 @@ def test_output_without_jinja_does_not_download(mock_source, testing_workdir, te
 def test_pin_compatible_semver(testing_config):
     recipe_dir = os.path.join(metadata_dir, '_pin_compatible')
     metadata = api.render(recipe_dir, config=testing_config)[0][0]
-    assert 'zlib  >=1.2.8,<2.0a0' in metadata.get_value('requirements/run')
+    assert 'zlib >=1.2.8,<2.0a0' in metadata.get_value('requirements/run')
 
 
 def test_host_entries_finalized(testing_config):
@@ -181,3 +181,13 @@ def test_self_reference_run_exports_pin_subpackage_picks_up_version_correctly():
     assert run_exports
     assert len(run_exports) == 1
     assert run_exports[0].split()[1] == '>=1.0.0,<2.0a0'
+
+
+def test_run_exports_with_pin_compatible_in_subpackages(testing_config):
+    recipe = os.path.join(metadata_dir, '_run_exports_in_outputs')
+    ms = api.render(recipe, config=testing_config)
+    for m, _, _ in ms:
+        if m.name().startswith('gfortran_'):
+            run_exports = set(m.meta.get('build', {}).get('run_exports', {}).get('strong', []))
+            assert len(run_exports) == 1
+            assert all(len(export.split()) > 1 for export in run_exports), run_exports
