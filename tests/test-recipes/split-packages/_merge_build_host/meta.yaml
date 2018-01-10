@@ -11,11 +11,9 @@ build:
     - test -e "$PREFIX/lib/libjpeg.so"      # [linux]
     - |
       [ "$PREFIX" == "$BUILD_PREFIX" ] || exit 1  # [unix]
-    - if "%PREFIX% NEQ "%BUILD_PREFIX%" exit 1  # [win]
+    - if "%PREFIX%" NEQ "%BUILD_PREFIX%" exit 1  # [win]
     - if not exist %PREFIX%\Library\bin\zlib.dll exit 1  # [win]
     - if not exist %PREFIX%\Library\bin\libjpeg.dll exit 1  # [win]
-    - if exist %BUILD_PREFIX%\Library\bin\zlib.dll exit 1  # [win]
-    - if exist %BUILD_PREFIX%\Library\bin\libjpeg.dll exit 1  # [win]
   ignore_run_exports:
     - jpeg
     - libpng
@@ -37,15 +35,13 @@ outputs:
         - set -ex
         - |
           [ "$PREFIX" == "$BUILD_PREFIX" ] || exit 1  # [unix]
-        - if "%PREFIX% NEQ "%BUILD_PREFIX%" exit 1  # [win]
+        - if "%PREFIX%" NEQ "%BUILD_PREFIX%" exit 1  # [win]
         - test -e "$PREFIX/lib/libz.dylib"      # [osx]
         - test -e "$PREFIX/lib/libjpeg.dylib"   # [osx]
         - test -e "$PREFIX/lib/libz.so"         # [linux]
         - test -e "$PREFIX/lib/libjpeg.so"      # [linux]
         - if not exist %PREFIX%\Library\bin\zlib.dll exit 1  # [win]
         - if not exist %PREFIX%\Library\bin\libjpeg.dll exit 1  # [win]
-        - if exist %BUILD_PREFIX%\Library\bin\zlib.dll exit 1  # [win]
-        - if exist %BUILD_PREFIX%\Library\bin\libjpeg.dll exit 1  # [win]
       run_exports:
         - {{ pin_compatible('jpeg') }}
         - {{ pin_compatible('zlib') }}

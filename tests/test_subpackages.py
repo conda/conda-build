@@ -201,21 +201,6 @@ def test_toplevel_entry_points_do_not_apply_to_subpackages(testing_config):
             raise ValueError("Didn't see any of the 3 expected filenames.  Filename was {}".format(fn))
 
 
-# with cb3.1, this no longer raises an error, because the subpackage hashes no
-# longer depend on each other, only the external info in
-# conda_build_config.yaml. Thus there is no cyclical issue here.
-
-# def test_cyclical_exact_subpackage_pins_raises_error(testing_config):
-#     recipe_dir = os.path.join(subpackage_dir, '_intradependencies_circular')
-#     with pytest.raises(exceptions.RecipeError):
-#         ms = api.render(recipe_dir, config=testing_config)
-
-
-def test_toplevel_subpackage_exact_does_not_raise_infinite_loop_error(testing_config):
-    recipe_dir = os.path.join(subpackage_dir, '_intradependencies_toplevel_circular')
-    api.render(recipe_dir, config=testing_config)
-
-
 def test_subpackage_hash_inputs(testing_config):
     recipe_dir = os.path.join(subpackage_dir, '_hash_inputs')
     outputs = api.build(recipe_dir, config=testing_config)
