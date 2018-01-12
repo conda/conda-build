@@ -1,3 +1,31 @@
+2018-01-12 3.2.2:
+
+Enhancements:
+-------------
+
+* Add CLI flag (--merge-build-host) to restore pre-3.1.4 behavior with merging build and host envs  #26260
+
+Bug fixes:
+----------
+
+* Check recipe/metadata skip status in more places, rather than strictly at the top-level  #2617
+* fix unnecessary conforming of zip keys when distributing variants  #2618
+* fix matching of unrendered output names when matching rendered names  #2618
+* fix matching of partial (only used parts) of variants when lining up subpackages  #2618
+* fix handling of outputs with same name as top level when considering used vars  #2618
+* exclude top-level run_exports from applying to all outputs  #2618
+* Fix linking compiler runtimes from build to host prefix (was broken by build/host prefix split in 3.1.4)  #2621
+* Fix logic errors around merging build/host envs  #2623
+* fix run_exports in outputs being overwritten  #2623
+
+Contributors:
+-------------
+
+* @jjhelmus
+* @mingwandroid
+* @msarahan
+
+
 2018-01-02 3.2.1:
 
 Enhancements:
