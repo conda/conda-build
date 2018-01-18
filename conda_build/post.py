@@ -475,9 +475,10 @@ def _find_needed_dso_in_system(m, needed_dso, errors, sysroots, msg_prelude,
                 print_msg(errors, '{}: {} not found in any CDT/compiler package?!'.
                                     format(info_prelude, n_dso_p))
         else:
+            prelude = warn_prelude if needed_dso.startswith('$RPATH') else msg_prelude
             print_msg(errors, "{}: {} not found in sysroot, is this binary repackaging?"
                                 " .. do you need to use install_name_tool/patchelf?".
-                                format(msg_prelude, needed_dso))
+                                format(prelude, needed_dso))
     else:
         # When a needed_dso begins with $RPATH it means we are making a CDT package
         # (in any other case this would be a problem), but I should verify it is ok
