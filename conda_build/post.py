@@ -405,123 +405,139 @@ def assert_relative_osx(path, prefix):
         assert not name.startswith(prefix), path
 
 
-def check_overlinking(m, files, config):
+def print_msg(errors, text):
+    if text.startswith("  ERROR"):
+        errors.append(text)
+    print(text)
+
+
+def _find_needed_dso_in_prefix(m, needed_dso, f, files, errors, run_reqs,
+                               msg_prelude, info_prelude):
+    in_prefix_dso = os.path.normpath(needed_dso.replace(m.config.host_prefix + '/', ''))
+    n_dso_p = "Needed DSO {} in {}".format(in_prefix_dso, f)
+    and_also = " (and also in this package)" if in_prefix_dso in files else ""
+    pkgs = list(which_package(in_prefix_dso, m.config.host_prefix))
+    if len(pkgs) == 1:
+        if pkgs[0].quad[0] not in run_reqs:
+            print_msg(errors, '{}: {} found in {}{}'.format(msg_prelude,
+                                                            n_dso_p,
+                                                            pkgs[0],
+                                                            and_also))
+            print_msg(errors, '{}: .. but {} not in reqs/run, i.e. it is overlinked'
+                                ' (likely) or a missing dependency (less likely)'.
+                                format(msg_prelude, pkgs[0].quad[0]))
+        elif m.config.verbose:
+            print_msg(errors, '{}: {} found in {}{}'.format(info_prelude,
+                                                            n_dso_p,
+                                                            pkgs[0],
+                                                            and_also))
+    elif len(pkgs) > 1:
+        print_msg(errors, '{}: {} found in multiple packages:{}'.format(msg_prelude,
+                                                                        in_prefix_dso,
+                                                                        and_also))
+        for pkg in pkgs:
+            print_msg(errors, '{}: {}'.format(msg_prelude, pkg))
+            if pkg.dist_name not in m.meta.requirements.host:
+                print_msg(errors, '{}: .. but {} not in reqs/host (is transitive)'.
+                format(msg_prelude, pkg.dist_name))
+    else:
+        if in_prefix_dso not in files:
+            print_msg(errors, '{}: {} not found in any packages'.format(msg_prelude,
+                                                                        in_prefix_dso))
+        elif m.config.verbose:
+            print_msg(errors, '{}: {} found in this package'.format(info_prelude,
+                                                                    in_prefix_dso))
+
+
+def _find_needed_dso_in_system(m, needed_dso, errors, sysroots, msg_prelude,
+                               info_prelude, warn_prelude):
+    # A system dependency then. We should be able to find it in one of the CDT o
+    # compiler packages on linux or at in a sysroot folder on other OSes.
+    #
+    if m.config.verbose and len(sysroots):
+        # Check id we have a CDT package.
+        dso_fname = os.path.basename(needed_dso)
+        sysroot_files = []
+        for sysroot in sysroots:
+            sysroot_files.extend(glob(os.path.join(sysroot, '**', dso_fname),
+                                        recursive=True))
+        if len(sysroot_files):
+            # Removing config.build_prefix is only *really* for Linux, though we could
+            # use CONDA_BUILD_SYSROOT for macOS. We should figure out what to do about
+            # /opt/X11 too.
+            in_prefix_dso = os.path.normpath(sysroot_files[0].replace(
+                m.config.build_prefix + '/', ''))
+            n_dso_p = "Needed DSO {}".format(in_prefix_dso)
+            pkgs = list(which_package(in_prefix_dso, m.config.build_prefix))
+            if len(pkgs):
+                print_msg(errors, '{}: {} found in CDT/compiler package {}'.
+                                    format(info_prelude, n_dso_p, pkgs[0]))
+            else:
+                print_msg(errors, '{}: {} not found in any CDT/compiler package?!'.
+                                    format(info_prelude, n_dso_p))
+        else:
+            print_msg(errors, "{}: {} not found in sysroot, is this binary repackaging?"
+                                " .. do you need to use install_name_tool/patchelf?".
+                                format(msg_prelude, needed_dso))
+    else:
+        # When a needed_dso begins with $RPATH it means we are making a CDT package
+        # (in any other case this would be a problem), but I should verify it is ok
+        # for CDT packages too.
+        if needed_dso.startswith('$RPATH'):
+            print_msg(errors, "{}: {} returned by pyldd. A CDT package?".
+                                format(warn_prelude, needed_dso))
+        else:
+            print_msg(errors, "{}: did not find - or even know where to look for: {}".
+                                format(msg_prelude, needed_dso))
+
+
+def _inspect_file_linking(m, path, files, errors, pkg_name, run_reqs, sysroots):
+    f = os.path.basename(path)
+    warn_prelude = "WARNING ({},{})".format(pkg_name, f)
+    err_prelude = "  ERROR ({},{})".format(pkg_name, f)
+    info_prelude = "   INFO ({},{})".format(pkg_name, f)
+    msg_prelude = err_prelude if m.config.error_overlinking else warn_prelude
+
+    needed = inspect_linkages(path, resolve_filenames=True, recurse=False)
+    for needed_dso in needed:
+        if needed_dso.startswith(m.config.host_prefix):
+            _find_needed_dso_in_prefix(m, needed_dso, f, files, errors, run_reqs,
+                                       msg_prelude, info_prelude)
+        elif needed_dso.startswith(m.config.build_prefix):
+            print_msg(errors, "ERROR: {} found in build prefix; should never happen".format(
+                needed_dso))
+        else:
+            _find_needed_dso_in_system(m, needed_dso, errors, sysroots, msg_prelude, info_prelude,
+                                       warn_prelude)
+
+
+def check_overlinking(m, files):
+    errors = []
     pkg_name = m.get_value('package/name')
 
-    errors = []
-
-    def print_msg(errors, text):
-        if text.startswith("  ERROR"):
-            errors.append(text)
-        print(text)
-
     run_reqs = [req.split(' ')[0] for req in m.meta.get('requirements', {}).get('run', [])]
-    sysroots = glob(os.path.join(config.build_prefix, '**', 'sysroot'), recursive=True)
-    print(config.variant['target_platform'])
+    sysroots = glob(os.path.join(m.config.build_prefix, '**', 'sysroot'), recursive=True)
     if not len(sysroots):
-        if 'target_platform' in config.variant and config.variant['target_platform'] == 'osx-64':
+        if m.config.variant.get('target_platform') == 'osx-64':
             sysroots = ['/usr/lib', '/opt/X11', '/System/Library/Frameworks']
 
     for f in files:
-        path = os.path.join(config.host_prefix, f)
+        path = os.path.join(m.config.host_prefix, f)
         if not is_obj(path):
             continue
-        warn_prelude = "WARNING ({},{})".format(pkg_name, f)
-        err_prelude = "  ERROR ({},{})".format(pkg_name, f)
-        info_prelude = "   INFO ({},{})".format(pkg_name, f)
-        msg_prelude = err_prelude if m.config.error_overlinking else warn_prelude
-
-        needed = inspect_linkages(path, resolve_filenames=True, recurse=False)
-        for needed_dso in needed:
-            if needed_dso.startswith(config.host_prefix):
-                in_prefix_dso = os.path.normpath(needed_dso.replace(config.host_prefix + '/', ''))
-                n_dso_p = "Needed DSO {} in {}".format(in_prefix_dso, f)
-                and_also = " (and also in this package)" if in_prefix_dso in files else ""
-                pkgs = list(which_package(in_prefix_dso, config.host_prefix))
-                if len(pkgs) == 1:
-                    if pkgs[0].quad[0] not in run_reqs:
-                        print_msg(errors, '{}: {} found in {}{}'.format(msg_prelude,
-                                                                        n_dso_p,
-                                                                        pkgs[0],
-                                                                        and_also))
-                        print_msg(errors, '{}: .. but {} not in reqs/run, i.e. it is overlinked'
-                                          ' (likely) or a missing dependency (less likely)'.
-                                           format(msg_prelude, pkgs[0].quad[0]))
-                    elif m.config.verbose:
-                        print_msg(errors, '{}: {} found in {}{}'.format(info_prelude,
-                                                                        n_dso_p,
-                                                                        pkgs[0],
-                                                                        and_also))
-                elif len(pkgs) > 1:
-                    print_msg(errors, '{}: {} found in multiple packages:{}'.format(msg_prelude,
-                                                                                    in_prefix_dso,
-                                                                                    and_also))
-                    for pkg in pkgs:
-                        print_msg(errors, '{}: {}'.format(msg_prelude, pkg))
-                        if pkg.dist_name not in m.meta.requirements.host:
-                            print_msg(errors, '{}: .. but {} not in reqs/host (is transitive)'.
-                            format(msg_prelude, pkg.dist_name))
-                else:
-                    if in_prefix_dso not in files:
-                        print_msg(errors, '{}: {} not found in any packages'.format(msg_prelude,
-                                                                                    in_prefix_dso))
-                    elif m.config.verbose:
-                        print_msg(errors, '{}: {} found in this package'.format(info_prelude,
-                                                                                in_prefix_dso))
-            elif needed_dso.startswith(config.build_prefix):
-                print_msg(errors, "ERROR: {} found in build prefix; should never happen".format(
-                    needed_dso))
-            else:
-                # A system dependency then. We should be able to find it in one of the CDT o
-                # compiler packages on linux or at in a sysroot folder on other OSes.
-                #
-                if m.config.verbose and len(sysroots):
-                    # Check id we have a CDT package.
-                    dso_fname = os.path.basename(needed_dso)
-                    sysroot_files = []
-                    for sysroot in sysroots:
-                        sysroot_files.extend(glob(os.path.join(sysroot, '**', dso_fname),
-                                                  recursive=True))
-                    if len(sysroot_files):
-                        # Removing config.build_prefix is only *really* for Linux, though we could
-                        # use CONDA_BUILD_SYSROOT for macOS. We should figure out what to do about
-                        # /opt/X11 too.
-                        in_prefix_dso = os.path.normpath(sysroot_files[0].replace(
-                            config.build_prefix + '/', ''))
-                        n_dso_p = "Needed DSO {}".format(in_prefix_dso)
-                        pkgs = list(which_package(in_prefix_dso, config.build_prefix))
-                        if len(pkgs):
-                            print_msg(errors, '{}: {} found in CDT/compiler package {}'.
-                                              format(info_prelude, n_dso_p, pkgs[0]))
-                        else:
-                            print_msg(errors, '{}: {} not found in any CDT/compiler package?!'.
-                                              format(info_prelude, n_dso_p))
-                    else:
-                        print_msg(errors, "{}: {} not found in sysroot, is this binary repackaging?"
-                                          " .. do you need to use install_name_tool/patchelf?".
-                                          format(msg_prelude, needed_dso))
-                else:
-                    # When a needed_dso begins with $RPATH it means we are making a CDT package
-                    # (in any other case this would be a problem), but I should verify it is ok
-                    # for CDT packages too.
-                    if needed_dso.startswith('$RPATH'):
-                        print_msg(errors, "{}: {} returned by pyldd. A CDT package?".
-                                          format(warn_prelude, needed_dso))
-                    else:
-                        print_msg(errors, "{}: did not find - or even know where to look for: {}".
-                                          format(msg_prelude, needed_dso))
+        _inspect_file_linking(m, path, files, errors, pkg_name, run_reqs, sysroots)
         if len(errors):
             sys.exit(1)
 
 
-def post_process_shared_lib(m, f, files, config):
-    path = os.path.join(config.host_prefix, f)
+def post_process_shared_lib(m, f, files):
+    path = os.path.join(m.config.host_prefix, f)
     if not is_obj(path):
         return
     if sys.platform.startswith('linux'):
-        mk_relative_linux(f, config.host_prefix, rpaths=m.get_value('build/rpaths', ['lib']))
+        mk_relative_linux(f, m.config.host_prefix, rpaths=m.get_value('build/rpaths', ['lib']))
     elif sys.platform == 'darwin':
-        mk_relative_osx(path, config.host_prefix, config.build_prefix, files=files)
+        mk_relative_osx(path, m.config.host_prefix, m.config.build_prefix, files=files)
 
 
 def fix_permissions(files, prefix):
@@ -548,12 +564,12 @@ def fix_permissions(files, prefix):
                 log.warn(str(e))
 
 
-def post_build(m, files, build_python, config):
+def post_build(m, files, build_python):
     print('number of files:', len(files))
-    fix_permissions(files, config.host_prefix)
+    fix_permissions(files, m.config.host_prefix)
 
     for f in files:
-        make_hardlink_copy(f, config.host_prefix)
+        make_hardlink_copy(f, m.config.host_prefix)
 
     if sys.platform == 'win32':
         return
@@ -563,17 +579,17 @@ def post_build(m, files, build_python, config):
         print("Skipping binary relocation logic")
     osx_is_app = bool(m.get_value('build/osx_is_app', False)) and sys.platform == 'darwin'
 
-    check_symlinks(files, config.host_prefix, config.croot)
-    prefix_files = utils.prefix_files(config.host_prefix)
+    check_symlinks(files, m.config.host_prefix, m.config.croot)
+    prefix_files = utils.prefix_files(m.config.host_prefix)
 
     for f in files:
         if f.startswith('bin/'):
-            fix_shebang(f, prefix=config.host_prefix, build_python=build_python,
+            fix_shebang(f, prefix=m.config.host_prefix, build_python=build_python,
                         osx_is_app=osx_is_app)
         if binary_relocation is True or (isinstance(binary_relocation, list) and
                                          f in binary_relocation):
-            post_process_shared_lib(m, f, prefix_files, config)
-    check_overlinking(m, files, config)
+            post_process_shared_lib(m, f, prefix_files)
+    check_overlinking(m, files)
 
 
 def check_symlinks(files, prefix, croot):

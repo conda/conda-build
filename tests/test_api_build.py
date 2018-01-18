@@ -914,7 +914,8 @@ def test_run_exports(testing_metadata, testing_config, testing_workdir):
     testing_metadata.meta['requirements']['build'] = ['test_has_run_exports', '{{ compiler("c") }}']
     testing_metadata.meta['requirements']['host'] = ['test_has_run_exports_implicit_weak']
     api.output_yaml(testing_metadata, 'host_present_strong/meta.yaml')
-    m = api.render(os.path.join(testing_workdir, 'host_present_strong'), config=testing_config)[0][0]
+    m = api.render(os.path.join(testing_workdir, 'host_present_strong'),
+                   config=testing_config)[0][0]
     assert any('strong_pinned_package 1.0' in req for req in m.meta['requirements']['host'])
     assert 'strong_pinned_package 1.0.*' in m.meta['requirements']['run']
     # weak one from test_has_run_exports should be excluded, since it is a build dep
@@ -1183,7 +1184,8 @@ def test_pin_depends(testing_config):
     """
     recipe = os.path.join(metadata_dir, '_pin_depends_record')
     m = api.render(recipe, config=testing_config)[0][0]
-    # the recipe python is not pinned, and having pin_depends set to record will not show it in record
+    # the recipe python is not pinned, and having pin_depends set to record
+    # will not show it in record
     assert not any(re.search('python\s+[23]\.', dep) for dep in m.meta['requirements']['run'])
     output = api.build(m, config=testing_config)[0]
     requires = package_has_file(output, 'info/requires')
@@ -1219,7 +1221,8 @@ def test_provides_features_metadata(testing_config):
     assert index['provides_features'] == {'test2': 'also_ok'}
 
 
-@pytest.mark.skipif(not sys.platform.startswith('linux'), reason="Not implemented outside linux for now")
+@pytest.mark.skipif(not sys.platform.startswith('linux'),
+                    reason="Not implemented outside linux for now")
 def test_overlinking_detection(testing_config):
     testing_config.activate = True
     recipe = os.path.join(metadata_dir, '_overlinkage_detection')

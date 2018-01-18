@@ -2,8 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import re
 import sys
-from conda.utils import memoized
-from subprocess import Popen, check_output, PIPE, STDOUT
+from subprocess import Popen, check_output, PIPE, STDOUT, CalledProcessError
 from os.path import islink, isfile
 from conda_build.os_utils.pyldd import inspect_rpaths
 from itertools import islice

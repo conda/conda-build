@@ -5,8 +5,10 @@ import os
 import re
 import struct
 import sys
-
 import logging
+
+from conda_build.utils import ensure_list
+
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
@@ -199,6 +201,20 @@ class fileview(object):
         return bytes
 
 
+class UnixExecutable(object):
+    def get_rpaths_transitive(self):
+        return self.rpaths_transitive
+
+    def get_rpaths_nontransitive(self):
+        return self.rpaths_nontransitive
+
+    def get_shared_libraries(self):
+        return self.shared_libraries
+
+    def is_executable(self):
+        return True
+
+
 def read_data(file, endian, num=1):
     """
     Read a given number of 32-bits unsigned integers from the given file
@@ -344,7 +360,7 @@ def _get_resolved_location(codefile,
                            exedir,
                            selfdir,
                            LD_LIBRARY_PATH='',
-                           default_paths=[],
+                           default_paths=None,
                            sysroot='',
                            resolved_rpath=None):
     '''
@@ -391,9 +407,7 @@ def _get_resolved_location(codefile,
                         codefile.get_rpaths_transitive() + \
                         ld_library_paths + \
                         codefile.get_rpaths_nontransitive() + \
-                        [dp.replace('$SYSROOT', sysroot) for dp in default_paths]
-        if 'libgcc_s.so.1' in unresolved:
-            print('debuggin')
+                        [dp.replace('$SYSROOT', sysroot) for dp in ensure_list(default_paths)]
         for rpath in these_rpaths:
             resolved = unresolved.replace('$RPATH', rpath) \
                                  .replace('$SELFDIR', selfdir) \
@@ -431,7 +445,7 @@ def _get_resolved_relocated_location(codefile, so, src_exedir, src_selfdir,
     return src_resolved, dst_resolved, in_sysroot
 
 
-class machofile(object):
+class machofile(UnixExecutable):
     def __init__(self, file, arch, initial_rpaths_transitive=[]):
         self.shared_libraries = []
         results = mach_o_find_dylibs(file, arch)
@@ -452,24 +466,17 @@ class machofile(object):
         self.selfdir = os.path.dirname(file.name)
         self.filename = file.name
 
-    def to_os_varnames(self, input):
-        return input.replace('$SELFDIR', '@loader_path')    \
-                    .replace('$EXEDIR', '@executable_path') \
-                    .replace('$RPATH', '@rpath')
+    def to_os_varnames(self, input_):
+        """Don't make these functions - they are methods to match the API for elffiles."""
+        return input_.replace('$SELFDIR', '@loader_path')    \
+                     .replace('$EXEDIR', '@executable_path') \
+                     .replace('$RPATH', '@rpath')
 
-    def from_os_varnames(self, input):
-        return input.replace('@loader_path', '$SELFDIR')    \
-                    .replace('@executable_path', '$EXEDIR') \
-                    .replace('@rpath', '$RPATH')
-
-    def get_rpaths_transitive(self):
-        return self.rpaths_transitive
-
-    def get_rpaths_nontransitive(self):
-        return self.rpaths_nontransitive
-
-    def get_shared_libraries(self):
-        return self.shared_libraries
+    def from_os_varnames(self, input_):
+        """Don't make these functions - they are methods to match the API for elffiles."""
+        return input_.replace('@loader_path', '$SELFDIR')    \
+                     .replace('@executable_path', '$EXEDIR') \
+                     .replace('@rpath', '$RPATH')
 
     def get_resolved_shared_libraries(self, src_exedir, src_selfdir, sysroot=''):
         result = []
@@ -492,10 +499,6 @@ class machofile(object):
                                                  dst_selfdir)
             result.append((so, resolved, dst_resolved, in_sysroot))
         return result
-
-    def is_executable(self):
-        # TODO :: Write this.
-        return True
 
     def uniqueness_key(self):
         return self.filename
@@ -756,8 +759,6 @@ class elfsection(object):
                     for n in dt_needed:
                         end = n + strsec.table[n:].index('\0')
                         elffile.dt_needed.append(strsec.table[n:end])
-                        if strsec.table[n:end] == 'libgcc_s.so.1':
-                            print("Why RPATH?")
                     for r in dt_rpath:
                         end = r + strsec.table[r:].index('\0')
                         path = strsec.table[r:end]
@@ -804,7 +805,7 @@ class programheader(object):
             elffile.program_interpreter = file.read(self.p_filesz - 1).decode()
 
 
-class elffile(object):
+class elffile(UnixExecutable):
     def __init__(self, file, initial_rpaths_transitive=[]):
         self.ehdr = elfheader(file)
         self.dt_needed = []
@@ -828,6 +829,7 @@ class elffile(object):
             ph.postprocess(self, file)
         for es in self.elfsections:
             es.postprocess(self, file)
+
         # TODO :: If we have a program_interpreter we need to run it as:
         # TODO :: LD_DEBUG=all self.program_interpreter --inhibit-cache --list file.name
         # TODO :: then process the output line e.g.:
@@ -863,22 +865,12 @@ class elffile(object):
         return input.replace('$ORIGIN', '$SELFDIR')  \
                     .replace('$LIB', libdir)
 
-
     def find_section_and_offset(self, addr):
         'Can be called immediately after the elfsections have been constructed'
         for es in self.elfsections:
             if addr >= es.sh_addr and addr < es.sh_addr + es.sh_size:
                 return es, addr - es.sh_addr
         return None, None
-
-    def get_rpaths_transitive(self):
-        return self.rpaths_transitive
-
-    def get_rpaths_nontransitive(self):
-        return self.rpaths_nontransitive
-
-    def get_shared_libraries(self):
-        return self.shared_libraries
 
     def get_resolved_shared_libraries(self, src_exedir, src_selfdir, sysroot=''):
         result = []
@@ -894,9 +886,6 @@ class elffile(object):
             result.append((so_orig, resolved, rpath, in_sysroot))
         return result
 
-    def is_executable(self):
-        return True
-
     def selfdir(self):
         return None
 
@@ -904,18 +893,12 @@ class elffile(object):
         return self.dt_soname
 
 
-class inscrutablefile(object):
-    def __init__(self, file, initial_rpaths_transitive=[]):
-        return
-
+class inscrutablefile(UnixExecutable):
     def get_rpaths_transitive(self):
         return []
 
-    def get_resolved_shared_libraries(self, src_exedir, src_selfdir, sysroot=''):
+    def get_resolved_shared_libraries(self, *args, **kw):
         return []
-
-    def is_executable(self):
-        return True
 
     def selfdir(self):
         return None
@@ -965,6 +948,18 @@ def is_codefile(filename, skip_symlinks=True):
     return True
 
 
+def _trim_sysroot(sysroot):
+    while sysroot.endswith('/') or sysroot.endswith('\\'):
+        sysroot = sysroot[:-1]
+    return sysroot
+
+
+def _get_arch_if_native(arch):
+    if arch == 'native':
+        _, _, _, _, arch = os.uname()
+    return arch
+
+
 # TODO :: Consider memoizing instead of repeatedly scanning
 # TODO :: libc.so/libSystem.dylib when inspect_linkages(recurse=True)
 def _inspect_linkages_this(filename, sysroot='', arch='native'):
@@ -975,12 +970,11 @@ def _inspect_linkages_this(filename, sysroot='', arch='native'):
     :param arch:
     :return:
     '''
-    while sysroot.endswith('/') or sysroot.endswith('\\'):
-        sysroot = sysroot[:-1]
-    if arch == 'native':
-        _, _, _, _, arch = os.uname()
+
     if not os.path.exists(filename):
         return None, [], []
+    sysroot = _trim_sysroot(sysroot)
+    arch = _get_arch_if_native(arch)
     with open(filename, 'rb') as f:
         # TODO :: Problems here:
         # TODO :: 1. macOS can modify RPATH for children in each .so
@@ -994,13 +988,12 @@ def _inspect_linkages_this(filename, sysroot='', arch='native'):
         return cf.uniqueness_key(), orig_names, resolved_names
 
 
-def inspect_rpaths(filename, resolve_dirnames=True, use_os_varnames=True, sysroot='', arch='native'):
-    while sysroot.endswith('/') or sysroot.endswith('\\'):
-        sysroot = sysroot[:-1]
-    if arch == 'native':
-        _, _, _, _, arch = os.uname()
+def inspect_rpaths(filename, resolve_dirnames=True, use_os_varnames=True,
+                   sysroot='', arch='native'):
     if not os.path.exists(filename):
         return [], []
+    sysroot = _trim_sysroot(sysroot)
+    arch = _get_arch_if_native(arch)
     with open(filename, 'rb') as f:
         # TODO :: Problems here:
         # TODO :: 1. macOS can modify RPATH for children in each .so
@@ -1008,7 +1001,8 @@ def inspect_rpaths(filename, resolve_dirnames=True, use_os_varnames=True, sysroo
         # TODO :: Should '/lib', '/usr/lib' not include (or be?!) `sysroot`(s) instead?
         cf = codefile(f, arch, ['/lib', '/usr/lib'])
         if resolve_dirnames:
-            return [_get_resolved_location(cf, rpath, os.path.dirname(filename), os.path.dirname(filename), sysroot)[0]
+            return [_get_resolved_location(cf, rpath, os.path.dirname(filename),
+                                           os.path.dirname(filename), sysroot)[0]
                     for rpath in cf.rpaths_nontransitive]
         else:
             if use_os_varnames:
@@ -1025,9 +1019,8 @@ def inspect_linkages(filename, resolve_filenames=True, recurse=True, sysroot='',
     results = set()
     while todo != done:
         filename = next(iter(todo - done))
-        if filename == '/usr/lib64/ld-linux-x86-64.so.2':
-            print('debug this')
-        uniqueness_key, these_orig, these_resolved = _inspect_linkages_this(filename, sysroot=sysroot, arch=arch)
+        uniqueness_key, these_orig, these_resolved = _inspect_linkages_this(
+            filename, sysroot=sysroot, arch=arch)
         if uniqueness_key not in already_seen:
             if resolve_filenames:
                 results.update(these_resolved)

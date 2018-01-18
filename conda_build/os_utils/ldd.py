@@ -11,7 +11,7 @@ from conda_build.conda_interface import linked_data
 
 from conda_build import post
 from conda_build.os_utils.macho import otool
-from conda_build.os_utils.pyldd import codefile_class, elffile, inspect_linkages, machofile
+from conda_build.os_utils.pyldd import codefile_class, inspect_linkages, machofile
 
 
 LDD_RE = re.compile(r'\s*(.*?)\s*=>\s*(.*?)\s*\(.*\)')
@@ -67,7 +67,8 @@ def get_linkages(obj_files, prefix, sysroot):
         except:
             ldd_failed = True
         finally:
-            res_py = inspect_linkages(path, resolve_filenames=resolve_filenames, sysroot=sysroot, recurse=recurse)
+            res_py = inspect_linkages(path, resolve_filenames=resolve_filenames,
+                                      sysroot=sysroot, recurse=recurse)
             res_py = [(basename(lp), lp) for lp in res_py]
             if ldd_failed:
                 res[f] = res_py
@@ -78,7 +79,8 @@ def get_linkages(obj_files, prefix, sysroot):
                     print("WARNING: https://github.com/conda/conda-build")
                     print("WARNING: and (if possible) attach file {}".format(path))
                     print("WARNING: \nldd/otool gives:\n{}\npyldd gives:\n{}\n"
-                          .format("\n".join(str(e) for e in res[f]), "\n".join(str(e) for e in res_py)))
+                          .format("\n".join(str(e) for e in res[f]), "\n".join(str(e)
+                                                                               for e in res_py)))
                     print("Diffs\n{}".format(set(res[f]) - set(res_py)))
                     print("Diffs\n{}".format(set(res_py) - set(res[f])))
     return res
