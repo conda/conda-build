@@ -30,7 +30,7 @@ from conda_build import api, exceptions, __version__
 from conda_build.build import VersionOrder
 from conda_build.render import finalize_metadata
 from conda_build.utils import (copy_into, on_win, check_call_env, convert_path_for_cygwin_or_msys2,
-                               package_has_file, check_output_env, get_conda_operation_locks)
+                               package_has_file, check_output_env, get_conda_operation_locks, rm_rf)
 from conda_build.os_utils.external import find_executable
 from conda_build.exceptions import DependencyNeedsBuildingError
 
@@ -1217,3 +1217,16 @@ def test_provides_features_metadata(testing_config):
     assert index['requires_features'] == {'test': 'ok'}
     assert 'provides_features' in index
     assert index['provides_features'] == {'test2': 'also_ok'}
+
+
+@pytest.mark.skipif(not sys.platform.startswith('linux'), reason="Not implemented outside linux for now")
+def test_overlinking_detection(testing_config):
+    testing_config.activate = True
+    recipe = os.path.join(metadata_dir, '_overlinkage_detection')
+    dest_file = os.path.join(recipe, 'build.sh')
+    copy_into(os.path.join(recipe, 'build_scripts', 'default.sh'), dest_file)
+    api.build(recipe, config=testing_config)
+    copy_into(os.path.join(recipe, 'build_scripts', 'no_as_needed.sh'), dest_file)
+    with pytest.raises(SystemExit):
+        api.build(recipe, config=testing_config)
+    rm_rf(dest_file)

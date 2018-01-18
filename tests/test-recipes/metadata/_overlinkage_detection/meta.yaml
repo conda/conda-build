@@ -1,0 +1,66 @@
+{% set version = "3.3.2" %}
+
+package:
+  name: libarchive
+  version: {{ version }}
+
+source:
+  fn: libarchive-{{ version }}.tar.gz
+  url: https://github.com/libarchive/libarchive/archive/v{{ version }}.tar.gz
+  sha256: 22560b89d420b11a4a724877bc6672b7d7c0f239e77d42a39dcc5a9c3b28db82
+  patches:
+    - 0001-Add-lib-to-CMAKE_FIND_LIBRARY_PREFIXES-for-lzma.patch
+
+build:
+  number: 3
+  skip: True  # [win and py2k]
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+    - autoconf  # [unix]
+    - automake  # [unix]
+    - libtool  # [unix]
+    - pkg-config  # [unix]
+    - cmake  # [win]
+  host:
+    - bzip2
+    - libiconv  # [osx]
+    - lz4-c
+    - xz
+    - lzo
+    - openssl
+    - libxml2
+    - zlib
+
+test:
+  files:
+    - test/hello_world.xar
+  commands:
+    # Verify pkg-config file is in place.
+    - test -f "${PREFIX}/lib/pkgconfig/libarchive.pc"  # [unix]
+
+    # Verify headers are in place.
+    - test -f "${PREFIX}/include/archive.h"            # [unix]
+    - test -f "${PREFIX}/include/archive_entry.h"      # [unix]
+
+    # Verify libraries are in place.
+    - test -f "${PREFIX}/lib/libarchive.a"             # [unix]
+    - test -f "${PREFIX}/lib/libarchive.so"            # [linux]
+    - test -f "${PREFIX}/lib/libarchive.dylib"         # [osx]
+
+    # Check for commands
+    - bsdcat --version
+    - bsdcpio --version
+    - bsdtar --version
+    - bsdtar -tf test/hello_world.xar
+
+about:
+  home: http://www.libarchive.org/
+  summary: Multi-format archive and compression library
+  license: BSD 2-Clause
+
+extra:
+  recipe-maintainers:
+    - jakirkham
+    - mingwandroid
