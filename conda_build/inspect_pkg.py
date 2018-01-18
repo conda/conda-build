@@ -15,16 +15,15 @@ import re
 import sys
 import tempfile
 
-from .conda_interface import (iteritems, specs_from_args, is_linked, linked_data, linked,
-                              get_index)
-from .conda_interface import display_actions, install_actions
-from .conda_interface import memoized
-
-
 from conda_build.os_utils.ldd import get_linkages, get_package_obj_files, get_untracked_obj_files
 from conda_build.os_utils.macho import get_rpaths, human_filetype
 from conda_build.utils import (groupby, getter, comma_join, rm_rf, package_has_file, get_logger,
                                ensure_list)
+
+from conda_build.conda_interface import (iteritems, specs_from_args, is_linked, linked_data, linked,
+                                         get_index)
+from conda_build.conda_interface import display_actions, install_actions
+from conda_build.conda_interface import memoized
 
 
 @memoized

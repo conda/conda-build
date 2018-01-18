@@ -9,9 +9,8 @@ from conda_build.conda_interface import memoized
 from conda_build.conda_interface import untracked
 from conda_build.conda_interface import linked_data
 
-from conda_build import post
 from conda_build.os_utils.macho import otool
-from conda_build.os_utils.pyldd import codefile_class, inspect_linkages, machofile
+from conda_build.os_utils.pyldd import codefile_class, inspect_linkages, machofile, is_codefile
 
 
 LDD_RE = re.compile(r'\s*(.*?)\s*=>\s*(.*?)\s*\(.*\)')
@@ -94,7 +93,7 @@ def get_package_obj_files(dist, prefix):
     if data:
         for f in data.get('files', []):
             path = join(prefix, f)
-            if post.is_obj(path):
+            if is_codefile(path):
                 res.append(f)
 
     return res
@@ -106,7 +105,7 @@ def get_untracked_obj_files(prefix):
     files = untracked(prefix)
     for f in files:
         path = join(prefix, f)
-        if post.is_obj(path):
+        if is_codefile(path):
             res.append(f)
 
     return res

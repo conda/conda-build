@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function
 from collections import defaultdict
 import fnmatch
 from functools import partial
-from glob import glob
+from glob2 import glob
 import io
 import locale
 import re
@@ -17,15 +17,15 @@ except ImportError:
     readlink = False
 
 from conda_build.os_utils import external
-from .conda_interface import lchmod
-from .conda_interface import walk_prefix
-from .conda_interface import md5_file
-from .conda_interface import PY3
-from .conda_interface import TemporaryDirectory
+from conda_build.conda_interface import lchmod
+from conda_build.conda_interface import walk_prefix
+from conda_build.conda_interface import md5_file
+from conda_build.conda_interface import PY3
+from conda_build.conda_interface import TemporaryDirectory
 
 from conda_build import utils
 from conda_build.os_utils.pyldd import is_codefile, inspect_linkages
-from conda_build.inspect import which_package
+from conda_build.inspect_pkg import which_package
 
 if sys.platform == 'darwin':
     from conda_build.os_utils import macho
@@ -459,8 +459,7 @@ def _find_needed_dso_in_system(m, needed_dso, errors, sysroots, msg_prelude,
         dso_fname = os.path.basename(needed_dso)
         sysroot_files = []
         for sysroot in sysroots:
-            sysroot_files.extend(glob(os.path.join(sysroot, '**', dso_fname),
-                                        recursive=True))
+            sysroot_files.extend(glob(os.path.join(sysroot, '**', dso_fname)))
         if len(sysroot_files):
             # Removing config.build_prefix is only *really* for Linux, though we could
             # use CONDA_BUILD_SYSROOT for macOS. We should figure out what to do about
@@ -516,7 +515,7 @@ def check_overlinking(m, files):
     pkg_name = m.get_value('package/name')
 
     run_reqs = [req.split(' ')[0] for req in m.meta.get('requirements', {}).get('run', [])]
-    sysroots = glob(os.path.join(m.config.build_prefix, '**', 'sysroot'), recursive=True)
+    sysroots = glob(os.path.join(m.config.build_prefix, '**', 'sysroot'))
     if not len(sysroots):
         if m.config.variant.get('target_platform') == 'osx-64':
             sysroots = ['/usr/lib', '/opt/X11', '/System/Library/Frameworks']
