@@ -5,11 +5,57 @@ import os
 import re
 import struct
 import sys
-
 import logging
+
+from conda_build.utils import ensure_list
+
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
+
+'''
+# Detect security flags via readelf (from https://github.com/hugsy/gef)
+# .. spawning out to readelf is not something we intend to do though ..
+@lru_cache(32)
+def checksec(filename):
+    """Check the security property of the ELF binary. The following properties are:
+    - Canary
+    - NX
+    - PIE
+    - Fortify
+    - Partial/Full RelRO.
+    Return a Python dict() with the different keys mentioned above, and the boolean
+    associated whether the protection was found."""
+
+    try:
+        readelf = which("readelf")
+    except IOError:
+        err("Missing `readelf`")
+        return
+
+    def __check_security_property(opt, filename, pattern):
+        cmd   = [readelf,]
+        cmd  += opt.split()
+        cmd  += [filename,]
+        lines = gef_execute_external(cmd, as_list=True)
+        for line in lines:
+            if re.search(pattern, line):
+                return True
+        return False
+
+    results = collections.OrderedDict()
+    results["Canary"] = __check_security_property("-s", filename, r"__stack_chk_fail") is True
+    has_gnu_stack = __check_security_property("-W -l", filename, r"GNU_STACK") is True
+    if has_gnu_stack:
+        results["NX"] = __check_security_property("-W -l", filename, r"GNU_STACK.*RWE") is False
+    else:
+        results["NX"] = False
+    results["PIE"] = __check_security_property("-h", filename, r"Type:.*EXEC") is False
+    results["Fortify"] = __check_security_property("-s", filename, r"_chk@GLIBC") is True
+    results["Partial RelRO"] = __check_security_property("-l", filename, r"GNU_RELRO") is True
+    results["Full RelRO"] = __check_security_property("-d", filename, r"BIND_NOW") is True
+    return results
+'''
 
 '''
 Eventual goal is to become a full replacement for `ldd` `otool -L` and `ntldd'
@@ -84,8 +130,7 @@ LC_LOAD_WEAK_DYLIB = 0x18
 LC_LOAD_UPWARD_DYLIB = 0x23
 LC_REEXPORT_DYLIB = 0x1f
 LC_LAZY_LOAD_DYLIB = 0x20
-LC_LOAD_DYLIBS = (LC_ID_DYLIB,
-                  LC_LOAD_DYLIB,
+LC_LOAD_DYLIBS = (LC_LOAD_DYLIB,
                   LC_LOAD_WEAK_DYLIB,
                   LC_LOAD_UPWARD_DYLIB,
                   LC_LAZY_LOAD_DYLIB,
@@ -154,6 +199,20 @@ class fileview(object):
         bytes = self._fileobj.read(size)
         self._pos += len(bytes)
         return bytes
+
+
+class UnixExecutable(object):
+    def get_rpaths_transitive(self):
+        return self.rpaths_transitive
+
+    def get_rpaths_nontransitive(self):
+        return self.rpaths_nontransitive
+
+    def get_shared_libraries(self):
+        return self.shared_libraries
+
+    def is_executable(self):
+        return True
 
 
 def read_data(file, endian, num=1):
@@ -296,38 +355,84 @@ def mach_o_find_rpaths(ofile, arch):
     return results
 
 
-def _get_resolved_location(codefile, so, exedir, selfdir, sysroot='', resolved_rpath=None):
-    '''Returns a tuple of resolved location, '''
+def _get_resolved_location(codefile,
+                           unresolved,
+                           exedir,
+                           selfdir,
+                           LD_LIBRARY_PATH='',
+                           default_paths=None,
+                           sysroot='',
+                           resolved_rpath=None):
+    '''
+       From `man ld.so`
+
+       When resolving shared object dependencies, the dynamic linker first inspects each dependency
+       string to see if it contains a slash (this can occur if a shared object pathname containing
+       slashes was specified at link time).  If a slash is found, then the dependency string is
+       interpreted as a (relative or absolute) pathname, and the shared object is loaded using that
+       pathname.
+
+       If a shared object dependency does not contain a slash, then it is searched for in the
+       following order:
+
+       o Using the directories specified in the DT_RPATH dynamic section attribute of the binary
+         if present and DT_RUNPATH attribute does not exist.  Use of DT_RPATH is deprecated.
+
+       o Using the environment variable LD_LIBRARY_PATH (unless the executable is being run in
+         secure-execution mode; see below).  in which case it is ignored.
+
+       o Using the directories specified in the DT_RUNPATH dynamic section attribute of the
+         binary if present. Such directories are searched only to find those objects required
+         by DT_NEEDED (direct dependencies) entries and do not apply to those objects' children,
+         which must themselves have their own DT_RUNPATH entries. This is unlike DT_RPATH,
+         which is applied to searches for all children in the dependency tree.
+
+       o From the cache file /etc/ld.so.cache, which contains a compiled list of candidate
+         shared objects previously found in the augmented library path. If, however, the binary
+         was linked with the -z nodeflib linker option, shared objects in the default paths are
+         skipped. Shared objects installed in hardware capability directories (see below) are
+         preferred to other shared objects.
+
+       o In the default path /lib, and then /usr/lib. (On some 64-bit architectures, the default
+         paths for 64-bit shared objects are /lib64, and then /usr/lib64.)  If the binary was
+         linked with the -z nodeflib linker option, this step is skipped.
+
+       Returns a tuple of resolved location, rpath_used, in_sysroot
+    '''
     rpath_result = None
     found = False
-    if so.startswith('$RPATH'):
+    ld_library_paths = [] if not LD_LIBRARY_PATH else LD_LIBRARY_PATH.split(':')
+    if unresolved.startswith('$RPATH'):
         these_rpaths = [resolved_rpath] if resolved_rpath else \
-                     codefile.get_rpaths_transitive() + \
-                     codefile.get_rpaths_nontransitive()
+                        codefile.get_rpaths_transitive() + \
+                        ld_library_paths + \
+                        codefile.get_rpaths_nontransitive() + \
+                        [dp.replace('$SYSROOT', sysroot) for dp in ensure_list(default_paths)]
         for rpath in these_rpaths:
-            resolved = so.replace('$RPATH', rpath) \
-                         .replace('$SELFDIR', selfdir) \
-                         .replace('$EXEDIR', exedir)
+            resolved = unresolved.replace('$RPATH', rpath) \
+                                 .replace('$SELFDIR', selfdir) \
+                                 .replace('$EXEDIR', exedir)
             exists = os.path.exists(resolved)
-            exists_sysroot = os.path.exists(os.path.join(sysroot, resolved.lstrip('/')))
+            exists_sysroot = exists and sysroot and resolved.startswith(sysroot)
             if resolved_rpath or exists or exists_sysroot:
                 rpath_result = rpath
                 found = True
                 break
         if not found:
             # Return the so name so that it can be warned about as missing.
-            return so, None, False
-    else:
-        resolved = so.replace('$SELFDIR', selfdir) \
-                     .replace('$EXEDIR', exedir)
+            return unresolved, None, False
+    elif any(a in unresolved for a in ('$SELFDIR', '$EXEDIR')):
+        resolved = unresolved.replace('$SELFDIR', selfdir) \
+                             .replace('$EXEDIR', exedir)
         exists = os.path.exists(resolved)
-        exists_sysroot = os.path.exists(os.path.join(sysroot, resolved.lstrip('/')))
-    if exists_sysroot and sysroot != '':
-        if exists:
-            log.warning('shared library exists in both the system and also the sysroot, picking non-sysroot')  # noqa
+        exists_sysroot = exists and sysroot and resolved.startswith(sysroot)
+    else:
+        if unresolved.startswith('/'):
+            return unresolved, None, False
         else:
-            return os.path.join(sysroot, resolved.lstrip('/')), rpath_result, True
-    return resolved, rpath_result, False
+            return os.path.join(selfdir, unresolved), None, False
+
+    return resolved, rpath_result, exists_sysroot
 
 
 def _get_resolved_relocated_location(codefile, so, src_exedir, src_selfdir,
@@ -340,7 +445,7 @@ def _get_resolved_relocated_location(codefile, so, src_exedir, src_selfdir,
     return src_resolved, dst_resolved, in_sysroot
 
 
-class machofile(object):
+class machofile(UnixExecutable):
     def __init__(self, file, arch, initial_rpaths_transitive=[]):
         self.shared_libraries = []
         results = mach_o_find_dylibs(file, arch)
@@ -350,28 +455,28 @@ class machofile(object):
         file.seek(0)
         self.rpaths_transitive = initial_rpaths_transitive
         filetypes, rpaths = zip(*mach_o_find_rpaths(file, arch))
-        self.rpaths_transitive.extend(
-            [rpath.replace('@loader_path', '$SELFDIR')
-                  .replace('@executable_path', '$EXEDIR')
-                  .replace('@rpath', '$RPATH')
-             for rpath in rpaths[0] if rpath])
-        self.rpaths_nontransitive = []
+        local_rpaths = [self.from_os_varnames(rpath)
+                        for rpath in rpaths[0] if rpath]
+        self.rpaths_transitive.extend(local_rpaths)
+        self.rpaths_nontransitive = local_rpaths
         self.shared_libraries.extend(
-            [(so, so.replace('@loader_path', '$SELFDIR')
-                    .replace('@executable_path', '$EXEDIR')
-                    .replace('@rpath', '$RPATH')) for so in sos[0] if so])
+            [(so, self.from_os_varnames(so)) for so in sos[0] if so])
         file.seek(0)
         # Not actually used ..
         self.selfdir = os.path.dirname(file.name)
+        self.filename = file.name
 
-    def get_rpaths_transitive(self):
-        return self.rpaths_transitive
+    def to_os_varnames(self, input_):
+        """Don't make these functions - they are methods to match the API for elffiles."""
+        return input_.replace('$SELFDIR', '@loader_path')    \
+                     .replace('$EXEDIR', '@executable_path') \
+                     .replace('$RPATH', '@rpath')
 
-    def get_rpaths_nontransitive(self):
-        return []
-
-    def get_shared_libraries(self):
-        return self.shared_libraries
+    def from_os_varnames(self, input_):
+        """Don't make these functions - they are methods to match the API for elffiles."""
+        return input_.replace('@loader_path', '$SELFDIR')    \
+                     .replace('@executable_path', '$EXEDIR') \
+                     .replace('@rpath', '$RPATH')
 
     def get_resolved_shared_libraries(self, src_exedir, src_selfdir, sysroot=''):
         result = []
@@ -395,9 +500,8 @@ class machofile(object):
             result.append((so, resolved, dst_resolved, in_sysroot))
         return result
 
-    def is_executable(self):
-        # TODO :: Write this.
-        return True
+    def uniqueness_key(self):
+        return self.filename
 
 
 ###########################################
@@ -430,8 +534,12 @@ PT_INTERP = 3
 PT_NOTE = 4
 PT_SHLIB = 5
 PT_PHDR = 6
+PT_LOOS = 0x60000000
 PT_LOPROC = 0x70000000
 PT_HIPROC = 0x7fffffff
+PT_GNU_EH_FRAME = (PT_LOOS + 0x474e550)
+PT_GNU_STACK = (PT_LOOS + 0x474e551)
+PT_GNU_RELRO = (PT_LOOS + 0x474e552)
 
 SHT_PROGBITS = 0x1
 SHT_SYMTAB = 0x2
@@ -630,6 +738,7 @@ class elfsection(object):
             dt_needed = []
             dt_rpath = []
             dt_runpath = []
+            dt_soname = '$EXECUTABLE'
             for m in range(int(self.sh_size / self.sh_entsize)):
                 file.seek(self.sh_offset + (m * self.sh_entsize))
                 d_tag, = struct.unpack(endian + ptr_type, file.read(sz_ptr))
@@ -638,10 +747,12 @@ class elfsection(object):
                     dt_needed.append(d_val_ptr)
                 elif d_tag == DT_RPATH:
                     dt_rpath.append(d_val_ptr)
-                elif d_tag == DT_RPATH:
+                elif d_tag == DT_RUNPATH:
                     dt_runpath.append(d_val_ptr)
                 elif d_tag == DT_STRTAB:
                     dt_strtab_ptr = d_val_ptr
+                elif d_tag == DT_SONAME:
+                    dt_soname = d_val_ptr
             if dt_strtab_ptr:
                 strsec, offset = elffile.find_section_and_offset(dt_strtab_ptr)
                 if strsec and strsec.sh_type == SHT_STRTAB:
@@ -662,6 +773,10 @@ class elfsection(object):
                         elffile.dt_runpath.extend([rp if rp.endswith(os.sep)
                                                    else rp + os.sep
                                                    for rp in rpaths])
+                    if dt_soname != '$EXECUTABLE':
+                        end = dt_soname + strsec.table[dt_soname:].index('\0')
+                        elffile.dt_soname = strsec.table[dt_soname:end]
+
             # runpath always takes precedence.
             if len(elffile.dt_runpath):
                 elffile.dt_rpath = []
@@ -690,7 +805,7 @@ class programheader(object):
             elffile.program_interpreter = file.read(self.p_filesz - 1).decode()
 
 
-class elffile(object):
+class elffile(UnixExecutable):
     def __init__(self, file, initial_rpaths_transitive=[]):
         self.ehdr = elfheader(file)
         self.dt_needed = []
@@ -699,10 +814,12 @@ class elffile(object):
         self.programheaders = []
         self.elfsections = []
         self.program_interpreter = None
+        self.dt_soname = '$EXECUTABLE'
         # Not actually used ..
         self.selfdir = os.path.dirname(file.name)
 
         for n in range(self.ehdr.phnum):
+            file.seek(self.ehdr.phoff + (n * self.ehdr.phentsize))
             self.programheaders.append(programheader(self.ehdr, file))
         for n in range(self.ehdr.shnum):
             file.seek(self.ehdr.shoff + (n * self.ehdr.shentsize))
@@ -712,6 +829,7 @@ class elffile(object):
             ph.postprocess(self, file)
         for es in self.elfsections:
             es.postprocess(self, file)
+
         # TODO :: If we have a program_interpreter we need to run it as:
         # TODO :: LD_DEBUG=all self.program_interpreter --inhibit-cache --list file.name
         # TODO :: then process the output line e.g.:
@@ -720,17 +838,32 @@ class elffile(object):
         # TODO :: when run through QEMU also, so in that case,
         # TODO :: we must run os.path.join(sysroot,self.program_interpreter)
         # TODO :: Interesting stuff: https://www.cs.virginia.edu/~dww4s/articles/ld_linux.html
-        self.rpaths_transitive = [rpath.replace('$ORIGIN', '$SELFDIR')
-                                       .replace('$LIB', '/usr/lib')
-                                  for rpath in (self.dt_rpath +
-                                                initial_rpaths_transitive)]
-        self.rpaths_nontransitive = [rpath.replace('$ORIGIN', '$SELFDIR')
-                                          .replace('$LIB', '/usr/lib')
-                                     for rpath in self.dt_runpath]
-        # This is implied. Making it explicit allows sharing the
-        # same _get_resolved_location() function with macho-o
-        self.shared_libraries = [(needed, '$RPATH/' + needed)
+
+        dt_rpath = [p.rstrip("/") for p in self.dt_rpath]
+        dt_runpath = [p.rstrip("/") for p in self.dt_runpath]
+        self.rpaths_transitive = [self.from_os_varnames(rpath)
+                                  for rpath in (initial_rpaths_transitive + dt_rpath)]
+        self.rpaths_nontransitive = [self.from_os_varnames(rpath)
+                                     for rpath in dt_runpath]
+        # Lookup must be avoided when DT_NEEDED contains any '/'s
+        self.shared_libraries = [(needed, needed if '/' in needed else '$RPATH/' + needed)
                                  for needed in self.dt_needed]
+
+    def to_os_varnames(self, input):
+        if self.ehdr.sz_ptr == 8:
+            libdir = '/lib64'
+        else:
+            libdir = '/lib'
+        return input.replace('$SELFDIR', '$ORIGIN')  \
+                    .replace(libdir, '$LIB')
+
+    def from_os_varnames(self, input):
+        if self.ehdr.sz_ptr == 8:
+            libdir = '/lib64'
+        else:
+            libdir = '/lib'
+        return input.replace('$ORIGIN', '$SELFDIR')  \
+                    .replace('$LIB', libdir)
 
     def find_section_and_offset(self, addr):
         'Can be called immediately after the elfsections have been constructed'
@@ -739,45 +872,39 @@ class elffile(object):
                 return es, addr - es.sh_addr
         return None, None
 
-    def get_rpaths_transitive(self):
-        return self.rpaths_transitive
-
-    def get_rpaths_nontransitive(self):
-        return self.rpaths_nontransitive
-
-    def get_shared_libraries(self):
-        return self.shared_libraries
-
     def get_resolved_shared_libraries(self, src_exedir, src_selfdir, sysroot=''):
         result = []
         for so_orig, so in self.shared_libraries:
             resolved, rpath, in_sysroot = \
-                _get_resolved_location(self, so, src_exedir, src_selfdir, sysroot)
+                _get_resolved_location(self,
+                                       so,
+                                       src_exedir,
+                                       src_selfdir,
+                                       LD_LIBRARY_PATH='',
+                                       default_paths=['$SYSROOT/lib64', '$SYSROOT/usr/lib64'],
+                                       sysroot=sysroot)
             result.append((so_orig, resolved, rpath, in_sysroot))
         return result
 
-    def is_executable(self):
-        return True
-
     def selfdir(self):
         return None
 
+    def uniqueness_key(self):
+        return self.dt_soname
 
-class inscrutablefile(object):
-    def __init__(self, file, initial_rpaths_transitive=[]):
-        return
 
+class inscrutablefile(UnixExecutable):
     def get_rpaths_transitive(self):
         return []
 
-    def get_resolved_shared_libraries(self, src_exedir, src_selfdir, sysroot=''):
+    def get_resolved_shared_libraries(self, *args, **kw):
         return []
-
-    def is_executable(self):
-        return True
 
     def selfdir(self):
         return None
+
+    def uniqueness_key(self):
+        return 'unknown'
 
 
 def codefile(file, arch='any', initial_rpaths_transitive=[]):
@@ -821,42 +948,87 @@ def is_codefile(filename, skip_symlinks=True):
     return True
 
 
+def _trim_sysroot(sysroot):
+    while sysroot.endswith('/') or sysroot.endswith('\\'):
+        sysroot = sysroot[:-1]
+    return sysroot
+
+
+def _get_arch_if_native(arch):
+    if arch == 'native':
+        _, _, _, _, arch = os.uname()
+    return arch
+
+
 # TODO :: Consider memoizing instead of repeatedly scanning
 # TODO :: libc.so/libSystem.dylib when inspect_linkages(recurse=True)
 def _inspect_linkages_this(filename, sysroot='', arch='native'):
-    while sysroot.endswith('/') or sysroot.endswith('\\'):
-        sysroot = sysroot[:-1]
-    if arch == 'native':
-        _, _, _, _, arch = os.uname()
+    '''
+
+    :param filename:
+    :param sysroot:
+    :param arch:
+    :return:
+    '''
+
+    if not os.path.exists(filename):
+        return None, [], []
+    sysroot = _trim_sysroot(sysroot)
+    arch = _get_arch_if_native(arch)
+    with open(filename, 'rb') as f:
+        # TODO :: Problems here:
+        # TODO :: 1. macOS can modify RPATH for children in each .so
+        # TODO :: 2. Linux can identify the program interpreter which can change the default_paths
+        cf = codefile(f, arch)
+        dirname = os.path.dirname(filename)
+        results = cf.get_resolved_shared_libraries(dirname, dirname, sysroot)
+        if not results:
+            return cf.uniqueness_key(), [], []
+        orig_names, resolved_names, _, in_sysroot = map(list, zip(*results))
+        return cf.uniqueness_key(), orig_names, resolved_names
+
+
+def inspect_rpaths(filename, resolve_dirnames=True, use_os_varnames=True,
+                   sysroot='', arch='native'):
     if not os.path.exists(filename):
         return [], []
+    sysroot = _trim_sysroot(sysroot)
+    arch = _get_arch_if_native(arch)
     with open(filename, 'rb') as f:
         # TODO :: Problems here:
         # TODO :: 1. macOS can modify RPATH for children in each .so
         # TODO :: 2. Linux can identify the program interpreter which can change the initial RPATHs
+        # TODO :: Should '/lib', '/usr/lib' not include (or be?!) `sysroot`(s) instead?
         cf = codefile(f, arch, ['/lib', '/usr/lib'])
-        dirname = os.path.dirname(filename)
-        results = cf.get_resolved_shared_libraries(dirname, dirname, sysroot)
-        if not results:
-            return [], []
-        orig_names, resolved_names, _, in_sysroot = map(list, zip(*results))
-        return orig_names, resolved_names
+        if resolve_dirnames:
+            return [_get_resolved_location(cf, rpath, os.path.dirname(filename),
+                                           os.path.dirname(filename), sysroot)[0]
+                    for rpath in cf.rpaths_nontransitive]
+        else:
+            if use_os_varnames:
+                return [cf.to_os_varnames(rpath) for rpath in cf.rpaths_nontransitive]
+            else:
+                return cf.rpaths_nontransitive
 
 
 # TODO :: Consider returning a tree structure or a dict when recurse is True?
 def inspect_linkages(filename, resolve_filenames=True, recurse=True, sysroot='', arch='native'):
+    already_seen = set()
     todo = set([filename])
     done = set()
     results = set()
     while todo != done:
         filename = next(iter(todo - done))
-        these_orig, these_resolved = _inspect_linkages_this(filename, sysroot=sysroot, arch=arch)
-        if resolve_filenames:
-            results.update(these_resolved)
-        else:
-            results.update(these_orig)
-        if recurse:
-            todo.update(these_resolved)
+        uniqueness_key, these_orig, these_resolved = _inspect_linkages_this(
+            filename, sysroot=sysroot, arch=arch)
+        if uniqueness_key not in already_seen:
+            if resolve_filenames:
+                results.update(these_resolved)
+            else:
+                results.update(these_orig)
+            if recurse:
+                todo.update(these_resolved)
+            already_seen.add(uniqueness_key)
         done.add(filename)
     return results
 

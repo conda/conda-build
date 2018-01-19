@@ -30,7 +30,7 @@ from conda_build import api, exceptions, __version__
 from conda_build.build import VersionOrder
 from conda_build.render import finalize_metadata
 from conda_build.utils import (copy_into, on_win, check_call_env, convert_path_for_cygwin_or_msys2,
-                               package_has_file, check_output_env, get_conda_operation_locks)
+                               package_has_file, check_output_env, get_conda_operation_locks, rm_rf)
 from conda_build.os_utils.external import find_executable
 from conda_build.exceptions import DependencyNeedsBuildingError
 
@@ -914,7 +914,8 @@ def test_run_exports(testing_metadata, testing_config, testing_workdir):
     testing_metadata.meta['requirements']['build'] = ['test_has_run_exports', '{{ compiler("c") }}']
     testing_metadata.meta['requirements']['host'] = ['test_has_run_exports_implicit_weak']
     api.output_yaml(testing_metadata, 'host_present_strong/meta.yaml')
-    m = api.render(os.path.join(testing_workdir, 'host_present_strong'), config=testing_config)[0][0]
+    m = api.render(os.path.join(testing_workdir, 'host_present_strong'),
+                   config=testing_config)[0][0]
     assert any('strong_pinned_package 1.0' in req for req in m.meta['requirements']['host'])
     assert 'strong_pinned_package 1.0.*' in m.meta['requirements']['run']
     # weak one from test_has_run_exports should be excluded, since it is a build dep
@@ -1183,7 +1184,8 @@ def test_pin_depends(testing_config):
     """
     recipe = os.path.join(metadata_dir, '_pin_depends_record')
     m = api.render(recipe, config=testing_config)[0][0]
-    # the recipe python is not pinned, and having pin_depends set to record will not show it in record
+    # the recipe python is not pinned, and having pin_depends set to record
+    # will not show it in record
     assert not any(re.search('python\s+[23]\.', dep) for dep in m.meta['requirements']['run'])
     output = api.build(m, config=testing_config)[0]
     requires = package_has_file(output, 'info/requires')
@@ -1217,3 +1219,17 @@ def test_provides_features_metadata(testing_config):
     assert index['requires_features'] == {'test': 'ok'}
     assert 'provides_features' in index
     assert index['provides_features'] == {'test2': 'also_ok'}
+
+
+@pytest.mark.skipif(not sys.platform.startswith('linux'),
+                    reason="Not implemented outside linux for now")
+def test_overlinking_detection(testing_config):
+    testing_config.activate = True
+    recipe = os.path.join(metadata_dir, '_overlinkage_detection')
+    dest_file = os.path.join(recipe, 'build.sh')
+    copy_into(os.path.join(recipe, 'build_scripts', 'default.sh'), dest_file)
+    api.build(recipe, config=testing_config)
+    copy_into(os.path.join(recipe, 'build_scripts', 'no_as_needed.sh'), dest_file)
+    with pytest.raises(SystemExit):
+        api.build(recipe, config=testing_config)
+    rm_rf(dest_file)

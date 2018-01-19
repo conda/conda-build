@@ -86,6 +86,7 @@ DEFAULTS = [Setting('activate', True),
             Setting('_src_cache_root', abspath(expanduser(expandvars(
                 cc_conda_build.get('cache_dir')))) if cc_conda_build.get('cache_dir') else None),
             Setting('copy_test_source_files', True),
+            Setting('error_overlinking', True),
 
             Setting('index', None),
             # support legacy recipes where only build is specified and expected to be the

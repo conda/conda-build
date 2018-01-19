@@ -710,7 +710,7 @@ def post_process_files(m, initial_prefix_files):
         sys.exit(indent("""Error: Untracked file(s) %s found in conda-meta directory.
 This error usually comes from using conda in the build script.  Avoid doing this, as it
 can lead to packages that include their dependencies.""" % meta_files))
-    post_build(m, new_files, build_python=python, config=m.config)
+    post_build(m, new_files, build_python=python)
 
     entry_point_script_names = get_entry_point_script_names(m.get_value('build/entry_points'))
     if m.noarch == 'python':

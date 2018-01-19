@@ -294,20 +294,20 @@ def convert(package_file, output_dir=".", show_imports=False, platforms=None, fo
 def test_installable(channel='defaults'):
     """Check to make sure that packages in channel are installable.
     This is a consistency check for the channel."""
-    from .inspect import test_installable
+    from .inspect_pkg import test_installable
     return test_installable(channel)
 
 
 def inspect_linkages(packages, prefix=_sys.prefix, untracked=False, all_packages=False,
                      show_files=False, groupby='package', sysroot=''):
-    from .inspect import inspect_linkages
+    from .inspect_pkg import inspect_linkages
     packages = _ensure_list(packages)
     return inspect_linkages(packages, prefix=prefix, untracked=untracked, all_packages=all_packages,
                             show_files=show_files, groupby=groupby, sysroot=sysroot)
 
 
 def inspect_objects(packages, prefix=_sys.prefix, groupby='filename'):
-    from .inspect import inspect_objects
+    from .inspect_pkg import inspect_objects
     packages = _ensure_list(packages)
     return inspect_objects(packages, prefix=prefix, groupby=groupby)
 
@@ -334,7 +334,7 @@ def inspect_hash_inputs(packages):
     Returns a dictionary with a key for each input package and a value of the dictionary loaded
     from the package's info/hash_input.json file
     """
-    from .inspect import get_hash_input
+    from .inspect_pkg import get_hash_input
     return get_hash_input(packages)
 
 
