@@ -447,7 +447,10 @@ def _get_resolved_relocated_location(codefile, so, src_exedir, src_selfdir,
 
 class machofile(UnixExecutable):
     def __init__(self, file, arch, initial_rpaths_transitive=[]):
+        self.filename = file.name
         self.shared_libraries = []
+        # Not actually used ..
+        self.selfdir = os.path.dirname(file.name)
         results = mach_o_find_dylibs(file, arch)
         if not results:
             return
@@ -462,9 +465,6 @@ class machofile(UnixExecutable):
         self.shared_libraries.extend(
             [(so, self.from_os_varnames(so)) for so in sos[0] if so])
         file.seek(0)
-        # Not actually used ..
-        self.selfdir = os.path.dirname(file.name)
-        self.filename = file.name
 
     def to_os_varnames(self, input_):
         """Don't make these functions - they are methods to match the API for elffiles."""
