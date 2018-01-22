@@ -36,6 +36,7 @@ from .conda_interface import StringIO
 from .conda_interface import VersionOrder, MatchSpec
 from .conda_interface import cc_conda_build
 from .conda_interface import conda_43, Dist
+from .conda_interface import context
 # NOQA because it is not used in this file.
 from conda_build.conda_interface import rm_rf as _rm_rf # NOQA
 from conda_build.os_utils import external
@@ -806,6 +807,7 @@ class LoggingContext(object):
         self.old_levels = {}
         self.handler = handler
         self.close = close
+        self.quiet = context.quiet
 
     def __enter__(self):
         for logger in LoggingContext.loggers:
@@ -816,6 +818,8 @@ class LoggingContext(object):
         if self.handler:
             self.logger.addHandler(self.handler)
 
+        context.quiet = True
+
     def __exit__(self, et, ev, tb):
         for logger, level in self.old_levels.items():
             logging.getLogger(logger).setLevel(level)
@@ -823,6 +827,9 @@ class LoggingContext(object):
             self.logger.removeHandler(self.handler)
         if self.handler and self.close:
             self.handler.close()
+
+        context.quiet = self.quiet
+
         # implicit return of None => don't swallow exceptions
 
 
