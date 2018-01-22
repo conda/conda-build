@@ -1858,8 +1858,10 @@ class MetaData(object):
 
     def get_used_vars(self, force_top_level=False):
         global used_vars_cache
-        if (self.name(), force_top_level, self.config.subdir) in used_vars_cache:
-            used_vars = used_vars_cache[(self.name(), force_top_level, self.config.subdir)]
+        recipe_dir = self.path or self.meta.get('extra', {}).get('parent_recipe', {}).get('path')
+        if (self.name(), recipe_dir, force_top_level, self.config.subdir) in used_vars_cache:
+            used_vars = used_vars_cache[(self.name(), recipe_dir,
+                                         force_top_level, self.config.subdir)]
         else:
             meta_yaml_reqs = self._get_used_vars_meta_yaml(force_top_level=force_top_level)
             is_output = 'package:' not in self.get_recipe_text()
@@ -1875,7 +1877,8 @@ class MetaData(object):
                     any(plat != self.config.subdir for plat in
                         self.get_variants_as_dict_of_lists()['target_platform'])):
                 used_vars.add('target_platform')
-            used_vars_cache[(self.name(), force_top_level, self.config.subdir)] = used_vars
+            used_vars_cache[(self.name(), recipe_dir,
+                             force_top_level, self.config.subdir)] = used_vars
         return used_vars
 
     def _get_used_vars_meta_yaml(self, force_top_level=False):
