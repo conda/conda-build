@@ -1840,8 +1840,10 @@ class MetaData(object):
                                     self.extract_outputs_text())).rstrip()
 
         outputs = (yaml.safe_load(self._get_contents(permit_undefined_jinja=False,
-                                template_string=template_string)) or {}).get('outputs', [])
-        self.parse_until_resolved()
+                                                     template_string=template_string,
+                                                     skip_build_id=True)) or {}).get('outputs', [])
+        if not self.final:
+            self.parse_until_resolved()
         return get_output_dicts_from_metadata(self, outputs=outputs)
 
     def get_rendered_output(self, name):
@@ -1859,7 +1861,9 @@ class MetaData(object):
     def get_used_vars(self, force_top_level=False):
         global used_vars_cache
         recipe_dir = self.path or self.meta.get('extra', {}).get('parent_recipe', {}).get('path')
-        if (self.name(), recipe_dir, force_top_level, self.config.subdir) in used_vars_cache:
+        if hasattr(self.config, 'used_vars'):
+            used_vars = self.config.used_vars
+        elif (self.name(), recipe_dir, force_top_level, self.config.subdir) in used_vars_cache:
             used_vars = used_vars_cache[(self.name(), recipe_dir,
                                          force_top_level, self.config.subdir)]
         else:
@@ -1884,7 +1888,7 @@ class MetaData(object):
     def _get_used_vars_meta_yaml(self, force_top_level=False):
         # recipe text is the best, because variables can be used anywhere in it.
         #   we promise to detect anything in meta.yaml, but not elsewhere.
-        is_output = 'package:' not in self.get_recipe_text()
+        is_output = (not self.path and self.meta.get('extra', {}).get('parent_recipe'))
         if is_output and not force_top_level:
             recipe_text = self.extract_single_output_text(self.name())
         else:

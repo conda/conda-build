@@ -1453,18 +1453,17 @@ def _construct_metadata_for_test_from_package(package, config):
 
     if package_data['subdir'] != 'noarch':
         config.host_subdir = package_data['subdir']
-    if config.filename_hashing:
-        # We may be testing an (old) package built without filename hashing.
-        hash_input = os.path.join(info_dir, 'hash_input.json')
-        if os.path.isfile(hash_input):
-            with open(os.path.join(info_dir, 'hash_input.json')) as f:
-                hash_input = json.load(f)
-        else:
-            config.filename_hashing = False
-            hash_input = {}
-        # not actually used as a variant, since metadata will have been finalized.
-        #    This is still necessary for computing the hash correctly though
-        config.variant = hash_input
+    # We may be testing an (old) package built without filename hashing.
+    hash_input = os.path.join(info_dir, 'hash_input.json')
+    if os.path.isfile(hash_input):
+        with open(os.path.join(info_dir, 'hash_input.json')) as f:
+            hash_input = json.load(f)
+    else:
+        config.filename_hashing = False
+        hash_input = {}
+    # not actually used as a variant, since metadata will have been finalized.
+    #    This is still necessary for computing the hash correctly though
+    config.variant = hash_input
 
     log = utils.get_logger(__name__)
 
@@ -1514,6 +1513,9 @@ def _construct_metadata_for_test_from_package(package, config):
                                                 'string': package_data['build']},
                                       'requirements': {'run': package_data['depends']}
                                       }, config=config)
+    # HACK: because the recipe is fully baked, detecting "used" variables no longer works.  The set
+    #     of variables in the hash_input suffices, though.
+    metadata.config.used_vars = list(hash_input.keys())
     return metadata, hash_input
 
 

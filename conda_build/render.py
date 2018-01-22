@@ -179,7 +179,6 @@ def find_pkg_dir_or_file_in_pkgs_dirs(pkg_dist, m):
     for pkgs_dir in _pkgs_dirs:
         pkg_dir = os.path.join(pkgs_dir, pkg_dist)
         pkg_file = os.path.join(pkgs_dir, pkg_dist + '.tar.bz2')
-        
         if os.path.isdir(pkg_dir):
             pkg_loc = pkg_dir
             break
