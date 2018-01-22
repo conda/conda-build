@@ -200,13 +200,7 @@ def copy_recipe(m):
 
             src_dir = m.meta.get('extra', {}).get('parent_recipe', {}).get('path')
             if src_dir:
-                this_output_text = m.get_recipe_text()
-                this_output = {}
-                if this_output_text:
-                    this_output = yaml.safe_load(m._get_contents(permit_undefined_jinja=True,
-                                                                 template_string=this_output_text))
-                if isinstance(this_output, list):
-                    this_output = this_output[0]
+                this_output = m.get_rendered_output(m.name()) or {}
                 install_script = this_output.get('script')
                 # # HACK: conda-build renames the actual test script from the recipe into
                 # #    run_test.* in the package.  This makes the test discovery code work.
