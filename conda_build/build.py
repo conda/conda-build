@@ -786,7 +786,8 @@ def bundle_conda(output, metadata, env, **kw):
     elif files:
         # Files is specified by the output
         # we exclude the list of files that we want to keep, so post-process picks them up as "new"
-        keep_files = set(utils.expand_globs(files, metadata.config.host_prefix))
+        keep_files = set(os.path.normpath(pth)
+                         for pth in utils.expand_globs(files, metadata.config.host_prefix))
         pfx_files = set(utils.prefix_files(metadata.config.host_prefix))
         initial_files = set(item for item in (pfx_files - keep_files)
                             if not any(keep_file.startswith(item + os.path.sep)
