@@ -1,3 +1,36 @@
+2018-01-23 3.3.0:
+
+Enhancements:
+-------------
+
+* Issue template created for github repo  #2632
+* Detect overlinking (usage of libraries that are not present in listed dependencies).
+  Warn by default.  Error out with --error-overlinking flag.  Conda-build 4.0 will
+  error by default.  #2635 #2647
+
+Bug fixes:
+----------
+
+* fix merge_build_host to always be used in CRAN skeletons  #2635
+* fix macho filename attribute error  #2641
+* reorder search through files for compatibility bounds for speed  #2638
+* cache used vars based also on recipe path, to avoid overly caching results  #2643
+* normalize slashes in file glob lists for explicit output file lists  #2644
+* silence conda 4.4 better when using quiet operations, such as --output  #2645
+* fix pypi_url not affecting the url of the actual skeleton output from conda skeleton pypi  #2646
+* fix overly broad string matching of "None" that caused problems where None may appear
+  as part of a string in meta.yaml  #2649
+
+Contributors:
+-------------
+
+* @csoja
+* @mingwandroid
+* @msarahan
+* @nehaljwani
+* @neok-m4700
+
+
 2018-01-12 3.2.2:
 
 Enhancements:
