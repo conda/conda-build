@@ -86,7 +86,22 @@ DEFAULTS = [Setting('activate', True),
             Setting('_src_cache_root', abspath(expanduser(expandvars(
                 cc_conda_build.get('cache_dir')))) if cc_conda_build.get('cache_dir') else None),
             Setting('copy_test_source_files', True),
-            Setting('error_overlinking', True),
+
+            # Disable the overlinking test for this package. This test checks that transitive DSOs
+            # are not referenced by DSOs in the package being built. When this happens something
+            # has gone wrong with:
+            # 1. Linker flags not being passed, or not working correctly:
+            #    (GNU ld: -as-needed, Apple ld64: -dead_strip_dylibs -no_implicit_dylibs)
+            # 2. A missing package in reqs/run (maybe that package is missing run_exports?)
+            # 3. A missing (or broken) CDT package in reqs/build or (on systems without CDTs)
+            # 4. .. a missing value in the (to be implemented) system library whitelist
+            # It is important that packages do not suffer from 2 because uninstalling that missing
+            # package leads to an inability to run this package.
+            #
+            # default to not erroring with overlinking for now.  We have specified in
+            #    cli/main_build.py that this default will switch in conda-build 4.0.
+            Setting('error_overlinking', cc_conda_build.get('error_overlinking',
+                                                           'false').lower() == 'true'),
 
             Setting('index', None),
             # support legacy recipes where only build is specified and expected to be the
@@ -137,7 +152,7 @@ DEFAULTS = [Setting('activate', True),
             # This is to make older recipes still work with cross-compiling.  True cross-compiling
             # involving compilers (not just python) will still require recipe modification to have
             # distinct host and build sections, but simple python stuff should work without.
-            Setting('merge_build_host', False)
+            Setting('merge_build_host', False),
             ]
 
 
