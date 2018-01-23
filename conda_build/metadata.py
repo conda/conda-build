@@ -224,7 +224,7 @@ def _trim_None_strings(meta_dict):
                             keep.append(trimmed_dict)
                 # support lists of strings (homogeneous)
                 else:
-                    keep = [i for i in value if 'None' not in i]
+                    keep = [i for i in value if i not in ('None', 'NoneType')]
                 meta_dict[key] = keep
         else:
             log.debug("found unrecognized data type in dictionary: {0}, type: {1}".format(value,
