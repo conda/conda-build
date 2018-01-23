@@ -1818,6 +1818,8 @@ class MetaData(object):
                 #    actual one, as any "final" recipe returned here will still
                 #    barf if anyone tries to actually build it.
                 m.final = True
+                if not m.path and m.meta.get('outputs'):
+                    del m.meta['outputs']
                 final_conda_packages.append((out_d, m))
             output_tuples = final_conda_packages + non_conda_packages
         return output_tuples

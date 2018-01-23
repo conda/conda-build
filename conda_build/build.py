@@ -200,13 +200,7 @@ def copy_recipe(m):
 
             src_dir = m.meta.get('extra', {}).get('parent_recipe', {}).get('path')
             if src_dir:
-                this_output_text = m.get_recipe_text()
-                this_output = {}
-                if this_output_text:
-                    this_output = yaml.safe_load(m._get_contents(permit_undefined_jinja=True,
-                                                                 template_string=this_output_text))
-                if isinstance(this_output, list):
-                    this_output = this_output[0]
+                this_output = m.get_rendered_output(m.name()) or {}
                 install_script = this_output.get('script')
                 # # HACK: conda-build renames the actual test script from the recipe into
                 # #    run_test.* in the package.  This makes the test discovery code work.
@@ -786,7 +780,8 @@ def bundle_conda(output, metadata, env, **kw):
     elif files:
         # Files is specified by the output
         # we exclude the list of files that we want to keep, so post-process picks them up as "new"
-        keep_files = set(utils.expand_globs(files, metadata.config.host_prefix))
+        keep_files = set(os.path.normpath(pth)
+                         for pth in utils.expand_globs(files, metadata.config.host_prefix))
         pfx_files = set(utils.prefix_files(metadata.config.host_prefix))
         initial_files = set(item for item in (pfx_files - keep_files)
                             if not any(keep_file.startswith(item + os.path.sep)
