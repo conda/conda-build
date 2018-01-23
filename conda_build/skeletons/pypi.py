@@ -94,7 +94,7 @@ PYPI_META_STATIC = {
     ]),
     'source': ruamel_yaml.comments.CommentedMap([
         ('fn', '{{ name }}-{{ version }}.{{ file_ext }}'),
-        ('url', '%s/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.{{ file_ext }}'),  # NOQA
+        ('url', '/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.{{ file_ext }}'),  # NOQA
         ('{{ hash_type }}', '{{ hash_value }}'),
     ]),
     'build': ruamel_yaml.comments.CommentedMap([
@@ -308,10 +308,11 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
                 except KeyError:
                     ordered_recipe[key] = ruamel_yaml.comments.CommentedMap()
 
-            assert '://' in pypi_url, "pypi_url must have protocol (e.g. http://) included"
+            if '://' not in pypi_url:
+                raise ValueError("pypi_url must have protocol (e.g. http://) included")
             base_url = urlsplit(pypi_url)
             base_url = "://".join((base_url.scheme, base_url.netloc))
-            ordered_recipe['source']['url'] = ordered_recipe['source']['url'] % base_url
+            ordered_recipe['source']['url'] = urljoin(base_url, ordered_recipe['source']['url'])
 
             if d['entry_points']:
                 ordered_recipe['build']['entry_points'] = d['entry_points']
