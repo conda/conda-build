@@ -19,7 +19,7 @@ from tempfile import mkdtemp
 import pkginfo
 import requests
 from requests.packages.urllib3.util.url import parse_url
-from six.moves.urllib.parse import urljoin
+from six.moves.urllib.parse import urljoin, urlsplit
 import yaml
 try:
     import ruamel_yaml
@@ -94,7 +94,7 @@ PYPI_META_STATIC = {
     ]),
     'source': ruamel_yaml.comments.CommentedMap([
         ('fn', '{{ name }}-{{ version }}.{{ file_ext }}'),
-        ('url', 'https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.{{ file_ext }}'),  # NOQA
+        ('url', '/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.{{ file_ext }}'),  # NOQA
         ('{{ hash_type }}', '{{ hash_value }}'),
     ]),
     'build': ruamel_yaml.comments.CommentedMap([
@@ -307,6 +307,12 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
                     ordered_recipe[key] = PYPI_META_STATIC[key]
                 except KeyError:
                     ordered_recipe[key] = ruamel_yaml.comments.CommentedMap()
+
+            if '://' not in pypi_url:
+                raise ValueError("pypi_url must have protocol (e.g. http://) included")
+            base_url = urlsplit(pypi_url)
+            base_url = "://".join((base_url.scheme, base_url.netloc))
+            ordered_recipe['source']['url'] = urljoin(base_url, ordered_recipe['source']['url'])
 
             if d['entry_points']:
                 ordered_recipe['build']['entry_points'] = d['entry_points']
