@@ -247,10 +247,18 @@ different sets of packages."""
               "tests, but ultimately fail on installed systems.")
     )
     p.add_argument(
+        "--error-overlinking", dest='error_overlinking', action="store_true",
+        help=("Enable error when shared libraries from transitive dependencies are directly"
+              "linked to any executables or shared libraries in built packages.  This is disabled"
+              "by default, but will be enabled by default in conda-build 4.0."),
+        default=cc_conda_build.get('error_overlinking', 'false').lower() == 'true',
+    )
+    p.add_argument(
         "--no-error-overlinking", dest='error_overlinking', action="store_false",
         help=("Disable error when shared libraries from transitive dependencies are directly"
-              "linked to any executables or shared libraries in built packages."),
-        default=cc_conda_build.get('no_error_overlinking', 'false').lower() == 'true',
+              "linked to any executables or shared libraries in built packages.  This is currently"
+              "the default behavior, but will change in conda-build 4.0."),
+        default=cc_conda_build.get('error_overlinking', 'false').lower() == 'true',
     )
     p.add_argument(
         "--long-test-prefix", default=True, action="store_false",

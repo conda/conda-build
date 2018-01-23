@@ -847,7 +847,8 @@ class MetaData(object):
                 (not self.meta.get('requirements', {}).get('host', []) and not
                         self.uses_new_style_compiler_activation)):
                 self.config.build_is_host = True
-
+            if self.meta.get('build', {}).get('error_overlinking', False):
+                self.config.error_overlinking = self.meta['build']['error_overlinking']
         except:
             raise
         finally:
