@@ -437,7 +437,7 @@ def _find_needed_dso_in_prefix(m, needed_dso, f, files, errors, run_reqs,
                                                                         and_also))
         for pkg in pkgs:
             print_msg(errors, '{}: {}'.format(msg_prelude, pkg))
-            if pkg.dist_name not in m.meta.requirements.host:
+            if pkg.dist_name not in m.meta.get('requirements', {}).get('host', []):
                 print_msg(errors, '{}: .. but {} not in reqs/host (is transitive)'.
                 format(msg_prelude, pkg.dist_name))
     else:
