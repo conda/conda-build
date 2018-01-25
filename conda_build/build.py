@@ -142,9 +142,10 @@ def have_prefix_files(files, prefix):
                 # Use the placeholder for maximal backwards compatibility, and
                 # to minimize the occurrences of usernames appearing in built
                 # packages.
-                rewrite_file_with_new_prefix(path, mm[:], prefix_bytes, prefix_placeholder_bytes)
+                data = mm[:]
                 mm.close()
                 fi.close()
+                rewrite_file_with_new_prefix(path, data, prefix_bytes, prefix_placeholder_bytes)
                 fi = open(path, 'rb+')
                 mm = utils.mmap_mmap(fi.fileno(), 0, tagname=None, flags=utils.mmap_MAP_PRIVATE)
         if mm.find(prefix_bytes) != -1:
