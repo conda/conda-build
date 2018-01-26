@@ -411,7 +411,7 @@ def print_msg(errors, text):
     print(text)
 
 
-def _find_needed_dso_in_prefix(m, needed_dso, f, files, errors, run_reqs,
+def _find_needed_dso_in_prefix(m, needed_dso, f, files, errors, run_reqs, host_reqs,
                                msg_prelude, info_prelude):
     in_prefix_dso = os.path.normpath(needed_dso.replace(m.config.host_prefix + '/', ''))
     n_dso_p = "Needed DSO {} in {}".format(in_prefix_dso, f)
@@ -437,7 +437,7 @@ def _find_needed_dso_in_prefix(m, needed_dso, f, files, errors, run_reqs,
                                                                         and_also))
         for pkg in pkgs:
             print_msg(errors, '{}: {}'.format(msg_prelude, pkg))
-            if pkg.dist_name not in m.meta.get('requirements', {}).get('host', []):
+            if pkg.dist_name not in host_reqs:
                 print_msg(errors, '{}: .. but {} not in reqs/host (is transitive)'.
                 format(msg_prelude, pkg.dist_name))
     else:
@@ -491,7 +491,7 @@ def _find_needed_dso_in_system(m, needed_dso, errors, sysroots, msg_prelude,
                                 format(msg_prelude, needed_dso))
 
 
-def _inspect_file_linking(m, path, files, errors, pkg_name, run_reqs, sysroots):
+def _inspect_file_linking(m, path, files, errors, pkg_name, run_reqs, host_reqs, sysroots):
     f = os.path.basename(path)
     warn_prelude = "WARNING ({},{})".format(pkg_name, f)
     err_prelude = "  ERROR ({},{})".format(pkg_name, f)
@@ -501,7 +501,7 @@ def _inspect_file_linking(m, path, files, errors, pkg_name, run_reqs, sysroots):
     needed = inspect_linkages(path, resolve_filenames=True, recurse=False)
     for needed_dso in needed:
         if needed_dso.startswith(m.config.host_prefix):
-            _find_needed_dso_in_prefix(m, needed_dso, f, files, errors, run_reqs,
+            _find_needed_dso_in_prefix(m, needed_dso, f, files, errors, run_reqs, host_reqs,
                                        msg_prelude, info_prelude)
         elif needed_dso.startswith(m.config.build_prefix):
             print_msg(errors, "ERROR: {} found in build prefix; should never happen".format(
@@ -516,6 +516,7 @@ def check_overlinking(m, files):
     pkg_name = m.get_value('package/name')
 
     run_reqs = [req.split(' ')[0] for req in m.meta.get('requirements', {}).get('run', [])]
+    host_reqs = [req.split(' ')[0] for req in m.meta.get('requirements', {}).get('host', [])]
     sysroots = glob(os.path.join(m.config.build_prefix, '**', 'sysroot'))
     if not len(sysroots):
         if m.config.variant.get('target_platform') == 'osx-64':
@@ -525,7 +526,7 @@ def check_overlinking(m, files):
         path = os.path.join(m.config.host_prefix, f)
         if not is_obj(path):
             continue
-        _inspect_file_linking(m, path, files, errors, pkg_name, run_reqs, sysroots)
+        _inspect_file_linking(m, path, files, errors, pkg_name, run_reqs, host_reqs, sysroots)
         if len(errors):
             sys.exit(1)
 
