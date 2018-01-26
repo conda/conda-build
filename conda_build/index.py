@@ -298,22 +298,18 @@ def _read_index_tar(tar_path, lock, locking=True, timeout=90):
                                 "File probably corrupt." % tar_path)
             try:
                 about_json = json.loads(t.extractfile('info/about.json').read().decode('utf-8'))
-            except Exception as e:
-                log.warn('Error extracting info/about.json in %s: %r', tar_path, e, exc_info=True)
+            except KeyError:
                 about_json = {}
 
             try:
                 paths_json = json.loads(t.extractfile('info/paths.json').read().decode('utf-8'))
-            except Exception as e:
-                log.warn('Error extracting info/paths.json in %s: %r', tar_path, e, exc_info=True)
+            except KeyError:
                 paths_json = {}
 
             try:
                 recipe_text = t.extractfile('info/recipe/meta.yaml').read().decode('utf-8')
                 recipe_json = yaml.load(recipe_text)
-            except KeyError as e:
-                # log.warn('Error extracting info/recipe/meta.yaml in %s: %r',
-                #          tar_path, e, exc_info=True)
+            except KeyError:
                 recipe_json = {}
 
             # If a conda package contains an icon, also extract and cache that in an .icon/
