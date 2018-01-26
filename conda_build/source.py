@@ -561,7 +561,7 @@ def apply_patch(src_dir, path, config, git=None):
             or conda, m2-patch (Windows),
         """ % (os.pathsep.join(external.dir_paths)))
         patch_strip_level = _guess_patch_strip_level(files, src_dir)
-        patch_args = ['-p%d' % patch_strip_level, '-i', path]
+        patch_args = ['-p%d' % patch_strip_level, '--ignore-whitespace', '-i', path]
 
         # line endings are a pain.
         # https://unix.stackexchange.com/a/243748/34459

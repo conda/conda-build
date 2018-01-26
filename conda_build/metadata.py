@@ -52,6 +52,12 @@ ARCH_MAP = {'32': 'x86',
 #    regex, which extract all outputs in order.
 output_re = re.compile(r"^\s+-\s(?:name|type):.+?(?=^\w|\Z|^\s+-\s(?:name|type))",
                        flags=re.M | re.S)
+numpy_xx_re = re.compile(r'(numpy\s*x\.x)|pin_compatible\([\'\"]numpy.*max_pin=[\'\"]x\.x[\'\"]')
+# TODO: there's probably a way to combine these, but I can't figure out how to many the x
+#     capturing group optional.
+numpy_compatible_x_re = re.compile(
+    r'pin_\w+\([\'\"]numpy[\'\"].*((?<=x_pin=[\'\"])[x\.]*(?=[\'\"]))')
+numpy_compatible_re = re.compile(r"pin_\w+\([\'\"]numpy[\'\"]")
 
 # used to avoid recomputing/rescanning recipe contents for used variables
 used_vars_cache = {}
@@ -1101,8 +1107,14 @@ class MetaData(object):
         dependencies = self.get_used_vars()
 
         # filter out ignored versions
-        build_string_excludes = ['python', 'r_base', 'perl', 'lua', 'numpy', 'target_platform']
+        build_string_excludes = ['python', 'r_base', 'perl', 'lua', 'target_platform']
         build_string_excludes.extend(ensure_list(self.config.variant.get('ignore_version', [])))
+        if 'numpy' in dependencies:
+            pin_compatible, not_xx = self.uses_numpy_pin_compatible_without_xx
+            # numpy_xx means it is accounted for in the build string, with npXYY
+            # if not pin_compatible, then we don't care about the usage, and omit it from the hash.
+            if self.numpy_xx or not pin_compatible:
+                build_string_excludes.append('numpy')
         # always exclude older stuff that's always in the build string (py, np, pl, r, lua)
         if build_string_excludes:
             exclude_pattern = re.compile('|'.join('{}[\s$]?.*'.format(exc)
@@ -1520,15 +1532,21 @@ class MetaData(object):
         '''This is legacy syntax that we need to support for a while.  numpy x.x means
         "pin run as build" for numpy.  It was special-cased to only numpy.'''
         text = self.extract_requirements_text()
-        uses_xx = bool(re.search(r'numpy\s*x\.x', text))
-        if uses_xx:
-            log = utils.get_logger(__name__)
-            log.warn("Recipe at {path} uses numpy x.x.  This is deprecated as of conda-build 3.0, "
-                     "and will be removed in conda-build 4.0.  Please consider using variants with "
-                     "pin_run_as_build instead.  More info at "
-                     "https://conda.io/docs/building/variants.html#customizing-compatibility"
-                     .format(path=self.path))
+        uses_xx = bool(numpy_xx_re.search(text))
         return uses_xx
+
+    @property
+    def uses_numpy_pin_compatible_without_xx(self):
+        text = self.extract_requirements_text()
+        compatible_search = numpy_compatible_re.search(text)
+        max_pin_search = None
+        if compatible_search:
+            max_pin_search = numpy_compatible_x_re.search(text)
+        # compatible_search matches simply use of pin_compatible('numpy')
+        # max_pin_search quantifies the actual number of x's in the max_pin field.  The max_pin
+        #     field can be absent, which is equivalent to a single 'x'
+        return (bool(compatible_search),
+                max_pin_search.group(1).count('x') != 2 if max_pin_search else True)
 
     @property
     def uses_subpackage(self):
@@ -1734,7 +1752,8 @@ class MetaData(object):
             output_tuples = [(outputs, self)]
         else:
             all_output_metadata = OrderedDict()
-            for variant in (self.config.variants if hasattr(self.config, 'variants')
+            for variant in (self.config.variants if (hasattr(self.config, 'variants') and
+                                                     self.config.variants)
                             else [self.config.variant]):
                 om = self.copy()
                 om.config.variant = variant

@@ -339,3 +339,9 @@ def test_target_platform_looping(testing_config):
     outputs = api.get_output_file_paths(os.path.join(recipe_dir, '25_target_platform_looping'),
                                    platform='win', arch='64')
     assert len(outputs) == 2
+
+
+def test_numpy_used_variable_looping(testing_config):
+    outputs = api.get_output_file_paths(os.path.join(recipe_dir, 'numpy_used'),
+                                   platform='win', arch='64')
+    assert len(outputs) == 4
