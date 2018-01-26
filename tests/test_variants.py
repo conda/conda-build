@@ -345,3 +345,21 @@ def test_numpy_used_variable_looping(testing_config):
     outputs = api.get_output_file_paths(os.path.join(recipe_dir, 'numpy_used'),
                                    platform='win', arch='64')
     assert len(outputs) == 4
+
+
+def test_exclusive_config_file(testing_workdir):
+    with open('conda_build_config.yaml', 'w') as f:
+        yaml.dump({'abc': ['someval'], 'cwd': ['someval']}, f, default_flow_style=False)
+    os.makedirs('config_dir')
+    with open(os.path.join('config_dir', 'config.yaml'), 'w') as f:
+        yaml.dump({'abc': ['super'], 'exclusive': ['someval']}, f, default_flow_style=False)
+    output = api.render(os.path.join(recipe_dir, 'exclusive_config_file'),
+                        exclusive_config_file=os.path.join('config_dir', 'config.yaml'))[0][0]
+    variant = output.config.variant
+    # is cwd ignored?
+    assert 'cwd' not in variant
+    # did we load the exclusive config
+    assert 'exclusive' in variant
+    # does recipe config override exclusive?
+    assert 'unique_to_recipe' in variant
+    assert variant['abc'] == '123'
