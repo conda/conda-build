@@ -9,9 +9,14 @@ if sys.version_info[:2] < (2, 7):
     sys.exit("conda-build is only meant for Python >=2.7"
              "Current Python version: %d.%d" % sys.version_info[:2])
 
+# Don't proceed with 'unknown' in version
+version_dict = versioneer.get_versions()
+if version_dict['error']:
+    raise RuntimeError(version_dict["error"])
+
 setup(
     name="conda-build",
-    version=versioneer.get_version(),
+    version=version_dict['version'],
     cmdclass=versioneer.get_cmdclass(),
     author="Continuum Analytics, Inc.",
     author_email="conda@continuum.io",
