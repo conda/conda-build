@@ -116,6 +116,9 @@ DEFAULTS = [Setting('activate', True),
 
             # variants
             Setting('variant_config_files', []),
+            # this file precludes usage of any system-wide or cwd config files.  Config files in
+            #    recipes are still respected, and they override this file.
+            Setting('exclusive_config_file', None),
             Setting('ignore_system_variants', False),
             Setting('hash_length', 7),
 

@@ -96,10 +96,18 @@ source to try fill in related template variables.",
     )
     p.add_argument(
         '-m', '--variant-config-files',
-        dest='variant_config_files',
         action="append",
         help="""Additional variant config files to add.  These yaml files can contain
         keys such as `c_compiler` and `target_platform` to form a build matrix."""
+    )
+    p.add_argument(
+        '-e', '--exclusive-config-file',
+        help="""Exclusive variant config file to add.  Compared with --variant-config-files,
+        you're allowed only one file here.  Providing a file here disables searching in your
+        home directory and in cwd.  The file specified here comes at the start of the order,
+        as opposed to the end with --variant-config-files.  Any config files in recipes and
+        any config files specified with --variant-config-files will override values from
+        this file."""
     )
     p.add_argument(
         "--old-build-string", dest="filename_hashing", action="store_false",
