@@ -46,7 +46,7 @@ class TarCheck(object):
         if seta == setb:
             return
         for p in sorted(seta | setb):
-            if p not in seta:
+            if p not in seta and not p.startswith('info'):
                 print('%r not in info/files' % p)
             if p not in setb:
                 print('%r not in tarball' % p)
