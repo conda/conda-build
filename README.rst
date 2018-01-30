@@ -7,10 +7,6 @@ conda-build
 
 .. image:: https://ci.appveyor.com/api/projects/status/07r1m8fy55jee9th?svg=true
                :target: https://ci.appveyor.com/project/ContinuumAnalyticsFOSS/conda-build
-               
-.. image:: https://www.quantifiedcode.com/api/v1/project/1960a96404aa431bab5d834edff1cf85/badge.svg
-  :target: https://www.quantifiedcode.com/app/project/1960a96404aa431bab5d834edff1cf85
-  :alt: Code issues
   
 .. image:: https://codecov.io/gh/conda/conda-build/branch/master/graph/badge.svg
   :target: https://codecov.io/gh/conda/conda-build
