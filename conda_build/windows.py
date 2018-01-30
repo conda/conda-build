@@ -201,6 +201,38 @@ def msvc_env_cmd(bits, config, override=None):
     return '\n'.join(msvc_env_lines) + '\n'
 
 
+def _write_bat_activation_text(file_handle, m):
+    file_handle.write('call "{conda_root}\\activate.bat" "{prefix}"\n'.format(
+        conda_root=root_script_dir,
+        prefix=m.config.build_prefix))
+    if m.is_cross:
+        # HACK: we need both build and host envs "active" - i.e. on PATH,
+        #     and with their activate.d scripts sourced. Conda only
+        #     lets us activate one, though. This is a
+        #     vile hack to trick conda into "stacking"
+        #     two environments.
+        #
+        # Net effect: binaries come from host first, then build
+        #
+        # Conda 4.4 may break this by reworking the activate scripts.
+        #  ^^ shouldn't be true
+        # In conda 4.4, export CONDA_MAX_SHLVL=2 to stack envs to two
+        #   levels deep.
+        # conda 4.4 does require that a conda-meta/history file
+        #   exists to identify a valid conda environment
+        history_file = join(m.config.host_prefix, 'conda-meta', 'history')
+        if not isfile(history_file):
+            if not isdir(dirname(history_file)):
+                os.makedirs(dirname(history_file))
+            open(history_file, 'a').close()
+        # removing this placeholder should make conda double-activate with conda 4.3
+        file_handle.write('set "PATH=%PATH:CONDA_PATH_PLACEHOLDER;=%"\n')
+        file_handle.write('set CONDA_MAX_SHLVL=2\n')
+        file_handle.write('call "{conda_root}\\activate.bat" "{prefix}"\n'.format(
+            conda_root=root_script_dir,
+            prefix=m.config.host_prefix))
+
+
 def build(m, bld_bat):
     with path_prepended(m.config.build_prefix):
         with path_prepended(m.config.host_prefix):
@@ -233,35 +265,7 @@ def build(m, bld_bat):
             fo.write('set "INCLUDE={};%INCLUDE%"\n'.format(env["LIBRARY_INC"]))
             fo.write('set "LIB={};%LIB%"\n'.format(env["LIBRARY_LIB"]))
             if m.config.activate and m.name() != 'conda':
-                fo.write('call "{conda_root}\\activate.bat" "{prefix}"\n'.format(
-                    conda_root=root_script_dir,
-                    prefix=m.config.build_prefix))
-                if m.is_cross:
-                    # HACK: we need both build and host envs "active" - i.e. on PATH,
-                    #     and with their activate.d scripts sourced. Conda only
-                    #     lets us activate one, though. This is a
-                    #     vile hack to trick conda into "stacking"
-                    #     two environments.
-                    #
-                    # Net effect: binaries come from host first, then build
-                    #
-                    # Conda 4.4 may break this by reworking the activate scripts.
-                    #  ^^ shouldn't be true
-                    # In conda 4.4, export CONDA_MAX_SHLVL=2 to stack envs to two
-                    #   levels deep.
-                    # conda 4.4 does require that a conda-meta/history file
-                    #   exists to identify a valid conda environment
-                    history_file = join(m.config.host_prefix, 'conda-meta', 'history')
-                    if not isfile(history_file):
-                        if not isdir(dirname(history_file)):
-                            os.makedirs(dirname(history_file))
-                        open(history_file, 'a').close()
-                    # removing this placeholder should make conda double-activate with conda 4.3
-                    fo.write('set "PATH=%PATH:CONDA_PATH_PLACEHOLDER;=%"\n')
-                    fo.write('set CONDA_MAX_SHLVL=2\n')
-                    fo.write('call "{conda_root}\\activate.bat" "{prefix}"\n'.format(
-                        conda_root=root_script_dir,
-                        prefix=m.config.host_prefix))
+                _write_bat_activation_text(fo, m)
             fo.write("REM ===== end generated header =====\n")
             fo.write(data)
 
