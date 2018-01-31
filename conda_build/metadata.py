@@ -703,7 +703,7 @@ def get_updated_output_dict_from_reparsed_metadata(original_dict, new_outputs):
 def _filter_recipe_text(text, extract_pattern=None):
     if extract_pattern:
         match = re.search(extract_pattern, text, flags=re.MULTILINE | re.DOTALL)
-        text = match.group(1) if match else ""
+        text = "\n".join(set(string for string in match.groups() if string)) if match else ""
     return text
 
 
@@ -759,7 +759,7 @@ class MetaData(object):
 
     @property
     def is_cross(self):
-        return bool(self.get_value('requirements/host'))
+        return bool(self.get_depends_top_and_out('host'))
 
     @property
     def final(self):
@@ -1038,6 +1038,15 @@ class MetaData(object):
         except (ValueError, TypeError):
             build_int = ""
         return build_int
+
+    def get_depends_top_and_out(self, typ):
+        meta_requirements = ensure_list(self.get_value('requirements/' + typ, []))
+        if 'outputs' in self.meta:
+            matching_output = [out for out in self.meta.get('outputs') if
+                               out.get('name') == self.name()]
+            if matching_output:
+                meta_requirements += utils.expand_reqs(matching_output[0].get('requirements', [])).get(typ, [])
+        return meta_requirements
 
     def ms_depends(self, typ='run'):
         res = []
@@ -1494,14 +1503,17 @@ class MetaData(object):
         return recipe_text.rstrip()
 
     def extract_requirements_text(self, force_top_level=False):
-        is_output = 'package:' not in self.get_recipe_text()
-        if not is_output:
-            # start of line means top-level requirements
-            filter_ = r'(^requirements:.*?)(^\s*test:|^\s*extra:|^\s*about:|^outputs:|\Z)'
-        else:
-            # outputs are already filtered into each output for us
-            filter_ = r'(^\s*requirements:.*?)(^\s*test:|^\s*extra:|^\s*about:|^\s*-\sname:|^outputs:|\Z)'  # NOQA
-        return self.get_recipe_text(filter_, force_top_level=force_top_level)
+        # outputs are already filtered into each output for us
+        f = r'(^\s*requirements:.*?)(^\s*test:|^\s*extra:|^\s*about:|^\s*-\sname:|^outputs:|\Z)'  # NOQA
+        if 'package:' in self.get_recipe_text():
+            # match top-level requirements - start of line means top-level requirements
+            #    ^requirements:.*?
+            # match output with similar name
+            #    (?:-\sname:\s+%s.*?)requirements:.*?
+            # terminate match of other sections
+            #    (?=^\s*-\sname|^\s*test:|^\s*extra:|^\s*about:|^outputs:|\Z)
+            f = r'(^requirements:.*?|(?<=-\sname:\s%s\s).*?requirements:.*?)(?=^\s*-\sname|^\s*test:|^\s*script:|^\s*extra:|^\s*about:|^outputs:|\Z)' % self.name()  # NOQA
+        return self.get_recipe_text(f, force_top_level=force_top_level)
 
     def extract_outputs_text(self):
         return self.get_recipe_text(r'(^outputs:.*?)(^test:|^extra:|^about:|\Z)',
@@ -1555,10 +1567,12 @@ class MetaData(object):
         for out in outputs:
             if 'name' in out:
                 name_re = re.compile(r"^{}(\s|\Z|$)".format(out['name']))
-                in_reqs = any(name_re.match(req) for req in self.get_value('requirements/run'))
+                in_reqs = any(name_re.match(req) for req in self.get_depends_top_and_out('run'))
+                if in_reqs:
+                    break
         subpackage_pin = False
         if not in_reqs and self.meta_path:
-                data = self.extract_requirements_text()
+                data = self.extract_requirements_text(force_top_level=True)
                 if data:
                     subpackage_pin = re.search("{{\s*pin_subpackage\(.*\)\s*}}", data)
         return in_reqs or bool(subpackage_pin)
@@ -1838,8 +1852,6 @@ class MetaData(object):
                 #    actual one, as any "final" recipe returned here will still
                 #    barf if anyone tries to actually build it.
                 m.final = True
-                if not m.path and m.meta.get('outputs'):
-                    del m.meta['outputs']
                 final_conda_packages.append((out_d, m))
             output_tuples = final_conda_packages + non_conda_packages
         return output_tuples
@@ -1983,3 +1995,18 @@ class MetaData(object):
     def clean(self):
         """This ensures that clean is called with the correct build id"""
         self.config.clean()
+
+    @property
+    def activate_build_script(self):
+        b = self.meta.get('build', {}) or {}
+        should_activate = (self.uses_new_style_compiler_activation or b.get('activate_in_script'))
+        return bool(self.config.activate and not self.name() == 'conda' and should_activate)
+
+    def get_top_level_recipe_without_outputs(self):
+        recipe_no_outputs = self.get_recipe_text(force_top_level=True).replace(
+            self.extract_outputs_text(), "")
+        top_no_outputs = {}
+        if recipe_no_outputs:
+            top_no_outputs = yaml.safe_load(self._get_contents(False,
+                                                                template_string=recipe_no_outputs))
+        return top_no_outputs or {}

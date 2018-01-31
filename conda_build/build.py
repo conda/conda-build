@@ -743,22 +743,19 @@ def bundle_conda(output, metadata, env, **kw):
 
     # Use script from recipe?
     script = utils.ensure_list(metadata.get_value('build/script', None))
+
     # need to treat top-level stuff specially.  build/script in top-level stuff should not be
     #     re-run for an output with a similar name to the top-level recipe
     is_output = 'package:' not in metadata.get_recipe_text()
-
-    recipe_no_outputs = metadata.get_recipe_text().replace(metadata.extract_outputs_text(), "")
-    top_no_outputs = {}
-    if recipe_no_outputs:
-        top_no_outputs = yaml.safe_load(metadata._get_contents(False,
-                                                               template_string=recipe_no_outputs))
-        top_build = top_no_outputs.get('build', {}) or {}
-
-    if script and (is_output or (top_no_outputs and not top_build.get('script'))):
+    top_build = metadata.get_top_level_recipe_without_outputs().get('build', {}) or {}
+    activate_script = metadata.activate_build_script
+    if (script and not output.get('script')) and (is_output or not top_build.get('script')):
+        # do add in activation, but only if it's not disabled
+        activate_script = metadata.config.activate
         script = '\n'.join(script)
         suffix = "bat" if utils.on_win else "sh"
         script_fn = output.get('script') or 'output_script.{}'.format(suffix)
-        with open(os.path.join(metadata.config.work_dir, script_fn), 'a') as f:
+        with open(os.path.join(metadata.config.work_dir, script_fn), 'w') as f:
             f.write('\n')
             f.write(script)
             f.write('\n')
@@ -785,7 +782,8 @@ def bundle_conda(output, metadata, env, **kw):
         recipe_dir = (metadata.path or
                       metadata.meta.get('extra', {}).get('parent_recipe', {}).get('path', ''))
         utils.copy_into(os.path.join(recipe_dir, output['script']), dest_file)
-        _write_activation_text(dest_file, metadata)
+        if activate_script:
+            _write_activation_text(dest_file, metadata)
         utils.check_call_env(interpreter.split(' ') + [dest_file],
                             cwd=metadata.config.work_dir, env=env_output)
     elif files:
@@ -984,15 +982,14 @@ def _write_activation_text(script_path, m):
     with open(script_path, 'r+') as fh:
         data = fh.read()
         fh.seek(0)
-        if m.config.activate and not m.name() == 'conda':
-            if os.path.splitext(script_path)[1].lower() == ".bat":
-                windows._write_bat_activation_text(fh, m)
-            elif os.path.splitext(script_path)[1].lower() == ".sh":
-                _write_sh_activation_text(fh, m)
-            else:
-                log = utils.get_logger(__name__)
-                log.warn("not adding activation to {} - I don't know how to do so for "
-                         "this file type".format(script_path))
+        if os.path.splitext(script_path)[1].lower() == ".bat":
+            windows._write_bat_activation_text(fh, m)
+        elif os.path.splitext(script_path)[1].lower() == ".sh":
+            _write_sh_activation_text(fh, m)
+        else:
+            log = utils.get_logger(__name__)
+            log.warn("not adding activation to {} - I don't know how to do so for "
+                        "this file type".format(script_path))
         fh.write(data)
 
 

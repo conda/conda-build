@@ -64,7 +64,7 @@ def get_env_dependencies(m, env, variant, exclude_pattern=None,
                          permit_unsatisfiable_variants=False,
                          merge_build_host_on_same_platform=True):
     dash_or_under = re.compile("[-_]")
-    specs = [ms.spec for ms in m.ms_depends(env)]
+    specs = m.get_depends_top_and_out(env)
     # replace x.x with our variant's numpy version, or else conda tries to literally go get x.x
     if env in ('build', 'host'):
         no_xx_specs = []
@@ -282,7 +282,7 @@ def _read_upstream_pin_files(m, env, permit_unsatisfiable_variants, exclude_patt
     # extend host deps with strong build run exports.  This is important for things like
     #    vc feature activation to work correctly in the host env.
     extra_run_specs = get_upstream_pins(m, actions, env)
-    return deps or m.meta.get('requirements', {}).get(env, []), unsat, extra_run_specs
+    return list(set(deps)) or m.meta.get('requirements', {}).get(env, []), unsat, extra_run_specs
 
 
 def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
@@ -296,7 +296,16 @@ def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
     if m.is_cross:
         # this must come before we read upstream pins, because it will enforce things
         #      like vc version from the compiler.
-        m.meta['requirements']['host'].extend(extra_run_specs_from_build.get('strong', []))
+        if m.meta.get('requirements', {}).get('host'):
+            host_reqs = m.meta['requirements']['host']
+        else:
+            matching_output = [out for out in m.meta['outputs'] if out.get('name') == m.name()]
+            if matching_output:
+                requirements = utils.expand_reqs(matching_output[0]['requirements'])
+                matching_output[0]['requirements'] = requirements
+                host_reqs = requirements['host']
+        # in-place modification of above thingie
+        host_reqs.extend(extra_run_specs_from_build.get('strong', []))
 
         host_deps, host_unsat, extra_run_specs_from_host = _read_upstream_pin_files(m, 'host',
                                                     permit_unsatisfiable_variants, exclude_pattern)
