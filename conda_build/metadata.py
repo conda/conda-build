@@ -521,7 +521,9 @@ def build_string_from_metadata(metadata):
                                                                                ''))
                                 if variant_version:
                                     break
-                            res.append(''.join([s] + variant_version.split('.')[:places]))
+                            entry = ''.join([s] + variant_version.split('.')[:places])
+                            if entry not in res:
+                                res.append(entry)
 
         features = ensure_list(metadata.get_value('build/features', []))
         if res:
@@ -1045,11 +1047,11 @@ class MetaData(object):
             matching_output = [out for out in self.meta.get('outputs') if
                                out.get('name') == self.name()]
             if matching_output:
-                meta_requirements += utils.expand_reqs(matching_output[0].get('requirements', [])).get(typ, [])
+                meta_requirements += utils.expand_reqs(
+                    matching_output[0].get('requirements', [])).get(typ, [])
         return meta_requirements
 
     def ms_depends(self, typ='run'):
-        res = []
         names = ('python', 'numpy', 'perl', 'lua')
         name_ver_list = [(name, self.config.variant[name])
                          for name in names
@@ -1059,6 +1061,7 @@ class MetaData(object):
             name_ver_list.extend([('r', self.config.variant['r_base']),
                                   ('r-base', self.config.variant['r_base']),
                                   ])
+        specs = OrderedDict()
         for spec in ensure_list(self.get_value('requirements/' + typ, [])):
             try:
                 ms = MatchSpec(spec)
@@ -1087,8 +1090,8 @@ class MetaData(object):
                         msg += "\nPerhaps you meant '%s %s%s'" % (ms.name,
                             parts[1], parts[2])
                     sys.exit(msg)
-            res.append(ms)
-        return res
+            specs[spec] = ms
+        return list(specs.values())
 
     def get_hash_contents(self):
         """
