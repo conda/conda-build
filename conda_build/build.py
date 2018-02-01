@@ -67,6 +67,9 @@ from conda_verify.verify import Verify
 from conda import __version__ as conda_version
 from conda_build import __version__ as conda_build_version
 
+if sys.platform == 'win32':
+    import conda_build.windows as windows
+
 if 'bsd' in sys.platform:
     shell_path = '/bin/sh'
 else:
@@ -740,23 +743,26 @@ def bundle_conda(output, metadata, env, **kw):
 
     # Use script from recipe?
     script = utils.ensure_list(metadata.get_value('build/script', None))
+
     # need to treat top-level stuff specially.  build/script in top-level stuff should not be
     #     re-run for an output with a similar name to the top-level recipe
     is_output = 'package:' not in metadata.get_recipe_text()
-    if script and is_output:
+    top_build = metadata.get_top_level_recipe_without_outputs().get('build', {}) or {}
+    activate_script = metadata.activate_build_script
+    if (script and not output.get('script')) and (is_output or not top_build.get('script')):
+        # do add in activation, but only if it's not disabled
+        activate_script = metadata.config.activate
         script = '\n'.join(script)
-
         suffix = "bat" if utils.on_win else "sh"
         script_fn = output.get('script') or 'output_script.{}'.format(suffix)
-        with open(os.path.join(metadata.config.work_dir, script_fn), 'a') as f:
+        with open(os.path.join(metadata.config.work_dir, script_fn), 'w') as f:
             f.write('\n')
             f.write(script)
             f.write('\n')
         output['script'] = script_fn
 
     if output.get('script'):
-        with utils.path_prepended(metadata.config.build_prefix):
-            env = environ.get_dict(config=metadata.config, m=metadata)
+        env = environ.get_dict(config=metadata.config, m=metadata)
 
         interpreter = output.get('script_interpreter')
         if not interpreter:
@@ -774,8 +780,10 @@ def bundle_conda(output, metadata, env, **kw):
             env_output[var] = os.environ[var]
         dest_file = os.path.join(metadata.config.work_dir, output['script'])
         recipe_dir = (metadata.path or
-                      metadata.meta.get('extra', {}).get('parent_recipe', {}).get('path'))
+                      metadata.meta.get('extra', {}).get('parent_recipe', {}).get('path', ''))
         utils.copy_into(os.path.join(recipe_dir, output['script']), dest_file)
+        if activate_script:
+            _write_activation_text(dest_file, metadata)
         utils.check_call_env(interpreter.split(' ') + [dest_file],
                             cwd=metadata.config.work_dir, env=env_output)
     elif files:
@@ -929,6 +937,60 @@ bundlers = {
     'conda': bundle_conda,
     'wheel': bundle_wheel,
 }
+
+
+def _write_sh_activation_text(file_handle, m):
+    file_handle.write('source "{0}activate" "{1}"\n'
+                .format(utils.root_script_dir + os.path.sep,
+                        m.config.build_prefix))
+
+    # conda 4.4 requires a conda-meta/history file for a valid conda prefix
+    history_file = join(m.config.build_prefix, 'conda-meta', 'history')
+    if not isfile(history_file):
+        if not isdir(dirname(history_file)):
+            os.makedirs(dirname(history_file))
+        open(history_file, 'a').close()
+
+    if m.is_cross:
+        # HACK: we need both build and host envs "active" - i.e. on PATH,
+        #     and with their activate.d scripts sourced. Conda only
+        #     lets us activate one, though. This is a
+        #     vile hack to trick conda into "stacking"
+        #     two environments.
+        #
+        # Net effect: binaries come from host first, then build
+        #
+        # Conda 4.4 may break this by reworking the activate scripts.
+        #  ^^ shouldn't be true
+        # In conda 4.4, export CONDA_MAX_SHLVL=2 to stack envs to two
+        #   levels deep.
+        # conda 4.4 does require that a conda-meta/history file
+        #   exists to identify a valid conda environment
+        history_file = join(m.config.host_prefix, 'conda-meta', 'history')
+        if not isfile(history_file):
+            if not isdir(dirname(history_file)):
+                os.makedirs(dirname(history_file))
+            open(history_file, 'a').close()
+        file_handle.write('unset CONDA_PATH_BACKUP\n')
+        file_handle.write('export CONDA_MAX_SHLVL=2\n')
+        file_handle.write('source "{0}activate" "{1}"\n'
+                          .format(utils.root_script_dir + os.path.sep,
+                                  m.config.host_prefix))
+
+
+def _write_activation_text(script_path, m):
+    with open(script_path, 'r+') as fh:
+        data = fh.read()
+        fh.seek(0)
+        if os.path.splitext(script_path)[1].lower() == ".bat":
+            windows._write_bat_activation_text(fh, m)
+        elif os.path.splitext(script_path)[1].lower() == ".sh":
+            _write_sh_activation_text(fh, m)
+        else:
+            log = utils.get_logger(__name__)
+            log.warn("not adding activation to {} - I don't know how to do so for "
+                        "this file type".format(script_path))
+        fh.write(data)
 
 
 def build(m, post=None, need_source_download=True, need_reparse_in_env=False, built_packages=None,
@@ -1144,7 +1206,6 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                     build_file = join(src_dir, 'bld.bat')
                     with open(build_file, 'w') as bf:
                         bf.write(script)
-                import conda_build.windows as windows
                 windows.build(m, build_file)
             else:
                 build_file = join(m.path, 'build.sh')
@@ -1166,42 +1227,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                                 bf.write('export {0}="{1}"\n'.format(k, v))
 
                         if m.config.activate and not m.name() == 'conda':
-                            bf.write('source "{0}activate" "{1}"\n'
-                                     .format(utils.root_script_dir + os.path.sep,
-                                             m.config.build_prefix))
-
-                            # conda 4.4 requires a conda-meta/history file for a valid conda prefix
-                            history_file = join(m.config.build_prefix, 'conda-meta', 'history')
-                            if not isfile(history_file):
-                                if not isdir(dirname(history_file)):
-                                    os.makedirs(dirname(history_file))
-                                open(history_file, 'a').close()
-
-                            if m.is_cross:
-                                # HACK: we need both build and host envs "active" - i.e. on PATH,
-                                #     and with their activate.d scripts sourced. Conda only
-                                #     lets us activate one, though. This is a
-                                #     vile hack to trick conda into "stacking"
-                                #     two environments.
-                                #
-                                # Net effect: binaries come from host first, then build
-                                #
-                                # Conda 4.4 may break this by reworking the activate scripts.
-                                #  ^^ shouldn't be true
-                                # In conda 4.4, export CONDA_MAX_SHLVL=2 to stack envs to two
-                                #   levels deep.
-                                # conda 4.4 does require that a conda-meta/history file
-                                #   exists to identify a valid conda environment
-                                history_file = join(m.config.host_prefix, 'conda-meta', 'history')
-                                if not isfile(history_file):
-                                    if not isdir(dirname(history_file)):
-                                        os.makedirs(dirname(history_file))
-                                    open(history_file, 'a').close()
-                                bf.write('unset CONDA_PATH_BACKUP\n')
-                                bf.write('export CONDA_MAX_SHLVL=2\n')
-                                bf.write('source "{0}activate" "{1}"\n'
-                                         .format(utils.root_script_dir + os.path.sep,
-                                                 m.config.host_prefix))
+                            _write_sh_activation_text(bf, m)
                         if script:
                                 bf.write(script)
                         if isfile(build_file) and not script:
@@ -1280,7 +1306,11 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                     # for more than one output, we clear and rebuild the environment before each
                     #    package.  We also do this for single outputs that present their own
                     #    build reqs.
-                    if m.meta['extra'].get('parent_recipe'):
+                    if not (m.meta['extra'].get('parent_recipe') or
+                            (os.path.isdir(m.config.host_prefix) and
+                             len(os.listdir(m.config.host_prefix)) <= 1)):
+                        log.debug('Not creating new env for output - already exists from top-level')
+                    else:
                         utils.rm_rf(m.config.host_prefix)
                         utils.rm_rf(m.config.build_prefix)
                         utils.rm_rf(m.config.test_prefix)
