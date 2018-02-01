@@ -1,3 +1,42 @@
+2018-01-31 3.4.0:
+
+Enhancements:
+-------------
+
+* implement "--exclusive-config-file" CLI flag to render & build. This file
+  bypasses detection of config files in $HOME and cwd, but respects any config
+  files in recipe folders. #2661
+* Activate output scripts in meta.yaml ( #2667 ), but only when:
+  * output has a build/script entry
+  * output uses ``{{ compiler() }}`` jinja2 function in its requirements AND output extension is either .sh or .bat
+  * output has ``build/activate_in_script`` key in meta.yaml set to a truthy value AND output extension is either .sh or .bat
+
+Bug fixes:
+----------
+
+* fix AttributeError in overlinking check  #2650 #2651
+* reorder mmap operations to fix problem with WSL  #2655
+* fix numpy detection as "used" variable when using pin_compatible jinja2  #2659
+* silence conda KeyError warnings when indexing legacy packages that don't have newer metadata files  #2656
+* replace "which" with "type -P" in conda-build's internal recipe.  This avoids issues on PowerPC and with long paths.  #2664
+* Error out when version computation fails in conda-build's setup.py. This will
+  help prevent conda-build packages going out without valid internal versions
+  being recorded (for example, when git is not installed on a build worker).
+  #2665
+* ignore tarcheck errors for files in the info folder that don't appear in info/files file.  Fixes inclusion of arbitrarily named readme files.  #2668
+* clean up host prefix in between skeletons when using pypi's --recursive mode.  Conda otherwise throws errors on the 2nd recipe.  #2669
+
+Contributors:
+-------------
+
+* @kfranz
+* @mingwandroid
+* @msarahan
+* @nehaljwani
+* @neok-m4700
+* @steamelephant
+
+
 2018-01-23 3.3.0:
 
 Enhancements:
