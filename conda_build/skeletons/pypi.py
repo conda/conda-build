@@ -1000,6 +1000,7 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
 
     specs.extend(extra_specs)
 
+    rm_rf(config.host_prefix)
     create_env(config.host_prefix, specs_or_actions=specs, env='host',
                 subdir=config.host_subdir, clear_cache=False, config=config)
     stdlib_dir = join(config.host_prefix,
