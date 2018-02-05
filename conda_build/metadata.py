@@ -374,12 +374,17 @@ def build_string_from_metadata(metadata):
     if metadata.meta.get('build', {}).get('string'):
         return metadata.get_value('build/string')
     res = []
+    metadata_noarch = str(metadata.get_value('build/noarch'))
+    metadata_noarch_python = metadata.get_value('build/noarch_python')
     version_pat = re.compile(r'(?:==)?(\d+)\.(\d+)')
     for name, s in (('numpy', 'np'), ('python', 'py'),
                     ('perl', 'pl'), ('lua', 'lua'),
                     ('r', 'r'), ('r-base', 'r')):
         for ms in metadata.ms_depends():
             if ms.name.split(' ')[0] == name:
+                if metadata_noarch == name or (metadata_noarch_python and name == 'python'):
+                    res.append(s)
+                    break
                 try:
                     v = ms.spec.split()[1]
                 except IndexError:
