@@ -1,3 +1,16 @@
+2018-02-08 3.4.1:
+
+Bug fixes:
+----------
+
+* fix interpretation of zip_keys when testing pkgs (ignore empty values)  #2673
+
+Contributors:
+-------------
+
+* @msarahan
+
+
 2018-01-31 3.4.0:
 
 Enhancements:
