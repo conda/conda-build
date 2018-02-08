@@ -195,13 +195,14 @@ def _combine_spec_dictionaries(specs, extend_keys=None, filter_keys=None, zip_ke
                             # uniquify
                             values[k] = list(set(values[k]))
                     elif k == 'zip_keys':
-                        # should always be a list of lists, but users may specify as just a list
+                        v = [subval for subval in v if subval]
                         if not isinstance(v[0], list) and not isinstance(v[0], tuple):
                             v = [v]
+                        # should always be a list of lists, but users may specify as just a list
                         values[k] = values.get(k, [])
                         values[k].extend(v)
                         values[k] = list(list(set_group) for set_group in set(tuple(group)
-                                                                            for group in values[k]))
+                                                                        for group in values[k]))
                     else:
                         if hasattr(v, 'keys'):
                             values[k] = v.copy()
@@ -310,7 +311,7 @@ def _get_zip_key_set(combined_variant):
             # make sure that each key only occurs in one set
             _all_unique = all_unique(zip_keys)
             if _all_unique is not True:
-                raise ValueError("All package in zip keys must belong to only one group.  "
+                raise ValueError("All packages in zip keys must belong to only one group.  "
                                 "'{}' is in more than one group.".format(_all_unique))
             for ks in zip_keys:
                 # sets with only a single member aren't actually zipped.  Ignore them.
