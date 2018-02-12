@@ -87,6 +87,9 @@ DEFAULTS = [Setting('activate', True),
                 cc_conda_build.get('cache_dir')))) if cc_conda_build.get('cache_dir') else None),
             Setting('copy_test_source_files', True),
 
+            # should rendering cut out any skipped metadata?
+            Setting('trim_skip', True),
+
             # Disable the overlinking test for this package. This test checks that transitive DSOs
             # are not referenced by DSOs in the package being built. When this happens something
             # has gone wrong with:
