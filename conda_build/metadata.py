@@ -1507,7 +1507,7 @@ class MetaData(object):
 
     def extract_requirements_text(self, force_top_level=False):
         # outputs are already filtered into each output for us
-        f = r'(^\s*requirements:.*?)(^\s*test:|^\s*extra:|^\s*about:|^\s*-\sname:|^outputs:|\Z)'  # NOQA
+        f = r'(^\s*requirements:.*?)(?=^\s*test:|^\s*extra:|^\s*about:|^\s*-\sname:|^outputs:|\Z)'  # NOQA
         if 'package:' in self.get_recipe_text():
             # match top-level requirements - start of line means top-level requirements
             #    ^requirements:.*?
@@ -1519,15 +1519,15 @@ class MetaData(object):
         return self.get_recipe_text(f, force_top_level=force_top_level)
 
     def extract_outputs_text(self):
-        return self.get_recipe_text(r'(^outputs:.*?)(^test:|^extra:|^about:|\Z)',
+        return self.get_recipe_text(r'(^outputs:.*?)(?=^test:|^extra:|^about:|\Z)',
                                     force_top_level=True)
 
     def extract_source_text(self):
         return self.get_recipe_text(
-            r'(\s*source:.*?)(^build:|^requirements:|^test:|^extra:|^about:|^outputs:|\Z)')
+            r'(\s*source:.*?)(?=^build:|^requirements:|^test:|^extra:|^about:|^outputs:|\Z)')
 
     def extract_package_and_build_text(self):
-        return self.get_recipe_text(r'(^.*?)(^requirements:|^test:|^extra:|^about:|^outputs:|\Z)')
+        return self.get_recipe_text(r'(^.*?)(?=^requirements:|^test:|^extra:|^about:|^outputs:|\Z)')
 
     def extract_single_output_text(self, output_name):
         # first, need to figure out which index in our list of outputs the name matches.
