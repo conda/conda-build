@@ -177,7 +177,6 @@ def test_variant_input_with_zip_keys_keeps_zip_keys_list():
     assert 'zip_keys' in variant_list[0] and variant_list[0]['zip_keys']
 
 
-@pytest.mark.serial
 def test_ensure_valid_spec_on_run_and_test(testing_workdir, testing_config, caplog):
     recipe = os.path.join(recipe_dir, '14_variant_in_run_and_test')
     api.render(recipe, config=testing_config)

@@ -28,7 +28,6 @@ repo_packages = [('', 'pypi', 'pip', '8.1.2'),
                  ]
 
 
-@pytest.mark.serial
 @pytest.mark.parametrize("prefix, repo, package, version", repo_packages)
 def test_repo(prefix, repo, package, version, testing_workdir, testing_config):
     api.skeletonize(package, repo, version=version, output_dir=testing_workdir,
@@ -45,14 +44,12 @@ def test_repo(prefix, repo, package, version, testing_workdir, testing_config):
         raise
 
 
-@pytest.mark.serial
 def test_name_with_version_specified(testing_workdir, testing_config):
     api.skeletonize(packages='sympy', repo='pypi', version='0.7.5', config=testing_config)
     m = api.render('sympy/meta.yaml')[0][0]
     assert m.version() == "0.7.5"
 
 
-@pytest.mark.serial
 def test_pypi_url(testing_workdir, testing_config):
     api.skeletonize('https://pypi.python.org/packages/source/s/sympy/'
                     'sympy-0.7.5.tar.gz#md5=7de1adb49972a15a3dd975e879a2bea9',
@@ -61,7 +58,6 @@ def test_pypi_url(testing_workdir, testing_config):
     assert m.version() == "0.7.5"
 
 
-@pytest.mark.serial
 def test_pypi_with_setup_options(testing_workdir, testing_config):
     # Use photutils package below because skeleton will fail unless the setup.py is given
     # the flag --offline because of a bootstrapping a helper file that
@@ -76,7 +72,6 @@ def test_pypi_with_setup_options(testing_workdir, testing_config):
     assert '--offline' in m.meta['build']['script']
 
 
-@pytest.mark.serial
 def test_pypi_pin_numpy(testing_workdir, testing_config):
     # The package used here must have a numpy dependence for pin-numpy to have
     # any effect.
@@ -88,7 +83,6 @@ def test_pypi_pin_numpy(testing_workdir, testing_config):
         api.build('msumastro')
 
 
-@pytest.mark.serial
 def test_pypi_version_sorting(testing_workdir, testing_config):
     # The package used here must have a numpy dependence for pin-numpy to have
     # any effect.
@@ -102,13 +96,11 @@ def test_list_skeletons():
     assert set(skeletons) == set(['pypi', 'cran', 'cpan', 'luarocks', 'rpm'])
 
 
-@pytest.mark.serial
 def test_pypi_with_entry_points(testing_workdir):
     api.skeletonize('planemo', repo='pypi', python_version="2.7")
     assert os.path.isdir('planemo')
 
 
-@pytest.mark.serial
 def test_pypi_with_version_arg(testing_workdir):
     # regression test for https://github.com/conda/conda-build/issues/1442
     api.skeletonize('PrettyTable', 'pypi', version='0.7.2')
@@ -116,7 +108,6 @@ def test_pypi_with_version_arg(testing_workdir):
     assert parse_version(m.version()) == parse_version("0.7.2")
 
 
-@pytest.mark.serial
 def test_pypi_with_extra_specs(testing_workdir):
     # regression test for https://github.com/conda/conda-build/issues/1697
     api.skeletonize('bigfile', 'pypi', extra_specs=["cython", "mpi4py"], version='0.1.24')
@@ -126,7 +117,6 @@ def test_pypi_with_extra_specs(testing_workdir):
     assert any('mpi4py' in req for req in m.meta['requirements']['host'])
 
 
-@pytest.mark.serial
 def test_pypi_with_version_inconsistency(testing_workdir):
     # regression test for https://github.com/conda/conda-build/issues/189
     api.skeletonize('mpi4py_test', 'pypi', extra_specs=["mpi4py"], version='0.0.10')
@@ -134,7 +124,6 @@ def test_pypi_with_version_inconsistency(testing_workdir):
     assert parse_version(m.version()) == parse_version("0.0.10")
 
 
-@pytest.mark.serial
 def test_pypi_with_basic_environment_markers(testing_workdir):
     # regression test for https://github.com/conda/conda-build/issues/1974
     api.skeletonize('coconut', 'pypi', version='1.2.2')
@@ -157,14 +146,12 @@ def test_pypi_with_basic_environment_markers(testing_workdir):
         assert "pygments" not in run_reqs
 
 
-@pytest.mark.serial
 def test_setuptools_test_requirements(testing_workdir):
     api.skeletonize(packages='hdf5storage', repo='pypi')
     m = api.render('hdf5storage')[0][0]
     assert m.meta['test']['requires'] == ['nose >=1.0']
 
 
-@pytest.mark.serial
 def test_pypi_section_order_preserved(testing_workdir):
     """
     Test whether sections have been written in the correct order.

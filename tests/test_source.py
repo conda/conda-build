@@ -124,7 +124,6 @@ def test_hoist_different_name(testing_workdir):
     assert not os.path.isdir(testdir)
 
 
-@pytest.mark.serial
 def test_append_hash_to_fn(testing_metadata, caplog):
     relative_zip = 'testfn.zip'
     assert source.append_hash_to_fn(relative_zip, '123') == 'testfn_123.zip'
