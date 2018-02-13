@@ -411,6 +411,20 @@ def which_prefix(path):
     return prefix
 
 
+def get_installed_version(prefix, pkgs):
+    """Primarily used by conda-forge, but may be useful in general for checking when a package
+    needs to be updated"""
+    from conda_build.utils import ensure_list
+    pkgs = ensure_list(pkgs)
+    linked_pkgs = linked(prefix)
+    versions = {}
+    for pkg in pkgs:
+        vers_inst = [dist.split('::', 1)[-1].rsplit('-', 2)[1] for dist in linked_pkgs
+            if dist.split('::', 1)[-1].rsplit('-', 2)[0] == pkg]
+        versions[pkg] = vers_inst[0] if len(vers_inst) == 1 else None
+    return versions
+
+
 # when deactivating envs (e.g. switching from root to build/test) this env var is used,
 # except the PR that removed this has been reverted (for now) and Windows doesnt need it.
 env_path_backup_var_exists = os.environ.get('CONDA_PATH_BACKUP', None)
