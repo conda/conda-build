@@ -312,3 +312,9 @@ def test_merge_build_host_applies_in_outputs(testing_config):
             assert all(len(dep.split()) > 1 for dep in run_deps)
 
     api.build(recipe, config=testing_config)
+
+
+def test_activation_in_output_scripts(testing_config):
+    recipe = os.path.join(subpackage_dir, '_output_activation')
+    testing_config.activate = True
+    api.build(recipe, config=testing_config)

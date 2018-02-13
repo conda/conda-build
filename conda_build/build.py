@@ -1636,6 +1636,16 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         return True
 
     if metadata.config.remove_work_dir:
+        if os.path.isdir(metadata.config.build_prefix):
+            # move build folder to force hardcoded paths to build env to break during tests
+            #    (so that they can be properly addressed by recipe author)
+            dest = os.path.join(os.path.dirname(metadata.config.build_prefix),
+                        '_'.join(('build_prefix_moved', metadata.dist(),
+                                    metadata.config.host_subdir)))
+            # Needs to come after create_files in case there's test/source_files
+            print("Renaming build prefix directory, ", metadata.config.build_prefix, " to ", dest)
+            os.rename(config.build_prefix, dest)
+
         # nested if so that there's no warning when we just leave the empty workdir in place
         if metadata.source_provided:
             dest = os.path.join(os.path.dirname(metadata.config.work_dir),
