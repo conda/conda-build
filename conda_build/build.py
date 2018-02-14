@@ -940,9 +940,16 @@ bundlers = {
 
 
 def _write_sh_activation_text(file_handle, m):
-    file_handle.write('source "{0}activate" "{1}"\n'
-                .format(utils.root_script_dir + os.path.sep,
-                        m.config.build_prefix))
+    cygpath_prefix = "$(cygpath -u " if utils.on_win else ""
+    cygpath_suffix = " )" if utils.on_win else ""
+    activate_path = ''.join((cygpath_prefix,
+                            os.path.join(utils.root_script_dir, 'activate').replace('\\', '\\\\'),
+                            cygpath_suffix))
+    build_prefix_path = ''.join((cygpath_prefix,
+                                m.config.build_prefix.replace('\\', '\\\\'),
+                                cygpath_suffix))
+
+    file_handle.write('source "{0}" "{1}"\n'.format(activate_path, build_prefix_path))
 
     # conda 4.4 requires a conda-meta/history file for a valid conda prefix
     history_file = join(m.config.build_prefix, 'conda-meta', 'history')
@@ -973,9 +980,10 @@ def _write_sh_activation_text(file_handle, m):
             open(history_file, 'a').close()
         file_handle.write('unset CONDA_PATH_BACKUP\n')
         file_handle.write('export CONDA_MAX_SHLVL=2\n')
-        file_handle.write('source "{0}activate" "{1}"\n'
-                          .format(utils.root_script_dir + os.path.sep,
-                                  m.config.host_prefix))
+        host_prefix_path = ''.join((cygpath_prefix,
+                                   m.config.host_prefix.replace('\\', '\\\\'),
+                                   cygpath_suffix))
+        file_handle.write('source "{0}" "{1}"\n' .format(activate_path, host_prefix_path))
 
 
 def _write_activation_text(script_path, m):
