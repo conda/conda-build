@@ -186,7 +186,6 @@ def test_build_no_build_id(testing_workdir, testing_config):
     assert 'has_prefix_files_1' not in data
 
 
-@pytest.mark.serial
 def test_build_multiple_recipes(testing_metadata, testing_workdir, testing_config):
     """Test that building two recipes in one CLI call separates the build environment for each"""
     os.makedirs('recipe1')
@@ -368,7 +367,6 @@ def test_inspect_objects(testing_workdir, capfd):
         assert re.search('rpath:.*@loader_path', output)
 
 
-@pytest.mark.serial
 @pytest.mark.skipif(on_win, reason="Windows prefix length doesn't matter (yet?)")
 def test_inspect_prefix_length(testing_workdir, capfd):
     from conda_build import api
@@ -395,7 +393,6 @@ def test_inspect_prefix_length(testing_workdir, capfd):
     assert 'No packages found with binary prefixes shorter' in output
 
 
-@pytest.mark.serial
 def test_inspect_hash_input(testing_metadata, testing_workdir, capfd):
     testing_metadata.meta['requirements']['build'] = ['zlib']
     api.output_yaml(testing_metadata, 'meta.yaml')
@@ -408,7 +405,6 @@ def test_inspect_hash_input(testing_metadata, testing_workdir, capfd):
     assert 'zlib' in output
 
 
-@pytest.mark.serial
 def test_develop(testing_env):
     f = "https://pypi.io/packages/source/c/conda_version_test/conda_version_test-0.1.0-1.tar.gz"
     download(f, "conda_version_test.tar.gz")
@@ -507,7 +503,6 @@ def test_conda_py_no_period(testing_workdir, testing_metadata, monkeypatch):
     assert any('py34' in output for output in outputs)
 
 
-@pytest.mark.serial
 def test_build_skip_existing(testing_workdir, capfd, mocker):
     # build the recipe first
     empty_sections = os.path.join(metadata_dir, "empty_sections")
@@ -522,7 +517,6 @@ def test_build_skip_existing(testing_workdir, capfd, mocker):
     assert ("are already built" in output or "are already built" in error)
 
 
-@pytest.mark.serial
 def test_build_skip_existing_croot(testing_workdir, capfd):
     # build the recipe first
     empty_sections = os.path.join(metadata_dir, "empty_sections")
@@ -534,7 +528,6 @@ def test_build_skip_existing_croot(testing_workdir, capfd):
     assert "are already built" in output
 
 
-@pytest.mark.serial
 def test_package_test(testing_workdir, testing_metadata):
     """Test calling conda build -t <package file> - rather than <recipe dir>"""
     api.output_yaml(testing_metadata, 'recipe/meta.yaml')
@@ -543,7 +536,6 @@ def test_package_test(testing_workdir, testing_metadata):
     main_build.execute(args)
 
 
-@pytest.mark.serial
 def test_activate_scripts_not_included(testing_workdir):
     recipe = os.path.join(metadata_dir, '_activate_scripts_not_included')
     args = ['--no-anaconda-upload', '--croot', testing_workdir, recipe]
@@ -556,7 +548,6 @@ def test_activate_scripts_not_included(testing_workdir):
         assert not package_has_file(out, f)
 
 
-@pytest.mark.serial
 def test_relative_path_croot():
     # this tries to build a package while specifying the croot with a relative path:
     # conda-build --no-test --croot ./relative/path
@@ -570,7 +561,6 @@ def test_relative_path_croot():
     assert os.path.isfile(outputfile[0])
 
 
-@pytest.mark.serial
 def test_relative_path_test_artifact():
     # this test builds a package into (cwd)/relative/path and then calls:
     # conda-build --test ./relative/path/{platform}/{artifact}.tar.bz2
@@ -591,7 +581,6 @@ def test_relative_path_test_artifact():
     main_build.execute(args)
 
 
-@pytest.mark.serial
 def test_relative_path_test_recipe():
     # this test builds a package into (cwd)/relative/path and then calls:
     # conda-build --test --croot ./relative/path/ /abs/path/to/recipe
@@ -610,7 +599,6 @@ def test_relative_path_test_recipe():
     main_build.execute(args)
 
 
-@pytest.mark.serial
 def test_render_with_python_arg_reduces_subspace(capfd):
     recipe = os.path.join(metadata_dir, "..", "variants", "20_subspace_selection_cli")
     # build the package

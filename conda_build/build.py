@@ -940,9 +940,16 @@ bundlers = {
 
 
 def _write_sh_activation_text(file_handle, m):
-    file_handle.write('source "{0}activate" "{1}"\n'
-                .format(utils.root_script_dir + os.path.sep,
-                        m.config.build_prefix))
+    cygpath_prefix = "$(cygpath -u " if utils.on_win else ""
+    cygpath_suffix = " )" if utils.on_win else ""
+    activate_path = ''.join((cygpath_prefix,
+                            os.path.join(utils.root_script_dir, 'activate').replace('\\', '\\\\'),
+                            cygpath_suffix))
+    build_prefix_path = ''.join((cygpath_prefix,
+                                m.config.build_prefix.replace('\\', '\\\\'),
+                                cygpath_suffix))
+
+    file_handle.write('source "{0}" "{1}"\n'.format(activate_path, build_prefix_path))
 
     # conda 4.4 requires a conda-meta/history file for a valid conda prefix
     history_file = join(m.config.build_prefix, 'conda-meta', 'history')
@@ -973,9 +980,10 @@ def _write_sh_activation_text(file_handle, m):
             open(history_file, 'a').close()
         file_handle.write('unset CONDA_PATH_BACKUP\n')
         file_handle.write('export CONDA_MAX_SHLVL=2\n')
-        file_handle.write('source "{0}activate" "{1}"\n'
-                          .format(utils.root_script_dir + os.path.sep,
-                                  m.config.host_prefix))
+        host_prefix_path = ''.join((cygpath_prefix,
+                                   m.config.host_prefix.replace('\\', '\\\\'),
+                                   cygpath_suffix))
+        file_handle.write('source "{0}" "{1}"\n' .format(activate_path, host_prefix_path))
 
 
 def _write_activation_text(script_path, m):
@@ -1636,6 +1644,16 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
         return True
 
     if metadata.config.remove_work_dir:
+        if os.path.isdir(metadata.config.build_prefix):
+            # move build folder to force hardcoded paths to build env to break during tests
+            #    (so that they can be properly addressed by recipe author)
+            dest = os.path.join(os.path.dirname(metadata.config.build_prefix),
+                        '_'.join(('build_prefix_moved', metadata.dist(),
+                                    metadata.config.host_subdir)))
+            # Needs to come after create_files in case there's test/source_files
+            print("Renaming build prefix directory, ", metadata.config.build_prefix, " to ", dest)
+            os.rename(config.build_prefix, dest)
+
         # nested if so that there's no warning when we just leave the empty workdir in place
         if metadata.source_provided:
             dest = os.path.join(os.path.dirname(metadata.config.work_dir),

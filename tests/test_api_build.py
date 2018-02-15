@@ -336,7 +336,6 @@ def test_jinja_typo(testing_workdir, testing_config):
     assert "GIT_DSECRIBE_TAG" in exc.exconly()
 
 
-@pytest.mark.serial
 def test_skip_existing(testing_workdir, testing_config, capfd):
     # build the recipe first
     api.build(empty_sections, config=testing_config)
@@ -345,7 +344,6 @@ def test_skip_existing(testing_workdir, testing_config, capfd):
     assert "are already built" in output
 
 
-@pytest.mark.serial
 def test_skip_existing_url(testing_metadata, testing_workdir, capfd):
     # make sure that it is built
     outputs = api.build(testing_metadata)
@@ -395,7 +393,6 @@ def test_requirements_txt_for_run_reqs(testing_workdir, testing_config):
     api.build(os.path.join(metadata_dir, "_requirements_txt_run_reqs"), config=testing_config)
 
 
-@pytest.mark.serial
 def test_compileall_compiles_all_good_files(testing_workdir, testing_config):
     output = api.build(os.path.join(metadata_dir, "_compile-test"), config=testing_config)[0]
     good_files = ['f1.py', 'f3.py']
@@ -681,7 +678,6 @@ def test_preferred_env(testing_config):
     assert 'package_metadata_version' in extra
 
 
-@pytest.mark.serial
 def test_skip_compile_pyc(testing_config):
     outputs = api.build(os.path.join(metadata_dir, "skip_compile_pyc"), config=testing_config)
     tf = tarfile.open(outputs[0])
@@ -796,7 +792,6 @@ def test_build_expands_wildcards(mocker, testing_workdir):
                                        post=None, variants=None)
 
 
-@pytest.mark.serial
 @pytest.mark.parametrize('set_build_id', [True, False])
 def test_remove_workdir_default(testing_config, caplog, set_build_id):
     recipe = os.path.join(metadata_dir, '_keep_work_dir')
@@ -809,7 +804,6 @@ def test_remove_workdir_default(testing_config, caplog, set_build_id):
     assert not glob(os.path.join(metadata.config.work_dir, '*'))
 
 
-@pytest.mark.serial
 def test_keep_workdir_and_dirty_reuse(testing_config, capfd):
     recipe = os.path.join(metadata_dir, '_keep_work_dir')
     # make a metadata object - otherwise the build folder is computed within the build, but does
@@ -885,7 +879,6 @@ def test_append_python_app_osx(testing_config):
 #         api.build(metadata)
 
 
-@pytest.mark.serial
 def test_run_exports(testing_metadata, testing_config, testing_workdir):
     api.build(os.path.join(metadata_dir, '_run_exports'), config=testing_config, notest=True)
     api.build(os.path.join(metadata_dir, '_run_exports_implicit_weak'), config=testing_config,
@@ -924,7 +917,6 @@ def test_run_exports(testing_metadata, testing_config, testing_workdir):
     assert 'weak_pinned_package 2.0.*' in m.meta['requirements']['run']
 
 
-@pytest.mark.serial
 def test_ignore_run_exports(testing_metadata, testing_config):
     # build the package with run exports for ensuring that we ignore it
     api.build(os.path.join(metadata_dir, '_run_exports'), config=testing_config,
@@ -957,7 +949,6 @@ def test_copy_read_only_file_with_xattr(testing_config, testing_workdir):
     api.build(recipe, config=testing_config)
 
 
-@pytest.mark.serial
 def test_env_creation_fail_exits_build(testing_config):
     recipe = os.path.join(metadata_dir, '_post_link_exits_after_retry')
     with pytest.raises((RuntimeError, LinkError, CondaError)):
@@ -968,7 +959,6 @@ def test_env_creation_fail_exits_build(testing_config):
         api.build(recipe, config=testing_config)
 
 
-@pytest.mark.serial
 def test_recursion_packages(testing_config):
     """Two packages that need to be built are listed in the recipe
 
@@ -977,7 +967,6 @@ def test_recursion_packages(testing_config):
     api.build(recipe, config=testing_config)
 
 
-@pytest.mark.serial
 def test_recursion_layers(testing_config):
     """go two 'hops' - try to build a, but a needs b, so build b first, then come back to a"""
     recipe = os.path.join(metadata_dir, '_recursive-build-two-layers')
@@ -1002,7 +991,6 @@ def test_extract_tarball_with_unicode_filename(testing_config):
     api.build(recipe, config=testing_config)
 
 
-@pytest.mark.serial
 def test_failed_recipe_leaves_folders(testing_config, testing_workdir):
     recipe = os.path.join(fail_dir, 'recursive-build')
     m = api.render(recipe, config=testing_config)[0][0]
@@ -1056,7 +1044,6 @@ def test_run_constrained_stores_constrains_info(testing_config):
     assert info_contents['constrains'][0] == 'bzip2  1.*'
 
 
-@pytest.mark.serial
 def test_no_locking(testing_config):
     recipe = os.path.join(metadata_dir, 'source_git_jinja2')
     api.update_index(os.path.join(testing_config.croot, testing_config.subdir),

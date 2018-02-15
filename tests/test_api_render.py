@@ -146,7 +146,6 @@ def test_cross_recipe_with_only_build_section(testing_config):
     assert not metadata.config.build_is_host
 
 
-@pytest.mark.serial
 def test_setting_condarc_vars_with_env_var_expansion(testing_workdir):
     os.makedirs('config')
     # python won't be used - the stuff in the recipe folder will override it

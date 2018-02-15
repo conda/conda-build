@@ -148,7 +148,6 @@ def test_c_extension_conversion(testing_workdir, base_platform, package):
         assert os.path.exists('{}/{}' .format(platform, fn))
 
 
-@pytest.mark.serial
 @pytest.mark.parametrize('base_platform', ['linux', 'win', 'osx'])
 @pytest.mark.parametrize('package', [('itsdangerous-0.24', 'itsdangerous.py'),
                                      ('py-1.4.32', 'py/__init__.py')])
@@ -173,7 +172,6 @@ def test_convert_platform_to_others(testing_workdir, base_platform, package):
                 assert_package_paths_matches_files(package)
 
 
-@pytest.mark.serial
 @pytest.mark.skipif(on_win, reason="we create the pkg to be converted in *nix; don't run on win.")
 def test_convert_from_unix_to_win_creates_entry_points(testing_config):
     recipe_dir = os.path.join(metadata_dir, "entry_points")
@@ -211,7 +209,6 @@ def test_convert_from_unix_to_win_creates_entry_points(testing_config):
         assert 'Scripts/test-script-manual-postfix-script.py' in has_prefix_files
 
 
-@pytest.mark.serial
 @pytest.mark.parametrize('base_platform', ['linux', 'win', 'osx'])
 @pytest.mark.parametrize('package', [('anaconda-4.4.0', 'version.txt')])
 def test_convert_dependencies(testing_workdir, base_platform, package):
@@ -245,7 +242,6 @@ def test_convert_dependencies(testing_workdir, base_platform, package):
                 assert_package_paths_matches_files(package)
 
 
-@pytest.mark.serial
 @pytest.mark.parametrize('base_platform', ['linux', 'win', 'osx'])
 @pytest.mark.parametrize('package', [('anaconda-4.4.0', 'version.txt')])
 def test_convert_no_dependencies(testing_workdir, base_platform, package):
@@ -276,7 +272,6 @@ def test_convert_no_dependencies(testing_workdir, base_platform, package):
                 assert_package_paths_matches_files(package)
 
 
-@pytest.mark.serial
 @pytest.mark.parametrize('base_platform', ['linux', 'win', 'osx'])
 @pytest.mark.parametrize('package', [('anaconda-4.4.0', 'version.txt')])
 def test_skip_conversion(testing_workdir, base_platform, package, capfd):

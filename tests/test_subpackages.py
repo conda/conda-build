@@ -77,14 +77,6 @@ def test_run_exports_in_subpackage(testing_metadata):
     assert 'bzip2 1.0.*' in p2_final.meta['requirements']['run']
 
 
-# @pytest.mark.serial
-# def test_hash_includes_recipe_files(testing_workdir, testing_config):
-#     """Hash should include all files not specifically named in any output, plus the script for
-#     a given output."""
-#     recipe = os.path.join(subpackage_dir, 'script_install_files')
-#     outputs = api.build(recipe, config=testing_config)
-
-
 def test_subpackage_variant_override(testing_config):
     recipe = os.path.join(subpackage_dir, '_variant_override')
     outputs = api.build(recipe, config=testing_config)
@@ -169,7 +161,6 @@ def test_about_metadata(testing_config):
             assert info['home'] == 'http://not.a.url'
 
 
-@pytest.mark.serial
 def test_toplevel_entry_points_do_not_apply_to_subpackages(testing_config):
     recipe_dir = os.path.join(subpackage_dir, '_entry_points')
     outputs = api.build(recipe_dir, config=testing_config)
@@ -214,7 +205,6 @@ def test_subpackage_hash_inputs(testing_config):
             assert utils.package_has_file(out, 'info/recipe/build.sh')
 
 
-@pytest.mark.serial
 def test_overlapping_files(testing_config, caplog):
     recipe_dir = os.path.join(subpackage_dir, '_overlapping_files')
     utils.reset_deduplicator()
@@ -311,4 +301,10 @@ def test_merge_build_host_applies_in_outputs(testing_config):
             assert len(run_deps) == 2
             assert all(len(dep.split()) > 1 for dep in run_deps)
 
+    api.build(recipe, config=testing_config)
+
+
+def test_activation_in_output_scripts(testing_config):
+    recipe = os.path.join(subpackage_dir, '_output_activation')
+    testing_config.activate = True
     api.build(recipe, config=testing_config)
