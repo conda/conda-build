@@ -1,3 +1,28 @@
+2018-02-15 3.4.2:
+
+Enhancements:
+-------------
+
+* allow trimming of skipped metadata in rendering to be optional (for sake of
+  conda-forge rendering readme's on platforms that are skipped) #2680
+* rename the build prefix prior to the test phase. This will precipitate
+  failures when packages embed paths to the build prefix, which conda does not
+  replace at install time. Fixing these instances is specific enough to packages
+  that we do not attempt to handle it in conda-build. #2681
+* add conda_interface.get_install_version function that facilitates checking if
+  a pkg is in an env, and if so, what its version is #2682
+
+Bug fixes:
+----------
+
+* use lookaheads in extraction regexes to avoid capturing unwanted text  #2679
+
+Contributors:
+-------------
+
+* @msarahan
+
+
 2018-02-08 3.4.1:
 
 Bug fixes:
