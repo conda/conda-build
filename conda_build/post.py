@@ -160,13 +160,14 @@ def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
 
 def rm_py_along_so(prefix):
     """remove .py (.pyc) files alongside .so or .pyd files"""
-    for root, _, files in os.walk(prefix):
-        for fn in files:
-            if fn.endswith(('.so', '.pyd')):
-                name, _ = os.path.splitext(fn)
-                for ext in '.py', '.pyc', '.pyo':
-                    if name + ext in files:
-                        os.unlink(os.path.join(root, name + ext))
+
+    files = list(os.scandir(prefix))
+    for fn in files:
+        if fn.is_file() and fn.name.endswith(('.so', '.pyd')):
+            name, _ = os.path.splitext(fn.path)
+            for ext in '.py', '.pyc', '.pyo':
+                if name + ext in files:
+                    os.unlink(name + ext)
 
 
 def rm_pyo(files, prefix):
@@ -543,9 +544,9 @@ def post_process_shared_lib(m, f, files):
 
 def fix_permissions(files, prefix):
     print("Fixing permissions")
-    for root, dirs, _ in os.walk(prefix):
-        for dn in dirs:
-            lchmod(os.path.join(root, dn), 0o775)
+    for path in os.scandir(prefix):
+        if path.is_dir():
+            lchmod(path.path, 0o775)
 
     for f in files:
         path = os.path.join(prefix, f)
