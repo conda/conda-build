@@ -160,6 +160,11 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
 
     config = get_or_merge_config(config, **kwargs)
 
+    # if people don't pass in an object to capture stats in, they won't get them returned.
+    #     We'll still track them, though.
+    if not stats:
+        stats = {}
+
     recipe_paths_or_metadata = _ensure_list(recipe_paths_or_metadata)
     for recipe in recipe_paths_or_metadata:
         if not any((hasattr(recipe, "config"), isinstance(recipe, string_types))):
@@ -190,9 +195,8 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
 
     if not absolute_recipes:
         raise ValueError('No valid recipes found for input: {}'.format(recipe_paths_or_metadata))
-    return build_tree(absolute_recipes, build_only=build_only, post=post, notest=notest,
-                      need_source_download=need_source_download, config=config, variants=variants,
-                      stats=stats)
+    return build_tree(absolute_recipes, config, stats, build_only=build_only, post=post,
+                      notest=notest, need_source_download=need_source_download, variants=variants)
 
 
 def test(recipedir_or_package_or_metadata, move_broken=True, config=None, stats=None, **kwargs):
@@ -206,6 +210,11 @@ def test(recipedir_or_package_or_metadata, move_broken=True, config=None, stats=
         config = recipedir_or_package_or_metadata.config
     else:
         config = get_or_merge_config(config, **kwargs)
+
+    # if people don't pass in an object to capture stats in, they won't get them returned.
+    #     We'll still track them, though.
+    if not stats:
+        stats = {}
 
     with config:
         # This will create a new local build folder if and only if config

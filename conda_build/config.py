@@ -159,6 +159,9 @@ DEFAULTS = [Setting('activate', True),
             # involving compilers (not just python) will still require recipe modification to have
             # distinct host and build sections, but simple python stuff should work without.
             Setting('merge_build_host', False),
+
+            # path to output build statistics to
+            Setting('stats_file', None),
             ]
 
 

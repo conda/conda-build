@@ -33,8 +33,10 @@ requirements:
     - jinja2
     - patchelf      # [linux]
     - pkginfo
+    - psutil
     - python
     - pyyaml
+    - scandir
     - six
     - glob2
 
