@@ -787,7 +787,10 @@ def test_build_expands_wildcards(mocker, testing_workdir):
             fh.write('\n')
     api.build(["a*"], config=config)
     output = [os.path.join(os.getcwd(), path, 'meta.yaml') for path in files]
-    build_tree.assert_called_once_with(output, build_only=False, config=mocker.ANY,
+    build_tree.assert_called_once_with(output,
+                                       mocker.ANY,  # config
+                                       mocker.ANY,  # stats
+                                       build_only=False,
                                        need_source_download=True, notest=False,
                                        post=None, variants=None)
 
