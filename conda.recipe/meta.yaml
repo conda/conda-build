@@ -36,7 +36,7 @@ requirements:
     - psutil
     - python
     - pyyaml
-    - scandir
+    - scandir       # [py<34]
     - six
     - glob2
 

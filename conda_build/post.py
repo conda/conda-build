@@ -30,6 +30,11 @@ from conda_build.inspect_pkg import which_package
 if sys.platform == 'darwin':
     from conda_build.os_utils import macho
 
+if PY3:
+    scandir = os.scandir
+else:
+    from scandir import scandir
+
 
 def is_obj(path):
     return is_codefile(path)
@@ -161,7 +166,7 @@ def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
 def rm_py_along_so(prefix):
     """remove .py (.pyc) files alongside .so or .pyd files"""
 
-    files = list(os.scandir(prefix))
+    files = list(scandir(prefix))
     for fn in files:
         if fn.is_file() and fn.name.endswith(('.so', '.pyd')):
             name, _ = os.path.splitext(fn.path)
@@ -544,7 +549,7 @@ def post_process_shared_lib(m, f, files):
 
 def fix_permissions(files, prefix):
     print("Fixing permissions")
-    for path in os.scandir(prefix):
+    for path in scandir(prefix):
         if path.is_dir():
             lchmod(path.path, 0o775)
 

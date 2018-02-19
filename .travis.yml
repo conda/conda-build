@@ -45,7 +45,7 @@ install:
   - conda config --set always_yes yes
   - conda config --set auto_update_conda False
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-      conda install -q futures;
+      conda install -q futures scandir;
     fi
   - conda update -q --all
   - if [ -n "$CONDA_VERSION" ]; then

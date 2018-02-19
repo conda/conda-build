@@ -48,12 +48,14 @@ if PY3:
     # NOQA because it is not used in this file.
     from contextlib import ExitStack  # NOQA
     PermissionError = PermissionError  # NOQA
+    scandir = os.scandir
 else:
     import urlparse
     import urllib
     # NOQA because it is not used in this file.
     from contextlib2 import ExitStack  # NOQA
     PermissionError = OSError
+    from scandir import scandir
 
 
 on_win = (sys.platform == 'win32')
@@ -90,7 +92,7 @@ def directory_size(path):
     total_size = 0
     seen = set()
 
-    for path in os.scandir(path):
+    for path in scandir(path):
         if path.is_file():
             try:
                 stat = stat_file(path.path)
