@@ -2094,10 +2094,10 @@ for Python 3.5 and needs to be rebuilt."""
         handle_pypi_upload(wheels, config=config)
 
     total_time = time.time() - initial_time
-    max_memory_used = max([step.get('rss') for step in stats.values()])
-    total_disk = sum([step.get('disk') for step in stats.values()])
-    total_cpu_sys = sum([step.get('cpu_sys') for step in stats.values()])
-    total_cpu_user = sum([step.get('cpu_user') for step in stats.values()])
+    max_memory_used = max([step.get('rss') for step in stats.values()] or 0)
+    total_disk = sum([step.get('disk') for step in stats.values()] or 0)
+    total_cpu_sys = sum([step.get('cpu_sys') for step in stats.values()] or 0)
+    total_cpu_user = sum([step.get('cpu_user') for step in stats.values()] or 0)
 
     print("#####################################################")
     print("Resource usage summary:")
