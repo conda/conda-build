@@ -119,6 +119,7 @@ class PopenWrapper(object):
         # after here.
         self.returncode = 173
         self.disk = 0
+        self.processes = 1
 
         self.out, self.err = self._execute(*args, **kwargs)
 
@@ -131,6 +132,8 @@ class PopenWrapper(object):
         # Create a process of this (the parent) process
         parent = psutil.Process(os.getpid())
 
+        cpu_usage = defaultdict(dict)
+
         # Using the convenience Popen class provided by psutil
         start_time = time.time()
         _popen = psutil.Popen(*args, **kwargs)
@@ -142,19 +145,32 @@ class PopenWrapper(object):
 
                 rss = 0
                 vms = 0
+                processes = 0
                 # We use the parent process to get mem usage of all spawned processes
                 for child in parent.children(recursive=True):
+                    child_cpu_usage = cpu_usage.get(child.pid, {})
                     try:
                         mem = child.memory_info()
                         rss += mem.rss
                         vms += mem.rss
-                    except psutil._exceptions.ZombieProcess:
+                        # listing child times are only available on linux, so we don't use them.
+                        #    we are instead looping over children and getting each individually.
+                        #    https://psutil.readthedocs.io/en/latest/#psutil.Process.cpu_times
+                        cpu_stats = child.cpu_times()
+                        child_cpu_usage['sys'] = cpu_stats.system
+                        child_cpu_usage['user'] = cpu_stats.user
+                        cpu_usage[child.pid] = child_cpu_usage
+                    except (psutil.ZombieProcess, psutil.AccessDenied):
                         # process already died.  Just ignore it.
-                        pass
+                        continue
+                    processes += 1
 
                 # Sum the memory usage of all the children together (2D columnwise sum)
                 self.rss = max(rss, self.rss)
                 self.vms = max(vms, self.vms)
+                self.cpu_sys = sum(child['sys'] for child in cpu_usage.values())
+                self.cpu_user = sum(child['user'] for child in cpu_usage.values())
+                self.processes = max(processes, self.processes)
 
                 # Get disk usage
                 self.disk = max(directory_size(disk_usage_dir), self.disk)
@@ -167,7 +183,7 @@ class PopenWrapper(object):
                     # builds hang
                     try:
                         _popen.kill()
-                    except psutil.NoSuchProcess:
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
                         pass
                     break
         except KeyboardInterrupt:
@@ -181,6 +197,9 @@ class PopenWrapper(object):
                     'rss': self.rss,
                     'vms': self.vms,
                     'disk': self.disk,
+                    'processes': self.processes,
+                    'cpu_user': self.cpu_user,
+                    'cpu_sys': self.cpu_sys,
                     'returncode': self.returncode})
 
 
@@ -216,6 +235,9 @@ def _func_defaulting_env_to_os_environ(func, *popenargs, **kwargs):
     if stats is not None:
         stats.update({'elapsed': proc.elapsed,
                       'disk': proc.disk,
+                      'processes': proc.processes,
+                      'cpu_user': proc.cpu_user,
+                      'cpu_sys': proc.cpu_sys,
                       'rss': proc.rss,
                       'vms': proc.vms})
     return out

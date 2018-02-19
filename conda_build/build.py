@@ -96,13 +96,16 @@ def stats_key(metadata, desc):
 
 
 def seconds_to_text(secs):
-    m, s = divmod(int(secs), 60)
-    h, m = divmod(m, 60)
-    return "%d:%02d:%02d" % (h, m, s)
+    m, s = divmod(secs, 60)
+    h, m = divmod(int(m), 60)
+    return "{:d}:{:02d}:{:04.1f}".format(h, m, s)
 
 
 def log_stats(stats_dict, descriptor):
     print("\nResource usage statistics from {}:".format(descriptor))
+    print("   Process count: {}".format(stats_dict['processes']))
+    print("   CPU time: Sys={}, User={}".format(seconds_to_text(stats_dict['cpu_sys']),
+                                                seconds_to_text(stats_dict['cpu_user'])))
     print("   Memory: {}".format(utils.bytes2human(stats_dict['rss'])))
     print("   Disk usage: {}".format(utils.bytes2human(stats_dict['disk'])))
     print("   Time elapsed: {}\n".format(seconds_to_text(stats_dict['elapsed'])))
@@ -2093,10 +2096,14 @@ for Python 3.5 and needs to be rebuilt."""
     total_time = time.time() - initial_time
     max_memory_used = max([step.get('rss') for step in stats.values()])
     total_disk = sum([step.get('disk') for step in stats.values()])
+    total_cpu_sys = sum([step.get('cpu_sys') for step in stats.values()])
+    total_cpu_user = sum([step.get('cpu_user') for step in stats.values()])
 
     print("#####################################################")
     print("Resource usage summary:")
     print("\nTotal time: {}".format(seconds_to_text(total_time)))
+    print("CPU usage: sys={}, user={}".format(seconds_to_text(total_cpu_sys),
+                                              seconds_to_text(total_cpu_user)))
     print("Maximum memory usage observed: {}".format(utils.bytes2human(max_memory_used)))
     print("Total disk usage observed (not including envs): {}".format(
         utils.bytes2human(total_disk)))
