@@ -162,7 +162,7 @@ class PopenWrapper(object):
                         child_cpu_usage['sys'] = cpu_stats.system
                         child_cpu_usage['user'] = cpu_stats.user
                         cpu_usage[child.pid] = child_cpu_usage
-                    except (psutil.ZombieProcess, psutil.AccessDenied):
+                    except (psutil.ZombieProcess, psutil.AccessDenied, psutil.NoSuchProcess):
                         # process already died.  Just ignore it.
                         continue
                     processes += 1
@@ -185,7 +185,7 @@ class PopenWrapper(object):
                     # builds hang
                     try:
                         _popen.kill()
-                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.NoSuchProcess):
                         pass
                     break
         except KeyboardInterrupt:
