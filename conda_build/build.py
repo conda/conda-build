@@ -18,6 +18,7 @@ import sys
 import tarfile
 import hashlib
 import logging
+import time
 
 # this is to compensate for a requests idna encoding error.  Conda is a better place to fix,
 #   eventually
@@ -74,6 +75,40 @@ if 'bsd' in sys.platform:
     shell_path = '/bin/sh'
 else:
     shell_path = '/bin/bash'
+
+
+def stats_key(metadata, desc):
+    # get the build string from whatever conda-build makes of the configuration
+    used_loop_vars = metadata.get_used_loop_vars()
+    build_vars = '-'.join([k + '_' + str(metadata.config.variant[k]) for k in used_loop_vars
+                          if k != 'target_platform'])
+    # kind of a special case.  Target platform determines a lot of output behavior, but may not be
+    #    explicitly listed in the recipe.
+    tp = metadata.config.variant.get('target_platform')
+    if tp and tp != metadata.config.subdir and 'target_platform' not in build_vars:
+        build_vars += '-target_' + tp
+    key = [metadata.name(), metadata.version()]
+    if build_vars:
+        key.append(build_vars)
+    key = "-".join(key)
+    key = desc + key
+    return key
+
+
+def seconds_to_text(secs):
+    m, s = divmod(secs, 60)
+    h, m = divmod(int(m), 60)
+    return "{:d}:{:02d}:{:04.1f}".format(h, m, s)
+
+
+def log_stats(stats_dict, descriptor):
+    print("\nResource usage statistics from {}:".format(descriptor))
+    print("   Process count: {}".format(stats_dict['processes']))
+    print("   CPU time: Sys={}, User={}".format(seconds_to_text(stats_dict['cpu_sys']),
+                                                seconds_to_text(stats_dict['cpu_user'])))
+    print("   Memory: {}".format(utils.bytes2human(stats_dict['rss'])))
+    print("   Disk usage: {}".format(utils.bytes2human(stats_dict['disk'])))
+    print("   Time elapsed: {}\n".format(seconds_to_text(stats_dict['elapsed'])))
 
 
 def create_post_scripts(m):
@@ -730,7 +765,7 @@ can lead to packages that include their dependencies.""" % meta_files))
     return new_files
 
 
-def bundle_conda(output, metadata, env, **kw):
+def bundle_conda(output, metadata, env, stats, **kw):
     log = utils.get_logger(__name__)
     log.info('Packaging %s', metadata.dist())
 
@@ -784,8 +819,14 @@ def bundle_conda(output, metadata, env, **kw):
         utils.copy_into(os.path.join(recipe_dir, output['script']), dest_file)
         if activate_script:
             _write_activation_text(dest_file, metadata)
+
+        bundle_stats = {}
         utils.check_call_env(interpreter.split(' ') + [dest_file],
-                            cwd=metadata.config.work_dir, env=env_output)
+                             cwd=metadata.config.work_dir, env=env_output, stats=bundle_stats)
+        log_stats(bundle_stats, "bundling {}".format(metadata.name()))
+        if stats is not None:
+            stats[stats_key(metadata, 'bundle_{}'.format(metadata.name()))] = bundle_stats
+
     elif files:
         # Files is specified by the output
         # we exclude the list of files that we want to keep, so post-process picks them up as "new"
@@ -905,7 +946,7 @@ def bundle_conda(output, metadata, env, **kw):
     return final_output
 
 
-def bundle_wheel(output, metadata, env):
+def bundle_wheel(output, metadata, env, stats):
     with TemporaryDirectory() as tmpdir, utils.tmp_chdir(metadata.config.work_dir):
         utils.check_call_env(['pip', 'wheel', '--wheel-dir', tmpdir, '--no-deps', '.'], env=env)
         wheel_files = glob(os.path.join(tmpdir, "*.whl"))
@@ -1001,8 +1042,8 @@ def _write_activation_text(script_path, m):
         fh.write(data)
 
 
-def build(m, post=None, need_source_download=True, need_reparse_in_env=False, built_packages=None,
-          notest=False):
+def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=False,
+          built_packages=None, notest=False):
     '''
     Build the package with the specified metadata.
 
@@ -1244,9 +1285,14 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                     os.chmod(work_file, 0o766)
 
                     cmd = [shell_path] + (['-x'] if m.config.debug else []) + ['-e', work_file]
+
                     # this should raise if any problems occur while building
-                    utils.check_call_env(cmd, env=env, cwd=src_dir)
+                    build_stats = {}
+                    utils.check_call_env(cmd, env=env, cwd=src_dir, stats=build_stats)
                     utils.remove_pycache_from_scripts(m.config.host_prefix)
+                    log_stats(build_stats, "building {}".format(m.name()))
+                    if stats is not None:
+                        stats[stats_key(m, 'build')] = build_stats
 
     prefix_file_list = join(m.config.build_folder, 'prefix_files.txt')
     initial_files = set()
@@ -1379,7 +1425,7 @@ def build(m, post=None, need_source_download=True, need_reparse_in_env=False, bu
                     #    can be different from the env for the top level build.
                     with utils.path_prepended(m.config.build_prefix):
                         env = environ.get_dict(config=m.config, m=m)
-                    built_package = bundlers[output_d.get('type', 'conda')](output_d, m, env)
+                    built_package = bundlers[output_d.get('type', 'conda')](output_d, m, env, stats)
                     # warn about overlapping files.
                     if 'checksums' in output_d:
                         for file, csum in output_d['checksums'].items():
@@ -1590,7 +1636,7 @@ def construct_metadata_for_test(recipedir_or_package, config):
     return m, hash_input
 
 
-def test(recipedir_or_package_or_metadata, config, move_broken=True):
+def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
     '''
     Execute any test scripts for the given package.
 
@@ -1821,11 +1867,16 @@ def test(recipedir_or_package_or_metadata, config, move_broken=True):
     else:
         cmd = [shell_path] + (['-x'] if metadata.config.debug else []) + ['-e', test_script]
     try:
-        utils.check_call_env(cmd, env=env, cwd=metadata.config.test_dir)
+        test_stats = {}
+        utils.check_call_env(cmd, env=env, cwd=metadata.config.test_dir, stats=test_stats)
+        log_stats(test_stats, "testing {}".format(metadata.name()))
+        if stats is not None:
+            stats[stats_key(metadata, 'test_{}'.format(metadata.name()))] = test_stats
     except subprocess.CalledProcessError:
         tests_failed(metadata, move_broken=move_broken, broken_dir=metadata.config.broken_dir,
                         config=metadata.config)
         raise
+
     if config.need_cleanup and config.recipe_dir is not None:
         utils.rm_rf(config.recipe_dir)
     print("TEST END:", test_package_name)
@@ -1871,7 +1922,7 @@ Error:
 """ % (os.pathsep.join(external.dir_paths)))
 
 
-def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
+def build_tree(recipe_list, config, stats, build_only=False, post=False, notest=False,
                need_source_download=True, need_reparse_in_env=False, variants=None):
 
     to_build_recursive = []
@@ -1888,6 +1939,8 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
     extra_help = ""
     built_packages = OrderedDict()
     retried_recipes = []
+    initial_time = time.time()
+    stats_file = config.stats_file
 
     # this is primarily for exception handling.  It's OK that it gets clobbered by
     #     the loop below.
@@ -1954,7 +2007,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                 if metadata.name() not in metadata.config.build_folder:
                     metadata.config.compute_build_id(metadata.name(), reset=True)
 
-                packages_from_this = build(metadata,
+                packages_from_this = build(metadata, stats,
                                            post=post,
                                            need_source_download=need_source_download,
                                            need_reparse_in_env=need_reparse_in_env,
@@ -1965,7 +2018,7 @@ def build_tree(recipe_list, config, build_only=False, post=False, notest=False,
                     for pkg, dict_and_meta in packages_from_this.items():
                         if pkg.endswith('.tar.bz2'):
                             # we only know how to test conda packages
-                            test(pkg, config=metadata.config)
+                            test(pkg, config=metadata.config, stats=stats)
                         built_packages.update({pkg: dict_and_meta})
                 else:
                     built_packages.update(packages_from_this)
@@ -2039,6 +2092,27 @@ for Python 3.5 and needs to be rebuilt."""
         wheels = [f for f in built_packages if f.endswith('.whl')]
         handle_anaconda_upload(tarballs, config=config)
         handle_pypi_upload(wheels, config=config)
+
+    total_time = time.time() - initial_time
+    max_memory_used = max([step.get('rss') for step in stats.values()] or [0])
+    total_disk = sum([step.get('disk') for step in stats.values()] or [0])
+    total_cpu_sys = sum([step.get('cpu_sys') for step in stats.values()] or [0])
+    total_cpu_user = sum([step.get('cpu_user') for step in stats.values()] or [0])
+
+    print("#####################################################")
+    print("Resource usage summary:")
+    print("\nTotal time: {}".format(seconds_to_text(total_time)))
+    print("CPU usage: sys={}, user={}".format(seconds_to_text(total_cpu_sys),
+                                              seconds_to_text(total_cpu_user)))
+    print("Maximum memory usage observed: {}".format(utils.bytes2human(max_memory_used)))
+    print("Total disk usage observed (not including envs): {}".format(
+        utils.bytes2human(total_disk)))
+    stats['total'] = {'time': total_time,
+                      'memory': max_memory_used,
+                      'disk': total_disk}
+    if stats_file:
+        with open(stats_file, 'w') as f:
+            json.dump(stats, f)
 
     return list(built_packages.keys())
 

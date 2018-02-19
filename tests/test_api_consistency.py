@@ -47,14 +47,14 @@ def test_api_check():
 def test_api_build():
     argspec = getargspec(api.build)
     assert argspec.args == ['recipe_paths_or_metadata', 'post', 'need_source_download',
-                            'build_only', 'notest', 'config', 'variants']
-    assert argspec.defaults == (None, True, False, False, None, None)
+                            'build_only', 'notest', 'config', 'variants', 'stats']
+    assert argspec.defaults == (None, True, False, False, None, None, None)
 
 
 def test_api_test():
     argspec = getargspec(api.test)
-    assert argspec.args == ['recipedir_or_package_or_metadata', 'move_broken', 'config']
-    assert argspec.defaults == (True, None)
+    assert argspec.args == ['recipedir_or_package_or_metadata', 'move_broken', 'config', 'stats']
+    assert argspec.defaults == (True, None, None)
 
 
 def test_api_list_skeletons():

@@ -26,6 +26,7 @@ import yaml
 import zipfile
 
 import filelock
+import psutil
 
 from .conda_interface import hashsum_file, md5_file, unix_path_to_win, win_path_to_unix
 from .conda_interface import PY3, iteritems
@@ -47,12 +48,14 @@ if PY3:
     # NOQA because it is not used in this file.
     from contextlib import ExitStack  # NOQA
     PermissionError = PermissionError  # NOQA
+    scandir = os.scandir
 else:
     import urlparse
     import urllib
     # NOQA because it is not used in this file.
     from contextlib2 import ExitStack  # NOQA
     PermissionError = OSError
+    from scandir import scandir
 
 
 on_win = (sys.platform == 'win32')
@@ -76,6 +79,197 @@ if __name__ == '__main__':
     sys.argv[0] = re.sub(r'(-script\.pyw?|\.exe)?$', '', sys.argv[0])
     sys.exit(%(func)s())
 """
+
+
+@memoized
+def stat_file(path):
+    return os.stat(path)
+
+
+def directory_size(path):
+    '''
+    '''
+    total_size = 0
+    seen = set()
+
+    for path in scandir(path):
+        if path.is_file():
+            try:
+                stat = stat_file(path.path)
+            except OSError:
+                continue
+
+            if stat.st_ino in seen:
+                continue
+
+            seen.add(stat.st_ino)
+
+            total_size += stat.st_size
+    return total_size  # size in bytes
+
+
+class PopenWrapper(object):
+    # Small wrapper around subprocess.Popen to allow memory usage monitoring
+    # copied from ProtoCI, https://github.com/ContinuumIO/ProtoCI/blob/59159bc2c9f991fbfa5e398b6bb066d7417583ec/protoci/build2.py#L20  # NOQA
+
+    def __init__(self, *args, **kwargs):
+        self.elapsed = None
+        self.rss = 0
+        self.vms = 0
+        # set returncode to a bad one
+        # in case it is never defined
+        # after here.
+        self.returncode = 173
+        self.disk = 0
+        self.processes = 1
+
+        self.out, self.err = self._execute(*args, **kwargs)
+
+    def _execute(self, *args, **kwargs):
+        # The polling interval (in seconds)
+        time_int = kwargs.pop('time_int', 1)
+
+        disk_usage_dir = kwargs.get('cwd', sys.prefix)
+
+        # Create a process of this (the parent) process
+        parent = psutil.Process(os.getpid())
+
+        cpu_usage = defaultdict(dict)
+
+        # Using the convenience Popen class provided by psutil
+        start_time = time.time()
+        _popen = psutil.Popen(*args, **kwargs)
+        try:
+            while _popen.is_running():
+                # We need to get all of the children of our process since our
+                # process spawns other processes.  Collect all of the child
+                # processes
+
+                rss = 0
+                vms = 0
+                processes = 0
+                # We use the parent process to get mem usage of all spawned processes
+                for child in parent.children(recursive=True):
+                    child_cpu_usage = cpu_usage.get(child.pid, {})
+                    try:
+                        mem = child.memory_info()
+                        rss += mem.rss
+                        vms += mem.rss
+                        # listing child times are only available on linux, so we don't use them.
+                        #    we are instead looping over children and getting each individually.
+                        #    https://psutil.readthedocs.io/en/latest/#psutil.Process.cpu_times
+                        cpu_stats = child.cpu_times()
+                        child_cpu_usage['sys'] = cpu_stats.system
+                        child_cpu_usage['user'] = cpu_stats.user
+                        cpu_usage[child.pid] = child_cpu_usage
+                    except (psutil.ZombieProcess, psutil.AccessDenied, psutil.NoSuchProcess):
+                        # process already died.  Just ignore it.
+                        continue
+                    processes += 1
+
+                # Sum the memory usage of all the children together (2D columnwise sum)
+                self.rss = max(rss, self.rss)
+                self.vms = max(vms, self.vms)
+                self.cpu_sys = sum(child['sys'] for child in cpu_usage.values())
+                self.cpu_user = sum(child['user'] for child in cpu_usage.values())
+                self.processes = max(processes, self.processes)
+
+                # Get disk usage
+                self.disk = max(directory_size(disk_usage_dir), self.disk)
+
+                time.sleep(time_int)
+                self.elapsed = time.time() - start_time
+                self.returncode = _popen.poll()
+                if _popen.returncode is not None:
+                    # without this if block
+                    # builds hang
+                    try:
+                        _popen.kill()
+                    except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.NoSuchProcess):
+                        pass
+                    break
+        except KeyboardInterrupt:
+            _popen.kill()
+            raise
+
+        return _popen.stdout, _popen.stderr
+
+    def __repr__(self):
+        return str({'elapsed': self.elapsed,
+                    'rss': self.rss,
+                    'vms': self.vms,
+                    'disk': self.disk,
+                    'processes': self.processes,
+                    'cpu_user': self.cpu_user,
+                    'cpu_sys': self.cpu_sys,
+                    'returncode': self.returncode})
+
+
+def _func_defaulting_env_to_os_environ(func, *popenargs, **kwargs):
+    if 'env' not in kwargs:
+        kwargs = kwargs.copy()
+        env_copy = os.environ.copy()
+        kwargs.update({'env': env_copy})
+    kwargs['env'] = {str(key): str(value) for key, value in kwargs['env'].items()}
+    _args = []
+    if 'stdin' not in kwargs:
+        kwargs['stdin'] = subprocess.PIPE
+    for arg in popenargs:
+        # arguments to subprocess need to be bytestrings
+        if sys.version_info.major < 3 and hasattr(arg, 'encode'):
+            arg = arg.encode(codec)
+        elif sys.version_info.major >= 3 and hasattr(arg, 'decode'):
+            arg = arg.decode(codec)
+        _args.append(str(arg))
+
+    stats = kwargs.get('stats')
+    if stats is not None:
+        del kwargs['stats']
+    proc = PopenWrapper(_args, **kwargs)
+    out = None
+
+    if func == 'output':
+        out = proc.out.read()
+
+    if proc.returncode != 0:
+        raise subprocess.CalledProcessError(proc.returncode, _args)
+
+    if stats is not None:
+        stats.update({'elapsed': proc.elapsed,
+                      'disk': proc.disk,
+                      'processes': proc.processes,
+                      'cpu_user': proc.cpu_user,
+                      'cpu_sys': proc.cpu_sys,
+                      'rss': proc.rss,
+                      'vms': proc.vms})
+    return out
+
+
+def check_call_env(popenargs, **kwargs):
+    return _func_defaulting_env_to_os_environ('call', *popenargs, **kwargs)
+
+
+def check_output_env(popenargs, **kwargs):
+    return _func_defaulting_env_to_os_environ('output', stdout=subprocess.PIPE,
+                                              *popenargs, **kwargs)\
+        .rstrip()
+
+
+def bytes2human(n):
+    # http://code.activestate.com/recipes/578019
+    # >>> bytes2human(10000)
+    # '9.8K'
+    # >>> bytes2human(100001221)
+    # '95.4M'
+    symbols = ('K', 'M', 'G', 'T', 'P', 'E', 'Z', 'Y')
+    prefix = {}
+    for i, s in enumerate(symbols):
+        prefix[s] = 1 << (i + 1) * 10
+    for s in reversed(symbols):
+        if n >= prefix[s]:
+            value = float(n) / prefix[s]
+            return '%.1f%s' % (value, s)
+    return "%sB" % n
 
 
 def get_recipe_abspath(recipe):
@@ -653,34 +847,6 @@ def get_ext_files(start_path, pattern):
         for f in files:
             if f.endswith(pattern):
                 yield os.path.join(root, f)
-
-
-def _func_defaulting_env_to_os_environ(func, *popenargs, **kwargs):
-    if 'env' not in kwargs:
-        kwargs = kwargs.copy()
-        env_copy = os.environ.copy()
-        kwargs.update({'env': env_copy})
-    kwargs['env'] = {str(key): str(value) for key, value in kwargs['env'].items()}
-    _args = []
-    if 'stdin' not in kwargs:
-        kwargs['stdin'] = subprocess.PIPE
-    for arg in popenargs:
-        # arguments to subprocess need to be bytestrings
-        if sys.version_info.major < 3 and hasattr(arg, 'encode'):
-            arg = arg.encode(codec)
-        elif sys.version_info.major >= 3 and hasattr(arg, 'decode'):
-            arg = arg.decode(codec)
-        _args.append(str(arg))
-    return func(_args, **kwargs)
-
-
-def check_call_env(popenargs, **kwargs):
-    return _func_defaulting_env_to_os_environ(subprocess.check_call, *popenargs, **kwargs)
-
-
-def check_output_env(popenargs, **kwargs):
-    return _func_defaulting_env_to_os_environ(subprocess.check_output, *popenargs, **kwargs)\
-        .rstrip()
 
 
 _posix_exes_cache = {}

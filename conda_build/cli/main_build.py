@@ -298,6 +298,7 @@ different sets of packages."""
               'jinja2 is present'),
         default=cc_conda_build.get('merge_build_host', 'false').lower() == 'true',
     )
+    p.add_argument('--stats-file', help=('File path to save build statistics to'), )
 
     add_parser_channels(p)
 

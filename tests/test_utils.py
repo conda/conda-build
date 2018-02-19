@@ -1,5 +1,6 @@
 import os
 import stat
+import subprocess
 import sys
 import unittest
 import zipfile
@@ -297,3 +298,15 @@ def test_insert_variant_versions(testing_metadata):
     assert 'numpy 1.13' in testing_metadata.meta['requirements']['build']
     # the overall length does not change
     assert len(testing_metadata.meta['requirements']['build']) == 2
+
+
+def test_subprocess_stats_call():
+    stats = {}
+    utils.check_call_env(['ls'], stats=stats)
+    assert stats
+    stats = {}
+    out = utils.check_output_env(['ls'], stats=stats)
+    assert out
+    assert stats
+    with pytest.raises(subprocess.CalledProcessError):
+        utils.check_call_env(['bash', '-c', 'exit 1'])
