@@ -986,18 +986,6 @@ def _write_sh_activation_text(file_handle, m):
     activate_path = ''.join((cygpath_prefix,
                             os.path.join(utils.root_script_dir, 'activate').replace('\\', '\\\\'),
                             cygpath_suffix))
-    build_prefix_path = ''.join((cygpath_prefix,
-                                m.config.build_prefix.replace('\\', '\\\\'),
-                                cygpath_suffix))
-
-    file_handle.write('source "{0}" "{1}"\n'.format(activate_path, build_prefix_path))
-
-    # conda 4.4 requires a conda-meta/history file for a valid conda prefix
-    history_file = join(m.config.build_prefix, 'conda-meta', 'history')
-    if not isfile(history_file):
-        if not isdir(dirname(history_file)):
-            os.makedirs(dirname(history_file))
-        open(history_file, 'a').close()
 
     if m.is_cross:
         # HACK: we need both build and host envs "active" - i.e. on PATH,
@@ -1019,12 +1007,26 @@ def _write_sh_activation_text(file_handle, m):
             if not isdir(dirname(history_file)):
                 os.makedirs(dirname(history_file))
             open(history_file, 'a').close()
-        file_handle.write('unset CONDA_PATH_BACKUP\n')
-        file_handle.write('export CONDA_MAX_SHLVL=2\n')
         host_prefix_path = ''.join((cygpath_prefix,
                                    m.config.host_prefix.replace('\\', '\\\\'),
                                    cygpath_suffix))
         file_handle.write('source "{0}" "{1}"\n' .format(activate_path, host_prefix_path))
+        file_handle.write('unset CONDA_PATH_BACKUP\n')
+        file_handle.write('export CONDA_MAX_SHLVL=2\n')
+
+    # Write build prefix activation AFTER host prefix, so that its executables come first
+    build_prefix_path = ''.join((cygpath_prefix,
+                                m.config.build_prefix.replace('\\', '\\\\'),
+                                cygpath_suffix))
+
+    file_handle.write('source "{0}" "{1}"\n'.format(activate_path, build_prefix_path))
+
+    # conda 4.4 requires a conda-meta/history file for a valid conda prefix
+    history_file = join(m.config.build_prefix, 'conda-meta', 'history')
+    if not isfile(history_file):
+        if not isdir(dirname(history_file)):
+            os.makedirs(dirname(history_file))
+        open(history_file, 'a').close()
 
 
 def _write_activation_text(script_path, m):
