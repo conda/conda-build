@@ -199,10 +199,16 @@ def test_subpackage_hash_inputs(testing_config):
     for out in outputs:
         if os.path.basename(out).startswith('test_subpackage'):
             assert utils.package_has_file(out, 'info/recipe/install-script.sh')
-            assert utils.package_has_file(out, 'info/recipe/build.sh')
+            # will have full parent recipe in nested folder
+            assert utils.package_has_file(out, 'info/recipe/parent/build.sh')
+            assert not utils.package_has_file(out, 'info/recipe/meta.yaml.template')
+            assert utils.package_has_file(out, 'info/recipe/meta.yaml')
         else:
             assert utils.package_has_file(out, 'info/recipe/install-script.sh')
             assert utils.package_has_file(out, 'info/recipe/build.sh')
+            # will have full parent recipe in base recipe folder (this is an output for the top level)
+            assert utils.package_has_file(out, 'info/recipe/meta.yaml.template')
+            assert utils.package_has_file(out, 'info/recipe/meta.yaml')
 
 
 def test_overlapping_files(testing_config, caplog):

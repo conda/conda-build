@@ -212,55 +212,63 @@ def rewrite_file_with_new_prefix(path, data, old_prefix, new_prefix):
     return data
 
 
+def _copy_top_level_recipe(path, config, dest_dir, destination_subdir=None):
+    files = utils.rec_glob(path, "*")
+    file_paths = sorted([f.replace(path + os.sep, '') for f in files])
+
+    # when this actually has a value, we're copying the top-level recipe into a subdirectory,
+    #    so that we have record of what parent recipe produced subpackages.
+    if destination_subdir:
+        dest_dir = join(dest_dir, destination_subdir)
+    else:
+        # exclude meta.yaml because the json dictionary captures its content
+        file_paths = [f for f in file_paths if not (f == 'meta.yaml' or
+                                                    f == 'conda_build_config.yaml')]
+    file_paths = utils.filter_files(file_paths, path)
+    for f in file_paths:
+        utils.copy_into(join(path, f), join(dest_dir, f),
+                        timeout=config.timeout,
+                        locking=config.locking, clobber=True)
+
+
+def _copy_output_recipe(m, dest_dir):
+    src_dir = m.meta.get('extra', {}).get('parent_recipe', {}).get('path')
+    if src_dir:
+        _copy_top_level_recipe(src_dir, m.config, dest_dir, 'parent')
+
+        this_output = m.get_rendered_output(m.name()) or {}
+        install_script = this_output.get('script')
+        build_inputs = []
+        inputs = [install_script] + build_inputs
+        file_paths = [script for script in inputs if script]
+        file_paths = utils.filter_files(file_paths, src_dir)
+    else:
+        file_paths = []
+
+    for f in file_paths:
+        utils.copy_into(join(src_dir, f), join(dest_dir, f),
+                        timeout=m.config.timeout,
+                        locking=m.config.locking, clobber=True)
+
+
 def copy_recipe(m):
-    output_metadata = m.copy()
-    if output_metadata.config.include_recipe and output_metadata.include_recipe():
-        recipe_dir = join(output_metadata.config.info_dir, 'recipe')
+    if m.config.include_recipe and m.include_recipe():
+        # store the rendered meta.yaml file, plus information about where it came from
+        #    and what version of conda-build created it
+        recipe_dir = join(m.config.info_dir, 'recipe')
         try:
             os.makedirs(recipe_dir)
         except:
             pass
-
-        if os.path.isdir(output_metadata.path):
-            files = utils.rec_glob(m.path, "*")
-            src_dir = m.path
-            file_paths = sorted([f.replace(m.path + os.sep, '') for f in files])
-            # exclude meta.yaml because the json dictionary captures its content
-            file_paths = [f for f in file_paths if not (f == 'meta.yaml' or
-                                                        f == 'conda_build_config.yaml')]
-            file_paths = utils.filter_files(file_paths, m.path)
-            # store the rendered meta.yaml file, plus information about where it came from
-            #    and what version of conda-build created it
-            original_recipe = os.path.join(output_metadata.path, 'meta.yaml')
+        if os.path.isdir(m.path):
+            _copy_top_level_recipe(m.path, m.config, recipe_dir)
+            original_recipe = m.meta_path
         # it's a subpackage.
         else:
+            _copy_output_recipe(m, recipe_dir)
             original_recipe = ""
-            # this will be a subsection for just this output
 
-            src_dir = m.meta.get('extra', {}).get('parent_recipe', {}).get('path')
-            if src_dir:
-                this_output = m.get_rendered_output(m.name()) or {}
-                install_script = this_output.get('script')
-                # # HACK: conda-build renames the actual test script from the recipe into
-                # #    run_test.* in the package.  This makes the test discovery code work.
-                # if test_script:
-                #     ext = os.path.splitext(test_script)[1]
-                #     test_script = 'run_test' + ext
-                build_inputs = []
-                for build_input in ('build.sh', 'bld.bat'):
-                    if os.path.isfile(os.path.join(src_dir, build_input)):
-                        build_inputs.append(build_input)
-                inputs = [install_script] + build_inputs
-                file_paths = [script for script in inputs if script]
-                file_paths = utils.filter_files(file_paths, src_dir)
-            else:
-                file_paths = []
-
-        for f in file_paths:
-            utils.copy_into(join(src_dir, f), join(recipe_dir, f),
-                            timeout=output_metadata.config.timeout,
-                            locking=output_metadata.config.locking, clobber=True)
-
+        output_metadata = m.copy()
         # hard code the build string, so that tests don't get it mixed up
         build = output_metadata.meta.get('build', {})
         build['string'] = output_metadata.build_id()
