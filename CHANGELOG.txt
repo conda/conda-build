@@ -1,3 +1,22 @@
+2018-02-20 3.5.0:
+
+Enhancements:
+-------------
+
+* Print resource statistics for each step, as well as whole.  CPU time, memory usage, disk usage.  #2685
+* Record resource statistics to JSON file when ``--stats-file <output_file_path>`` argument is provided  #2685
+
+Bug fixes:
+----------
+
+* save complete parent recipe in info/recipe/parent for packages that are only outputs of a top-level package  #2687
+
+Contributors:
+-------------
+
+* @msarahan
+
+
 2018-02-15 3.4.2:
 
 Enhancements:
