@@ -26,7 +26,6 @@ import yaml
 import zipfile
 
 import filelock
-import psutil
 
 from .conda_interface import hashsum_file, md5_file, unix_path_to_win, win_path_to_unix
 from .conda_interface import PY3, iteritems
@@ -56,7 +55,6 @@ else:
     from contextlib2 import ExitStack  # NOQA
     PermissionError = OSError
     from scandir import scandir
-
 
 on_win = (sys.platform == 'win32')
 
@@ -108,6 +106,11 @@ def directory_size(path):
     return total_size  # size in bytes
 
 
+class DummyPsutilProcess(object):
+    def children(self, *args, **kwargs):
+        return []
+
+
 class PopenWrapper(object):
     # Small wrapper around subprocess.Popen to allow memory usage monitoring
     # copied from ProtoCI, https://github.com/ContinuumIO/ProtoCI/blob/59159bc2c9f991fbfa5e398b6bb066d7417583ec/protoci/build2.py#L20  # NOQA
@@ -116,31 +119,39 @@ class PopenWrapper(object):
         self.elapsed = None
         self.rss = 0
         self.vms = 0
-        # set returncode to a bad one
-        # in case it is never defined
-        # after here.
-        self.returncode = 173
+        self.returncode = None
         self.disk = 0
         self.processes = 1
 
         self.out, self.err = self._execute(*args, **kwargs)
 
     def _execute(self, *args, **kwargs):
+        try:
+            import psutil
+            psutil_exceptions = psutil.NoSuchProcess, psutil.AccessDenied, psutil.NoSuchProcess
+        except ImportError as e:
+            psutil = None
+            psutil_exceptions = (OSError, ValueError)
+            log = get_logger(__name__)
+            log.warn("psutil import failed.  Error was {}".format(e))
+            log.warn("only disk usage and time statistics will be available.  Install psutil to "
+                     "get CPU time and memory usage statistics.")
+
         # The polling interval (in seconds)
         time_int = kwargs.pop('time_int', 1)
 
         disk_usage_dir = kwargs.get('cwd', sys.prefix)
 
         # Create a process of this (the parent) process
-        parent = psutil.Process(os.getpid())
+        parent = psutil.Process(os.getpid()) if psutil else DummyPsutilProcess()
 
         cpu_usage = defaultdict(dict)
 
         # Using the convenience Popen class provided by psutil
         start_time = time.time()
-        _popen = psutil.Popen(*args, **kwargs)
+        _popen = psutil.Popen(*args, **kwargs) if psutil else subprocess.Popen(*args, **kwargs)
         try:
-            while _popen.is_running():
+            while self.returncode is None:
                 # We need to get all of the children of our process since our
                 # process spawns other processes.  Collect all of the child
                 # processes
@@ -162,7 +173,7 @@ class PopenWrapper(object):
                         child_cpu_usage['sys'] = cpu_stats.system
                         child_cpu_usage['user'] = cpu_stats.user
                         cpu_usage[child.pid] = child_cpu_usage
-                    except (psutil.ZombieProcess, psutil.AccessDenied, psutil.NoSuchProcess):
+                    except psutil_exceptions:
                         # process already died.  Just ignore it.
                         continue
                     processes += 1
@@ -180,14 +191,6 @@ class PopenWrapper(object):
                 time.sleep(time_int)
                 self.elapsed = time.time() - start_time
                 self.returncode = _popen.poll()
-                if _popen.returncode is not None:
-                    # without this if block
-                    # builds hang
-                    try:
-                        _popen.kill()
-                    except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.NoSuchProcess):
-                        pass
-                    break
         except KeyboardInterrupt:
             _popen.kill()
             raise
