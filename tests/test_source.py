@@ -116,12 +116,13 @@ def test_hoist_same_name(testing_workdir):
 
 def test_hoist_different_name(testing_workdir):
     testdir = os.path.join(testing_workdir, 'test')
-    os.makedirs(testdir)
-    with open(os.path.join(testdir, 'somefile'), 'w') as f:
+    nesteddir = os.path.join(testdir, 'test_name')
+    os.makedirs(nesteddir)
+    with open(os.path.join(nesteddir, 'somefile'), 'w') as f:
         f.write('weeeee')
-    source.hoist_single_extracted_folder(testdir)
-    assert os.path.isfile(os.path.join(testing_workdir, 'somefile'))
-    assert not os.path.isdir(testdir)
+    source.hoist_single_extracted_folder(nesteddir)
+    assert os.path.isfile(os.path.join(testdir, 'somefile'))
+    assert not os.path.isdir(nesteddir)
 
 
 def test_append_hash_to_fn(testing_metadata, caplog):
