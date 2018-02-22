@@ -1,3 +1,24 @@
+2018-02-22 3.5.1:
+
+Enhancements:
+-------------
+
+* Add relative path support for load_setup_py_data jinja2 function  #2700
+
+Bug fixes:
+----------
+
+* fix hoisting of archives containing folders named same as top-level folder.  These subfolders were being removed inappropriately.  #2692
+* Fall back gracefully when psutil fails to import.  Disk and total time stats still available; memory and CPU time are not when psutil is unavailable.  #2693
+* Fix directory size computation not being recursive, use scandir for walk operations on py27  #2699
+
+Contributors:
+-------------
+
+* @mariusvniekerk
+* @msarahan
+
+
 2018-02-20 3.5.0:
 
 Enhancements:
