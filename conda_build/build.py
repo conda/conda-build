@@ -1081,6 +1081,9 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
     if env_path_backup_var_exists:
         env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
+    if config.debug_build:
+        env["DEBUG_BUILD"] = "True"
+
     # this should be a no-op if source is already here
     if m.needs_source_for_render:
         try_download(m, no_download_source=False)

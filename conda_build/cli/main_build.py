@@ -301,6 +301,9 @@ different sets of packages."""
     p.add_argument('--stats-file', help=('File path to save build statistics to.  Stats are '
                                          'in JSON format'), )
 
+    p.add_argument('--debug-build', help=('Sets a environment-variable DEBUG_BUILD, which can be unresolved ',
+                                          'in the meta_yaml and build files.'), )
+
     add_parser_channels(p)
 
     args = p.parse_args(args)
