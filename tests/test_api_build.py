@@ -30,7 +30,8 @@ from conda_build import api, exceptions, __version__
 from conda_build.build import VersionOrder
 from conda_build.render import finalize_metadata
 from conda_build.utils import (copy_into, on_win, check_call_env, convert_path_for_cygwin_or_msys2,
-                               package_has_file, check_output_env, get_conda_operation_locks, rm_rf)
+                               package_has_file, check_output_env, get_conda_operation_locks, rm_rf,
+                               walk)
 from conda_build.os_utils.external import find_executable
 from conda_build.exceptions import DependencyNeedsBuildingError
 
@@ -1136,7 +1137,7 @@ def test_source_cache_build(testing_workdir):
     git_cache_directory = '{}/git_cache' .format(testing_workdir)
     assert os.path.isdir(git_cache_directory)
 
-    files = [filename for _, _, filenames in os.walk(git_cache_directory)
+    files = [filename for _, _, filenames in walk(git_cache_directory)
              for filename in filenames]
 
     assert len(files) > 0

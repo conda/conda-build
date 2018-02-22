@@ -18,7 +18,7 @@ import sys
 import tarfile
 import tempfile
 
-from conda_build.utils import filter_info_files
+from conda_build.utils import filter_info_files, walk
 
 
 def retrieve_c_extensions(file_path, show_imports=False):
@@ -522,7 +522,7 @@ def update_files_file(temp_dir, verbose):
 
     with open(files_file, 'w') as files:
         file_paths = []
-        for dirpath, dirnames, filenames in os.walk(temp_dir):
+        for dirpath, dirnames, filenames in walk(temp_dir):
             relative_dir = os.path.relpath(dirpath, temp_dir)
             filenames = [os.path.join(relative_dir, f) for f in filenames]
             for filename in filter_info_files(filenames, ''):
@@ -552,7 +552,7 @@ def create_target_archive(file_path, temp_dir, platform, output_dir):
     destination = os.path.join(output_directory, os.path.basename(file_path))
 
     with tarfile.open(destination, 'w:bz2') as target:
-        for dirpath, dirnames, filenames in os.walk(temp_dir):
+        for dirpath, dirnames, filenames in walk(temp_dir):
             relative_dir = os.path.relpath(dirpath, temp_dir)
             filenames = [os.path.join(relative_dir, f) for f in filenames]
             for filename in filenames:

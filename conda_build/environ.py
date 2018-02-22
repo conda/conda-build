@@ -619,7 +619,7 @@ def _load_all_json(path):
     Load all json files in a directory.  Return dictionary with filenames mapped to json
     dictionaries.
     """
-    root, _, files = next(os.walk(path))
+    root, _, files = next(utils.walk(path))
     result = {}
     for f in files:
         if f.endswith('.json'):

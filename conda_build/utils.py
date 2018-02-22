@@ -47,14 +47,12 @@ if PY3:
     # NOQA because it is not used in this file.
     from contextlib import ExitStack  # NOQA
     PermissionError = PermissionError  # NOQA
-    scandir = os.scandir
 else:
     import urlparse
     import urllib
     # NOQA because it is not used in this file.
     from contextlib2 import ExitStack  # NOQA
     PermissionError = OSError
-    from scandir import scandir
 
 on_win = (sys.platform == 'win32')
 
@@ -78,6 +76,11 @@ if __name__ == '__main__':
     sys.exit(%(func)s())
 """
 
+try:
+    from os import scandir, walk  # NOQA
+except ImportError:
+    from scandir import walk
+
 
 @memoized
 def stat_file(path):
@@ -90,10 +93,10 @@ def directory_size(path):
     total_size = 0
     seen = set()
 
-    for path in scandir(path):
-        if path.is_file():
+    for root, _, files in walk(path):
+        for f in files:
             try:
-                stat = stat_file(path.path)
+                stat = stat_file(os.path.join(root, f))
             except OSError:
                 continue
 
@@ -694,7 +697,7 @@ def safe_print_unicode(*args, **kwargs):
 
 def rec_glob(path, patterns):
     result = []
-    for d_f in os.walk(path):
+    for d_f in walk(path):
         # ignore the .git folder
         # if '.git' in d_f[0]:
         #     continue
@@ -846,7 +849,7 @@ def create_entry_points(items, config):
 
 # Return all files in dir, and all its subdirectories, ending in pattern
 def get_ext_files(start_path, pattern):
-    for root, _, files in os.walk(start_path):
+    for root, _, files in walk(start_path):
         for f in files:
             if f.endswith(pattern):
                 yield os.path.join(root, f)
@@ -930,7 +933,7 @@ def expand_globs(path_list, root_dir):
         elif os.path.islink(path):
             files.append(path)
         elif os.path.isdir(path):
-            files.extend(os.path.join(root, f) for root, _, fs in os.walk(path) for f in fs)
+            files.extend(os.path.join(root, f) for root, _, fs in walk(path) for f in fs)
         else:
             # File compared to the globs use / as separator indenpendently of the os
             glob_files = glob(path)
@@ -1360,7 +1363,7 @@ def prefix_files(prefix):
     Returns a set of all files in prefix.
     '''
     res = set()
-    for root, dirs, files in os.walk(prefix):
+    for root, dirs, files in walk(prefix):
         for fn in files:
             res.add(join(root, fn)[len(prefix) + 1:])
         for dn in dirs:
