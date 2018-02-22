@@ -14,20 +14,28 @@ def load_setup_py_data(setup_file, from_recipe_dir=False, recipe_dir=None, work_
     cd_to_work = False
     path_backup = sys.path
 
-    if from_recipe_dir and recipe_dir:
-        setup_file = os.path.abspath(os.path.join(recipe_dir, setup_file))
-    elif os.path.exists(work_dir):
+    def _change_cwd(target_dir):
         cd_to_work = True
         try:
             cwd = os.getcwd()
         except OSError:
             cwd = recipe_dir or work_dir
-        os.chdir(work_dir)
-        if not os.path.isabs(setup_file):
-            setup_file = os.path.join(work_dir, setup_file)
+        os.chdir(target_dir)
         # this is very important - or else if versioneer or otherwise is in the start folder,
         # things will pick up the wrong versioneer/whatever!
-        sys.path.insert(0, work_dir)
+        sys.path.insert(0, target_dir)
+        return cd_to_work, cwd
+
+    if from_recipe_dir and recipe_dir:
+        setup_file = os.path.abspath(os.path.join(recipe_dir, setup_file))
+        # if the setup_file is not in the recipe dir itself, but is say specified as '../setup.py'
+        setup_root, _ = os.path.split(setup_file)
+        if os.path.abspath(setup_root) != os.path.abspath(recipe_dir):
+            cd_to_work, cwd = _change_cwd(setup_root)
+    elif os.path.exists(work_dir):
+        cd_to_work, cwd = _change_cwd(work_dir)
+        if not os.path.isabs(setup_file):
+            setup_file = os.path.join(work_dir, setup_file)
     else:
         message = ("Did not find setup.py file in manually specified location, and source "
                   "not downloaded yet.")
