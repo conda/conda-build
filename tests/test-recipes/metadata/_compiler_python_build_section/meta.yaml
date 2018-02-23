@@ -1,0 +1,13 @@
+# common point of confusion around the split between build and host
+
+package:
+  name: empty_pkg_with_python_build_host
+  version: 1.0
+
+build:
+  script: echo weeee
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+    - python

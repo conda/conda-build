@@ -842,6 +842,25 @@ def bundle_conda(output, metadata, env, stats, **kw):
     else:
         if not metadata.always_include_files():
             log.warn("No files or script found for output {}".format(output.get('name')))
+            build_deps = metadata.get_value('requirements/build')
+            host_deps = metadata.get_value('requirements/host')
+            build_pkgs = [pkg.split()[0] for pkg in build_deps]
+            host_pkgs = [pkg.split()[0] for pkg in host_deps]
+            dangerous_double_deps = {'python': 'PYTHON', 'r-base': 'R'}
+            for dep, env_var in dangerous_double_deps.items():
+                if all(dep in pkgs_list for pkgs_list in (build_pkgs, host_pkgs)):
+                    raise CondaBuildException("Empty package; {0} present in build and host deps.  "
+                                              "You probably picked up the build environment's {0} "
+                                              " executable.  You need to alter your recipe to "
+                                              " use the {1} env var in your recipe to "
+                                              "run that executable.".format(dep, env_var))
+                elif (dep in build_pkgs and metadata.uses_new_style_compiler_activation):
+                    link = ("https://conda.io/docs/user-guide/tasks/build-packages/"
+                            "define-metadata.html#host")
+                    raise CondaBuildException("Empty package; {0} dep present in build but not "
+                                              "host requirements.  You need to move your {0} dep "
+                                              "to the host requirements section.  See {1} for more "
+                                              "info." .format(dep, link))
         initial_files = set(utils.prefix_files(metadata.config.host_prefix))
 
     for pat in metadata.always_include_files():
