@@ -226,13 +226,18 @@ def create_lua_files(m, test_dir=None):
     return tf if (tf_exists or imports) else False
 
 
-def create_all_test_files(m, test_dir=None):
+def create_all_test_files(m, test_dir=None, existing_test_dir=None):
     if not test_dir:
         test_dir = m.config.test_dir
     files = create_files(m, test_dir)
     pl_files = create_pl_files(m, test_dir)
-    py_files = create_py_files(m, test_dir)
-    r_files = create_r_files(m, test_dir)
-    lua_files = create_lua_files(m, test_dir)
-    shell_files = create_shell_files(m, test_dir)
+    py_files = create_py_files(m, test_dir) or (
+        existing_test_dir and os.path.isfile(os.path.join(existing_test_dir, 'run_test.py')))
+    r_files = create_r_files(m, test_dir) or (
+        existing_test_dir and os.path.isfile(os.path.join(existing_test_dir, 'run_test.r')))
+    lua_files = create_lua_files(m, test_dir) or (
+        existing_test_dir and os.path.isfile(os.path.join(existing_test_dir, 'run_test.lua')))
+    shell_files = create_shell_files(m, test_dir) or (
+        existing_test_dir and (os.path.isfile(os.path.join(existing_test_dir, 'run_test.sh')) or
+                               os.path.isfile(os.path.join(existing_test_dir, 'run_test.bat'))))
     return files, pl_files, py_files, r_files, lua_files, shell_files

@@ -229,6 +229,12 @@ def test_per_output_tests(testing_config, capfd):
     assert out.count("top-level test") == count, out
 
 
+def test_per_output_tests_script(testing_config):
+    recipe_dir = os.path.join(subpackage_dir, '_output_test_script')
+    with pytest.raises(SystemExit):
+        api.build(recipe_dir, config=testing_config)
+
+
 def test_pin_compatible_in_outputs(testing_config):
     recipe_dir = os.path.join(subpackage_dir, '_pin_compatible_in_output')
     m = api.render(recipe_dir, config=testing_config)[0][0]

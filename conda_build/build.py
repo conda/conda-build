@@ -873,7 +873,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
     # first filter is so that info_files does not pick up ignored files
     files = utils.filter_files(files, prefix=metadata.config.host_prefix)
     output['checksums'] = create_info_files(metadata, files, prefix=metadata.config.host_prefix)
-    for ext in ('.py', '.r', '.pl', '.lua', '.sh'):
+    for ext in ('.py', '.r', '.pl', '.lua', '.sh', '.bat'):
         test_dest_path = os.path.join(metadata.config.info_dir, 'test', 'run_test' + ext)
         script = output.get('test', {}).get('script')
         if script and script.endswith(ext):
@@ -1689,10 +1689,10 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
     if not in_pkg_cache:
         environ.clean_pkg_cache(metadata.dist(), metadata.config)
 
+    copy_test_source_files(metadata, metadata.config.test_dir)
     # this is also copying tests/source_files from work_dir to testing workdir
     _, pl_files, py_files, r_files, lua_files, shell_files = \
-        create_all_test_files(metadata)
-    copy_test_source_files(metadata, metadata.config.test_dir)
+        create_all_test_files(metadata, existing_test_dir=metadata.config.test_dir)
     if not any([py_files, shell_files, pl_files, lua_files, r_files]):
         print("Nothing to test for:", test_package_name)
         return True
