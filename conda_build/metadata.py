@@ -501,7 +501,7 @@ def build_string_from_metadata(metadata):
         #    nice to get rid of this, since the hash supercedes that functionally, but not clear
         #    whether anyone's tools depend on this file naming right now.
         for s, names, places in (('np', 'numpy', 2), ('py', 'python', 2), ('pl', 'perl', 2),
-                                 ('lua', 'lua', 2), ('r', ('r', 'r-base'), 3)):
+                                 ('lua', 'lua', 2), ('r', ('r', 'r-base'), 3), ('mro', 'mro-base', 3)):
             for ms in metadata.ms_depends('run'):
                 for name in ensure_list(names):
                     if ms.name == name and name in build_pkg_names:

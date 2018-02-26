@@ -2055,7 +2055,7 @@ def build_tree(recipe_list, config, stats, build_only=False, post=False, notest=
             #    cleaning on the last metadata in the loop should take care of all of the stuff.
             metadata.clean()
         except DependencyNeedsBuildingError as e:
-            skip_names = ['python', 'r', 'r-base', 'perl', 'lua']
+            skip_names = ['python', 'r', 'r-base', 'mro-base', 'perl', 'lua']
             built_package_paths = [entry[1][1].path for entry in built_packages.items()]
             add_recipes = []
             # add the failed one back in at the beginning - but its deps may come before it
