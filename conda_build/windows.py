@@ -202,9 +202,6 @@ def msvc_env_cmd(bits, config, override=None):
 
 
 def _write_bat_activation_text(file_handle, m):
-    file_handle.write('call "{conda_root}\\activate.bat" "{prefix}"\n'.format(
-        conda_root=root_script_dir,
-        prefix=m.config.build_prefix))
     if m.is_cross:
         # HACK: we need both build and host envs "active" - i.e. on PATH,
         #     and with their activate.d scripts sourced. Conda only
@@ -225,12 +222,16 @@ def _write_bat_activation_text(file_handle, m):
             if not isdir(dirname(history_file)):
                 os.makedirs(dirname(history_file))
             open(history_file, 'a').close()
-        # removing this placeholder should make conda double-activate with conda 4.3
-        file_handle.write('set "PATH=%PATH:CONDA_PATH_PLACEHOLDER;=%"\n')
-        file_handle.write('set CONDA_MAX_SHLVL=2\n')
         file_handle.write('call "{conda_root}\\activate.bat" "{prefix}"\n'.format(
             conda_root=root_script_dir,
             prefix=m.config.host_prefix))
+        # removing this placeholder should make conda double-activate with conda 4.3
+        file_handle.write('set "PATH=%PATH:CONDA_PATH_PLACEHOLDER;=%"\n')
+        file_handle.write('set CONDA_MAX_SHLVL=2\n')
+    # Write build prefix activation AFTER host prefix, so that its executables come first
+    file_handle.write('call "{conda_root}\\activate.bat" "{prefix}"\n'.format(
+        conda_root=root_script_dir,
+        prefix=m.config.build_prefix))
 
 
 def build(m, bld_bat):

@@ -33,7 +33,7 @@ from conda_build.utils import (copy_into, on_win, check_call_env, convert_path_f
                                package_has_file, check_output_env, get_conda_operation_locks, rm_rf,
                                walk)
 from conda_build.os_utils.external import find_executable
-from conda_build.exceptions import DependencyNeedsBuildingError
+from conda_build.exceptions import DependencyNeedsBuildingError, CondaBuildException
 
 from .utils import is_valid_dir, metadata_dir, fail_dir, add_mangling, FileNotFoundError
 
@@ -1225,3 +1225,15 @@ def test_overlinking_detection(testing_config):
     with pytest.raises(SystemExit):
         api.build(recipe, config=testing_config)
     rm_rf(dest_file)
+
+
+def test_empty_package_with_python_in_build_and_host_barfs(testing_config):
+    recipe = os.path.join(metadata_dir, '_empty_pkg_with_python_build_host')
+    with pytest.raises(CondaBuildException):
+        api.build(recipe, config=testing_config)
+
+
+def test_empty_package_with_python_and_compiler_in_build_barfs(testing_config):
+    recipe = os.path.join(metadata_dir, '_compiler_python_build_section')
+    with pytest.raises(CondaBuildException):
+        api.build(recipe, config=testing_config)

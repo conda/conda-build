@@ -1,0 +1,12 @@
+package:
+  name: empty_pkg_with_python_build_host
+  version: 1.0
+
+build:
+  script: echo weeee
+
+requirements:
+  build:
+    - python
+  host:
+    - python
