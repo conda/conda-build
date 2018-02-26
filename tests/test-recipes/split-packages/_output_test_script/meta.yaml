@@ -1,0 +1,8 @@
+package:
+  name: test_output_test_script
+  version: 1.0
+
+outputs:
+  - name: output_2
+    test:
+      script: run_output_2_test.py
