@@ -306,6 +306,18 @@ def update_executable_path(file_path, target_platform):
     return renamed_executable_path
 
 
+def update_executable_sha(package_directory, executable_path):
+    """Update the sha of executable scripts.
+
+    When moving from windows to linux, a shebang line is removed/added from
+    script files which requires to update the sha.
+
+    """
+    with open(os.path.join(package_directory, executable_path), 'rb') as script_file:
+        script_file_contents = script_file.read()
+        return hashlib.sha256(script_file_contents).hexdigest()
+
+
 def add_new_windows_path(executable_directory, executable):
     """Add a new path to the paths.json file.
 
@@ -349,6 +361,7 @@ def update_paths_file(temp_dir, target_platform):
 
                 elif path['_path'].startswith('bin'):
                     path['_path'] = update_executable_path(path['_path'], 'win')
+                    path['sha256'] = update_executable_sha(temp_dir, path['_path'])
 
             script_directory = os.path.join(temp_dir, 'Scripts')
             if os.path.isdir(script_directory):
@@ -363,6 +376,7 @@ def update_paths_file(temp_dir, target_platform):
 
                 elif path['_path'].startswith('Scripts'):
                     path['_path'] = update_executable_path(path['_path'], 'unix')
+                    path['sha256'] = update_executable_sha(temp_dir, path['_path'])
 
                 if path['_path'].endswith(('.bat', '.exe')):
                     paths['paths'].remove(path)
