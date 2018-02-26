@@ -809,7 +809,15 @@ def bundle_conda(output, metadata, env, stats, **kw):
 
         interpreter = output.get('script_interpreter')
         if not interpreter:
-            interpreter = guess_interpreter(output['script'])
+            interpreter_and_args = guess_interpreter(output['script'])
+            interpreter_and_args[0] = external.find_executable(interpreter_and_args[0],
+                                                               metadata.config.build_prefix)
+            if not interpreter_and_args[0]:
+                log.error("Did not find an interpreter to run {}, looked for {}".format(
+                    output['script'], interpreter_and_args[0]))
+        else:
+            interpreter_and_args = interpreter.split(' ')
+
         initial_files = utils.prefix_files(metadata.config.host_prefix)
         env_output = env.copy()
         env_output['TOP_PKG_NAME'] = env['PKG_NAME']
@@ -829,7 +837,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
             _write_activation_text(dest_file, metadata)
 
         bundle_stats = {}
-        utils.check_call_env(interpreter.split(' ') + [dest_file],
+        utils.check_call_env(interpreter_and_args + [dest_file],
                              cwd=metadata.config.work_dir, env=env_output, stats=bundle_stats)
         log_stats(bundle_stats, "bundling {}".format(metadata.name()))
         if stats is not None:
@@ -1504,10 +1512,10 @@ def guess_interpreter(script_filename):
     # Since the MSYS2 installation is probably a set of conda packages we do not
     # need to worry about system environmental pollution here. For that reason I
     # do not pass -l on other OSes.
-    extensions_to_run_commands = {'.sh': 'bash{}'.format(' -l' if utils.on_win else ''),
-                                  '.bat': 'cmd /d /c',
-                                  '.ps1': 'powershell -executionpolicy bypass -File',
-                                  '.py': 'python'}
+    extensions_to_run_commands = {'.sh': ['bash{}'.format('.exe' if utils.on_win else '')],
+                                  '.bat': [os.environ.get('COMSPEC', 'cmd.exe'), '/d', '/c'],
+                                  '.ps1': ['powershell', '-executionpolicy', 'bypass', '-File'],
+                                  '.py': ['python']}
     file_ext = os.path.splitext(script_filename)[1]
     for ext, command in extensions_to_run_commands.items():
         if file_ext.lower().startswith(ext):
@@ -1892,7 +1900,7 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
                                                                            test_file=test_file,
                                                                            trace=trace))
     if utils.on_win:
-        cmd = ['cmd.exe', "/d", "/c", test_script]
+        cmd = [os.environ.get('COMSPEC', 'cmd.exe'), "/d", "/c", test_script]
     else:
         cmd = [shell_path] + (['-x'] if metadata.config.debug else []) + ['-e', test_script]
     try:
