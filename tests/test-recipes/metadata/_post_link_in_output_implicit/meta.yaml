@@ -1,0 +1,9 @@
+package:
+  name: test_post_link_in_output_implicit
+  version: 1.0
+
+outputs:
+  - name: out1
+    test:
+      commands:
+        - echo 'weee'
