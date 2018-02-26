@@ -810,7 +810,8 @@ def bundle_conda(output, metadata, env, stats, **kw):
         interpreter = output.get('script_interpreter')
         if not interpreter:
             interpreter_and_args = guess_interpreter(output['script'])
-            interpreter_and_args[0] = external.find_executable(interpreter_and_args[0], metadata.config.build_prefix)
+            interpreter_and_args[0] = external.find_executable(interpreter_and_args[0],
+                                                               metadata.config.build_prefix)
             if not interpreter_and_args[0]:
                 log.error("Did not find an interpreter to run {}, looked for {}".format(
                     output['script'], interpreter_and_args[0]))
@@ -1513,7 +1514,7 @@ def guess_interpreter(script_filename):
     # do not pass -l on other OSes.
     extensions_to_run_commands = {'.sh': ['bash{}'.format('.exe' if utils.on_win else '')],
                                   '.bat': [os.environ.get('COMSPEC', 'cmd.exe'), '/d', '/c'],
-                                  '.ps1': ['powershell', '-executionpolicy',  'bypass', '-File'],
+                                  '.ps1': ['powershell', '-executionpolicy', 'bypass', '-File'],
                                   '.py': ['python']}
     file_ext = os.path.splitext(script_filename)[1]
     for ext, command in extensions_to_run_commands.items():
