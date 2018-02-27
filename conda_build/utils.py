@@ -87,39 +87,46 @@ def stat_file(path):
     return os.stat(path)
 
 
+def directory_size_slow(path):
+    total_size = 0
+    seen = set()
+
+    for root, _, files in walk(path):
+        for f in files:
+            try:
+                stat = stat_file(os.path.join(root, f))
+            except OSError:
+                continue
+
+            if stat.st_ino in seen:
+                continue
+
+            seen.add(stat.st_ino)
+
+            total_size += stat.st_size
+    return total_size
+
+
 def directory_size(path):
     '''
     '''
-    if on_win:
-        command = "dir /s {}"
-        out = subprocess.check_output(command.format(path), shell=True)
-    else:
-        command = "du -s {}"
-        out = subprocess.check_output(command.format(path).split())
+    try:
+        if on_win:
+            command = "dir /s {}"
+            out = subprocess.check_output(command.format(path), shell=True)
+        else:
+            command = "du -s {}"
+            out = subprocess.check_output(command.format(path).split(), stderr=subprocess.PIPE)
 
-    if hasattr(out, 'decode'):
-        out = out.decode()
-    if on_win:
-        out = re.search("([\d,]+)\sbytes", out).group(1).replace(',', '')
-    else:
-        out = out.split()[0]
+        if hasattr(out, 'decode'):
+            out = out.decode()
+        if on_win:
+            out = re.search("([\d,]+)\sbytes", out).group(1).replace(',', '')
+        else:
+            out = out.split()[0]
+    except subprocess.CalledProcessError:
+        out = directory_size_slow(path)
 
-    # totae_size = 0
-    # seen = set()
-
-    # for root, _, files in walk(path):
-    #     for f in files:
-    #         try:
-    #             stat = stat_file(os.path.join(root, f))
-    #         except OSError:
-    #             continue
-
-    #         if stat.st_ino in seen:
-    #             continue
-
-    #         seen.add(stat.st_ino)
-
-    #         total_size += stat.st_size
     return int(out)  # size in bytes
 
 
