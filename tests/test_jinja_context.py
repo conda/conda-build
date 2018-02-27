@@ -105,6 +105,13 @@ def test_pin_subpackage_expression(testing_metadata):
     assert len(pin.split()) == 2
 
 
+def test_all_packages(testing_metadata):
+    testing_metadata.meta['requirements']['build'] = ['python']
+    packages = jinja_context.all_packages(testing_metadata, 'build')
+    assert 'python' in packages, packages
+    assert 'zlib' in packages, packages
+
+
 try:
     from setuptools.config import read_configuration
     del read_configuration
