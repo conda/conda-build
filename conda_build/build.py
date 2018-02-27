@@ -116,7 +116,7 @@ def create_post_scripts(m):
     Create scripts to run after build step
     '''
     recipe_dir = (m.path or
-                  m.meta.get('extra', {}).get('parent_recipe', {}).get('path'))
+                  m.meta.get('extra', {}).get('parent_recipe', {}).get('path', ""))
     ext = '.bat' if utils.on_win else '.sh'
     for tp in 'pre-link', 'post-link', 'pre-unlink':
         # To have per-output link scripts they must be prefixed by the output name or be explicitly
