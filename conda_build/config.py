@@ -97,7 +97,7 @@ DEFAULTS = [Setting('activate', True),
             #    (GNU ld: -as-needed, Apple ld64: -dead_strip_dylibs -no_implicit_dylibs)
             # 2. A missing package in reqs/run (maybe that package is missing run_exports?)
             # 3. A missing (or broken) CDT package in reqs/build or (on systems without CDTs)
-            # 4. .. a missing value in the (to be implemented) system library whitelist
+            # 4. .. a missing value in the hard-coded but metadata-augmentable library whitelist
             # It is important that packages do not suffer from 2 because uninstalling that missing
             # package leads to an inability to run this package.
             #
