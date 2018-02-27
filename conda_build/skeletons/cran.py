@@ -1156,10 +1156,9 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     f.write(CRAN_BUILD_SH_BINARY.format(**d))
                 else:
                     tpbt = [target_platform_bash_test_by_sel[t] for t in from_source]
-                    source_pf_bash = ' || '.join(['[[ $target_platform ' + s + ' ]]'
+                    d['source_pf_bash'] = ' || '.join(['[[ $target_platform ' + s + ' ]]'
                                                   for s in tpbt])
-                    f.write(CRAN_BUILD_SH_MIXED.format(**d,
-                            source_pf_bash=source_pf_bash))
+                    f.write(CRAN_BUILD_SH_MIXED.format(**d))
 
         if not exists(join(dir_path, 'bld.bat')) or update_policy == 'overwrite':
             with open(join(dir_path, 'bld.bat'), 'w') as f:
