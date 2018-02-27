@@ -7,7 +7,7 @@ from __future__ import absolute_import, division, print_function
 from itertools import chain
 from os import makedirs, listdir, sep
 from os.path import (basename, commonprefix, exists, isabs, isdir,
-                     isfile, join, normpath, realpath, relpath, splitext)
+                     isfile, join, normpath, realpath, relpath)
 import re
 import subprocess
 import sys
@@ -250,6 +250,7 @@ target_platform_bash_test_by_sel = {'linux': '=~ linux.*',
                                     'win64': '== win-64',
                                     'osx': '== osx-64'}
 
+
 def package_exists(package_name):
     # TODO: how can we get cran to spit out package presence?
     # available.packages() is probably a start, but no channels are working on mac right now?
@@ -316,13 +317,15 @@ def add_parser(repos):
         action='store',
         dest='use_binaries_ver',
         default=None,
-        help="Repackage binaries from version 'ver' instead of building from source (default: %default)s).",
+        help=("Repackage binaries from version 'ver' instead of building from source "
+              "(default: %default)s)."),
     )
     cran.add_argument(
         "--use-noarch-generic",
         action='store_true',
         dest='use_noarch_generic',
-        help="Mark packages that do not need compilation as `noarch: generic` (default: %default)s).",
+        help=("Mark packages that do not need compilation as `noarch: generic` "
+              "(default: %default)s)."),
     )
     cran.add_argument(
         "--use-rtools-win",
@@ -828,7 +831,8 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                                   'ext': '.zip',
                                   'use_this': True if use_binaries_ver else False},
                        'osx-64': {'selector': 'osx',
-                                  'dir': 'bin/macosx/el-capitan/contrib/{}/'.format(use_binaries_ver),
+                                  'dir': 'bin/macosx/el-capitan/contrib/{}/'.format(
+                                      use_binaries_ver),
                                   'ext': '.tgz',
                                   'use_this': True if use_binaries_ver else False}}
         available = {}
@@ -848,12 +852,9 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     sha256 = hashlib.sha256()
                     print("Downloading {} from {}".format(archive_type, package_url))
                     # We may need to inspect the file later to determine which compilers are needed.
-                    try:
-                        cached_path, _ = source.download_to_cache(config.src_cache, '',
-                                                                  dict({'url': package_url,
-                                                                        'fn': archive_type + '-' + filename}))
-                    except:
-                        continue
+                    cached_path, _ = source.download_to_cache(config.src_cache, '',
+                                                    dict({'url': package_url,
+                                                            'fn': archive_type + '-' + filename}))
                 sha256.update(open(cached_path, 'rb').read())
                 available_details = {}
                 available_details['selector'] = archive_details['selector']
@@ -863,14 +864,16 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 available_details['package_url'] = package_url
                 available_details['hash_entry'] = 'sha256: {}'.format(sha256.hexdigest())
                 available_details['cached_path'] = cached_path
-                # This is rubbish; d[] should be renamed global[] and should be merged into source and binaryN.
+                # This is rubbish; d[] should be renamed global[] and should be
+                #      merged into source and binaryN.
                 if archive_type == 'source':
                     if is_github_url:
                         available_details['url_key'] = ''
                         available_details['fn_key'] = ''
                         available_details['git_url_key'] = 'git_url:'
                         available_details['git_tag_key'] = 'git_tag:'
-                        available_details['hash_entry'] = '# You can add a hash for the file here, like md5, sha1 or sha256'
+                        hash_msg = '# You can add a hash for the file here, (md5, sha1 or sha256)'
+                        available_details['hash_entry'] = hash_msg
                         available_details['filename'] = ''
                         available_details['cranurl'] = ''
                         available_details['git_url'] = url
@@ -887,14 +890,14 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 available_details['cranurl'] = ' ' + contrib_url + filename
 
         # Figure out the selectors according to what is available.
-        all = ['linux', 'win32', 'win64', 'osx']
-        from_source = all.copy()
+        _all = ['linux', 'win32', 'win64', 'osx']
+        from_source = _all.copy()
         binary_id = 1
         for archive_type, archive_details in iteritems(available):
             if archive_type != 'source':
                 sel = archive_details['selector']
                 from_source.remove(sel)
-                binary_id+=1
+                binary_id += 1
             else:
                 for k, v in iteritems(archive_details):
                     d[k] = v
@@ -904,8 +907,10 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             sel_src_not_win = '  # [not win]'
         else:
             sel_src = '  # [' + ' or '.join(from_source) + ']'
-            sel_src_and_win = '  # [' + ' or '.join(fs for fs in from_source if fs.startswith('win')) + ']'
-            sel_src_not_win = '  # [' + ' or '.join(fs for fs in from_source if not fs.startswith('win')) + ']'
+            sel_src_and_win = '  # [' + ' or '.join(fs for fs in from_source if
+                                                    fs.startswith('win')) + ']'
+            sel_src_not_win = '  # [' + ' or '.join(fs for fs in from_source if not
+                                                    fs.startswith('win')) + ']'
 
         d['sel_src'] = sel_src
         d['sel_src_and_win'] = sel_src_and_win
@@ -935,7 +940,8 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             if archive_type == 'source':
                 d['source'] = SOURCE_META.format(**archive_details)
             else:
-                d['binary' + str(binary_id)] = BINARY_META.format(**archive_details, sel='  # [' + archive_details['selector'] + ']')
+                archive_details['sel'] = '  # [' + archive_details['selector'] + ']'
+                d['binary' + str(binary_id)] = BINARY_META.format(**archive_details)
                 binary_id += 1
 
         # XXX: We should maybe normalize these
@@ -1064,14 +1070,16 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                         indent=INDENT, sel=sel_src_and_win))
                     deps.append("{indent}{{{{posix}}}}grep              {sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
-                    deps.append("{indent}{{{{posix}}}}autoconf          {sel}".format(indent=INDENT, sel=sel_src))
+                    deps.append("{indent}{{{{posix}}}}autoconf          {sel}".format(
+                        indent=INDENT, sel=sel_src))
                     deps.append("{indent}{{{{posix}}}}automake-wrapper  {sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
                     deps.append("{indent}{{{{posix}}}}automake          {sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
                     deps.append("{indent}{{{{posix}}}}pkg-config".format(indent=INDENT))
                 if need_make:
-                    deps.append("{indent}{{{{posix}}}}make              {sel}".format(indent=INDENT, sel=sel_src))
+                    deps.append("{indent}{{{{posix}}}}make              {sel}".format(
+                        indent=INDENT, sel=sel_src))
             elif dep_type == 'run':
                 if need_c or need_cxx or need_f:
                     deps.append("{indent}{{{{native}}}}gcc-libs         {sel}".format(
@@ -1148,7 +1156,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     f.write(CRAN_BUILD_SH_BINARY.format(**d))
                 else:
                     tpbt = [target_platform_bash_test_by_sel[t] for t in from_source]
-                    source_pf_bash = ' || '.join(['[[ $target_platform '+ s + ' ]]'
+                    source_pf_bash = ' || '.join(['[[ $target_platform ' + s + ' ]]'
                                                   for s in tpbt])
                     f.write(CRAN_BUILD_SH_MIXED.format(**d,
                             source_pf_bash=source_pf_bash))
