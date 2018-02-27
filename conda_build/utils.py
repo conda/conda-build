@@ -1245,8 +1245,16 @@ def rm_rf(path, config=None):
             if on_win:
                 subprocess.check_call('rd /s /q {}'.format(path), shell=True)
             else:
-                del_dir_cmd = 'mkdir -p .empty && rsync -a --delete /tmp/empty {}/ && rmdir .empty'
+                try:
+                    os.makedirs('.empty')
+                except:
+                    pass
+                del_dir_cmd = 'rsync -a --delete .empty {}/'
                 subprocess.check_call(del_dir_cmd.format(path).split())
+                try:
+                    shutil.rmtree('.empty')
+                except:
+                    pass
         # we don't really care about errors that much. People can and should
         #     clean out their folders once in a while with "purge"
         except:

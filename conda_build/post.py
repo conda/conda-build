@@ -424,8 +424,7 @@ def check_overlinking(m, files):
 
     run_reqs = [req.split(' ')[0] for req in m.meta.get('requirements', {}).get('run', [])]
     # sysroots and whitelists are similar, but the subtle distinctions are important.
-    sysroots = glob(os.path.join(m.config.build_prefix, '**', 'sysroot'), recursive=True)
-    print(m.config.variant['target_platform'])
+    sysroots = glob(os.path.join(m.config.build_prefix, '**', 'sysroot'))
     whitelist = []
     if 'target_platform' in m.config.variant and m.config.variant['target_platform'] == 'osx-64':
         if not len(sysroots):
@@ -580,7 +579,6 @@ def fix_permissions(files, prefix):
 
 def post_build(m, files, build_python):
     print('number of files:', len(files))
-    fix_permissions(files, m.config.host_prefix)
 
     for f in files:
         make_hardlink_copy(f, m.config.host_prefix)
