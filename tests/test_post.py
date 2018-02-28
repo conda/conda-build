@@ -4,10 +4,10 @@ import sys
 
 import pytest
 
-from conda_build import post
-from conda_build.utils import on_win
+from conda_build import post, api
+from conda_build.utils import on_win, package_has_file
 
-from .utils import add_mangling
+from .utils import add_mangling, metadata_dir
 
 
 def test_compile_missing_pyc(testing_workdir):
@@ -48,3 +48,17 @@ def test_postbuild_files_raise(testing_metadata, testing_workdir):
         with pytest.raises(ValueError) as exc:
             post.get_build_metadata(testing_metadata)
         assert f in str(exc)
+
+
+def test_postlink_script_in_output_explicit(testing_config):
+    recipe = os.path.join(metadata_dir, '_post_link_in_output')
+    pkg = api.build(recipe, config=testing_config, notest=True)[0]
+    assert (package_has_file(pkg, 'bin/.out1-post-link.sh') or
+            package_has_file(pkg, 'Scripts/.out1-post-link.bat'))
+
+
+def test_postlink_script_in_output_implicit(testing_config):
+    recipe = os.path.join(metadata_dir, '_post_link_in_output_implicit')
+    pkg = api.build(recipe, config=testing_config, notest=True)[0]
+    assert (package_has_file(pkg, 'bin/.out1-post-link.sh') or
+            package_has_file(pkg, 'Scripts/.out1-post-link.bat'))

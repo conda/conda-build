@@ -1,0 +1,15 @@
+package:
+  name: test_post_link_in_output
+  version: 1.0
+
+# this is one style of post-link scripts in output.  The other is to match based on package name as
+#    a prefix for the script name.  We have a separate test for that
+
+outputs:
+  - name: out1
+    build:
+      # name is the filename minus the extension.  .bat is used on win, .sh is used on unix.
+      post-link: mypostlinkscript
+    test:
+      commands:
+        - echo "weee"
