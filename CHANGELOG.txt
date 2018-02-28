@@ -1,3 +1,44 @@
+2018-02-28 3.6.0:
+
+Enhancements:
+-------------
+
+* Allow per-output {pre,post}-{un,}link scripts  #2712
+* support mro as part of the build string  #2711
+* improve interpreter guessing for running output packaging scripts  #2709
+* improve library overlinkage check, add support for whitelists of always-ok
+  libraries to ignore. #2708
+* add support for noarch: generic recipes in cran skeleton generator
+* add support for using Rtools on windows when building a package from source
+* add support for binary repackaging of CRAN/MRAN artifacts
+* add support for cran recipes from source tarballs
+* template cran_mirror variable in generated cran output recipes. This allows
+  CRAN and MRAN to easily be switched out. Default is MRAN.  #2710
+
+Bug fixes:
+----------
+
+* Reverse build/host activation order, to give build executables higher
+  priority. Necessary to support proper R packaging. Includes better errors for
+  empty packages caused by build env python being used to install python
+  packages. #2686
+* Fix test scripts from subpackage outputs not being detected  #2703
+* Fix sha in scripts in conversion from linux to windows packages (was not
+  correctly handling hashbang addition/removal). #2713
+* Speed up stat gathering, restrict it more to only build, packaging, and test
+  steps (not arbitrary subprocess calls) #2714
+* Check for incomplete files when inspecting links. Some files that looked like
+  ELF files, but weren't, would trip up pyldd and kill the build.  #2718
+
+Contributors:
+-------------
+
+* @jjhelmus
+* @MatthieuDartiailh
+* @mingwandroid
+* @msarahan
+
+
 2018-02-22 3.5.1:
 
 Enhancements:
