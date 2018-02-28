@@ -141,6 +141,31 @@ majver = sys.version_info[0]
 maxint = majver == 3 and getattr(sys, 'maxsize') or getattr(sys, 'maxint')
 
 
+class IncompleteRead(Exception):
+    pass
+
+
+class ReadCheckWrapper(object):
+    """
+    Wrap a file-object to raises a exception on incomplete reads.
+    """
+
+    def __init__(self, file_obj):
+        self._file_obj = file_obj
+
+    def read(self, size):
+        buf = self._file_obj.read(size)
+        if len(buf) != size:
+            raise IncompleteRead('requested number of bytes were not read.')
+        return buf
+
+    def __getattr__(self, attr):
+        if attr == 'read':
+            return self.read
+        else:
+            return getattr(self._file_obj, attr)
+
+
 class fileview(object):
     """
     A proxy for file-like objects that exposes a given view of a file.
@@ -979,7 +1004,13 @@ def _inspect_linkages_this(filename, sysroot='', arch='native'):
         # TODO :: Problems here:
         # TODO :: 1. macOS can modify RPATH for children in each .so
         # TODO :: 2. Linux can identify the program interpreter which can change the default_paths
-        cf = codefile(f, arch)
+        try:
+            cf = codefile(ReadCheckWrapper(f), arch)
+        except IncompleteRead:
+            # the file was incomplete, can occur if a package ships a test file
+            # which looks like an ELF file but is not.  Orange3 does this.
+            log.warning('problems inspecting linkages for {}'.format(filename))
+            return None, [], []
         dirname = os.path.dirname(filename)
         results = cf.get_resolved_shared_libraries(dirname, dirname, sysroot)
         if not results:
