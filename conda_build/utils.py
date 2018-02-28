@@ -87,9 +87,7 @@ def stat_file(path):
     return os.stat(path)
 
 
-def directory_size(path):
-    '''
-    '''
+def directory_size_slow(path):
     total_size = 0
     seen = set()
 
@@ -106,7 +104,34 @@ def directory_size(path):
             seen.add(stat.st_ino)
 
             total_size += stat.st_size
-    return total_size  # size in bytes
+    return total_size
+
+
+def directory_size(path):
+    '''
+    '''
+    try:
+        if on_win:
+            command = "dir /s {}"
+            out = subprocess.check_output(command.format(path), shell=True)
+        else:
+            command = "du -s {}"
+            out = subprocess.check_output(command.format(path).split(), stderr=subprocess.PIPE)
+
+        if hasattr(out, 'decode'):
+            try:
+                out = out.decode()
+            # give up.  this isn't important anyway.
+            except UnicodeDecodeError:
+                pass
+        if on_win:
+            out = re.search("([\d,]+)\sbytes", out).group(1).replace(',', '')
+        else:
+            out = out.split()[0]
+    except subprocess.CalledProcessError:
+        out = directory_size_slow(path)
+
+    return int(out)  # size in bytes
 
 
 class DummyPsutilProcess(object):
@@ -141,7 +166,7 @@ class PopenWrapper(object):
                      "get CPU time and memory usage statistics.")
 
         # The polling interval (in seconds)
-        time_int = kwargs.pop('time_int', 1)
+        time_int = kwargs.pop('time_int', 2)
 
         disk_usage_dir = kwargs.get('cwd', sys.prefix)
 
@@ -194,9 +219,15 @@ class PopenWrapper(object):
                 time.sleep(time_int)
                 self.elapsed = time.time() - start_time
                 self.returncode = _popen.poll()
+
         except KeyboardInterrupt:
             _popen.kill()
             raise
+
+        finally:
+            # Get disk usage
+            self.disk = max(directory_size(disk_usage_dir), self.disk)
+            self.elapsed = time.time() - start_time
 
         return _popen.stdout, _popen.stderr
 
@@ -229,25 +260,33 @@ def _func_defaulting_env_to_os_environ(func, *popenargs, **kwargs):
         _args.append(str(arg))
 
     stats = kwargs.get('stats')
-    if stats is not None:
+    if 'stats' in kwargs:
         del kwargs['stats']
-    proc = PopenWrapper(_args, **kwargs)
+
     out = None
-
-    if func == 'output':
-        out = proc.out.read()
-
-    if proc.returncode != 0:
-        raise subprocess.CalledProcessError(proc.returncode, _args)
-
     if stats is not None:
-        stats.update({'elapsed': proc.elapsed,
-                      'disk': proc.disk,
-                      'processes': proc.processes,
-                      'cpu_user': proc.cpu_user,
-                      'cpu_sys': proc.cpu_sys,
-                      'rss': proc.rss,
-                      'vms': proc.vms})
+        proc = PopenWrapper(_args, **kwargs)
+        if func == 'output':
+            out = proc.out.read()
+
+        if proc.returncode != 0:
+            raise subprocess.CalledProcessError(proc.returncode, _args)
+
+        if stats is not None:
+            stats.update({'elapsed': proc.elapsed,
+                        'disk': proc.disk,
+                        'processes': proc.processes,
+                        'cpu_user': proc.cpu_user,
+                        'cpu_sys': proc.cpu_sys,
+                        'rss': proc.rss,
+                        'vms': proc.vms})
+    else:
+        if func == 'call':
+            subprocess.check_call(_args, **kwargs)
+        else:
+            if 'stdout' in kwargs:
+                del kwargs['stdout']
+            out = subprocess.check_output(_args, **kwargs)
     return out
 
 
@@ -257,8 +296,7 @@ def check_call_env(popenargs, **kwargs):
 
 def check_output_env(popenargs, **kwargs):
     return _func_defaulting_env_to_os_environ('output', stdout=subprocess.PIPE,
-                                              *popenargs, **kwargs)\
-        .rstrip()
+                                              *popenargs, **kwargs).rstrip()
 
 
 def bytes2human(n):
@@ -1212,21 +1250,33 @@ def filter_info_files(files_list, prefix):
 
 
 def rm_rf(path, config=None):
-    if on_win:
-        # native windows delete is potentially much faster
+    if os.path.isdir(path):
         try:
-            if os.path.isfile(path):
-                subprocess.check_call('del {}'.format(path), shell=True)
-            elif os.path.isdir(path):
+            # subprocessing to delete large folders can be quite a bit faster
+            if on_win:
                 subprocess.check_call('rd /s /q {}'.format(path), shell=True)
             else:
-                pass
-        except subprocess.CalledProcessError:
+                try:
+                    os.makedirs('.empty')
+                except:
+                    pass
+                del_dir_cmd = 'rsync -a --delete .empty {}/'
+                subprocess.check_call(del_dir_cmd.format(path).split())
+                try:
+                    shutil.rmtree('.empty')
+                except:
+                    pass
+        # we don't really care about errors that much. People can and should
+        #     clean out their folders once in a while with "purge"
+        except:
             pass
+
     conda_log_level = logging.WARN
     if config and config.debug:
         conda_log_level = logging.DEBUG
     with LoggingContext(conda_log_level):
+        # this clears out the path from conda's cache, which otherwise thinks
+        #    that things are still installed here
         _rm_rf(path)
 
 

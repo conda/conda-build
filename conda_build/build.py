@@ -103,10 +103,19 @@ def seconds_to_text(secs):
 
 def log_stats(stats_dict, descriptor):
     print("\nResource usage statistics from {}:".format(descriptor))
-    print("   Process count: {}".format(stats_dict['processes']))
-    print("   CPU time: Sys={}, User={}".format(seconds_to_text(stats_dict['cpu_sys']),
-                                                seconds_to_text(stats_dict['cpu_user'])))
-    print("   Memory: {}".format(utils.bytes2human(stats_dict['rss'])))
+    print("   Process count: {}".format(stats_dict.get('processes', 1)))
+
+    if stats_dict.get('cpu_sys'):
+        print("   CPU time: Sys={}, User={}".format(seconds_to_text(stats_dict.get('cpu_sys', 0)),
+                                                    seconds_to_text(stats_dict.get('cpu_user', 0))))
+    else:
+        print("   CPU time: unavailable")
+
+    if stats_dict.get('rss'):
+        print("   Memory: {}".format(utils.bytes2human(stats_dict.get('rss', 0))))
+    else:
+        print("   Memory: unavailable")
+
     print("   Disk usage: {}".format(utils.bytes2human(stats_dict['disk'])))
     print("   Time elapsed: {}\n".format(seconds_to_text(stats_dict['elapsed'])))
 
@@ -1296,13 +1305,14 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
             script = '\n'.join(script)
 
         if isdir(src_dir):
+            build_stats = {}
             if utils.on_win:
                 build_file = join(m.path, 'bld.bat')
                 if script:
                     build_file = join(src_dir, 'bld.bat')
                     with open(build_file, 'w') as bf:
                         bf.write(script)
-                windows.build(m, build_file)
+                windows.build(m, build_file, stats=build_stats)
             else:
                 build_file = join(m.path, 'build.sh')
                 if isfile(build_file) and script:
@@ -1334,12 +1344,12 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                     cmd = [shell_path] + (['-x'] if m.config.debug else []) + ['-e', work_file]
 
                     # this should raise if any problems occur while building
-                    build_stats = {}
                     utils.check_call_env(cmd, env=env, cwd=src_dir, stats=build_stats)
                     utils.remove_pycache_from_scripts(m.config.host_prefix)
-                    log_stats(build_stats, "building {}".format(m.name()))
-                    if stats is not None:
-                        stats[stats_key(m, 'build')] = build_stats
+            if build_stats:
+                log_stats(build_stats, "building {}".format(m.name()))
+                if stats is not None:
+                    stats[stats_key(m, 'build')] = build_stats
 
     prefix_file_list = join(m.config.build_folder, 'prefix_files.txt')
     initial_files = set()
@@ -2146,7 +2156,7 @@ for Python 3.5 and needs to be rebuilt."""
     total_cpu_sys = sum([step.get('cpu_sys') for step in stats.values()] or [0])
     total_cpu_user = sum([step.get('cpu_user') for step in stats.values()] or [0])
 
-    print("#####################################################")
+    print('#' * 84)
     print("Resource usage summary:")
     print("\nTotal time: {}".format(seconds_to_text(total_time)))
     print("CPU usage: sys={}, user={}".format(seconds_to_text(total_cpu_sys),
@@ -2254,7 +2264,7 @@ def handle_pypi_upload(wheels, config):
 
 
 def print_build_intermediate_warning(config):
-    print("\n\n")
+    print("\n")
     print('#' * 84)
     print("Source and build intermediates have been left in " + config.croot + ".")
     build_folders = utils.get_build_folders(config.croot)

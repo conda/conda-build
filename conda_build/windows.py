@@ -234,7 +234,7 @@ def _write_bat_activation_text(file_handle, m):
         prefix=m.config.build_prefix))
 
 
-def build(m, bld_bat):
+def build(m, bld_bat, stats):
     with path_prepended(m.config.build_prefix):
         with path_prepended(m.config.host_prefix):
             env = environ.get_dict(config=m.config, m=m)
@@ -271,6 +271,6 @@ def build(m, bld_bat):
             fo.write(data)
 
         cmd = ['cmd.exe', '/c', 'bld.bat']
-        check_call_env(cmd, cwd=src_dir)
+        check_call_env(cmd, cwd=src_dir, stats=stats)
 
     fix_staged_scripts(join(m.config.host_prefix, 'Scripts'), config=m.config)
