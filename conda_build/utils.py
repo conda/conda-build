@@ -119,7 +119,11 @@ def directory_size(path):
             out = subprocess.check_output(command.format(path).split(), stderr=subprocess.PIPE)
 
         if hasattr(out, 'decode'):
-            out = out.decode()
+            try:
+                out = out.decode()
+            # give up.  this isn't important anyway.
+            except UnicodeDecodeError:
+                pass
         if on_win:
             out = re.search("([\d,]+)\sbytes", out).group(1).replace(',', '')
         else:
