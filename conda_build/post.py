@@ -510,8 +510,7 @@ def check_overlinking(m, files):
                     dso_fname = os.path.basename(needed_dso)
                     sysroot_files = []
                     for sysroot in sysroots:
-                        sysroot_files.extend(glob(os.path.join(sysroot, '**', dso_fname),
-                                                  recursive=True))
+                        sysroot_files.extend(glob(os.path.join(sysroot, '**', dso_fname)))
                     if len(sysroot_files):
                         # Removing config.build_prefix is only *really* for Linux, though we could
                         # use CONDA_BUILD_SYSROOT for macOS. We should figure out what to do about
