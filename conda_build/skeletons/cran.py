@@ -31,9 +31,7 @@ from conda_build.license_family import allowed_license_families, guess_license_f
 from conda_build.utils import rm_rf
 
 SOURCE_META = """\
-  {fn_key} {filename}{sel}
-  {url_key}{sel} {cranurl}
-  {hash_entry}{sel}
+  {archive_keys}
   {git_url_key} {git_url}
   {git_tag_key} {git_tag}
   {patches}
@@ -471,10 +469,16 @@ def yaml_quote_string(string):
     return yaml.dump(string, Dumper=SafeDumper).replace('\n...\n', '').replace('\n', '\n  ')
 
 
-def clear_trailing_whitespace(string):
+# Due to how we render the metadata there can be significant areas of repeated newlines.
+# This collapses them and also strips any trailing spaces.
+def clear_whitespace(string):
     lines = []
+    last_line = ''
     for line in string.splitlines():
-        lines.append(line.rstrip())
+        line = line.rstrip()
+        if not (line == '' and last_line == ''):
+            lines.append(line)
+        last_line = line
     return '\n'.join(lines)
 
 
@@ -741,7 +745,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                                  % (location, sub_description_pkg, sub_description_name))
 
             with open(DESCRIPTION) as f:
-                description_text = clear_trailing_whitespace(f.read())
+                description_text = clear_whitespace(f.read())
 
             d = dict_from_cran_lines(remove_package_line_continuations(
                 description_text.splitlines()))
@@ -825,7 +829,9 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         cran_layout = {'source': {'selector': '{others}',
                                   'dir': 'src/contrib/',
                                   'ext': '.tar.gz',
-                                  'use_this': not is_github_url or is_tarfile},
+                                  # If we had platform filters we would change this to:
+                                  # build_for_linux or is_github_url or is_tarfile
+                                  'use_this': True},
                        'win-64': {'selector': 'win64',
                                   'dir': 'bin/windows/contrib/{}/'.format(use_binaries_ver),
                                   'ext': '.zip',
@@ -837,6 +843,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                                   'use_this': True if use_binaries_ver else False}}
         available = {}
         for archive_type, archive_details in iteritems(cran_layout):
+            contrib_url = ''
             if archive_details['use_this']:
                 if is_tarfile:
                     filename = basename(location)
@@ -844,7 +851,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     contrib_url_rendered = package_url = contrib_url
                     sha256 = hashlib.sha256()
                     cached_path = location
-                else:
+                elif not is_github_url:
                     filename = '{}_{}'.format(package, d['cran_version']) + archive_details['ext']
                     contrib_url = '{{{{ cran_mirror }}}}/{}'.format(archive_details['dir'])
                     contrib_url_rendered = cran_url + '/{}'.format(archive_details['dir'])
@@ -855,15 +862,16 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     cached_path, _ = source.download_to_cache(config.src_cache, '',
                                                     dict({'url': package_url,
                                                             'fn': archive_type + '-' + filename}))
-                sha256.update(open(cached_path, 'rb').read())
                 available_details = {}
                 available_details['selector'] = archive_details['selector']
-                available_details['filename'] = filename
-                available_details['contrib_url'] = contrib_url
-                available_details['contrib_url_rendered'] = contrib_url_rendered
-                available_details['package_url'] = package_url
-                available_details['hash_entry'] = 'sha256: {}'.format(sha256.hexdigest())
-                available_details['cached_path'] = cached_path
+                if cached_path:
+                    sha256.update(open(cached_path, 'rb').read())
+                    available_details['filename'] = filename
+                    available_details['contrib_url'] = contrib_url
+                    available_details['contrib_url_rendered'] = contrib_url_rendered
+                    available_details['package_url'] = package_url
+                    available_details['hash_entry'] = 'sha256: {}'.format(sha256.hexdigest())
+                    available_details['cached_path'] = cached_path
                 # This is rubbish; d[] should be renamed global[] and should be
                 #      merged into source and binaryN.
                 if archive_type == 'source':
@@ -878,16 +886,17 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                         available_details['cranurl'] = ''
                         available_details['git_url'] = url
                         available_details['git_tag'] = new_git_tag
+                        available_details['archive_keys'] = ''
                     else:
                         available_details['url_key'] = 'url:'
                         available_details['fn_key'] = 'fn:'
                         available_details['git_url_key'] = ''
                         available_details['git_tag_key'] = ''
+                        available_details['cranurl'] = ' ' + contrib_url + filename
                         available_details['git_url'] = ''
                         available_details['git_tag'] = ''
-                        available_details['patches'] = d['patches']
+                available_details['patches'] = d['patches']
                 available[archive_type] = available_details
-                available_details['cranurl'] = ' ' + contrib_url + filename
 
         # Figure out the selectors according to what is available.
         _all = ['linux', 'win32', 'win64', 'osx']
@@ -920,16 +929,23 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             available_details = available['source']
             available_details['sel'] = sel_src
             filename = available_details['filename']
-            contrib_url = available_details['contrib_url']
-            if archive:
-                if is_tarfile:
-                    available_details['cranurl'] = (INDENT + contrib_url)
+            if 'contrib_url' in available_details:
+                contrib_url = available_details['contrib_url']
+                if archive:
+                    if is_tarfile:
+                        available_details['cranurl'] = (INDENT + contrib_url)
+                    else:
+                        available_details['cranurl'] = (INDENT + contrib_url +
+                            filename + sel_src + INDENT + contrib_url +
+                            'Archive/{}/'.format(package) + filename + sel_src)
                 else:
-                    available_details['cranurl'] = (INDENT + contrib_url +
-                        filename + sel_src + INDENT + contrib_url +
-                        'Archive/{}/'.format(package) + filename + sel_src)
-            else:
-                available_details['cranurl'] = ' ' + contrib_url + filename + sel_src
+                    available_details['cranurl'] = ' ' + contrib_url + filename + sel_src
+            if not is_github_url:
+                available_details['archive_keys'] = '{fn_key} {filename}{sel}\n' \
+                                                    '  {url_key}{sel}' \
+                                                    '    {cranurl}\n' \
+                                                    '  {hash_entry}{sel}'.format(
+                    **available_details)
 
         d['cran_metadata'] = '\n'.join(['# %s' % l for l in
             cran_package['orig_lines'] if l])
@@ -1147,7 +1163,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             pass
         print("Writing recipe for %s" % package.lower())
         with open(join(dir_path, 'meta.yaml'), 'w') as f:
-            f.write(clear_trailing_whitespace(CRAN_META.format(**d)))
+            f.write(clear_whitespace(CRAN_META.format(**d)))
         if not exists(join(dir_path, 'build.sh')) or update_policy == 'overwrite':
             with open(join(dir_path, 'build.sh'), 'w') as f:
                 if from_source == all:
