@@ -10,4 +10,5 @@ outputs:
   - name: test_subpackage
     script: install-script.sh
     test:
-      script: test-script.sh
+      script: test-script.sh  # [unix]
+      script: test-script.bat  # [win]
