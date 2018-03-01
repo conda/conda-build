@@ -411,6 +411,7 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
                             for dep in run_deps]
         versioned_run_deps = [utils.ensure_valid_spec(spec, warn=True)
                               for spec in versioned_run_deps]
+        requirements[pinning_env] = full_build_deps
         requirements['run'] = versioned_run_deps
 
         rendered_metadata.meta['requirements'] = requirements
