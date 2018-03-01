@@ -900,7 +900,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
 
         # Figure out the selectors according to what is available.
         _all = ['linux', 'win32', 'win64', 'osx']
-        from_source = _all.copy()
+        from_source = _all[:]
         binary_id = 1
         for archive_type, archive_details in iteritems(available):
             if archive_type != 'source':
@@ -910,7 +910,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             else:
                 for k, v in iteritems(archive_details):
                     d[k] = v
-        if from_source == all:
+        if from_source == _all:
             sel_src = ""
             sel_src_and_win = '  # [win]'
             sel_src_not_win = '  # [not win]'
