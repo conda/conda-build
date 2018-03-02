@@ -304,6 +304,8 @@ def test_detect_variables_in_build_and_output_scripts(testing_config):
         if m.name() == 'test_find_used_variables_in_scripts':
             used_vars = m.get_used_vars()
             assert used_vars
+            assert 'SELECTOR_VAR' in used_vars
+            assert 'OUTPUT_SELECTOR_VAR' not in used_vars
             assert 'BASH_VAR1' in used_vars
             assert 'BASH_VAR2' in used_vars
             assert 'BAT_VAR' not in used_vars
@@ -311,6 +313,8 @@ def test_detect_variables_in_build_and_output_scripts(testing_config):
         else:
             used_vars = m.get_used_vars()
             assert used_vars
+            assert 'SELECTOR_VAR' not in used_vars
+            assert 'OUTPUT_SELECTOR_VAR' in used_vars
             assert 'BASH_VAR1' not in used_vars
             assert 'BASH_VAR2' not in used_vars
             assert 'BAT_VAR' not in used_vars
@@ -322,6 +326,8 @@ def test_detect_variables_in_build_and_output_scripts(testing_config):
         if m.name() == 'test_find_used_variables_in_scripts':
             used_vars = m.get_used_vars()
             assert used_vars
+            assert 'SELECTOR_VAR' in used_vars
+            assert 'OUTPUT_SELECTOR_VAR' not in used_vars
             assert 'BASH_VAR1' in used_vars
             assert 'BASH_VAR2' in used_vars
             # bat is in addition to bash, not instead of
@@ -330,6 +336,8 @@ def test_detect_variables_in_build_and_output_scripts(testing_config):
         else:
             used_vars = m.get_used_vars()
             assert used_vars
+            assert 'SELECTOR_VAR' not in used_vars
+            assert 'OUTPUT_SELECTOR_VAR' in used_vars
             assert 'BASH_VAR1' not in used_vars
             assert 'BASH_VAR2' not in used_vars
             assert 'BAT_VAR' not in used_vars
