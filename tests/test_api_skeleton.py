@@ -20,7 +20,7 @@ from conda_build.exceptions import DependencyNeedsBuildingError
 thisdir = os.path.dirname(os.path.realpath(__file__))
 
 repo_packages = [('', 'pypi', 'pip', '8.1.2'),
-                 ('r', 'cran', 'nmf', ''),
+                 ('r', 'cran', 'acs', ''),
                  ('r', 'cran', 'https://github.com/twitter/AnomalyDetection.git', ''),
                  ('perl', 'cpan', 'Moo', ''),
                  ('', 'rpm', 'libX11-devel', ''),
