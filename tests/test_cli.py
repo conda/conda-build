@@ -88,7 +88,7 @@ def test_render_without_channel_fails():
     # do make extra channel available, so the required package should not be found
     with TemporaryDirectory() as tmpdir:
         rendered_filename = os.path.join(tmpdir, 'out.yaml')
-        args = ['--override-channels', '-c', 'conda', os.path.join(metadata_dir, "_recipe_requiring_external_channel"), '--file', rendered_filename]
+        args = ['--override-channels', os.path.join(metadata_dir, "_recipe_requiring_external_channel"), '--file', rendered_filename]
         main_render.execute(args)
         rendered_meta = yaml.safe_load(open(rendered_filename, 'r'))
         required_package_string = [pkg for pkg in
