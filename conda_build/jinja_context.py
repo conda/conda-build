@@ -320,7 +320,7 @@ def pin_subpackage(metadata, subpackage_name, min_pin='x.x.x.x.x.x', max_pin='x'
                                              exact, permit_undefined_jinja)
     if not pin:
         pin = subpackage_name
-        if not permit_undefined_jinja:
+        if not permit_undefined_jinja and not allow_no_other_outputs:
             raise ValueError("Didn't find subpackage version info for '{}', which is used in a"
                              " pin_subpackage expression.  Is it actually a subpackage?  If not, "
                              "you want pin_compatible instead.".format(subpackage_name))

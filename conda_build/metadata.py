@@ -1320,7 +1320,8 @@ class MetaData(object):
         return self.get_value('build/skip', False)
 
     def _get_contents(self, permit_undefined_jinja, allow_no_other_outputs=False,
-                      bypass_env_check=False, template_string=None, skip_build_id=False):
+                      bypass_env_check=False, template_string=None, skip_build_id=False,
+                      alt_name=None):
         '''
         Get the contents of our [meta.yaml|conda.yaml] file.
         If jinja is installed, then the template.render function is called
@@ -1371,6 +1372,10 @@ class MetaData(object):
                                              allow_no_other_outputs=allow_no_other_outputs,
                                              bypass_env_check=bypass_env_check,
                                              skip_build_id=skip_build_id))
+        # override PKG_NAME with custom value.  This gets used when an output needs to pretend
+        #   that it is top-level when getting the top-level recipe data.
+        if alt_name:
+            env.globals.update({'PKG_NAME': alt_name})
 
         # Future goal here.  Not supporting jinja2 on replaced sections right now.
 
@@ -1872,7 +1877,7 @@ class MetaData(object):
         return {var for var in self.get_used_vars(force_top_level=force_top_level)
                 if var in self.get_loop_vars()}
 
-    def get_rendered_outputs_section(self):
+    def get_rendered_outputs_section(self, permit_undefined_jinja=False):
         extract_pattern = r'(.*)package:'
         template_string = '\n'.join((self.get_recipe_text(extract_pattern=extract_pattern,
                                                           force_top_level=True),
@@ -1880,20 +1885,21 @@ class MetaData(object):
                                     #    object (might be output)
                                     self.extract_outputs_text())).rstrip()
 
-        outputs = (yaml.safe_load(self._get_contents(permit_undefined_jinja=False,
+        outputs = (yaml.safe_load(self._get_contents(permit_undefined_jinja=permit_undefined_jinja,
                                                      template_string=template_string,
                                                      skip_build_id=True)) or {}).get('outputs', [])
         if not self.final:
             self.parse_until_resolved()
         return get_output_dicts_from_metadata(self, outputs=outputs)
 
-    def get_rendered_output(self, name):
+    def get_rendered_output(self, name, permit_undefined_jinja=False):
         """This is for obtaining the rendered, parsed, dictionary-object representation of an
         output. It's not useful for saying what variables are used. You need earlier, more raw
         versions of the metadata for that. It is useful, however, for getting updated, re-rendered
         contents of outputs."""
         output = None
-        for output_ in self.get_rendered_outputs_section():
+        for output_ in self.get_rendered_outputs_section(
+                permit_undefined_jinja=permit_undefined_jinja):
             if output_.get('name') == name:
                 output = output_
                 break
@@ -1979,7 +1985,8 @@ class MetaData(object):
         return used_vars
 
     def _get_used_vars_output_script(self):
-        this_output = self.get_rendered_output(self.name()) or {}
+        this_output = self.get_rendered_output(self.name(),
+                                               permit_undefined_jinja=True) or {}
         used_vars = set()
         if 'script' in this_output:
             path = self.meta.get('extra', {}).get('parent_recipe', {}).get('path')
@@ -2013,7 +2020,15 @@ class MetaData(object):
         recipe_no_outputs = self.get_recipe_text(force_top_level=True).replace(
             self.extract_outputs_text(), "")
         top_no_outputs = {}
+        # because we're an output, calls to PKG_NAME used in the top-level
+        #    content will reflect our current name, not the top-level name. We
+        #    fix that here by replacing any PKG_NAME instances with the known
+        #    parent name
+        parent_recipe = self.meta.get('extra', {}).get('parent_recipe', {})
+        is_output = self.name() != parent_recipe.get('name') and parent_recipe.get('path')
+        alt_name = parent_recipe['name'] if is_output else None
         if recipe_no_outputs:
             top_no_outputs = yaml.safe_load(self._get_contents(False,
-                                                                template_string=recipe_no_outputs))
+                                                               template_string=recipe_no_outputs,
+                                                               alt_name=alt_name))
         return top_no_outputs or {}
