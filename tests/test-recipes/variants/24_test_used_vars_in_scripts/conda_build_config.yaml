@@ -10,3 +10,9 @@ BAT_VAR:
 OUTPUT_VAR:
   - abc123
   - 123
+SELECTOR_VAR:
+  - True
+  - False
+OUTPUT_SELECTOR_VAR:
+  - True
+  - False

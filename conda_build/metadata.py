@@ -112,11 +112,17 @@ def ns_cfg(config):
     for feature, value in feature_list:
         d[feature] = value
     d.update(os.environ)
+
+    # here we try to do some type conversion for more intuitive usage.  Otherwise,
+    #    values like 35 are strings by default, making relational operations confusing.
+    # We also convert "True" and things like that to booleans.
     for k, v in config.variant.items():
         if k not in d:
             try:
                 d[k] = int(v)
             except (TypeError, ValueError):
+                if isinstance(v, string_types) and v.lower() in ('false', 'true'):
+                    v = v.lower() == 'true'
                 d[k] = v
     return d
 
@@ -1492,7 +1498,7 @@ class MetaData(object):
                             return vcs
         return None
 
-    def get_recipe_text(self, extract_pattern=None, force_top_level=False):
+    def get_recipe_text(self, extract_pattern=None, force_top_level=False, apply_selectors=True):
         parent_recipe = self.meta.get('extra', {}).get('parent_recipe', {})
         is_output = self.name() != parent_recipe.get('name') and parent_recipe.get('path')
         meta_path = self.meta_path or (os.path.join(parent_recipe['path'], 'meta.yaml')
@@ -1505,8 +1511,9 @@ class MetaData(object):
             from conda_build.render import output_yaml
             recipe_text = output_yaml(self)
         recipe_text = _filter_recipe_text(recipe_text, extract_pattern)
-        recipe_text = select_lines(recipe_text, ns_cfg(self.config),
-                                   variants_in_place=bool(self.config.variant))
+        if apply_selectors:
+            recipe_text = select_lines(recipe_text, ns_cfg(self.config),
+                                    variants_in_place=bool(self.config.variant))
         return recipe_text.rstrip()
 
     def extract_requirements_text(self, force_top_level=False):
@@ -1522,9 +1529,9 @@ class MetaData(object):
             f = r'(^requirements:.*?|(?<=-\sname:\s%s\s).*?requirements:.*?)(?=^\s*-\sname|^\s*test:|^\s*script:|^\s*extra:|^\s*about:|^outputs:|\Z)' % self.name()  # NOQA
         return self.get_recipe_text(f, force_top_level=force_top_level)
 
-    def extract_outputs_text(self):
+    def extract_outputs_text(self, apply_selectors=True):
         return self.get_recipe_text(r'(^outputs:.*?)(?=^test:|^extra:|^about:|\Z)',
-                                    force_top_level=True)
+                                    force_top_level=True, apply_selectors=apply_selectors)
 
     def extract_source_text(self):
         return self.get_recipe_text(
@@ -1533,10 +1540,10 @@ class MetaData(object):
     def extract_package_and_build_text(self):
         return self.get_recipe_text(r'(^.*?)(?=^requirements:|^test:|^extra:|^about:|^outputs:|\Z)')
 
-    def extract_single_output_text(self, output_name):
+    def extract_single_output_text(self, output_name, apply_selectors=True):
         # first, need to figure out which index in our list of outputs the name matches.
         #    We have to do this on rendered data, because templates can be used in output names
-        recipe_text = self.extract_outputs_text()
+        recipe_text = self.extract_outputs_text(apply_selectors=apply_selectors)
         output_matches = output_re.findall(recipe_text)
         try:
             output_index = [out.get('name') for out in
@@ -1931,12 +1938,13 @@ class MetaData(object):
         #   we promise to detect anything in meta.yaml, but not elsewhere.
         is_output = (not self.path and self.meta.get('extra', {}).get('parent_recipe'))
         if is_output and not force_top_level:
-            recipe_text = self.extract_single_output_text(self.name())
+            recipe_text = self.extract_single_output_text(self.name(), apply_selectors=False)
         else:
-            recipe_text = (self.get_recipe_text(force_top_level=force_top_level).replace(
-                                self.extract_outputs_text().strip(), '') +
-                           self.extract_single_output_text(self.name()))
-        reqs_re = re.compile(r"requirements:.+?(?=^\w|\Z|^\s+-\s(?:name|type))", flags=re.M | re.S)
+            recipe_text = (self.get_recipe_text(force_top_level=force_top_level,
+                                                apply_selectors=False).replace(
+                                self.extract_outputs_text(apply_selectors=False).strip(), '') +
+                           self.extract_single_output_text(self.name(), apply_selectors=False))
+        reqs_re = re.compile(r"requirements:.+?(?=^\w|\Z|^\s+-\s(?=name|type))", flags=re.M | re.S)
         recipe_text_without_requirements = reqs_re.sub('', recipe_text)
 
         all_used = variants.find_used_variables_in_text(self.config.variant, recipe_text)
