@@ -4,6 +4,7 @@ Tools for converting Cran packages to conda recipes.
 
 from __future__ import absolute_import, division, print_function
 
+import argparse
 from itertools import chain
 from os import makedirs, listdir, sep
 from os.path import (basename, commonprefix, exists, isabs, isdir,
@@ -265,6 +266,7 @@ def add_parser(repos):
     Create recipe skeleton for packages hosted on the Comprehensive R Archive
     Network (CRAN) (cran.r-project.org).
         """,
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     cran.add_argument(
         "packages",
@@ -284,15 +286,17 @@ def add_parser(repos):
     cran.add_argument(
         "--add-maintainer",
         help="Add this github username as a maintainer if not already present.",
-        default=None,
+        default=argparse.SUPPRESS,
     )
     cran.add_argument(
         "--version",
         help="Version to use. Applies to all packages.",
+        default=argparse.SUPPRESS,
     )
     cran.add_argument(
         "--git-tag",
         help="Git tag to use for GitHub recipes.",
+        default=argparse.SUPPRESS,
     )
     cran.add_argument(
         "--all-urls",
@@ -303,39 +307,33 @@ def add_parser(repos):
     cran.add_argument(
         "--cran-url",
         default='https://cran.r-project.org/',
-        help="URL to use for CRAN (default: %(default)s).",
+        help="URL to use for as source package repository",
     )
     cran.add_argument(
         "--r-interp",
         default='r-base',
-        help="Declare R interpreter package (default: %default)s).",
+        help="Declare R interpreter package",
     )
     cran.add_argument(
         "--use-binaries-ver",
-        action='store',
-        dest='use_binaries_ver',
-        default=None,
-        help=("Repackage binaries from version 'ver' instead of building from source "
-              "(default: %default)s)."),
+        help=("Repackage binaries from version provided by argument instead of building "
+              "from source."),
+        default=argparse.SUPPRESS,
     )
     cran.add_argument(
         "--use-noarch-generic",
         action='store_true',
         dest='use_noarch_generic',
-        help=("Mark packages that do not need compilation as `noarch: generic` "
-              "(default: %default)s)."),
+        help=("Mark packages that do not need compilation as `noarch: generic`"),
     )
     cran.add_argument(
         "--use-rtools-win",
         action='store_true',
-        dest='use_rtools_win',
-        default=False,
-        help="Use Rtools when building from source on Windows (default: %default)s).",
+        help="Use Rtools when building from source on Windows",
     )
     cran.add_argument(
         "--recursive",
         action='store_true',
-        dest='recursive',
         help='Create recipes for dependencies if they do not already exist.',
     )
     cran.add_argument(
@@ -900,7 +898,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
 
         # Figure out the selectors according to what is available.
         _all = ['linux', 'win32', 'win64', 'osx']
-        from_source = _all.copy()
+        from_source = _all[:]
         binary_id = 1
         for archive_type, archive_details in iteritems(available):
             if archive_type != 'source':
@@ -910,7 +908,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             else:
                 for k, v in iteritems(archive_details):
                     d[k] = v
-        if from_source == all:
+        if from_source == _all:
             sel_src = ""
             sel_src_and_win = '  # [win]'
             sel_src_not_win = '  # [not win]'

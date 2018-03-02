@@ -192,7 +192,6 @@ def test_toplevel_entry_points_do_not_apply_to_subpackages(testing_config):
             raise ValueError("Didn't see any of the 3 expected filenames.  Filename was {}".format(fn))
 
 
-@pytest.mark.serial
 def test_subpackage_hash_inputs(testing_config):
     recipe_dir = os.path.join(subpackage_dir, '_hash_inputs')
     outputs = api.build(recipe_dir, config=testing_config)
