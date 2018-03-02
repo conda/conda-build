@@ -1791,6 +1791,8 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
         # not sure how this shakes out
         specs += ['r-base']
 
+    specs.extend(utils.ensure_list(metadata.config.extra_deps))
+
     with utils.path_prepended(metadata.config.test_prefix):
         env = dict(os.environ.copy())
         env.update(environ.get_dict(config=metadata.config, m=metadata,

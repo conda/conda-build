@@ -300,6 +300,11 @@ different sets of packages."""
     )
     p.add_argument('--stats-file', help=('File path to save build statistics to.  Stats are '
                                          'in JSON format'), )
+    p.add_argument('--extra-deps',
+                   nargs='+',
+                   help=('Extra dependencies to add to all environment creation steps.  This '
+                         'is only enabled for testing with the -t or --test flag.  Change '
+                         'meta.yaml or use templates otherwise.'), )
 
     add_parser_channels(p)
 

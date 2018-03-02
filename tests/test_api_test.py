@@ -4,6 +4,8 @@ This module tests the test API.  These are high-level integration tests.
 
 import os
 
+import pytest
+
 from conda_build import api
 from .utils import metadata_dir
 
@@ -41,3 +43,15 @@ def test_package_with_jinja2_does_not_redownload_source(testing_workdir, testing
     provide = mocker.patch('conda_build.source.provide')
     api.test(outputs[0], config=metadata.config)
     assert not provide.called
+
+
+def test_api_extra_dep(testing_metadata):
+    testing_metadata.meta['test']['imports'] = ['click']
+    output = api.build(testing_metadata, notest=True, anaconda_upload=False)[0]
+
+    # extra_deps will add it in
+    api.test(output, config=testing_metadata.config, extra_deps=['click'])
+
+    # missing click dep will fail tests
+    with pytest.raises(SystemExit):
+        api.test(output, config=testing_metadata.config)

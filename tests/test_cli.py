@@ -617,3 +617,20 @@ def test_render_with_python_arg_reduces_subspace(capfd):
     args = [recipe, '--python=3.6', '--output']
     with pytest.raises(ValueError):
         main_render.execute(args)
+
+
+def test_test_extra_dep(testing_metadata):
+    testing_metadata.meta['test']['imports'] = ['click']
+    api.output_yaml(testing_metadata, 'meta.yaml')
+    output = api.build(testing_metadata, notest=True, anaconda_upload=False)[0]
+
+    # tests version constraints.  CLI would quote this - "click <6.7"
+    args = [output, '-t', '--extra-deps', 'click <6.7']
+    # extra_deps will add it in
+    main_build.execute(args)
+
+    # missing click dep will fail tests
+    with pytest.raises(SystemExit):
+        args = [output, '-t']
+        # extra_deps will add it in
+        main_build.execute(args)
