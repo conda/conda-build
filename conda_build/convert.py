@@ -318,6 +318,20 @@ def update_executable_sha(package_directory, executable_path):
         return hashlib.sha256(script_file_contents).hexdigest()
 
 
+def update_executable_size(temp_dir, executable):
+    """Update the size of the converted executable files.
+
+    Positional arguments:
+    temp_dir (str) -- the file path to the temporary directory containing the source
+        package's extracted contents
+    executable (str) -- the executable whose size to update including its file extension
+
+    Returns:
+    byte size (int) of the executable file
+    """
+    return os.path.getsize(os.path.join(temp_dir, executable))
+
+
 def add_new_windows_path(executable_directory, executable):
     """Add a new path to the paths.json file.
 
@@ -362,6 +376,7 @@ def update_paths_file(temp_dir, target_platform):
                 elif path['_path'].startswith('bin'):
                     path['_path'] = update_executable_path(path['_path'], 'win')
                     path['sha256'] = update_executable_sha(temp_dir, path['_path'])
+                    path['size_in_bytes'] = update_executable_size(temp_dir, path['_path'])
 
             script_directory = os.path.join(temp_dir, 'Scripts')
             if os.path.isdir(script_directory):
@@ -377,6 +392,7 @@ def update_paths_file(temp_dir, target_platform):
                 elif path['_path'].startswith('Scripts'):
                     path['_path'] = update_executable_path(path['_path'], 'unix')
                     path['sha256'] = update_executable_sha(temp_dir, path['_path'])
+                    path['size_in_bytes'] = update_executable_size(temp_dir, path['_path'])
 
                 if path['_path'].endswith(('.bat', '.exe')):
                     paths['paths'].remove(path)

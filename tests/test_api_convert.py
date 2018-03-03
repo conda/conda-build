@@ -190,11 +190,13 @@ def test_convert_from_unix_to_win_creates_entry_points(testing_config):
         assert_package_consistency(converted_fn)
         paths_content = json.loads(package_has_file(converted_fn, 'info/paths.json').decode())
 
-        # Check the validity of the sha of the converted scripts
-        for f in paths_content['paths']:
-            if f['_path'].startswith('Scripts/') and f['_path'].endswith('-script.py'):
-                script_content = package_has_file(converted_fn, f['_path'])
-                assert f['sha256'] == hashlib.sha256(script_content).hexdigest()
+        # Check the validity of the sha and filesize of the converted scripts
+        with tarfile.open(converted_fn) as t:
+            for f in paths_content['paths']:
+                if f['_path'].startswith('Scripts/') and f['_path'].endswith('-script.py'):
+                    script_content = package_has_file(converted_fn, f['_path'])
+                    assert f['sha256'] == hashlib.sha256(script_content).hexdigest()
+                    assert f['size_in_bytes'] == t.getmember(f['_path']).size
 
         paths_list = {f['_path'] for f in paths_content['paths']}
         files = {p.decode() for p in package_has_file(converted_fn, 'info/files').splitlines()}
