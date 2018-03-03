@@ -162,6 +162,9 @@ DEFAULTS = [Setting('activate', True),
 
             # path to output build statistics to
             Setting('stats_file', None),
+
+            # extra deps to add to test env creation
+            Setting('extra_deps', [])
             ]
 
 
