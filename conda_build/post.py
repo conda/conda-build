@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 from collections import defaultdict
 import fnmatch
 from functools import partial
+import glob2
 from glob2 import glob
 import io
 import locale
@@ -433,16 +434,43 @@ def check_overlinking(m, files):
                      '/usr/lib/libSystem.B.dylib',
                      '/usr/lib/libcrypto.0.9.8.dylib',
                      '/usr/lib/libobjc.A.dylib',
-                     '/System/Library/Frameworks/Accelerate.framework',
-                     '/System/Library/Frameworks/AppKit.framework',
-                     '/System/Library/Frameworks/ApplicationServices.framework',
-                     '/System/Library/Frameworks/CoreFoundation.framework',
-                     '/System/Library/Frameworks/CoreGraphics.framework',
-                     '/System/Library/Frameworks/CoreServices.framework',
-                     '/System/Library/Frameworks/Foundation.framework',
-                     '/System/Library/Frameworks/GLKit.framework',
-                     '/System/Library/Frameworks/ImageIO.framework',
-                     '/System/Library/Frameworks/SystemConfiguration.framework']
+                     '/System/Library/Frameworks/Accelerate.framework/*',
+                     '/System/Library/Frameworks/AGL.framework/*',
+                     '/System/Library/Frameworks/AppKit.framework/*',
+                     '/System/Library/Frameworks/ApplicationServices.framework/*',
+                     '/System/Library/Frameworks/AudioToolbox.framework/*',
+                     '/System/Library/Frameworks/AudioUnit.framework/*',
+                     '/System/Library/Frameworks/AVFoundation.framework/*',
+                     '/System/Library/Frameworks/CFNetwork.framework/*',
+                     '/System/Library/Frameworks/Carbon.framework/*',
+                     '/System/Library/Frameworks/Cocoa.framework/*',
+                     '/System/Library/Frameworks/CoreAudio.framework/*',
+                     '/System/Library/Frameworks/CoreFoundation.framework/*',
+                     '/System/Library/Frameworks/CoreGraphics.framework/*',
+                     '/System/Library/Frameworks/CoreMedia.framework/*',
+                     '/System/Library/Frameworks/CoreBluetooth.framework/*',
+                     '/System/Library/Frameworks/CoreMIDI.framework/*',
+                     '/System/Library/Frameworks/CoreMedia.framework/*',
+                     '/System/Library/Frameworks/CoreServices.framework/*',
+                     '/System/Library/Frameworks/CoreText.framework/*',
+                     '/System/Library/Frameworks/CoreVideo.framework/*',
+                     '/System/Library/Frameworks/CoreWLAN.framework/*',
+                     '/System/Library/Frameworks/DiskArbitration.framework/*',
+                     '/System/Library/Frameworks/Foundation.framework/*',
+                     '/System/Library/Frameworks/GameController.framework/*',
+                     '/System/Library/Frameworks/GLKit.framework/*',
+                     '/System/Library/Frameworks/ImageIO.framework/*',
+                     '/System/Library/Frameworks/IOBluetooth.framework/*',
+                     '/System/Library/Frameworks/IOKit.framework/*',
+                     '/System/Library/Frameworks/IOSurface.framework/*',
+                     '/System/Library/Frameworks/OpenAL.framework/*',
+                     '/System/Library/Frameworks/OpenGL.framework/*',
+                     '/System/Library/Frameworks/Quartz.framework/*',
+                     '/System/Library/Frameworks/QuartzCore.framework/*',
+                     '/System/Library/Frameworks/Security.framework/*',
+                     '/System/Library/Frameworks/StoreKit.framework/*',
+                     '/System/Library/Frameworks/SystemConfiguration.framework/*',
+                     '/System/Library/Frameworks/WebKit.framework/*']
     whitelist += m.meta.get('build', {}).get('missing_dso_whitelist', [])
     for f in files:
         path = os.path.join(m.config.host_prefix, f)
@@ -461,7 +489,7 @@ def check_overlinking(m, files):
                 and_also = " (and also in this package)" if in_prefix_dso in files else ""
                 pkgs = list(which_package(in_prefix_dso, m.config.host_prefix))
                 in_pkgs_in_run_reqs = [pkg for pkg in pkgs if pkg.quad[0] in run_reqs]
-                in_whitelist = any([in_prefix_dso == w for w in whitelist])
+                in_whitelist = any([glob2.fnmatch.fnmatch(in_prefix_dso, w) for w in whitelist])
                 if in_whitelist:
                     print_msg(errors, '{}: {} found in the whitelist'.
                               format(info_prelude, n_dso_p))
@@ -500,7 +528,7 @@ def check_overlinking(m, files):
                 # start with '$RPATH/' which indicates pyldd did not find them, so remove that now.
                 if needed_dso.startswith('$RPATH/'):
                     needed_dso = needed_dso.replace('$RPATH/', '')
-                in_whitelist = any([needed_dso.startswith(w) for w in whitelist])
+                in_whitelist = any([glob2.fnmatch.fnmatch(needed_dso, w) for w in whitelist])
                 if in_whitelist:
                     n_dso_p = "Needed DSO {}".format(needed_dso)
                     print_msg(errors, '{}: {} found in the whitelist'.

@@ -899,6 +899,9 @@ class elffile(UnixExecutable):
 
     def get_resolved_shared_libraries(self, src_exedir, src_selfdir, sysroot=''):
         result = []
+        default_paths = ['$SYSROOT/lib', '$SYSROOT/usr/lib']
+        if self.ehdr.sz_ptr == 8:
+            default_paths.extend(['$SYSROOT/lib64', '$SYSROOT/usr/lib64'])
         for so_orig, so in self.shared_libraries:
             resolved, rpath, in_sysroot = \
                 _get_resolved_location(self,
@@ -906,7 +909,7 @@ class elffile(UnixExecutable):
                                        src_exedir,
                                        src_selfdir,
                                        LD_LIBRARY_PATH='',
-                                       default_paths=['$SYSROOT/lib64', '$SYSROOT/usr/lib64'],
+                                       default_paths=default_paths,
                                        sysroot=sysroot)
             result.append((so_orig, resolved, rpath, in_sysroot))
         return result
