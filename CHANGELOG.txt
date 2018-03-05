@@ -1,3 +1,29 @@
+20180-03-05 3.7.0:
+
+Enhancements:
+-------------
+
+* raise ValueError when pin_subpackage is used, but no matching output is found  #2720
+* Add new optional CLI argument, --extra-deps, to add test-time dependencies dynamically when splitting build and test phases (can't apply variants when phases are split)  #2724
+
+Bug fixes:
+----------
+
+* fix cran skeleton py2 invalid list copy syntax  #2720
+* reconfigure TravisCI to test against conda master  #2720
+* fix inaccurately raised problems with pin_subpackage  #2720
+* coerce boolean values in conda_build_config.yaml to booleans (value.lower() == "true")  #2723
+* change r skeleton cran test to a different package (nmf -> acs); nmf got removed
+* fix selectors being applied before variable detection, leading to variables in selectors never being detected  #2723
+* add filesize calculation to converted script files  #2727
+
+Contributors:
+-------------
+
+* @mandeep
+* @msarahan
+
+
 2018-02-28 3.6.0:
 
 Enhancements:
