@@ -9,7 +9,7 @@ from conda_build import api
 thisdir = os.path.dirname(os.path.realpath(__file__))
 
 repo_packages = [('', 'pypi', 'pip', "8.1.2"),
-                 ('r', 'cran', 'nmf', ""),
+                 ('r', 'cran', 'acs', ""),
                  ('r', 'cran', 'https://github.com/twitter/AnomalyDetection.git', ""),
                  ('perl', 'cpan', 'Moo', ""),
                  # ('lua', luarocks', 'LuaSocket'),
