@@ -21,7 +21,8 @@ def _error_exit(exit_message):
 
 def rewrite_script(fn, prefix):
     """Take a file from the bin directory and rewrite it into the python-scripts
-    directory after it passes some sanity checks for noarch pacakges"""
+    directory with the same permissions after it passes some sanity checks for
+    noarch pacakges"""
 
     # Load and check the source file for not being a binary
     src = join(prefix, 'Scripts' if ISWIN else 'bin', fn)
@@ -30,6 +31,7 @@ def rewrite_script(fn, prefix):
             data = fi.read()
         except UnicodeDecodeError:  # file is binary
             _error_exit("Noarch package contains binary script: %s" % fn)
+    src_mode = os.stat(src).st_mode
     os.unlink(src)
 
     # Get rid of '-script.py' suffix on Windows
@@ -39,8 +41,10 @@ def rewrite_script(fn, prefix):
     # Rewrite the file to the python-scripts directory
     dst_dir = join(prefix, 'python-scripts')
     _force_dir(dst_dir)
-    with open(join(dst_dir, fn), 'w') as fo:
+    dst = join(dst_dir, fn)
+    with open(dst, 'w') as fo:
         fo.write(data)
+    os.chmod(dst, src_mode)
     return fn
 
 
