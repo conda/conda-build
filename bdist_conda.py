@@ -73,6 +73,9 @@ class CondaDistribution(Distribution):
       (enable when installed).  See the features section of the conda build
       documentation for more information about features in conda.
 
+    - conda_build_noarch: Build a conda recipe that can be used on any
+      architecture.  This is useful if the recipe is a pure-python package.
+
     Command line options:
 
     --buildnum: Set the build number. Defaults to the conda_buildnum passed to
@@ -94,6 +97,7 @@ class CondaDistribution(Distribution):
         'conda_preserve_egg_dir': None,
         'conda_features': None,
         'conda_track_features': None,
+        'conda_build_noarch': None
     }
 
     def __init__(self, attrs=None):
@@ -169,6 +173,8 @@ class bdist_conda(install):
         d['build']['preserve_egg_dir'] = metadata.conda_preserve_egg_dir
         d['build']['features'] = metadata.conda_features
         d['build']['track_features'] = metadata.conda_track_features
+        if metadata.conda_build_noarch:
+            d['build']['noarch'] = 'python'
 
         # XXX: I'm not really sure if it is correct to combine requires
         # and install_requires
