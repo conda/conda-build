@@ -320,3 +320,11 @@ def test_activation_in_output_scripts(testing_config):
     recipe = os.path.join(subpackage_dir, '_output_activation')
     testing_config.activate = True
     api.build(recipe, config=testing_config)
+
+
+def test_inherit_build_number(testing_config):
+    recipe = os.path.join(subpackage_dir, '_inherit_build_number')
+    ms = api.render(recipe, config=testing_config)
+    for m, _, _ in ms:
+        assert 'number' in m.meta['build'], "build number was not inherited at all"
+        assert int(m.meta['build']['number']) == 1, "build number should have been inherited as '1'"

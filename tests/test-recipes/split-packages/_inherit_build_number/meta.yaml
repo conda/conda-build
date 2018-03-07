@@ -1,0 +1,16 @@
+package:
+  name: inherit_build_number
+  version: 1.0
+
+build:
+  number: 1
+
+outputs:
+  - name: test_inherit_build_number
+    build:
+      missing_dso_whitelist:
+        - '*'
+  - name: inherit_build_number
+    build:
+      missing_dso_whitelist:
+        - '*'
