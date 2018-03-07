@@ -117,23 +117,14 @@ def hoist_single_extracted_folder(nested_folder):
 
     This is for when your archive extracts into its own folder, so that we don't need to
     know exactly what that folder is called."""
-    flist = os.listdir(nested_folder)
     parent = os.path.dirname(nested_folder)
-    # only hoist if the parent folder contains ONLY our nested folder
-    nested_folders_to_remove = [nested_folder]
-    for thing in flist:
-        if not os.path.isdir(os.path.join(parent, thing)):
-            shutil.move(os.path.join(nested_folder, thing), os.path.join(parent, thing))
-        else:
-            copy_into(os.path.join(nested_folder, thing), os.path.join(parent, thing))
-            nested_folders_to_remove.append(os.path.join(nested_folder, thing))
-    # handle nested similar folder names
-    fn = os.path.basename(nested_folder)
-    if (os.path.join(nested_folder, fn) in nested_folders_to_remove and
-            nested_folder in nested_folders_to_remove):
-        nested_folders_to_remove.remove(nested_folder)
-    for folder in nested_folders_to_remove:
-        rm_rf(folder)
+    flist = os.listdir(nested_folder)
+    with TemporaryDirectory() as tmpdir:
+        for entry in flist:
+            shutil.move(os.path.join(nested_folder, entry), os.path.join(tmpdir, entry))
+        rm_rf(nested_folder)
+        for entry in flist:
+            shutil.move(os.path.join(tmpdir, entry), os.path.join(parent, entry))
 
 
 def unpack(source_dict, src_dir, cache_folder, recipe_path, croot, verbose=False,
