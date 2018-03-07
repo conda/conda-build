@@ -1758,9 +1758,11 @@ class MetaData(object):
                 build['features'] = output['features']
 
             # 3.0.26+ - just pass through the whole build section from the output.
-            #    It clobbers everything else.
+            #    It clobbers everything else, aside from build number
             if 'build' in output:
                 build = output['build']
+                if 'number' not in build:
+                    build['number'] = output.get('number', output_metadata.build_number())
             output_metadata.meta['build'] = build
             if 'test' in output:
                 output_metadata.meta['test'] = output['test']

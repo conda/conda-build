@@ -327,4 +327,4 @@ def test_inherit_build_number(testing_config):
     ms = api.render(recipe, config=testing_config)
     for m, _, _ in ms:
         assert 'number' in m.meta['build'], "build number was not inherited at all"
-        assert m.meta['build']['number'] == 1, "build number should have been inherited as '1'"
+        assert int(m.meta['build']['number']) == 1, "build number should have been inherited as '1'"
