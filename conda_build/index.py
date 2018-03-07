@@ -309,7 +309,7 @@ def _read_index_tar(tar_path, lock, locking=True, timeout=90):
             try:
                 recipe_text = t.extractfile('info/recipe/meta.yaml').read().decode('utf-8')
                 recipe_json = yaml.load(recipe_text)
-            except KeyError:
+            except (KeyError, yaml.scanner.ScannerError):
                 recipe_json = {}
 
             # If a conda package contains an icon, also extract and cache that in an .icon/
