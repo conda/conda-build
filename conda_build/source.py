@@ -7,6 +7,7 @@ from os.path import join, isdir, isfile, abspath, basename, exists, normpath, ex
 import re
 import shutil
 from subprocess import CalledProcessError
+import tempfile
 import sys
 import time
 
@@ -117,6 +118,10 @@ def hoist_single_extracted_folder(nested_folder):
 
     This is for when your archive extracts into its own folder, so that we don't need to
     know exactly what that folder is called."""
+    # use a temporary directory in case of conflicting case <...>/<dirname>/<filename>, where filename == dirname
+    tmp_dir = tempfile.mkdtemp(dir=os.path.dirname(nested_folder))
+    rm_rf(tmp_dir); os.rename(nested_folder, tmp_dir)
+    nested_folder = tmp_dir
     flist = os.listdir(nested_folder)
     parent = os.path.dirname(nested_folder)
     # only hoist if the parent folder contains ONLY our nested folder
