@@ -1,4 +1,29 @@
-20180-03-05 3.7.0:
+2018-03-08 3.7.1:
+
+Enhancements:
+-------------
+
+* Enable glob2.fnmatch for shared library whitelists.  Add more Frameworks to whitelist on Mac.  #2732
+
+Bug fixes:
+----------
+
+* Squelch yaml ScannerError when building index can't read meta.yaml in package  #2740
+* Fix & simplify "hoisting" of source folders up one level  #2741
+* Fix build number not getting inherited from top-level metadata  #2742
+* Allow output creation environment for wheels to be activated  #2744
+* Fix selector regex for finding "used" variables; was finding too much across lines.  #2745
+* Ignore empty config files (don't error out on them)  #2746
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @msarahan
+* @neok-m4700
+
+
+2018-03-05 3.7.0:
 
 Enhancements:
 -------------
