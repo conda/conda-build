@@ -521,17 +521,18 @@ def get_vars(variants, loop_only=False):
 def find_used_variables_in_text(variant, recipe_text):
     used_variables = set()
     for v in variant:
-        variant_regex = r"(^.*\{\{\s*(?:pin_.*?)?%s[\'\"\s,]*(?:.*?)?\}\})" % v
-        selector_regex = r"\#?\s\[(?:.*[^_\w\d])?(%s)[^_\w\d]" % v
-        conditional_regex = r"(.*\{%\s*(?:el)?if\s*" + v + r"\s*(?:.*?)?%\})"
+        variant_regex = r"(^.*?\{\{\s*(?:pin_.*?)?%s[\'\"\s,]*(?:.*?)?\}\})" % v
+        selector_regex = r"\#?\s\[(?:.*?[^_\w\d])?(%s)[^_\w\d]$" % v
+        conditional_regex = r"(.*?\{%\s*(?:el)?if\s*" + v + r"\s*(?:.*?)?%\})"
         requirement_regex = r"(\-\s+%s(?:\s+[\[#]|$))" % v.replace('_', '[-_]')
-        all_res = '|'.join((variant_regex, requirement_regex, conditional_regex, selector_regex))
+        all_res = [variant_regex, selector_regex, conditional_regex, requirement_regex]
         compiler_match = re.match(r'(.*?)_compiler$', v)
         if compiler_match:
             compiler_regex = (
-                r"(\s*\{\{\s*compiler\([\'\"]%s[\"\'].*\)\s*\}\})" % compiler_match.group(1))
-            all_res = '|'.join((all_res, compiler_regex))
-        if re.search(all_res, recipe_text, flags=re.MULTILINE | re.DOTALL):
+                r"(\s*\{\{\s*compiler\([\'\"]%s[\"\'].*?\)\s*\}\})" % compiler_match.group(1))
+            all_res.append(compiler_regex)
+        if any(re.search(this_re, recipe_text, flags=re.MULTILINE | re.DOTALL)
+               for this_re in all_res):
             used_variables.add(v)
     return used_variables
 
@@ -541,7 +542,7 @@ def find_used_variables_in_shell_script(variant, file_path):
         text = f.read()
     used_variables = set()
     for v in variant:
-        variant_regex = r"(^.*\$\{?\s*%s\s*[\s|\}])" % v
+        variant_regex = r"(^.*?\$\{?\s*%s\s*[\s|\}])" % v
         if re.search(variant_regex, text, flags=re.MULTILINE | re.DOTALL):
             used_variables.add(v)
     return used_variables
