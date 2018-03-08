@@ -1001,8 +1001,31 @@ def bundle_conda(output, metadata, env, stats, **kw):
 
 
 def bundle_wheel(output, metadata, env, stats):
+    ext = ".bat" if utils.on_win else ".sh"
     with TemporaryDirectory() as tmpdir, utils.tmp_chdir(metadata.config.work_dir):
-        utils.check_call_env(['pip', 'wheel', '--wheel-dir', tmpdir, '--no-deps', '.'], env=env)
+        dest_file = os.path.join(metadata.config.work_dir, 'wheel_output' + ext)
+        with open(dest_file, 'w') as f:
+            f.write('\n')
+            f.write('pip wheel --wheel-dir {} --no-deps .'.format(tmpdir))
+            f.write('\n')
+        if metadata.activate_build_script:
+            _write_activation_text(dest_file, metadata)
+
+        # run the appropriate script
+        env = environ.get_dict(config=metadata.config, m=metadata).copy()
+        env['TOP_PKG_NAME'] = env['PKG_NAME']
+        env['TOP_PKG_VERSION'] = env['PKG_VERSION']
+        env['PKG_VERSION'] = metadata.version()
+        env['PKG_NAME'] = metadata.get_value('package/name')
+        interpreter_and_args = guess_interpreter(dest_file)
+
+        bundle_stats = {}
+        utils.check_call_env(interpreter_and_args + [dest_file],
+                             cwd=metadata.config.work_dir, env=env, stats=bundle_stats)
+        log_stats(bundle_stats, "bundling wheel {}".format(metadata.name()))
+        if stats is not None:
+            stats[stats_key(metadata, 'bundle_wheel_{}'.format(metadata.name()))] = bundle_stats
+
         wheel_files = glob(os.path.join(tmpdir, "*.whl"))
         if not wheel_files:
             raise RuntimeError("Wheel creation failed.  Please see output above to debug.")
