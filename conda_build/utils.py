@@ -125,7 +125,8 @@ def directory_size(path):
             except UnicodeDecodeError:
                 pass
         if on_win:
-            out = re.search("([\d,]+)\sbytes", out).group(1).replace(',', '')
+            out = re.search("([\d,]+)\sbytes", out,
+                            flags=re.IGNORECASE).group(1).replace(',', '')
         else:
             out = out.split()[0]
     except subprocess.CalledProcessError:
