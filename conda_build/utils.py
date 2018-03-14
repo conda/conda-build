@@ -120,15 +120,15 @@ def directory_size(path):
 
         if hasattr(out, 'decode'):
             try:
-                out = out.decode(errors='replace')
+                out = out.decode(errors='ignore')
             # This isn't important anyway so give up. Don't try search on bytes.
             except (UnicodeDecodeError, IndexError):
                 if on_win:
                     return 0
                 else:
-                    pass                   
+                    pass
         if on_win:
-            # Windows can give long output, we need only 2nd to last line 
+            # Windows can give long output, we need only 2nd to last line
             out = out.strip().rsplit('\r\n', 2)[-2]
             pattern = "\s([\d\W]+).+"  # Language and punctuation neutral
             out = re.search(pattern, out.strip()).group(1).strip()
@@ -234,11 +234,8 @@ class PopenWrapper(object):
             _popen.kill()
             raise
 
-        finally:
-            # Get disk usage
-            self.disk = max(directory_size(disk_usage_dir), self.disk)
-            self.elapsed = time.time() - start_time
-
+        self.disk = max(directory_size(disk_usage_dir), self.disk)
+        self.elapsed = time.time() - start_time
         return _popen.stdout, _popen.stderr
 
     def __repr__(self):
