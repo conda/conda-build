@@ -291,7 +291,6 @@ def add_parser(repos):
     cran.add_argument(
         "--version",
         help="Version to use. Applies to all packages.",
-        default=argparse.SUPPRESS,
     )
     cran.add_argument(
         "--git-tag",

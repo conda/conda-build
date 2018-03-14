@@ -198,6 +198,13 @@ def rm_pyc(files, prefix):
             os.unlink(os.path.join(prefix, fn))
 
 
+def rm_share_info_dir(files, prefix):
+    if 'share/info/dir' in files:
+        fn = os.path.join(prefix, 'share', 'info', 'dir')
+        if os.path.isfile(fn):
+            os.unlink(fn)
+
+
 def compile_missing_pyc(files, cwd, python_exe, skip_compile_pyc=()):
     if not os.path.isfile(python_exe):
         return
@@ -241,6 +248,7 @@ def post_process(files, prefix, config, preserve_egg_dir=False, noarch=False, sk
                             skip_compile_pyc=skip_compile_pyc)
     remove_easy_install_pth(files, prefix, config, preserve_egg_dir=preserve_egg_dir)
     rm_py_along_so(prefix)
+    rm_share_info_dir(files, prefix)
 
 
 def find_lib(link, prefix, files, path=None):
