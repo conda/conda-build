@@ -311,6 +311,9 @@ def _read_index_tar(tar_path, lock, locking=True, timeout=90):
                 recipe_json = yaml.load(recipe_text)
             except KeyError:
                 recipe_json = {}
+            except Exception as e:
+                log.debug("'info/recipe/meta.yaml' could not be read for '%s': %r", tar_path, e)
+                recipe_json = {}
 
             # If a conda package contains an icon, also extract and cache that in an .icon/
             # directory.  The icon file name is the name of the package, plus the extension
