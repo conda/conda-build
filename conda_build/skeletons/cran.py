@@ -286,7 +286,6 @@ def add_parser(repos):
     cran.add_argument(
         "--add-maintainer",
         help="Add this github username as a maintainer if not already present.",
-        default=argparse.SUPPRESS,
     )
     cran.add_argument(
         "--version",
@@ -295,7 +294,6 @@ def add_parser(repos):
     cran.add_argument(
         "--git-tag",
         help="Git tag to use for GitHub recipes.",
-        default=argparse.SUPPRESS,
     )
     cran.add_argument(
         "--all-urls",
@@ -317,7 +315,6 @@ def add_parser(repos):
         "--use-binaries-ver",
         help=("Repackage binaries from version provided by argument instead of building "
               "from source."),
-        default=argparse.SUPPRESS,
     )
     cran.add_argument(
         "--use-noarch-generic",
