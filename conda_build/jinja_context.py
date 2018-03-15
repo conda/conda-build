@@ -299,7 +299,7 @@ def pin_subpackage(metadata, subpackage_name, min_pin='x.x.x.x.x.x', max_pin='x'
         metadata_name = None
     if metadata_name and subpackage_name == metadata_name:
         if exact:
-            pin = ' '.join(metadata.dist().rsplit('-', 2))
+            pin = ' '.join((metadata.name(), metadata.version(), metadata.build_id()))
         else:
             pin = ' '.join((subpackage_name,
                             apply_pin_expressions(metadata.version(), min_pin, max_pin)))
