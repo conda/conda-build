@@ -112,7 +112,7 @@ def directory_size(path):
     '''
     try:
         if on_win:
-            command = "dir /s {}"
+            command = 'dir /s "{}"'  # Windows path can have spaces
             out = subprocess.check_output(command.format(path), shell=True)
         else:
             command = "du -s {}"
@@ -120,19 +120,28 @@ def directory_size(path):
 
         if hasattr(out, 'decode'):
             try:
-                out = out.decode()
-            # give up.  this isn't important anyway.
-            except UnicodeDecodeError:
-                pass
+                out = out.decode(errors='replace')
+            # This isn't important anyway so give up. Don't try search on bytes.
+            except (UnicodeDecodeError, IndexError):
+                if on_win:
+                    return 0
+                else:
+                    pass                   
         if on_win:
-            out = re.search("([\d,]+)\sbytes", out,
-                            flags=re.IGNORECASE).group(1).replace(',', '')
+            # Windows can give long output, we need only 2nd to last line 
+            out = out.strip().rsplit('\r\n', 2)[-2]
+            pattern = "\s([\d\W]+).+"  # Language and punctuation neutral
+            out = re.search(pattern, out.strip()).group(1).strip()
+            out = out.replace(',', '').replace('.', '').replace(' ', '')
         else:
             out = out.split()[0]
     except subprocess.CalledProcessError:
         out = directory_size_slow(path)
 
-    return int(out)  # size in bytes
+    try:
+        return int(out)  # size in bytes
+    except ValueError:
+        return 0
 
 
 class DummyPsutilProcess(object):
