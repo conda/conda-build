@@ -489,6 +489,11 @@ def check_overlinking(m, files):
         info_prelude = "   INFO ({},{})".format(pkg_name, f)
         msg_prelude = err_prelude if m.config.error_overlinking else warn_prelude
 
+        runpaths = get_runpaths(path)
+        if len(runpaths):
+            print_msg(errors, '{}: runpaths {} found in {}'.format(msg_prelude,
+                                                                   runpaths,
+                                                                   path))
         needed = inspect_linkages(path, resolve_filenames=True, recurse=False)
         for needed_dso in needed:
             if needed_dso.startswith(m.config.host_prefix):

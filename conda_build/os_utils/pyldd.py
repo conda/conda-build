@@ -1055,7 +1055,6 @@ def inspect_rpaths(filename, resolve_dirnames=True, use_os_varnames=True,
 def get_runpaths(filename, arch='native'):
     if not os.path.exists(filename):
         return []
-    sysroot = _trim_sysroot(sysroot)
     arch = _get_arch_if_native(arch)
     with open(filename, 'rb') as f:
         cf = codefile(f, arch, ['/lib', '/usr/lib'])
