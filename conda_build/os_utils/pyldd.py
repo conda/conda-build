@@ -239,6 +239,9 @@ class UnixExecutable(object):
     def is_executable(self):
         return True
 
+    def get_runpaths(self):
+        return self.dt_runpath
+
 
 def read_data(file, endian, num=1):
     """
@@ -474,6 +477,7 @@ class machofile(UnixExecutable):
     def __init__(self, file, arch, initial_rpaths_transitive=[]):
         self.filename = file.name
         self.shared_libraries = []
+        self.dt_runpath = []
         # Not actually used ..
         self.selfdir = os.path.dirname(file.name)
         results = mach_o_find_dylibs(file, arch)
@@ -928,6 +932,9 @@ class inscrutablefile(UnixExecutable):
     def get_resolved_shared_libraries(self, *args, **kw):
         return []
 
+    def get_runpaths(self):
+        return []
+
     def selfdir(self):
         return None
 
@@ -1043,6 +1050,16 @@ def inspect_rpaths(filename, resolve_dirnames=True, use_os_varnames=True,
                 return [cf.to_os_varnames(rpath) for rpath in cf.rpaths_nontransitive]
             else:
                 return cf.rpaths_nontransitive
+
+
+def get_runpaths(filename, arch='native'):
+    if not os.path.exists(filename):
+        return []
+    sysroot = _trim_sysroot(sysroot)
+    arch = _get_arch_if_native(arch)
+    with open(filename, 'rb') as f:
+        cf = codefile(f, arch, ['/lib', '/usr/lib'])
+        return cf.get_runpaths()
 
 
 # TODO :: Consider returning a tree structure or a dict when recurse is True?

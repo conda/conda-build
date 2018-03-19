@@ -25,7 +25,7 @@ from conda_build.conda_interface import PY3
 from conda_build.conda_interface import TemporaryDirectory
 
 from conda_build import utils
-from conda_build.os_utils.pyldd import is_codefile, inspect_linkages
+from conda_build.os_utils.pyldd import is_codefile, inspect_linkages, get_runpaths
 from conda_build.inspect_pkg import which_package
 
 if sys.platform == 'darwin':
