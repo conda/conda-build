@@ -1052,13 +1052,17 @@ class MetaData(object):
         return build_int
 
     def get_depends_top_and_out(self, typ):
-        meta_requirements = ensure_list(self.get_value('requirements/' + typ, []))
+        meta_requirements = ensure_list(self.get_value('requirements/' + typ, []))[:]
+        req_names = set(req.split()[0] for req in meta_requirements)
+        extra_reqs = []
         if 'outputs' in self.meta:
             matching_output = [out for out in self.meta.get('outputs') if
                                out.get('name') == self.name()]
             if matching_output:
-                meta_requirements += utils.expand_reqs(
+                extra_reqs = utils.expand_reqs(
                     matching_output[0].get('requirements', [])).get(typ, [])
+                extra_reqs = [dep for dep in extra_reqs if dep.split()[0] not in req_names]
+        meta_requirements = list(set(meta_requirements) | set(extra_reqs))
         return meta_requirements
 
     def ms_depends(self, typ='run'):
