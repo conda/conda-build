@@ -662,8 +662,10 @@ def test_legacy_noarch_python(testing_config):
     assert os.path.basename(os.path.dirname(output)) == 'noarch'
 
 
-@pytest.mark.skipif(parse_version(conda.__version__) < parse_version("4.5"),
-                    reason="full preferred env implementation deferred to conda 4.5")
+@pytest.mark.skipif(True,
+                    reason="Re-enable when private application environments are fully implemented "
+                           "in conda. "
+                           "See https://github.com/conda/conda/issues/3912#issuecomment-374820599")
 def test_preferred_env(testing_config):
     recipe = os.path.join(metadata_dir, "_preferred_env")
     output = api.build(recipe, config=testing_config)[0]
