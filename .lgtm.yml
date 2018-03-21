@@ -8,5 +8,4 @@ extraction:
     index:
       exclude:
         - .git
-        - conda/_vendor
         - tests
