@@ -25,7 +25,7 @@ from conda_build.conda_interface import PY3
 from conda_build.conda_interface import TemporaryDirectory
 
 from conda_build import utils
-from conda_build.os_utils.pyldd import is_codefile, inspect_linkages, get_runpaths
+from conda_build.os_utils.pyldd import codefile_type, inspect_linkages, get_runpaths
 from conda_build.inspect_pkg import which_package
 
 if sys.platform == 'darwin':
@@ -37,13 +37,9 @@ else:
     from scandir import scandir
 
 
-def is_obj(path):
-    return is_codefile(path)
-
-
 def fix_shebang(f, prefix, build_python, osx_is_app=False):
     path = os.path.join(prefix, f)
-    if is_obj(path):
+    if codefile_type(path):
         return
     elif os.path.islink(path):
         return
@@ -296,7 +292,7 @@ def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
         link = link.replace(build_prefix, host_prefix)
         print(".. seems to be linking to a compiler runtime, replacing build prefix with "
               "host prefix and")
-        if not is_obj(link):
+        if not codefile_type(link):
             sys.exit("Error: Compiler runtime library in build prefix not found in host prefix %s"
                      % link)
         else:
@@ -341,7 +337,7 @@ def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
 
 
 def mk_relative_osx(path, host_prefix, build_prefix, files):
-    assert sys.platform == 'darwin' and is_obj(path)
+    assert sys.platform == 'darwin'
 
     names = macho.otool(path)
     s = macho.install_name_change(path,
@@ -482,7 +478,7 @@ def check_overlinking(m, files):
     whitelist += m.meta.get('build', {}).get('missing_dso_whitelist', [])
     for f in files:
         path = os.path.join(m.config.host_prefix, f)
-        if not is_obj(path):
+        if not codefile_type(path):
             continue
         warn_prelude = "WARNING ({},{})".format(pkg_name, f)
         err_prelude = "  ERROR ({},{})".format(pkg_name, f)
@@ -585,11 +581,12 @@ def check_overlinking(m, files):
 
 def post_process_shared_lib(m, f, files):
     path = os.path.join(m.config.host_prefix, f)
-    if not is_obj(path):
+    codefile_t = codefile_type(path)
+    if not codefile_t:
         return
-    if sys.platform.startswith('linux'):
+    if sys.platform.startswith('linux') and codefile_t == 'elffile':
         mk_relative_linux(f, m.config.host_prefix, rpaths=m.get_value('build/rpaths', ['lib']))
-    elif sys.platform == 'darwin':
+    elif sys.platform == 'darwin' and codefile_t == 'machofile':
         mk_relative_osx(path, m.config.host_prefix, m.config.build_prefix, files=files)
 
 
@@ -658,7 +655,7 @@ def check_symlinks(files, prefix, croot):
             #    because ld.so follows symlinks in RPATHS
             #    If condition exists, then copy the file rather than symlink it.
             if (not os.path.dirname(link_path) == os.path.dirname(real_link_path) and
-                    is_obj(f)):
+                    codefile_type(f)):
                 os.remove(path)
                 utils.copy_into(real_link_path, path)
             elif real_link_path.startswith(real_build_prefix):

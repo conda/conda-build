@@ -983,6 +983,14 @@ def is_codefile(filename, skip_symlinks=True):
     return True
 
 
+def codefile_type(filename, skip_symlinks=True):
+    "Returns None, 'machofile' or 'elffile'"
+    klass = codefile_class(filename, skip_symlinks=skip_symlinks)
+    if not klass:
+        return None
+    return klass.__name__
+
+
 def _trim_sysroot(sysroot):
     while sysroot.endswith('/') or sysroot.endswith('\\'):
         sysroot = sysroot[:-1]
