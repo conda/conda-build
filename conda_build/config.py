@@ -467,12 +467,12 @@ class Config(object):
 
     def _get_r(self, prefix, platform):
         if platform.startswith('win'):
-            res = join(prefix, 'Scripts', 'R.exe')
+            res = join(prefix, 'Scripts', 'Rscript.exe')
             # MRO test:
             if not os.path.exists(res):
-                res = join(prefix, 'bin', 'R.exe')
+                res = join(prefix, 'bin', 'Rscript.exe')
         else:
-            res = join(prefix, 'bin', 'R')
+            res = join(prefix, 'bin', 'Rscript')
         return res
 
     def compute_build_id(self, package_name, reset=False):
