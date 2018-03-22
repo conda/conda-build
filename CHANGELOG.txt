@@ -1,3 +1,35 @@
+2018-03-22 3.7.2:
+
+Enhancements:
+-------------
+
+* add runpath handling to pyldd  #2768
+* add lgtm.com configuration  #2772
+
+Bug fixes:
+----------
+
+* fix language issues with finding directory size on windows #2749 #2766  #2760
+* ignore non-rendered jinja2 errors when indexing packages  #2756
+* fix cran skeleton argparse errors when version flag not provided  #2751 #2759
+* fix exact pinning in subpackages raising errors due to non-final output data conflicting with final top-level data  #2763
+* skip test_preferred_env until conda more fully implements it  #2722
+* Don't run mk_relative_osx on linux DSO's  #2768
+* use Rscript to run R tests, so that console output is shown more clearly.  Only add r-base spec if neither r-base nor mro-base are already in deps.  #2764
+* don't filter out .gitignore and .gitmodules when packaging  #2774
+* fix pin_* regex that was erroneously picking up wrong usages  #2775
+
+Contributors:
+-------------
+
+* @bilderbuchi
+* @kfranz
+* @m-rossi
+* @mingwandroid
+* @msarahan
+* @wikiped
+
+
 2018-03-08 3.7.1:
 
 Enhancements:
