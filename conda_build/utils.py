@@ -1220,10 +1220,8 @@ def apply_pin_expressions(version, min_pin='x.x.x.x.x.x.x', max_pin='x'):
 def filter_files(files_list, prefix, filter_patterns=('(.*[\\\\/])?\.git[\\\\/].*',
                                                       '(.*[\\\\/])?\.git$',
                                                       '(.*)?\.DS_Store.*',
-                                                      '(.*)?\.gitignore',
-                                                      'conda-meta.*',
-                                                      '(.*)?\.gitmodules')):
-    """Remove things like .git from the list of files to be copied"""
+                                                      'conda-meta.*')):
+    """Remove things like the .git directory from the list of files to be copied"""
     for pattern in filter_patterns:
         r = re.compile(pattern)
         files_list = set(files_list) - set(filter(r.match, files_list))
