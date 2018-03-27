@@ -1929,7 +1929,8 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
                 tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
         if r_files:
             tf.write('"{r}" "{test_file}"\n'.format(
-                r=metadata.config.r_bin(metadata.config.test_prefix, metadata.config.host_platform),
+                r=metadata.config.rscript_bin(metadata.config.test_prefix,
+                                              metadata.config.host_platform),
                 test_file=join(metadata.config.test_dir, 'run_test.r')))
             if utils.on_win:
                 tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
