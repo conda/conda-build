@@ -1801,7 +1801,10 @@ class MetaData(object):
                     utils.rm_rf(om.config.work_dir)
                     provide(om)
                     om.parse_again()
-                om.parse_until_resolved(allow_no_other_outputs=True, bypass_env_check=True)
+                try:
+                    om.parse_until_resolved(allow_no_other_outputs=True, bypass_env_check=True)
+                except SystemExit:
+                    pass
                 outputs = get_output_dicts_from_metadata(om)
 
                 try:
