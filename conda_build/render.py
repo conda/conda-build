@@ -561,13 +561,16 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
             source.provide(mv)
             mv.parse_again()
 
-        mv.parse_until_resolved(allow_no_other_outputs=allow_no_other_outputs,
-                                bypass_env_check=bypass_env_check)
+        try:
+            mv.parse_until_resolved(allow_no_other_outputs=allow_no_other_outputs,
+                                    bypass_env_check=bypass_env_check)
+        except SystemExit:
+            pass
         need_source_download = (not mv.needs_source_for_render or not mv.source_provided)
 
         rendered_metadata[(mv.dist(),
                            mv.config.variant.get('target_platform', mv.config.subdir),
-                           tuple((var, mv.config.variant[var])
+                           tuple((var, mv.config.variant.get(var))
                                  for var in mv.get_used_vars()))] = \
                                     (mv, need_source_download, None)
     # list of tuples.

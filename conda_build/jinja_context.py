@@ -16,6 +16,7 @@ from .utils import (get_installed_packages, apply_pin_expressions, get_logger, H
 from .render import get_env_dependencies
 from .utils import copy_into, check_call_env, rm_rf, ensure_valid_spec
 from .variants import DEFAULT_COMPILERS
+from .exceptions import CondaBuildException
 from . import _load_setup_py_data
 
 
@@ -128,6 +129,15 @@ def load_setup_py_data(config, setup_file='setup.py', from_recipe_dir=False, rec
         except (TypeError, OSError):
             # setup.py file doesn't yet exist.  Will get picked up in future parsings
             pass
+        except ImportError as e:
+            if permit_undefined_jinja:
+                log = get_logger(__name__)
+                log.debug("Reading setup.py failed due to missing modules.  This is probably OK, "
+                          "since it may succeed in later passes.  Watch for incomplete recipe "
+                          "info, though.")
+            else:
+                raise CondaBuildException("Could not render recipe - need modules "
+                                        "installed in root env.  Import error was \"{}\"".format(e))
     # cleanup: we must leave the source tree empty unless the source code is already present
     rm_rf(os.path.join(config.work_dir, '_load_setup_py_data.py'))
     return _setuptools_data if _setuptools_data else {}
