@@ -467,6 +467,16 @@ class Config(object):
 
     def _get_r(self, prefix, platform):
         if platform.startswith('win'):
+            res = join(prefix, 'Scripts', 'R.exe')
+            # MRO test:
+            if not os.path.exists(res):
+                res = join(prefix, 'bin', 'R.exe')
+        else:
+            res = join(prefix, 'bin', 'R')
+        return res
+
+    def _get_rscript(self, prefix, platform):
+        if platform.startswith('win'):
             res = join(prefix, 'Scripts', 'Rscript.exe')
             # MRO test:
             if not os.path.exists(res):
@@ -589,6 +599,9 @@ class Config(object):
 
     def r_bin(self, prefix, platform):
         return self._get_r(prefix, platform)
+
+    def rscript_bin(self, prefix, platform):
+        return self._get_rscript(prefix, platform)
 
     @property
     def info_dir(self):
