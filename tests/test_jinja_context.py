@@ -107,7 +107,7 @@ def test_pin_subpackage_expression(testing_metadata):
 
 def test_resolved_packages(testing_metadata):
     testing_metadata.meta['requirements']['build'] = ['python']
-    packages = jinja_context.all_packages(testing_metadata, 'build')
+    packages = jinja_context.resolved_packages(testing_metadata, 'build')
     assert 'python' in packages, packages
     assert 'zlib' in packages, packages
 
