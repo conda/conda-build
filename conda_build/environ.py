@@ -689,7 +689,7 @@ def get_install_actions(prefix, specs, env, retries=0, subdir=None,
     index, index_ts = get_build_index(subdir, list(bldpkgs_dirs)[0], output_folder=output_folder,
                                       channel_urls=channel_urls, debug=debug, verbose=verbose,
                                       locking=locking, timeout=timeout)
-    specs = tuple(utils.ensure_valid_spec(spec) for spec in specs)
+    specs = tuple(utils.ensure_valid_spec(spec) for spec in specs if not str(spec).endswith('@'))
 
     if ((specs, env, subdir, channel_urls, disable_pip) in cached_actions and
             last_index_ts >= index_ts):

@@ -161,7 +161,9 @@ def eval_selector(selector_string, namespace, variants_in_place):
     except NameError as e:
         missing_var = parseNameNotFound(e)
         if variants_in_place:
-            print("Warning: Treating unknown selector \'" + missing_var + "\' as if it was False.")
+            log = utils.get_logger(__name__)
+            log.debug("Treating unknown selector \'" + missing_var +
+                      "\' as if it was False.")
         next_string = selector_string.replace(missing_var, "False")
         return eval_selector(next_string, namespace, variants_in_place)
 
