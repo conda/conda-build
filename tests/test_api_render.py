@@ -106,6 +106,19 @@ def test_pin_compatible_semver(testing_config):
     assert 'zlib >=1.2.8,<2.0a0' in metadata.get_value('requirements/run')
 
 
+def test_resolved_packages_recipe(testing_config):
+    recipe_dir = os.path.join(metadata_dir, '_resolved_packages_host_build')
+    metadata = api.render(recipe_dir, config=testing_config)[0][0]
+    run_requirements = set(x.split()[0] for x in metadata.get_value('requirements/run'))
+    for package in [
+        'python',  # direct dependency
+        'curl',  # direct dependency
+        'zlib',  # indirect dependency of curl and python
+        'xz',  # indirect dependency of python
+    ]:
+        assert package in run_requirements
+
+
 def test_host_entries_finalized(testing_config):
     recipe = os.path.join(metadata_dir, '_host_entries_finalized')
     metadata = api.render(recipe, config=testing_config)

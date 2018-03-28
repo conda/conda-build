@@ -429,16 +429,18 @@ def cdt(package_name, config, permit_undefined_jinja=False):
     return result
 
 
-def all_packages(m, env, permit_undefined_jinja=False, bypass_env_check=False):
+def resolved_packages(m, env, permit_undefined_jinja=False,
+                      bypass_env_check=False):
     """Returns the final list of packages that are listed in host or build.
-    This include all packages that will be installed in the host or build
-    environment. An example usage of this jinja function can be::
+    This include all packages (including the indirect dependencies) that will
+    be installed in the host or build environment. An example usage of this
+    jinja function can be::
 
         requirements:
           host:
             - curl 7.55.1
           run_constrained:
-          {% for package in all_packages('host') %}
+          {% for package in resolved_packages('host') %}
             - {{ pin_compatible(package, exact=True) }}
           {% endfor %}
 
@@ -460,7 +462,9 @@ def all_packages(m, env, permit_undefined_jinja=False, bypass_env_check=False):
                 - openssl 1.0.2n hb7f436b_0
                 - zlib 1.2.11 ha838bed_2
     """
-    assert env in ('host', 'build'), 'Currently only host and build dependencies are supported.'
+    if env not in ('host', 'build'):
+        raise ValueError('Only host and build dependencies are supported.')
+
     package_names = []
 
     # optimization: this is slow (requires solver), so better to bypass it
@@ -502,7 +506,7 @@ def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jin
                                allow_no_other_outputs=allow_no_other_outputs),
         compiler=partial(compiler, config=config, permit_undefined_jinja=permit_undefined_jinja),
         cdt=partial(cdt, config=config, permit_undefined_jinja=permit_undefined_jinja),
-        all_packages=partial(all_packages, initial_metadata,
+        resolved_packages=partial(resolved_packages, initial_metadata,
                              permit_undefined_jinja=permit_undefined_jinja,
                              bypass_env_check=bypass_env_check),
         time=time,
