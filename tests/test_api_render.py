@@ -109,6 +109,7 @@ def test_pin_compatible_semver(testing_config):
 def test_resolved_packages_recipe(testing_config):
     recipe_dir = os.path.join(metadata_dir, '_resolved_packages_host_build')
     metadata = api.render(recipe_dir, config=testing_config)[0][0]
+    assert all(len(pkg.split()) == 3 for pkg in metadata.get_value('requirements/run'))
     run_requirements = set(x.split()[0] for x in metadata.get_value('requirements/run'))
     for package in [
         'curl',  # direct dependency

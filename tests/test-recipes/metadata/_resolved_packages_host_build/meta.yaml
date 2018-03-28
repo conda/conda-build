@@ -12,5 +12,5 @@ requirements:
     - {{ package }}
   {% endfor %}
   {% for package in resolved_packages('host') %}
-    - {{ pin_compatible(package, exact=True) }}
+    - {{ package }}
   {% endfor %}

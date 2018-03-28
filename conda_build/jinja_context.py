@@ -441,7 +441,7 @@ def resolved_packages(m, env, permit_undefined_jinja=False,
             - curl 7.55.1
           run_constrained:
           {% for package in resolved_packages('host') %}
-            - {{ pin_compatible(package, exact=True) }}
+            - {{ package }}
           {% endfor %}
 
     which will render to::
@@ -470,8 +470,7 @@ def resolved_packages(m, env, permit_undefined_jinja=False,
     # optimization: this is slow (requires solver), so better to bypass it
     # until the finalization stage as done similarly in pin_compatible.
     if not bypass_env_check and not permit_undefined_jinja:
-        pins, _, _ = get_env_dependencies(m, env, m.config.variant)
-        package_names = [p.split(' ')[0] for p in pins]
+        package_names, _, _ = get_env_dependencies(m, env, m.config.variant)
 
     return package_names
 
