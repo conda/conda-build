@@ -111,10 +111,10 @@ def test_resolved_packages_recipe(testing_config):
     metadata = api.render(recipe_dir, config=testing_config)[0][0]
     run_requirements = set(x.split()[0] for x in metadata.get_value('requirements/run'))
     for package in [
-        'python',  # direct dependency
         'curl',  # direct dependency
-        'zlib',  # indirect dependency of curl and python
-        'xz',  # indirect dependency of python
+        'numpy',  # direct dependency
+        'zlib',  # indirect dependency of curl
+        'python',  # indirect dependency of numpy
     ]:
         assert package in run_requirements
 

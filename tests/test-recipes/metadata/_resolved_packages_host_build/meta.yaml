@@ -4,7 +4,7 @@ package:
 
 requirements:
   build:
-    - python
+    - numpy
   host:
     - curl
   run:

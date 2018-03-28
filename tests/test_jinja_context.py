@@ -106,10 +106,10 @@ def test_pin_subpackage_expression(testing_metadata):
 
 
 def test_resolved_packages(testing_metadata):
-    testing_metadata.meta['requirements']['build'] = ['python']
+    testing_metadata.meta['requirements']['build'] = ['numpy']
     packages = jinja_context.resolved_packages(testing_metadata, 'build')
-    assert 'python' in packages, packages
-    assert 'zlib' in packages, packages
+    assert 'numpy' in packages
+    assert 'python' in packages
 
 
 try:
