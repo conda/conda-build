@@ -339,9 +339,16 @@ def copy_readme(m):
 def copy_license(m):
     license_file = m.get_value('about/license_file')
     if license_file:
-        utils.copy_into(join(m.config.work_dir, license_file),
-                        join(m.config.info_dir, 'LICENSE.txt'), m.config.timeout,
-                        locking=m.config.locking)
+        src_file = join(m.config.work_dir, license_file)
+        if not os.path.isfile(src_file):
+            src_file = os.path.join(m.path, license_file)
+        if os.path.isfile(src_file):
+            utils.copy_into(src_file,
+                            join(m.config.info_dir, 'LICENSE.txt'), m.config.timeout,
+                            locking=m.config.locking)
+        else:
+            raise ValueError("License file given in about/license_file does not exist in "
+                             "source root dir or in recipe root dir (with meta.yaml)")
 
 
 def copy_test_source_files(m, destination):
