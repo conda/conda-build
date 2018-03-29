@@ -443,6 +443,52 @@ def cdt(package_name, config, permit_undefined_jinja=False):
     return result
 
 
+def resolved_packages(m, env, permit_undefined_jinja=False,
+                      bypass_env_check=False):
+    """Returns the final list of packages that are listed in host or build.
+    This include all packages (including the indirect dependencies) that will
+    be installed in the host or build environment. An example usage of this
+    jinja function can be::
+
+        requirements:
+          host:
+            - curl 7.55.1
+          run_constrained:
+          {% for package in resolved_packages('host') %}
+            - {{ package }}
+          {% endfor %}
+
+    which will render to::
+
+        requirements:
+            host:
+                - ca-certificates 2017.08.26 h1d4fec5_0
+                - curl 7.55.1 h78862de_4
+                - libgcc-ng 7.2.0 h7cc24e2_2
+                - libssh2 1.8.0 h9cfc8f7_4
+                - openssl 1.0.2n hb7f436b_0
+                - zlib 1.2.11 ha838bed_2
+            run_constrained:
+                - ca-certificates 2017.08.26 h1d4fec5_0
+                - curl 7.55.1 h78862de_4
+                - libgcc-ng 7.2.0 h7cc24e2_2
+                - libssh2 1.8.0 h9cfc8f7_4
+                - openssl 1.0.2n hb7f436b_0
+                - zlib 1.2.11 ha838bed_2
+    """
+    if env not in ('host', 'build'):
+        raise ValueError('Only host and build dependencies are supported.')
+
+    package_names = []
+
+    # optimization: this is slow (requires solver), so better to bypass it
+    # until the finalization stage as done similarly in pin_compatible.
+    if not bypass_env_check and not permit_undefined_jinja:
+        package_names, _, _ = get_env_dependencies(m, env, m.config.variant)
+
+    return package_names
+
+
 def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jinja,
                       allow_no_other_outputs=False, bypass_env_check=False, skip_build_id=False):
     """
@@ -473,6 +519,9 @@ def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jin
                                allow_no_other_outputs=allow_no_other_outputs),
         compiler=partial(compiler, config=config, permit_undefined_jinja=permit_undefined_jinja),
         cdt=partial(cdt, config=config, permit_undefined_jinja=permit_undefined_jinja),
+        resolved_packages=partial(resolved_packages, initial_metadata,
+                             permit_undefined_jinja=permit_undefined_jinja,
+                             bypass_env_check=bypass_env_check),
         time=time,
         datetime=datetime,
 

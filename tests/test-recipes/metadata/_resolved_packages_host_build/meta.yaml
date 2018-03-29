@@ -1,0 +1,16 @@
+package:
+  name: test_resolved_packages_host_build
+  version: 1.0
+
+requirements:
+  build:
+    - numpy
+  host:
+    - curl
+  run:
+  {% for package in resolved_packages('build') %}
+    - {{ package }}
+  {% endfor %}
+  {% for package in resolved_packages('host') %}
+    - {{ package }}
+  {% endfor %}

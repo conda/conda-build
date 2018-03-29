@@ -105,6 +105,14 @@ def test_pin_subpackage_expression(testing_metadata):
     assert len(pin.split()) == 2
 
 
+def test_resolved_packages(testing_metadata):
+    testing_metadata.meta['requirements']['build'] = ['numpy']
+    packages = jinja_context.resolved_packages(testing_metadata, 'build')
+    assert all(len(pkg.split()) == 3 for pkg in packages)
+    assert any('numpy' == pkg.split()[0] for pkg in packages)
+    assert any('python' == pkg.split()[0] for pkg in packages)
+
+
 try:
     from setuptools.config import read_configuration
     del read_configuration
