@@ -1,3 +1,29 @@
+2018-03-30 3.8.0:
+
+Enhancements:
+-------------
+
+* Add new jinja2 function, resolved_packages, that can be used to pin run or
+  test requirements to indirect dependencies as well as direct dependencies  #2715
+
+Bug fixes:
+----------
+
+* Fix R/Rscript mixup that broke usage of R env var  #2782
+* Improve error message when additional modules are needed in root env in order to render a recipe  #2784
+* Fix handling of FEATURE_NOARCH, which was adding specs that conda's solver didn't understand  #2787
+* allow license_file to be found in either source root or recipe root (common point of confusion)  #2792
+* fix disable_pip removing setuptools even when it was an explicit dependency.
+  This was due to conda changing its string representation of MatchSpecs, and
+  our regex didn't take that into account. #2793
+
+Contributors:
+-------------
+
+* @183amir
+* @msarahan
+
+
 2018-03-22 3.7.2:
 
 Enhancements:
