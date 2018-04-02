@@ -217,6 +217,8 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_ca
                        cwd=mirror_dir, stdout=stdout, stderr=stderr)
     else:
         args = [git, 'clone', '--mirror']
+        if git_ref != 'HEAD':
+            args += ['--branch', git_ref]
         if git_depth > 0:
             args += ['--depth', str(git_depth)]
         try:
