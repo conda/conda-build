@@ -1,0 +1,14 @@
+{% set major_minor = "2.56" %}
+{% set version = major_minor + ".0" %}
+{% set sha256 = "ecef6e17e97b8d9150d0e8a4b3edee1ac37331213b8a2a87a083deea408a0fc7" %}
+
+package:
+  name: glib
+  version: {{ version }}
+
+requirements:
+  build:
+    - python
+  host:
+    - libffi >=3.0.0
+    - zlib

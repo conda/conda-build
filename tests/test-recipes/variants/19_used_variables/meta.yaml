@@ -6,6 +6,11 @@ package:
 requirements:
   build:
     # an implicit usage
+    #   python is a special case.  It is ignored if it is only a build-time dep.
+    #   We do that because we consider it a build tool whose version does not affect the outcome
     - python
     # an implicit usage other than python
     - zlib
+  run:
+    # python is only "used" if it's used in build and run - see above
+    - python
