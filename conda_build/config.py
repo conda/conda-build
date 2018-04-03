@@ -256,9 +256,9 @@ class Config(object):
     @arch.setter
     def arch(self, value):
         log = get_logger(__name__)
-        log.warn("setting build arch.  This is only useful when pretending to be on another "
-                 "arch, such as for rendering necessary dependencies on a non-native arch."
-                 "  I trust that you know what you're doing.")
+        log.warn("Setting build arch. This is only useful when pretending to be on another "
+                 "arch, such as for rendering necessary dependencies on a non-native arch. "
+                 "I trust that you know what you're doing.")
         self._arch = str(value)
 
     @property
@@ -270,10 +270,10 @@ class Config(object):
     @platform.setter
     def platform(self, value):
         log = get_logger(__name__)
-        log.warn("setting build platform. This is only useful when "
-                "pretending to be on another " "another platform, such as "
-                "for rendering necessary dependencies on a non-native "
-                "platform. I trust that you know what you're doing.")
+        log.warn("Setting build platform. This is only useful when "
+                 "pretending to be on another platform, such as "
+                 "for rendering necessary dependencies on a non-native "
+                 "platform. I trust that you know what you're doing.")
         if value == 'noarch':
             raise ValueError("config platform should never be noarch.  Set host_platform instead.")
         self._platform = value
