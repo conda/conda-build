@@ -485,7 +485,11 @@ def check_overlinking(m, files):
         info_prelude = "   INFO ({},{})".format(pkg_name, f)
         msg_prelude = err_prelude if m.config.error_overlinking else warn_prelude
 
-        runpaths = get_runpaths(path)
+        try:
+            runpaths = get_runpaths(path)
+        except:
+            print_msg(errors, '{}: pyldd.py failed to process'.format(warn_prelude))
+            continue
         if len(runpaths):
             print_msg(errors, '{}: runpaths {} found in {}'.format(msg_prelude,
                                                                    runpaths,
