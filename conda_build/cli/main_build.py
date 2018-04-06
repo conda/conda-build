@@ -73,7 +73,7 @@ different sets of packages."""
         '-t', "--test",
         action="store_true",
         help="Test package (assumes package is already built).  RECIPE_DIR argument can be either "
-        "recipe directory, in which case source download may be necessary to resolve package"
+        "recipe directory, in which case source download may be necessary to resolve package "
         "version, or path to built package .tar.bz2 file, in which case no source is necessary.",
     )
     p.add_argument(
@@ -103,7 +103,7 @@ different sets of packages."""
     p.add_argument(
         '--skip-existing',
         action='store_true',
-        help=("Skip recipes for which there already exists an existing build"
+        help=("Skip recipes for which there already exists an existing build "
               "(locally or in the channels)."),
         default=cc_conda_build.get('skip_existing', 'false').lower() == 'true',
     )
@@ -111,7 +111,7 @@ different sets of packages."""
         '--keep-old-work',
         action='store_true',
         dest='keep_old_work',
-        help="Do not remove anything from environment, even after successful"
+        help="Do not remove anything from environment, even after successful "
              "build and test."
     )
     p.add_argument(
@@ -237,26 +237,26 @@ different sets of packages."""
     )
     p.add_argument(
         "--no-locking", dest='locking', default=True, action="store_false",
-        help=("Disable locking, to avoid unresolved race condition issues.  Unsafe to run multiple"
+        help=("Disable locking, to avoid unresolved race condition issues.  Unsafe to run multiple "
               "builds at once on one system with this set.")
     )
     p.add_argument(
         "--no-remove-work-dir", dest='remove_work_dir', default=True, action="store_false",
         help=("Disable removal of the work dir before testing.  Be careful using this option, as"
-              " you package may depend on files that are not included in the package, and may pass"
+              " you package may depend on files that are not included in the package, and may pass "
               "tests, but ultimately fail on installed systems.")
     )
     p.add_argument(
         "--error-overlinking", dest='error_overlinking', action="store_true",
-        help=("Enable error when shared libraries from transitive dependencies are directly"
-              "linked to any executables or shared libraries in built packages.  This is disabled"
+        help=("Enable error when shared libraries from transitive dependencies are directly "
+              "linked to any executables or shared libraries in built packages.  This is disabled "
               "by default, but will be enabled by default in conda-build 4.0."),
         default=cc_conda_build.get('error_overlinking', 'false').lower() == 'true',
     )
     p.add_argument(
         "--no-error-overlinking", dest='error_overlinking', action="store_false",
-        help=("Disable error when shared libraries from transitive dependencies are directly"
-              "linked to any executables or shared libraries in built packages.  This is currently"
+        help=("Disable error when shared libraries from transitive dependencies are directly "
+              "linked to any executables or shared libraries in built packages.  This is currently "
               "the default behavior, but will change in conda-build 4.0."),
         default=cc_conda_build.get('error_overlinking', 'false').lower() == 'true',
     )
