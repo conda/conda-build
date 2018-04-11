@@ -320,14 +320,14 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
             if noarch_python:
                 ordered_recipe['build']['noarch'] = 'python'
 
-            ordered_recipe['build']['script'] = 'python setup.py install ' + ' '.join(setup_options)
-            if any(re.match(r'^setuptools(?:\s|$)', req) for req in d['build_depends']):
-                ordered_recipe['build']['script'] += ('--single-version-externally-managed '
-                                                      '--record=record.txt')
+            pip_opts = ['--no-deps', '--ignore-installed']
+            options = pip_opts + list(setup_options)
+            ordered_recipe['build']['script'] = 'python -m pip install . ' + ' '.join(options)
 
-            # Always require python as a dependency
+            # Always require python and pip as a dependency
             ordered_recipe['requirements'] = ruamel_yaml.comments.CommentedMap()
-            ordered_recipe['requirements']['host'] = ['python'] + ensure_list(d['build_depends'])
+            deps = ['python', 'pip']
+            ordered_recipe['requirements']['host'] = deps + ensure_list(d['build_depends'])
             ordered_recipe['requirements']['run'] = ['python'] + ensure_list(d['run_depends'])
 
             if d['import_tests']:
