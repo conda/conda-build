@@ -522,7 +522,7 @@ def find_used_variables_in_text(variant, recipe_text):
     used_variables = set()
     for v in variant:
         variant_regex = r"(\{\{\s*(?:pin_\w+\(\s*['\"]+)?%s(?:[^\}]+)\}\})" % v
-        selector_regex = r"\#?\s\[(?:.*?[^_\w\d])?(%s)[^_\w\d]$" % v
+        selector_regex = r"\#?\s\[.*?((?<![_\w\d])%s)[=\s<>!\]]" % v
         conditional_regex = r"(.*?\{%\s*(?:el)?if\s*" + v + r"\s*(?:.*?)?%\})"
         requirement_regex = r"(\-\s+%s(?:\s+[\[#]|$))" % v.replace('_', '[-_]')
         all_res = [variant_regex, selector_regex, conditional_regex, requirement_regex]
