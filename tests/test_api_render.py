@@ -204,3 +204,9 @@ def test_run_exports_with_pin_compatible_in_subpackages(testing_config):
             run_exports = set(m.meta.get('build', {}).get('run_exports', {}).get('strong', []))
             assert len(run_exports) == 1
             assert all(len(export.split()) > 1 for export in run_exports), run_exports
+
+
+def test_ignore_build_only_deps(testing_config):
+    ms = api.render(os.path.join(thisdir, 'test-recipes', 'variants', 'python_in_build_only'),
+                bypass_env_check=True, finalize=False)
+    assert len(ms) == 1

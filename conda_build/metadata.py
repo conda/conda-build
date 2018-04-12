@@ -1974,19 +1974,29 @@ class MetaData(object):
         # filter out things that occur only in run requirements.  These don't actually affect the
         #     outcome of the package.
         output_reqs = utils.expand_reqs(self.meta.get('requirements', {}))
-        build_reqs = (ensure_list(output_reqs.get('build', [])) +
-                      ensure_list(output_reqs.get('host', [])))
+        build_reqs = ensure_list(output_reqs.get('build', []))
+        host_reqs = ensure_list(output_reqs.get('host', []))
         run_reqs = output_reqs.get('run', [])
         build_reqs = {req.split()[0].replace('-', '_') for req in build_reqs if req}
+        host_reqs = {req.split()[0].replace('-', '_') for req in host_reqs if req}
 
         # things can be used as dependencies or elsewhere in the recipe.  If it's only used
         #    elsewhere, keep it. If it's a dep-related thing, only keep it if
         #    it's in the build deps.
         to_remove = set()
+        ignore_build_only_deps = ensure_list(self.config.variant.get('ignore_build_only_deps', []))
         for dep in requirements_only_used:
             # filter out stuff that's only in run deps
             if dep in run_reqs:
-                if dep not in build_reqs and dep in requirements_only_used:
+                if (dep not in build_reqs and
+                        dep not in host_reqs and
+                        dep in requirements_only_used):
+                    to_remove.add(dep)
+            else:
+                if (dep in build_reqs and
+                        dep not in host_reqs and
+                        dep in requirements_only_used and
+                        dep in ignore_build_only_deps):
                     to_remove.add(dep)
         requirements_only_used -= to_remove
         return outside_reqs_used | requirements_only_used
