@@ -1,3 +1,24 @@
+2018-04-16 3.8.1:
+
+Bug fixes:
+----------
+
+* fix shebang rewriting so that it only touches python[w]? shebangs  #2786
+* fix a regression in ignoring python as a build-only dep being "used" and becoming a loop var #2799
+* improve config log warning  #2801
+* skip, but warn about failures in pyldd  #2802
+* fix whitespace in multi-line help strings  #2808
+* fix variables in compound selectors not getting detected as "used"  #2814
+
+Contributors:
+-------------
+
+* @bjlittle
+* @jbcrail
+* @mingwandroid
+* @msarahan
+
+
 2018-03-30 3.8.0:
 
 Enhancements:
