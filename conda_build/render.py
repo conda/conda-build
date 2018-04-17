@@ -650,14 +650,6 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
             m.config.variant = m.config.variants[0]
         rendered_metadata = [(m, False, False), ]
     else:
-        index, index_ts = get_build_index(m.config.build_subdir,
-                                          bldpkgs_dir=m.config.bldpkgs_dir,
-                                          output_folder=m.config.output_folder,
-                                          channel_urls=m.config.channel_urls,
-                                          omit_defaults=m.config.override_channels,
-                                          debug=m.config.debug, verbose=m.config.verbose,
-                                          locking=m.config.locking, timeout=m.config.timeout)
-
         # merge any passed-in variants with any files found
         variants = get_package_variants(m, variants=variants)
 
