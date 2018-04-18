@@ -635,8 +635,8 @@ unxz is required to unarchive .xz source files.
         sys.exit("""\
 tarball contains unsafe path: 
 """ + member.name)
-      members[i]=member 
- 
+      members[i]=member
+
     if not PY3:
         t.extractall(path=dir_path.encode(codec))
     else:
