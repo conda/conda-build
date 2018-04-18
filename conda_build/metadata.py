@@ -216,7 +216,7 @@ def yamlize(data):
 def ensure_valid_fields(meta):
     pin_depends = meta.get('build', {}).get('pin_depends', '')
     if pin_depends and pin_depends not in ('', 'record', 'strict'):
-        raise RuntimeError("build/pin_depends must be 'record' or 'strict' - "
+        raise RuntimeError("Error: build/pin_depends must be 'record' or 'strict' - "
                            "not '%s'" % pin_depends)
 
 
@@ -253,7 +253,7 @@ def ensure_valid_noarch_value(meta):
     except KeyError:
         return
     if build_noarch.lower() == 'none':
-        raise exceptions.CondaBuildException("Invalid value for noarch: %s" % build_noarch)
+        raise exceptions.CondaBuildException("Error: Invalid value for noarch: %s" % build_noarch)
 
 
 def _get_all_dependencies(metadata, envs=('host', 'build', 'run')):
@@ -306,7 +306,7 @@ def ensure_matching_hashes(output_metadata):
         error = ""
         for prob in problemos:
             error += "Mismatching package: {}; consumer package: {}\n".format(*prob)
-        raise exceptions.RecipeError("Mismatching hashes in recipe. Exact pins in dependencies "
+        raise exceptions.RecipeError("Error: Mismatching hashes in recipe. Exact pins in dependencies "
                                      "that contribute to the hash often cause this. Can you "
                                      "change one or more exact pins to version bound constraints?\n"
                                      "Involved packages were:\n" + error)
@@ -328,11 +328,11 @@ def parse(data, config, path=None):
         if field == 'source':
             if not (isinstance(res[field], dict) or (hasattr(res[field], '__iter__') and not
                         isinstance(res[field], string_types))):
-                raise RuntimeError("The %s field should be a dict or list of dicts, not "
+                raise RuntimeError("Error: The %s field should be a dict or list of dicts, not "
                                    "%s in file %s." % (field, res[field].__class__.__name__, path))
         else:
             if not isinstance(res[field], dict):
-                raise RuntimeError("The %s field should be a dict, not %s in file %s." %
+                raise RuntimeError("Error: The %s field should be a dict, not %s in file %s." %
                                 (field, res[field].__class__.__name__, path))
 
     ensure_valid_fields(res)
@@ -881,7 +881,7 @@ class MetaData(object):
         keys = 'requirements/build', 'requirements/run', 'test/requires'
         for key in keys:
             if any(hasattr(item, 'keys') for item in self.get_value(key)):
-                raise ValueError("Dictionaries are not supported as values in requirements sections"
+                raise ValueError("Error: Dictionaries are not supported as values in requirements sections"
                                  ".  Note that pip requirements as used in conda-env "
                                  "environment.yml files are not supported by conda-build.")
 
@@ -1018,10 +1018,10 @@ class MetaData(object):
             if section == 'extra':
                 continue
             if section not in FIELDS:
-                raise ValueError("unknown section: %s" % section)
+                raise ValueError("Error: unknown section: %s" % section)
             for key in submeta:
                 if key not in FIELDS[section]:
-                    raise ValueError("in section %r: unknown key %r" %
+                    raise ValueError("Error: in section %r: unknown key %r" %
                              (section, key))
         return True
 
@@ -1041,7 +1041,7 @@ class MetaData(object):
             sys.exit("Error: package/version missing in: %r" % self.meta_path)
         check_bad_chrs(res, 'package/version')
         if self.final and res.startswith('.'):
-            raise ValueError("Fully-rendered version can't start with period -  got %s", res)
+            raise ValueError("Error: Fully-rendered version can't start with period -  got %s", res)
         return res
 
     def build_number(self):
@@ -1082,12 +1082,12 @@ class MetaData(object):
             try:
                 ms = MatchSpec(spec)
             except AssertionError:
-                raise RuntimeError("Invalid package specification: %r" % spec)
+                raise RuntimeError("Error: Invalid package specification: %r" % spec)
             except (AttributeError, ValueError):
-                raise RuntimeError("Received dictionary as spec.  Note that pip requirements are "
+                raise RuntimeError("Error: Received dictionary as spec.  Note that pip requirements are "
                                    "not supported in conda-build meta.yaml.")
             if ms.name == self.name():
-                raise RuntimeError("%s cannot depend on itself" % self.name())
+                raise RuntimeError("Error: %s cannot depend on itself" % self.name())
             for name, ver in name_ver_list:
                 if ms.name == name:
                     if self.noarch:
@@ -1276,28 +1276,28 @@ class MetaData(object):
     def has_prefix_files(self):
         ret = ensure_list(self.get_value('build/has_prefix_files', []))
         if not isinstance(ret, list):
-            raise RuntimeError('build/has_prefix_files should be a list of paths')
+            raise RuntimeError('Error: build/has_prefix_files should be a list of paths')
         if sys.platform == 'win32':
             if any('\\' in i for i in ret):
-                raise RuntimeError("build/has_prefix_files paths must use / "
+                raise RuntimeError("Error: build/has_prefix_files paths must use / "
                                    "as the path delimiter on Windows")
         return expand_globs(ret, self.config.host_prefix)
 
     def ignore_prefix_files(self):
         ret = self.get_value('build/ignore_prefix_files', False)
         if type(ret) not in (list, bool):
-            raise RuntimeError('build/ignore_prefix_files should be boolean or a list of paths '
+            raise RuntimeError('Error: build/ignore_prefix_files should be boolean or a list of paths '
                                '(optionally globs)')
         if sys.platform == 'win32':
             if type(ret) is list and any('\\' in i for i in ret):
-                raise RuntimeError("build/ignore_prefix_files paths must use / "
+                raise RuntimeError("Error: build/ignore_prefix_files paths must use / "
                                    "as the path delimiter on Windows")
         return expand_globs(ret, self.config.host_prefix) if type(ret) is list else ret
 
     def always_include_files(self):
         files = ensure_list(self.get_value('build/always_include_files', []))
         if any('\\' in i for i in files):
-            raise RuntimeError("build/always_include_files paths must use / "
+            raise RuntimeError("Error: build/always_include_files paths must use / "
                                 "as the path delimiter on Windows")
         if on_win:
             files = [f.replace("/", "\\") for f in files]
@@ -1307,11 +1307,11 @@ class MetaData(object):
     def binary_relocation(self):
         ret = self.get_value('build/binary_relocation', True)
         if type(ret) not in (list, bool):
-            raise RuntimeError('build/ignore_prefix_files should be boolean or a list of paths '
+            raise RuntimeError('Error: build/ignore_prefix_files should be boolean or a list of paths '
                                '(optionally globs)')
         if sys.platform == 'win32':
             if type(ret) is list and any('\\' in i for i in ret):
-                raise RuntimeError("build/ignore_prefix_files paths must use / "
+                raise RuntimeError("Error: build/ignore_prefix_files paths must use / "
                                    "as the path delimiter on Windows")
         return expand_globs(ret, self.config.host_prefix) if type(ret) is list else ret
 
@@ -1321,10 +1321,10 @@ class MetaData(object):
     def binary_has_prefix_files(self):
         ret = ensure_list(self.get_value('build/binary_has_prefix_files', []))
         if not isinstance(ret, list):
-            raise RuntimeError('build/binary_has_prefix_files should be a list of paths')
+            raise RuntimeError('Error: build/binary_has_prefix_files should be a list of paths')
         if sys.platform == 'win32':
             if any('\\' in i for i in ret):
-                raise RuntimeError("build/binary_has_prefix_files paths must use / "
+                raise RuntimeError("Error: build/binary_has_prefix_files paths must use / "
                                    "as the path delimiter on Windows")
         return expand_globs(ret, self.config.host_prefix)
 
@@ -1609,7 +1609,7 @@ class MetaData(object):
 
     def validate_features(self):
         if any('-' in feature for feature in ensure_list(self.get_value('build/features'))):
-            raise ValueError("- is a disallowed character in features.  Please change this "
+            raise ValueError("Error: '-' is a disallowed character in features.  Please change this "
                              "character in your recipe.")
 
     def copy(self):
