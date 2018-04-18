@@ -627,13 +627,17 @@ unxz is required to unarchive .xz source files.
     t = tarfile.open(tarball, mode)
     members = t.getmembers()
     for i in range(len(members)):
-      name = members[i].name
-      if os.path.isabs(name):
-        members[i].name = os.path.relpath(name, '/')
+      if os.path.isabs(members[i].name):
+        members[i].name = os.path.relpath(members[i].name, '/')
+      if not os.path.realpath(members[i].name).startswith(os.getcwd()):
+        members[i].name=members[i].name.replace("../","")
+      
+      # check we have not still got a file to be created outside cwd
+      # and bail if this is the case
       if not os.path.realpath(members[i].name).startswith(os.getcwd()):
         sys.exit("""\
-tarball contains unsafe path
-""")
+tarball contains unsafe path: 
+""" + members[i].name)
         
     if not PY3:
         t.extractall(path=dir_path.encode(codec))
