@@ -1,0 +1,7 @@
+package:
+  name: test_upstream_with_downstream_tests
+  version: 1.0
+
+test:
+  downstreams:
+    - test_downstream_with_test_fail

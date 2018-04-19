@@ -173,18 +173,24 @@ def _filter_run_exports(specs, ignore_list):
     return filtered_specs
 
 
-def find_pkg_dir_or_file_in_pkgs_dirs(pkg_dist, m):
+def find_pkg_dir_or_file_in_pkgs_dirs(pkg_dist, m, files_only=False):
     _pkgs_dirs = pkgs_dirs + list(m.config.bldpkgs_dirs)
     pkg_loc = None
     for pkgs_dir in _pkgs_dirs:
         pkg_dir = os.path.join(pkgs_dir, pkg_dist)
         pkg_file = os.path.join(pkgs_dir, pkg_dist + '.tar.bz2')
-        if os.path.isdir(pkg_dir):
+        if not files_only and os.path.isdir(pkg_dir):
             pkg_loc = pkg_dir
             break
         elif os.path.isfile(pkg_file):
             pkg_loc = pkg_file
             break
+        elif files_only and os.path.isdir(pkg_dir):
+            pkg_loc = pkg_file
+            # create the tarball on demand.  This is so that testing on archives works.
+            with tarfile.open(pkg_file, 'w:bz2') as archive:
+                for entry in os.listdir(pkg_dir):
+                    archive.add(entry, arcname=os.path.relpath(entry, pkg_dir))
     return pkg_loc
 
 
@@ -213,41 +219,45 @@ def _read_specs_from_package(pkg_loc, pkg_dist):
     return specs
 
 
-def get_upstream_pins(m, actions, env):
-    """Download packages from specs, then inspect each downloaded package for additional
-    downstream dependency specs.  Return these additional specs."""
-
-    env_specs = m.meta.get('requirements', {}).get(env, [])
-    explicit_specs = [req.split(' ')[0] for req in env_specs] if env_specs else []
-    linked_packages = actions.get('LINK', [])
-    linked_packages = [pkg for pkg in linked_packages if pkg.name in explicit_specs]
-
-    # edit the plan to download all necessary packages
-    for key in ('LINK', 'EXTRACT', 'UNLINK'):
-        if key in actions:
-            del actions[key]
-    # this should be just downloading packages.  We don't need to extract them -
-    #    we read contents directly
-
+def execute_download_actions(m, actions, env, package_subset=None, require_files=False):
     index, index_ts = get_build_index(getattr(m.config, '{}_subdir'.format(env)),
                                       bldpkgs_dir=m.config.bldpkgs_dir,
                                       output_folder=m.config.output_folder,
                                       channel_urls=m.config.channel_urls,
                                       debug=m.config.debug, verbose=m.config.verbose,
                                       locking=m.config.locking, timeout=m.config.timeout)
+
+    # this should be just downloading packages.  We don't need to extract them -
+    #    we read contents directly
     if 'FETCH' in actions or 'EXTRACT' in actions:
         # this is to force the download
         execute_actions(actions, index, verbose=m.config.debug)
-    ignore_list = utils.ensure_list(m.get_value('build/ignore_run_exports'))
 
-    additional_specs = {}
-    for pkg in linked_packages:
+    pkg_files = {}
+
+    packages = actions.get('LINK', [])
+    package_subset = utils.ensure_list(package_subset)
+    selected_packages = set()
+    if package_subset:
+        for pkg in package_subset:
+            if hasattr(pkg, 'name'):
+                if pkg in packages:
+                    selected_packages.add(pkg.name)
+            else:
+                pkg_name = pkg.split()[0]
+                for link_pkg in packages:
+                    if pkg_name == link_pkg.name:
+                        selected_packages.add(link_pkg)
+                        break
+        packages = selected_packages
+
+    for pkg in packages:
         if hasattr(pkg, 'dist_name'):
             pkg_dist = pkg.dist_name
         else:
             pkg = strip_channel(pkg)
             pkg_dist = pkg.split(' ')[0]
-        pkg_loc = find_pkg_dir_or_file_in_pkgs_dirs(pkg_dist, m)
+        pkg_loc = find_pkg_dir_or_file_in_pkgs_dirs(pkg_dist, m, files_only=require_files)
 
         # ran through all pkgs_dirs, and did not find package or folder.  Download it.
         # TODO: this is a vile hack reaching into conda's internals. Replace with
@@ -267,9 +277,33 @@ def get_upstream_pins(m, actions, env):
                 if os.path.isfile(_loc):
                     pkg_loc = _loc
                     break
+        pkg_files[pkg] = pkg_loc, pkg_dist
 
-        specs = _read_specs_from_package(pkg_loc, pkg_dist)
+    return pkg_files
 
+
+def get_upstream_pins(m, actions, env):
+    """Download packages from specs, then inspect each downloaded package for additional
+    downstream dependency specs.  Return these additional specs."""
+
+    env_specs = m.meta.get('requirements', {}).get(env, [])
+    explicit_specs = [req.split(' ')[0] for req in env_specs] if env_specs else []
+    linked_packages = actions.get('LINK', [])
+    linked_packages = [pkg for pkg in linked_packages if pkg.name in explicit_specs]
+
+    # edit the plan to download all necessary packages
+    for key in ('LINK', 'EXTRACT', 'UNLINK'):
+        if key in actions:
+            del actions[key]
+
+    pkg_locs_and_dists = execute_download_actions(m, actions, env=env,
+                                                  package_subset=linked_packages)
+
+    ignore_list = utils.ensure_list(m.get_value('build/ignore_run_exports'))
+
+    additional_specs = {}
+    for pkg, (loc, dist) in pkg_locs_and_dists.items():
+        specs = _read_specs_from_package(loc, dist)
         additional_specs = utils.merge_dicts_of_lists(additional_specs,
                                                       _filter_run_exports(specs, ignore_list))
     return additional_specs
