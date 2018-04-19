@@ -1647,9 +1647,20 @@ def _construct_metadata_for_test_from_package(package, config):
             is_channel = True
 
     if not is_channel:
-        raise ValueError("Your package must reside in a channel structure with "
-                         "platform-subfolders.  See more info at what a valid channel is "
-                         "at https://conda.io/docs/user-guide/tasks/create-custom-channels.html")
+        log.warn("Copying package to conda-build croot.  No packages otherwise alongside yours will"
+                 " be available unless you specify -c local.  To avoid this warning, your package "
+                 "must reside in a channel structure with platform-subfolders.  See more info on "
+                 "what a valid channel is at "
+                 "https://conda.io/docs/user-guide/tasks/create-custom-channels.html")
+
+        local_dir = os.path.join(config.croot, config.host_subdir)
+        try:
+            os.makedirs(local_dir)
+        except:
+            pass
+        local_pkg_location = os.path.join(local_dir, os.path.basename(package))
+        utils.copy_into(package, local_pkg_location)
+        local_pkg_location = local_dir
 
     # get channel url
     local_channel = os.path.dirname(local_pkg_location)

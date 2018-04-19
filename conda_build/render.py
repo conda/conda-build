@@ -12,8 +12,9 @@ import os
 from os.path import isdir, isfile, abspath
 import random
 import re
-import subprocess
+import shutil
 import string
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -191,6 +192,9 @@ def find_pkg_dir_or_file_in_pkgs_dirs(pkg_dist, m, files_only=False):
             with tarfile.open(pkg_file, 'w:bz2') as archive:
                 for entry in os.listdir(pkg_dir):
                     archive.add(entry, arcname=os.path.relpath(entry, pkg_dir))
+            pkg_subdir = os.path.join(m.config.croot, m.config.host_subdir)
+            pkg_loc = os.path.join(pkg_subdir, os.path.basename(pkg_file))
+            shutil.move(pkg_file, pkg_loc)
     return pkg_loc
 
 
@@ -242,7 +246,7 @@ def execute_download_actions(m, actions, env, package_subset=None, require_files
         for pkg in package_subset:
             if hasattr(pkg, 'name'):
                 if pkg in packages:
-                    selected_packages.add(pkg.name)
+                    selected_packages.add(pkg)
             else:
                 pkg_name = pkg.split()[0]
                 for link_pkg in packages:
@@ -264,9 +268,10 @@ def execute_download_actions(m, actions, env, package_subset=None, require_files
         #    proper conda API when available.
         if not pkg_loc and conda_43:
             try:
+                pkg_record = [_ for _ in index if _.dist_name == pkg_dist][0]
                 # the conda 4.4 API uses a single `link_prefs` kwarg
                 # whereas conda 4.3 used `index` and `link_dists` kwargs
-                pfe = ProgressiveFetchExtract(link_prefs=(index[pkg],))
+                pfe = ProgressiveFetchExtract(link_prefs=(index[pkg_record],))
             except TypeError:
                 # TypeError: __init__() got an unexpected keyword argument 'link_prefs'
                 pfe = ProgressiveFetchExtract(link_dists=[pkg], index=index)
@@ -291,18 +296,13 @@ def get_upstream_pins(m, actions, env):
     linked_packages = actions.get('LINK', [])
     linked_packages = [pkg for pkg in linked_packages if pkg.name in explicit_specs]
 
-    # edit the plan to download all necessary packages
-    for key in ('LINK', 'EXTRACT', 'UNLINK'):
-        if key in actions:
-            del actions[key]
-
     pkg_locs_and_dists = execute_download_actions(m, actions, env=env,
                                                   package_subset=linked_packages)
 
     ignore_list = utils.ensure_list(m.get_value('build/ignore_run_exports'))
 
     additional_specs = {}
-    for pkg, (loc, dist) in pkg_locs_and_dists.items():
+    for (loc, dist) in pkg_locs_and_dists.values():
         specs = _read_specs_from_package(loc, dist)
         additional_specs = utils.merge_dicts_of_lists(additional_specs,
                                                       _filter_run_exports(specs, ignore_list))
