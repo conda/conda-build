@@ -1401,7 +1401,7 @@ def merge_or_update_dict(base, new, path, merge, raise_on_clobber=False):
                 if base_value and base_value != value:
                     base_value.extend(value)
                 try:
-                    base[key] = list(set(base_value))
+                    base[key] = list(base_value)
                 except TypeError:
                     base[key] = base_value
             else:
