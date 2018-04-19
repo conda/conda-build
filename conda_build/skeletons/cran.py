@@ -855,7 +855,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     # We may need to inspect the file later to determine which compilers are needed.
                     cached_path, _ = source.download_to_cache(config.src_cache, '',
                                                     dict({'url': package_url,
-                                                            'fn': archive_type + '-' + filename}))
+                                                           'fn': archive_type + '-' + filename}))
                 available_details = {}
                 available_details['selector'] = archive_details['selector']
                 if cached_path:
@@ -863,7 +863,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     available_details['filename'] = filename
                     available_details['contrib_url'] = contrib_url
                     available_details['contrib_url_rendered'] = contrib_url_rendered
-                    available_details['package_url'] = package_url
+                    available_details['cranurl'] = package_url
                     available_details['hash_entry'] = 'sha256: {}'.format(sha256.hexdigest())
                     available_details['cached_path'] = cached_path
                 # This is rubbish; d[] should be renamed global[] and should be
