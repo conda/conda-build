@@ -604,7 +604,6 @@ def relative(f, d='lib'):
         f.pop(0)
     return '/'.join(((['..'] * len(f)) if f else ['.']) + d)
 
-
 def tar_xf(tarball, dir_path, mode='r:*'):
     if tarball.lower().endswith('.tar.z'):
         uncompress = external.find_executable('uncompress')
@@ -626,6 +625,18 @@ unxz is required to unarchive .xz source files.
         check_call_env([unxz, '-f', '-k', tarball])
         tarball = tarball[:-3]
     t = tarfile.open(tarball, mode)
+    members = t.getmembers()
+    for i,member in enumerate(members,0):
+      if os.path.isabs(member.name):
+        member.name = os.path.relpath(member.name, '/')
+      if not os.path.realpath(member.name).startswith(os.getcwd()):
+        member.name=member.name.replace("../","")
+      if not os.path.realpath(member.name).startswith(os.getcwd()):
+        sys.exit("""\
+tarball contains unsafe path: 
+""" + member.name)
+      members[i]=member
+
     if not PY3:
         t.extractall(path=dir_path.encode(codec))
     else:
