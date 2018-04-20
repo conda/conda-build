@@ -10,9 +10,11 @@ import io
 import json
 import os
 from os.path import isdir, isfile, islink, join, dirname
+import random
 import re
 import shutil
 import stat
+import string
 import subprocess
 import sys
 import tarfile
@@ -51,7 +53,7 @@ from conda_build import environ, source, tarcheck, utils
 from conda_build.index import get_build_index, update_index
 from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse, finalize_metadata,
                                 distribute_variants, expand_outputs, try_download,
-                                add_upstream_pins)
+                                add_upstream_pins, execute_download_actions)
 import conda_build.os_utils.external as external
 from conda_build.metadata import FIELDS, MetaData
 from conda_build.post import (post_process, post_build,
@@ -1645,9 +1647,20 @@ def _construct_metadata_for_test_from_package(package, config):
             is_channel = True
 
     if not is_channel:
-        raise ValueError("Your package must reside in a channel structure with "
-                         "platform-subfolders.  See more info at what a valid channel is "
-                         "at https://conda.io/docs/user-guide/tasks/create-custom-channels.html")
+        log.warn("Copying package to conda-build croot.  No packages otherwise alongside yours will"
+                 " be available unless you specify -c local.  To avoid this warning, your package "
+                 "must reside in a channel structure with platform-subfolders.  See more info on "
+                 "what a valid channel is at "
+                 "https://conda.io/docs/user-guide/tasks/create-custom-channels.html")
+
+        local_dir = os.path.join(config.croot, config.host_subdir)
+        try:
+            os.makedirs(local_dir)
+        except:
+            pass
+        local_pkg_location = os.path.join(local_dir, os.path.basename(package))
+        utils.copy_into(package, local_pkg_location)
+        local_pkg_location = local_dir
 
     # get channel url
     local_channel = os.path.dirname(local_pkg_location)
@@ -2093,7 +2106,6 @@ def build_tree(recipe_list, config, stats, build_only=False, post=False, notest=
                     utils.rm_rf(metadata.config.host_prefix)
                     utils.rm_rf(metadata.config.build_prefix)
                     utils.rm_rf(metadata.config.test_prefix)
-
                 if metadata.name() not in metadata.config.build_folder:
                     metadata.config.compute_build_id(metadata.name(), reset=True)
 
@@ -2109,6 +2121,37 @@ def build_tree(recipe_list, config, stats, build_only=False, post=False, notest=
                         if pkg.endswith('.tar.bz2'):
                             # we only know how to test conda packages
                             test(pkg, config=metadata.config, stats=stats)
+                        _, meta = dict_and_meta
+                        downstreams = meta.meta.get('test', {}).get('downstreams')
+                        if downstreams:
+                            # downstreams can be a dict, for adding capability for worker labels
+                            if hasattr(downstreams, 'keys'):
+                                downstreams = list(downstreams.keys())
+                                log = utils.get_logger(__name__)
+                                log.warn("Dictionary keys for downstreams are being "
+                                         "ignored right now.  Coming soon...")
+                            else:
+                                downstreams = utils.ensure_list(downstreams)
+                            for dep in downstreams:
+                                # resolve downstream packages to a known package
+                                random_string = ''.join(random.choice(
+                                    string.ascii_uppercase + string.digits) for _ in range(10))
+                                specs = meta.ms_depends('run') + [MatchSpec(dep),
+                                                        MatchSpec(meta.dist().replace('-', ' '))]
+                                with TemporaryDirectory(prefix="_", suffix=random_string) as tmpdir:
+                                    actions = environ.get_install_actions(
+                                        tmpdir, specs, env='run',
+                                        subdir=meta.config.host_subdir,
+                                        bldpkgs_dirs=meta.config.bldpkgs_dirs)
+                                # make sure to download that package to the local cache if not there
+                                local_file = execute_download_actions(meta, actions, 'host',
+                                                                      package_subset=dep,
+                                                                      require_files=True)
+                                # test that package, using the local channel so that our new
+                                #    upstream dep gets used
+                                test(list(local_file.values())[0][0],
+                                     config=metadata.config, stats=stats)
+
                         built_packages.update({pkg: dict_and_meta})
                 else:
                     built_packages.update(packages_from_this)

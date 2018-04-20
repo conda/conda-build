@@ -1243,3 +1243,11 @@ def test_empty_package_with_python_and_compiler_in_build_barfs(testing_config):
     recipe = os.path.join(metadata_dir, '_compiler_python_build_section')
     with pytest.raises(CondaBuildException):
         api.build(recipe, config=testing_config)
+
+
+def test_downstream_tests(testing_config):
+    upstream = os.path.join(metadata_dir, '_test_downstreams/upstream')
+    downstream = os.path.join(metadata_dir, '_test_downstreams/downstream')
+    api.build(downstream, config=testing_config, notest=True)
+    with pytest.raises(SystemExit):
+        api.build(upstream, config=testing_config)
