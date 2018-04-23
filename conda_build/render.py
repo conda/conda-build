@@ -366,8 +366,8 @@ def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
 
 class _Constraint(object):
     def __init__(self, lower_bound=None, upper_bound=None, exact=None):
-        self.lower_bound = lower_bound
-        self.upper_bound = upper_bound
+        self.lower_bound = VersionOrder(lower_bound) if lower_bound else None
+        self.upper_bound = VersionOrder(upper_bound) if upper_bound else None
         self.exact = exact
 
     def __str__(self):
@@ -398,6 +398,15 @@ def _minimize_constraints(one, two):
     return _Constraint(lower_bound=lower_bound, upper_bound=upper_bound, exact=exact)
 
 
+def _translate_equal_or_star_to_bounded(spec_text):
+    version = re.search(r'(?:==)([\w\.]+)|([\w\.]+)(?:\*)', spec_text)
+    if version:
+        version = version.group(1) if version.group(1) else version.group(2)
+        spec_text = version.rstrip('.')
+        spec_text = utils.apply_pin_expressions(spec_text, max_pin='x.x.x.x.x.x.x.x.x.x.x')
+    return spec_text
+
+
 def _simplify_to_tightest_constraint(metadata):
     requirements = metadata.meta.get('requirements', {})
     default_constraint = _Constraint(None, None, None)
@@ -406,23 +415,24 @@ def _simplify_to_tightest_constraint(metadata):
         deps = requirements.get(section, [])
         deps_dict = defaultdict(_Constraint)
         for dep in deps:
-            spec_parts = dep.split(' ')
+            spec_parts = utils.ensure_valid_spec(dep).split()
             name = spec_parts[0]
             if len(spec_parts) == 1:
                 constraint = _Constraint(None, None, None)
             elif len(spec_parts) == 3:
                 constraint = _Constraint(None, None, " ".join(spec_parts[1:]))
             else:
-                lower_bound = re.search(r'>=?(.*?(?=,|\Z))', spec_parts[1])
+                version_spec = _translate_equal_or_star_to_bounded(spec_parts[1])
+                lower_bound = re.search(r'>=?(.*?(?=,|\Z))', version_spec)
                 if lower_bound:
                     lower_bound = lower_bound.group(1)
-                upper_bound = re.search(r'<=?(.*?(?=,|\Z))', spec_parts[1])
+                upper_bound = re.search(r'<=?(.*?(?=,|\Z))', version_spec)
                 if upper_bound:
                     upper_bound = upper_bound.group(1)
                 constraint = _Constraint(lower_bound, upper_bound, None)
             deps_dict[name] = _minimize_constraints(deps_dict.get(name, default_constraint),
                                                     constraint)
-        requirements[section] = [' '.join((spec, str(constraint))) for spec, constraint in
+        requirements[section] = [' '.join((spec, str(constraint))).rstrip() for spec, constraint in
                                           deps_dict.items()]
     if requirements:
         metadata.meta['requirements'] = requirements
