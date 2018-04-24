@@ -380,6 +380,7 @@ default_structs = {
     'test/source_files': list,
     'test/commands': list,
     'test/imports': list,
+    'test/downstreams': list,
     'package/version': text_type,
     'source/svn_rev': text_type,
     'source/git_tag': text_type,
@@ -473,7 +474,7 @@ FIELDS = {
     'requirements': {'build', 'host', 'run', 'conflicts', 'run_constrained'},
     'app': {'entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'},
-    'test': {'requires', 'commands', 'files', 'imports', 'source_files'},
+    'test': {'requires', 'commands', 'files', 'imports', 'source_files', 'downstreams'},
     'about': {'home', 'dev_url', 'doc_url', 'doc_source_url', 'license_url',  # these are URLs
               'license', 'summary', 'description', 'license_family',  # text
               'license_file', 'readme',  # paths in source tree
