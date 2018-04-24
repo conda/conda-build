@@ -333,8 +333,8 @@ def _get_zip_dict_of_lists(combined_variant, list_of_strings):
         length = len(ensure_list(combined_variant[used_keys[0]]))
         for key in used_keys:
             if not len(ensure_list(combined_variant[key])) == length:
-                raise ValueError("zip field {} ({}) length does not match zip field {} ({}) length.  All zip "
-                                 "fields within a group must be the same length."
+                raise ValueError("zip field {} ({}) length does not match zip field {} ({}) "
+                                 "length.  All zip fields within a group must be the same length."
                                  .format(used_keys[0], combined_variant[used_keys[0]],
                                          key, combined_variant[key]))
         values = list(zip(*[ensure_list(combined_variant[key]) for key in used_keys]))

@@ -27,7 +27,7 @@ except ImportError:
 
 from conda_build import source, metadata
 from conda_build.config import get_or_merge_config
-from conda_build.conda_interface import text_type, iteritems, TemporaryDirectory
+from conda_build.conda_interface import text_type, iteritems, TemporaryDirectory, cc_conda_build
 from conda_build.license_family import allowed_license_families, guess_license_family
 from conda_build.utils import rm_rf, ensure_list
 from conda_build.variants import get_package_variants
@@ -370,9 +370,9 @@ def add_parser(repos):
     )
     cran.add_argument(
         '-m', '--variant-config-files',
-        action="append",
-        help="""Additional variant config files to add.  These yaml files can contain
-        keys such as `cran_mirror`"""
+        default=cc_conda_build.get('skeleton_config_yaml', None),
+        help="""Variant config file to add.  These yaml files can contain
+        keys such as `cran_mirror`.  Only one can be provided here."""
     )
 
 
@@ -669,12 +669,11 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 variant_config_files=None):
 
     output_dir = realpath(output_dir)
-
     config = get_or_merge_config(config, variant_config_files=variant_config_files)
-    with TemporaryDirectory() as t:
-        _variant = get_package_variants(t, config)[0]
 
     if not cran_url:
+        with TemporaryDirectory() as t:
+            _variant = get_package_variants(t, config)[0]
         cran_url = ensure_list(_variant.get('cran_mirror', "https://cran.r-project.org"))[0]
 
     if len(in_packages) > 1 and version_compare:
