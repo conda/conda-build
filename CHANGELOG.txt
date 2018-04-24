@@ -1,3 +1,31 @@
+2018-04-24 3.9.0:
+
+Enhancements:
+-------------
+
+* Add new key in test section, ``downstreams`` that accepts a list of package specs to test after the current package is built  #2823
+* work to prevent unsafe paths in tarballs that would affect paths outside of the work dir  #2822
+* simplify all constraints for a given package name to a single constraint that represents the tightest combination of them all  #2694
+
+Bug fixes:
+----------
+
+* fix a misnamed cran skeleton key  #2817
+* Remove unused index command in rendering path  #2818
+* fix loss of ordering when using recipe_append  #2825
+* fix usage of dict for default pin_run_as_build data structure.  Losing ordering created noise down the line for Conda-Forge.  #2830
+* fix selector regex being too greedy; reporting wrong used vars  #2832
+
+Contributors:
+-------------
+
+* @ceball
+* @isuruf
+* @jamesabbott
+* @jdblischak
+* @mingwandroid
+* @msarahan
+
 2018-04-16 3.8.1:
 
 Bug fixes:
