@@ -304,7 +304,7 @@ def add_parser(repos):
     )
     cran.add_argument(
         "--cran-url",
-        default='https://cran.r-project.org/',
+        default='https://mran.microsoft.com/snapshot/2018-01-01/',
         help="URL to use for as source package repository",
     )
     cran.add_argument(
