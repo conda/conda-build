@@ -94,6 +94,7 @@ about:
   license: {license}
   {summary_comment}summary:{summary}
   license_family: {license_family}
+  {license_file}
 
 {extra_recipe_maintainers}
 
@@ -957,6 +958,18 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         # XXX: We should maybe normalize these
         d['license'] = cran_package.get("License", "None")
         d['license_family'] = guess_license_family(d['license'], allowed_license_families)
+
+        # Add license file
+        d['license_file'] = ''
+
+        license_file_template = 'license_file: \'{{ environ["PREFIX"] }}/lib/R/share/licenses/{}\''
+        if d['license'] == 'GPL-2':
+            d['license_file'] = license_file_template.format('GPL-2')
+
+        if d['license'] == 'GPL-3':
+            d['license_file'] = license_file_template.format('GPL-3')
+
+        #import ipdb; ipdb.set_trace()
 
         if 'License_is_FOSS' in cran_package:
             d['license'] += ' (FOSS)'
