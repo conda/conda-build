@@ -1256,6 +1256,7 @@ def up_to_date(cran_metadata, package):
 
     return True
 
+
 def get_license_file(license_text):
     '''
     Most R packages on CRAN do not include a license file. Instead, to avoid
@@ -1291,19 +1292,19 @@ license_file: '{{ environ["PREFIX"] }}/lib/R/share/licenses/{license}'  # [unix]
 '''
 
     if license_text in d_license['agpl3']:
-        license_file = license_file_template.format(license = 'AGPL-3')
+        license_file = license_file_template.format(license='AGPL-3')
     elif license_text in d_license['artistic2']:
-        license_file = license_file_template.format(license = 'Artistic-2.0')
+        license_file = license_file_template.format(license='Artistic-2.0')
     elif license_text in d_license['gpl2']:
-        license_file = license_file_template.format(license = 'GPL-2')
+        license_file = license_file_template.format(license='GPL-2')
     elif license_text in d_license['gpl3']:
-        license_file = license_file_template.format(license = 'GPL-3')
+        license_file = license_file_template.format(license='GPL-3')
     elif license_text in d_license['lgpl2']:
-        license_file = license_file_template.format(license = 'LGPL-2')
+        license_file = license_file_template.format(license='LGPL-2')
     elif license_text in d_license['lgpl21']:
-        license_file = license_file_template.format(license = 'LGPL-2.1')
+        license_file = license_file_template.format(license='LGPL-2.1')
     elif license_text in d_license['lgpl3']:
-        license_file = license_file_template.format(license = 'LGPL-3')
+        license_file = license_file_template.format(license='LGPL-3')
     else:
         license_file = ''
 
