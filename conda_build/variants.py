@@ -422,7 +422,7 @@ def list_of_dicts_to_dict_of_lists(list_of_dicts):
     """
     if not list_of_dicts:
         return
-    squished = {}
+    squished = OrderedDict()
     all_zip_keys = set()
     groups = None
     zip_key_groups = (list_of_dicts[0]['zip_keys'] if 'zip_keys' in list_of_dicts[0] and
@@ -441,7 +441,7 @@ def list_of_dicts_to_dict_of_lists(list_of_dicts):
             if k == 'zip_keys':
                 continue
             if hasattr(v, 'keys'):
-                existing_value = squished.get(k, {})
+                existing_value = squished.get(k, OrderedDict())
                 existing_value.update(v)
                 squished[k] = existing_value
             elif isinstance(v, list):
