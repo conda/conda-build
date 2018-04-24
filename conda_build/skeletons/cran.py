@@ -26,10 +26,11 @@ except ImportError:
     from yaml import SafeDumper
 
 from conda_build import source, metadata
-from conda_build.config import Config
-from conda_build.conda_interface import text_type, iteritems
+from conda_build.config import get_or_merge_config
+from conda_build.conda_interface import text_type, iteritems, TemporaryDirectory
 from conda_build.license_family import allowed_license_families, guess_license_family
-from conda_build.utils import rm_rf
+from conda_build.utils import rm_rf, ensure_list
+from conda_build.variants import get_package_variants
 
 SOURCE_META = """\
   {archive_keys}
@@ -260,6 +261,7 @@ def package_exists(package_name):
 
 
 def add_parser(repos):
+    # for loading default variant info
     cran = repos.add_parser(
         "cran",
         help="""
@@ -303,7 +305,6 @@ def add_parser(repos):
     )
     cran.add_argument(
         "--cran-url",
-        default='https://mran.microsoft.com/snapshot/2018-01-01/',
         help="URL to use for as source package repository",
     )
     cran.add_argument(
@@ -366,6 +367,12 @@ def add_parser(repos):
         across patches, and the `build/{number,script_env}` fields. When the version
         changes, both merge options reset `build/number` to 0. When the version does
         not change they either keep the old `build/number` or else increase it by one."""
+    )
+    cran.add_argument(
+        '-m', '--variant-config-files',
+        action="append",
+        help="""Additional variant config files to add.  These yaml files can contain
+        keys such as `cran_mirror`"""
     )
 
 
@@ -656,14 +663,19 @@ def package_to_inputs_dict(output_dir, output_suffix, git_tag, package):
 
 
 def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=None, version=None,
-                git_tag=None, cran_url="https://cran.r-project.org", recursive=False, archive=True,
+                git_tag=None, cran_url=None, recursive=False, archive=True,
                 version_compare=False, update_policy='', r_interp='r-base', use_binaries_ver=None,
-                use_noarch_generic=False, use_rtools_win=False, config=None):
+                use_noarch_generic=False, use_rtools_win=False, config=None,
+                variant_config_files=None):
 
     output_dir = realpath(output_dir)
 
-    if not config:
-        config = Config()
+    config = get_or_merge_config(config, variant_config_files=variant_config_files)
+    with TemporaryDirectory() as t:
+        _variant = get_package_variants(t, config)[0]
+
+    if not cran_url:
+        cran_url = ensure_list(_variant.get('cran_mirror', "https://cran.r-project.org"))[0]
 
     if len(in_packages) > 1 and version_compare:
         raise ValueError("--version-compare only works with one package at a time")

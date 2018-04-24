@@ -32,8 +32,6 @@ DEFAULT_VARIANTS = {
     'ignore_version': [],
     'ignore_build_only_deps': ['python'],
     'extend_keys': ['pin_run_as_build', 'ignore_version', 'ignore_build_only_deps'],
-    # We use MRAN here because they take snapshots which improves reproducibility.
-    'cran_mirror': 'https://mran.microsoft.com/snapshot/2018-01-01',
 }
 
 # map python version to default compiler on windows, to match upstream python
