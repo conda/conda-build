@@ -649,7 +649,7 @@ def get_output_dicts_from_metadata(metadata, outputs=None):
 
 
 def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
-                          permit_unsatisfiable_variants=False):
+                          permit_unsatisfiable_variants=False, bypass_env_check=False):
     from .render import finalize_metadata
     outputs = OrderedDict()
     # each of these outputs can have a different set of dependency versions from each other,
@@ -680,7 +680,11 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
             output_d = om.get_rendered_output(metadata.name()) or {'name': metadata.name()}
             om = om.get_output_metadata(output_d)
             base_metadata.append_parent_metadata(om)
-            fm = finalize_metadata(om, permit_unsatisfiable_variants=permit_unsatisfiable_variants)
+            if not bypass_env_check:
+                fm = finalize_metadata(om,
+                                       permit_unsatisfiable_variants=permit_unsatisfiable_variants)
+            else:
+                fm = om
             if not output_d.get('type') or output_d.get('type') == 'conda':
                 outputs[(fm.name(), HashableDict({k: fm.config.variant[k]
                                                   for k in fm.get_used_vars()}))] = (output_d, fm)
@@ -1701,7 +1705,7 @@ class MetaData(object):
         output_metadata.meta_path = ""
 
     def get_output_metadata(self, output):
-        output_metadata = self.copy()
+        output_metadata = self.copy() if output else self
 
         if output:
             output_reqs = utils.expand_reqs(output.get('requirements', {}))
@@ -1784,8 +1788,23 @@ class MetaData(object):
                                   'version': self.version()}
         out_metadata.meta['extra'] = extra
 
+    def get_reduced_variant_set(self, used_variables):
+        # reduce variable space to limit work we need to do
+        full_collapsed_variants = variants.list_of_dicts_to_dict_of_lists(self.config.variants)
+        reduced_collapsed_variants = full_collapsed_variants.copy()
+        pass_through_keys = set(self.config.variants[0].keys()) - set(used_variables)
+        # passing the keys
+        for key in pass_through_keys:
+            values = full_collapsed_variants.get(key)
+            if values and not hasattr(values, 'keys') and not any(key in coll for coll in
+                                                    self.config.variant.get('zip_keys', [])):
+                reduced_collapsed_variants[key] = utils.ensure_list(next(iter(values)))
+
+        return variants.dict_of_lists_to_list_of_dicts(reduced_collapsed_variants)
+
     def get_output_metadata_set(self, permit_undefined_jinja=False,
-                                permit_unsatisfiable_variants=False):
+                                permit_unsatisfiable_variants=False,
+                                bypass_env_check=False):
         from conda_build.source import provide
         out_metadata_map = {}
 
@@ -1794,21 +1813,24 @@ class MetaData(object):
             output_tuples = [(outputs, self)]
         else:
             all_output_metadata = OrderedDict()
-            for variant in (self.config.variants if (hasattr(self.config, 'variants') and
+
+            used_variables = self.get_used_loop_vars(force_global=True)
+            top_loop = self.get_reduced_variant_set(used_variables) or self.config.variants[:1]
+
+            for variant in (top_loop if (hasattr(self.config, 'variants') and
                                                      self.config.variants)
                             else [self.config.variant]):
-                om = self.copy()
-                om.config.variant = variant
-                if om.needs_source_for_render and om.variant_in_source:
-                    om.parse_again()
-                    utils.rm_rf(om.config.work_dir)
-                    provide(om)
-                    om.parse_again()
+                self.config.variant = variant
+                if self.needs_source_for_render and self.variant_in_source:
+                    self.parse_again()
+                    utils.rm_rf(self.config.work_dir)
+                    provide(self)
+                    self.parse_again()
                 try:
-                    om.parse_until_resolved(allow_no_other_outputs=True, bypass_env_check=True)
+                    self.parse_until_resolved(allow_no_other_outputs=True, bypass_env_check=True)
                 except SystemExit:
                     pass
-                outputs = get_output_dicts_from_metadata(om)
+                outputs = get_output_dicts_from_metadata(self)
 
                 try:
                     for out in outputs:
@@ -1818,7 +1840,7 @@ class MetaData(object):
                             for env in ('build', 'host', 'run'):
                                 insert_variant_versions(requirements, variant, env)
                             out['requirements'] = requirements
-                        out_metadata = om.get_output_metadata(out)
+                        out_metadata = self.get_output_metadata(out)
                         self.append_parent_metadata(out_metadata)
                         out_metadata.other_outputs = all_output_metadata
                         # keeping track of other outputs is necessary for correct functioning of the
@@ -1870,7 +1892,8 @@ class MetaData(object):
             #     when we need it.
             if not permit_undefined_jinja and not self.skip():
                 conda_packages = finalize_outputs_pass(self, conda_packages, pass_no=0,
-                                    permit_unsatisfiable_variants=permit_unsatisfiable_variants)
+                                        permit_unsatisfiable_variants=permit_unsatisfiable_variants,
+                                        bypass_env_check=bypass_env_check)
 
                 # Sanity check: if any exact pins of any subpackages, make sure that they match
                 ensure_matching_hashes(conda_packages)
@@ -1892,8 +1915,9 @@ class MetaData(object):
                     self.config.variants)
         return variants.get_vars(_variants, loop_only=True)
 
-    def get_used_loop_vars(self, force_top_level=False):
-        return {var for var in self.get_used_vars(force_top_level=force_top_level)
+    def get_used_loop_vars(self, force_top_level=False, force_global=False):
+        return {var for var in self.get_used_vars(force_top_level=force_top_level,
+                                                  force_global=force_global)
                 if var in self.get_loop_vars()}
 
     def get_rendered_outputs_section(self, permit_undefined_jinja=False):
@@ -1924,16 +1948,18 @@ class MetaData(object):
                 break
         return output
 
-    def get_used_vars(self, force_top_level=False):
+    def get_used_vars(self, force_top_level=False, force_global=False):
         global used_vars_cache
         recipe_dir = self.path or self.meta.get('extra', {}).get('parent_recipe', {}).get('path')
         if hasattr(self.config, 'used_vars'):
             used_vars = self.config.used_vars
-        elif (self.name(), recipe_dir, force_top_level, self.config.subdir) in used_vars_cache:
+        elif (self.name(), recipe_dir, force_top_level,
+              force_global, self.config.subdir) in used_vars_cache:
             used_vars = used_vars_cache[(self.name(), recipe_dir,
-                                         force_top_level, self.config.subdir)]
+                                         force_top_level, force_global, self.config.subdir)]
         else:
-            meta_yaml_reqs = self._get_used_vars_meta_yaml(force_top_level=force_top_level)
+            meta_yaml_reqs = self._get_used_vars_meta_yaml(force_top_level=force_top_level,
+                                                           force_global=force_global)
             is_output = 'package:' not in self.get_recipe_text()
 
             if is_output:
@@ -1947,16 +1973,19 @@ class MetaData(object):
                     any(plat != self.config.subdir for plat in
                         self.get_variants_as_dict_of_lists()['target_platform'])):
                 used_vars.add('target_platform')
-            used_vars_cache[(self.name(), recipe_dir,
-                             force_top_level, self.config.subdir)] = used_vars
+            used_vars_cache[(self.name(), recipe_dir, force_top_level,
+                             force_global, self.config.subdir)] = used_vars
         return used_vars
 
-    def _get_used_vars_meta_yaml(self, force_top_level=False):
+    def _get_used_vars_meta_yaml(self, force_top_level=False, force_global=False):
         # recipe text is the best, because variables can be used anywhere in it.
         #   we promise to detect anything in meta.yaml, but not elsewhere.
         is_output = (not self.path and self.meta.get('extra', {}).get('parent_recipe'))
         if is_output and not force_top_level:
             recipe_text = self.extract_single_output_text(self.name(), apply_selectors=False)
+        elif force_global:
+            recipe_text = self.get_recipe_text(force_top_level=force_top_level,
+                                                apply_selectors=False)
         else:
             recipe_text = (self.get_recipe_text(force_top_level=force_top_level,
                                                 apply_selectors=False).replace(
@@ -1965,8 +1994,10 @@ class MetaData(object):
         reqs_re = re.compile(r"requirements:.+?(?=^\w|\Z|^\s+-\s(?=name|type))", flags=re.M | re.S)
         recipe_text_without_requirements = reqs_re.sub('', recipe_text)
 
-        all_used = variants.find_used_variables_in_text(self.config.variant, recipe_text)
-        outside_reqs_used = variants.find_used_variables_in_text(self.config.variant,
+        # make variant dict hashable so that memoization works
+        variant_keys = tuple(sorted(self.config.variant.keys()))
+        all_used = variants.find_used_variables_in_text(variant_keys, recipe_text)
+        outside_reqs_used = variants.find_used_variables_in_text(variant_keys,
                                                                  recipe_text_without_requirements)
         # things that are only used in requirements need further consideration,
         #   for omitting things that are only used in run

@@ -279,14 +279,13 @@ def _func_defaulting_env_to_os_environ(func, *popenargs, **kwargs):
         if proc.returncode != 0:
             raise subprocess.CalledProcessError(proc.returncode, _args)
 
-        if stats is not None:
-            stats.update({'elapsed': proc.elapsed,
-                        'disk': proc.disk,
-                        'processes': proc.processes,
-                        'cpu_user': proc.cpu_user,
-                        'cpu_sys': proc.cpu_sys,
-                        'rss': proc.rss,
-                        'vms': proc.vms})
+        stats.update({'elapsed': proc.elapsed,
+                    'disk': proc.disk,
+                    'processes': proc.processes,
+                    'cpu_user': proc.cpu_user,
+                    'cpu_sys': proc.cpu_sys,
+                    'rss': proc.rss,
+                    'vms': proc.vms})
     else:
         if func == 'call':
             subprocess.check_call(_args, **kwargs)

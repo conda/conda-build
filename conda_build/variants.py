@@ -377,12 +377,18 @@ def filter_by_key_value(variants, key, values, source_name):
     return reduced_variants
 
 
+@memoized
+def _split_str(string, char):
+    return string.split(char)
+
+
 def dict_of_lists_to_list_of_dicts(dict_of_lists, extend_keys=None):
     # http://stackoverflow.com/a/5228294/1170370
     # end result is a collection of dicts, like [{'python': 2.7, 'numpy': 1.11},
     #                                            {'python': 3.5, 'numpy': 1.11}]
     dicts = []
-    pass_through_keys = (['extend_keys', 'zip_keys'] + list(ensure_list(extend_keys)) +
+    pass_through_keys = (['extend_keys', 'zip_keys', 'pin_run_as_build'] +
+                         list(ensure_list(extend_keys)) +
                          list(_get_zip_key_set(dict_of_lists)))
     dimensions = {k: v for k, v in dict_of_lists.items() if k not in pass_through_keys}
     # here's where we add in the zipped dimensions.  Zipped stuff is concatenated strings, to avoid
@@ -400,14 +406,17 @@ def dict_of_lists_to_list_of_dicts(dict_of_lists, extend_keys=None):
             if v:
                 remapped[col] = v
         # split out zipped keys
-        for k, v in remapped.copy().items():
+        to_del = set()
+        for k, v in remapped.items():
             if isinstance(k, string_types) and isinstance(v, string_types):
-                keys = k.split('#')
-                values = v.split('#')
+                keys = _split_str(k, '#')
+                values = _split_str(v, '#')
                 for (_k, _v) in zip(keys, values):
                     remapped[_k] = _v
                 if '#' in k:
-                    del remapped[k]
+                    to_del.add(k)
+        for key in to_del:
+            del remapped[key]
         dicts.append(remapped)
     return dicts
 
@@ -443,9 +452,9 @@ def list_of_dicts_to_dict_of_lists(list_of_dicts):
                 existing_value.update(v)
                 squished[k] = existing_value
             elif isinstance(v, list):
-                squished[k] = squished.get(k, set()) | set(v)
+                squished[k] = set(squished.get(k, set())) | set(v)
             else:
-                squished[k] = squished.get(k, []) + ensure_list(v)
+                squished[k] = list(squished.get(k, [])) + ensure_list(v)
                 if k not in all_zip_keys:
                     squished[k] = list(set(squished[k]))
     # reduce the combinatoric space of the zipped keys, too:
@@ -517,21 +526,25 @@ def get_vars(variants, loop_only=False):
     return loop_vars
 
 
+@memoized
 def find_used_variables_in_text(variant, recipe_text):
     used_variables = set()
     for v in variant:
-        variant_regex = r"(\{\{\s*(?:pin_\w+\(\s*['\"]+)?%s(?:[^\}]+)\}\})" % v
-        selector_regex = r"\#?\s\[[^\]]*?((?<![_\w\d])%s)[=\s<>!\]]" % v
-        conditional_regex = r"(.*?\{%\s*(?:el)?if\s*" + v + r"\s*(?:.*?)?%\})"
-        requirement_regex = r"(\-\s+%s(?:\s+[\[#]|$))" % v.replace('_', '[-_]')
+        variant_regex = r"\{\s*(?:pin_[a-z]+\(\s*?['\"])?%s[^'\"]*?\}\}" % v
+        selector_regex = r"^[^#\[]*?\#?\s\[[^\]]*?(?<![_\w\d])%s[=\s<>!\]]" % v
+        conditional_regex = r"[^\{]*?\{%\s*(?:el)?if\s*" + v + r"\s*(?:[^%]*?)?%\}"
+        # plain req name, no version spec.  Look for end of line after name, or comment or selector
+        requirement_regex = r"^\s+\-\s+%s(?:\s+[\[#]|$)" % v.replace('_', '[-_]')
         all_res = [variant_regex, selector_regex, conditional_regex, requirement_regex]
         compiler_match = re.match(r'(.*?)_compiler$', v)
         if compiler_match:
             compiler_regex = (
-                r"(\s*\{\{\s*compiler\([\'\"]%s[\"\'].*?\)\s*\}\})" % compiler_match.group(1))
+                r"\{\s*compiler\([\'\"]%s[\"\'][^\{]*?\}" % compiler_match.group(1)
+            )
             all_res.append(compiler_regex)
-        if any(re.search(this_re, recipe_text, flags=re.MULTILINE | re.DOTALL)
-               for this_re in all_res):
+        # consolidate all re's into one big one for speedup
+        all_res = r"|".join(all_res)
+        if re.search(all_res, recipe_text, flags=re.MULTILINE | re.DOTALL):
             used_variables.add(v)
     return used_variables
 
@@ -541,7 +554,7 @@ def find_used_variables_in_shell_script(variant, file_path):
         text = f.read()
     used_variables = set()
     for v in variant:
-        variant_regex = r"(^.*?\$\{?\s*%s\s*[\s|\}])" % v
+        variant_regex = r"(^[^$]*?\$\{?\s*%s\s*[\s|\}])" % v
         if re.search(variant_regex, text, flags=re.MULTILINE | re.DOTALL):
             used_variables.add(v)
     return used_variables
