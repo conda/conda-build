@@ -1,3 +1,20 @@
+2018-04-24 3.9.1:
+
+Bug fixes:
+----------
+
+* Revert #2831 (add license file for R packages from CRAN) due to incompatibility with package layout in defaults
+* handle OrderedDict dumping to yaml better; further work on preserving dict key order in config yaml files  #2834
+* consolidate cran default repo settings, respect variant setting better.  #2836
+* Add conda-build/skeleton_config_yaml key to condarc to control which conda_build_config.yaml should be used to find the cran_mirror setting.  #2836
+* Change default cran mirror from mran to cran.  #2836
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @msarahan
+
 2018-04-24 3.9.0:
 
 Enhancements:
