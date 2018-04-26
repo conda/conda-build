@@ -47,6 +47,8 @@ from .conda_interface import cc_platform, root_dir, pkgs_dirs
 from .conda_interface import conda_private
 from .conda_interface import dist_str_in_index
 from .conda_interface import MatchSpec
+from .conda_interface import reset_context
+from .utils import env_var
 
 from conda_build import __version__
 from conda_build import environ, source, tarcheck, utils
@@ -891,13 +893,13 @@ def bundle_conda(output, metadata, env, stats, **kw):
             build_pkgs = [pkg.split()[0] for pkg in build_deps]
             host_pkgs = [pkg.split()[0] for pkg in host_deps]
             dangerous_double_deps = {'python': 'PYTHON', 'r-base': 'R'}
-            for dep, env_var in dangerous_double_deps.items():
+            for dep, env_var_name in dangerous_double_deps.items():
                 if all(dep in pkgs_list for pkgs_list in (build_pkgs, host_pkgs)):
                     raise CondaBuildException("Empty package; {0} present in build and host deps.  "
                                               "You probably picked up the build environment's {0} "
                                               " executable.  You need to alter your recipe to "
                                               " use the {1} env var in your recipe to "
-                                              "run that executable.".format(dep, env_var))
+                                              "run that executable.".format(dep, env_var_name))
                 elif (dep in build_pkgs and metadata.uses_new_style_compiler_activation):
                     link = ("https://conda.io/docs/user-guide/tasks/build-packages/"
                             "define-metadata.html#host")
@@ -1876,10 +1878,10 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
                                             max_env_retry=metadata.config.max_env_retry,
                                             output_folder=metadata.config.output_folder,
                                             channel_urls=tuple(metadata.config.channel_urls))
-
-    environ.create_env(metadata.config.test_prefix, actions, config=metadata.config, env='host',
-                       subdir=subdir, is_cross=metadata.is_cross,
-                       is_conda=metadata.name() == 'conda')
+    with env_var('CONDA_PATH_CONFLICT', 'warn', reset_context):
+        environ.create_env(metadata.config.test_prefix, actions, config=metadata.config,
+                           env='host', subdir=subdir, is_cross=metadata.is_cross,
+                           is_conda=metadata.name() == 'conda')
 
     with utils.path_prepended(metadata.config.test_prefix):
         env = dict(os.environ.copy())
