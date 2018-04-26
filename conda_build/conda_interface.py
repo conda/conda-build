@@ -30,6 +30,7 @@ except ImportError:
 
 conda_43 = parse_version(CONDA_VERSION) >= parse_version("4.3")
 conda_44 = parse_version(CONDA_VERSION) >= parse_version("4.4")
+conda_46 = parse_version(CONDA_VERSION) >= parse_version("4.6")
 
 if conda_44:
     from conda.exports import display_actions, execute_actions, execute_plan, install_actions
