@@ -28,7 +28,6 @@ from .conda_interface import pkgs_dirs
 from .conda_interface import conda_43
 from .conda_interface import specs_from_url
 from .conda_interface import memoized
-from .conda_interface import VersionOrder
 
 from conda_build import exceptions, utils, environ
 from conda_build.metadata import MetaData, combine_top_level_metadata_with_output
@@ -359,6 +358,8 @@ def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
         extra_run_specs = set(extra_run_specs_from_build.get('strong', []))
         if not m.uses_new_style_compiler_activation:
             extra_run_specs.update(extra_run_specs_from_build.get('weak', []))
+        else:
+            host_deps = set(extra_run_specs_from_build.get('strong', []))
 
     run_deps = extra_run_specs | set(utils.ensure_list(requirements.get('run')))
 
@@ -370,118 +371,38 @@ def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
     return build_unsat, host_unsat
 
 
-class _Constraint(object):
-    def __init__(self, operator=None, bound=None, exact=None):
-        self.bound = VersionOrder(bound) if bound else None
-        self.operator = operator
-        self.exact = exact
-
-    def __str__(self):
-        pin = ""
-        if self.exact:
-            pin = self.exact
-        elif self.bound:
-            pin = self.operator + self.bound.norm_version
-        return pin
-
-    def __eq__(self, other):
-        return ((self.bound == other.bound and self.operator == other.operator) or
-                self.exact == other.exact)
-
-    def __gt__(self, other):
-        # if either is null, the one with the value wins
-        if self.exact:
-            if other.exact and self.exact != other.exact:
-                raise ValueError("Incompatible exact specs: {}, {}".format(self.exact, other.exact))
-            ret = True     # self wins
-        elif other.exact:
-            ret = False     # other wins
-        elif self.bound and not other.bound:
-            ret = True     # self wins
-        elif not self.bound and other.bound:
-            ret = False     # other wins
-        # two bounds, compare version and operator
-        else:
-            if VersionOrder(self.bound) == VersionOrder(other.bound):
-                ret = len(self.operator) < len(other.operator)
-            else:
-                ret = VersionOrder(self.bound) > VersionOrder(other.bound)
-        return ret
-
-    def __lt__(self, other):
-        # if either is null, the one with the value wins
-        if self.exact:
-            if other.exact and self.exact != other.exact:
-                raise ValueError("Incompatible exact specs: {}, {}".format(self.exact, other.exact))
-            ret = True     # self wins
-        elif other.exact:
-            ret = False     # other wins
-        elif self.bound and not other.bound:
-            ret = True     # self wins
-        elif not self.bound and other.bound:
-            ret = False     # other wins
-        # two bounds, compare version and operator
-        else:
-            if VersionOrder(self.bound) == VersionOrder(other.bound):
-                ret = len(self.operator) < len(other.operator)
-            else:
-                # annoying that this has to be copied so much.  It is this way because we want to
-                #    keep the "exact" behavior, and the operator length also stays the same.
-                #    this operator here is all that differs with __gt__
-                ret = VersionOrder(self.bound) < VersionOrder(other.bound)
-        return ret
-
-
-def _translate_equal_or_star_to_bounded(spec_text):
-    version = re.search(r'(?:==)([\w\.]+)|([\w\.]+)(?:\*)', spec_text)
-    if version:
-        version = version.group(1) if version.group(1) else version.group(2)
-        spec_text = version.rstrip('.')
-        spec_text = utils.apply_pin_expressions(spec_text, max_pin='x.x.x.x.x.x.x.x.x.x.x')
-    return spec_text
-
-
-def _simplify_to_tightest_constraint(metadata):
+def _simplify_to_exact_constraints(metadata):
+    """
+    For metapackages that are pinned exactly, we want to bypass all dependencies that may
+    be less exact.
+    """
     requirements = metadata.meta.get('requirements', {})
-    default_constraint = _Constraint(None, None, None)
     # collect deps on a per-section basis
     for section in 'build', 'host', 'run':
         deps = requirements.get(section, [])
-        deps_dict = defaultdict(dict)
+        deps_dict = defaultdict(list)
         for dep in deps:
             spec_parts = utils.ensure_valid_spec(dep).split()
             name = spec_parts[0]
-            exact_constraint = default_constraint
-            if len(spec_parts) == 3:
-                exact_constraint = _Constraint(None, None, " ".join(spec_parts[1:]))
-                deps_dict[name]['lower'] = exact_constraint
-                deps_dict[name]['upper'] = exact_constraint
-            elif len(spec_parts) == 2:
-                version_spec = _translate_equal_or_star_to_bounded(spec_parts[1])
-                lower_bound, upper_bound = [re.search(r'(%s?)([\w\._-]+?(?=,|\Z))' % op,
-                                                      version_spec) for op in ('>=', '<=')]
-                if lower_bound:
-                    operator = lower_bound.group(1)
-                    bound = lower_bound.group(2)
-                    deps_dict[name]['lower'] = max(deps_dict.get(name, {}).get(
-                        'lower', default_constraint),
-                                                   _Constraint(operator, bound, None))
-                if upper_bound:
-                    operator = upper_bound.group(1)
-                    bound = upper_bound.group(2)
-                    deps_dict[name]['upper'] = min(deps_dict.get(name, {}).get(
-                        'upper', default_constraint),
-                                                   _Constraint(operator, bound, None))
-        composite_reqs = []
-        for spec, constraint_types in deps_dict.items():
-            req = str(constraint_types['lower']) if 'lower' in constraint_types else ''
-            if 'upper' in constraint_types:
-                if not constraint_types['upper'].exact:
-                    req = (req + ',' + str(constraint_types['upper']) if req else
-                           str(constraint_types['upper']))
-            composite_reqs.append(' '.join((spec, req)))
-        requirements[section] = composite_reqs
-        metadata.meta['requirements'] = requirements
+            if len(spec_parts) > 1:
+                deps_dict[name].append(spec_parts[1:])
+            else:
+                deps_dict[name].append([])
+
+        deps_list = []
+        for name, values in deps_dict.items():
+            exact_pins = [dep for dep in values if len(dep) > 1]
+            if len(values) == 1 and not any(values):
+                deps_list.append(name)
+            elif exact_pins:
+                if not all(pin == exact_pins[0] for pin in exact_pins):
+                    raise ValueError("Conflicting exact pins: {}".format(exact_pins))
+                else:
+                    deps_list.append(' '.join([name] + exact_pins[0]))
+            else:
+                deps_list.extend(' '.join([name] + dep) for dep in values if dep)
+        requirements[section] = deps_list
+    metadata.meta['requirements'] = requirements
 
 
 def finalize_metadata(m, permit_unsatisfiable_variants=False):
@@ -606,7 +527,7 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
         if not rendered_metadata.meta.get('build'):
             rendered_metadata.meta['build'] = {}
 
-        _simplify_to_tightest_constraint(rendered_metadata)
+        _simplify_to_exact_constraints(rendered_metadata)
 
         if build_unsat or host_unsat:
             rendered_metadata.final = False

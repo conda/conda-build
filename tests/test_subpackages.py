@@ -74,7 +74,7 @@ def test_run_exports_in_subpackage(testing_metadata):
     p2 = testing_metadata.copy()
     p2.meta['requirements']['host'] = ['has_run_exports']
     p2_final = finalize_metadata(p2)
-    assert 'bzip2 >=1.0,<1.1.0a0' in p2_final.meta['requirements']['run']
+    assert 'bzip2 1.0.*' in p2_final.meta['requirements']['run']
 
 
 def test_subpackage_variant_override(testing_config):
