@@ -371,37 +371,65 @@ def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
 
 
 class _Constraint(object):
-    def __init__(self, lower_bound=None, upper_bound=None, exact=None):
-        self.lower_bound = VersionOrder(lower_bound) if lower_bound else None
-        self.upper_bound = VersionOrder(upper_bound) if upper_bound else None
+    def __init__(self, operator=None, bound=None, exact=None):
+        self.bound = VersionOrder(bound) if bound else None
+        self.operator = operator
         self.exact = exact
 
     def __str__(self):
         pin = ""
         if self.exact:
             pin = self.exact
-        elif self.lower_bound:
-            pin = ">=" + self.lower_bound.norm_version + (
-                ',<' + self.upper_bound.norm_version) if self.upper_bound else ""
-        elif self.upper_bound:
-            pin = "<" + self.upper_bound.norm_version
+        elif self.bound:
+            pin = self.operator + self.bound.norm_version
         return pin
 
+    def __eq__(self, other):
+        return ((self.bound == other.bound and self.operator == other.operator) or
+                self.exact == other.exact)
 
-def _minimize_constraints(one, two):
-    if one.lower_bound and two.lower_bound:
-        lower_bound = max(VersionOrder(one.lower_bound), VersionOrder(two.lower_bound))
-    else:
-        lower_bound = one.lower_bound if one.lower_bound else two.lower_bound
-    if one.upper_bound and two.upper_bound:
-        upper_bound = min(VersionOrder(one.upper_bound), VersionOrder(two.upper_bound))
-    else:
-        upper_bound = one.upper_bound if one.upper_bound else two.upper_bound
-    if one.exact == two.exact or any(x.exact is None for x in (one, two)):
-        exact = one.exact if one.exact else two.exact
-    elif one.exact != two.exact:
-        raise ValueError("Incompatible exact pins: {} and {}".format(one, two))
-    return _Constraint(lower_bound=lower_bound, upper_bound=upper_bound, exact=exact)
+    def __gt__(self, other):
+        # if either is null, the one with the value wins
+        if self.exact:
+            if other.exact and self.exact != other.exact:
+                raise ValueError("Incompatible exact specs: {}, {}".format(self.exact, other.exact))
+            ret = True     # self wins
+        elif other.exact:
+            ret = False     # other wins
+        elif self.bound and not other.bound:
+            ret = True     # self wins
+        elif not self.bound and other.bound:
+            ret = False     # other wins
+        # two bounds, compare version and operator
+        else:
+            if VersionOrder(self.bound) == VersionOrder(other.bound):
+                ret = len(self.operator) < len(other.operator)
+            else:
+                ret = VersionOrder(self.bound) > VersionOrder(other.bound)
+        return ret
+
+    def __lt__(self, other):
+        # if either is null, the one with the value wins
+        if self.exact:
+            if other.exact and self.exact != other.exact:
+                raise ValueError("Incompatible exact specs: {}, {}".format(self.exact, other.exact))
+            ret = True     # self wins
+        elif other.exact:
+            ret = False     # other wins
+        elif self.bound and not other.bound:
+            ret = True     # self wins
+        elif not self.bound and other.bound:
+            ret = False     # other wins
+        # two bounds, compare version and operator
+        else:
+            if VersionOrder(self.bound) == VersionOrder(other.bound):
+                ret = len(self.operator) < len(other.operator)
+            else:
+                # annoying that this has to be copied so much.  It is this way because we want to
+                #    keep the "exact" behavior, and the operator length also stays the same.
+                #    this operator here is all that differs with __gt__
+                ret = VersionOrder(self.bound) < VersionOrder(other.bound)
+        return ret
 
 
 def _translate_equal_or_star_to_bounded(spec_text):
@@ -419,28 +447,40 @@ def _simplify_to_tightest_constraint(metadata):
     # collect deps on a per-section basis
     for section in 'build', 'host', 'run':
         deps = requirements.get(section, [])
-        deps_dict = defaultdict(_Constraint)
+        deps_dict = defaultdict(dict)
         for dep in deps:
             spec_parts = utils.ensure_valid_spec(dep).split()
             name = spec_parts[0]
-            if len(spec_parts) == 1:
-                constraint = _Constraint(None, None, None)
-            elif len(spec_parts) == 3:
-                constraint = _Constraint(None, None, " ".join(spec_parts[1:]))
-            else:
+            exact_constraint = default_constraint
+            if len(spec_parts) == 3:
+                exact_constraint = _Constraint(None, None, " ".join(spec_parts[1:]))
+                deps_dict[name]['lower'] = exact_constraint
+                deps_dict[name]['upper'] = exact_constraint
+            elif len(spec_parts) == 2:
                 version_spec = _translate_equal_or_star_to_bounded(spec_parts[1])
-                lower_bound = re.search(r'>=?(.*?(?=,|\Z))', version_spec)
+                lower_bound, upper_bound = [re.search(r'(%s?)([\w\._-]+?(?=,|\Z))' % op,
+                                                      version_spec) for op in ('>=', '<=')]
                 if lower_bound:
-                    lower_bound = lower_bound.group(1)
-                upper_bound = re.search(r'<=?(.*?(?=,|\Z))', version_spec)
+                    operator = lower_bound.group(1)
+                    bound = lower_bound.group(2)
+                    deps_dict[name]['lower'] = max(deps_dict.get(name, {}).get(
+                        'lower', default_constraint),
+                                                   _Constraint(operator, bound, None))
                 if upper_bound:
-                    upper_bound = upper_bound.group(1)
-                constraint = _Constraint(lower_bound, upper_bound, None)
-            deps_dict[name] = _minimize_constraints(deps_dict.get(name, default_constraint),
-                                                    constraint)
-        requirements[section] = [' '.join((spec, str(constraint))).rstrip() for spec, constraint in
-                                          deps_dict.items()]
-    if requirements:
+                    operator = upper_bound.group(1)
+                    bound = upper_bound.group(2)
+                    deps_dict[name]['upper'] = min(deps_dict.get(name, {}).get(
+                        'upper', default_constraint),
+                                                   _Constraint(operator, bound, None))
+        composite_reqs = []
+        for spec, constraint_types in deps_dict.items():
+            req = str(constraint_types['lower']) if 'lower' in constraint_types else ''
+            if 'upper' in constraint_types:
+                if not constraint_types['upper'].exact:
+                    req = (req + ',' + str(constraint_types['upper']) if req else
+                           str(constraint_types['upper']))
+            composite_reqs.append(' '.join((spec, req)))
+        requirements[section] = composite_reqs
         metadata.meta['requirements'] = requirements
 
 

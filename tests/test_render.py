@@ -39,4 +39,4 @@ def test_reduce_duplicate_specs(testing_metadata):
     assert 'stardot >=1.2,<1.3.0a0' in simplified_deps['build']
     # currently we lose the >= in the upper bound.  I don't think that's going to be a huge issue,
     #     but we'll see.  I don't really want to track the bound - just the bound type (upper/lower)
-    assert 'bounded >=1.5,<1.8' in simplified_deps['build']
+    assert 'bounded >=1.5,<=1.8' in simplified_deps['build']
