@@ -301,13 +301,13 @@ def test_insert_variant_versions(testing_metadata):
     assert len(testing_metadata.meta['requirements']['build']) == 2
 
 
-def test_subprocess_stats_call():
+def test_subprocess_stats_call(testing_workdir):
     stats = {}
-    utils.check_call_env(['ls'], stats=stats)
+    utils.check_call_env(['hostname'], stats=stats, cwd=testing_workdir)
     assert stats
     stats = {}
-    out = utils.check_output_env(['ls'], stats=stats)
+    out = utils.check_output_env(['hostname'], stats=stats, cwd=testing_workdir)
     assert out
     assert stats
     with pytest.raises(subprocess.CalledProcessError):
-        utils.check_call_env(['bash', '-c', 'exit 1'])
+        utils.check_call_env(['bash', '-c', 'exit 1'], cwd=testing_workdir)

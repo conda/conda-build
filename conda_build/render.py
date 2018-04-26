@@ -637,10 +637,13 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
     elif not PY3 and hasattr(recipe_text, 'encode'):
         recipe_text = recipe_text.encode()
 
-    for variant in variants:
+    metadata.config.variant = variants[0]
+    used_variables = metadata.get_used_loop_vars(force_global=False)
+    top_loop = metadata.get_reduced_variant_set(used_variables)
+
+    for variant in top_loop:
         mv = metadata.copy()
         mv.config.variant = variant
-        used_variables = mv.get_used_loop_vars()
         conform_dict = {}
         for key in used_variables:
             # We use this variant in the top-level recipe.
@@ -807,6 +810,9 @@ def _unicode_representer(dumper, uni):
 class _IndentDumper(yaml.Dumper):
     def increase_indent(self, flow=False, indentless=False):
         return super(_IndentDumper, self).increase_indent(flow, False)
+
+    def ignore_aliases(self, data):
+        return True
 
 
 yaml.add_representer(_MetaYaml, _represent_omap)

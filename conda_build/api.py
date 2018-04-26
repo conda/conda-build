@@ -47,7 +47,8 @@ def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variant
         if not meta.skip() or not config.trim_skip:
             for od, om in meta.get_output_metadata_set(
                     permit_unsatisfiable_variants=permit_unsatisfiable_variants,
-                    permit_undefined_jinja=not finalize):
+                    permit_undefined_jinja=not finalize,
+                    bypass_env_check=bypass_env_check):
                 if not om.skip() or not config.trim_skip:
                     # only show conda packages right now
                     if 'type' not in od or od['type'] == 'conda':
