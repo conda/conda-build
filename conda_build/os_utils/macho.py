@@ -195,11 +195,11 @@ def get_rpaths(path):
 
 
 def _chmod(filename, mode):
-   try:
-       os.chmod(filename, mode)
-   except (OSError, utils.PermissionError) as e:
-       log = utils.get_logger(__name__)
-       log.warn(str(e))
+    try:
+        os.chmod(filename, mode)
+    except (OSError, utils.PermissionError) as e:
+        log = utils.get_logger(__name__)
+        log.warn(str(e))
 
 
 def install_name_tool(args, verbose=False):
