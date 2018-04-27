@@ -203,6 +203,10 @@ def msvc_env_cmd(bits, config, override=None):
 
 
 def _write_bat_activation_text(file_handle, m):
+    if conda_46:
+        file_handle.write('call "{conda_root}\\condacmd\\conda_hook.bat"\n'.format(
+            conda_root=root_script_dir,
+        ))
     if m.is_cross:
         # HACK: we need both build and host envs "active" - i.e. on PATH,
         #     and with their activate.d scripts sourced. Conda only
@@ -227,9 +231,6 @@ def _write_bat_activation_text(file_handle, m):
             open(history_file, 'a').close()
 
         if conda_46:
-            file_handle.write('call "{conda_root}\\condacmd\\conda_hook.bat"\n'.format(
-                conda_root=root_script_dir,
-            ))
             file_handle.write('conda activate "{prefix}"\n'.format(
                 prefix=m.config.host_prefix,
             ))
