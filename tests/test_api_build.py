@@ -36,6 +36,7 @@ from conda_build.os_utils.external import find_executable
 from conda_build.exceptions import DependencyNeedsBuildingError, CondaBuildException
 from conda_build.conda_interface import reset_context
 from conda.exceptions import ClobberError, CondaMultiError
+from conda_build.conda_interface import conda_46
 
 from .utils import is_valid_dir, metadata_dir, fail_dir, add_mangling, FileNotFoundError
 
@@ -1255,6 +1256,7 @@ def test_downstream_tests(testing_config):
         api.build(upstream, config=testing_config)
 
 
+@pytest.mark.xfail(not conda_46, reason="conda 4.6 changed logger level from info to warn")
 def test_warning_on_file_clobbering(testing_config, caplog):
     recipe_dir = os.path.join(metadata_dir, '_overlapping_files_warning')
 
