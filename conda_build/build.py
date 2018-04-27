@@ -1099,8 +1099,8 @@ def _write_sh_activation_text(file_handle, m):
                                    m.config.host_prefix.replace('\\', '\\\\'),
                                    cygpath_suffix))
         if conda_46:
-            file_handle.write("eval \"$('{sys_prefix}' -m conda shell.bash hook)\"\n".format(
-                sys_prefix=sys.prefix,
+            file_handle.write("eval \"$('{sys_python}' -m conda shell.bash hook)\"\n".format(
+                sys_python=sys.executable,
             ))
             file_handle.write("conda activate \"{0}\"\n".format(host_prefix_path))
         else:
