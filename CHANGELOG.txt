@@ -1,3 +1,26 @@
+2018-04-27 3.9.2:
+
+Enhancements:
+-------------
+
+* Optimizations to rendering to speed up dealing with lots of recipes  #2838 #2848
+
+Bug fixes:
+----------
+
+* include ``folder`` as a field in ``source`` for linting purposes  #2837
+* remove merging of constraints.  Keep only the clobbering of groups of constraints by exact constraints (of which you can have only one)  #2839
+* ensure u+w permissions before calling install_name_tool  #2840
+* remove conversion of dash to underscore in pin_run_as_build  #2842
+
+Contributors:
+-------------
+
+* @jakirkham
+* @mingwandroid
+* @msarahan
+
+
 2018-04-24 3.9.1:
 
 Bug fixes:
