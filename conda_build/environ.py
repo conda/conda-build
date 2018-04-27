@@ -763,7 +763,7 @@ def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, 
     if config.debug:
         external_logger_context = utils.LoggingContext(logging.DEBUG)
     else:
-        external_logger_context = utils.LoggingContext(logging.ERROR)
+        external_logger_context = utils.LoggingContext(logging.WARN)
 
     with external_logger_context:
         log = utils.get_logger(__name__)
