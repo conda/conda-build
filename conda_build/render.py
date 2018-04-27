@@ -28,7 +28,6 @@ from .conda_interface import pkgs_dirs
 from .conda_interface import conda_43
 from .conda_interface import specs_from_url
 from .conda_interface import memoized
-from .conda_interface import VersionOrder
 
 from conda_build import exceptions, utils, environ
 from conda_build.metadata import MetaData, combine_top_level_metadata_with_output
@@ -359,6 +358,8 @@ def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
         extra_run_specs = set(extra_run_specs_from_build.get('strong', []))
         if not m.uses_new_style_compiler_activation:
             extra_run_specs.update(extra_run_specs_from_build.get('weak', []))
+        else:
+            host_deps = set(extra_run_specs_from_build.get('strong', []))
 
     run_deps = extra_run_specs | set(utils.ensure_list(requirements.get('run')))
 
@@ -370,78 +371,38 @@ def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
     return build_unsat, host_unsat
 
 
-class _Constraint(object):
-    def __init__(self, lower_bound=None, upper_bound=None, exact=None):
-        self.lower_bound = VersionOrder(lower_bound) if lower_bound else None
-        self.upper_bound = VersionOrder(upper_bound) if upper_bound else None
-        self.exact = exact
-
-    def __str__(self):
-        pin = ""
-        if self.exact:
-            pin = self.exact
-        elif self.lower_bound:
-            pin = ">=" + self.lower_bound.norm_version + (
-                ',<' + self.upper_bound.norm_version) if self.upper_bound else ""
-        elif self.upper_bound:
-            pin = "<" + self.upper_bound.norm_version
-        return pin
-
-
-def _minimize_constraints(one, two):
-    if one.lower_bound and two.lower_bound:
-        lower_bound = max(VersionOrder(one.lower_bound), VersionOrder(two.lower_bound))
-    else:
-        lower_bound = one.lower_bound if one.lower_bound else two.lower_bound
-    if one.upper_bound and two.upper_bound:
-        upper_bound = min(VersionOrder(one.upper_bound), VersionOrder(two.upper_bound))
-    else:
-        upper_bound = one.upper_bound if one.upper_bound else two.upper_bound
-    if one.exact == two.exact or any(x.exact is None for x in (one, two)):
-        exact = one.exact if one.exact else two.exact
-    elif one.exact != two.exact:
-        raise ValueError("Incompatible exact pins: {} and {}".format(one, two))
-    return _Constraint(lower_bound=lower_bound, upper_bound=upper_bound, exact=exact)
-
-
-def _translate_equal_or_star_to_bounded(spec_text):
-    version = re.search(r'(?:==)([\w\.]+)|([\w\.]+)(?:\*)', spec_text)
-    if version:
-        version = version.group(1) if version.group(1) else version.group(2)
-        spec_text = version.rstrip('.')
-        spec_text = utils.apply_pin_expressions(spec_text, max_pin='x.x.x.x.x.x.x.x.x.x.x')
-    return spec_text
-
-
-def _simplify_to_tightest_constraint(metadata):
+def _simplify_to_exact_constraints(metadata):
+    """
+    For metapackages that are pinned exactly, we want to bypass all dependencies that may
+    be less exact.
+    """
     requirements = metadata.meta.get('requirements', {})
-    default_constraint = _Constraint(None, None, None)
     # collect deps on a per-section basis
     for section in 'build', 'host', 'run':
         deps = requirements.get(section, [])
-        deps_dict = defaultdict(_Constraint)
+        deps_dict = defaultdict(list)
         for dep in deps:
             spec_parts = utils.ensure_valid_spec(dep).split()
             name = spec_parts[0]
-            if len(spec_parts) == 1:
-                constraint = _Constraint(None, None, None)
-            elif len(spec_parts) == 3:
-                constraint = _Constraint(None, None, " ".join(spec_parts[1:]))
+            if len(spec_parts) > 1:
+                deps_dict[name].append(spec_parts[1:])
             else:
-                version_spec = _translate_equal_or_star_to_bounded(spec_parts[1])
-                lower_bound = re.search(r'>=?(.*?(?=,|\Z))', version_spec)
-                if lower_bound:
-                    lower_bound = lower_bound.group(1)
-                upper_bound = re.search(r'<=?(.*?(?=,|\Z))', version_spec)
-                if upper_bound:
-                    upper_bound = upper_bound.group(1)
-                constraint = _Constraint(lower_bound, upper_bound, None)
-            deps_dict[name] = _minimize_constraints(deps_dict.get(name, default_constraint),
-                                                    constraint)
-        requirements[section] = [' '.join((spec, str(constraint))).rstrip() for spec, constraint in
-                                          deps_dict.items()]
-    if requirements:
-        metadata.meta['requirements'] = requirements
+                deps_dict[name].append([])
+
+        deps_list = []
+        for name, values in deps_dict.items():
+            exact_pins = [dep for dep in values if len(dep) > 1]
+            if len(values) == 1 and not any(values):
+                deps_list.append(name)
+            elif exact_pins:
+                if not all(pin == exact_pins[0] for pin in exact_pins):
+                    raise ValueError("Conflicting exact pins: {}".format(exact_pins))
+                else:
+                    deps_list.append(' '.join([name] + exact_pins[0]))
+            else:
+                deps_list.extend(' '.join([name] + dep) for dep in values if dep)
+        requirements[section] = deps_list
+    metadata.meta['requirements'] = requirements
 
 
 def finalize_metadata(m, permit_unsatisfiable_variants=False):
@@ -566,7 +527,7 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
         if not rendered_metadata.meta.get('build'):
             rendered_metadata.meta['build'] = {}
 
-        _simplify_to_tightest_constraint(rendered_metadata)
+        _simplify_to_exact_constraints(rendered_metadata)
 
         if build_unsat or host_unsat:
             rendered_metadata.final = False
