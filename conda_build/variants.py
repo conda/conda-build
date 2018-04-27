@@ -27,12 +27,14 @@ DEFAULT_VARIANTS = {
     'lua': '5',
     'r_base': '3.4',
     'cpu_optimization_target': 'nocona',
-    'pin_run_as_build': OrderedDict(python=OrderedDict(min_pin='x.x', max_pin='x.x'),
-                                    r_base=OrderedDict(min_pin='x.x.x', max_pin='x.x.x')),
+    'pin_run_as_build': OrderedDict(python=OrderedDict(min_pin='x.x', max_pin='x.x')),
     'ignore_version': [],
     'ignore_build_only_deps': ['python'],
     'extend_keys': ['pin_run_as_build', 'ignore_version', 'ignore_build_only_deps'],
 }
+
+# set this outside the initialization because of the dash in the key
+DEFAULT_VARIANTS['pin_run_as_build']['r-base'] = OrderedDict(min_pin='x.x.x', max_pin='x.x.x')
 
 # map python version to default compiler on windows, to match upstream python
 #    This mapping only sets the "native" compiler, and can be overridden by specifying a compiler
