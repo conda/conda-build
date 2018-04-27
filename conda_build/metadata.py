@@ -1979,9 +1979,17 @@ class MetaData(object):
         return used_vars
 
     def _get_used_vars_meta_yaml(self, force_top_level=False, force_global=False):
-        # recipe text is the best, because variables can be used anywhere in it.
-        #   we promise to detect anything in meta.yaml, but not elsewhere.
         is_output = (not self.path and self.meta.get('extra', {}).get('parent_recipe'))
+
+        # filter out things that occur only in run requirements.  These don't actually affect the
+        #     outcome of the package.
+        output_reqs = utils.expand_reqs(self.meta.get('requirements', {}))
+        build_reqs = ensure_list(output_reqs.get('build', []))
+        host_reqs = ensure_list(output_reqs.get('host', []))
+        run_reqs = output_reqs.get('run', [])
+        build_reqs = {req.split()[0].replace('-', '_') for req in build_reqs if req}
+        host_reqs = {req.split()[0].replace('-', '_') for req in host_reqs if req}
+
         if is_output and not force_top_level:
             recipe_text = self.extract_single_output_text(self.name(), apply_selectors=False)
         elif force_global:
@@ -1993,46 +2001,38 @@ class MetaData(object):
                                 self.extract_outputs_text(apply_selectors=False).strip(), '') +
                            self.extract_single_output_text(self.name(), apply_selectors=False))
         reqs_re = re.compile(r"requirements:.+?(?=^\w|\Z|^\s+-\s(?=name|type))", flags=re.M | re.S)
-        recipe_text_without_requirements = reqs_re.sub('', recipe_text)
+        reqs_text = reqs_re.search(recipe_text)
+        reqs_text = reqs_text.group() if reqs_text else ''
 
         # make variant dict hashable so that memoization works
         variant_keys = tuple(sorted(self.config.variant.keys()))
         all_used = variants.find_used_variables_in_text(variant_keys, recipe_text)
-        outside_reqs_used = variants.find_used_variables_in_text(variant_keys,
-                                                                 recipe_text_without_requirements)
+
         # things that are only used in requirements need further consideration,
         #   for omitting things that are only used in run
-        requirements_only_used = all_used - outside_reqs_used
-
-        # filter out things that occur only in run requirements.  These don't actually affect the
-        #     outcome of the package.
-        output_reqs = utils.expand_reqs(self.meta.get('requirements', {}))
-        build_reqs = ensure_list(output_reqs.get('build', []))
-        host_reqs = ensure_list(output_reqs.get('host', []))
-        run_reqs = output_reqs.get('run', [])
-        build_reqs = {req.split()[0].replace('-', '_') for req in build_reqs if req}
-        host_reqs = {req.split()[0].replace('-', '_') for req in host_reqs if req}
+        requirements_used = variants.find_used_variables_in_text(variant_keys, reqs_text)
+        outside_reqs_used = all_used - requirements_used
 
         # things can be used as dependencies or elsewhere in the recipe.  If it's only used
         #    elsewhere, keep it. If it's a dep-related thing, only keep it if
         #    it's in the build deps.
         to_remove = set()
         ignore_build_only_deps = ensure_list(self.config.variant.get('ignore_build_only_deps', []))
-        for dep in requirements_only_used:
+        for dep in requirements_used:
             # filter out stuff that's only in run deps
             if dep in run_reqs:
                 if (dep not in build_reqs and
                         dep not in host_reqs and
-                        dep in requirements_only_used):
+                        dep in requirements_used):
                     to_remove.add(dep)
             else:
                 if (dep in build_reqs and
                         dep not in host_reqs and
-                        dep in requirements_only_used and
+                        dep in requirements_used and
                         dep in ignore_build_only_deps):
                     to_remove.add(dep)
-        requirements_only_used -= to_remove
-        return outside_reqs_used | requirements_only_used
+        requirements_used -= to_remove
+        return outside_reqs_used | requirements_used
 
     def _get_used_vars_build_scripts(self):
         used_vars = set()
