@@ -48,7 +48,7 @@ install:
       conda install -q futures scandir;
     fi
   - conda update -q --all
-  - if [ -n "$CONDA_VERSION" ]; then
+  - if [ "$CONDA_VERSION" = "4.3.x" ]; then
         rm -rf /opt/conda/lib/python$TRAVIS_PYTHON_VERSION/site-packages/conda;
         rm -rf /opt/conda/lib/python$TRAVIS_PYTHON_VERSION/site-packages/conda*.egg-info;
         git clone -b $CONDA_VERSION --single-branch --depth 1000 https://github.com/conda/conda.git;
@@ -57,6 +57,13 @@ install:
         popd;
         hash -r;
         conda info;
+    else
+        git clone -b $CONDA_VERSION --single-branch --depth 1000 https://github.com/conda/conda.git;
+        pushd conda;
+        python -m conda init --dev;
+        hash -r;
+        conda info;
+        popd;
     fi
   - conda install -q anaconda-client requests filelock contextlib2 jinja2 patchelf python=$TRAVIS_PYTHON_VERSION
   - conda install -q pyflakes conda-verify beautifulsoup4 chardet pycrypto glob2 psutil
