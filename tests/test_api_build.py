@@ -31,9 +31,11 @@ from conda_build.build import VersionOrder
 from conda_build.render import finalize_metadata
 from conda_build.utils import (copy_into, on_win, check_call_env, convert_path_for_cygwin_or_msys2,
                                package_has_file, check_output_env, get_conda_operation_locks, rm_rf,
-                               walk)
+                               walk, env_var)
 from conda_build.os_utils.external import find_executable
 from conda_build.exceptions import DependencyNeedsBuildingError, CondaBuildException
+from conda_build.conda_interface import reset_context
+from conda.exceptions import ClobberError, CondaMultiError
 
 from .utils import is_valid_dir, metadata_dir, fail_dir, add_mangling, FileNotFoundError
 
@@ -1251,3 +1253,14 @@ def test_downstream_tests(testing_config):
     api.build(downstream, config=testing_config, notest=True)
     with pytest.raises(SystemExit):
         api.build(upstream, config=testing_config)
+
+
+def test_warning_on_file_clobbering(testing_config, caplog):
+    recipe_dir = os.path.join(metadata_dir, '_overlapping_files_warning')
+
+    api.build(os.path.join(recipe_dir, 'a', ), config=testing_config)
+    api.build(os.path.join(recipe_dir, 'b', ), config=testing_config)
+    assert "Conda was asked to clobber an existing path" in caplog.text
+    with pytest.raises((ClobberError, CondaMultiError)):
+        with env_var('CONDA_PATH_CONFLICT', 'prevent', reset_context):
+            api.build(os.path.join(recipe_dir, 'b'), config=testing_config)

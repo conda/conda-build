@@ -48,6 +48,7 @@ from .conda_interface import conda_private
 from .conda_interface import dist_str_in_index
 from .conda_interface import MatchSpec
 from .conda_interface import reset_context
+from .conda_interface import context
 from .utils import env_var
 
 from conda_build import __version__
@@ -1878,7 +1879,11 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
                                             max_env_retry=metadata.config.max_env_retry,
                                             output_folder=metadata.config.output_folder,
                                             channel_urls=tuple(metadata.config.channel_urls))
-    with env_var('CONDA_PATH_CONFLICT', 'warn', reset_context):
+    # upgrade the warning from silently clobbering to warning.  If it is preventing, just
+    #     keep it that way.
+    conflict_verbosity = ('warn' if str(context.path_conflict) == 'clobber' else
+                          str(context.path_conflict))
+    with env_var('CONDA_PATH_CONFLICT', conflict_verbosity, reset_context):
         environ.create_env(metadata.config.test_prefix, actions, config=metadata.config,
                            env='host', subdir=subdir, is_cross=metadata.is_cross,
                            is_conda=metadata.name() == 'conda')
