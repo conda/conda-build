@@ -1,10 +1,12 @@
 from __future__ import absolute_import, division, print_function
 
 import re
+import stat
 import sys
 from subprocess import Popen, check_output, PIPE, STDOUT, CalledProcessError
-from os.path import islink, isfile
+import os
 from conda_build.os_utils.pyldd import inspect_rpaths
+from conda_build import utils
 from itertools import islice
 
 NO_EXT = (
@@ -36,7 +38,7 @@ FILETYPE = {
 
 
 def is_macho(path):
-    if path.endswith(NO_EXT) or islink(path) or not isfile(path):
+    if path.endswith(NO_EXT) or os.path.islink(path) or not os.path.isfile(path):
         return False
     with open(path, 'rb') as fi:
         head = fi.read(4)
@@ -192,14 +194,35 @@ def get_rpaths(path):
     return res_pyldd
 
 
+def _chmod(filename, mode):
+   try:
+       os.chmod(filename, mode)
+   except (OSError, utils.PermissionError) as e:
+       log = utils.get_logger(__name__)
+       log.warn(str(e))
+
+
+def install_name_tool(args, verbose=False):
+    args_full = ['install_name_tool'] + args
+    if verbose:
+        print(' '.join(args_full))
+    old_mode = stat.S_IMODE(os.stat(args[-1]).st_mode)
+    new_mode = old_mode | stat.S_IWUSR
+    if old_mode != new_mode:
+        _chmod(args[-1], new_mode)
+    subproc = Popen(args_full, stdout=PIPE, stderr=PIPE)
+    out, err = subproc.communicate()
+    out = out.decode('utf-8')
+    err = err.decode('utf-8')
+    if old_mode != new_mode:
+        _chmod(args[-1], old_mode)
+    return subproc.returncode, out, err
+
+
 def add_rpath(path, rpath, verbose=False):
     """Add an `rpath` to the Mach-O file at `path`"""
-    args = ['install_name_tool', '-add_rpath', rpath, path]
-    if verbose:
-        print(' '.join(args))
-    p = Popen(args, stderr=PIPE)
-    stdout, stderr = p.communicate()
-    stderr = stderr.decode('utf-8')
+    args = ['-add_rpath', rpath, path]
+    code, _, stderr = install_name_tool(args)
     if "Mach-O dynamic shared library stub file" in stderr:
         print("Skipping Mach-O dynamic shared library stub file %s\n" % path)
         return
@@ -208,19 +231,15 @@ def add_rpath(path, rpath, verbose=False):
         return
     else:
         print(stderr, file=sys.stderr)
-        if p.returncode:
+        if code:
             raise RuntimeError("install_name_tool failed with exit status %d"
-        % p.returncode)
+        % code)
 
 
 def delete_rpath(path, rpath, verbose=False):
     """Delete an `rpath` from the Mach-O file at `path`"""
-    args = ['install_name_tool', '-delete_rpath', rpath, path]
-    if verbose:
-        print(' '.join(args))
-    p = Popen(args, stderr=PIPE)
-    _, stderr = p.communicate()
-    stderr = stderr.decode('utf-8')
+    args = ['-delete_rpath', rpath, path]
+    code, _, stderr = install_name_tool(args)
     if "Mach-O dynamic shared library stub file" in stderr:
         print("Skipping Mach-O dynamic shared library stub file %s\n" % path)
         return
@@ -229,9 +248,9 @@ def delete_rpath(path, rpath, verbose=False):
         return
     else:
         print(stderr, file=sys.stderr)
-        if p.returncode:
+        if code:
             raise RuntimeError("install_name_tool failed with exit status %d"
-        % p.returncode)
+        % code)
 
 
 def install_name_change(path, cb_func, dylibs, verbose=False):
@@ -253,25 +272,21 @@ def install_name_change(path, cb_func, dylibs, verbose=False):
 
     ret = True
     for index, new_name in changes:
-        args = ['install_name_tool']
+        args = []
         if dylibs[index]['cmd'] == 'LC_ID_DYLIB':
             args.extend(('-id', new_name, path))
         else:
             args.extend(('-change', dylibs[index]['name'], new_name, path))
-        if verbose:
-            print(' '.join(args))
-        p = Popen(args, stderr=PIPE)
-        _, stderr = p.communicate()
-        stderr = stderr.decode('utf-8')
+        code, _, stderr = install_name_tool(args)
         if "Mach-O dynamic shared library stub file" in stderr:
             print("Skipping Mach-O dynamic shared library stub file %s" % path)
             ret = False
             continue
         else:
             print(stderr, file=sys.stderr)
-        if p.returncode:
-            raise RuntimeError("install_name_tool failed with exit status %d"
-                % p.returncode)
+        if code:
+            raise RuntimeError("install_name_tool failed with exit status %d, stderr of:\n%s"
+                % (code, stderr))
     return ret
 
 
