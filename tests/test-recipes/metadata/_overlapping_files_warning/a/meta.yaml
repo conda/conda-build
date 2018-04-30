@@ -1,0 +1,7 @@
+package:
+  name: pkg_a
+  version: "1.0.0"
+
+build:
+  script: touch $PREFIX/this_is_a_file    # [unix]
+  script: echo 0 > %PREFIX%\this_is_a_file    # [win]
