@@ -8,7 +8,7 @@ vc:              # [win]
   - 14           # [win]
   - 14           # [win]
 
-# zip_keys:
-#   -
-#     - python
-#     - vc         # [win]
+zip_keys:
+  -
+    - python
+    - vc         # [win]
