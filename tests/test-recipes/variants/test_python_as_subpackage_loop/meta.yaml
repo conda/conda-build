@@ -1,0 +1,36 @@
+# top level output does not use python, and so should not loop.
+#    subpackage does, and so it should loop.
+
+{% set version = "2018.0.3" %}
+
+package:
+  name: tbb
+  version: {{ version }}
+
+outputs:
+  - name: tbb
+    requirements:
+      build:
+        - python
+        - {{ compiler('cxx') }}                              # [win]
+
+  - name: tbb-devel
+    requirements:
+      host:
+        - {{ compiler('cxx') }}                          # [win]
+      run:
+        - {{ pin_subpackage('tbb', exact=True) }}        # development package is for specific version of tbb
+
+  - name: tbb4py
+    requirements:
+      host:
+        - {{ compiler('cxx') }}                          # [win]
+        - python
+        - {{ pin_subpackage('tbb-devel', exact=True) }}
+      run:
+        - tbb >={{ version }}                            # while python module works with any compatible tbb...
+        - python
+    test:
+      requires:
+        - python
+        - {{ pin_subpackage('tbb', exact=True) }}        # we want to test with this specific tbb package
