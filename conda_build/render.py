@@ -30,7 +30,8 @@ from .conda_interface import specs_from_url
 from .conda_interface import memoized
 
 from conda_build import exceptions, utils, environ
-from conda_build.metadata import MetaData, combine_top_level_metadata_with_output
+from conda_build.metadata import (MetaData, combine_top_level_metadata_with_output,
+                                  trim_build_only_deps)
 import conda_build.source as source
 from conda_build.variants import (get_package_variants, list_of_dicts_to_dict_of_lists,
                                   filter_by_key_value)
@@ -612,13 +613,10 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
             #     variant mapping
             conform_dict[key] = variant[key]
 
-        build_reqs = mv.meta.get('requirements', {}).get('build', [])
-        host_reqs = mv.meta.get('requirements', {}).get('host', [])
-
-        if 'python' in build_reqs or 'python' in host_reqs:
-            conform_dict['python'] = variant['python']
-        if 'r-base' in build_reqs or 'r-base' in host_reqs:
-            conform_dict['r_base'] = variant['r_base']
+        requirements_used = trim_build_only_deps(metadata, used_variables)
+        for req in 'python', 'r-base', 'mro-base':
+            if req in requirements_used:
+                conform_dict[req] = variant[req]
 
         pin_run_as_build = variant.get('pin_run_as_build', {})
         if mv.numpy_xx and 'numpy' not in pin_run_as_build:

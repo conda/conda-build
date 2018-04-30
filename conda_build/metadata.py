@@ -751,6 +751,39 @@ def combine_top_level_metadata_with_output(metadata, output):
         metadata.meta[section] = output_section
 
 
+def trim_build_only_deps(metadata, requirements_used):
+    '''things can be used as dependencies or elsewhere in the recipe.  If it's only used
+    elsewhere, keep it. If it's a dep-related thing, only keep it if
+    it's in the build deps.'''
+
+    # filter out things that occur only in run requirements.  These don't actually affect the
+    #     outcome of the package.
+    output_reqs = utils.expand_reqs(metadata.meta.get('requirements', {}))
+    build_reqs = utils.ensure_list(output_reqs.get('build', []))
+    host_reqs = utils.ensure_list(output_reqs.get('host', []))
+    run_reqs = output_reqs.get('run', [])
+    build_reqs = {req.split()[0].replace('-', '_') for req in build_reqs if req}
+    host_reqs = {req.split()[0].replace('-', '_') for req in host_reqs if req}
+
+    to_remove = set()
+    ignore_build_only_deps = utils.ensure_list(metadata.config.variant.get(
+        'ignore_build_only_deps', []))
+    for dep in requirements_used:
+        # filter out stuff that's only in run deps
+        if dep in run_reqs:
+            if (dep not in build_reqs and
+                    dep not in host_reqs and
+                    dep in requirements_used):
+                to_remove.add(dep)
+        else:
+            if (dep in build_reqs and
+                    dep not in host_reqs and
+                    dep in requirements_used and
+                    dep in ignore_build_only_deps):
+                to_remove.add(dep)
+    return requirements_used - to_remove
+
+
 class MetaData(object):
     def __init__(self, path, config=None, variant=None):
 
@@ -1793,12 +1826,15 @@ class MetaData(object):
         # reduce variable space to limit work we need to do
         full_collapsed_variants = variants.list_of_dicts_to_dict_of_lists(self.config.variants)
         reduced_collapsed_variants = full_collapsed_variants.copy()
-        pass_through_keys = set(self.config.variants[0].keys()) - set(used_variables)
+        reduce_keys = set(self.config.variants[0].keys()) - set(used_variables)
+        used_zip_key_groups = [group for group in self.config.variant.get('zip_keys', []) if any(
+            set(group) & set(used_variables))]
         # passing the keys
-        for key in pass_through_keys:
+        for key in reduce_keys:
             values = full_collapsed_variants.get(key)
             if values and not hasattr(values, 'keys') and not any(key in coll for coll in
-                                                    self.config.variant.get('zip_keys', [])):
+                                                                  used_zip_key_groups):
+                # save only one element from this key
                 reduced_collapsed_variants[key] = utils.ensure_list(next(iter(values)))
 
         return variants.dict_of_lists_to_list_of_dicts(reduced_collapsed_variants)
@@ -1981,28 +2017,24 @@ class MetaData(object):
     def _get_used_vars_meta_yaml(self, force_top_level=False, force_global=False):
         is_output = (not self.path and self.meta.get('extra', {}).get('parent_recipe'))
 
-        # filter out things that occur only in run requirements.  These don't actually affect the
-        #     outcome of the package.
-        output_reqs = utils.expand_reqs(self.meta.get('requirements', {}))
-        build_reqs = ensure_list(output_reqs.get('build', []))
-        host_reqs = ensure_list(output_reqs.get('host', []))
-        run_reqs = output_reqs.get('run', [])
-        build_reqs = {req.split()[0].replace('-', '_') for req in build_reqs if req}
-        host_reqs = {req.split()[0].replace('-', '_') for req in host_reqs if req}
-
-        if is_output and not force_top_level:
-            recipe_text = self.extract_single_output_text(self.name(), apply_selectors=False)
-        elif force_global:
+        if force_global:
             recipe_text = self.get_recipe_text(force_top_level=force_top_level,
                                                 apply_selectors=False)
+            # a bit hacky.  When we force global, we don't distinguish
+            #     between requirements and the rest
+            reqs_text = recipe_text
         else:
-            recipe_text = (self.get_recipe_text(force_top_level=force_top_level,
-                                                apply_selectors=False).replace(
-                                self.extract_outputs_text(apply_selectors=False).strip(), '') +
-                           self.extract_single_output_text(self.name(), apply_selectors=False))
-        reqs_re = re.compile(r"requirements:.+?(?=^\w|\Z|^\s+-\s(?=name|type))", flags=re.M | re.S)
-        reqs_text = reqs_re.search(recipe_text)
-        reqs_text = reqs_text.group() if reqs_text else ''
+            if is_output and not force_top_level:
+                recipe_text = self.extract_single_output_text(self.name(), apply_selectors=False)
+            else:
+                recipe_text = (self.get_recipe_text(force_top_level=force_top_level,
+                                                    apply_selectors=False).replace(
+                                    self.extract_outputs_text(apply_selectors=False).strip(), '') +
+                            self.extract_single_output_text(self.name(), apply_selectors=False))
+            reqs_re = re.compile(r"requirements:.+?(?=^\w|\Z|^\s+-\s(?=name|type))",
+                                 flags=re.M | re.S)
+            reqs_text = reqs_re.search(recipe_text)
+            reqs_text = reqs_text.group() if reqs_text else ''
 
         # make variant dict hashable so that memoization works
         variant_keys = tuple(sorted(self.config.variant.keys()))
@@ -2010,29 +2042,16 @@ class MetaData(object):
 
         # things that are only used in requirements need further consideration,
         #   for omitting things that are only used in run
-        requirements_used = variants.find_used_variables_in_text(variant_keys, reqs_text)
-        outside_reqs_used = all_used - requirements_used
+        if force_global:
+            used = all_used
+        if not force_global:
+            requirements_used = variants.find_used_variables_in_text(variant_keys, reqs_text)
+            outside_reqs_used = all_used - requirements_used
 
-        # things can be used as dependencies or elsewhere in the recipe.  If it's only used
-        #    elsewhere, keep it. If it's a dep-related thing, only keep it if
-        #    it's in the build deps.
-        to_remove = set()
-        ignore_build_only_deps = ensure_list(self.config.variant.get('ignore_build_only_deps', []))
-        for dep in requirements_used:
-            # filter out stuff that's only in run deps
-            if dep in run_reqs:
-                if (dep not in build_reqs and
-                        dep not in host_reqs and
-                        dep in requirements_used):
-                    to_remove.add(dep)
-            else:
-                if (dep in build_reqs and
-                        dep not in host_reqs and
-                        dep in requirements_used and
-                        dep in ignore_build_only_deps):
-                    to_remove.add(dep)
-        requirements_used -= to_remove
-        return outside_reqs_used | requirements_used
+            requirements_used = trim_build_only_deps(self, requirements_used)
+            used = outside_reqs_used | requirements_used
+
+        return used
 
     def _get_used_vars_build_scripts(self):
         used_vars = set()

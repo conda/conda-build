@@ -372,3 +372,13 @@ def test_exclusive_config_file(testing_workdir):
     # does recipe config override exclusive?
     assert 'unique_to_recipe' in variant
     assert variant['abc'] == '123'
+
+
+def test_inner_python_loop_with_output(testing_config):
+    outputs = api.get_output_file_paths(os.path.join(recipe_dir, 'test_python_as_subpackage_loop'),
+                                        config=testing_config)
+    outputs = [os.path.basename(out) for out in outputs]
+    assert len(outputs) == 5
+    assert len([out for out in outputs if out.startswith('tbb-2018')]) == 1
+    assert len([out for out in outputs if out.startswith('tbb-devel-2018')]) == 1
+    assert len([out for out in outputs if out.startswith('tbb4py-2018')]) == 3

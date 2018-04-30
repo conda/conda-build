@@ -1556,6 +1556,8 @@ def insert_variant_versions(requirements_dict, variant, env):
             for i, x in enumerate(matches):
                 if x and (env in ('build', 'host') or x.group(1) in build_deps):
                     del reqs[i]
+                    if not isinstance(val, string_types):
+                        val = val[0]
                     reqs.insert(i, ensure_valid_spec(' '.join((x.group(1), val))))
 
     xx_re = re.compile("([0-9a-zA-Z\.\-\_]+)\s+x\.x")
