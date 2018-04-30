@@ -32,7 +32,7 @@ from bs4 import UnicodeDammit
 import yaml
 
 # used to get version
-from .conda_interface import env_path_backup_var_exists
+from .conda_interface import env_path_backup_var_exists, conda_46
 from .conda_interface import PY3
 from .conda_interface import prefix_placeholder
 from .conda_interface import TemporaryDirectory
@@ -1073,6 +1073,11 @@ def _write_sh_activation_text(file_handle, m):
                             os.path.join(utils.root_script_dir, 'activate').replace('\\', '\\\\'),
                             cygpath_suffix))
 
+    if conda_46:
+        file_handle.write("eval \"$('{sys_python}' -m conda shell.bash hook)\"\n".format(
+            sys_python=sys.executable,
+        ))
+
     if m.is_cross:
         # HACK: we need both build and host envs "active" - i.e. on PATH,
         #     and with their activate.d scripts sourced. Conda only
@@ -1088,6 +1093,8 @@ def _write_sh_activation_text(file_handle, m):
         #   levels deep.
         # conda 4.4 does require that a conda-meta/history file
         #   exists to identify a valid conda environment
+        # conda 4.6 changes this one final time, by adding a '--stack' flag to the 'activate'
+        #   command, and 'activate' does not stack environments by default without that flag
         history_file = join(m.config.host_prefix, 'conda-meta', 'history')
         if not isfile(history_file):
             if not isdir(dirname(history_file)):
@@ -1096,16 +1103,22 @@ def _write_sh_activation_text(file_handle, m):
         host_prefix_path = ''.join((cygpath_prefix,
                                    m.config.host_prefix.replace('\\', '\\\\'),
                                    cygpath_suffix))
-        file_handle.write('source "{0}" "{1}"\n' .format(activate_path, host_prefix_path))
-        file_handle.write('unset CONDA_PATH_BACKUP\n')
-        file_handle.write('export CONDA_MAX_SHLVL=2\n')
+        if conda_46:
+            file_handle.write("conda activate \"{0}\"\n".format(host_prefix_path))
+        else:
+            file_handle.write('source "{0}" "{1}"\n' .format(activate_path, host_prefix_path))
+            file_handle.write('unset CONDA_PATH_BACKUP\n')
+            file_handle.write('export CONDA_MAX_SHLVL=2\n')
 
     # Write build prefix activation AFTER host prefix, so that its executables come first
     build_prefix_path = ''.join((cygpath_prefix,
                                 m.config.build_prefix.replace('\\', '\\\\'),
                                 cygpath_suffix))
 
-    file_handle.write('source "{0}" "{1}"\n'.format(activate_path, build_prefix_path))
+    if conda_46:
+        file_handle.write("conda activate --stack \"{0}\"\n".format(build_prefix_path))
+    else:
+        file_handle.write('source "{0}" "{1}"\n'.format(activate_path, build_prefix_path))
 
     # conda 4.4 requires a conda-meta/history file for a valid conda prefix
     history_file = join(m.config.build_prefix, 'conda-meta', 'history')

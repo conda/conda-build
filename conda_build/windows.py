@@ -12,6 +12,7 @@ from distutils.msvc9compiler import find_vcvarsall as distutils_find_vcvarsall
 from distutils.msvc9compiler import Reg, WINSDK_BASE
 
 from conda_build import environ
+from conda_build.conda_interface import conda_46
 from conda_build.utils import check_call_env, root_script_dir, path_prepended, copy_into, get_logger
 from conda_build.variants import set_language_env_vars, get_default_variant
 
@@ -202,6 +203,10 @@ def msvc_env_cmd(bits, config, override=None):
 
 
 def _write_bat_activation_text(file_handle, m):
+    if conda_46:
+        file_handle.write('call "{conda_root}\\condacmd\\conda_hook.bat"\n'.format(
+            conda_root=root_script_dir,
+        ))
     if m.is_cross:
         # HACK: we need both build and host envs "active" - i.e. on PATH,
         #     and with their activate.d scripts sourced. Conda only
@@ -217,21 +222,35 @@ def _write_bat_activation_text(file_handle, m):
         #   levels deep.
         # conda 4.4 does require that a conda-meta/history file
         #   exists to identify a valid conda environment
+        # conda 4.6 changes this one final time, by adding a '--stack' flag to the 'activate'
+        #   command, and 'activate' does not stack environments by default without that flag
         history_file = join(m.config.host_prefix, 'conda-meta', 'history')
         if not isfile(history_file):
             if not isdir(dirname(history_file)):
                 os.makedirs(dirname(history_file))
             open(history_file, 'a').close()
+
+        if conda_46:
+            file_handle.write('conda activate "{prefix}"\n'.format(
+                prefix=m.config.host_prefix,
+            ))
+        else:
+            file_handle.write('call "{conda_root}\\activate.bat" "{prefix}"\n'.format(
+                conda_root=root_script_dir,
+                prefix=m.config.host_prefix))
+            # removing this placeholder should make conda double-activate with conda 4.3
+            file_handle.write('set "PATH=%PATH:CONDA_PATH_PLACEHOLDER;=%"\n')
+            file_handle.write('set CONDA_MAX_SHLVL=2\n')
+
+    # Write build prefix activation AFTER host prefix, so that its executables come first
+    if conda_46:
+        file_handle.write('conda activate --stack "{prefix}"\n'.format(
+            prefix=m.config.build_prefix,
+        ))
+    else:
         file_handle.write('call "{conda_root}\\activate.bat" "{prefix}"\n'.format(
             conda_root=root_script_dir,
-            prefix=m.config.host_prefix))
-        # removing this placeholder should make conda double-activate with conda 4.3
-        file_handle.write('set "PATH=%PATH:CONDA_PATH_PLACEHOLDER;=%"\n')
-        file_handle.write('set CONDA_MAX_SHLVL=2\n')
-    # Write build prefix activation AFTER host prefix, so that its executables come first
-    file_handle.write('call "{conda_root}\\activate.bat" "{prefix}"\n'.format(
-        conda_root=root_script_dir,
-        prefix=m.config.build_prefix))
+            prefix=m.config.build_prefix))
 
 
 def build(m, bld_bat, stats):

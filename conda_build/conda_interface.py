@@ -28,8 +28,9 @@ except ImportError:
     # no need to patch if it doesn't exist
     pass
 
-conda_43 = parse_version(CONDA_VERSION) >= parse_version("4.3")
-conda_44 = parse_version(CONDA_VERSION) >= parse_version("4.4")
+conda_43 = parse_version(CONDA_VERSION) >= parse_version("4.3.0a0")
+conda_44 = parse_version(CONDA_VERSION) >= parse_version("4.4.0a0")
+conda_46 = parse_version(CONDA_VERSION) >= parse_version("4.6.0a0")
 
 if conda_44:
     from conda.exports import display_actions, execute_actions, execute_plan, install_actions
