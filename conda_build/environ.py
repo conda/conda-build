@@ -45,8 +45,10 @@ def get_lua_ver(config):
 
 
 def get_py_ver(config):
-    return '.'.join(config.variant.get('python',
-                                       get_default_variant(config)['python']).split('.')[:2])
+    py = config.variant.get('python', get_default_variant(config)['python'])
+    if not hasattr(py, 'split'):
+        py = py[0]
+    return '.'.join(py.split('.')[:2])
 
 
 def get_r_ver(config):
