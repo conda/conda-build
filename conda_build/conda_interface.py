@@ -5,7 +5,6 @@ from functools import partial
 import os
 from os import lstat
 from pkg_resources import parse_version
-from enum import Enum
 from importlib import import_module
 
 from conda import __version__ as CONDA_VERSION
@@ -47,48 +46,23 @@ except ImportError:
     from conda.toposort import _toposort
 _toposort = _toposort
 
-if conda_43:
-    from conda.exports import TmpDownload, download, handle_proxy_407  # NOQA
-    from conda.exports import untracked, walk_prefix  # NOQA
-    from conda.exports import MatchSpec, NoPackagesFound, Resolve, Unsatisfiable, normalized_version  # NOQA
-    from conda.exports import human_bytes, hashsum_file, md5_file, memoized, unix_path_to_win, win_path_to_unix, url_path  # NOQA
-    from conda.exports import get_index  # NOQA
-    from conda.exports import (Completer, InstalledPackages, add_parser_channels,
-                               add_parser_prefix,  # NOQA
-                               specs_from_args, spec_from_line, specs_from_url)  # NOQA
-    from conda.exports import ArgumentParser  # NOQA
-    from conda.exports import (is_linked, linked, linked_data, prefix_placeholder,  # NOQA
-                               rm_rf, symlink_conda, package_cache)  # NOQA
-    from conda.exports import CondaSession  # NOQA
-    from conda.exports import (PY3,  StringIO, input, iteritems, lchmod, string_types,  # NOQA
-                              text_type, TemporaryDirectory)  # NOQA
-    from conda.exports import VersionOrder  # NOQA
-    from conda.exports import dist_str_in_index
-    from conda.core.package_cache import ProgressiveFetchExtract
-    from conda.models.dist import Dist, IndexRecord  # NOQA
+from conda.exports import TmpDownload, download, handle_proxy_407  # NOQA
+from conda.exports import untracked, walk_prefix  # NOQA
+from conda.exports import MatchSpec, NoPackagesFound, Resolve, Unsatisfiable, normalized_version  # NOQA
+from conda.exports import human_bytes, hashsum_file, md5_file, memoized, unix_path_to_win, win_path_to_unix, url_path  # NOQA
+from conda.exports import get_index  # NOQA
+from conda.exports import (Completer, InstalledPackages, add_parser_channels,
+                           add_parser_prefix,  # NOQA
+                           specs_from_args, spec_from_line, specs_from_url)  # NOQA
+from conda.exports import ArgumentParser  # NOQA
+from conda.exports import (is_linked, linked, linked_data, prefix_placeholder,  # NOQA
+                           rm_rf, symlink_conda, package_cache)  # NOQA
+from conda.exports import CondaSession  # NOQA
+from conda.exports import (PY3,  StringIO, input, iteritems, lchmod, string_types,  # NOQA
+                          text_type, TemporaryDirectory)  # NOQA
+from conda.exports import VersionOrder  # NOQA
+from conda.exports import dist_str_in_index  # NOQA
 
-else:
-    from conda.fetch import TmpDownload, download, handle_proxy_407  # NOQA
-    from conda.misc import untracked, walk_prefix  # NOQA
-    from conda.resolve import MatchSpec, NoPackagesFound, Resolve, Unsatisfiable, normalized_version  # NOQA
-    from conda.utils import human_bytes, hashsum_file, md5_file, memoized, unix_path_to_win, win_path_to_unix, url_path  # NOQA
-    from conda.api import get_index  # NOQA
-    from conda.cli.common import (Completer, InstalledPackages, add_parser_channels,
-                                  add_parser_prefix,  # NOQA
-                                  specs_from_args, spec_from_line, specs_from_url)  # NOQA
-    from conda.cli.conda_argparse import ArgumentParser  # NOQA
-    from conda.install import (is_linked, linked, linked_data, prefix_placeholder,  # NOQA
-                               rm_rf, symlink_conda, package_cache)  # NOQA
-    from conda.connection import CondaSession  # NOQA
-    from conda.compat import (PY3, StringIO, input, iteritems, lchmod, string_types,  # NOQA
-                              text_type, TemporaryDirectory)  # NOQA
-    from conda.version import VersionOrder  # NOQA
-
-    dist_str_in_index = lambda index, dist_str: dist_str in index
-
-    class ProgressiveFetchExtract(object): pass  # NOQA
-    class Dist(object): pass # NOQA
-    class IndexRecord(object): pass # NOQA
 
 TmpDownload = TmpDownload
 download, handle_proxy_407, untracked, walk_prefix = download, handle_proxy_407, untracked, walk_prefix  # NOQA
@@ -103,9 +77,14 @@ rm_rf, symlink_conda, package_cache = rm_rf, symlink_conda, package_cache
 PY3, input, iteritems, lchmod, string_types = PY3, input, iteritems, lchmod, string_types
 text_type, TemporaryDirectory = text_type, TemporaryDirectory
 ArgumentParser, CondaSession, VersionOrder = ArgumentParser, CondaSession, VersionOrder
-dist_str_in_index, ProgressiveFetchExtract = dist_str_in_index, ProgressiveFetchExtract
-Dist = Dist
+dist_str_in_index = dist_str_in_index
 
+
+from conda.core.package_cache import ProgressiveFetchExtract  # NOQA
+from conda.models.dist import Dist, IndexRecord  # NOQA
+
+ProgressiveFetchExtract = ProgressiveFetchExtract
+Dist, IndexRecord = Dist, IndexRecord
 
 if PY3:
     import configparser  # NOQA
@@ -114,164 +93,49 @@ else:
 configparser = configparser
 
 
-if conda_43:
-    from conda.exports import FileMode, PathType
-    FileMode, PathType = FileMode, PathType
-    from conda.exports import EntityEncoder
-    EntityEncoder = EntityEncoder
-else:
-    from json import JSONEncoder
-
-    class PathType(Enum):
-        """
-        Refers to if the file in question is hard linked or soft linked. Originally designed to be
-        used in paths.json
-        """
-        hardlink = "hardlink"
-        softlink = "softlink"
-
-        def __str__(self):
-            return self.value
-
-        def __json__(self):
-            return self.name
-
-    class FileMode(Enum):
-        """
-        Refers to the mode of the file. Originally referring to the has_prefix file, but adopted
-        for paths.json
-        """
-        text = 'text'
-        binary = 'binary'
-
-        def __str__(self):
-            return "%s" % self.value
-
-    class EntityEncoder(JSONEncoder):
-        # json.dumps(obj, cls=SetEncoder)
-        def default(self, obj):
-            if hasattr(obj, 'dump'):
-                return obj.dump()
-            elif hasattr(obj, '__json__'):
-                return obj.__json__()
-            elif hasattr(obj, 'to_json'):
-                return obj.to_json()
-            elif hasattr(obj, 'as_json'):
-                return obj.as_json()
-            return JSONEncoder.default(self, obj)
+from conda.exports import FileMode, PathType  # NOQA
+FileMode, PathType = FileMode, PathType
+from conda.exports import EntityEncoder  # NOQA
 
 EntityEncoder, FileMode, PathType = EntityEncoder, FileMode, PathType
 
 
-if parse_version(CONDA_VERSION) >= parse_version("4.3"):
-    CondaError = try_exports("conda.exceptions", "CondaError")
-    CondaHTTPError = try_exports("conda.exceptions", "CondaHTTPError")
-    LinkError = try_exports("conda.exceptions", "LinkError")
-    LockError = try_exports("conda.exceptions", "LockError")
-    NoPackagesFoundError = try_exports("conda.exceptions", "NoPackagesFoundError")
-    PaddingError = try_exports("conda.exceptions", "PaddingError")
-    UnsatisfiableError = try_exports("conda.exceptions", "UnsatisfiableError")
+CondaError = try_exports("conda.exceptions", "CondaError")
+CondaHTTPError = try_exports("conda.exceptions", "CondaHTTPError")
+LinkError = try_exports("conda.exceptions", "LinkError")
+LockError = try_exports("conda.exceptions", "LockError")
+NoPackagesFoundError = try_exports("conda.exceptions", "NoPackagesFoundError")
+PaddingError = try_exports("conda.exceptions", "PaddingError")
+UnsatisfiableError = try_exports("conda.exceptions", "UnsatisfiableError")
 
-    non_x86_linux_machines = try_exports("conda.base.context", "non_x86_linux_machines")
-    context = try_exports("conda.base.context", "context")
-    context_get_prefix = try_exports("conda.base.context", "get_prefix")
-    reset_context = try_exports("conda.base.context", "reset_context")
-    get_conda_build_local_url = try_exports("conda.models.channel", "get_conda_build_local_url")
+non_x86_linux_machines = try_exports("conda.base.context", "non_x86_linux_machines")
+context = try_exports("conda.base.context", "context")
+context_get_prefix = try_exports("conda.base.context", "get_prefix")
+reset_context = try_exports("conda.base.context", "reset_context")
+get_conda_build_local_url = try_exports("conda.models.channel", "get_conda_build_local_url")
 
-    binstar_upload = context.binstar_upload
-    bits = context.bits
-    conda_private = context.conda_private
-    default_python = context.default_python
-    envs_dirs = context.envs_dirs
-    pkgs_dirs = list(context.pkgs_dirs)
-    cc_platform = context.platform
-    root_dir = context.root_dir
-    root_writable = context.root_writable
-    subdir = context.subdir
+binstar_upload = context.binstar_upload
+bits = context.bits
+conda_private = context.conda_private
+default_python = context.default_python
+envs_dirs = context.envs_dirs
+pkgs_dirs = list(context.pkgs_dirs)
+cc_platform = context.platform
+root_dir = context.root_dir
+root_writable = context.root_writable
+subdir = context.subdir
 
-    get_rc_urls = lambda: list(context.channels)
-    get_prefix = partial(context_get_prefix, context)
-    cc_conda_build = context.conda_build if hasattr(context, 'conda_build') else {}
+get_rc_urls = lambda: list(context.channels)
+get_prefix = partial(context_get_prefix, context)
+cc_conda_build = context.conda_build if hasattr(context, 'conda_build') else {}
 
-    # disallow softlinks.  This avoids a lot of dumb issues, at the potential cost of disk space.
-    os.environ[str('CONDA_ALLOW_SOFTLINKS')] = str('false')
-    reset_context()
+# disallow softlinks.  This avoids a lot of dumb issues, at the potential cost of disk space.
+os.environ[str('CONDA_ALLOW_SOFTLINKS')] = str('false')
+reset_context()
 
-    get_local_urls = lambda: list(get_conda_build_local_url()) or []
-    arch_name = context.arch_name
+get_local_urls = lambda: list(get_conda_build_local_url()) or []
+arch_name = context.arch_name
 
-if parse_version(CONDA_VERSION) >= parse_version("4.2"):
-    from conda.exceptions import (CondaError, CondaHTTPError, LinkError, LockError,
-                                  NoPackagesFoundError, PaddingError, UnsatisfiableError)
-
-    from conda.base.context import non_x86_linux_machines
-    from conda.base.context import context, get_prefix as context_get_prefix, reset_context
-    binstar_upload = context.binstar_upload
-    bits = context.bits
-    conda_private = context.conda_private
-    default_python = context.default_python
-    envs_dirs = context.envs_dirs
-    pkgs_dirs = list(context.pkgs_dirs)
-    cc_platform = context.platform
-    root_dir = context.root_dir
-    root_writable = context.root_writable
-    subdir = context.subdir
-
-    get_rc_urls = lambda: list(context.channels)
-    get_prefix = partial(context_get_prefix, context)
-    cc_conda_build = context.conda_build if hasattr(context, 'conda_build') else {}
-
-    # disallow softlinks.  This avoids a lot of dumb issues, at the potential cost of disk space.
-    os.environ[str('CONDA_ALLOW_SOFTLINKS')] = str('false')
-    reset_context()
-
-    from conda.models.channel import get_conda_build_local_url
-    get_local_urls = lambda: list(get_conda_build_local_url()) or []
-    arch_name = context.arch_name
-
-else:
-    from conda import config as cc
-    from conda.config import non_x86_linux_machines  # NOQA
-    from conda.cli.common import get_prefix  # NOQA
-
-    binstar_upload = cc.binstar_upload
-    bits = cc.bits
-    default_python = cc.default_python
-    envs_dirs = cc.envs_dirs
-    pkgs_dirs = list(cc.pkgs_dirs)
-    cc_platform = cc.platform
-    root_dir = cc.root_dir
-    root_writable = cc.root_writable
-    subdir = cc.subdir
-    get_rc_urls = cc.get_rc_urls
-
-    cc_conda_build = cc.rc.get('conda-build', {})
-
-    class CondaHTTPError(Exception):
-        pass
-
-    class PaddingError(Exception):
-        pass
-
-    class LockError(Exception):
-        pass
-
-    class LinkError(Exception):
-        pass
-
-    class NoPackagesFoundError(Exception):
-        pass
-
-    class UnsatisfiableError(Exception):
-        pass
-
-    class CondaError(Exception):
-        pass
-
-    get_local_urls = cc.get_local_urls
-    arch_name = cc.arch_name
-
-    del locals()['cc']
 
 CondaError, CondaHTTPError, get_prefix, LinkError = CondaError, CondaHTTPError, get_prefix, LinkError  # NOQA
 LockError, non_x86_linux_machines, NoPackagesFoundError = LockError, non_x86_linux_machines, NoPackagesFoundError  # NOQA
