@@ -1,3 +1,19 @@
+2018-05-01 3.10.1:
+
+Bug fixes:
+----------
+
+* fix handling of downstream testing when downstreams don't exist yet (e.g. bootstrapping)  #2860
+* fix handling of downstream testing in tandem with --output-dir or --croot (add locations as file:// urls)  #2860
+* fix improperly escaped entries in cran template.  Clean up unnecessary changes.  #2861
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @msarahan
+
+
 2018-05-01 3.10.0:
 
 Enhancements:
