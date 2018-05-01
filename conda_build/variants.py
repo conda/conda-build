@@ -307,8 +307,9 @@ def _get_zip_key_set(combined_variant):
         is_strings, is_list_of_strings = _get_zip_key_type(zip_keys)
         assert is_strings or is_list_of_strings, ("zip_keys must be uniformly a list of strings, "
                                                 "or a list of lists of strings")
-        if is_strings:
-            key_set = set(zip_keys)
+        key_set = set()
+        if is_strings and len(zip_keys) > 1:
+            key_set.update(zip_keys)
         else:
             # make sure that each key only occurs in one set
             _all_unique = all_unique(zip_keys)
@@ -389,9 +390,9 @@ def dict_of_lists_to_list_of_dicts(dict_of_lists, extend_keys=None):
     # end result is a collection of dicts, like [{'python': 2.7, 'numpy': 1.11},
     #                                            {'python': 3.5, 'numpy': 1.11}]
     dicts = []
-    pass_through_keys = (['extend_keys', 'zip_keys', 'pin_run_as_build'] +
-                         list(ensure_list(extend_keys)) +
-                         list(_get_zip_key_set(dict_of_lists)))
+    pass_through_keys = set(['extend_keys', 'zip_keys', 'pin_run_as_build'] +
+                            list(ensure_list(extend_keys)) +
+                            list(_get_zip_key_set(dict_of_lists)))
     dimensions = {k: v for k, v in dict_of_lists.items() if k not in pass_through_keys}
     # here's where we add in the zipped dimensions.  Zipped stuff is concatenated strings, to avoid
     #      being distributed in the product.

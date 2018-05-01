@@ -382,3 +382,21 @@ def test_inner_python_loop_with_output(testing_config):
     assert len([out for out in outputs if out.startswith('tbb-2018')]) == 1
     assert len([out for out in outputs if out.startswith('tbb-devel-2018')]) == 1
     assert len([out for out in outputs if out.startswith('tbb4py-2018')]) == 3
+
+    testing_config.variant_config_files = [os.path.join(recipe_dir, 'test_python_as_subpackage_loop', 'config_with_zip.yaml')]
+    outputs = api.get_output_file_paths(os.path.join(recipe_dir, 'test_python_as_subpackage_loop'),
+                                        config=testing_config)
+    outputs = [os.path.basename(out) for out in outputs]
+    assert len(outputs) == 5
+    assert len([out for out in outputs if out.startswith('tbb-2018')]) == 1
+    assert len([out for out in outputs if out.startswith('tbb-devel-2018')]) == 1
+    assert len([out for out in outputs if out.startswith('tbb4py-2018')]) == 3
+
+    testing_config.variant_config_files = [os.path.join(recipe_dir, 'test_python_as_subpackage_loop', 'config_with_zip.yaml')]
+    outputs = api.get_output_file_paths(os.path.join(recipe_dir, 'test_python_as_subpackage_loop'),
+                                        config=testing_config, platform='win', arch=64)
+    outputs = [os.path.basename(out) for out in outputs]
+    assert len(outputs) == 5
+    assert len([out for out in outputs if out.startswith('tbb-2018')]) == 1
+    assert len([out for out in outputs if out.startswith('tbb-devel-2018')]) == 1
+    assert len([out for out in outputs if out.startswith('tbb4py-2018')]) == 3

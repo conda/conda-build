@@ -30,8 +30,7 @@ from .conda_interface import specs_from_url
 from .conda_interface import memoized
 
 from conda_build import exceptions, utils, environ
-from conda_build.metadata import (MetaData, combine_top_level_metadata_with_output,
-                                  trim_build_only_deps)
+from conda_build.metadata import MetaData, combine_top_level_metadata_with_output
 import conda_build.source as source
 from conda_build.variants import (get_package_variants, list_of_dicts_to_dict_of_lists,
                                   filter_by_key_value)
@@ -198,7 +197,7 @@ def find_pkg_dir_or_file_in_pkgs_dirs(pkg_dist, m, files_only=False):
             # create the tarball on demand.  This is so that testing on archives works.
             with tarfile.open(pkg_file, 'w:bz2') as archive:
                 for entry in os.listdir(pkg_dir):
-                    archive.add(entry, arcname=os.path.relpath(entry, pkg_dir))
+                    archive.add(os.path.join(pkg_dir, entry), arcname=entry)
             pkg_subdir = os.path.join(m.config.croot, m.config.host_subdir)
             pkg_loc = os.path.join(pkg_subdir, os.path.basename(pkg_file))
             shutil.move(pkg_file, pkg_loc)
@@ -606,6 +605,11 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
     for variant in top_loop:
         mv = metadata.copy()
         mv.config.variant = variant
+
+        pin_run_as_build = variant.get('pin_run_as_build', {})
+        if mv.numpy_xx and 'numpy' not in pin_run_as_build:
+            pin_run_as_build['numpy'] = {'min_pin': 'x.x', 'max_pin': 'x.x'}
+
         conform_dict = {}
         for key in used_variables:
             # We use this variant in the top-level recipe.
@@ -613,19 +617,15 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
             #     variant mapping
             conform_dict[key] = variant[key]
 
-        requirements_used = trim_build_only_deps(metadata, used_variables)
-        for req in 'python', 'r-base', 'mro-base':
-            if req in requirements_used:
-                conform_dict[req] = variant[req]
+        for key, values in conform_dict.items():
+            mv.config.variants = (filter_by_key_value(mv.config.variants, key, values,
+                                                      'distribute_variants_reduction') or
+                                  mv.config.variants)
 
         pin_run_as_build = variant.get('pin_run_as_build', {})
         if mv.numpy_xx and 'numpy' not in pin_run_as_build:
             pin_run_as_build['numpy'] = {'min_pin': 'x.x', 'max_pin': 'x.x'}
 
-        for key, values in conform_dict.items():
-            mv.config.variants = (filter_by_key_value(mv.config.variants, key, values,
-                                                      'distribute_variants_reduction') or
-                                  mv.config.variants)
         numpy_pinned_variants = []
         for _variant in mv.config.variants:
             _variant['pin_run_as_build'] = pin_run_as_build

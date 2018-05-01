@@ -1830,17 +1830,23 @@ class MetaData(object):
         full_collapsed_variants = variants.list_of_dicts_to_dict_of_lists(self.config.variants)
         reduced_collapsed_variants = full_collapsed_variants.copy()
         reduce_keys = set(self.config.variants[0].keys()) - set(used_variables)
-        used_zip_key_groups = [group for group in self.config.variant.get('zip_keys', []) if any(
+
+        zip_key_groups = self.config.variant.get('zip_keys', [])
+        zip_key_groups = ([zip_key_groups] if zip_key_groups and
+                          isinstance(zip_key_groups[0], string_types) else zip_key_groups)
+        used_zip_key_groups = [group for group in zip_key_groups if any(
             set(group) & set(used_variables))]
-        # passing the keys
+
+        reduce_keys = [key for key in reduce_keys if not any(key in group for group in
+                                                             used_zip_key_groups)]
         for key in reduce_keys:
             values = full_collapsed_variants.get(key)
-            if values and not hasattr(values, 'keys') and not any(key in coll for coll in
-                                                                  used_zip_key_groups):
+            if values and not hasattr(values, 'keys'):
                 # save only one element from this key
                 reduced_collapsed_variants[key] = utils.ensure_list(next(iter(values)))
 
-        return variants.dict_of_lists_to_list_of_dicts(reduced_collapsed_variants)
+        out = variants.dict_of_lists_to_list_of_dicts(reduced_collapsed_variants)
+        return out
 
     def get_output_metadata_set(self, permit_undefined_jinja=False,
                                 permit_unsatisfiable_variants=False,
