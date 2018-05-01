@@ -1,0 +1,20 @@
+{
+    "version": 1,
+    "project": "conda-build",
+    "project_url": "http://github.com/conda/conda-build",
+    "repo": ".",
+    "branches": ["master"],
+    "dvcs": "git",
+    "environment_type": "conda",
+    "show_commit_url": "http://github.com/conda/conda-build/commit/",
+    "pythons": ["3.6"],
+    "matrix": {
+        "conda": [],
+        "conda-verify": [],
+        "pytest": [],
+        "pytest-mock": [],
+    },
+    "env_dir": ".asv/env",
+    "results_dir": ".asv/results",
+    "html_dir": ".asv/html",
+}
