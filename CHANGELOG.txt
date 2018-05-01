@@ -1,3 +1,27 @@
+2018-05-01 3.10.0:
+
+Enhancements:
+-------------
+
+* Warn user about path conflicts during environment building for test phase  #2843
+* Add conda 4.6 compatibility   #2844
+* **remove conda 4.2 and earlier compatibility**  #2845
+* add info to merge/copy source subdir error  #2858
+* Add setup for Air Speed Velocity benchmarking  #2859
+
+Bug fixes:
+----------
+
+* fix python handling when python is a tuple (inner python looping)  #2854
+* fix python not looping in inner packages when top-level doesn't use it.  Fix zip_keys handling. #2856
+
+Contributors:
+-------------
+
+* @kalefranz
+* @msarahan
+
+
 2018-04-27 3.9.2:
 
 Enhancements:
