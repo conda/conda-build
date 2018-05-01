@@ -73,10 +73,12 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
             bytes_ = True
             m = SHEBANG_PAT.match(mm)
 
-        python_pattern = (re.compile(br'\/python[w]?(?:$|\s|\Z)', re.M) if bytes_ else
-                          re.compile(r'\/python[w]?(:$|\s|\z)', re.M))
-
-        if not (m and python_pattern.search(m.group())):
+        if m:
+            python_pattern = (re.compile(br'\/python[w]?(?:$|\s|\Z)', re.M) if bytes_ else
+                            re.compile(r'\/python[w]?(:$|\s|\z)', re.M))
+            if not python_pattern.search(m.group()):
+                return
+        else:
             return
 
         data = mm[:]

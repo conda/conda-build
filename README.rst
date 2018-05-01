@@ -15,6 +15,10 @@ conda-build
    :target: https://landscape.io/github/conda/conda-build/master
    :alt: Code Health
 
+.. image:: http://img.shields.io/badge/benchmarked%20by-asv-green.svg?style=flat
+   :target: https://github.com/airspeed-velocity/asv
+   :alt: Benchmarked by Airspeed Velocity
+
 
 Installation
 --------------
