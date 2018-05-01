@@ -857,16 +857,17 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     sha256 = hashlib.sha256()
                     cached_path = location
                 elif not is_github_url:
-                    filename = '{}_{}'.format(package, d['cran_version']) + archive_details['ext']
+                    filename_rendered = '{}_{}'.format(package, d['cran_version']) + archive_details['ext']
+                    filename = '{}_{{{{ version }}}}'.format(package) + archive_details['ext']
                     contrib_url = '{{{{ cran_mirror }}}}/{}'.format(archive_details['dir'])
                     contrib_url_rendered = cran_url + '/{}'.format(archive_details['dir'])
-                    package_url = contrib_url_rendered + filename
+                    package_url = contrib_url_rendered + filename_rendered
                     sha256 = hashlib.sha256()
                     print("Downloading {} from {}".format(archive_type, package_url))
                     # We may need to inspect the file later to determine which compilers are needed.
                     cached_path, _ = source.download_to_cache(config.src_cache, '',
                                                     dict({'url': package_url,
-                                                           'fn': archive_type + '-' + filename}))
+                                                           'fn': archive_type + '-' + filename_rendered}))
                 available_details = {}
                 available_details['selector'] = archive_details['selector']
                 if cached_path:
@@ -946,7 +947,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 else:
                     available_details['cranurl'] = ' ' + contrib_url + filename + sel_src
             if not is_github_url:
-                available_details['archive_keys'] = '{fn_key} {filename}{sel}\n' \
+                available_details['archive_keys'] = '{fn_key} {filename} {sel}\n' \
                                                     '  {url_key}{sel}' \
                                                     '    {cranurl}\n' \
                                                     '  {hash_entry}{sel}'.format(
@@ -1064,46 +1065,46 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             # Put non-R dependencies first.
             if dep_type == 'build':
                 if need_c:
-                    deps.append("{indent}{{{{ compiler('c') }}}}        {sel}".format(
+                    deps.append("{indent}{{{{ compiler('c') }}}}      {sel}".format(
                         indent=INDENT, sel=sel_src_not_win))
                 if need_cxx:
-                    deps.append("{indent}{{{{ compiler('cxx') }}}}      {sel}".format(
+                    deps.append("{indent}{{{{ compiler('cxx') }}}}    {sel}".format(
                         indent=INDENT, sel=sel_src_not_win))
                 if need_f:
-                    deps.append("{indent}{{{{ compiler('fortran') }}}}  {sel}".format(
+                    deps.append("{indent}{{{{ compiler('fortran') }}}}{sel}".format(
                         indent=INDENT, sel=sel_src_not_win))
                 if use_rtools_win:
                     need_c = need_cxx = need_f = need_autotools = need_make = False
-                    deps.append("{indent}{{{{native}}}}rtools        {sel}".format(
+                    deps.append("{indent}{{{{native}}}}rtools      {sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
-                    deps.append("{indent}{{{{native}}}}extsoft       {sel}".format(
+                    deps.append("{indent}{{{{native}}}}extsoft     {sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
                 if need_c or need_cxx or need_f:
-                    deps.append("{indent}{{{{native}}}}toolchain        {sel}".format(
+                    deps.append("{indent}{{{{native}}}}toolchain      {sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
                 if need_autotools or need_make or need_git:
-                    deps.append("{indent}{{{{posix}}}}filesystem        {sel}".format(
+                    deps.append("{indent}{{{{posix}}}}filesystem      {sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
                 if need_git:
                     deps.append("{indent}{{{{posix}}}}git".format(indent=INDENT))
                 if need_autotools:
-                    deps.append("{indent}{{{{posix}}}}sed               {sel}".format(
+                    deps.append("{indent}{{{{posix}}}}sed             {sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
-                    deps.append("{indent}{{{{posix}}}}grep              {sel}".format(
+                    deps.append("{indent}{{{{posix}}}}grep            {sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
-                    deps.append("{indent}{{{{posix}}}}autoconf          {sel}".format(
+                    deps.append("{indent}{{{{posix}}}}autoconf        {sel}".format(
                         indent=INDENT, sel=sel_src))
-                    deps.append("{indent}{{{{posix}}}}automake-wrapper  {sel}".format(
+                    deps.append("{indent}{{{{posix}}}}automake-wrapper{sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
-                    deps.append("{indent}{{{{posix}}}}automake          {sel}".format(
+                    deps.append("{indent}{{{{posix}}}}automake        {sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
                     deps.append("{indent}{{{{posix}}}}pkg-config".format(indent=INDENT))
                 if need_make:
-                    deps.append("{indent}{{{{posix}}}}make              {sel}".format(
+                    deps.append("{indent}{{{{posix}}}}make            {sel}".format(
                         indent=INDENT, sel=sel_src))
             elif dep_type == 'run':
                 if need_c or need_cxx or need_f:
-                    deps.append("{indent}{{{{native}}}}gcc-libs         {sel}".format(
+                    deps.append("{indent}{{{{native}}}}gcc-libs       {sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
 
             if dep_type == 'host' or dep_type == 'run':
