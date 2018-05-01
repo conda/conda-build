@@ -7,6 +7,7 @@ import sys
 _thisdir = os.path.dirname(__file__)
 sys.path.append(os.path.dirname(_thisdir))
 
+
 from tests.utils import metadata_dir
 variant_dir = os.path.join(metadata_dir, '..', 'variants')
 
