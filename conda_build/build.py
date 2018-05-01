@@ -49,6 +49,7 @@ from .conda_interface import dist_str_in_index
 from .conda_interface import MatchSpec
 from .conda_interface import reset_context
 from .conda_interface import context
+from .conda_interface import UnsatisfiableError
 from .utils import env_var
 
 from conda_build import __version__
@@ -2144,25 +2145,35 @@ def build_tree(recipe_list, config, stats, build_only=False, post=False, notest=
                         _, meta = dict_and_meta
                         downstreams = meta.meta.get('test', {}).get('downstreams')
                         if downstreams:
+                            channel_urls = tuple([utils.path2url(os.path.abspath(os.path.dirname(
+                                os.path.dirname(pkg))))])
+                            log = utils.get_logger(__name__)
                             # downstreams can be a dict, for adding capability for worker labels
                             if hasattr(downstreams, 'keys'):
                                 downstreams = list(downstreams.keys())
-                                log = utils.get_logger(__name__)
                                 log.warn("Dictionary keys for downstreams are being "
                                          "ignored right now.  Coming soon...")
                             else:
                                 downstreams = utils.ensure_list(downstreams)
                             for dep in downstreams:
+                                log.info("Testing downstream package: {}".format(dep))
                                 # resolve downstream packages to a known package
-                                random_string = ''.join(random.choice(
+                                r_string = ''.join(random.choice(
                                     string.ascii_uppercase + string.digits) for _ in range(10))
                                 specs = meta.ms_depends('run') + [MatchSpec(dep),
                                                         MatchSpec(meta.dist().replace('-', ' '))]
-                                with TemporaryDirectory(prefix="_", suffix=random_string) as tmpdir:
-                                    actions = environ.get_install_actions(
-                                        tmpdir, specs, env='run',
-                                        subdir=meta.config.host_subdir,
-                                        bldpkgs_dirs=meta.config.bldpkgs_dirs)
+                                specs = [utils.ensure_valid_spec(spec) for spec in specs]
+                                try:
+                                    with TemporaryDirectory(prefix="_", suffix=r_string) as tmpdir:
+                                        actions = environ.get_install_actions(
+                                            tmpdir, specs, env='run',
+                                            subdir=meta.config.host_subdir,
+                                            bldpkgs_dirs=meta.config.bldpkgs_dirs,
+                                            channel_urls=channel_urls)
+                                except (UnsatisfiableError, DependencyNeedsBuildingError) as e:
+                                    log.warn("Skipping downstream test for spec {}; was "
+                                             "unsatisfiable.  Error was {}".format(dep, e))
+                                    continue
                                 # make sure to download that package to the local cache if not there
                                 local_file = execute_download_actions(meta, actions, 'host',
                                                                       package_subset=dep,

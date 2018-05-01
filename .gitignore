@@ -13,3 +13,7 @@ junit.xml
 .cache
 .DS_Store
 .pytest_cache/
+.asv
+prof
+relative
+

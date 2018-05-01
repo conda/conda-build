@@ -655,11 +655,11 @@ def package_to_inputs_dict(output_dir, output_suffix, git_tag, package):
     new_location = join(output_dir, 'r-' + pkg_name + output_suffix)
     print(".. name: %s location: %s new_location: %s" % (pkg_name, location, new_location))
 
-    return dict({'pkg-name': pkg_name,
-                 'location': location,
-                 'old-git-rev': old_git_rev,
-                 'old-metadata': m,
-                 'new-location': new_location})
+    return {'pkg-name': pkg_name,
+            'location': location,
+            'old-git-rev': old_git_rev,
+            'old-metadata': m,
+            'new-location': new_location}
 
 
 def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=None, version=None,
@@ -857,7 +857,8 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     sha256 = hashlib.sha256()
                     cached_path = location
                 elif not is_github_url:
-                    filename_rendered = '{}_{}'.format(package, d['cran_version']) + archive_details['ext']
+                    filename_rendered = '{}_{}{}'.format(
+                        package, d['cran_version'], archive_details['ext'])
                     filename = '{}_{{{{ version }}}}'.format(package) + archive_details['ext']
                     contrib_url = '{{{{ cran_mirror }}}}/{}'.format(archive_details['dir'])
                     contrib_url_rendered = cran_url + '/{}'.format(archive_details['dir'])
@@ -865,9 +866,9 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     sha256 = hashlib.sha256()
                     print("Downloading {} from {}".format(archive_type, package_url))
                     # We may need to inspect the file later to determine which compilers are needed.
-                    cached_path, _ = source.download_to_cache(config.src_cache, '',
-                                                    dict({'url': package_url,
-                                                           'fn': archive_type + '-' + filename_rendered}))
+                    cached_path, _ = source.download_to_cache(
+                        config.src_cache, '',
+                        {'url': package_url, 'fn': archive_type + '-' + filename_rendered})
                 available_details = {}
                 available_details['selector'] = archive_details['selector']
                 if cached_path:
