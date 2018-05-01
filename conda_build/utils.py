@@ -518,7 +518,9 @@ def merge_tree(src, dst, symlinks=False, timeout=90, lock=None, locking=True, cl
     dst = os.path.normpath(os.path.normcase(dst))
     src = os.path.normpath(os.path.normcase(src))
     assert not dst.startswith(src), ("Can't merge/copy source into subdirectory of itself.  "
-                                     "Please create separate spaces for these things.")
+                                     "Please create separate spaces for these things.\n"
+                                     "  src: {0}\n"
+                                     "  dst: {1}".format(src, dst))
 
     new_files = copytree(src, dst, symlinks=symlinks, dry_run=True)
     existing = [f for f in new_files if isfile(f)]
