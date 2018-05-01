@@ -60,8 +60,7 @@ from conda.exports import CondaSession  # NOQA
 from conda.exports import (PY3,  StringIO, input, iteritems, lchmod, string_types,  # NOQA
                           text_type, TemporaryDirectory)  # NOQA
 from conda.exports import VersionOrder  # NOQA
-from conda.exports import dist_str_in_index
-
+from conda.exports import dist_str_in_index  # NOQA
 
 
 TmpDownload = TmpDownload
@@ -80,7 +79,7 @@ ArgumentParser, CondaSession, VersionOrder = ArgumentParser, CondaSession, Versi
 dist_str_in_index = dist_str_in_index
 
 
-from conda.core.package_cache import ProgressiveFetchExtract
+from conda.core.package_cache import ProgressiveFetchExtract  # NOQA
 from conda.models.dist import Dist, IndexRecord  # NOQA
 
 ProgressiveFetchExtract = ProgressiveFetchExtract
@@ -93,9 +92,9 @@ else:
 configparser = configparser
 
 
-from conda.exports import FileMode, PathType
+from conda.exports import FileMode, PathType  # NOQA
 FileMode, PathType = FileMode, PathType
-from conda.exports import EntityEncoder
+from conda.exports import EntityEncoder  # NOQA
 
 EntityEncoder, FileMode, PathType = EntityEncoder, FileMode, PathType
 
