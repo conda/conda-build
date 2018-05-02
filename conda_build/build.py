@@ -2145,8 +2145,9 @@ def build_tree(recipe_list, config, stats, build_only=False, post=False, notest=
                         _, meta = dict_and_meta
                         downstreams = meta.meta.get('test', {}).get('downstreams')
                         if downstreams:
-                            channel_urls = tuple([utils.path2url(os.path.abspath(os.path.dirname(
-                                os.path.dirname(pkg))))])
+                            channel_urls = tuple(utils.ensure_list(metadata.config.channel_urls) +
+                                                 [utils.path2url(os.path.abspath(os.path.dirname(
+                                                                 os.path.dirname(pkg))))])
                             log = utils.get_logger(__name__)
                             # downstreams can be a dict, for adding capability for worker labels
                             if hasattr(downstreams, 'keys'):
@@ -2161,7 +2162,7 @@ def build_tree(recipe_list, config, stats, build_only=False, post=False, notest=
                                 r_string = ''.join(random.choice(
                                     string.ascii_uppercase + string.digits) for _ in range(10))
                                 specs = meta.ms_depends('run') + [MatchSpec(dep),
-                                                        MatchSpec(meta.dist().replace('-', ' '))]
+                                                    MatchSpec(' '.join(meta.dist().rsplit('-', 2)))]
                                 specs = [utils.ensure_valid_spec(spec) for spec in specs]
                                 try:
                                     with TemporaryDirectory(prefix="_", suffix=r_string) as tmpdir:
