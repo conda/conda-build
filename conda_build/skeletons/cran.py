@@ -30,7 +30,7 @@ from conda_build.config import get_or_merge_config
 from conda_build.conda_interface import text_type, iteritems, TemporaryDirectory, cc_conda_build
 from conda_build.license_family import allowed_license_families, guess_license_family
 from conda_build.utils import rm_rf, ensure_list
-from conda_build.variants import get_package_variants
+from conda_build.variants import get_package_variants, DEFAULT_VARIANTS
 
 SOURCE_META = """\
   {archive_keys}
@@ -674,7 +674,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
     if not cran_url:
         with TemporaryDirectory() as t:
             _variant = get_package_variants(t, config)[0]
-        cran_url = ensure_list(_variant.get('cran_mirror', "https://cran.r-project.org"))[0]
+        cran_url = ensure_list(_variant.get('cran_mirror', DEFAULT_VARIANTS['cran_mirror']))[0]
 
     if len(in_packages) > 1 and version_compare:
         raise ValueError("--version-compare only works with one package at a time")

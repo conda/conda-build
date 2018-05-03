@@ -31,6 +31,7 @@ DEFAULT_VARIANTS = {
     'ignore_version': [],
     'ignore_build_only_deps': ['python'],
     'extend_keys': ['pin_run_as_build', 'ignore_version', 'ignore_build_only_deps'],
+    'cran_mirror': "https://cran.r-project.org",
 }
 
 # set this outside the initialization because of the dash in the key
