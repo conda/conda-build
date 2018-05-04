@@ -373,6 +373,8 @@ default_structs = {
     'build/pre-unlink': text_type,
     'build/string': text_type,
     'build/pin_depends': text_type,
+    'build/force_use_keys': list,
+    'build/force_ignore_keys': list,
     'requirements/build': list,
     'requirements/host': list,
     'requirements/run': list,
@@ -474,6 +476,7 @@ FIELDS = {
               'pin_depends', 'include_recipe',  # pin_depends is experimental still
               'preferred_env', 'preferred_env_executable_paths', 'run_exports',
               'ignore_run_exports', 'requires_features', 'provides_features',
+              'force_use_keys', "force_ignore_keys",
               },
     'requirements': {'build', 'host', 'run', 'conflicts', 'run_constrained'},
     'app': {'entry', 'icon', 'summary', 'type', 'cli_opts',
@@ -1994,6 +1997,14 @@ class MetaData(object):
                 break
         return output
 
+    @property
+    def force_ignore_keys(self):
+        return ensure_list(self.get_value('build/force_ignore_keys'))
+
+    @property
+    def force_use_keys(self):
+        return ensure_list(self.get_value('build/force_use_keys'))
+
     def get_used_vars(self, force_top_level=False, force_global=False):
         global used_vars_cache
         recipe_dir = self.path or self.meta.get('extra', {}).get('parent_recipe', {}).get('path')
@@ -2019,6 +2030,10 @@ class MetaData(object):
                     any(plat != self.config.subdir for plat in
                         self.get_variants_as_dict_of_lists()['target_platform'])):
                 used_vars.add('target_platform')
+
+            if self.force_use_keys or self.force_ignore_keys:
+                used_vars = (used_vars - set(self.force_ignore_keys)) | set(self.force_use_keys)
+
             used_vars_cache[(self.name(), recipe_dir, force_top_level,
                              force_global, self.config.subdir)] = used_vars
         return used_vars
