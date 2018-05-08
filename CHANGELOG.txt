@@ -1,3 +1,19 @@
+2018-05-08 3.10.2:
+
+Bug fixes:
+----------
+
+* fix downstream test not using channel list; fix exact specs in downstream testing  #2864
+* add deprecation notice for msvc_compiler key in meta.yaml.  Explain its incompatibility with variants.  #2868
+* set default cran mirror  #2868
+* disallow merging of build and host prefixes when host_subdir != build_subdir  #2876
+
+Contributors:
+-------------
+
+* @msarahan
+
+
 2018-05-01 3.10.1:
 
 Bug fixes:
