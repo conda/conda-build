@@ -90,6 +90,10 @@ def msvc_env_cmd(bits, config, override=None):
     log.warn("Using legacy MSVC compiler setup.  This will be removed in conda-build 4.0. "
              "If this recipe does not use a compiler, this message is safe to ignore.  "
              "Otherwise, use {{compiler('<language>')}} jinja2 in requirements/build.")
+    if override:
+        log.warn("msvc_compiler key in meta.yaml is deprecated. Use the new"
+        "variant-powered compiler configuration instead. Note that msvc_compiler"
+        "is incompatible with the new \{\{compiler('c')\}\} jinja scheme.")
     # this has been an int at times.  Make sure it's a string for consistency.
     bits = str(bits)
     arch_selector = 'x86' if bits == '32' else 'amd64'
