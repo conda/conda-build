@@ -17,8 +17,6 @@ build:
   ignore_run_exports:
     - jpeg
     - libpng
-  # this key does apply to the outputs.  Most do.  entry_points, run_exports and script do not.
-  #     See reconcile_metadata_with_output_dict function
   merge_build_host: True
 
 requirements:
@@ -31,6 +29,7 @@ outputs:
   - name: test_build_host_merge
   - name: test_merge_uses_run_exports
     build:
+      merge_build_host: True
       script:
         - set -ex
         - |

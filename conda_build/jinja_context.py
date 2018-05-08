@@ -223,11 +223,11 @@ def pin_compatible(m, package_name, lower_bound=None, upper_bound=None, min_pin=
         if key in cached_env_dependencies:
             pins = cached_env_dependencies[key]
         else:
-            if m.is_cross and not m.config.build_is_host:
+            if m.is_cross and not m.build_is_host:
                 pins, _, _ = get_env_dependencies(m, 'host', m.config.variant)
             else:
                 pins, _, _ = get_env_dependencies(m, 'build', m.config.variant)
-                if m.config.build_is_host:
+                if m.build_is_host:
                     host_pins, _, _ = get_env_dependencies(m, 'host', m.config.variant)
                     pins.extend(host_pins)
             cached_env_dependencies[key] = pins
@@ -252,7 +252,7 @@ def pin_compatible(m, package_name, lower_bound=None, upper_bound=None, min_pin=
     if (not compatibility and not permit_undefined_jinja and not bypass_env_check and
             'pin_compatible' in m.extract_requirements_text()):
         raise RuntimeError("Could not get compatibility information for {} package.  "
-                           "Is it one of your build dependencies?".format(package_name))
+                           "Is it one of your host dependencies?".format(package_name))
     return " ".join((package_name, compatibility)) if compatibility is not None else package_name
 
 
