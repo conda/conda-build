@@ -159,6 +159,9 @@ DEFAULTS = [Setting('activate', True),
             # involving compilers (not just python) will still require recipe modification to have
             # distinct host and build sections, but simple python stuff should work without.
             Setting('merge_build_host', False),
+            # this one is the state that can be set elsewhere, which affects how
+            #    the "build_prefix" works.  The one above is a setting.
+            Setting('_merge_build_host', False),
 
             # path to output build statistics to
             Setting('stats_file', None),
@@ -544,7 +547,7 @@ class Config(object):
         """The temporary folder where the build environment is created.  The build env contains
         libraries that may be linked, but only if the host env is not specified.  It is placed on
         PATH."""
-        if self.build_is_host:
+        if self._merge_build_host:
             prefix = self.host_prefix
         else:
             prefix = join(self.build_folder, '_build_env')
@@ -687,6 +690,10 @@ class Config(object):
         path = join(self.build_folder, 'test_tmp')
         _ensure_dir(path)
         return path
+
+    @property
+    def subdirs_same(self):
+        return self.host_subdir == self.build_subdir
 
     def clean(self, remove_folders=True):
         # build folder is the whole burrito containing envs and source folders

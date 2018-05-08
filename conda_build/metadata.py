@@ -812,6 +812,8 @@ class MetaData(object):
         # Primarily for debugging.  Ensure that metadata is not altered after "finalizing"
         self.parse_again(permit_undefined_jinja=True, allow_no_other_outputs=True)
         self.config.disable_pip = self.disable_pip
+        # establish whether this recipe should squish build and host together
+        self.config._merge_build_host = self.build_is_host
 
     @property
     def is_cross(self):
@@ -904,11 +906,7 @@ class MetaData(object):
             if self.config.bootstrap:
                 dependencies = _get_dependencies_from_environment(self.config.bootstrap)
                 self.append_metadata_sections(dependencies, merge=True)
-            if (self.config.merge_build_host or
-                self.meta.get('build', {}).get('merge_build_host', False) or
-                (not self.meta.get('requirements', {}).get('host', []) and not
-                        self.uses_new_style_compiler_activation)):
-                self.config.build_is_host = True
+
             if self.meta.get('build', {}).get('error_overlinking', False):
                 self.config.error_overlinking = self.meta['build']['error_overlinking']
         except:
@@ -2105,6 +2103,15 @@ class MetaData(object):
         b = self.meta.get('build', {}) or {}
         should_activate = (self.uses_new_style_compiler_activation or b.get('activate_in_script'))
         return bool(self.config.activate and not self.name() == 'conda' and should_activate)
+
+    @property
+    def build_is_host(self):
+        value = (self.config.subdirs_same and (
+            (self.meta.get('build', {}).get('merge_build_host', False) or
+             self.config.build_is_host) or
+            (not self.meta.get('requirements', {}).get('host', []) and
+             not self.uses_new_style_compiler_activation)))
+        return value
 
     def get_top_level_recipe_without_outputs(self):
         recipe_no_outputs = self.get_recipe_text(force_top_level=True).replace(

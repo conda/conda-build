@@ -1249,7 +1249,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
         host_ms_deps = m.ms_depends('host')
         host_ms_deps = [utils.ensure_valid_spec(spec) for spec in host_ms_deps]
 
-        if m.is_cross and not m.config.build_is_host:
+        if m.is_cross and not m.build_is_host:
             if VersionOrder(conda_version) < VersionOrder('4.3.2'):
                 raise RuntimeError("Non-native subdir support only in conda >= 4.3.2")
 
@@ -1268,7 +1268,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
             environ.create_env(m.config.host_prefix, host_actions, env='host', config=m.config,
                                subdir=m.config.host_subdir, is_cross=m.is_cross,
                                is_conda=m.name() == 'conda')
-        if m.config.build_is_host:
+        if m.build_is_host:
             build_ms_deps.extend(host_ms_deps)
         build_actions = environ.get_install_actions(m.config.build_prefix,
                                                     tuple(build_ms_deps), 'build',
@@ -1477,7 +1477,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
 
                         host_ms_deps = m.ms_depends('host')
                         sub_build_ms_deps = m.ms_depends('build')
-                        if m.is_cross and not m.config.build_is_host:
+                        if m.is_cross and not m.build_is_host:
                             host_actions = environ.get_install_actions(m.config.host_prefix,
                                                     tuple(host_ms_deps), 'host',
                                                     subdir=m.config.host_subdir,
@@ -1807,15 +1807,17 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
         return True
 
     if metadata.config.remove_work_dir:
-        if os.path.isdir(metadata.config.build_prefix):
-            # move build folder to force hardcoded paths to build env to break during tests
-            #    (so that they can be properly addressed by recipe author)
-            dest = os.path.join(os.path.dirname(metadata.config.build_prefix),
-                        '_'.join(('build_prefix_moved', metadata.dist(),
-                                    metadata.config.host_subdir)))
-            # Needs to come after create_files in case there's test/source_files
-            print("Renaming build prefix directory, ", metadata.config.build_prefix, " to ", dest)
-            os.rename(config.build_prefix, dest)
+        for name, prefix in (('host', metadata.config.host_prefix),
+                             ('build', metadata.config.build_prefix)):
+            if os.path.isdir(prefix):
+                # move host folder to force hardcoded paths to host env to break during tests
+                #    (so that they can be properly addressed by recipe author)
+                dest = os.path.join(os.path.dirname(prefix),
+                            '_'.join(('%s_prefix_moved' % name, metadata.dist(),
+                                      getattr(metadata.config, '%s_subdir' % name))))
+                # Needs to come after create_files in case there's test/source_files
+                print("Renaming %s prefix directory, " % name, prefix, " to ", dest)
+                os.rename(prefix, dest)
 
         # nested if so that there's no warning when we just leave the empty workdir in place
         if metadata.source_provided:
@@ -2182,7 +2184,7 @@ def build_tree(recipe_list, config, stats, build_only=False, post=False, notest=
                                 # test that package, using the local channel so that our new
                                 #    upstream dep gets used
                                 test(list(local_file.values())[0][0],
-                                     config=metadata.config, stats=stats)
+                                     config=meta.config, stats=stats)
 
                         built_packages.update({pkg: dict_and_meta})
                 else:

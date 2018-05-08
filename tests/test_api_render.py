@@ -148,16 +148,11 @@ def test_pin_depends(testing_config):
 
 
 def test_cross_recipe_with_only_build_section(testing_config):
-    recipe = os.path.join(metadata_dir, '_cross_prefix_elision')
-    metadata = api.render(recipe, config=testing_config, bypass_env_check=True)[0][0]
-    assert metadata.config.host_subdir != subdir
-    assert metadata.config.build_prefix == metadata.config.host_prefix
-    assert metadata.config.build_is_host
     recipe = os.path.join(metadata_dir, '_cross_prefix_elision_compiler_used')
     metadata = api.render(recipe, config=testing_config, bypass_env_check=True)[0][0]
     assert metadata.config.host_subdir != subdir
     assert metadata.config.build_prefix != metadata.config.host_prefix
-    assert not metadata.config.build_is_host
+    assert not metadata.build_is_host
 
 
 def test_setting_condarc_vars_with_env_var_expansion(testing_workdir):
