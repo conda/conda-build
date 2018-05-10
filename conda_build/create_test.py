@@ -72,13 +72,12 @@ def create_shell_files(m, test_dir=None):
                 f.write(cmd)
                 f.write('\n')
                 if on_win:
-                    f.write("IF %ERRORLEVEL% NEQ 0 exit \b 1\n")
+                    f.write("IF %ERRORLEVEL% NEQ 0 exit /B 1\n")
                 has_tests = True
             if on_win:
-                f.write('exit \b 0\n')
+                f.write('exit /B 0\n')
             else:
                 f.write('exit 0\n')
-
     return has_tests or os.path.isfile(os.path.join(m.config.test_dir, name))
 
 
