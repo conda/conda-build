@@ -139,7 +139,7 @@ def unpack(source_dict, src_dir, cache_folder, recipe_path, croot, verbose=False
     with TemporaryDirectory(dir=croot) as tmpdir:
         unhashed_dest = os.path.join(tmpdir, unhashed_fn)
         if src_path.lower().endswith(('.tar.gz', '.tar.bz2', '.tgz', '.tar.xz',
-                '.tar', 'tar.z')):
+                '.tar', 'tar.lzma', 'tar.z')):
             tar_xf(src_path, tmpdir)
         elif src_path.lower().endswith('.zip'):
             unzip(src_path, tmpdir)

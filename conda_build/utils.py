@@ -626,6 +626,15 @@ unxz is required to unarchive .xz source files.
 
         check_call_env([unxz, '-f', '-k', tarball])
         tarball = tarball[:-3]
+    if not PY3 and tarball.endswith('.tar.lzma'):
+        unlzma = external.find_executable('unlzma')
+        if not unlzma:
+            sys.exit("""\
+unlzma is required to unarchive .lzma source files.
+""")
+
+        check_call_env([unlzma, '-f', '-k', tarball])
+        tarball = tarball[:-5]
     t = tarfile.open(tarball, mode)
     members = t.getmembers()
     for i, member in enumerate(members, 0):
