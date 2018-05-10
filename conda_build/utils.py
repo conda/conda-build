@@ -7,6 +7,7 @@ import fnmatch
 import hashlib
 import json
 from locale import getpreferredencoding
+import libarchive
 import logging
 import logging.config
 import mmap
@@ -346,17 +347,13 @@ def get_recipe_abspath(recipe):
     if not PY3:
         recipe = recipe.decode(getpreferredencoding() or 'utf-8')
     if isfile(recipe):
-        if recipe.endswith(('.tar', '.tar.gz', '.tgz', '.tar.bz2')):
+        if recipe.lower().endswith(decompressible_exts):
             recipe_dir = tempfile.mkdtemp()
-            t = tarfile.open(recipe, 'r:*')
-            t.extractall(path=recipe_dir)
+            tar_xf(recipe, recipe_dir)
             # At some stage the old build system started to tar up recipes.
             recipe_tarfile = os.path.join(recipe_dir, 'info', 'recipe.tar')
             if isfile(recipe_tarfile):
-                t2 = tarfile.open(recipe_tarfile, 'r:*')
-                t2.extractall(path=os.path.join(recipe_dir, 'info'))
-                t2.close()
-            t.close()
+                tar_xf(recipe_tarfile, os.path.join(recipe_dir, 'info'))
             need_cleanup = True
         else:
             print("Ignoring non-recipe: %s" % recipe)
@@ -619,60 +616,21 @@ def relative(f, d='lib'):
     return '/'.join(((['..'] * len(f)) if f else ['.']) + d)
 
 
-def tar_xf(tarball, dir_path, mode='r:*'):
-    if tarball.lower().endswith('.tar.z'):
-        uncompress = external.find_executable('uncompress')
-        if not uncompress:
-            uncompress = external.find_executable('gunzip')
-        if not uncompress:
-            sys.exit("""\
-uncompress (or gunzip) is required to unarchive .z source files.
-""")
-        check_call_env([uncompress, '-f', tarball])
-        tarball = tarball[:-2]
-    if not PY3 and tarball.endswith('.tar.xz'):
-        unxz = external.find_executable('unxz')
-        if not unxz:
-            sys.exit("""\
-unxz is required to unarchive .xz source files.
-""")
-
-        check_call_env([unxz, '-f', '-k', tarball])
-        tarball = tarball[:-3]
-    t = tarfile.open(tarball, mode)
-    members = t.getmembers()
-    for i, member in enumerate(members, 0):
-        if os.path.isabs(member.name):
-            member.name = os.path.relpath(member.name, '/')
-        if not os.path.realpath(member.name).startswith(os.getcwd()):
-            member.name = member.name.replace("../", "")
-        if not os.path.realpath(member.name).startswith(os.getcwd()):
-            sys.exit("tarball contains unsafe path: " + member.name)
-        members[i] = member
-
-    if not PY3:
-        t.extractall(path=dir_path.encode(codec))
-    else:
-        t.extractall(path=dir_path)
-    t.close()
+# This is the lowest common denominator of the formats supported by our libarchive/python-libarchive-c
+# packages across all platforms
+decompressible_exts = ('.7z', '.tar', '.tar.bz2', '.tar.gz', '.tar.lzma', '.tar.xz', '.tar.z', '.tgz', '.whl', '.zip')
 
 
-def unzip(zip_path, dir_path):
-    z = zipfile.ZipFile(zip_path)
-    for info in z.infolist():
-        name = info.filename
-        if name.endswith('/'):
-            continue
-        path = join(dir_path, *name.split('/'))
-        dp = dirname(path)
-        if not isdir(dp):
-            os.makedirs(dp)
-        with open(path, 'wb') as fo:
-            fo.write(z.read(name))
-        unix_attributes = info.external_attr >> 16
-        if unix_attributes:
-            os.chmod(path, unix_attributes)
-    z.close()
+def tar_xf(tarball, dir_path):
+    flags = libarchive.extract.EXTRACT_TIME | \
+            libarchive.extract.EXTRACT_PERM | \
+            libarchive.extract.EXTRACT_SECURE_NODOTDOT | \
+            libarchive.extract.EXTRACT_SECURE_SYMLINKS | \
+            libarchive.extract.EXTRACT_SECURE_NOABSOLUTEPATHS
+    if not os.path.isabs(tarball):
+        tarball = os.path.join(os.getcwd(), tarball)
+    with tmp_chdir(dir_path):
+        libarchive.extract_file(tarball, flags)
 
 
 def file_info(path):
