@@ -1,0 +1,47 @@
+package:
+  name: libarchive
+  version: 1
+
+source:
+  - url: test.7z
+  - url: test.tar
+  - url: test.tar.bz2
+  - url: test.tar.gz
+  - url: test.tar.lzma
+  - url: test.tar.xz
+  - url: test.tar.z
+  - url: test.tgz
+  - url: test.whl
+  - url: test.zip
+
+build:
+  script:
+    - mv test_* ${PREFIX}    # [unix]
+    - move test_* %PREFIX%\  # [win]
+
+test:
+  commands:
+    - pushd ${PREFIX}        # [unix]
+    - test -f test_7z        # [unix]
+    - test -f test_tar       # [unix]
+    - test -f test_tar_bz2   # [unix]
+    - test -f test_tar_gz    # [unix]
+    - test -f test_tar_lzma  # [unix]
+    - test -f test_tar_xz    # [unix]
+    - test -f test_tar_z     # [unix]
+    - test -f test_tgz       # [unix]
+    - test -f test_whl       # [unix]
+    - test -f test_zip       # [unix]
+    - popd                   # [unix]
+    - pushd %PREFIX%                     # [win]
+    - if not exist test_7z exit 1        # [win]
+    - if not exist test_tar exit 1       # [win]
+    - if not exist test_tar_bz2 exit 1   # [win]
+    - if not exist test_tar_gz exit 1    # [win]
+    - if not exist test_tar_lzma exit 1  # [win]
+    - if not exist test_tar_xz exit 1    # [win]
+    - if not exist test_tar_z exit 1     # [win]
+    - if not exist test_tgz exit 1       # [win]
+    - if not exist test_whl exit 1       # [win]
+    - if not exist test_zip exit 1       # [win]
+    - popd                               # [win]
