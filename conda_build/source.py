@@ -15,7 +15,7 @@ from .conda_interface import hashsum_file
 
 from conda_build.os_utils import external
 from conda_build.conda_interface import url_path, CondaHTTPError
-from conda_build.utils import (tar_xf, unzip, safe_print_unicode, copy_into, on_win, ensure_list,
+from conda_build.utils import (decompressible_exts, tar_xf, safe_print_unicode, copy_into, on_win, ensure_list,
                                check_output_env, check_call_env, convert_path_for_cygwin_or_msys2,
                                get_logger, rm_rf, LoggingContext)
 
@@ -139,20 +139,16 @@ def unpack(source_dict, src_dir, cache_folder, recipe_path, croot, verbose=False
         print("Extracting download")
     with TemporaryDirectory(dir=croot) as tmpdir:
         unhashed_dest = os.path.join(tmpdir, unhashed_fn)
-        if src_path.lower().endswith(('.tar.gz', '.tar.bz2', '.tgz', '.tar.xz',
-                '.tar', 'tar.z')):
+        if src_path.lower().endswith(decompressible_exts):
             tar_xf(src_path, tmpdir)
-        elif src_path.lower().endswith('.zip'):
-            unzip(src_path, tmpdir)
-        elif src_path.lower().endswith('.whl'):
-            # copy wheel itself *and* unpack it
-            # This allows test_files or about.license_file to locate files in the wheel,
-            # as well as `pip install name-version.whl` as install command
-            unzip(src_path, tmpdir)
-            copy_into(src_path, unhashed_dest, timeout, locking=locking)
         else:
             # In this case, the build script will need to deal with unpacking the source
             print("Warning: Unrecognized source format. Source file will be copied to the SRC_DIR")
+            copy_into(src_path, unhashed_dest, timeout, locking=locking)
+        if src_path.lower().endswith('.whl'):
+            # copy wheel itself *and* unpack it
+            # This allows test_files or about.license_file to locate files in the wheel,
+            # as well as `pip install name-version.whl` as install command
             copy_into(src_path, unhashed_dest, timeout, locking=locking)
         flist = os.listdir(tmpdir)
         folder = os.path.join(tmpdir, flist[0])
