@@ -1,0 +1,23 @@
+package:
+  name: test_data-suite
+  version: 1.0
+
+# requirements:
+#   build:
+#     - posix  # [win]
+#     - git    # [not win]
+
+outputs:
+  - name: libtest_data
+    script: install-libtest_data.sh
+    test:
+      files:
+        - test_data
+
+  - name: test_data
+    requirements:
+      - {{ pin_subpackage('libtest_data', exact=True) }}
+    script: install-test_data.sh
+    test:
+      files:
+        - test_data
