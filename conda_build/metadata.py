@@ -816,7 +816,6 @@ class MetaData(object):
         self.parse_again(permit_undefined_jinja=True, allow_no_other_outputs=True)
         self.config.disable_pip = self.disable_pip
         # establish whether this recipe should squish build and host together
-        self.config._merge_build_host = self.build_is_host
 
     @property
     def is_cross(self):

@@ -1249,6 +1249,8 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
         host_ms_deps = m.ms_depends('host')
         host_ms_deps = [utils.ensure_valid_spec(spec) for spec in host_ms_deps]
 
+        m.config._merge_build_host = m.build_is_host
+
         if m.is_cross and not m.build_is_host:
             if VersionOrder(conda_version) < VersionOrder('4.3.2'):
                 raise RuntimeError("Non-native subdir support only in conda >= 4.3.2")
@@ -1474,6 +1476,8 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                         utils.rm_rf(m.config.host_prefix)
                         utils.rm_rf(m.config.build_prefix)
                         utils.rm_rf(m.config.test_prefix)
+
+                        m.config._merge_build_host = m.build_is_host
 
                         host_ms_deps = m.ms_depends('host')
                         sub_build_ms_deps = m.ms_depends('build')
