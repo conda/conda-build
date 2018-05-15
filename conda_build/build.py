@@ -43,7 +43,7 @@ from .conda_interface import PathType, FileMode
 from .conda_interface import EntityEncoder
 from .conda_interface import get_rc_urls
 from .conda_interface import url_path
-from .conda_interface import cc_platform, root_dir, pkgs_dirs
+from .conda_interface import root_dir, pkgs_dirs
 from .conda_interface import conda_private
 from .conda_interface import dist_str_in_index
 from .conda_interface import MatchSpec
@@ -523,13 +523,8 @@ def write_about_json(m):
         for channel in get_rc_urls() + list(m.config.channel_urls):
             stripped_channels.append(sanitize_channel(channel))
         d['channels'] = stripped_channels
-        evars = ['PATH', 'PYTHONPATH', 'PYTHONHOME', 'CONDA_DEFAULT_ENV',
-                 'CIO_TEST', 'CONDA_ENVS_PATH']
+        evars = ['CIO_TEST']
 
-        if cc_platform == 'linux':
-            evars.append('LD_LIBRARY_PATH')
-        elif cc_platform == 'osx':
-            evars.append('DYLD_LIBRARY_PATH')
         d['env_vars'] = {ev: os.getenv(ev, '<not set>') for ev in evars}
         # this information will only be present in conda 4.2.10+
         try:
