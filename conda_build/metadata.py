@@ -1183,7 +1183,7 @@ class MetaData(object):
             pin_compatible, not_xx = self.uses_numpy_pin_compatible_without_xx
             # numpy_xx means it is accounted for in the build string, with npXYY
             # if not pin_compatible, then we don't care about the usage, and omit it from the hash.
-            if self.numpy_xx or not pin_compatible:
+            if self.numpy_xx or (pin_compatible and not not_xx):
                 build_string_excludes.append('numpy')
         # always exclude older stuff that's always in the build string (py, np, pl, r, lua)
         if build_string_excludes:

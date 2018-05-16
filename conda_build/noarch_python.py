@@ -73,7 +73,7 @@ def handle_file(f, d, prefix):
         dst = join(prefix, g)
         dst_dir = dirname(dst)
         _force_dir(dst_dir)
-        os.rename(path, dst)
+        shutil.move(path, dst)
         d['site-packages'].append(g[14:])
 
     # Treat scripts specially with the logic from above

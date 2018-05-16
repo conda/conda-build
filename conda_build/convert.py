@@ -270,18 +270,20 @@ def update_lib_contents(lib_directory, temp_dir, target_platform, file_path):
         except IndexError:
             pass
 
-        os.rename(os.path.join(temp_dir, 'lib'), os.path.join(temp_dir, 'Lib'))
+        shutil.move(os.path.join(temp_dir, 'lib'), os.path.join(temp_dir, 'Lib'))
 
     elif target_platform == 'unix':
-        for lib_file in glob.iglob('{}/**' .format(lib_directory)):
+        dest_dir = os.path.join(temp_dir, 'lib')
+        shutil.move(os.path.join(temp_dir, 'Lib'), dest_dir)
+        for lib_file in glob.iglob('{}/**' .format(dest_dir)):
             python_version = retrieve_python_version(file_path)
-            new_lib_file = re.sub('Lib', os.path.join('lib', python_version), lib_file)
-            os.renames(lib_file, new_lib_file)
-
-        try:
-            os.rename(os.path.join(temp_dir, 'Lib'), os.path.join(temp_dir, 'lib'))
-        except:
-            pass
+            py_folder = os.path.join(dest_dir, python_version)
+            new_lib_file = os.path.join(py_folder, os.path.basename(lib_file))
+            try:
+                os.makedirs(py_folder)
+            except:
+                pass
+            shutil.move(lib_file, new_lib_file)
 
 
 def update_executable_path(file_path, target_platform):
