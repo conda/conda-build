@@ -302,6 +302,8 @@ def copy_recipe(m):
         # just for lack of confusion, don't show outputs in final rendered recipes
         if 'outputs' in output_metadata.meta:
             del output_metadata.meta['outputs']
+        if 'parent_recipe' in output_metadata.meta.get('extra', {}):
+            del output_metadata.meta['extra']['parent_recipe']
 
         utils.sort_list_in_nested_structure(output_metadata.meta,
                                             ('build/script', 'test/commands'))
@@ -811,6 +813,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
 
     files = output.get('files', [])
 
+    # this is because without any requirements at all, we still need to have the host prefix exist
     try:
         os.makedirs(metadata.config.host_prefix)
     except OSError:
@@ -1780,8 +1783,6 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
                                                                   config)
 
     trace = '-x ' if metadata.config.debug else ''
-
-    metadata.config.compute_build_id(metadata.name())
 
     # Must download *after* computing build id, or else computing build id will change
     #     folder destination
