@@ -708,8 +708,11 @@ def build_info_files_json_v1(m, prefix, files, files_with_prefix):
     for fi in sorted(files):
         prefix_placeholder, file_mode = has_prefix(fi, files_with_prefix)
         path = os.path.join(prefix, fi)
+        short_path = get_short_path(m, fi)
+        if short_path:
+            short_path = short_path.replace('\\', '/').replace('\\\\', '/')
         file_info = {
-            "_path": get_short_path(m, fi),
+            "_path": short_path,
             "sha256": sha256_checksum(path),
             "size_in_bytes": os.path.getsize(path),
             "path_type": path_type(path),

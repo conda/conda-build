@@ -380,6 +380,8 @@ def update_paths_file(temp_dir, target_platform):
                     path['sha256'] = update_executable_sha(temp_dir, path['_path'])
                     path['size_in_bytes'] = update_executable_size(temp_dir, path['_path'])
 
+                path['_path'] = path['_path'].replace('\\', '/').replace('\\\\', '/')
+
             script_directory = os.path.join(temp_dir, 'Scripts')
             if os.path.isdir(script_directory):
                 for script in os.listdir(script_directory):
@@ -395,6 +397,8 @@ def update_paths_file(temp_dir, target_platform):
                     path['_path'] = update_executable_path(path['_path'], 'unix')
                     path['sha256'] = update_executable_sha(temp_dir, path['_path'])
                     path['size_in_bytes'] = update_executable_size(temp_dir, path['_path'])
+
+                path['_path'] = path['_path'].replace('\\', '/').replace('\\\\', '/')
 
                 if path['_path'].endswith(('.bat', '.exe')):
                     paths['paths'].remove(path)
@@ -558,7 +562,7 @@ def update_files_file(temp_dir, verbose):
             relative_dir = os.path.relpath(dirpath, temp_dir)
             filenames = [os.path.join(relative_dir, f) for f in filenames]
             for filename in filter_info_files(filenames, ''):
-                file_paths.append(filename)
+                file_paths.append(filename.replace('\\', '/').replace('\\\\', '/'))
                 if verbose:
                     print('Updating {}' .format(filename))
 
