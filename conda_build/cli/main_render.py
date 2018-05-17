@@ -9,6 +9,7 @@ from __future__ import absolute_import, division, print_function
 import logging
 import sys
 import os
+from pprint import pprint
 
 from conda_build.conda_interface import (ArgumentParser, add_parser_channels, cc_conda_build,
                                          url_path)
@@ -179,6 +180,13 @@ def execute(args):
     else:
         logging.basicConfig(level=logging.INFO)
         for (m, _, _) in metadata_tuples:
+            print("--------------")
+            print("Hash contents:")
+            print("--------------")
+            pprint(m.get_hash_contents())
+            print("----------")
+            print("meta.yaml:")
+            print("----------")
             print(api.output_yaml(m, args.file))
 
 

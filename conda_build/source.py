@@ -106,7 +106,7 @@ def download_to_cache(cache_folder, recipe_path, source_dict):
             hashed = hashsum_file(path, 'sha256')
         dest_path = append_hash_to_fn(path, hashed)
         if not os.path.isfile(dest_path):
-            os.rename(path, dest_path)
+            shutil.move(path, dest_path)
         path = dest_path
 
     return path, unhashed_fn
@@ -651,7 +651,7 @@ def provide(metadata):
                 apply_patch(src_dir, join(metadata.path, patch), metadata.config, git)
 
     except CalledProcessError:
-        os.rename(metadata.config.work_dir, metadata.config.work_dir + '_failed_provide')
+        shutil.move(metadata.config.work_dir, metadata.config.work_dir + '_failed_provide')
         raise
 
     return metadata.config.work_dir

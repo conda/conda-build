@@ -1183,18 +1183,21 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
     if post in [False, None]:
         output_metas = expand_outputs([(m, need_source_download, need_reparse_in_env)])
 
-        if m.config.skip_existing:
-            # TODO: should we check both host and build envs?  These are the same, except when
-            #    cross compiling.
-            package_locations = [is_package_built(om, 'host') for _, om in output_metas]
-            if all(package_locations):
-                print("Packages for ", m.path or m.name(),
-                        "are already built in {0}, skipping.".format(package_locations))
-                return default_return
+        skipped = []
+        package_locations = []
+        # TODO: should we check both host and build envs?  These are the same, except when
+        #    cross compiling.
+        for _, om in output_metas:
+            if om.skip() or (m.config.skip_existing and is_package_built(om, 'host')):
+                skipped.append(bldpkg_path(om))
             else:
-                package_locations = [bldpkg_path(om) for _, om in output_metas if not om.skip()]
-        else:
-            package_locations = [bldpkg_path(om) for _, om in output_metas if not om.skip()]
+                package_locations.append(bldpkg_path(om))
+        if not package_locations:
+            print("Packages for ", m.path or m.name(), "with variant {} "
+                  "are already built and available from your configured channels "
+                  "(including local) or are otherwise specified to be skipped."
+                  .format(m.get_hash_contents()))
+            return default_return
 
         print("BUILD START:", [os.path.basename(pkg) for pkg in package_locations])
 
@@ -1431,10 +1434,24 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                 utils.copy_into(os.path.join(m.config.host_prefix, f),
                                 os.path.join(prefix_files_backup, f),
                                 symlinks=True)
+
+            # this is the inner loop, where we loop over any vars used only by
+            # outputs (not those used by the top-level recipe). The metadata
+            # objects here are created by the m.get_output_metadata_set, which
+            # is distributing the matrix of used variables.
+
             for (output_d, m) in outputs:
                 if m.skip():
                     print(utils.get_skip_message(m))
                     continue
+
+                # TODO: should we check both host and build envs?  These are the same, except when
+                #    cross compiling
+                if m.config.skip_existing and is_package_built(m, 'host'):
+                    print(utils.get_skip_message(m))
+                    new_pkgs[bldpkg_path(m)] = output_d, m
+                    continue
+
                 if (top_level_meta.name() == output_d.get('name') and not (output_d.get('files') or
                                                                            output_d.get('script'))):
                     output_d['files'] = (utils.prefix_files(prefix=m.config.host_prefix) -
@@ -1817,7 +1834,7 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
                                       getattr(metadata.config, '%s_subdir' % name))))
                 # Needs to come after create_files in case there's test/source_files
                 print("Renaming %s prefix directory, " % name, prefix, " to ", dest)
-                os.rename(prefix, dest)
+                shutil.move(prefix, dest)
 
         # nested if so that there's no warning when we just leave the empty workdir in place
         if metadata.source_provided:
@@ -1826,7 +1843,7 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
                                           metadata.config.host_subdir)))
             # Needs to come after create_files in case there's test/source_files
             print("Renaming work directory, ", metadata.config.work_dir, " to ", dest)
-            os.rename(config.work_dir, dest)
+            shutil.move(config.work_dir, dest)
     else:
         log.warn("Not moving work directory after build.  Your package may depend on files "
                     "in the work directory that are not included with your package")
@@ -2124,6 +2141,10 @@ def build_tree(recipe_list, config, stats, build_only=False, post=False, notest=
             #    job breaks variants horribly.
             if post in (True, False):
                 metadata_tuples = metadata_tuples[:1]
+
+            # This is the "TOP LEVEL" loop. Only vars used in the top-level
+            # recipe are looped over here.
+
             for (metadata, need_source_download, need_reparse_in_env) in metadata_tuples:
                 if post is None:
                     utils.rm_rf(metadata.config.host_prefix)
@@ -2143,7 +2164,7 @@ def build_tree(recipe_list, config, stats, build_only=False, post=False, notest=
                     for pkg, dict_and_meta in packages_from_this.items():
                         if pkg.endswith('.tar.bz2'):
                             # we only know how to test conda packages
-                            test(pkg, config=metadata.config, stats=stats)
+                            test(pkg, config=metadata.config.copy(), stats=stats)
                         _, meta = dict_and_meta
                         downstreams = meta.meta.get('test', {}).get('downstreams')
                         if downstreams:
@@ -2184,11 +2205,28 @@ def build_tree(recipe_list, config, stats, build_only=False, post=False, notest=
                                 # test that package, using the local channel so that our new
                                 #    upstream dep gets used
                                 test(list(local_file.values())[0][0],
-                                     config=meta.config, stats=stats)
+                                     config=meta.config.copy(), stats=stats)
 
                         built_packages.update({pkg: dict_and_meta})
                 else:
                     built_packages.update(packages_from_this)
+
+                if (os.path.exists(metadata.config.work_dir) and not
+                        (metadata.config.dirty or metadata.config.keep_old_work or
+                         metadata.get_value('build/no_move_top_level_workdir_loops'))):
+                    # force the build string to include hashes as necessary
+                    metadata.final = True
+                    dest = os.path.join(os.path.dirname(metadata.config.work_dir),
+                                        '_'.join(('work_moved', metadata.dist(),
+                                                  metadata.config.host_subdir, "main_build_loop")))
+                    # Needs to come after create_files in case there's test/source_files
+                    print("Renaming work directory, ", metadata.config.work_dir, " to ", dest)
+                    try:
+                        shutil.move(metadata.config.work_dir, dest)
+                    except shutil.Error:
+                        utils.rm_rf(dest)
+                        shutil.move(metadata.config.work_dir, dest)
+
             # each metadata element here comes from one recipe, thus it will share one build id
             #    cleaning on the last metadata in the loop should take care of all of the stuff.
             metadata.clean()

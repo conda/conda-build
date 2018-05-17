@@ -9,6 +9,7 @@ import io
 import locale
 import re
 import os
+import shutil
 import stat
 from subprocess import call, check_output
 import sys
@@ -125,7 +126,7 @@ def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
 
             print('found egg dir:', egg_path)
             try:
-                os.rename(os.path.join(egg_path, 'EGG-INFO'),
+                shutil.move(os.path.join(egg_path, 'EGG-INFO'),
                           egg_path + '-info')
             except OSError:
                 pass
@@ -152,7 +153,7 @@ def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
                                           "this conflict."
                                           .format(egg_path=egg_path, sp_dir=sp_dir, fn=fn))
                     else:
-                        os.rename(os.path.join(egg_path, fn), os.path.join(sp_dir, fn))
+                        shutil.move(os.path.join(egg_path, fn), os.path.join(sp_dir, fn))
 
         elif os.path.isfile(egg_path):
             if egg_path not in absfiles:

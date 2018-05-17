@@ -1174,7 +1174,8 @@ class MetaData(object):
         # used variables - anything with a value in conda_build_config.yaml that applies to this
         #    recipe.  Includes compiler if compiler jinja2 function is used.
         """
-        dependencies = self.get_used_vars()
+        dependencies = set(self.get_used_vars())
+        trim_build_only_deps(self, dependencies)
 
         # filter out ignored versions
         build_string_excludes = ['python', 'r_base', 'perl', 'lua', 'target_platform']
@@ -1183,7 +1184,7 @@ class MetaData(object):
             pin_compatible, not_xx = self.uses_numpy_pin_compatible_without_xx
             # numpy_xx means it is accounted for in the build string, with npXYY
             # if not pin_compatible, then we don't care about the usage, and omit it from the hash.
-            if self.numpy_xx or not pin_compatible:
+            if self.numpy_xx or (pin_compatible and not not_xx):
                 build_string_excludes.append('numpy')
         # always exclude older stuff that's always in the build string (py, np, pl, r, lua)
         if build_string_excludes:
