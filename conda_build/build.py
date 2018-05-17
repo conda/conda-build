@@ -2227,7 +2227,6 @@ def build_tree(recipe_list, config, stats, build_only=False, post=False, notest=
                         utils.rm_rf(dest)
                         shutil.move(metadata.config.work_dir, dest)
 
-
             # each metadata element here comes from one recipe, thus it will share one build id
             #    cleaning on the last metadata in the loop should take care of all of the stuff.
             metadata.clean()
