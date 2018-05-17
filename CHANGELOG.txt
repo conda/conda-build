@@ -1,3 +1,31 @@
+2018-05-17 3.10.3:
+
+Enhancements:
+-------------
+
+* --skip-existing applies to outputs, not just whole collections of packages.  Individual outputs that are already built will be skipped.  #2889
+* add output of hash contents to what gets printed with conda render (not with --output)
+
+Bug fixes:
+----------
+
+* fix conda pypi skeleton checking for '~' in None values  #2880
+* add /B to win exits, so that erroring out of tests does not close out of outer shells  #2881
+* ensure that merge_build_host is updated correctly for each output #2882
+* Remove several env vars from being recorded in about.json, over concerns for GDPR compliance #2883
+* remove parent_recipe entry from recipes when recording meta.yaml for output packages, to avoid confusion over used variables #2886
+* xfail get_installed_version for new conda and test_build_with_activate_does_activate when PATH is too long  #2889
+* change os.rename to shutil.move so that there is a copy fallback  #2889
+* fix mutability of config objects passed to test causing bizarre states of variants
+* fix win style slashes in paths.json and ``files`` that broke things when converting a win package to unix #2891
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @msarahan
+
+
 2018-05-08 3.10.2:
 
 Bug fixes:
