@@ -1174,7 +1174,8 @@ class MetaData(object):
         # used variables - anything with a value in conda_build_config.yaml that applies to this
         #    recipe.  Includes compiler if compiler jinja2 function is used.
         """
-        dependencies = self.get_used_vars()
+        dependencies = set(self.get_used_vars())
+        trim_build_only_deps(self, dependencies)
 
         # filter out ignored versions
         build_string_excludes = ['python', 'r_base', 'perl', 'lua', 'target_platform']

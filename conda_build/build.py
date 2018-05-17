@@ -1193,9 +1193,10 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
             else:
                 package_locations.append(bldpkg_path(om))
         if not package_locations:
-            print("Packages for ", m.path or m.name(),
-                    "are already built in {0} or otherwise specified to be skipped."
-                  .format(skipped))
+            print("Packages for ", m.path or m.name(), "with variant {} "
+                  "are already built and available from your configured channels "
+                  "(including local) or are otherwise specified to be skipped."
+                  .format(m.get_hash_contents()))
             return default_return
 
         print("BUILD START:", [os.path.basename(pkg) for pkg in package_locations])
