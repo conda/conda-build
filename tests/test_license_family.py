@@ -122,8 +122,13 @@ def test_unlimited():
     assert guess_license_family(cens) == 'MIT'
 
 
+def test_cc():
+    fam = guess_license_family(u'CC0')
+    assert fam == u'CC'
+
+
 def test_other():
-    licenses = {u'file LICENSE (FOSS)', u'CC0',
+    licenses = {u'file LICENSE (FOSS)',
                 u'Open Source (http://www.libpng.org/pub/png/src/libpng-LICENSE.txt)',
                 u'zlib (http://zlib.net/zlib_license.html)',
                 u'Free software (X11 License)', u'Custom free software license'}
