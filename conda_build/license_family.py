@@ -26,6 +26,7 @@ NONE
 gpl2_regex = re.compile('GPL[^3]*2')  # match GPL2
 gpl3_regex = re.compile('GPL[^2]*3')  # match GPL3
 gpl23_regex = re.compile('GPL[^2]*>= *2')  # match GPL >= 2
+cc_regex = re.compile('CC\w+')  # match CC
 punk_regex = re.compile('[%s]' % re.escape(string.punctuation))  # removes punks
 
 
@@ -85,6 +86,8 @@ def guess_license_family(license_name=None,
         return 'GPL3'
     elif gpl2_regex.search(sans_lgpl):
         return 'GPL2'
+    elif cc_regex.search(license_name):
+        return 'CC'
 
     license_name = remove_special_characters(license_name)
     for family in recognized:
