@@ -1565,7 +1565,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                         for file, csum in output_d['checksums'].items():
                             for _, prev_om in new_pkgs.items():
                                 prev_output_d, _ = prev_om
-                                if file in prev_output_d['checksums']:
+                                if file in prev_output_d.get('checksums', {}):
                                     prev_csum = prev_output_d['checksums'][file]
                                     nature = 'Exact' if csum == prev_csum else 'Inexact'
                                     log.warn("{} overlap between {} in packages {} and {}"
