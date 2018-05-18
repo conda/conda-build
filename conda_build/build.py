@@ -360,8 +360,14 @@ def copy_license(m):
 
 
 def copy_test_source_files(m, destination):
-    create_all_test_files(m, destination)
+    # if we include the recipe, we create the test files there.  Otherwise, create them here.
+    if not(m.config.include_recipe and m.include_recipe()):
+        create_all_test_files(m, destination)
     test_deps = m.meta.get('test', {}).get('requires', [])
+    try:
+        os.makedirs(destination)
+    except:
+        pass
     if test_deps:
         with open(os.path.join(destination, 'test_time_dependencies.json'), 'w') as f:
             json.dump(test_deps, f)
