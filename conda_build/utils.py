@@ -888,7 +888,7 @@ def create_entry_point(path, module, func, config):
             os.remove(path)
         with open(path, 'w') as fo:
             if not config.noarch:
-                fo.write('#!%s\n' % config.build_python)
+                fo.write('#!%s\n' % config.host_python)
             fo.write(pyscript)
         os.chmod(path, 0o775)
 
