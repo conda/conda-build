@@ -260,7 +260,7 @@ def _write_bat_activation_text(file_handle, m):
 def build(m, bld_bat, stats):
     with path_prepended(m.config.build_prefix):
         with path_prepended(m.config.host_prefix):
-            env = environ.get_dict(config=m.config, m=m)
+            env = environ.get_dict(m=m)
     env["CONDA_BUILD_STATE"] = "BUILD"
 
     # set variables like CONDA_PY in the test environment
