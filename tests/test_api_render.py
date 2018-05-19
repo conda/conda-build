@@ -205,3 +205,13 @@ def test_ignore_build_only_deps(testing_config):
     ms = api.render(os.path.join(thisdir, 'test-recipes', 'variants', 'python_in_build_only'),
                 bypass_env_check=True, finalize=False)
     assert len(ms) == 1
+
+
+def test_merge_build_host_build_key(testing_workdir, testing_metadata):
+    m = api.render(os.path.join(metadata_dir, '_no_merge_build_host'))[0][0]
+    assert not any('bzip2' in dep for dep in m.meta['requirements']['run'])
+
+
+def test_merge_build_host_empty_host_section(testing_config):
+    m = api.render(os.path.join(metadata_dir, '_empty_host_avoids_merge'))[0][0]
+    assert not any('bzip2' in dep for dep in m.meta['requirements']['run'])

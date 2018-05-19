@@ -1,0 +1,9 @@
+package:
+  name: pkg
+
+build:
+  merge_build_host: False
+
+requirements:
+  build:
+    - bzip2

@@ -1398,8 +1398,11 @@ def merge_or_update_dict(base, new, path, merge, raise_on_clobber=False):
             base[key] = base_value
         elif hasattr(value, '__iter__') and not isinstance(value, string_types):
             if merge:
-                if base_value and base_value != value:
-                    base_value.extend(value)
+                if base_value != value:
+                    try:
+                        base_value.extend(value)
+                    except TypeError:
+                        base_value = value
                 try:
                     base[key] = list(base_value)
                 except TypeError:
@@ -1604,5 +1607,9 @@ def match_peer_job(target_matchspec, other_m, this_m=None):
 def expand_reqs(reqs_entry):
     if not hasattr(reqs_entry, 'keys'):
         original = ensure_list(reqs_entry)[:]
-        reqs_entry = {'host': original, 'run': original} if original else {}
+        reqs_entry = {'host': ensure_list(original),
+                      'run': ensure_list(original)} if original else {}
+    else:
+        for sec in reqs_entry:
+            reqs_entry[sec] = ensure_list(reqs_entry[sec])
     return reqs_entry

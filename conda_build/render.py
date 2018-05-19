@@ -134,8 +134,8 @@ def get_env_dependencies(m, env, variant, exclude_pattern=None,
                 raise
 
     specs = actions_to_pins(actions)
-    return ((specs + subpackages + pass_through_deps) or
-                  m.meta.get('requirements', {}).get(env, []),
+    return (utils.ensure_list((specs + subpackages + pass_through_deps) or
+                  m.meta.get('requirements', {}).get(env, [])),
             actions, unsat)
 
 
@@ -336,14 +336,14 @@ def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
     if m.is_cross:
         # this must come before we read upstream pins, because it will enforce things
         #      like vc version from the compiler.
-        if m.meta.get('requirements', {}).get('host'):
-            host_reqs = m.meta['requirements']['host']
-        else:
-            matching_output = [out for out in m.meta['outputs'] if out.get('name') == m.name()]
+        host_reqs = utils.ensure_list(m.get_value('requirements/host'))
+        if not host_reqs:
+            matching_output = [out for out in m.meta.get('outputs', []) if
+                               out.get('name') == m.name()]
             if matching_output:
-                requirements = utils.expand_reqs(matching_output[0]['requirements'])
+                requirements = utils.expand_reqs(matching_output[0].get('requirements', {}))
                 matching_output[0]['requirements'] = requirements
-                host_reqs = requirements['host']
+                host_reqs = requirements.get('host', [])
         # in-place modification of above thingie
         host_reqs.extend(extra_run_specs_from_build.get('strong', []))
 
@@ -356,7 +356,7 @@ def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
         host_deps = []
         host_unsat = []
         extra_run_specs = set(extra_run_specs_from_build.get('strong', []))
-        if not m.uses_new_style_compiler_activation:
+        if not m.uses_new_style_compiler_activation and not m.build_is_host:
             extra_run_specs.update(extra_run_specs_from_build.get('weak', []))
         else:
             host_deps = set(extra_run_specs_from_build.get('strong', []))
@@ -379,7 +379,7 @@ def _simplify_to_exact_constraints(metadata):
     requirements = metadata.meta.get('requirements', {})
     # collect deps on a per-section basis
     for section in 'build', 'host', 'run':
-        deps = requirements.get(section, [])
+        deps = utils.ensure_list(requirements.get(section, []))
         deps_dict = defaultdict(list)
         for dep in deps:
             spec_parts = utils.ensure_valid_spec(dep).split()
@@ -401,7 +401,8 @@ def _simplify_to_exact_constraints(metadata):
                     deps_list.append(' '.join([name] + exact_pins[0]))
             else:
                 deps_list.extend(' '.join([name] + dep) for dep in values if dep)
-        requirements[section] = deps_list
+        if section in requirements and deps_list:
+            requirements[section] = deps_list
     metadata.meta['requirements'] = requirements
 
 

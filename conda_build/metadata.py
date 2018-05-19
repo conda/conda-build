@@ -23,17 +23,11 @@ from conda_build import exceptions, utils, variants, environ
 from conda_build.features import feature_list
 from conda_build.config import Config, get_or_merge_config
 from conda_build.utils import (ensure_list, find_recipe, expand_globs, get_installed_packages,
-                               HashableDict, trim_empty_keys, insert_variant_versions)
+                               HashableDict, insert_variant_versions)
 from conda_build.license_family import ensure_valid_license_family
 
 try:
     import yaml
-
-    # try to import C loader
-    try:
-        from yaml import CBaseLoader as BaseLoader
-    except ImportError:
-        from yaml import BaseLoader
 except ImportError:
     sys.exit('Error: could not import yaml (required to read meta.yaml '
              'files of conda recipes)')
@@ -43,6 +37,8 @@ on_win = (sys.platform == 'win32')
 # arches that don't follow exact names in the subdir need to be mapped here
 ARCH_MAP = {'32': 'x86',
             '64': 'x86_64'}
+
+NOARCH_TYPES = ('python', 'generic', True)
 
 # we originally matched outputs based on output name. Unfortunately, that
 #    doesn't work when outputs are templated - we want to match un-rendered
@@ -206,7 +202,7 @@ exception:
 
 def yamlize(data):
     try:
-        return yaml.load(data, Loader=BaseLoader)
+        return yaml.load(data)
     except yaml.error.YAMLError as e:
         if '{{' in data:
             try:
@@ -247,16 +243,12 @@ def _trim_None_strings(meta_dict):
         else:
             log.debug("found unrecognized data type in dictionary: {0}, type: {1}".format(value,
                                                                                     type(value)))
-    trim_empty_keys(meta_dict)
     return meta_dict
 
 
 def ensure_valid_noarch_value(meta):
-    try:
-        build_noarch = meta['build']['noarch']
-    except KeyError:
-        return
-    if build_noarch.lower() == 'none':
+    build_noarch = meta.get('build', {}).get('noarch')
+    if build_noarch and build_noarch not in NOARCH_TYPES:
         raise exceptions.CondaBuildException("Invalid value for noarch: %s" % build_noarch)
 
 
@@ -376,6 +368,8 @@ default_structs = {
     'build/pin_depends': text_type,
     'build/force_use_keys': list,
     'build/force_ignore_keys': list,
+    'build/merge_build_host': bool,
+    'build/msvc_compiler': text_type,
     'requirements/build': list,
     'requirements/host': list,
     'requirements/run': list,
@@ -404,7 +398,7 @@ def sanitize(meta):
     Sanitize the meta-data to remove aliases/handle deprecation
 
     """
-    sanitize_funs = {'source': [_git_clean]}
+    sanitize_funs = {'source': [_git_clean], 'package': [_str_version], 'build': [_str_version]}
     for section, funs in sanitize_funs.items():
         if section in meta:
             for func in funs:
@@ -416,7 +410,6 @@ def sanitize(meta):
                 else:
                     section_data = [func(_d) for _d in section_data]
                 meta[section] = section_data
-    _trim_None_strings(meta)
     return meta
 
 
@@ -455,6 +448,14 @@ def _git_clean(source_meta):
         ret_meta.pop(key, None)
 
     return ret_meta
+
+
+def _str_version(package_meta):
+    if 'version' in package_meta:
+        package_meta['version'] = str(package_meta.get('version', ''))
+    if 'msvc_compiler' in package_meta:
+        package_meta['msvc_compiler'] = str(package_meta.get('msvc_compiler', ''))
+    return package_meta
 
 
 # If you update this please update the example in
@@ -647,12 +648,6 @@ def get_output_dicts_from_metadata(metadata, outputs=None):
     for out in outputs:
         if 'package:' in metadata.get_recipe_text() and out.get('name') == metadata.name():
             combine_top_level_metadata_with_output(metadata, out)
-
-        # TODO: Outputs are coming up with None values for some fields. That trips
-        # up later things, and makes checking values more annoying. This is a
-        # band-aid. The right fix is to fix the creation of those None values.
-        trim_empty_keys(out)
-
     return outputs
 
 
@@ -751,7 +746,7 @@ def combine_top_level_metadata_with_output(metadata, output):
         if section == 'requirements':
             output_section = utils.expand_reqs(output.get(section, {}))
         for k, v in metadata_section.items():
-            if k not in output_section and v:
+            if k not in output_section:
                 output_section[k] = v
         output[section] = output_section
         # synchronize them
@@ -820,7 +815,8 @@ class MetaData(object):
 
     @property
     def is_cross(self):
-        return bool(self.get_depends_top_and_out('host'))
+        return (bool(self.get_depends_top_and_out('host')) or
+                'host' in self.meta.get('requirements', {}))
 
     @property
     def final(self):
@@ -923,7 +919,7 @@ class MetaData(object):
     def ensure_no_pip_requirements(self):
         keys = 'requirements/build', 'requirements/run', 'test/requires'
         for key in keys:
-            if any(hasattr(item, 'keys') for item in self.get_value(key)):
+            if any(hasattr(item, 'keys') for item in (self.get_value(key) or [])):
                 raise ValueError("Dictionaries are not supported as values in requirements sections"
                                  ".  Note that pip requirements as used in conda-env "
                                  "environment.yml files are not supported by conda-build.")
@@ -1779,9 +1775,11 @@ class MetaData(object):
                 if run_reqs:
                     run_reqs = [req for req in run_reqs if not subpackage_pattern.match(req)]
 
-            requirements = {'build': build_reqs, 'host': host_reqs, 'run': run_reqs}
-            if constrain_reqs:
-                requirements['run_constrained'] = constrain_reqs
+            requirements = {}
+            requirements.update({'build': build_reqs}) if build_reqs else None
+            requirements.update({'host': host_reqs}) if host_reqs else None
+            requirements.update({'run': run_reqs}) if run_reqs else None
+            requirements.update({'run_constrained': constrain_reqs}) if constrain_reqs else None
             requirements.update(other_reqs)
             output_metadata.meta['requirements'] = requirements
             output_metadata.meta['package']['version'] = output.get('version') or self.version()
@@ -1819,7 +1817,6 @@ class MetaData(object):
                 output_metadata.meta['test'] = output['test']
             if 'about' in output:
                 output_metadata.meta['about'] = output['about']
-
         return output_metadata
 
     def append_parent_metadata(self, out_metadata):
@@ -2124,9 +2121,9 @@ class MetaData(object):
     @property
     def build_is_host(self):
         value = (self.config.subdirs_same and (
-            (self.meta.get('build', {}).get('merge_build_host', False) or
+            (self.get_value('build/merge_build_host') or
              self.config.build_is_host) or
-            (not self.meta.get('requirements', {}).get('host', []) and
+            ('host' not in self.meta.get('requirements', {}) and
              not self.uses_new_style_compiler_activation)))
         return value
 
