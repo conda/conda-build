@@ -10,7 +10,6 @@ import re
 import subprocess
 import sys
 import warnings
-from collections import defaultdict
 from glob import glob
 from os.path import join, normpath
 
@@ -242,30 +241,30 @@ def get_hg_build_info(repo):
     return d
 
 
-def get_dict(config, m=None, prefix=None, for_env=True, skip_build_id=False):
+def get_dict(m, prefix=None, for_env=True, skip_build_id=False):
     if not prefix:
-        prefix = config.host_prefix
+        prefix = m.config.host_prefix
 
     # conda-build specific vars
-    d = conda_build_vars(prefix, config)
+    d = conda_build_vars(prefix, m.config)
 
     # languages
-    d.update(python_vars(config, prefix, config.host_platform))
-    d.update(perl_vars(config, prefix, config.host_platform))
-    d.update(lua_vars(config, prefix, config.host_platform))
-    d.update(r_vars(config, prefix, config.host_platform))
+    d.update(python_vars(m))
+    d.update(perl_vars(m))
+    d.update(lua_vars(m))
+    d.update(r_vars(m))
 
     if m:
-        d.update(meta_vars(m, config, skip_build_id=skip_build_id))
+        d.update(meta_vars(m, skip_build_id=skip_build_id))
 
     # system
-    d.update(system_vars(d, prefix, config))
+    d.update(system_vars(d, m))
 
     # features
     d.update({feat.upper(): str(int(value)) for feat, value in
               feature_list})
 
-    for k, v in config.variant.items():
+    for k, v in m.config.variant.items():
         if not for_env or (k.upper() not in d and k.upper() not in LANGUAGES):
             d[k] = v
     return d
@@ -302,66 +301,79 @@ def conda_build_vars(prefix, config):
     }
 
 
-def python_vars(config, prefix, platform):
-    py_ver = get_py_ver(config)
+def python_vars(metadata):
+    py_ver = get_py_ver(metadata.config)
     vars_ = {
             'CONDA_PY': ''.join(py_ver.split('.')[:2]),
             'PY3K': str(int(int(py_ver[0]) >= 3)),
             'PY_VER': py_ver,
-            'STDLIB_DIR': utils.get_stdlib_dir(prefix, py_ver),
-            'SP_DIR': utils.get_site_packages(prefix, py_ver),
+            'STDLIB_DIR': utils.get_stdlib_dir(metadata.config.host_prefix, py_ver),
+            'SP_DIR': utils.get_site_packages(metadata.config.host_prefix, py_ver),
             }
-    if os.path.isfile(config.python_bin(prefix, platform)):
+    build_or_host = 'host' if metadata.is_cross else 'build'
+    deps = [str(ms.name) for ms in metadata.ms_depends(build_or_host)]
+    if 'python' in deps:
         vars_.update({
-            'PYTHON': config.python_bin(prefix, platform),
+            # host prefix is always fine, because it is the same as build when is_cross is False
+            'PYTHON': metadata.config.python_bin(metadata.config.host_prefix,
+                                                 metadata.config.host_subdir),
         })
 
-    np_ver = config.variant.get('numpy', get_default_variant(config)['numpy'])
+    np_ver = metadata.config.variant.get('numpy', get_default_variant(metadata.config)['numpy'])
     vars_['NPY_VER'] = '.'.join(np_ver.split('.')[:2])
     vars_['CONDA_NPY'] = ''.join(np_ver.split('.')[:2])
     return vars_
 
 
-def perl_vars(config, prefix, platform):
+def perl_vars(metadata):
     vars_ = {
-            'PERL_VER': get_perl_ver(config),
-            'CONDA_PERL': get_perl_ver(config),
+            'PERL_VER': get_perl_ver(metadata.config),
+            'CONDA_PERL': get_perl_ver(metadata.config),
              }
-    if os.path.isfile(config.perl_bin(prefix, platform)):
+    build_or_host = 'host' if metadata.is_cross else 'build'
+    deps = [str(ms.name) for ms in metadata.ms_depends(build_or_host)]
+    if 'perl' in deps:
         vars_.update({
-            'PERL': config.perl_bin(prefix, platform),
+            # host prefix is always fine, because it is the same as build when is_cross is False
+            'PERL': metadata.config.perl_bin(metadata.config.host_prefix,
+                                             metadata.config.host_subdir),
         })
     return vars_
 
 
-def lua_vars(config, prefix, platform):
+def lua_vars(metadata):
     vars_ = {
-            'LUA_VER': get_lua_ver(config),
-            'CONDA_LUA': get_lua_ver(config),
+            'LUA_VER': get_lua_ver(metadata.config),
+            'CONDA_LUA': get_lua_ver(metadata.config),
              }
-    lua = config.lua_bin(prefix, platform)
-    if os.path.isfile(lua):
+    build_or_host = 'host' if metadata.is_cross else 'build'
+    deps = [str(ms.name) for ms in metadata.ms_depends(build_or_host)]
+    if 'lua' in deps:
         vars_.update({
-            'LUA': lua,
-            'LUA_INCLUDE_DIR': get_lua_include_dir(config),
+            'LUA': metadata.config.lua_bin(metadata.config.host_prefix,
+                                           metadata.config.host_subdir),
+            'LUA_INCLUDE_DIR': get_lua_include_dir(metadata.config),
         })
     return vars_
 
 
-def r_vars(config, prefix, platform):
+def r_vars(metadata):
     vars_ = {
-            'R_VER': get_r_ver(config),
-            'CONDA_R': get_r_ver(config),
+            'R_VER': get_r_ver(metadata.config),
+            'CONDA_R': get_r_ver(metadata.config),
             }
-    r = config.r_bin(prefix, platform)
-    if os.path.isfile(r):
+
+    build_or_host = 'host' if metadata.is_cross else 'build'
+    deps = [str(ms.name) for ms in metadata.ms_depends(build_or_host)]
+    if 'r-base' in deps or 'mro-base' in deps:
         vars_.update({
-            'R': r,
+            'R': metadata.config.r_bin(metadata.config.host_prefix,
+                                       metadata.config.host_subdir),
         })
     return vars_
 
 
-def meta_vars(meta, config, skip_build_id=False):
+def meta_vars(meta, skip_build_id=False):
     d = {}
     for var_name in ensure_list(meta.get_value('build/script_env', [])):
         value = os.getenv(var_name)
@@ -380,7 +392,7 @@ def meta_vars(meta, config, skip_build_id=False):
             )
 
     folder = meta.get_value('source/0/folder', '')
-    repo_dir = join(config.work_dir, folder)
+    repo_dir = join(meta.config.work_dir, folder)
     git_dir = join(repo_dir, '.git')
     hg_dir = join(repo_dir, '.hg')
 
@@ -388,7 +400,7 @@ def meta_vars(meta, config, skip_build_id=False):
         # On Windows, subprocess env can't handle unicode.
         git_dir = git_dir.encode(sys.getfilesystemencoding() or 'utf-8')
 
-    git_exe = external.find_executable('git', config.build_prefix)
+    git_exe = external.find_executable('git', meta.config.build_prefix)
     if git_exe and os.path.exists(git_dir):
         # We set all 'source' metavars using the FIRST source entry in meta.yaml.
         git_url = meta.get_value('source/0/git_url')
@@ -405,14 +417,14 @@ def meta_vars(meta, config, skip_build_id=False):
             _x = verify_git_repo(git_exe,
                                  git_dir,
                                  git_url,
-                                 config.git_commits_since_tag,
-                                 config.debug,
+                                 meta.config.git_commits_since_tag,
+                                 meta.config.debug,
                                  meta.get_value('source/0/git_rev', 'HEAD'))
 
         if _x or meta.get_value('source/0/path'):
-            d.update(get_git_info(git_exe, git_dir, config.debug))
+            d.update(get_git_info(git_exe, git_dir, meta.config.debug))
 
-    elif external.find_executable('hg', config.build_prefix) and os.path.exists(hg_dir):
+    elif external.find_executable('hg', meta.config.build_prefix) and os.path.exists(hg_dir):
         d.update(get_hg_build_info(hg_dir))
 
     # use `get_value` to prevent early exit while name is still unresolved during rendering
@@ -457,14 +469,14 @@ def get_shlib_ext():
         raise NotImplementedError(sys.platform)
 
 
-def windows_vars(prefix, config, get_default):
+def windows_vars(m, get_default):
     """This is setting variables on a dict that is part of the get_default function"""
     # We have gone for the clang values here.
-    win_arch = 'i386' if str(config.host_arch) == '32' else 'amd64'
+    win_arch = 'i386' if str(m.config.host_arch) == '32' else 'amd64'
     win_msvc = '19.0.0' if PY3 else '15.0.0'
-    library_prefix = join(prefix, 'Library')
-    drive, tail = prefix.split(':')
-    get_default('SCRIPTS', join(prefix, 'Scripts'))
+    library_prefix = join(m.config.host_prefix, 'Library')
+    drive, tail = m.config.host_prefix.split(':')
+    get_default('SCRIPTS', join(m.config.host_prefix, 'Scripts'))
     get_default('LIBRARY_PREFIX', library_prefix)
     get_default('LIBRARY_BIN', join(library_prefix, 'bin'))
     get_default('LIBRARY_INC', join(library_prefix, 'include'))
@@ -509,17 +521,17 @@ def windows_vars(prefix, config, get_default):
             get_default(env_var)
 
 
-def unix_vars(prefix, get_default):
+def unix_vars(m, get_default):
     """This is setting variables on a dict that is part of the get_default function"""
     get_default('HOME', 'UNKNOWN')
-    get_default('PKG_CONFIG_PATH', join(prefix, 'lib', 'pkgconfig'))
+    get_default('PKG_CONFIG_PATH', join(m.config.host_prefix, 'lib', 'pkgconfig'))
     get_default('CMAKE_GENERATOR', 'Unix Makefiles')
     get_default('SSL_CERT_FILE')
 
 
-def osx_vars(compiler_vars, config, get_default):
+def osx_vars(m, get_default):
     """This is setting variables on a dict that is part of the get_default function"""
-    OSX_ARCH = 'i386' if str(config.host_arch) == '32' else 'x86_64'
+    OSX_ARCH = 'i386' if str(m.config.host_arch) == '32' else 'x86_64'
     # 10.7 install_name_tool -delete_rpath causes broken dylibs, I will revisit this ASAP.
     # rpath = ' -Wl,-rpath,%(PREFIX)s/lib' % d # SIP workaround, DYLD_* no longer works.
     # d['LDFLAGS'] = ldflags + rpath + ' -arch %(OSX_ARCH)s' % d
@@ -528,7 +540,7 @@ def osx_vars(compiler_vars, config, get_default):
     get_default('BUILD', OSX_ARCH + '-apple-darwin13.4.0')
 
 
-def linux_vars(compiler_vars, config, get_default):
+def linux_vars(m, get_default):
     """This is setting variables on a dict that is part of the get_default function"""
     build_arch = platform.machine()
     # Python reports x86_64 when running a i686 Python binary on a 64-bit CPU
@@ -556,7 +568,7 @@ def linux_vars(compiler_vars, config, get_default):
     get_default('QEMU_UNAME')
     get_default('DEJAGNU')
     get_default('DISPLAY')
-    get_default('LD_RUN_PATH', config.host_prefix + '/lib')
+    get_default('LD_RUN_PATH', m.config.host_prefix + '/lib')
     get_default('BUILD', build_arch + '-conda_' + build_distro + '-linux-gnu')
 
 
@@ -569,11 +581,10 @@ def set_from_os_or_variant(out_dict, key, variant, default):
 
 
 @memoized
-def system_vars(env_dict, prefix, config):
+def system_vars(env_dict, m):
     d = dict()
-    compiler_vars = defaultdict(text_type)
     # note the dictionary is passed in here - variables are set in that dict if they are non-null
-    get_default = lambda key, default='': set_from_os_or_variant(d, key, config.variant, default)
+    get_default = lambda key, default='': set_from_os_or_variant(d, key, m.config.variant, default)
 
     get_default('CPU_COUNT', get_cpu_count())
     get_default('LANG')
@@ -582,24 +593,18 @@ def system_vars(env_dict, prefix, config):
     d['SHLIB_EXT'] = get_shlib_ext()
     d['PATH'] = os.environ.copy()['PATH']
 
-    if not config.activate:
-        d = prepend_bin_path(d, prefix)
+    if not m.config.activate:
+        d = prepend_bin_path(d, m.config.host_prefix)
 
     if sys.platform == 'win32':
-        windows_vars(prefix, config, get_default)
+        windows_vars(m, get_default)
     else:
-        unix_vars(prefix, get_default)
+        unix_vars(m, get_default)
 
     if sys.platform == 'darwin':
-        osx_vars(compiler_vars, config, get_default)
+        osx_vars(m, get_default)
     elif sys.platform.startswith('linux'):
-        linux_vars(compiler_vars, config, get_default)
-
-    # make sure compiler_vars get appended to anything already set, including build/script_env
-    for key in compiler_vars:
-        if key in env_dict and env_dict[key]:
-            compiler_vars[key] += env_dict[key]
-    d.update(compiler_vars)
+        linux_vars(m, get_default)
 
     return d
 

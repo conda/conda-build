@@ -838,7 +838,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
         output['script'] = script_fn
 
     if output.get('script'):
-        env = environ.get_dict(config=metadata.config, m=metadata)
+        env = environ.get_dict(m=metadata)
 
         interpreter = output.get('script_interpreter')
         if not interpreter:
@@ -1026,7 +1026,7 @@ def bundle_wheel(output, metadata, env, stats):
             _write_activation_text(dest_file, metadata)
 
         # run the appropriate script
-        env = environ.get_dict(config=metadata.config, m=metadata).copy()
+        env = environ.get_dict(m=metadata).copy()
         env['TOP_PKG_NAME'] = env['PKG_NAME']
         env['TOP_PKG_VERSION'] = env['PKG_VERSION']
         env['PKG_VERSION'] = metadata.version()
@@ -1174,7 +1174,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
     output_metas = []
 
     with utils.path_prepended(m.config.build_prefix):
-        env = environ.get_dict(config=m.config, m=m)
+        env = environ.get_dict(m=m)
     env["CONDA_BUILD_STATE"] = "BUILD"
     if env_path_backup_var_exists:
         env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
@@ -1378,7 +1378,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                 if isfile(build_file) or script:
 
                     with utils.path_prepended(m.config.build_prefix):
-                        env = environ.get_dict(config=m.config, m=m)
+                        env = environ.get_dict(m=m)
                     env["CONDA_BUILD_STATE"] = "BUILD"
 
                     work_file = join(m.config.work_dir, 'conda_build.sh')
@@ -1552,7 +1552,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                     # we must refresh the environment variables because our env for each package
                     #    can be different from the env for the top level build.
                     with utils.path_prepended(m.config.build_prefix):
-                        env = environ.get_dict(config=m.config, m=m)
+                        env = environ.get_dict(m=m)
                     built_package = bundlers[output_d.get('type', 'conda')](output_d, m, env, stats)
                     # warn about overlapping files.
                     if 'checksums' in output_d:
@@ -1877,8 +1877,7 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
 
     with utils.path_prepended(metadata.config.test_prefix):
         env = dict(os.environ.copy())
-        env.update(environ.get_dict(config=metadata.config, m=metadata,
-                                    prefix=config.test_prefix))
+        env.update(environ.get_dict(m=metadata, prefix=config.test_prefix))
         env["CONDA_BUILD_STATE"] = "TEST"
         if env_path_backup_var_exists:
             env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
@@ -1926,8 +1925,7 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
 
     with utils.path_prepended(metadata.config.test_prefix):
         env = dict(os.environ.copy())
-        env.update(environ.get_dict(config=metadata.config, m=metadata,
-                                    prefix=metadata.config.test_prefix))
+        env.update(environ.get_dict(m=metadata, prefix=metadata.config.test_prefix))
         env["CONDA_BUILD_STATE"] = "TEST"
         if env_path_backup_var_exists:
             env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]

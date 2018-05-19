@@ -19,7 +19,7 @@ from .conda_interface import MatchSpec
 from .conda_interface import envs_dirs
 from .conda_interface import string_types
 
-from conda_build import exceptions, utils, variants
+from conda_build import exceptions, utils, variants, environ
 from conda_build.features import feature_list
 from conda_build.config import Config, get_or_merge_config
 from conda_build.utils import (ensure_list, find_recipe, expand_globs, get_installed_packages,
@@ -89,6 +89,7 @@ def ns_cfg(config):
     if not hasattr(py, 'split'):
         py = py[0]
     py = int("".join(py.split('.')[:2]))
+
     d.update(dict(py=py,
                     py3k=bool(30 <= py < 40),
                     py2k=bool(20 <= py < 30),
@@ -1421,6 +1422,7 @@ class MetaData(object):
         env = jinja2.Environment(loader=loader, undefined=undefined_type)
 
         env.globals.update(ns_cfg(self.config))
+        env.globals.update(environ.get_dict(m=self))
         env.globals.update({"CONDA_BUILD_STATE": "RENDER"})
         env.globals.update(context_processor(self, path, config=self.config,
                                              permit_undefined_jinja=permit_undefined_jinja,
