@@ -1,3 +1,23 @@
+2018-05-20 3.10.4:
+------------------
+
+Bug fixes:
+----------
+
+* fix import tests being run multiple times  #2892
+* add creative commons as a license family (used to be classified OTHER)  #2893
+* handle empty packages in checks for duplicated files across subpackages  #2894
+* set PYTHON and other language path vars based on presence in build/host reqs, rather than binary file in either env.  Allows usage of PYTHON and friends in meta.yaml vars.  #2895
+* fix entry points incorrecty pointing at build prefix (instead of host), leading to prefix replacement failing  #2895
+* fix merge_build_host functionality.  Adding an empty host section now forces build and host to be split.  #2896
+
+Contributors:
+-------------
+
+* @msarahan
+* @scopatz
+
+
 2018-05-17 3.10.3:
 
 Enhancements:
