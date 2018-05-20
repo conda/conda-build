@@ -9,6 +9,6 @@ requirements:
 
 outputs:
   - name: pkg_subpackage
-    noarch: True
+    noarch: generic
   - name: pkg_subpackage_python_noarch
     noarch: python

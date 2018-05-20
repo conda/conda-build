@@ -302,18 +302,8 @@ def pin_subpackage(metadata, subpackage_name, min_pin='x.x.x.x.x.x', max_pin='x'
     pinning on the runtime package that is also created by the compiler package recipe
     """
     pin = None
-    try:
-        metadata_name = metadata.name()
-    except SystemExit:
-        # in very early passes, we can't yet evaluate the name() attribute.
-        metadata_name = None
-    if metadata_name and subpackage_name == metadata_name:
-        if exact:
-            pin = ' '.join((metadata.name(), metadata.version(), metadata.build_id()))
-        else:
-            pin = ' '.join((subpackage_name,
-                            apply_pin_expressions(metadata.version(), min_pin, max_pin)))
-    elif not hasattr(metadata, 'other_outputs'):
+
+    if not hasattr(metadata, 'other_outputs'):
         if allow_no_other_outputs:
             pin = subpackage_name
         else:
