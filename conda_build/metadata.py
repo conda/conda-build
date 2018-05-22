@@ -32,6 +32,18 @@ except ImportError:
     sys.exit('Error: could not import yaml (required to read meta.yaml '
              'files of conda recipes)')
 
+try:
+    loader = yaml.CLoader
+except:
+    loader = yaml.Loader
+
+from yaml.resolver import Resolver
+
+# ensure that numbers are not interpreted as ints or floats.  That trips up versions
+#     with trailing zeros.
+for ch in list(u'-+0123456789'):
+    del Resolver.yaml_implicit_resolvers[ch]
+
 on_win = (sys.platform == 'win32')
 
 # arches that don't follow exact names in the subdir need to be mapped here
