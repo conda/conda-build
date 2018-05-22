@@ -2169,7 +2169,7 @@ def build_tree(recipe_list, config, stats, build_only=False, post=False, notest=
                                            )
                 if not notest:
                     for pkg, dict_and_meta in packages_from_this.items():
-                        if pkg.endswith('.tar.bz2'):
+                        if pkg.endswith('.tar.bz2') and os.path.isfile(pkg):
                             # we only know how to test conda packages
                             test(pkg, config=metadata.config.copy(), stats=stats)
                         _, meta = dict_and_meta
