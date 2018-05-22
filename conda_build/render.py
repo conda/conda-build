@@ -174,8 +174,8 @@ def _filter_run_exports(specs, ignore_list):
         for spec in specs_list:
             if hasattr(spec, 'decode'):
                 spec = spec.decode()
-            if not any((spec == ignore_spec or spec.startswith(ignore_spec + ' '))
-                       for ignore_spec in ignore_list):
+            if not any((ignore_spec == '*' or spec == ignore_spec or
+                        spec.startswith(ignore_spec + ' ')) for ignore_spec in ignore_list):
                 filtered_specs[agent] = filtered_specs.get(agent, []) + [spec]
     return filtered_specs
 
