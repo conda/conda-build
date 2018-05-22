@@ -1,0 +1,12 @@
+package:
+  name: test_empty_run_deps
+  version: 1.0
+
+requirements:
+  run:
+
+
+test:
+  requires:
+  commands:
+    - echo 'test'

@@ -1299,8 +1299,8 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
             if not notest:
                 utils.insert_variant_versions(m.meta.get('requirements', {}),
                                               m.config.variant, 'run')
-                test_run_ms_deps = m.get_value('test/requires', []) + \
-                                   m.get_value('requirements/run', [])
+                test_run_ms_deps = utils.ensure_list(m.get_value('test/requires', [])) + \
+                                   utils.ensure_list(m.get_value('requirements/run', []))
                 # make sure test deps are available before taking time to create build env
                 environ.get_install_actions(m.config.test_prefix,
                                             tuple(test_run_ms_deps), 'test',
