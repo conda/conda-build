@@ -1,0 +1,1 @@
+if not "%PKG_VERSION%" == "1.10" exit 1

@@ -1,0 +1,5 @@
+# test ensuring that version numbers that look like floating point numbers are kept as strings
+
+package:
+  name: test_floating_point_version
+  version: 1.10
