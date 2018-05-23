@@ -1097,7 +1097,7 @@ class MetaData(object):
 
     def get_depends_top_and_out(self, typ):
         meta_requirements = ensure_list(self.get_value('requirements/' + typ, []))[:]
-        req_names = set(req.split()[0] for req in meta_requirements)
+        req_names = set(req.split()[0] for req in meta_requirements if req)
         extra_reqs = []
         if 'outputs' in self.meta:
             matching_output = [out for out in self.meta.get('outputs') if
@@ -1106,7 +1106,7 @@ class MetaData(object):
                 extra_reqs = utils.expand_reqs(
                     matching_output[0].get('requirements', [])).get(typ, [])
                 extra_reqs = [dep for dep in extra_reqs if dep.split()[0] not in req_names]
-        meta_requirements = list(set(meta_requirements) | set(extra_reqs))
+        meta_requirements = [req for req in (set(meta_requirements) | set(extra_reqs)) if req]
         return meta_requirements
 
     def ms_depends(self, typ='run'):
@@ -1121,6 +1121,8 @@ class MetaData(object):
                                   ])
         specs = OrderedDict()
         for spec in ensure_list(self.get_value('requirements/' + typ, [])):
+            if not spec:
+                continue
             try:
                 ms = MatchSpec(spec)
             except AssertionError:
