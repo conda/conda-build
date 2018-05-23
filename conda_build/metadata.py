@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 from collections import OrderedDict
+import contextlib
 import copy
 import hashlib
 import json
@@ -31,6 +32,13 @@ try:
 except ImportError:
     sys.exit('Error: could not import yaml (required to read meta.yaml '
              'files of conda recipes)')
+
+try:
+    loader = yaml.CLoader
+except:
+    loader = yaml.Loader
+
+from yaml.resolver import Resolver
 
 on_win = (sys.platform == 'win32')
 
@@ -202,7 +210,9 @@ exception:
 
 def yamlize(data):
     try:
-        return yaml.load(data)
+        with stringify_numbers():
+            loaded_data = yaml.load(data, Loader=loader)
+        return loaded_data
     except yaml.error.YAMLError as e:
         if '{{' in data:
             try:
@@ -784,6 +794,18 @@ def trim_build_only_deps(metadata, requirements_used):
                     dep in ignore_build_only_deps):
                 to_remove.add(dep)
     return requirements_used - to_remove
+
+
+@contextlib.contextmanager
+def stringify_numbers():
+    # ensure that numbers are not interpreted as ints or floats.  That trips up versions
+    #     with trailing zeros.
+    implicit_resolver_backup = Resolver.yaml_implicit_resolvers.copy()
+    for ch in list(u'-+0123456789'):
+        del Resolver.yaml_implicit_resolvers[ch]
+    yield
+    for ch in list(u'-+0123456789'):
+        Resolver.yaml_implicit_resolvers[ch] = implicit_resolver_backup[ch]
 
 
 class MetaData(object):
