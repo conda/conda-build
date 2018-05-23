@@ -1,3 +1,26 @@
+2018-05-23 3.10.5:
+------------------
+
+Enhancements:
+-------------
+
+* allow '*' as an ignore_run_exports value to ignore all run_exports  #2907
+
+Bug fixes:
+----------
+
+* fix handling of empty run and test requirements  #2908
+* fix trailing zeroes in version numbers getting lost by yaml interpreting things as floats  #2909
+* fix regression in host prefix showing up in the test phase, leading to files/executables not being where they should be  #2910
+* fix handling of not-yet-available requirements  #2912
+* fix get_value with default keyword not respecting that user-specified default  #2912
+
+Contributors:
+-------------
+
+* @msarahan
+
+
 2018-05-20 3.10.4:
 ------------------
 
