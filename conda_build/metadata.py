@@ -1049,6 +1049,9 @@ class MetaData(object):
             elif value.lower() in falses:
                 value = False
 
+        if value is None:
+            value = default
+
         return value
 
     def check_fields(self):
