@@ -184,7 +184,8 @@ def load_file_regex(config, load_file, regex_pattern, from_recipe_dir=False,
             raise RuntimeError(message)
 
     if os.path.isfile(load_file):
-        match = re.search(regex_pattern, open(load_file, 'r').read())
+        with open(load_file, 'r') as lfile:
+            match = re.search(regex_pattern, lfile.read())
     else:
         if not permit_undefined_jinja:
             raise TypeError('{} is not a file that can be read'.format(load_file))
