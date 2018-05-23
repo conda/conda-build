@@ -249,10 +249,10 @@ def get_dict(m, prefix=None, for_env=True, skip_build_id=False):
     d = conda_build_vars(prefix, m.config)
 
     # languages
-    d.update(python_vars(m))
-    d.update(perl_vars(m))
-    d.update(lua_vars(m))
-    d.update(r_vars(m))
+    d.update(python_vars(m, prefix))
+    d.update(perl_vars(m, prefix))
+    d.update(lua_vars(m, prefix))
+    d.update(r_vars(m, prefix))
 
     if m:
         d.update(meta_vars(m, skip_build_id=skip_build_id))
@@ -301,22 +301,21 @@ def conda_build_vars(prefix, config):
     }
 
 
-def python_vars(metadata):
+def python_vars(metadata, prefix):
     py_ver = get_py_ver(metadata.config)
     vars_ = {
             'CONDA_PY': ''.join(py_ver.split('.')[:2]),
             'PY3K': str(int(int(py_ver[0]) >= 3)),
             'PY_VER': py_ver,
-            'STDLIB_DIR': utils.get_stdlib_dir(metadata.config.host_prefix, py_ver),
-            'SP_DIR': utils.get_site_packages(metadata.config.host_prefix, py_ver),
+            'STDLIB_DIR': utils.get_stdlib_dir(prefix, py_ver),
+            'SP_DIR': utils.get_site_packages(prefix, py_ver),
             }
     build_or_host = 'host' if metadata.is_cross else 'build'
     deps = [str(ms.name) for ms in metadata.ms_depends(build_or_host)]
     if 'python' in deps:
         vars_.update({
             # host prefix is always fine, because it is the same as build when is_cross is False
-            'PYTHON': metadata.config.python_bin(metadata.config.host_prefix,
-                                                 metadata.config.host_subdir),
+            'PYTHON': metadata.config.python_bin(prefix, metadata.config.host_subdir),
         })
 
     np_ver = metadata.config.variant.get('numpy', get_default_variant(metadata.config)['numpy'])
@@ -325,7 +324,7 @@ def python_vars(metadata):
     return vars_
 
 
-def perl_vars(metadata):
+def perl_vars(metadata, prefix):
     vars_ = {
             'PERL_VER': get_perl_ver(metadata.config),
             'CONDA_PERL': get_perl_ver(metadata.config),
@@ -335,13 +334,12 @@ def perl_vars(metadata):
     if 'perl' in deps:
         vars_.update({
             # host prefix is always fine, because it is the same as build when is_cross is False
-            'PERL': metadata.config.perl_bin(metadata.config.host_prefix,
-                                             metadata.config.host_subdir),
+            'PERL': metadata.config.perl_bin(prefix, metadata.config.host_subdir),
         })
     return vars_
 
 
-def lua_vars(metadata):
+def lua_vars(metadata, prefix):
     vars_ = {
             'LUA_VER': get_lua_ver(metadata.config),
             'CONDA_LUA': get_lua_ver(metadata.config),
@@ -350,14 +348,14 @@ def lua_vars(metadata):
     deps = [str(ms.name) for ms in metadata.ms_depends(build_or_host)]
     if 'lua' in deps:
         vars_.update({
-            'LUA': metadata.config.lua_bin(metadata.config.host_prefix,
+            'LUA': metadata.config.lua_bin(prefix,
                                            metadata.config.host_subdir),
             'LUA_INCLUDE_DIR': get_lua_include_dir(metadata.config),
         })
     return vars_
 
 
-def r_vars(metadata):
+def r_vars(metadata, prefix):
     vars_ = {
             'R_VER': get_r_ver(metadata.config),
             'CONDA_R': get_r_ver(metadata.config),
@@ -367,8 +365,7 @@ def r_vars(metadata):
     deps = [str(ms.name) for ms in metadata.ms_depends(build_or_host)]
     if 'r-base' in deps or 'mro-base' in deps:
         vars_.update({
-            'R': metadata.config.r_bin(metadata.config.host_prefix,
-                                       metadata.config.host_subdir),
+            'R': metadata.config.r_bin(prefix, metadata.config.host_subdir),
         })
     return vars_
 
