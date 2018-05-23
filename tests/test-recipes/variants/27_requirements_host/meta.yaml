@@ -1,0 +1,7 @@
+package:
+    name: cfastpm
+
+requirements:
+    host:
+        - {{ mpi }}
+
