@@ -384,8 +384,8 @@ def copy_test_source_files(m, destination):
                                     "as the path delimiter on Windows")
             files = glob(join(src_dir, pattern))
             if not files:
-                raise RuntimeError("Did not find any source_files for test with pattern %s",
-                                   pattern)
+                msg = "Did not find any source_files for test with pattern {0}"
+                raise RuntimeError(msg.format(pattern))
             for f in files:
                 try:
                     # disable locking to avoid locking a temporary directory (the extracted
