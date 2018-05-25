@@ -400,3 +400,9 @@ def test_inner_python_loop_with_output(testing_config):
     assert len([out for out in outputs if out.startswith('tbb-2018')]) == 1
     assert len([out for out in outputs if out.startswith('tbb-devel-2018')]) == 1
     assert len([out for out in outputs if out.startswith('tbb4py-2018')]) == 3
+
+
+def test_variant_as_dependency_name(testing_config):
+    outputs = api.render(os.path.join(recipe_dir, '27_requirements_host'),
+                                        config=testing_config)
+    assert len(outputs) == 2
