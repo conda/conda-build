@@ -537,12 +537,18 @@ def osx_vars(m, get_default):
     get_default('BUILD', OSX_ARCH + '-apple-darwin13.4.0')
 
 
+@memoized
+def _machine_and_architecture():
+    return platform.machine(), platform.architecture()
+
+
 def linux_vars(m, get_default):
     """This is setting variables on a dict that is part of the get_default function"""
-    build_arch = platform.machine()
+    platform_machine, platform_architecture = _machine_and_architecture()
+    build_arch = platform_machine
     # Python reports x86_64 when running a i686 Python binary on a 64-bit CPU
     # unless run through linux32. Issue a warning when we detect this.
-    if build_arch == 'x86_64' and platform.architecture()[0] == '32bit':
+    if build_arch == 'x86_64' and platform_architecture[0] == '32bit':
         print("Warning: You are running 32-bit Python on a 64-bit linux installation")
         print("         but have not launched it via linux32. Various qeuries *will*")
         print("         give unexpected results (uname -m, platform.machine() etc)")
