@@ -548,7 +548,7 @@ def find_used_variables_in_text(variant, recipe_text):
             all_res.append(compiler_regex)
         # consolidate all re's into one big one for speedup
         all_res = r"|".join(all_res)
-        if re.search(all_res, recipe_text):
+        if any(re.search(all_res, line) for line in recipe_text.splitlines()):
             used_variables.add(v)
     return used_variables
 
