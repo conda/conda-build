@@ -329,10 +329,14 @@ def pin_subpackage(metadata, subpackage_name, min_pin='x.x.x.x.x.x', max_pin='x'
 
 
 def native_compiler(language, config):
-    try:
-        compiler = DEFAULT_COMPILERS[config.platform][language]
-    except KeyError:
-        compiler = DEFAULT_COMPILERS[config.platform.split('-')[0]][language]
+    compiler = "unknown_compiler"
+
+    for platform in [config.platform, config.platform.split('-')[0]]:
+        try:
+            compiler = DEFAULT_COMPILERS[platform][language]
+            break
+        except KeyError:
+            continue
     if hasattr(compiler, 'keys'):
         compiler = compiler.get(config.variant.get('python', 'nope'), 'vs2015')
     return compiler
