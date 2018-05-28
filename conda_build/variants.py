@@ -533,7 +533,11 @@ def get_vars(variants, loop_only=False):
 @memoized
 def find_used_variables_in_text(variant, recipe_text):
     used_variables = set()
+    recipe_lines = recipe_text.splitlines()
     for v in variant:
+        variant_lines = [line for line in recipe_lines if v in line]
+        if not variant_lines:
+            continue
         variant_regex = r"\{\s*(?:pin_[a-z]+\(\s*?['\"])?%s[^'\"]*?\}\}" % v
         selector_regex = r"^[^#\[]*?\#?\s\[[^\]]*?(?<![_\w\d])%s[=\s<>!\]]" % v
         conditional_regex = r"(?:^|[^\{])\{%\s*(?:el)?if\s*" + v + r"\s*(?:[^%]*?)?%\}"
@@ -548,7 +552,7 @@ def find_used_variables_in_text(variant, recipe_text):
             all_res.append(compiler_regex)
         # consolidate all re's into one big one for speedup
         all_res = r"|".join(all_res)
-        if any(re.search(all_res, line) for line in recipe_text.splitlines()):
+        if any(re.search(all_res, line) for line in variant_lines):
             used_variables.add(v)
     return used_variables
 
