@@ -406,3 +406,9 @@ def test_variant_as_dependency_name(testing_config):
     outputs = api.render(os.path.join(recipe_dir, '27_requirements_host'),
                                         config=testing_config)
     assert len(outputs) == 2
+
+
+def test_custom_compiler():
+    recipe = os.path.join(recipe_dir, '28_custom_compiler')
+    ms = api.render(recipe, permit_unsatisfiable_variants=True, finalize=False, bypass_env_check=True)
+    assert len(ms) == 3

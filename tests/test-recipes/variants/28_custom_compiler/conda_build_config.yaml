@@ -1,0 +1,6 @@
+go_compiler:
+  - go
+target_platform:
+  - linux-64
+  - osx-64
+  - win-64
