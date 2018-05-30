@@ -801,7 +801,12 @@ def get_stdlib_dir(prefix, py_ver):
     if sys.platform == 'win32':
         lib_dir = os.path.join(prefix, 'Lib')
     else:
-        lib_dir = os.path.join(prefix, 'lib', 'python{}'.format(py_ver))
+        lib_dir = os.path.join(prefix, 'lib')
+        python_folder = glob(os.path.join(lib_dir, 'python?.*'))
+        if python_folder:
+            lib_dir = os.path.join(lib_dir, python_folder[0])
+        else:
+            lib_dir = os.path.join(lib_dir, 'python{}'.format(py_ver))
     return lib_dir
 
 
