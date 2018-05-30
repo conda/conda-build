@@ -258,7 +258,7 @@ def get_dict(m, prefix=None, for_env=True, skip_build_id=False):
         d.update(meta_vars(m, skip_build_id=skip_build_id))
 
     # system
-    d.update(system_vars(d, m))
+    d.update(system_vars(d, m, prefix))
 
     # features
     d.update({feat.upper(): str(int(value)) for feat, value in
@@ -466,14 +466,14 @@ def get_shlib_ext():
         raise NotImplementedError(sys.platform)
 
 
-def windows_vars(m, get_default):
+def windows_vars(m, get_default, prefix):
     """This is setting variables on a dict that is part of the get_default function"""
     # We have gone for the clang values here.
     win_arch = 'i386' if str(m.config.host_arch) == '32' else 'amd64'
     win_msvc = '19.0.0' if PY3 else '15.0.0'
-    library_prefix = join(m.config.host_prefix, 'Library')
+    library_prefix = join(prefix, 'Library')
     drive, tail = m.config.host_prefix.split(':')
-    get_default('SCRIPTS', join(m.config.host_prefix, 'Scripts'))
+    get_default('SCRIPTS', join(prefix, 'Scripts'))
     get_default('LIBRARY_PREFIX', library_prefix)
     get_default('LIBRARY_BIN', join(library_prefix, 'bin'))
     get_default('LIBRARY_INC', join(library_prefix, 'include'))
@@ -518,15 +518,15 @@ def windows_vars(m, get_default):
             get_default(env_var)
 
 
-def unix_vars(m, get_default):
+def unix_vars(m, get_default, prefix):
     """This is setting variables on a dict that is part of the get_default function"""
     get_default('HOME', 'UNKNOWN')
-    get_default('PKG_CONFIG_PATH', join(m.config.host_prefix, 'lib', 'pkgconfig'))
+    get_default('PKG_CONFIG_PATH', join(prefix, 'lib', 'pkgconfig'))
     get_default('CMAKE_GENERATOR', 'Unix Makefiles')
     get_default('SSL_CERT_FILE')
 
 
-def osx_vars(m, get_default):
+def osx_vars(m, get_default, prefix):
     """This is setting variables on a dict that is part of the get_default function"""
     OSX_ARCH = 'i386' if str(m.config.host_arch) == '32' else 'x86_64'
     # 10.7 install_name_tool -delete_rpath causes broken dylibs, I will revisit this ASAP.
@@ -542,7 +542,7 @@ def _machine_and_architecture():
     return platform.machine(), platform.architecture()
 
 
-def linux_vars(m, get_default):
+def linux_vars(m, get_default, prefix):
     """This is setting variables on a dict that is part of the get_default function"""
     platform_machine, platform_architecture = _machine_and_architecture()
     build_arch = platform_machine
@@ -571,7 +571,7 @@ def linux_vars(m, get_default):
     get_default('QEMU_UNAME')
     get_default('DEJAGNU')
     get_default('DISPLAY')
-    get_default('LD_RUN_PATH', m.config.host_prefix + '/lib')
+    get_default('LD_RUN_PATH', prefix + '/lib')
     get_default('BUILD', build_arch + '-conda_' + build_distro + '-linux-gnu')
 
 
@@ -584,7 +584,7 @@ def set_from_os_or_variant(out_dict, key, variant, default):
 
 
 @memoized
-def system_vars(env_dict, m):
+def system_vars(env_dict, m, prefix):
     d = dict()
     # note the dictionary is passed in here - variables are set in that dict if they are non-null
     get_default = lambda key, default='': set_from_os_or_variant(d, key, m.config.variant, default)
@@ -600,14 +600,14 @@ def system_vars(env_dict, m):
         d = prepend_bin_path(d, m.config.host_prefix)
 
     if sys.platform == 'win32':
-        windows_vars(m, get_default)
+        windows_vars(m, get_default, prefix)
     else:
-        unix_vars(m, get_default)
+        unix_vars(m, get_default, prefix)
 
     if sys.platform == 'darwin':
-        osx_vars(m, get_default)
+        osx_vars(m, get_default, prefix)
     elif sys.platform.startswith('linux'):
-        linux_vars(m, get_default)
+        linux_vars(m, get_default, prefix)
 
     return d
 
