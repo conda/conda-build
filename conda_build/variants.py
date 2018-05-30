@@ -533,22 +533,31 @@ def get_vars(variants, loop_only=False):
 @memoized
 def find_used_variables_in_text(variant, recipe_text):
     used_variables = set()
+    recipe_lines = recipe_text.splitlines()
     for v in variant:
-        variant_regex = r"\{\s*(?:pin_[a-z]+\(\s*?['\"])?%s[^'\"]*?\}\}" % v
-        selector_regex = r"^[^#\[]*?\#?\s\[[^\]]*?(?<![_\w\d])%s[=\s<>!\]]" % v
-        conditional_regex = r"[^\{]*?\{%\s*(?:el)?if\s*" + v + r"\s*(?:[^%]*?)?%\}"
-        # plain req name, no version spec.  Look for end of line after name, or comment or selector
-        requirement_regex = r"^\s+\-\s+%s(?:\s+[\[#]|$)" % v.replace('_', '[-_]')
-        all_res = [variant_regex, selector_regex, conditional_regex, requirement_regex]
+        all_res = []
         compiler_match = re.match(r'(.*?)_compiler$', v)
         if compiler_match:
+            compiler_lang = compiler_match.group(1)
             compiler_regex = (
-                r"\{\s*compiler\([\'\"]%s[\"\'][^\{]*?\}" % compiler_match.group(1)
+                r"\{\s*compiler\([\'\"]%s[\"\'][^\{]*?\}" % re.escape(compiler_lang)
             )
             all_res.append(compiler_regex)
+            variant_lines = [line for line in recipe_lines if v in line or compiler_lang in line]
+        else:
+            variant_lines = [line for line in recipe_lines if v in line]
+        if not variant_lines:
+            continue
+        v_regex = re.escape(v)
+        variant_regex = r"\{\s*(?:pin_[a-z]+\(\s*?['\"])?%s[^'\"]*?\}\}" % v_regex
+        selector_regex = r"^[^#\[]*?\#?\s\[[^\]]*?(?<![_\w\d])%s[=\s<>!\]]" % v_regex
+        conditional_regex = r"(?:^|[^\{])\{%\s*(?:el)?if\s*" + v_regex + r"\s*(?:[^%]*?)?%\}"
+        # plain req name, no version spec.  Look for end of line after name, or comment or selector
+        requirement_regex = r"^\s+\-\s+%s(?:\s+[\[#]|$)" % v_regex.replace('_', '[-_]')
+        all_res.extend([variant_regex, selector_regex, conditional_regex, requirement_regex])
         # consolidate all re's into one big one for speedup
         all_res = r"|".join(all_res)
-        if re.search(all_res, recipe_text, flags=re.MULTILINE | re.DOTALL):
+        if any(re.search(all_res, line) for line in variant_lines):
             used_variables.add(v)
     return used_variables
 
