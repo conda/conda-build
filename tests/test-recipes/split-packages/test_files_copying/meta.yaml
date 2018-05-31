@@ -1,0 +1,19 @@
+package:
+  name: test
+  version: 1.0
+
+source:
+  path: .
+
+outputs:
+  - name: test
+
+  - name: test2
+    test:
+      files:
+        - file
+      source_files:
+        - source_file
+      commands:
+        - test -e file
+        - test -e source_file

@@ -1089,9 +1089,9 @@ class MetaData(object):
                              (section, key))
         return True
 
-    def name(self):
-        res = self.get_value('package/name')
-        if not res:
+    def name(self, fail_ok=False):
+        res = self.meta.get('package', {}).get('name', '')
+        if not res and not fail_ok:
             sys.exit('Error: package/name missing in: %r' % self.meta_path)
         res = text_type(res)
         if res != res.lower():

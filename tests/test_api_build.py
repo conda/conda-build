@@ -164,6 +164,7 @@ def test_no_include_recipe_meta_yaml(testing_metadata, testing_config):
     assert not package_has_file(output_file, "info/recipe/meta.yaml")
 
     with pytest.raises(SystemExit):
+        # we are testing that even with the recipe excluded, we still get the tests in place
         output_file = api.build(os.path.join(metadata_dir, '_no_include_recipe'),
                                 config=testing_config)[0]
 
@@ -1164,21 +1165,24 @@ def test_copy_test_source_files(testing_config):
         filenames.add(os.path.basename(outputs[0]))
         tf = tarfile.open(outputs[0])
         found = False
+        files = []
         for f in tf.getmembers():
-            if f.name.startswith('info/test/'):
+            files.append(f.name)
+            # nesting of test/test here is because info/test is the main folder
+            # for test files, then test is the source_files folder we specify,
+            # and text.txt is within that.
+            if f.name == 'info/test/test/text.txt':
                 found = True
                 break
         if found:
-            assert copy, "'info/test/' found in tar.bz2 but not copying test source files"
+            assert copy, "'info/test/test/text.txt' found in tar.bz2 but not copying test source files"
             if copy:
                 api.test(outputs[0])
             else:
                 with pytest.raises(RuntimeError):
                     api.test(outputs[0])
         else:
-            assert not copy, "'info/test/' not found in tar.bz2 but copying test source files"
-    # cb3.1 bases the hash only on conda_build_config.yaml pinning.  This test no longer applies.
-    # assert len(filenames) == 2, "copy_test_source_files does not modify the build hash but should"
+            assert not copy, "'info/test/test/text.txt' not found in tar.bz2 but copying test source files. File list: %r" % files
 
 
 def test_pin_depends(testing_config):
