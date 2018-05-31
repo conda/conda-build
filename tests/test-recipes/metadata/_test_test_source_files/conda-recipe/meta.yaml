@@ -8,7 +8,11 @@ source:
 test:
   source_files:
     - test
+  files:
+    - recipe_file
 
   commands:
     - test -e test/text.txt   # [unix]
+    - test -e recipe_file     # [unix]
     - if not exist test\text.txt exit 1  # [win]
+    - if not exist recipe_file exit 1    # [win]
