@@ -45,7 +45,7 @@ if PY3:
 
     # stdlib glob is less feature-rich but considerably faster than glob2
     def glob(pathname, recursive=True):
-        return list(map(normcase, iglob(pathname, recursive=recursive)))
+        return list(map(abspath, map(normcase, iglob(pathname, recursive=recursive))))
 
     import urllib.parse as urlparse
     import urllib.request as urllib
@@ -53,10 +53,10 @@ if PY3:
     from contextlib import ExitStack  # NOQA
     PermissionError = PermissionError  # NOQA
 else:
-    from glob2 import glob as glob2_glob
+    from glob2 import glob as glob2_iglob
 
     def glob(pathname, recursive=True):
-        return glob2_glob(pathname, recursive=recursive)
+        return list(map(abspath, glob2_iglob(pathname, recursive=recursive)))
 
     import urlparse
     import urllib
