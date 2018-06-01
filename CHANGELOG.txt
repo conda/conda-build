@@ -1,3 +1,32 @@
+2018-05-31 3.10.6:
+------------------
+
+Enhancements:
+-------------
+
+* several rendering speed improvements #2925
+
+Bug fixes:
+----------
+* add regression test for #2912       #2914
+* fix a file handle not being closed  #2915
+* fix an incorrect syntax RuntimeError  #2920
+* fix custom compiler languages not being possible  #2927
+* fix OS vars not correctly respecting test prefix; add test  #2932
+* fix incorrect python versions showing up in test phase paths (SP_DIR)  #2932
+* fix test/files functionality for outputs; add test  #2934
+
+Contributors:
+-------------
+
+* @mbargull
+* @msarahan
+* @nicoddemus
+* @rainwoodman
+* @sodre
+* @tomashek
+
+
 2018-05-23 3.10.5:
 ------------------
 
