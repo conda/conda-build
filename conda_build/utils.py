@@ -4,7 +4,6 @@ import base64
 from collections import defaultdict
 import contextlib
 import fnmatch
-from glob2 import glob
 import json
 from locale import getpreferredencoding
 import logging
@@ -13,7 +12,7 @@ import mmap
 import operator
 import os
 from os.path import (dirname, getmtime, getsize, isdir, join, isfile, abspath, islink,
-                     expanduser, expandvars)
+                     expanduser, expandvars, normcase)
 import re
 import stat
 import subprocess
@@ -42,12 +41,23 @@ from conda_build.conda_interface import rm_rf as _rm_rf # NOQA
 from conda_build.os_utils import external
 
 if PY3:
+    from glob import iglob
+
+    # stdlib glob is less feature-rich but considerably faster than glob2
+    def glob(pathname, recursive=True):
+        return list(map(normcase, iglob(pathname, recursive=recursive)))
+
     import urllib.parse as urlparse
     import urllib.request as urllib
     # NOQA because it is not used in this file.
     from contextlib import ExitStack  # NOQA
     PermissionError = PermissionError  # NOQA
 else:
+    from glob2 import glob as glob2_glob
+
+    def glob(pathname, recursive=True):
+        return glob2_glob(pathname, recursive=recursive)
+
     import urlparse
     import urllib
     # NOQA because it is not used in this file.
