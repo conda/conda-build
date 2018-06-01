@@ -1,4 +1,5 @@
 import os
+import os.path
 import stat
 import subprocess
 import sys
@@ -195,17 +196,20 @@ def test_expand_globs(testing_workdir):
 
     # Test dirs
     exp = utils.expand_globs([os.path.join('sub1', 'ssub1')], testing_workdir)
-    assert sorted(exp) == sorted([os.path.sep.join(('sub1', 'ssub1', 'ghi')),
-                                  os.path.sep.join(('sub1', 'ssub1', 'abc'))])
+    assert sorted(exp) == sorted(map(os.path.abspath,
+                                     [os.path.sep.join(('sub1', 'ssub1', 'ghi')),
+                                      os.path.sep.join(('sub1', 'ssub1', 'abc'))]))
 
     # Test files
     exp = sorted(utils.expand_globs(['abc', files[2]], testing_workdir))
-    assert exp == sorted(['abc', os.path.sep.join(('sub1', 'def'))])
+    assert exp == sorted(map(os.path.abspath,
+                             ['abc', os.path.sep.join(('sub1', 'def'))]))
 
     # Test globs
     exp = sorted(utils.expand_globs(['a*', '*/*f', '**/*i'], testing_workdir))
-    assert exp == sorted(['abc', 'acb', os.path.sep.join(('sub1', 'def')),
-                          os.path.sep.join(('sub1', 'ssub1', 'ghi'))])
+    assert exp == sorted(map(os.path.abspath,
+                             ['abc', 'acb', os.path.sep.join(('sub1', 'def')),
+                              os.path.sep.join(('sub1', 'ssub1', 'ghi'))]))
 
 
 def test_filter_files():
