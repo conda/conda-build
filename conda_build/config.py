@@ -738,7 +738,7 @@ class Config(object):
 
     def __exit__(self, e_type, e_value, traceback):
         if not getattr(self, 'dirty') and e_type is None and not getattr(self, 'keep_old_work'):
-            get_logger(__name__).info("--dirty flag and --keep-old-work not specified."
+            get_logger(__name__).info("--dirty flag and --keep-old-work not specified. "
                                         "Removing build/test folder after successful build/test.\n")
             self.clean()
         else:

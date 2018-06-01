@@ -360,9 +360,6 @@ def copy_license(m):
 
 
 def copy_test_source_files(m, destination):
-    # if we include the recipe, we create the test files there.  Otherwise, create them here.
-    if not(m.config.include_recipe and m.include_recipe()):
-        create_all_test_files(m, destination)
     test_deps = m.meta.get('test', {}).get('requires', [])
     try:
         os.makedirs(destination)
@@ -377,7 +374,7 @@ def copy_test_source_files(m, destination):
     elif hasattr(m.config, 'recipe_dir') and m.config.recipe_dir:
         src_dir = os.path.join(m.config.recipe_dir, 'info', 'test')
 
-    if src_dir:
+    if src_dir and os.path.isdir(src_dir):
         for pattern in utils.ensure_list(m.get_value('test/source_files', [])):
             if utils.on_win and '\\' in pattern:
                 raise RuntimeError("test/source_files paths must use / "
@@ -399,6 +396,13 @@ def copy_test_source_files(m, destination):
             for ext in '.pyc', '.pyo':
                 for f in utils.get_ext_files(destination, ext):
                     os.remove(f)
+
+    recipe_test_files = m.get_value('test/files')
+    if recipe_test_files:
+        orig_recipe_dir = m.path or m.meta.get('extra', {}).get('parent_recipe', {}).get('path')
+        for f in recipe_test_files:
+            utils.copy_into(os.path.join(orig_recipe_dir, f), os.path.join(destination, f),
+                            timeout=m.config.timeout, locking=m.config.locking, clobber=True)
 
 
 def write_hash_input(m):
@@ -629,6 +633,8 @@ def create_info_files(m, files, prefix):
     copy_recipe(m)
     copy_readme(m)
     copy_license(m)
+
+    create_all_test_files(m, test_dir=join(m.config.info_dir, 'test'))
     if m.config.copy_test_source_files:
         copy_test_source_files(m, join(m.config.info_dir, 'test'))
 
@@ -938,6 +944,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
                                  metadata.build_id()]) + '.tar.bz2')
     # first filter is so that info_files does not pick up ignored files
     files = utils.filter_files(files, prefix=metadata.config.host_prefix)
+    # this is also copying things like run_test.sh into info/recipe
     output['checksums'] = create_info_files(metadata, files, prefix=metadata.config.host_prefix)
     for ext in ('.py', '.r', '.pl', '.lua', '.sh', '.bat'):
         test_dest_path = os.path.join(metadata.config.info_dir, 'test', 'run_test' + ext)

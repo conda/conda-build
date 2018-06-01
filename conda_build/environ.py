@@ -312,7 +312,7 @@ def python_vars(metadata, prefix):
             }
     build_or_host = 'host' if metadata.is_cross else 'build'
     deps = [str(ms.name) for ms in metadata.ms_depends(build_or_host)]
-    if 'python' in deps:
+    if 'python' in deps or metadata.name(fail_ok=True) == 'python':
         vars_.update({
             # host prefix is always fine, because it is the same as build when is_cross is False
             'PYTHON': metadata.config.python_bin(prefix, metadata.config.host_subdir),
@@ -331,7 +331,7 @@ def perl_vars(metadata, prefix):
              }
     build_or_host = 'host' if metadata.is_cross else 'build'
     deps = [str(ms.name) for ms in metadata.ms_depends(build_or_host)]
-    if 'perl' in deps:
+    if 'perl' in deps or metadata.name(fail_ok=True) == 'perl':
         vars_.update({
             # host prefix is always fine, because it is the same as build when is_cross is False
             'PERL': metadata.config.perl_bin(prefix, metadata.config.host_subdir),
@@ -363,7 +363,8 @@ def r_vars(metadata, prefix):
 
     build_or_host = 'host' if metadata.is_cross else 'build'
     deps = [str(ms.name) for ms in metadata.ms_depends(build_or_host)]
-    if 'r-base' in deps or 'mro-base' in deps:
+    if 'r-base' in deps or 'mro-base' in deps or metadata.name(fail_ok=True) in (
+            'r-base', 'mro-base'):
         vars_.update({
             'R': metadata.config.r_bin(prefix, metadata.config.host_subdir),
         })
