@@ -8,7 +8,7 @@ import os
 from os.path import join, exists
 import sys
 
-from conda_build.utils import copy_into, on_win, ensure_list
+from conda_build.utils import copy_into, on_win, ensure_list, glob
 
 
 def create_files(m, test_dir=None):
@@ -27,14 +27,12 @@ def create_files(m, test_dir=None):
 
     recipe_dir = m.path or m.meta.get('extra', {}).get('parent_recipe', {}).get('path')
 
-    for fn in ensure_list(m.get_value('test/files', [])):
+    for pattern in ensure_list(m.get_value('test/files', [])):
         has_files = True
-        path = join(recipe_dir, fn)
-        if not os.path.isdir(os.path.dirname(path)):
-            os.makedirs(os.path.dirname(path))
-        # disable locking to avoid locking a temporary directory (the extracted test folder)
-        copy_into(path, join(test_dir, fn), m.config.timeout, locking=False,
-                  clobber=True)
+        files = glob(join(recipe_dir, pattern))
+        for f in files:
+            copy_into(f, f.replace(recipe_dir, test_dir), m.config.timeout, locking=False,
+                    clobber=True)
     return has_files
 
 
