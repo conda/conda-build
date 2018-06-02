@@ -1,3 +1,23 @@
+2018-06-01 3.10.7:
+------------------
+
+Enhancements:
+-------------
+
+* replace glob2 by glob for py3 (speed improvement)  #2937
+
+Bug fixes:
+----------
+
+* Fix folder copying in test/files  #2941
+
+Contributors:
+-------------
+
+* @mbargull
+* @msarahan
+
+
 2018-05-31 3.10.6:
 ------------------
 
