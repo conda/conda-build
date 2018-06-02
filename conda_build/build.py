@@ -400,9 +400,11 @@ def copy_test_source_files(m, destination):
     recipe_test_files = m.get_value('test/files')
     if recipe_test_files:
         orig_recipe_dir = m.path or m.meta.get('extra', {}).get('parent_recipe', {}).get('path')
-        for f in recipe_test_files:
-            utils.copy_into(os.path.join(orig_recipe_dir, f), os.path.join(destination, f),
-                            timeout=m.config.timeout, locking=m.config.locking, clobber=True)
+        for pattern in recipe_test_files:
+            files = glob(join(orig_recipe_dir, pattern))
+            for f in files:
+                utils.copy_into(f, f.replace(orig_recipe_dir, destination),
+                                timeout=m.config.timeout, locking=m.config.locking, clobber=True)
 
 
 def write_hash_input(m):

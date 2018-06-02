@@ -1171,18 +1171,18 @@ def test_copy_test_source_files(testing_config):
             # nesting of test/test here is because info/test is the main folder
             # for test files, then test is the source_files folder we specify,
             # and text.txt is within that.
-            if f.name == 'info/test/test/text.txt':
+            if f.name == 'info/test/test_files_folder/text.txt':
                 found = True
                 break
         if found:
-            assert copy, "'info/test/test/text.txt' found in tar.bz2 but not copying test source files"
+            assert copy, "'info/test/test_files_folder/text.txt' found in tar.bz2 but not copying test source files"
             if copy:
                 api.test(outputs[0])
             else:
                 with pytest.raises(RuntimeError):
                     api.test(outputs[0])
         else:
-            assert not copy, "'info/test/test/text.txt' not found in tar.bz2 but copying test source files. File list: %r" % files
+            assert not copy, "'info/test/test_files_folder/text.txt' not found in tar.bz2 but copying test source files. File list: %r" % files
 
 
 def test_pin_depends(testing_config):

@@ -12,8 +12,16 @@ outputs:
     test:
       files:
         - file
+        - folder
       source_files:
         - source_file
+        - source_folder
       commands:
-        - test -e file
-        - test -e source_file
+        - test -e file                           # [unix]
+        - test -e folder/file2                   # [unix]
+        - test -e source_file                    # [unix]
+        - test -e source_folder/file3            # [unix]
+        - if not exist file exit 1               # [win]
+        - if not exist folder/file2 exit 1       # [win]
+        - if not exist source_file exit 1        # [win]
+        - if not exist source_folder/file3 exit  # [win]
