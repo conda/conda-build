@@ -433,7 +433,8 @@ def check_overlinking(m, files):
 
     run_reqs = [req.split(' ')[0] for req in m.meta.get('requirements', {}).get('run', [])]
     # sysroots and whitelists are similar, but the subtle distinctions are important.
-    sysroots = glob(os.path.join(m.config.build_prefix, '**', 'sysroot'))
+    sysroot_prefix = m.config.build_prefix if not m.build_is_host else m.config.host_prefix
+    sysroots = glob(os.path.join(sysroot_prefix, '**', 'sysroot'))
     whitelist = []
     if 'target_platform' in m.config.variant and m.config.variant['target_platform'] == 'osx-64':
         if not len(sysroots):
@@ -557,7 +558,7 @@ def check_overlinking(m, files):
                     for sysroot in sysroots:
                         sysroot_files.extend(glob(os.path.join(sysroot, '**', dso_fname)))
                     if len(sysroot_files):
-                        # Removing config.build_prefix is only *really* for Linux, though we could
+                        # Removing sysroot_prefix is only *really* for Linux, though we could
                         # use CONDA_BUILD_SYSROOT for macOS. We should figure out what to do about
                         # /opt/X11 too.
                         # Find the longest suffix match.
@@ -566,9 +567,9 @@ def check_overlinking(m, files):
                                       for s in sysroot_files]
                         idx = max(range(len(match_lens)), key=match_lens.__getitem__)
                         in_prefix_dso = os.path.normpath(sysroot_files[idx].replace(
-                            m.config.build_prefix + '/', ''))
+                            sysroot_prefix + '/', ''))
                         n_dso_p = "Needed DSO {}".format(in_prefix_dso)
-                        pkgs = list(which_package(in_prefix_dso, m.config.build_prefix))
+                        pkgs = list(which_package(in_prefix_dso, sysroot_prefix))
                         if len(pkgs):
                             print_msg(errors, '{}: {} found in CDT/compiler package {}'.
                                               format(info_prelude, n_dso_p, pkgs[0]))
