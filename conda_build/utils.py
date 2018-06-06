@@ -12,7 +12,7 @@ import mmap
 import operator
 import os
 from os.path import (dirname, getmtime, getsize, isdir, join, isfile, abspath, islink,
-                     expanduser, expandvars, normcase)
+                     expanduser, expandvars)
 import re
 import stat
 import subprocess
@@ -41,11 +41,11 @@ from conda_build.conda_interface import rm_rf as _rm_rf # NOQA
 from conda_build.os_utils import external
 
 if PY3:
-    from glob import iglob
+    from glob import glob as glob_glob
 
     # stdlib glob is less feature-rich but considerably faster than glob2
     def glob(pathname, recursive=True):
-        return list(map(normcase, iglob(pathname, recursive=recursive)))
+        return glob_glob(pathname, recursive=recursive)
 
     import urllib.parse as urlparse
     import urllib.request as urllib
