@@ -545,7 +545,7 @@ def find_used_variables_in_text(variant, recipe_text):
             all_res.append(compiler_regex)
             variant_lines = [line for line in recipe_lines if v in line or compiler_lang in line]
         else:
-            variant_lines = [line for line in recipe_lines if v in line]
+            variant_lines = [line for line in recipe_lines if v in line.replace('-', '_')]
         if not variant_lines:
             continue
         v_regex = re.escape(v)

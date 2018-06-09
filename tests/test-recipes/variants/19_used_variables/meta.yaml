@@ -11,6 +11,8 @@ requirements:
     - python
     # an implicit usage other than python
     - zlib
+    # an implicit usage containing a dash
+    - pthread-stubs
   run:
     # python is only "used" if it's used in build and run - see above
     - python

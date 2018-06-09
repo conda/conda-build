@@ -6,6 +6,8 @@ unused_var:
   - 123
 zlib:
   - 1.2.11
+pthread_stubs:
+  - 0.3
 some_package:
   - mooo
   - llama
