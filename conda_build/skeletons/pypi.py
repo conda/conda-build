@@ -832,7 +832,9 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
                                 package)
     else:
         license_name = ' or '.join(licenses)
-    d['license'] = license_name
+    # remove the word license from the license
+    clean_license_name = re.subn('(.*)\s+license', r'\1', license_name, flags=re.IGNORECASE)[0]
+    d['license'] = clean_license_name
     d['license_family'] = guess_license_family(license_name, allowed_license_families)
     if 'new_hash_value' in pkginfo:
         d['digest'] = pkginfo['new_hash_value']
