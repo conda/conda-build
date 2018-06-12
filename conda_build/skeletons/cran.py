@@ -1089,8 +1089,6 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 if need_git:
                     deps.append("{indent}{{{{posix}}}}git".format(indent=INDENT))
                 if need_autotools:
-                    deps.append("{indent}{{{{posix}}}}sed             {sel}".format(
-                        indent=INDENT, sel=sel_src_and_win))
                     deps.append("{indent}{{{{posix}}}}grep            {sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
                     deps.append("{indent}{{{{posix}}}}autoconf        {sel}".format(
@@ -1103,6 +1101,10 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 if need_make:
                     deps.append("{indent}{{{{posix}}}}make            {sel}".format(
                         indent=INDENT, sel=sel_src))
+                    deps.append("{indent}{{{{posix}}}}sed             {sel}".format(
+                        indent=INDENT, sel=sel_src_and_win))
+                    deps.append("{indent}{{{{posix}}}}coreutils       {sel}".format(
+                        indent=INDENT, sel=sel_src_and_win))
             elif dep_type == 'run':
                 if need_c or need_cxx or need_f:
                     deps.append("{indent}{{{{native}}}}gcc-libs       {sel}".format(
