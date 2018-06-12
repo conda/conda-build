@@ -1,3 +1,24 @@
+2018-06-12 3.10.8:
+------------------
+
+Bug fixes:
+----------
+* clean up license field for pypi skeleton  #2938
+* fix regex to match requirements with trailing spaces  #2948
+* Check for dash in text with variants  #2949
+* do not check in build prefix for overlinking when merging build and host  #2950
+* utils.glob: remove unnecessary normcas, fix test_expand_globs  #2952
+* add missing "build" fields in FIELDS schema thing  #2962
+
+Contributors:
+-------------
+
+* @isuruf
+* @mariusvniekerk
+* @mbargull
+* @mingwandroid
+
+
 2018-06-01 3.10.7:
 ------------------
 
