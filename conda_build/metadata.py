@@ -488,7 +488,8 @@ FIELDS = {
               'pin_depends', 'include_recipe',  # pin_depends is experimental still
               'preferred_env', 'preferred_env_executable_paths', 'run_exports',
               'ignore_run_exports', 'requires_features', 'provides_features',
-              'force_use_keys', "force_ignore_keys",
+              'force_use_keys', 'force_ignore_keys', 'merge_build_host',
+              'pre-link', 'post-link', 'pre-unlink',
               },
     'requirements': {'build', 'host', 'run', 'conflicts', 'run_constrained'},
     'app': {'entry', 'icon', 'summary', 'type', 'cli_opts',
