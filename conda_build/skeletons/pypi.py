@@ -93,7 +93,6 @@ PYPI_META_STATIC = {
         ('version', '{{ version }}'),
     ]),
     'source': ruamel_yaml.comments.CommentedMap([
-        ('fn', '{{ name }}-{{ version }}.{{ file_ext }}'),
         ('url', '/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.{{ file_ext }}'),  # NOQA
         ('{{ hash_type }}', '{{ hash_value }}'),
     ]),
