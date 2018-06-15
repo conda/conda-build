@@ -69,17 +69,8 @@ REQUIREMENTS_ORDER = ['host', 'run']
 ABOUT_ORDER = ['home', 'license', 'license_family', 'license_file', 'summary',
                'description', 'doc_url', 'dev_url']
 
-# This may be overkill, but some day sha256 won't be enough. Might as well be
-# ready...list these in order of decreasing preference.
-POSSIBLE_DIGESTS = ['sha256', 'md5']
-
-POSSIBLE_FILE_EXTENSIONS = ['tar.gz', 'tar.bz2', 'zip', 'tar', 'gz']
-
 PYPI_META_HEADER = """{{% set name = "{packagename}" %}}
 {{% set version = "{version}" %}}
-{{% set file_ext = "{file_ext}" %}}
-{{% set hash_type = "{hash_type}" %}}
-{{% set hash_value = "{hash_value}" %}}
 
 """
 
@@ -93,8 +84,7 @@ PYPI_META_STATIC = {
         ('version', '{{ version }}'),
     ]),
     'source': ruamel_yaml.comments.CommentedMap([
-        ('url', '/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.{{ file_ext }}'),  # NOQA
-        ('{{ hash_type }}', '{{ hash_value }}'),
+        ('url', '/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz'),  # NOQA
     ]),
     'build': ruamel_yaml.comments.CommentedMap([
         ('number', 0),
@@ -312,6 +302,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
             base_url = urlsplit(pypi_url)
             base_url = "://".join((base_url.scheme, base_url.netloc))
             ordered_recipe['source']['url'] = urljoin(base_url, ordered_recipe['source']['url'])
+            ordered_recipe['source']['sha256'] = d['hash_value']
 
             if d['entry_points']:
                 ordered_recipe['build']['entry_points'] = d['entry_points']
@@ -319,10 +310,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
             if noarch_python:
                 ordered_recipe['build']['noarch'] = 'python'
 
-            ordered_recipe['build']['script'] = 'python setup.py install ' + ' '.join(setup_options)
-            if any(re.match(r'^setuptools(?:\s|$)', req) for req in d['build_depends']):
-                ordered_recipe['build']['script'] += ('--single-version-externally-managed '
-                                                      '--record=record.txt')
+            ordered_recipe['build']['script'] = 'python -m pip install . --no-deps --ignore-installed'
 
             # Always require python as a dependency
             ordered_recipe['requirements'] = ruamel_yaml.comments.CommentedMap()
@@ -498,11 +486,9 @@ def digest_from_fragment(fragment):
     """
     Try to parse a checksum from a URL fragment.
     """
-    for p in POSSIBLE_DIGESTS:
-        search_for = p + '='
-        if fragment.startswith(search_for):
-            digest = (p, fragment[len(search_for):])
-            break
+    search_for = 'sha265' + '='
+    if fragment.startswith(search_for):
+        digest = ('sha265', fragment[len(search_for):])
     else:
         digest = ()
     return digest
@@ -573,23 +559,14 @@ def get_download_data(pypi_data, package, version, is_url, all_urls, noprompt, m
         pypiurl = url['url']
         print("Using url %s (%s) for %s." % (pypiurl,
             human_bytes(url['size'] or 0), package))
-        # List of digests we might get in order of preference
-        for p in POSSIBLE_DIGESTS:
-            try:
-                if url['digests'][p]:
-                    digest = (p, url['digests'][p])
-                    break
-            except KeyError:
-                continue
+        
+        if url['digests']['sha256']:
+            digest = ('sha256', url['digests']['sha256'])
         else:
             # That didn't work, even though as of 7/17/2017 some packages
             # have a 'digests' entry.
             # As a last-ditch effort, try for the md5_digest entry.
-            try:
-                digest = ('md5', url['md5_digest'])
-            except KeyError:
-                # Give up
-                digest = ()
+            digest = ()
         filename = url['filename'] or 'package'
     else:
         # User provided a URL, try to use it.
@@ -663,7 +640,6 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
                           setup_options=setup_options,
                           config=config)
 
-    setuptools_build = pkginfo.get('setuptools', False)
     setuptools_run = False
 
     # Look at the entry_points and construct console_script and
@@ -708,7 +684,6 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
             # We have *other* kinds of entry-points so we need
             # setuptools at run-time
             if set(entry_points.keys()) - {'console_scripts', 'gui_scripts'}:
-                setuptools_build = True
                 setuptools_run = True
             # TODO: Use pythonw for gui scripts
             entry_list = (cs + gs)
@@ -718,7 +693,7 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
 
     requires = get_requirements(package, pkginfo, all_extras=all_extras)
 
-    if requires or setuptools_build or setuptools_run:
+    if requires or setuptools_run:
         deps = []
         if setuptools_run:
             deps.append('setuptools')
@@ -742,9 +717,8 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
                     deps.append(spec)
 
         if 'setuptools' in deps:
-            setuptools_build = False
             setuptools_run = False
-        d['build_depends'] = ['setuptools'] * setuptools_build + deps
+        d['build_depends'] = ['pip'] + deps
         # Never add setuptools to runtime dependencies.
         d['run_depends'] = deps
 
@@ -759,11 +733,6 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
         d['packagename'] = pkginfo['name'].lower()
     if d['version'] == 'UNKNOWN':
         d['version'] = pkginfo['version']
-
-    for ext in POSSIBLE_FILE_EXTENSIONS:
-        if d['pypiurl'].split('#')[0].endswith(ext):
-            d['file_ext'] = ext
-            break
 
     if pkginfo.get('packages'):
         deps = set(pkginfo['packages'])
@@ -954,8 +923,8 @@ def get_pkginfo(package, filename, pypiurl, digest, python_version, extra_specs,
         # Calculate the preferred hash type here if necessary.
         # Needs to be done in this block because this is where we have
         # access to the source file.
-        if hash_type != POSSIBLE_DIGESTS[0]:
-            new_hash_value = hashsum_file(download_path, POSSIBLE_DIGESTS[0])
+        if hash_type != 'sha256':
+            new_hash_value = hashsum_file(download_path, 'sha256')
         else:
             new_hash_value = ''
 
@@ -973,7 +942,7 @@ def get_pkginfo(package, filename, pypiurl, digest, python_version, extra_specs,
         except IOError:
             pkg_info = pkginfo.SDist(download_path).__dict__
         if new_hash_value:
-            pkg_info['new_hash_value'] = (POSSIBLE_DIGESTS[0], new_hash_value)
+            pkg_info['new_hash_value'] = ('sha256', new_hash_value)
     finally:
         rm_rf(tempdir)
 
