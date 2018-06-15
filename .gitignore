@@ -3,6 +3,7 @@
 *.egg-info
 build/
 dist/
+docs/_build
 docs/build
 tags
 .idea/
