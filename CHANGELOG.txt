@@ -1,3 +1,22 @@
+2018-06-15 3.10.9:
+------------------
+
+Miscellany:
+-----------
+
+* docs are moving from the conda-docs repo into conda-build (splitting off from conda docs in general)
+
+Bug fixes:
+----------
+
+* fix re.escape usage for Python <3.3 #2970
+
+Contributors:
+-------------
+* @mbargull
+* @msarahan
+
+
 2018-06-12 3.10.8:
 ------------------
 
