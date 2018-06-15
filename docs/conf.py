@@ -89,9 +89,7 @@ html_theme = 'sphinx_rtd_theme'
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-html_theme_options = {
-    "project_nav_name": "conda-build",
-}
+# html_theme_options = {}
 
 html_short_title = "Conda-build"
 html_show_sourcelink = False
@@ -180,3 +178,5 @@ intersphinx_mapping = {'https://docs.python.org/': None}
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True
+
+html_style = 'css/no_fixed_width.css'
