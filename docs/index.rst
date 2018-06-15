@@ -1,8 +1,8 @@
-.. _build:
+.. _index:
 
-=================
-Building packages
-=================
+=========================
+Conda-build Documentation
+=========================
 
 Building a conda package requires
 :doc:`installing conda build <install-conda-build>` and
@@ -19,10 +19,8 @@ Anaconda Cloud, you will need an
 `Anaconda Cloud <http://anaconda.org>`_ account and client.
 
 .. toctree::
-   :glob:
-   :maxdepth: 2
+   :maxdepth: 3
 
-   source/install/index
    source/install-conda-build
    source/package-spec
    source/package-naming-conv
