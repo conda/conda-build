@@ -549,11 +549,12 @@ def find_used_variables_in_text(variant, recipe_text):
         if not variant_lines:
             continue
         v_regex = re.escape(v)
+        v_req_regex = '[-_]'.join(map(re.escape, v.split('_')))
         variant_regex = r"\{\s*(?:pin_[a-z]+\(\s*?['\"])?%s[^'\"]*?\}\}" % v_regex
         selector_regex = r"^[^#\[]*?\#?\s\[[^\]]*?(?<![_\w\d])%s[=\s<>!\]]" % v_regex
         conditional_regex = r"(?:^|[^\{])\{%\s*(?:el)?if\s*" + v_regex + r"\s*(?:[^%]*?)?%\}"
         # plain req name, no version spec.  Look for end of line after name, or comment or selector
-        requirement_regex = r"^\s+\-\s+%s\s*(?:\s[\[#]|$)" % v_regex.replace('_', '[-_]')
+        requirement_regex = r"^\s+\-\s+%s\s*(?:\s[\[#]|$)" % v_req_regex
         all_res.extend([variant_regex, selector_regex, conditional_regex, requirement_regex])
         # consolidate all re's into one big one for speedup
         all_res = r"|".join(all_res)
