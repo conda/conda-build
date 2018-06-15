@@ -362,7 +362,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
 
             # This hackery is necessary because
             #  - the default indentation of lists is not what we would like.
-            #    Ideally we'd contact the ruamel.yaml auther to find the right
+            #    Ideally we'd contact the ruamel.yaml author to find the right
             #    way to do this. See this PR thread for more:
             #    https://github.com/conda/conda-build/pull/2205#issuecomment-315803714
             #    Brute force fix below.
