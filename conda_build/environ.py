@@ -15,7 +15,7 @@ from os.path import join, normpath
 
 # noqa here because PY3 is used only on windows, and trips up flake8 otherwise.
 from .conda_interface import text_type, PY3  # noqa
-from .conda_interface import CondaError, LinkError, LockError, NoPackagesFoundError, PaddingError
+from .conda_interface import CondaError, LinkError, LockError, NoPackagesFoundError, PaddingError, UnsatisfiableError
 from .conda_interface import display_actions, execute_actions, execute_plan, install_actions
 from .conda_interface import memoized
 from .conda_interface import package_cache, TemporaryDirectory
@@ -715,7 +715,7 @@ def get_install_actions(prefix, specs, env, retries=0, subdir=None,
             with capture():
                 try:
                     actions = install_actions(prefix, index, specs, force=True)
-                except NoPackagesFoundError as exc:
+                except (NoPackagesFoundError, UnsatisfiableError) as exc:
                     raise DependencyNeedsBuildingError(exc, subdir=subdir)
                 except (SystemExit, PaddingError, LinkError, DependencyNeedsBuildingError,
                         CondaError, AssertionError) as exc:
