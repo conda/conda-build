@@ -50,6 +50,7 @@ from .conda_interface import MatchSpec
 from .conda_interface import reset_context
 from .conda_interface import context
 from .conda_interface import UnsatisfiableError
+from .conda_interface import NoPackagesFoundError
 from .utils import env_var
 
 from conda_build import __version__
@@ -1917,18 +1918,26 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
                 else metadata.config.host_subdir)
     # ensure that the test prefix isn't kept between variants
     utils.rm_rf(metadata.config.test_prefix)
-    actions = environ.get_install_actions(metadata.config.test_prefix,
-                                            tuple(specs), 'host',
-                                            subdir=subdir,
-                                            debug=metadata.config.debug,
-                                            verbose=metadata.config.verbose,
-                                            locking=metadata.config.locking,
-                                            bldpkgs_dirs=tuple(metadata.config.bldpkgs_dirs),
-                                            timeout=metadata.config.timeout,
-                                            disable_pip=metadata.config.disable_pip,
-                                            max_env_retry=metadata.config.max_env_retry,
-                                            output_folder=metadata.config.output_folder,
-                                            channel_urls=tuple(metadata.config.channel_urls))
+    try:
+        actions = environ.get_install_actions(metadata.config.test_prefix,
+                                                tuple(specs), 'host',
+                                                subdir=subdir,
+                                                debug=metadata.config.debug,
+                                                verbose=metadata.config.verbose,
+                                                locking=metadata.config.locking,
+                                                bldpkgs_dirs=tuple(metadata.config.bldpkgs_dirs),
+                                                timeout=metadata.config.timeout,
+                                                disable_pip=metadata.config.disable_pip,
+                                                max_env_retry=metadata.config.max_env_retry,
+                                                output_folder=metadata.config.output_folder,
+                                                channel_urls=tuple(metadata.config.channel_urls))
+    except (DependencyNeedsBuildingError, NoPackagesFoundError, UnsatisfiableError,
+            CondaError, AssertionError) as exc:
+        log.warn("failed to get install actions, retrying.  exception was: %s",
+                  str(exc))
+        tests_failed(metadata, move_broken=move_broken, broken_dir=metadata.config.broken_dir,
+                        config=metadata.config)
+        raise
     # upgrade the warning from silently clobbering to warning.  If it is preventing, just
     #     keep it that way.
     conflict_verbosity = ('warn' if str(context.path_conflict) == 'clobber' else
