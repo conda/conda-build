@@ -375,7 +375,7 @@ def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
     return ret
 
 
-def mk_relative_osx(path, host_prefix, build_prefix, files):
+def mk_relative_osx(path, host_prefix, build_prefix, files, rpaths=('lib',)):
     assert sys.platform == 'darwin'
 
     names = macho.otool(path)
@@ -389,10 +389,11 @@ def mk_relative_osx(path, host_prefix, build_prefix, files):
     if names:
         # Add an rpath to every executable to increase the chances of it
         # being found.
-        rpath = os.path.join('@loader_path',
-                     os.path.relpath(os.path.join(host_prefix, 'lib'),
-                             os.path.dirname(path)), '').replace('/./', '/')
-        macho.add_rpath(path, rpath, verbose=True)
+        for rpath in rpaths:
+            rpath_new = os.path.join('@loader_path',
+                            os.path.relpath(os.path.join(host_prefix, rpath),
+                                os.path.dirname(path)), '').replace('/./', '/')
+            macho.add_rpath(path, rpath_new, verbose=True)
 
         # 10.7 install_name_tool -delete_rpath causes broken dylibs, I will revisit this ASAP.
         # .. and remove config.build_prefix/lib which was added in-place of
@@ -630,10 +631,11 @@ def post_process_shared_lib(m, f, files):
     codefile_t = codefile_type(path)
     if not codefile_t:
         return
+    rpaths = rpaths=m.get_value('build/rpaths', ['lib'])
     if sys.platform.startswith('linux') and codefile_t == 'elffile':
-        mk_relative_linux(f, m.config.host_prefix, rpaths=m.get_value('build/rpaths', ['lib']))
+        mk_relative_linux(f, m.config.host_prefix, rpaths=rpaths)
     elif sys.platform == 'darwin' and codefile_t == 'machofile':
-        mk_relative_osx(path, m.config.host_prefix, m.config.build_prefix, files=files)
+        mk_relative_osx(path, m.config.host_prefix, m.config.build_prefix, files=files, rpaths=rpaths)
 
 
 def fix_permissions(files, prefix):
