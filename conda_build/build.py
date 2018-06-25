@@ -51,6 +51,7 @@ from .conda_interface import reset_context
 from .conda_interface import context
 from .conda_interface import UnsatisfiableError
 from .conda_interface import NoPackagesFoundError
+from .conda_interface import CondaError
 from .utils import env_var
 
 from conda_build import __version__

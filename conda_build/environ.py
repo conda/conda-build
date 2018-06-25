@@ -15,7 +15,8 @@ from os.path import join, normpath
 
 # noqa here because PY3 is used only on windows, and trips up flake8 otherwise.
 from .conda_interface import text_type, PY3  # noqa
-from .conda_interface import CondaError, LinkError, LockError, NoPackagesFoundError, PaddingError, UnsatisfiableError
+from .conda_interface import (CondaError, LinkError, LockError, NoPackagesFoundError,
+                              PaddingError, UnsatisfiableError)
 from .conda_interface import display_actions, execute_actions, execute_plan, install_actions
 from .conda_interface import memoized
 from .conda_interface import package_cache, TemporaryDirectory
