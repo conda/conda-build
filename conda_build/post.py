@@ -480,7 +480,7 @@ def check_overlinking(m, files):
                      '/System/Library/Frameworks/StoreKit.framework/*',
                      '/System/Library/Frameworks/SystemConfiguration.framework/*',
                      '/System/Library/Frameworks/WebKit.framework/*']
-    whitelist += m.meta.get('build', {}).get('missing_dso_whitelist', [])
+    whitelist += m.meta.get('build', {}).get('missing_dso_whitelist') or []
     for f in files:
         path = os.path.join(m.config.host_prefix, f)
         if not codefile_type(path):
