@@ -163,10 +163,13 @@ def otool(path, cb_filter=is_dylib_info):
     """
     lines = check_output(['otool', '-l', path], stderr=STDOUT).decode('utf-8')
     # llvm-objdump returns 0 for some things that are anything but successful completion.
-    if (re.match('.*(is not a Mach-O|invalid|expected|unexpected).*', lines, re.MULTILINE)):
+    lines_split = lines.splitlines()
+    # 'invalid', 'expected' and 'unexpected' are too generic
+    # here so also check that we do not get 'useful' output.
+    if len(lines_split) < 10 and (re.match('.*(is not a Mach-O|invalid|expected|unexpected).*',
+                                           lines, re.MULTILINE)):
         raise CalledProcessError
-    lines = lines.splitlines()
-    return _get_matching_load_commands(lines, cb_filter)
+    return _get_matching_load_commands(lines_split, cb_filter)
 
 
 def get_dylibs(path):
