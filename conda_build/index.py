@@ -305,7 +305,14 @@ def _read_index_tar(tar_path, lock, locking=True, timeout=90):
                 paths_json = {}
 
             try:
-                recipe_text = t.extractfile('info/recipe/meta.yaml').read().decode('utf-8')
+                recipe_path_search_order = (
+                    'info/recipe/meta.yaml.rendered',
+                    'info/recipe/meta.yaml',
+                    'info/meta.yaml',
+                )
+                all_paths = set(t.getnames())
+                recipe_path = next((p for p in recipe_path_search_order if p in all_paths), None)
+                recipe_text = t.extractfile(recipe_path).read().decode('utf-8')
                 recipe_json = yaml.load(recipe_text)
             except (KeyError, yaml.scanner.ScannerError):
                 recipe_json = {}
