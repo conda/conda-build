@@ -474,6 +474,7 @@ def check_overlinking(m, files):
                      '/System/Library/Frameworks/IOSurface.framework/*',
                      '/System/Library/Frameworks/OpenAL.framework/*',
                      '/System/Library/Frameworks/OpenGL.framework/*',
+                     '/System/Library/Frameworks/QTKit.framework/*',
                      '/System/Library/Frameworks/Quartz.framework/*',
                      '/System/Library/Frameworks/QuartzCore.framework/*',
                      '/System/Library/Frameworks/Security.framework/*',
