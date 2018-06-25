@@ -15,7 +15,7 @@ import logging
 from numbers import Number
 import os
 from os.path import basename, dirname, getmtime, getsize, isdir, isfile, join
-from shutil import copy2
+from shutil import copy2, move
 import tarfile
 
 from jinja2 import Environment, PackageLoader
@@ -236,14 +236,11 @@ def update_subdir_index(dir_path, force=False, check_md5=False, remove=True, loc
                 del index[fn]
         if not isdir(dirname(index_path)):
             os.makedirs(dirname(index_path))
-        with open(index_path, 'w') as fo:
-            json.dump(index, fo, indent=2, sort_keys=True)
-        with open(about_path, 'w') as fo:
-            json.dump(about, fo, indent=2, sort_keys=True)
-        with open(paths_path, 'w') as fo:
-            json.dump(paths, fo, indent=2, sort_keys=True)
-        with open(recipe_path, 'w') as fo:
-            json.dump(recipe, fo, indent=2, sort_keys=True)
+        for (path, data) in ((index_path, index), (about_path, about),
+                             (paths_path, paths), (recipe_path, recipe)):
+            with open(path + '.tmp', 'w') as fo:
+                json.dump(data, fo, indent=2, sort_keys=True)
+            move(path + '.tmp', path)
 
         for fn in index:
             info = index[fn]
@@ -275,8 +272,9 @@ def update_subdir_index(dir_path, force=False, check_md5=False, remove=True, loc
             _add_extra_path(extra_paths, join(dir_path, 'repodata.json.bz2'))
             rendered_html = _make_subdir_index_html(channel_name, basename(dir_path),
                                                     repodata, extra_paths)
-            with open(join(dir_path, 'index.html'), 'w') as fh:
+            with open(join(dir_path, 'index.html.tmp'), 'w') as fh:
                 fh.write(rendered_html)
+            move(join(dir_path, 'index.html.tmp'), join(dir_path, 'index.html'))
 
 
 def _read_index_tar(tar_path, lock, locking=True, timeout=90):
@@ -354,8 +352,11 @@ def _write_repodata(repodata, dir_path, lock, locking=90, timeout=90):
         # make sure we have newline at the end
         if not data.endswith('\n'):
             data += '\n'
-        with open(join(dir_path, 'repodata.json'), 'w') as fo:
+        # write to a tempfile first, then move it on top of any existing one.  This is done
+        #    so that interrupting the file write doesn't leave a corrupted index.
+        with open(join(dir_path, 'repodata.json.tmp'), 'w') as fo:
             fo.write(data)
+        move(join(dir_path, 'repodata.json.tmp'), join(dir_path, 'repodata.json'))
         with open(join(dir_path, 'repodata.json.bz2'), 'wb') as fo:
             fo.write(bz2.compress(data.encode('utf-8')))
 
