@@ -337,13 +337,17 @@ def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
         # this must come before we read upstream pins, because it will enforce things
         #      like vc version from the compiler.
         host_reqs = utils.ensure_list(m.get_value('requirements/host'))
+        # ensure host_reqs is present, so in-place modification below is actually in-place
+        requirements = m.meta.setdefault('requirements', {})
+        requirements['host'] = host_reqs
+
         if not host_reqs:
             matching_output = [out for out in m.meta.get('outputs', []) if
                                out.get('name') == m.name()]
             if matching_output:
                 requirements = utils.expand_reqs(matching_output[0].get('requirements', {}))
                 matching_output[0]['requirements'] = requirements
-                host_reqs = requirements.get('host', [])
+                host_reqs = requirements.setdefault('host', [])
         # in-place modification of above thingie
         host_reqs.extend(extra_run_specs_from_build.get('strong', []))
 
