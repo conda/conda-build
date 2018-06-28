@@ -555,7 +555,7 @@ def find_used_variables_in_text(variant, recipe_text, selectors=False):
         conditional_regex = r"(?:^|[^\{])\{%\s*(?:el)?if\s*" + v_regex + r"\s*(?:[^%]*?)?%\}"
         # plain req name, no version spec.  Look for end of line after name, or comment or selector
         requirement_regex = r"^\s+\-\s+%s\s*(?:\s[\[#]|$)" % v_req_regex
-        if not selectors:
+        if selectors:
             all_res.extend([selector_regex])
         else:
             all_res.extend([variant_regex, requirement_regex, conditional_regex])
