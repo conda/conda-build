@@ -519,9 +519,19 @@ def get_latest_git_tag(config):
     print("Using tag %s" % tags[-1])
     return tags[-1]
 
+    
+def _ssl_no_verify():
+    """Gets whether the SSL_NO_VERIFY environment variable is set to 1 or True.
+
+    This provides a workaround for users in some corporate environments where
+    MITM style proxies make it difficult to fetch data over HTTPS.
+    """
+    return os.environ.get('SSL_NO_VERIFY', '').strip().lower() in ('1', 'true')
+
 
 def get_session(output_dir, verbose=True):
     session = requests.Session()
+    session.verify = _ssl_no_verify()
     try:
         import cachecontrol
         import cachecontrol.caches
