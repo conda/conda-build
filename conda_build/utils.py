@@ -24,7 +24,6 @@ import tarfile
 import tempfile
 import time
 import yaml
-import zipfile
 
 import filelock
 
@@ -618,7 +617,8 @@ def relative(f, d='lib'):
 
 # This is the lowest common denominator of the formats supported by our libarchive/python-libarchive-c
 # packages across all platforms
-decompressible_exts = ('.7z', '.tar', '.tar.bz2', '.tar.gz', '.tar.lzma', '.tar.xz', '.tar.z', '.tgz', '.whl', '.zip', '.rpm', '.deb')
+decompressible_exts = ('.7z', '.tar', '.tar.bz2', '.tar.gz', '.tar.lzma', '.tar.xz',
+                       '.tar.z', '.tgz', '.whl', '.zip', '.rpm', '.deb')
 
 
 def tar_xf(tarball, dir_path):

@@ -18,7 +18,6 @@ import stat
 import string
 import subprocess
 import sys
-import tarfile
 import time
 
 # this is to compensate for a requests idna encoding error.  Conda is a better place to fix,
