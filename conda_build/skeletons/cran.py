@@ -6,7 +6,7 @@ from __future__ import absolute_import, division, print_function
 
 import argparse
 from itertools import chain
-from os import makedirs, listdir, sep
+from os import makedirs, listdir, sep, environ
 from os.path import (basename, commonprefix, exists, isabs, isdir,
                      isfile, join, normpath, realpath, relpath)
 import re
@@ -519,14 +519,14 @@ def get_latest_git_tag(config):
     print("Using tag %s" % tags[-1])
     return tags[-1]
 
-    
+
 def _ssl_no_verify():
     """Gets whether the SSL_NO_VERIFY environment variable is set to 1 or True.
 
     This provides a workaround for users in some corporate environments where
     MITM style proxies make it difficult to fetch data over HTTPS.
     """
-    return os.environ.get('SSL_NO_VERIFY', '').strip().lower() in ('1', 'true')
+    return environ.get('SSL_NO_VERIFY', '').strip().lower() in ('1', 'true')
 
 
 def get_session(output_dir, verbose=True):
