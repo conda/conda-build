@@ -420,13 +420,13 @@ def assert_relative_osx(path, prefix):
         assert not name.startswith(prefix), path
 
 
-def print_msg(errors, text):
-    if text.startswith("  ERROR"):
-        errors.append(text)
-    print(text)
-
-
 def check_overlinking(m, files):
+    def print_msg(errors, text):
+        if text.startswith("  ERROR"):
+            errors.append(text)
+        if m.config.verbose:
+            print(text)
+
     pkg_name = m.get_value('package/name')
 
     errors = []
@@ -511,7 +511,7 @@ def check_overlinking(m, files):
                 if in_whitelist:
                     print_msg(errors, '{}: {} found in the whitelist'.
                               format(info_prelude, n_dso_p))
-                elif len(in_pkgs_in_run_reqs) == 1 and m.config.verbose:
+                elif len(in_pkgs_in_run_reqs) == 1:
                     print_msg(errors, '{}: {} found in {}{}'.format(info_prelude,
                                                                     n_dso_p,
                                                                     in_pkgs_in_run_reqs[0],
@@ -534,7 +534,7 @@ def check_overlinking(m, files):
                     if in_prefix_dso not in files:
                         print_msg(errors, '{}: {} not found in any packages'.format(msg_prelude,
                                                                                     in_prefix_dso))
-                    elif m.config.verbose:
+                    else:
                         print_msg(errors, '{}: {} found in this package'.format(info_prelude,
                                                                                 in_prefix_dso))
             elif needed_dso.startswith(m.config.build_prefix):
@@ -551,7 +551,7 @@ def check_overlinking(m, files):
                     n_dso_p = "Needed DSO {}".format(needed_dso)
                     print_msg(errors, '{}: {} found in the whitelist'.
                               format(info_prelude, n_dso_p))
-                elif m.config.verbose and len(sysroots):
+                elif len(sysroots):
                     # Check id we have a CDT package.
                     dso_fname = os.path.basename(needed_dso)
                     sysroot_files = []
