@@ -2063,21 +2063,23 @@ class MetaData(object):
                              force_global, self.config.subdir)] = used_vars
         return used_vars
 
-    def _get_used_vars_meta_yaml(self, force_top_level=False, force_global=False):
+    def _get_used_vars_meta_yaml_helper(self, force_top_level=False, force_global=False,
+                                            apply_selectors=False):
         is_output = (not self.path and self.meta.get('extra', {}).get('parent_recipe'))
 
         if force_global:
             recipe_text = self.get_recipe_text(force_top_level=force_top_level,
-                                                apply_selectors=False)
+                                                apply_selectors=apply_selectors)
             # a bit hacky.  When we force global, we don't distinguish
             #     between requirements and the rest
             reqs_text = recipe_text
         else:
             if is_output and not force_top_level:
-                recipe_text = self.extract_single_output_text(self.name(), apply_selectors=False)
+                recipe_text = self.extract_single_output_text(self.name(),
+                                apply_selectors=apply_selectors)
             else:
                 recipe_text = (self.get_recipe_text(force_top_level=force_top_level,
-                                                    apply_selectors=False).replace(
+                                                    apply_selectors=apply_selectors).replace(
                                     self.extract_outputs_text(apply_selectors=False).strip(), '') +
                             self.extract_single_output_text(self.name(), apply_selectors=False))
             reqs_re = re.compile(r"requirements:.+?(?=^\w|\Z|^\s+-\s(?=name|type))",
@@ -2085,9 +2087,23 @@ class MetaData(object):
             reqs_text = reqs_re.search(recipe_text)
             reqs_text = reqs_text.group() if reqs_text else ''
 
+        return reqs_text, recipe_text
+
+    def _get_used_vars_meta_yaml(self, force_top_level=False, force_global=False):
         # make variant dict hashable so that memoization works
         variant_keys = tuple(sorted(self.config.variant.keys()))
-        all_used = variants.find_used_variables_in_text(variant_keys, recipe_text)
+
+        reqs_text, recipe_text = self._get_used_vars_meta_yaml_helper(force_top_level=force_top_level,
+                                    force_global=force_global, apply_selectors=False)
+        all_used_selectors = variants.find_used_variables_in_text(variant_keys, recipe_text,
+                                                                    selectors=True)
+
+        reqs_text, recipe_text = self._get_used_vars_meta_yaml_helper(force_top_level=force_top_level,
+                                    force_global=force_global, apply_selectors=True)
+        all_used_reqs = variants.find_used_variables_in_text(variant_keys, recipe_text,
+                                                                    selectors=False)
+
+        all_used = all_used_reqs.union(all_used_selectors)
 
         # things that are only used in requirements need further consideration,
         #   for omitting things that are only used in run
