@@ -195,6 +195,9 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_ca
     git_mirror_dir = convert_path_for_cygwin_or_msys2(git, mirror_dir).rstrip('/')
     git_checkout_dir = convert_path_for_cygwin_or_msys2(git, checkout_dir).rstrip('/')
 
+    # Set default here to catch empty dicts
+    git_ref = git_ref or 'HEAD'
+
     mirror_dir = mirror_dir.rstrip('/')
     if not isdir(os.path.dirname(mirror_dir)):
         os.makedirs(os.path.dirname(mirror_dir))
@@ -291,7 +294,7 @@ def git_source(source_dict, git_cache, src_dir, recipe_path=None, verbose=True):
 
     git_url = source_dict['git_url']
     git_depth = int(source_dict.get('git_depth', -1))
-    git_ref = source_dict.get('git_rev', 'HEAD')
+    git_ref = source_dict.get('git_rev') or 'HEAD'
 
     if git_url.startswith('.'):
         # It's a relative path from the conda recipe
