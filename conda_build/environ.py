@@ -322,6 +322,7 @@ def python_vars(metadata, prefix):
     np_ver = metadata.config.variant.get('numpy', get_default_variant(metadata.config)['numpy'])
     vars_['NPY_VER'] = '.'.join(np_ver.split('.')[:2])
     vars_['CONDA_NPY'] = ''.join(np_ver.split('.')[:2])
+    vars_['NPY_DISTUTILS_APPEND_FLAGS'] = '1'
     return vars_
 
 
