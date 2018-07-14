@@ -286,7 +286,7 @@ def update_lib_contents(lib_directory, temp_dir, target_platform, file_path):
             shutil.move(lib_file, new_lib_file)
 
 
-def update_executable_path(file_path, target_platform):
+def update_executable_path(temp_dir, file_path, target_platform):
     """Update the name of the executable files found in the paths.json file.
 
     When converting from unix to windows, executables are renamed with a '-script.py'
@@ -298,8 +298,11 @@ def update_executable_path(file_path, target_platform):
     target_platform (str) -- the platform to target: 'unix' or 'win'
     """
     if target_platform == 'win':
-        renamed_path = os.path.splitext(re.sub('\Abin', 'Scripts', file_path))[0]
-        renamed_executable_path = '{}-script.py' .format(renamed_path)
+        if os.path.basename(file_path).startswith('.') or is_binary_file(temp_dir, file_path):
+            renamed_executable_path = re.sub('\Abin', 'Scripts', file_path)
+        else:
+            renamed_path = os.path.splitext(re.sub('\Abin', 'Scripts', file_path))[0]
+            renamed_executable_path = '{}-script.py' .format(renamed_path)
 
     elif target_platform == 'unix':
         renamed_path = re.sub('\AScripts', 'bin', file_path)
@@ -376,7 +379,7 @@ def update_paths_file(temp_dir, target_platform):
                     path['_path'] = update_lib_path(path['_path'], 'win')
 
                 elif path['_path'].startswith('bin'):
-                    path['_path'] = update_executable_path(path['_path'], 'win')
+                    path['_path'] = update_executable_path(temp_dir, path['_path'], 'win')
                     path['sha256'] = update_executable_sha(temp_dir, path['_path'])
                     path['size_in_bytes'] = update_executable_size(temp_dir, path['_path'])
 
@@ -394,7 +397,7 @@ def update_paths_file(temp_dir, target_platform):
                     path['_path'] = update_lib_path(path['_path'], 'unix', temp_dir)
 
                 elif path['_path'].startswith('Scripts'):
-                    path['_path'] = update_executable_path(path['_path'], 'unix')
+                    path['_path'] = update_executable_path(temp_dir, path['_path'], 'unix')
                     path['sha256'] = update_executable_sha(temp_dir, path['_path'])
                     path['size_in_bytes'] = update_executable_size(temp_dir, path['_path'])
 
