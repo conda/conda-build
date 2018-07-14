@@ -302,7 +302,7 @@ def update_executable_path(file_path, target_platform):
         renamed_executable_path = '{}-script.py' .format(renamed_path)
 
     elif target_platform == 'unix':
-        renamed_path = os.path.splitext(re.sub('\AScripts', 'bin', file_path))[0]
+        renamed_path = re.sub('\AScripts', 'bin', file_path)
         renamed_executable_path = renamed_path.replace('-script.py', '')
 
     return renamed_executable_path
