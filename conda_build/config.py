@@ -54,7 +54,10 @@ SUBDIR_ALIASES = {
 
 
 Setting = namedtuple("ConfigSetting", "name, default")
-DEFAULTS = [Setting('activate', True),
+
+
+def _get_default_settings():
+    return [Setting('activate', True),
             Setting('anaconda_upload', binstar_upload),
             Setting('force_upload', True),
             Setting('channel_urls', []),
@@ -243,7 +246,7 @@ class Config(object):
             self._croot = getattr(self, '_croot', None)
 
         # handle known values better than unknown (allow defaults)
-        for value in DEFAULTS:
+        for value in _get_default_settings():
             self._set_attribute_from_kwargs(kwargs, value.name, value.default)
 
         # dangle remaining keyword arguments as attributes on this class
