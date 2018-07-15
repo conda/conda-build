@@ -102,13 +102,13 @@ source to try fill in related template variables.",
         keys such as `c_compiler` and `target_platform` to form a build matrix."""
     )
     p.add_argument(
-        '-e', '--exclusive-config-file',
-        help="""Exclusive variant config file to add.  Compared with --variant-config-files,
-        you're allowed only one file here.  Providing a file here disables searching in your
-        home directory and in cwd.  The file specified here comes at the start of the order,
-        as opposed to the end with --variant-config-files.  Any config files in recipes and
-        any config files specified with --variant-config-files will override values from
-        this file."""
+        '-e', '--exclusive-config-files', '--exclusive-config-file',
+        action="append",
+        help="""Exclusive variant config files to add. Providing files here disables
+        searching in your home directory and in cwd.  The files specified here come at the
+        start of the order, as opposed to the end with --variant-config-files.  Any config
+        files in recipes and any config files specified with --variant-config-files will
+        override values from these files."""
     )
     p.add_argument(
         "--old-build-string", dest="filename_hashing", action="store_false",

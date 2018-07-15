@@ -138,14 +138,16 @@ def validate_spec(spec):
 
 
 def find_config_files(metadata_or_path, additional_files=None, ignore_system_config=False,
-                      exclusive_config_file=None):
+                      exclusive_config_files=[]):
     """Find files to load variables from.  Note that order here determines clobbering.
 
     Later files clobber earlier ones.  order is user-wide < cwd < recipe dir < additional files"""
-    files = ([os.path.abspath(os.path.expanduser(exclusive_config_file))]
-             if exclusive_config_file else [])
+    files = [
+        os.path.abspath(os.path.expanduser(config_file))
+        for config_file in exclusive_config_files
+    ]
 
-    if not ignore_system_config and not exclusive_config_file:
+    if not ignore_system_config and not exclusive_config_files:
         if cc_conda_build.get('config_file'):
             system_path = abspath(expanduser(expandvars(cc_conda_build['config_file'])))
         else:
@@ -479,7 +481,7 @@ def get_package_variants(recipedir_or_metadata, config=None, variants=None):
         config = Config()
     files = find_config_files(recipedir_or_metadata, ensure_list(config.variant_config_files),
                               ignore_system_config=config.ignore_system_variants,
-                              exclusive_config_file=config.exclusive_config_file)
+                              exclusive_config_files=config.exclusive_config_files)
 
     specs = OrderedDict(internal_defaults=get_default_variant(config))
 
