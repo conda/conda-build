@@ -2093,13 +2093,13 @@ class MetaData(object):
         # make variant dict hashable so that memoization works
         variant_keys = tuple(sorted(self.config.variant.keys()))
 
-        reqs_text, recipe_text = self._get_used_vars_meta_yaml_helper(force_top_level=force_top_level,
-                                    force_global=force_global, apply_selectors=False)
+        reqs_text, recipe_text = self._get_used_vars_meta_yaml_helper(
+            force_top_level=force_top_level, force_global=force_global, apply_selectors=False)
         all_used_selectors = variants.find_used_variables_in_text(variant_keys, recipe_text,
                                                                     selectors=True)
 
-        reqs_text, recipe_text = self._get_used_vars_meta_yaml_helper(force_top_level=force_top_level,
-                                    force_global=force_global, apply_selectors=True)
+        reqs_text, recipe_text = self._get_used_vars_meta_yaml_helper(
+            force_top_level=force_top_level, force_global=force_global, apply_selectors=True)
         all_used_reqs = variants.find_used_variables_in_text(variant_keys, recipe_text,
                                                                     selectors=False)
 

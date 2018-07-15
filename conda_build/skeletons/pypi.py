@@ -310,7 +310,8 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
             if noarch_python:
                 ordered_recipe['build']['noarch'] = 'python'
 
-            ordered_recipe['build']['script'] = 'python -m pip install . --no-deps --ignore-installed'
+            ordered_recipe['build']['script'] = ('python -m pip install . --no-deps '
+                                                 '--ignore-installed --no-cache-dir -vvv')
 
             # Always require python as a dependency
             ordered_recipe['requirements'] = ruamel_yaml.comments.CommentedMap()
@@ -559,7 +560,7 @@ def get_download_data(pypi_data, package, version, is_url, all_urls, noprompt, m
         pypiurl = url['url']
         print("Using url %s (%s) for %s." % (pypiurl,
             human_bytes(url['size'] or 0), package))
-        
+
         if url['digests']['sha256']:
             digest = ('sha256', url['digests']['sha256'])
         else:
