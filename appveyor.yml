@@ -82,6 +82,7 @@ test_script:
   - conda create -n blarg -yq --download-only python=3.5 libpng=1.6.17
   # no libpng here because we already have the right version from the 3.5 install
   - conda create -n blarg -yq --download-only python=3.6
+  - conda create -n blarg -yq --download-only cmake
   - py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp -n 0 -m "serial"
   # remove all folders to avoid permission errors.  Leave root files (may have coverage info there)
   - for /d %%F in (c:\cbtmp\*) do rd /s /q "%%F"
