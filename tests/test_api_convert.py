@@ -305,3 +305,32 @@ def test_skip_conversion(testing_workdir, base_platform, package, capfd):
 
     assert skip_message in output
     assert not os.path.exists(package)
+
+
+@pytest.mark.parametrize('base_platform', ['linux', 'osx'])
+@pytest.mark.parametrize('package', [('sparkmagic-0.12.1', '')])
+def test_renaming_executables(testing_workdir, base_platform, package):
+    """Test that the files in /bin are properly renamed.
+
+    When converting the bin/ directory to Scripts/, only scripts
+    need to be changed. Sometimes the /bin directory contains other
+    files that are not Python scripts such as post-link.sh scripts.
+    This test converts a packaege that contains a post-link.sh script
+    in the bin/ directory and checks to see that its filename remains
+    the same.
+    """
+    package_name, example_file = package
+    subdir = '{}-64'.format(base_platform)
+    f = 'http://repo.continuum.io/pkgs/free/{}/{}-py27_0.tar.bz2'.format(subdir,
+                                                                         package_name)
+    fn = "{}-py27_0.tar.bz2".format(package_name)
+    download(f, fn)
+    expected_paths_json = package_has_file(fn, 'info/paths.json')
+    api.convert(fn, platforms='all', quiet=False, verbose=False)
+    for platform in ['osx-64', 'win-64', 'win-32', 'linux-64', 'linux-32']:
+        if subdir != platform:
+            package = os.path.join(platform, fn)
+
+            if expected_paths_json:
+                assert package_has_file(package, 'info/paths.json')
+                assert_package_paths_matches_files(package)
