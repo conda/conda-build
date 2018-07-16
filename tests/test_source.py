@@ -11,6 +11,15 @@ from conda_build.utils import reset_deduplicator
 from .utils import thisdir
 
 
+def test_alternative_url_no_fn(testing_metadata):
+    testing_metadata.meta['source'] = {'url': [
+        os.path.join(thisdir, 'archives', 'a.tar.bz2'),
+        os.path.join(thisdir, 'archives', 'a.tar.bz2'),
+    ]}
+    source.provide(testing_metadata)
+    assert os.path.exists(os.path.join(testing_metadata.config.work_dir, 'a'))
+
+
 def test_multiple_url_sources(testing_metadata):
 
     testing_metadata.meta['source'] = [

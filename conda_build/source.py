@@ -42,7 +42,10 @@ def download_to_cache(cache_folder, recipe_path, source_dict):
     if not isdir(cache_folder):
         os.makedirs(cache_folder)
 
-    unhashed_fn = fn = source_dict['fn'] if 'fn' in source_dict else basename(source_dict['url'])
+    source_urls = source_dict['url']
+    if not isinstance(source_urls, list):
+        source_urls = [source_urls]
+    unhashed_fn = fn = source_dict['fn'] if 'fn' in source_dict else basename(source_urls[0])
     hash_added = False
     for hash_type in ('md5', 'sha1', 'sha256'):
         if hash_type in source_dict:
@@ -58,10 +61,8 @@ def download_to_cache(cache_folder, recipe_path, source_dict):
         print('Found source in cache: %s' % fn)
     else:
         print('Downloading source to cache: %s' % fn)
-        if not isinstance(source_dict['url'], list):
-            source_dict['url'] = [source_dict['url']]
 
-        for url in source_dict['url']:
+        for url in source_urls:
             if "://" not in url:
                 if url.startswith('~'):
                     url = expanduser(url)
