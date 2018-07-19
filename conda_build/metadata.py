@@ -38,8 +38,6 @@ try:
 except:
     loader = yaml.Loader
 
-from yaml.resolver import Resolver
-
 on_win = (sys.platform == 'win32')
 
 # arches that don't follow exact names in the subdir need to be mapped here
@@ -801,12 +799,14 @@ def trim_build_only_deps(metadata, requirements_used):
 def stringify_numbers():
     # ensure that numbers are not interpreted as ints or floats.  That trips up versions
     #     with trailing zeros.
-    implicit_resolver_backup = Resolver.yaml_implicit_resolvers.copy()
-    for ch in list(u'-+0123456789'):
-        del Resolver.yaml_implicit_resolvers[ch]
+    implicit_resolver_backup = loader.yaml_implicit_resolvers.copy()
+    for ch in list(u'0123456789'):
+        if ch in loader.yaml_implicit_resolvers:
+            del loader.yaml_implicit_resolvers[ch]
     yield
-    for ch in list(u'-+0123456789'):
-        Resolver.yaml_implicit_resolvers[ch] = implicit_resolver_backup[ch]
+    for ch in list(u'0123456789'):
+        if ch in implicit_resolver_backup:
+            loader.yaml_implicit_resolvers[ch] = implicit_resolver_backup[ch]
 
 
 class MetaData(object):
