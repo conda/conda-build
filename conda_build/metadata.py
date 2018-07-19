@@ -218,6 +218,8 @@ def yamlize(data):
                 jinja2  # Avoid pyflakes failure: 'jinja2' imported but unused
             except ImportError:
                 raise exceptions.UnableToParseMissingJinja2(original=e)
+        print("Problematic recipe:", file=sys.stderr)
+        print(data, file=sys.stderr)
         raise exceptions.UnableToParse(original=e)
 
 

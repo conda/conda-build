@@ -242,7 +242,7 @@ def get_hg_build_info(repo):
     return d
 
 
-def get_dict(m, prefix=None, for_env=True, skip_build_id=False):
+def get_dict(m, prefix=None, for_env=True, skip_build_id=False, escape_backslash=False):
     if not prefix:
         prefix = m.config.host_prefix
 
@@ -250,10 +250,10 @@ def get_dict(m, prefix=None, for_env=True, skip_build_id=False):
     d = conda_build_vars(prefix, m.config)
 
     # languages
-    d.update(python_vars(m, prefix))
-    d.update(perl_vars(m, prefix))
-    d.update(lua_vars(m, prefix))
-    d.update(r_vars(m, prefix))
+    d.update(python_vars(m, prefix, escape_backslash))
+    d.update(perl_vars(m, prefix, escape_backslash))
+    d.update(lua_vars(m, prefix, escape_backslash))
+    d.update(r_vars(m, prefix, escape_backslash))
 
     if m:
         d.update(meta_vars(m, skip_build_id=skip_build_id))
@@ -302,21 +302,33 @@ def conda_build_vars(prefix, config):
     }
 
 
-def python_vars(metadata, prefix):
+def python_vars(metadata, prefix, escape_backslash):
     py_ver = get_py_ver(metadata.config)
+    stdlib_dir = utils.get_stdlib_dir(prefix, py_ver)
+    sp_dir = utils.get_site_packages(prefix, py_ver)
+
+    if utils.on_win and escape_backslash:
+        stdlib_dir = stdlib_dir.replace('\\', '\\\\')
+        sp_dir = sp_dir.replace('\\', '\\\\')
+
     vars_ = {
             'CONDA_PY': ''.join(py_ver.split('.')[:2]),
             'PY3K': str(int(int(py_ver[0]) >= 3)),
             'PY_VER': py_ver,
-            'STDLIB_DIR': utils.get_stdlib_dir(prefix, py_ver),
-            'SP_DIR': utils.get_site_packages(prefix, py_ver),
+            'STDLIB_DIR': stdlib_dir,
+            'SP_DIR': sp_dir,
             }
     build_or_host = 'host' if metadata.is_cross else 'build'
     deps = [str(ms.name) for ms in metadata.ms_depends(build_or_host)]
     if 'python' in deps or metadata.name(fail_ok=True) == 'python':
+        python_bin = metadata.config.python_bin(prefix, metadata.config.host_subdir)
+
+        if utils.on_win and escape_backslash:
+            python_bin = python_bin.replace('\\', '\\\\')
+
         vars_.update({
             # host prefix is always fine, because it is the same as build when is_cross is False
-            'PYTHON': metadata.config.python_bin(prefix, metadata.config.host_subdir),
+            'PYTHON': python_bin,
         })
 
     np_ver = metadata.config.variant.get('numpy', get_default_variant(metadata.config)['numpy'])
@@ -326,7 +338,7 @@ def python_vars(metadata, prefix):
     return vars_
 
 
-def perl_vars(metadata, prefix):
+def perl_vars(metadata, prefix, escape_backslash):
     vars_ = {
             'PERL_VER': get_perl_ver(metadata.config),
             'CONDA_PERL': get_perl_ver(metadata.config),
@@ -334,14 +346,19 @@ def perl_vars(metadata, prefix):
     build_or_host = 'host' if metadata.is_cross else 'build'
     deps = [str(ms.name) for ms in metadata.ms_depends(build_or_host)]
     if 'perl' in deps or metadata.name(fail_ok=True) == 'perl':
+        perl_bin = metadata.config.perl_bin(prefix, metadata.config.host_subdir)
+
+        if utils.on_win and escape_backslash:
+            perl_bin = perl_bin.replace('\\', '\\\\')
+
         vars_.update({
             # host prefix is always fine, because it is the same as build when is_cross is False
-            'PERL': metadata.config.perl_bin(prefix, metadata.config.host_subdir),
+            'PERL': perl_bin,
         })
     return vars_
 
 
-def lua_vars(metadata, prefix):
+def lua_vars(metadata, prefix, escape_backslash):
     vars_ = {
             'LUA_VER': get_lua_ver(metadata.config),
             'CONDA_LUA': get_lua_ver(metadata.config),
@@ -349,15 +366,21 @@ def lua_vars(metadata, prefix):
     build_or_host = 'host' if metadata.is_cross else 'build'
     deps = [str(ms.name) for ms in metadata.ms_depends(build_or_host)]
     if 'lua' in deps:
+        lua_bin = metadata.config.lua_bin(prefix, metadata.config.host_subdir)
+        lua_include_dir = get_lua_include_dir(metadata.config)
+
+        if utils.on_win and escape_backslash:
+            lua_bin = lua_bin.replace('\\', '\\\\')
+            lua_include_dir = lua_include_dir.replace('\\', '\\\\')
+
         vars_.update({
-            'LUA': metadata.config.lua_bin(prefix,
-                                           metadata.config.host_subdir),
-            'LUA_INCLUDE_DIR': get_lua_include_dir(metadata.config),
+            'LUA': lua_bin,
+            'LUA_INCLUDE_DIR': lua_include_dir,
         })
     return vars_
 
 
-def r_vars(metadata, prefix):
+def r_vars(metadata, prefix, escape_backslash):
     vars_ = {
             'R_VER': get_r_ver(metadata.config),
             'CONDA_R': get_r_ver(metadata.config),
@@ -367,8 +390,13 @@ def r_vars(metadata, prefix):
     deps = [str(ms.name) for ms in metadata.ms_depends(build_or_host)]
     if 'r-base' in deps or 'mro-base' in deps or metadata.name(fail_ok=True) in (
             'r-base', 'mro-base'):
+        r_bin = metadata.config.r_bin(prefix, metadata.config.host_subdir)
+
+        if utils.on_win and escape_backslash:
+            r_bin = r_bin.replace('\\', '\\\\')
+
         vars_.update({
-            'R': metadata.config.r_bin(prefix, metadata.config.host_subdir),
+            'R': r_bin,
         })
     return vars_
 

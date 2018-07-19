@@ -341,9 +341,10 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
                                                  '--ignore-installed --no-cache-dir -vvv ' +
                                                  ' '.join(setup_options) + '"')
 
-            # Always require python as a dependency
+            # Always require python as a dependency.  Pip is because we use pip for
+            #    the install line.
             ordered_recipe['requirements'] = OrderedDict()
-            ordered_recipe['requirements']['host'] = sorted(['python'] +
+            ordered_recipe['requirements']['host'] = sorted(['python', 'pip'] +
                                                             list(set(d['build_depends'])))
             ordered_recipe['requirements']['run'] = sorted(['python'] +
                                                            list(set(d['run_depends'])))
