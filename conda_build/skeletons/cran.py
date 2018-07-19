@@ -1101,8 +1101,9 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 if need_make:
                     deps.append("{indent}{{{{posix}}}}make            {sel}".format(
                         indent=INDENT, sel=sel_src))
-                    deps.append("{indent}{{{{posix}}}}sed             {sel}".format(
-                        indent=INDENT, sel=sel_src_and_win))
+                    if not need_autotools:
+                        deps.append("{indent}{{{{posix}}}}sed             {sel}".format(
+                            indent=INDENT, sel=sel_src_and_win))
                     deps.append("{indent}{{{{posix}}}}coreutils       {sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
                 deps.append("{indent}{{{{posix}}}}zip             {sel}".format(
