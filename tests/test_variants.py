@@ -356,6 +356,35 @@ def test_numpy_used_variable_looping(testing_config):
     assert len(outputs) == 4
 
 
+def test_exclusive_config_files(testing_workdir):
+    with open('conda_build_config.yaml', 'w') as f:
+        yaml.dump({'abc': ['someval'], 'cwd': ['someval']}, f, default_flow_style=False)
+    os.makedirs('config_dir')
+    with open(os.path.join('config_dir', 'config-0.yaml'), 'w') as f:
+        yaml.dump({'abc': ['super_0'], 'exclusive_0': ['0'], 'exclusive_both': ['0']},
+                  f, default_flow_style=False)
+    with open(os.path.join('config_dir', 'config-1.yaml'), 'w') as f:
+        yaml.dump({'abc': ['super_1'], 'exclusive_1': ['1'], 'exclusive_both': ['1']},
+                  f, default_flow_style=False)
+    exclusive_config_files = (
+        os.path.join('config_dir', 'config-0.yaml'),
+        os.path.join('config_dir', 'config-1.yaml'),
+    )
+    output = api.render(os.path.join(recipe_dir, 'exclusive_config_file'),
+                        exclusive_config_files=exclusive_config_files)[0][0]
+    variant = output.config.variant
+    # is cwd ignored?
+    assert 'cwd' not in variant
+    # did we load the exclusive configs?
+    assert variant['exclusive_0'] == '0'
+    assert variant['exclusive_1'] == '1'
+    # does later exclusive config override initial one?
+    assert variant['exclusive_both'] == '1'
+    # does recipe config override exclusive?
+    assert 'unique_to_recipe' in variant
+    assert variant['abc'] == '123'
+
+
 def test_exclusive_config_file(testing_workdir):
     with open('conda_build_config.yaml', 'w') as f:
         yaml.dump({'abc': ['someval'], 'cwd': ['someval']}, f, default_flow_style=False)

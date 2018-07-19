@@ -54,7 +54,10 @@ SUBDIR_ALIASES = {
 
 
 Setting = namedtuple("ConfigSetting", "name, default")
-DEFAULTS = [Setting('activate', True),
+
+
+def _get_default_settings():
+    return [Setting('activate', True),
             Setting('anaconda_upload', binstar_upload),
             Setting('force_upload', True),
             Setting('channel_urls', []),
@@ -119,9 +122,9 @@ DEFAULTS = [Setting('activate', True),
 
             # variants
             Setting('variant_config_files', []),
-            # this file precludes usage of any system-wide or cwd config files.  Config files in
-            #    recipes are still respected, and they override this file.
-            Setting('exclusive_config_file', None),
+            # these files preclude usage of any system-wide or cwd config files.
+            #    Config files in recipes are still respected, and they override this file.
+            Setting('exclusive_config_files', []),
             Setting('ignore_system_variants', False),
             Setting('hash_length', 7),
 
@@ -243,7 +246,7 @@ class Config(object):
             self._croot = getattr(self, '_croot', None)
 
         # handle known values better than unknown (allow defaults)
-        for value in DEFAULTS:
+        for value in _get_default_settings():
             self._set_attribute_from_kwargs(kwargs, value.name, value.default)
 
         # dangle remaining keyword arguments as attributes on this class
@@ -341,6 +344,23 @@ class Config(object):
     @target_subdir.setter
     def target_subdir(self, value):
         self._target_subdir = value
+
+    @property
+    def exclusive_config_file(self):
+        if self.exclusive_config_files:
+            return self.exclusive_config_files[0]
+        return None
+
+    @exclusive_config_file.setter
+    def exclusive_config_file(self, value):
+        if len(self.exclusive_config_files) > 1:
+            raise ValueError(
+                'Cannot set singular exclusive_config_file '
+                'if multiple exclusive_config_files are present.')
+        if value is None:
+            self.exclusive_config_files = []
+        else:
+            self.exclusive_config_files = [value]
 
     @property
     def src_cache_root(self):
