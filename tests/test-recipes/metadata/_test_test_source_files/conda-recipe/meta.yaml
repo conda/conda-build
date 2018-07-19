@@ -6,12 +6,15 @@ source:
   path: ../
 
 test:
+  requires:
+    - pytest
   source_files:
     - test_files_folder
   files:
     - recipe_file
 
   commands:
+    - pytest -h
     - test -e test_files_folder/text.txt   # [unix]
     - test -e recipe_file     # [unix]
     - if not exist test_files_folder\text.txt exit 1  # [win]

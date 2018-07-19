@@ -1185,6 +1185,14 @@ def test_copy_test_source_files(testing_config):
             assert not copy, "'info/test/test_files_folder/text.txt' not found in tar.bz2 but copying test source files. File list: %r" % files
 
 
+def test_copy_test_source_files_deps(testing_config):
+    recipe = os.path.join(metadata_dir, '_test_test_source_files')
+    for copy in (False, True):
+        testing_config.copy_test_source_files = copy
+        # test is that pytest is a dep either way.  Builds will fail if it's not.
+        api.build(recipe, notest=False, config=testing_config)
+
+
 def test_pin_depends(testing_config):
     """purpose of 'record' argument is to put a 'requires' file that records pinned run
     dependencies
