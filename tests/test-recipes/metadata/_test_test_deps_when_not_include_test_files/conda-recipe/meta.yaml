@@ -1,0 +1,17 @@
+package:
+  name: testprg
+  version: "1.0"
+
+source:
+  path: ../
+
+test:
+  requires:
+    - pytest
+  source_files:
+    - test_files_folder
+  files:
+    - recipe_file
+
+  commands:
+    - pytest -h

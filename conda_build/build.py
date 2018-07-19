@@ -362,14 +362,6 @@ def copy_license(m):
 
 
 def copy_test_source_files(m, destination):
-    test_deps = m.meta.get('test', {}).get('requires', [])
-    try:
-        os.makedirs(destination)
-    except:
-        pass
-    if test_deps:
-        with open(os.path.join(destination, 'test_time_dependencies.json'), 'w') as f:
-            json.dump(test_deps, f)
     src_dir = None
     if os.listdir(m.config.work_dir):
         src_dir = m.config.work_dir

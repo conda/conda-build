@@ -7,6 +7,7 @@ from __future__ import absolute_import, division, print_function
 import os
 from os.path import join, exists
 import sys
+import json
 
 from conda_build.utils import copy_into, on_win, ensure_list, glob
 
@@ -227,8 +228,20 @@ def create_lua_files(m, test_dir=None):
 
 
 def create_all_test_files(m, test_dir=None, existing_test_dir=None):
-    if not test_dir:
+    if test_dir:
+        try:
+            os.makedirs(test_dir)
+        except:
+            pass
+        # this happens when we're finishing the build.
+        test_deps = m.meta.get('test', {}).get('requires', [])
+        if test_deps:
+            with open(os.path.join(test_dir, 'test_time_dependencies.json'), 'w') as f:
+                json.dump(test_deps, f)
+    else:
+        # this happens when we're running a package's tests
         test_dir = m.config.test_dir
+
     files = create_files(m, test_dir)
 
     existing_test = lambda ext: (bool(existing_test_dir) and
