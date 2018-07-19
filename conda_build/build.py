@@ -702,7 +702,8 @@ def has_prefix(short_path, files_with_prefix):
 
 
 def is_no_link(no_link, short_path):
-    if no_link is not None and short_path in no_link:
+    no_link = utils.ensure_list(no_link)
+    if any(fnmatch.fnmatch(short_path, p) for p in no_link):
         return True
 
 
