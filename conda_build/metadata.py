@@ -38,8 +38,6 @@ try:
 except:
     loader = yaml.Loader
 
-from yaml.resolver import Resolver
-
 on_win = (sys.platform == 'win32')
 
 # arches that don't follow exact names in the subdir need to be mapped here
@@ -220,6 +218,8 @@ def yamlize(data):
                 jinja2  # Avoid pyflakes failure: 'jinja2' imported but unused
             except ImportError:
                 raise exceptions.UnableToParseMissingJinja2(original=e)
+        print("Problematic recipe:", file=sys.stderr)
+        print(data, file=sys.stderr)
         raise exceptions.UnableToParse(original=e)
 
 
@@ -801,12 +801,14 @@ def trim_build_only_deps(metadata, requirements_used):
 def stringify_numbers():
     # ensure that numbers are not interpreted as ints or floats.  That trips up versions
     #     with trailing zeros.
-    implicit_resolver_backup = Resolver.yaml_implicit_resolvers.copy()
-    for ch in list(u'-+0123456789'):
-        del Resolver.yaml_implicit_resolvers[ch]
+    implicit_resolver_backup = loader.yaml_implicit_resolvers.copy()
+    for ch in list(u'0123456789'):
+        if ch in loader.yaml_implicit_resolvers:
+            del loader.yaml_implicit_resolvers[ch]
     yield
-    for ch in list(u'-+0123456789'):
-        Resolver.yaml_implicit_resolvers[ch] = implicit_resolver_backup[ch]
+    for ch in list(u'0123456789'):
+        if ch in implicit_resolver_backup:
+            loader.yaml_implicit_resolvers[ch] = implicit_resolver_backup[ch]
 
 
 class MetaData(object):
@@ -2093,13 +2095,13 @@ class MetaData(object):
         # make variant dict hashable so that memoization works
         variant_keys = tuple(sorted(self.config.variant.keys()))
 
-        reqs_text, recipe_text = self._get_used_vars_meta_yaml_helper(force_top_level=force_top_level,
-                                    force_global=force_global, apply_selectors=False)
+        reqs_text, recipe_text = self._get_used_vars_meta_yaml_helper(
+            force_top_level=force_top_level, force_global=force_global, apply_selectors=False)
         all_used_selectors = variants.find_used_variables_in_text(variant_keys, recipe_text,
                                                                     selectors=True)
 
-        reqs_text, recipe_text = self._get_used_vars_meta_yaml_helper(force_top_level=force_top_level,
-                                    force_global=force_global, apply_selectors=True)
+        reqs_text, recipe_text = self._get_used_vars_meta_yaml_helper(
+            force_top_level=force_top_level, force_global=force_global, apply_selectors=True)
         all_used_reqs = variants.find_used_variables_in_text(variant_keys, recipe_text,
                                                                     selectors=False)
 

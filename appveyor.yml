@@ -6,16 +6,16 @@ environment:
     CMD_IN_ENV: "cmd /E:ON /V:ON /C .\\tools\\appveyor\\run_with_env.cmd"
 
   matrix:
-    - PYTHON: "C:\\Miniconda36-x64"
-      PYTHON_VERSION: "3.6"
-      PYTHON_ARCH: "64"
+    - SYS_PYTHON: "C:\\Miniconda36-x64"
+      SYS_PYTHON_VERSION: "3.6"
+      SYS_PYTHON_ARCH: "64"
 
-    - PYTHON: "C:\\Miniconda-x64"
-      PYTHON_VERSION: "2.7"
-      PYTHON_ARCH: "64"
+    - SYS_PYTHON: "C:\\Miniconda-x64"
+      SYS_PYTHON_VERSION: "2.7"
+      SYS_PYTHON_ARCH: "64"
 
 init:
-  - ECHO %PYTHON% %PYTHON_VERSION% %PYTHON_ARCH% %HOME%
+  - ECHO %SYS_PYTHON% %SYS_PYTHON_VERSION% %SYS_PYTHON_ARCH% %HOME%
 
 
 install:
@@ -30,8 +30,8 @@ install:
         throw "There are newer queued builds for this pull request, failing early." }
   # these correspond to folder naming of miniconda installs on appveyor.  See
   # https://www.appveyor.com/docs/installed-software#python
-  - if "%PYTHON_VERSION%" == "3.6" set "BASE_PYTHON_VERSION=36"
-  - if "%PYTHON_ARCH%" == "64" set "ARCH_LABEL=-x64"
+  - if "%SYS_PYTHON_VERSION%" == "3.6" set "BASE_PYTHON_VERSION=36"
+  - if "%SYS_PYTHON_ARCH%" == "64" set "ARCH_LABEL=-x64"
   # These are already installed on appveyor.  Update them.
   - set "CONDA_ROOT=C:\Miniconda%BASE_PYTHON_VERSION%%ARCH_LABEL%"
   - set "PATH=%CONDA_ROOT%;%CONDA_ROOT%\Scripts;%CONDA_ROOT%\Library\bin;%PATH%"
@@ -44,7 +44,7 @@ install:
   - python -c "import sys; print(sys.prefix)"
   - conda update -q --all
   - conda install -q pip pytest pytest-cov jinja2 patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy conda-verify beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil
-  - if "%PYTHON_VERSION%" == "2.7" conda install -q scandir
+  - if "%SYS_PYTHON_VERSION%" == "2.7" conda install -q scandir
   # this is to ensure dependencies
   - python --version
   - python -c "import struct; print(struct.calcsize('P') * 8)"
@@ -71,7 +71,6 @@ test_script:
   - mkdir C:\cbtmp
   # unset other language env vars - we only want to test if conda-build sets them itself
   - set PERL=
-  - set PYTHON=
   - set LUA=
   - set R=
   # cache several files to avoid race condition errors
@@ -81,7 +80,7 @@ test_script:
   - conda create -n blarg -yq --download-only python=3.4 libpng=1.6.17
   - conda create -n blarg -yq --download-only python=3.5 libpng=1.6.17
   # no libpng here because we already have the right version from the 3.5 install
-  - conda create -n blarg -yq --download-only python=3.6
+  - conda create -n blarg -yq --download-only python
   - conda create -n blarg -yq --download-only cmake
   - py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp -n 0 -m "serial"
   # remove all folders to avoid permission errors.  Leave root files (may have coverage info there)
@@ -96,4 +95,4 @@ test_script:
 
 on_success:
   - conda install -c conda-forge codecov
-  - codecov --env PYTHON_VERSION --file C:\projects\conda-build\coverage.xml
+  - codecov --env SYS_PYTHON_VERSION --file C:\projects\conda-build\coverage.xml

@@ -4,7 +4,7 @@ Tools for converting PyPI packages to conda recipes.
 
 from __future__ import absolute_import, division, print_function
 
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import keyword
 import os
 from os import makedirs, listdir, getcwd, chdir
@@ -21,14 +21,6 @@ import requests
 from requests.packages.urllib3.util.url import parse_url
 from six.moves.urllib.parse import urljoin, urlsplit
 import yaml
-try:
-    import ruamel_yaml
-except ImportError:
-    try:
-        import ruamel.yaml as ruamel_yaml
-    except ImportError:
-        raise ImportError("No ruamel_yaml library available.\n"
-                          "To proceed, conda install ruamel_yaml")
 
 from conda_build.conda_interface import spec_from_line
 from conda_build.conda_interface import input, configparser, StringIO, string_types, PY3
@@ -67,19 +59,10 @@ REQUIREMENTS_ORDER = ['host', 'run']
 
 # Definition of ABOUT_ORDER reflects current practice
 ABOUT_ORDER = ['home', 'license', 'license_family', 'license_file', 'summary',
-               'description', 'doc_url', 'dev_url']
-
-# This may be overkill, but some day sha256 won't be enough. Might as well be
-# ready...list these in order of decreasing preference.
-POSSIBLE_DIGESTS = ['sha256', 'md5']
-
-POSSIBLE_FILE_EXTENSIONS = ['tar.gz', 'tar.bz2', 'zip', 'tar', 'gz']
+               'doc_url', 'dev_url']
 
 PYPI_META_HEADER = """{{% set name = "{packagename}" %}}
 {{% set version = "{version}" %}}
-{{% set file_ext = "{file_ext}" %}}
-{{% set hash_type = "{hash_type}" %}}
-{{% set hash_value = "{hash_value}" %}}
 
 """
 
@@ -88,19 +71,17 @@ PYPI_META_HEADER = """{{% set name = "{packagename}" %}}
 # The top-level ordering is irrelevant because the write order of 'package',
 # etc. is determined by EXPECTED_SECTION_ORDER.
 PYPI_META_STATIC = {
-    'package': ruamel_yaml.comments.CommentedMap([
-        ('name', '{{ name|lower }}'),
-        ('version', '{{ version }}'),
+    'package': OrderedDict([
+        ('name', '"{{ name|lower }}"'),
+        ('version', '"{{ version }}"'),
     ]),
-    'source': ruamel_yaml.comments.CommentedMap([
-        ('fn', '{{ name }}-{{ version }}.{{ file_ext }}'),
-        ('url', '/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.{{ file_ext }}'),  # NOQA
-        ('{{ hash_type }}', '{{ hash_value }}'),
+    'source': OrderedDict([
+        ('url', '/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz'),  # NOQA
     ]),
-    'build': ruamel_yaml.comments.CommentedMap([
+    'build': OrderedDict([
         ('number', 0),
     ]),
-    'extra': ruamel_yaml.comments.CommentedMap([
+    'extra': OrderedDict([
         ('recipe-maintainers', '')
     ]),
 }
@@ -170,6 +151,42 @@ def package_exists(package_name, pypi_url=None):
     # request code will be 404 if the package does not exist.  Requires exact match.
     r = requests.get(pypi_url + '/' + package_name, verify=not _ssl_no_verify())
     return r.status_code != 404
+
+
+def __print_with_indent(line, prefix='', suffix='', level=0, newline=True):
+    output = ''
+    if level:
+        output = ' ' * level
+    return output + prefix + line + suffix + ('\n' if newline else '')
+
+
+def _print_dict(d, order=None, level=0, indent=2):
+    rendered_recipe = ''
+    if not order:
+        order = sorted(list(d.keys()))
+    for k in order:
+        if k in d and d[k]:
+            rendered_recipe += __print_with_indent(k, suffix=':')
+            for _k, _v in d[k].items():
+                if _v is None:
+                    continue
+                if isinstance(_v, string_types) or not hasattr(_v, "__iter__"):
+                    rendered_recipe += __print_with_indent(_k, suffix=':', level=level + indent,
+                                                          newline=False)
+                    rendered_recipe += ' ' + str(_v) + '\n'
+                elif hasattr(_v, 'keys'):
+                    rendered_recipe += _print_dict(_v, sorted(list(_v.keys())))
+                # assume that it's a list if it exists at all
+                elif _v:
+                    rendered_recipe += __print_with_indent(_k, suffix=':', level=level + indent)
+                    for item in _v:
+                        rendered_recipe += __print_with_indent(item, prefix='- ',
+                                                               level=level + indent)
+            # add a newline in between sections
+            if level == 0:
+                rendered_recipe += '\n'
+
+    return rendered_recipe
 
 
 def skeletonize(packages, output_dir=".", version=None, recursive=False,
@@ -262,12 +279,11 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
 
         d['import_tests'] = ''
 
-        # Get summary and description directly from the metadata returned
+        # Get summary directly from the metadata returned
         # from PyPI. summary will be pulled from package information in
         # get_package_metadata or a default value set if it turns out that
-        # data['summary'] is empty.
+        # data['summary'] is empty.  Ignore description as it is too long.
         d['summary'] = data.get('summary', '')
-        d['description'] = data.get('description', '')
         get_package_metadata(package, d, data, output_dir, python_version,
                              all_extras, recursive, created_recipes, noarch_python,
                              noprompt, packages, extra_specs, config=config,
@@ -300,19 +316,20 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
         with open(join(output_dir, name, 'meta.yaml'), 'w') as f:
             rendered_recipe = PYPI_META_HEADER.format(**d)
 
-            ordered_recipe = ruamel_yaml.comments.CommentedMap()
+            ordered_recipe = OrderedDict()
             # Create all keys in expected ordered
             for key in EXPECTED_SECTION_ORDER:
                 try:
                     ordered_recipe[key] = PYPI_META_STATIC[key]
                 except KeyError:
-                    ordered_recipe[key] = ruamel_yaml.comments.CommentedMap()
+                    ordered_recipe[key] = OrderedDict()
 
             if '://' not in pypi_url:
                 raise ValueError("pypi_url must have protocol (e.g. http://) included")
             base_url = urlsplit(pypi_url)
             base_url = "://".join((base_url.scheme, base_url.netloc))
             ordered_recipe['source']['url'] = urljoin(base_url, ordered_recipe['source']['url'])
+            ordered_recipe['source']['sha256'] = d['hash_value']
 
             if d['entry_points']:
                 ordered_recipe['build']['entry_points'] = d['entry_points']
@@ -320,15 +337,17 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
             if noarch_python:
                 ordered_recipe['build']['noarch'] = 'python'
 
-            ordered_recipe['build']['script'] = 'python setup.py install ' + ' '.join(setup_options)
-            if any(re.match(r'^setuptools(?:\s|$)', req) for req in d['build_depends']):
-                ordered_recipe['build']['script'] += ('--single-version-externally-managed '
-                                                      '--record=record.txt')
+            ordered_recipe['build']['script'] = ('"{{ PYTHON }} -m pip install . --no-deps '
+                                                 '--ignore-installed --no-cache-dir -vvv ' +
+                                                 ' '.join(setup_options) + '"')
 
-            # Always require python as a dependency
-            ordered_recipe['requirements'] = ruamel_yaml.comments.CommentedMap()
-            ordered_recipe['requirements']['host'] = ['python'] + ensure_list(d['build_depends'])
-            ordered_recipe['requirements']['run'] = ['python'] + ensure_list(d['run_depends'])
+            # Always require python as a dependency.  Pip is because we use pip for
+            #    the install line.
+            ordered_recipe['requirements'] = OrderedDict()
+            ordered_recipe['requirements']['host'] = sorted(['python', 'pip'] +
+                                                            list(set(d['build_depends'])))
+            ordered_recipe['requirements']['run'] = sorted(['python'] +
+                                                           list(set(d['run_depends'])))
 
             if d['import_tests']:
                 ordered_recipe['test']['imports'] = d['import_tests']
@@ -339,31 +358,24 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
             if d['tests_require']:
                 ordered_recipe['test']['requires'] = d['tests_require']
 
-            ordered_recipe['about'] = ruamel_yaml.comments.CommentedMap()
+            ordered_recipe['about'] = OrderedDict()
 
             for key in ABOUT_ORDER:
                 try:
                     ordered_recipe['about'][key] = d[key]
                 except KeyError:
                     ordered_recipe['about'][key] = ''
-            ordered_recipe['extra']['recipe-maintainers'] = ''
+            ordered_recipe['extra']['recipe-maintainers'] = ['your-github-id-here']
 
             # Prune any top-level sections that are empty
-            for key in EXPECTED_SECTION_ORDER:
-                if not ordered_recipe[key]:
-                    del ordered_recipe[key]
-                else:
-                    rendered_recipe += ruamel_yaml.dump({key: ordered_recipe[key]},
-                                                Dumper=ruamel_yaml.RoundTripDumper,
-                                                default_flow_style=False,
-                                                width=200)
-                    rendered_recipe += '\n'
+            rendered_recipe += _print_dict(ordered_recipe, EXPECTED_SECTION_ORDER)
+
             # make sure that recipe ends with one newline, by god.
             rendered_recipe.rstrip()
 
             # This hackery is necessary because
             #  - the default indentation of lists is not what we would like.
-            #    Ideally we'd contact the ruamel.yaml auther to find the right
+            #    Ideally we'd contact the ruamel.yaml author to find the right
             #    way to do this. See this PR thread for more:
             #    https://github.com/conda/conda-build/pull/2205#issuecomment-315803714
             #    Brute force fix below.
@@ -495,20 +507,6 @@ def add_parser(repos):
     )
 
 
-def digest_from_fragment(fragment):
-    """
-    Try to parse a checksum from a URL fragment.
-    """
-    for p in POSSIBLE_DIGESTS:
-        search_for = p + '='
-        if fragment.startswith(search_for):
-            digest = (p, fragment[len(search_for):])
-            break
-    else:
-        digest = ()
-    return digest
-
-
 def get_download_data(pypi_data, package, version, is_url, all_urls, noprompt, manual_url):
     """
     Get at least one valid *source* download URL or fail.
@@ -549,7 +547,7 @@ def get_download_data(pypi_data, package, version, is_url, all_urls, noprompt, m
                     (package, U))
             urls[0]['filename'] = U.path.rsplit('/')[-1]
             fragment = U.fragment or ''
-            digest = digest_from_fragment(fragment)
+            digest = fragment.split("=")
         else:
             sys.exit("Error: No source urls found for %s" % package)
     if len(urls) > 1 and not noprompt:
@@ -574,30 +572,21 @@ def get_download_data(pypi_data, package, version, is_url, all_urls, noprompt, m
         pypiurl = url['url']
         print("Using url %s (%s) for %s." % (pypiurl,
             human_bytes(url['size'] or 0), package))
-        # List of digests we might get in order of preference
-        for p in POSSIBLE_DIGESTS:
-            try:
-                if url['digests'][p]:
-                    digest = (p, url['digests'][p])
-                    break
-            except KeyError:
-                continue
+
+        if url['digests']['sha256']:
+            digest = ('sha256', url['digests']['sha256'])
         else:
             # That didn't work, even though as of 7/17/2017 some packages
             # have a 'digests' entry.
             # As a last-ditch effort, try for the md5_digest entry.
-            try:
-                digest = ('md5', url['md5_digest'])
-            except KeyError:
-                # Give up
-                digest = ()
+            digest = ()
         filename = url['filename'] or 'package'
     else:
         # User provided a URL, try to use it.
         print("Using url %s" % package)
         pypiurl = package
         U = parse_url(package)
-        digest = digest_from_fragment(U.fragment)
+        digest = U.fragment.split("=")
         # TODO: 'package' won't work with unpack()
         filename = U.path.rsplit('/', 1)[-1] or 'package'
 
@@ -649,6 +638,46 @@ def convert_version(version):
     return pin_compatible
 
 
+MARKER_RE = re.compile(r"(?P<name>^[^=<>!\s]+)"
+                       "\s*"
+                       "(?P<constraint>[=!><]=?\s*[^\s;]+)?"
+                       "(?:\s+;\s+)?(?P<env_mark_name>[^=<>!\s;]+)?"
+                       "\s*"
+                       "(?P<env_mark_constraint>[=<>!\s]+[^=<>!\s]+)?"
+                       )
+
+
+def _translate_python_constraint(constraint):
+    operator, value = constraint.split()
+    value = "".join(value.strip("'").strip('"').split(".")[:2])
+    return " ".join((operator, value))
+
+
+def env_mark_lookup(env_mark_name, env_mark_constraint):
+    """returns translated variable name and corresponding function to run to normalize the
+    version constraint to conda style"""
+    # TODO: implement more of these from PEP 508 as necessary:
+    #   https://www.python.org/dev/peps/pep-0508/
+    env_mark_table = {'python_version': {"repl": "py",
+                                         "constraint_trans_fn": _translate_python_constraint},
+                      }
+    marker = " ".join((env_mark_table[env_mark_name]["repl"],
+                    env_mark_table[env_mark_name]['constraint_trans_fn'](env_mark_constraint)))
+    return '  # [ ' + marker + ' ]'
+
+
+def parse_dep_with_env_marker(dep_str):
+    match = MARKER_RE.match(dep_str)
+    name = match.group("name")
+    if match.group("constraint"):
+        name = " ".join((name, match.group("constraint").replace(" ", "")))
+    env_mark = ""
+    if match.group("env_mark_name"):
+        env_mark = env_mark_lookup(match.group("env_mark_name"),
+                                   match.group("env_mark_constraint"))
+    return name, env_mark
+
+
 def get_package_metadata(package, d, data, output_dir, python_version, all_extras,
                          recursive, created_recipes, noarch_python, noprompt, packages,
                          extra_specs, config, setup_options):
@@ -664,7 +693,6 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
                           setup_options=setup_options,
                           config=config)
 
-    setuptools_build = pkginfo.get('setuptools', False)
     setuptools_run = False
 
     # Look at the entry_points and construct console_script and
@@ -709,7 +737,6 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
             # We have *other* kinds of entry-points so we need
             # setuptools at run-time
             if set(entry_points.keys()) - {'console_scripts', 'gui_scripts'}:
-                setuptools_build = True
                 setuptools_run = True
             # TODO: Use pythonw for gui scripts
             entry_list = (cs + gs)
@@ -719,7 +746,7 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
 
     requires = get_requirements(package, pkginfo, all_extras=all_extras)
 
-    if requires or setuptools_build or setuptools_run:
+    if requires or setuptools_run:
         deps = []
         if setuptools_run:
             deps.append('setuptools')
@@ -732,6 +759,7 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
                 # ... and may also contain comments...
                 dep = dep.split('#')[0].strip()
                 if dep:  # ... and empty (or comment only) lines
+                    dep, marker = parse_dep_with_env_marker(dep)
                     spec = spec_from_line(dep)
                     if spec is None:
                         sys.exit("Error: Could not parse: %s" % dep)
@@ -740,12 +768,13 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
                         tilde_version = '~ {}' .format(version)
                         pin_compatible = convert_version(version)
                         spec = spec.replace(tilde_version, pin_compatible)
+                    if marker:
+                        spec = ' '.join((spec, marker))
                     deps.append(spec)
 
         if 'setuptools' in deps:
-            setuptools_build = False
             setuptools_run = False
-        d['build_depends'] = ['setuptools'] * setuptools_build + deps
+        d['build_depends'] = ['pip'] + deps
         # Never add setuptools to runtime dependencies.
         d['run_depends'] = deps
 
@@ -760,11 +789,6 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
         d['packagename'] = pkginfo['name'].lower()
     if d['version'] == 'UNKNOWN':
         d['version'] = pkginfo['version']
-
-    for ext in POSSIBLE_FILE_EXTENSIONS:
-        if d['pypiurl'].split('#')[0].endswith(ext):
-            d['file_ext'] = ext
-            break
 
     if pkginfo.get('packages'):
         deps = set(pkginfo['packages'])
@@ -955,8 +979,8 @@ def get_pkginfo(package, filename, pypiurl, digest, python_version, extra_specs,
         # Calculate the preferred hash type here if necessary.
         # Needs to be done in this block because this is where we have
         # access to the source file.
-        if hash_type != POSSIBLE_DIGESTS[0]:
-            new_hash_value = hashsum_file(download_path, POSSIBLE_DIGESTS[0])
+        if hash_type != 'sha256':
+            new_hash_value = hashsum_file(download_path, 'sha256')
         else:
             new_hash_value = ''
 
@@ -974,7 +998,7 @@ def get_pkginfo(package, filename, pypiurl, digest, python_version, extra_specs,
         except IOError:
             pkg_info = pkginfo.SDist(download_path).__dict__
         if new_hash_value:
-            pkg_info['new_hash_value'] = (POSSIBLE_DIGESTS[0], new_hash_value)
+            pkg_info['new_hash_value'] = ('sha256', new_hash_value)
     finally:
         rm_rf(tempdir)
 

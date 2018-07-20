@@ -263,6 +263,10 @@ def build(m, bld_bat, stats):
             env = environ.get_dict(m=m)
     env["CONDA_BUILD_STATE"] = "BUILD"
 
+    # hard-code this because we never want pip's build isolation
+    #    https://github.com/conda/conda-build/pull/2972#discussion_r198290241
+    env["PIP_NO_BUILD_ISOLATION"] = False
+
     # set variables like CONDA_PY in the test environment
     env.update(set_language_env_vars(m.config.variant))
 
