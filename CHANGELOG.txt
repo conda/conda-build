@@ -1,3 +1,61 @@
+2018-07-20 3.11.0:
+-------------------
+
+Bug fixes:
+----------
+
+* improve environment marker support for pypi skeleton  #2972
+* apply selectors before checking requirements, to better understand per-platform used vars  #2973
+* Handle conda UnsatisfiableError causing packages to be moved to broken folder without tests actually being run on them  #2974 #2975
+* use tempfiles when writing index to reduce risk of corrupt index  #2978
+* handle conda index recipe info for older versions of conda-build  #2979
+* allow empty missing_dso_whitelist in build section  #2983
+* fix host_reqs referring to a detached list, leading to requirements/host not being modified by run_exports  #2987
+* fix for bypassing MITM proxies based on SSL_NO_VERIFY env var  #2991
+* add missing_dso_whitelist to FIELDS  #2994
+* Don't skip logic in pyldd based on CB verbosity (--quiet)  #2999
+* Convert empty git refs to HEAD, so that git_url behavior is more predictable  #3003
+* set NPY_DISTUTILS_APPEND_FLAGS=1 so the compiler package flags are respected  #3015
+* fix script file renaming when converting package from win to unix  #3014
+* allow fn to be omitted when using multiple url sources  #3021
+* fix default config settings being shared across Config instances  #3022
+* force text interpretation of CRAN DESCRIPTION files  #3020
+* fix is_no_link to honor patterns  #3023
+* fix test/requires being ignored when --no-copy-test-source-files is specified  #3027
+* fix up dependencies in CRAN skeleton output  #3030 #3032
+
+
+Enhancements:
+-------------
+
+* change skeleton pypi to generate recipes that use pip for install step.  Remove description.  #2972
+* Set environment variable to disable pip environment isolation to prevent problems  #2972
+* support multiple exclusive_config_files  #3022
+
+
+Docs:
+-----
+
+* Fix search order for conda_build_config.yaml  #3029
+
+
+Contributors:
+-------------
+
+* @isuruf
+* @j-hartshorn
+* @kalefranz
+* @mandeep
+* @mbargull
+* @mcg1969
+* @mingwandroid
+* @minrk
+* @msarahan
+* @nehaljwani
+* @ocefpaf
+* @tjd2002
+
+
 2018-06-15 3.10.9:
 ------------------
 
