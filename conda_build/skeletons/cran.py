@@ -1107,12 +1107,17 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                         indent=INDENT, sel=sel_src))
                     deps.append("{indent}{{{{posix}}}}automake-wrapper{sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
-                    deps.append("{indent}{{{{posix}}}}automake        {sel}".format(
-                        indent=INDENT, sel=sel_src_and_win))
                     deps.append("{indent}{{{{posix}}}}pkg-config".format(indent=INDENT))
                 if need_make:
                     deps.append("{indent}{{{{posix}}}}make            {sel}".format(
                         indent=INDENT, sel=sel_src))
+                    if not need_autotools:
+                        deps.append("{indent}{{{{posix}}}}sed             {sel}".format(
+                            indent=INDENT, sel=sel_src_and_win))
+                    deps.append("{indent}{{{{posix}}}}coreutils       {sel}".format(
+                        indent=INDENT, sel=sel_src_and_win))
+                deps.append("{indent}{{{{posix}}}}zip             {sel}".format(
+                    indent=INDENT, sel=sel_src_and_win))
             elif dep_type == 'run':
                 if need_c or need_cxx or need_f:
                     deps.append("{indent}{{{{native}}}}gcc-libs       {sel}".format(
