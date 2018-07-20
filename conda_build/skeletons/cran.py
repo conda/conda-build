@@ -1105,6 +1105,8 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                         indent=INDENT, sel=sel_src_and_win))
                     deps.append("{indent}{{{{posix}}}}autoconf        {sel}".format(
                         indent=INDENT, sel=sel_src))
+                    deps.append("{indent}{{{{posix}}}}automake        {sel}".format(
+                        indent=INDENT, sel=sel_src_not_win))
                     deps.append("{indent}{{{{posix}}}}automake-wrapper{sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
                     deps.append("{indent}{{{{posix}}}}pkg-config".format(indent=INDENT))
