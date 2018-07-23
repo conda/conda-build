@@ -1281,3 +1281,16 @@ def test_warning_on_file_clobbering(testing_config, caplog):
     with pytest.raises((ClobberError, CondaMultiError)):
         with env_var('CONDA_PATH_CONFLICT', 'prevent', reset_context):
             api.build(os.path.join(recipe_dir, 'b'), config=testing_config)
+
+
+@pytest.mark.serial
+def test_verify_bad_package(testing_config):
+    from conda_verify.errors import PackageError
+    recipe_dir = os.path.join(fail_dir, 'create_bad_folder_for_conda_verify')
+    api.build(recipe_dir, config=testing_config)
+    with pytest.raises(PackageError):
+        testing_config.exit_on_verify_error = True
+        api.build(recipe_dir, config=testing_config)
+    # ignore the error that we know should be raised, and re-run to make sure it is actually ignored
+    testing_config.ignore_verify_codes = ['C1125', 'C1115']
+    api.build(recipe_dir, config=testing_config)

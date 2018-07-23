@@ -43,7 +43,7 @@ install:
   - python -c "import sys; print(sys.executable)"
   - python -c "import sys; print(sys.prefix)"
   - conda update -q --all
-  - conda install -q pip pytest pytest-cov jinja2 patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy conda-verify beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil
+  - conda install -q pip pytest pytest-cov jinja2 patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil
   - if "%SYS_PYTHON_VERSION%" == "2.7" conda install -q scandir
   # this is to ensure dependencies
   - python --version
@@ -77,15 +77,18 @@ test_script:
   - echo "safety_checks: disabled" >> ~/.condarc
   - echo "local_repodata_ttl: 1800" >> ~/.condarc
   - conda create -n blarg -yq --download-only python=2.7 libpng=1.6.17
-  - conda create -n blarg -yq --download-only python=3.4 libpng=1.6.17
   - conda create -n blarg -yq --download-only python=3.5 libpng=1.6.17
   # no libpng here because we already have the right version from the 3.5 install
-  - conda create -n blarg -yq --download-only python
-  - conda create -n blarg -yq --download-only cmake
-  - py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp -n 0 -m "serial"
+  - conda create -n blarg -yq --download-only python cmake
   # remove all folders to avoid permission errors.  Leave root files (may have coverage info there)
   - for /d %%F in (c:\cbtmp\*) do rd /s /q "%%F"
   - py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp C:\cbtmp -n 2 -m "not serial"
+  # install conda-verify from its master branch, at least for a while until it's more stable
+  - git clone https://github.com/conda/conda-verify
+  - pushd conda-verify
+  - pip install .
+  - popd
+  - py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp -n 0 -m "serial"
 
 # For debugging, this is helpful - zip up the test environment and make it available for later download.
 #    However, it eats up a fair amount of time.  Better to disable until you need it.

@@ -145,13 +145,11 @@ def _get_default_settings():
             Setting('config_file', None),
             Setting('repository', 'pypitest'),
 
-            # conda-verify is disabled by default.  This is because it was inoperable for a long
-            #     time, and thus needs to be opt-in not opt-out.
-            Setting('verify', False),
+            Setting('verify', True),
             Setting('ignore_verify_codes',
                     cc_conda_build.get('ignore_verify_codes', [])),
             Setting('exit_on_verify_error',
-                    cc_conda_build.get('exit_on_verify_error', True)),
+                    cc_conda_build.get('exit_on_verify_error', False)),
 
             # Recipes that have no host section, only build, should bypass the build/host line.
             # This is to make older recipes still work with cross-compiling.  True cross-compiling

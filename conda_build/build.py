@@ -75,7 +75,10 @@ try:
     from conda_verify.verify import Verify
 except ImportError:
     Verify = None
-    print("Importing conda-verify failed.  Please be sure to test your packages.")
+    print("=" * 60)
+    print("Warning: Importing conda-verify failed.  Please be sure to test your packages.  "
+          "conda install conda-verify to make this message go away.")
+    print("=" * 60)
 
 from conda import __version__ as conda_version
 from conda_build import __version__ as conda_build_version

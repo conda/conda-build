@@ -49,7 +49,7 @@ test:
     # - pytest-env  # [win]
     # - pytest-xdist
     - mock
-    - conda-verify  >=3.0.3
+    # - conda-verify  >=3.0.3   # todo once it is released
   commands:
     - type -P conda-build  # [unix]
     - where conda-build  # [win]
