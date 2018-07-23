@@ -331,7 +331,7 @@ def parse(data, config, path=None):
         if not res[field]:
             res[field] = {}
         # source field may be either a dictionary, or a list of dictionaries
-        if field == 'source':
+        if field in ('source', 'outputs'):
             if not (isinstance(res[field], dict) or (hasattr(res[field], '__iter__') and not
                         isinstance(res[field], string_types))):
                 raise RuntimeError("The %s field should be a dict or list of dicts, not "
@@ -491,6 +491,7 @@ FIELDS = {
               'force_use_keys', 'force_ignore_keys', 'merge_build_host',
               'pre-link', 'post-link', 'pre-unlink', 'missing_dso_whitelist',
               },
+    'outputs': {'name', 'script', 'build', 'requirements', 'test', 'about', 'files'},
     'requirements': {'build', 'host', 'run', 'conflicts', 'run_constrained'},
     'app': {'entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'},
@@ -1995,6 +1996,14 @@ class MetaData(object):
         return {var for var in self.get_used_vars(force_top_level=force_top_level,
                                                   force_global=force_global)
                 if var in self.get_loop_vars()}
+
+    def get_rendered_recipe_text(self, permit_undefined_jinja=False, extract_pattern=None):
+        template_string = self.get_recipe_text(extract_pattern=extract_pattern,
+                                               force_top_level=True).rstrip()
+
+        return (yaml.safe_load(self._get_contents(permit_undefined_jinja=permit_undefined_jinja,
+                                                  template_string=template_string,
+                                                  skip_build_id=True)) or {})
 
     def get_rendered_outputs_section(self, permit_undefined_jinja=False):
         extract_pattern = r'(.*)package:'
