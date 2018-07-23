@@ -148,14 +148,10 @@ def _get_default_settings():
             # conda-verify is disabled by default.  This is because it was inoperable for a long
             #     time, and thus needs to be opt-in not opt-out.
             Setting('verify', False),
-            Setting('ignore_recipe_verify_scripts',
-                  cc_conda_build.get('ignore_recipe_verify_scripts', [])),
-            Setting('ignore_package_verify_scripts',
-                    cc_conda_build.get('ignore_package_verify_scripts', [])),
-            Setting('run_recipe_verify_scripts',
-                    cc_conda_build.get('run_package_verify_scripts', [])),
-            Setting('run_package_verify_scripts',
-                    cc_conda_build.get('run_package_verify_scripts', [])),
+            Setting('ignore_verify_codes',
+                    cc_conda_build.get('ignore_verify_codes', [])),
+            Setting('exit_on_verify_error',
+                    cc_conda_build.get('exit_on_verify_error', True)),
 
             # Recipes that have no host section, only build, should bypass the build/host line.
             # This is to make older recipes still work with cross-compiling.  True cross-compiling
