@@ -17,10 +17,11 @@ else
     echo "local_repodata_ttl: 1800" >> ~/.condarc
     mkdir -p ~/.conda
     conda create -n blarg1 -yq python=2.7
-    conda create -n blarg2 -yq python=3.4
     conda create -n blarg3 -yq python=3.5
-    conda create -n blarg4 -yq python numpy
+    conda create -n blarg4 -yq python numpy pandas
     conda create -n blarg5 -yq libpng=1.6.17
-    /opt/conda/bin/py.test -v -n 0 --basetemp /tmp/cb --cov conda_build --cov-report xml -m "serial" tests
     /opt/conda/bin/py.test -v -n 2 --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --forked
+    # install conda-verify from its master branch, at least for a while until it's more stable
+    pip install git+https://github.com/conda/conda-verify.git
+    /opt/conda/bin/py.test -v -n 0 --basetemp /tmp/cb --cov conda_build --cov-report xml -m "serial" tests
 fi

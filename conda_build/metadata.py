@@ -2092,8 +2092,10 @@ class MetaData(object):
             else:
                 recipe_text = (self.get_recipe_text(force_top_level=force_top_level,
                                                     apply_selectors=apply_selectors).replace(
-                                    self.extract_outputs_text(apply_selectors=apply_selectors).strip(), '') +
-                            self.extract_single_output_text(self.name(), apply_selectors=apply_selectors))
+                                    self.extract_outputs_text(
+                                        apply_selectors=apply_selectors).strip(), '') +
+                            self.extract_single_output_text(self.name(),
+                                                            apply_selectors=apply_selectors))
             reqs_re = re.compile(r"requirements:.+?(?=^\w|\Z|^\s+-\s(?=name|type))",
                                  flags=re.M | re.S)
             reqs_text = reqs_re.search(recipe_text)

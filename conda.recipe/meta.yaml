@@ -26,7 +26,7 @@ requirements:
     - beautifulsoup4
     - chardet
     - conda  >=4.3
-    - conda-verify
+    # - conda-verify  >=3.0.2  # optional as of CB 3.12.0
     - contextlib2   # [py<34]
     - enum34        # [py<34]
     - filelock
@@ -39,7 +39,7 @@ requirements:
     - pyyaml
     - scandir       # [py<34]
     - six
-    - glob2
+    - glob2  >=0.6
 
 test:
   requires:
@@ -49,6 +49,7 @@ test:
     # - pytest-env  # [win]
     # - pytest-xdist
     - mock
+    # - conda-verify  >=3.0.3   # todo once it is released
   commands:
     - type -P conda-build  # [unix]
     - where conda-build  # [win]

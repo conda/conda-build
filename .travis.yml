@@ -66,7 +66,7 @@ install:
         popd;
     fi
   - conda install -q anaconda-client requests filelock contextlib2 jinja2 patchelf python=$TRAVIS_PYTHON_VERSION
-  - conda install -q pyflakes conda-verify beautifulsoup4 chardet pycrypto glob2 psutil
+  - conda install -q pyflakes beautifulsoup4 chardet pycrypto glob2 psutil
   - pip install pkginfo
   - if [[ "$FLAKE8" == "true" ]]; then
       conda install -q flake8;

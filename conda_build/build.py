@@ -71,7 +71,14 @@ from conda_build.variants import (set_language_env_vars, dict_of_lists_to_list_o
 from conda_build.create_test import create_all_test_files
 
 import conda_build.noarch_python as noarch_python
-from conda_verify.verify import Verify
+try:
+    from conda_verify.verify import Verify
+except ImportError:
+    Verify = None
+    print("=" * 60)
+    print("Warning: Importing conda-verify failed.  Please be sure to test your packages.  "
+          "conda install conda-verify to make this message go away.")
+    print("=" * 60)
 
 from conda import __version__ as conda_version
 from conda_build import __version__ as conda_build_version
@@ -977,14 +984,12 @@ def bundle_conda(output, metadata, env, stats, **kw):
 
         # we're done building, perform some checks
         tarcheck.check_all(tmp_path, metadata.config)
-        if getattr(metadata.config, "verify", False):
+        if getattr(metadata.config, "verify", False) and Verify:
             verifier = Verify()
-            ignore_scripts = metadata.config.ignore_package_verify_scripts if \
-                             metadata.config.ignore_package_verify_scripts else None
-            run_scripts = metadata.config.run_package_verify_scripts if \
-                          metadata.config.run_package_verify_scripts else None
-            verifier.verify_package(ignore_scripts=ignore_scripts, run_scripts=run_scripts,
-                                    path_to_package=tmp_path)
+            checks_to_ignore = metadata.config.ignore_verify_codes if \
+                             metadata.config.ignore_verify_codes else None
+            verifier.verify_package(path_to_package=tmp_path, checks_to_ignore=checks_to_ignore,
+                                    exit_on_error=metadata.config.exit_on_verify_error)
         try:
             crossed_subdir = metadata.config.target_subdir
         except AttributeError:
