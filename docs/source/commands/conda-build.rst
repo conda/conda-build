@@ -169,6 +169,9 @@ conda build
           <B>--user</B> USER
                  User/organization to upload packages to on anaconda.org or pypi
    
+          <B>--label</B> LABELS
+                 Label argument to pass through to anaconda upload
+
           <B>--no-force-upload</B>
                  Disable force upload to anaconda.org, preventing overwriting any
                  existing packages

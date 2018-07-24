@@ -68,6 +68,7 @@ def _get_default_settings():
             Setting('skip_existing', False),
             Setting('token', None),
             Setting('user', None),
+            Setting('labels', []),
             Setting('verbose', True),
 
             Setting('debug', False),

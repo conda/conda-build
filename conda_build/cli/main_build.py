@@ -142,6 +142,10 @@ different sets of packages."""
         default=cc_conda_build.get('user'),
     )
     p.add_argument(
+        '--label', action='append', dest='labels', default=[],
+        help="Label argument to pass through to anaconda upload",
+    )
+    p.add_argument(
         '--no-force-upload',
         help="Disable force upload to anaconda.org, preventing overwriting any existing packages",
         dest='force_upload',
