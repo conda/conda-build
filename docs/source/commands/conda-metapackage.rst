@@ -58,6 +58,9 @@ conda metapackage
           <B>--user</B> USER
                  User/organization to upload packages to on anaconda.org
    
+          <B>--label</B> LABELS
+                 Label argument to pass through to anaconda upload
+
           <B>--build-number</B> BUILD_NUMBER
                  Build number for the package (default is 0).
    

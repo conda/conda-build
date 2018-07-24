@@ -54,6 +54,10 @@ command line with the conda metapackage command.
         help="User/organization to upload packages to on anaconda.org"
     )
     p.add_argument(
+        '--label', action='append', dest='labels', default=[],
+        help="Label argument to pass through to anaconda upload",
+    )
+    p.add_argument(
         "name",
         help="Name of the created package.",
     )

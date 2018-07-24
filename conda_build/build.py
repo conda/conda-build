@@ -2394,6 +2394,8 @@ Error: cannot locate anaconda command (required for upload)
         cmd.append('--force')
     if config.user:
         cmd.extend(['--user', config.user])
+    for label in config.labels:
+        cmd.extend(['--label', label])
     for package in paths:
         try:
             print("Uploading {} to anaconda.org".format(os.path.basename(package)))
