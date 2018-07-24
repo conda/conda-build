@@ -1,3 +1,27 @@
+2018-07-24 3.12.0:
+------------------
+
+Enhancements:
+-------------
+
+* Allow user-specified channels to come ahead of local channel  #3038
+* Add schema for outputs section in FIELDS; provide method for getting rendered recipe text (to support conda-verify)  #3041
+* Enable conda-verify by default when it is importable, but only print warnings by default, instead of exiting  #3042
+* Add --label CLI argument to allow specifying label for uploading packages to  #3043
+
+Bug fixes:
+----------
+
+* fix apply_selectors, leading to excessive detection of used variables  #3040
+
+Contributors:
+-------------
+
+* @CJ-Wright
+* @msarahan
+* @speleo3
+
+
 2018-07-20 3.11.0:
 -------------------
 
