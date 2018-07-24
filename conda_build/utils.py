@@ -29,7 +29,7 @@ import filelock
 from .conda_interface import hashsum_file, md5_file, unix_path_to_win, win_path_to_unix
 from .conda_interface import PY3, iteritems
 from .conda_interface import root_dir, pkgs_dirs
-from .conda_interface import string_types, url_path, get_rc_urls
+from .conda_interface import string_types
 from .conda_interface import memoized
 from .conda_interface import StringIO
 from .conda_interface import VersionOrder, MatchSpec
@@ -1161,18 +1161,6 @@ def env_var(name, value, callback=None):
             del os.environ[name]
         if callback:
             callback()
-
-
-def collect_channels(config, is_host=False):
-    urls = [url_path(config.croot)] + get_rc_urls() + ['local', ]
-    if config.channel_urls:
-        urls.extend(config.channel_urls)
-    # defaults has a very limited set of repo urls.  Omit it from the URL list so
-    #     that it doesn't fail.
-    if config.is_cross and is_host:
-        urls.remove('defaults')
-        urls.remove('local')
-    return urls
 
 
 def trim_empty_keys(dict_):
