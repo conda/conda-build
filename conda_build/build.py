@@ -1735,7 +1735,7 @@ def _construct_metadata_for_test_from_package(package, config):
     # channel_urls is an iterable, but we don't know if it's a tuple or list.  Don't know
     #    how to add elements.
     config.channel_urls = list(config.channel_urls)
-    config.channel_urls.insert(0, local_channel_url)
+    config.channel_urls.append(local_channel_url)
 
     try:
         metadata = render_recipe(os.path.join(info_dir, 'recipe'), config=config,
