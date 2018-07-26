@@ -548,6 +548,9 @@ def write_about_json(m):
             pass
         env = environ.Environment(root_dir)
         d['root_pkgs'] = env.package_specs()
+        print("\n\n*****************************\nTEST\n")
+        print(d)
+        print("\n******************************\n\n")
         json.dump(d, fo, indent=2, sort_keys=True)
 
 
