@@ -71,14 +71,6 @@ from conda_build.variants import (set_language_env_vars, dict_of_lists_to_list_o
 from conda_build.create_test import create_all_test_files
 
 import conda_build.noarch_python as noarch_python
-try:
-    from conda_verify.verify import Verify
-except ImportError:
-    Verify = None
-    print("=" * 60)
-    print("Warning: Importing conda-verify failed.  Please be sure to test your packages.  "
-          "conda install conda-verify to make this message go away.")
-    print("=" * 60)
 
 from conda import __version__ as conda_version
 from conda_build import __version__ as conda_build_version
@@ -984,6 +976,14 @@ def bundle_conda(output, metadata, env, stats, **kw):
 
         # we're done building, perform some checks
         tarcheck.check_all(tmp_path, metadata.config)
+
+        # we do the import here because we want to respect logger level context
+        try:
+            from conda_verify.verify import Verify
+        except ImportError:
+            Verify = None
+            log.warn("Importing conda-verify failed.  Please be sure to test your packages.  "
+                "conda install conda-verify to make this message go away.")
         if getattr(metadata.config, "verify", False) and Verify:
             verifier = Verify()
             checks_to_ignore = metadata.config.ignore_verify_codes if \
