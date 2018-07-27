@@ -2457,7 +2457,7 @@ def clean_build(config, folders=None):
         utils.rm_rf(folder)
 
 
-def is_package_built(metadata, env):
+def is_package_built(metadata, env, include_local=True):
     for d in metadata.config.bldpkgs_dirs:
         if not os.path.isdir(d):
             os.makedirs(d)
@@ -2472,7 +2472,9 @@ def is_package_built(metadata, env):
                                       locking=metadata.config.locking,
                                       timeout=metadata.config.timeout,
                                       clear_cache=True)
-    urls = [url_path(metadata.config.output_folder), 'local'] + get_rc_urls()
+
+    urls = [url_path(metadata.config.output_folder), 'local'] if include_local else []
+    urls += get_rc_urls()
     if metadata.config.channel_urls:
         urls.extend(metadata.config.channel_urls)
 
