@@ -121,9 +121,9 @@ CDTs = dict({'centos5': {'dirname': 'centos5',
                          'macros': {}},
              'centos6': {'dirname': 'centos6',
                          'short_name': 'cos6',
-                         'base_url': 'http://mirror.centos.org/centos/6.9/os/{base_architecture}/CentOS/',  # noqa
-                         'sbase_url': 'http://vault.centos.org/6.9/os/Source/SPackages/',
-                         'repomd_url': 'http://mirror.centos.org/centos/6.9/os/{base_architecture}/repodata/repomd.xml',  # noqa
+                         'base_url': 'http://mirror.centos.org/centos/6.10/os/{base_architecture}/CentOS/',  # noqa
+                         'sbase_url': 'http://vault.centos.org/6.10/os/Source/SPackages/',
+                         'repomd_url': 'http://mirror.centos.org/centos/6.10/os/{base_architecture}/repodata/repomd.xml',  # noqa
                          'host_machine': '{architecture}-conda_cos6-linux-gnu',
                          'host_subdir': 'linux-{bits}',
                          'fname_architecture': '{architecture}',
