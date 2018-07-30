@@ -270,6 +270,8 @@ def build(m, bld_bat, stats):
     # we supply them ourselves instead.
     env["PIP_NO_DEPENDENCIES"] = False
     env["PIP_IGNORE_INSTALLED"] = True
+    # disable use of pip's cache directory.
+    env["PIP_NO_CACHE_DIR"] = False
 
     # set variables like CONDA_PY in the test environment
     env.update(set_language_env_vars(m.config.variant))

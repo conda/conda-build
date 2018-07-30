@@ -1403,6 +1403,8 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                     # we supply them ourselves instead.
                     env["PIP_NO_DEPENDENCIES"] = False
                     env["PIP_IGNORE_INSTALLED"] = True
+                    # disable use of pip's cache directory.
+                    env["PIP_NO_CACHE_DIR"] = False
 
                     work_file = join(m.config.work_dir, 'conda_build.sh')
                     with open(work_file, 'w') as bf:
