@@ -540,6 +540,8 @@ def write_about_json(m):
             pass
         env = environ.Environment(root_dir)
         d['root_pkgs'] = env.package_specs()
+        # Include the extra section of the metadata in the about.json
+        d['extra'] = m.get_section('extra')
         json.dump(d, fo, indent=2, sort_keys=True)
 
 
