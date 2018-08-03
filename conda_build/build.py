@@ -1729,14 +1729,6 @@ def _construct_metadata_for_test_from_package(package, config):
             log.info("Updating index at %s to make package installable with dependencies" % folder)
             update_index(folder)
 
-    # make an url out of the channel and add to channel list
-    local_channel_url = url_path(local_channel)
-
-    # channel_urls is an iterable, but we don't know if it's a tuple or list.  Don't know
-    #    how to add elements.
-    config.channel_urls = list(config.channel_urls)
-    config.channel_urls.insert(0, local_channel_url)
-
     try:
         metadata = render_recipe(os.path.join(info_dir, 'recipe'), config=config,
                                         reset_build_id=False)[0][0]
