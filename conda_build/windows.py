@@ -265,7 +265,19 @@ def build(m, bld_bat, stats):
 
     # hard-code this because we never want pip's build isolation
     #    https://github.com/conda/conda-build/pull/2972#discussion_r198290241
+    #
+    # Note that pip env "NO" variables are inverted logic.
+    #      PIP_NO_BUILD_ISOLATION=False means don't use build isolation.
+    #
     env["PIP_NO_BUILD_ISOLATION"] = False
+    # some other env vars to have pip ignore dependencies.
+    # we supply them ourselves instead.
+    #    See note above about inverted logic on "NO" variables
+    env["PIP_NO_DEPENDENCIES"] = False
+    env["PIP_IGNORE_INSTALLED"] = True
+    # disable use of pip's cache directory.
+    #    See note above about inverted logic on "NO" variables
+    env["PIP_NO_CACHE_DIR"] = False
 
     # set variables like CONDA_PY in the test environment
     env.update(set_language_env_vars(m.config.variant))
