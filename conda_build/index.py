@@ -8,6 +8,7 @@ import bz2
 from collections import defaultdict
 import contextlib
 from datetime import datetime
+import fnmatch
 from functools import partial
 from glob import glob
 import json
@@ -188,6 +189,8 @@ def update_subdir_index(dir_path, force=False, check_md5=False, remove=True, loc
     about_path = join(dir_path, '.about.json')
     paths_path = join(dir_path, '.paths.json')
     recipe_path = join(dir_path, '.recipe.json')
+    run_exports_path = join(dir_path, '.run_exports.json')
+    post_install_details_path = join(dir_path, '.post_install_details.json')
 
     if not lock:
         lock = get_lock(dir_path)
@@ -200,6 +203,8 @@ def update_subdir_index(dir_path, force=False, check_md5=False, remove=True, loc
     about = {}
     paths = {}
     recipe = {}
+    run_exports = {}
+    post_install_details = {}
 
     with try_acquire_locks(locks, timeout):
         if not force:
@@ -214,6 +219,8 @@ def update_subdir_index(dir_path, force=False, check_md5=False, remove=True, loc
             about = read_json_caching_file(about_path)
             paths = read_json_caching_file(paths_path)
             recipe = read_json_caching_file(recipe_path)
+            run_exports = read_json_caching_file(run_exports_path)
+            post_install_details = read_json_caching_file(post_install_details_path)
 
         files = tuple(basename(path) for path in glob(join(dir_path, '*.tar.bz2')))
         for fn in files:
@@ -226,14 +233,20 @@ def update_subdir_index(dir_path, force=False, check_md5=False, remove=True, loc
                     continue
             if verbose:
                 print('updating:', fn)
-            index_json, about_json, paths_json, recipe_json = _read_index_tar(
-                path, lock=lock, locking=locking, timeout=timeout
-            )
+            try:
+                (index_json, about_json, paths_json, recipe_json, run_exports_json,
+                post_install_details_json) = _read_index_tar(
+                    path, lock=lock, locking=locking, timeout=timeout
+                )
+            except RuntimeError:
+                log.warn('Error indexing {}.  Ignoring it.'.format(path))
             index_json.update(file_info(path))
             index[fn] = index_json
             about[fn] = about_json
             paths[fn] = paths_json
             recipe[fn] = recipe_json
+            run_exports[fn] = run_exports_json
+            post_install_details[fn] = post_install_details_json
 
         if remove:
             # remove files from the index which are not on disk
@@ -243,10 +256,14 @@ def update_subdir_index(dir_path, force=False, check_md5=False, remove=True, loc
                 del index[fn]
         if not isdir(dirname(index_path)):
             os.makedirs(dirname(index_path))
-        for (path, data) in ((index_path, index), (about_path, about),
-                             (paths_path, paths), (recipe_path, recipe)):
+        for (path, data) in ((index_path, index), (about_path, about), (paths_path, paths),
+                             (recipe_path, recipe), (run_exports_path, run_exports),
+                             (post_install_details_path, post_install_details)):
+            # TODO: should handle invalid json stuff and omit or sanitize it, rather than die
+            # _sanitize_json(data)
             with open(path + '.tmp', 'w') as fo:
                 json.dump(data, fo, indent=2, sort_keys=True)
+
             move(path + '.tmp', path)
 
         for fn in index:
@@ -312,6 +329,38 @@ def _read_index_tar(tar_path, lock, locking=True, timeout=90):
                 paths_json = {}
 
             try:
+                run_exports_json = yaml.safe_load(t.extractfile('info/run_exports.yaml')
+                                                  .read().decode('utf-8'))
+            except KeyError:
+                run_exports_json = {}
+
+            post_install_details_json = {'binary_prefix': False, 'text_prefix': False}
+            filenames = t.getnames()
+            # get embedded prefix data from paths.json
+            for f in paths_json.get('paths', []):
+                if f.get('prefix_placeholder'):
+                    if f.get('file_mode') == 'binary':
+                        post_install_details_json['binary_prefix'] = True
+                    elif f.get('file_mode') == 'text':
+                        post_install_details_json['text_prefix'] = True
+                if (post_install_details_json['binary_prefix'] and
+                        post_install_details_json['text_prefix']):
+                    break
+            # check for any scripts in activate.d
+            post_install_details_json['activate.d'] = any(
+                fn.startswith('etc/conda/activate.d') for fn in filenames)
+            # check for any scripts in deactivate.d
+            post_install_details_json['deactivate.d'] = any(
+                fn.startswith('etc/conda/deactivate.d') for fn in filenames)
+            # check for any link scripts
+            post_install_details_json['pre_link'] = any(
+                fnmatch.fnmatch(fn, '*/.*-pre-link.*') for fn in filenames)
+            post_install_details_json['post_link'] = any(
+                fnmatch.fnmatch(fn, '*/.*-post-link.*') for fn in filenames)
+            post_install_details_json['pre_unlink'] = any(
+                fnmatch.fnmatch(fn, '*/.*-pre-unlink.*') for fn in filenames)
+
+            try:
                 recipe_path_search_order = (
                     'info/recipe/meta.yaml.rendered',
                     'info/recipe/meta.yaml',
@@ -344,7 +393,8 @@ def _read_index_tar(tar_path, lock, locking=True, timeout=90):
                 with open(join(icon_dir, icon_filename), 'wb') as fh:
                     fh.write(icondata)
 
-            return index_json, about_json, paths_json, recipe_json
+            return (index_json, about_json, paths_json, recipe_json, run_exports_json,
+                    post_install_details_json)
 
 
 def write_repodata(repodata, dir_path, lock, locking=90, timeout=90, **kw):
