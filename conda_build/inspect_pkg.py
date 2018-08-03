@@ -320,7 +320,6 @@ def inspect_objects(packages, prefix=sys.prefix, groupby='package'):
 
 
 def get_hash_input(packages):
-    log = get_logger(__name__)
     hash_inputs = {}
     for pkg in ensure_list(packages):
         pkgname = os.path.basename(pkg)[:-8]
@@ -330,14 +329,5 @@ def get_hash_input(packages):
             hash_inputs[pkgname]['recipe'] = json.loads(hash_input.decode())
         else:
             hash_inputs[pkgname] = "<no hash_input.json in file>"
-        hash_input_files = package_has_file(pkg, 'info/hash_input_files')
-        hash_inputs[pkgname]['files'] = []
-        if hash_input_files:
-            for fname in hash_input_files.splitlines():
-                if hasattr(fname, 'decode'):
-                    fname = fname.decode()
-                hash_inputs[pkgname]['files'].append('info/recipe/{}'.format(fname))
-        else:
-            log.warn('Package {} does not include recipe.  Full hash information is '
-                     'not reproducible.'.format(pkgname))
+
     return hash_inputs
