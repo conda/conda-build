@@ -361,34 +361,39 @@ def copy_license(m):
 
 
 def copy_test_source_files(m, destination):
-    src_dir = None
+    src_dir = ''
     if os.listdir(m.config.work_dir):
         src_dir = m.config.work_dir
     elif hasattr(m.config, 'recipe_dir') and m.config.recipe_dir:
         src_dir = os.path.join(m.config.recipe_dir, 'info', 'test')
 
-    if src_dir and os.path.isdir(src_dir):
-        for pattern in utils.ensure_list(m.get_value('test/source_files', [])):
-            if utils.on_win and '\\' in pattern:
-                raise RuntimeError("test/source_files paths must use / "
-                                    "as the path delimiter on Windows")
-            files = glob(join(src_dir, pattern))
-            if not files:
-                msg = "Did not find any source_files for test with pattern {0}"
-                raise RuntimeError(msg.format(pattern))
-            for f in files:
-                try:
-                    # disable locking to avoid locking a temporary directory (the extracted
-                    #     test folder)
-                    utils.copy_into(f, f.replace(src_dir, destination), m.config.timeout,
-                            locking=False, clobber=True)
-                except OSError as e:
-                    log = logging.getLogger(__name__)
-                    log.warn("Failed to copy {0} into test files.  Error was: {1}".format(f,
-                                                                                          str(e)))
-            for ext in '.pyc', '.pyo':
-                for f in utils.get_ext_files(destination, ext):
-                    os.remove(f)
+    src_dirs = [src_dir]
+    if os.path.isdir(os.path.join(src_dir, 'parent')):
+        src_dirs.append(os.path.join(src_dir, 'parent'))
+
+    for src_dir in src_dirs:
+        if src_dir and os.path.isdir(src_dir) and src_dir != destination:
+            for pattern in utils.ensure_list(m.get_value('test/source_files', [])):
+                if utils.on_win and '\\' in pattern:
+                    raise RuntimeError("test/source_files paths must use / "
+                                        "as the path delimiter on Windows")
+                files = glob(join(src_dir, pattern))
+                if not files:
+                    msg = "Did not find any source_files for test with pattern {0}"
+                    raise RuntimeError(msg.format(pattern))
+                for f in files:
+                    try:
+                        # disable locking to avoid locking a temporary directory (the extracted
+                        #     test folder)
+                        utils.copy_into(f, f.replace(src_dir, destination), m.config.timeout,
+                                locking=False, clobber=True)
+                    except OSError as e:
+                        log = logging.getLogger(__name__)
+                        log.warn("Failed to copy {0} into test files.  Error was: {1}".format(f,
+                                                                                            str(e)))
+                for ext in '.pyc', '.pyo':
+                    for f in utils.get_ext_files(destination, ext):
+                        os.remove(f)
 
     recipe_test_files = m.get_value('test/files')
     if recipe_test_files:
@@ -396,8 +401,14 @@ def copy_test_source_files(m, destination):
         for pattern in recipe_test_files:
             files = glob(join(orig_recipe_dir, pattern))
             for f in files:
-                utils.copy_into(f, f.replace(orig_recipe_dir, destination),
-                                timeout=m.config.timeout, locking=m.config.locking, clobber=True)
+                basedir = orig_recipe_dir
+                if not os.path.isfile(f):
+                    basedir = os.path.join(orig_recipe_dir, 'parent')
+                dest = f.replace(basedir, destination)
+                if f != dest:
+                    utils.copy_into(f, f.replace(basedir, destination),
+                                    timeout=m.config.timeout, locking=m.config.locking,
+                                    clobber=True)
 
 
 def write_hash_input(m):

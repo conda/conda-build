@@ -1,0 +1,27 @@
+package:
+  name: test_files_in_parent_recipe
+  version: 1.0
+
+source:
+  path: src
+
+build:
+  script: echo "weee"
+
+outputs:
+  # one that has same name as top-level
+  - name: test_files_in_parent_recipe
+    test:
+      files:
+        - recipe_file
+      commands:
+        - test -e recipe_file  # [unix]
+        - IF NOT EXIST recipe_file exit 1  # [win]
+  # one that does not
+  - name: abc
+    test:
+      files:
+        - recipe_file
+      commands:
+        - test -e recipe_file  # [unix]
+        - IF NOT EXIST recipe_file exit 1  # [win]

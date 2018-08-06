@@ -83,11 +83,8 @@ test_script:
   # remove all folders to avoid permission errors.  Leave root files (may have coverage info there)
   - for /d %%F in (c:\cbtmp\*) do rd /s /q "%%F"
   - py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp C:\cbtmp -n 2 -m "not serial"
-  # install conda-verify from its master branch, at least for a while until it's more stable
-  - git clone https://github.com/conda/conda-verify
-  - pushd conda-verify
-  - pip install .
-  - popd
+  # install conda-verify later, so we are ignoring checks in most tests
+  - conda install -y conda-verify
   - py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp -n 0 -m "serial"
 
 # For debugging, this is helpful - zip up the test environment and make it available for later download.
