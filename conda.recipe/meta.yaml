@@ -39,7 +39,7 @@ requirements:
     - pyyaml
     - scandir       # [py<34]
     - six
-    - glob2  >=0.6
+    - glob2  >=0.6  # [py<35]
 
 test:
   requires:

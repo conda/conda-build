@@ -3,8 +3,6 @@ from __future__ import absolute_import, division, print_function
 from collections import defaultdict
 import fnmatch
 from functools import partial
-import glob2
-from glob2 import glob
 import io
 import locale
 import re
@@ -117,7 +115,7 @@ def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
     absfiles = [os.path.join(prefix, f) for f in files]
     py_ver = '.'.join(config.variant['python'].split('.')[:2])
     sp_dir = utils.get_site_packages(prefix, py_ver)
-    for egg_path in glob(os.path.join(sp_dir, '*-py*.egg')):
+    for egg_path in utils.glob(os.path.join(sp_dir, '*-py*.egg')):
         if os.path.isdir(egg_path):
             if preserve_egg_dir or not any(os.path.join(egg_path, i) in absfiles for i
                     in walk_prefix(egg_path, False, windows_forward_slashes=False)):
@@ -434,7 +432,7 @@ def check_overlinking(m, files):
     run_reqs = [req.split(' ')[0] for req in m.meta.get('requirements', {}).get('run', [])]
     # sysroots and whitelists are similar, but the subtle distinctions are important.
     sysroot_prefix = m.config.build_prefix if not m.build_is_host else m.config.host_prefix
-    sysroots = glob(os.path.join(sysroot_prefix, '**', 'sysroot'))
+    sysroots = utils.glob(os.path.join(sysroot_prefix, '**', 'sysroot'))
     whitelist = []
     if 'target_platform' in m.config.variant and m.config.variant['target_platform'] == 'osx-64':
         if not len(sysroots):
@@ -507,7 +505,7 @@ def check_overlinking(m, files):
                 and_also = " (and also in this package)" if in_prefix_dso in files else ""
                 pkgs = list(which_package(in_prefix_dso, m.config.host_prefix))
                 in_pkgs_in_run_reqs = [pkg for pkg in pkgs if pkg.quad[0] in run_reqs]
-                in_whitelist = any([glob2.fnmatch.fnmatch(in_prefix_dso, w) for w in whitelist])
+                in_whitelist = any([fnmatch.fnmatch(in_prefix_dso, w) for w in whitelist])
                 if in_whitelist:
                     print_msg(errors, '{}: {} found in the whitelist'.
                               format(info_prelude, n_dso_p))
@@ -546,7 +544,7 @@ def check_overlinking(m, files):
                 # start with '$RPATH/' which indicates pyldd did not find them, so remove that now.
                 if needed_dso.startswith('$RPATH/'):
                     needed_dso = needed_dso.replace('$RPATH/', '')
-                in_whitelist = any([glob2.fnmatch.fnmatch(needed_dso, w) for w in whitelist])
+                in_whitelist = any([fnmatch.fnmatch(needed_dso, w) for w in whitelist])
                 if in_whitelist:
                     n_dso_p = "Needed DSO {}".format(needed_dso)
                     print_msg(errors, '{}: {} found in the whitelist'.
@@ -556,7 +554,7 @@ def check_overlinking(m, files):
                     dso_fname = os.path.basename(needed_dso)
                     sysroot_files = []
                     for sysroot in sysroots:
-                        sysroot_files.extend(glob(os.path.join(sysroot, '**', dso_fname)))
+                        sysroot_files.extend(utils.glob(os.path.join(sysroot, '**', dso_fname)))
                     if len(sysroot_files):
                         # Removing sysroot_prefix is only *really* for Linux, though we could
                         # use CONDA_BUILD_SYSROOT for macOS. We should figure out what to do about

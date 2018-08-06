@@ -7,7 +7,6 @@
 from __future__ import absolute_import, division, print_function
 
 import argparse
-from glob2 import glob
 import logging
 import os
 import sys
@@ -386,7 +385,7 @@ def execute(args):
     if action == test_action:
         failed_recipes = []
         recipes = [item for sublist in
-                   [glob(os.path.abspath(recipe)) if '*' in recipe
+                   [utils.glob(os.path.abspath(recipe)) if '*' in recipe
                                                   else [recipe] for recipe in args.recipe]
                    for item in sublist]
         for recipe in recipes:
