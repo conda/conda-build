@@ -1,3 +1,31 @@
+2018-08-06 3.12.1:
+------------------
+
+Enhancements:
+-------------
+
+* add the "extra" field of a package's meta.yaml file into the output package's info/about.json file  #3048
+* add option to omit local channel in is_package_build (used by c3i)  #3051
+* add pip env vars to prevent it from pulling in external dependencies when used in build scripts  #3053
+
+Bug fixes:
+----------
+
+* fix local channel always being top priority.  Allow user-defined channel orders where local is lower than remotes.  #3049
+* Fix conda-verify import error warning showing up in --output text  #3052
+* fix RPM skeleton test (point to newer CentOS repo) #3054
+* fix test/files and test/source_files looking in the wrong place for info/recipe/parent contents (subpackages)  #3061
+
+Contributors:
+-------------
+
+* @Bezier89
+* @jakirkham
+* @mikecormier
+* @mingwandroid
+* @msarahan
+
+
 2018-07-24 3.12.0:
 ------------------
 
