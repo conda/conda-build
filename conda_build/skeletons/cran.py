@@ -953,11 +953,10 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                         print("ERROR: No binary nor old binary found")
                         sys.exit(1)
                     # Version needs to be stored in archive_details.
+                    # TODO: Sort the versions (though I've never seen anything other than 1 element)
                     archive_details['conda_version'] = archive_details['binaries'][package][-1]
                     archive_details['cran_version'] = archive_details['conda_version'].replace('_', '-')
                     avaliable_artefact = True
-            # TODO :: Implement an option to use the most recent binary instead. We'd need to split the versions out.
-            #         For now it will fallback to compiling from source.
             if archive_details['use_this'] and avaliable_artefact:
                 if is_tarfile:
                     filename = basename(location)
