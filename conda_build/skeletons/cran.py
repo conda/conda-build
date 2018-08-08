@@ -964,8 +964,6 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     archive_details['conda_version'] = archive_details['binaries'][package][-1][0]
                     archive_details['cran_version'] = archive_details['conda_version'].replace('_', '-')
                     avaliable_artefact = True
-            # TODO :: Implement an option to use the most recent binary instead. We'd need to split the versions out.
-            #         For now it will fallback to compiling from source.
             if archive_details['use_this'] and avaliable_artefact:
                 if is_tarfile:
                     filename = basename(location)
