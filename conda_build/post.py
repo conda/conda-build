@@ -481,6 +481,7 @@ def check_overlinking(m, files):
                      '/System/Library/Frameworks/SystemConfiguration.framework/*',
                      '/System/Library/Frameworks/WebKit.framework/*']
     whitelist += m.meta.get('build', {}).get('missing_dso_whitelist') or []
+    runpath_whitelist = m.meta.get('build', {}).get('runpath_whitelist') or []
     for f in files:
         path = os.path.join(m.config.host_prefix, f)
         if not codefile_type(path):
@@ -495,7 +496,8 @@ def check_overlinking(m, files):
         except:
             print_msg(errors, '{}: pyldd.py failed to process'.format(warn_prelude))
             continue
-        if len(runpaths):
+        if runpaths and not (runpath_whitelist or
+                             any(fnmatch.fnmatch(f, w) for w in runpath_whitelist)):
             print_msg(errors, '{}: runpaths {} found in {}'.format(msg_prelude,
                                                                    runpaths,
                                                                    path))
