@@ -154,7 +154,6 @@ def verify_git_repo(git_exe, git_dir, git_url, git_commits_since_tag, debug=Fals
     return OK
 
 
-@memoized
 def get_git_info(git_exe, repo, debug):
     """
     Given a repo to a git repo, return a dictionary of:

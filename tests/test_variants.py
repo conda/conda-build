@@ -441,3 +441,11 @@ def test_custom_compiler():
     recipe = os.path.join(recipe_dir, '28_custom_compiler')
     ms = api.render(recipe, permit_unsatisfiable_variants=True, finalize=False, bypass_env_check=True)
     assert len(ms) == 3
+
+
+def test_different_git_vars():
+    recipe = os.path.join(recipe_dir, '29_different_git_vars')
+    ms = api.render(recipe)
+    versions = [m[0].version() for m in ms]
+    assert "1.20.0" in versions
+    assert "1.21.11" in versions
