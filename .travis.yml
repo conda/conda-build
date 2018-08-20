@@ -60,7 +60,7 @@ install:
     else
         git clone -b $CONDA_VERSION --single-branch --depth 1000 https://github.com/conda/conda.git;
         pushd conda;
-        python -m conda init --dev;
+        /opt/conda/bin/python -m conda init --dev;
         hash -r;
         conda info;
         popd;
