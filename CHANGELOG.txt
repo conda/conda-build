@@ -1,3 +1,26 @@
+2018-08-20 3.13.0:
+------------------
+
+Enhancements:
+-------------
+
+* add run_exports and aggregated post-install metadata indexing outputs  #3060
+* allow whitelisting runpath entries  #3072
+* consider *_compiler_version entries when looping over variants (allow *_compiler_version to be a used variable that affects the hash)  #3084
+
+Bug fixes:
+----------
+
+* fix cached git info for variants  #3082
+* fix linux temporary channel not being added at test time, leaving package unresolvable  #3088
+
+Contributors:
+-------------
+
+* @msarahan
+* @teake
+
+
 2018-08-06 3.12.1:
 ------------------
 
