@@ -538,7 +538,7 @@ def find_used_variables_in_text(variant, recipe_text, selectors=False):
     recipe_lines = recipe_text.splitlines()
     for v in variant:
         all_res = []
-        compiler_match = re.match(r'(.*?)_compiler$', v)
+        compiler_match = re.match(r'(.*?)_compiler(_version)?$', v)
         if compiler_match and not selectors:
             compiler_lang = compiler_match.group(1)
             compiler_regex = (
