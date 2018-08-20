@@ -1771,6 +1771,8 @@ def _construct_metadata_for_test_from_package(package, config):
     # HACK: because the recipe is fully baked, detecting "used" variables no longer works.  The set
     #     of variables in the hash_input suffices, though.
     metadata.config.used_vars = list(hash_input.keys())
+    metadata.config.channel_urls = list(utils.ensure_list(metadata.config.channel_urls))
+    metadata.config.channel_urls.insert(0, url_path(local_channel))
     return metadata, hash_input
 
 
@@ -1938,6 +1940,7 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
                 else metadata.config.host_subdir)
     # ensure that the test prefix isn't kept between variants
     utils.rm_rf(metadata.config.test_prefix)
+
     try:
         actions = environ.get_install_actions(metadata.config.test_prefix,
                                                 tuple(specs), 'host',
