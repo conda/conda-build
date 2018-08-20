@@ -237,17 +237,7 @@ def compile_missing_pyc(files, cwd, python_exe, skip_compile_pyc=()):
                 call([python_exe, '-Wi', '-m', 'py_compile', f], cwd=cwd)
 
 
-def check_dist_info_version(name, version, files):
-    for f in files:
-        if '.dist-info' in f:
-            f, _, _ = f.rpartition('.dist-info')
-            _, _, f = f.rpartition(name + '-')
-            if version != f:
-                print("ERROR: dist-info version incorrect (is {}, should be {})".format(f, version))
-                sys.exit(1)
-
-
-def post_process(name, version, files, prefix, config, preserve_egg_dir=False, noarch=False, skip_compile_pyc=()):
+def post_process(files, prefix, config, preserve_egg_dir=False, noarch=False, skip_compile_pyc=()):
     rm_pyo(files, prefix)
     if noarch:
         rm_pyc(files, prefix)
@@ -259,7 +249,6 @@ def post_process(name, version, files, prefix, config, preserve_egg_dir=False, n
     remove_easy_install_pth(files, prefix, config, preserve_egg_dir=preserve_egg_dir)
     rm_py_along_so(prefix)
     rm_share_info_dir(files, prefix)
-    check_dist_info_version(name, version, files)
 
 
 def find_lib(link, prefix, files, path=None):
