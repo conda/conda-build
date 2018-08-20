@@ -47,7 +47,6 @@ install:
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
       conda install -q futures scandir;
     fi
-  - conda update -q --all
   - if [ "$CONDA_VERSION" = "4.3.x" ]; then
         rm -rf /opt/conda/lib/python$TRAVIS_PYTHON_VERSION/site-packages/conda;
         rm -rf /opt/conda/lib/python$TRAVIS_PYTHON_VERSION/site-packages/conda*.egg-info;

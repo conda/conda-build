@@ -970,9 +970,9 @@ def package_has_file(package_path, file_path):
                     return False
                 except OSError as e:
                     raise RuntimeError("Could not extract %s (%s)" % (package_path, e))
-    except tarfile.ReadError:
-        raise RuntimeError("Could not extract metadata from %s. "
-                            "File probably corrupt." % package_path)
+    except (tarfile.ReadError, IOError, EOFError):
+        raise RuntimeError("Could not extract metadata from %s. File probably corrupt.  "
+                           "Please manually remove this file and try again." % package_path)
 
 
 def ensure_list(arg):
