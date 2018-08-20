@@ -786,12 +786,13 @@ def post_process_files(m, initial_prefix_files):
 
     python = (m.config.build_python if os.path.isfile(m.config.build_python) else
               m.config.host_python)
-    post_process(sorted(current_prefix_files - initial_prefix_files),
-                    prefix=m.config.host_prefix,
-                    config=m.config,
-                    preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')),
-                    noarch=m.get_value('build/noarch'),
-                    skip_compile_pyc=m.get_value('build/skip_compile_pyc'))
+    post_process(m.get_value('package/name'), m.get_value('package/version'),
+                 sorted(current_prefix_files - initial_prefix_files),
+                 prefix=m.config.host_prefix,
+                 config=m.config,
+                 preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')),
+                 noarch=m.get_value('build/noarch'),
+                 skip_compile_pyc=m.get_value('build/skip_compile_pyc'))
 
     # The post processing may have deleted some files (like easy-install.pth)
     current_prefix_files = utils.prefix_files(prefix=m.config.host_prefix)
