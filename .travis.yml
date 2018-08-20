@@ -1,26 +1,26 @@
 os: linux
 language: python
 python:
-  - 2.7
+#  - 2.7
   - 3.6
 env:
-  - CONDA_VERSION=4.3.x
-  - CONDA_VERSION=master
+  # - CONDA_VERSION=4.3.x
+  - CONDA_VERSION=4.5.x
 matrix:
   fast_finish: true
-  exclude:
-    - python: 2.7
-      env: CONDA_VERSION=4.3.x
+#  exclude:
+#    - python: 2.7
+#      env: CONDA_VERSION=4.3.x
   include:
     - python: 3.6
       env:
         - FLAKE8=true
-        - CONDA_VERSION=master
+        - CONDA_VERSION=4.5.x
       os: linux
-  allow_failures:
-    - env:
-        - FLAKE8=true
-        - CONDA_VERSION=master
+#  allow_failures:
+#    - env:
+#        - FLAKE8=true
+#        - CONDA_VERSION=master
       python: 3.6
 
 addons:
