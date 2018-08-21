@@ -85,6 +85,8 @@ def test_index_on_single_subdir_1():
                     "version": "1.0",
                 },
             },
+            "removed": [],
+            "repodata_version": 1,
         }
         assert actual_repodata_json == expected_repodata_json
 
@@ -117,10 +119,19 @@ def test_index_on_single_subdir_1():
                         "osx-64",
                     ],
                     "summary": "Summary field for conda-index-pkg-a",
-                    "version": "1.0"
+                    "version": "1.0",
+                    "activate.d": False,
+                    "deactivate.d": False,
+                    "post_link": True,
+                    "pre_link": False,
+                    "pre_unlink": False,
+                    "binary_prefix": False,
+                    "text_prefix": True,
+                    "run_exports": {},
                 }
             },
             "subdirs": [
+                "noarch",
                 "osx-64"
             ]
         }
@@ -176,6 +187,8 @@ def test_index_noarch_osx64_1():
                     "version": "1.0",
                 },
             },
+            "removed": [],
+            "repodata_version": 1,
         }
         assert actual_repodata_json == expected_repodata_json
 
@@ -209,7 +222,15 @@ def test_index_noarch_osx64_1():
                         "osx-64",
                     ],
                     "summary": "Summary field for conda-index-pkg-a. This is the python noarch version.",  # <- tests that the higher noarch build number is the data collected
-                    "version": "1.0"
+                    "version": "1.0",
+                    "activate.d": False,
+                    "deactivate.d": False,
+                    "post_link": True,
+                    "pre_link": False,
+                    "pre_unlink": False,
+                    "binary_prefix": False,
+                    "text_prefix": False,
+                    "run_exports": {},
                 }
             },
             "subdirs": [

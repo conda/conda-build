@@ -118,5 +118,5 @@ def test_api_create_metapackage():
 
 def test_api_update_index():
     argspec = getargspec(api.update_index)
-    assert argspec.args == ['dir_paths', 'config', 'force', 'check_md5', 'remove', 'channel_name']
-    assert argspec.defaults == (None, False, False, False, None)
+    assert argspec.args == ['dir_paths', 'subdir', 'check_md5', 'channel_name', 'threads']
+    assert argspec.defaults == (None, False, None, None)

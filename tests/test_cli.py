@@ -333,7 +333,7 @@ def test_metapackage_metadata(testing_config, testing_workdir):
 def testing_index(testing_workdir):
     args = ['.']
     main_index.execute(args)
-    assert os.path.isfile('repodata.json')
+    assert os.path.isfile('noarch/repodata.json')
 
 
 def test_inspect_installable(testing_workdir):

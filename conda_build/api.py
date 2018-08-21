@@ -367,20 +367,18 @@ def create_metapackage(name, version, entry_points=(), build_string=None, build_
                               license_name=license_name, summary=summary, config=config)
 
 
-def update_index(dir_paths, config=None, force=False, check_md5=False, remove=False,
-                 channel_name=None):
+def update_index(dir_paths, subdir=None, check_md5=False, channel_name=None, threads=None):
     from locale import getpreferredencoding
     import os
     from .conda_interface import PY3
-    from conda_build.index import update_index
+    from conda_build.index import update_index, update_subdir_index
     dir_paths = [os.path.abspath(path) for path in _ensure_list(dir_paths)]
     # Don't use byte strings in Python 2
     if not PY3:
         dir_paths = [path.decode(getpreferredencoding()) for path in dir_paths]
 
-    if not config:
-        config = Config()
-
     for path in dir_paths:
-        update_index(path, force=force, check_md5=check_md5, remove=remove, verbose=config.verbose,
-                     locking=config.locking, timeout=config.timeout, channel_name=channel_name)
+        if subdir:
+            update_subdir_index(path, subdir=subdir, check_md5=check_md5, channel_name=channel_name)
+        else:
+            update_index(path, check_md5=check_md5, channel_name=channel_name)

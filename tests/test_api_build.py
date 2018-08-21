@@ -361,12 +361,7 @@ def test_skip_existing_url(testing_metadata, testing_workdir, capfd):
     copy_into(outputs[0], os.path.join(platform, os.path.basename(outputs[0])))
 
     # create the index so conda can find the file
-    api.update_index(platform, config=testing_metadata.config)
-
-    # HACK: manually create noarch location there, so that conda 4.3.2+ considers a valid channel
-    noarch = os.path.join(output_dir, 'noarch')
-    os.makedirs(noarch)
-    api.update_index(noarch, config=testing_metadata.config)
+    api.update_index(output_dir)
 
     testing_metadata.config.skip_existing = True
     testing_metadata.config.channel_urls = [url_path(output_dir)]
@@ -1063,8 +1058,7 @@ def test_run_constrained_stores_constrains_info(testing_config):
 
 def test_no_locking(testing_config):
     recipe = os.path.join(metadata_dir, 'source_git_jinja2')
-    api.update_index(os.path.join(testing_config.croot, testing_config.subdir),
-                     config=testing_config)
+    api.update_index(os.path.join(testing_config.croot))
     api.build(recipe, config=testing_config, locking=False)
 
 
