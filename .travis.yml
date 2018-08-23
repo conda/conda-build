@@ -44,6 +44,7 @@ install:
   - hash -r
   - conda config --set always_yes yes
   - conda config --set auto_update_conda False
+  - conda config --add create_default_packages nomkl
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
       conda install -q futures scandir;
     fi
@@ -71,7 +72,7 @@ install:
       conda install -q flake8;
     else
       conda install -c c3i_test -q perl;
-      conda install -q pytest pip pytest-cov pytest-forked pytest-xdist numpy mock pytest-mock;
+      conda install -q pytest pip pytest-cov pytest-forked pytest-xdist nomkl numpy mock pytest-mock;
       pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd;
     fi
   - pip install --no-deps .

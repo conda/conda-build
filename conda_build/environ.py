@@ -20,7 +20,7 @@ from .conda_interface import (CondaError, LinkError, LockError, NoPackagesFoundE
 from .conda_interface import display_actions, execute_actions, execute_plan, install_actions
 from .conda_interface import memoized
 from .conda_interface import package_cache, TemporaryDirectory
-from .conda_interface import pkgs_dirs, root_dir, symlink_conda
+from .conda_interface import pkgs_dirs, root_dir, symlink_conda, create_default_packages
 
 from conda_build import utils
 from conda_build.exceptions import DependencyNeedsBuildingError
@@ -713,6 +713,7 @@ def get_install_actions(prefix, specs, env, retries=0, subdir=None,
     log = utils.get_logger(__name__)
     conda_log_level = logging.WARN
     specs = list(specs)
+    specs.extend(create_default_packages)
     if verbose:
         capture = contextlib.contextmanager(lambda: (yield))
     elif debug:
@@ -931,6 +932,23 @@ def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, 
         symlink_conda(prefix, sys.prefix, shell)
 
 
+def get_pkg_dirs_locks(dirs, config):
+    return [utils.get_lock(folder, timeout=config.timeout) for folder in dirs]
+
+
+def remove_existing_packages(dirs, fns, config):
+    locks = get_pkg_dirs_locks(dirs, config) if config.locking else []
+
+    with utils.try_acquire_locks(locks, timeout=config.timeout):
+        for folder in dirs:
+            for fn in fns:
+                all_files = [fn]
+                if not os.path.isabs(fn):
+                    all_files = glob(os.path.join(folder, fn + '*'))
+                for entry in all_files:
+                    utils.rm_rf(entry)
+
+
 def clean_pkg_cache(dist, config):
     locks = []
 
@@ -938,9 +956,7 @@ def clean_pkg_cache(dist, config):
     if config.debug:
         conda_log_level = logging.DEBUG
 
-    _pkgs_dirs = pkgs_dirs[:1]
-    if config.locking:
-        locks = [utils.get_lock(folder, timeout=config.timeout) for folder in _pkgs_dirs]
+    locks = get_pkg_dirs_locks([config.bldpkgs_dir, pkgs_dirs[:1]], config)
     with utils.LoggingContext(conda_log_level):
         with utils.try_acquire_locks(locks, timeout=config.timeout):
             rmplan = [
@@ -953,12 +969,9 @@ def clean_pkg_cache(dist, config):
             #   Conda's cleanup is still necessary - it keeps track of its own in-memory
             #   list of downloaded things.
             for folder in pkgs_dirs:
-                try:
-                    assert not os.path.exists(os.path.join(folder, dist))
-                    assert not os.path.exists(os.path.join(folder, dist + '.tar.bz2'))
-                    for pkg_id in [dist, 'local::' + dist]:
-                        assert pkg_id not in package_cache()
-                except AssertionError:
+                if (os.path.exists(os.path.join(folder, dist)) or
+                        os.path.exists(os.path.join(folder, dist + '.tar.bz2')) or
+                        any(pkg_id in package_cache() for pkg_id in [dist, 'local::' + dist])):
                     log = utils.get_logger(__name__)
                     log.debug("Conda caching error: %s package remains in cache after removal",
                               dist)
@@ -968,8 +981,7 @@ def clean_pkg_cache(dist, config):
                     for pkg_id in keys:
                         if pkg_id in cache:
                             del cache[pkg_id]
-                    for entry in glob(os.path.join(folder, dist + '*')):
-                        utils.rm_rf(entry)
+                    remove_existing_packages(pkgs_dirs, [dist], config)
 
 
 def get_pinned_deps(m, section):

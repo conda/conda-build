@@ -375,7 +375,7 @@ def test_inspect_prefix_length(testing_workdir, capfd):
     config = api.Config(croot=test_base, anaconda_upload=False, verbose=True)
     recipe_path = os.path.join(metadata_dir, "has_prefix_files")
     config.prefix_length = 80
-    outputs = api.build(recipe_path, config=config)
+    outputs = api.build(recipe_path, config=config, notest=True)
 
     args = ['prefix-lengths'] + outputs
     with pytest.raises(SystemExit):
@@ -387,7 +387,7 @@ def test_inspect_prefix_length(testing_workdir, capfd):
     config.prefix_length = 255
     # reset the build id so that a new one is computed
     config._build_id = ""
-    api.build(recipe_path, config=config)
+    api.build(recipe_path, config=config, notest=True)
     main_inspect.execute(args)
     output, error = capfd.readouterr()
     assert 'No packages found with binary prefixes shorter' in output
@@ -396,7 +396,7 @@ def test_inspect_prefix_length(testing_workdir, capfd):
 def test_inspect_hash_input(testing_metadata, testing_workdir, capfd):
     testing_metadata.meta['requirements']['build'] = ['zlib']
     api.output_yaml(testing_metadata, 'meta.yaml')
-    output = api.build(testing_workdir)[0]
+    output = api.build(testing_workdir, notest=True)[0]
     with open(os.path.join(testing_workdir, 'conda_build_config.yaml'), 'w') as f:
         yaml.dump({'zlib': ['1.2.11']}, f)
     args = ['hash-inputs', output]
@@ -451,7 +451,7 @@ def test_purge(testing_workdir, testing_metadata):
     It does not clear out build packages from folders like osx-64 or linux-64.
     """
     api.output_yaml(testing_metadata, 'meta.yaml')
-    outputs = api.build(testing_workdir)
+    outputs = api.build(testing_workdir, notest=True)
     args = ['purge']
     main_build.execute(args)
     dirs = get_build_folders(testing_metadata.config.croot)
@@ -468,7 +468,7 @@ def test_purge_all(testing_workdir, testing_metadata):
     api.output_yaml(testing_metadata, 'meta.yaml')
     with TemporaryDirectory() as tmpdir:
         testing_metadata.config.croot = tmpdir
-        outputs = api.build(testing_workdir, config=testing_metadata.config)
+        outputs = api.build(testing_workdir, config=testing_metadata.config, notest=True)
         args = ['purge-all', '--croot', tmpdir]
         main_build.execute(args)
         assert not get_build_folders(testing_metadata.config.croot)
@@ -500,7 +500,7 @@ def test_conda_py_no_period(testing_workdir, testing_metadata, monkeypatch):
     testing_metadata.meta['requirements'] = {'host': ['python'],
                                              'run': ['python']}
     api.output_yaml(testing_metadata, 'meta.yaml')
-    outputs = api.build(testing_workdir)
+    outputs = api.build(testing_workdir, notest=True)
     assert any('py34' in output for output in outputs)
 
 

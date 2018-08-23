@@ -109,7 +109,7 @@ def test_token_upload(testing_workdir, testing_metadata):
     testing_metadata.config.token = args.token
 
     # the folder with the test recipe to upload
-    api.build(testing_metadata)
+    api.build(testing_metadata, notest=True)
 
     # make sure that the package is available (should raise if it doesn't)
     show.main(args)
@@ -124,7 +124,7 @@ def test_token_upload(testing_workdir, testing_metadata):
 
 @pytest.mark.parametrize("service_name", ["binstar", "anaconda"])
 def test_no_anaconda_upload_condarc(service_name, testing_workdir, testing_config, capfd):
-    api.build(empty_sections, config=testing_config)
+    api.build(empty_sections, config=testing_config, notest=True)
     output, error = capfd.readouterr()
     assert "Automatic uploading is disabled" in output, error
 
@@ -156,7 +156,7 @@ def test_no_include_recipe_config_arg(testing_metadata):
 def test_no_include_recipe_meta_yaml(testing_metadata, testing_config):
     # first, make sure that the recipe is there by default.  This test copied from above, but copied
     # as a sanity check here.
-    outputs = api.build(testing_metadata)
+    outputs = api.build(testing_metadata, notest=True)
     assert package_has_file(outputs[0], "info/recipe/meta.yaml")
 
     output_file = api.build(os.path.join(metadata_dir, '_no_include_recipe'),
@@ -1121,8 +1121,7 @@ def test_python_xx(testing_config):
 
 def test_indirect_numpy_dependency(testing_metadata):
     testing_metadata.meta['requirements']['build'] = ['pandas']
-    testing_metadata.config.channel_urls = ['conda-forge']
-    api.build(testing_metadata, numpy=1.13)
+    api.build(testing_metadata, numpy=1.13, notest=True)
 
 
 def test_dependencies_with_notest(testing_workdir, testing_config):
