@@ -320,6 +320,9 @@ CHANNELDATA_FIELDS = (
     "pre_link",
     "post_link",
     "pre_unlink",
+    "tags",
+    "identifiers",
+    "keywords",
 )
 
 
