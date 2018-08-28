@@ -331,7 +331,7 @@ def parse(data, config, path=None):
         if not res[field]:
             res[field] = {}
         # source field may be either a dictionary, or a list of dictionaries
-        if field in ('source', 'outputs'):
+        if field in OPTIONALLY_ITERABLE_FIELDS:
             if not (isinstance(res[field], dict) or (hasattr(res[field], '__iter__') and not
                         isinstance(res[field], string_types))):
                 raise RuntimeError("The %s field should be a dict or list of dicts, not "
@@ -502,6 +502,9 @@ FIELDS = {
               'license_file', 'readme',  # paths in source tree
               },
 }
+
+# Fields that may either be a dictionary or a list of dictionaries.
+OPTIONALLY_ITERABLE_FIELDS = ('source', 'outputs')
 
 
 def check_bad_chrs(s, field):
@@ -1082,16 +1085,22 @@ class MetaData(object):
         return value
 
     def check_fields(self):
+        def check_field(key, section):
+            if key not in FIELDS[section]:
+                raise ValueError("in section %r: unknown key %r" %
+                                 (section, key))
         for section, submeta in iteritems(self.meta):
             # anything goes in the extra section
             if section == 'extra':
                 continue
             if section not in FIELDS:
                 raise ValueError("unknown section: %s" % section)
-            for key in submeta:
-                if key not in FIELDS[section]:
-                    raise ValueError("in section %r: unknown key %r" %
-                             (section, key))
+            for key_or_dict in submeta:
+                if section in OPTIONALLY_ITERABLE_FIELDS and isinstance(key_or_dict, dict):
+                    for key in key_or_dict.keys():
+                        check_field(key, section)
+                else:
+                    check_field(key_or_dict, section)
         return True
 
     def name(self, fail_ok=False):
