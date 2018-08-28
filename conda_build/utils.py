@@ -1452,8 +1452,8 @@ def mmap_mmap(fileno, length, tagname=None, flags=0, prot=mmap_PROT_READ | mmap_
     Hides the differences between mmap.mmap on Windows and Unix.
     Windows has `tagname`.
     Unix does not, but makes up for it with `flags` and `prot`.
-    On both, the defaule value for `access` is determined from how the file
-    was opened so must not be passed in at all to get this default behaviour
+    On both, the default value for `access` is determined from how the file
+    was opened so must not be passed in at all to get this default behaviour.
     '''
     if on_win:
         if access:
