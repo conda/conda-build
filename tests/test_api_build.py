@@ -630,6 +630,9 @@ def test_about_json_content(testing_metadata):
     assert 'conda_version' in about and about['conda_version'] == conda.__version__
     assert 'conda_build_version' in about and about['conda_build_version'] == __version__
     assert 'channels' in about and about['channels']
+    assert 'tags' in about and about['tags'] == ["a", "b"]
+    # this one comes in as a string - test type coercion
+    assert 'identifiers' in about and about['identifiers'] == ["a"]
     try:
         assert 'env_vars' in about and about['env_vars']
     except AssertionError:

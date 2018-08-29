@@ -61,7 +61,7 @@ from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse
                                 distribute_variants, expand_outputs, try_download,
                                 add_upstream_pins, execute_download_actions)
 import conda_build.os_utils.external as external
-from conda_build.metadata import FIELDS, MetaData
+from conda_build.metadata import FIELDS, MetaData, default_structs
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
 
@@ -531,6 +531,8 @@ def write_about_json(m):
             value = m.get_value('about/%s' % key)
             if value:
                 d[key] = value
+            if default_structs.get('about/%s' % key) == list:
+                d[key] = utils.ensure_list(value)
 
         # for sake of reproducibility, record some conda info
         d['conda_version'] = conda_version

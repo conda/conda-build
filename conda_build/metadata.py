@@ -400,7 +400,10 @@ default_structs = {
     'source/git_rev': text_type,
     'source/path': text_type,
     'source/git_url': text_type,
-    'app/own_environment': bool
+    'app/own_environment': bool,
+    'about/identifiers': list,
+    'about/keywords': list,
+    'about/tags': list,
 }
 
 
@@ -500,7 +503,8 @@ FIELDS = {
     'test': {'requires', 'commands', 'files', 'imports', 'source_files', 'downstreams'},
     'about': {'home', 'dev_url', 'doc_url', 'doc_source_url', 'license_url',  # these are URLs
               'license', 'summary', 'description', 'license_family',  # text
-              'license_file', 'readme',  # paths in source tree
+              'identifiers', 'tags', 'keywords',   # lists
+              'license_file', 'readme',   # paths in source tree
               },
 }
 
