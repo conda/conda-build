@@ -47,6 +47,10 @@ def parse_args(args):
         default=MAX_THREADS_DEFAULT,
         type=int,
     )
+    p.add_argument(
+        "-p", "--patch-generator",
+        help="Path to Python file that outputs metadata patch instructions"
+    )
 
     args = p.parse_args(args)
     return p, args
@@ -55,7 +59,7 @@ def parse_args(args):
 def execute(args):
     _, args = parse_args(args)
     api.update_index(args.dir, check_md5=args.check_md5, channel_name=args.channel_name,
-                    threads=args.threads, subdir=args.subdir)
+                     threads=args.threads, subdir=args.subdir, patch_generator=args.patch_generator)
 
 
 def main():

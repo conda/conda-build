@@ -957,7 +957,7 @@ def clean_pkg_cache(dist, config):
     if config.debug:
         conda_log_level = logging.DEBUG
 
-    locks = get_pkg_dirs_locks([config.bldpkgs_dir, pkgs_dirs[:1]], config)
+    locks = get_pkg_dirs_locks([config.bldpkgs_dir, pkgs_dirs[0]], config)
     with utils.LoggingContext(conda_log_level):
         with utils.try_acquire_locks(locks, timeout=config.timeout):
             rmplan = [

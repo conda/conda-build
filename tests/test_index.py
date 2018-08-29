@@ -240,3 +240,18 @@ def test_index_noarch_osx64_1():
         }
         assert actual_channeldata_json == expected_channeldata_json
 
+
+def test_gen_patch_py():
+    """
+    This is a channel-wide file that applies to many subdirs.  It must have a function with this signature:
+
+    def _patch_repodata(repodata, subdir):
+
+    That function must return a dictionary of patch instructions.
+
+    """
+    pass
+
+
+def test_channel_patch_instructions_json():
+    pass

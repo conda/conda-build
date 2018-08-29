@@ -236,7 +236,7 @@ def _ensure_valid_channel(local_folder, subdir):
             os.makedirs(path)
 
 
-def update_index(dir_path, check_md5=False, channel_name=None):
+def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=None):
     """
     If dir_path contains a directory named 'noarch', the path tree therein is treated
     as though it's a full channel, with a level of subdirs, each subdir having an update
@@ -247,7 +247,7 @@ def update_index(dir_path, check_md5=False, channel_name=None):
     information will be updated.
 
     """
-    return ChannelIndex(dir_path, channel_name, deep_integrity_check=check_md5).index()
+    return ChannelIndex(dir_path, channel_name, deep_integrity_check=check_md5).index(patch_generator=patch_generator)
 
 
 def update_subdir_index(dir_path, subdir, check_md5=False, channel_name=None):
@@ -720,7 +720,7 @@ class ChannelIndex(object):
         self.thread_executor = ThreadLimitedThreadPoolExecutor(threads)
         self.deep_integrity_check = deep_integrity_check
 
-    def index(self):
+    def index(self, patch_generator):
         log = getLogger(__name__)
         if self._subdirs is None:
             detected_subdirs = set(subdir for subdir in os.listdir(self.channel_root)
@@ -742,7 +742,7 @@ class ChannelIndex(object):
             patched_repodata = {}
             patch_instructions = {}
             for subdir in subdirs:
-                patched_repodata[subdir], patch_instructions[subdir] = self._patch_repodata(subdir, repodata_from_packages[subdir])
+                patched_repodata[subdir], patch_instructions[subdir] = self._patch_repodata(subdir, repodata_from_packages[subdir], patch_generator)
 
             # Step 5. Save patched and augmented repodata.
             for subdir in subdirs:
@@ -1107,9 +1107,9 @@ class ChannelIndex(object):
         content = json.dumps(channeldata, indent=2, sort_keys=True, separators=(',', ': '))
         _maybe_write(channeldata_path, content, True)
 
-    def _create_patch_instructions(self, subdir, repodata):
+    def _create_patch_instructions(self, subdir, repodata, patch_generator=None):
         log = getLogger(__name__)
-        gen_patch_path = join(self.channel_root, 'gen_patch.py')
+        gen_patch_path = patch_generator or join(self.channel_root, 'gen_patch.py')
         if isfile(gen_patch_path):
             log.info("using patch generator %s for %s", gen_patch_path, subdir)
 
@@ -1126,6 +1126,10 @@ class ChannelIndex(object):
 
             return instructions
         else:
+            if patch_generator:
+                raise ValueError("Specified metadata patch file '{}' does not exist.  Please try an absolute "
+                                 "path, or examine your relative path carefully with respect to your cwd."
+                                 .format(patch_generator))
             return {}
 
     def _write_patch_instructions(self, subdir, instructions):
@@ -1145,8 +1149,8 @@ class ChannelIndex(object):
                 return instructions
         return {}
 
-    def _patch_repodata(self, subdir, repodata):
-        instructions = self._create_patch_instructions(subdir, repodata)
+    def _patch_repodata(self, subdir, repodata, patch_generator=None):
+        instructions = self._create_patch_instructions(subdir, repodata, patch_generator)
         if instructions:
             self._write_patch_instructions(subdir, instructions)
         else:

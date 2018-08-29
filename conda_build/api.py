@@ -367,7 +367,7 @@ def create_metapackage(name, version, entry_points=(), build_string=None, build_
                               license_name=license_name, summary=summary, config=config)
 
 
-def update_index(dir_paths, subdir=None, check_md5=False, channel_name=None, threads=None):
+def update_index(dir_paths, subdir=None, check_md5=False, channel_name=None, threads=None, patch_generator=None):
     from locale import getpreferredencoding
     import os
     from .conda_interface import PY3

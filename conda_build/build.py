@@ -51,6 +51,7 @@ from .conda_interface import context
 from .conda_interface import UnsatisfiableError
 from .conda_interface import NoPackagesFoundError
 from .conda_interface import CondaError
+from .conda_interface import pkgs_dirs
 from .utils import env_var
 
 from conda_build import __version__
@@ -1824,6 +1825,16 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
     #     folder destination
     utils.rm_rf(metadata.config.test_dir)
     _extract_test_files_from_package(metadata)
+
+    # When testing a .tar.bz2 in the pkgs dir, clean_pkg_cache() will remove it.
+    # Prevent this. When https://github.com/conda/conda/issues/5708 gets fixed
+    # I think we can remove this call to clean_pkg_cache().
+    in_pkg_cache = (not hasattr(recipedir_or_package_or_metadata, 'config') and
+                    os.path.isfile(recipedir_or_package_or_metadata) and
+                    recipedir_or_package_or_metadata.endswith('.tar.bz2') and
+                    os.path.dirname(recipedir_or_package_or_metadata) in pkgs_dirs[0])
+    if not in_pkg_cache:
+        environ.clean_pkg_cache(metadata.dist(), metadata.config)
 
     copy_test_source_files(metadata, metadata.config.test_dir)
     # this is also copying tests/source_files from work_dir to testing workdir
