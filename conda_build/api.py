@@ -381,4 +381,4 @@ def update_index(dir_paths, subdir=None, check_md5=False, channel_name=None, thr
         if subdir:
             update_subdir_index(path, subdir=subdir, check_md5=check_md5, channel_name=channel_name)
         else:
-            update_index(path, check_md5=check_md5, channel_name=channel_name)
+            update_index(path, check_md5=check_md5, channel_name=channel_name, patch_generator=patch_generator)
