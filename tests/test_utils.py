@@ -210,7 +210,8 @@ def test_expand_globs(testing_workdir):
 
 def test_filter_files():
     # Files that should be filtered out.
-    files_list = ['.git/a', 'something/.git/a', '.git\\a', 'something\\.git\\a']
+    files_list = ['.git/a', 'something/.git/a', '.git\\a', 'something\\.git\\a',
+                 'file.la', 'something/file.la']
     assert not utils.filter_files(files_list, '')
 
     # Files that should *not* be filtered out.
@@ -218,7 +219,7 @@ def test_filter_files():
     #    lib/python3.4/site-packages/craftr/stl/craftr.utils.git/Craftrfile
     files_list = ['a', 'x.git/a', 'something/x.git/a',
                   'x.git\\a', 'something\\x.git\\a', 'something/.gitmodules',
-                  'some/template/directory/.gitignore']
+                  'some/template/directory/.gitignore', 'another.lab']
     assert len(utils.filter_files(files_list, '')) == len(files_list)
 
 
