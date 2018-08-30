@@ -218,7 +218,7 @@ def test_filter_files():
     #    lib/python3.4/site-packages/craftr/stl/craftr.utils.git/Craftrfile
     files_list = ['a', 'x.git/a', 'something/x.git/a',
                   'x.git\\a', 'something\\x.git\\a', 'something/.gitmodules',
-                  'some/template/directory/.gitignore']
+                  'some/template/directory/.gitignore', 'file.la', 'something/file.la']
     assert len(utils.filter_files(files_list, '')) == len(files_list)
 
 
