@@ -462,7 +462,7 @@ def add_parser(repos):
         action='store',
         default=default_python,
         help="""Version of Python to use to run setup.py. Default is %(default)s.""",
-        choices=['2.7', '3.4', '3.5'],
+        choices=['2.7', '3.5', '3.6', '3.7'],
     )
 
     pypi.add_argument(
