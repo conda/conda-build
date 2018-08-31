@@ -1114,10 +1114,16 @@ class ChannelIndex(object):
             log.info("using patch generator %s for %s", gen_patch_path, subdir)
 
             # https://stackoverflow.com/a/41595552/2127762
-            from importlib.util import spec_from_file_location, module_from_spec
-            spec = spec_from_file_location('a_b', gen_patch_path)
-            mod = module_from_spec(spec)
-            spec.loader.exec_module(mod)
+            try:
+                from importlib.util import spec_from_file_location, module_from_spec
+                spec = spec_from_file_location('a_b', gen_patch_path)
+                mod = module_from_spec(spec)
+
+                spec.loader.exec_module(mod)
+            # older pythons
+            except ImportError:
+                import imp
+                mod = imp.load_source('a_b', gen_patch_path)
 
             instructions = mod._patch_repodata(repodata, subdir)
 
