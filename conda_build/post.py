@@ -52,7 +52,8 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
 
     bytes_ = False
 
-    with io.open(path, encoding=locale.getpreferredencoding(), mode='r+') as fi:
+    os.chmod(path, 0o775)
+    with io.open(path, mode='r+', encoding=locale.getpreferredencoding()) as fi:
         try:
             data = fi.read(100)
             fi.seek(0)
@@ -98,7 +99,6 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
             fo.write(new_data)
         except TypeError:
             fo.write(new_data.decode())
-    os.chmod(path, 0o775)
 
 
 def write_pth(egg_path, config):

@@ -50,6 +50,16 @@ def test_postbuild_files_raise(testing_metadata, testing_workdir):
         assert f in str(exc)
 
 
+@pytest.mark.skipif(on_win, reason="fix_shebang is not executed on win32")
+def test_fix_shebang(testing_config):
+    fname = 'test1'
+    with open(fname, 'w') as f:
+        f.write("\n")
+    os.chmod(fname, 0o000)
+    post.fix_shebang(fname, '.', '/test/python')
+    assert os.stat(fname).st_mode == 33277  # file with permissions 0o775
+
+
 def test_postlink_script_in_output_explicit(testing_config):
     recipe = os.path.join(metadata_dir, '_post_link_in_output')
     pkg = api.build(recipe, config=testing_config, notest=True)[0]
