@@ -18,6 +18,7 @@ import string
 import subprocess
 import sys
 import tarfile
+import tempfile
 import hashlib
 import logging
 import time
@@ -1424,6 +1425,9 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                     # pip's cache directory (PIP_NO_CACHE_DIR) should not be
                     # disabled as this results in .egg-info rather than
                     # .dist-info directories being created, see gh-3094
+
+                    # set PIP_CACHE_DIR to a path in the work dir that does not exist.
+                    env['PIP_CACHE_DIR'] = tempfile.mktemp(dir=m.config.work_dir)
 
                     work_file = join(m.config.work_dir, 'conda_build.sh')
                     with open(work_file, 'w') as bf:
