@@ -21,6 +21,7 @@ from .conda_interface import envs_dirs
 from .conda_interface import string_types
 
 from conda_build import exceptions, utils, variants, environ
+from conda_build.conda_interface import memoized
 from conda_build.features import feature_list
 from conda_build.config import Config, get_or_merge_config
 from conda_build.utils import (ensure_list, find_recipe, expand_globs, get_installed_packages,
@@ -745,6 +746,7 @@ def _filter_recipe_text(text, extract_pattern=None):
     return text
 
 
+@memoized
 def read_meta_file(meta_path):
     with open(meta_path, 'rb') as f:
         recipe_text = UnicodeDammit(f.read()).unicode_markup
