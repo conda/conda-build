@@ -100,31 +100,31 @@ class FilteredLoader(jinja2.BaseLoader):
                              variants_in_place=bool(self.config.variant)), filename, uptodate)
 
 
-def load_setup_py_data(config, setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
+def load_setup_py_data(m, setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
                        permit_undefined_jinja=True):
     _setuptools_data = None
     # we must copy the script into the work folder to avoid incompatible pyc files
     origin_setup_script = os.path.join(os.path.dirname(__file__), '_load_setup_py_data.py')
-    dest_setup_script = os.path.join(config.work_dir, '_load_setup_py_data.py')
+    dest_setup_script = os.path.join(m.config.work_dir, '_load_setup_py_data.py')
     copy_into(origin_setup_script, dest_setup_script)
-    if os.path.isfile(config.build_python):
-        args = [config.build_python, dest_setup_script, config.work_dir, setup_file]
+    if os.path.isfile(m.config.build_python):
+        args = [m.config.build_python, dest_setup_script, m.config.work_dir, setup_file]
         if from_recipe_dir:
             assert recipe_dir, 'recipe_dir must be set if from_recipe_dir is True'
             args.append('--from-recipe-dir')
             args.extend(['--recipe-dir', recipe_dir])
         if permit_undefined_jinja:
             args.append('--permit-undefined-jinja')
-        check_call_env(args, env=get_environ(config))
+        check_call_env(args, env=get_environ(m))
         # this is a file that the subprocess will have written
-        with open(os.path.join(config.work_dir, 'conda_build_loaded_setup_py.json')) as f:
+        with open(os.path.join(m.config.work_dir, 'conda_build_loaded_setup_py.json')) as f:
             _setuptools_data = json.load(f)
     else:
         try:
             _setuptools_data = _load_setup_py_data.load_setup_py_data(setup_file,
                                                     from_recipe_dir=from_recipe_dir,
                                                     recipe_dir=recipe_dir,
-                                                    work_dir=config.work_dir,
+                                                    work_dir=m.config.work_dir,
                                                     permit_undefined_jinja=permit_undefined_jinja)
         except (TypeError, OSError):
             # setup.py file doesn't yet exist.  Will get picked up in future parsings
@@ -139,16 +139,16 @@ def load_setup_py_data(config, setup_file='setup.py', from_recipe_dir=False, rec
                 raise CondaBuildException("Could not render recipe - need modules "
                                         "installed in root env.  Import error was \"{}\"".format(e))
     # cleanup: we must leave the source tree empty unless the source code is already present
-    rm_rf(os.path.join(config.work_dir, '_load_setup_py_data.py'))
+    rm_rf(os.path.join(m.config.work_dir, '_load_setup_py_data.py'))
     return _setuptools_data if _setuptools_data else {}
 
 
-def load_setuptools(config, setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
+def load_setuptools(m, setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
                     permit_undefined_jinja=True):
     log = get_logger(__name__)
     log.warn("Deprecation notice: the load_setuptools function has been renamed to "
              "load_setup_py_data.  load_setuptools will be removed in a future release.")
-    return load_setup_py_data(config=config, setup_file=setup_file, from_recipe_dir=from_recipe_dir,
+    return load_setup_py_data(m, setup_file=setup_file, from_recipe_dir=from_recipe_dir,
                               recipe_dir=recipe_dir, permit_undefined_jinja=permit_undefined_jinja)
 
 
@@ -498,10 +498,10 @@ def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jin
     environ.update(get_environ(m=initial_metadata, skip_build_id=skip_build_id))
 
     ctx.update(
-        load_setup_py_data=partial(load_setup_py_data, config=config, recipe_dir=recipe_dir,
+        load_setup_py_data=partial(load_setup_py_data, m=initial_metadata, recipe_dir=recipe_dir,
                                    permit_undefined_jinja=permit_undefined_jinja),
         # maintain old alias for backwards compatibility:
-        load_setuptools=partial(load_setuptools, config=config, recipe_dir=recipe_dir,
+        load_setuptools=partial(load_setuptools, m=initial_metadata, recipe_dir=recipe_dir,
                                 permit_undefined_jinja=permit_undefined_jinja),
         load_npm=load_npm,
         load_file_regex=partial(load_file_regex, config=config, recipe_dir=recipe_dir,
