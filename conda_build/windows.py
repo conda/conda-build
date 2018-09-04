@@ -314,6 +314,10 @@ def build(m, bld_bat, stats, provision_only=False):
     # set PIP_CACHE_DIR to a path in the work dir that does not exist.
     env['PIP_CACHE_DIR'] = m.config.pip_cache_dir
 
+    # tell pip to not get anything from PyPI, please.  We have everything we need
+    # locally, and if we don't, it's a problem.
+    env["PIP_NO_INDEX"] = True
+
     # set variables like CONDA_PY in the test environment
     env.update(set_language_env_vars(m.config.variant))
 
