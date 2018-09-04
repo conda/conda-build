@@ -150,7 +150,7 @@ except ImportError:  # pragma: no cover
 
 def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
                     omit_defaults=False, channel_urls=None, debug=False, verbose=True,
-                    locking=True, timeout=90):
+                    **kwargs):
     global local_index_timestamp
     global local_subdir
     global cached_index
@@ -236,7 +236,7 @@ def _ensure_valid_channel(local_folder, subdir):
             os.makedirs(path)
 
 
-def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=None):
+def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=None, threads=None):
     """
     If dir_path contains a directory named 'noarch', the path tree therein is treated
     as though it's a full channel, with a level of subdirs, each subdir having an update
@@ -247,10 +247,10 @@ def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=N
     information will be updated.
 
     """
-    return ChannelIndex(dir_path, channel_name, deep_integrity_check=check_md5).index(patch_generator=patch_generator)
+    return ChannelIndex(dir_path, channel_name, deep_integrity_check=check_md5, threads=threads).index(patch_generator=patch_generator)
 
 
-def update_subdir_index(dir_path, subdir, check_md5=False, channel_name=None):
+def update_subdir_index(dir_path, subdir, check_md5=False, channel_name=None, threads=None):
     """
     Update all index files in dir_path with changed packages.
 
@@ -258,7 +258,7 @@ def update_subdir_index(dir_path, subdir, check_md5=False, channel_name=None):
                       if a package changed.
     :type check_md5: bool
     """
-    return ChannelIndex(dir_path, channel_name, deep_integrity_check=check_md5).index_subdir(subdir)
+    return ChannelIndex(dir_path, channel_name, deep_integrity_check=check_md5, threads=threads).index_subdir(subdir)
 
 
 def _determine_namespace(info):
@@ -479,9 +479,10 @@ def _warn_on_ambiguous_namekeys(ambiguous_namekeys, subdirs, patched_repodata):
                     popped = patched_repodata[subdir]["packages"].pop(fn, None)
                     if popped:
                         patched_repodata[subdir]["removed"].append(fn)
-        builder.append("The associated packages are being removed from the index.")
+        # we remove them from the v2 repodata, not b1
+        # builder.append("The associated packages are being removed from the index.")
         builder.append('')
-        print("\n".join(builder))
+        getLogger(__name__).warn("\n".join(builder))
 
 
 def _add_namespace_to_spec(fn, info, dep_str, namemap, missing_dependencies, subdir):
@@ -545,7 +546,7 @@ def _warn_on_missing_dependencies(missing_dependencies, patched_repodata):
 
         builder.append("The associated packages are being removed from the index.")
         builder.append('')
-        print("\n".join(builder))
+        getLogger(__name__).warn("\n".join(builder))
 
 
 def _augment_repodata(subdirs, patched_repodata, patch_instructions):
