@@ -8,6 +8,7 @@ from __future__ import absolute_import, division, print_function
 
 from collections import OrderedDict, defaultdict
 from locale import getpreferredencoding
+import json
 import os
 from os.path import isdir, isfile, abspath
 import random
@@ -216,9 +217,16 @@ def _read_specs_from_package(pkg_loc, pkg_dist):
         elif os.path.isfile(downstream_file + '.yaml'):
             with open(downstream_file + '.yaml') as f:
                 specs = yaml.safe_load(f)
+        elif os.path.isfile(downstream_file + '.json'):
+            with open(downstream_file + '.json') as f:
+                specs = json.load(f)
     if not specs and os.path.isfile(pkg_loc):
+        # switching to json for consistency in conda-build 4
         specs_yaml = utils.package_has_file(pkg_loc, 'info/run_exports.yaml')
-        if specs_yaml:
+        specs_json = utils.package_has_file(pkg_loc, 'info/run_exports.json')
+        if specs_json:
+            specs = json.loads(specs_json)
+        elif specs_yaml:
             specs = yaml.safe_load(specs_yaml)
         else:
             legacy_specs = utils.package_has_file(pkg_loc, 'info/run_exports')

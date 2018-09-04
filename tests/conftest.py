@@ -57,6 +57,8 @@ def testing_metadata(request, testing_config):
     d['about']['home'] = "sweet home"
     d['about']['license'] = "contract in blood"
     d['about']['summary'] = "a test package"
+    d['about']['tags'] = ['a', 'b']
+    d['about']['identifiers'] = 'a'
     testing_config.variant = get_default_variant(testing_config)
     testing_config.variants = [testing_config.variant]
     return MetaData.fromdict(d, config=testing_config)

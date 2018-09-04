@@ -47,7 +47,7 @@ setup(
                             'conda-skeleton = conda_build.cli.main_skeleton:main',
                             ]},
     install_requires=['conda', 'requests', 'filelock', 'pyyaml', 'jinja2', 'pkginfo',
-                      'glob2', 'beautifulsoup4'],
+                      'glob2', 'beautifulsoup4', 'pytz'],
     package_data={'conda_build': ['templates/*', 'cli-*.exe']},
     zip_safe=False,
 )

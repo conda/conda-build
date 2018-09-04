@@ -4,6 +4,7 @@ import base64
 from collections import defaultdict
 import contextlib
 import fnmatch
+import hashlib
 import json
 from locale import getpreferredencoding
 import logging
@@ -1255,6 +1256,7 @@ def filter_info_files(files_list, prefix):
                     'info[\\\\/]hash_input_files',   # legacy, not used anymore
                     'info[\\\\/]hash_input.json',
                     'info[\\\\/]run_exports.yaml',
+                    'info[\\\\/]run_exports.json',
                     'info[\\\\/]git',
                     'info[\\\\/]recipe[\\\\/].*',
                     'info[\\\\/]recipe.tar',
@@ -1617,3 +1619,13 @@ def expand_reqs(reqs_entry):
         for sec in reqs_entry:
             reqs_entry[sec] = ensure_list(reqs_entry[sec])
     return reqs_entry
+
+
+def sha256_checksum(filename, buffersize=65536):
+    if not isfile(filename):
+        return None
+    sha256 = hashlib.sha256()
+    with open(filename, 'rb') as f:
+        for block in iter(lambda: f.read(buffersize), b''):
+            sha256.update(block)
+    return sha256.hexdigest()

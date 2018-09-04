@@ -40,6 +40,7 @@ requirements:
     - scandir       # [py<34]
     - six
     - glob2  >=0.6
+    - pytz
 
 test:
   requires:

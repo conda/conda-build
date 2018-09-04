@@ -109,7 +109,7 @@ def test_token_upload(testing_workdir, testing_metadata):
     testing_metadata.config.token = args.token
 
     # the folder with the test recipe to upload
-    api.build(testing_metadata)
+    api.build(testing_metadata, notest=True)
 
     # make sure that the package is available (should raise if it doesn't)
     show.main(args)
@@ -124,7 +124,7 @@ def test_token_upload(testing_workdir, testing_metadata):
 
 @pytest.mark.parametrize("service_name", ["binstar", "anaconda"])
 def test_no_anaconda_upload_condarc(service_name, testing_workdir, testing_config, capfd):
-    api.build(empty_sections, config=testing_config)
+    api.build(empty_sections, config=testing_config, notest=True)
     output, error = capfd.readouterr()
     assert "Automatic uploading is disabled" in output, error
 
@@ -156,7 +156,7 @@ def test_no_include_recipe_config_arg(testing_metadata):
 def test_no_include_recipe_meta_yaml(testing_metadata, testing_config):
     # first, make sure that the recipe is there by default.  This test copied from above, but copied
     # as a sanity check here.
-    outputs = api.build(testing_metadata)
+    outputs = api.build(testing_metadata, notest=True)
     assert package_has_file(outputs[0], "info/recipe/meta.yaml")
 
     output_file = api.build(os.path.join(metadata_dir, '_no_include_recipe'),
@@ -361,12 +361,7 @@ def test_skip_existing_url(testing_metadata, testing_workdir, capfd):
     copy_into(outputs[0], os.path.join(platform, os.path.basename(outputs[0])))
 
     # create the index so conda can find the file
-    api.update_index(platform, config=testing_metadata.config)
-
-    # HACK: manually create noarch location there, so that conda 4.3.2+ considers a valid channel
-    noarch = os.path.join(output_dir, 'noarch')
-    os.makedirs(noarch)
-    api.update_index(noarch, config=testing_metadata.config)
+    api.update_index(output_dir)
 
     testing_metadata.config.skip_existing = True
     testing_metadata.config.channel_urls = [url_path(output_dir)]
@@ -635,6 +630,9 @@ def test_about_json_content(testing_metadata):
     assert 'conda_version' in about and about['conda_version'] == conda.__version__
     assert 'conda_build_version' in about and about['conda_build_version'] == __version__
     assert 'channels' in about and about['channels']
+    assert 'tags' in about and about['tags'] == ["a", "b"]
+    # this one comes in as a string - test type coercion
+    assert 'identifiers' in about and about['identifiers'] == ["a"]
     try:
         assert 'env_vars' in about and about['env_vars']
     except AssertionError:
@@ -1063,8 +1061,7 @@ def test_run_constrained_stores_constrains_info(testing_config):
 
 def test_no_locking(testing_config):
     recipe = os.path.join(metadata_dir, 'source_git_jinja2')
-    api.update_index(os.path.join(testing_config.croot, testing_config.subdir),
-                     config=testing_config)
+    api.update_index(os.path.join(testing_config.croot))
     api.build(recipe, config=testing_config, locking=False)
 
 
@@ -1127,8 +1124,7 @@ def test_python_xx(testing_config):
 
 def test_indirect_numpy_dependency(testing_metadata):
     testing_metadata.meta['requirements']['build'] = ['pandas']
-    testing_metadata.config.channel_urls = ['conda-forge']
-    api.build(testing_metadata, numpy=1.13)
+    api.build(testing_metadata, numpy=1.13, notest=True)
 
 
 def test_dependencies_with_notest(testing_workdir, testing_config):

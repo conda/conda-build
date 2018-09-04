@@ -18,7 +18,6 @@ import string
 import subprocess
 import sys
 import tarfile
-import hashlib
 import logging
 import time
 
@@ -43,7 +42,7 @@ from .conda_interface import PathType, FileMode
 from .conda_interface import EntityEncoder
 from .conda_interface import get_rc_urls
 from .conda_interface import url_path
-from .conda_interface import root_dir, pkgs_dirs
+from .conda_interface import root_dir
 from .conda_interface import conda_private
 from .conda_interface import dist_str_in_index
 from .conda_interface import MatchSpec
@@ -52,6 +51,7 @@ from .conda_interface import context
 from .conda_interface import UnsatisfiableError
 from .conda_interface import NoPackagesFoundError
 from .conda_interface import CondaError
+from .conda_interface import pkgs_dirs
 from .utils import env_var
 
 from conda_build import __version__
@@ -61,7 +61,7 @@ from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse
                                 distribute_variants, expand_outputs, try_download,
                                 add_upstream_pins, execute_download_actions)
 import conda_build.os_utils.external as external
-from conda_build.metadata import FIELDS, MetaData
+from conda_build.metadata import FIELDS, MetaData, default_structs
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
 
@@ -531,6 +531,8 @@ def write_about_json(m):
             value = m.get_value('about/%s' % key)
             if value:
                 d[key] = value
+            if default_structs.get('about/%s' % key) == list:
+                d[key] = utils.ensure_list(value)
 
         # for sake of reproducibility, record some conda info
         d['conda_version'] = conda_version
@@ -609,13 +611,13 @@ def get_entry_point_script_names(entry_point_scripts):
 def write_run_exports(m):
     run_exports = m.meta.get('build', {}).get('run_exports', {})
     if run_exports:
-        with open(os.path.join(m.config.info_dir, 'run_exports.yaml'), 'w') as f:
+        with open(os.path.join(m.config.info_dir, 'run_exports.json'), 'w') as f:
             if not hasattr(run_exports, 'keys'):
                 run_exports = {'weak': run_exports}
             for k in ('weak', 'strong'):
                 if k in run_exports:
                     run_exports[k] = utils.ensure_list(run_exports[k])
-            yaml.dump(run_exports, f)
+            json.dump(run_exports, f)
 
 
 def create_info_files(m, files, prefix):
@@ -688,16 +690,6 @@ def get_short_path(m, target_file):
         return target_file
 
 
-def sha256_checksum(filename, buffersize=65536):
-    if not isfile(filename):
-        return None
-    sha256 = hashlib.sha256()
-    with open(filename, 'rb') as f:
-        for block in iter(lambda: f.read(buffersize), b''):
-            sha256.update(block)
-    return sha256.hexdigest()
-
-
 def has_prefix(short_path, files_with_prefix):
     for prefix, mode, filename in files_with_prefix:
         if short_path == filename:
@@ -734,7 +726,7 @@ def build_info_files_json_v1(m, prefix, files, files_with_prefix):
             short_path = short_path.replace('\\', '/').replace('\\\\', '/')
         file_info = {
             "_path": short_path,
-            "sha256": sha256_checksum(path),
+            "sha256": utils.sha256_checksum(path),
             "size_in_bytes": os.path.getsize(path),
             "path_type": path_type(path),
         }
@@ -1021,18 +1013,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
         #    a major bottleneck.
         utils.copy_into(tmp_path, final_output, metadata.config.timeout,
                         locking=False)
-    update_index(output_folder, verbose=metadata.config.verbose, locking=metadata.config.locking,
-                 timeout=metadata.config.timeout)
-
-    # HACK: conda really wants a noarch folder to be around.  Create it as necessary.
-    if os.path.basename(output_folder) != 'noarch':
-        try:
-            os.makedirs(os.path.join(os.path.dirname(output_folder), 'noarch'))
-        except OSError:
-            pass
-        update_index(os.path.join(os.path.dirname(output_folder), 'noarch'),
-                     verbose=metadata.config.verbose, locking=metadata.config.locking,
-                    timeout=metadata.config.timeout)
+    update_index(os.path.dirname(output_folder))
 
     # clean out host prefix so that this output's files don't interfere with other outputs
     #   We have a backup of how things were before any output scripts ran.  That's
@@ -1231,6 +1212,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
             return default_return
 
         print("BUILD START:", [os.path.basename(pkg) for pkg in package_locations])
+        environ.remove_existing_packages(m.config.bldpkgs_dir, package_locations, m.config)
 
         specs = [ms.spec for ms in m.ms_depends('build')]
         if any(out.get('type') == 'wheel' for out in m.meta.get('outputs', [])):
@@ -1852,7 +1834,7 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
     in_pkg_cache = (not hasattr(recipedir_or_package_or_metadata, 'config') and
                     os.path.isfile(recipedir_or_package_or_metadata) and
                     recipedir_or_package_or_metadata.endswith('.tar.bz2') and
-                    os.path.dirname(recipedir_or_package_or_metadata) in pkgs_dirs[:1])
+                    os.path.dirname(recipedir_or_package_or_metadata) in pkgs_dirs[0])
     if not in_pkg_cache:
         environ.clean_pkg_cache(metadata.dist(), metadata.config)
 
@@ -2481,7 +2463,7 @@ def is_package_built(metadata, env, include_local=True):
     for d in metadata.config.bldpkgs_dirs:
         if not os.path.isdir(d):
             os.makedirs(d)
-            update_index(d, metadata.config, could_be_mirror=False)
+            update_index(d)
     subdir = getattr(metadata.config, '{}_subdir'.format(env))
     index, index_ts = get_build_index(subdir=subdir,
                                       bldpkgs_dir=metadata.config.bldpkgs_dir,

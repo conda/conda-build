@@ -124,6 +124,7 @@ cc_platform = context.platform
 root_dir = context.root_dir
 root_writable = context.root_writable
 subdir = context.subdir
+create_default_packages = context.create_default_packages
 
 get_rc_urls = lambda: list(context.channels)
 get_prefix = partial(context_get_prefix, context)

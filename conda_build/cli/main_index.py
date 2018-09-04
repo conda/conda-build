@@ -7,7 +7,7 @@ import sys
 from conda_build.conda_interface import ArgumentParser
 
 from conda_build import api
-from conda_build.config import Config
+from conda_build.index import DEFAULT_SUBDIRS, MAX_THREADS_DEFAULT
 
 logging.basicConfig(level=logging.INFO)
 
@@ -26,35 +26,30 @@ def parse_args(args):
     p.add_argument(
         '-c', "--check-md5",
         action="store_true",
-        help="""Use MD5 values instead of file modification times for determining if a
+        help="""Use hash values instead of file modification times for determining if a
         package's metadata needs to be updated.""",
     )
-
     p.add_argument(
-        '-f', "--force",
-        action="store_true",
-        help="Force reading all files.",
-    )
-
-    p.add_argument(
-        '-q', "--quiet",
-        action="store_true",
-        help="Don't show any output.",
-    )
-
-    p.add_argument(
-        '--no-remove',
-        action="store_false",
-        dest="remove",
-        default=True,
-        help="Don't remove entries for files that don't exist.",
-    )
-
-    p.add_argument(
-        '--channel-name',
-        action="store",
+        'channel_name',
+        help='Adding a channel name will create an index.html file within the subdir.',
+        nargs='?',
         default=None,
-        help="Adding a channel name will create an index.html file within the subdir.",
+    )
+    p.add_argument(
+        '-s', '--subdir',
+        action='append',
+        help='Optional. The subdir to index. Can be given multiple times. If not provided, will '
+             'default to all of %s. If provided, will not create channeldata.json for the channel.'
+             '' % ', '.join(DEFAULT_SUBDIRS),
+    )
+    p.add_argument(
+        '-t', '--threads',
+        default=MAX_THREADS_DEFAULT,
+        type=int,
+    )
+    p.add_argument(
+        "-p", "--patch-generator",
+        help="Path to Python file that outputs metadata patch instructions"
     )
 
     args = p.parse_args(args)
@@ -63,12 +58,8 @@ def parse_args(args):
 
 def execute(args):
     _, args = parse_args(args)
-    config = Config(**args.__dict__)
-    config.verbose = not args.quiet
-
-    api.update_index(args.dir, config=config, force=args.force,
-            check_md5=args.check_md5, remove=args.remove,
-                     channel_name=args.channel_name)
+    api.update_index(args.dir, check_md5=args.check_md5, channel_name=args.channel_name,
+                     threads=args.threads, subdir=args.subdir, patch_generator=args.patch_generator)
 
 
 def main():

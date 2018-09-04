@@ -1,0 +1,25 @@
+package:
+  name: index_hotfix_pkgs
+  version: 1.0
+
+outputs:
+  - name: track_features_test
+    build:
+      # we'll test that we can remove the track_features.  This is analogous to what we do with vc and nomkl.
+      track_features:
+        - dummy
+  - name: hotfix_depends_test
+    build:
+      # we'll test that we can remove the features.  This is analogous to what we do with vc and nomkl.
+      features:
+        - dummy
+    requirements:
+      run:
+        # we'll test that we add a dependency in a hotfix here.  The other dependency should remain.
+        - zlib
+  - name: revoke_test
+    requirements:
+      run:
+        # we'll test that we add a "package_has_been_revoked" dependency here.  The other dependency should remain.
+        - zlib
+  - name: remove_test
