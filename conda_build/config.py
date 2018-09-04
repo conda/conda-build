@@ -165,7 +165,10 @@ def _get_default_settings():
             Setting('stats_file', None),
 
             # extra deps to add to test env creation
-            Setting('extra_deps', [])
+            Setting('extra_deps', []),
+
+            # customize this so pip doesn't look in places we don't want.  Per-build path by default.
+            Setting('_pip_cache_dir', None)
             ]
 
 
@@ -698,6 +701,16 @@ class Config(object):
         #         if os.path.isdir(dir_path):
         #             return dir_path
         return path
+
+    @property
+    def pip_cache_dir(self):
+        path = self._pip_cache_dir or join(self.build_folder, 'pip_cache')
+        _ensure_dir(path)
+        return path
+
+    @pip_cache_dir.setter
+    def pip_cache_dir(self, path):
+        self._pip_cache_dir = path
 
     @property
     def test_dir(self):

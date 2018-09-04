@@ -1403,9 +1403,12 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                     #    See note above about inverted logic on "NO" variables
                     env["PIP_NO_DEPENDENCIES"] = False
                     env["PIP_IGNORE_INSTALLED"] = True
-                    # disable use of pip's cache directory.
-                    #    See note above about inverted logic on "NO" variables
-                    env["PIP_NO_CACHE_DIR"] = False
+                    # pip's cache directory (PIP_NO_CACHE_DIR) should not be
+                    # disabled as this results in .egg-info rather than
+                    # .dist-info directories being created, see gh-3094
+
+                    # set PIP_CACHE_DIR to a path in the work dir that does not exist.
+                    env['PIP_CACHE_DIR'] = m.config.pip_cache_dir
 
                     work_file = join(m.config.work_dir, 'conda_build.sh')
                     with open(work_file, 'w') as bf:
