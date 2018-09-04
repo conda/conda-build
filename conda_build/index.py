@@ -1052,9 +1052,9 @@ class ChannelIndex(object):
         return _maybe_write(index_path, rendered_html)
 
     def _write_channeldata_rss(self, channeldata, package_mtimes):
-        twenty_four_hours_ago = time.time() - 24 * 3600
+        two_weeks_ago = time.time() - 14 * 24 * 3600
         current = {name: mtime for name, mtime in package_mtimes.items()
-                   if mtime > twenty_four_hours_ago}
+                   if mtime > two_weeks_ago}
         package_order = sorted(current, key=lambda x: current[x], reverse=True)
 
         environment = _get_jinja2_environment()

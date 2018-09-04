@@ -367,7 +367,8 @@ def create_metapackage(name, version, entry_points=(), build_string=None, build_
                               license_name=license_name, summary=summary, config=config)
 
 
-def update_index(dir_paths, subdir=None, check_md5=False, channel_name=None, threads=None, patch_generator=None):
+def update_index(dir_paths, check_md5=False, channel_name=None, subdir=None, threads=None, patch_generator=None,
+                 **kwargs):
     from locale import getpreferredencoding
     import os
     from .conda_interface import PY3
@@ -379,6 +380,6 @@ def update_index(dir_paths, subdir=None, check_md5=False, channel_name=None, thr
 
     for path in dir_paths:
         if subdir:
-            update_subdir_index(path, subdir=subdir, check_md5=check_md5, channel_name=channel_name)
+            update_subdir_index(path, subdir=subdir, check_md5=check_md5, channel_name=channel_name, threads=threads)
         else:
-            update_index(path, check_md5=check_md5, channel_name=channel_name, patch_generator=patch_generator)
+            update_index(path, check_md5=check_md5, channel_name=channel_name, patch_generator=patch_generator, threads=threads)
