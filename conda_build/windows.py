@@ -3,6 +3,7 @@ from __future__ import absolute_import, division, print_function
 import os
 import sys
 from os.path import isdir, join, dirname, isfile
+import tempfile
 
 # importing setuptools patches distutils so that it knows how to find VC for python 2.7
 import setuptools  # noqa
@@ -275,9 +276,12 @@ def build(m, bld_bat, stats):
     #    See note above about inverted logic on "NO" variables
     env["PIP_NO_DEPENDENCIES"] = False
     env["PIP_IGNORE_INSTALLED"] = True
-    # disable use of pip's cache directory.
-    #    See note above about inverted logic on "NO" variables
-    env["PIP_NO_CACHE_DIR"] = False
+
+    # pip's cache directory (PIP_NO_CACHE_DIR) should not be
+    # disabled as this results in .egg-info rather than
+    # .dist-info directories being created, see gh-3094
+    # set PIP_CACHE_DIR to a path in the work dir that does not exist.
+    env['PIP_CACHE_DIR'] = m.config.pip_cache_dir
 
     # set variables like CONDA_PY in the test environment
     env.update(set_language_env_vars(m.config.variant))
