@@ -18,7 +18,6 @@ import string
 import subprocess
 import sys
 import tarfile
-import logging
 import time
 
 # this is to compensate for a requests idna encoding error.  Conda is a better place to fix,
@@ -388,7 +387,7 @@ def copy_test_source_files(m, destination):
                         utils.copy_into(f, f.replace(src_dir, destination), m.config.timeout,
                                 locking=False, clobber=True)
                     except OSError as e:
-                        log = logging.getLogger(__name__)
+                        log = utils.get_logger(__name__)
                         log.warn("Failed to copy {0} into test files.  Error was: {1}".format(f,
                                                                                             str(e)))
                 for ext in '.pyc', '.pyo':
@@ -1013,7 +1012,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
         #    a major bottleneck.
         utils.copy_into(tmp_path, final_output, metadata.config.timeout,
                         locking=False)
-    update_index(os.path.dirname(output_folder))
+    update_index(os.path.dirname(output_folder), verbose=metadata.config.verbose)
 
     # clean out host prefix so that this output's files don't interfere with other outputs
     #   We have a backup of how things were before any output scripts ran.  That's
@@ -1737,7 +1736,7 @@ def _construct_metadata_for_test_from_package(package, config):
     for pattern in ('win-*', 'linux-*', 'osx-*', 'noarch'):
         for folder in glob(os.path.join(local_channel, pattern)):
             log.info("Updating index at %s to make package installable with dependencies" % folder)
-            update_index(folder)
+            update_index(folder, verbose=config.verbose)
 
     try:
         metadata = render_recipe(os.path.join(info_dir, 'recipe'), config=config,
@@ -2081,7 +2080,7 @@ def tests_failed(package_or_metadata, move_broken, broken_dir, config):
         log.warn('Tests failed for %s - moving package to %s' % (os.path.basename(pkg),
                  broken_dir))
         shutil.move(pkg, dest)
-        update_index(os.path.dirname(pkg))
+        update_index(os.path.dirname(pkg), verbose=config.verbose)
     sys.exit("TESTS FAILED: " + os.path.basename(pkg))
 
 
@@ -2466,7 +2465,7 @@ def is_package_built(metadata, env, include_local=True):
     for d in metadata.config.bldpkgs_dirs:
         if not os.path.isdir(d):
             os.makedirs(d)
-            update_index(d)
+            update_index(d, verbose=metadata.config.verbose)
     subdir = getattr(metadata.config, '{}_subdir'.format(env))
     index, index_ts = get_build_index(subdir=subdir,
                                       bldpkgs_dir=metadata.config.bldpkgs_dir,

@@ -7,10 +7,9 @@ import struct
 import sys
 import logging
 
-from conda_build.utils import ensure_list
+from conda_build.utils import ensure_list, get_logger
 
 logging.basicConfig(level=logging.INFO)
-log = logging.getLogger(__name__)
 
 
 '''
@@ -676,7 +675,7 @@ class elfheader(object):
         self.shstrndx, = struct.unpack(endian + 'H', file.read(2))
         loc = file.tell()
         if loc != self.ehsize:
-            log.warning('file.tell()={} != ehsize={}'.format(loc, self.ehsize))
+            get_logger(__name__).warning('file.tell()={} != ehsize={}'.format(loc, self.ehsize))
 
     def __str__(self):
         return 'bitness {}, endian {}, version {}, type {}, machine {}, entry {}'.format( # noqa
@@ -1027,7 +1026,7 @@ def _inspect_linkages_this(filename, sysroot='', arch='native'):
         except IncompleteRead:
             # the file was incomplete, can occur if a package ships a test file
             # which looks like an ELF file but is not.  Orange3 does this.
-            log.warning('problems inspecting linkages for {}'.format(filename))
+            get_logger(__name__).warning('problems inspecting linkages for {}'.format(filename))
             return None, [], []
         dirname = os.path.dirname(filename)
         results = cf.get_resolved_shared_libraries(dirname, dirname, sysroot)

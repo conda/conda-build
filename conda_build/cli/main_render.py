@@ -168,13 +168,15 @@ def execute(args):
 
     config.override_channels = args.override_channels
 
+    if args.output:
+        config.verbose = False
+        config.debug = False
+
     metadata_tuples = api.render(args.recipe, config=config,
                                  no_download_source=args.no_source)
 
     if args.output:
         with LoggingContext(logging.CRITICAL + 1):
-            config.verbose = False
-            config.debug = False
             paths = api.get_output_file_paths(metadata_tuples, config=config)
             print('\n'.join(sorted(paths)))
     else:

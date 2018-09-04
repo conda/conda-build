@@ -88,6 +88,7 @@ def get_output_file_paths(recipe_path_or_metadata, no_download_source=False, con
     from conda_build.conda_interface import string_types
     from conda_build.utils import get_skip_message
     config = get_or_merge_config(config, **kwargs)
+
     if hasattr(recipe_path_or_metadata, '__iter__') and not isinstance(recipe_path_or_metadata,
                                                                        string_types):
         list_of_metas = [hasattr(item[0], 'config') for item in recipe_path_or_metadata
