@@ -1044,7 +1044,8 @@ def find_recipe(path):
 class LoggingContext(object):
     loggers = ['conda', 'binstar', 'install', 'conda.install', 'fetch', 'conda.instructions',
                'fetch.progress', 'print', 'progress', 'dotupdate', 'stdoutlog', 'requests',
-               'conda.core.package_cache', 'conda.plan', 'conda.gateways.disk.delete']
+               'conda.core.package_cache', 'conda.plan', 'conda.gateways.disk.delete',
+               'conda_build', 'conda_build.index']
 
     def __init__(self, level=logging.WARN, handler=None, close=True):
         self.level = level

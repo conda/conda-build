@@ -88,6 +88,7 @@ def handle_file(f, d, prefix):
     # No special treatment for other files
     # leave them as-is
     else:
+        # this should be the built-in logging module, not conda-build's stuff, because this file is standalone.
         log = logging.getLogger(__name__)
         log.debug("Don't know how to handle file: %s.  Including it as-is." % f)
 

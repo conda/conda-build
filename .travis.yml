@@ -45,6 +45,8 @@ install:
   - conda config --set always_yes yes
   - conda config --set auto_update_conda False
   - conda config --add create_default_packages nomkl
+  # avoids a python 3.7 problem
+  - conda install -q cytoolz
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
       conda install -q futures scandir;
     fi

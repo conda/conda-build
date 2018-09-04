@@ -124,7 +124,7 @@ else:
 
 @pytest.mark.skipif(not _has_read_configuration,
                     reason="setuptools <30.3.0 cannot read metadata / options from 'setup.cfg'")
-def test_load_setup_py_data_from_setup_cfg(testing_config, tmpdir):
+def test_load_setup_py_data_from_setup_cfg(testing_metadata, tmpdir):
     setup_py = tmpdir.join('setup.py')
     setup_cfg = tmpdir.join('setup.cfg')
     setup_py.write(
@@ -139,7 +139,7 @@ def test_load_setup_py_data_from_setup_cfg(testing_config, tmpdir):
         'extra = extra_package\n'
     )
     setup_file = str(setup_py)
-    setuptools_data = jinja_context.load_setup_py_data(testing_config, setup_file)
+    setuptools_data = jinja_context.load_setup_py_data(testing_metadata, setup_file)
     # ensure that setup.cfg has priority over setup.py
     assert setuptools_data['name'] == 'name_from_setup_cfg'
     assert setuptools_data['version'] == 'version_from_setup_cfg'

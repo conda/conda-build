@@ -103,7 +103,12 @@ def ns_cfg(config):
                     py35=bool(py == 35),
                     py36=bool(py == 36),))
 
-    np = config.variant.get('numpy', defaults['numpy'])
+    np = config.variant.get('numpy')
+    if not np:
+        np = defaults['numpy']
+        if config.verbose:
+            utils.get_logger(__name__).warn("No numpy version specified in conda_build_config.yaml.  "
+                                            "Falling back to default numpy value of {}".format(defaults['numpy']))
     d['np'] = int("".join(np.split('.')[:2]))
 
     pl = config.variant.get('perl', defaults['perl'])
