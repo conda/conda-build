@@ -107,7 +107,8 @@ def ns_cfg(config):
     if not np:
         np = defaults['numpy']
         if config.verbose:
-            utils.get_logger(__name__).warn("No numpy version specified in conda_build_config.yaml.  Falling back to default numpy value of {}".format(defaults['numpy']))
+            utils.get_logger(__name__).warn("No numpy version specified in conda_build_config.yaml.  "
+                                            "Falling back to default numpy value of {}".format(defaults['numpy']))
     d['np'] = int("".join(np.split('.')[:2]))
 
     pl = config.variant.get('perl', defaults['perl'])
