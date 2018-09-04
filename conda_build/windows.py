@@ -3,7 +3,6 @@ from __future__ import absolute_import, division, print_function
 import os
 import sys
 from os.path import isdir, join, dirname, isfile
-import tempfile
 
 # importing setuptools patches distutils so that it knows how to find VC for python 2.7
 import setuptools  # noqa

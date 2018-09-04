@@ -18,7 +18,6 @@ import string
 import subprocess
 import sys
 import tarfile
-import tempfile
 import hashlib
 import logging
 import time
