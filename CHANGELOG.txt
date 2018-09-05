@@ -1,3 +1,40 @@
+2018-09-04 3.14.0:
+------------------
+
+Enhancements:
+-------------
+
+* refactor indexing to cache more efficiently  #3091
+* add ``tags``, ``identifiers``, and ``keywords`` to about section.  Tie them into channeldata.json.  #3091
+* filter .la files from packages by default  #3102
+* memoize read_meta_file  #3108
+
+Bug fixes:
+----------
+
+* fix --check for optionally iterable fields  #3098
+* fix permission problems prior to fixing shebangs  #3101
+* do not disable pip's cache directory.  Redirect it instead.  #3104
+* fix usage of config in load_setup_py_data  #3110
+* show logger message when default numpy is used, to communicate what's happening to the user  #3110
+
+Other:
+------
+
+* drop python 3.4, add 3.6, 3.7 to skeleton pypi  #3103
+
+Contributors:
+-------------
+
+* @jjhelmus
+* @kalefranz
+* @msarahan
+* @nehaljwani
+* @nsoranzo
+* @ocefpaf
+* @teake
+
+
 2018-08-20 3.13.0:
 ------------------
 
