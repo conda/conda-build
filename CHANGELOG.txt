@@ -1,3 +1,19 @@
+2018-09-06 3.14.1:
+------------------
+
+Bug fixes:
+----------
+
+* detect and fall back to old update_index behavior (new is channel-wide; old is specific subdir)  #3117
+* fix CONDA_BUILD_STATE not being set when load_setup_py_data gets run  #3117
+* fix channel_name as CLI argument for conda index.  It can't be positional.  #3318
+
+Contributors:
+-------------
+
+* @msarahan
+
+
 2018-09-04 3.14.0:
 ------------------
 
