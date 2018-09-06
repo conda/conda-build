@@ -915,45 +915,38 @@ class MetaData(object):
             log.warn("using unsupported internal conda-build function `parse_again`.  Please use "
                      "conda_build.api.render instead.")
 
-        os.environ["CONDA_BUILD_STATE"] = "RENDER"
         append_sections_file = None
         clobber_sections_file = None
-        try:
-            # we sometimes create metadata from dictionaries, in which case we'll have no path
-            if self.meta_path:
-                self.meta = parse(self._get_contents(permit_undefined_jinja,
-                                                     allow_no_other_outputs=allow_no_other_outputs,
-                                                     bypass_env_check=bypass_env_check),
-                                  config=self.config,
-                                  path=self.meta_path)
+        # we sometimes create metadata from dictionaries, in which case we'll have no path
+        if self.meta_path:
+            self.meta = parse(self._get_contents(permit_undefined_jinja,
+                                                    allow_no_other_outputs=allow_no_other_outputs,
+                                                    bypass_env_check=bypass_env_check),
+                                config=self.config,
+                                path=self.meta_path)
 
-                append_sections_file = os.path.join(self.path, 'recipe_append.yaml')
-                clobber_sections_file = os.path.join(self.path, 'recipe_clobber.yaml')
+            append_sections_file = os.path.join(self.path, 'recipe_append.yaml')
+            clobber_sections_file = os.path.join(self.path, 'recipe_clobber.yaml')
 
-            append_sections_file = self.config.append_sections_file or append_sections_file
-            if append_sections_file and not os.path.isfile(append_sections_file):
-                log.debug('input append sections file did not exist: %s', append_sections_file)
-                append_sections_file = None
-            clobber_sections_file = self.config.clobber_sections_file or clobber_sections_file
-            if clobber_sections_file and not os.path.isfile(clobber_sections_file):
-                log.debug('input clobber sections file did not exist: %s', clobber_sections_file)
-                clobber_sections_file = None
+        append_sections_file = self.config.append_sections_file or append_sections_file
+        if append_sections_file and not os.path.isfile(append_sections_file):
+            log.debug('input append sections file did not exist: %s', append_sections_file)
+            append_sections_file = None
+        clobber_sections_file = self.config.clobber_sections_file or clobber_sections_file
+        if clobber_sections_file and not os.path.isfile(clobber_sections_file):
+            log.debug('input clobber sections file did not exist: %s', clobber_sections_file)
+            clobber_sections_file = None
 
-            if append_sections_file:
-                self.append_metadata_sections(append_sections_file, merge=True)
-            if clobber_sections_file:
-                self.append_metadata_sections(clobber_sections_file, merge=False)
-            if self.config.bootstrap:
-                dependencies = _get_dependencies_from_environment(self.config.bootstrap)
-                self.append_metadata_sections(dependencies, merge=True)
+        if append_sections_file:
+            self.append_metadata_sections(append_sections_file, merge=True)
+        if clobber_sections_file:
+            self.append_metadata_sections(clobber_sections_file, merge=False)
+        if self.config.bootstrap:
+            dependencies = _get_dependencies_from_environment(self.config.bootstrap)
+            self.append_metadata_sections(dependencies, merge=True)
 
-            if self.meta.get('build', {}).get('error_overlinking', False):
-                self.config.error_overlinking = self.meta['build']['error_overlinking']
-        except:
-            raise
-        finally:
-            del os.environ["CONDA_BUILD_STATE"]
-            pass
+        if self.meta.get('build', {}).get('error_overlinking', False):
+            self.config.error_overlinking = self.meta['build']['error_overlinking']
         self.validate_features()
         self.ensure_no_pip_requirements()
 
@@ -1497,6 +1490,7 @@ class MetaData(object):
             else:
                 template = env.from_string("")
 
+            os.environ["CONDA_BUILD_STATE"] = "RENDER"
             rendered = template.render(environment=env)
 
             if permit_undefined_jinja:
@@ -1509,6 +1503,8 @@ class MetaData(object):
                 ex = "Failed to run jinja context function"
             sys.exit("Error: Failed to render jinja template in {}:\n{}"
                      .format(self.meta_path, str(ex)))
+        finally:
+            del os.environ["CONDA_BUILD_STATE"]
         return rendered
 
     def __unicode__(self):

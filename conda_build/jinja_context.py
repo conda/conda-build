@@ -107,6 +107,8 @@ def load_setup_py_data(m, setup_file='setup.py', from_recipe_dir=False, recipe_d
     origin_setup_script = os.path.join(os.path.dirname(__file__), '_load_setup_py_data.py')
     dest_setup_script = os.path.join(m.config.work_dir, '_load_setup_py_data.py')
     copy_into(origin_setup_script, dest_setup_script)
+    env = get_environ(m)
+    env["CONDA_BUILD_STATE"] = "RENDER"
     if os.path.isfile(m.config.build_python):
         args = [m.config.build_python, dest_setup_script, m.config.work_dir, setup_file]
         if from_recipe_dir:
@@ -115,7 +117,7 @@ def load_setup_py_data(m, setup_file='setup.py', from_recipe_dir=False, recipe_d
             args.extend(['--recipe-dir', recipe_dir])
         if permit_undefined_jinja:
             args.append('--permit-undefined-jinja')
-        check_call_env(args, env=get_environ(m))
+        check_call_env(args, env=env)
         # this is a file that the subprocess will have written
         with open(os.path.join(m.config.work_dir, 'conda_build_loaded_setup_py.json')) as f:
             _setuptools_data = json.load(f)

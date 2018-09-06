@@ -1733,10 +1733,7 @@ def _construct_metadata_for_test_from_package(package, config):
     local_channel = os.path.dirname(local_pkg_location)
 
     # update indices in the channel
-    for pattern in ('win-*', 'linux-*', 'osx-*', 'noarch'):
-        for folder in glob(os.path.join(local_channel, pattern)):
-            log.info("Updating index at %s to make package installable with dependencies" % folder)
-            update_index(folder, verbose=config.verbose)
+    update_index(local_channel, verbose=config.verbose)
 
     try:
         metadata = render_recipe(os.path.join(info_dir, 'recipe'), config=config,
