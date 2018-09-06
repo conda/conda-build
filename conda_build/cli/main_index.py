@@ -30,10 +30,8 @@ def parse_args(args):
         package's metadata needs to be updated.""",
     )
     p.add_argument(
-        'channel_name',
-        help='Adding a channel name will create an index.html file within the subdir.',
-        nargs='?',
-        default=None,
+        "-n", "--channel-name",
+        help="Customize the channel name listed in each channel's index.html.",
     )
     p.add_argument(
         '-s', '--subdir',
