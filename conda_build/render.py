@@ -674,6 +674,7 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
 def expand_outputs(metadata_tuples):
     """Obtain all metadata objects for all outputs from recipe.  Useful for outputting paths."""
     expanded_outputs = OrderedDict()
+
     for (_m, download, reparse) in metadata_tuples:
         for (output_dict, m) in _m.get_output_metadata_set(permit_unsatisfiable_variants=False):
             expanded_outputs[m.dist()] = (output_dict, m)

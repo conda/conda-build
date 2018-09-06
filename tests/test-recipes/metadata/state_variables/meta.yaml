@@ -1,7 +1,12 @@
+{% set data = load_setup_py_data() %}
+
 package:
   # should be defined as "RENDER" during rendering phase
   name: {{ CONDA_BUILD_STATE|lower }}
   version: 1.0
+
+source:
+  path: .
 
 build:
   script:

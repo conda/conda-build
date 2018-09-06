@@ -237,6 +237,17 @@ def _ensure_valid_channel(local_folder, subdir):
             os.makedirs(path)
 
 
+def update_subdir_index(dir_path, subdir, check_md5=False, channel_name=None, threads=None, verbose=True):
+    """
+    Update all index files in dir_path with changed packages.
+
+    :param check_md5: Whether to check MD5s instead of mtimes for determining
+                      if a package changed.
+    :type check_md5: bool
+    """
+    return ChannelIndex(dir_path, channel_name, deep_integrity_check=check_md5, threads=threads).index_subdir(subdir, verbose=verbose)
+
+
 def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=None, threads=None, verbose=True):
     """
     If dir_path contains a directory named 'noarch', the path tree therein is treated
@@ -248,18 +259,12 @@ def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=N
     information will be updated.
 
     """
+    base_path, dirname = os.path.split(dir_path)
+    if dirname in DEFAULT_SUBDIRS:
+        log.warn("The update_index function has changed to index all subdirs at once.  You're pointing it at a single subdir.  "
+                 "Please update your code to point it at the channel root, rather than a subdir.")
+        return update_subdir_index(base_path, dirname, check_md5=check_md5, channel_name=channel_name, threads=threads, verbose=verbose)
     return ChannelIndex(dir_path, channel_name, deep_integrity_check=check_md5, threads=threads).index(patch_generator=patch_generator, verbose=verbose)
-
-
-def update_subdir_index(dir_path, subdir, check_md5=False, channel_name=None, threads=None, verbose=True):
-    """
-    Update all index files in dir_path with changed packages.
-
-    :param check_md5: Whether to check MD5s instead of mtimes for determining
-                      if a package changed.
-    :type check_md5: bool
-    """
-    return ChannelIndex(dir_path, channel_name, deep_integrity_check=check_md5, threads=threads).index_subdir(subdir, verbose=verbose)
 
 
 def _determine_namespace(info):

@@ -621,12 +621,12 @@ def test_render_with_python_arg_reduces_subspace(capfd):
 
 
 def test_test_extra_dep(testing_metadata):
-    testing_metadata.meta['test']['imports'] = ['click']
+    testing_metadata.meta['test']['imports'] = ['imagesize']
     api.output_yaml(testing_metadata, 'meta.yaml')
     output = api.build(testing_metadata, notest=True, anaconda_upload=False)[0]
 
     # tests version constraints.  CLI would quote this - "click <6.7"
-    args = [output, '-t', '--extra-deps', 'click <6.7']
+    args = [output, '-t', '--extra-deps', 'imagesize <1.0']
     # extra_deps will add it in
     main_build.execute(args)
 
