@@ -208,7 +208,7 @@ def find_pkg_dir_or_file_in_pkgs_dirs(pkg_dist, m, files_only=False):
 @memoized
 def _read_specs_from_package(pkg_loc, pkg_dist):
     specs = {}
-    if os.path.isdir(pkg_loc):
+    if pkg_loc and os.path.isdir(pkg_loc):
         downstream_file = os.path.join(pkg_loc, 'info/run_exports')
         if os.path.isfile(downstream_file):
             with open(downstream_file) as f:
