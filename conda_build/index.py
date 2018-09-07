@@ -263,7 +263,7 @@ def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=N
     if dirname in DEFAULT_SUBDIRS:
         log.warn("The update_index function has changed to index all subdirs at once.  You're pointing it at a single subdir.  "
                  "Please update your code to point it at the channel root, rather than a subdir.")
-        return update_subdir_index(base_path, dirname, check_md5=check_md5, channel_name=channel_name, threads=threads, verbose=verbose)
+        return update_index(base_path, check_md5=check_md5, channel_name=channel_name, threads=threads, verbose=verbose)
     return ChannelIndex(dir_path, channel_name, deep_integrity_check=check_md5, threads=threads).index(patch_generator=patch_generator, verbose=verbose)
 
 
