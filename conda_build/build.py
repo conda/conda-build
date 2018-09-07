@@ -359,6 +359,20 @@ def copy_license(m):
                              "source root dir or in recipe root dir (with meta.yaml)")
 
 
+def copy_recipe_log(m):
+    # the purpose of this file is to capture some change history metadata that may tell people
+    #    why a given build was changed the way that it was
+    log_file = m.get_value('about/recipe_log_file') or "recipe_log.txt"
+    # look in recipe folder first
+    src_file = os.path.join(m.path, log_file)
+    if not os.path.isfile(src_file):
+        src_file = join(m.config.work_dir, log_file)
+    if os.path.isfile(src_file):
+        utils.copy_into(src_file,
+                        join(m.config.info_dir, 'recipe_log.txt'), m.config.timeout,
+                        locking=m.config.locking)
+
+
 def copy_test_source_files(m, destination):
     src_dir = ''
     if os.listdir(m.config.work_dir):
@@ -642,6 +656,7 @@ def create_info_files(m, files, prefix):
     copy_recipe(m)
     copy_readme(m)
     copy_license(m)
+    copy_recipe_log(m)
 
     create_all_test_files(m, test_dir=join(m.config.info_dir, 'test'))
     if m.config.copy_test_source_files:
