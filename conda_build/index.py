@@ -992,8 +992,12 @@ class ChannelIndex(object):
 
         data = {}
         for path in (recipe_cache_path, about_cache_path, index_cache_path, post_install_cache_path):
-            with open(path) as fh:
-                data.update(json.load(fh))
+            try:
+                with open(path) as fh:
+                    data.update(json.load(fh))
+            except (OSError, EOFError):
+                pass
+
         icon_cache_paths = glob(icon_cache_path_glob)
         if icon_cache_paths:
             icon_cache_path = sorted(icon_cache_paths)[-1]
@@ -1021,8 +1025,11 @@ class ChannelIndex(object):
             pass
         _clear_newline_chars(data, 'description')
         _clear_newline_chars(data, 'summary')
-        with open(run_exports_cache_path) as fh:
-            data["run_exports"] = json.load(fh)
+        try:
+            with open(run_exports_cache_path) as fh:
+                data["run_exports"] = json.load(fh)
+        except (OSError, EOFError):
+            data["run_exports"] = {}
         return data
 
     def _write_repodata(self, subdir, repodata):
