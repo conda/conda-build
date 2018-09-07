@@ -588,6 +588,8 @@ def _augment_repodata(subdirs, patched_repodata, patch_instructions):
 
 def _cache_post_install_details(loaded_json_text, all_paths, post_install_cache_path):
     post_install_details_json = {'binary_prefix': False, 'text_prefix': False}
+    if hasattr(loaded_json_text, "decode"):
+        loaded_json_text = loaded_json_text.decode("utf-8")
     # get embedded prefix data from paths.json
     for f in json.loads(loaded_json_text).get('paths', []):
         if f.get('prefix_placeholder'):

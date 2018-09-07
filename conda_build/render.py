@@ -208,7 +208,7 @@ def find_pkg_dir_or_file_in_pkgs_dirs(pkg_dist, m, files_only=False):
 @memoized
 def _read_specs_from_package(pkg_loc, pkg_dist):
     specs = {}
-    if os.path.isdir(pkg_loc):
+    if pkg_loc and os.path.isdir(pkg_loc):
         downstream_file = os.path.join(pkg_loc, 'info/run_exports')
         if os.path.isfile(downstream_file):
             with open(downstream_file) as f:
@@ -232,8 +232,15 @@ def _read_specs_from_package(pkg_loc, pkg_dist):
             legacy_specs = utils.package_has_file(pkg_loc, 'info/run_exports')
             # exclude packages pinning themselves (makes no sense)
             if legacy_specs:
-                specs = {'weak': [spec.rstrip() for spec in legacy_specs.splitlines()
-                                if not spec.startswith(pkg_dist.rsplit('-', 2)[0])]}
+                weak_specs = set()
+                if hasattr(pkg_dist, "decode"):
+                    pkg_dist = pkg_dist.decode("utf-8")
+                for spec in legacy_specs.splitlines():
+                    if hasattr(spec, "decode"):
+                        spec = spec.decode("utf-8")
+                    if not spec.startswith(pkg_dist.rsplit('-', 2)[0]):
+                        weak_specs.add(spec.rstrip())
+                specs = {'weak': sorted(list(weak_specs))}
     return specs
 
 
