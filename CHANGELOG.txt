@@ -1,3 +1,25 @@
+2018-09-07 3.14.2:
+------------------
+
+Enhancements:
+-------------
+
+* add support for a "recipe log" file.  This will be used at Anaconda to capture the commit activity of a given recipe, which will be published in the RSS feed.  #3123
+
+Bug fixes:
+----------
+
+* fix indexing of noarch subdir as done by conda-forge  #3120
+* decode cached index files to utf-8 before reading JSON  #3121
+* try to address unicode problems in run_exports handling  #3121
+* skip over index metadata files when they are not present in a package  #3125
+
+Contributors:
+-------------
+
+* @msarahan
+
+
 2018-09-06 3.14.1:
 ------------------
 
