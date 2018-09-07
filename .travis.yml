@@ -45,6 +45,8 @@ install:
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
       conda install -q futures scandir;
     fi
+  - conda install -q anaconda-client requests filelock contextlib2 jinja2 patchelf python=$TRAVIS_PYTHON_VERSION
+  - conda install -q pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz
   - if [ "$CONDA_VERSION" = "4.3.x" ]; then
         rm -rf /opt/conda/lib/python$TRAVIS_PYTHON_VERSION/site-packages/conda;
         rm -rf /opt/conda/lib/python$TRAVIS_PYTHON_VERSION/site-packages/conda*.egg-info;
@@ -62,8 +64,6 @@ install:
         conda info;
         popd;
     fi
-  - conda install -q anaconda-client requests filelock contextlib2 jinja2 patchelf python=$TRAVIS_PYTHON_VERSION
-  - conda install -q pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz
   - pip install pkginfo
   - if [[ "$FLAKE8" == "true" ]]; then
       conda install -q flake8;
