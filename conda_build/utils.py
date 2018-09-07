@@ -1,6 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 import contextlib
 import fnmatch
 import hashlib
@@ -21,6 +21,7 @@ import sys
 import shutil
 import tarfile
 import tempfile
+from threading import Thread
 import time
 import yaml
 
@@ -167,6 +168,44 @@ class DummyPsutilProcess(object):
     def children(self, *args, **kwargs):
         return []
 
+def _setup_rewrite_pipe(env):
+    """Rewrite values of env variables back to $ENV in stdout
+
+    Takes output on the pipe and finds any env value
+    and rewrites it as the env key
+
+    Useful for replacing "~/conda/conda-bld/pkg_<date>/_h_place..." with "$PREFIX"
+
+    Returns an FD to be passed to Popen(stdout=...)
+    """
+    # replacements is the env dict reversed,
+    # ordered by the length of the value so that longer replacements
+    # always occur first in case of common prefixes
+    replacements = OrderedDict()
+    for k, v in sorted(env.items(), key=lambda kv: len(kv[1]), reverse=True):
+        replacements[v] = k
+
+    r_fd, w_fd = os.pipe()
+    r = os.fdopen(r_fd, 'rt')
+
+    def rewriter():
+        while True:
+            line = r.readline()
+            if not line:
+                # reading done
+                r.close()
+                os.close(w_fd)
+                return
+            for s, key in replacements.items():
+                line = line.replace(s, '$' + key)
+            sys.stdout.write(line)
+
+    t = Thread(target=rewriter)
+    t.daemon = True
+    t.start()
+
+    return w_fd
+
 
 class PopenWrapper(object):
     # Small wrapper around subprocess.Popen to allow memory usage monitoring
@@ -288,6 +327,10 @@ def _func_defaulting_env_to_os_environ(func, *popenargs, **kwargs):
     stats = kwargs.get('stats')
     if 'stats' in kwargs:
         del kwargs['stats']
+
+    rewrite_stdout_env = kwargs.pop('rewrite_stdout_env', None)
+    if rewrite_stdout_env:
+        kwargs['stdout'] = _setup_rewrite_pipe(rewrite_stdout_env)
 
     out = None
     if stats is not None:

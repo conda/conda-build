@@ -11,6 +11,7 @@ import json
 import libarchive
 import os
 from os.path import isdir, isfile, islink, join, dirname
+import pprint
 import random
 import re
 import shutil
@@ -1495,9 +1496,19 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                     os.chmod(work_file, 0o766)
 
                     cmd = [shell_path] + (['-x'] if m.config.debug else []) + ['-e', work_file]
+                    # rewrite long paths in stdout back to their env variables
+                    if m.config.debug:
+                        rewrite_env = None
+                    else:
+                        rewrite_env = {
+                            k: env[k]
+                            for k in ['PREFIX', 'BUILD_PREFIX', 'SRC_DIR'] if k in env
+                        }
+                        print("Rewriting env in output: %s" % pprint.pformat(rewrite_env))
 
                     # this should raise if any problems occur while building
-                    utils.check_call_env(cmd, env=env, cwd=src_dir, stats=build_stats)
+                    utils.check_call_env(cmd, env=env, rewrite_stdout_env=rewrite_env,
+                                         cwd=src_dir, stats=build_stats)
                     utils.remove_pycache_from_scripts(m.config.host_prefix)
             if build_stats:
                 log_stats(build_stats, "building {}".format(m.name()))

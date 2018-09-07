@@ -179,3 +179,14 @@ def test_create_info_files_json_no_inodes(testing_workdir, testing_metadata):
     with open(files_json_path, "r") as files_json:
         output = json.load(files_json)
         assert output == expected_output
+
+
+def test_rewrite_output(testing_workdir, testing_config, capsys):
+    m = api.render(os.path.join(metadata_dir, "rewrite_env"), config=testing_config)[0][0]
+    build.build(m, stats=None)
+    captured = capsys.readouterr()
+    stdout = captured.out
+    assert "PREFIX=$PREFIX" in stdout
+    assert "LIBDIR=$PREFIX/lib" in stdout
+    assert "PWD=$SRC_DIR" in stdout
+    assert "BUILD_PREFIX=$BUILD_PREFIX" in stdout
