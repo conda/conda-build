@@ -757,13 +757,13 @@ class ChannelIndex(object):
                 patched_repodata[subdir], patch_instructions[subdir] = self._patch_repodata(
                     subdir, repodata_from_packages[subdir], patch_generator)
 
-            # Step 5. Save patched and augmented repodata.
+            # Step 4. Save patched and augmented repodata.
             for subdir in subdirs:
                 # If the contents of repodata have changed, write a new repodata.json file.
                 # Also create associated index.html.
                 self._write_repodata(subdir, patched_repodata[subdir])
 
-            # Step 4. Augment repodata with additional information.
+            # Step 5. Augment repodata with additional information.
             augmented_repodata = _augment_repodata(subdirs, patched_repodata, patch_instructions)
 
             # Step 6. Create and save repodata2.json
@@ -1124,6 +1124,14 @@ class ChannelIndex(object):
         content = json.dumps(channeldata, indent=2, sort_keys=True, separators=(',', ': '))
         _maybe_write(channeldata_path, content, True)
 
+    def _load_patch_instructions_tarball(self, subdir, patch_generator):
+        patch_instructions_file = utils.package_has_file(patch_generator,
+                                                         os.path.join(subdir, "patch_instructions.json"))
+        instructions = {}
+        if patch_instructions_file:
+            instructions = json.loads(patch_instructions_file)
+        return instructions
+
     def _create_patch_instructions(self, subdir, repodata, patch_generator=None):
         gen_patch_path = patch_generator or join(self.channel_root, 'gen_patch.py')
         if isfile(gen_patch_path):
@@ -1171,7 +1179,10 @@ class ChannelIndex(object):
         return {}
 
     def _patch_repodata(self, subdir, repodata, patch_generator=None):
-        instructions = self._create_patch_instructions(subdir, repodata, patch_generator)
+        if patch_generator and patch_generator.endswith("bz2"):
+            instructions = self._load_patch_instructions_tarball(subdir, patch_generator)
+        else:
+            instructions = self._create_patch_instructions(subdir, repodata, patch_generator)
         if instructions:
             self._write_patch_instructions(subdir, instructions)
         else:
