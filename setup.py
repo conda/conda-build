@@ -14,6 +14,12 @@ version_dict = versioneer.get_versions()
 if version_dict['error']:
     raise RuntimeError(version_dict["error"])
 
+deps = ['conda', 'requests', 'filelock', 'pyyaml', 'jinja2', 'pkginfo',
+        'beautifulsoup4', 'chardet', 'pytz', 'tqdm', 'psutil', 'six']
+
+if sys.version_info < (3, 4):
+    deps.extend(['contextlib2', 'enum34', 'futures', 'scandir', 'glob2'])
+
 setup(
     name="conda-build",
     version=version_dict['version'],
@@ -29,8 +35,9 @@ setup(
         "Programming Language :: Python :: 2",
         "Programming Language :: Python :: 2.7",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
     ],
     description="tools for building conda packages",
     long_description=open('README.rst').read(),
@@ -46,8 +53,7 @@ setup(
                             'conda-render = conda_build.cli.main_render:main',
                             'conda-skeleton = conda_build.cli.main_skeleton:main',
                             ]},
-    install_requires=['conda', 'requests', 'filelock', 'pyyaml', 'jinja2', 'pkginfo',
-                      'glob2', 'beautifulsoup4', 'pytz'],
+    install_requires=deps,
     package_data={'conda_build': ['templates/*', 'cli-*.exe']},
     zip_safe=False,
 )
