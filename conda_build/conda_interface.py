@@ -29,6 +29,7 @@ except ImportError:
 
 conda_43 = parse_version(CONDA_VERSION) >= parse_version("4.3.0a0")
 conda_44 = parse_version(CONDA_VERSION) >= parse_version("4.4.0a0")
+conda_45 = parse_version(CONDA_VERSION) >= parse_version("4.5.0a0")
 conda_46 = parse_version(CONDA_VERSION) >= parse_version("4.6.0a0")
 
 if conda_44:
