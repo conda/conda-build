@@ -23,6 +23,7 @@ from conda.common.compat import ensure_binary
 
 import pytz
 from jinja2 import Environment, PackageLoader
+from tqdm import tqdm
 import yaml
 from yaml.constructor import ConstructorError
 from yaml.parser import ParserError
@@ -237,7 +238,7 @@ def _ensure_valid_channel(local_folder, subdir):
             os.makedirs(path)
 
 
-def update_subdir_index(dir_path, subdir, check_md5=False, channel_name=None, threads=None, verbose=True):
+def update_subdir_index(dir_path, subdir, check_md5=False, channel_name=None, threads=None, verbose=False, progress=False):
     """
     Update all index files in dir_path with changed packages.
 
@@ -245,10 +246,11 @@ def update_subdir_index(dir_path, subdir, check_md5=False, channel_name=None, th
                       if a package changed.
     :type check_md5: bool
     """
-    return ChannelIndex(dir_path, channel_name, deep_integrity_check=check_md5, threads=threads).index_subdir(subdir, verbose=verbose)
+    return ChannelIndex(dir_path, channel_name, deep_integrity_check=check_md5, threads=threads).index_subdir(
+        subdir, verbose=verbose, progress=progress)
 
 
-def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=None, threads=None, verbose=True):
+def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=None, threads=None, verbose=False, progress=False):
     """
     If dir_path contains a directory named 'noarch', the path tree therein is treated
     as though it's a full channel, with a level of subdirs, each subdir having an update
@@ -264,7 +266,8 @@ def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=N
         log.warn("The update_index function has changed to index all subdirs at once.  You're pointing it at a single subdir.  "
                  "Please update your code to point it at the channel root, rather than a subdir.")
         return update_index(base_path, check_md5=check_md5, channel_name=channel_name, threads=threads, verbose=verbose)
-    return ChannelIndex(dir_path, channel_name, deep_integrity_check=check_md5, threads=threads).index(patch_generator=patch_generator, verbose=verbose)
+    return ChannelIndex(dir_path, channel_name, deep_integrity_check=check_md5, threads=threads).index(
+        patch_generator=patch_generator, verbose=verbose, progress=progress)
 
 
 def _determine_namespace(info):
@@ -647,7 +650,7 @@ def _cache_about_json(tf, tar_path, about_cache_path):
     try:
         binary_about_json = tf.extractfile('info/about.json').read()
     except KeyError:
-        log.debug("%s has no file info/about.json", tar_path)
+        log.debug("%s has no file info/about.json" % tar_path)
         binary_about_json = b'{}'
     with open(about_cache_path, 'wb') as fh:
         fh.write(binary_about_json)
@@ -663,7 +666,7 @@ def _cache_run_exports(tf, tar_path, run_exports_cache_path):
             binary_run_exports = tf.extractfile('info/run_exports.yaml').read()
             run_exports = yaml.safe_load(binary_run_exports)
         except KeyError:
-            log.debug("%s has no file info/run_exports.yaml", tar_path)
+            log.debug("%s has no run_exports file (this is OK)" % tar_path)
             run_exports = {}
     with open(run_exports_cache_path, 'w') as fh:
         json.dump(run_exports, fh)
@@ -673,7 +676,7 @@ def _cache_paths_json(tf, tar_path, paths_cache_path):
     try:
         binary_paths_json = tf.extractfile('info/paths.json').read()
     except KeyError:
-        log.debug("%s has no file info/paths.json", tar_path)
+        log.debug("%s has no file info/paths.json" % tar_path)
         binary_paths_json = b'{}'
     with open(paths_cache_path, 'wb') as fh:
         fh.write(binary_paths_json)
@@ -728,27 +731,30 @@ class ChannelIndex(object):
         self.thread_executor = ThreadLimitedThreadPoolExecutor(threads)
         self.deep_integrity_check = deep_integrity_check
 
-    def index(self, patch_generator, verbose=True):
-        if self._subdirs is None:
-            detected_subdirs = set(subdir for subdir in os.listdir(self.channel_root)
-                                   if subdir in DEFAULT_SUBDIRS and isdir(join(self.channel_root, subdir)))
-            log.debug("found subdirs %s", detected_subdirs)
-            self.subdirs = subdirs = sorted(detected_subdirs | {'noarch'})
-        else:
-            self.subdirs = subdirs = sorted(set(self._subdirs) | {'noarch'})
-
+    def index(self, patch_generator, verbose=False, progress=False):
         if verbose:
             log.setLevel(logging.DEBUG)
         else:
             log.setLevel(logging.CRITICAL + 1)
 
+        if self._subdirs is None:
+            detected_subdirs = set(subdir for subdir in os.listdir(self.channel_root)
+                                   if subdir in DEFAULT_SUBDIRS and isdir(join(self.channel_root, subdir)))
+            log.debug("found subdirs %s" % detected_subdirs)
+            self.subdirs = subdirs = sorted(detected_subdirs | {'noarch'})
+        else:
+            self.subdirs = subdirs = sorted(set(self._subdirs) | {'noarch'})
+
         # Step 1. Lock local channel.
         with utils.try_acquire_locks([utils.get_lock(self.channel_root)], timeout=90):
             # Step 2. Collect repodata from packages.
             repodata_from_packages = {}
-            for subdir in subdirs:
-                _ensure_valid_channel(self.channel_root, subdir)
-                repodata_from_packages[subdir] = self.index_subdir(subdir)
+            with tqdm(total=len(subdirs), disable=(verbose or not progress)) as t:
+                for subdir in subdirs:
+                    t.set_description("Subdir: %s" % subdir)
+                    t.update()
+                    _ensure_valid_channel(self.channel_root, subdir)
+                    repodata_from_packages[subdir] = self.index_subdir(subdir, verbose=verbose, progress=progress)
 
             # Step 3. Apply patch instructions.
             patched_repodata = {}
@@ -782,18 +788,19 @@ class ChannelIndex(object):
             self._write_channeldata_index_html(channel_data)
             self._write_channeldata_rss(channel_data, package_mtimes)
 
-    def index_subdir(self, subdir, verbose=False):
+    def index_subdir(self, subdir, verbose=False, progress=False):
         subdir_path = join(self.channel_root, subdir)
         self._ensure_dirs(subdir)
         repodata_json_path = join(subdir_path, REPODATA_JSON_FN)
         stat_cache_path = join(subdir_path, '.cache', 'stat.json')
+
         if verbose:
-            log.info("Building repodata for %s", subdir_path)
+            log.info("Building repodata for %s" % subdir_path)
 
         # gather conda package filenames in subdir
         fns_in_subdir = set(fn for fn in os.listdir(subdir_path)
                          if fn.endswith(CONDA_TARBALL_EXTENSION))
-        log.debug("found %d conda packages", len(fns_in_subdir))
+        log.debug("found %d conda packages in %s" % (len(fns_in_subdir), subdir))
 
         # load current/old repodata
         try:
@@ -830,7 +837,7 @@ class ChannelIndex(object):
             remove_set = old_repodata_fns - fns_in_subdir - old_repodata_removed_fns
             # remove_set: filenames that are in old repodata that won't be in the new repodata
             update_set = self._calculate_update_set(
-                subdir, fns_in_subdir, old_repodata_fns, stat_cache
+                subdir, fns_in_subdir, old_repodata_fns, stat_cache, verbose=verbose, progress=progress
             )
             # update_set: Filenames that are in both old repodata and new repodata,
             #     and whose contents have changed based on file size or mtime. We're
@@ -867,7 +874,8 @@ class ChannelIndex(object):
             futures = tuple(self.thread_executor.submit(
                 self._extract_to_cache, subdir, fn
             ) for fn in hash_extract_set)
-            for future in as_completed(futures):
+            for future in tqdm(as_completed(futures), desc="hash & extract packages for %s" % subdir,
+                               total=len(futures), disable=(verbose or not progress)):
                 fn, mtime, size, index_json = future.result()
                 stat_cache[fn] = {'mtime': mtime, 'size': size}
                 new_repodata_packages[fn] = index_json
@@ -902,13 +910,14 @@ class ChannelIndex(object):
         ensure(join(cache_path, 'icon'))
         ensure(join(self.channel_root, 'icons'))
 
-    def _calculate_update_set(self, subdir, fns_in_subdir, old_repodata_fns, stat_cache):
+    def _calculate_update_set(self, subdir, fns_in_subdir, old_repodata_fns, stat_cache, verbose=False, progress=False):
         # Determine the packages that already exist in repodata, but need to be updated.
         # We're not using md5 here because it takes too long.
         candidate_fns = fns_in_subdir & old_repodata_fns
         subdir_path = join(self.channel_root, subdir)
         stat_results = tuple((fn, os.lstat(join(subdir_path, fn))) for fn in candidate_fns)
-        update_set = set(fn for fn, stat_result in stat_results
+        update_set = set(fn for fn, stat_result in tqdm(stat_results, desc="Finding updated files",
+                                                        disable=(verbose or not progress))
                          if stat_result.st_mtime != stat_cache.get(fn, {}).get('mtime') or
                          stat_result.st_size != stat_cache.get(fn, {}).get('size'))
         return update_set
@@ -927,7 +936,7 @@ class ChannelIndex(object):
         post_install_cache_path = join(subdir_path, '.cache', 'post_install', fn + '.json')
         icon_cache_path = join(subdir_path, '.cache', 'icon', fn)
 
-        log.debug("hashing, extracting, and caching %s", tar_path)
+        log.debug("hashing, extracting, and caching %s" % tar_path)
         with tarfile.open(tar_path) as tf:
             binary_index_json = tf.extractfile('info/index.json').read()
             index_json = json.loads(binary_index_json.decode('utf-8'))
@@ -970,7 +979,7 @@ class ChannelIndex(object):
 
     def _load_index_from_cache(self, subdir, fn, stat_cache):
         index_cache_path = join(self.channel_root, subdir, '.cache', 'index', fn + '.json')
-        log.debug("loading index cache %s", index_cache_path)
+        log.debug("loading index cache %s" % index_cache_path)
         with open(index_cache_path) as fh:
             index_json = json.load(fh)
 
@@ -1135,7 +1144,7 @@ class ChannelIndex(object):
     def _create_patch_instructions(self, subdir, repodata, patch_generator=None):
         gen_patch_path = patch_generator or join(self.channel_root, 'gen_patch.py')
         if isfile(gen_patch_path):
-            log.debug("using patch generator %s for %s", gen_patch_path, subdir)
+            log.debug("using patch generator %s for %s" % (gen_patch_path, subdir))
 
             # https://stackoverflow.com/a/41595552/2127762
             try:
@@ -1170,7 +1179,7 @@ class ChannelIndex(object):
     def _load_instructions(self, subdir):
         patch_instructions_path = join(self.channel_root, subdir, 'patch_instructions.json')
         if isfile(patch_instructions_path):
-            log.debug("using patch instructions %s", patch_instructions_path)
+            log.debug("using patch instructions %s" % patch_instructions_path)
             with open(patch_instructions_path) as fh:
                 instructions = json.load(fh)
                 if instructions.get('patch_instructions_version', 0) > 1:

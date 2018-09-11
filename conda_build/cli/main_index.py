@@ -49,6 +49,12 @@ def parse_args(args):
         "-p", "--patch-generator",
         help="Path to Python file that outputs metadata patch instructions"
     )
+    p.add_argument(
+        "--verbose", help="show extra debugging info", action="store_true"
+    )
+    p.add_argument(
+        "--no-progress", help="Hide progress bars", action="store_false", dest="progress"
+    )
 
     args = p.parse_args(args)
     return p, args
@@ -57,7 +63,8 @@ def parse_args(args):
 def execute(args):
     _, args = parse_args(args)
     api.update_index(args.dir, check_md5=args.check_md5, channel_name=args.channel_name,
-                     threads=args.threads, subdir=args.subdir, patch_generator=args.patch_generator)
+                     threads=args.threads, subdir=args.subdir, patch_generator=args.patch_generator,
+                     verbose=args.verbose, progress=args.progress)
 
 
 def main():
