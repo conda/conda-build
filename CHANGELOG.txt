@@ -1,3 +1,24 @@
+2018-09-11 3.14.3:
+------------------
+
+Enhancements:
+-------------
+
+* add support for index patch instructions as tarballs containing subdirs  #3129
+* add progress bars for indexing (using tqdm)  #3130
+
+Bug fixes:
+----------
+
+* fix log messages being deduplicated too much  #3130
+* handle permission errors with moving files in indexing more gracefully  #3132
+
+Contributors:
+-------------
+
+* @msarahan
+
+
 2018-09-07 3.14.2:
 ------------------
 
