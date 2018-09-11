@@ -204,8 +204,22 @@ different sets of packages."""
     p.add_argument(
         "--verify",
         action="store_true",
+        help="run verification on recipes or packages when building",
+        default=cc_conda_build.get('verify', 'true').lower() == 'true',
+    )
+    p.add_argument(
+        "--no-verify",
+        action="store_false",
+        dest="verify",
         help="do not run verification on recipes or packages when building",
-        default=cc_conda_build.get('verify', 'false').lower() == 'true',
+        default=cc_conda_build.get('verify', 'true').lower() == 'true',
+    )
+    p.add_argument(
+        "--strict-verify",
+        action="store_true",
+        dest="exit_on_verify_error",
+        help="Exit if any conda-verify check fail, instead of only printing them",
+        default=cc_conda_build.get('exit_on_verify_error', 'false').lower() == 'true',
     )
     p.add_argument(
         "--output-folder",
