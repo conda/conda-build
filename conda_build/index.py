@@ -407,7 +407,10 @@ def _maybe_write(path, content, write_newline_end=False, content_is_binary=False
             os.unlink(temp_path)
             return False
     # log.info("writing %s", path)
-    move(temp_path, path)
+    try:
+        move(temp_path, path)
+    except PermissionError:
+        utils.copy_into(temp_path, path)
     return True
 
 
