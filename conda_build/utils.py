@@ -1256,10 +1256,11 @@ def filter_info_files(files_list, prefix):
                     'info[\\\\/]has_prefix',
                     'info[\\\\/]hash_input_files',   # legacy, not used anymore
                     'info[\\\\/]hash_input.json',
-                    'info[\\\\/]run_exports.yaml',
-                    'info[\\\\/]run_exports.json',
+                    'info[\\\\/]run_exports.yaml',   # legacy
+                    'info[\\\\/]run_exports.json',   # current
                     'info[\\\\/]git',
                     'info[\\\\/]recipe[\\\\/].*',
+                    'info[\\\\/]recipe_log.txt',
                     'info[\\\\/]recipe.tar',
                     'info[\\\\/]test[\\\\/].*',
                     'info[\\\\/]LICENSE.txt',
