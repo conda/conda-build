@@ -361,14 +361,14 @@ def copy_license(m):
 def copy_recipe_log(m):
     # the purpose of this file is to capture some change history metadata that may tell people
     #    why a given build was changed the way that it was
-    log_file = m.get_value('about/recipe_log_file') or "recipe_log.txt"
+    log_file = m.get_value('about/recipe_log_file') or "recipe_log.json"
     # look in recipe folder first
     src_file = os.path.join(m.path, log_file)
     if not os.path.isfile(src_file):
         src_file = join(m.config.work_dir, log_file)
     if os.path.isfile(src_file):
         utils.copy_into(src_file,
-                        join(m.config.info_dir, 'recipe_log.txt'), m.config.timeout,
+                        join(m.config.info_dir, 'recipe_log.json'), m.config.timeout,
                         locking=m.config.locking)
 
 

@@ -1260,7 +1260,7 @@ def filter_info_files(files_list, prefix):
                     'info[\\\\/]run_exports.json',   # current
                     'info[\\\\/]git',
                     'info[\\\\/]recipe[\\\\/].*',
-                    'info[\\\\/]recipe_log.txt',
+                    'info[\\\\/]recipe_log.json',
                     'info[\\\\/]recipe.tar',
                     'info[\\\\/]test[\\\\/].*',
                     'info[\\\\/]LICENSE.txt',
