@@ -2474,37 +2474,30 @@ def clean_build(config, folders=None):
 
 
 def is_package_built(metadata, env, include_local=True):
+    for d in metadata.config.bldpkgs_dirs:
+        if not os.path.isdir(d):
+            os.makedirs(d)
+        update_index(d, verbose=metadata.config.verbose)
+    subdir = getattr(metadata.config, '{}_subdir'.format(env))
+
+    urls = [url_path(metadata.config.output_folder), 'local'] if include_local else []
+    urls += get_rc_urls()
+    if metadata.config.channel_urls:
+        urls.extend(metadata.config.channel_urls)
+
+    spec = MatchSpec(name=metadata.name(), version=metadata.version(), build=metadata.build_id())
+
     if conda_45:
         from conda.api import SubdirData
-        for d in metadata.config.bldpkgs_dirs:
-            if not os.path.isdir(d):
-                os.makedirs(d)
-            update_index(d, verbose=metadata.config.verbose)
-        subdir = getattr(metadata.config, '{}_subdir'.format(env))
-
-        urls = [url_path(metadata.config.output_folder), 'local'] if include_local else []
-        urls += get_rc_urls()
-        if metadata.config.channel_urls:
-            urls.extend(metadata.config.channel_urls)
-
-        spec_str = " ".join((metadata.name(), metadata.version(), metadata.build_id()))
-        return bool(next(SubdirData.query_all(spec_str, channels=urls, subdirs=(subdir, "noarch")), None))
-
+        return bool(SubdirData.query_all(spec, channels=urls, subdirs=(subdir, "noarch")))
     else:
-        for d in metadata.config.bldpkgs_dirs:
-            if not os.path.isdir(d):
-                os.makedirs(d)
-                update_index(d, verbose=metadata.config.verbose)
-        subdir = getattr(metadata.config, '{}_subdir'.format(env))
         index, index_ts = get_build_index(subdir=subdir,
-                                        bldpkgs_dir=metadata.config.bldpkgs_dir,
-                                        output_folder=metadata.config.output_folder,
-                                        channel_urls=metadata.config.channel_urls,
-                                        debug=metadata.config.debug,
-                                        verbose=metadata.config.verbose,
-                                        locking=metadata.config.locking,
-                                        timeout=metadata.config.timeout,
-                                        clear_cache=True)
-
-        spec = MatchSpec(name=metadata.name(), version=metadata.version(), build=metadata.build_id())
+                                          bldpkgs_dir=metadata.config.bldpkgs_dir,
+                                          output_folder=metadata.config.output_folder,
+                                          channel_urls=urls,
+                                          debug=metadata.config.debug,
+                                          verbose=metadata.config.verbose,
+                                          locking=metadata.config.locking,
+                                          timeout=metadata.config.timeout,
+                                          clear_cache=True)
         return any(spec.match(prec) for prec in index.values())
