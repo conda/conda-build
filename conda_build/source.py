@@ -203,19 +203,29 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_ca
     if not isdir(os.path.dirname(mirror_dir)):
         os.makedirs(os.path.dirname(mirror_dir))
     if isdir(mirror_dir):
-        if git_ref != 'HEAD':
-            check_call_env([git, 'fetch'], cwd=mirror_dir, stdout=stdout, stderr=stderr)
-        else:
-            # Unlike 'git clone', fetch doesn't automatically update the cache's HEAD,
-            # So here we explicitly store the remote HEAD in the cache's local refs/heads,
-            # and then explicitly set the cache's HEAD.
-            # This is important when the git repo is a local path like "git_url: ../",
-            # but the user is working with a branch other than 'master' without
-            # explicitly providing git_rev.
-            check_call_env([git, 'fetch', 'origin', '+HEAD:_conda_cache_origin_head'],
-                       cwd=mirror_dir, stdout=stdout, stderr=stderr)
-            check_call_env([git, 'symbolic-ref', 'HEAD', 'refs/heads/_conda_cache_origin_head'],
-                       cwd=mirror_dir, stdout=stdout, stderr=stderr)
+        try:
+            if git_ref != 'HEAD':
+                check_call_env([git, 'fetch'], cwd=mirror_dir, stdout=stdout, stderr=stderr)
+            else:
+                # Unlike 'git clone', fetch doesn't automatically update the cache's HEAD,
+                # So here we explicitly store the remote HEAD in the cache's local refs/heads,
+                # and then explicitly set the cache's HEAD.
+                # This is important when the git repo is a local path like "git_url: ../",
+                # but the user is working with a branch other than 'master' without
+                # explicitly providing git_rev.
+                check_call_env([git, 'fetch', 'origin', '+HEAD:_conda_cache_origin_head'],
+                           cwd=mirror_dir, stdout=stdout, stderr=stderr)
+                check_call_env([git, 'symbolic-ref', 'HEAD', 'refs/heads/_conda_cache_origin_head'],
+                           cwd=mirror_dir, stdout=stdout, stderr=stderr)
+        except CalledProcessError:
+            msg = ("Failed to update local git cache. "
+                   "Deleting local cached repo: {} ".format(mirror_dir))
+            print(msg)
+
+            # Maybe the failure was caused by a corrupt mirror directory.
+            # Delete it so the user can try again.
+            shutil.rmtree(mirror_dir)
+            raise
     else:
         args = [git, 'clone', '--mirror']
         if git_depth > 0:
