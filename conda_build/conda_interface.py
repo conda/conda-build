@@ -29,6 +29,7 @@ except ImportError:
 
 conda_43 = parse_version(CONDA_VERSION) >= parse_version("4.3.0a0")
 conda_44 = parse_version(CONDA_VERSION) >= parse_version("4.4.0a0")
+conda_45 = parse_version(CONDA_VERSION) >= parse_version("4.5.0a0")
 conda_46 = parse_version(CONDA_VERSION) >= parse_version("4.6.0a0")
 
 if conda_44:
@@ -61,7 +62,6 @@ from conda.exports import CondaSession  # NOQA
 from conda.exports import (PY3,  StringIO, input, iteritems, lchmod, string_types,  # NOQA
                           text_type, TemporaryDirectory)  # NOQA
 from conda.exports import VersionOrder  # NOQA
-from conda.exports import dist_str_in_index  # NOQA
 
 
 TmpDownload = TmpDownload
@@ -77,7 +77,6 @@ rm_rf, symlink_conda, package_cache = rm_rf, symlink_conda, package_cache
 PY3, input, iteritems, lchmod, string_types = PY3, input, iteritems, lchmod, string_types
 text_type, TemporaryDirectory = text_type, TemporaryDirectory
 ArgumentParser, CondaSession, VersionOrder = ArgumentParser, CondaSession, VersionOrder
-dist_str_in_index = dist_str_in_index
 
 
 from conda.core.package_cache import ProgressiveFetchExtract  # NOQA
