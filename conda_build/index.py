@@ -350,12 +350,7 @@ def _clear_newline_chars(record, field_name):
 
 def _apply_instructions(subdir, repodata, instructions):
     repodata.setdefault("removed", [])
-    for fn, patch in instructions.get('packages', {}).items():
-        # update then filter Nones
-        repodata['packages'][fn].update(patch)
-        repodata['packages'][fn] = {
-            k: v for k, v in repodata['packages'][fn].items() if v is not None
-        }
+    utils.merge_or_update_dict(repodata.get('packages', {}), instructions.get('packages', {}))
 
     for fn in instructions.get('revoke', ()):
         repodata['packages'][fn]['revoked'] = True
@@ -872,7 +867,6 @@ class ChannelIndex(object):
             old_repodata = {}
         old_repodata_packages = old_repodata.get("packages", {})
         old_repodata_fns = set(old_repodata_packages)
-        old_repodata_removed_fns = set(old_repodata.get("removed", ()))
 
         # Load stat cache. The stat cache has the form
         #   {
@@ -892,11 +886,8 @@ class ChannelIndex(object):
 
         try:
             # calculate all the paths and figure out what we're going to do with them
-            add_set = fns_in_subdir - old_repodata_fns - old_repodata_removed_fns
             # add_set: filenames that aren't in the current/old repodata, but exist in the subdir
-            #          but not filenames that have been explicitly ignored or removed
-            remove_set = old_repodata_fns - fns_in_subdir - old_repodata_removed_fns
-            # remove_set: filenames that are in old repodata that won't be in the new repodata
+            add_set = fns_in_subdir - old_repodata_fns
             update_set = self._calculate_update_set(
                 subdir, fns_in_subdir, old_repodata_fns, stat_cache, verbose=verbose, progress=progress
             )
@@ -904,7 +895,7 @@ class ChannelIndex(object):
             #     and whose contents have changed based on file size or mtime. We're
             #     not using md5 here because it takes too long. If needing to do full md5 checks,
             #     use the --deep-integrity-check flag / self.deep_integrity_check option.
-            unchanged_set = sorted(old_repodata_fns - remove_set - update_set)
+            unchanged_set = sorted(old_repodata_fns - update_set)
             # unchanged_set: packages in old repodata whose information can carry straight
             #     across to new repodata
 
@@ -935,11 +926,15 @@ class ChannelIndex(object):
             futures = tuple(self.thread_executor.submit(
                 self._extract_to_cache, subdir, fn
             ) for fn in hash_extract_set)
-            for future in tqdm(as_completed(futures), desc="hash & extract packages for %s" % subdir,
-                               total=len(futures), disable=(verbose or not progress)):
-                fn, mtime, size, index_json = future.result()
-                stat_cache[fn] = {'mtime': mtime, 'size': size}
-                new_repodata_packages[fn] = index_json
+            with tqdm(desc="hash & extract packages for %s" % subdir,
+                      total=len(futures), disable=(verbose or not progress)) as t:
+                for future in as_completed(futures):
+                    fn, mtime, size, index_json = future.result()
+                    # the progress bar shows package names, but we don't know what their name is before they complete.
+                    t.set_description("Hash & extract: %s" % fn)
+                    t.update()
+                    stat_cache[fn] = {'mtime': mtime, 'size': size}
+                    new_repodata_packages[fn] = index_json
 
             new_repodata = {
                 'packages': new_repodata_packages,
@@ -1000,18 +995,21 @@ class ChannelIndex(object):
         recipe_log_path = join(subdir_path, '.cache', 'recipe_log', fn + '.json')
 
         log.debug("hashing, extracting, and caching %s" % tar_path)
-        with tarfile.open(tar_path) as tf:
-            binary_index_json = tf.extractfile('info/index.json').read()
-            index_json = json.loads(binary_index_json.decode('utf-8'))
+        try:
+            with tarfile.open(tar_path) as tf:
+                binary_index_json = tf.extractfile('info/index.json').read()
+                index_json = json.loads(binary_index_json.decode('utf-8'))
 
-            all_paths = set(tf.getnames())
-            _cache_about_json(tf, tar_path, about_cache_path)
-            _cache_run_exports(tf, tar_path, run_exports_cache_path)
-            binary_paths_json = _cache_paths_json(tf, tar_path, paths_cache_path)
-            _cache_post_install_details(binary_paths_json, all_paths, post_install_cache_path)
-            recipe_json = _cache_recipe(all_paths, tf, recipe_cache_path)
-            _cache_recipe_log(tf, tar_path, recipe_log_path)
-            _cache_icon(recipe_json, all_paths, icon_cache_path, tf)
+                all_paths = set(tf.getnames())
+                _cache_about_json(tf, tar_path, about_cache_path)
+                _cache_run_exports(tf, tar_path, run_exports_cache_path)
+                binary_paths_json = _cache_paths_json(tf, tar_path, paths_cache_path)
+                _cache_post_install_details(binary_paths_json, all_paths, post_install_cache_path)
+                recipe_json = _cache_recipe(all_paths, tf, recipe_cache_path)
+                _cache_recipe_log(tf, tar_path, recipe_log_path)
+                _cache_icon(recipe_json, all_paths, icon_cache_path, tf)
+        except tarfile.ReadError:
+            log.error("Package %s/%s appears to be corrupt.  Please remove it and re-download it" % (subdir, fn))
 
         # calculate extra stuff to add to index.json cache, size, md5, sha256
         stat_result = os.stat(tar_path)

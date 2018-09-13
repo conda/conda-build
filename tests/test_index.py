@@ -286,28 +286,31 @@ def _patch_repodata(repodata, subdir):
         "remove": remove_list,
     }
 """
-
     patch_file = os.path.join(testing_workdir, 'repodata_patch.py')
     with open(patch_file, 'w') as f:
         f.write(func)
-    update_index(testing_workdir, patch_generator=patch_file)
-    with open(os.path.join(testing_workdir, subdir, 'repodata.json')) as f:
-        patched_metadata = json.load(f)
 
-    pkg_list = patched_metadata['packages']
-    assert "track_features_test-1.0-0.tar.bz2" in pkg_list
-    assert "track_features" not in pkg_list["track_features_test-1.0-0.tar.bz2"]
+    # indexing a second time with the same patchset should keep the removals
+    for i in (1, 2):
+        update_index(testing_workdir, patch_generator=patch_file)
+        with open(os.path.join(testing_workdir, subdir, 'repodata.json')) as f:
+            patched_metadata = json.load(f)
 
-    assert "hotfix_depends_test-1.0-dummy_0.tar.bz2" in pkg_list
-    assert "features" not in pkg_list["hotfix_depends_test-1.0-dummy_0.tar.bz2"]
-    assert "zlib" in pkg_list["hotfix_depends_test-1.0-dummy_0.tar.bz2"]["depends"]
-    assert "dummy" in pkg_list["hotfix_depends_test-1.0-dummy_0.tar.bz2"]["depends"]
+        pkg_list = patched_metadata['packages']
+        assert "track_features_test-1.0-0.tar.bz2" in pkg_list
+        assert "track_features" not in pkg_list["track_features_test-1.0-0.tar.bz2"]
 
-    assert "revoke_test-1.0-0.tar.bz2" in pkg_list
-    assert "zlib" in pkg_list["revoke_test-1.0-0.tar.bz2"]["depends"]
-    assert "package_has_been_revoked" in pkg_list["revoke_test-1.0-0.tar.bz2"]["depends"]
+        assert "hotfix_depends_test-1.0-dummy_0.tar.bz2" in pkg_list
+        assert "features" not in pkg_list["hotfix_depends_test-1.0-dummy_0.tar.bz2"]
+        assert "zlib" in pkg_list["hotfix_depends_test-1.0-dummy_0.tar.bz2"]["depends"]
+        assert "dummy" in pkg_list["hotfix_depends_test-1.0-dummy_0.tar.bz2"]["depends"]
 
-    assert "remove_test-1.0-0.tar.bz2" not in pkg_list
+        assert "revoke_test-1.0-0.tar.bz2" in pkg_list
+        assert "zlib" in pkg_list["revoke_test-1.0-0.tar.bz2"]["depends"]
+        assert "package_has_been_revoked" in pkg_list["revoke_test-1.0-0.tar.bz2"]["depends"]
+
+        assert "remove_test-1.0-0.tar.bz2" not in pkg_list
+        assert "remove_test-1.0-0.tar.bz2" in patched_metadata['removed'], "removed list not populated in run %d" % i
 
 
 def test_channel_patch_instructions_json(testing_workdir):
