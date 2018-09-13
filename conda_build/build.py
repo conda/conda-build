@@ -1744,7 +1744,6 @@ def _construct_metadata_for_test_from_package(package, config):
         utils.copy_into(package, local_pkg_location)
         local_pkg_location = local_dir
 
-    # get channel url
     local_channel = os.path.dirname(local_pkg_location)
 
     # update indices in the channel
