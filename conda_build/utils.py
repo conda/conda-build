@@ -1042,21 +1042,26 @@ def find_recipe(path):
 
 
 class LoggingContext(object):
-    loggers = ['conda', 'binstar', 'install', 'conda.install', 'fetch', 'conda.instructions',
-               'fetch.progress', 'print', 'progress', 'dotupdate', 'stdoutlog', 'requests',
-               'conda.core.package_cache', 'conda.plan', 'conda.gateways.disk.delete',
-               'conda_build', 'conda_build.index']
+    default_loggers = ['conda', 'binstar', 'install', 'conda.install', 'fetch', 'conda.instructions',
+                       'fetch.progress', 'print', 'progress', 'dotupdate', 'stdoutlog', 'requests',
+                       'conda.core.package_cache', 'conda.plan', 'conda.gateways.disk.delete',
+                       'conda_build', 'conda_build.index']
 
-    def __init__(self, level=logging.WARN, handler=None, close=True):
+    def __init__(self, level=logging.WARN, handler=None, close=True, loggers=None):
         self.level = level
         self.old_levels = {}
         self.handler = handler
         self.close = close
         self.quiet = context.quiet
+        if not loggers:
+            self.loggers = LoggingContext.default_loggers
+        else:
+            self.loggers = loggers
 
     def __enter__(self):
-        for logger in LoggingContext.loggers:
-            log = logging.getLogger(logger)
+        for logger in self.loggers:
+            if isinstance(logger, string_types):
+                log = logging.getLogger(logger)
             self.old_levels[logger] = log.level
             log.setLevel(self.level if ('install' not in logger or
                                         self.level < logging.INFO) else self.level + 10)
