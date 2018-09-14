@@ -897,6 +897,10 @@ class elffile(UnixExecutable):
         'Can be called immediately after the elfsections have been constructed'
         for es in self.elfsections:
             if addr >= es.sh_addr and addr < es.sh_addr + es.sh_size:
+                # sections which do not appear in the memory image of the
+                # process should be skipped
+                if es.sh_addr == 0:
+                    continue
                 return es, addr - es.sh_addr
         return None, None
 
