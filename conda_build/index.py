@@ -177,34 +177,33 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
             mtime > local_index_timestamp or
             cached_channels != channel_urls):
 
-        log.debug("Building new index for subdir '{}' with channels {}, condarc channels "
-                  "= {}".format(subdir, channel_urls, not omit_defaults))
-
         # priority: (local as either croot or output_folder IF NOT EXPLICITLY IN CHANNEL ARGS),
         #     then channels passed as args (if local in this, it remains in same order),
         #     then channels from condarc.
         urls = list(channel_urls)
 
-        # this is where we add the "local" channel.  It's a little smarter than conda, because
-        #     conda does not know about our output_folder when it is not the default setting.
-        if os.path.isdir(output_folder):
-            if 'local' not in urls:
-                urls.insert(0, url_path(output_folder))
-            # replace local with the appropriate real channel.  Order is maintained.
-            urls = [url if url != "local" else url_path(output_folder) for url in urls]
-        _ensure_valid_channel(output_folder, subdir)
-        update_index(output_folder, verbose=verbose)
-
-        # silence output from conda about fetching index files
-        capture = contextlib.contextmanager(lambda: (yield))
+        loggers = utils.LoggingContext.default_loggers + [__name__]
         if debug:
-            log_context = partial(utils.LoggingContext, logging.DEBUG)
+            log_context = partial(utils.LoggingContext, logging.DEBUG, loggers=loggers)
         elif verbose:
-            log_context = partial(utils.LoggingContext, logging.WARN)
+            log_context = partial(utils.LoggingContext, logging.WARN, loggers=loggers)
         else:
-            log_context = partial(utils.LoggingContext, logging.CRITICAL + 1)
+            log_context = partial(utils.LoggingContext, logging.CRITICAL + 1, loggers=loggers)
             capture = utils.capture
         with log_context():
+            # this is where we add the "local" channel.  It's a little smarter than conda, because
+            #     conda does not know about our output_folder when it is not the default setting.
+            if os.path.isdir(output_folder):
+                if 'local' not in urls:
+                    urls.insert(0, url_path(output_folder))
+                # replace local with the appropriate real channel.  Order is maintained.
+                urls = [url if url != "local" else url_path(output_folder) for url in urls]
+            _ensure_valid_channel(output_folder, subdir)
+            update_index(output_folder, verbose=debug)
+
+            # silence output from conda about fetching index files
+            capture = contextlib.contextmanager(lambda: (yield))
+
             with capture():
                 # replace noarch with native subdir - this ends up building an index with both the
                 #      native content and the noarch content.
@@ -794,60 +793,61 @@ class ChannelIndex(object):
 
     def index(self, patch_generator, hotfix_source_repo=None, verbose=False, progress=False):
         if verbose:
-            log.setLevel(logging.DEBUG)
+            level = logging.DEBUG
         else:
-            log.setLevel(logging.CRITICAL + 1)
+            level = logging.ERROR
 
-        if self._subdirs is None:
-            detected_subdirs = set(subdir for subdir in os.listdir(self.channel_root)
-                                   if subdir in DEFAULT_SUBDIRS and isdir(join(self.channel_root, subdir)))
-            log.debug("found subdirs %s" % detected_subdirs)
-            self.subdirs = subdirs = sorted(detected_subdirs | {'noarch'})
-        else:
-            self.subdirs = subdirs = sorted(set(self._subdirs) | {'noarch'})
+        with utils.LoggingContext(level, loggers=[__name__]):
+            if self._subdirs is None:
+                detected_subdirs = set(subdir for subdir in os.listdir(self.channel_root)
+                                    if subdir in DEFAULT_SUBDIRS and isdir(join(self.channel_root, subdir)))
+                log.debug("found subdirs %s" % detected_subdirs)
+                self.subdirs = subdirs = sorted(detected_subdirs | {'noarch'})
+            else:
+                self.subdirs = subdirs = sorted(set(self._subdirs) | {'noarch'})
 
-        # Step 1. Lock local channel.
-        with utils.try_acquire_locks([utils.get_lock(self.channel_root)], timeout=90):
-            # Step 2. Collect repodata from packages.
-            repodata_from_packages = {}
-            with tqdm(total=len(subdirs), disable=(verbose or not progress)) as t:
+            # Step 1. Lock local channel.
+            with utils.try_acquire_locks([utils.get_lock(self.channel_root)], timeout=90):
+                # Step 2. Collect repodata from packages.
+                repodata_from_packages = {}
+                with tqdm(total=len(subdirs), disable=(verbose or not progress)) as t:
+                    for subdir in subdirs:
+                        t.set_description("Subdir: %s" % subdir)
+                        t.update()
+                        _ensure_valid_channel(self.channel_root, subdir)
+                        repodata_from_packages[subdir] = self.index_subdir(subdir, verbose=verbose, progress=progress)
+
+                # Step 3. Apply patch instructions.
+                patched_repodata = {}
+                patch_instructions = {}
                 for subdir in subdirs:
-                    t.set_description("Subdir: %s" % subdir)
-                    t.update()
-                    _ensure_valid_channel(self.channel_root, subdir)
-                    repodata_from_packages[subdir] = self.index_subdir(subdir, verbose=verbose, progress=progress)
+                    patched_repodata[subdir], patch_instructions[subdir] = self._patch_repodata(
+                        subdir, repodata_from_packages[subdir], patch_generator)
 
-            # Step 3. Apply patch instructions.
-            patched_repodata = {}
-            patch_instructions = {}
-            for subdir in subdirs:
-                patched_repodata[subdir], patch_instructions[subdir] = self._patch_repodata(
-                    subdir, repodata_from_packages[subdir], patch_generator)
+                # Step 4. Save patched and augmented repodata.
+                for subdir in subdirs:
+                    # If the contents of repodata have changed, write a new repodata.json file.
+                    # Also create associated index.html.
+                    self._write_repodata(subdir, patched_repodata[subdir])
 
-            # Step 4. Save patched and augmented repodata.
-            for subdir in subdirs:
-                # If the contents of repodata have changed, write a new repodata.json file.
-                # Also create associated index.html.
-                self._write_repodata(subdir, patched_repodata[subdir])
+                # Step 5. Augment repodata with additional information.
+                augmented_repodata = _augment_repodata(subdirs, patched_repodata, patch_instructions)
 
-            # Step 5. Augment repodata with additional information.
-            augmented_repodata = _augment_repodata(subdirs, patched_repodata, patch_instructions)
+                # Step 6. Create and save repodata2.json
+                repodata2 = {}
+                for subdir in subdirs:
+                    repodata2[subdir] = self._create_repodata2(subdir, augmented_repodata[subdir])
+                    changed = self._write_repodata2(subdir, repodata2[subdir])
+                    if changed:
+                        self._write_subdir_index_html(subdir, repodata2[subdir])
 
-            # Step 6. Create and save repodata2.json
-            repodata2 = {}
-            for subdir in subdirs:
-                repodata2[subdir] = self._create_repodata2(subdir, augmented_repodata[subdir])
-                changed = self._write_repodata2(subdir, repodata2[subdir])
-                if changed:
-                    self._write_subdir_index_html(subdir, repodata2[subdir])
-
-            # Step 7. Create and write channeldata.
-            all_repodata_packages = tuple(concat(repodata["packages"] for repodata in repodata2.values()))
-            reference_packages = _gather_channeldata_reference_packages(all_repodata_packages)
-            channel_data, package_mtimes = self._build_channeldata(subdirs, reference_packages)
-            self._write_channeldata_index_html(channel_data)
-            self._write_channeldata_rss(channel_data, package_mtimes, hotfix_source_repo)
-            self._write_channeldata(channel_data)
+                # Step 7. Create and write channeldata.
+                all_repodata_packages = tuple(concat(repodata["packages"] for repodata in repodata2.values()))
+                reference_packages = _gather_channeldata_reference_packages(all_repodata_packages)
+                channel_data, package_mtimes = self._build_channeldata(subdirs, reference_packages)
+                self._write_channeldata_index_html(channel_data)
+                self._write_channeldata_rss(channel_data, package_mtimes, hotfix_source_repo)
+                self._write_channeldata(channel_data)
 
     def index_subdir(self, subdir, verbose=False, progress=False):
         subdir_path = join(self.channel_root, subdir)

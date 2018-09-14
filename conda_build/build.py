@@ -1026,7 +1026,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
         #    a major bottleneck.
         utils.copy_into(tmp_path, final_output, metadata.config.timeout,
                         locking=False)
-    update_index(os.path.dirname(output_folder), verbose=metadata.config.verbose)
+    update_index(os.path.dirname(output_folder), verbose=metadata.config.debug)
 
     # clean out host prefix so that this output's files don't interfere with other outputs
     #   We have a backup of how things were before any output scripts ran.  That's
@@ -1746,7 +1746,7 @@ def _construct_metadata_for_test_from_package(package, config):
     local_channel = os.path.dirname(local_pkg_location)
 
     # update indices in the channel
-    update_index(local_channel, verbose=config.verbose)
+    update_index(local_channel, verbose=config.debug)
 
     try:
         metadata = render_recipe(os.path.join(info_dir, 'recipe'), config=config,
@@ -2090,7 +2090,7 @@ def tests_failed(package_or_metadata, move_broken, broken_dir, config):
         log.warn('Tests failed for %s - moving package to %s' % (os.path.basename(pkg),
                  broken_dir))
         shutil.move(pkg, dest)
-        update_index(os.path.dirname(pkg), verbose=config.verbose)
+        update_index(os.path.dirname(pkg), verbose=config.debug)
     sys.exit("TESTS FAILED: " + os.path.basename(pkg))
 
 
@@ -2475,7 +2475,7 @@ def is_package_built(metadata, env, include_local=True):
     for d in metadata.config.bldpkgs_dirs:
         if not os.path.isdir(d):
             os.makedirs(d)
-        update_index(d, verbose=metadata.config.verbose)
+        update_index(d, verbose=metadata.config.debug)
     subdir = getattr(metadata.config, '{}_subdir'.format(env))
 
     urls = [url_path(metadata.config.output_folder), 'local'] if include_local else []
