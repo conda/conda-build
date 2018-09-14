@@ -152,6 +152,7 @@ def test_variants_in_output_names():
     assert len(outputs) == 4
 
 
+@pytest.mark.serial
 def test_variants_in_versions_with_setup_py_data(testing_workdir):
     recipe = os.path.join(recipe_dir, '12_variant_versions')
     outputs = api.get_output_file_paths(recipe)

@@ -178,14 +178,6 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
 
         log.debug("Building new index for subdir '{}' with channels {}, condarc channels "
                   "= {}".format(subdir, channel_urls, not omit_defaults))
-        capture = contextlib.contextmanager(lambda: (yield))
-        if debug:
-            log_context = partial(utils.LoggingContext, logging.DEBUG)
-        elif verbose:
-            log_context = partial(utils.LoggingContext, logging.WARN)
-        else:
-            log_context = partial(utils.LoggingContext, logging.CRITICAL + 1)
-            capture = utils.capture
 
         # priority: (local as either croot or output_folder IF NOT EXPLICITLY IN CHANNEL ARGS),
         #     then channels passed as args (if local in this, it remains in same order),
@@ -203,6 +195,14 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
         update_index(output_folder, verbose=verbose)
 
         # silence output from conda about fetching index files
+        capture = contextlib.contextmanager(lambda: (yield))
+        if debug:
+            log_context = partial(utils.LoggingContext, logging.DEBUG)
+        elif verbose:
+            log_context = partial(utils.LoggingContext, logging.WARN)
+        else:
+            log_context = partial(utils.LoggingContext, logging.CRITICAL + 1)
+            capture = utils.capture
         with log_context():
             with capture():
                 # replace noarch with native subdir - this ends up building an index with both the
