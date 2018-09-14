@@ -12,6 +12,7 @@ from numbers import Number
 import os
 from os.path import abspath, basename, getmtime, getsize, isdir, isfile, join, lexists, splitext, dirname
 from shutil import copy2, move
+import subprocess
 import tarfile
 from tempfile import gettempdir
 import time
@@ -250,7 +251,8 @@ def update_subdir_index(dir_path, subdir, check_md5=False, channel_name=None, th
         subdir, verbose=verbose, progress=progress)
 
 
-def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=None, threads=None, verbose=False, progress=False):
+def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=None, threads=None, verbose=False,
+                 progress=False, hotfix_source_repo=None):
     """
     If dir_path contains a directory named 'noarch', the path tree therein is treated
     as though it's a full channel, with a level of subdirs, each subdir having an update
@@ -265,9 +267,10 @@ def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=N
     if dirname in DEFAULT_SUBDIRS:
         log.warn("The update_index function has changed to index all subdirs at once.  You're pointing it at a single subdir.  "
                  "Please update your code to point it at the channel root, rather than a subdir.")
-        return update_index(base_path, check_md5=check_md5, channel_name=channel_name, threads=threads, verbose=verbose)
+        return update_index(base_path, check_md5=check_md5, channel_name=channel_name, threads=threads,
+                            verbose=verbose, hotfix_source_repo=hotfix_source_repo)
     return ChannelIndex(dir_path, channel_name, deep_integrity_check=check_md5, threads=threads).index(
-        patch_generator=patch_generator, verbose=verbose, progress=progress)
+        patch_generator=patch_generator, verbose=verbose, progress=progress, hotfix_source_repo=hotfix_source_repo)
 
 
 def _determine_namespace(info):
@@ -332,6 +335,8 @@ CHANNELDATA_FIELDS = (
     "tags",
     "identifiers",
     "keywords",
+    "recipe_origin",
+    "commits",
 )
 
 
@@ -388,6 +393,8 @@ def _get_jinja2_environment():
     environment.filters['human_bytes'] = human_bytes
     environment.filters['strftime'] = _filter_strftime
     environment.filters['add_href'] = _filter_add_href
+    environment.trim_blocks = True
+    environment.lstrip_blocks = True
 
     return environment
 
@@ -660,6 +667,16 @@ def _cache_about_json(tf, tar_path, about_cache_path):
     # about_json = json.loads(binary_about_json.decode('utf-8'))
 
 
+def _cache_recipe_log(tf, tar_path, recipe_log_path):
+    try:
+        binary_recipe_log = tf.extractfile('info/recipe_log.json').read()
+    except KeyError:
+        log.debug("%s has no file info/recipe_log.json (this is OK)" % tar_path)
+        binary_recipe_log = b'{}'
+    with open(recipe_log_path, 'wb') as fh:
+        fh.write(binary_recipe_log)
+
+
 def _cache_run_exports(tf, tar_path, run_exports_cache_path):
     try:
         binary_run_exports = tf.extractfile('info/run_exports.json')
@@ -726,6 +743,45 @@ def _make_channeldata_index_html(channel_name, channeldata):
     return rendered_html
 
 
+def _get_source_repo_git_info(path):
+    is_repo = subprocess.check_output(["git", "rev-parse", "--is-inside-work-tree"], cwd=path)
+    if is_repo.strip().decode('utf-8') == "true":
+        output = subprocess.check_output(['git', 'log',
+                                        "--pretty=format:'%h|%ad|%an|%s'",
+                                        "--date=unix"], cwd=path)
+        commits = []
+        for line in output.decode("utf-8").strip().splitlines():
+            _hash, _time, _author, _desc = line.split("|")
+            commits.append({"hash": _hash, "timestamp": int(_time),
+                            "author": _author, "description": _desc})
+    return commits
+
+
+def _collect_commits(package_order, hotfix_source_repo, cutoff_time):
+    commit_info = {}
+
+    for package_name, info in package_order.items():
+        commits = info.get('commits', [])
+        for commit in commits:
+            commit['timestamp'] = int(commit['timestamp'])
+        commits = [commit for commit in commits if commit['timestamp'] > cutoff_time]
+        commits.sort(key=lambda x: x['timestamp'], reverse=True)
+        if commits:
+            commit_info["%s (%s)" % (package_name, info['version'])] = {"recipe_origin": info.get('recipe_origin'),
+                                                                        "commits": commits}
+    if hotfix_source_repo:
+        commit_info['index hotfixes'] = {"recipe_origin": hotfix_source_repo,
+                                        "commits": sorted([commit for commit in _get_source_repo_git_info(hotfix_source_repo)
+                                                if commit["timestamp"] > cutoff_time],
+                                            key=lambda x: x["timestamp"], reverse=True)}
+    sorted_commit_info = OrderedDict()
+
+    order = sorted(commit_info, key=lambda k: commit_info[k]['commits'][0]['timestamp'], reverse=True)
+    for k in order:
+        sorted_commit_info[k] = commit_info[k]
+    return sorted_commit_info
+
+
 class ChannelIndex(object):
 
     def __init__(self, channel_root, channel_name, subdirs=None, threads=MAX_THREADS_DEFAULT,
@@ -736,7 +792,7 @@ class ChannelIndex(object):
         self.thread_executor = ThreadLimitedThreadPoolExecutor(threads)
         self.deep_integrity_check = deep_integrity_check
 
-    def index(self, patch_generator, verbose=False, progress=False):
+    def index(self, patch_generator, hotfix_source_repo=None, verbose=False, progress=False):
         if verbose:
             log.setLevel(logging.DEBUG)
         else:
@@ -789,9 +845,9 @@ class ChannelIndex(object):
             all_repodata_packages = tuple(concat(repodata["packages"] for repodata in repodata2.values()))
             reference_packages = _gather_channeldata_reference_packages(all_repodata_packages)
             channel_data, package_mtimes = self._build_channeldata(subdirs, reference_packages)
-            self._write_channeldata(channel_data)
             self._write_channeldata_index_html(channel_data)
-            self._write_channeldata_rss(channel_data, package_mtimes)
+            self._write_channeldata_rss(channel_data, package_mtimes, hotfix_source_repo)
+            self._write_channeldata(channel_data)
 
     def index_subdir(self, subdir, verbose=False, progress=False):
         subdir_path = join(self.channel_root, subdir)
@@ -914,6 +970,7 @@ class ChannelIndex(object):
         ensure(join(cache_path, 'post_install'))
         ensure(join(cache_path, 'icon'))
         ensure(join(self.channel_root, 'icons'))
+        ensure(join(cache_path, 'recipe_log'))
 
     def _calculate_update_set(self, subdir, fns_in_subdir, old_repodata_fns, stat_cache, verbose=False, progress=False):
         # Determine the packages that already exist in repodata, but need to be updated.
@@ -940,6 +997,7 @@ class ChannelIndex(object):
         run_exports_cache_path = join(subdir_path, '.cache', 'run_exports', fn + '.json')
         post_install_cache_path = join(subdir_path, '.cache', 'post_install', fn + '.json')
         icon_cache_path = join(subdir_path, '.cache', 'icon', fn)
+        recipe_log_path = join(subdir_path, '.cache', 'recipe_log', fn + '.json')
 
         log.debug("hashing, extracting, and caching %s" % tar_path)
         with tarfile.open(tar_path) as tf:
@@ -952,6 +1010,7 @@ class ChannelIndex(object):
             binary_paths_json = _cache_paths_json(tf, tar_path, paths_cache_path)
             _cache_post_install_details(binary_paths_json, all_paths, post_install_cache_path)
             recipe_json = _cache_recipe(all_paths, tf, recipe_cache_path)
+            _cache_recipe_log(tf, tar_path, recipe_log_path)
             _cache_icon(recipe_json, all_paths, icon_cache_path, tf)
 
         # calculate extra stuff to add to index.json cache, size, md5, sha256
@@ -1005,9 +1064,10 @@ class ChannelIndex(object):
         run_exports_cache_path = join(subdir_path, '.cache', 'run_exports', fn + '.json')
         post_install_cache_path = join(subdir_path, '.cache', 'post_install', fn + '.json')
         icon_cache_path_glob = join(subdir_path, '.cache', 'icon', fn + ".*")
+        recipe_log_path = join(subdir_path, '.cache', 'recipe_log', fn + '.json')
 
         data = {}
-        for path in (recipe_cache_path, about_cache_path, index_cache_path, post_install_cache_path):
+        for path in (recipe_cache_path, about_cache_path, index_cache_path, post_install_cache_path, recipe_log_path):
             try:
                 with open(path) as fh:
                     data.update(json.load(fh))
@@ -1082,11 +1142,16 @@ class ChannelIndex(object):
         index_path = join(subdir_path, 'index.html')
         return _maybe_write(index_path, rendered_html)
 
-    def _write_channeldata_rss(self, channeldata, package_mtimes):
-        two_weeks_ago = time.time() - 14 * 24 * 3600
-        current = {name: mtime for name, mtime in package_mtimes.items()
-                   if mtime > two_weeks_ago}
-        package_order = sorted(current, key=lambda x: current[x], reverse=True)
+    def _write_channeldata_rss(self, channeldata, package_mtimes, hotfix_source_repo):
+        cutoff_time = time.time() - 14 * 24 * 3600
+
+        current = {name: channeldata['packages'][name] for name, mtime in package_mtimes.items()
+                   if mtime > cutoff_time}
+
+        # our RSS feed is fed by up to 2 things:
+        #    - package recipe_log.json files
+        #    - commit log from the repo where we get our patch instructions from.  This is a config option and cli flag.
+        commit_info = _collect_commits(current, hotfix_source_repo, cutoff_time)
 
         environment = _get_jinja2_environment()
         template = environment.get_template('rss.xml.j2')
@@ -1095,9 +1160,8 @@ class ChannelIndex(object):
             channel_url="https://anaconda.org",  # TODO: figure this out
             current_time=datetime.utcnow().replace(tzinfo=pytz.timezone("UTC")),
 
-            package_order=package_order,
-            channeldata_packages=channeldata['packages'],
-            package_mtimes=package_mtimes,
+            commit_info=commit_info,
+            trim_blocks=True
         )
 
         rss_path = join(self.channel_root, 'rss.xml')
@@ -1134,6 +1198,10 @@ class ChannelIndex(object):
         return channeldata, package_mtimes
 
     def _write_channeldata(self, channeldata):
+        # trim out commits, as they can take up a ton of space.  They're really only for the RSS feed.
+        for pkg, pkg_dict in channeldata.get('packages', {}).items():
+            if "commits" in pkg_dict:
+                del pkg_dict['commits']
         channeldata_path = join(self.channel_root, 'channeldata.json')
         content = json.dumps(channeldata, indent=2, sort_keys=True, separators=(',', ': '))
         _maybe_write(channeldata_path, content, True)

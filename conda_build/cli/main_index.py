@@ -50,6 +50,10 @@ def parse_args(args):
         help="Path to Python file that outputs metadata patch instructions"
     )
     p.add_argument(
+        "--hotfix-source-repo",
+        help="URL of git repo that hosts your metadata patch instructions"
+    )
+    p.add_argument(
         "--verbose", help="show extra debugging info", action="store_true"
     )
     p.add_argument(
@@ -64,7 +68,7 @@ def execute(args):
     _, args = parse_args(args)
     api.update_index(args.dir, check_md5=args.check_md5, channel_name=args.channel_name,
                      threads=args.threads, subdir=args.subdir, patch_generator=args.patch_generator,
-                     verbose=args.verbose, progress=args.progress)
+                     verbose=args.verbose, progress=args.progress, hotfix_source_repo=args.hotfix_source_repo)
 
 
 def main():

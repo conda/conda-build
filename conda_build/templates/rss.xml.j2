@@ -8,11 +8,19 @@
     <language>en</language>
     <copyright>Copyright {{ current_time | strftime("%Y") }}, Anaconda, Inc.</copyright>
     <pubDate>{{ current_time | strftime("%a, %d %b %Y %H:%M:%S %z") }}</pubDate>
-{% for name in package_order %}
+{% for name, commits_dict in commit_info.items() %}
     <item>
-      <title>{{ name }} {{ channeldata_packages[name].version }}</title>
-      <pubDate>{{ package_mtimes[name] | strftime("%a, %d %b %Y %H:%M:%S %z") }}</pubDate>
+      <title>{{ name }}</title>
+      <pubDate>{{ commits_dict['commits'][0]['timestamp'] | strftime("%a, %d %b %Y %H:%M:%S %z") }}</pubDate>
+      {% if "recipe_origin" in commits_dict and commits_dict['recipe_origin'] %}
+      <link>{{ commits_dict['recipe_origin'] }}</link>
+      <description>
+      {% for commit in commits_dict['commits'] %}
+        - {{ commit['hash'] }} ({{ commit['timestamp'] | strftime("%a, %d %b %Y %H:%M:%S %z") }}): {{ commit['description'] }}
+      {% endfor %}
+      </description>
+      {% endif %}
     </item>
-{%- endfor %}
+{% endfor %}
   </channel>
 </rss>
