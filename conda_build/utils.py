@@ -53,6 +53,7 @@ if PY3:
     # NOQA because it is not used in this file.
     from contextlib import ExitStack  # NOQA
     PermissionError = PermissionError  # NOQA
+    FileNotFoundError = FileNotFoundError
 else:
     from glob2 import glob as glob2_glob
 
@@ -64,6 +65,7 @@ else:
     # NOQA because it is not used in this file.
     from contextlib2 import ExitStack  # NOQA
     PermissionError = OSError
+    FileNotFoundError = OSError
 
 on_win = (sys.platform == 'win32')
 

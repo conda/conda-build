@@ -39,7 +39,7 @@ import logging
 from . import conda_interface, utils
 from .conda_interface import MatchSpec, VersionOrder, human_bytes
 from .conda_interface import CondaHTTPError, get_index, url_path
-from .utils import glob, get_logger
+from .utils import glob, get_logger, FileNotFoundError
 
 from conda.base.constants import CONDA_TARBALL_EXTENSION
 
@@ -1044,18 +1044,16 @@ class ChannelIndex(object):
         log.debug("loading index cache %s" % index_cache_path)
         with open(index_cache_path) as fh:
             index_json = json.load(fh)
-
-        # These asserts are only meant to be temporary, while we're working out correctness of
-        # all the caching and access logic.
-        stat_result = os.lstat(join(self.channel_root, subdir, fn))
-        assert stat_result.st_mtime == stat_cache[fn].get('mtime')
-        assert stat_result.st_size == index_json['size']
         return index_json
 
     def _load_all_from_cache(self, subdir, fn):
+        subdir_path = join(self.channel_root, subdir)
+        try:
+            mtime = getmtime(join(subdir_path, fn))
+        except FileNotFoundError:
+            return {}
         # In contrast to self._load_index_from_cache(), this method reads up pretty much
         # all of the cached metadata, except for paths. It all gets dumped into a single map.
-        subdir_path = join(self.channel_root, subdir)
         index_cache_path = join(subdir_path, '.cache', 'index', fn + '.json')
         about_cache_path = join(subdir_path, '.cache', 'about', fn + '.json')
         recipe_cache_path = join(subdir_path, '.cache', 'recipe', fn + '.json')
@@ -1089,7 +1087,7 @@ class ChannelIndex(object):
                 copy2(icon_cache_path, icon_channel_path)
 
         # have to stat again, because we don't have access to the stat cache here
-        data['mtime'] = getmtime(join(subdir_path, fn))
+        data['mtime'] = mtime
 
         source = data.get("source", {})
         try:
@@ -1183,10 +1181,11 @@ class ChannelIndex(object):
         ) for rec in reference_packages)
         for rec, future in zip(reference_packages, futures):
             data = future.result()
-            data.update(rec)
-            name = data['name']
-            package_data[name] = {k: v for k, v in data.items() if k in _CHANNELDATA_FIELDS}
-            package_mtimes[name] = data['mtime']
+            if data:
+                data.update(rec)
+                name = data['name']
+                package_data[name] = {k: v for k, v in data.items() if k in _CHANNELDATA_FIELDS}
+                package_mtimes[name] = data['mtime']
 
         channeldata = {
             'channeldata_version': CHANNELDATA_VERSION,

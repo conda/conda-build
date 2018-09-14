@@ -20,7 +20,7 @@ def main():
         assert set(info['files']) == {'lib/libpng.so',
                                       'lib/libpng16.so',
                                       'lib/libpng16.so.16',
-                                      'lib/libpng16.so.16.17.0',
+                                      'lib/libpng16.so.16.34.0',
                                       'top_level.txt'}, info['files']
     elif sys.platform == 'win32':
         assert set(info['files']) == {'Library/lib/libpng.lib',

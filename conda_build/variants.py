@@ -17,6 +17,7 @@ from conda_build.conda_interface import string_types
 from conda_build.conda_interface import subdir
 from conda_build.conda_interface import cc_conda_build
 from conda_build.conda_interface import memoized
+from conda_build.utils import on_win
 
 DEFAULT_VARIANTS = {
     'python': '{0}.{1}'.format(sys.version_info.major, sys.version_info.minor),
@@ -25,7 +26,7 @@ DEFAULT_VARIANTS = {
     #    version to say what's in their standard library.
     'perl': '5.26.0',
     'lua': '5',
-    'r_base': '3.5',
+    'r_base': '3.4' if on_win else '3.5',
     'cpu_optimization_target': 'nocona',
     'pin_run_as_build': OrderedDict(python=OrderedDict(min_pin='x.x', max_pin='x.x')),
     'ignore_version': [],
