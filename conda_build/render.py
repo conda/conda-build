@@ -224,6 +224,9 @@ def _read_specs_from_package(pkg_loc, pkg_dist):
         # switching to json for consistency in conda-build 4
         specs_yaml = utils.package_has_file(pkg_loc, 'info/run_exports.yaml')
         specs_json = utils.package_has_file(pkg_loc, 'info/run_exports.json')
+        if hasattr(specs_json, "decode"):
+            specs_json = specs_json.decode("utf-8")
+        
         if specs_json:
             specs = json.loads(specs_json)
         elif specs_yaml:
