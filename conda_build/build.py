@@ -2091,7 +2091,7 @@ def tests_failed(package_or_metadata, move_broken, broken_dir, config):
         log.warn('Tests failed for %s - moving package to %s' % (os.path.basename(pkg),
                  broken_dir))
         shutil.move(pkg, dest)
-        update_index(os.path.dirname(pkg), verbose=config.debug)
+        update_index(os.path.dirname(os.path.dirname(pkg)), verbose=config.debug)
     sys.exit("TESTS FAILED: " + os.path.basename(pkg))
 
 

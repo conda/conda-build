@@ -8,18 +8,12 @@ import pytest
 
 from conda_build.conda_interface import PY3
 from conda_build.metadata import MetaData
-from conda_build.utils import on_win
+from conda_build.utils import on_win, FileNotFoundError
 
 thisdir = os.path.dirname(os.path.realpath(__file__))
 metadata_dir = os.path.join(thisdir, "test-recipes/metadata")
 subpackage_dir = os.path.join(thisdir, "test-recipes/split-packages")
 fail_dir = os.path.join(thisdir, "test-recipes/fail")
-
-
-if PY3:
-    FileNotFoundError = FileNotFoundError
-else:
-    FileNotFoundError = OSError
 
 
 def is_valid_dir(parent_dir, dirname):

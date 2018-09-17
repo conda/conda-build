@@ -53,6 +53,7 @@ if PY3:
     # NOQA because it is not used in this file.
     from contextlib import ExitStack  # NOQA
     PermissionError = PermissionError  # NOQA
+    FileNotFoundError = FileNotFoundError
 else:
     from glob2 import glob as glob2_glob
 
@@ -64,6 +65,7 @@ else:
     # NOQA because it is not used in this file.
     from contextlib2 import ExitStack  # NOQA
     PermissionError = OSError
+    FileNotFoundError = OSError
 
 on_win = (sys.platform == 'win32')
 
@@ -1401,7 +1403,7 @@ def _equivalent(base_value, value, path):
     return equivalent
 
 
-def merge_or_update_dict(base, new, path, merge, raise_on_clobber=False):
+def merge_or_update_dict(base, new, path="", merge=True, raise_on_clobber=False):
     log = get_logger(__name__)
     for key, value in new.items():
         base_value = base.get(key, value)
@@ -1427,7 +1429,10 @@ def merge_or_update_dict(base, new, path, merge, raise_on_clobber=False):
                     raise_on_clobber):
                 log.debug('clobbering key {} (original value {}) with value {}'.format(key,
                                                                             base_value, value))
-            base[key] = value
+            if value is None:
+                del base[key]
+            else:
+                base[key] = value
     return base
 
 
