@@ -353,6 +353,7 @@ def copy_license(m):
             utils.copy_into(src_file,
                             join(m.config.info_dir, 'LICENSE.txt'), m.config.timeout,
                             locking=m.config.locking)
+            print("Packaged license file.")
         else:
             raise ValueError("License file given in about/license_file does not exist in "
                              "source root dir or in recipe root dir (with meta.yaml)")
