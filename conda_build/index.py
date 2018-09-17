@@ -143,7 +143,8 @@ DEFAULT_SUBDIRS = (
     "noarch",
 )
 
-os.environ['CONDA_ADD_ANACONDA_TOKEN'] = "false"
+# TODO: this is to make sure that the index doesn't leak tokens.  It breaks use of private channels, though.
+# os.environ['CONDA_ADD_ANACONDA_TOKEN'] = "false"
 
 
 try:
@@ -502,7 +503,7 @@ def _add_namespace_to_spec(fn, info, dep_str, namemap, missing_dependencies, sub
         return dep_str
 
     spec = MatchSpec(dep_str)
-    if spec.namespace:
+    if hasattr(spec, 'namespace') and spec.namespace:
         # this spec is fine
         return dep_str
     else:
