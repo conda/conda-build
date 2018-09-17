@@ -110,7 +110,7 @@ def test_pypi_with_version_arg(testing_workdir):
 
 def test_pypi_with_extra_specs(testing_workdir):
     # regression test for https://github.com/conda/conda-build/issues/1697
-    api.skeletonize('bigfile', 'pypi', extra_specs=["cython", "mpi4py"], version='0.1.24')
+    api.skeletonize('bigfile', 'pypi', extra_specs=["cython", "mpi4py"], version='0.1.24', python="3.6")
     m = api.render('bigfile')[0][0]
     assert parse_version(m.version()) == parse_version("0.1.24")
     assert any('cython' in req for req in m.meta['requirements']['host'])
@@ -119,7 +119,7 @@ def test_pypi_with_extra_specs(testing_workdir):
 
 def test_pypi_with_version_inconsistency(testing_workdir):
     # regression test for https://github.com/conda/conda-build/issues/189
-    api.skeletonize('mpi4py_test', 'pypi', extra_specs=["mpi4py"], version='0.0.10')
+    api.skeletonize('mpi4py_test', 'pypi', extra_specs=["mpi4py"], version='0.0.10', python="3.6")
     m = api.render('mpi4py_test')[0][0]
     assert parse_version(m.version()) == parse_version("0.0.10")
 
