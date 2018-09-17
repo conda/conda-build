@@ -383,7 +383,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
             # Fix the indents
             recipe_lines = []
             for line in rendered_recipe.splitlines():
-                match = re.search('^\s+(-) ', line,
+                match = re.search(r'^\s+(-) ', line,
                                   flags=re.MULTILINE)
                 if match:
                     pre, sep, post = line.partition('-')
@@ -639,11 +639,11 @@ def convert_version(version):
 
 
 MARKER_RE = re.compile(r"(?P<name>^[^=<>!\s]+)"
-                       "\s*"
-                       "(?P<constraint>[=!><]=?\s*[^\s;]+)?"
-                       "(?:\s+;\s+)?(?P<env_mark_name>[^=<>!\s;]+)?"
-                       "\s*"
-                       "(?P<env_mark_constraint>[=<>!\s]+[^=<>!\s]+)?"
+                       r"\s*"
+                       r"(?P<constraint>[=!><]=?\s*[^\s;]+)?"
+                       r"(?:\s+;\s+)?(?P<env_mark_name>[^=<>!\s;]+)?"
+                       r"\s*"
+                       r"(?P<env_mark_constraint>[=<>!\s]+[^=<>!\s]+)?"
                        )
 
 
@@ -857,7 +857,7 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
     else:
         license_name = ' or '.join(licenses)
     # remove the word license from the license
-    clean_license_name = re.subn('(.*)\s+license', r'\1', license_name, flags=re.IGNORECASE)[0]
+    clean_license_name = re.subn(r'(.*)\s+license', r'\1', license_name, flags=re.IGNORECASE)[0]
     d['license'] = clean_license_name
     d['license_family'] = guess_license_family(license_name, allowed_license_families)
     if 'new_hash_value' in pkginfo:

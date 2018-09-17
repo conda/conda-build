@@ -446,7 +446,7 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
             output_excludes = set(name for (name, variant) in m.other_outputs.keys())
 
         if excludes or output_excludes:
-            exclude_pattern = re.compile('|'.join('(?:^{}(?:\s|$|\Z))'.format(exc)
+            exclude_pattern = re.compile(r'|'.join(r'(?:^{}(?:\s|$|\Z))'.format(exc)
                                             for exc in excludes | output_excludes))
 
         parent_recipe = m.meta.get('extra', {}).get('parent_recipe', {})
@@ -484,7 +484,7 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
         #     on the keys in the 'pin_run_as_build' key in the variant, which is a list of package
         #     names to have this behavior.
         if output_excludes:
-            exclude_pattern = re.compile('|'.join('(?:^{}(?:\s|$|\Z))'.format(exc)
+            exclude_pattern = re.compile(r'|'.join(r'(?:^{}(?:\s|$|\Z))'.format(exc)
                                             for exc in output_excludes))
         pinning_env = 'host' if rendered_metadata.is_cross else 'build'
 

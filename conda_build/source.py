@@ -526,14 +526,14 @@ def _guess_patch_strip_level(filesstr, src_dir):
 
 
 def _get_patch_file_details(path):
-    re_files = re.compile('^(?:---|\+\+\+) ([^\n\t]+)')
+    re_files = re.compile(r'^(?:---|\+\+\+) ([^\n\t]+)')
     files = set()
     with io.open(path, errors='ignore') as f:
         files = []
         first_line = True
         is_git_format = True
         for l in f.readlines():
-            if first_line and not re.match('From [0-9a-f]{40}', l):
+            if first_line and not re.match(r'From [0-9a-f]{40}', l):
                 is_git_format = False
             first_line = False
             m = re_files.search(l)
