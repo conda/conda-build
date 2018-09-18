@@ -1109,12 +1109,12 @@ def test_setup_py_data_in_env(testing_config):
 
 def test_numpy_xx(testing_config):
     recipe = os.path.join(metadata_dir, '_numpy_xx')
-    api.build(recipe, config=testing_config, numpy='1.12')
+    api.build(recipe, config=testing_config, numpy='1.15', python="3.6")
 
 
 def test_numpy_xx_host(testing_config):
     recipe = os.path.join(metadata_dir, '_numpy_xx_host')
-    api.build(recipe, config=testing_config, numpy='1.12')
+    api.build(recipe, config=testing_config, numpy='1.15', python="3.6")
 
 
 def test_python_xx(testing_config):
