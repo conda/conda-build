@@ -1104,7 +1104,7 @@ def inspect_linkages_otool(filename, arch='native'):
         args.extend(['-arch', os.uname()[4]])
     args.extend(['-L', filename])
     result = check_output(args).decode(encoding='ascii')
-    groups = re.findall('^\t(.*) \(compatibility', result, re.MULTILINE)
+    groups = re.findall(r'^\t(.*) \(compatibility', result, re.MULTILINE)
     return groups
 
 
@@ -1115,7 +1115,7 @@ def inspect_linkages_ldd(filename):
     result, err = process.communicate()
     result = result.decode(encoding='ascii')
     err = err.decode(encoding='ascii')
-    groups = re.findall('^\t(?!linux-gate\.so\.1.*$)[^ ]+ => (.*) \([0-9a-fx]+\)',
+    groups = re.findall(r'^\t(?!linux-gate\.so\.1.*$)[^ ]+ => (.*) \([0-9a-fx]+\)',
                         result, re.MULTILINE)
     return groups
 
@@ -1171,9 +1171,9 @@ def ldd(*args):
 
 def main(argv):
     for idx, progname in enumerate(argv[0:2][::-1]):
-        if re.match('.*ldd(?:$|\.exe|\.py)', progname):
+        if re.match(r'.*ldd(?:$|\.exe|\.py)', progname):
             return ldd(*argv[2 - idx:])
-        elif re.match('.*otool(?:$|\.exe|\.py)', progname):
+        elif re.match(r'.*otool(?:$|\.exe|\.py)', progname):
             return otool(*argv[2 - idx:])
         elif os.path.isfile(progname):
             klass = codefile_class(progname)

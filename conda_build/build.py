@@ -486,7 +486,7 @@ def detect_and_record_prefix_files(m, files, prefix):
 
 
 def sanitize_channel(channel):
-    return re.sub('\/t\/[a-zA-Z0-9\-]*\/', '/t/<TOKEN>/', channel)
+    return re.sub(r'\/t\/[a-zA-Z0-9\-]*\/', '/t/<TOKEN>/', channel)
 
 
 def write_info_files_file(m, files):
@@ -1263,7 +1263,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
             output_excludes = set(name for (name, variant) in m.other_outputs.keys())
 
         if excludes or output_excludes:
-            exclude_pattern = re.compile('|'.join('(?:^{}(?:\s|$|\Z))'.format(exc)
+            exclude_pattern = re.compile(r'|'.join(r'(?:^{}(?:\s|$|\Z))'.format(exc)
                                             for exc in excludes | output_excludes))
 
         # this metadata object may not be finalized - the outputs are, but this is the
