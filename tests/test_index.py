@@ -222,6 +222,26 @@ def test_index_noarch_osx64_1(testing_workdir):
     assert actual_channeldata_json == expected_channeldata_json
 
 
+def _build_test_index(workdir):
+    api.build(os.path.join(metadata_dir, "_index_hotfix_pkgs"), croot=workdir)
+
+    with open(os.path.join(workdir, subdir, 'repodata.json')) as f:
+        original_metadata = json.load(f)
+
+    pkg_list = original_metadata['packages']
+    assert "track_features_test-1.0-0.tar.bz2" in pkg_list
+    assert pkg_list["track_features_test-1.0-0.tar.bz2"]["track_features"] == "dummy"
+
+    assert "hotfix_depends_test-1.0-dummy_0.tar.bz2" in pkg_list
+    assert pkg_list["hotfix_depends_test-1.0-dummy_0.tar.bz2"]["features"] == "dummy"
+    assert "zlib" in pkg_list["hotfix_depends_test-1.0-dummy_0.tar.bz2"]["depends"]
+
+    assert "revoke_test-1.0-0.tar.bz2" in pkg_list
+    assert "zlib" in pkg_list["revoke_test-1.0-0.tar.bz2"]["depends"]
+    assert "package_has_been_revoked" not in pkg_list["revoke_test-1.0-0.tar.bz2"]["depends"]
+
+    assert "remove_test-1.0-0.tar.bz2" in pkg_list
+
 def test_gen_patch_py(testing_workdir):
     """
     This is a channel-wide file that applies to many subdirs.  It must have a function with this signature:
@@ -248,23 +268,7 @@ def test_gen_patch_py(testing_workdir):
     values in provided in packages here overwrite the values in repodata.json.
     Any value set to None is removed.
     """
-    api.build(os.path.join(metadata_dir, "_index_hotfix_pkgs"), croot=testing_workdir)
-    with open(os.path.join(testing_workdir, subdir, 'repodata.json')) as f:
-        original_metadata = json.load(f)
-
-    pkg_list = original_metadata['packages']
-    assert "track_features_test-1.0-0.tar.bz2" in pkg_list
-    assert pkg_list["track_features_test-1.0-0.tar.bz2"]["track_features"] == "dummy"
-
-    assert "hotfix_depends_test-1.0-dummy_0.tar.bz2" in pkg_list
-    assert pkg_list["hotfix_depends_test-1.0-dummy_0.tar.bz2"]["features"] == "dummy"
-    assert "zlib" in pkg_list["hotfix_depends_test-1.0-dummy_0.tar.bz2"]["depends"]
-
-    assert "revoke_test-1.0-0.tar.bz2" in pkg_list
-    assert "zlib" in pkg_list["revoke_test-1.0-0.tar.bz2"]["depends"]
-    assert "package_has_been_revoked" not in pkg_list["revoke_test-1.0-0.tar.bz2"]["depends"]
-
-    assert "remove_test-1.0-0.tar.bz2" in pkg_list
+    _build_test_index(testing_workdir)
 
     func = """
 def _patch_repodata(repodata, subdir):
@@ -292,46 +296,33 @@ def _patch_repodata(repodata, subdir):
 
     # indexing a second time with the same patchset should keep the removals
     for i in (1, 2):
-        update_index(testing_workdir, patch_generator=patch_file)
+        update_index(testing_workdir, patch_generator=patch_file, verbose=True)
         with open(os.path.join(testing_workdir, subdir, 'repodata.json')) as f:
             patched_metadata = json.load(f)
 
         pkg_list = patched_metadata['packages']
         assert "track_features_test-1.0-0.tar.bz2" in pkg_list
         assert "track_features" not in pkg_list["track_features_test-1.0-0.tar.bz2"]
+        print("pass %s track features ok" % i)
 
         assert "hotfix_depends_test-1.0-dummy_0.tar.bz2" in pkg_list
         assert "features" not in pkg_list["hotfix_depends_test-1.0-dummy_0.tar.bz2"]
         assert "zlib" in pkg_list["hotfix_depends_test-1.0-dummy_0.tar.bz2"]["depends"]
         assert "dummy" in pkg_list["hotfix_depends_test-1.0-dummy_0.tar.bz2"]["depends"]
+        print("pass %s hotfix ok" % i)
 
         assert "revoke_test-1.0-0.tar.bz2" in pkg_list
         assert "zlib" in pkg_list["revoke_test-1.0-0.tar.bz2"]["depends"]
         assert "package_has_been_revoked" in pkg_list["revoke_test-1.0-0.tar.bz2"]["depends"]
+        print("pass %s revoke ok" % i)
 
         assert "remove_test-1.0-0.tar.bz2" not in pkg_list
         assert "remove_test-1.0-0.tar.bz2" in patched_metadata['removed'], "removed list not populated in run %d" % i
+        print("pass %s remove ok" % i)
 
 
 def test_channel_patch_instructions_json(testing_workdir):
-    api.build(os.path.join(metadata_dir, "_index_hotfix_pkgs"), croot=testing_workdir)
-
-    with open(os.path.join(testing_workdir, subdir, 'repodata.json')) as f:
-        original_metadata = json.load(f)
-
-    pkg_list = original_metadata['packages']
-    assert "track_features_test-1.0-0.tar.bz2" in pkg_list
-    assert pkg_list["track_features_test-1.0-0.tar.bz2"]["track_features"] == "dummy"
-
-    assert "hotfix_depends_test-1.0-dummy_0.tar.bz2" in pkg_list
-    assert pkg_list["hotfix_depends_test-1.0-dummy_0.tar.bz2"]["features"] == "dummy"
-    assert "zlib" in pkg_list["hotfix_depends_test-1.0-dummy_0.tar.bz2"]["depends"]
-
-    assert "revoke_test-1.0-0.tar.bz2" in pkg_list
-    assert "zlib" in pkg_list["revoke_test-1.0-0.tar.bz2"]["depends"]
-    assert "package_has_been_revoked" not in pkg_list["revoke_test-1.0-0.tar.bz2"]["depends"]
-
-    assert "remove_test-1.0-0.tar.bz2" in pkg_list
+    _build_test_index(testing_workdir)
 
     replacement_dict = {}
     replacement_dict["track_features_test-1.0-0.tar.bz2"] = {"track_features": None}
@@ -374,7 +365,7 @@ def test_patch_from_tarball(testing_workdir):
     """This is how we expect external communities to provide patches to us.
     We can't let them just give us Python files for us to run, because of the
     security risk of arbitrary code execution."""
-    api.build(os.path.join(metadata_dir, "_index_hotfix_pkgs"), croot=testing_workdir)
+    _build_test_index(testing_workdir)
 
     # our hotfix metadata can be generated any way you want.  Hard-code this here, but in general,
     #    people will use some python file to generate this.
