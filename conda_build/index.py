@@ -351,7 +351,7 @@ def _clear_newline_chars(record, field_name):
 
 def _apply_instructions(subdir, repodata, instructions):
     repodata.setdefault("removed", [])
-    utils.merge_or_update_dict(repodata.get('packages', {}), instructions.get('packages', {}))
+    utils.merge_or_update_dict(repodata.get('packages', {}), instructions.get('packages', {}), merge=False)
 
     for fn in instructions.get('revoke', ()):
         repodata['packages'][fn]['revoked'] = True
@@ -361,6 +361,7 @@ def _apply_instructions(subdir, repodata, instructions):
         popped = repodata['packages'].pop(fn, None)
         if popped:
             repodata["removed"].append(fn)
+    repodata["removed"].sort()
 
     return repodata
 
@@ -931,11 +932,13 @@ class ChannelIndex(object):
                       total=len(futures), disable=(verbose or not progress)) as t:
                 for future in as_completed(futures):
                     fn, mtime, size, index_json = future.result()
-                    # the progress bar shows package names, but we don't know what their name is before they complete.
-                    t.set_description("Hash & extract: %s" % fn)
-                    t.update()
-                    stat_cache[fn] = {'mtime': mtime, 'size': size}
-                    new_repodata_packages[fn] = index_json
+                    # fn can be None if the file was corrupt
+                    if fn:
+                        # the progress bar shows package names, but we don't know what their name is before they complete.
+                        t.set_description("Hash & extract: %s" % fn)
+                        t.update()
+                        stat_cache[fn] = {'mtime': mtime, 'size': size}
+                        new_repodata_packages[fn] = index_json
 
             new_repodata = {
                 'packages': new_repodata_packages,
@@ -1009,8 +1012,9 @@ class ChannelIndex(object):
                 recipe_json = _cache_recipe(all_paths, tf, recipe_cache_path)
                 _cache_recipe_log(tf, tar_path, recipe_log_path)
                 _cache_icon(recipe_json, all_paths, icon_cache_path, tf)
-        except tarfile.ReadError:
+        except (tarfile.ReadError, EOFError):
             log.error("Package %s/%s appears to be corrupt.  Please remove it and re-download it" % (subdir, fn))
+            return None, None, None, None
 
         # calculate extra stuff to add to index.json cache, size, md5, sha256
         stat_result = os.stat(tar_path)
