@@ -1,3 +1,39 @@
+2018-09-17 3.15.0:
+------------------
+
+Enhancements:
+-------------
+
+* add CLI flag (--strict-verify) to allow erroring out when conda-verify fails a package  #3135
+* output text stating that the license file has been successfully found and included with a package  #3152
+
+Bug fixes:
+----------
+
+* allow channel auth when checking if a package is built  #3133
+* If local git cache can't be updated, delete it and barf (for user to re-run)  #3136
+* clean up duplicate pip requirements produced by skeleton  #3138
+* replace recipe_log.txt file with recipe_log.json file (for passing recipe history along with package)  #3139
+* fix decoding to str before passing package contents to JSON loading  #3140
+* fix loss of "removed" section of index with every other indexing operation  #3144
+* fix update_index used in tests to index channel, not subdir  #3145
+* fix ELF sections not included in memory image of process being loaded by pyldd and giving misleading results  #3148
+* fix index operations outputting debug log messages  #3151
+* fix private channels showing 404 errors during test phase  #3153
+
+Contributors:
+-------------
+
+* @Bezier89
+* @gabm
+* @jakirkham
+* @jjhelmus
+* @kalefranz
+* @msarahan
+* @stuarteberg
+* @teake
+
+
 2018-09-11 3.14.4:
 ------------------
 
