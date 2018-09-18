@@ -1,3 +1,19 @@
+2018-09-18 3.15.1:
+------------------
+
+Bug fixes:
+----------
+
+* sort "removed" fns in index repodata.json  #3154
+* fix deps being merged instead of clobbered  #3154
+* Handle corrupt packages during indexing better  #3154
+
+Contributors:
+-------------
+
+* @msarahan
+
+
 2018-09-17 3.15.0:
 ------------------
 
