@@ -675,10 +675,8 @@ def _cache_recipe_log(tf, tar_path, recipe_log_path):
 
 def _cache_run_exports(tf, tar_path, run_exports_cache_path):
     try:
-        binary_run_exports = tf.extractfile('info/run_exports.json')
-        if hasattr(binary_run_exports, "decode"):
-            binary_run_exports = binary_run_exports.decode("utf-8")
-        run_exports = json.load(binary_run_exports)
+        binary_run_exports = tf.extractfile('info/run_exports.json').read()
+        run_exports = json.loads(binary_run_exports.decode("utf-8"))
     except KeyError:
         try:
             binary_run_exports = tf.extractfile('info/run_exports.yaml').read()
