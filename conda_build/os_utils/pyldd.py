@@ -831,6 +831,14 @@ class programheader(object):
         if self.p_type == PT_INTERP:
             file.seek(self.p_offset)
             elffile.program_interpreter = file.read(self.p_filesz - 1).decode()
+        elif self.p_type == PT_LOAD:
+            file.seek(self.p_offset)
+            if hasattr(elffile, 'ptload_p_vaddr'):
+                elffile.ptload_p_vaddr.append(self.p_vaddr)
+                elffile.ptload_p_paddr.append(self.p_paddr)
+            else:
+                elffile.ptload_p_vaddr = [self.p_vaddr]
+                elffile.ptload_p_paddr = [self.p_paddr]
 
 
 class elffile(UnixExecutable):
