@@ -1203,10 +1203,13 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                         indent=INDENT, sel=sel_src_not_win))
                 if use_rtools_win:
                     need_c = need_cxx = need_f = need_autotools = need_make = False
-                    deps.append("{indent}{{{{native}}}}rtools      {sel}".format(
+                    deps.append("{indent}{{{{native}}}}rtools         {sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
-                    deps.append("{indent}{{{{native}}}}extsoft     {sel}".format(
-                        indent=INDENT, sel=sel_src_and_win))
+                    # extsoft is legacy. R packages will download rwinlib subprojects
+                    # as necessary according to Jeroen Ooms. (may need to disable that
+                    # for non-MRO builds or maybe switch to Jeroen's toolchain?)
+                    # deps.append("{indent}{{{{native}}}}extsoft     {sel}".format(
+                    #     indent=INDENT, sel=sel_src_and_win))
                 if need_c or need_cxx or need_f:
                     deps.append("{indent}{{{{native}}}}toolchain      {sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
