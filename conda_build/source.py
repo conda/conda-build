@@ -54,8 +54,8 @@ def download_to_cache(cache_folder, recipe_path, source_dict):
             break
     else:
         log = get_logger(__name__)
-        log.warn("No hash (md5, sha1, sha256) provided.  Source download forced.  "
-                 "Add hash to recipe to use source cache.")
+        log.warn("No hash (md5, sha1, sha256) provided for {}.  Source download forced.  "
+                 "Add hash to recipe to use source cache.".format(unhashed_fn))
     path = join(cache_folder, fn)
     if isfile(path):
         print('Found source in cache: %s' % fn)
