@@ -5,10 +5,11 @@ Tools for converting Cran packages to conda recipes.
 from __future__ import absolute_import, division, print_function
 
 import argparse
+import copy
 from itertools import chain
 from os import makedirs, listdir, sep, environ
-from os.path import (basename, commonprefix, dirname, exists, isabs, isdir,
-                     isfile, join, normpath, realpath, relpath, splitext)
+from os.path import (basename, commonprefix, exists, isabs, isdir,
+                     isfile, join, normpath, realpath, relpath)
 import re
 import subprocess
 import sys
@@ -739,9 +740,9 @@ def get_available_binaries(cran_url, details):
         pkg, _, ver = filename.rpartition('_')
         ver, _, _ = ver.rpartition(ext)
         if pkg in details['binaries']:
-            details['binaries'][pkg].extend((ver, p))
+            details['binaries'][pkg.lower()].extend((ver, p))
         else:
-            details['binaries'][pkg] = [(ver, p)]
+            details['binaries'][pkg.lower()] = [(ver, p)]
 
 
 def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=None, version=None,
@@ -935,7 +936,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         d['build_number'] = build_number
 
         cached_path = None
-        cran_layout = cran_layout_template.copy()
+        cran_layout = copy.deepcopy(cran_layout_template)
         available = {}
 
         for archive_type, archive_details in iteritems(cran_layout):
@@ -950,7 +951,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     print("ERROR: --use-when-no-binary is error (and there is no binary)")
                     sys.exit(1)
                 elif use_when_no_binary.startswith('old'):
-                    if not package in archive_details['binaries']:
+                    if package not in archive_details['binaries']:
                         if use_when_no_binary.endswith('src'):
                             avaliable_artefact = False
                             archive_details['use_this'] = False
@@ -964,12 +965,14 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     archive_details['conda_version'] = archive_details['binaries'][package][-1][0]
                     archive_details['cran_version'] = archive_details['conda_version'].replace('_', '-')
                     avaliable_artefact = True
+            # We may need to inspect the file later to determine which compilers are needed.
+            cached_path = None
+            sha256 = hashlib.sha256()
             if archive_details['use_this'] and avaliable_artefact:
                 if is_tarfile:
                     filename = basename(location)
                     contrib_url = relpath(location, dir_path)
                     contrib_url_rendered = package_url = contrib_url
-                    sha256 = hashlib.sha256()
                     cached_path = location
                 elif not is_github_url or archive_type != 'source':
                     filename_rendered = '{}_{}{}'.format(
@@ -978,10 +981,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     contrib_url = '{{{{ cran_mirror }}}}/{}'.format(archive_details['dir'])
                     contrib_url_rendered = cran_url + '/{}'.format(archive_details['dir'])
                     package_url = contrib_url_rendered + filename_rendered
-                    sha256 = hashlib.sha256()
                     print("Downloading {} from {}".format(archive_type, package_url))
-                    # We may need to inspect the file later to determine which compilers are needed.
-                    cached_path = None
                     try:
                         cached_path, _ = source.download_to_cache(
                             config.src_cache, '',
@@ -1052,10 +1052,10 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                                                     fs.startswith('win')) + ']'
             sel_src_not_win = '  # [' + ' or '.join(fs for fs in from_source if not
                                                     fs.startswith('win')) + ']'
-
         d['sel_src'] = sel_src
         d['sel_src_and_win'] = sel_src_and_win
         d['sel_src_not_win'] = sel_src_not_win
+        d['from_source'] = from_source
 
         if 'source' in available:
             available_details = available['source']
@@ -1203,7 +1203,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                         indent=INDENT, sel=sel_src_not_win))
                 if use_rtools_win:
                     need_c = need_cxx = need_f = need_autotools = need_make = False
-                    deps.append("{indent}{{{{native}}}}rtools         {sel}".format(
+                    deps.append("{indent}rtools                   {sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
                     # extsoft is legacy. R packages will download rwinlib subprojects
                     # as necessary according to Jeroen Ooms. (may need to disable that
@@ -1298,6 +1298,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         elif update_policy == 'skip-existing' and d['inputs']['old-metadata']:
             continue
 
+        from_sources = d['from_source']
         # Normalize the metadata values
         d = {k: unicodedata.normalize("NFKD", text_type(v)).encode('ascii', 'ignore')
              .decode() for k, v in iteritems(d)}
@@ -1310,19 +1311,19 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             f.write(clear_whitespace(CRAN_META.format(**d)))
         if not exists(join(dir_path, 'build.sh')) or update_policy == 'overwrite':
             with open(join(dir_path, 'build.sh'), 'w') as f:
-                if from_source == all:
+                if from_sources == all:
                     f.write(CRAN_BUILD_SH_SOURCE.format(**d))
-                elif from_source == []:
+                elif from_sources == []:
                     f.write(CRAN_BUILD_SH_BINARY.format(**d))
                 else:
-                    tpbt = [target_platform_bash_test_by_sel[t] for t in from_source]
+                    tpbt = [target_platform_bash_test_by_sel[t] for t in from_sources]
                     d['source_pf_bash'] = ' || '.join(['[[ $target_platform ' + s + ' ]]'
                                                   for s in tpbt])
                     f.write(CRAN_BUILD_SH_MIXED.format(**d))
 
         if not exists(join(dir_path, 'bld.bat')) or update_policy == 'overwrite':
             with open(join(dir_path, 'bld.bat'), 'w') as f:
-                if len([fs for fs in from_source if fs.startswith('win')]) == 2:
+                if len([fs for fs in from_sources if fs.startswith('win')]) == 2:
                     f.write(CRAN_BLD_BAT_SOURCE.format(**d))
                 else:
                     f.write(CRAN_BLD_BAT_MIXED.format(**d))
