@@ -27,6 +27,12 @@ import yaml
 
 import filelock
 
+try:
+    from conda.base.constants import CONDA_TARBALL_EXTENSIONS
+except Exception:
+    from conda.base.constants import CONDA_TARBALL_EXTENSION
+    CONDA_TARBALL_EXTENSIONS = (CONDA_TARBALL_EXTENSION,)
+
 from .conda_interface import hashsum_file, md5_file, unix_path_to_win, win_path_to_unix
 from .conda_interface import PY3, iteritems
 from .conda_interface import root_dir, pkgs_dirs
@@ -346,7 +352,7 @@ def get_recipe_abspath(recipe):
     if not PY3:
         recipe = recipe.decode(getpreferredencoding() or 'utf-8')
     if isfile(recipe):
-        if recipe.lower().endswith(decompressible_exts):
+        if recipe.lower().endswith(decompressible_exts) or recipe.lower().endswith(CONDA_TARBALL_EXTENSIONS):
             recipe_dir = tempfile.mkdtemp()
             tar_xf(recipe, recipe_dir)
             # At some stage the old build system started to tar up recipes.

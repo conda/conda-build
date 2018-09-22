@@ -238,7 +238,6 @@ def compile_missing_pyc(files, cwd, python_exe, skip_compile_pyc=()):
 
 
 def check_dist_info_version(name, version, files):
-    name_lower = name.lower()
     for f in files:
         if '.dist-info' in f:
             f_lower = f.lower()
