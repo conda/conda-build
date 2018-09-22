@@ -355,8 +355,8 @@ def copy_license(m):
                             locking=m.config.locking)
             print("Packaged license file.")
         else:
-            raise ValueError("License file given in about/license_file does not exist in "
-                             "source root dir or in recipe root dir (with meta.yaml)")
+            raise ValueError("License file given in about/license_file ({}) does not exist in "
+                             "source root dir or in recipe root dir (with meta.yaml)".format(src_file))
 
 
 def copy_recipe_log(m):
