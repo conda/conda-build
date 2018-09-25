@@ -32,8 +32,11 @@ logging.basicConfig(level=logging.INFO)
 # see: https://stackoverflow.com/questions/29986185/python-argparse-dict-arg
 class StoreDictKeyPair(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
+        if len(values) != 1:
+            return
+
         my_dict = {}
-        for kv in values.split(","):
+        for kv in values[0].split(","):
             k, v = kv.split("=")
             my_dict[k] = v
         setattr(namespace, self.dest, my_dict)
@@ -333,6 +336,7 @@ different sets of packages."""
                          'meta.yaml or use templates otherwise.'), )
 
     p.add_argument('--variant',
+                   nargs=1,
                    action=StoreDictKeyPair,
                    help='Variants to extend the build matrix', )
 
