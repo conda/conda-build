@@ -29,6 +29,14 @@ on_win = (sys.platform == 'win32')
 
 logging.basicConfig(level=logging.INFO)
 
+# see: https://stackoverflow.com/questions/29986185/python-argparse-dict-arg
+class StoreDictKeyPair(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        my_dict = {}
+        for kv in values.split(","):
+            k, v = kv.split("=")
+            my_dict[k] = v
+        setattr(namespace, self.dest, my_dict)
 
 def parse_args(args):
     p = get_render_parser()
@@ -323,6 +331,10 @@ different sets of packages."""
                    help=('Extra dependencies to add to all environment creation steps.  This '
                          'is only enabled for testing with the -t or --test flag.  Change '
                          'meta.yaml or use templates otherwise.'), )
+
+    p.add_argument('--variant',
+                   action=StoreDictKeyPair,
+                   help='Variants to extend the build matrix', )
 
     add_parser_channels(p)
 
