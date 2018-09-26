@@ -834,8 +834,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 extra_recipe_maintainers.append(new_maintainer)
         if len(extra_recipe_maintainers):
             extra_recipe_maintainers[1:].sort()
-            extra_recipe_maintainers.insert(0, "extra:\n  ")
-        d['extra_recipe_maintainers'] = ''.join(extra_recipe_maintainers)
+        d['extra_recipe_maintainers'] = extra_recipe_maintainers
         d['patches'] = ''.join(patches)
         d['script_env'] = ''.join(script_env)
         d['build_number'] = build_number

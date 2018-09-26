@@ -1,0 +1,60 @@
+{% macro requirements(section, dependencies) %}
+{% if dependencies -%}
+{{ section }}:
+{% for dep in dependencies|unique|sort %}
+    - {{ dep }}
+{% endfor %}
+{%- endif %}
+{%- endmacro %}
+{% macro tests(section, tests) %}
+{% if tests -%}
+{{ section }}:
+  {% for test in tests %}
+    - {{ test }}
+  {% endfor %}
+{%- endif %}
+{%- endmacro %}
+{% macro entry(section, value) %}
+{% if value -%}{{ section }}: {{ value }}{%- endif %}
+{%- endmacro %}
+{% block header %} {%- endblock %}
+package:
+  {% block package %}
+  {% endblock %}
+
+source:
+  {% block source %}
+  {% endblock %}
+
+build:
+  number: 0
+  {% block build %}
+  {% endblock %}
+
+requirements:
+  {{ requirements("build", build_depends, ) }}
+  {{ requirements("host", host_depends) }}
+  {{ requirements("run", run_depends) }}
+
+test:
+  {% block test %}
+  {{ tests("imports", import_tests) }}
+  {{ tests("commands", test_commands) }}
+  {{ tests("requires", tests_require) }}
+  {% endblock %}
+
+about:
+  home: {{ home }}
+  {{ entry("license", license) }}
+  {{ entry("license_family", license_family) }}
+  {{ entry("license_file", license_file) }}
+  summary: {{ summary }}
+  {{ entry("doc_url", doc_url) }}
+  {{ entry("dev_url", dev_url) }}
+
+extra:
+  {% block extra %}
+  {% endblock %}
+
+{% block footer %}
+{% endblock %}

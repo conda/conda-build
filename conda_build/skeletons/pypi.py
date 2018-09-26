@@ -24,7 +24,7 @@ import yaml
 
 from conda_build.conda_interface import spec_from_line
 from conda_build.conda_interface import input, configparser, StringIO, string_types, PY3
-from conda_build.conda_interface import download
+from conda_build.conda_interface import download, iteritems
 from conda_build.conda_interface import normalized_version
 from conda_build.conda_interface import human_bytes, hashsum_file
 from conda_build.conda_interface import default_python
@@ -36,6 +36,7 @@ from conda_build.config import Config
 from conda_build.metadata import MetaData
 from conda_build.license_family import allowed_license_families, guess_license_family
 from conda_build.render import FIELDS as EXPECTED_SECTION_ORDER
+from conda_build.skeletons import TEMPLATES
 
 pypi_example = """
 Examples:
@@ -193,8 +194,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
                 all_urls=False, pypi_url='https://pypi.io/pypi/', noprompt=True,
                 version_compare=False, python_version=default_python, manual_url=False,
                 all_extras=False, noarch_python=False, config=None, setup_options=None,
-                extra_specs=[],
-                pin_numpy=False):
+                extra_specs=[], pin_numpy=False, style=None):
     package_dicts = {}
 
     if not setup_options:
@@ -226,6 +226,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
             {
                 'packagename': package.lower(),
                 'run_depends': '',
+                'host_depends': '',
                 'build_depends': '',
                 'entry_points': '',
                 'test_commands': '',
@@ -308,90 +309,35 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
                     deps.insert(numpy_dep[0], 'numpy x.x')
                     d[depends] = deps
 
-    for package in package_dicts:
-        d = package_dicts[package]
+    for package, d in iteritems(package_dicts):
         name = d['packagename']
         makedirs(join(output_dir, name))
-        print("Writing recipe for %s" % package.lower())
+        print("Writing recipe for %s" % name)
+
+        # determine base url
+        if '://' not in pypi_url:
+            raise ValueError("pypi_url must have protocol (e.g. http://) included")
+        base_url = urlsplit(pypi_url)
+        base_url = "://".join((base_url.scheme, base_url.netloc))
+
+        # render script
+        script = ('{{ PYTHON }} -m pip install . --no-deps '
+                 '--ignore-installed -vvv ' +
+                 ' '.join(setup_options))
+
+        # update requirements
+        d['host_depends'].extend(['python', 'pip'])
+        d['run_depends'].append('python')
+
+        # obtain template according to given style and render recipe
+        template = TEMPLATES.get_template(join('styles', style, 'pypi.yaml'))
+        rendered_recipe = template.render(noarch_python=noarch_python,
+                        base_url=base_url,
+                        script=script,
+                        **d)
+
+        # write recipe
         with open(join(output_dir, name, 'meta.yaml'), 'w') as f:
-            rendered_recipe = PYPI_META_HEADER.format(**d)
-
-            ordered_recipe = OrderedDict()
-            # Create all keys in expected ordered
-            for key in EXPECTED_SECTION_ORDER:
-                try:
-                    ordered_recipe[key] = PYPI_META_STATIC[key]
-                except KeyError:
-                    ordered_recipe[key] = OrderedDict()
-
-            if '://' not in pypi_url:
-                raise ValueError("pypi_url must have protocol (e.g. http://) included")
-            base_url = urlsplit(pypi_url)
-            base_url = "://".join((base_url.scheme, base_url.netloc))
-            ordered_recipe['source']['url'] = urljoin(base_url, ordered_recipe['source']['url'])
-            ordered_recipe['source']['sha256'] = d['hash_value']
-
-            if d['entry_points']:
-                ordered_recipe['build']['entry_points'] = d['entry_points']
-
-            if noarch_python:
-                ordered_recipe['build']['noarch'] = 'python'
-
-            ordered_recipe['build']['script'] = ('"{{ PYTHON }} -m pip install . --no-deps '
-                                                 '--ignore-installed -vvv ' +
-                                                 ' '.join(setup_options) + '"')
-
-            # Always require python as a dependency.  Pip is because we use pip for
-            #    the install line.
-            ordered_recipe['requirements'] = OrderedDict()
-            ordered_recipe['requirements']['host'] = sorted(set(['python', 'pip'] +
-                                                                list(d['build_depends'])))
-            ordered_recipe['requirements']['run'] = sorted(set(['python'] +
-                                                               list(d['run_depends'])))
-
-            if d['import_tests']:
-                ordered_recipe['test']['imports'] = d['import_tests']
-
-            if d['test_commands']:
-                ordered_recipe['test']['commands'] = d['test_commands']
-
-            if d['tests_require']:
-                ordered_recipe['test']['requires'] = d['tests_require']
-
-            ordered_recipe['about'] = OrderedDict()
-
-            for key in ABOUT_ORDER:
-                try:
-                    ordered_recipe['about'][key] = d[key]
-                except KeyError:
-                    ordered_recipe['about'][key] = ''
-            ordered_recipe['extra']['recipe-maintainers'] = ['your-github-id-here']
-
-            # Prune any top-level sections that are empty
-            rendered_recipe += _print_dict(ordered_recipe, EXPECTED_SECTION_ORDER)
-
-            # make sure that recipe ends with one newline, by god.
-            rendered_recipe.rstrip()
-
-            # This hackery is necessary because
-            #  - the default indentation of lists is not what we would like.
-            #    Ideally we'd contact the ruamel.yaml author to find the right
-            #    way to do this. See this PR thread for more:
-            #    https://github.com/conda/conda-build/pull/2205#issuecomment-315803714
-            #    Brute force fix below.
-
-            # Fix the indents
-            recipe_lines = []
-            for line in rendered_recipe.splitlines():
-                match = re.search(r'^\s+(-) ', line,
-                                  flags=re.MULTILINE)
-                if match:
-                    pre, sep, post = line.partition('-')
-                    sep = '  ' + sep
-                    line = pre + sep + post
-                recipe_lines.append(line)
-            rendered_recipe = '\n'.join(recipe_lines)
-
             f.write(rendered_recipe)
 
 
@@ -774,7 +720,7 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
 
         if 'setuptools' in deps:
             setuptools_run = False
-        d['build_depends'] = ['pip'] + deps
+        d['host_depends'] = ['pip'] + deps
         # Never add setuptools to runtime dependencies.
         d['run_depends'] = deps
 

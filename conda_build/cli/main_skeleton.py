@@ -16,6 +16,7 @@ from conda_build.conda_interface import ArgumentParser
 
 import conda_build.api as api
 from conda_build.config import Config
+from conda_build.skeletons import STYLES
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
 logging.basicConfig(level=logging.INFO)
@@ -32,6 +33,8 @@ Run --help on the subcommands like 'conda skeleton pypi --help' to see the
 options available.
         """,
     )
+    p.add_argument("--style", default="jinja", choices=STYLES,
+                   help="Desired skeleton style.")
 
     repos = p.add_subparsers(
         dest="repo"

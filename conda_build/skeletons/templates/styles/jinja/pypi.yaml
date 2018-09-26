@@ -1,0 +1,15 @@
+{% extends "base.pypi.yaml" %}
+{% block header %}
+{{ '{% set name = "{packagename}" %}'|safe }}
+{{ '{% set version = "{version}" %}'|safe }}
+{% endblock %}
+
+{% block package %}
+  name: "{{ '{{ name|lower }}' }}"
+  version: "{{ '{{ version|replace(\'-\', \'_\') }}' }}"
+{% endblock %}
+
+{% block source %}
+  url: {{ base_url }}{{ '/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz' }}
+  sha256: {{ hash_value }}
+{% endblock %}

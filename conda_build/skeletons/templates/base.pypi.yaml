@@ -1,0 +1,19 @@
+{% extends "base.yaml" %}
+
+{% block build %}
+{% if entry_points %}
+  entry_points:
+    {% for entry_point in entry_points %}
+    - {{ entry_point }}
+    {% endfor %}
+{% endif %}
+{% if noarch_python %}
+  noarch: python
+{% endif %}
+  script: "{{ script }}"
+{% endblock %}
+
+{% block extra %}
+  recipe-maintainers:
+    - your-github-id-here
+{% endblock %}

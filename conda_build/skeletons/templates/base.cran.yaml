@@ -1,0 +1,29 @@
+{% extends "base.yaml" %}
+{{% set posix = 'm2-' if win else '' %}}
+{{% set native = 'm2w64-' if win else '' %}}
+
+{% block source %}
+{{ source }}
+{{ binary1 }}
+{{ binary2 }}
+{% endblock %}
+
+{% block test %}
+  commands:
+    - $R -e "library('{cran_packagename}')"           # [not win]
+    - "\\"%R%\\" -e \\"library('{cran_packagename}')\\""  # [win]
+    # You can put additional test commands to be run here.
+    # You can also put a file called run_test.py, run_test.sh, or run_test.bat
+    # in the recipe that will be run at test time.
+{% endblock %}
+
+{% block extra %}
+  recipe-maintaines:
+    {% for maintainer in extra_recipe_maintainers %}
+    - {{ maintainer }}
+    {% endfor %}
+{% endblock %}
+
+{% block footer %}
+{{ cran_metadata }}
+{% endblock %}
