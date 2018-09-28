@@ -1,0 +1,18 @@
+{% extends "base.pypi.yaml" %}
+{% block header %}
+{{ '{% set version = "{version}" %}'|safe }}
+
+{{ '{% set posix = \'m2-\' if win else \'\' %}'|safe }}
+{{ '{% set native = \'m2w64-\' if win else \'\' %}'|safe }}
+{% endblock %}
+
+{% block package %}
+  name: {{ packagename }}
+  version: "{{ '{{ version|replace(\'-\', \'_\') }}' }}"
+{% endblock %}
+
+{% block source %}
+  url: {{ '{{ cran_mirror }}' }}/src/contrib/dplyr_{{ '{{ version}}' }}.tar.gz
+  url: {{ '{{ cran_mirror }}' }}/src/contrib/Archive/dplyr/dplyr_{{ '{{ version}}' }}.tar.gz
+  sha256: {{ hash_value }}
+{% endblock %}

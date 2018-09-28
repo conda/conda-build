@@ -12,3 +12,9 @@ TEMPLATES = Environment(
     trim_blocks=True,
     lstrip_blocks=True
 )
+
+
+def get_template(style, source):
+    return TEMPLATES.get_template(os.path.join('styles',
+                                       style,
+                                       '{}.yaml'.format(source)))

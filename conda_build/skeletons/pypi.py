@@ -36,7 +36,7 @@ from conda_build.config import Config
 from conda_build.metadata import MetaData
 from conda_build.license_family import allowed_license_families, guess_license_family
 from conda_build.render import FIELDS as EXPECTED_SECTION_ORDER
-from conda_build.skeletons import TEMPLATES
+from conda_build.skeletons import get_template
 
 pypi_example = """
 Examples:
@@ -330,7 +330,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
         d['run_depends'].append('python')
 
         # obtain template according to given style and render recipe
-        template = TEMPLATES.get_template(join('styles', style, 'pypi.yaml'))
+        template = get_template(style, 'pypi')
         rendered_recipe = template.render(noarch_python=noarch_python,
                         base_url=base_url,
                         script=script,

@@ -1,17 +1,22 @@
 {% extends "base.yaml" %}
-{{% set posix = 'm2-' if win else '' %}}
-{{% set native = 'm2w64-' if win else '' %}}
+{% block header %}
+{{ '{% set posix = \'m2-\' if win else \'\' %}'|safe }}
+{{ '{% set native = \'m2w64-\' if win else \'\' %}'|safe }}
+{% endblock %}
 
-{% block source %}
-{{ source }}
-{{ binary1 }}
-{{ binary2 }}
+{% block build %}
+  merge_build_host: True{{ sel_src_and_win }}
+  {{ noarch_generic }}
+  # This is required to make R link correctly on Linux.
+  rpaths:
+    - lib/R/lib/
+    - lib/
+  {{ script_env }}
 {% endblock %}
 
 {% block test %}
   commands:
-    - $R -e "library('{cran_packagename}')"           # [not win]
-    - "\\"%R%\\" -e \\"library('{cran_packagename}')\\""  # [win]
+    - $R -e "library('{{ cran_packagename }}')"           # [not win]
     # You can put additional test commands to be run here.
     # You can also put a file called run_test.py, run_test.sh, or run_test.bat
     # in the recipe that will be run at test time.

@@ -31,6 +31,7 @@ from conda_build.conda_interface import text_type, iteritems, TemporaryDirectory
 from conda_build.license_family import allowed_license_families, guess_license_family
 from conda_build.utils import rm_rf, ensure_list
 from conda_build.variants import get_package_variants, DEFAULT_VARIANTS
+from conda_build.skeletons import get_template
 
 SOURCE_META = """\
   {archive_keys}
@@ -676,7 +677,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 git_tag=None, cran_url=None, recursive=False, archive=True,
                 version_compare=False, update_policy='', r_interp='r-base', use_binaries_ver=None,
                 use_noarch_generic=False, use_rtools_win=False, config=None,
-                variant_config_files=None):
+                variant_config_files=None, style=None):
 
     output_dir = realpath(output_dir)
     config = get_or_merge_config(config, variant_config_files=variant_config_files)
@@ -1075,54 +1076,54 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             # Put non-R dependencies first.
             if dep_type == 'build':
                 if need_c:
-                    deps.append("{indent}{{{{ compiler('c') }}}}      {sel}".format(
-                        indent=INDENT, sel=sel_src_not_win))
+                    deps.append("{{{{ compiler('c') }}}}      {sel}".format(
+                        sel=sel_src_not_win))
                 if need_cxx:
-                    deps.append("{indent}{{{{ compiler('cxx') }}}}    {sel}".format(
-                        indent=INDENT, sel=sel_src_not_win))
+                    deps.append("{{{{ compiler('cxx') }}}}    {sel}".format(
+                        sel=sel_src_not_win))
                 if need_f:
-                    deps.append("{indent}{{{{ compiler('fortran') }}}}{sel}".format(
-                        indent=INDENT, sel=sel_src_not_win))
+                    deps.append("{{{{ compiler('fortran') }}}}{sel}".format(
+                        sel=sel_src_not_win))
                 if use_rtools_win:
                     need_c = need_cxx = need_f = need_autotools = need_make = False
-                    deps.append("{indent}{{{{native}}}}rtools      {sel}".format(
-                        indent=INDENT, sel=sel_src_and_win))
-                    deps.append("{indent}{{{{native}}}}extsoft     {sel}".format(
-                        indent=INDENT, sel=sel_src_and_win))
+                    deps.append("{{{{native}}}}rtools      {sel}".format(
+                        sel=sel_src_and_win))
+                    deps.append("{{{{native}}}}extsoft     {sel}".format(
+                        sel=sel_src_and_win))
                 if need_c or need_cxx or need_f:
-                    deps.append("{indent}{{{{native}}}}toolchain      {sel}".format(
-                        indent=INDENT, sel=sel_src_and_win))
+                    deps.append("{{{{native}}}}toolchain      {sel}".format(
+                        sel=sel_src_and_win))
                 if need_autotools or need_make or need_git:
-                    deps.append("{indent}{{{{posix}}}}filesystem      {sel}".format(
-                        indent=INDENT, sel=sel_src_and_win))
+                    deps.append("{{{{posix}}}}filesystem      {sel}".format(
+                        sel=sel_src_and_win))
                 if need_git:
-                    deps.append("{indent}{{{{posix}}}}git".format(indent=INDENT))
+                    deps.append("{{{{posix}}}}git".format(indent=INDENT))
                 if need_autotools:
-                    deps.append("{indent}{{{{posix}}}}sed             {sel}".format(
-                        indent=INDENT, sel=sel_src_and_win))
-                    deps.append("{indent}{{{{posix}}}}grep            {sel}".format(
-                        indent=INDENT, sel=sel_src_and_win))
-                    deps.append("{indent}{{{{posix}}}}autoconf        {sel}".format(
-                        indent=INDENT, sel=sel_src))
-                    deps.append("{indent}{{{{posix}}}}automake        {sel}".format(
-                        indent=INDENT, sel=sel_src_not_win))
-                    deps.append("{indent}{{{{posix}}}}automake-wrapper{sel}".format(
-                        indent=INDENT, sel=sel_src_and_win))
-                    deps.append("{indent}{{{{posix}}}}pkg-config".format(indent=INDENT))
+                    deps.append("{{{{posix}}}}sed             {sel}".format(
+                        sel=sel_src_and_win))
+                    deps.append("{{{{posix}}}}grep            {sel}".format(
+                        sel=sel_src_and_win))
+                    deps.append("{{{{posix}}}}autoconf        {sel}".format(
+                        sel=sel_src))
+                    deps.append("{{{{posix}}}}automake        {sel}".format(
+                        sel=sel_src_not_win))
+                    deps.append("{{{{posix}}}}automake-wrapper{sel}".format(
+                        sel=sel_src_and_win))
+                    deps.append("{{{{posix}}}}pkg-config".format(indent=INDENT))
                 if need_make:
-                    deps.append("{indent}{{{{posix}}}}make            {sel}".format(
-                        indent=INDENT, sel=sel_src))
+                    deps.append("{{{{posix}}}}make            {sel}".format(
+                        sel=sel_src))
                     if not need_autotools:
-                        deps.append("{indent}{{{{posix}}}}sed             {sel}".format(
-                            indent=INDENT, sel=sel_src_and_win))
-                    deps.append("{indent}{{{{posix}}}}coreutils       {sel}".format(
-                        indent=INDENT, sel=sel_src_and_win))
-                deps.append("{indent}{{{{posix}}}}zip             {sel}".format(
-                    indent=INDENT, sel=sel_src_and_win))
+                        deps.append("{{{{posix}}}}sed             {sel}".format(
+                            sel=sel_src_and_win))
+                    deps.append("{{{{posix}}}}coreutils       {sel}".format(
+                        sel=sel_src_and_win))
+                deps.append("{{{{posix}}}}zip             {sel}".format(
+                    sel=sel_src_and_win))
             elif dep_type == 'run':
                 if need_c or need_cxx or need_f:
-                    deps.append("{indent}{{{{native}}}}gcc-libs       {sel}".format(
-                        indent=INDENT, sel=sel_src_and_win))
+                    deps.append("{{{{native}}}}gcc-libs       {sel}".format(
+                        sel=sel_src_and_win))
 
             if dep_type == 'host' or dep_type == 'run':
                 for name in sorted(dep_dict):
@@ -1138,15 +1139,15 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                         # that are in the recommended group.
                         # We don't include any R version restrictions because
                         # conda-build always pins r-base and mro-base version.
-                        deps.insert(0, '{indent}{r_name}'.format(indent=INDENT, r_name=r_interp))
+                        deps.insert(0, '{r_name}'.format(r_name=r_interp))
                     else:
                         conda_name = 'r-' + name.lower()
 
                         if dep_dict[name]:
-                            deps.append('{indent}{name} {version}'.format(name=conda_name,
+                            deps.append('{name} {version}'.format(name=conda_name,
                                 version=dep_dict[name], indent=INDENT))
                         else:
-                            deps.append('{indent}{name}'.format(name=conda_name,
+                            deps.append('{name}'.format(name=conda_name,
                                 indent=INDENT))
                         if recursive:
                             lower_name = name.lower()
@@ -1160,7 +1161,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                                 package_dicts.update({lower_name: {'inputs': inputs_dict}})
                                 package_list.append(lower_name)
 
-            d['%s_depends' % dep_type] = ''.join(deps)
+            d['%s_depends' % dep_type] = deps
 
     for package in package_dicts:
         d = package_dicts[package]
@@ -1185,8 +1186,15 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         except:
             pass
         print("Writing recipe for %s" % package.lower())
+
+        # obtain template according to given style and render recipe
+        template = get_template(style, 'cran')
+        rendered_recipe = template.render(**d)
+
+        # write meta.yaml
         with open(join(dir_path, 'meta.yaml'), 'w') as f:
-            f.write(clear_whitespace(CRAN_META.format(**d)))
+            f.write(rendered_recipe)
+
         if not exists(join(dir_path, 'build.sh')) or update_policy == 'overwrite':
             with open(join(dir_path, 'build.sh'), 'w') as f:
                 if from_source == all:

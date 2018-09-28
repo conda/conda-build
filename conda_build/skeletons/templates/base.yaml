@@ -2,7 +2,7 @@
 {% if dependencies %}
   {{ section }}:
   {% for dep in dependencies|unique|sort %}
-    - {{ dep }}
+    - {{ dep|safe }}
   {% endfor %}
 {% endif %}
 {% endmacro %}
@@ -28,12 +28,13 @@ source:
   {% endblock %}
 
 build:
-  number: 0
+  # If this is a new build for the same version, increment the build number.
+  number: {{ build_number }}
   {% block build %}
   {% endblock %}
 
 requirements:
-{{ requirements("build", build_depends, ) -}}
+{{ requirements("build", build_depends) -}}
 {{ requirements("host", host_depends) -}}
 {{ requirements("run", run_depends) }}
 
