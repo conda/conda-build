@@ -1178,9 +1178,6 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         elif update_policy == 'skip-existing' and d['inputs']['old-metadata']:
             continue
 
-        # Normalize the metadata values
-        d = {k: unicodedata.normalize("NFKD", text_type(v)).encode('ascii', 'ignore')
-             .decode() for k, v in iteritems(d)}
         try:
             makedirs(join(dir_path))
         except:
@@ -1190,9 +1187,12 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         # obtain template according to given style and render recipe
         template = get_template(style, 'cran')
         rendered_recipe = template.render(**d)
+        # Normalize the metadata values
+        rendered_recipe = unicodedata.normalize(
+            "NFKD", text_type(rendered_recipe)).encode('ascii', 'ignore')
 
         # write meta.yaml
-        with open(join(dir_path, 'meta.yaml'), 'w') as f:
+        with open(join(dir_path, 'meta.yaml'), 'wb') as f:
             f.write(rendered_recipe)
 
         if not exists(join(dir_path, 'build.sh')) or update_policy == 'overwrite':
