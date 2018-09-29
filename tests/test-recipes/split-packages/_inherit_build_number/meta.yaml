@@ -14,3 +14,8 @@ outputs:
     build:
       missing_dso_whitelist:
         - '*'
+  - name: inherit_build_number_empty_build
+    build:
+  - name: inherit_build_number_empty_build_selector
+    build:
+      skip: True  # [maybe]
