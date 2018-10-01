@@ -1,0 +1,10 @@
+{% extends "base.luarocks.yaml" %}
+
+{% block header %}
+{{ '{%' }} set version = "{{ version }}" {{ '%}' }}
+{% endblock %}
+
+{% block package %}
+  name: {{ packagename }}
+  version: {{ '"{{ version }}"'|safe }}
+{% endblock %}

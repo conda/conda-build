@@ -2,7 +2,7 @@
 
 {% block package %}
   name: {{ packagename }}
-  version: "{{ version }}
+  version: "{{ version }}"
 {% endblock %}
 
 {% block source %}

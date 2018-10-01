@@ -1,0 +1,6 @@
+{% extends "base.luarocks.yaml" %}
+
+{% block package %}
+  name: {{ packagename }}
+  version: "{{ version }}"
+{% endblock %}

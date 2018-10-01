@@ -219,7 +219,7 @@ def ensure_base_deps(deps):
     return deps
 
 
-def skeletonize(packages, output_dir=".", version=None, recursive=False):
+def skeletonize(packages, output_dir=".", version=None, recursive=False, style=None, config=None, platform=None):
 
     # Check that we have Lua installed (any version)
 
@@ -263,7 +263,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False):
                 'entry_comment': "",
                 'test_commands': "",
                 'home_comment': "# ",
-                'homeurl': "",
+                'home': "",
                 'license': "Unknown",
                 'summary_comment': "# ",
                 'summary': "",
@@ -284,7 +284,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False):
         p = subprocess.Popen(["lua", "-e", rockspec_parser % d['rockspec_file']],
                              stdout=subprocess.PIPE)
         out, err = p.communicate()
-        if "ERROR" in out:
+        if "ERROR" in out.decode():
             raise Exception(out.replace("ERROR: ", ""))
         spec = json.loads(out)
 
@@ -324,7 +324,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False):
         if "description" in spec:
             desc = getval(spec, "description")
             if "homepage" in desc:
-                d['homeurl'] = desc['homepage']
+                d['home'] = desc['homepage']
                 d['home_comment'] = ""
             if "summary" in desc:
                 d['summary'] = desc['summary']
@@ -370,8 +370,15 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False):
         name = d['packagename']
         os.makedirs(os.path.join(output_dir, name))
         print("Writing recipe for %s to %s" % (package.lower(), os.path.join(output_dir, name)))
+
+        # obtain template according to given style and render recipe
+        template = get_template(style, 'luarocks')
+        rendered_recipe = template.render(**d)
+
+        # write meta.yaml
         with open(os.path.join(output_dir, name, 'meta.yaml'), 'w') as f:
-            f.write(LUAROCKS_META.format(**d))
+            f.write(rendered_recipe)
+
         with open(os.path.join(output_dir, name, 'build.sh'), 'w') as f:
             f.write(LUAROCKS_BUILD_SH.format(**d))
         with open(os.path.join(output_dir, name, 'post-link.sh'), 'w') as f:

@@ -1,0 +1,49 @@
+{% extends "base.yaml" %}
+
+{% block source %}
+{% if usefile %}
+  url: {{ url }}
+  {% if usemd5 %}
+  md5: {{ md5 }}
+  {% endif %}
+{% elif usegit %}
+  git_url: {{ url }}
+  {% if usegittag %}
+  git_tag: {{ gittag }}
+  {% elif usegitrev %}
+  git_rev: {{ gitrev }}
+  {% endif %}
+{% endif %}
+{%- endblock %}
+
+{% block build %}
+  number: 0
+  # Useful to leave this on by default, will allow relocating
+  # packages that have hard-coded paths in them
+  detect_binary_files_with_prefix: true
+  # uncomment if package does not require compilation
+  # noarch: generic
+{%- endblock %}
+
+{% block test %}
+  commands:
+    # You can put test commands to be run here.  Use this to test that the
+    # entry points work.
+  # You can also put a file called run_test.lua in the recipe folder that will
+  # be run at test time.
+{% endblock %}
+
+{% block extra %}
+  recipe-maintainers:
+    {% if extra_recipe_maintainers %}
+    {% for maintainer in extra_recipe_maintainers %}
+    - {{ maintainer|safe }}
+    {% endfor %}
+    {% else %}
+    - your-github-id-here
+    {% endif %}
+{% endblock %}
+
+{% block footer %}
+{{ cran_metadata|safe }}
+{% endblock %}
