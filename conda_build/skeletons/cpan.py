@@ -183,8 +183,6 @@ def skeletonize(packages, output_dir=".", version=None,
     Loops over packages, outputting conda recipes converted from CPAN metata.
     '''
 
-    print(style)
-
     config = get_or_merge_config(config)
     # TODO: load/use variants?
 

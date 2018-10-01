@@ -715,9 +715,9 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 'packagename': 'r-' + package.lower(),
                 'patches': '',
                 'build_number': 0,
-                'build_depends': '',
-                'host_depends': '',
-                'run_depends': '',
+                'build_depends': [],
+                'host_depends': [],
+                'run_depends': [],
                 # CRAN doesn't seem to have this metadata :(
                 'home_comment': '#',
                 'home': '',
