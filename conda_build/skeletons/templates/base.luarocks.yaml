@@ -17,7 +17,6 @@
 {%- endblock %}
 
 {% block build %}
-  number: 0
   # Useful to leave this on by default, will allow relocating
   # packages that have hard-coded paths in them
   detect_binary_files_with_prefix: true

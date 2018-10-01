@@ -1,0 +1,6 @@
+{% extends "base.yaml" %}
+
+{% block extra %}
+  recipe-maintainers:
+    - your-github-id-here
+{% endblock %}

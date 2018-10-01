@@ -25,51 +25,10 @@ from conda_build.conda_interface import CondaHTTPError, CondaError
 from conda_build.config import get_or_merge_config
 from conda_build.utils import on_win, check_call_env
 from conda_build.variants import get_default_variant
+from conda_build.skeletons import get_template
 
 import requests
 
-CPAN_META = """\
-{{% set name = "{packagename}" %}}
-{{% set version = "{version}" %}}
-{{% set sha256 = "{sha256}" %}}
-
-package:
-  name: {{{{ name }}}}
-  version: {{{{ version }}}}
-
-{source_comment}source:
-  {useurl}fn: {filename}
-  {useurl}url: {cpanurl}
-  {usesha256}sha256: {{{{ sha256 }}}}
-
-# If this is a new build for the same version, increment the build
-# number. If you do not include this key, it defaults to 0.
-build:
-  number: 0
-
-requirements:
-  build:
-    - perl{build_depends}
-
-  run:
-    - perl{run_depends}
-
-{import_comment}test:
-  # Perl 'use' tests
-  {import_comment}imports:{import_tests}
-
-  # You can also put a file called run_test.pl (or run_test.py) in the recipe
-  # that will be run at test time.
-
-about:
-  home: {homeurl}
-  license: {license}
-  summary: {summary}
-
-# See
-# http://docs.continuum.io/conda/build.html for
-# more information about meta.yaml
-"""
 
 CPAN_BUILD_SH = """\
 #!/bin/bash
@@ -218,10 +177,13 @@ def package_exists(package_name):
 # meta_cpan_url="http://api.metacpan.org",
 def skeletonize(packages, output_dir=".", version=None,
                 meta_cpan_url="http://fastapi.metacpan.org/v1",
-                recursive=False, force=False, config=None, write_core=False):
+                recursive=False, force=False, config=None, write_core=False,
+                style=None):
     '''
     Loops over packages, outputting conda recipes converted from CPAN metata.
     '''
+
+    print(style)
 
     config = get_or_merge_config(config)
     # TODO: load/use variants?
@@ -277,15 +239,16 @@ def skeletonize(packages, output_dir=".", version=None,
             continue
 
         d = package_dicts.setdefault(package, {'packagename': packagename,
-                                               'run_depends': '',
-                                               'build_depends': '',
+                                               'run_depends': [],
+                                               'host_depends': [],
                                                'build_comment': '# ',
+                                               'build_number': 0,
                                                'test_commands': '',
                                                'usesha256': '',
                                                'useurl': '',
                                                'source_comment': '',
                                                'summary': "''",
-                                               'import_tests': ''})
+                                               'import_tests': []})
 
         # Fetch all metadata from CPAN
         if version is None:
@@ -321,13 +284,11 @@ def skeletonize(packages, output_dir=".", version=None,
 
             # Get which deps are in perl_core
 
-            d['build_depends'] += indent.join([''] + list(build_deps |
-                                                          run_deps))
-            d['build_depends'] += indent_core.join([''] + list(build_core_deps |
-                                                               run_core_deps))
+            d['host_depends'] += ['perl'] + list(build_deps | run_deps)
+            d['host_depends'] += list(build_core_deps | run_core_deps)
 
-            d['run_depends'] += indent.join([''] + list(run_deps))
-            d['run_depends'] += indent_core.join([''] + list(run_core_deps))
+            d['run_depends'] += ['perl'] + list(run_deps)
+            d['run_depends'] += list(run_core_deps)
             # Make sure we append any packages before continuing
             packages.extend(packages_to_append)
             empty_recipe = False
@@ -361,9 +322,9 @@ def skeletonize(packages, output_dir=".", version=None,
             d['source_comment'] = '#'
 
         try:
-            d['homeurl'] = release_data['resources']['homepage']
+            d['home'] = release_data['resources']['homepage']
         except KeyError:
-            d['homeurl'] = 'http://metacpan.org/pod/' + package
+            d['home'] = 'http://metacpan.org/pod/' + package
         if 'abstract' in release_data:
             # TODO this does not escape quotes in a YAML friendly manner
             summary = repr(release_data['abstract']).lstrip('u')
@@ -386,7 +347,7 @@ def skeletonize(packages, output_dir=".", version=None,
                 # Filter out weird modules that don't belong
                 if (provided_mod.startswith(module_prefix) and
                         '::_' not in provided_mod):
-                    d['import_tests'] += indent + provided_mod
+                    d['import_tests'].append(provided_mod)
         if d['import_tests']:
             d['import_comment'] = ''
         else:
@@ -398,8 +359,15 @@ def skeletonize(packages, output_dir=".", version=None,
         # Write recipe files to a directory
         # TODO def write_recipe
         print("Writing recipe for %s-%s" % (packagename, d['version']))
+
+        # obtain template according to given style and render recipe
+        template = get_template(style, 'cpan')
+        rendered_recipe = template.render(**d)
+
+        # write meta.yaml
         with open(join(dir_path, 'meta.yaml'), 'w') as f:
-            f.write(CPAN_META.format(**d))
+            f.write(rendered_recipe)
+
         with open(join(dir_path, 'build.sh'), 'w') as f:
             if empty_recipe:
                 f.write('#!/bin/bash\necho "Nothing to do."\n')
@@ -649,9 +617,9 @@ def core_module_dict(cpan_url, module):
         mod_dict = get_cpan_api_url(
             '{0}/module/{1}'.format(cpan_url, module), colons=True)
         # If there was an error, report it
-    except CondaHTTPError:
+    except CondaHTTPError as e:
         sys.exit(('Error: Could not find module or distribution named'
-                  ' %s on MetaCPAN. Error was: %s') % (module))
+                  ' %s on MetaCPAN. Error was: %s') % (module, e))
     else:
         mod_dict = {}
         mod_dict['distribution'] = 'perl'

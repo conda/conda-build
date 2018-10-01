@@ -12,6 +12,7 @@ import tempfile
 from glob import glob
 import json
 from sys import platform as _platform
+from conda_build.skeletons import get_template
 
 INDENT = '\n    - '
 
@@ -196,6 +197,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False, style=N
             {
                 'packagename': packagename,
                 'version': "0.0",
+                'build_number': 0,
                 'filename': "",
                 'url': "",
                 'md5': "",

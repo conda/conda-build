@@ -1,0 +1,18 @@
+{% extends "base.cpan.yaml" %}
+
+
+{% block header %}
+{{ '{%' }} set name = "{{ packagename }}" {{ '%}' }}
+{{ '{%' }} set version = "{{ version }}" {{ '%}' }}
+{{ '{%' }} set sha256 = "{{ sha256 }}" {{ '%}' }}
+{% endblock %}
+
+{% block package %}
+  name: {{ '{{ name }}' }}
+  version: "{{ '{{ version }}' }}"
+{% endblock %}
+
+{% block source %}
+  url: {{ cpanurl|replace(version, '{{ version }}') }}
+  sha256: {{ '{{ sha256 }}' }}
+{% endblock %}

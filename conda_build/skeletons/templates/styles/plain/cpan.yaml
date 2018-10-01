@@ -1,0 +1,11 @@
+{% extends "base.cpan.yaml" %}
+
+{% block package %}
+  name: {{ packagename }}
+  version: "{{ version }}"
+{% endblock %}
+
+{% block source %}
+  url: {{ cpanurl|replace(version, '{{ PKG_VERSION }}') }}
+  sha256: {{ sha256 }}
+{% endblock %}
