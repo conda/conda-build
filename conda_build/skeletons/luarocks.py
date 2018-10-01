@@ -50,56 +50,6 @@ local out = {
 print(cjson.encode(out))
 """
 
-
-LUAROCKS_META = """\
-package:
-  name: {packagename}
-  version: "{version}"
-
-source:
-  {usefile}fn: {filename}
-  {usefile}url: {url}
-  {usegit}git_url: {url}
-  {usegittag}git_tag: {gittag} # can also be a branch, but that is highly discouraged
-  {usegitrev}git_rev: {gitrev} # prefer tags over commits, commits over branches
-  {usemd5}md5:{md5}
-#  patches:
-   # List any patch files here
-   # - fix.patch
-
-build:
-  {noarch_python_comment}noarch: generic
-  # Useful to leave this on by default, will allow relocating
-  # packages that have hard-coded paths in them
-  detect_binary_files_with_prefix: true
-  # If this is a new build for the same version, increment the build
-  # number. If you do not include this key, it defaults to 0.
-  # number: 1
-
-requirements:
-  build:{build_depends}
-
-  run:{run_depends}
-
-{test_comment}test:
-  {entry_comment}commands:
-    # You can put test commands to be run here.  Use this to test that the
-    # entry points work.
-{test_commands}
-
-  # You can also put a file called run_test.lua in the recipe that will be run
-  # at test time.
-
-about:
-  {home_comment}home: {homeurl}
-  license: {license}
-  {summary_comment}summary: {summary}
-
-# See
-# http://docs.continuum.io/conda/build.html for
-# more information about meta.yaml
-"""
-
 LUAROCKS_BUILD_SH = """\
 #!/bin/bash
 
