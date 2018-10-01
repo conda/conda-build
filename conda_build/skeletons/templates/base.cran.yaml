@@ -1,34 +1,71 @@
 {% extends "base.yaml" %}
+
 {% block header %}
+{{ '{%' }} set version = "{{ cran_version }}" {{ '%}' }}
+
 {{ '{% set posix = \'m2-\' if win else \'\' %}'|safe }}
 {{ '{% set native = \'m2w64-\' if win else \'\' %}'|safe }}
 {% endblock %}
 
+{% block package %}
+  name: {{ packagename }}
+  version: "{{ '{{ version|replace(\'-\', \'_\') }}'|safe }}"
+{% endblock %}
+
+{% block source %}
+{% for source, entries in sources.items() %}
+  {% if source == "source" %}
+    {% if entries["git_url"] %}
+  git_url: {{ entries["git_url"] }}
+  git_tag: {{ entries["git_tag"] }}
+    {% else %}
+  url:
+    - {{ '{{ cran_mirror }}' }}/src/contrib/dplyr_{{ '{{ version}}' }}.tar.gz  {{ entries["sel"] }}
+    - {{ '{{ cran_mirror }}' }}/src/contrib/Archive/dplyr/dplyr_{{ '{{ version}}' }}.tar.gz  {{ entries["sel"] }}
+      {% if entries["hash_value"] %}
+  sha256: {{ hash_value }}  {{ entries["sel"] }}
+      {% else %}
+  # You should add a hash for the file here, (md5, sha1 or sha256)
+      {% endif %}
+    {% endif %}
+  {% else %}
+  url: {{ cranurl }}  {{ entries["sel"] }}
+  # You should add a hash for the file here, (md5, sha1 or sha256)
+  {% endif %}
+{% endfor %}
+  {{ patches|safe }}
+{%- endblock %}
+
 {% block build %}
-  merge_build_host: True{{ sel_src_and_win }}
-  {{ noarch_generic }}
+  merge_build_host: True{{ sel_src_and_win|safe }}
+  {{ noarch_generic|safe }}
   # This is required to make R link correctly on Linux.
   rpaths:
     - lib/R/lib/
     - lib/
-  {{ script_env }}
-{% endblock %}
+  {{ script_env|safe }}
+{%- endblock %}
 
 {% block test %}
   commands:
     - $R -e "library('{{ cran_packagename }}')"           # [not win]
+    - "\\"%R%\\" -e \\"library('{{ cran_packagename }}')\\""  # [win]
     # You can put additional test commands to be run here.
     # You can also put a file called run_test.py, run_test.sh, or run_test.bat
     # in the recipe that will be run at test time.
 {% endblock %}
 
 {% block extra %}
-  recipe-maintaines:
+  recipe-maintainers:
+    {% if extra_recipe_maintainers %}
     {% for maintainer in extra_recipe_maintainers %}
-    - {{ maintainer }}
+    - {{ maintainer|safe }}
     {% endfor %}
+    {% else %}
+    - your-github-id-here
+    {% endif %}
 {% endblock %}
 
 {% block footer %}
-{{ cran_metadata }}
+{{ cran_metadata|safe }}
 {% endblock %}

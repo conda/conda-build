@@ -33,81 +33,6 @@ from conda_build.utils import rm_rf, ensure_list
 from conda_build.variants import get_package_variants, DEFAULT_VARIANTS
 from conda_build.skeletons import get_template
 
-SOURCE_META = """\
-  {archive_keys}
-  {git_url_key} {git_url}
-  {git_tag_key} {git_tag}
-  {patches}
-"""
-
-BINARY_META = """\
-  url: {cranurl}{sel}
-  {hash_entry}{sel}
-"""
-
-CRAN_META = """\
-{{% set version = '{cran_version}' %}}
-
-{{% set posix = 'm2-' if win else '' %}}
-{{% set native = 'm2w64-' if win else '' %}}
-
-package:
-  name: {packagename}
-  version: {{{{ version|replace("-", "_") }}}}
-
-source:
-{source}
-{binary1}
-{binary2}
-
-build:
-  merge_build_host: True{sel_src_and_win}
-  # If this is a new build for the same version, increment the build number.
-  number: {build_number}
-  {noarch_generic}
-
-  # This is required to make R link correctly on Linux.
-  rpaths:
-    - lib/R/lib/
-    - lib/
-  {script_env}
-{suggests}
-requirements:
-  build:{build_depends}
-
-  host:{host_depends}
-
-  run:{run_depends}
-
-test:
-  commands:
-    # You can put additional test commands to be run here.
-    - $R -e "library('{cran_packagename}')"           # [not win]
-    - "\\"%R%\\" -e \\"library('{cran_packagename}')\\""  # [win]
-
-  # You can also put a file called run_test.py, run_test.sh, or run_test.bat
-  # in the recipe that will be run at test time.
-
-  # requires:
-    # Put any additional test requirements here.
-
-about:
-  {home_comment}home:{homeurl}
-  license: {license}
-  {summary_comment}summary:{summary}
-  license_family: {license_family}
-
-{extra_recipe_maintainers}
-
-# The original CRAN metadata for this package was:
-
-{cran_metadata}
-
-# See
-# http://docs.continuum.io/conda/build.html for
-# more information about meta.yaml
-
-"""
 
 CRAN_BUILD_SH_SOURCE = """\
 #!/bin/bash
@@ -795,7 +720,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 'run_depends': '',
                 # CRAN doesn't seem to have this metadata :(
                 'home_comment': '#',
-                'homeurl': '',
+                'home': '',
                 'summary_comment': '#',
                 'summary': '',
             })
@@ -821,17 +746,16 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             m = inputs['old-metadata']
             patches = make_array(m, 'source/patches')
             script_env = make_array(m, 'build/script_env')
-            extra_recipe_maintainers = make_array(m, 'extra/recipe-maintainers', add_maintainer)
+            extra_recipe_maintainers = []
             if m.version() == d['conda_version']:
                 build_number = int(m.get_value('build/number', 0))
                 build_number += 1 if update_policy == 'merge-incr-build-num' else 0
         if add_maintainer:
-            new_maintainer = "{indent}{add_maintainer}".format(indent=INDENT,
-                                                               add_maintainer=add_maintainer)
+            new_maintainer = add_maintainer
             if new_maintainer not in extra_recipe_maintainers:
                 if not len(extra_recipe_maintainers):
                     # We hit this case when there is no existing recipe.
-                    extra_recipe_maintainers = make_array({}, 'extra/recipe-maintainers', True)
+                    extra_recipe_maintainers = []
                 extra_recipe_maintainers.append(new_maintainer)
         if len(extra_recipe_maintainers):
             extra_recipe_maintainers[1:].sort()
@@ -887,7 +811,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     available_details['contrib_url'] = contrib_url
                     available_details['contrib_url_rendered'] = contrib_url_rendered
                     available_details['cranurl'] = package_url
-                    available_details['hash_entry'] = 'sha256: {}'.format(sha256.hexdigest())
+                    available_details['hash_value'] = sha256.hexdigest()
                     available_details['cached_path'] = cached_path
                 # This is rubbish; d[] should be renamed global[] and should be
                 #      merged into source and binaryN.
@@ -898,7 +822,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                         available_details['git_url_key'] = 'git_url:'
                         available_details['git_tag_key'] = 'git_tag:'
                         hash_msg = '# You can add a hash for the file here, (md5, sha1 or sha256)'
-                        available_details['hash_entry'] = hash_msg
+                        available_details['hash_msg'] = hash_msg
                         available_details['filename'] = ''
                         available_details['cranurl'] = ''
                         available_details['git_url'] = url
@@ -961,21 +885,14 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 available_details['archive_keys'] = '{fn_key} {filename} {sel}\n' \
                                                     '  {url_key}{sel}' \
                                                     '    {cranurl}\n' \
-                                                    '  {hash_entry}{sel}'.format(
+                                                    ''.format(
                     **available_details)
 
         d['cran_metadata'] = '\n'.join(['# %s' % l for l in
             cran_package['orig_lines'] if l])
 
-        # Render the source and binaryN keys
-        binary_id = 1
-        for archive_type, archive_details in iteritems(available):
-            if archive_type == 'source':
-                d['source'] = SOURCE_META.format(**archive_details)
-            else:
-                archive_details['sel'] = '  # [' + archive_details['selector'] + ']'
-                d['binary' + str(binary_id)] = BINARY_META.format(**archive_details)
-                binary_id += 1
+        # make all sources available in the template
+        d['sources'] = available
 
         # XXX: We should maybe normalize these
         d['license'] = cran_package.get("License", "None")
@@ -988,14 +905,14 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
 
         if "URL" in cran_package:
             d['home_comment'] = ''
-            d['homeurl'] = ' ' + yaml_quote_string(cran_package['URL'])
+            d['home'] = ' ' + yaml_quote_string(cran_package['URL'])
         else:
             # use CRAN page as homepage if nothing has been specified
             d['home_comment'] = ''
             if is_github_url:
-                d['homeurl'] = ' {}'.format(location)
+                d['home'] = ' {}'.format(location)
             else:
-                d['homeurl'] = ' https://CRAN.R-project.org/package={}'.format(package)
+                d['home'] = ' https://CRAN.R-project.org/package={}'.format(package)
 
         if not use_noarch_generic or cran_package.get("NeedsCompilation", 'no') == 'yes':
             d['noarch_generic'] = ''

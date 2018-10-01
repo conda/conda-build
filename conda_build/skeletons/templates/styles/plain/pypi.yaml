@@ -1,0 +1,11 @@
+{% extends "base.pypi.yaml" %}
+
+{% block package %}
+  name: {{ packagename }}
+  version: "{{ version }}
+{% endblock %}
+
+{% block source %}
+  url: {{ base_url }}/packages/source/{{ packagename[0] }}/{{ packagename }}/{{ packagename }}-{{ '{{ PKG_VERSION }}' }}.tar.gz
+  sha256: {{ hash_value }}
+{% endblock %}

@@ -34,16 +34,18 @@ build:
   {% endblock %}
 
 requirements:
+{% block requirements %}
 {{ requirements("build", build_depends) -}}
 {{ requirements("host", host_depends) -}}
 {{ requirements("run", run_depends) }}
+{%- endblock %}
 
 test:
 {% block test %}
 {{ tests("imports", import_tests) -}}
 {{ tests("commands", test_commands) -}}
-{{ tests("requires", tests_require) }}
-{% endblock -%}
+{{ tests("requires", tests_require) -}}
+{%- endblock %}
 
 about:
   home: {{ home }}

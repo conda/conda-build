@@ -1,7 +1,7 @@
 {% extends "base.pypi.yaml" %}
 {% block header %}
-{{ '{% set name = "{packagename}" %}'|safe }}
-{{ '{% set version = "{version}" %}'|safe }}
+{{ '{%' }} set name = "{{ packagename }}" {{ '%}' }}
+{{ '{%' }} set version = "{{ version }}" {{ '%}' }}
 {% endblock %}
 
 {% block package %}
