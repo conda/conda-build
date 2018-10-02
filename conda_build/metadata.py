@@ -1858,6 +1858,8 @@ class MetaData(object):
             #    It clobbers everything else, aside from build number
             if 'build' in output:
                 build = output['build']
+                if build is None:
+                    build = {}
                 if 'number' not in build:
                     build['number'] = output.get('number', output_metadata.build_number())
             output_metadata.meta['build'] = build
