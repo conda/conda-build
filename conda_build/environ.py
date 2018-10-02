@@ -34,6 +34,7 @@ from conda_build.variants import get_default_variant
 # these are things that we provide env vars for more explicitly.  This list disables the
 #    pass-through of variant values to env vars for these keys.
 LANGUAGES = ('PERL', 'LUA', 'R', "NUMPY", 'PYTHON')
+R_PACKAGES = ('r-base', 'mro-base', 'r-impl')
 
 
 def get_perl_ver(config):
@@ -387,8 +388,8 @@ def r_vars(metadata, prefix, escape_backslash):
 
     build_or_host = 'host' if metadata.is_cross else 'build'
     deps = [str(ms.name) for ms in metadata.ms_depends(build_or_host)]
-    if 'r-base' in deps or 'mro-base' in deps or metadata.name(fail_ok=True) in (
-            'r-base', 'mro-base'):
+    if any(r_pkg in deps for r_pkg in R_PACKAGES) or \
+            metadata.name(fail_ok=True) in R_PACKAGES:
         r_bin = metadata.config.r_bin(prefix, metadata.config.host_subdir)
 
         if utils.on_win and escape_backslash:
