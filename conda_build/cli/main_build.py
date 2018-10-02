@@ -7,12 +7,15 @@
 from __future__ import absolute_import, division, print_function
 
 import argparse
+
+import yaml
 from glob2 import glob
 import logging
 import os
 import sys
 
 import filelock
+from yaml.parser import ParserError
 
 import conda_build.api as api
 import conda_build.build as build
@@ -30,16 +33,20 @@ on_win = (sys.platform == 'win32')
 logging.basicConfig(level=logging.INFO)
 
 # see: https://stackoverflow.com/questions/29986185/python-argparse-dict-arg
-class StoreDictKeyPair(argparse.Action):
+class ParseYAMLArgument(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         if len(values) != 1:
-            return
+            raise RuntimeError("This switch requires exactly one argument")
 
-        my_dict = {}
-        for kv in values[0].split(","):
-            k, v = kv.split("=")
-            my_dict[k] = v
-        setattr(namespace, self.dest, my_dict)
+        try:
+            my_dict = yaml.load(values[0])
+
+            if not isinstance(my_dict, dict):
+                raise RuntimeError("The argument of {} is not a YAML dictionary.".format(option_string))
+
+            setattr(namespace, self.dest, my_dict)
+        except ParserError as e:
+            raise RuntimeError('The argument of {} is not a valid YAML. The parser error was: \n\n{}'.format(option_string, str(e)))
 
 def parse_args(args):
     p = get_render_parser()
@@ -335,10 +342,10 @@ different sets of packages."""
                          'is only enabled for testing with the -t or --test flag.  Change '
                          'meta.yaml or use templates otherwise.'), )
 
-    p.add_argument('--variant',
+    p.add_argument('--variants',
                    nargs=1,
-                   action=StoreDictKeyPair,
-                   help='Variants to extend the build matrix', )
+                   action=ParseYAMLArgument,
+                   help='Variants to extend the build matrix. Must be a valid YAML instance', )
 
     add_parser_channels(p)
 
@@ -442,7 +449,7 @@ def execute(args):
     else:
         outputs = api.build(args.recipe, post=args.post, build_only=args.build_only,
                             notest=args.notest, already_built=None, config=config,
-                            verify=args.verify)
+                            verify=args.verify, variants=args.variants)
 
     if not args.output and len(utils.get_build_folders(config.croot)) > 0:
         build.print_build_intermediate_warning(config)
