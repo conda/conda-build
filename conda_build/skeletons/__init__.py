@@ -15,6 +15,8 @@ TEMPLATES = Environment(
 
 
 def get_template(style, source):
+    if style is None:
+        style = "jinja"
     return TEMPLATES.get_template(os.path.join('styles',
                                        style,
                                        '{}.yaml'.format(source)))
