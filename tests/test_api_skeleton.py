@@ -1,5 +1,6 @@
 import os
 import sys
+from itertools import product
 
 from pkg_resources import parse_version
 import pytest
@@ -26,12 +27,15 @@ repo_packages = [('', 'pypi', 'pip', '8.1.2'),
                  ('', 'rpm', 'libX11-devel', ''),
                  # ('lua', luarocks', 'LuaSocket', ''),
                  ]
+styles = ["jinja", "plain"]
 
 
-@pytest.mark.parametrize("prefix, repo, package, version", repo_packages)
-def test_repo(prefix, repo, package, version, testing_workdir, testing_config):
+@pytest.mark.parametrize("prefix, repo, package, version, style",
+                         map(lambda t: t[0] + (t[1],),
+                             product(repo_packages, styles)))
+def test_repo(prefix, repo, package, version, style, testing_workdir, testing_config):
     api.skeletonize(package, repo, version=version, output_dir=testing_workdir,
-                    config=testing_config)
+                    config=testing_config, style=style)
     try:
         base_package, _ = os.path.splitext(os.path.basename(package))
         package_name = "-".join([prefix, base_package]) if prefix else base_package
@@ -44,49 +48,54 @@ def test_repo(prefix, repo, package, version, testing_workdir, testing_config):
         raise
 
 
-def test_name_with_version_specified(testing_workdir, testing_config):
-    api.skeletonize(packages='sympy', repo='pypi', version='0.7.5', config=testing_config)
+@pytest.mark.parametrize("style", styles)
+def test_name_with_version_specified(style, testing_workdir, testing_config):
+    api.skeletonize(packages='sympy', repo='pypi', version='0.7.5', config=testing_config, style=style)
     m = api.render('sympy/meta.yaml')[0][0]
     assert m.version() == "0.7.5"
 
 
-def test_pypi_url(testing_workdir, testing_config):
+@pytest.mark.parametrize("style", styles)
+def test_pypi_url(style, testing_workdir, testing_config):
     api.skeletonize('https://pypi.python.org/packages/source/s/sympy/'
                     'sympy-0.7.5.tar.gz#md5=7de1adb49972a15a3dd975e879a2bea9',
-                    repo='pypi', config=testing_config)
+                    repo='pypi', config=testing_config, style=style)
     m = api.render('sympy/meta.yaml')[0][0]
     assert m.version() == "0.7.5"
 
 
-def test_pypi_with_setup_options(testing_workdir, testing_config):
+@pytest.mark.parametrize("style", styles)
+def test_pypi_with_setup_options(style, testing_workdir, testing_config):
     # Use photutils package below because skeleton will fail unless the setup.py is given
     # the flag --offline because of a bootstrapping a helper file that
     # occurs by default.
 
     # Test that the setup option is used in constructing the skeleton.
     api.skeletonize(packages='photutils', repo='pypi', version='0.2.2', setup_options='--offline',
-                    config=testing_config)
+                    config=testing_config, style=style)
 
     # Check that the setup option occurs in bld.bat and build.sh.
     m = api.render('photutils')[0][0]
     assert '--offline' in m.meta['build']['script']
 
 
-def test_pypi_pin_numpy(testing_workdir, testing_config):
+@pytest.mark.parametrize("style", styles)
+def test_pypi_pin_numpy(style, testing_workdir, testing_config):
     # The package used here must have a numpy dependence for pin-numpy to have
     # any effect.
     api.skeletonize(packages='msumastro', repo='pypi', version='0.9.0', config=testing_config,
-                    pin_numpy=True)
+                    pin_numpy=True, style=style)
     with open(os.path.join('msumastro', 'meta.yaml')) as f:
         assert f.read().count('numpy x.x') == 2
     with pytest.raises(DependencyNeedsBuildingError):
         api.build('msumastro')
 
 
-def test_pypi_version_sorting(testing_workdir, testing_config):
+@pytest.mark.parametrize("style", styles)
+def test_pypi_version_sorting(style, testing_workdir, testing_config):
     # The package used here must have a numpy dependence for pin-numpy to have
     # any effect.
-    api.skeletonize(packages='impyla', repo='pypi', config=testing_config)
+    api.skeletonize(packages='impyla', repo='pypi', config=testing_config, style=style)
     m = api.render('impyla')[0][0]
     assert parse_version(m.version()) >= parse_version("0.13.8")
 
@@ -96,37 +105,42 @@ def test_list_skeletons():
     assert set(skeletons) == set(['pypi', 'cran', 'cpan', 'luarocks', 'rpm'])
 
 
-def test_pypi_with_entry_points(testing_workdir):
-    api.skeletonize('planemo', repo='pypi', python_version="2.7")
+@pytest.mark.parametrize("style", styles)
+def test_pypi_with_entry_points(style, testing_workdir):
+    api.skeletonize('planemo', repo='pypi', python_version="2.7", style=style)
     assert os.path.isdir('planemo')
 
 
-def test_pypi_with_version_arg(testing_workdir):
+@pytest.mark.parametrize("style", styles)
+def test_pypi_with_version_arg(style, testing_workdir):
     # regression test for https://github.com/conda/conda-build/issues/1442
-    api.skeletonize('PrettyTable', 'pypi', version='0.7.2')
+    api.skeletonize('PrettyTable', 'pypi', version='0.7.2', style=style)
     m = api.render('prettytable')[0][0]
     assert parse_version(m.version()) == parse_version("0.7.2")
 
 
-def test_pypi_with_extra_specs(testing_workdir):
+@pytest.mark.parametrize("style", styles)
+def test_pypi_with_extra_specs(style, testing_workdir):
     # regression test for https://github.com/conda/conda-build/issues/1697
-    api.skeletonize('bigfile', 'pypi', extra_specs=["cython", "mpi4py"], version='0.1.24', python="3.6")
+    api.skeletonize('bigfile', 'pypi', extra_specs=["cython", "mpi4py"], version='0.1.24', python="3.6", style=style)
     m = api.render('bigfile')[0][0]
     assert parse_version(m.version()) == parse_version("0.1.24")
     assert any('cython' in req for req in m.meta['requirements']['host'])
     assert any('mpi4py' in req for req in m.meta['requirements']['host'])
 
 
-def test_pypi_with_version_inconsistency(testing_workdir):
+@pytest.mark.parametrize("style", styles)
+def test_pypi_with_version_inconsistency(style, testing_workdir):
     # regression test for https://github.com/conda/conda-build/issues/189
-    api.skeletonize('mpi4py_test', 'pypi', extra_specs=["mpi4py"], version='0.0.10', python="3.6")
+    api.skeletonize('mpi4py_test', 'pypi', extra_specs=["mpi4py"], version='0.0.10', python="3.6", style=style)
     m = api.render('mpi4py_test')[0][0]
     assert parse_version(m.version()) == parse_version("0.0.10")
 
 
-def test_pypi_with_basic_environment_markers(testing_workdir):
+@pytest.mark.parametrize("style", styles)
+def test_pypi_with_basic_environment_markers(style, testing_workdir):
     # regression test for https://github.com/conda/conda-build/issues/1974
-    api.skeletonize('coconut', 'pypi', version='1.2.2')
+    api.skeletonize('coconut', 'pypi', version='1.2.2', style=style)
     m = api.render('coconut')[0][0]
 
     build_reqs = str(m.meta['requirements']['host'])
@@ -146,13 +160,15 @@ def test_pypi_with_basic_environment_markers(testing_workdir):
         assert "pygments" not in run_reqs
 
 
-def test_setuptools_test_requirements(testing_workdir):
-    api.skeletonize(packages='hdf5storage', repo='pypi')
+@pytest.mark.parametrize("style", styles)
+def test_setuptools_test_requirements(style, testing_workdir):
+    api.skeletonize(packages='hdf5storage', repo='pypi', style=style)
     m = api.render('hdf5storage')[0][0]
     assert m.meta['test']['requires'] == ['nose >=1.0']
 
 
-def test_pypi_section_order_preserved(testing_workdir):
+@pytest.mark.parametrize("style", styles)
+def test_pypi_section_order_preserved(style, testing_workdir):
     """
     Test whether sections have been written in the correct order.
     """
@@ -161,7 +177,7 @@ def test_pypi_section_order_preserved(testing_workdir):
                                             REQUIREMENTS_ORDER,
                                             PYPI_META_STATIC)
 
-    api.skeletonize(packages='sympy', repo='pypi')
+    api.skeletonize(packages='sympy', repo='pypi', style=style)
     # Since we want to check the order of items in the recipe (not whether
     # the metadata values themselves are sensible), read the file as (ordered)
     # yaml, and check the order.
