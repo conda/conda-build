@@ -110,6 +110,7 @@ except ImportError:
         "r": "r",
         "r-base": "r",
         "mro-base": "r",
+        "mro-base_impl": "r",
         "erlang": "erlang",
         "java": "java",
         "openjdk": "java",
