@@ -35,7 +35,6 @@ from conda_build.environ import create_env
 from conda_build.config import Config
 from conda_build.metadata import MetaData
 from conda_build.license_family import allowed_license_families, guess_license_family
-from conda_build.render import FIELDS as EXPECTED_SECTION_ORDER
 from conda_build.skeletons import get_template
 
 pypi_example = """

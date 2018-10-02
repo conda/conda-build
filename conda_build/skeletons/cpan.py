@@ -190,8 +190,6 @@ def skeletonize(packages, output_dir=".", version=None,
     # wildcards are not valid for perl
     perl_version = perl_version.replace(".*", "")
     package_dicts = {}
-    indent = '\n    - '
-    indent_core = '\n    #- '
     processed_packages = set()
     orig_version = version
     while packages:
