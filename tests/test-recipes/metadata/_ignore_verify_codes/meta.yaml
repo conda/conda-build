@@ -1,0 +1,7 @@
+package:
+  name: test_ignore_verify_codes
+  version: 1.0
+
+build:
+  ignore_verify_codes:
+    - C1115

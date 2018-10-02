@@ -1389,6 +1389,9 @@ class MetaData(object):
 
         return expand_globs(files, self.config.host_prefix)
 
+    def ignore_verify_codes(self):
+        return ensure_list(self.get_value('build/ignore_verify_codes', []))
+
     def binary_relocation(self):
         ret = self.get_value('build/binary_relocation', True)
         if type(ret) not in (list, bool):

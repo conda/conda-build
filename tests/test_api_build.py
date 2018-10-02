@@ -1290,3 +1290,11 @@ def test_verify_bad_package(testing_config):
     # ignore the error that we know should be raised, and re-run to make sure it is actually ignored
     testing_config.ignore_verify_codes = ['C1125', 'C1115']
     api.build(recipe_dir, config=testing_config)
+
+
+def test_ignore_verify_codes(testing_config):
+    recipe_dir = os.path.join(metadata_dir, '_ignore_verify_codes')
+    testing_config.exit_on_verify_error = True
+    # this recipe intentionally has a license error.  If ignore_verify_codes works,
+    #    it will build OK.  If not, it will error out.
+    api.build(recipe_dir, config=testing_config)
