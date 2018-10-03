@@ -8,14 +8,12 @@ from __future__ import absolute_import, division, print_function
 
 import argparse
 
-import yaml
 from glob2 import glob
 import logging
 import os
 import sys
 
 import filelock
-from yaml.parser import ParserError
 
 import conda_build.api as api
 import conda_build.build as build
@@ -32,21 +30,6 @@ on_win = (sys.platform == 'win32')
 
 logging.basicConfig(level=logging.INFO)
 
-# see: https://stackoverflow.com/questions/29986185/python-argparse-dict-arg
-class ParseYAMLArgument(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
-        if len(values) != 1:
-            raise RuntimeError("This switch requires exactly one argument")
-
-        try:
-            my_dict = yaml.load(values[0])
-
-            if not isinstance(my_dict, dict):
-                raise RuntimeError("The argument of {} is not a YAML dictionary.".format(option_string))
-
-            setattr(namespace, self.dest, my_dict)
-        except ParserError as e:
-            raise RuntimeError('The argument of {} is not a valid YAML. The parser error was: \n\n{}'.format(option_string, str(e)))
 
 def parse_args(args):
     p = get_render_parser()
@@ -341,11 +324,6 @@ different sets of packages."""
                    help=('Extra dependencies to add to all environment creation steps.  This '
                          'is only enabled for testing with the -t or --test flag.  Change '
                          'meta.yaml or use templates otherwise.'), )
-
-    p.add_argument('--variants',
-                   nargs=1,
-                   action=ParseYAMLArgument,
-                   help='Variants to extend the build matrix. Must be a valid YAML instance', )
 
     add_parser_channels(p)
 
