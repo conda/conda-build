@@ -6,10 +6,14 @@
 
 from __future__ import absolute_import, division, print_function
 
+import argparse
 import logging
 import sys
 import os
 from pprint import pprint
+
+import yaml
+from yaml.parser import ParserError
 
 from conda_build.conda_interface import (ArgumentParser, add_parser_channels, cc_conda_build,
                                          url_path)
@@ -21,6 +25,22 @@ from conda_build.variants import get_package_variants, set_language_env_vars
 from conda_build.utils import LoggingContext
 
 on_win = (sys.platform == 'win32')
+
+
+# see: https://stackoverflow.com/questions/29986185/python-argparse-dict-arg
+class ParseYAMLArgument(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        if len(values) != 1:
+            raise RuntimeError("This switch requires exactly one argument")
+
+        try:
+            my_dict = yaml.load(values[0], Loader=yaml.BaseLoader)
+            if not isinstance(my_dict, dict):
+                raise RuntimeError("The argument of {} is not a YAML dictionary.".format(option_string))
+
+            setattr(namespace, self.dest, my_dict)
+        except ParserError as e:
+            raise RuntimeError('The argument of {} is not a valid YAML. The parser error was: \n\n{}'.format(option_string, str(e)))
 
 
 def get_render_parser():
@@ -118,6 +138,11 @@ source to try fill in related template variables.",
               "yours to handle. Any variants with overlapping names within a "
               "build will clobber each other.")
     )
+    p.add_argument('--variants',
+                   nargs=1,
+                   action=ParseYAMLArgument,
+                   help=('Variants to extend the build matrix. Must be a valid YAML instance, '
+                         'such as "{python: [3.6, 3.7]}"'))
 
     add_parser_channels(p)
     return p
@@ -150,7 +175,8 @@ def execute(args):
     p, args = parse_args(args)
 
     config = get_or_merge_config(None, **args.__dict__)
-    variants = get_package_variants(args.recipe, config)
+
+    variants = get_package_variants(args.recipe, config, variants=args.variants)
     set_language_env_vars(variants)
 
     channel_urls = args.__dict__.get('channel') or args.__dict__.get('channels') or ()
@@ -173,7 +199,8 @@ def execute(args):
         config.debug = False
 
     metadata_tuples = api.render(args.recipe, config=config,
-                                 no_download_source=args.no_source)
+                                 no_download_source=args.no_source,
+                                 variants=args.variants)
 
     if args.output:
         with LoggingContext(logging.CRITICAL + 1):

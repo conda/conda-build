@@ -613,11 +613,30 @@ def test_render_with_python_arg_reduces_subspace(capfd):
     out, err = capfd.readouterr()
     assert(len(out.splitlines()) == 1)
 
-    # should raise an error, because python 3.6 is not in the matrix, so we don't know which vc
+    # should raise an error, because python 3.4 is not in the matrix, so we don't know which vc
     # to associate with
-    args = [recipe, '--python=3.6', '--output']
+    args = [recipe, '--python=3.4', '--output']
     with pytest.raises(ValueError):
         main_render.execute(args)
+
+
+def test_render_with_python_arg_CLI_reduces_subspace(capfd):
+    recipe = os.path.join(metadata_dir, "..", "variants", "20_subspace_selection_cli")
+    # build the package
+    args = [recipe, '--variants', '{python: [2.7, 3.5]}', '--output']
+    main_render.execute(args)
+    out, err = capfd.readouterr()
+    assert(len(out.splitlines()) == 3)
+
+    args = [recipe, '--variants', '{python: 2.7}', '--output']
+    main_render.execute(args)
+    out, err = capfd.readouterr()
+    assert(len(out.splitlines()) == 2)
+
+    args = [recipe, '--variants', '{python: 3.5}', '--output']
+    main_render.execute(args)
+    out, err = capfd.readouterr()
+    assert(len(out.splitlines()) == 1)
 
 
 def test_test_extra_dep(testing_metadata):

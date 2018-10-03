@@ -235,6 +235,7 @@ def _combine_spec_dictionaries(specs, extend_keys=None, filter_keys=None, zip_ke
                             else:
                                 if k in values and any(subvalue not in values[k]
                                                     for subvalue in ensure_list(v)):
+
                                     raise ValueError("variant config in {} is ambiguous because it "
                                         "does not fully implement all zipped keys, or specifies "
                                         "a subspace that is not fully implemented.".format(

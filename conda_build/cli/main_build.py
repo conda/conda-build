@@ -7,6 +7,7 @@
 from __future__ import absolute_import, division, print_function
 
 import argparse
+
 from glob2 import glob
 import logging
 import os
@@ -426,7 +427,7 @@ def execute(args):
     else:
         outputs = api.build(args.recipe, post=args.post, build_only=args.build_only,
                             notest=args.notest, already_built=None, config=config,
-                            verify=args.verify)
+                            verify=args.verify, variants=args.variants)
 
     if not args.output and len(utils.get_build_folders(config.croot)) > 0:
         build.print_build_intermediate_warning(config)
