@@ -748,7 +748,7 @@ def get_available_binaries(cran_url, details):
 def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=None, version=None,
                 git_tag=None, cran_url=None, recursive=False, archive=True,
                 version_compare=False, update_policy='', r_interp='r-base', use_binaries_ver=None,
-                use_noarch_generic=False, use_when_no_binary='error', use_rtools_win=False, config=None,
+                use_noarch_generic=False, use_when_no_binary='src', use_rtools_win=False, config=None,
                 variant_config_files=None):
 
     if use_when_no_binary != 'error' and \
