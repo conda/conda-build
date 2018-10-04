@@ -242,6 +242,7 @@ def _build_test_index(workdir):
 
     assert "remove_test-1.0-0.tar.bz2" in pkg_list
 
+
 def test_gen_patch_py(testing_workdir):
     """
     This is a channel-wide file that applies to many subdirs.  It must have a function with this signature:
@@ -407,3 +408,13 @@ def test_patch_from_tarball(testing_workdir):
     assert "package_has_been_revoked" in pkg_list["revoke_test-1.0-0.tar.bz2"]["depends"]
 
     assert "remove_test-1.0-0.tar.bz2" not in pkg_list
+
+
+def test_index_of_removed_pkg(testing_metadata):
+    out_files = api.build(testing_metadata)
+    for f in out_files:
+        os.remove(f)
+    api.update_index(testing_metadata.config.croot)
+    with open(os.path.join(testing_metadata.config.croot, subdir, 'repodata.json')) as f:
+        repodata = json.load(f)
+    assert not repodata['packages']
