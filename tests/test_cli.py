@@ -245,7 +245,7 @@ def test_render_output_build_path_set_python(testing_workdir, testing_metadata, 
 
 
 def test_skeleton_pypi(testing_workdir, testing_config):
-    args = ['pypi', 'click']
+    args = ['pypi', 'Click']
     main_skeleton.execute(args)
     assert os.path.isdir('click')
 

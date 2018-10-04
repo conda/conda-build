@@ -224,7 +224,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
                 raise RuntimeError("directory already exists: %s" % dir_path)
         d = package_dicts.setdefault(package,
             {
-                'packagename': package.lower(),
+                'packagename': package,
                 'run_depends': '',
                 'build_depends': '',
                 'entry_points': '',
@@ -310,7 +310,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
 
     for package in package_dicts:
         d = package_dicts[package]
-        name = d['packagename']
+        name = d['packagename'].lower()
         makedirs(join(output_dir, name))
         print("Writing recipe for %s" % package.lower())
         with open(join(output_dir, name, 'meta.yaml'), 'w') as f:
