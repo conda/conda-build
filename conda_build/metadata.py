@@ -549,7 +549,7 @@ def build_string_from_metadata(metadata):
         #    whether anyone's tools depend on this file naming right now.
         for s, names, places in (('np', 'numpy', 2), ('py', 'python', 2), ('pl', 'perl', 2),
                                  ('lua', 'lua', 2), ('r', ('r', 'r-base'), 3),
-                                 ('mro', 'mro-base', 3)):
+                                 ('mro', 'mro-base', 3), ('mro', 'mro-base_impl', 3)):
             for ms in metadata.ms_depends('run'):
                 for name in ensure_list(names):
                     if ms.name == name and name in build_pkg_names:
@@ -1392,11 +1392,11 @@ class MetaData(object):
     def binary_relocation(self):
         ret = self.get_value('build/binary_relocation', True)
         if type(ret) not in (list, bool):
-            raise RuntimeError('build/ignore_prefix_files should be boolean or a list of paths '
+            raise RuntimeError('build/binary_relocation should be boolean or a list of paths '
                                '(optionally globs)')
         if sys.platform == 'win32':
             if type(ret) is list and any('\\' in i for i in ret):
-                raise RuntimeError("build/ignore_prefix_files paths must use / "
+                raise RuntimeError("build/binary_relocation paths must use / "
                                    "as the path delimiter on Windows")
         return expand_globs(ret, self.config.host_prefix) if type(ret) is list else ret
 

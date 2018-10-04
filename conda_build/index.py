@@ -34,6 +34,7 @@ import contextlib
 import fnmatch
 from functools import partial
 import logging
+import libarchive
 
 
 from . import conda_interface, utils
@@ -41,7 +42,11 @@ from .conda_interface import MatchSpec, VersionOrder, human_bytes
 from .conda_interface import CondaHTTPError, get_index, url_path
 from .utils import glob, get_logger, FileNotFoundError
 
-from conda.base.constants import CONDA_TARBALL_EXTENSION
+try:
+    from conda.base.constants import CONDA_TARBALL_EXTENSIONS
+except Exception:
+    from conda.base.constants import CONDA_TARBALL_EXTENSION
+    CONDA_TARBALL_EXTENSIONS = (CONDA_TARBALL_EXTENSION,)
 
 try:
     from json.decoder import JSONDecodeError
@@ -105,6 +110,7 @@ except ImportError:
         "r": "r",
         "r-base": "r",
         "mro-base": "r",
+        "mro-base_impl": "r",
         "erlang": "erlang",
         "java": "java",
         "openjdk": "java",
@@ -627,7 +633,7 @@ def _cache_post_install_details(loaded_json_text, all_paths, post_install_cache_
         json.dump(post_install_details_json, fh)
 
 
-def _cache_recipe(all_paths, tf, recipe_cache_path):
+def _cache_recipe(tarball, all_paths, recipe_cache_path):
     recipe_path_search_order = (
                 'info/recipe/meta.yaml.rendered',
                 'info/recipe/meta.yaml',
@@ -635,7 +641,7 @@ def _cache_recipe(all_paths, tf, recipe_cache_path):
             )
     recipe_path = next((p for p in recipe_path_search_order if p in all_paths), None)
     if recipe_path:
-        recipe_yaml_binary = tf.extractfile(recipe_path).read()
+        recipe_yaml_binary = _tar_xf_file(tarball, recipe_path)
     else:
         recipe_yaml_binary = '{}'
     try:
@@ -652,9 +658,9 @@ def _cache_recipe(all_paths, tf, recipe_cache_path):
     return recipe_json
 
 
-def _cache_about_json(tf, tar_path, about_cache_path):
+def _cache_about_json(tar_path, about_cache_path):
     try:
-        binary_about_json = tf.extractfile('info/about.json').read()
+        binary_about_json = _tar_xf_file(tar_path, 'info/about.json')
     except KeyError:
         log.debug("%s has no file info/about.json" % tar_path)
         binary_about_json = b'{}'
@@ -663,9 +669,9 @@ def _cache_about_json(tf, tar_path, about_cache_path):
     # about_json = json.loads(binary_about_json.decode('utf-8'))
 
 
-def _cache_recipe_log(tf, tar_path, recipe_log_path):
+def _cache_recipe_log(tar_path, recipe_log_path):
     try:
-        binary_recipe_log = tf.extractfile('info/recipe_log.json').read()
+        binary_recipe_log = _tar_xf_file(tar_path, 'info/recipe_log.json')
     except KeyError:
         log.debug("%s has no file info/recipe_log.json (this is OK)" % tar_path)
         binary_recipe_log = b'{}'
@@ -673,13 +679,13 @@ def _cache_recipe_log(tf, tar_path, recipe_log_path):
         fh.write(binary_recipe_log)
 
 
-def _cache_run_exports(tf, tar_path, run_exports_cache_path):
+def _cache_run_exports(tar_path, run_exports_cache_path):
     try:
-        binary_run_exports = tf.extractfile('info/run_exports.json').read()
+        binary_run_exports = _tar_xf_file(tar_path, 'info/run_exports.json')
         run_exports = json.loads(binary_run_exports.decode("utf-8"))
     except KeyError:
         try:
-            binary_run_exports = tf.extractfile('info/run_exports.yaml').read()
+            binary_run_exports = _tar_xf_file(tar_path, 'info/run_exports.yaml')
             run_exports = yaml.safe_load(binary_run_exports)
         except KeyError:
             log.debug("%s has no run_exports file (this is OK)" % tar_path)
@@ -688,9 +694,9 @@ def _cache_run_exports(tf, tar_path, run_exports_cache_path):
         json.dump(run_exports, fh)
 
 
-def _cache_paths_json(tf, tar_path, paths_cache_path):
+def _cache_paths_json(tar_path, paths_cache_path):
     try:
-        binary_paths_json = tf.extractfile('info/paths.json').read()
+        binary_paths_json = _tar_xf_file(tar_path, 'info/paths.json')
     except KeyError:
         log.debug("%s has no file info/paths.json" % tar_path)
         binary_paths_json = b'{}'
@@ -699,7 +705,7 @@ def _cache_paths_json(tf, tar_path, paths_cache_path):
     return binary_paths_json
 
 
-def _cache_icon(recipe_json, all_paths, icon_cache_path, tf):
+def _cache_icon(tar_path, recipe_json, all_paths, icon_cache_path):
     # If a conda package contains an icon, also extract and cache that in an .icon/
     # directory.  The icon file name is the name of the package, plus the extension
     # of the icon file as indicated by the meta.yaml `app/icon` key.
@@ -708,7 +714,7 @@ def _cache_icon(recipe_json, all_paths, icon_cache_path, tf):
     app_icon_path = recipe_json.get('app', {}).get('icon') or 'info/icon.png'
     if app_icon_path in all_paths:
         icon_cache_path += splitext(app_icon_path)[-1]
-        binary_icon_data = tf.extractfile('info/icon.png').read()
+        binary_icon_data = _tar_xf_file(tar_path, 'info/icon.png')
         with open(icon_cache_path, 'wb') as fh:
             fh.write(binary_icon_data)
 
@@ -749,6 +755,59 @@ def _get_source_repo_git_info(path):
             commits.append({"hash": _hash, "timestamp": int(_time),
                             "author": _author, "description": _desc})
     return commits
+
+
+@contextlib.contextmanager
+def _tmp_chdir(dest):
+    curdir = os.getcwd()
+    try:
+        os.chdir(dest)
+        yield
+    finally:
+        os.chdir(curdir)
+
+
+def _tar_xf(tarball, dir_path):
+    flags = libarchive.extract.EXTRACT_TIME | \
+            libarchive.extract.EXTRACT_PERM | \
+            libarchive.extract.EXTRACT_SECURE_NODOTDOT | \
+            libarchive.extract.EXTRACT_SECURE_SYMLINKS | \
+            libarchive.extract.EXTRACT_SECURE_NOABSOLUTEPATHS
+    if not os.path.isabs(tarball):
+        tarball = os.path.join(os.getcwd(), tarball)
+    with _tmp_chdir(dir_path):
+        libarchive.extract_file(tarball, flags)
+
+
+def _tar_xf_file(tarball, entries):
+    if not os.path.isabs(tarball):
+        tarball = os.path.join(os.getcwd(), tarball)
+    result = None
+    n_found = 0
+    with libarchive.file_reader(tarball) as archive:
+        for entry in archive:
+            if entry.name in entries:
+                n_found += 1
+                for block in entry.get_blocks():
+                    if result is None:
+                        result = bytes(block)
+                    else:
+                        result += block
+                break
+    from conda_build.utils import ensure_list
+    if n_found != len(ensure_list(entries)):
+        raise KeyError()
+    return result
+
+
+def _tar_xf_getnames(tarball):
+    if not os.path.isabs(tarball):
+        tarball = os.path.join(os.getcwd(), tarball)
+    result = []
+    with libarchive.file_reader(tarball) as archive:
+        for entry in archive:
+            result.append(entry.name)
+    return result
 
 
 def _collect_commits(package_order, hotfix_source_repo, cutoff_time):
@@ -855,7 +914,7 @@ class ChannelIndex(object):
 
         # gather conda package filenames in subdir
         fns_in_subdir = set(fn for fn in os.listdir(subdir_path)
-                         if fn.endswith(CONDA_TARBALL_EXTENSION))
+                         if fn.endswith(CONDA_TARBALL_EXTENSIONS))
         log.debug("found %d conda packages in %s" % (len(fns_in_subdir), subdir))
 
         # load current/old repodata
@@ -998,19 +1057,18 @@ class ChannelIndex(object):
 
         log.debug("hashing, extracting, and caching %s" % tar_path)
         try:
-            with tarfile.open(tar_path) as tf:
-                binary_index_json = tf.extractfile('info/index.json').read()
-                index_json = json.loads(binary_index_json.decode('utf-8'))
+            binary_index_json = _tar_xf_file(tar_path, 'info/index.json')
+            index_json = json.loads(binary_index_json.decode('utf-8'))
 
-                all_paths = set(tf.getnames())
-                _cache_about_json(tf, tar_path, about_cache_path)
-                _cache_run_exports(tf, tar_path, run_exports_cache_path)
-                binary_paths_json = _cache_paths_json(tf, tar_path, paths_cache_path)
-                _cache_post_install_details(binary_paths_json, all_paths, post_install_cache_path)
-                recipe_json = _cache_recipe(all_paths, tf, recipe_cache_path)
-                _cache_recipe_log(tf, tar_path, recipe_log_path)
-                _cache_icon(recipe_json, all_paths, icon_cache_path, tf)
-        except (tarfile.ReadError, EOFError):
+            all_paths = set(_tar_xf_getnames(tar_path))
+            _cache_about_json(tar_path, about_cache_path)
+            _cache_run_exports(tar_path, run_exports_cache_path)
+            binary_paths_json = _cache_paths_json(tar_path, paths_cache_path)
+            _cache_post_install_details(binary_paths_json, all_paths, post_install_cache_path)
+            recipe_json = _cache_recipe(tar_path, all_paths, recipe_cache_path)
+            _cache_recipe_log(tar_path, recipe_log_path)
+            _cache_icon(tar_path, recipe_json, all_paths, icon_cache_path)
+        except (tarfile.ReadError, KeyError, EOFError):
             log.error("Package %s/%s appears to be corrupt.  Please remove it and re-download it" % (subdir, fn))
             return None, None, None, None
 
@@ -1069,7 +1127,8 @@ class ChannelIndex(object):
         for path in (recipe_cache_path, about_cache_path, index_cache_path, post_install_cache_path, recipe_log_path):
             try:
                 with open(path) as fh:
-                    data.update(json.load(fh))
+                    if os.path.getsize(path) != 0:
+                        data.update(json.load(fh))
             except (OSError, EOFError):
                 pass
 

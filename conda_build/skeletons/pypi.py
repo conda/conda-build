@@ -29,7 +29,7 @@ from conda_build.conda_interface import normalized_version
 from conda_build.conda_interface import human_bytes, hashsum_file
 from conda_build.conda_interface import default_python
 
-from conda_build.utils import tar_xf, unzip, rm_rf, check_call_env, ensure_list
+from conda_build.utils import decompressible_exts, tar_xf, rm_rf, check_call_env, ensure_list
 from conda_build.source import apply_patch
 from conda_build.environ import create_env
 from conda_build.config import Config
@@ -224,7 +224,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
                 raise RuntimeError("directory already exists: %s" % dir_path)
         d = package_dicts.setdefault(package,
             {
-                'packagename': package.lower(),
+                'packagename': package,
                 'run_depends': '',
                 'build_depends': '',
                 'entry_points': '',
@@ -310,7 +310,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
 
     for package in package_dicts:
         d = package_dicts[package]
-        name = d['packagename']
+        name = d['packagename'].lower()
         makedirs(join(output_dir, name))
         print("Writing recipe for %s" % package.lower())
         with open(join(output_dir, name, 'meta.yaml'), 'w') as f:
@@ -872,10 +872,8 @@ def valid(name):
 
 
 def unpack(src_path, tempdir):
-    if src_path.endswith(('.tar.gz', '.tar.bz2', '.tgz', '.tar.xz', '.tar')):
+    if src_path.lower().endswith(decompressible_exts):
         tar_xf(src_path, tempdir)
-    elif src_path.endswith('.zip'):
-        unzip(src_path, tempdir)
     else:
         raise Exception("not a valid source: %s" % src_path)
 
