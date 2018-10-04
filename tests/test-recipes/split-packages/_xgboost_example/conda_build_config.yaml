@@ -1,0 +1,8 @@
+python:
+  - 2.7
+  - 3.6
+r_version:
+  - 3.5.0
+r_implementation:
+  - 'r-base'
+  - 'mro-base'  # [not osx]

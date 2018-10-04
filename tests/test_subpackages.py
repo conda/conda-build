@@ -1,3 +1,4 @@
+from glob import glob
 import json
 import os
 import pytest
@@ -328,3 +329,11 @@ def test_inherit_build_number(testing_config):
     for m, _, _ in ms:
         assert 'number' in m.meta['build'], "build number was not inherited at all"
         assert int(m.meta['build']['number']) == 1, "build number should have been inherited as '1'"
+
+
+def test_loops_do_not_remove_earlier_packages(testing_config):
+    recipe = os.path.join(subpackage_dir, '_xgboost_example')
+    output_files = api.get_output_file_paths(recipe, config=testing_config)
+
+    api.build(recipe, config=testing_config)
+    assert len(output_files) == len(glob(os.path.join(testing_config.croot, testing_config.host_subdir, "*.tar.bz2")))
