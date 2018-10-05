@@ -420,6 +420,7 @@ def _maybe_write(path, content, write_newline_end=False, content_is_binary=False
         move(temp_path, path)
     except PermissionError:
         utils.copy_into(temp_path, path)
+        os.unlink(temp_path)
     return True
 
 
