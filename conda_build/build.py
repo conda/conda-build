@@ -1023,16 +1023,15 @@ def bundle_conda(output, metadata, env, stats, **kw):
 
             # we do the import here because we want to respect logger level context
             try:
-                # from conda_verify.verify import Verify
-                raise ImportError
+                from conda_verify.verify import Verify
             except ImportError:
                 Verify = None
                 log.warn("Importing conda-verify failed.  Please be sure to test your packages.  "
                     "conda install conda-verify to make this message go away.")
             if getattr(metadata.config, "verify", False) and Verify:
                 verifier = Verify()
-                checks_to_ignore = metadata.config.ignore_verify_codes if \
-                                   metadata.config.ignore_verify_codes else None
+                checks_to_ignore = (utils.ensure_list(metadata.config.ignore_verify_codes) +
+                                    metadata.ignore_verify_codes())
                 verifier.verify_package(path_to_package=tmp_path, checks_to_ignore=checks_to_ignore,
                                         exit_on_error=metadata.config.exit_on_verify_error)
             try:
@@ -1040,7 +1039,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
             except AttributeError:
                 crossed_subdir = metadata.config.host_subdir
             subdir = ('noarch' if (metadata.noarch or metadata.noarch_python)
-                      else crossed_subdir)
+                    else crossed_subdir)
             if metadata.config.output_folder:
                 output_folder = os.path.join(metadata.config.output_folder, subdir)
             else:
