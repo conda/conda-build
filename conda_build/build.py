@@ -1706,13 +1706,17 @@ def _construct_metadata_for_test_from_recipe(recipe_dir, config):
     config.need_cleanup = False
     config.recipe_dir = None
     hash_input = {}
-    metadata = render_recipe(recipe_dir, config=config, reset_build_id=False)[0][0]
+    metadata = expand_outputs(render_recipe(recipe_dir, config=config, reset_build_id=False))[0][1]
+    log = utils.get_logger(__name__)
+    log.warn("Testing based on recipes is deprecated as of conda-build 3.16.0.  Please adjust "
+             "your code to pass your desired conda package to test instead.")
 
     utils.rm_rf(metadata.config.test_dir)
 
     if metadata.meta.get('test', {}).get('source_files'):
         if not metadata.source_provided:
             try_download(metadata, no_download_source=False)
+
     if not metadata.final:
         metadata = finalize_metadata(metadata)
     return metadata, hash_input
@@ -2082,7 +2086,7 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
         test_stats = {}
         utils.check_call_env(cmd, env=env, cwd=metadata.config.test_dir, stats=test_stats)
         log_stats(test_stats, "testing {}".format(metadata.name()))
-        if stats is not None:
+        if stats is not None and metadata.config.variants:
             stats[stats_key(metadata, 'test_{}'.format(metadata.name()))] = test_stats
     except subprocess.CalledProcessError:
         tests_failed(metadata, move_broken=move_broken, broken_dir=metadata.config.broken_dir,
