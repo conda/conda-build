@@ -648,9 +648,13 @@ MARKER_RE = re.compile(r"(?P<name>^[^=<>!\s]+)"
 
 
 def _translate_python_constraint(constraint):
-    operator, value = constraint.split()
-    value = "".join(value.strip("'").strip('"').split(".")[:2])
-    return " ".join((operator, value))
+    parts = constraint.split()
+    translation = constraint
+    if len(parts) == 2:
+        operator, value = parts
+        value = "".join(value.strip("'").strip('"').split(".")[:2])
+        translation = " ".join((operator, value))
+    return translation
 
 
 def env_mark_lookup(env_mark_name, env_mark_constraint):
