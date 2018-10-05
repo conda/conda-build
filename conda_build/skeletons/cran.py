@@ -5,6 +5,7 @@ Tools for converting Cran packages to conda recipes.
 from __future__ import absolute_import, division, print_function
 
 import argparse
+import copy
 from itertools import chain
 from os import makedirs, listdir, sep, environ
 from os.path import (basename, commonprefix, exists, isabs, isdir,
@@ -69,6 +70,33 @@ if {source_pf_bash}; then
 else
   mkdir -p $PREFIX/lib/R/library/{cran_packagename}
   mv * $PREFIX/lib/R/library/{cran_packagename}
+
+  if [[ $target_platform == osx-64 ]]; then
+    pushd $PREFIX
+      for libdir in lib/R/lib lib/R/modules lib/R/library lib/R/bin/exec sysroot/usr/lib; do
+        pushd $libdir || exit 1
+          for SHARED_LIB in $(find . -type f -iname "*.dylib" -or -iname "*.so" -or -iname "R"); do
+            echo "fixing SHARED_LIB $SHARED_LIB"
+            install_name_tool -change /Library/Frameworks/R.framework/Versions/3.5.0-MRO/Resources/lib/libR.dylib "$PREFIX"/lib/R/lib/libR.dylib $SHARED_LIB || true
+            install_name_tool -change /Library/Frameworks/R.framework/Versions/3.5/Resources/lib/libR.dylib "$PREFIX"/lib/R/lib/libR.dylib $SHARED_LIB || true
+            install_name_tool -change /usr/local/clang4/lib/libomp.dylib "$PREFIX"/lib/libomp.dylib $SHARED_LIB || true
+            install_name_tool -change /usr/local/gfortran/lib/libgfortran.3.dylib "$PREFIX"/lib/libgfortran.3.dylib $SHARED_LIB || true
+            install_name_tool -change /Library/Frameworks/R.framework/Versions/3.5/Resources/lib/libquadmath.0.dylib "$PREFIX"/lib/libquadmath.0.dylib $SHARED_LIB || true
+            install_name_tool -change /usr/local/gfortran/lib/libquadmath.0.dylib "$PREFIX"/lib/libquadmath.0.dylib $SHARED_LIB || true
+            install_name_tool -change /Library/Frameworks/R.framework/Versions/3.5/Resources/lib/libgfortran.3.dylib "$PREFIX"/lib/libgfortran.3.dylib $SHARED_LIB || true
+            install_name_tool -change /usr/lib/libgcc_s.1.dylib "$PREFIX"/lib/libgcc_s.1.dylib $SHARED_LIB || true
+            install_name_tool -change /usr/lib/libiconv.2.dylib "$PREFIX"/sysroot/usr/lib/libiconv.2.dylib $SHARED_LIB || true
+            install_name_tool -change /usr/lib/libncurses.5.4.dylib "$PREFIX"/sysroot/usr/lib/libncurses.5.4.dylib $SHARED_LIB || true
+            install_name_tool -change /usr/lib/libicucore.A.dylib "$PREFIX"/sysroot/usr/lib/libicucore.A.dylib $SHARED_LIB || true
+            install_name_tool -change /usr/lib/libexpat.1.dylib "$PREFIX"/lib/libexpat.1.dylib $SHARED_LIB || true
+            install_name_tool -change /usr/lib/libcurl.4.dylib "$PREFIX"/lib/libcurl.4.dylib $SHARED_LIB || true
+            install_name_tool -change /usr/lib/libc++.1.dylib "$PREFIX"/lib/libc++.1.dylib $SHARED_LIB || true
+            install_name_tool -change /Library/Frameworks/R.framework/Versions/3.5/Resources/lib/libc++.1.dylib "$PREFIX"/lib/libc++.1.dylib $SHARED_LIB || true
+          done
+        popd
+      done
+    popd
+  fi
 fi
 """
 
@@ -242,6 +270,19 @@ def add_parser(repos):
         "--use-binaries-ver",
         help=("Repackage binaries from version provided by argument instead of building "
               "from source."),
+    )
+    cran.add_argument(
+        "--use-when-no-binary",
+        choices=('src',
+                 'old',
+                 'src-old',
+                 'old-src',
+                 'error'),
+        default='src',
+        help="""Sometimes binaries are not available at the correct version for
+                a given platform (macOS). You can use this flag to specify what
+                fallback to take, either compiling from source or using an older
+                binary or trying one then the other."""
     )
     cran.add_argument(
         "--use-noarch-generic",
@@ -598,12 +639,45 @@ def package_to_inputs_dict(output_dir, output_suffix, git_tag, package):
             'new-location': new_location}
 
 
+def get_available_binaries(cran_url, details):
+    import requests
+    from bs4 import BeautifulSoup
+
+    def get_url_paths(url, ext='', params={}):
+        response = requests.get(url, params=params)
+        if response.ok:
+            response_text = response.text
+        else:
+            return response.raise_for_status()
+        soup = BeautifulSoup(response_text, 'html.parser')
+        parent = [url + node.get('href') for node in soup.find_all('a') if node.get('href').endswith(ext)]
+        return parent
+
+    url = cran_url + '/' + details['dir']
+    ext = details['ext']
+    result = get_url_paths(url, ext)
+    for p in result:
+        filename = basename(p)
+        pkg, _, ver = filename.rpartition('_')
+        ver, _, _ = ver.rpartition(ext)
+        if pkg in details['binaries']:
+            details['binaries'][pkg.lower()].extend((ver, p))
+        else:
+            details['binaries'][pkg.lower()] = [(ver, p)]
+
+
 def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=None, version=None,
                 git_tag=None, cran_url=None, recursive=False, archive=True,
                 version_compare=False, update_policy='', r_interp='r-base', use_binaries_ver=None,
-                use_noarch_generic=False, use_rtools_win=False, config=None,
+                use_noarch_generic=False, use_when_no_binary='src', use_rtools_win=False, config=None,
                 variant_config_files=None, style=None):
 
+    if use_when_no_binary != 'error' and \
+       use_when_no_binary != 'src' and \
+       use_when_no_binary != 'old' and \
+       use_when_no_binary != 'old-src':
+        print("ERROR: --use_when_no_binary={} not yet implemented".format(use_when_no_binary))
+        sys.exit(1)
     output_dir = realpath(output_dir)
     config = get_or_merge_config(config, variant_config_files=variant_config_files)
 
@@ -623,12 +697,28 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
     cran_url = cran_url.rstrip('/')
     cran_metadata = get_cran_metadata(cran_url, output_dir)
 
-    # r_recipes_in_output_dir = []
-    # recipes = listdir(output_dir)
-    # for recipe in recipes:
-    #     if not recipe.startswith('r-') or not isdir(recipe):
-    #         continue
-    #     r_recipes_in_output_dir.append(recipe)
+    cran_layout_template = \
+                  {'source': {'selector': '{others}',
+                              'dir': 'src/contrib/',
+                              'ext': '.tar.gz',
+                              # If we had platform filters we would change this to:
+                              # build_for_linux or is_github_url or is_tarfile
+                              'use_this': True},
+                   'win-64': {'selector': 'win64',
+                              'dir': 'bin/windows/contrib/{}/'.format(use_binaries_ver),
+                              'ext': '.zip',
+                              'use_this': True if use_binaries_ver else False},
+                   'osx-64': {'selector': 'osx',
+                              'dir': 'bin/macosx/el-capitan/contrib/{}/'.format(
+                                  use_binaries_ver),
+                              'ext': '.tgz',
+                              'use_this': True if use_binaries_ver else False}}
+
+    # Figure out what binaries are available once:
+    for archive_type, archive_details in iteritems(cran_layout_template):
+        archive_details['binaries'] = dict()
+        if archive_type != 'source' and archive_details['use_this']:
+            get_available_binaries(cran_url, archive_details)
 
     for package in in_packages:
         inputs_dict = package_to_inputs_dict(output_dir, output_suffix, git_tag, package)
@@ -765,48 +855,67 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         d['build_number'] = build_number
 
         cached_path = None
-        cran_layout = {'source': {'selector': '{others}',
-                                  'dir': 'src/contrib/',
-                                  'ext': '.tar.gz',
-                                  # If we had platform filters we would change this to:
-                                  # build_for_linux or is_github_url or is_tarfile
-                                  'use_this': True},
-                       'win-64': {'selector': 'win64',
-                                  'dir': 'bin/windows/contrib/{}/'.format(use_binaries_ver),
-                                  'ext': '.zip',
-                                  'use_this': True if use_binaries_ver else False},
-                       'osx-64': {'selector': 'osx',
-                                  'dir': 'bin/macosx/el-capitan/contrib/{}/'.format(
-                                      use_binaries_ver),
-                                  'ext': '.tgz',
-                                  'use_this': True if use_binaries_ver else False}}
+        cran_layout = copy.deepcopy(cran_layout_template)
         available = {}
+
         for archive_type, archive_details in iteritems(cran_layout):
             contrib_url = ''
-            if archive_details['use_this']:
+            archive_details['cran_version'] = d['cran_version']
+            archive_details['conda_version'] = d['conda_version']
+            avaliable_artefact = True if archive_type == 'source' else \
+                package in archive_details['binaries'] and \
+                d['cran_version'] in archive_details['binaries'][package][0]
+            if not avaliable_artefact:
+                if use_when_no_binary == 'error':
+                    print("ERROR: --use-when-no-binary is error (and there is no binary)")
+                    sys.exit(1)
+                elif use_when_no_binary.startswith('old'):
+                    if package not in archive_details['binaries']:
+                        if use_when_no_binary.endswith('src'):
+                            avaliable_artefact = False
+                            archive_details['use_this'] = False
+                            continue
+                        else:
+                            print("ERROR: No binary nor old binary found "
+                                  "(maybe pass --use-when-no-binary=old-src to fallback to source?)")
+                            sys.exit(1)
+                    # Version needs to be stored in archive_details.
+                    archive_details['cranurl'] = archive_details['binaries'][package][-1][1]
+                    archive_details['conda_version'] = archive_details['binaries'][package][-1][0]
+                    archive_details['cran_version'] = archive_details['conda_version'].replace('_', '-')
+                    avaliable_artefact = True
+            # We may need to inspect the file later to determine which compilers are needed.
+            cached_path = None
+            sha256 = hashlib.sha256()
+            if archive_details['use_this'] and avaliable_artefact:
                 if is_tarfile:
                     filename = basename(location)
                     contrib_url = relpath(location, dir_path)
                     contrib_url_rendered = package_url = contrib_url
-                    sha256 = hashlib.sha256()
                     cached_path = location
-                elif not is_github_url:
+                elif not is_github_url or archive_type != 'source':
                     filename_rendered = '{}_{}{}'.format(
-                        package, d['cran_version'], archive_details['ext'])
+                        package, archive_details['cran_version'], archive_details['ext'])
                     filename = '{}_{{{{ version }}}}'.format(package) + archive_details['ext']
                     contrib_url = '{{{{ cran_mirror }}}}/{}'.format(archive_details['dir'])
                     contrib_url_rendered = cran_url + '/{}'.format(archive_details['dir'])
                     package_url = contrib_url_rendered + filename_rendered
-                    sha256 = hashlib.sha256()
                     print("Downloading {} from {}".format(archive_type, package_url))
-                    # We may need to inspect the file later to determine which compilers are needed.
-                    cached_path, _ = source.download_to_cache(
-                        config.src_cache, '',
-                        {'url': package_url, 'fn': archive_type + '-' + filename_rendered})
+                    try:
+                        cached_path, _ = source.download_to_cache(
+                            config.src_cache, '',
+                            {'url': package_url, 'fn': archive_type + '-' + filename_rendered})
+                    except:
+                        print("logic error, file {} should exist, we found it in a dir listing earlier."
+                              .format(package_url))
+                        sys.exit(1)
                 available_details = {}
                 available_details['selector'] = archive_details['selector']
+                available_details['cran_version'] = archive_details['cran_version']
+                available_details['conda_version'] = archive_details['conda_version']
                 if cached_path:
                     sha256.update(open(cached_path, 'rb').read())
+                    archive_details['cranurl'] = package_url
                     available_details['filename'] = filename
                     available_details['contrib_url'] = contrib_url
                     available_details['contrib_url_rendered'] = contrib_url_rendered
@@ -818,7 +927,6 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 if archive_type == 'source':
                     if is_github_url:
                         available_details['url_key'] = ''
-                        available_details['fn_key'] = ''
                         available_details['git_url_key'] = 'git_url:'
                         available_details['git_tag_key'] = 'git_tag:'
                         hash_msg = '# You can add a hash for the file here, (md5, sha1 or sha256)'
@@ -830,12 +938,14 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                         available_details['archive_keys'] = ''
                     else:
                         available_details['url_key'] = 'url:'
-                        available_details['fn_key'] = 'fn:'
                         available_details['git_url_key'] = ''
                         available_details['git_tag_key'] = ''
                         available_details['cranurl'] = ' ' + contrib_url + filename
                         available_details['git_url'] = ''
                         available_details['git_tag'] = ''
+                else:
+                    available_details['cranurl'] = archive_details['cranurl']
+
                 available_details['patches'] = d['patches']
                 available[archive_type] = available_details
 
@@ -844,13 +954,14 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         from_source = _all[:]
         binary_id = 1
         for archive_type, archive_details in iteritems(available):
-            if archive_type != 'source':
-                sel = archive_details['selector']
-                from_source.remove(sel)
-                binary_id += 1
-            else:
+            if archive_type == 'source':
                 for k, v in iteritems(archive_details):
                     d[k] = v
+            else:
+                sel = archive_details['selector']
+                # Does the file exist? If not we need to build from source.
+                from_source.remove(sel)
+                binary_id += 1
         if from_source == _all:
             sel_src = ""
             sel_src_and_win = '  # [win]'
@@ -861,10 +972,10 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                                                     fs.startswith('win')) + ']'
             sel_src_not_win = '  # [' + ' or '.join(fs for fs in from_source if not
                                                     fs.startswith('win')) + ']'
-
         d['sel_src'] = sel_src
         d['sel_src_and_win'] = sel_src_and_win
         d['sel_src_not_win'] = sel_src_not_win
+        d['from_source'] = from_source
 
         if 'source' in available:
             available_details = available['source']
@@ -882,8 +993,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 else:
                     available_details['cranurl'] = ' ' + contrib_url + filename + sel_src
             if not is_github_url:
-                available_details['archive_keys'] = '{fn_key} {filename} {sel}\n' \
-                                                    '  {url_key}{sel}' \
+                available_details['archive_keys'] = '{url_key}{sel}' \
                                                     '    {cranurl}\n' \
                                                     ''.format(
                     **available_details)
@@ -1003,10 +1113,13 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                         sel=sel_src_not_win))
                 if use_rtools_win:
                     need_c = need_cxx = need_f = need_autotools = need_make = False
-                    deps.append("{{{{native}}}}rtools      {sel}".format(
+                    deps.append("rtools                   {sel}".format(
                         sel=sel_src_and_win))
-                    deps.append("{{{{native}}}}extsoft     {sel}".format(
-                        sel=sel_src_and_win))
+                    # extsoft is legacy. R packages will download rwinlib subprojects
+                    # as necessary according to Jeroen Ooms. (may need to disable that
+                    # for non-MRO builds or maybe switch to Jeroen's toolchain?)
+                    # deps.append("{{{{native}}}}extsoft     {sel}".format(
+                    #     indent=INDENT, sel=sel_src_and_win))
                 if need_c or need_cxx or need_f:
                     deps.append("{{{{native}}}}toolchain      {sel}".format(
                         sel=sel_src_and_win))
@@ -1095,6 +1208,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         elif update_policy == 'skip-existing' and d['inputs']['old-metadata']:
             continue
 
+        from_sources = d['from_source']
         try:
             makedirs(join(dir_path))
         except:
@@ -1114,19 +1228,19 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
 
         if not exists(join(dir_path, 'build.sh')) or update_policy == 'overwrite':
             with open(join(dir_path, 'build.sh'), 'w') as f:
-                if from_source == all:
+                if from_sources == all:
                     f.write(CRAN_BUILD_SH_SOURCE.format(**d))
-                elif from_source == []:
+                elif from_sources == []:
                     f.write(CRAN_BUILD_SH_BINARY.format(**d))
                 else:
-                    tpbt = [target_platform_bash_test_by_sel[t] for t in from_source]
+                    tpbt = [target_platform_bash_test_by_sel[t] for t in from_sources]
                     d['source_pf_bash'] = ' || '.join(['[[ $target_platform ' + s + ' ]]'
                                                   for s in tpbt])
                     f.write(CRAN_BUILD_SH_MIXED.format(**d))
 
         if not exists(join(dir_path, 'bld.bat')) or update_policy == 'overwrite':
             with open(join(dir_path, 'bld.bat'), 'w') as f:
-                if len([fs for fs in from_source if fs.startswith('win')]) == 2:
+                if len([fs for fs in from_sources if fs.startswith('win')]) == 2:
                     f.write(CRAN_BLD_BAT_SOURCE.format(**d))
                 else:
                     f.write(CRAN_BLD_BAT_MIXED.format(**d))
