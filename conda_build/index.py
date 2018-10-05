@@ -947,6 +947,7 @@ class ChannelIndex(object):
             # calculate all the paths and figure out what we're going to do with them
             # add_set: filenames that aren't in the current/old repodata, but exist in the subdir
             add_set = fns_in_subdir - old_repodata_fns
+            remove_set = old_repodata_fns - fns_in_subdir
             update_set = self._calculate_update_set(
                 subdir, fns_in_subdir, old_repodata_fns, stat_cache, verbose=verbose, progress=progress
             )
@@ -954,7 +955,7 @@ class ChannelIndex(object):
             #     and whose contents have changed based on file size or mtime. We're
             #     not using md5 here because it takes too long. If needing to do full md5 checks,
             #     use the --deep-integrity-check flag / self.deep_integrity_check option.
-            unchanged_set = sorted(old_repodata_fns - update_set)
+            unchanged_set = sorted(old_repodata_fns - update_set - remove_set)
             # unchanged_set: packages in old repodata whose information can carry straight
             #     across to new repodata
 
