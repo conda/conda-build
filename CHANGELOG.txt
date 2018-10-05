@@ -1,3 +1,39 @@
+2018-10-05 3.16.0:
+------------------
+
+Enhancements:
+-------------
+
+* incorporate libarchive to support more compression formats (adds libarchive as a package dep)  #3163
+* add build/ignore_verify_codes key to allow recipes to ignore specific conda-verify error codes  #3179
+
+Bug fixes:
+----------
+
+* fix JSON string encoding error in index cache reading  #3156
+* restore --variants CLI flag for specifying variants  #3168
+* handle empty build section in output  #3175
+* add mro-base_impl as something that causes mro build strings  #3163
+* fix skeleton PyPI inappropriately dropping package case (needed for URLs)  #3163
+* fix packages from earlier loops with multiple outputs being removed prior to later loops  #3185
+* fix conda-index not removing entries from index that no longer exist on disk  #3186 #3188
+* clean up tempfiles after indexing  #3187
+* fix indexing of specific subdirs  #3190
+* fix pypi skeleton when python constraint has no operator  #3191
+* fix issues testing packages and recipe folders when done separately from build  #3192
+* fix source looking for patches in wrong folder when dealing with outputs  #3194
+
+Contributors:
+-------------
+
+* @dpryan79
+* @gabm
+* @mbargull
+* @mingwandroid
+* @msarahan
+* @nehaljwani
+
+
 2018-09-18 3.15.1:
 ------------------
 
