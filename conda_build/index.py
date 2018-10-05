@@ -975,8 +975,22 @@ class ChannelIndex(object):
             #     new_repodata_packages = {fn: old_repodata_packages[fn] for fn in unchanged_set}
             # else:
             # For the unchanged_set, read up the cached index.json files in subdir/.cache/index
-            new_repodata_packages = {fn: self._load_index_from_cache(subdir, fn, stat_cache)
-                                     for fn in unchanged_set}
+
+            # clean up removed files
+            removed_set = (old_repodata_fns - fns_in_subdir)
+            for fn in removed_set:
+                if fn in stat_cache:
+                    del stat_cache[fn]
+
+            new_repodata_packages = {}
+            for fn in sorted(unchanged_set):
+                try:
+                    new_repodata_packages[fn] = self._load_index_from_cache(subdir, fn, stat_cache)
+                except IOError:
+                    update_set.add(fn)
+
+            # files that are no longer in the folder should trigger an update for removal
+            # removed_set = old_repodata_fns - fns_in_subdir))
 
             # Invalidate cached files for update_set.
             # Extract and cache update_set and add_set, then add to new_repodata_packages.
@@ -991,7 +1005,7 @@ class ChannelIndex(object):
                       total=len(futures), disable=(verbose or not progress)) as t:
                 for future in as_completed(futures):
                     fn, mtime, size, index_json = future.result()
-                    # fn can be None if the file was corrupt
+                    # fn can be None if the file was corrupt or no longer there
                     if fn:
                         # the progress bar shows package names, but we don't know what their name is before they complete.
                         t.set_description("Hash & extract: %s" % fn)
@@ -1006,14 +1020,12 @@ class ChannelIndex(object):
                 },
                 'repodata_version': REPODATA_VERSION,
             }
-
-            return new_repodata
-
         finally:
             if stat_cache != stat_cache_original:
                 # log.info("writing stat cache to %s", stat_cache_path)
                 with open(stat_cache_path, 'w') as fh:
                     json.dump(stat_cache, fh)
+        return new_repodata
 
     def _ensure_dirs(self, subdir):
         # Create all cache directories in the subdir.
@@ -1048,59 +1060,62 @@ class ChannelIndex(object):
         # from the cached files, but don't use the existing repodata.json as a starting point.
         subdir_path = join(self.channel_root, subdir)
         tar_path = join(subdir_path, fn)
-        index_cache_path = join(subdir_path, '.cache', 'index', fn + '.json')
-        about_cache_path = join(subdir_path, '.cache', 'about', fn + '.json')
-        paths_cache_path = join(subdir_path, '.cache', 'paths', fn + '.json')
-        recipe_cache_path = join(subdir_path, '.cache', 'recipe', fn + '.json')
-        run_exports_cache_path = join(subdir_path, '.cache', 'run_exports', fn + '.json')
-        post_install_cache_path = join(subdir_path, '.cache', 'post_install', fn + '.json')
-        icon_cache_path = join(subdir_path, '.cache', 'icon', fn)
-        recipe_log_path = join(subdir_path, '.cache', 'recipe_log', fn + '.json')
+        # default value indicates either corrupt or removed file.  For corrupt, there
+        #      is an error message shown.
+        retval = fn, None, None, None
 
-        log.debug("hashing, extracting, and caching %s" % tar_path)
-        try:
-            binary_index_json = _tar_xf_file(tar_path, 'info/index.json')
-            index_json = json.loads(binary_index_json.decode('utf-8'))
+        if os.path.isfile(tar_path):
+            index_cache_path = join(subdir_path, '.cache', 'index', fn + '.json')
+            about_cache_path = join(subdir_path, '.cache', 'about', fn + '.json')
+            paths_cache_path = join(subdir_path, '.cache', 'paths', fn + '.json')
+            recipe_cache_path = join(subdir_path, '.cache', 'recipe', fn + '.json')
+            run_exports_cache_path = join(subdir_path, '.cache', 'run_exports', fn + '.json')
+            post_install_cache_path = join(subdir_path, '.cache', 'post_install', fn + '.json')
+            icon_cache_path = join(subdir_path, '.cache', 'icon', fn)
+            recipe_log_path = join(subdir_path, '.cache', 'recipe_log', fn + '.json')
 
-            all_paths = set(_tar_xf_getnames(tar_path))
-            _cache_about_json(tar_path, about_cache_path)
-            _cache_run_exports(tar_path, run_exports_cache_path)
-            binary_paths_json = _cache_paths_json(tar_path, paths_cache_path)
-            _cache_post_install_details(binary_paths_json, all_paths, post_install_cache_path)
-            recipe_json = _cache_recipe(tar_path, all_paths, recipe_cache_path)
-            _cache_recipe_log(tar_path, recipe_log_path)
-            _cache_icon(tar_path, recipe_json, all_paths, icon_cache_path)
-        except (tarfile.ReadError, KeyError, EOFError):
-            log.error("Package %s/%s appears to be corrupt.  Please remove it and re-download it" % (subdir, fn))
-            return None, None, None, None
+            log.debug("hashing, extracting, and caching %s" % tar_path)
+            try:
+                binary_index_json = _tar_xf_file(tar_path, 'info/index.json')
+                index_json = json.loads(binary_index_json.decode('utf-8'))
 
-        # calculate extra stuff to add to index.json cache, size, md5, sha256
-        stat_result = os.stat(tar_path)
-        index_json['size'] = size = stat_result.st_size
-        mtime = stat_result.st_mtime
-        index_json['md5'] = utils.md5_file(tar_path)
-        index_json['sha256'] = utils.sha256_checksum(tar_path)
+                all_paths = set(_tar_xf_getnames(tar_path))
+                _cache_about_json(tar_path, about_cache_path)
+                _cache_run_exports(tar_path, run_exports_cache_path)
+                binary_paths_json = _cache_paths_json(tar_path, paths_cache_path)
+                _cache_post_install_details(binary_paths_json, all_paths, post_install_cache_path)
+                recipe_json = _cache_recipe(tar_path, all_paths, recipe_cache_path)
+                _cache_recipe_log(tar_path, recipe_log_path)
+                _cache_icon(tar_path, recipe_json, all_paths, icon_cache_path)
+                # calculate extra stuff to add to index.json cache, size, md5, sha256
+                stat_result = os.stat(tar_path)
+                index_json['size'] = size = stat_result.st_size
+                mtime = stat_result.st_mtime
+                index_json['md5'] = utils.md5_file(tar_path)
+                index_json['sha256'] = utils.sha256_checksum(tar_path)
 
-        # decide what fields to filter out, like has_prefix
-        filter_fields = {
-            'arch',
-            'has_prefix',
-            'mtime',
-            'platform',
-            'ucs',
-            'requires_features',
-            'binstar',
-            'target-triplet',
-            'machine',
-            'operatingsystem',
-        }
-        for field_name in filter_fields & set(index_json):
-            del index_json[field_name]
+                # decide what fields to filter out, like has_prefix
+                filter_fields = {
+                    'arch',
+                    'has_prefix',
+                    'mtime',
+                    'platform',
+                    'ucs',
+                    'requires_features',
+                    'binstar',
+                    'target-triplet',
+                    'machine',
+                    'operatingsystem',
+                }
+                for field_name in filter_fields & set(index_json):
+                    del index_json[field_name]
 
-        with open(index_cache_path, 'w') as fh:
-            json.dump(index_json, fh)
-
-        return fn, mtime, size, index_json
+                with open(index_cache_path, 'w') as fh:
+                    json.dump(index_json, fh)
+                retval = fn, mtime, size, index_json
+            except (libarchive.exception.ArchiveError, tarfile.ReadError, KeyError, EOFError):
+                log.error("Package %s/%s appears to be corrupt.  Please remove it and re-download it" % (subdir, fn))
+        return retval
 
     def _load_index_from_cache(self, subdir, fn, stat_cache):
         index_cache_path = join(self.channel_root, subdir, '.cache', 'index', fn + '.json')
@@ -1111,6 +1126,7 @@ class ChannelIndex(object):
 
     def _load_all_from_cache(self, subdir, fn):
         subdir_path = join(self.channel_root, subdir)
+
         try:
             mtime = getmtime(join(subdir_path, fn))
         except FileNotFoundError:
@@ -1128,10 +1144,10 @@ class ChannelIndex(object):
         data = {}
         for path in (recipe_cache_path, about_cache_path, index_cache_path, post_install_cache_path, recipe_log_path):
             try:
-                with open(path) as fh:
-                    if os.path.getsize(path) != 0:
+                if os.path.getsize(path) != 0:
+                    with open(path) as fh:
                         data.update(json.load(fh))
-            except (OSError, EOFError):
+            except (OSError, EOFError, IOError):
                 pass
 
         icon_cache_paths = glob(icon_cache_path_glob)
