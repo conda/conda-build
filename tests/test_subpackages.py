@@ -279,6 +279,7 @@ def test_strong_run_exports_from_build_applies_to_host(testing_config):
     api.build(recipe, config=testing_config)
 
 
+@pytest.mark.serial
 @pytest.mark.parametrize("recipe", ('_line_up_python_compiled_libs',
                                     '_line_up_python_compiled_libs_top_level_same_name_output'))
 def test_python_line_up_with_compiled_lib(recipe, testing_config):

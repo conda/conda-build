@@ -354,6 +354,7 @@ def test_target_platform_looping(testing_config):
     assert len(outputs) == 2
 
 
+@pytest.mark.serial
 def test_numpy_used_variable_looping(testing_config):
     outputs = api.get_output_file_paths(os.path.join(recipe_dir, 'numpy_used'),
                                    platform='win', arch='64')
@@ -407,6 +408,7 @@ def test_exclusive_config_file(testing_workdir):
     assert variant['abc'] == '123'
 
 
+@pytest.mark.serial
 def test_inner_python_loop_with_output(testing_config):
     outputs = api.get_output_file_paths(os.path.join(recipe_dir, 'test_python_as_subpackage_loop'),
                                         config=testing_config)
