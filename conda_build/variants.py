@@ -529,8 +529,8 @@ def get_vars(variants, loop_only=False):
     to the matrix dimensionality"""
     special_keys = ('pin_run_as_build', 'zip_keys', 'ignore_version')
     loop_vars = [k for k in variants[0] if k not in special_keys and
-                 (not loop_only or
-                  any(variant[k] != variants[0][k] for variant in variants[1:]))]
+                (not loop_only or
+                any(variant[k] != variants[0][k] for variant in variants[1:]))]
     return loop_vars
 
 
