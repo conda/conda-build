@@ -374,17 +374,15 @@ def update_index(dir_paths, config=None, force=False, check_md5=False, remove=Fa
     from locale import getpreferredencoding
     import os
     from .conda_interface import PY3
-    from conda_build.index import update_index, update_subdir_index
+    from conda_build.index import update_index
+    from conda_build.utils import ensure_list
     dir_paths = [os.path.abspath(path) for path in _ensure_list(dir_paths)]
     # Don't use byte strings in Python 2
     if not PY3:
         dir_paths = [path.decode(getpreferredencoding()) for path in dir_paths]
 
     for path in dir_paths:
-        if subdir:
-            update_subdir_index(path, subdir=subdir, check_md5=check_md5, channel_name=channel_name,
-                                threads=threads, verbose=verbose, progress=progress)
-        else:
-            update_index(path, check_md5=check_md5, channel_name=channel_name,
-                         patch_generator=patch_generator, threads=threads, verbose=verbose, progress=progress,
-                         hotfix_source_repo=hotfix_source_repo)
+        update_index(path, check_md5=check_md5, channel_name=channel_name,
+                     patch_generator=patch_generator, threads=threads, verbose=verbose,
+                     progress=progress, hotfix_source_repo=hotfix_source_repo,
+                     subdirs=ensure_list(subdir))
