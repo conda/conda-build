@@ -657,8 +657,10 @@ def provide(metadata):
                     os.makedirs(src_dir)
 
             patches = ensure_list(source_dict.get('patches', []))
+            recipe_dir = (metadata.path or
+                          metadata.meta.get('extra', {}).get('parent_recipe', {}).get('path', ''))
             for patch in patches:
-                apply_patch(src_dir, join(metadata.path, patch), metadata.config, git)
+                apply_patch(src_dir, join(recipe_dir, patch), metadata.config, git)
 
     except CalledProcessError:
         shutil.move(metadata.config.work_dir, metadata.config.work_dir + '_failed_provide')
