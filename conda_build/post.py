@@ -242,7 +242,7 @@ def check_dist_info_version(name, version, files):
         if '.dist-info' in f:
             f_lower = f.lower()
             f_lower, _, _ = f_lower.rpartition('.dist-info')
-            _, _, f_lower = f_lower.rpartition(name + '-')
+            _, _, f_lower = f_lower.rpartition('-')
             if version != f_lower:
                 print("ERROR: dist-info version incorrect (is {}, should be {})".format(f_lower, version))
                 sys.exit(1)
