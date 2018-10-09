@@ -233,8 +233,28 @@ def compile_missing_pyc(files, cwd, python_exe, skip_compile_pyc=()):
             print('compiling .pyc files... failed as no python interpreter was found')
         else:
             print('compiling .pyc files...')
+            # We avoid command lines longer than 8190
+            if sys.platform == 'win32':
+                limit = 8190
+            else:
+                limit = 32760
+            limit -= len(compile_files) * 2
+            lower_limit = len(max(compile_files, key=len)) + 1
+            if limit < lower_limit:
+                limit = lower_limit
+            groups = [[]]
+            args = [python_exe, '-Wi', '-m', 'py_compile']
+            args_len = length = len(' '.join(args)) + 1
             for f in compile_files:
-                call([python_exe, '-Wi', '-m', 'py_compile', f], cwd=cwd)
+                length_this = len(f) + 1
+                if length_this + length > limit:
+                    groups.append([])
+                    length = args_len
+                else:
+                    length += length_this
+                groups[len(groups) - 1].append(f)
+            for group in groups:
+                call(args.copy().extend(group), cwd=cwd)
 
 
 def check_dist_info_version(name, version, files):
