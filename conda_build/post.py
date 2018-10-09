@@ -239,15 +239,16 @@ def compile_missing_pyc(files, cwd, python_exe, skip_compile_pyc=()):
 
 def check_dist_info_version(name, version, files):
     for f in files:
-        if '.dist-info' in f:
-            f_lower = f.lower()
-            f_lower, _, _ = f_lower.rpartition('.dist-info')
-            _, _, f_lower = f_lower.rpartition(name + '-')
-            if version != f_lower:
-                print("ERROR: dist-info version incorrect (is {}, should be {})".format(f_lower, version))
-                sys.exit(1)
-            else:
-                return
+        if '.dist-info/METADATA' in f:
+            f_lower = os.path.basename(os.path.dirname(f).lower())
+            if f_lower.startswith(name + '-'):
+                f_lower, _, _ = f_lower.rpartition('.dist-info')
+                _, distname, f_lower = f_lower.rpartition(name + '-')
+                if distname == name and version != f_lower:
+                    print("ERROR: Top level dist-info version incorrect (is {}, should be {})".format(f_lower, version))
+                    sys.exit(1)
+                else:
+                    return
 
 
 def post_process(name, version, files, prefix, config, preserve_egg_dir=False, noarch=False, skip_compile_pyc=()):
