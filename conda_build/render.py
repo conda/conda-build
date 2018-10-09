@@ -39,6 +39,11 @@ from conda_build.exceptions import DependencyNeedsBuildingError
 from conda_build.index import get_build_index
 # from conda_build.jinja_context import pin_subpackage_against_outputs
 
+try:
+    from conda.base.constants import CONDA_TARBALL_EXTENSIONS
+except Exception:
+    from conda.base.constants import CONDA_TARBALL_EXTENSION
+    CONDA_TARBALL_EXTENSIONS = (CONDA_TARBALL_EXTENSION,)
 
 def odict_representer(dumper, data):
     return dumper.represent_dict(data.items())
@@ -48,13 +53,12 @@ yaml.add_representer(set, yaml.representer.SafeRepresenter.represent_list)
 yaml.add_representer(tuple, yaml.representer.SafeRepresenter.represent_list)
 yaml.add_representer(OrderedDict, odict_representer)
 
-
 def bldpkg_path(m):
     '''
     Returns path to built package's tarball given its ``Metadata``.
     '''
     subdir = 'noarch' if m.noarch or m.noarch_python else m.config.host_subdir
-    return os.path.join(m.config.output_folder, subdir, '%s.tar.bz2' % m.dist())
+    return os.path.join(m.config.output_folder, subdir, '%s%s' % (m.dist(), CONDA_TARBALL_EXTENSIONS[0]))
 
 
 def actions_to_pins(actions):
@@ -186,7 +190,7 @@ def find_pkg_dir_or_file_in_pkgs_dirs(pkg_dist, m, files_only=False):
     pkg_loc = None
     for pkgs_dir in _pkgs_dirs:
         pkg_dir = os.path.join(pkgs_dir, pkg_dist)
-        pkg_file = os.path.join(pkgs_dir, pkg_dist + '.tar.bz2')
+        pkg_file = os.path.join(pkgs_dir, pkg_dist + CONDA_TARBALL_EXTENSIONS[0])
         if not files_only and os.path.isdir(pkg_dir):
             pkg_loc = pkg_dir
             break
