@@ -540,16 +540,19 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
         #   best thing is to hard-code the absolute path.  This probably won't exist on any
         #   system other than the original build machine, but at least it will work there.
         if m.meta.get('source'):
-            if 'path' in m.meta['source'] and not os.path.isabs(m.meta['source']['path']):
-                rendered_metadata.meta['source']['path'] = os.path.normpath(
-                    os.path.join(m.path, m.meta['source']['path']))
-            elif ('git_url' in m.meta['source'] and not (
-                    # absolute paths are not relative paths
-                    os.path.isabs(m.meta['source']['git_url']) or
-                    # real urls are not relative paths
-                    ":" in m.meta['source']['git_url'])):
-                rendered_metadata.meta['source']['git_url'] = os.path.normpath(
-                    os.path.join(m.path, m.meta['source']['git_url']))
+            if 'path' in m.meta['source']:
+                source_path = m.meta['source']['path']
+                os.path.expanduser(source_path)
+                if not os.path.isabs(source_path):
+                    rendered_metadata.meta['source']['path'] = os.path.normpath(
+                        os.path.join(m.path, source_path))
+                elif ('git_url' in m.meta['source'] and not (
+                        # absolute paths are not relative paths
+                        os.path.isabs(m.meta['source']['git_url']) or
+                        # real urls are not relative paths
+                        ":" in m.meta['source']['git_url'])):
+                    rendered_metadata.meta['source']['git_url'] = os.path.normpath(
+                        os.path.join(m.path, m.meta['source']['git_url']))
 
         if not rendered_metadata.meta.get('build'):
             rendered_metadata.meta['build'] = {}
