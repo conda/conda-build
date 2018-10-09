@@ -306,7 +306,7 @@ def dictify_pickled(xml_file, dict_massager=None, cdt=None):
         root = ET.fromstring(xmlstring.encode('utf-8'))
         result = dictify(root)
         if dict_massager:
-            result = dict_massager(result, cdt)
+            result = dict_massager(result, src_cache, cdt)
         pickle.dump(result, open(pickled, 'wb'))
         return result
 
@@ -361,7 +361,7 @@ def massage_primary_requires(requires, cdt):
     return requires
 
 
-def massage_primary(repo_primary, cdt):
+def massage_primary(repo_primary, src_cache, cdt):
     """
     Massages the result of dictify() into a less cumbersome form.
     In particular:
