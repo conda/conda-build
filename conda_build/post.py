@@ -239,7 +239,7 @@ def compile_missing_pyc(files, cwd, python_exe, skip_compile_pyc=()):
 
 def check_dist_info_version(name, version, files):
     for f in files:
-        if '.dist-info/METADATA' in f:
+        if f.endswith('.dist-info' + os.sep + 'METADATA'):
             f_lower = os.path.basename(os.path.dirname(f).lower())
             if f_lower.startswith(name + '-'):
                 f_lower, _, _ = f_lower.rpartition('.dist-info')
