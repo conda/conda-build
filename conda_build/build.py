@@ -983,6 +983,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
 
     basename = '-'.join([output['name'], metadata.version(), metadata.build_id()])
     tmp_archives = []
+    final_outputs = []
     with TemporaryDirectory() as tmp:
         tmp_path = os.path.join(tmp, basename)
 
@@ -1009,7 +1010,6 @@ def bundle_conda(output, metadata, env, stats, **kw):
             # add files in order of a) in info directory, b) increasing size so
             # we can access small manifest or json files without decompressing
             # possible large binary or data files
-            print("Compressing to {}".format(tmp_path + ext))
             with tmp_chdir(metadata.config.host_prefix):
                 with libarchive.file_writer(tmp_path + ext, 'gnutar', filter_name=filter, options=opts) as archive:
                     archive.add_files(*files_list)
@@ -1052,6 +1052,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
             #    a major bottleneck.
             utils.copy_into(tmp_path, final_output, metadata.config.timeout,
                             locking=False)
+            final_outputs.append(final_output)
     update_index(os.path.dirname(output_folder), verbose=metadata.config.debug)
 
     # clean out host prefix so that this output's files don't interfere with other outputs
@@ -1059,7 +1060,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
     #   restored elsewhere.
     utils.rm_rf(metadata.config.host_prefix)
 
-    return final_output
+    return final_outputs
 
 
 def bundle_wheel(output, metadata, env, stats):
@@ -1622,7 +1623,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                     #    can be different from the env for the top level build.
                     with utils.path_prepended(m.config.build_prefix):
                         env = environ.get_dict(m=m)
-                    built_package = bundlers[output_d.get('type', 'conda')](output_d, m, env, stats)
+                    newly_built_packages = bundlers[output_d.get('type', 'conda')](output_d, m, env, stats)
                     # warn about overlapping files.
                     if 'checksums' in output_d:
                         for file, csum in output_d['checksums'].items():
@@ -1634,7 +1635,8 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                                     log.warn("{} overlap between {} in packages {} and {}"
                                              .format(nature, file, output_d['name'],
                                                      prev_output_d['name']))
-                    new_pkgs[built_package] = (output_d, m)
+                    for built_package in newly_built_packages:
+                        new_pkgs[built_package] = (output_d, m)
 
                     # must rebuild index because conda has no way to incrementally add our last
                     #    package to the index.
