@@ -1195,9 +1195,9 @@ Output type
 -----------
 
 Conda-build supports creating packages other than conda packages.
-Currently that support includes only wheels, RPMs, .deb
-files, but others may come as demand appears. If type is not
-specified, the default value is ``conda``.
+Currently that support includes only wheels, but others may come
+as demand appears. If type is not specified, the default value is
+``conda``.
 
 .. code-block:: yaml
 
