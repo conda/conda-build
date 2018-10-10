@@ -25,6 +25,7 @@ Anaconda Cloud, you will need an
    source/package-spec
    source/package-naming-conv
    source/recipe
+   source/channels
    source/define-metadata
    source/build-scripts
    source/features
