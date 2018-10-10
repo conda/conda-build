@@ -709,14 +709,15 @@ def check_symlinks(files, prefix, croot):
             elif real_link_path.startswith(real_build_prefix):
                 # If the path is in the build prefix, this is fine, but
                 # the link needs to be relative
-                if not link_path.startswith('.'):
+                relative_path = os.path.relpath(real_link_path, os.path.dirname(path))
+                if not link_path.startswith('.') and link_path != relative_path:
                     # Don't change the link structure if it is already a
                     # relative link. It's possible that ..'s later in the path
                     # can result in a broken link still, but we'll assume that
                     # such crazy things don't happen.
                     print("Making absolute symlink %s -> %s relative" % (f, link_path))
                     os.unlink(path)
-                    os.symlink(os.path.relpath(real_link_path, os.path.dirname(path)), path)
+                    os.symlink(relative_path, path)
             else:
                 # Symlinks to absolute paths on the system (like /usr) are fine.
                 if real_link_path.startswith(croot):
