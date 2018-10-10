@@ -254,7 +254,7 @@ def compile_missing_pyc(files, cwd, python_exe, skip_compile_pyc=()):
                     length += length_this
                 groups[len(groups) - 1].append(f)
             for group in groups:
-                call(args.copy().extend(group), cwd=cwd)
+                call(args + group, cwd=cwd)
 
 
 def check_dist_info_version(name, version, files):
