@@ -45,6 +45,7 @@ except Exception:
     from conda.base.constants import CONDA_TARBALL_EXTENSION
     CONDA_TARBALL_EXTENSIONS = (CONDA_TARBALL_EXTENSION,)
 
+
 def odict_representer(dumper, data):
     return dumper.represent_dict(data.items())
 
@@ -52,6 +53,7 @@ def odict_representer(dumper, data):
 yaml.add_representer(set, yaml.representer.SafeRepresenter.represent_list)
 yaml.add_representer(tuple, yaml.representer.SafeRepresenter.represent_list)
 yaml.add_representer(OrderedDict, odict_representer)
+
 
 def bldpkg_path(m):
     '''

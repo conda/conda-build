@@ -631,7 +631,7 @@ def post_process_shared_lib(m, f, files):
     codefile_t = codefile_type(path)
     if not codefile_t:
         return
-    rpaths = rpaths=m.get_value('build/rpaths', ['lib'])
+    rpaths = m.get_value('build/rpaths', ['lib'])
     if sys.platform.startswith('linux') and codefile_t == 'elffile':
         mk_relative_linux(f, m.config.host_prefix, rpaths=rpaths)
     elif sys.platform == 'darwin' and codefile_t == 'machofile':
