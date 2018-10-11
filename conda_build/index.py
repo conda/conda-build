@@ -771,23 +771,20 @@ def _tar_xf(tarball, dir_path):
         libarchive.extract_file(tarball, flags)
 
 
-def _tar_xf_file(tarball, entries):
+def _tar_xf_file(tarball, file_path):
     if not os.path.isabs(tarball):
         tarball = os.path.join(os.getcwd(), tarball)
     result = None
-    n_found = 0
     with libarchive.file_reader(tarball) as archive:
         for entry in archive:
-            if entry.name in entries:
-                n_found += 1
+            if entry.name == file_path:
                 for block in entry.get_blocks():
                     if result is None:
                         result = bytes(block)
                     else:
                         result += block
                 break
-    from conda_build.utils import ensure_list
-    if n_found != len(ensure_list(entries)):
+    if not result:
         raise KeyError()
     return result
 
