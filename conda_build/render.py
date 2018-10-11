@@ -39,6 +39,12 @@ from conda_build.exceptions import DependencyNeedsBuildingError
 from conda_build.index import get_build_index
 # from conda_build.jinja_context import pin_subpackage_against_outputs
 
+try:
+    from conda.base.constants import CONDA_TARBALL_EXTENSIONS
+except Exception:
+    from conda.base.constants import CONDA_TARBALL_EXTENSION
+    CONDA_TARBALL_EXTENSIONS = (CONDA_TARBALL_EXTENSION,)
+
 
 def odict_representer(dumper, data):
     return dumper.represent_dict(data.items())
@@ -54,7 +60,7 @@ def bldpkg_path(m):
     Returns path to built package's tarball given its ``Metadata``.
     '''
     subdir = 'noarch' if m.noarch or m.noarch_python else m.config.host_subdir
-    return os.path.join(m.config.output_folder, subdir, '%s.tar.bz2' % m.dist())
+    return os.path.join(m.config.output_folder, subdir, '%s%s' % (m.dist(), CONDA_TARBALL_EXTENSIONS[0]))
 
 
 def actions_to_pins(actions):
@@ -186,7 +192,7 @@ def find_pkg_dir_or_file_in_pkgs_dirs(pkg_dist, m, files_only=False):
     pkg_loc = None
     for pkgs_dir in _pkgs_dirs:
         pkg_dir = os.path.join(pkgs_dir, pkg_dist)
-        pkg_file = os.path.join(pkgs_dir, pkg_dist + '.tar.bz2')
+        pkg_file = os.path.join(pkgs_dir, pkg_dist + CONDA_TARBALL_EXTENSIONS[0])
         if not files_only and os.path.isdir(pkg_dir):
             pkg_loc = pkg_dir
             break
@@ -536,16 +542,19 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
         #   best thing is to hard-code the absolute path.  This probably won't exist on any
         #   system other than the original build machine, but at least it will work there.
         if m.meta.get('source'):
-            if 'path' in m.meta['source'] and not os.path.isabs(m.meta['source']['path']):
-                rendered_metadata.meta['source']['path'] = os.path.normpath(
-                    os.path.join(m.path, m.meta['source']['path']))
-            elif ('git_url' in m.meta['source'] and not (
-                    # absolute paths are not relative paths
-                    os.path.isabs(m.meta['source']['git_url']) or
-                    # real urls are not relative paths
-                    ":" in m.meta['source']['git_url'])):
-                rendered_metadata.meta['source']['git_url'] = os.path.normpath(
-                    os.path.join(m.path, m.meta['source']['git_url']))
+            if 'path' in m.meta['source']:
+                source_path = m.meta['source']['path']
+                os.path.expanduser(source_path)
+                if not os.path.isabs(source_path):
+                    rendered_metadata.meta['source']['path'] = os.path.normpath(
+                        os.path.join(m.path, source_path))
+                elif ('git_url' in m.meta['source'] and not (
+                        # absolute paths are not relative paths
+                        os.path.isabs(m.meta['source']['git_url']) or
+                        # real urls are not relative paths
+                        ":" in m.meta['source']['git_url'])):
+                    rendered_metadata.meta['source']['git_url'] = os.path.normpath(
+                        os.path.join(m.path, m.meta['source']['git_url']))
 
         if not rendered_metadata.meta.get('build'):
             rendered_metadata.meta['build'] = {}

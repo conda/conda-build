@@ -293,7 +293,7 @@ def dictify(r, root=True):
     return d
 
 
-def dictify_pickled(xml_file, dict_massager=None, cdt=None):
+def dictify_pickled(xml_file, src_cache, dict_massager=None, cdt=None):
     pickled = xml_file + '.p'
     if exists(pickled):
         return pickle.load(open(pickled, 'rb'))
@@ -306,7 +306,7 @@ def dictify_pickled(xml_file, dict_massager=None, cdt=None):
         root = ET.fromstring(xmlstring.encode('utf-8'))
         result = dictify(root)
         if dict_massager:
-            result = dict_massager(result, cdt)
+            result = dict_massager(result, src_cache, cdt)
         pickle.dump(result, open(pickled, 'wb'))
         return result
 
@@ -339,7 +339,7 @@ def get_repo_dict(repomd_url, data_type, dict_massager, cdt, src_cache):
                         xml.write(xml_content)
                 else:
                     print("ERROR: Checksum of uncompressed file {} does not match".format(xmlgz_file))  # noqa
-        return dictify_pickled(xml_file, dict_massager, cdt)
+        return dictify_pickled(xml_file, src_cache, dict_massager, cdt)
     return dict({})
 
 
@@ -361,7 +361,7 @@ def massage_primary_requires(requires, cdt):
     return requires
 
 
-def massage_primary(repo_primary, cdt):
+def massage_primary(repo_primary, src_cache, cdt):
     """
     Massages the result of dictify() into a less cumbersome form.
     In particular:

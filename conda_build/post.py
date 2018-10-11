@@ -233,21 +233,42 @@ def compile_missing_pyc(files, cwd, python_exe, skip_compile_pyc=()):
             print('compiling .pyc files... failed as no python interpreter was found')
         else:
             print('compiling .pyc files...')
+            # We avoid command lines longer than 8190
+            if sys.platform == 'win32':
+                limit = 8190
+            else:
+                limit = 32760
+            limit -= len(compile_files) * 2
+            lower_limit = len(max(compile_files, key=len)) + 1
+            if limit < lower_limit:
+                limit = lower_limit
+            groups = [[]]
+            args = [python_exe, '-Wi', '-m', 'py_compile']
+            args_len = length = len(' '.join(args)) + 1
             for f in compile_files:
-                call([python_exe, '-Wi', '-m', 'py_compile', f], cwd=cwd)
+                length_this = len(f) + 1
+                if length_this + length > limit:
+                    groups.append([])
+                    length = args_len
+                else:
+                    length += length_this
+                groups[len(groups) - 1].append(f)
+            for group in groups:
+                call(args + group, cwd=cwd)
 
 
 def check_dist_info_version(name, version, files):
     for f in files:
-        if '.dist-info' in f:
-            f_lower = f.lower()
-            f_lower, _, _ = f_lower.rpartition('.dist-info')
-            _, _, f_lower = f_lower.rpartition(name + '-')
-            if version != f_lower:
-                print("ERROR: dist-info version incorrect (is {}, should be {})".format(f_lower, version))
-                sys.exit(1)
-            else:
-                return
+        if f.endswith('.dist-info' + os.sep + 'METADATA'):
+            f_lower = os.path.basename(os.path.dirname(f).lower())
+            if f_lower.startswith(name + '-'):
+                f_lower, _, _ = f_lower.rpartition('.dist-info')
+                _, distname, f_lower = f_lower.rpartition(name + '-')
+                if distname == name and version != f_lower:
+                    print("ERROR: Top level dist-info version incorrect (is {}, should be {})".format(f_lower, version))
+                    sys.exit(1)
+                else:
+                    return
 
 
 def post_process(name, version, files, prefix, config, preserve_egg_dir=False, noarch=False, skip_compile_pyc=()):
@@ -354,7 +375,7 @@ def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
     return ret
 
 
-def mk_relative_osx(path, host_prefix, build_prefix, files):
+def mk_relative_osx(path, host_prefix, build_prefix, files, rpaths=('lib',)):
     assert sys.platform == 'darwin'
 
     names = macho.otool(path)
@@ -368,10 +389,11 @@ def mk_relative_osx(path, host_prefix, build_prefix, files):
     if names:
         # Add an rpath to every executable to increase the chances of it
         # being found.
-        rpath = os.path.join('@loader_path',
-                     os.path.relpath(os.path.join(host_prefix, 'lib'),
-                             os.path.dirname(path)), '').replace('/./', '/')
-        macho.add_rpath(path, rpath, verbose=True)
+        for rpath in rpaths:
+            rpath_new = os.path.join('@loader_path',
+                            os.path.relpath(os.path.join(host_prefix, rpath),
+                                os.path.dirname(path)), '').replace('/./', '/')
+            macho.add_rpath(path, rpath_new, verbose=True)
 
         # 10.7 install_name_tool -delete_rpath causes broken dylibs, I will revisit this ASAP.
         # .. and remove config.build_prefix/lib which was added in-place of
@@ -609,10 +631,11 @@ def post_process_shared_lib(m, f, files):
     codefile_t = codefile_type(path)
     if not codefile_t:
         return
+    rpaths = m.get_value('build/rpaths', ['lib'])
     if sys.platform.startswith('linux') and codefile_t == 'elffile':
-        mk_relative_linux(f, m.config.host_prefix, rpaths=m.get_value('build/rpaths', ['lib']))
+        mk_relative_linux(f, m.config.host_prefix, rpaths=rpaths)
     elif sys.platform == 'darwin' and codefile_t == 'machofile':
-        mk_relative_osx(path, m.config.host_prefix, m.config.build_prefix, files=files)
+        mk_relative_osx(path, m.config.host_prefix, m.config.build_prefix, files=files, rpaths=rpaths)
 
 
 def fix_permissions(files, prefix):
@@ -686,14 +709,15 @@ def check_symlinks(files, prefix, croot):
             elif real_link_path.startswith(real_build_prefix):
                 # If the path is in the build prefix, this is fine, but
                 # the link needs to be relative
-                if not link_path.startswith('.'):
+                relative_path = os.path.relpath(real_link_path, os.path.dirname(path))
+                if not link_path.startswith('.') and link_path != relative_path:
                     # Don't change the link structure if it is already a
                     # relative link. It's possible that ..'s later in the path
                     # can result in a broken link still, but we'll assume that
                     # such crazy things don't happen.
                     print("Making absolute symlink %s -> %s relative" % (f, link_path))
                     os.unlink(path)
-                    os.symlink(os.path.relpath(real_link_path, os.path.dirname(path)), path)
+                    os.symlink(relative_path, path)
             else:
                 # Symlinks to absolute paths on the system (like /usr) are fine.
                 if real_link_path.startswith(croot):
