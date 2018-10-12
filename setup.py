@@ -54,6 +54,8 @@ setup(
                             'conda-skeleton = conda_build.cli.main_skeleton:main',
                             ]},
     install_requires=deps,
-    package_data={'conda_build': ['templates/*', 'cli-*.exe']},
+    package_data={'conda_build': ['templates/*',
+                                  'cli-*.exe',
+                                  'skeletons/templates/*']},
     zip_safe=False,
 )
