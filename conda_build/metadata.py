@@ -1504,7 +1504,11 @@ class MetaData(object):
             sys.exit("Error: Failed to render jinja template in {}:\n{}"
                      .format(self.meta_path, str(ex)))
         finally:
-            del os.environ["CONDA_BUILD_STATE"]
+            try:
+                del os.environ["CONDA_BUILD_STATE"]
+            except KeyError:
+                # key is already gone
+                pass
         return rendered
 
     def __unicode__(self):
