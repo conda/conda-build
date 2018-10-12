@@ -57,14 +57,6 @@ def handle_file(f, d, prefix):
     if f.endswith(('.egg-info', '.pyc', '.pyo')):
         os.unlink(path)
 
-    # The presence of .so indicated this is not a noarch package
-    elif f.endswith(('.so', '.dll', '.pyd', '.exe', '.dylib')):
-        if f.endswith('.exe') and (isfile(os.path.join(prefix, f[:-4] + '-script.py')) or
-                                   basename(f[:-4]) in d['python-scripts']):
-            os.unlink(path)  # this is an entry point with a matching xx-script.py
-            return
-        _error_exit("Error: Binary library or executable found: %s" % f)
-
     elif 'site-packages' in f:
         nsp = join(prefix, 'site-packages')
         _force_dir(nsp)
