@@ -1,3 +1,33 @@
+2018-10-12 3.16.1:
+------------------
+
+Enhancements:
+-------------
+
+* expand ~ in source paths  #3206
+* Use binsort when available to sort file list in tar archives, to optimize compressibility  #3210
+* allow meta.yaml's build/rpaths key to function on macOS, not just linux  #3206
+
+Bug fixes:
+----------
+
+* improve docs on behavior of channel arguments  #3197
+* remove mention in docs about building .RPM and .DEB files.  #3199
+* fix dist-info errors where dist-info files didn't match the package name  #3206
+* fix some hard-coded .tar.bz2 references, to support other compression formats more readily  #3206
+* batch calls to compiling .pyc files to avoid problems with maximum command length  #3206
+* use ensure_list in processing files to be extracted  #3210
+* fix KeyError that happened when a jinja2 rendering error occurred, which hid the rendering error  3211
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @msarahan
+* @stas00
+* @teake
+
+
 2018-10-05 3.16.0:
 ------------------
 
