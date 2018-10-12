@@ -6,5 +6,5 @@
 
 {% block package %}
   name: {{ packagename }}
-  version: {{ '"{{ version }}"'|safe }}
+  version: "{{ '{{ version }}' }}"
 {% endblock %}
