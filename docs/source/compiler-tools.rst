@@ -147,6 +147,41 @@ Generally the build section should include compilers and other build tools, and
 the host section should include everything else, including shared libraries,
 Python, and Python libraries.
 
+An aside on cmake and sysroots
+==============================
+
+Anaconda's compilers for Linux are built with something called crosstool-ng.
+They include not only GCC, but also a "sysroot" with glibc, as well as the rest
+of the toolchain (binutils). Ordinarily, the sysroot is something that your
+system provides, and it is what establishes the libc compatibility bound for
+your compiled code. Any compilation that uses a sysroot other than the system
+sysroot is said to be "cross-compiling." When the target OS and the build OS are
+the same, it is called a "pseudo-cross-compiler." This is the case for normal
+builds with Anaconda's compilers on Linux.
+
+Unfortunately, some software tools do not handle sysroots in intuitive ways.
+CMake is especially bad for this. Even though the compiler itself understands
+its own sysroot, CMake insists on ignoring that.  We've filed issues at:
+
+* https://gitlab.kitware.com/cmake/cmake/issues/17483
+*
+
+Additionally, this Stack Overflow issue has some more information: https://stackoverflow.com/questions/36195791/cmake-missing-sysroot-when-cross-compiling
+
+In order to teach CMake about the sysroot, you must do additional work. As an
+example, please see our recipe for libnetcdf at
+https://github.com/AnacondaRecipes/libnetcdf-feedstock/tree/master/recipe
+
+In particular, you'll need to copy the ``cross-linux.cmake`` file there, and reference it in your build.sh file:
+
+::
+
+    CMAKE_PLATFORM_FLAGS+=(-DCMAKE_TOOLCHAIN_FILE="${RECIPE_DIR}/cross-linux.cmake")
+
+    cmake -DCMAKE_INSTALL_PREFIX=${PREFIX} \
+      ${CMAKE_PLATFORM_FLAGS[@]} \
+      ${SRC_DIR}
+
 Customizing the compilers
 =========================
 

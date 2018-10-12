@@ -8,6 +8,7 @@ import fnmatch
 from glob import glob
 import io
 import json
+import libarchive
 import os
 from os.path import isdir, isfile, islink, join, dirname
 import random
@@ -17,7 +18,6 @@ import stat
 import string
 import subprocess
 import sys
-import tarfile
 import time
 
 # this is to compensate for a requests idna encoding error.  Conda is a better place to fix,
@@ -28,6 +28,12 @@ import encodings.idna  # NOQA
 
 from bs4 import UnicodeDammit
 import yaml
+
+try:
+    from conda.base.constants import CONDA_TARBALL_EXTENSIONS
+except Exception:
+    from conda.base.constants import CONDA_TARBALL_EXTENSION
+    CONDA_TARBALL_EXTENSIONS = (CONDA_TARBALL_EXTENSION,)
 
 # used to get version
 from .conda_interface import env_path_backup_var_exists, conda_45, conda_46
@@ -50,7 +56,7 @@ from .conda_interface import UnsatisfiableError
 from .conda_interface import NoPackagesFoundError
 from .conda_interface import CondaError
 from .conda_interface import pkgs_dirs
-from .utils import env_var
+from .utils import env_var, tmp_chdir
 
 from conda_build import __version__
 from conda_build import environ, source, tarcheck, utils
@@ -355,8 +361,8 @@ def copy_license(m):
                             locking=m.config.locking)
             print("Packaged license file.")
         else:
-            raise ValueError("License file given in about/license_file does not exist in "
-                             "source root dir or in recipe root dir (with meta.yaml)")
+            raise ValueError("License file given in about/license_file ({}) does not exist in "
+                             "source root dir or in recipe root dir (with meta.yaml)".format(src_file))
 
 
 def copy_recipe_log(m):
@@ -792,12 +798,13 @@ def post_process_files(m, initial_prefix_files):
 
     python = (m.config.build_python if os.path.isfile(m.config.build_python) else
               m.config.host_python)
-    post_process(sorted(current_prefix_files - initial_prefix_files),
-                    prefix=m.config.host_prefix,
-                    config=m.config,
-                    preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')),
-                    noarch=m.get_value('build/noarch'),
-                    skip_compile_pyc=m.get_value('build/skip_compile_pyc'))
+    post_process(m.get_value('package/name'), m.get_value('package/version'),
+                 sorted(current_prefix_files - initial_prefix_files),
+                 prefix=m.config.host_prefix,
+                 config=m.config,
+                 preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')),
+                 noarch=m.get_value('build/noarch'),
+                 skip_compile_pyc=m.get_value('build/skip_compile_pyc'))
 
     # The post processing may have deleted some files (like easy-install.pth)
     current_prefix_files = utils.prefix_files(prefix=m.config.host_prefix)
@@ -955,12 +962,11 @@ def bundle_conda(output, metadata, env, stats, **kw):
             "has included conda binary in package. Please report this on the conda-build issue "
             "tracker.")
 
-    output_filename = ('-'.join([output['name'], metadata.version(),
-                                 metadata.build_id()]) + '.tar.bz2')
     # first filter is so that info_files does not pick up ignored files
     files = utils.filter_files(files, prefix=metadata.config.host_prefix)
     # this is also copying things like run_test.sh into info/recipe
-    output['checksums'] = create_info_files(metadata, files, prefix=metadata.config.host_prefix)
+    with tmp_chdir(metadata.config.host_prefix):
+        output['checksums'] = create_info_files(metadata, files, prefix=metadata.config.host_prefix)
     for ext in ('.py', '.r', '.pl', '.lua', '.sh', '.bat'):
         test_dest_path = os.path.join(metadata.config.info_dir, 'test', 'run_test' + ext)
         script = output.get('test', {}).get('script')
@@ -975,58 +981,78 @@ def bundle_conda(output, metadata, env, stats, **kw):
     prefix_files = set(utils.prefix_files(metadata.config.host_prefix))
     files = utils.filter_files(prefix_files - initial_files, prefix=metadata.config.host_prefix)
 
+    basename = '-'.join([output['name'], metadata.version(), metadata.build_id()])
+    tmp_archives = []
     with TemporaryDirectory() as tmp:
-        tmp_path = os.path.join(tmp, os.path.basename(output_filename))
-        t = tarfile.open(tmp_path, 'w:bz2')
+        tmp_path = os.path.join(tmp, basename)
 
         def order(f):
             # we don't care about empty files so send them back via 100000
             fsize = os.stat(join(metadata.config.host_prefix, f)).st_size or 100000
             # info/* records will be False == 0, others will be 1.
             info_order = int(os.path.dirname(f) != 'info')
+            if info_order:
+                _, ext = os.path.splitext(f)
+                # Strip any .dylib.* and .so.* and rename .dylib to .so
+                ext = re.sub(r'(\.dylib|\.so).*$', r'.so', ext)
+                if not ext:
+                    # Files without extensions should be sorted by dirname
+                    info_order = 1 + hash(os.path.dirname(f)) % (10 ** 8)
+                else:
+                    info_order = 1 + abs(hash(ext)) % (10 ** 8)
             return info_order, fsize
 
-        # add files in order of a) in info directory, b) increasing size so
-        # we can access small manifest or json files without decompressing
-        # possible large binary or data files
-        for f in sorted(files, key=order):
-            t.add(join(metadata.config.host_prefix, f), f)
-        t.close()
+        files_list = list(f for f in sorted(files, key=order))
+        for (ext, filter, opts) in (('.tar.bz2', 'bzip2', ''), ('.tar.zst', 'zstd', 'zstd:compression-level=22')):
+            if ext not in CONDA_TARBALL_EXTENSIONS:
+                continue
+            # add files in order of a) in info directory, b) increasing size so
+            # we can access small manifest or json files without decompressing
+            # possible large binary or data files
+            print("Compressing to {}".format(tmp_path + ext))
+            with tmp_chdir(metadata.config.host_prefix):
+                with libarchive.file_writer(tmp_path + ext, 'gnutar', filter_name=filter, options=opts) as archive:
+                    archive.add_files(*files_list)
+                tmp_archives.append(tmp_path + ext)
 
         # we're done building, perform some checks
-        tarcheck.check_all(tmp_path, metadata.config)
+        for tmp_path in tmp_archives:
+            if tmp_path.endswith('.tar.bz2'):
+                tarcheck.check_all(tmp_path, metadata.config)
+            output_filename = basename + '.' + '.'.join(tmp_path.split('.')[-2:])
 
-        # we do the import here because we want to respect logger level context
-        try:
-            from conda_verify.verify import Verify
-        except ImportError:
-            Verify = None
-            log.warn("Importing conda-verify failed.  Please be sure to test your packages.  "
-                "conda install conda-verify to make this message go away.")
-        if getattr(metadata.config, "verify", False) and Verify:
-            verifier = Verify()
-            checks_to_ignore = metadata.config.ignore_verify_codes if \
-                             metadata.config.ignore_verify_codes else None
-            verifier.verify_package(path_to_package=tmp_path, checks_to_ignore=checks_to_ignore,
-                                    exit_on_error=metadata.config.exit_on_verify_error)
-        try:
-            crossed_subdir = metadata.config.target_subdir
-        except AttributeError:
-            crossed_subdir = metadata.config.host_subdir
-        subdir = ('noarch' if (metadata.noarch or metadata.noarch_python)
-                  else crossed_subdir)
-        if metadata.config.output_folder:
-            output_folder = os.path.join(metadata.config.output_folder, subdir)
-        else:
-            output_folder = os.path.join(os.path.dirname(metadata.config.bldpkgs_dir), subdir)
-        final_output = os.path.join(output_folder, output_filename)
-        if os.path.isfile(final_output):
-            utils.rm_rf(final_output)
+            # we do the import here because we want to respect logger level context
+            try:
+                # from conda_verify.verify import Verify
+                raise ImportError
+            except ImportError:
+                Verify = None
+                log.warn("Importing conda-verify failed.  Please be sure to test your packages.  "
+                    "conda install conda-verify to make this message go away.")
+            if getattr(metadata.config, "verify", False) and Verify:
+                verifier = Verify()
+                checks_to_ignore = metadata.config.ignore_verify_codes if \
+                                   metadata.config.ignore_verify_codes else None
+                verifier.verify_package(path_to_package=tmp_path, checks_to_ignore=checks_to_ignore,
+                                        exit_on_error=metadata.config.exit_on_verify_error)
+            try:
+                crossed_subdir = metadata.config.target_subdir
+            except AttributeError:
+                crossed_subdir = metadata.config.host_subdir
+            subdir = ('noarch' if (metadata.noarch or metadata.noarch_python)
+                      else crossed_subdir)
+            if metadata.config.output_folder:
+                output_folder = os.path.join(metadata.config.output_folder, subdir)
+            else:
+                output_folder = os.path.join(os.path.dirname(metadata.config.bldpkgs_dir), subdir)
+            final_output = os.path.join(output_folder, output_filename)
+            if os.path.isfile(final_output):
+                utils.rm_rf(final_output)
 
-        # disable locking here.  It's just a temp folder getting locked.  Removing it proved to be
-        #    a major bottleneck.
-        utils.copy_into(tmp_path, final_output, metadata.config.timeout,
-                        locking=False)
+            # disable locking here.  It's just a temp folder getting locked.  Removing it proved to be
+            #    a major bottleneck.
+            utils.copy_into(tmp_path, final_output, metadata.config.timeout,
+                            locking=False)
     update_index(os.path.dirname(output_folder), verbose=metadata.config.debug)
 
     # clean out host prefix so that this output's files don't interfere with other outputs
@@ -1846,7 +1872,7 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
     # I think we can remove this call to clean_pkg_cache().
     in_pkg_cache = (not hasattr(recipedir_or_package_or_metadata, 'config') and
                     os.path.isfile(recipedir_or_package_or_metadata) and
-                    recipedir_or_package_or_metadata.endswith('.tar.bz2') and
+                    recipedir_or_package_or_metadata.endswith(CONDA_TARBALL_EXTENSIONS) and
                     os.path.dirname(recipedir_or_package_or_metadata) in pkgs_dirs[0])
     if not in_pkg_cache:
         environ.clean_pkg_cache(metadata.dist(), metadata.config)
@@ -2205,7 +2231,7 @@ def build_tree(recipe_list, config, stats, build_only=False, post=False, notest=
                                            )
                 if not notest:
                     for pkg, dict_and_meta in packages_from_this.items():
-                        if pkg.endswith('.tar.bz2') and os.path.isfile(pkg):
+                        if pkg.endswith(CONDA_TARBALL_EXTENSIONS) and os.path.isfile(pkg):
                             # we only know how to test conda packages
                             test(pkg, config=metadata.config.copy(), stats=stats)
                         _, meta = dict_and_meta
@@ -2336,7 +2362,7 @@ for Python 3.5 and needs to be rebuilt."""
 
     if post in [True, None]:
         # TODO: could probably use a better check for pkg type than this...
-        tarballs = [f for f in built_packages if f.endswith('.tar.bz2')]
+        tarballs = [f for f in built_packages if f.endswith(CONDA_TARBALL_EXTENSIONS)]
         wheels = [f for f in built_packages if f.endswith('.whl')]
         handle_anaconda_upload(tarballs, config=config)
         handle_pypi_upload(wheels, config=config)

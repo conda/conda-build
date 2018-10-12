@@ -69,22 +69,6 @@ def test_disallow_merge_conflicts(namespace_setup, testing_config):
                                                  'package'))
 
 
-@pytest.mark.skipif(utils.on_win, reason="only unix has full os.chmod capabilities")
-def test_unzip(testing_workdir):
-    with open('file_with_execute_permission', 'w') as f:
-        f.write("test")
-    file_path = os.path.join(testing_workdir, 'file_with_execute_permission')
-    current_permissions = os.stat(file_path).st_mode
-    os.chmod(file_path, current_permissions | stat.S_IXUSR)
-    with zipfile.ZipFile('test.zip', 'w') as z:
-        z.write('file_with_execute_permission')
-    utils.unzip('test.zip', 'unpack')
-    unpacked_path = os.path.join('unpack', 'file_with_execute_permission')
-    assert os.path.isfile(unpacked_path)
-    st_mode = os.stat(unpacked_path).st_mode
-    assert st_mode & stat.S_IXUSR
-
-
 def test_disallow_in_tree_merge(testing_workdir):
     with open('testfile', 'w') as f:
         f.write("test")
