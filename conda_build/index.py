@@ -772,6 +772,8 @@ def _tar_xf(tarball, dir_path):
 
 
 def _tar_xf_file(tarball, entries):
+    from conda_build.utils import ensure_list
+    entries = ensure_list(entries)
     if not os.path.isabs(tarball):
         tarball = os.path.join(os.getcwd(), tarball)
     result = None
@@ -786,8 +788,7 @@ def _tar_xf_file(tarball, entries):
                     else:
                         result += block
                 break
-    from conda_build.utils import ensure_list
-    if n_found != len(ensure_list(entries)):
+    if n_found != len(entries):
         raise KeyError()
     return result
 

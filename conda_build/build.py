@@ -19,6 +19,7 @@ import string
 import subprocess
 import sys
 import time
+from tempfile import NamedTemporaryFile
 
 # this is to compensate for a requests idna encoding error.  Conda is a better place to fix,
 #   eventually
@@ -1003,23 +1004,41 @@ def bundle_conda(output, metadata, env, stats, **kw):
                     info_order = 1 + abs(hash(ext)) % (10 ** 8)
             return info_order, fsize
 
-        files_list = list(f for f in sorted(files, key=order))
+        binsort = os.path.join(sys.prefix, 'bin', 'binsort')
+        if os.path.exists(binsort):
+            with NamedTemporaryFile(mode='w', suffix='.filelist', delete=False) as fl:
+                with tmp_chdir(metadata.config.host_prefix):
+                    fl.writelines(map(lambda x: '.' + os.sep + x + '\n', files))
+                    fl.close()
+                    cmd = binsort + ' -t 1 -q -d -o 1000 {}'.format(fl.name)
+                    out, _ = subprocess.Popen(cmd, shell=True,
+                                              stdout=subprocess.PIPE).communicate()
+                    files_list = out.decode('utf-8').strip().split('\n')
+                    # binsort returns the absolute paths.
+                    files_list = [f.split(metadata.config.host_prefix + os.sep, 1)[-1]
+                                  for f in files_list]
+                    os.unlink(fl.name)
+        else:
+                files_list = list(f for f in sorted(files, key=order))
+
         for (ext, filter, opts) in (('.tar.bz2', 'bzip2', ''), ('.tar.zst', 'zstd', 'zstd:compression-level=22')):
             if ext not in CONDA_TARBALL_EXTENSIONS:
                 continue
             # add files in order of a) in info directory, b) increasing size so
             # we can access small manifest or json files without decompressing
             # possible large binary or data files
+            fullpath = tmp_path + ext
+            print("Compressing to {}".format(fullpath))
             with tmp_chdir(metadata.config.host_prefix):
-                with libarchive.file_writer(tmp_path + ext, 'gnutar', filter_name=filter, options=opts) as archive:
+                with libarchive.file_writer(fullpath, 'gnutar', filter_name=filter, options=opts) as archive:
                     archive.add_files(*files_list)
-                tmp_archives.append(tmp_path + ext)
+                tmp_archives.append(fullpath)
 
         # we're done building, perform some checks
         for tmp_path in tmp_archives:
             if tmp_path.endswith('.tar.bz2'):
                 tarcheck.check_all(tmp_path, metadata.config)
-            output_filename = basename + '.' + '.'.join(tmp_path.split('.')[-2:])
+            output_filename = os.path.basename(tmp_path)
 
             # we do the import here because we want to respect logger level context
             try:
