@@ -461,7 +461,7 @@ def get_repository_info(recipe_path):
             return "Origin {}, commit {}".format(origin, rev)
         elif isdir(join(recipe_path, ".svn")):
             info = check_output_env(["svn", "info"], cwd=recipe_path)
-            info = info.decode("utf-8") # Py3 returns a byte string, but re needs unicode or str.
+            info = info.decode("utf-8")  # Py3 returns a byte string, but re needs unicode or str.
             server = re.search("Repository Root: (.*)$", info, flags=re.M).group(1)
             revision = re.search("Revision: (.*)$", info, flags=re.M).group(1)
             return "{}, Revision {}".format(server, revision)

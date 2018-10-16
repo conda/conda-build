@@ -132,7 +132,7 @@ cached_index = None
 local_subdir = ""
 cached_channels = []
 
-MAX_THREADS_DEFAULT = int(os.cpu_count() / 2) if (hasattr(os, "cpu_count") and os.cpu_count() > 1) else 1
+MAX_THREADS_DEFAULT = os.cpu_count() if (hasattr(os, "cpu_count") and os.cpu_count() > 1) else 1
 LOCK_TIMEOUT_SECS = 3 * 3600
 LOCKFILE_NAME = ".lock"
 DEFAULT_SUBDIRS = (
@@ -245,7 +245,7 @@ def _ensure_valid_channel(local_folder, subdir):
             os.makedirs(path)
 
 
-def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=None, threads=None,
+def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=None, threads=MAX_THREADS_DEFAULT,
                  verbose=False, progress=False, hotfix_source_repo=None, subdirs=None):
     """
     If dir_path contains a directory named 'noarch', the path tree therein is treated
@@ -264,10 +264,10 @@ def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=N
         return update_index(base_path, check_md5=check_md5, channel_name=channel_name,
                             threads=threads, verbose=verbose, progress=progress,
                             hotfix_source_repo=hotfix_source_repo)
-    return ChannelIndex(dir_path, channel_name, subdirs=subdirs, deep_integrity_check=check_md5,
-                        threads=threads).index(patch_generator=patch_generator, verbose=verbose,
-                                               progress=progress,
-                                               hotfix_source_repo=hotfix_source_repo)
+    return ChannelIndex(dir_path, channel_name, subdirs=subdirs, threads=threads,
+                        deep_integrity_check=check_md5).index(patch_generator=patch_generator, verbose=verbose,
+                                                              progress=progress,
+                                                              hotfix_source_repo=hotfix_source_repo)
 
 
 def _determine_namespace(info):
