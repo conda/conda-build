@@ -241,6 +241,9 @@ class UnixExecutable(object):
     def get_runpaths(self):
         return self.dt_runpath
 
+    def get_soname(self):
+        return self.dt_soname
+
 
 def read_data(file, endian, num=1):
     """
@@ -935,6 +938,9 @@ class elffile(UnixExecutable):
     def uniqueness_key(self):
         return self.dt_soname
 
+    def get_soname(self):
+        return self.dt_soname
+
 
 class inscrutablefile(UnixExecutable):
     def get_rpaths_transitive(self):
@@ -953,7 +959,30 @@ class inscrutablefile(UnixExecutable):
         return 'unknown'
 
 
+class DLLfile(UnixExecutable):
+
+    def __init__(self, file, initial_rpaths_transitive=[]):
+        pass
+
+    def get_rpaths_transitive(self):
+        return []
+
+    def get_resolved_shared_libraries(self, *args, **kw):
+        return []
+
+    def get_runpaths(self):
+        return []
+
+    def selfdir(self):
+        return None
+
+    def uniqueness_key(self):
+        return 'unknown'
+
+
 def codefile(file, arch='any', initial_rpaths_transitive=[]):
+    if file.name.endswith('.dll'):
+        return DLLfile(file, list(initial_rpaths_transitive))
     magic, = struct.unpack(BIG_ENDIAN + 'L', file.read(4))
     file.seek(0)
     if magic in (FAT_MAGIC, MH_MAGIC, MH_CIGAM, MH_CIGAM_64):
@@ -972,6 +1001,8 @@ def codefile_class(filename, skip_symlinks=False):
             filename = os.path.realpath(filename)
     if os.path.isdir(filename):
         return None
+    if filename.endswith('.dll'):
+        return DLLfile
     # Java .class files share 0xCAFEBABE with Mach-O FAT_MAGIC.
     if filename.endswith('.class'):
         return None
@@ -1010,7 +1041,10 @@ def _trim_sysroot(sysroot):
 
 def _get_arch_if_native(arch):
     if arch == 'native':
-        _, _, _, _, arch = os.uname()
+        if sys.platform == 'win32':
+            arch = 'x86_64' if sys.maxsize > 2**32 else 'i686'
+        else:
+            _, _, _, _, arch = os.uname()
     return arch
 
 
