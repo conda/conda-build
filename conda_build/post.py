@@ -26,7 +26,7 @@ from conda_build.conda_interface import PY3
 from conda_build.conda_interface import TemporaryDirectory
 
 from conda_build import utils
-from conda_build.os_utils.pyldd import codefile_type, inspect_linkages, get_runpaths
+from conda_build.os_utils.liefldd import (codefile_type, get_linkages, get_runpaths)
 from conda_build.inspect_pkg import which_package
 
 if sys.platform == 'darwin':
@@ -391,8 +391,8 @@ def mk_relative_osx(path, host_prefix, build_prefix, files, rpaths=('lib',)):
         # being found.
         for rpath in rpaths:
             rpath_new = os.path.join('@loader_path',
-                            os.path.relpath(os.path.join(host_prefix, rpath),
-                                os.path.dirname(path)), '').replace('/./', '/')
+                                     os.path.relpath(os.path.join(host_prefix, rpath),
+                                     os.path.dirname(path)), '').replace('/./', '/')
             macho.add_rpath(path, rpath_new, verbose=True)
 
         # 10.7 install_name_tool -delete_rpath causes broken dylibs, I will revisit this ASAP.
@@ -537,7 +537,7 @@ def check_overlinking(m, files):
             print_msg(errors, '{}: runpaths {} found in {}'.format(msg_prelude,
                                                                    runpaths,
                                                                    path))
-        needed = inspect_linkages(path, resolve_filenames=True, recurse=False)
+        needed = get_linkages(path, resolve_filenames=True, recurse=False)
         for needed_dso in needed:
             if needed_dso.startswith(m.config.host_prefix):
                 in_prefix_dso = os.path.normpath(needed_dso.replace(m.config.host_prefix + '/', ''))
@@ -572,7 +572,7 @@ def check_overlinking(m, files):
                     if in_prefix_dso not in files:
                         print_msg(errors, '{}: {} not found in any packages'.format(msg_prelude,
                                                                                     in_prefix_dso))
-                    else:
+                    elif m.config.verbose:
                         print_msg(errors, '{}: {} found in this package'.format(info_prelude,
                                                                                 in_prefix_dso))
             elif needed_dso.startswith(m.config.build_prefix):
