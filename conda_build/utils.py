@@ -379,15 +379,31 @@ def try_acquire_locks(locks, timeout):
     """
     t = time.time()
     while (time.time() - t < timeout):
+        # Continuously try to acquire all locks.
+        # By passing a short timeout to each individual lock, we avoid blocking
+        # on a single lock for a long time, during which time we might already
+        # be able to acquire other locks.
         for lock in locks:
+            failed = False
             try:
                 lock.acquire(timeout=0.1)
             except filelock.Timeout:
-                for lock in locks:
-                    lock.release()
-                raise
-        break
+                failed = True
+
+        if not failed:
+            # No exception means we've successfully acquired all locks
+            break
+    else:
+        # If we reach this point, we weren't able to acquire all locks within
+        # the specified timeout. Release all locks we might have already
+        # acquired and raise.
+        for lock in locks:
+            lock.release()
+
+        raise filelock.Timeout('Failed to acquire all locks')
+
     yield
+
     for lock in locks:
         if lock:
             lock.release()
