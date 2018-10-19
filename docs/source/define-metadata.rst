@@ -1553,6 +1553,8 @@ variables are booleans.
    * - np
      - The NumPy version as an integer such as ``111``. See the
        CONDA_NPY :ref:`environment variable <build-envs>`.
+   * - emscripten
+     - True if EMSDK is a defined, non-empty environment variable.
 
 Because the selector is any valid Python expression, complicated
 logic is possible:

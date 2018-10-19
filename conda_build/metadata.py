@@ -121,6 +121,8 @@ def ns_cfg(config):
     for machine in non_x86_linux_machines:
         d[machine] = bool(plat == 'linux-%s' % machine)
 
+    d['emscripten'] = bool(os.environ.get('EMSDK', ''))
+
     for feature, value in feature_list:
         d[feature] = value
     d.update(os.environ)
