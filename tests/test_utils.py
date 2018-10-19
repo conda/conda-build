@@ -1,3 +1,4 @@
+import filelock
 import os
 import stat
 import subprocess
@@ -296,3 +297,17 @@ def test_subprocess_stats_call(testing_workdir):
     assert stats
     with pytest.raises(subprocess.CalledProcessError):
         utils.check_call_env(['bash', '-c', 'exit 1'], cwd=testing_workdir)
+
+
+def test_try_acquire_locks(testing_workdir):
+    # Acquiring two unlocked locks should succeed.
+    lock1 = filelock.FileLock(os.path.join(testing_workdir, 'lock1'))
+    lock2 = filelock.FileLock(os.path.join(testing_workdir, 'lock2'))
+    with utils.try_acquire_locks([lock1, lock2], timeout=1):
+        pass
+
+    # Acquiring the same lock twice should fail.
+    lock1_copy = filelock.FileLock(os.path.join(testing_workdir, 'lock1'))
+    with pytest.raises(filelock.Timeout):
+        with utils.try_acquire_locks([lock1, lock1_copy], timeout=1):
+            pass

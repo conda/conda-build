@@ -373,7 +373,7 @@ def get_recipe_abspath(recipe):
 
 @contextlib.contextmanager
 def try_acquire_locks(locks, timeout):
-    """Try to acquire all locks.  If any lock can't be immediately acquired, free all locks
+    """Try to acquire all locks.  If any lock can't be immediately acquired, free all locks and raise
 
     http://stackoverflow.com/questions/9814008/multiple-mutex-locking-strategies-and-why-libraries-dont-use-address-comparison
     """
@@ -385,7 +385,7 @@ def try_acquire_locks(locks, timeout):
             except filelock.Timeout:
                 for lock in locks:
                     lock.release()
-                break
+                raise
         break
     yield
     for lock in locks:
