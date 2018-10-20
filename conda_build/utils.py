@@ -1,6 +1,5 @@
 from __future__ import absolute_import, division, print_function
 
-import base64
 from collections import defaultdict
 import contextlib
 import fnmatch
@@ -586,7 +585,10 @@ def get_lock(folder, timeout=90):
     b_location = location
     if hasattr(b_location, 'encode'):
         b_location = b_location.encode()
-    lock_filename = base64.urlsafe_b64encode(b_location)[:20]
+
+    # Hash the entire filename to avoid collisions.
+    lock_filename = hashlib.sha1(b_location).hexdigest()
+
     if hasattr(lock_filename, 'decode'):
         lock_filename = lock_filename.decode()
     for locks_dir in _lock_folders:
