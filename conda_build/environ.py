@@ -957,8 +957,8 @@ def clean_pkg_cache(dist, config):
     if config.debug:
         conda_log_level = logging.DEBUG
 
-    locks = get_pkg_dirs_locks([config.bldpkgs_dir, pkgs_dirs[0]], config)
     with utils.LoggingContext(conda_log_level):
+        locks = get_pkg_dirs_locks([config.bldpkgs_dir] + pkgs_dirs, config)
         with utils.try_acquire_locks(locks, timeout=config.timeout):
             rmplan = [
                 'RM_EXTRACTED {0} local::{0}'.format(dist),
@@ -982,7 +982,10 @@ def clean_pkg_cache(dist, config):
                     for pkg_id in keys:
                         if pkg_id in cache:
                             del cache[pkg_id]
-                    remove_existing_packages(pkgs_dirs, [dist], config)
+
+        # Note that this call acquires the relevant locks, so this must be called
+        # outside the lock context above.
+        remove_existing_packages(pkgs_dirs, [dist], config)
 
 
 def get_pinned_deps(m, section):
