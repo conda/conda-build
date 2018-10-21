@@ -898,7 +898,7 @@ def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, 
                                 utils.rm_rf(pkg_dir)
                         if retry < config.max_env_retry:
                             log.warn("failed to create env, retrying.  exception was: %s", str(exc))
-                            create_env(prefix, actions, config=config, subdir=subdir, env=env,
+                            create_env(prefix, specs_or_actions, config=config, subdir=subdir, env=env,
                                        clear_cache=clear_cache, retry=retry + 1, is_cross=is_cross)
                         else:
                             log.error("Failed to create env, max retries exceeded.")
@@ -917,7 +917,7 @@ def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, 
                                 utils.rm_rf(pkg_dir)
                     if retry < config.max_env_retry:
                         log.warn("failed to create env, retrying.  exception was: %s", str(exc))
-                        create_env(prefix, actions, config=config, subdir=subdir, env=env,
+                        create_env(prefix, specs_or_actions, config=config, subdir=subdir, env=env,
                                    clear_cache=clear_cache, retry=retry + 1, is_cross=is_cross)
                     else:
                         log.error("Failed to create env, max retries exceeded.")
