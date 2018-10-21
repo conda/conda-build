@@ -593,7 +593,7 @@ def get_lock(folder, timeout=90):
         b_location = b_location.encode()
 
     # Hash the entire filename to avoid collisions.
-    lock_filename = hashlib.sha1(b_location).hexdigest()
+    lock_filename = hashlib.sha256(b_location).hexdigest()
 
     if hasattr(lock_filename, 'decode'):
         lock_filename = lock_filename.decode()
