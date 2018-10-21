@@ -44,6 +44,7 @@ from .conda_interface import conda_43, Dist
 from .conda_interface import context
 # NOQA because it is not used in this file.
 from conda_build.conda_interface import rm_rf as _rm_rf # NOQA
+from conda_build.exceptions import BuildLockError
 from conda_build.os_utils import external
 
 if PY3:
@@ -98,10 +99,6 @@ try:
     from os import scandir, walk  # NOQA
 except ImportError:
     from scandir import walk
-
-
-class BuildLockError(Exception):
-    """ Raised when we failed to acquire a lock. """
 
 
 @memoized

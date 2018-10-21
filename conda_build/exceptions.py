@@ -88,3 +88,7 @@ class DependencyNeedsBuildingError(CondaBuildException):
 
 class RecipeError(CondaBuildException):
     pass
+
+
+class BuildLockError(CondaBuildException):
+    """ Raised when we failed to acquire a lock. """

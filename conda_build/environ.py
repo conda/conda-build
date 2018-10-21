@@ -23,11 +23,11 @@ from .conda_interface import package_cache, TemporaryDirectory
 from .conda_interface import pkgs_dirs, root_dir, symlink_conda, create_default_packages
 
 from conda_build import utils
-from conda_build.exceptions import DependencyNeedsBuildingError
+from conda_build.exceptions import BuildLockError, DependencyNeedsBuildingError
 from conda_build.features import feature_list
 from conda_build.index import get_build_index
 from conda_build.os_utils import external
-from conda_build.utils import ensure_list, prepend_bin_path, BuildLockError
+from conda_build.utils import ensure_list, prepend_bin_path
 from conda_build.variants import get_default_variant
 
 
