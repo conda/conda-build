@@ -357,7 +357,7 @@ def check_action(recipe, config):
 
 
 def execute(args):
-    parser, args = parse_args(args)
+    _parser, args = parse_args(args)
     config = Config(**args.__dict__)
     build.check_external()
 
