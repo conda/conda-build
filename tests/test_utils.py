@@ -1,3 +1,4 @@
+import filelock
 import os
 import stat
 import subprocess
@@ -7,6 +8,7 @@ import zipfile
 
 import pytest
 
+from conda_build.exceptions import BuildLockError
 import conda_build.utils as utils
 
 
@@ -296,3 +298,34 @@ def test_subprocess_stats_call(testing_workdir):
     assert stats
     with pytest.raises(subprocess.CalledProcessError):
         utils.check_call_env(['bash', '-c', 'exit 1'], cwd=testing_workdir)
+
+
+def test_try_acquire_locks(testing_workdir):
+    # Acquiring two unlocked locks should succeed.
+    lock1 = filelock.FileLock(os.path.join(testing_workdir, 'lock1'))
+    lock2 = filelock.FileLock(os.path.join(testing_workdir, 'lock2'))
+    with utils.try_acquire_locks([lock1, lock2], timeout=1):
+        pass
+
+    # Acquiring the same lock twice should fail.
+    lock1_copy = filelock.FileLock(os.path.join(testing_workdir, 'lock1'))
+    # Also verify that the error message contains the word "lock", since we rely
+    # on this elsewhere.
+    with pytest.raises(BuildLockError, message='Failed to acquire all locks'):
+        with utils.try_acquire_locks([lock1, lock1_copy], timeout=1):
+            pass
+
+def test_get_lock(testing_workdir):
+    lock1 = utils.get_lock(os.path.join(testing_workdir, 'lock1'))
+    lock2 = utils.get_lock(os.path.join(testing_workdir, 'lock2'))
+
+    # Different folders should get different lock files.
+    assert lock1.lock_file != lock2.lock_file
+
+    # Same folder should get the same lock file.
+    lock1_copy = utils.get_lock(os.path.join(testing_workdir, 'lock1'))
+    assert lock1.lock_file == lock1_copy.lock_file
+
+    # ...even when not normalized
+    lock1_unnormalized = utils.get_lock(os.path.join(testing_workdir, 'foo', '..', 'lock1'))
+    assert lock1.lock_file == lock1_unnormalized.lock_file

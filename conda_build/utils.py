@@ -1,6 +1,5 @@
 from __future__ import absolute_import, division, print_function
 
-import base64
 from collections import defaultdict
 import contextlib
 import fnmatch
@@ -45,6 +44,7 @@ from .conda_interface import conda_43, Dist
 from .conda_interface import context
 # NOQA because it is not used in this file.
 from conda_build.conda_interface import rm_rf as _rm_rf # NOQA
+from conda_build.exceptions import BuildLockError
 from conda_build.os_utils import external
 
 if PY3:
@@ -373,23 +373,44 @@ def get_recipe_abspath(recipe):
 
 @contextlib.contextmanager
 def try_acquire_locks(locks, timeout):
-    """Try to acquire all locks.  If any lock can't be immediately acquired, free all locks
+    """Try to acquire all locks.
+
+    If any lock can't be immediately acquired, free all locks.
+    If the timeout is reached withou acquiring all locks, free all locks and raise.
 
     http://stackoverflow.com/questions/9814008/multiple-mutex-locking-strategies-and-why-libraries-dont-use-address-comparison
     """
     t = time.time()
     while (time.time() - t < timeout):
-        for lock in locks:
-            try:
+        # Continuously try to acquire all locks.
+        # By passing a short timeout to each individual lock, we give other
+        # processes that might be trying to acquire the same locks (and may
+        # already hold some of them) a chance to the remaining locks - and
+        # hopefully subsequently release them.
+        try:
+            for lock in locks:
                 lock.acquire(timeout=0.1)
-            except filelock.Timeout:
-                for lock in locks:
-                    lock.release()
-                break
-        break
-    yield
-    for lock in locks:
-        if lock:
+        except filelock.Timeout:
+            # If we failed to acquire a lock, it is important to release all
+            # locks we may have already acquired, to avoid wedging multiple
+            # processes that try to acquire the same set of locks.
+            # That is, we want to avoid a situation where processes 1 and 2 try
+            # to acquire locks A and B, and proc 1 holds lock A while proc 2
+            # holds lock B.
+            for lock in locks:
+                lock.release()
+        else:
+            break
+    else:
+        # If we reach this point, we weren't able to acquire all locks within
+        # the specified timeout. We shouldn't be holding any locks anymore at
+        # this point, so we just raise an exception.
+        raise BuildLockError('Failed to acquire all locks')
+
+    try:
+        yield
+    finally:
+        for lock in locks:
             lock.release()
 
 
@@ -569,7 +590,10 @@ def get_lock(folder, timeout=90):
     b_location = location
     if hasattr(b_location, 'encode'):
         b_location = b_location.encode()
-    lock_filename = base64.urlsafe_b64encode(b_location)[:20]
+
+    # Hash the entire filename to avoid collisions.
+    lock_filename = hashlib.sha256(b_location).hexdigest()
+
     if hasattr(lock_filename, 'decode'):
         lock_filename = lock_filename.decode()
     for locks_dir in _lock_folders:

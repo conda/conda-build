@@ -23,7 +23,7 @@ from .conda_interface import package_cache, TemporaryDirectory
 from .conda_interface import pkgs_dirs, root_dir, symlink_conda, create_default_packages
 
 from conda_build import utils
-from conda_build.exceptions import DependencyNeedsBuildingError
+from conda_build.exceptions import BuildLockError, DependencyNeedsBuildingError
 from conda_build.features import feature_list
 from conda_build.index import get_build_index
 from conda_build.os_utils import external
@@ -749,7 +749,7 @@ def get_install_actions(prefix, specs, env, retries=0, subdir=None,
                 except (NoPackagesFoundError, UnsatisfiableError) as exc:
                     raise DependencyNeedsBuildingError(exc, subdir=subdir)
                 except (SystemExit, PaddingError, LinkError, DependencyNeedsBuildingError,
-                        CondaError, AssertionError) as exc:
+                        CondaError, AssertionError, BuildLockError) as exc:
                     if 'lock' in str(exc):
                         log.warn("failed to get install actions, retrying.  exception was: %s",
                                 str(exc))
@@ -853,7 +853,7 @@ def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, 
                                 os.environ[k] = str(v)
                         execute_actions(actions, index, verbose=config.debug)
                 except (SystemExit, PaddingError, LinkError, DependencyNeedsBuildingError,
-                        CondaError) as exc:
+                        CondaError, BuildLockError) as exc:
                     if (("too short in" in str(exc) or
                             re.search('post-link failed for: (?:[a-zA-Z]*::)?openssl', str(exc)) or
                             isinstance(exc, PaddingError)) and
@@ -882,7 +882,7 @@ def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, 
                     elif 'lock' in str(exc):
                         if retry < config.max_env_retry:
                             log.warn("failed to create env, retrying.  exception was: %s", str(exc))
-                            create_env(prefix, actions, config=config, subdir=subdir, env=env,
+                            create_env(prefix, specs_or_actions, config=config, subdir=subdir, env=env,
                                     clear_cache=clear_cache, retry=retry + 1, is_cross=is_cross)
                     elif ('requires a minimum conda version' in str(exc) or
                           'link a source that does not' in str(exc)):
@@ -898,7 +898,7 @@ def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, 
                                 utils.rm_rf(pkg_dir)
                         if retry < config.max_env_retry:
                             log.warn("failed to create env, retrying.  exception was: %s", str(exc))
-                            create_env(prefix, actions, config=config, subdir=subdir, env=env,
+                            create_env(prefix, specs_or_actions, config=config, subdir=subdir, env=env,
                                        clear_cache=clear_cache, retry=retry + 1, is_cross=is_cross)
                         else:
                             log.error("Failed to create env, max retries exceeded.")
@@ -917,7 +917,7 @@ def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, 
                                 utils.rm_rf(pkg_dir)
                     if retry < config.max_env_retry:
                         log.warn("failed to create env, retrying.  exception was: %s", str(exc))
-                        create_env(prefix, actions, config=config, subdir=subdir, env=env,
+                        create_env(prefix, specs_or_actions, config=config, subdir=subdir, env=env,
                                    clear_cache=clear_cache, retry=retry + 1, is_cross=is_cross)
                     else:
                         log.error("Failed to create env, max retries exceeded.")
@@ -957,8 +957,8 @@ def clean_pkg_cache(dist, config):
     if config.debug:
         conda_log_level = logging.DEBUG
 
-    locks = get_pkg_dirs_locks([config.bldpkgs_dir, pkgs_dirs[0]], config)
     with utils.LoggingContext(conda_log_level):
+        locks = get_pkg_dirs_locks([config.bldpkgs_dir] + pkgs_dirs, config)
         with utils.try_acquire_locks(locks, timeout=config.timeout):
             rmplan = [
                 'RM_EXTRACTED {0} local::{0}'.format(dist),
@@ -982,7 +982,10 @@ def clean_pkg_cache(dist, config):
                     for pkg_id in keys:
                         if pkg_id in cache:
                             del cache[pkg_id]
-                    remove_existing_packages(pkgs_dirs, [dist], config)
+
+        # Note that this call acquires the relevant locks, so this must be called
+        # outside the lock context above.
+        remove_existing_packages(pkgs_dirs, [dist], config)
 
 
 def get_pinned_deps(m, section):

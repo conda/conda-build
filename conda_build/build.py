@@ -1271,7 +1271,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
             return default_return
 
         print("BUILD START:", [os.path.basename(pkg) for pkg in package_locations])
-        environ.remove_existing_packages(m.config.bldpkgs_dir,
+        environ.remove_existing_packages([m.config.bldpkgs_dir],
                 [pkg for pkg in package_locations if pkg not in built_packages], m.config)
 
         specs = [ms.spec for ms in m.ms_depends('build')]
