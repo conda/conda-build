@@ -100,6 +100,10 @@ except ImportError:
     from scandir import walk
 
 
+class BuildLockError(Exception):
+    """ Raised when we failed to acquire a lock. """
+
+
 @memoized
 def stat_file(path):
     return os.stat(path)
@@ -402,17 +406,15 @@ def try_acquire_locks(locks, timeout):
             break
     else:
         # If we reach this point, we weren't able to acquire all locks within
-        # the specified timeout. Release all locks we might have already
-        # acquired and raise.
+        # the specified timeout. We shouldn't be holding any locks anymore at
+        # this point, so we just raise an exception.
+        raise BuildLockError('Failed to acquire all locks')
+
+    try:
+        yield
+    finally:
         for lock in locks:
             lock.release()
-
-        raise RuntimeError('Failed to acquire all locks')
-
-    yield
-
-    for lock in locks:
-        lock.release()
 
 
 # with each of these, we are copying less metadata.  This seems to be necessary

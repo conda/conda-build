@@ -27,7 +27,7 @@ from conda_build.exceptions import DependencyNeedsBuildingError
 from conda_build.features import feature_list
 from conda_build.index import get_build_index
 from conda_build.os_utils import external
-from conda_build.utils import ensure_list, prepend_bin_path
+from conda_build.utils import ensure_list, prepend_bin_path, BuildLockError
 from conda_build.variants import get_default_variant
 
 
@@ -749,7 +749,7 @@ def get_install_actions(prefix, specs, env, retries=0, subdir=None,
                 except (NoPackagesFoundError, UnsatisfiableError) as exc:
                     raise DependencyNeedsBuildingError(exc, subdir=subdir)
                 except (SystemExit, PaddingError, LinkError, DependencyNeedsBuildingError,
-                        CondaError, AssertionError) as exc:
+                        CondaError, AssertionError, BuildLockError) as exc:
                     if 'lock' in str(exc):
                         log.warn("failed to get install actions, retrying.  exception was: %s",
                                 str(exc))
@@ -853,7 +853,7 @@ def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, 
                                 os.environ[k] = str(v)
                         execute_actions(actions, index, verbose=config.debug)
                 except (SystemExit, PaddingError, LinkError, DependencyNeedsBuildingError,
-                        CondaError) as exc:
+                        CondaError, BuildLockError) as exc:
                     if (("too short in" in str(exc) or
                             re.search('post-link failed for: (?:[a-zA-Z]*::)?openssl', str(exc)) or
                             isinstance(exc, PaddingError)) and
