@@ -6,6 +6,7 @@ python:
 env:
   - CONDA_VERSION=4.3.x
   - CONDA_VERSION=4.5.x
+  - CONDA_VERSION=master
 matrix:
   fast_finish: true
   exclude:
@@ -22,6 +23,8 @@ matrix:
         - FLAKE8=true
         - CONDA_VERSION=4.5.x
       python: 3.6
+    - env:
+        - CONDA_VERSION=master
 
 addons:
   apt:
