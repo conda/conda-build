@@ -1817,8 +1817,11 @@ def _construct_metadata_for_test_from_package(package, config):
     # HACK: because the recipe is fully baked, detecting "used" variables no longer works.  The set
     #     of variables in the hash_input suffices, though.
     metadata.config.used_vars = list(hash_input.keys())
-    metadata.config.channel_urls = list(utils.ensure_list(metadata.config.channel_urls))
-    metadata.config.channel_urls.insert(0, url_path(local_channel))
+    urls = list(utils.ensure_list(metadata.config.channel_urls))
+    if 'local' not in urls:
+        urls.insert(0, 'local')
+    # replace local with the appropriate real channel.  Order is maintained.
+    metadata.config.channel_urls = [url if url != 'local' else url_path(local_channel) for url in urls]
     return metadata, hash_input
 
 
