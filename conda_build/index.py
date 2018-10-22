@@ -184,9 +184,6 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
             mtime > local_index_timestamp or
             cached_channels != channel_urls):
 
-        # priority: (local as either croot or output_folder IF NOT EXPLICITLY IN CHANNEL ARGS),
-        #     then channels passed as args (if local in this, it remains in same order),
-        #     then channels from condarc.
         urls = list(channel_urls)
 
         loggers = utils.LoggingContext.default_loggers + [__name__]
