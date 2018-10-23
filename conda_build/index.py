@@ -184,6 +184,9 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
             mtime > local_index_timestamp or
             cached_channels != channel_urls):
 
+        # priority: (local as either croot or output_folder IF NOT EXPLICITLY IN CHANNEL ARGS),
+        #     then channels passed as args (if local in this, it remains in same order),
+        #     then channels from condarc.
         urls = list(channel_urls)
 
         loggers = utils.LoggingContext.default_loggers + [__name__]
@@ -195,6 +198,14 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
             log_context = partial(utils.LoggingContext, logging.CRITICAL + 1, loggers=loggers)
             capture = utils.capture
         with log_context():
+            # this is where we add the "local" channel.  It's a little smarter than conda, because
+            #     conda does not know about our output_folder when it is not the default setting.
+            if os.path.isdir(output_folder):
+                local_path = url_path(output_folder)
+                # replace local with the appropriate real channel.  Order is maintained.
+                urls = [url if url != 'local' else local_path for url in urls]
+                if local_path not in urls:
+                    urls.insert(0, local_path)
             _ensure_valid_channel(output_folder, subdir)
             update_index(output_folder, verbose=debug)
 
