@@ -226,6 +226,13 @@ class fileview(object):
 
 
 class UnixExecutable(object):
+    def __init__(self, file, initial_rpaths_transitive=[]):
+        self.rpaths_transitive = []
+        self.rpaths_nontransitive = []
+        self.shared_libraries = []
+        self.dt_runpath = []
+        self.dt_soname = initial_rpaths_transitive
+
     def get_rpaths_transitive(self):
         return self.rpaths_transitive
 
