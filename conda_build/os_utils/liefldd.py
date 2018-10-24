@@ -118,7 +118,7 @@ def get_rpaths(file, envroot):
                 for e in dynamic_entries:
                     if e.tag == lief.ELF.DYNAMIC_TAGS.RPATH:
                         print(dir(e))
-                [rpaths.extend(e.rpath) for e in dynamic_entries if e.tag == lief.ELF.DYNAMIC_TAGS.RPATH]
+                rpaths.extend([e.rpath for e in dynamic_entries if e.tag == lief.ELF.DYNAMIC_TAGS.RPATH])
     return [from_os_varnames(binary, rpath) for rpath in rpaths]
 
 
@@ -202,7 +202,8 @@ def _get_path_dirs(prefix):
     yield join(prefix, 'bin')
 
 
-def get_uniqueness_key(binary):
+def get_uniqueness_key(file):
+    binary = ensure_binary(file)
     if binary.format == lief.EXE_FORMATS.MACHO:
         return binary.name
     elif (binary.format == lief.EXE_FORMATS.ELF
@@ -307,41 +308,52 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
     # rules and its appropriateness on macOS is TBD!
     already_seen = set()
     exedir = os.path.dirname(filename)
-    todo = set((filename, ))
-    done = set()
+    binary = lief.parse(filename)
+    todo = [[filename, binary]]
+
+    default_paths = []
+    if binary.format == lief.EXE_FORMATS.ELF:
+        default_paths = ['$SYSROOT/lib', '$SYSROOT/usr/lib']
+        if binary.type == lief.ELF.ELF_CLASS.CLASS64:
+            default_paths.extend(['$SYSROOT/lib64', '$SYSROOT/usr/lib64'])
+
     results = set()
     rpaths_by_binary = dict()
     parents_by_filename = dict({filename: None})
-    while todo != done:
-        filename2 = next(iter(todo - done))
-        binary = lief.parse(filename2)
-        uniqueness_key = get_uniqueness_key(binary)
-        if uniqueness_key not in already_seen:
-            rpaths_by_binary[filename2] = get_rpaths(binary, envroot)
-            tmp_filename = filename2
-            rpaths_transitive = []
-            if binary.format == lief.EXE_FORMATS.PE:
-                rpaths_transitive = rpaths_by_binary[tmp_filename]
-            else:
-                while tmp_filename:
-                    rpaths_transitive[:0] = rpaths_by_binary[tmp_filename]
-                    tmp_filename = parents_by_filename[tmp_filename]
-            these_orig = get_libraries(binary)
-            for orig in these_orig:
-                resolved = _get_resolved_location(binary,
-                                                  orig,
-                                                  exedir,
-                                                  os.path.dirname(orig),
-                                                  rpaths_transitive)
-                if resolve_filenames:
-                    results.add(resolved[0])
-                    parents_by_filename[resolved[0]] = filename2
+    while todo:
+        for element in todo:
+            todo.pop(0)
+            filename2 = element[0]
+            binary = element[1]
+            uniqueness_key = get_uniqueness_key(binary)
+            if uniqueness_key not in already_seen:
+                rpaths_by_binary[filename2] = get_rpaths(binary, envroot)
+                tmp_filename = filename2
+                rpaths_transitive = []
+                if binary.format == lief.EXE_FORMATS.PE:
+                    rpaths_transitive = rpaths_by_binary[tmp_filename]
                 else:
-                    results.add(orig)
-                if recurse:
-                    todo.add(resolved[0])
-            already_seen.add(filename2)
-        done.add(filename2)
+                    while tmp_filename:
+                        rpaths_transitive[:0] = rpaths_by_binary[tmp_filename]
+                        tmp_filename = parents_by_filename[tmp_filename]
+                these_orig = ['$RPATH/' + lib if not lib.startswith('/') else lib
+                              for lib in get_libraries(binary)]
+                for orig in these_orig:
+                    resolved = _get_resolved_location(binary,
+                                                      orig,
+                                                      exedir,
+                                                      exedir,
+                                                      rpaths_transitive=rpaths_transitive,
+                                                      default_paths=default_paths,
+                                                      sysroot=sysroot)
+                    if resolve_filenames:
+                        results.add(resolved[0])
+                        parents_by_filename[resolved[0]] = filename2
+                    else:
+                        results.add(orig)
+                    if recurse:
+                        todo.extend([resolved[0], lief.parse(resolved[0])])
+                already_seen.add(get_uniqueness_key(binary))
     return results
 
 
