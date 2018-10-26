@@ -1507,7 +1507,8 @@ spec_ver_needing_star_re = re.compile("^([0-9a-zA-Z\.]+)$")
 
 def ensure_valid_spec(spec, warn=False):
     if isinstance(spec, MatchSpec):
-        if (hasattr(spec, 'version') and spec.version and
+        if (hasattr(spec, 'version') and spec.version and not
+                (hasattr(spec, 'build') or spec.build) and
                 spec_ver_needing_star_re.match(str(spec.version))):
             if str(spec.name) not in ('python', 'numpy') or str(spec.version) != 'x.x':
                 spec = MatchSpec("{} {}".format(str(spec.name), str(spec.version) + '.*'))
