@@ -336,8 +336,11 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
                     while tmp_filename:
                         rpaths_transitive[:0] = rpaths_by_binary[tmp_filename]
                         tmp_filename = parents_by_filename[tmp_filename]
-                these_orig = ['$RPATH/' + lib if not lib.startswith('/') else lib
-                              for lib in get_libraries(binary)]
+                libraries = get_libraries(binary)
+                # RPATH is implicit everywhere except macOS, make it explicit to simplify things.
+                these_orig = [('$RPATH/' + lib if not lib.startswith('/') and not lib.startswith('$')
+                               and binary.format != lief.EXE_FORMATS.MACHO else lib)
+                              for lib in libraries]
                 for orig in these_orig:
                     resolved = _get_resolved_location(binary,
                                                       orig,
