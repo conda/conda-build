@@ -495,7 +495,7 @@ class machofile(UnixExecutable):
         file.seek(0)
         self.rpaths_transitive = initial_rpaths_transitive
         _filetypes, rpaths = zip(*mach_o_find_rpaths(file, arch))
-        local_rpaths = [self.from_os_varnames(rpath)
+        local_rpaths = [self.from_os_varnames(rpath.rstrip('/'))
                         for rpath in rpaths[0] if rpath]
         self.rpaths_transitive.extend(local_rpaths)
         self.rpaths_nontransitive = local_rpaths
@@ -800,16 +800,12 @@ class elfsection(object):
                         end = r + strsec.table[r:].index('\0')
                         path = strsec.table[r:end]
                         rpaths = [path for path in path.split(':') if path]
-                        elffile.dt_rpath.extend([path if not path.endswith('/')
-                                                 else path.rstrip('/')
-                                                 for path in rpaths])
+                        elffile.dt_rpath.extend([path.rstrip('/') for path in rpaths])
                     for r in dt_runpath:
                         end = r + strsec.table[r:].index('\0')
                         path = strsec.table[r:end]
                         rpaths = [path for path in path.split(':') if path]
-                        elffile.dt_runpath.extend([rp if rp.endswith(os.sep)
-                                                   else rp + os.sep
-                                                   for rp in rpaths])
+                        elffile.dt_runpath.extend([path.rstrip('/') for path in rpaths])
                     if dt_soname != '$EXECUTABLE':
                         end = dt_soname + strsec.table[dt_soname:].index('\0')
                         elffile.dt_soname = strsec.table[dt_soname:end]

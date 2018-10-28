@@ -110,8 +110,12 @@ def get_rpaths(file, envroot):
             if envroot:
                 # and not lief.PE.HEADER_CHARACTERISTICS.DLL in binary.header.characteristics_list:
                 rpaths = list(_get_path_dirs(envroot))
+# This only returns the first entry.
+#        elif binary.format == lief.EXE_FORMATS.MACHO and binary.has_rpath:
+#            rpaths = binary.rpath.path.split(':')
         elif binary.format == lief.EXE_FORMATS.MACHO and binary.has_rpath:
-            rpaths = binary.rpath.path.split(':')
+            rpaths = [command.path.rstrip('/') for command in binary.commands
+                      if command.command == lief.MachO.LOAD_COMMAND_TYPES.RPATH]
         elif binary.format == lief.EXE_FORMATS.ELF:
             if binary.type == lief.ELF.ELF_CLASS.CLASS32 or binary.type == lief.ELF.ELF_CLASS.CLASS64:
                 dynamic_entries = binary.dynamic_entries
@@ -316,6 +320,8 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
         default_paths = ['$SYSROOT/lib', '$SYSROOT/usr/lib']
         if binary.type == lief.ELF.ELF_CLASS.CLASS64:
             default_paths.extend(['$SYSROOT/lib64', '$SYSROOT/usr/lib64'])
+    elif binary.format == lief.EXE_FORMATS.MACHO:
+        default_paths = ['$SYSROOT/usr/lib']
 
     results = set()
     rpaths_by_binary = dict()
@@ -337,6 +343,8 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
                         rpaths_transitive[:0] = rpaths_by_binary[tmp_filename]
                         tmp_filename = parents_by_filename[tmp_filename]
                 libraries = get_libraries(binary)
+                if filename2 in libraries:  # Happens on macOS, leading to cycles.
+                    libraries.remove(filename2)
                 # RPATH is implicit everywhere except macOS, make it explicit to simplify things.
                 these_orig = [('$RPATH/' + lib if not lib.startswith('/') and not lib.startswith('$')
                                and binary.format != lief.EXE_FORMATS.MACHO else lib)
@@ -355,7 +363,7 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
                     else:
                         results.add(orig)
                     if recurse:
-                        todo.extend([resolved[0], lief.parse(resolved[0])])
+                        todo.append([resolved[0], lief.parse(resolved[0])])
                 already_seen.add(get_uniqueness_key(binary))
     return results
 
