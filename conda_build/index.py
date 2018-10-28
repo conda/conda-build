@@ -247,7 +247,7 @@ def _ensure_valid_channel(local_folder, subdir):
 
 
 def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=None, threads=MAX_THREADS_DEFAULT,
-                 verbose=False, progress=False, hotfix_source_repo=None, subdirs=None):
+                 verbose=False, progress=False, hotfix_source_repo=None, subdirs=None, warn=True):
     """
     If dir_path contains a directory named 'noarch', the path tree therein is treated
     as though it's a full channel, with a level of subdirs, each subdir having an update
@@ -260,8 +260,9 @@ def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=N
     """
     base_path, dirname = os.path.split(dir_path)
     if dirname in DEFAULT_SUBDIRS:
-        log.warn("The update_index function has changed to index all subdirs at once.  You're pointing it at a single subdir.  "
-                 "Please update your code to point it at the channel root, rather than a subdir.")
+        if warn:
+            log.warn("The update_index function has changed to index all subdirs at once.  You're pointing it at a single subdir.  "
+                    "Please update your code to point it at the channel root, rather than a subdir.")
         return update_index(base_path, check_md5=check_md5, channel_name=channel_name,
                             threads=threads, verbose=verbose, progress=progress,
                             hotfix_source_repo=hotfix_source_repo)

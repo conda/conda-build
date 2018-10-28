@@ -370,7 +370,6 @@ def test_skip_existing_url(testing_metadata, testing_workdir, capfd):
 
     output, error = capfd.readouterr()
     assert "are already built" in output
-    assert url_path(testing_metadata.config.croot) in output
 
 
 def test_failed_tests_exit_build(testing_workdir, testing_config):
@@ -649,7 +648,10 @@ def test_about_json_content(testing_metadata):
                    reason="new noarch supported starting with conda 4.3.14")
 def test_noarch_python_with_tests(testing_config):
     recipe = os.path.join(metadata_dir, "_noarch_python_with_tests")
-    api.build(recipe, config=testing_config)
+    pkg = api.build(recipe, config=testing_config)[0]
+    # noarch recipes with commands should generate both .bat and .sh files.
+    assert package_has_file(pkg, 'info/test/run_test.bat')
+    assert package_has_file(pkg, 'info/test/run_test.sh')
 
 
 def test_noarch_python_1(testing_config):

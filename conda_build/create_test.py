@@ -6,10 +6,9 @@ from __future__ import absolute_import, division, print_function
 
 import os
 from os.path import join, exists
-import sys
 import json
 
-from conda_build.utils import copy_into, on_win, ensure_list, glob
+from conda_build.utils import copy_into, ensure_list, glob, on_win
 
 
 def create_files(m, test_dir=None):
@@ -37,15 +36,11 @@ def create_files(m, test_dir=None):
     return has_files
 
 
-def create_shell_files(m, test_dir=None):
-    if not test_dir:
-        test_dir = m.config.test_dir
-    has_tests = False
-    ext = '.bat' if sys.platform == 'win32' else '.sh'
-    name = 'no-file'
-
+def _get_output_script_name(m, win_status):
     # the way this works is that each output needs to explicitly define a test script to run.
     #   They do not automatically pick up run_test.*, but can be pointed at that explicitly.
+
+    ext = '.bat' if win_status else '.sh'
     for out in m.meta.get('outputs', []):
         if m.name() == out.get('name'):
             out_test_script = out.get('test', {}).get('script', 'no-file')
@@ -54,30 +49,47 @@ def create_shell_files(m, test_dir=None):
                 break
     else:
         name = "run_test{}".format(ext)
+    return name
 
-    if exists(join(m.path, name)):
-        # disable locking to avoid locking a temporary directory (the extracted test folder)
-        copy_into(join(m.path, name), test_dir, m.config.timeout, locking=False)
-        has_tests = True
 
-    commands = ensure_list(m.get_value('test/commands', []))
-    if commands:
-        with open(join(test_dir, name), 'a') as f:
-            f.write('\n\n')
-            if not on_win:
-                f.write('set -ex\n\n')
-            f.write('\n\n')
-            for cmd in commands:
-                f.write(cmd)
-                f.write('\n')
-                if on_win:
-                    f.write("IF %ERRORLEVEL% NEQ 0 exit /B 1\n")
-                has_tests = True
-            if on_win:
-                f.write('exit /B 0\n')
-            else:
-                f.write('exit 0\n')
-    return has_tests or os.path.isfile(os.path.join(m.config.test_dir, name))
+def create_shell_files(m, test_dir=None):
+    if not test_dir:
+        test_dir = m.config.test_dir
+    name = 'no-file'
+
+    win_status = [on_win]
+
+    if m.noarch:
+        win_status = [False, True]
+
+    patch_files = []
+
+    for status in win_status:
+        name = _get_output_script_name(m, status)
+        dest_file = join(test_dir, name)
+        if exists(join(m.path, name)):
+            # disable locking to avoid locking a temporary directory (the extracted test folder)
+            copy_into(join(m.path, name), dest_file, m.config.timeout, locking=False)
+
+        commands = ensure_list(m.get_value('test/commands', []))
+        if commands:
+            with open(join(test_dir, name), 'a') as f:
+                f.write('\n\n')
+                if not status:
+                    f.write('set -ex\n\n')
+                f.write('\n\n')
+                for cmd in commands:
+                    f.write(cmd)
+                    f.write('\n')
+                    if status:
+                        f.write("IF %ERRORLEVEL% NEQ 0 exit /B 1\n")
+                if status:
+                    f.write('exit /B 0\n')
+                else:
+                    f.write('exit 0\n')
+        if os.path.isfile(dest_file):
+            patch_files.append(dest_file)
+    return patch_files
 
 
 def _create_test_files(m, test_dir, ext, comment_char='# '):
@@ -251,5 +263,10 @@ def create_all_test_files(m, test_dir=None, existing_test_dir=None):
     py_files = existing_test('py') or create_py_files(m, test_dir)
     r_files = existing_test('r') or create_r_files(m, test_dir)
     lua_files = existing_test('lua') or create_lua_files(m, test_dir)
-    shell_files = existing_test('sh') or existing_test('bat') or create_shell_files(m, test_dir)
+    if existing_test_dir:
+        shell_files = glob(join(existing_test_dir, "*.sh"))
+        if on_win:
+            shell_files.extend(glob(join(existing_test_dir, "*.bat")))
+    else:
+        shell_files = create_shell_files(m, test_dir)
     return files, pl_files, py_files, r_files, lua_files, shell_files

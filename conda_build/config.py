@@ -290,8 +290,11 @@ class Config(object):
 
     @property
     def host_arch(self):
-        return (self._host_arch or
-                self.variant.get('target_platform', self.build_subdir).split('-', 1)[1])
+        try:
+            variant_arch = self.variant.get('target_platform', self.build_subdir).split('-', 1)[1]
+        except IndexError:
+            variant_arch = 64
+        return self._host_arch or variant_arch
 
     @host_arch.setter
     def host_arch(self, value):
@@ -460,7 +463,7 @@ class Config(object):
         self.variant['r_base'] = value
 
     def _get_python(self, prefix, platform):
-        if platform.startswith('win'):
+        if platform.startswith('win') or (platform == "noarch" and sys.platform == "win32"):
             if os.path.isfile(os.path.join(prefix, 'python_d.exe')):
                 res = join(prefix, 'python_d.exe')
             else:
