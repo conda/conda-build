@@ -52,6 +52,7 @@ setup(
                             'conda-metapackage = conda_build.cli.main_metapackage:main',
                             'conda-render = conda_build.cli.main_render:main',
                             'conda-skeleton = conda_build.cli.main_skeleton:main',
+                            'conda-debug = conda_build.cli.main_debug:main',
                             ]},
     install_requires=deps,
     package_data={'conda_build': ['templates/*', 'cli-*.exe']},
