@@ -171,7 +171,7 @@ def parse_args(args):
     return p, args
 
 
-def execute(args):
+def execute(args, print_results=True):
     p, args = parse_args(args)
 
     config = get_or_merge_config(None, **args.__dict__)
@@ -202,21 +202,24 @@ def execute(args):
                                  no_download_source=args.no_source,
                                  variants=args.variants)
 
-    if args.output:
-        with LoggingContext(logging.CRITICAL + 1):
-            paths = api.get_output_file_paths(metadata_tuples, config=config)
-            print('\n'.join(sorted(paths)))
+    if print_results:
+        if args.output:
+            with LoggingContext(logging.CRITICAL + 1):
+                paths = api.get_output_file_paths(metadata_tuples, config=config)
+                print('\n'.join(sorted(paths)))
+        else:
+            logging.basicConfig(level=logging.INFO)
+            for (m, _, _) in metadata_tuples:
+                print("--------------")
+                print("Hash contents:")
+                print("--------------")
+                pprint(m.get_hash_contents())
+                print("----------")
+                print("meta.yaml:")
+                print("----------")
+                print(api.output_yaml(m, args.file))
     else:
-        logging.basicConfig(level=logging.INFO)
-        for (m, _, _) in metadata_tuples:
-            print("--------------")
-            print("Hash contents:")
-            print("--------------")
-            pprint(m.get_hash_contents())
-            print("----------")
-            print("meta.yaml:")
-            print("----------")
-            print(api.output_yaml(m, args.file))
+        return metadata_tuples
 
 
 def main():
