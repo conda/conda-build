@@ -85,6 +85,8 @@ if sys.platform == 'win32':
 
 if 'bsd' in sys.platform:
     shell_path = '/bin/sh'
+elif utils.on_win:
+    shell_path = 'bash'
 else:
     shell_path = '/bin/bash'
 
@@ -968,14 +970,17 @@ def bundle_conda(output, metadata, env, stats, **kw):
     # this is also copying things like run_test.sh into info/recipe
     with tmp_chdir(metadata.config.host_prefix):
         output['checksums'] = create_info_files(metadata, files, prefix=metadata.config.host_prefix)
+
     for ext in ('.py', '.r', '.pl', '.lua', '.sh', '.bat'):
         test_dest_path = os.path.join(metadata.config.info_dir, 'test', 'run_test' + ext)
+
         script = output.get('test', {}).get('script')
         if script and script.endswith(ext):
             utils.copy_into(os.path.join(metadata.config.work_dir, output['test']['script']),
                             test_dest_path, metadata.config.timeout,
                             locking=metadata.config.locking)
-        elif os.path.isfile(test_dest_path) and metadata.meta.get('extra', {}).get('parent_recipe'):
+        elif (os.path.isfile(test_dest_path) and metadata.meta.get('extra', {}).get('parent_recipe') and
+              not metadata.meta.get('test', {}).get("commands")):
             # the test belongs to the parent recipe.  Don't include it in subpackages.
             utils.rm_rf(test_dest_path)
     # here we add the info files into the prefix, so we want to re-collect the files list
@@ -1051,8 +1056,12 @@ def bundle_conda(output, metadata, env, stats, **kw):
                 verifier = Verify()
                 checks_to_ignore = (utils.ensure_list(metadata.config.ignore_verify_codes) +
                                     metadata.ignore_verify_codes())
-                verifier.verify_package(path_to_package=tmp_path, checks_to_ignore=checks_to_ignore,
-                                        exit_on_error=metadata.config.exit_on_verify_error)
+                try:
+                    verifier.verify_package(path_to_package=tmp_path, checks_to_ignore=checks_to_ignore,
+                                            exit_on_error=metadata.config.exit_on_verify_error)
+                except KeyError as e:
+                    log.warn("Package doesn't have necessary files.  It might be too old to inspect."
+                             "Legacy noarch packages are known to fail.  Full message was {}".format(e))
             try:
                 crossed_subdir = metadata.config.target_subdir
             except AttributeError:
@@ -1816,6 +1825,10 @@ def _construct_metadata_for_test_from_package(package, config):
                                       }, config=config)
     # HACK: because the recipe is fully baked, detecting "used" variables no longer works.  The set
     #     of variables in the hash_input suffices, though.
+
+    if metadata.noarch:
+        metadata.config.variant['target_platform'] = "noarch"
+
     metadata.config.used_vars = list(hash_input.keys())
     urls = list(utils.ensure_list(metadata.config.channel_urls))
     local_path = url_path(local_channel)
@@ -2094,16 +2107,18 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
             if utils.on_win:
                 tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
         if shell_files:
-            test_file = join(metadata.config.test_dir, 'run_test.' + suffix)
-            if utils.on_win:
-                tf.write('call "{test_file}"\n'.format(test_file=test_file))
+            for shell_file in shell_files:
                 if utils.on_win:
-                    tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
-            else:
-                # TODO: Run the test/commands here instead of in run_test.py
-                tf.write('"{shell_path}" {trace}-e "{test_file}"\n'.format(shell_path=shell_path,
-                                                                           test_file=test_file,
-                                                                           trace=trace))
+                    if os.path.splitext(shell_file) == ".bat":
+                        tf.write('call "{test_file}"\n'.format(test_file=shell_file))
+                        tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+                    else:
+                        log.warn("Found sh test file on windows.  Ignoring this for now (PRs welcome)")
+                else:
+                    # TODO: Run the test/commands here instead of in run_test.py
+                    tf.write('"{shell_path}" {trace}-e "{test_file}"\n'.format(shell_path=shell_path,
+                                                                            test_file=shell_file,
+                                                                            trace=trace))
     if utils.on_win:
         cmd = [os.environ.get('COMSPEC', 'cmd.exe'), "/d", "/c", test_script]
     else:
@@ -2281,6 +2296,7 @@ def build_tree(recipe_list, config, stats, build_only=False, post=False, notest=
                             for dep in downstreams:
                                 log.info("Testing downstream package: {}".format(dep))
                                 # resolve downstream packages to a known package
+
                                 r_string = ''.join(random.choice(
                                     string.ascii_uppercase + string.digits) for _ in range(10))
                                 specs = meta.ms_depends('run') + [MatchSpec(dep),
@@ -2532,7 +2548,7 @@ def is_package_built(metadata, env, include_local=True):
     for d in metadata.config.bldpkgs_dirs:
         if not os.path.isdir(d):
             os.makedirs(d)
-        update_index(d, verbose=metadata.config.debug)
+        update_index(d, verbose=metadata.config.debug, warn=False)
     subdir = getattr(metadata.config, '{}_subdir'.format(env))
 
     urls = [url_path(metadata.config.output_folder), 'local'] if include_local else []
