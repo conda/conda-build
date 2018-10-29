@@ -1,3 +1,32 @@
+2018-10-29 3.16.2:
+------------------
+
+Bug fixes:
+----------
+
+* Remove noarch binary file check (do this in conda-verify instead)  #3212
+* Fix utf-8 conversion of check_output_env  #3213
+* fix thread count when indexing causing oversubscription  #3217
+* fix behavior of try_acquire_locks during lock contention  #3224
+* fix test env creation improperly prioritizing local channel  #3229
+* don't check for error when removing conda-init (in conda recipe for this repo)  #3230
+* add r-impl to R package template generator  #3232
+* fix creation of unix and win shell script files for noarch packages  #3236
+* fix path of python interpreter used for noarch packages being tested on win, when created on linux/mac  #3236
+
+Contributors:
+-------------
+
+* @alexandersturm
+* @Bezier89
+* @dsludwig
+* @mandeep
+* @mingwandroid
+* @msarahan
+* @rchateauneu
+* @soapy1
+
+
 2018-10-12 3.16.1:
 ------------------
 
