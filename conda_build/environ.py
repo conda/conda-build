@@ -706,7 +706,7 @@ last_index_ts = 0
 
 def get_install_actions(prefix, specs, env, retries=0, subdir=None,
                         verbose=True, debug=False, locking=True,
-                        bldpkgs_dirs=None, timeout=90, disable_pip=False,
+                        bldpkgs_dirs=None, timeout=900, disable_pip=False,
                         max_env_retry=3, output_folder=None, channel_urls=None):
     global cached_actions
     global last_index_ts
