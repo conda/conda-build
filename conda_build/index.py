@@ -690,7 +690,7 @@ def _cache_recipe_log(tar_path, recipe_log_path):
         fh.write(binary_recipe_log)
 
 
-def _cache_run_exports(tar_path, run_exports_cache_path):
+def get_run_exports(tar_path):
     try:
         binary_run_exports = _tar_xf_file(tar_path, 'info/run_exports.json')
         run_exports = json.loads(binary_run_exports.decode("utf-8"))
@@ -701,6 +701,11 @@ def _cache_run_exports(tar_path, run_exports_cache_path):
         except KeyError:
             log.debug("%s has no run_exports file (this is OK)" % tar_path)
             run_exports = {}
+    return run_exports
+
+
+def _cache_run_exports(tar_path, run_exports_cache_path):
+    run_exports = get_run_exports(tar_path)
     with open(run_exports_cache_path, 'w') as fh:
         json.dump(run_exports, fh)
 
