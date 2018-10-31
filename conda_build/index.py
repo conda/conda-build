@@ -856,7 +856,7 @@ class ChannelIndex(object):
                 self.subdirs = subdirs = sorted(set(self._subdirs) | {'noarch'})
 
             # Step 1. Lock local channel.
-            with utils.try_acquire_locks([utils.get_lock(self.channel_root)], timeout=90):
+            with utils.try_acquire_locks([utils.get_lock(self.channel_root)], timeout=900):
                 # Step 2. Collect repodata from packages.
                 repodata_from_packages = {}
                 with tqdm(total=len(subdirs), disable=(verbose or not progress)) as t:
