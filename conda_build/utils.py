@@ -444,7 +444,7 @@ def get_prefix_replacement_paths(src, dst):
     return os.path.join(*ssplit), os.path.join(*dsplit)
 
 
-def copy_into(src, dst, timeout=90, symlinks=False, lock=None, locking=True, clobber=False):
+def copy_into(src, dst, timeout=900, symlinks=False, lock=None, locking=True, clobber=False):
     """Copy all the files and directories in src to the directory dst"""
     log = get_logger(__name__)
     if symlinks and islink(src):
@@ -543,7 +543,7 @@ def copytree(src, dst, symlinks=False, ignore=None, dry_run=False):
     return dst_lst
 
 
-def merge_tree(src, dst, symlinks=False, timeout=90, lock=None, locking=True, clobber=False):
+def merge_tree(src, dst, symlinks=False, timeout=900, lock=None, locking=True, clobber=False):
     """
     Merge src into dst recursively by copying all files from src into dst.
     Return a list of all files copied.
@@ -581,7 +581,7 @@ _lock_folders = (os.path.join(root_dir, 'locks'),
                  os.path.expanduser(os.path.join('~', '.conda_build_locks')))
 
 
-def get_lock(folder, timeout=90):
+def get_lock(folder, timeout=900):
     fl = None
     try:
         location = os.path.abspath(os.path.normpath(folder))
@@ -613,7 +613,7 @@ def get_lock(folder, timeout=90):
     return fl
 
 
-def get_conda_operation_locks(locking=True, bldpkgs_dirs=None, timeout=90):
+def get_conda_operation_locks(locking=True, bldpkgs_dirs=None, timeout=900):
     locks = []
     bldpkgs_dirs = ensure_list(bldpkgs_dirs)
     # locks enabled by default
@@ -950,7 +950,7 @@ def get_skip_message(m):
 def package_has_file(package_path, file_path):
     try:
         locks = get_conda_operation_locks()
-        with try_acquire_locks(locks, timeout=90):
+        with try_acquire_locks(locks, timeout=900):
             with tarfile.open(package_path) as t:
                 try:
                     # internal paths are always forward slashed on all platforms
