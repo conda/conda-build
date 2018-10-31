@@ -24,9 +24,14 @@ from conda_build.conda_interface import walk_prefix
 from conda_build.conda_interface import md5_file
 from conda_build.conda_interface import PY3
 from conda_build.conda_interface import TemporaryDirectory
+from conda_build.conda_interface import linked_data
+from conda_build.conda_interface import package_cache
+from conda_build.conda_interface import pkgs_dirs
 
 from conda_build import utils
 from conda_build.os_utils.liefldd import (codefile_type, get_linkages, get_runpaths)
+from conda_build.os_utils.ldd import get_package_obj_files
+from conda_build.index import get_run_exports, DEFAULT_SUBDIRS
 from conda_build.inspect_pkg import which_package
 
 if sys.platform == 'darwin':
@@ -456,6 +461,31 @@ def assert_relative_osx(path, prefix):
         assert not name.startswith(prefix), path
 
 
+def is_library_package(pkg, prefix):
+    codefiles = get_package_obj_files(pkg, prefix)
+    if any([[f for ext in ('.dylib', '.so', '.dll') if ext in f] for f in codefiles]):
+        run_exports = None
+        if pkg.name.startswith('lib'):
+            return True
+        for pkgs_dir in pkgs_dirs:
+            test_filename = os.path.join(pkgs_dir, pkg.fn)
+            if os.path.exists(test_filename):
+                run_exports = get_run_exports(test_filename)
+                break
+        if run_exports:
+            return True
+    return False
+
+
+def dists_from_names(names, prefix):
+    results = []
+    pkgs = linked_data(prefix)
+    for name in names:
+        for pkg in pkgs:
+            if pkg.quad[0] == name:
+                results.append(pkg)
+    return results
+
 def check_overlinking(m, files):
     def print_msg(errors, text):
         if text.startswith("  ERROR"):
@@ -468,6 +498,13 @@ def check_overlinking(m, files):
     errors = []
 
     run_reqs = [req.split(' ')[0] for req in m.meta.get('requirements', {}).get('run', [])]
+    # Used to detect overlinking (finally)
+#    lib_packages = set([run_req for run_req in run_reqs if is_library_package(run_req, m.config.host_prefix)])
+    packages = dists_from_names(run_reqs, m.config.host_prefix)
+    lib_packages = set([package for package in packages
+                        if is_library_package(package, m.config.host_prefix)])
+    lib_packages_used = set()
+
     # sysroots and whitelists are similar, but the subtle distinctions are important.
     sysroot_prefix = m.config.build_prefix if not m.build_is_host else m.config.host_prefix
     sysroots = glob(os.path.join(sysroot_prefix, '**', 'sysroot'))
@@ -545,6 +582,9 @@ def check_overlinking(m, files):
                 and_also = " (and also in this package)" if in_prefix_dso in files else ""
                 pkgs = list(which_package(in_prefix_dso, m.config.host_prefix))
                 in_pkgs_in_run_reqs = [pkg for pkg in pkgs if pkg.quad[0] in run_reqs]
+                for pkg in in_pkgs_in_run_reqs:
+                    if pkg in lib_packages:
+                        lib_packages_used.add(pkg)
                 in_whitelist = any([glob2.fnmatch.fnmatch(in_prefix_dso, w) for w in whitelist])
                 if in_whitelist:
                     print_msg(errors, '{}: {} found in the whitelist'.
@@ -622,6 +662,12 @@ def check_overlinking(m, files):
                 else:
                     print_msg(errors, "{}: did not find - or even know where to look for: {}".
                                       format(msg_prelude, needed_dso))
+    if lib_packages_used != lib_packages:
+        warn_prelude = "WARNING ({})".format(pkg_name)
+        err_prelude = "  ERROR ({}),".format(pkg_name)
+        msg_prelude = err_prelude if m.config.error_overlinking else warn_prelude
+        for lib in lib_packages - lib_packages_used:
+            print_msg(errors, "{}: lib package {} in requirements/run but it is not used".format(msg_prelude, lib))
     if len(errors):
         sys.exit(1)
 
