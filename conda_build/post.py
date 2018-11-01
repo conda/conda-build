@@ -19,14 +19,14 @@ except ImportError:
     readlink = False
 
 from conda_build.os_utils import external
-from conda_build.conda_interface import lchmod
-from conda_build.conda_interface import walk_prefix
-from conda_build.conda_interface import md5_file
 from conda_build.conda_interface import PY3
-from conda_build.conda_interface import TemporaryDirectory
+from conda_build.conda_interface import lchmod
 from conda_build.conda_interface import linked_data
+from conda_build.conda_interface import walk_prefix
 from conda_build.conda_interface import package_cache
 from conda_build.conda_interface import pkgs_dirs
+from conda_build.conda_interface import TemporaryDirectory
+from conda_build.conda_interface import md5_file
 
 from conda_build import utils
 from conda_build.os_utils.liefldd import (codefile_type, get_linkages, get_runpaths)
