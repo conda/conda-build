@@ -1238,8 +1238,6 @@ def test_provides_features_metadata(testing_config):
     assert index['provides_features'] == {'test2': 'also_ok'}
 
 
-@pytest.mark.skipif(not sys.platform.startswith('linux'),
-                    reason="Not implemented outside linux for now")
 def test_overlinking_detection(testing_config):
     testing_config.activate = True
     testing_config.error_overlinking = True
@@ -1251,6 +1249,14 @@ def test_overlinking_detection(testing_config):
     with pytest.raises(SystemExit):
         api.build(recipe, config=testing_config)
     rm_rf(dest_file)
+
+
+def test_underlinking_detection(testing_config):
+    testing_config.activate = True
+    testing_config.error_overlinking = True
+    recipe = os.path.join(metadata_dir, '_underlinking_detection')
+    with pytest.raises(SystemExit):
+        api.build(recipe, config=testing_config)
 
 
 def test_empty_package_with_python_in_build_and_host_barfs(testing_config):
