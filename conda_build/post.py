@@ -714,24 +714,22 @@ def post_build(m, files, build_python):
     for f in files:
         make_hardlink_copy(f, m.config.host_prefix)
 
-    if sys.platform == 'win32':
-        return
+    if sys.platform != 'win32':
+        binary_relocation = m.binary_relocation()
+        if not binary_relocation:
+            print("Skipping binary relocation logic")
+        osx_is_app = bool(m.get_value('build/osx_is_app', False)) and sys.platform == 'darwin'
 
-    binary_relocation = m.binary_relocation()
-    if not binary_relocation:
-        print("Skipping binary relocation logic")
-    osx_is_app = bool(m.get_value('build/osx_is_app', False)) and sys.platform == 'darwin'
+        check_symlinks(files, m.config.host_prefix, m.config.croot)
+        prefix_files = utils.prefix_files(m.config.host_prefix)
 
-    check_symlinks(files, m.config.host_prefix, m.config.croot)
-    prefix_files = utils.prefix_files(m.config.host_prefix)
-
-    for f in files:
-        if f.startswith('bin/'):
-            fix_shebang(f, prefix=m.config.host_prefix, build_python=build_python,
-                        osx_is_app=osx_is_app)
-        if binary_relocation is True or (isinstance(binary_relocation, list) and
-                                         f in binary_relocation):
-            post_process_shared_lib(m, f, prefix_files)
+        for f in files:
+            if f.startswith('bin/'):
+                fix_shebang(f, prefix=m.config.host_prefix, build_python=build_python,
+                            osx_is_app=osx_is_app)
+            if binary_relocation is True or (isinstance(binary_relocation, list) and
+                                             f in binary_relocation):
+                post_process_shared_lib(m, f, prefix_files)
     check_overlinking(m, files)
 
 
