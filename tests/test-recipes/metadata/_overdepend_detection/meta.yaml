@@ -1,7 +1,7 @@
 {% set version = "1" %}
 
 package:
-  name: overlinking
+  name: overdepend
   version: {{ version }}
 
 source:
