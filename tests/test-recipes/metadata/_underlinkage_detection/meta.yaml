@@ -1,0 +1,87 @@
+{% set version = "3.3.3" %}
+
+package:
+  name: libarchive
+  version: {{ version }}
+
+source:
+  fn: libarchive-{{ version }}.tar.gz
+  url: https://github.com/libarchive/libarchive/archive/v{{ version }}.tar.gz
+  sha256: 720da414e7aebb255fcdaee106894e4d30e2472ac1390c2c15b70c84c7479658
+  patches:
+    - 0001-Add-lib-to-CMAKE_FIND_LIBRARY_PREFIXES-for-lzma.patch
+    - 0002-xar-fix-bad-seek-in-move_reading_point.patch
+    - 0003-VC9-compatibility-test-for-BCryptDeriveKeyPBKDF2.patch
+    - 0004-VC9-compatibility-define-BCRYPT_SUCCESS.patch
+    # This should not be applied in general. It exists so I can build it for
+    # debugging Visual Studio where warnings are errors for some reason.
+    # Hiding warnings is poor practice.
+    # - 0005-VC9-compatibility-ignore-some-warnings.patch
+    - 0006-VC-openssl-define-inline-as-__inline.patch
+    # These warnings are errors when compiling lz-4 support
+    - 0007-CMake-VC9-compatibility-ignore-some-warnings.patch
+    - 0008-VC9-compatibility-remove-C99.patch
+    - 0009-CMake-Force-Multi-threaded-DLL-runtime.patch
+    - 0010-Use-CreateSymbolicLinkW-on-Windows-for-symlinks-WIP.patch
+
+build:
+  number: 2
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+    # Does not work in this recips at present
+    # we manually convert C99 to C89 instead.
+    # - c99-to-c89  # [win and vc<14]
+    - msinttypes  # [win and vc<14]
+    - autoconf    # [unix]
+    - automake    # [unix]
+    - libtool     # [unix]
+    - pkg-config  # [unix]
+    - cmake       # [win]
+    - make        # [unix]
+    - jom         # [win]
+  host:
+    - msinttypes  # [win and vc<14]
+    - bzip2
+    - libiconv    # [osx]
+    - lz4-c
+    - xz
+    - lzo
+    - openssl
+    - libxml2
+    - zlib
+    - zstd
+
+test:
+  files:
+    - test/hello_world.xar
+  commands:
+    # Verify pkg-config file is in place.
+    - test -f "${PREFIX}/lib/pkgconfig/libarchive.pc"  # [unix]
+
+    # Verify headers are in place.
+    - test -f "${PREFIX}/include/archive.h"            # [unix]
+    - test -f "${PREFIX}/include/archive_entry.h"      # [unix]
+
+    # Verify libraries are in place.
+    - test -f "${PREFIX}/lib/libarchive.a"             # [unix]
+    - test -f "${PREFIX}/lib/libarchive.so"            # [linux]
+    - test -f "${PREFIX}/lib/libarchive.dylib"         # [osx]
+
+    # Check for commands
+    - bsdcat --version
+    - bsdcpio --version
+    - bsdtar --version
+    - bsdtar -tf test/hello_world.xar
+
+about:
+  home: http://www.libarchive.org/
+  summary: Multi-format archive and compression library
+  license: BSD 2-Clause
+  license_family: BSD
+
+extra:
+  recipe-maintainers:
+    - jakirkham
+    - mingwandroid
