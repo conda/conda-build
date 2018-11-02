@@ -39,7 +39,7 @@ def which_package(in_prefix_path, prefix):
     only one package.
     """
     for dist in linked(prefix):
-        if in_prefix_path in dist_files(prefix, dist):
+        if in_prefix_path.replace(os.sep, '/') in dist_files(prefix, dist):
             yield dist
 
 

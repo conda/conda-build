@@ -17,6 +17,8 @@ try:
     have_lief = True
 except:
     pass
+if have_lief:
+    codefile_type = codefile_type
 
 
 # Some functions can operate on either file names
@@ -55,19 +57,21 @@ def nm(filename):
         print("No symbols found")
 
 
-'''
 def codefile_type(file, skip_symlinks=True):
     binary = ensure_binary(file)
     result = None
     if binary:
         if binary.format == lief.EXE_FORMATS.PE:
-            result = 'DLLfile'
+            if lief.PE.DLL_CHARACTERISTICS: # .DYNAMIC_BASE
+                if binary.header.characteristics & lief.PE.HEADER_CHARACTERISTICS.DLL:
+                    result = 'DLLfile'
+                else:
+                    result = 'EXEfile'
         elif binary.format == lief.EXE_FORMATS.MACHO:
             result = 'machofile'
         elif binary.format == lief.EXE_FORMATS.ELF:
             result = 'elffile'
     return result
-'''
 
 
 def _trim_sysroot(sysroot):
@@ -96,7 +100,7 @@ def get_libraries(file):
     return result
 
 
-def get_rpaths(file, envroot):
+def get_rpaths(file, exe_dirname, envroot, windows_root = ''):
     binary = ensure_binary(file)
     rpaths = []
     if binary:
@@ -107,9 +111,14 @@ def get_rpaths(file, envroot):
             # .. scratch that, we don't pass exes in as the root
             # entries so we just need rpaths for all files and
             # not to apply them transitively.
+            # https://docs.microsoft.com/en-us/windows/desktop/dlls/dynamic-link-library-search-order
+            rpaths.append(exe_dirname.replace('\\', '/'))
+            if windows_root:
+                rpaths.append('/'.join((windows_root, "System32")))
+                rpaths.append(windows_root)
             if envroot:
                 # and not lief.PE.HEADER_CHARACTERISTICS.DLL in binary.header.characteristics_list:
-                rpaths = list(_get_path_dirs(envroot))
+                rpaths.extend(list(_get_path_dirs(envroot)))
 # This only returns the first entry.
 #        elif binary.format == lief.EXE_FORMATS.MACHO and binary.has_rpath:
 #            rpaths = binary.rpath.path.split(':')
@@ -119,9 +128,6 @@ def get_rpaths(file, envroot):
         elif binary.format == lief.EXE_FORMATS.ELF:
             if binary.type == lief.ELF.ELF_CLASS.CLASS32 or binary.type == lief.ELF.ELF_CLASS.CLASS64:
                 dynamic_entries = binary.dynamic_entries
-                for e in dynamic_entries:
-                    if e.tag == lief.ELF.DYNAMIC_TAGS.RPATH:
-                        print(dir(e))
                 rpaths.extend([e.rpath for e in dynamic_entries if e.tag == lief.ELF.DYNAMIC_TAGS.RPATH])
     return [from_os_varnames(binary, rpath) for rpath in rpaths]
 
@@ -134,8 +140,6 @@ def get_runpaths(file):
             (binary.type == lief.ELF.ELF_CLASS.CLASS32 or binary.type == lief.ELF.ELF_CLASS.CLASS64)):
             dynamic_entries = binary.dynamic_entries
             for e in dynamic_entries:
-                if e.tag == lief.ELF.DYNAMIC_TAGS.RUNPATH:
-                    print(dir(e))
                 [rpaths.extend(e.runpath) for e in dynamic_entries if e.tag == lief.ELF.DYNAMIC_TAGS.RUNPATH]
     return [from_os_varnames(binary, rpath) for rpath in rpaths]
 
@@ -195,6 +199,9 @@ def from_os_varnames(binary, input_):
             libdir = '/lib'
         return input_.replace('$ORIGIN', '$SELFDIR')  \
             .replace('$LIB', libdir)
+    elif binary.format == lief.EXE_FORMATS.PE:
+        return input_
+
 
 
 # TODO :: Use conda's version of this (or move the constant strings into constants.py
@@ -215,8 +222,6 @@ def get_uniqueness_key(file):
          (binary.type == lief.ELF.ELF_CLASS.CLASS32 or binary.type == lief.ELF.ELF_CLASS.CLASS64)):
         dynamic_entries = binary.dynamic_entries
         for e in dynamic_entries:
-            if e.tag == lief.ELF.DYNAMIC_TAGS.SONAME:
-                print(dir(e))
             result = [e.name for e in dynamic_entries if e.tag == lief.ELF.DYNAMIC_TAGS.SONAME]
             if result:
                 return result[0]
@@ -322,7 +327,10 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
             default_paths.extend(['$SYSROOT/lib64', '$SYSROOT/usr/lib64'])
     elif binary.format == lief.EXE_FORMATS.MACHO:
         default_paths = ['$SYSROOT/usr/lib']
-
+    elif binary.format == lief.EXE_FORMATS.PE:
+        # We do not include C:\Windows nor C:\Windows\System32 in this list. They are added in
+        # get_rpaths() instead since we need to carefully control the order.
+        default_paths = ['$SYSROOT/System32/Wbem', '$SYSROOT/System32/WindowsPowerShell/v1.0']
     results = set()
     rpaths_by_binary = dict()
     parents_by_filename = dict({filename: None})
@@ -333,7 +341,19 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
             binary = element[1]
             uniqueness_key = get_uniqueness_key(binary)
             if uniqueness_key not in already_seen:
-                rpaths_by_binary[filename2] = get_rpaths(binary, envroot)
+                parent_exe_dirname = None
+                if binary.format == lief.EXE_FORMATS.PE:
+                    tmp_filename = filename2
+                    while tmp_filename:
+                        if not parent_exe_dirname and codefile_type(tmp_filename) == 'EXEfile':
+                            parent_exe_dirname = os.path.dirname(tmp_filename)
+                        tmp_filename = parents_by_filename[tmp_filename]
+                else:
+                    parent_exe_dirname = exedir
+                rpaths_by_binary[filename2] = get_rpaths(binary,
+                                                         parent_exe_dirname,
+                                                         envroot.replace(os.sep, '/'),
+                                                         sysroot)
                 tmp_filename = filename2
                 rpaths_transitive = []
                 if binary.format == lief.EXE_FORMATS.PE:
@@ -363,7 +383,8 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
                     else:
                         results.add(orig)
                     if recurse:
-                        todo.append([resolved[0], lief.parse(resolved[0])])
+                        if os.path.exists(resolved[0]):
+                            todo.append([resolved[0], lief.parse(resolved[0])])
                 already_seen.add(get_uniqueness_key(binary))
     return results
 
@@ -376,8 +397,8 @@ def get_linkages(filename, resolve_filenames=True, recurse=True, sysroot='', env
     result_pyldd = inspect_linkages_pyldd(filename, resolve_filenames=resolve_filenames,
                                           recurse=recurse, sysroot=sysroot, arch=arch)
     # We do not support Windows yet with pyldd.
-    if set(result_lief) != set(result_pyldd)  \
-            and codefile_type_pyldd(filename) != 'DLLfile':
+    if (set(result_lief) != set(result_pyldd)
+        and codefile_type(filename) not in ('DLLfile', 'EXEfile')):
         print("WARNING: Disagreement in get_linkages():\n lief: {}\npyldd: {}\n  (using lief)".
               format(result_lief, result_pyldd))
     return result_lief
