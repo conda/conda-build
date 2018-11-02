@@ -952,6 +952,9 @@ class MetaData(object):
 
         if self.meta.get('build', {}).get('error_overlinking', False):
             self.config.error_overlinking = self.meta['build']['error_overlinking']
+        if self.meta.get('build', {}).get('error_overdepending', False):
+            self.config.error_overlinking = self.meta['build']['error_overdepending']
+
         self.validate_features()
         self.ensure_no_pip_requirements()
 

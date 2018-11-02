@@ -1251,10 +1251,11 @@ def test_overlinking_detection(testing_config):
     rm_rf(dest_file)
 
 
-def test_overdepend_detection(testing_config):
+def test_overdepending_detection(testing_config):
     testing_config.activate = True
     testing_config.error_overlinking = True
-    recipe = os.path.join(metadata_dir, '_overdepend_detection')
+    testing_config.error_overdepending = True
+    recipe = os.path.join(metadata_dir, '_overdepending_detection')
     with pytest.raises(SystemExit):
         api.build(recipe, config=testing_config)
 

@@ -692,7 +692,7 @@ def check_overlinking(m, files):
     if lib_packages_used != lib_packages:
         warn_prelude = "WARNING ({})".format(pkg_name)
         err_prelude = "  ERROR ({}),".format(pkg_name)
-        msg_prelude = err_prelude if m.config.error_overlinking else warn_prelude
+        msg_prelude = err_prelude if m.config.error_overdepending else warn_prelude
         for lib in lib_packages - lib_packages_used:
             print_msg(errors, "{}: lib package {} in requirements/run but it is not used".format(msg_prelude, lib))
     if len(errors):
