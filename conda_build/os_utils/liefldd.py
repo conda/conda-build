@@ -17,8 +17,6 @@ try:
     have_lief = True
 except:
     pass
-if have_lief:
-    codefile_type = codefile_type_liefldd
 
 
 # Some functions can operate on either file names
@@ -72,7 +70,8 @@ def codefile_type_liefldd(file, skip_symlinks=True):
         elif binary.format == lief.EXE_FORMATS.ELF:
             result = 'elffile'
     return result
-
+if have_lief:
+    codefile_type = codefile_type_liefldd
 
 def _trim_sysroot(sysroot):
     while sysroot.endswith('/') or sysroot.endswith('\\'):
