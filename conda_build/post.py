@@ -590,7 +590,7 @@ def check_overlinking(m, files):
         used_sysroot = ''
         if 'target_platform' in m.config.variant and m.config.variant['target_platform'].startswith('win'):
             used_sysroot = sysroots[0]
-        needed = get_linkages(path, resolve_filenames=True, recurse=True, sysroot=used_sysroot,
+        needed = get_linkages(path, resolve_filenames=True, recurse=False, sysroot=used_sysroot,
                               envroot=m.config.host_prefix)
         for needed_dso in needed:
             needed_dso = needed_dso.replace('/', os.sep)
@@ -691,7 +691,7 @@ def check_overlinking(m, files):
                                       format(msg_prelude, needed_dso))
     if lib_packages_used != lib_packages:
         warn_prelude = "WARNING ({})".format(pkg_name)
-        err_prelude = "  ERROR ({}),".format(pkg_name)
+        err_prelude = "  ERROR ({})".format(pkg_name)
         msg_prelude = err_prelude if m.config.error_overdepending else warn_prelude
         for lib in lib_packages - lib_packages_used:
             print_msg(errors, "{}: lib package {} in requirements/run but it is not used".format(msg_prelude, lib))
