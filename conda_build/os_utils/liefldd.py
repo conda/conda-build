@@ -18,7 +18,7 @@ try:
 except:
     pass
 if have_lief:
-    codefile_type = codefile_type
+    codefile_type = codefile_type_liefldd
 
 
 # Some functions can operate on either file names
@@ -57,7 +57,7 @@ def nm(filename):
         print("No symbols found")
 
 
-def codefile_type(file, skip_symlinks=True):
+def codefile_type_liefldd(file, skip_symlinks=True):
     binary = ensure_binary(file)
     result = None
     if binary:
