@@ -110,6 +110,9 @@ def _get_default_settings():
             Setting('error_overlinking', cc_conda_build.get('error_overlinking',
                                                            'false').lower() == 'true'),
 
+            Setting('error_overdepending', cc_conda_build.get('error_overdepending',
+                                                           'false').lower() == 'true'),
+
             Setting('index', None),
             # support legacy recipes where only build is specified and expected to be the
             #    folder that packaging is done on

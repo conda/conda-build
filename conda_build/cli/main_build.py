@@ -281,6 +281,20 @@ different sets of packages."""
         default=cc_conda_build.get('error_overlinking', 'false').lower() == 'true',
     )
     p.add_argument(
+        "--error-overdepending", dest='error_overdepending', action="store_true",
+        help=("Enable error when packages with names beginning `lib` or which have "
+              "`run_exports` are not auto-loaded by the OSes DSO loading mechanism by "
+              "any of the files in this package."),
+        default=cc_conda_build.get('error_overdepending', 'false').lower() == 'true',
+    )
+    p.add_argument(
+        "--no-error-overdepending", dest='error_overdepending', action="store_false",
+        help=("Disable error when packages with names beginning `lib` or which have "
+              "`run_exports` are not auto-loaded by the OSes DSO loading mechanism by "
+              "any of the files in this package."),
+        default=cc_conda_build.get('error_overdepending', 'false').lower() == 'true',
+    )
+    p.add_argument(
         "--long-test-prefix", action="store_true",
         help=("Use a long prefix for the test prefix, as well as the build prefix.  Affects only "
               "Linux and Mac.  Prefix length matches the --prefix-length flag.  This is on by "
