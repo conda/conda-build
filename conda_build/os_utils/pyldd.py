@@ -984,6 +984,11 @@ class DLLfile(UnixExecutable):
         return 'unknown'
 
 
+class EXEfile(object):
+    def __init__(self, file, initial_rpaths_transitive=[]):
+        self.super.__init__(self, file, initial_rpaths_transitive)
+
+
 def codefile(file, arch='any', initial_rpaths_transitive=[]):
     if file.name.endswith('.dll'):
         return DLLfile(file, list(initial_rpaths_transitive))
@@ -1007,6 +1012,8 @@ def codefile_class(filename, skip_symlinks=False):
         return None
     if filename.endswith('.dll'):
         return DLLfile
+    if filename.endswith('.exe'):
+        return EXEfile
     # Java .class files share 0xCAFEBABE with Mach-O FAT_MAGIC.
     if filename.endswith('.class'):
         return None
