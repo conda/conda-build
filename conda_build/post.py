@@ -23,7 +23,6 @@ from conda_build.conda_interface import PY3
 from conda_build.conda_interface import lchmod
 from conda_build.conda_interface import linked_data
 from conda_build.conda_interface import walk_prefix
-from conda_build.conda_interface import package_cache
 from conda_build.conda_interface import pkgs_dirs
 from conda_build.conda_interface import TemporaryDirectory
 from conda_build.conda_interface import md5_file
@@ -31,7 +30,7 @@ from conda_build.conda_interface import md5_file
 from conda_build import utils
 from conda_build.os_utils.liefldd import (codefile_type, get_linkages, get_runpaths)
 from conda_build.os_utils.ldd import get_package_obj_files
-from conda_build.index import get_run_exports, DEFAULT_SUBDIRS
+from conda_build.index import get_run_exports
 from conda_build.inspect_pkg import which_package
 
 if sys.platform == 'darwin':
@@ -485,6 +484,7 @@ def dists_from_names(names, prefix):
             if pkg.quad[0] == name:
                 results.append(pkg)
     return results
+
 
 def check_overlinking(m, files):
     def print_msg(errors, text):
