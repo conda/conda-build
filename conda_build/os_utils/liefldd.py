@@ -18,6 +18,11 @@ try:
 except:
     pass
 
+def is_string(s):
+    try:
+        return isinstance(s, basestring)
+    except NameError:
+        return isinstance(s, str)
 
 # Some functions can operate on either file names
 # or an already loaded binary. Generally speaking
@@ -25,7 +30,7 @@ except:
 # should be passed a binary when possible as that
 # will prevent having to parse it multiple times.
 def ensure_binary(file):
-    if not isinstance(file, str):
+    if not is_string(file):
         return file
     else:
         try:
@@ -60,7 +65,7 @@ def codefile_type_liefldd(file, skip_symlinks=True):
     result = None
     if binary:
         if binary.format == lief.EXE_FORMATS.PE:
-            if lief.PE.DLL_CHARACTERISTICS: # .DYNAMIC_BASE
+            if lief.PE.DLL_CHARACTERISTICS:
                 if binary.header.characteristics & lief.PE.HEADER_CHARACTERISTICS.DLL:
                     result = 'DLLfile'
                 else:
@@ -70,8 +75,11 @@ def codefile_type_liefldd(file, skip_symlinks=True):
         elif binary.format == lief.EXE_FORMATS.ELF:
             result = 'elffile'
     return result
+
+
 if have_lief:
     codefile_type = codefile_type_liefldd
+
 
 def _trim_sysroot(sysroot):
     while sysroot.endswith('/') or sysroot.endswith('\\'):
@@ -99,7 +107,7 @@ def get_libraries(file):
     return result
 
 
-def get_rpaths(file, exe_dirname, envroot, windows_root = ''):
+def get_rpaths(file, exe_dirname, envroot, windows_root=''):
     binary = ensure_binary(file)
     rpaths = []
     if binary:
@@ -200,7 +208,6 @@ def from_os_varnames(binary, input_):
             .replace('$LIB', libdir)
     elif binary.format == lief.EXE_FORMATS.PE:
         return input_
-
 
 
 # TODO :: Use conda's version of this (or move the constant strings into constants.py
@@ -365,8 +372,8 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
                 if filename2 in libraries:  # Happens on macOS, leading to cycles.
                     libraries.remove(filename2)
                 # RPATH is implicit everywhere except macOS, make it explicit to simplify things.
-                these_orig = [('$RPATH/' + lib if not lib.startswith('/') and not lib.startswith('$')
-                               and binary.format != lief.EXE_FORMATS.MACHO else lib)
+                these_orig = [('$RPATH/' + lib if not lib.startswith('/') and not lib.startswith('$') and  # noqa
+                               binary.format != lief.EXE_FORMATS.MACHO else lib)
                               for lib in libraries]
                 for orig in these_orig:
                     resolved = _get_resolved_location(binary,
@@ -396,8 +403,8 @@ def get_linkages(filename, resolve_filenames=True, recurse=True, sysroot='', env
     result_pyldd = inspect_linkages_pyldd(filename, resolve_filenames=resolve_filenames,
                                           recurse=recurse, sysroot=sysroot, arch=arch)
     # We do not support Windows yet with pyldd.
-    if (set(result_lief) != set(result_pyldd)
-        and codefile_type(filename) not in ('DLLfile', 'EXEfile')):
+    if (set(result_lief) != set(result_pyldd) and
+       codefile_type(filename) not in ('DLLfile', 'EXEfile')):
         print("WARNING: Disagreement in get_linkages():\n lief: {}\npyldd: {}\n  (using lief)".
               format(result_lief, result_pyldd))
     return result_lief
