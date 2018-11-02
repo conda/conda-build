@@ -558,6 +558,9 @@ def check_overlinking(m, files):
             sysroots = ['C:/Windows']
         # Maybe make this use sysroots[0] + '/System32'?
         whitelist = ['**/KERNEL32.dll',
+                     '**/ADVAPI32.dll',
+                     '**/RPCRT4.dll',
+                     '**/ntdll.dll',
                      '**/msvcrt.dll',
                      '**/api-ms-win*.dll']
 
@@ -649,9 +652,16 @@ def check_overlinking(m, files):
                     # Check id we have a CDT package.
                     dso_fname = os.path.basename(needed_dso)
                     sysroot_files = []
+                    dirs_to_glob = []  # Optimization, ideally we'll not glob at all as it's slooow.
                     for sysroot in sysroots:
-                        sysroot_files.extend(glob(os.path.join(sysroot.replace('/', os.sep),
-                                                               '**', dso_fname)))
+                        sysroot_os = sysroot.replace('/', os.sep)
+                        if needed_dso.startswith(sysroot_os):
+                            # Do we want to do this replace?
+                            sysroot_files.append(needed_dso.replace(sysroot_os, ''))
+                        else:
+                            dirs_to_glob.extend((os.path.join(sysroot_os, '**', dso_fname)))
+                    for dir_to_glob in dirs_to_glob:
+                        sysroot_files.extend(glob(dir_to_glob))
                     if len(sysroot_files):
                         # Removing sysroot_prefix is only *really* for Linux, though we could
                         # use CONDA_BUILD_SYSROOT for macOS. We should figure out what to do about
