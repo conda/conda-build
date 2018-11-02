@@ -553,6 +553,14 @@ def check_overlinking(m, files):
                      '/System/Library/Frameworks/StoreKit.framework/*',
                      '/System/Library/Frameworks/SystemConfiguration.framework/*',
                      '/System/Library/Frameworks/WebKit.framework/*']
+    elif 'target_platform' in m.config.variant and m.config.variant['target_platform'].startswith('win'):
+        if not len(sysroots):
+            sysroots = ['C:/Windows']
+        # Maybe make this use sysroots[0] + '/System32'?
+        whitelist = ['**/KERNEL32.dll',
+                     '**/msvcrt.dll',
+                     '**/api-ms-win*.dll']
+
     whitelist += m.meta.get('build', {}).get('missing_dso_whitelist') or []
     runpath_whitelist = m.meta.get('build', {}).get('runpath_whitelist') or []
     for f in files:
@@ -574,26 +582,34 @@ def check_overlinking(m, files):
             print_msg(errors, '{}: runpaths {} found in {}'.format(msg_prelude,
                                                                    runpaths,
                                                                    path))
-        needed = get_linkages(path, resolve_filenames=True, recurse=False)
+        # It is unclear if passing a reasonable sysroot for macOS and linux will break things!
+        # Having 2 backends does not help.
+        used_sysroot = ''
+        if 'target_platform' in m.config.variant and m.config.variant['target_platform'].startswith('win'):
+            used_sysroot = sysroots[0]
+        needed = get_linkages(path, resolve_filenames=True, recurse=True, sysroot=used_sysroot,
+                              envroot=m.config.host_prefix)
         for needed_dso in needed:
+            needed_dso = needed_dso.replace('/', os.sep)
             if needed_dso.startswith(m.config.host_prefix):
-                in_prefix_dso = os.path.normpath(needed_dso.replace(m.config.host_prefix + '/', ''))
+                in_prefix_dso = os.path.normpath(needed_dso.replace(m.config.host_prefix + os.sep, ''))
                 n_dso_p = "Needed DSO {}".format(in_prefix_dso)
                 and_also = " (and also in this package)" if in_prefix_dso in files else ""
                 pkgs = list(which_package(in_prefix_dso, m.config.host_prefix))
                 in_pkgs_in_run_reqs = [pkg for pkg in pkgs if pkg.quad[0] in run_reqs]
+                # TODO :: metadata build/inherit_child_run_exports (for vc, mro-base-impl).
                 for pkg in in_pkgs_in_run_reqs:
                     if pkg in lib_packages:
                         lib_packages_used.add(pkg)
                 in_whitelist = any([glob2.fnmatch.fnmatch(in_prefix_dso, w) for w in whitelist])
-                if in_whitelist:
-                    print_msg(errors, '{}: {} found in the whitelist'.
-                              format(info_prelude, n_dso_p))
-                elif len(in_pkgs_in_run_reqs) == 1:
+                if len(in_pkgs_in_run_reqs) == 1:
                     print_msg(errors, '{}: {} found in {}{}'.format(info_prelude,
                                                                     n_dso_p,
                                                                     in_pkgs_in_run_reqs[0],
                                                                     and_also))
+                elif in_whitelist:
+                    print_msg(errors, '{}: {} found in the whitelist'.
+                              format(info_prelude, n_dso_p))
                 elif len(in_pkgs_in_run_reqs) == 0 and len(pkgs) > 0:
                     print_msg(errors, '{}: {} found in {}{}'.format(msg_prelude,
                                                                     n_dso_p,
@@ -634,7 +650,8 @@ def check_overlinking(m, files):
                     dso_fname = os.path.basename(needed_dso)
                     sysroot_files = []
                     for sysroot in sysroots:
-                        sysroot_files.extend(glob(os.path.join(sysroot, '**', dso_fname)))
+                        sysroot_files.extend(glob(os.path.join(sysroot.replace('/', os.sep),
+                                                               '**', dso_fname)))
                     if len(sysroot_files):
                         # Removing sysroot_prefix is only *really* for Linux, though we could
                         # use CONDA_BUILD_SYSROOT for macOS. We should figure out what to do about
@@ -645,7 +662,7 @@ def check_overlinking(m, files):
                                       for s in sysroot_files]
                         idx = max(range(len(match_lens)), key=match_lens.__getitem__)
                         in_prefix_dso = os.path.normpath(sysroot_files[idx].replace(
-                            sysroot_prefix + '/', ''))
+                            sysroot_prefix + os.sep, ''))
                         n_dso_p = "Needed DSO {}".format(in_prefix_dso)
                         pkgs = list(which_package(in_prefix_dso, sysroot_prefix))
                         if len(pkgs):
@@ -714,12 +731,12 @@ def post_build(m, files, build_python):
     for f in files:
         make_hardlink_copy(f, m.config.host_prefix)
 
-    if sys.platform != 'win32':
+    if not m.config.target_subdir.startswith('win'):
         binary_relocation = m.binary_relocation()
         if not binary_relocation:
             print("Skipping binary relocation logic")
-        osx_is_app = bool(m.get_value('build/osx_is_app', False)) and sys.platform == 'darwin'
-
+        osx_is_app = (m.config.target_subdir == 'osx-64' and
+                      bool(m.get_value('build/osx_is_app', False)))
         check_symlinks(files, m.config.host_prefix, m.config.croot)
         prefix_files = utils.prefix_files(m.config.host_prefix)
 
