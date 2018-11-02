@@ -1243,9 +1243,9 @@ def test_overlinking_detection(testing_config):
     testing_config.error_overlinking = True
     recipe = os.path.join(metadata_dir, '_overlinkage_detection')
     dest_file = os.path.join(recipe, 'build.sh')
-    copy_into(os.path.join(recipe, 'build_scripts', 'default.sh'), dest_file)
+    copy_into(os.path.join(recipe, 'build_scripts', 'default.sh'), dest_file, clobber=True)
     api.build(recipe, config=testing_config)
-    copy_into(os.path.join(recipe, 'build_scripts', 'no_as_needed.sh'), dest_file)
+    copy_into(os.path.join(recipe, 'build_scripts', 'no_as_needed.sh'), dest_file, clobber=True)
     with pytest.raises(SystemExit):
         api.build(recipe, config=testing_config)
     rm_rf(dest_file)
