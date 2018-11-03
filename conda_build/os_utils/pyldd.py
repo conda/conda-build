@@ -799,13 +799,13 @@ class elfsection(object):
                     for r in dt_rpath:
                         end = r + strsec.table[r:].index('\0')
                         path = strsec.table[r:end]
-                        rpaths = [path for path in path.split(':') if path]
-                        elffile.dt_rpath.extend([path.rstrip('/') for path in rpaths])
+                        rpaths = [p for p in path.split(':') if path]
+                        elffile.dt_rpath.extend([p.rstrip('/') for p in rpaths])
                     for r in dt_runpath:
                         end = r + strsec.table[r:].index('\0')
                         path = strsec.table[r:end]
-                        rpaths = [path for path in path.split(':') if path]
-                        elffile.dt_runpath.extend([path.rstrip('/') for path in rpaths])
+                        rpaths = [p for p in path.split(':') if path]
+                        elffile.dt_runpath.extend([p.rstrip('/') for p in rpaths])
                     if dt_soname != '$EXECUTABLE':
                         end = dt_soname + strsec.table[dt_soname:].index('\0')
                         elffile.dt_soname = strsec.table[dt_soname:end]
