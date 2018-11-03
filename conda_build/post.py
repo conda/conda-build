@@ -536,6 +536,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     else:
         lib_packages_used = set()
 
+
     vendoring_record = dict()
     pkg_vendoring_name = pkg_name
     pkg_vendoring_version = pkg_version
@@ -614,6 +615,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                          '**/ntdll.dll',
                          '**/msvcrt.dll',
                          '**/api-ms-win*.dll']
+
 
     # LIEF is very slow at decoding some DSOs, so we only let it look at ones that we link to (and ones we
     # have built).
@@ -695,12 +697,12 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
             continue
         needed = needed_dsos_for_file[f]
         for needed_dso in needed:
-            if not needed_dso.startswith('/') and \
-               not needed_dso.startswith(sysroot_substitution) and \
-               not needed_dso.startswith(build_prefix_substitution) and \
-               not needed_dso in prefix_owners:
-                    print("What a terrible failure {} not in prefix_owners".format(needed_dso))
-                    sys.exit(1)
+            if (not needed_dso.startswith('/') and
+                not needed_dso.startswith(sysroot_substitution) and
+                not needed_dso.startswith(build_prefix_substitution) and
+                needed_dso not in prefix_owners):
+                print("  ERROR :: {} not in prefix_owners".format(needed_dso))
+                sys.exit(1)
 
     whitelist += missing_dso_whitelist
     for f in files:
