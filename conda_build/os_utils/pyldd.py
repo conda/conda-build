@@ -1126,7 +1126,8 @@ def get_runpaths(filename, arch='native'):
 
 
 # TODO :: Consider returning a tree structure or a dict when recurse is True?
-def inspect_linkages(filename, resolve_filenames=True, recurse=True, sysroot='', arch='native'):
+def inspect_linkages(filename, resolve_filenames=True, recurse=True,
+                     sysroot='', arch='native'):
     already_seen = set()
     todo = set([filename])
     done = set()

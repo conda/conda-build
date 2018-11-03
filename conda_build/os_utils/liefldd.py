@@ -288,13 +288,13 @@ def _get_resolved_location(codefile,
         these_rpaths = [resolved_rpath] if resolved_rpath else \
                         rpaths_transitive + \
                         ld_library_paths + \
-                        [dp.replace('$SYSROOT', sysroot) for dp in default_paths]
+                        [dp.replace('$SYSROOT/', sysroot) for dp in default_paths]
         for rpath in these_rpaths:
             resolved = unresolved.replace('$RPATH', rpath) \
                                  .replace('$SELFDIR', selfdir) \
                                  .replace('$EXEDIR', exedir)
             exists = os.path.exists(resolved)
-            exists_sysroot = exists and sysroot and resolved.startswith(sysroot)
+            exists_sysroot = exists or sysroot and resolved.startswith(sysroot)
             if resolved_rpath or exists or exists_sysroot:
                 rpath_result = rpath
                 found = True
@@ -395,13 +395,14 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
     return results
 
 
-def get_linkages(filename, resolve_filenames=True, recurse=True, sysroot='', envroot='', arch='native'):
+def get_linkages(filename, resolve_filenames=True, recurse=True,
+                 sysroot='', envroot='', arch='native'):
     # When we switch to lief, want to ensure these results do not change.
     # if have_lief:
-    result_lief = inspect_linkages_lief(filename, resolve_filenames=resolve_filenames,
-                                        recurse=recurse, sysroot=sysroot, envroot=envroot, arch=arch)
-    result_pyldd = inspect_linkages_pyldd(filename, resolve_filenames=resolve_filenames,
-                                          recurse=recurse, sysroot=sysroot, arch=arch)
+    result_lief = inspect_linkages_lief(filename, resolve_filenames=resolve_filenames, recurse=recurse,
+                                        sysroot=sysroot, envroot=envroot, arch=arch)
+    result_pyldd = inspect_linkages_pyldd(filename, resolve_filenames=resolve_filenames, recurse=recurse,
+                                          sysroot=sysroot, arch=arch)
     # We do not support Windows yet with pyldd.
     if (set(result_lief) != set(result_pyldd) and
        codefile_type(filename) not in ('DLLfile', 'EXEfile')):
@@ -608,6 +609,7 @@ def get_symbols_memoized(filename, defined, undefined, arch):
 
 
 @memoized_by_arg0_filehash
-def get_linkages_memoized(filename, resolve_filenames, recurse, sysroot='', envroot='', arch='native'):
+def get_linkages_memoized(filename, resolve_filenames, recurse,
+                          sysroot='', envroot='', arch='native'):
     return get_linkages(filename, resolve_filenames=resolve_filenames,
                         recurse=recurse, sysroot=sysroot, envroot=envroot, arch=arch)
