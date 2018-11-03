@@ -28,10 +28,14 @@ from conda_build.conda_interface import TemporaryDirectory
 from conda_build.conda_interface import md5_file
 
 from conda_build import utils
-from conda_build.os_utils.liefldd import (codefile_type, get_linkages, get_runpaths)
+from conda_build.os_utils.liefldd import (get_exports_memoized, get_imports_memoized,
+                                          get_linkages_memoized,
+                                          get_runpaths, get_symbols_memoized)
+from conda_build.os_utils.pyldd import codefile_type
 from conda_build.os_utils.ldd import get_package_obj_files
 from conda_build.index import get_run_exports
 from conda_build.inspect_pkg import which_package
+from conda_build.exceptions import (OverLinkingError, OverDependingError)
 
 if sys.platform == 'darwin':
     from conda_build.os_utils import macho
@@ -499,7 +503,6 @@ def check_overlinking(m, files):
 
     run_reqs = [req.split(' ')[0] for req in m.meta.get('requirements', {}).get('run', [])]
     # Used to detect overlinking (finally)
-#    lib_packages = set([run_req for run_req in run_reqs if is_library_package(run_req, m.config.host_prefix)])
     packages = dists_from_names(run_reqs, m.config.host_prefix)
     lib_packages = set([package for package in packages
                         if is_library_package(package, m.config.host_prefix)])
@@ -564,8 +567,6 @@ def check_overlinking(m, files):
                      '**/msvcrt.dll',
                      '**/api-ms-win*.dll']
 
-    whitelist += m.meta.get('build', {}).get('missing_dso_whitelist') or []
-    runpath_whitelist = m.meta.get('build', {}).get('runpath_whitelist') or []
     for f in files:
         path = os.path.join(m.config.host_prefix, f)
         if not codefile_type(path):
@@ -697,7 +698,7 @@ def check_overlinking(m, files):
             print_msg(errors, "{}: lib package {} in requirements/run but it is not used".format(msg_prelude, lib))
     if len(errors):
         sys.exit(1)
-
+'''
 
 def post_process_shared_lib(m, f, files):
     path = os.path.join(m.config.host_prefix, f)

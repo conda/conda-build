@@ -33,7 +33,8 @@ from conda_build.utils import (copy_into, on_win, check_call_env, convert_path_f
                                package_has_file, check_output_env, get_conda_operation_locks, rm_rf,
                                walk, env_var, FileNotFoundError)
 from conda_build.os_utils.external import find_executable
-from conda_build.exceptions import DependencyNeedsBuildingError, CondaBuildException
+from conda_build.exceptions import (DependencyNeedsBuildingError, CondaBuildException,
+                                    OverLinkingError, OverDependingError)
 from conda_build.conda_interface import reset_context
 from conda.exceptions import ClobberError, CondaMultiError
 from conda_build.conda_interface import conda_46
@@ -1246,7 +1247,7 @@ def test_overlinking_detection(testing_config):
     copy_into(os.path.join(recipe, 'build_scripts', 'default.sh'), dest_file, clobber=True)
     api.build(recipe, config=testing_config)
     copy_into(os.path.join(recipe, 'build_scripts', 'no_as_needed.sh'), dest_file, clobber=True)
-    with pytest.raises(SystemExit):
+    with pytest.raises(OverLinkingError):
         api.build(recipe, config=testing_config)
     rm_rf(dest_file)
 
@@ -1256,7 +1257,7 @@ def test_overdepending_detection(testing_config):
     testing_config.error_overlinking = True
     testing_config.error_overdepending = True
     recipe = os.path.join(metadata_dir, '_overdepending_detection')
-    with pytest.raises(SystemExit):
+    with pytest.raises(OverDependingError):
         api.build(recipe, config=testing_config)
 
 
