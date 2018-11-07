@@ -577,6 +577,9 @@ def write_about_json(m):
         d['root_pkgs'] = env.package_specs()
         # Include the extra section of the metadata in the about.json
         d['extra'] = m.get_section('extra')
+        d['tags'] = m.get_section('tags')
+        d['keywords'] = m.get_section('keywords')
+        d['identifiers'] = m.get_section('identifiers')
         json.dump(d, fo, indent=2, sort_keys=True)
 
 
