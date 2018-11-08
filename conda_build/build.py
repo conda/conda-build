@@ -1099,7 +1099,7 @@ def bundle_wheel(output, metadata, env, stats):
             f.write('\n')
             f.write('pip wheel --wheel-dir {} --no-deps .'.format(tmpdir))
             f.write('\n')
-        if metadata.activate_build_script:
+        if metadata.config.activate:
             _write_activation_text(dest_file, metadata)
 
         # run the appropriate script
