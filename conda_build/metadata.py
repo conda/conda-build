@@ -1649,10 +1649,13 @@ class MetaData(object):
         #    We have to do this on rendered data, because templates can be used in output names
         recipe_text = self.extract_outputs_text(apply_selectors=apply_selectors)
         output_matches = output_re.findall(recipe_text)
-        parent_meta = self.meta.get('extra', {}).get('parent_recipe', self.meta)
         try:
-            output_index = [out.get('name') for out in
-                            parent_meta.get('outputs', [])].index(output_name)
+            check_in = list(self.other_outputs.keys())
+        except AttributeError:
+            check_in = [out.get('name') for out in
+                            self.meta.get('outputs', [])]
+        try:
+            output_index = check_in.index(output_name)
             output = output_matches[output_index] if output_matches else ''
         except ValueError:
             output = ''
