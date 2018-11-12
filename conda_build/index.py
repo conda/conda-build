@@ -40,7 +40,7 @@ import libarchive
 from . import conda_interface, utils
 from .conda_interface import MatchSpec, VersionOrder, human_bytes
 from .conda_interface import CondaHTTPError, get_index, url_path
-from .utils import glob, get_logger, FileNotFoundError
+from .utils import glob, get_logger, FileNotFoundError, PermissionError
 
 try:
     from conda.base.constants import CONDA_TARBALL_EXTENSIONS
