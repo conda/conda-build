@@ -1456,45 +1456,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                                               "or remove the build/script section in meta.yaml.")
                 # There is no sense in trying to run an empty build script.
                 if isfile(build_file) or script:
-
-                    with utils.path_prepended(m.config.build_prefix):
-                        env = environ.get_dict(m=m)
-                    env["CONDA_BUILD_STATE"] = "BUILD"
-
-                    # hard-code this because we never want pip's build isolation
-                    #    https://github.com/conda/conda-build/pull/2972#discussion_r198290241
-                    #
-                    # Note that pip env "NO" variables are inverted logic.
-                    #      PIP_NO_BUILD_ISOLATION=False means don't use build isolation.
-                    #
-                    env["PIP_NO_BUILD_ISOLATION"] = False
-                    # some other env vars to have pip ignore dependencies.
-                    # we supply them ourselves instead.
-                    #    See note above about inverted logic on "NO" variables
-                    env["PIP_NO_DEPENDENCIES"] = False
-                    env["PIP_IGNORE_INSTALLED"] = True
-                    # pip's cache directory (PIP_NO_CACHE_DIR) should not be
-                    # disabled as this results in .egg-info rather than
-                    # .dist-info directories being created, see gh-3094
-
-                    # set PIP_CACHE_DIR to a path in the work dir that does not exist.
-                    env['PIP_CACHE_DIR'] = m.config.pip_cache_dir
-
-                    work_file = join(m.config.work_dir, 'conda_build.sh')
-                    with open(work_file, 'w') as bf:
-                        for k, v in env.items():
-                            if v:
-                                bf.write('export {0}="{1}"\n'.format(k, v))
-
-                        if m.config.activate and not m.name() == 'conda':
-                            _write_sh_activation_text(bf, m)
-                        if script:
-                                bf.write(script)
-                        if isfile(build_file) and not script:
-                            bf.write(open(build_file).read())
-
-                    os.chmod(work_file, 0o766)
-
+                    work_file = write_build_scripts(m, script, build_file)
                     cmd = [shell_path] + (['-x'] if m.config.debug else []) + ['-e', work_file]
                     # rewrite long paths in stdout back to their env variables
                     if m.config.debug:
@@ -1889,6 +1851,136 @@ def construct_metadata_for_test(recipedir_or_package, config):
     return m, hash_input
 
 
+def write_build_scripts(m, script, build_file):
+    with utils.path_prepended(m.config.build_prefix):
+        env = environ.get_dict(m=m)
+    env["CONDA_BUILD_STATE"] = "BUILD"
+
+    # hard-code this because we never want pip's build isolation
+    #    https://github.com/conda/conda-build/pull/2972#discussion_r198290241
+    #
+    # Note that pip env "NO" variables are inverted logic.
+    #      PIP_NO_BUILD_ISOLATION=False means don't use build isolation.
+    #
+    env["PIP_NO_BUILD_ISOLATION"] = False
+    # some other env vars to have pip ignore dependencies.
+    # we supply them ourselves instead.
+    #    See note above about inverted logic on "NO" variables
+    env["PIP_NO_DEPENDENCIES"] = False
+    env["PIP_IGNORE_INSTALLED"] = True
+    # pip's cache directory (PIP_NO_CACHE_DIR) should not be
+    # disabled as this results in .egg-info rather than
+    # .dist-info directories being created, see gh-3094
+
+    # set PIP_CACHE_DIR to a path in the work dir that does not exist.
+    env['PIP_CACHE_DIR'] = m.config.pip_cache_dir
+
+    work_file = join(m.config.work_dir, 'conda_build.sh')
+    env_file = join(m.config.work_dir, 'build_env_setup.sh')
+    with open(env_file, 'w') as bf:
+        for k, v in env.items():
+            if v:
+                bf.write('export {0}="{1}"\n'.format(k, v))
+
+        if m.config.activate and not m.name() == 'conda':
+            _write_sh_activation_text(bf, m)
+    with open(work_file, 'w') as bf:
+        bf.write("source {}\n".format(env_file))
+        if script:
+                bf.write(script)
+        if isfile(build_file) and not script:
+            bf.write(open(build_file).read())
+
+    os.chmod(work_file, 0o766)
+    return work_file
+
+
+def write_test_scripts(metadata, env_vars, py_files, pl_files, lua_files, r_files, shell_files, trace=""):
+    log = utils.get_logger(__name__)
+    if not metadata.config.activate or metadata.name() == 'conda':
+        # prepend bin (or Scripts) directory
+        env_vars = utils.prepend_bin_path(env_vars, metadata.config.test_prefix, prepend_prefix=True)
+        if utils.on_win:
+            env_vars['PATH'] = metadata.config.test_prefix + os.pathsep + env_vars['PATH']
+
+    # set variables like CONDA_PY in the test environment
+    env_vars.update(set_language_env_vars(metadata.config.variant))
+
+    # Python 2 Windows requires that envs variables be string, not unicode
+    env_vars = {str(key): str(value) for key, value in env_vars.items()}
+    suffix = "bat" if utils.on_win else "sh"
+    test_env_script = join(metadata.config.test_dir,
+                           "conda_test_env_vars.{suffix}".format(suffix=suffix))
+    test_run_script = join(metadata.config.test_dir,
+                           "conda_test_runner.{suffix}".format(suffix=suffix))
+
+    with open(test_env_script, 'w') as tf:
+        if not utils.on_win:
+            tf.write('set {trace}-e\n'.format(trace=trace))
+        if metadata.config.activate and not metadata.name() == 'conda':
+            ext = ".bat" if utils.on_win else ""
+            tf.write('{source} "{conda_root}activate{ext}" "{test_env}"\n'.format(
+                conda_root=utils.root_script_dir + os.path.sep,
+                source="call" if utils.on_win else "source",
+                ext=ext,
+                test_env=metadata.config.test_prefix))
+            if utils.on_win:
+                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+
+    with open(test_run_script, 'w') as tf:
+        ext = ".bat" if utils.on_win else ""
+        tf.write('{source} "{test_env_script}"\n'.format(
+            source="call" if utils.on_win else "source",
+            test_env_script=test_env_script))
+        if utils.on_win:
+            tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+        if py_files:
+            test_python = metadata.config.test_python
+            # use pythonw for import tests when osx_is_app is set
+            if metadata.get_value('build/osx_is_app') and sys.platform == 'darwin':
+                test_python = test_python + 'w'
+            tf.write('"{python}" -s "{test_file}"\n'.format(
+                python=test_python,
+                test_file=join(metadata.config.test_dir, 'run_test.py')))
+            if utils.on_win:
+                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+        if pl_files:
+            tf.write('"{perl}" "{test_file}"\n'.format(
+                perl=metadata.config.perl_bin(metadata.config.test_prefix,
+                                              metadata.config.host_platform),
+                test_file=join(metadata.config.test_dir, 'run_test.pl')))
+            if utils.on_win:
+                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+        if lua_files:
+            tf.write('"{lua}" "{test_file}"\n'.format(
+                lua=metadata.config.lua_bin(metadata.config.test_prefix,
+                                            metadata.config.host_platform),
+                test_file=join(metadata.config.test_dir, 'run_test.lua')))
+            if utils.on_win:
+                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+        if r_files:
+            tf.write('"{r}" "{test_file}"\n'.format(
+                r=metadata.config.rscript_bin(metadata.config.test_prefix,
+                                              metadata.config.host_platform),
+                test_file=join(metadata.config.test_dir, 'run_test.r')))
+            if utils.on_win:
+                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+        if shell_files:
+            for shell_file in shell_files:
+                if utils.on_win:
+                    if os.path.splitext(shell_file) == ".bat":
+                        tf.write('call "{test_file}"\n'.format(test_file=shell_file))
+                        tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+                    else:
+                        log.warn("Found sh test file on windows.  Ignoring this for now (PRs welcome)")
+                else:
+                    # TODO: Run the test/commands here instead of in run_test.py
+                    tf.write('"{shell_path}" {trace}-e "{test_file}"\n'.format(shell_path=shell_path,
+                                                                            test_file=shell_file,
+                                                                            trace=trace))
+    return test_run_script
+
+
 def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
     '''
     Execute any test scripts for the given package.
@@ -1966,28 +2058,8 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
                     "in the work directory that are not included with your package")
 
     get_build_metadata(metadata)
-    specs = ['%s %s %s' % (metadata.name(), metadata.version(), metadata.build_id())]
 
-    # add packages listed in the run environment and test/requires
-    specs.extend(ms.spec for ms in metadata.ms_depends('run'))
-    specs += utils.ensure_list(metadata.get_value('test/requires', []))
-
-    if py_files:
-        # as the tests are run by python, ensure that python is installed.
-        # (If they already provided python as a run or test requirement,
-        #  this won't hurt anything.)
-        specs += ['python']
-    if pl_files:
-        # as the tests are run by perl, we need to specify it
-        specs += ['perl']
-    if lua_files:
-        # not sure how this shakes out
-        specs += ['lua']
-    if r_files and not any(s.split()[0] in ('r-base', 'mro-base') for s in specs):
-        # not sure how this shakes out
-        specs += ['r-base']
-
-    specs.extend(utils.ensure_list(metadata.config.extra_deps))
+    specs = metadata.get_test_deps(py_files, pl_files, lua_files, r_files)
 
     with utils.path_prepended(metadata.config.test_prefix):
         env = dict(os.environ.copy())
@@ -2006,10 +2078,6 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
     env['PREFIX'] = metadata.config.test_prefix
     if 'BUILD_PREFIX' in env:
         del env['BUILD_PREFIX']
-
-    suffix = "bat" if utils.on_win else "sh"
-    test_script = join(metadata.config.test_dir,
-                        "conda_test_runner.{suffix}".format(suffix=suffix))
 
     # In the future, we will need to support testing cross compiled
     #     packages on physical hardware. until then it is expected that
@@ -2064,77 +2132,8 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
     if metadata.config.remove_work_dir:
         env['SRC_DIR'] = metadata.config.test_dir
 
-    if not metadata.config.activate or metadata.name() == 'conda':
-        # prepend bin (or Scripts) directory
-        env = utils.prepend_bin_path(env, metadata.config.test_prefix, prepend_prefix=True)
-        if utils.on_win:
-            env['PATH'] = metadata.config.test_prefix + os.pathsep + env['PATH']
+    test_script = write_test_scripts(metadata, env, py_files, pl_files, lua_files, r_files, shell_files, trace)
 
-    # set variables like CONDA_PY in the test environment
-    env.update(set_language_env_vars(metadata.config.variant))
-
-    # Python 2 Windows requires that envs variables be string, not unicode
-    env = {str(key): str(value) for key, value in env.items()}
-    suffix = "bat" if utils.on_win else "sh"
-    test_script = join(metadata.config.test_dir,
-                        "conda_test_runner.{suffix}".format(suffix=suffix))
-
-    with open(test_script, 'w') as tf:
-        if not utils.on_win:
-            tf.write('set {trace}-e\n'.format(trace=trace))
-        if metadata.config.activate and not metadata.name() == 'conda':
-            ext = ".bat" if utils.on_win else ""
-            tf.write('{source} "{conda_root}activate{ext}" "{test_env}"\n'.format(
-                conda_root=utils.root_script_dir + os.path.sep,
-                source="call" if utils.on_win else "source",
-                ext=ext,
-                test_env=metadata.config.test_prefix))
-            if utils.on_win:
-                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
-        if py_files:
-            test_python = metadata.config.test_python
-            # use pythonw for import tests when osx_is_app is set
-            if metadata.get_value('build/osx_is_app') and sys.platform == 'darwin':
-                test_python = test_python + 'w'
-            tf.write('"{python}" -s "{test_file}"\n'.format(
-                python=test_python,
-                test_file=join(metadata.config.test_dir, 'run_test.py')))
-            if utils.on_win:
-                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
-        if pl_files:
-            tf.write('"{perl}" "{test_file}"\n'.format(
-                perl=metadata.config.perl_bin(metadata.config.test_prefix,
-                                              metadata.config.host_platform),
-                test_file=join(metadata.config.test_dir, 'run_test.pl')))
-            if utils.on_win:
-                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
-        if lua_files:
-            tf.write('"{lua}" "{test_file}"\n'.format(
-                lua=metadata.config.lua_bin(metadata.config.test_prefix,
-                                            metadata.config.host_platform),
-                test_file=join(metadata.config.test_dir, 'run_test.lua')))
-            if utils.on_win:
-                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
-        if r_files:
-            tf.write('"{r}" "{test_file}"\n'.format(
-                r=metadata.config.rscript_bin(metadata.config.test_prefix,
-                                              metadata.config.host_platform),
-                test_file=join(metadata.config.test_dir, 'run_test.r')))
-            if utils.on_win:
-                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
-        if shell_files:
-            for shell_file in shell_files:
-                if utils.on_win:
-                    if os.path.splitext(shell_file)[1].lower() == ".bat":
-                        tf.write('call "{test_file}"\n'.format(test_file=shell_file))
-                        tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
-                    else:
-                        log.warn("Found sh test file on windows.  Ignoring this for now (PRs welcome)")
-                else:
-                    # TODO: Run the test/commands here instead of in run_test.py
-                    tf.write('"{shell_path}" {trace}-e "{test_file}"\n'.format(shell_path=shell_path,
-                                                                            test_file=shell_file,
-                                                                            trace=trace))
     if utils.on_win:
         cmd = [os.environ.get('COMSPEC', 'cmd.exe'), "/d", "/c", test_script]
     else:

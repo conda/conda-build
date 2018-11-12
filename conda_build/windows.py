@@ -258,6 +258,33 @@ def _write_bat_activation_text(file_handle, m):
             prefix=m.config.build_prefix))
 
 
+def write_build_scripts(m, env, bld_bat):
+    env_script = join(m.config.work_dir, 'build_env_setup.bat')
+    with open(env_script, 'w') as fo:
+        # more debuggable with echo on
+        fo.write('@echo on\n')
+        for key, value in env.items():
+            if value:
+                fo.write('set "{key}={value}"\n'.format(key=key, value=value))
+        if not m.uses_new_style_compiler_activation:
+            fo.write(msvc_env_cmd(bits=m.config.host_arch, config=m.config,
+                                override=m.get_value('build/msvc_compiler', None)))
+        # Reset echo on, because MSVC scripts might have turned it off
+        fo.write('@echo on\n')
+        fo.write('set "INCLUDE={};%INCLUDE%"\n'.format(env["LIBRARY_INC"]))
+        fo.write('set "LIB={};%LIB%"\n'.format(env["LIBRARY_LIB"]))
+        if m.config.activate and m.name() != 'conda':
+            _write_bat_activation_text(fo, m)
+    # bld_bat may have been generated elsewhere with contents of build/script
+    if os.path.isfile(bld_bat):
+        with open(bld_bat) as fi:
+            data = fi.read()
+        with open(join(m.config.work_dir, 'bld.bat'), 'w') as fo:
+            fo.write("call {}".format())
+            fo.write("REM ===== end generated header =====\n")
+            fo.write(data)
+
+
 def build(m, bld_bat, stats):
     with path_prepended(m.config.build_prefix):
         with path_prepended(m.config.host_prefix):
@@ -291,27 +318,7 @@ def build(m, bld_bat, stats):
         if not isdir(path):
             os.makedirs(path)
 
-    src_dir = m.config.work_dir
-    if os.path.isfile(bld_bat):
-        with open(bld_bat) as fi:
-            data = fi.read()
-        with open(join(src_dir, 'bld.bat'), 'w') as fo:
-            # more debuggable with echo on
-            fo.write('@echo on\n')
-            for key, value in env.items():
-                if value:
-                    fo.write('set "{key}={value}"\n'.format(key=key, value=value))
-            if not m.uses_new_style_compiler_activation:
-                fo.write(msvc_env_cmd(bits=m.config.host_arch, config=m.config,
-                                    override=m.get_value('build/msvc_compiler', None)))
-            # Reset echo on, because MSVC scripts might have turned it off
-            fo.write('@echo on\n')
-            fo.write('set "INCLUDE={};%INCLUDE%"\n'.format(env["LIBRARY_INC"]))
-            fo.write('set "LIB={};%LIB%"\n'.format(env["LIBRARY_LIB"]))
-            if m.config.activate and m.name() != 'conda':
-                _write_bat_activation_text(fo, m)
-            fo.write("REM ===== end generated header =====\n")
-            fo.write(data)
+        write_build_scripts(m, env, bld_bat)
 
         cmd = ['cmd.exe', '/c', 'bld.bat']
         # rewrite long paths in stdout back to their env variables
@@ -323,6 +330,5 @@ def build(m, bld_bat, stats):
                 for k in ['PREFIX', 'BUILD_PREFIX', 'SRC_DIR'] if k in env
             }
             print("Rewriting env in output: %s" % pprint.pformat(rewrite_env))
-        check_call_env(cmd, cwd=src_dir, stats=stats, rewrite_stdout_env=rewrite_env)
-
+        check_call_env(cmd, cwd=m.config.work_dir, stats=stats, rewrite_stdout_env=rewrite_env)
     fix_staged_scripts(join(m.config.host_prefix, 'Scripts'), config=m.config)
