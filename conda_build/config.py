@@ -72,7 +72,7 @@ def _get_default_settings():
             Setting('verbose', True),
 
             Setting('debug', False),
-            Setting('timeout', 90),
+            Setting('timeout', 900),
             Setting('set_build_id', True),
             Setting('disable_pip', False),
             Setting('_output_folder', None),

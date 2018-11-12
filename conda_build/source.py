@@ -129,7 +129,7 @@ def hoist_single_extracted_folder(nested_folder):
 
 
 def unpack(source_dict, src_dir, cache_folder, recipe_path, croot, verbose=False,
-           timeout=90, locking=True):
+           timeout=900, locking=True):
     ''' Uncompress a downloaded source. '''
     src_path, unhashed_fn = download_to_cache(cache_folder, recipe_path, source_dict)
 
@@ -405,7 +405,7 @@ def hg_source(source_dict, src_dir, hg_cache, verbose):
     return src_dir
 
 
-def svn_source(source_dict, src_dir, svn_cache, verbose=True, timeout=90, locking=True):
+def svn_source(source_dict, src_dir, svn_cache, verbose=True, timeout=900, locking=True):
     ''' Download a source from SVN repo. '''
     if verbose:
         stdout = None
