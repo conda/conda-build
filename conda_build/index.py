@@ -39,7 +39,7 @@ import libarchive
 
 from . import conda_interface, utils
 from .conda_interface import MatchSpec, VersionOrder, human_bytes
-from .conda_interface import CondaHTTPError, get_index, url_path
+from .conda_interface import CondaError, CondaHTTPError, get_index, url_path
 from .utils import glob, get_logger, FileNotFoundError, PermissionError
 
 try:
@@ -276,7 +276,12 @@ def _determine_namespace(info):
     if info.get('namespace'):
         namespace = info['namespace']
     else:
-        depends_names = {MatchSpec(spec).name for spec in info['depends']}
+        depends_names = set()
+        for spec in info['depends']:
+            try:
+                depends_names.add(MatchSpec(spec).name)
+            except CondaError:
+                pass
         spaces = depends_names & NAMESPACE_PACKAGE_NAMES
         if len(spaces) == 1:
             namespace = NAMESPACES_MAP[spaces.pop()]
@@ -421,15 +426,18 @@ def _gather_channeldata_reference_packages(all_repodata_packages):
     groups = groupby('name', all_repodata_packages)
     reference_packages = []
     for group in groups.values():
-        version_groups = groupby('version', group)
-        latest_version = sorted(version_groups, key=VersionOrder)[-1]
-        build_number_groups = groupby('build_number', version_groups[latest_version])
-        latest_build_number = sorted(build_number_groups)[-1]
-        ref_pkg = sorted(build_number_groups[latest_build_number],
-                            key=lambda x: x['subdir'])[-1]
-        ref_pkg["subdirs"] = sorted(set(rec['subdir'] for rec in group))
-        ref_pkg["reference_package"] = "%s/%s" % (ref_pkg["subdir"], ref_pkg["fn"])
-        reference_packages.append(ref_pkg)
+        try:
+            version_groups = groupby('version', group)
+            latest_version = sorted(version_groups, key=VersionOrder)[-1]
+            build_number_groups = groupby('build_number', version_groups[latest_version])
+            latest_build_number = sorted(build_number_groups)[-1]
+            ref_pkg = sorted(build_number_groups[latest_build_number],
+                                key=lambda x: x['subdir'])[-1]
+            ref_pkg["subdirs"] = sorted(set(rec['subdir'] for rec in group))
+            ref_pkg["reference_package"] = "%s/%s" % (ref_pkg["subdir"], ref_pkg["fn"])
+            reference_packages.append(ref_pkg)
+        except KeyError as e:
+            log.warn("group {} failed to gather channeldata.  Error was {}.  Skipping this one...".format(group, e))
     return reference_packages
 
 
@@ -516,7 +524,10 @@ def _add_namespace_to_spec(fn, info, dep_str, namemap, missing_dependencies, sub
             return dep_str
         namekey = namemap[spec.name]
         namespace, name = namekey.split(":", 1)
-        spec = MatchSpec(spec, namespace=namespace, name=name)
+        try:
+            spec = MatchSpec(spec, namespace=namespace, name=name)
+        except CondaError:
+            spec = MatchSpec(spec, name=name)
         return spec.conda_build_form()
 
 
@@ -581,13 +592,19 @@ def _augment_repodata(subdirs, patched_repodata, patch_instructions):
             info['record_version'] = 1
             if 'constrains' in info:
                 constrains_names = set(dep.split()[0] for dep in info["constrains"])
-                info['constrains2'] = [_add_namespace_to_spec(fn, info, dep, namemap, missing_dependencies, subdir)
-                                       for dep in info['constrains']]
-                info['depends2'] = [_add_namespace_to_spec(fn, info, dep, namemap, missing_dependencies, subdir)
-                                    for dep in info['depends'] if dep.split()[0] not in constrains_names]
+                try:
+                    info['constrains2'] = [_add_namespace_to_spec(fn, info, dep, namemap, missing_dependencies, subdir)
+                                        for dep in info['constrains']]
+                    info['depends2'] = [_add_namespace_to_spec(fn, info, dep, namemap, missing_dependencies, subdir)
+                                        for dep in info['depends'] if dep.split()[0] not in constrains_names]
+                except CondaError as e:
+                    log.warn("Encountered a file that conda does not like.  Error was: {}.  Skipping this one...".format(fn))
             else:
-                info['depends2'] = [_add_namespace_to_spec(fn, info, dep, namemap, missing_dependencies, subdir)
-                                    for dep in info['depends']]
+                try:
+                    info['depends2'] = [_add_namespace_to_spec(fn, info, dep, namemap, missing_dependencies, subdir)
+                                        for dep in info['depends']]
+                except CondaError as e:
+                    log.warn("Encountered a file that conda does not like.  Error was: {}.  Skipping this one...".format(fn))
             # info['build_string'] =_make_build_string(info["build"], info["build_number"])
         repodata["removed"] = patch_instructions[subdir].get("remove", [])
         augmented_repodata[subdir] = repodata
@@ -1354,6 +1371,8 @@ class ChannelIndex(object):
 
         for fn, info in repodata2["packages"].items():
             info["record_version"] = 2
+            if 'depends2' not in info:
+                continue
             info["requires"] = info["depends2"]
             del info["depends"]
             del info["depends2"]
