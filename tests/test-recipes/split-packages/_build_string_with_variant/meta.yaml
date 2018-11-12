@@ -1,0 +1,72 @@
+{% set version = "5.0.0" %}
+{% set sha256 = "019f23c2192df793ac746595e94a403908749f8e0c484b403476d2611dd20970" %}
+
+{% set build_number = "1000" %}
+
+package:
+  name: clangdev
+  version: {{ version }}
+
+build:
+  number: {{ build_number }}
+  skip: true  # [win and vc<14]
+
+
+# Specifying `compiler('cxx')` as a top-level build requirements to force
+# conda-smithy to generate the correct build matrix.
+requirements:
+  build:
+    - {{ compiler('cxx') }}
+
+outputs:
+
+  # Main output
+  - name: clangdev
+    version: {{ version }}
+    script: build_clangdev.sh   # [unix]
+    script: build_clangdev.bat  # [win]
+    build:
+      activate_in_script: True
+      run_exports:
+        - clang_variant * {{ clang_variant }}
+    requirements:
+      build:
+        - {{ compiler('cxx') }}
+        # "compiling .pyc files" fails without this
+        - python >3
+      host:
+        - llvmdev =={{ version }}
+        - libxml2
+      run:
+        - llvmdev =={{ version }}
+        - libxml2
+        # Require the mutex package.
+        - clang_variant * {{ clang_variant }}
+
+  # Mutex package to keep only one variant of clangdev in a given environment.
+  #
+  # Non-default variants track the "non_default_clang" feature.
+  # This is used to weigh down non-default variants of the package, allowing
+  # the default variant to take precedence unless required explicitely.
+  - name: clang_variant
+    version: 1.0
+    build:
+      string: {{ clang_variant }}
+{% if clang_variant != "default" %}
+      track_features:
+        - non_default_clang
+{% endif %}
+
+about:
+  home: http://llvm.org/
+  license: NCSA
+  license_file: LICENSE.TXT
+  summary: Development headers and libraries for Clang
+
+extra:
+  recipe-maintainers:
+    - inducer
+    - isuruf
+    - jakirkham
+    - mattwala
+    - SylvainCorlay

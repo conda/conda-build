@@ -338,3 +338,12 @@ def test_loops_do_not_remove_earlier_packages(testing_config):
 
     api.build(recipe, config=testing_config)
     assert len(output_files) == len(glob(os.path.join(testing_config.croot, testing_config.host_subdir, "*.tar.bz2")))
+
+
+# regression test for https://github.com/conda/conda-build/issues/3248
+def test_build_string_does_not_incorrectly_add_hash(testing_config):
+    recipe = os.path.join(subpackage_dir, '_build_string_with_variant')
+    output_files = api.get_output_file_paths(recipe, config=testing_config)
+    assert len(output_files) == 4
+    assert any("clang_variant-1.0-cling.tar.bz2" in f for f in output_files)
+    assert any("clang_variant-1.0-default.tar.bz2" in f for f in output_files)
