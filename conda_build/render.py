@@ -60,7 +60,12 @@ def bldpkg_path(m):
     Returns path to built package's tarball given its ``Metadata``.
     '''
     subdir = 'noarch' if m.noarch or m.noarch_python else m.config.host_subdir
-    return os.path.join(m.config.output_folder, subdir, '%s%s' % (m.dist(), CONDA_TARBALL_EXTENSIONS[0]))
+
+    if not hasattr(m, 'type') or m.type == "conda":
+        path = os.path.join(m.config.output_folder, subdir, '%s%s' % (m.dist(), CONDA_TARBALL_EXTENSIONS[0]))
+    else:
+        path = '{} file for {} in: {} '.format(m.type, m.name(), os.path.join(m.config.output_folder, subdir))
+    return path
 
 
 def actions_to_pins(actions):
@@ -565,8 +570,11 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
             rendered_metadata.final = False
             log = utils.get_logger(__name__)
             log.warn("Returning non-final recipe for {}; one or more dependencies "
-                    "was unsatisfiable:\nBuild: {}\nHost: {}".format(rendered_metadata.dist(),
-                                                                    build_unsat, host_unsat))
+                    "was unsatisfiable:".format(rendered_metadata.dist()))
+            if build_unsat:
+                log.warn("Build: {}".format(build_unsat))
+            if host_unsat:
+                log.warn("Host: {}".format(host_unsat))
         else:
             rendered_metadata.final = True
     return rendered_metadata
@@ -770,10 +778,8 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
         rendered_metadata = distribute_variants(m, variants,
                                     permit_unsatisfiable_variants=permit_unsatisfiable_variants,
                                     allow_no_other_outputs=True, bypass_env_check=bypass_env_check)
-
     if need_cleanup:
         utils.rm_rf(recipe_dir)
-
     return rendered_metadata
 
 

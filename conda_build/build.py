@@ -1651,7 +1651,8 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                     #    can be different from the env for the top level build.
                     with utils.path_prepended(m.config.build_prefix):
                         env = environ.get_dict(m=m)
-                    newly_built_packages = bundlers[output_d.get('type', 'conda')](output_d, m, env, stats)
+                    pkg_type = 'conda' if not hasattr(m, 'type') else m.type
+                    newly_built_packages = bundlers[pkg_type](output_d, m, env, stats)
                     # warn about overlapping files.
                     if 'checksums' in output_d:
                         for file, csum in output_d['checksums'].items():

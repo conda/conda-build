@@ -50,7 +50,6 @@ def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variant
                     permit_undefined_jinja=not finalize,
                     bypass_env_check=bypass_env_check):
                 if not om.skip() or not config.trim_skip:
-                    # only show conda packages right now
                     if 'type' not in od or od['type'] == 'conda':
                         if finalize and not om.final:
                             try:
@@ -62,12 +61,19 @@ def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variant
 
                         # remove outputs section from output objects for simplicity
                         if not om.path and om.meta.get('outputs'):
+                            om.parent_outputs = om.meta['outputs']
                             del om.meta['outputs']
 
                         output_metas[om.dist(), om.config.variant.get('target_platform'),
                                     tuple((var, om.config.variant[var])
                                         for var in om.get_used_vars())] = \
                             ((om, download, render_in_env))
+                    else:
+                        output_metas["{}: {}".format(om.type, om.name()), om.config.variant.get('target_platform'),
+                                    tuple((var, om.config.variant[var])
+                                        for var in om.get_used_vars())] = \
+                            ((om, download, render_in_env))
+
     return list(output_metas.values())
 
 

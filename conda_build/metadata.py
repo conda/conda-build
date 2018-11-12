@@ -1258,10 +1258,16 @@ class MetaData(object):
         return hash_
 
     def build_id(self):
-        manual_build_string = re.search("\s*string:", self.extract_package_and_build_text())
+        manual_build_string = self.get_value('build/string')
+        # we need the raw recipe for this metadata (possibly an output), so that we can say whether
+        #    PKG_HASH is used for anything.
+        raw_recipe_text = self.extract_package_and_build_text()
+        if not raw_recipe_text:
+            raise RuntimeError("Couldn't extract raw recipe text for {} output".format(self.name()))
+        raw_manual_build_string = re.search("\s*string:", raw_recipe_text)
         # default; build/string not set
-        if not manual_build_string or re.findall('h\{\{\s*PKG_HASH\s*\}\}',
-                                                 manual_build_string.string):
+        if not manual_build_string or (raw_manual_build_string and
+                                       re.findall('h\{\{\s*PKG_HASH\s*\}\}', raw_manual_build_string.string)):
             out = build_string_from_metadata(self)
             if self.config.filename_hashing and self.final:
                 hash_ = self.hash_dependencies()
@@ -1278,8 +1284,8 @@ class MetaData(object):
                     out = re.sub('h[0-9a-f]{%s}' % self.config.hash_length, hash_, out)
         # user setting their own build string.  Don't modify it.
         else:
-            out = self.get_value('build/string')
-            check_bad_chrs(out, 'build/string')
+            check_bad_chrs(manual_build_string, 'build/string')
+            out = manual_build_string
         return out
 
     def dist(self):
@@ -1610,7 +1616,7 @@ class MetaData(object):
         if meta_path:
             recipe_text = read_meta_file(meta_path)
             if is_output and not force_top_level:
-                recipe_text = self.extract_single_output_text(self.name())
+                recipe_text = self.extract_single_output_text(self.name(), getattr(self, 'type', None))
         else:
             from conda_build.render import output_yaml
             recipe_text = output_yaml(self)
@@ -1644,17 +1650,29 @@ class MetaData(object):
     def extract_package_and_build_text(self):
         return self.get_recipe_text(r'(^.*?)(?=^requirements:|^test:|^extra:|^about:|^outputs:|\Z)')
 
-    def extract_single_output_text(self, output_name, apply_selectors=True):
+    def extract_single_output_text(self, output_name, output_type, apply_selectors=True):
         # first, need to figure out which index in our list of outputs the name matches.
         #    We have to do this on rendered data, because templates can be used in output names
         recipe_text = self.extract_outputs_text(apply_selectors=apply_selectors)
         output_matches = output_re.findall(recipe_text)
+        outputs = self.meta.get('outputs') or (self.parent_outputs if hasattr(self, 'parent_outputs') else None)
+        if not outputs:
+            outputs = [{'name': self.name()}]
+
         try:
-            output_index = [out.get('name') for out in
-                            self.meta.get('outputs', [])].index(output_name)
+            if output_type:
+                output_tuples = [(out.get('name', self.name()), out.get('type', 'conda')) for out in outputs]
+                output_index = output_tuples.index((output_name, output_type))
+            else:
+                output_tuples = [out.get('name', self.name()) for out in outputs]
+                output_index = output_tuples.index(output_name)
             output = output_matches[output_index] if output_matches else ''
         except ValueError:
-            output = ''
+            if (not self.path and self.meta.get('extra', {}).get('parent_recipe')):
+                utils.get_logger(__name__).warn("Didn't match any output in raw metadata.  Target value was: {}".format(output_name))
+                output = ''
+            else:
+                output = self.name()
         return output
 
     @property
@@ -1710,6 +1728,7 @@ class MetaData(object):
         new.config = self.config.copy()
         new.config.variant = copy.deepcopy(self.config.variant)
         new.meta = copy.deepcopy(self.meta)
+        new.type = getattr(self, 'type', 'conda')
         return new
 
     @property
@@ -1811,9 +1830,7 @@ class MetaData(object):
             if self.name() != output.get('name') or (output.get('script') or output.get('files')):
                 self.reconcile_metadata_with_output_dict(output_metadata, output)
 
-            if 'type' in output and output['type'] != 'conda':
-                name = output.get('name', self.name()) + '_' + output['type']
-                output_metadata.meta['package']['name'] = name
+            output_metadata.type = output.get('type', 'conda')
 
             if 'name' in output:
                 # since we are copying reqs from the top-level package, which
@@ -2109,14 +2126,14 @@ class MetaData(object):
             reqs_text = recipe_text
         else:
             if is_output and not force_top_level:
-                recipe_text = self.extract_single_output_text(self.name(),
+                recipe_text = self.extract_single_output_text(self.name(), getattr(self, 'type', None),
                                 apply_selectors=apply_selectors)
             else:
                 recipe_text = (self.get_recipe_text(force_top_level=force_top_level,
                                                     apply_selectors=apply_selectors).replace(
                                     self.extract_outputs_text(
                                         apply_selectors=apply_selectors).strip(), '') +
-                            self.extract_single_output_text(self.name(),
+                            self.extract_single_output_text(self.name(), getattr(self, 'type', None),
                                                             apply_selectors=apply_selectors))
             reqs_re = re.compile(r"requirements:.+?(?=^\w|\Z|^\s+-\s(?=name|type))",
                                  flags=re.M | re.S)
