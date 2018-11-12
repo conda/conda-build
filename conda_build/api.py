@@ -395,10 +395,19 @@ def update_index(dir_paths, config=None, force=False, check_md5=False, remove=Fa
 
 
 def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False, output_id=None, **kwargs):
+    import os
     from fnmatch import fnmatch
     from conda_build.conda_interface import string_types
+    from conda_build.environ import create_env
+    from conda_build.conda_interface import CONDA_TARBALL_EXTENSIONS, subdir
+    config = Config()
     if isinstance(recipe_or_package_path_or_metadata_tuples, string_types):
-        metadata_tuples = render(recipe_or_package_path_or_metadata_tuples, **kwargs)
+        if os.path.splitext(recipe_or_package_path_or_metadata_tuples)[1] in CONDA_TARBALL_EXTENSIONS:
+            metadata_tuples = render(recipe_or_package_path_or_metadata_tuples, **kwargs)
+        else:
+            metadata_tuples = render(recipe_or_package_path_or_metadata_tuples, **kwargs)
+    else:
+        metadata_tuples = recipe_or_package_path_or_metadata_tuples
     outputs = get_output_file_paths([_[2] for _ in metadata_tuples])
     if output_id:
         matched_outputs = [fnmatch(_, output_id) for _ in outputs]
@@ -406,14 +415,19 @@ def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False, outp
             raise ValueError("Specified --output-id matches more than one output ({}).  Please refine your output id so that only "
                   "a single output is found.".format(matched_outputs))
         elif not matched_outputs:
-            print()
             raise ValueError("Specified --output-id did not match any outputs.  Available outputs are: {} Please check it and try again".format(outputs))
-        outputs = matched_outputs
     if len(outputs) > 1:
         raise ValueError("More than one output found for this recipe ({}).  Please use the --output-id argument to filter down "
                          "to a single output.".format(outputs))
+
+    target_metadata = metadata_tuples[outputs.index(matched_outputs[0])][2]
+    if not path:
+        path = os.path.join(config.croot, "debug_{}_{}".format())
+
     # create the envs
     if test:
-        create_env
+        create_env(prefix=os.path.join(path, os.path.basename(config.test_prefix)),
+                   specs_or_actions=target_metadata.get_test_deps(), env=None, config=config, subdir=subdir)
     else:
         pass
+        # create_build_envs()
