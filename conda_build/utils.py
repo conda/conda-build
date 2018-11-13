@@ -168,6 +168,7 @@ class DummyPsutilProcess(object):
     def children(self, *args, **kwargs):
         return []
 
+
 def _setup_rewrite_pipe(env):
     """Rewrite values of env variables back to $ENV in stdout
 
