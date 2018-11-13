@@ -395,39 +395,77 @@ def update_index(dir_paths, config=None, force=False, check_md5=False, remove=Fa
 
 
 def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False, output_id=None, **kwargs):
-    import os
+    """Set up either build/host or test environments, leaving you with a quick tool to debug
+    your package's build or test phase.
+    """
     from fnmatch import fnmatch
+    import os
+    import time
     from conda_build.conda_interface import string_types
-    from conda_build.environ import create_env
-    from conda_build.conda_interface import CONDA_TARBALL_EXTENSIONS, subdir
-    config = Config()
+    from conda_build.build import test as run_test, build as run_build
+    from conda_build.utils import CONDA_TARBALL_EXTENSIONS, on_win
+    is_package = False
+    default_config = Config()
+    args = {"set_build_id": False}
+    if not path:
+        path = os.path.join(default_config.croot, "debug_{}".format(int(time.time() * 1000)))
+    config = Config(croot=path, **args)
+
+    metadata_tuples = []
+
     if isinstance(recipe_or_package_path_or_metadata_tuples, string_types):
-        if os.path.splitext(recipe_or_package_path_or_metadata_tuples)[1] in CONDA_TARBALL_EXTENSIONS:
-            metadata_tuples = render(recipe_or_package_path_or_metadata_tuples, **kwargs)
+        if not any(os.path.splitext(recipe_or_package_path_or_metadata_tuples)[1] in ext for ext in CONDA_TARBALL_EXTENSIONS):
+            metadata_tuples = render(recipe_or_package_path_or_metadata_tuples, config=config, **kwargs)
         else:
-            metadata_tuples = render(recipe_or_package_path_or_metadata_tuples, **kwargs)
+            # this is a package, we only support testing
+            test = True
+            is_package = True
     else:
         metadata_tuples = recipe_or_package_path_or_metadata_tuples
-    outputs = get_output_file_paths([_[2] for _ in metadata_tuples])
-    if output_id:
-        matched_outputs = [fnmatch(_, output_id) for _ in outputs]
-        if len(matched_outputs) > 1:
-            raise ValueError("Specified --output-id matches more than one output ({}).  Please refine your output id so that only "
-                  "a single output is found.".format(matched_outputs))
-        elif not matched_outputs:
-            raise ValueError("Specified --output-id did not match any outputs.  Available outputs are: {} Please check it and try again".format(outputs))
-    if len(outputs) > 1:
-        raise ValueError("More than one output found for this recipe ({}).  Please use the --output-id argument to filter down "
-                         "to a single output.".format(outputs))
 
-    target_metadata = metadata_tuples[outputs.index(matched_outputs[0])][2]
-    if not path:
-        path = os.path.join(config.croot, "debug_{}_{}".format())
+    if metadata_tuples:
+        outputs = get_output_file_paths(metadata_tuples)
+        if output_id:
+            matched_outputs = [fnmatch(_, output_id) for _ in outputs]
+            if len(matched_outputs) > 1:
+                raise ValueError("Specified --output-id matches more than one output ({}).  Please refine your output id so that only "
+                    "a single output is found.".format(matched_outputs))
+            elif not matched_outputs:
+                raise ValueError("Specified --output-id did not match any outputs.  Available outputs are: {} Please check it and try again".format(outputs))
+        if len(outputs) > 1:
+            raise ValueError("More than one output found for this recipe ({}).  Please use the --output-id argument to filter down "
+                            "to a single output.".format(outputs))
+        else:
+            matched_outputs = outputs
 
-    # create the envs
-    if test:
-        create_env(prefix=os.path.join(path, os.path.basename(config.test_prefix)),
-                   specs_or_actions=target_metadata.get_test_deps(), env=None, config=config, subdir=subdir)
+        target_metadata = metadata_tuples[outputs.index(matched_outputs[0])][0]
+
+    ext = ".bat" if on_win else ".sh"
+    if not test:
+        run_build(target_metadata, stats={}, provision_only=True)
+        activation_file = "build_env_setup" + ext
+        print("#" * 80)
+        print("Build and/or host environments created for debugging.  To enter a debugging environment:\n")
+        activation_string = "cd {work_dir} && {source} {activation_file}\n".format(
+            work_dir=target_metadata.config.work_dir,
+            source="call" if on_win else "source",
+            activation_file=os.path.join(target_metadata.config.work_dir, activation_file))
+        print(activation_string)
     else:
-        pass
-        # create_build_envs()
+        if not is_package:
+            raise ValueError("Debugging for test mode is only supported for package files that already exist. "
+                             "Please build your package first, then use it to create the debugging environment.")
+        else:
+            test_input = recipe_or_package_path_or_metadata_tuples
+        # use the package to create an env and extract the test files.  Stop short of running the tests.
+        # tell people what steps to take next
+        run_test(test_input, config=config, stats={}, provision_only=True)
+        activation_file = os.path.join(config.test_dir, "conda_test_env_vars" + ext)
+        print("#" * 80)
+        print("Test environment created for debugging.  To enter a debugging environment:\n")
+        activation_string = "cd {work_dir} && {source} {activation_file}\n".format(
+            work_dir=config.test_dir,
+            source="call" if on_win else "source",
+            activation_file=os.path.join(config.test_dir, activation_file))
+        print(activation_string)
+    return activation_string

@@ -276,13 +276,15 @@ def write_build_scripts(m, env, bld_bat):
         if m.config.activate and m.name() != 'conda':
             _write_bat_activation_text(fo, m)
     # bld_bat may have been generated elsewhere with contents of build/script
+    work_script = join(m.config.work_dir, 'bld.bat')
     if os.path.isfile(bld_bat):
         with open(bld_bat) as fi:
             data = fi.read()
-        with open(join(m.config.work_dir, 'bld.bat'), 'w') as fo:
+        with open(work_script, 'w') as fo:
             fo.write("call {}".format())
             fo.write("REM ===== end generated header =====\n")
             fo.write(data)
+    return work_script, env_script
 
 
 def build(m, bld_bat, stats):

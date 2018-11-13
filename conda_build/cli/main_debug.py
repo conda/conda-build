@@ -7,9 +7,11 @@
 from __future__ import absolute_import, division, print_function
 
 import logging
+import os
 import sys
 
 from conda_build import api
+from conda_build.utils import CONDA_TARBALL_EXTENSIONS
 # we extend the render parser because we basically need to render the recipe before
 #       we can say what env to create.  This is not really true for debugging tests, but meh...
 from conda_build.cli.main_render import get_render_parser
@@ -20,7 +22,6 @@ logging.basicConfig(level=logging.INFO)
 
 
 def parse_args(args):
-
     p = get_render_parser()
     p.description = """
 
@@ -57,9 +58,16 @@ Set up environments and activation scripts to debug your build or test.
 
 
 def execute(args):
-    metadata_tuples = render_execute(args, print_results=False)
+    p, _args = parse_args(args)
     try:
-        api.debug(metadata_tuples, **args.__dict__)
+        if not any(os.path.splitext(_args.recipe_or_package_file_path)[1] in ext for ext in CONDA_TARBALL_EXTENSIONS):
+            if _args.test:
+                raise ValueError("Error: debugging for test mode is only supported for package files that already exist. "
+                                "Please build your package first, then use it to create the debugging environment.")
+            thing_to_debug = render_execute(args, print_results=False)
+        else:
+            thing_to_debug = _args.recipe_or_package_file_path
+        api.debug(thing_to_debug, **_args.__dict__)
     except ValueError as e:
         print(str(e))
         sys.exit(1)
