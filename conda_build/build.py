@@ -1357,7 +1357,15 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
             return default_return
 
         if not provision_only:
-            print("BUILD START:", [os.path.basename(pkg) for pkg in package_locations])
+            printed_fns = []
+            for pkg in package_locations:
+                if (os.path.splitext(pkg)[1] and any(
+                        os.path.splitext(pkg)[1] in ext for ext in CONDA_TARBALL_EXTENSIONS)):
+                    printed_fns.append(os.path.basename(pkg))
+                else:
+                    printed_fns.append(pkg)
+            print("BUILD START:", printed_fns)
+
         environ.remove_existing_packages([m.config.bldpkgs_dir],
                 [pkg for pkg in package_locations if pkg not in built_packages], m.config)
 
@@ -1461,9 +1469,6 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                     if not provision_only:
                         cmd = [shell_path] + (['-x'] if m.config.debug else []) + ['-e', work_file]
 
-                        # this should raise if any problems occur while building
-                        utils.check_call_env(cmd, env=env, cwd=src_dir, stats=build_stats)
-                        utils.remove_pycache_from_scripts(m.config.host_prefix)
                         # rewrite long paths in stdout back to their env variables
                         if m.config.debug:
                             rewrite_env = None

@@ -64,7 +64,7 @@ def bldpkg_path(m):
     if not hasattr(m, 'type') or m.type == "conda":
         path = os.path.join(m.config.output_folder, subdir, '%s%s' % (m.dist(), CONDA_TARBALL_EXTENSIONS[0]))
     else:
-        path = '{} file for {} in: {} '.format(m.type, m.name(), os.path.join(m.config.output_folder, subdir))
+        path = '{} file for {} in: {}'.format(m.type, m.name(), os.path.join(m.config.output_folder, subdir))
     return path
 
 
