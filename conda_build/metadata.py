@@ -1538,10 +1538,11 @@ class MetaData(object):
     @property
     def uses_setup_py_in_meta(self):
         meta_text = ''
-        meta_path = (self.meta_path or
-                     self.meta.get('extra', {}).get('parent_recipe', {}).get('path'))
+        meta_path = self.meta_path or self.meta.get('extra', {}).get('parent_recipe', {}).get('path', '')
         if meta_path:
-            with open(self.meta_path, 'rb') as f:
+            if os.path.basename(meta_path) != "meta.yaml":
+                os.path.join(meta_path, 'meta.yaml')
+            with open(meta_path, 'rb') as f:
                 meta_text = UnicodeDammit(f.read()).unicode_markup
         return u"load_setup_py_data" in meta_text or u"load_setuptools" in meta_text
 
