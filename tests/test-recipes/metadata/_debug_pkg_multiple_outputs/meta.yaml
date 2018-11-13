@@ -1,0 +1,39 @@
+package:
+  name: test_debug_pkg_multiple_outputs
+  version: 1.0
+
+outputs:
+  - name: output1
+    build:
+      script: echo "weeee"
+      noarch: generic
+    requirements:
+      build:
+        - zlib
+      host:
+        - jpeg
+      run:
+        - bzip2
+
+    test:
+      requires:
+        - xz
+      commands:
+        - echo "steve"
+  - name: output2
+    build:
+      script: echo "weeee"
+      noarch: generic
+    requirements:
+      build:
+        - zlib
+      host:
+        - jpeg
+      run:
+        - bzip2
+
+    test:
+      requires:
+        - xz
+      commands:
+        - echo "steve"

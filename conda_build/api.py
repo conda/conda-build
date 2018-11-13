@@ -394,7 +394,7 @@ def update_index(dir_paths, config=None, force=False, check_md5=False, remove=Fa
                      subdirs=ensure_list(subdir))
 
 
-def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False, output_id=None, **kwargs):
+def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False, output_id=None, config=None, **kwargs):
     """Set up either build/host or test environments, leaving you with a quick tool to debug
     your package's build or test phase.
     """
@@ -405,16 +405,17 @@ def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False, outp
     from conda_build.build import test as run_test, build as run_build
     from conda_build.utils import CONDA_TARBALL_EXTENSIONS, on_win
     is_package = False
-    default_config = Config()
+    default_config = get_or_merge_config(config, **kwargs)
     args = {"set_build_id": False}
     if not path:
         path = os.path.join(default_config.croot, "debug_{}".format(int(time.time() * 1000)))
-    config = Config(croot=path, **args)
+    config = get_or_merge_config(config=default_config, croot=path, **args)
 
     metadata_tuples = []
 
     if isinstance(recipe_or_package_path_or_metadata_tuples, string_types):
-        if not any(os.path.splitext(recipe_or_package_path_or_metadata_tuples)[1] in ext for ext in CONDA_TARBALL_EXTENSIONS):
+        ext = os.path.splitext(recipe_or_package_path_or_metadata_tuples)[1]
+        if not ext or not any(ext in _ for _ in CONDA_TARBALL_EXTENSIONS):
             metadata_tuples = render(recipe_or_package_path_or_metadata_tuples, config=config, **kwargs)
         else:
             # this is a package, we only support testing
@@ -425,14 +426,15 @@ def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False, outp
 
     if metadata_tuples:
         outputs = get_output_file_paths(metadata_tuples)
+        matched_outputs = outputs
         if output_id:
-            matched_outputs = [fnmatch(_, output_id) for _ in outputs]
+            matched_outputs = [_ for _ in outputs if fnmatch(os.path.basename(_).rsplit("-", 2)[0], output_id)]
             if len(matched_outputs) > 1:
                 raise ValueError("Specified --output-id matches more than one output ({}).  Please refine your output id so that only "
                     "a single output is found.".format(matched_outputs))
             elif not matched_outputs:
                 raise ValueError("Specified --output-id did not match any outputs.  Available outputs are: {} Please check it and try again".format(outputs))
-        if len(outputs) > 1:
+        if len(matched_outputs) > 1:
             raise ValueError("More than one output found for this recipe ({}).  Please use the --output-id argument to filter down "
                             "to a single output.".format(outputs))
         else:
