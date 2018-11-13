@@ -598,13 +598,13 @@ def _augment_repodata(subdirs, patched_repodata, patch_instructions):
                     info['depends2'] = [_add_namespace_to_spec(fn, info, dep, namemap, missing_dependencies, subdir)
                                         for dep in info['depends'] if dep.split()[0] not in constrains_names]
                 except CondaError as e:
-                    log.warn("Encountered a file that conda does not like.  Error was: {}.  Skipping this one...".format(fn))
+                    log.warn("Encountered a file ({}) that conda does not like.  Error was: {}.  Skipping this one...".format(fn, e))
             else:
                 try:
                     info['depends2'] = [_add_namespace_to_spec(fn, info, dep, namemap, missing_dependencies, subdir)
                                         for dep in info['depends']]
                 except CondaError as e:
-                    log.warn("Encountered a file that conda does not like.  Error was: {}.  Skipping this one...".format(fn))
+                    log.warn("Encountered a file ({}) that conda does not like.  Error was: {}.  Skipping this one...".format(fn, e))
             # info['build_string'] =_make_build_string(info["build"], info["build_number"])
         repodata["removed"] = patch_instructions[subdir].get("remove", [])
         augmented_repodata[subdir] = repodata
