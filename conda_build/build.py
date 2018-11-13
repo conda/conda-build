@@ -2110,7 +2110,7 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
         if shell_files:
             for shell_file in shell_files:
                 if utils.on_win:
-                    if os.path.splitext(shell_file) == ".bat":
+                    if os.path.splitext(shell_file)[1].lower() == ".bat":
                         tf.write('call "{test_file}"\n'.format(test_file=shell_file))
                         tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
                     else:
