@@ -182,7 +182,7 @@ def test_create_info_files_json_no_inodes(testing_workdir, testing_metadata):
 
 
 def test_rewrite_output(testing_workdir, testing_config, capsys):
-    api.build(os.path.join(metadata_dir, "rewrite_env"), config=testing_config)
+    api.build(os.path.join(metadata_dir, "_rewrite_env"), config=testing_config)
     captured = capsys.readouterr()
     stdout = captured.out
     if sys.platform == 'win32':
