@@ -1,0 +1,2 @@
+echo $PREFIX
+echo $PWD

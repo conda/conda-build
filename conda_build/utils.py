@@ -192,7 +192,6 @@ def _setup_rewrite_pipe(env):
     else:
         replacement_t = '${}'
 
-
     def rewriter():
         while True:
             line = r.readline()

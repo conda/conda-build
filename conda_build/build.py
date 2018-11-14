@@ -2003,6 +2003,10 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
     if utils.on_win:
         env['PATH'] = metadata.config.test_prefix + os.pathsep + env['PATH']
 
+    env['PREFIX'] = metadata.config.test_prefix
+    if 'BUILD_PREFIX' in env:
+        del env['BUILD_PREFIX']
+
     suffix = "bat" if utils.on_win else "sh"
     test_script = join(metadata.config.test_dir,
                         "conda_test_runner.{suffix}".format(suffix=suffix))
@@ -2137,7 +2141,16 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
         cmd = [shell_path] + (['-x'] if metadata.config.debug else []) + ['-e', test_script]
     try:
         test_stats = {}
-        utils.check_call_env(cmd, env=env, cwd=metadata.config.test_dir, stats=test_stats)
+        # rewrite long paths in stdout back to their env variables
+        if metadata.config.debug:
+            rewrite_env = None
+        else:
+            rewrite_env = {
+                k: env[k]
+                for k in ['PREFIX', 'SRC_DIR'] if k in env
+            }
+            print("Rewriting env in output: %s" % pprint.pformat(rewrite_env))
+        utils.check_call_env(cmd, env=env, cwd=metadata.config.test_dir, stats=test_stats, rewrite_stdout_env=rewrite_env)
         log_stats(test_stats, "testing {}".format(metadata.name()))
         if stats is not None and metadata.config.variants:
             stats[stats_key(metadata, 'test_{}'.format(metadata.name()))] = test_stats
