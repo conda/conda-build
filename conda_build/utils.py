@@ -187,6 +187,11 @@ def _setup_rewrite_pipe(env):
 
     r_fd, w_fd = os.pipe()
     r = os.fdopen(r_fd, 'rt')
+    if sys.platform == 'win32':
+        replacement_t = '%{}%'
+    else:
+        replacement_t = '${}'
+
 
     def rewriter():
         while True:
@@ -197,7 +202,7 @@ def _setup_rewrite_pipe(env):
                 os.close(w_fd)
                 return
             for s, key in replacements.items():
-                line = line.replace(s, '$' + key)
+                line = line.replace(s, replacement_t.format(key))
             sys.stdout.write(line)
 
     t = Thread(target=rewriter)

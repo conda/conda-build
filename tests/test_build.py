@@ -185,7 +185,13 @@ def test_rewrite_output(testing_workdir, testing_config, capsys):
     api.build(os.path.join(metadata_dir, "rewrite_env"), config=testing_config)
     captured = capsys.readouterr()
     stdout = captured.out
-    assert "PREFIX=$PREFIX" in stdout
-    assert "LIBDIR=$PREFIX/lib" in stdout
-    assert "PWD=$SRC_DIR" in stdout
-    assert "BUILD_PREFIX=$BUILD_PREFIX" in stdout
+    if sys.platform == 'win32':
+        assert "PREFIX=%PREFIX%" in stdout
+        assert "LIBDIR=%PREFIX%\lib" in stdout
+        assert "PWD=%SRC_DIR%" in stdout
+        assert "BUILD_PREFIX=%BUILD_PREFIX%" in stdout
+    else:
+        assert "PREFIX=$PREFIX" in stdout
+        assert "LIBDIR=$PREFIX/lib" in stdout
+        assert "PWD=$SRC_DIR" in stdout
+        assert "BUILD_PREFIX=$BUILD_PREFIX" in stdout
