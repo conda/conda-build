@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import os
+import pprint
 import sys
 from os.path import isdir, join, dirname, isfile
 
@@ -313,6 +314,15 @@ def build(m, bld_bat, stats):
             fo.write(data)
 
         cmd = ['cmd.exe', '/c', 'bld.bat']
-        check_call_env(cmd, cwd=src_dir, stats=stats)
+        # rewrite long paths in stdout back to their env variables
+        if m.config.debug:
+            rewrite_env = None
+        else:
+            rewrite_env = {
+                k: env[k]
+                for k in ['PREFIX', 'BUILD_PREFIX', 'SRC_DIR'] if k in env
+            }
+            print("Rewriting env in output: %s" % pprint.pformat(rewrite_env))
+        check_call_env(cmd, cwd=src_dir, stats=stats, rewrite_stdout_env=rewrite_env)
 
     fix_staged_scripts(join(m.config.host_prefix, 'Scripts'), config=m.config)

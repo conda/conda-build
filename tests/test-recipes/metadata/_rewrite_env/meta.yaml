@@ -1,0 +1,8 @@
+package:
+  name: conda-build-test-rewrite-env
+  version: 1.0
+
+requirements:
+  build:
+    - zlib
+  host: []
