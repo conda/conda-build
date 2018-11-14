@@ -182,8 +182,7 @@ def test_create_info_files_json_no_inodes(testing_workdir, testing_metadata):
 
 
 def test_rewrite_output(testing_workdir, testing_config, capsys):
-    m = api.render(os.path.join(metadata_dir, "rewrite_env"), config=testing_config)[0][0]
-    build.build(m, stats=None)
+    api.build(os.path.join(metadata_dir, "rewrite_env"), config=testing_config)
     captured = capsys.readouterr()
     stdout = captured.out
     assert "PREFIX=$PREFIX" in stdout
