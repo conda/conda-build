@@ -90,7 +90,7 @@ def test_debug_package_custom_path(testing_workdir):
 
 
 def test_specific_output():
-    activation_string = api.debug(ambiguous_recipe_path, output_id="output1")
+    activation_string = api.debug(ambiguous_recipe_path, output_id="output1*")
     _, work_dir, _, src_command, env_activation_script = activation_string.split()
     shell_cmd.append(' '.join((src_command, env_activation_script)))
     subprocess.check_call(shell_cmd, cwd=work_dir)
