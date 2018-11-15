@@ -464,20 +464,32 @@ def assert_relative_osx(path, prefix):
         assert not name.startswith(prefix), path
 
 
-def is_library_package(pkg, prefix):
+def determine_package_nature(pkg, prefix):
+    has_dsos = False
+    run_exports = None
+    lib_prefix = pkg.name.startswith('lib')
     codefiles = get_package_obj_files(pkg, prefix)
     if any([[f for ext in ('.dylib', '.so', '.dll') if ext in f] for f in codefiles]):
-        run_exports = None
-        if pkg.name.startswith('lib'):
-            return True
-        for pkgs_dir in pkgs_dirs:
-            test_filename = os.path.join(pkgs_dir, pkg.fn)
-            if os.path.exists(test_filename):
-                run_exports = get_run_exports(test_filename)
-                break
-        if run_exports:
-            return True
-    return False
+        has_dsos = True
+    for pkgs_dir in pkgs_dirs:
+        test_filename = os.path.join(pkgs_dir, pkg.fn)
+        if os.path.exists(test_filename):
+            run_exports = get_run_exports(test_filename)
+            break
+    return (has_dsos, run_exports, lib_prefix)
+
+
+def library_nature(pkg, prefix):
+    '''
+    Result :: "non-library", "dso library", "run-exports library"
+    .. in that order, i.e. if have both dsos and run_exports, it's a run_exports_library.
+    '''
+    has_dsos, run_exports, lib_prefix = determine_package_nature(pkg, prefix)
+    if run_exports:
+        return "run-exports library"
+    elif has_dsos:
+        return "dso library"
+    return "non-library"
 
 
 def dists_from_names(names, prefix):
@@ -491,12 +503,12 @@ def dists_from_names(names, prefix):
 
 
 def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdir,
-                      ignore_run_exports,
-                      requirements_run, requirements_build, requirements_host,
-					  run_prefix, build_prefix,
-					  missing_dso_whitelist, runpath_whitelist,
-					  error_overlinking, error_overdepending, verbose,
-                      exception_on_error, files):
+                           ignore_run_exports,
+                           requirements_run, requirements_build, requirements_host,
+                           run_prefix, build_prefix,
+                           missing_dso_whitelist, runpath_whitelist,
+                           error_overlinking, error_overdepending, verbose,
+                           exception_on_error, files):
 
     def print_msg(errors, text):
         if text.startswith("  ERROR"):
@@ -516,16 +528,16 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     ignore_list = utils.ensure_list(ignore_run_exports)
     if subdir.startswith('linux'):
         ignore_list.append('libgcc-ng')
+    package_nature = { package: library_nature(package, run_prefix) for package in packages }
     lib_packages = set([package for package in packages
                         if package.quad[0] not in ignore_list and
-                        is_library_package(package, run_prefix)])
+                        package_nature[package] != 'non-library'])
     # The last package of requirements_run is this package itself, add it as being used
     # incase it qualifies as a library package.
-    if packages[-1] in lib_packages:
+    if len(packages) and packages[-1] in lib_packages:
         lib_packages_used = set((packages[-1],))
     else:
         lib_packages_used = set()
-
 
     vendoring_record = dict()
     pkg_vendoring_name = pkg_name
@@ -605,7 +617,6 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                          '**/ntdll.dll',
                          '**/msvcrt.dll',
                          '**/api-ms-win*.dll']
-
 
     # LIEF is very slow at decoding some DSOs, so we only let it look at ones that we link to (and ones we
     # have built).
@@ -825,12 +836,13 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     if lib_packages_used != lib_packages:
         warn_prelude = "WARNING ({})".format(pkg_name)
         err_prelude = "  ERROR ({})".format(pkg_name)
-        msg_prelude = err_prelude if error_overdepending else warn_prelude
         for lib in lib_packages - lib_packages_used:
-            print_msg(errors, "{}: lib package {} in requirements/run but it is not used "
+            msg_prelude = err_prelude if (error_overdepending and
+                                          package_nature[lib] == 'run-exports library') else warn_prelude
+            print_msg(errors, "{}: {} package {} in requirements/run but it is not used "
                               "(i.e. it is overdepending or perhaps statically linked? "
                               "If that is what you want then add it to `build/ignore_run_exports`)"
-                              .format(msg_prelude, lib))
+                              .format(msg_prelude, package_nature[lib], lib))
     if len(errors):
         if exception_on_error:
             overlinking_errors = [error for error in errors if "overlinking" in error]
