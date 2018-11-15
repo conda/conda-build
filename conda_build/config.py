@@ -111,7 +111,7 @@ def _get_default_settings():
                                                            'false').lower() == 'true'),
 
             Setting('error_overdepending', cc_conda_build.get('error_overdepending',
-                                                           'false').lower() == 'true'),
+                                                              'false').lower() == 'true'),
 
             Setting('index', None),
             # support legacy recipes where only build is specified and expected to be the
