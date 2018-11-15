@@ -456,7 +456,7 @@ def mk_relative_linux(f, prefix, rpaths=('lib',)):
     call([patchelf, '--force-rpath', '--set-rpath', rpath, elf])
 
 
-def assert_relative_osx(path, prefix):
+def assert_relative_osx(path, build_prefix, prefix):
     for name in macho.get_dylibs(path):
         assert not name.startswith(prefix), path
 
@@ -536,7 +536,6 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     else:
         lib_packages_used = set()
 
-
     vendoring_record = dict()
     pkg_vendoring_name = pkg_name
     pkg_vendoring_version = pkg_version
@@ -615,7 +614,6 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                          '**/ntdll.dll',
                          '**/msvcrt.dll',
                          '**/api-ms-win*.dll']
-
 
     # LIEF is very slow at decoding some DSOs, so we only let it look at ones that we link to (and ones we
     # have built).
