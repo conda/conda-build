@@ -11,7 +11,7 @@ import os
 import sys
 
 from conda_build import api
-from conda_build.utils import CONDA_TARBALL_EXTENSIONS
+from conda_build.utils import CONDA_TARBALL_EXTENSIONS, on_win
 # we extend the render parser because we basically need to render the recipe before
 #       we can say what env to create.  This is not really true for debugging tests, but meh...
 from conda_build.cli.main_render import get_render_parser
@@ -74,6 +74,14 @@ def execute(args):
             else:
                 print("Build and/or host environments created for debugging.  To enter a debugging environment:\n")
         print(activation_string)
+        if not _args.activate_string_only:
+            if test:
+                test_file = "conda_test_runner.sh" if on_win else "conda_test_runner.sh"
+                print("To run your tests, you might want to start with running the {} file.".format(test_file))
+            else:
+                build_file = "bld.bat" if on_win else "conda_build.sh"
+                print("To run your build, you might want to start with running the {} file.".format(build_file))
+            print("#" * 80)
 
     except ValueError as e:
         print(str(e))
