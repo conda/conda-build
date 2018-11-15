@@ -1432,9 +1432,11 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
         #    dependening on the source.
         src_dir = m.config.work_dir
         if isdir(src_dir):
-            print("source tree in:", src_dir)
+            if m.config.verbose:
+                print("source tree in:", src_dir)
         else:
-            print("no source - creating empty work folder")
+            if m.config.verbose:
+                print("no source - creating empty work folder")
             os.makedirs(src_dir)
 
         utils.rm_rf(m.config.info_dir)

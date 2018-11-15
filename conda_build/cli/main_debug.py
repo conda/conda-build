@@ -33,9 +33,6 @@ Set up environments and activation scripts to debug your build or test.
         'recipe_or_package_file_path',
         help="Path to recipe directory or package file to use for dependency and source information",
     )
-    p.add_argument("-t", "--test", action="store_true",
-                   help=("Generate debugging env for test environment, rather than build-time.  Requires a"
-                         " package (not a recipe) as input."))
     p.add_argument("-p", "--path",
                    help=("root path in which to place envs, source and activation script.  Defaults to a "
                          "standard conda-build work folder (packagename_timestamp) in your conda-bld folder."))
@@ -43,8 +40,8 @@ Set up environments and activation scripts to debug your build or test.
                    help=("fnmatch pattern that is associated with the output that you want to create an env for.  "
                          "Must match only one file, as we don't support creating envs for more than one output at a time. "
                          "The top-level recipe can be specified by passing 'TOPLEVEL' here"))
-    p.add_argument("-a", "--activate-path-only", action="store_true",
-                   help="Output only the path to the generated activation script.  Use this for creating envs in scripted "
+    p.add_argument("-a", "--activate-string-only", action="store_true",
+                   help="Output only the string to the used generated activation script.  Use this for creating envs in scripted "
                    "environments.")
 
     # cut out some args from render that don't make sense here
@@ -59,15 +56,25 @@ Set up environments and activation scripts to debug your build or test.
 
 def execute(args):
     p, _args = parse_args(args)
+    test = False
+
     try:
         if not any(os.path.splitext(_args.recipe_or_package_file_path)[1] in ext for ext in CONDA_TARBALL_EXTENSIONS):
-            if _args.test:
-                raise ValueError("Error: debugging for test mode is only supported for package files that already exist. "
-                                "Please build your package first, then use it to create the debugging environment.")
+            # --output silences console output here
             thing_to_debug = render_execute(args, print_results=False)
+            test = True
         else:
             thing_to_debug = _args.recipe_or_package_file_path
-        api.debug(thing_to_debug, **_args.__dict__)
+        activation_string = api.debug(thing_to_debug, verbose=(not _args.activate_string_only), **_args.__dict__)
+
+        if not _args.activate_string_only:
+            print("#" * 80)
+            if test:
+                print("Test environment created for debugging.  To enter a debugging environment:\n")
+            else:
+                print("Build and/or host environments created for debugging.  To enter a debugging environment:\n")
+        print(activation_string)
+
     except ValueError as e:
         print(str(e))
         sys.exit(1)
