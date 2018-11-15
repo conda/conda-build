@@ -25,13 +25,15 @@ def parse_args(args):
     p = get_render_parser()
     p.description = """
 
-Set up environments and activation scripts to debug your build or test.
+Set up environments and activation scripts to debug your build or test phase.
 
 """
     # we do this one separately because we only allow one entry to conda render
     p.add_argument(
         'recipe_or_package_file_path',
-        help="Path to recipe directory or package file to use for dependency and source information",
+        help=("Path to recipe directory or package file to use for dependency and source information. "
+              "If you use a recipe, you get the build/host env and source work directory.  If you use "
+              "a package file, you get the test environments and the test_tmp folder."),
     )
     p.add_argument("-p", "--path",
                    help=("root path in which to place envs, source and activation script.  Defaults to a "
