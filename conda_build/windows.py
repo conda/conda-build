@@ -281,7 +281,7 @@ def write_build_scripts(m, env, bld_bat):
         with open(bld_bat) as fi:
             data = fi.read()
         with open(work_script, 'w') as fo:
-            fo.write("call {}".format())
+            fo.write("call {}".format(env_script))
             fo.write("REM ===== end generated header =====\n")
             fo.write(data)
     return work_script, env_script

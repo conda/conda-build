@@ -394,22 +394,24 @@ def update_index(dir_paths, config=None, force=False, check_md5=False, remove=Fa
                      subdirs=ensure_list(subdir))
 
 
-def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False, output_id=None, config=None, **kwargs):
+def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False, output_id=None, config=None,
+          verbose=True, **kwargs):
     """Set up either build/host or test environments, leaving you with a quick tool to debug
     your package's build or test phase.
     """
     from fnmatch import fnmatch
+    import logging
     import os
     import time
     from conda_build.conda_interface import string_types
     from conda_build.build import test as run_test, build as run_build
-    from conda_build.utils import CONDA_TARBALL_EXTENSIONS, on_win
+    from conda_build.utils import CONDA_TARBALL_EXTENSIONS, on_win, LoggingContext
     is_package = False
     default_config = get_or_merge_config(config, **kwargs)
     args = {"set_build_id": False}
     if not path:
         path = os.path.join(default_config.croot, "debug_{}".format(int(time.time() * 1000)))
-    config = get_or_merge_config(config=default_config, croot=path, **args)
+    config = get_or_merge_config(config=default_config, croot=path, verbose=verbose, **args)
 
     metadata_tuples = []
 
@@ -428,7 +430,7 @@ def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False, outp
         outputs = get_output_file_paths(metadata_tuples)
         matched_outputs = outputs
         if output_id:
-            matched_outputs = [_ for _ in outputs if fnmatch(os.path.basename(_).rsplit("-", 2)[0], output_id)]
+            matched_outputs = [_ for _ in outputs if fnmatch(os.path.basename(_), output_id)]
             if len(matched_outputs) > 1:
                 raise ValueError("Specified --output-id matches more than one output ({}).  Please refine your output id so that only "
                     "a single output is found.".format(matched_outputs))
@@ -443,16 +445,20 @@ def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False, outp
         target_metadata = metadata_tuples[outputs.index(matched_outputs[0])][0]
 
     ext = ".bat" if on_win else ".sh"
+
+    if verbose:
+        log_context = LoggingContext()
+    else:
+        log_context = LoggingContext(logging.CRITICAL + 1)
+
     if not test:
-        run_build(target_metadata, stats={}, provision_only=True)
+        with log_context:
+            run_build(target_metadata, stats={}, provision_only=True)
         activation_file = "build_env_setup" + ext
-        print("#" * 80)
-        print("Build and/or host environments created for debugging.  To enter a debugging environment:\n")
         activation_string = "cd {work_dir} && {source} {activation_file}\n".format(
             work_dir=target_metadata.config.work_dir,
             source="call" if on_win else "source",
             activation_file=os.path.join(target_metadata.config.work_dir, activation_file))
-        print(activation_string)
     else:
         if not is_package:
             raise ValueError("Debugging for test mode is only supported for package files that already exist. "
@@ -461,13 +467,11 @@ def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False, outp
             test_input = recipe_or_package_path_or_metadata_tuples
         # use the package to create an env and extract the test files.  Stop short of running the tests.
         # tell people what steps to take next
-        run_test(test_input, config=config, stats={}, provision_only=True)
+        with log_context:
+            run_test(test_input, config=config, stats={}, provision_only=True)
         activation_file = os.path.join(config.test_dir, "conda_test_env_vars" + ext)
-        print("#" * 80)
-        print("Test environment created for debugging.  To enter a debugging environment:\n")
         activation_string = "cd {work_dir} && {source} {activation_file}\n".format(
             work_dir=config.test_dir,
             source="call" if on_win else "source",
             activation_file=os.path.join(config.test_dir, activation_file))
-        print(activation_string)
     return activation_string

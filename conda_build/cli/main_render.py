@@ -167,7 +167,7 @@ def parse_args(args):
         action='store_true',
         help='Enable verbose output from download tools and progress updates',
     )
-    args, unknown_args = p.parse_known_args(args)
+    args, _ = p.parse_known_args(args)
     return p, args
 
 

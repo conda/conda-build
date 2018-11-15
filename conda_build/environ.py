@@ -21,13 +21,14 @@ from .conda_interface import display_actions, execute_actions, execute_plan, ins
 from .conda_interface import memoized
 from .conda_interface import package_cache, TemporaryDirectory
 from .conda_interface import pkgs_dirs, root_dir, symlink_conda, create_default_packages
+from .conda_interface import reset_context
 
 from conda_build import utils
 from conda_build.exceptions import BuildLockError, DependencyNeedsBuildingError
 from conda_build.features import feature_list
 from conda_build.index import get_build_index
 from conda_build.os_utils import external
-from conda_build.utils import ensure_list, prepend_bin_path
+from conda_build.utils import ensure_list, prepend_bin_path, env_var
 from conda_build.variants import get_default_variant
 
 
@@ -544,9 +545,9 @@ def windows_vars(m, get_default, prefix):
     get_default('PROCESSOR_ARCHITECTURE')
     get_default('PROCESSOR_IDENTIFIER')
     get_default('BUILD', win_arch + '-pc-windows-' + win_msvc)
-    for env_var in os.environ.keys():
-        if re.match('VS[0-9]{2,3}COMNTOOLS', env_var):
-            get_default(env_var)
+    for k in os.environ.keys():
+        if re.match('VS[0-9]{2,3}COMNTOOLS', k):
+            get_default(k)
 
 
 def unix_vars(m, get_default, prefix):
@@ -848,11 +849,14 @@ def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, 
                                                         locking=config.locking,
                                                         timeout=config.timeout)
                         utils.trim_empty_keys(actions)
-                        display_actions(actions, index)
+                        if config.verbose:
+                            display_actions(actions, index)
                         if utils.on_win:
                             for k, v in os.environ.items():
                                 os.environ[k] = str(v)
-                        execute_actions(actions, index, verbose=config.debug)
+                        with env_var('CONDA_QUIET', not config.verbose, reset_context):
+                            with env_var('CONDA_JSON', not config.verbose, reset_context):
+                                execute_actions(actions, index)
                 except (SystemExit, PaddingError, LinkError, DependencyNeedsBuildingError,
                         CondaError, BuildLockError) as exc:
                     if (("too short in" in str(exc) or
