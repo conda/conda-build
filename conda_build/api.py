@@ -445,6 +445,8 @@ def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False, outp
         target_metadata = metadata_tuples[outputs.index(matched_outputs[0])][0]
 
     ext = ".bat" if on_win else ".sh"
+    # make sure that none of the _placehold stuff gets added to env paths
+    target_metadata.config.prefix_length = 10
 
     if verbose:
         log_context = LoggingContext()
