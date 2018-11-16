@@ -834,11 +834,12 @@ class MetaData(object):
         self.config = get_or_merge_config(config, variant=variant)
 
         if isfile(path):
-            self.meta_path = path
+            self._meta_path = path
             self.path = os.path.dirname(path)
         else:
-            self.meta_path = find_recipe(path)
+            self._meta_path = find_recipe(path)
             self.path = os.path.dirname(self.meta_path)
+        self._name = ''
         self.requirements_path = join(self.path, 'requirements.txt')
 
         # Start with bare-minimum contents so we can call environ.get_dict() with impunity
@@ -1013,7 +1014,7 @@ class MetaData(object):
         """
         m = super(MetaData, cls).__new__(cls)
         m.path = ''
-        m.meta_path = ''
+        m._meta_path = ''
         m.requirements_path = ''
         m.meta = sanitize(metadata)
 
@@ -1108,7 +1109,7 @@ class MetaData(object):
         return True
 
     def name(self, fail_ok=False):
-        res = self.meta.get('package', {}).get('name', '')
+        res = self._name or self.meta.get('package', {}).get('name', '')
         if not res and not fail_ok:
             sys.exit('Error: package/name missing in: %r' % self.meta_path)
         res = text_type(res)
@@ -1536,13 +1537,17 @@ class MetaData(object):
         return self.__str__()
 
     @property
+    def meta_path(self):
+        meta_path = self._meta_path or self.meta.get('extra', {}).get('parent_recipe', {}).get('path', '')
+        if meta_path and os.path.basename(meta_path) != "meta.yaml":
+            meta_path = os.path.join(meta_path, 'meta.yaml')
+        return meta_path
+
+    @property
     def uses_setup_py_in_meta(self):
         meta_text = ''
-        meta_path = self.meta_path or self.meta.get('extra', {}).get('parent_recipe', {}).get('path', '')
-        if meta_path:
-            if os.path.basename(meta_path) != "meta.yaml":
-                meta_path = os.path.join(meta_path, 'meta.yaml')
-            with open(meta_path, 'rb') as f:
+        if self.meta_path:
+            with open(self.meta_path, 'rb') as f:
                 meta_text = UnicodeDammit(f.read()).unicode_markup
         return u"load_setup_py_data" in meta_text or u"load_setuptools" in meta_text
 
@@ -1590,7 +1595,7 @@ class MetaData(object):
     @property
     def uses_vcs_in_build(self):
         build_script = "bld.bat" if on_win else "build.sh"
-        build_script = os.path.join(os.path.dirname(self.meta_path), build_script)
+        build_script = os.path.join(self.path, build_script)
         for recipe_file in (build_script, self.meta_path):
             if os.path.isfile(recipe_file):
                 vcs_types = ["git", "svn", "hg"]
@@ -1612,8 +1617,7 @@ class MetaData(object):
     def get_recipe_text(self, extract_pattern=None, force_top_level=False, apply_selectors=True):
         parent_recipe = self.meta.get('extra', {}).get('parent_recipe', {})
         is_output = self.name() != parent_recipe.get('name') and parent_recipe.get('path')
-        meta_path = self.meta_path or (os.path.join(parent_recipe['path'], 'meta.yaml')
-                                       if is_output else '')
+        meta_path = self.meta_path
         if meta_path:
             recipe_text = read_meta_file(meta_path)
             if is_output and not force_top_level:
@@ -1808,12 +1812,12 @@ class MetaData(object):
                 del build[key]
         output_metadata.meta['build'] = build
 
-        # reset these so that reparsing does not reset the metadata name
-        output_metadata.path = ""
-        output_metadata.meta_path = ""
+        # reset this so that reparsing does not reset the metadata name
+        output_metadata._meta_path = ""
 
     def get_output_metadata(self, output):
         output_metadata = self.copy() if output else self
+        output_metadata._name = output.get('name')
 
         if output:
             output_reqs = utils.expand_reqs(output.get('requirements', {}))
@@ -2189,8 +2193,7 @@ class MetaData(object):
                                                permit_undefined_jinja=True) or {}
         used_vars = set()
         if 'script' in this_output:
-            path = self.meta.get('extra', {}).get('parent_recipe', {}).get('path')
-            script = os.path.join(path, this_output['script'])
+            script = os.path.join(self.path, this_output['script'])
             if os.path.splitext(script)[1] == '.sh':
                 used_vars.update(variants.find_used_variables_in_shell_script(self.config.variant,
                                                                               script))
