@@ -1015,7 +1015,7 @@ def package_has_file(package_path, file_path):
 
 def ensure_list(arg):
     if (isinstance(arg, string_types) or not hasattr(arg, '__iter__')):
-        if arg:
+        if arg != None:
             arg = [arg]
         else:
             arg = []

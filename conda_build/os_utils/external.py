@@ -18,9 +18,9 @@ def find_executable(executable, prefix=None):
                      join(root_dir, 'Library\\bin'), ]
         if prefix:
             dir_paths[0:0] = [join(prefix, 'Scripts'),
-                         join(prefix, 'Library\\mingw-w64\\bin'),
-                         join(prefix, 'Library\\usr\\bin'),
-                         join(prefix, 'Library\\bin'), ]
+                              join(prefix, 'Library\\mingw-w64\\bin'),
+                              join(prefix, 'Library\\usr\\bin'),
+                              join(prefix, 'Library\\bin'), ]
     else:
         dir_paths = [join(root_dir, 'bin'), ]
         if prefix:

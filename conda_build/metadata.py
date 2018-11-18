@@ -1928,7 +1928,7 @@ class MetaData(object):
                                                              used_zip_key_groups)]
         for key in reduce_keys:
             values = full_collapsed_variants.get(key)
-            if values and not hasattr(values, 'keys') and key != 'zip_keys':
+            if values != None and not hasattr(values, 'keys') and key != 'zip_keys':
                 # save only one element from this key
                 reduced_collapsed_variants[key] = utils.ensure_list(next(iter(values)))
 
