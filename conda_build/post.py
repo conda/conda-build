@@ -398,16 +398,13 @@ def mk_relative_osx(path, host_prefix, build_prefix, files, rpaths=('lib',)):
         # Add an rpath to every executable to increase the chances of it
         # being found.
         for rpath in rpaths:
+            # Escape hatch for when you really don't want any rpaths added.
+            if rpath == '':
+                continue
             rpath_new = os.path.join('@loader_path',
-                                     os.path.relpath(os.path.join(host_prefix, rpath),
-                                     os.path.dirname(path)), '').replace('/./', '/')
+                                     os.path.relpath(os.path.join(host_prefix, rpath), os.path.dirname(path)),
+                                     '').replace('/./', '/')
             macho.add_rpath(path, rpath_new, verbose=True)
-
-        # 10.7 install_name_tool -delete_rpath causes broken dylibs, I will revisit this ASAP.
-        # .. and remove config.build_prefix/lib which was added in-place of
-        # DYLD_FALLBACK_LIBRARY_PATH since El Capitan's SIP.
-        # macho.delete_rpath(path, config.build_prefix + '/lib', verbose = True)
-
     if s:
         # Skip for stub files, which have to use binary_has_prefix_files to be
         # made relocatable.
