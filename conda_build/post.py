@@ -462,18 +462,17 @@ def assert_relative_osx(path, prefix):
 
 
 def determine_package_nature(pkg, prefix):
-    has_dsos = False
+    dsos = []
     run_exports = None
     lib_prefix = pkg.name.startswith('lib')
     codefiles = get_package_obj_files(pkg, prefix)
-    if any([[f for ext in ('.dylib', '.so', '.dll') if ext in f] for f in codefiles]):
-        has_dsos = True
+    dsos = [[f for ext in ('.dylib', '.so', '.dll') if ext in f] for f in codefiles]
     for pkgs_dir in pkgs_dirs:
         test_filename = os.path.join(pkgs_dir, pkg.fn)
         if os.path.exists(test_filename):
             run_exports = get_run_exports(test_filename)
             break
-    return (has_dsos, run_exports, lib_prefix)
+    return (dsos, run_exports, lib_prefix)
 
 
 def library_nature(pkg, prefix):
@@ -481,11 +480,16 @@ def library_nature(pkg, prefix):
     Result :: "non-library", "dso library", "run-exports library"
     .. in that order, i.e. if have both dsos and run_exports, it's a run_exports_library.
     '''
-    has_dsos, run_exports, lib_prefix = determine_package_nature(pkg, prefix)
+    dsos, run_exports, lib_prefix = determine_package_nature(pkg, prefix)
     if run_exports:
         return "run-exports library"
-    elif has_dsos:
-        return "dso library"
+    elif len(dsos):
+        # If all DSOs are under site-packages or R/lib/
+        dsos_without_plugins = [dso for dso in dsos if ('lib/R/library', 'site-packages') not in dso]
+        if len(dsos_without_plugins):
+            return "dso library"
+        else:
+            return "plugin library"
     return "non-library"
 
 
@@ -830,11 +834,16 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                     print_msg(errors, "{}: did not find - or even know where to look for: {}".
                                       format(msg_prelude, needed_dso))
     if lib_packages_used != lib_packages:
+        info_prelude = "   INFO ({})".format(pkg_name)
         warn_prelude = "WARNING ({})".format(pkg_name)
         err_prelude = "  ERROR ({})".format(pkg_name)
         for lib in lib_packages - lib_packages_used:
-            msg_prelude = err_prelude if (error_overdepending and
-                                          package_nature[lib] == 'run-exports library') else warn_prelude
+            if package_nature[lib] == 'run-exports library':
+                msg_prelude = err_prelude if error_overdepending else warn_prelude
+            elif package_nature[lib] == 'plugin library':
+                msg_prelude = info_prelude
+            else:
+                msg_prelude = warn_prelude
             print_msg(errors, "{}: {} package {} in requirements/run but it is not used "
                               "(i.e. it is overdepending or perhaps statically linked? "
                               "If that is what you want then add it to `build/ignore_run_exports`)"
