@@ -411,7 +411,8 @@ def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False, outp
     args = {"set_build_id": False}
     if not path:
         path = os.path.join(default_config.croot, "debug_{}".format(int(time.time() * 1000)))
-    config = get_or_merge_config(config=default_config, croot=path, verbose=verbose, **args)
+    config = get_or_merge_config(config=default_config, croot=path, verbose=verbose, _prefix_length=10,
+                                 **args)
 
     metadata_tuples = []
 
@@ -443,10 +444,10 @@ def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False, outp
             matched_outputs = outputs
 
         target_metadata = metadata_tuples[outputs.index(matched_outputs[0])][0]
+        # make sure that none of the _placehold stuff gets added to env paths
+        target_metadata.config.prefix_length = 10
 
     ext = ".bat" if on_win else ".sh"
-    # make sure that none of the _placehold stuff gets added to env paths
-    target_metadata.config.prefix_length = 10
 
     if verbose:
         log_context = LoggingContext()
