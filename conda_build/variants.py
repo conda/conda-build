@@ -374,7 +374,7 @@ def filter_by_key_value(variants, key, values, source_name):
     else:
         # break this out into a full loop so that we can show filtering output
         for variant in variants:
-            if variant.get(key) != None and variant.get(key) in values:
+            if variant.get(key) is not None and variant.get(key) in values:
                 reduced_variants.append(variant)
             else:
                 log = get_logger(__name__)
