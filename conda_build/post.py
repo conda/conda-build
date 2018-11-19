@@ -665,10 +665,9 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                     if rp in files:
                         owners.append(pkg_vendored_dist)
                 new_pkgs = list(which_package(rp, prefix))
-# Cannot filter here as this means the DSO (eg libomp.dylib) will not be found in any package
-
-#                [owners.append(new_pkg) for new_pkg in new_pkgs if new_pkg not in owners
-#                 and not any([glob2.fnmatch.fnmatch(new_pkg.name, i) for i in ignore_for_statics])]
+                # Cannot filter here as this means the DSO (eg libomp.dylib) will not be found in any package
+                # [owners.append(new_pkg) for new_pkg in new_pkgs if new_pkg not in owners
+                #  and not any([glob2.fnmatch.fnmatch(new_pkg.name, i) for i in ignore_for_statics])]
                 [owners.append(new_pkg) for new_pkg in new_pkgs if new_pkg not in owners]
                 for new_pkg in new_pkgs:
                     if new_pkg not in owners:
