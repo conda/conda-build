@@ -456,7 +456,7 @@ def mk_relative_linux(f, prefix, rpaths=('lib',)):
     call([patchelf, '--force-rpath', '--set-rpath', rpath, elf])
 
 
-def assert_relative_osx(path, build_prefix, prefix):
+def assert_relative_osx(path, prefix):
     for name in macho.get_dylibs(path):
         assert not name.startswith(prefix), path
 
