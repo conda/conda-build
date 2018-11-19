@@ -1,25 +1,13 @@
 #!/bin/bash
 
-# this recipe will overlink libraries without the --as-needed linker arg
+# this recipe will overlink libraries without the --as-needed/-dead_strip_dylibs linker arg
 re='^(.*)-Wl,--as-needed(.*)$'
 if [[ ${LDFLAGS} =~ $re ]]; then
-    export LDFLAGS="${BASH_REMATCH[1]}${BASH_REMATCH[2]}"
+  export LDFLAGS="${BASH_REMATCH[1]}${BASH_REMATCH[2]}"
+fi
+re='^(.*)-Wl,-dead_strip_dylibs(.*)$'
+if [[ ${LDFLAGS} =~ $re ]]; then
+  export LDFLAGS="${BASH_REMATCH[1]}${BASH_REMATCH[2]}"
 fi
 
-autoreconf -vfi
-mkdir build-${HOST} && pushd build-${HOST}
-${SRC_DIR}/configure --prefix=${PREFIX}  \
-          --with-zlib         \
-          --with-bz2lib       \
-          --with-iconv        \
-          --with-lz4          \
-          --with-lzma         \
-          --with-lzo2         \
-          --without-cng       \
-          --with-openssl      \
-          --without-nettle    \
-          --with-xml2         \
-          --without-expat
-make -j${CPU_COUNT} ${VERBOSE_AT}
-make install
-popd
+echo "int main() { return 0; }" | ${CC} ${CFLAGS} ${LDFLAGS} -o ${PREFIX}/bin/overlinking -lbz2 -x c -

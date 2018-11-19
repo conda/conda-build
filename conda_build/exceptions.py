@@ -95,17 +95,14 @@ class BuildLockError(CondaBuildException):
 
 
 class OverLinkingError(VerifyError):
-    def __init__(self, error, script, *args):
+    def __init__(self, error, *args):
         self.error = error
-        self.script = script
-        self.msg = "%s overlinking check failed \n%s" % (script, error)
+        self.msg = "overlinking check failed \n%s" % (error)
         super(VerifyError, self).__init__(self.msg)
 
 
 class OverDependingError(VerifyError):
-    def __init__(self, error, script, *args):
+    def __init__(self, error, *args):
         self.error = error
-        self.script = script
-        self.msg = "%s overdepending check failed \n%s" % (script, error)
+        self.msg = "overdepending check failed \n%s" % (error)
         super(VerifyError, self).__init__(self.msg)
-
