@@ -438,18 +438,19 @@ def mk_relative_linux(f, prefix, rpaths=('lib',)):
                     new.append(relpath)
     # Ensure that the asked-for paths are also in new.
     for rpath in rpaths:
-        if not rpath.startswith('/'):
-            # IMHO utils.relative shouldn't exist, but I am too paranoid to remove
-            # it, so instead, make sure that what I think it should be replaced by
-            # gives the same result and assert if not. Yeah, I am a chicken.
-            rel_ours = os.path.normpath(utils.relative(f, rpath))
-            rel_stdlib = os.path.normpath(os.path.relpath(rpath, os.path.dirname(f)))
-            assert rel_ours == rel_stdlib, \
-                'utils.relative {0} and relpath {1} disagree for {2}, {3}'.format(
-                rel_ours, rel_stdlib, f, rpath)
-            rpath = '$ORIGIN/' + rel_stdlib
-        if rpath not in new:
-            new.append(rpath)
+        if rpath != '':
+            if not rpath.startswith('/'):
+                # IMHO utils.relative shouldn't exist, but I am too paranoid to remove
+                # it, so instead, make sure that what I think it should be replaced by
+                # gives the same result and assert if not. Yeah, I am a chicken.
+                rel_ours = os.path.normpath(utils.relative(f, rpath))
+                rel_stdlib = os.path.normpath(os.path.relpath(rpath, os.path.dirname(f)))
+                assert rel_ours == rel_stdlib, \
+                    'utils.relative {0} and relpath {1} disagree for {2}, {3}'.format(
+                    rel_ours, rel_stdlib, f, rpath)
+                rpath = '$ORIGIN/' + rel_stdlib
+            if rpath not in new:
+                new.append(rpath)
     rpath = ':'.join(new)
     print('patchelf: file: %s\n    setting rpath to: %s' % (elf, rpath))
     call([patchelf, '--force-rpath', '--set-rpath', rpath, elf])
