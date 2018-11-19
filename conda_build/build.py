@@ -11,7 +11,6 @@ import json
 import libarchive
 import os
 from os.path import isdir, isfile, islink, join, dirname
-import pprint
 import random
 import re
 import shutil

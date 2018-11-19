@@ -28,9 +28,8 @@ from conda_build.conda_interface import TemporaryDirectory
 from conda_build.conda_interface import md5_file
 
 from conda_build import utils
-from conda_build.os_utils.liefldd import (get_exports_memoized, get_imports_memoized,
-                                          get_linkages_memoized,
-                                          get_runpaths, get_symbols_memoized)
+from conda_build.os_utils.liefldd import (get_exports_memoized, get_linkages_memoized,
+                                          get_runpaths)
 from conda_build.os_utils.pyldd import codefile_type
 from conda_build.os_utils.ldd import get_package_obj_files
 from conda_build.index import get_run_exports
@@ -529,7 +528,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     ignore_list = utils.ensure_list(ignore_run_exports)
     if subdir.startswith('linux'):
         ignore_list.append('libgcc-ng')
-    package_nature = { package: library_nature(package, run_prefix) for package in packages }
+    package_nature = {package: library_nature(package, run_prefix) for package in packages}
     lib_packages = set([package for package in packages
                         if package.quad[0] not in ignore_list and
                         package_nature[package] != 'non-library'])
@@ -540,14 +539,11 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     else:
         lib_packages_used = set()
 
-    vendoring_record = dict()
     pkg_vendoring_name = pkg_name
     pkg_vendoring_version = pkg_version
     pkg_vendoring_build_str = build_str
     pkg_vendoring_build_number = build_number
-    pkg_vendoring_key = '-'.join([pkg_vendoring_name,
-                                  pkg_vendoring_version,
-                                  pkg_vendoring_build_str])
+
     class FakeDist:
         def __init__(self, name, version, build_number, build_str):
             self.name = name
@@ -561,7 +557,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                                  pkg_vendoring_build_str)
 
     ignore_list_syms = ['main', '_main', '*get_pc_thunk*', '___clang_call_terminate', '_timeout']
-    ignore_for_statics = ['gcc_impl_linux*', 'compiler-rt*', 'llvm-openmp*', 'gfortran_osx*']
+    # ignore_for_statics = ['gcc_impl_linux*', 'compiler-rt*', 'llvm-openmp*', 'gfortran_osx*']
     # sysroots and whitelists are similar, but the subtle distinctions are important.
     sysroot_prefix = build_prefix
     sysroots = [sysroot + os.sep for sysroot in glob(os.path.join(sysroot_prefix, '**', 'sysroot'))]
@@ -632,11 +628,11 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                                        sysroot=sysroot,
                                        envroot=run_prefix)
         if sysroot:
-            needed = [n.replace(sysroot, sysroot_substitution) if n.startswith(sysroot) \
+            needed = [n.replace(sysroot, sysroot_substitution) if n.startswith(sysroot)
                       else n for n in needed]
-        needed = [n.replace(build_prefix, build_prefix_substitution) if n.startswith(build_prefix) \
+        needed = [n.replace(build_prefix, build_prefix_substitution) if n.startswith(build_prefix)
                   else n for n in needed]
-        needed = [os.path.relpath(n, run_prefix) if n.startswith(run_prefix) \
+        needed = [os.path.relpath(n, run_prefix) if n.startswith(run_prefix)
                   else n for n in needed]
         needed_dsos_for_file[f] = needed
         all_needed_dsos = all_needed_dsos.union(needed)
@@ -653,7 +649,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
             for file in filez:
                 fp = os.path.join(subdir2, file)
                 dynamic_lib = any(glob2.fnmatch.fnmatch(fp, ext) for ext in ('*.so*', '*.dylib*', '*.dll')) and \
-                              codefile_type(fp, skip_symlinks=False) != None
+                              codefile_type(fp, skip_symlinks=False) is not None
                 static_lib = any(glob2.fnmatch.fnmatch(fp, ext) for ext in ('*.a', '*.lib'))
                 # Looking at all the files is very slow.
                 if not dynamic_lib and not static_lib:
@@ -687,9 +683,9 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                     elif static_lib:
                         if sysroot_substitution in fp:
                             if (prefix_owners[rp][0].name.startswith('gcc_impl_linux') or
-                                prefix_owners[rp][0].name == 'llvm'):
+                               prefix_owners[rp][0].name == 'llvm'):
                                 continue
-                            print("sysroot in {}, owner is {}".format(fp,prefix_owners[rp][0]))
+                            print("sysroot in {}, owner is {}".format(fp, prefix_owners[rp][0]))
                         contains_static_libs[prefix_owners[rp][0]] = True
 
     for f in files:
@@ -699,9 +695,9 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
         needed = needed_dsos_for_file[f]
         for needed_dso in needed:
             if (not needed_dso.startswith('/') and
-                not needed_dso.startswith(sysroot_substitution) and
-                not needed_dso.startswith(build_prefix_substitution) and
-                needed_dso not in prefix_owners):
+               not needed_dso.startswith(sysroot_substitution) and
+               not needed_dso.startswith(build_prefix_substitution) and
+               needed_dso not in prefix_owners):
                 print("  ERROR :: {} not in prefix_owners".format(needed_dso))
                 sys.exit(1)
 
@@ -726,7 +722,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                                                                    runpaths,
                                                                    path))
         needed = needed_dsos_for_file[f]
-        imps = get_imports_memoized(path, None)
+        # imps = get_imports_memoized(path, None)
         for needed_dso in needed:
             needed_dso = needed_dso.replace('/', os.sep)
             if not needed_dso.startswith(os.sep) and not needed_dso.startswith('$'):
@@ -859,25 +855,27 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
         else:
             sys.exit(1)
 
+
 def check_overlinking(m, files):
-   return check_overlinking_impl(m.get_value('package/name'),
-                                 m.get_value('package/version'),
-                                 m.get_value('build/string'),
-                                 m.get_value('build/number'),
-                                 m.config.target_subdir,
-                                 m.get_value('build/ignore_run_exports'),
-                                 [req.split(' ')[0] for req in m.meta.get('requirements', {}).get('run', [])],
-                                 [req.split(' ')[0] for req in m.meta.get('requirements', {}).get('build', [])],
-                                 [req.split(' ')[0] for req in m.meta.get('requirements', {}).get('host', [])],
-                                 m.config.host_prefix,
-                                 m.config.build_prefix,
-                                 m.meta.get('build', {}).get('missing_dso_whitelist', []),
-                                 m.meta.get('build', {}).get('runpath_whitelist', []),
-                                 m.config.error_overlinking,
-                                 m.config.error_overdepending,
-                                 m.config.verbose,
-                                 True,
-                                 files)
+    return check_overlinking_impl(m.get_value('package/name'),
+                                  m.get_value('package/version'),
+                                  m.get_value('build/string'),
+                                  m.get_value('build/number'),
+                                  m.config.target_subdir,
+                                  m.get_value('build/ignore_run_exports'),
+                                  [req.split(' ')[0] for req in m.meta.get('requirements', {}).get('run', [])],
+                                  [req.split(' ')[0] for req in m.meta.get('requirements', {}).get('build', [])],
+                                  [req.split(' ')[0] for req in m.meta.get('requirements', {}).get('host', [])],
+                                  m.config.host_prefix,
+                                  m.config.build_prefix,
+                                  m.meta.get('build', {}).get('missing_dso_whitelist', []),
+                                  m.meta.get('build', {}).get('runpath_whitelist', []),
+                                  m.config.error_overlinking,
+                                  m.config.error_overdepending,
+                                  m.config.verbose,
+                                  True,
+                                  files)
+
 
 def post_process_shared_lib(m, f, files):
     path = os.path.join(m.config.host_prefix, f)
