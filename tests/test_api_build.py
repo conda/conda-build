@@ -613,6 +613,7 @@ def test_disable_pip(testing_config, testing_metadata):
 @pytest.mark.skipif(sys.platform.startswith('win'),
                     reason="rpath fixup not done on Windows.")
 def test_rpath_unix(testing_config):
+    testing_config.activate = True
     api.build(os.path.join(metadata_dir, "_rpath"), config=testing_config)
 
 

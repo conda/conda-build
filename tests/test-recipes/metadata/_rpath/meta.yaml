@@ -15,5 +15,6 @@ requirements:
 
 test:
   commands:
-    - python -c "import lief; binary = lief.parse(\"${PREFIX}/bin/rpath\"); print([e.rpath for e in binary.dynamic_entries if e.tag == lief.ELF.DYNAMIC_TAGS.RPATH])" | grep \$ORIGIN/../previous:\$ORIGIN/../lib:${PREFIX}/plugins:\$ORIGIN/../successive  # [linux]
+    - python -c "import lief; binary = lief.parse(\"${PREFIX}/bin/rpath\"); print([e.rpath for e in binary.dynamic_entries if e.tag == lief.ELF.DYNAMIC_TAGS.RPATH])"  # [linux]
+    - python -c "import lief; binary = lief.parse(\"${PREFIX}/bin/rpath\"); print([e.rpath for e in binary.dynamic_entries if e.tag == lief.ELF.DYNAMIC_TAGS.RPATH])" | grep \$ORIGIN/../previous:\$ORIGIN/../lib:\$ORIGIN/../plugins:\$ORIGIN/../successive  # [linux]
     - python -c "import lief; binary = lief.parse(\"${PREFIX}/bin/rpath\"); print(':'.join([command.path.rstrip('/') for command in binary.commands if command.command == lief.MachO.LOAD_COMMAND_TYPES.RPATH]))" | grep ${PREFIX}/../previous:${PREFIX}/../lib:${PREFIX}/plugins:${PREFIX}/../successive  # [osx]
