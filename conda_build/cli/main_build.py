@@ -225,7 +225,8 @@ different sets of packages."""
     p.add_argument(
         "--output-folder",
         help=("folder to dump output package to.  Package are moved here if build or test succeeds."
-              "  Destination folder must exist prior to using this.")
+              "  Destination folder must exist prior to using this."),
+        default=cc_conda_build.get('output_folder')
     )
     p.add_argument(
         "--no-prefix-length-fallback", dest='prefix_length_fallback',
