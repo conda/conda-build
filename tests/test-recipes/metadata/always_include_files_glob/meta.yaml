@@ -36,7 +36,8 @@ outputs:
         - Library/lib/libjpeg*.lib  # [win]
       ignore_run_exports:
         - jpeg
-    script: echo_file.sh
+    script: echo_file.sh            # [not win]
+    script: echo_file.bat           # [win]
     missing_dso_whitelist:
       - '*'
     test:
