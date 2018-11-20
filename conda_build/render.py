@@ -160,7 +160,11 @@ def strip_channel(spec_str):
 
 
 def get_pin_from_build(m, dep, build_dep_versions):
-    dep_name = dep.split()[0]
+    dep_split = dep.split()
+    dep_name = dep_split[0]
+    build = ''
+    if len(dep_split) >= 3:
+        build = dep_split[2]
     pin = None
     version = build_dep_versions.get(dep_name) or m.config.variant.get(dep_name)
     if (version and dep_name in m.config.variant.get('pin_run_as_build', {}) and
@@ -176,7 +180,7 @@ def get_pin_from_build(m, dep, build_dep_versions):
             raise ValueError("numpy x.x specified, but numpy not in build requirements.")
         pin = utils.apply_pin_expressions(version.split()[0], min_pin='x.x', max_pin='x.x')
     if pin:
-        dep = " ".join((dep_name, pin))
+        dep = " ".join((dep_name, pin, build)).strip()
     return dep
 
 
