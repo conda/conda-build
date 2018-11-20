@@ -790,7 +790,7 @@ def get_install_actions(prefix, specs, env, retries=0, subdir=None,
             for pkg in ('pip', 'setuptools', 'wheel'):
                 # specs are the raw specifications, not the conda-derived actual specs
                 #   We're testing that pip etc. are manually specified
-                if not any(re.match('^%s(?:$|[\s=].*)' % pkg, str(dep)) for dep in specs):
+                if not any(re.match(r'^%s(?:$|[\s=].*)' % pkg, str(dep)) for dep in specs):
                     actions['LINK'] = [spec for spec in actions['LINK'] if spec.name != pkg]
         utils.trim_empty_keys(actions)
         cached_actions[(specs, env, subdir, channel_urls, disable_pip)] = actions.copy()

@@ -144,7 +144,7 @@ def test_pin_depends(testing_config):
     recipe = os.path.join(metadata_dir, '_pin_depends_strict')
     m = api.render(recipe, config=testing_config)[0][0]
     # the recipe python is not pinned, but having pin_depends set will force it to be.
-    assert any(re.search('python\s+[23]\.', dep) for dep in m.meta['requirements']['run'])
+    assert any(re.search(r'python\s+[23]\.', dep) for dep in m.meta['requirements']['run'])
 
 
 def test_cross_recipe_with_only_build_section(testing_config):

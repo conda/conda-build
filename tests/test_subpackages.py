@@ -239,7 +239,7 @@ def test_per_output_tests_script(testing_config):
 def test_pin_compatible_in_outputs(testing_config):
     recipe_dir = os.path.join(subpackage_dir, '_pin_compatible_in_output')
     m = api.render(recipe_dir, config=testing_config)[0][0]
-    assert any(re.search('numpy\s*>=.*,<.*', req) for req in m.meta['requirements']['run'])
+    assert any(re.search(r'numpy\s*>=.*,<.*', req) for req in m.meta['requirements']['run'])
 
 
 def test_output_same_name_as_top_level_does_correct_output_regex(testing_config):
