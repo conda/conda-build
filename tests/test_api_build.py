@@ -1203,13 +1203,13 @@ def test_pin_depends(testing_config):
     m = api.render(recipe, config=testing_config)[0][0]
     # the recipe python is not pinned, and having pin_depends set to record
     # will not show it in record
-    assert not any(re.search('python\s+[23]\.', dep) for dep in m.meta['requirements']['run'])
+    assert not any(re.search(r'python\s+[23]\.', dep) for dep in m.meta['requirements']['run'])
     output = api.build(m, config=testing_config)[0]
     requires = package_has_file(output, 'info/requires')
     assert requires
     if PY3 and hasattr(requires, 'decode'):
         requires = requires.decode()
-    assert re.search('python\=[23]\.', requires), "didn't find pinned python in info/requires"
+    assert re.search(r'python\=[23]\.', requires), "didn't find pinned python in info/requires"
 
 
 def test_failed_patch_exits_build(testing_config):

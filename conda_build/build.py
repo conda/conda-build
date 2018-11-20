@@ -1814,6 +1814,7 @@ def _construct_metadata_for_test_from_package(package, config):
     if local_path not in urls:
         urls.insert(0, local_path)
     metadata.config.channel_urls = urls
+    utils.rm_rf(metadata.config.test_dir)
     return metadata, hash_input
 
 
@@ -2016,7 +2017,6 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
 
     # Must download *after* computing build id, or else computing build id will change
     #     folder destination
-    utils.rm_rf(metadata.config.test_dir)
     _extract_test_files_from_package(metadata)
 
     # When testing a .tar.bz2 in the pkgs dir, clean_pkg_cache() will remove it.
