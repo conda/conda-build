@@ -428,7 +428,12 @@ def _simplify_to_exact_constraints(metadata):
 
         deps_list = []
         for name, values in deps_dict.items():
-            exact_pins = [dep for dep in values if len(dep) > 1]
+            exact_pins = []
+            for dep in values:
+                if len(dep) > 1:
+                    version, build = dep[:2]
+                    if not (any(c in version for c in ('>', '<', '*')) or '*' in build):
+                        exact_pins.append(dep)
             if len(values) == 1 and not any(values):
                 deps_list.append(name)
             elif exact_pins:
