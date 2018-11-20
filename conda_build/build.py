@@ -139,8 +139,6 @@ def create_post_scripts(m):
     '''
     Create scripts to run after build step
     '''
-    recipe_dir = (m.path or
-                  m.meta.get('extra', {}).get('parent_recipe', {}).get('path', ""))
     ext = '.bat' if utils.on_win else '.sh'
     for tp in 'pre-link', 'post-link', 'pre-unlink':
         # To have per-output link scripts they must be prefixed by the output name or be explicitly
@@ -154,7 +152,7 @@ def create_post_scripts(m):
                 scriptname = m.name() + '-' + tp
         scriptname += ext
         dst_name = '.' + m.name() + '-' + tp + ext
-        src = join(recipe_dir, scriptname)
+        src = join(m.path, scriptname)
         if isfile(src):
             dst_dir = join(m.config.host_prefix,
                            'Scripts' if m.config.host_subdir.startswith('win-') else 'bin')
@@ -266,21 +264,17 @@ def _copy_top_level_recipe(path, config, dest_dir, destination_subdir=None):
 
 
 def _copy_output_recipe(m, dest_dir):
-    src_dir = m.meta.get('extra', {}).get('parent_recipe', {}).get('path')
-    if src_dir:
-        _copy_top_level_recipe(src_dir, m.config, dest_dir, 'parent')
+    _copy_top_level_recipe(m.path, m.config, dest_dir, 'parent')
 
-        this_output = m.get_rendered_output(m.name()) or {}
-        install_script = this_output.get('script')
-        build_inputs = []
-        inputs = [install_script] + build_inputs
-        file_paths = [script for script in inputs if script]
-        file_paths = utils.filter_files(file_paths, src_dir)
-    else:
-        file_paths = []
+    this_output = m.get_rendered_output(m.name()) or {}
+    install_script = this_output.get('script')
+    build_inputs = []
+    inputs = [install_script] + build_inputs
+    file_paths = [script for script in inputs if script]
+    file_paths = utils.filter_files(file_paths, m.path)
 
     for f in file_paths:
-        utils.copy_into(join(src_dir, f), join(dest_dir, f),
+        utils.copy_into(join(m.path, f), join(dest_dir, f),
                         timeout=m.config.timeout,
                         locking=m.config.locking, clobber=True)
 
@@ -294,13 +288,14 @@ def copy_recipe(m):
             os.makedirs(recipe_dir)
         except:
             pass
-        if os.path.isdir(m.path):
+
+        original_recipe = ""
+
+        if m.is_output:
+            _copy_output_recipe(m, recipe_dir)
+        else:
             _copy_top_level_recipe(m.path, m.config, recipe_dir)
             original_recipe = m.meta_path
-        # it's a subpackage.
-        else:
-            _copy_output_recipe(m, recipe_dir)
-            original_recipe = ""
 
         output_metadata = m.copy()
         # hard code the build string, so that tests don't get it mixed up
@@ -420,7 +415,7 @@ def copy_test_source_files(m, destination):
 
     recipe_test_files = m.get_value('test/files')
     if recipe_test_files:
-        orig_recipe_dir = m.path or m.meta.get('extra', {}).get('parent_recipe', {}).get('path')
+        orig_recipe_dir = m.path
         for pattern in recipe_test_files:
             files = glob(join(orig_recipe_dir, pattern))
             for f in files:
@@ -901,9 +896,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
                                     .format(var))
             env_output[var] = os.environ[var]
         dest_file = os.path.join(metadata.config.work_dir, output['script'])
-        recipe_dir = (metadata.path or
-                      metadata.meta.get('extra', {}).get('parent_recipe', {}).get('path', ''))
-        utils.copy_into(os.path.join(recipe_dir, output['script']), dest_file)
+        utils.copy_into(os.path.join(metadata.path, output['script']), dest_file)
         if activate_script:
             _write_activation_text(dest_file, metadata)
 
@@ -980,10 +973,10 @@ def bundle_conda(output, metadata, env, stats, **kw):
             utils.copy_into(os.path.join(metadata.config.work_dir, output['test']['script']),
                             test_dest_path, metadata.config.timeout,
                             locking=metadata.config.locking)
-        elif (os.path.isfile(test_dest_path) and metadata.meta.get('extra', {}).get('parent_recipe') and
-              not metadata.meta.get('test', {}).get("commands")):
-            # the test belongs to the parent recipe.  Don't include it in subpackages.
-            utils.rm_rf(test_dest_path)
+        # elif (os.path.isfile(test_dest_path) and metadata.is_output and
+        #       not metadata.meta.get('test', {}).get("commands")):
+        #     # the test belongs to the parent recipe.  Don't include it in subpackages.
+        #     utils.rm_rf(test_dest_path)
     # here we add the info files into the prefix, so we want to re-collect the files list
     prefix_files = set(utils.prefix_files(metadata.config.host_prefix))
     files = utils.filter_files(prefix_files - initial_files, prefix=metadata.config.host_prefix)
@@ -1544,22 +1537,18 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                     output_d['files'] = (utils.prefix_files(prefix=m.config.host_prefix) -
                                          initial_files)
 
-                meta_dir = (m.meta_path or
-                            m.meta.get('extra', {}).get('parent_recipe', {}).get('path'))
-                if meta_dir and meta_dir.endswith('.yaml'):
-                    meta_dir = os.path.dirname(meta_dir)
                 # ensure that packaging scripts are copied over into the workdir
-                if 'script' in output_d and meta_dir:
-                    utils.copy_into(os.path.join(meta_dir, output_d['script']), m.config.work_dir)
+                if 'script' in output_d:
+                    utils.copy_into(os.path.join(m.path, output_d['script']), m.config.work_dir)
 
                 # same thing, for test scripts
                 test_script = output_d.get('test', {}).get('script')
-                if test_script and meta_dir:
-                    if not os.path.isfile(os.path.join(meta_dir, test_script)):
+                if test_script:
+                    if not os.path.isfile(os.path.join(m.path, test_script)):
                         raise ValueError("test script specified as {} does not exist.  Please "
                                          "check for typos or create the file and try again."
                                          .format(test_script))
-                    utils.copy_into(os.path.join(meta_dir, test_script),
+                    utils.copy_into(os.path.join(m.path, test_script),
                                     os.path.join(m.config.work_dir, test_script))
 
                 assert output_d.get('type') != 'conda' or m.final, (
@@ -1829,8 +1818,7 @@ def _construct_metadata_for_test_from_package(package, config):
 
 
 def _extract_test_files_from_package(metadata):
-    recipe_dir = metadata.config.recipe_dir if hasattr(metadata.config, "recipe_dir") else (
-        metadata.path or metadata.meta.get('extra', {}).get('parent_recipe', {}).get('path'))
+    recipe_dir = metadata.config.recipe_dir if hasattr(metadata.config, "recipe_dir") else metadata.path
     if recipe_dir:
         info_dir = os.path.normpath(os.path.join(recipe_dir, 'info'))
         test_files = os.path.join(info_dir, 'test')
@@ -2043,6 +2031,7 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
 
     copy_test_source_files(metadata, metadata.config.test_dir)
     # this is also copying tests/source_files from work_dir to testing workdir
+
     _, pl_files, py_files, r_files, lua_files, shell_files = \
         create_all_test_files(metadata, existing_test_dir=metadata.config.test_dir)
     if not any([py_files, shell_files, pl_files, lua_files, r_files]):
@@ -2166,7 +2155,8 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
                     k: env[k]
                     for k in ['PREFIX', 'SRC_DIR'] if k in env
                 }
-                print("Rewriting env in output: %s" % pprint.pformat(rewrite_env))
+                if metadata.config.verbose:
+                    print("Rewriting env in output: %s" % pprint.pformat(rewrite_env))
             utils.check_call_env(cmd, env=env, cwd=metadata.config.test_dir, stats=test_stats, rewrite_stdout_env=rewrite_env)
             log_stats(test_stats, "testing {}".format(metadata.name()))
             if stats is not None and metadata.config.variants:
@@ -2201,9 +2191,12 @@ def tests_failed(package_or_metadata, move_broken, broken_dir, config):
 
     if move_broken:
         log = utils.get_logger(__name__)
-        log.warn('Tests failed for %s - moving package to %s' % (os.path.basename(pkg),
-                 broken_dir))
-        shutil.move(pkg, dest)
+        try:
+            shutil.move(pkg, dest)
+            log.warn('Tests failed for %s - moving package to %s' % (os.path.basename(pkg),
+                    broken_dir))
+        except OSError:
+            pass
         update_index(os.path.dirname(os.path.dirname(pkg)), verbose=config.debug)
     sys.exit("TESTS FAILED: " + os.path.basename(pkg))
 

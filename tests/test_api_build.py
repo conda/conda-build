@@ -423,6 +423,10 @@ def test_build_metadata_object(testing_metadata):
 
 def test_numpy_setup_py_data(testing_config):
     recipe_path = os.path.join(metadata_dir, '_numpy_setup_py_data')
+    # this shows an error that is OK to ignore:
+
+    # PackagesNotFoundError: The following packages are missing from the target environment:
+    #    - cython
     subprocess.call('conda remove -y cython'.split())
     with pytest.raises(CondaBuildException) as exc:
         m = api.render(recipe_path, config=testing_config, numpy="1.11")[0][0]
