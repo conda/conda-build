@@ -642,6 +642,7 @@ def toposort(output_metadata_map):
                     topodict[name].update((dep,))
         else:
             endorder.add(idx)
+
     topo_order = list(_toposort(topodict))
     keys = [k for pkgname in topo_order for k in output_metadata_map.keys()
             if 'name' in k and k['name'] == pkgname]
@@ -705,10 +706,8 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
             om.final = False
             # get the new output_d from the reparsed top-level metadata, so that we have any
             #    exact subpackage version/build string info
-            base_metadata.append_parent_metadata(om)
             output_d = om.get_rendered_output(metadata.name()) or {'name': metadata.name()}
             om = om.get_output_metadata(output_d)
-            base_metadata.append_parent_metadata(om)
             if not bypass_env_check:
                 fm = finalize_metadata(om,
                                        permit_unsatisfiable_variants=permit_unsatisfiable_variants)
@@ -768,8 +767,8 @@ def combine_top_level_metadata_with_output(metadata, output):
     """Merge top-level metadata into output when output is same name as top-level"""
     sections = ('requirements', 'build', 'about')
     for section in sections:
-        metadata_section = metadata.meta.get(section, {})
-        output_section = output.get(section, {})
+        metadata_section = metadata.meta.get(section, {}) or {}
+        output_section = output.get(section, {}) or {}
         if section == 'requirements':
             output_section = utils.expand_reqs(output.get(section, {}))
         for k, v in metadata_section.items():
@@ -839,7 +838,6 @@ class MetaData(object):
         else:
             self._meta_path = find_recipe(path)
             self.path = os.path.dirname(self.meta_path)
-        self._name = ''
         self.requirements_path = join(self.path, 'requirements.txt')
 
         # Start with bare-minimum contents so we can call environ.get_dict() with impunity
@@ -897,6 +895,12 @@ class MetaData(object):
                 build_config = parse(configfile.read(), config=self.config)
         utils.merge_or_update_dict(self.meta, build_config, self.path, merge=merge,
                                    raise_on_clobber=raise_on_clobber)
+
+    @property
+    def is_output(self):
+        self_name = self.name()
+        parent_name = self.meta.get('extra', {}).get('parent_recipe', {}).get('name')
+        return bool(parent_name) and parent_name != self_name
 
     def parse_again(self, permit_undefined_jinja=False, allow_no_other_outputs=False,
                     bypass_env_check=False, **kw):
@@ -988,6 +992,9 @@ class MetaData(object):
                              bypass_env_check=bypass_env_check)
             self.final = final
         if undefined_jinja_vars:
+            self.parse_again(permit_undefined_jinja=False,
+                             allow_no_other_outputs=allow_no_other_outputs,
+                             bypass_env_check=bypass_env_check)
             sys.exit("Undefined Jinja2 variables remain ({}).  Please enable "
                      "source downloading and try again.".format(self.undefined_jinja_vars))
 
@@ -1109,7 +1116,7 @@ class MetaData(object):
         return True
 
     def name(self, fail_ok=False):
-        res = self._name or self.meta.get('package', {}).get('name', '')
+        res = self.meta.get('package', {}).get('name', '')
         if not res and not fail_ok:
             sys.exit('Error: package/name missing in: %r' % self.meta_path)
         res = text_type(res)
@@ -1816,10 +1823,11 @@ class MetaData(object):
         output_metadata._meta_path = ""
 
     def get_output_metadata(self, output):
-        output_metadata = self.copy() if output else self
-        output_metadata._name = output.get('name')
-
-        if output:
+        self.parse_until_resolved(allow_no_other_outputs=True)
+        if output.get('name') == self.name():
+            output_metadata = self
+        else:
+            output_metadata = self.copy()
             output_reqs = utils.expand_reqs(output.get('requirements', {}))
             build_reqs = output_reqs.get('build', [])
             host_reqs = output_reqs.get('host', [])
@@ -1856,6 +1864,7 @@ class MetaData(object):
             requirements.update({'run_constrained': constrain_reqs}) if constrain_reqs else None
             requirements.update(other_reqs)
             output_metadata.meta['requirements'] = requirements
+
             output_metadata.meta['package']['version'] = output.get('version') or self.version()
             output_metadata.final = False
             output_metadata.noarch = output.get('noarch', False)
@@ -1893,6 +1902,7 @@ class MetaData(object):
                 output_metadata.meta['test'] = output['test']
             if 'about' in output:
                 output_metadata.meta['about'] = output['about']
+            self.append_parent_metadata(output_metadata)
         return output_metadata
 
     def append_parent_metadata(self, out_metadata):
@@ -1963,8 +1973,7 @@ class MetaData(object):
                                 insert_variant_versions(requirements, variant, env)
                             out['requirements'] = requirements
                         out_metadata = self.get_output_metadata(out)
-                        self.append_parent_metadata(out_metadata)
-                        out_metadata.other_outputs = all_output_metadata
+
                         # keeping track of other outputs is necessary for correct functioning of the
                         #    pin_subpackage jinja2 function.  It's important that we store all of
                         #    our outputs so that they can be referred to in later rendering.  We
@@ -1974,6 +1983,7 @@ class MetaData(object):
                                              HashableDict({k: out_metadata.config.variant[k]
                                     for k in out_metadata.get_used_vars()}))] = out, out_metadata
                         out_metadata_map[HashableDict(out)] = out_metadata
+                        self.other_outputs = out_metadata.other_outputs = all_output_metadata
                 except SystemExit:
                     if not permit_undefined_jinja:
                         raise
@@ -1988,6 +1998,7 @@ class MetaData(object):
 
             conda_packages = OrderedDict()
             non_conda_packages = []
+
             for output_d, m in render_order.items():
                 if not output_d.get('type') or output_d['type'] == 'conda':
                     conda_packages[m.name(), HashableDict({k: m.config.variant[k]
@@ -2060,9 +2071,9 @@ class MetaData(object):
 
         outputs = (yaml.safe_load(self._get_contents(permit_undefined_jinja=permit_undefined_jinja,
                                                      template_string=template_string,
-                                                     skip_build_id=True)) or {}).get('outputs', [])
-        if not self.final:
-            self.parse_until_resolved()
+                                                     skip_build_id=True,
+                                                     allow_no_other_outputs=permit_undefined_jinja)) or
+                   {}).get('outputs', [])
         return get_output_dicts_from_metadata(self, outputs=outputs)
 
     def get_rendered_output(self, name, permit_undefined_jinja=False):
@@ -2088,7 +2099,7 @@ class MetaData(object):
 
     def get_used_vars(self, force_top_level=False, force_global=False):
         global used_vars_cache
-        recipe_dir = self.path or self.meta.get('extra', {}).get('parent_recipe', {}).get('path')
+        recipe_dir = self.path
         if hasattr(self.config, 'used_vars'):
             used_vars = self.config.used_vars
         elif (self.name(), recipe_dir, force_top_level,

@@ -8,7 +8,7 @@ import os
 from os.path import join, exists
 import json
 
-from conda_build.utils import copy_into, ensure_list, glob, on_win
+from conda_build.utils import copy_into, ensure_list, glob, on_win, rm_rf
 
 
 def create_files(m, test_dir=None):
@@ -25,13 +25,11 @@ def create_files(m, test_dir=None):
     if not os.path.isdir(test_dir):
         os.makedirs(test_dir)
 
-    recipe_dir = m.path or m.meta.get('extra', {}).get('parent_recipe', {}).get('path')
-
     for pattern in ensure_list(m.get_value('test/files', [])):
         has_files = True
-        files = glob(join(recipe_dir, pattern))
+        files = glob(join(m.path, pattern))
         for f in files:
-            copy_into(f, f.replace(recipe_dir, test_dir), m.config.timeout, locking=False,
+            copy_into(f, f.replace(m.path, test_dir), m.config.timeout, locking=False,
                     clobber=True)
     return has_files
 
@@ -241,10 +239,8 @@ def create_lua_files(m, test_dir=None):
 
 def create_all_test_files(m, test_dir=None, existing_test_dir=None):
     if test_dir:
-        try:
-            os.makedirs(test_dir)
-        except:
-            pass
+        rm_rf(test_dir)
+        os.makedirs(test_dir)
         # this happens when we're finishing the build.
         test_deps = m.meta.get('test', {}).get('requires', [])
         if test_deps:

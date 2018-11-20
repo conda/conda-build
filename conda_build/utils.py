@@ -988,9 +988,8 @@ def convert_path_for_cygwin_or_msys2(exe, path):
 
 
 def get_skip_message(m):
-    recipe_dir = m.path or m.meta.get('extra', {}).get('parent_recipe', {}).get('path')
     return ("Skipped: {} from {} defines build/skip for this configuration ({}).".format(
-        m.name(), recipe_dir,
+        m.name(), m.path,
         {k: m.config.variant[k] for k in m.get_used_vars()}))
 
 

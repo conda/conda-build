@@ -466,8 +466,7 @@ def meta_vars(meta, skip_build_id=False):
     else:
         d['PKG_BUILD_STRING'] = 'placeholder'
         d['PKG_HASH'] = '1234567'
-    d['RECIPE_DIR'] = (meta.path if meta.path else
-                       meta.meta.get('extra', {}).get('parent_recipe', {}).get('path', ''))
+    d['RECIPE_DIR'] = meta.path
     return d
 
 
