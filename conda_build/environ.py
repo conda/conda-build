@@ -247,6 +247,8 @@ def get_dict(m, prefix=None, for_env=True, skip_build_id=False, escape_backslash
     if not prefix:
         prefix = m.config.host_prefix
 
+    m.config._merge_build_host = m.build_is_host
+
     # conda-build specific vars
     d = conda_build_vars(prefix, m.config)
 

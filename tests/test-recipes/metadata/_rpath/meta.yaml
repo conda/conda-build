@@ -3,7 +3,11 @@ package:
   version: 0.1
 
 build:
-  script: mkdir -p ${PREFIX}/bin ; echo "int main() { return 0; }" | gcc -x c -o ${PREFIX}/bin/rpath -Wl,-rpath,\$ORIGIN/../previous:\$ORIGIN/../lib:$PREFIX/lib:${PREFIX}/plugins:\$ORIGIN/../successive -
+  script: mkdir -p ${PREFIX}/bin ; echo "int main() { return 0; }" | $CC -x c -o ${PREFIX}/bin/rpath -Wl,-rpath,\$ORIGIN/../previous:\$ORIGIN/../lib:$PREFIX/lib:${PREFIX}/plugins:\$ORIGIN/../successive -
+
+requirements:
+  build:
+    - {{ compiler("c") }}
 
 test:
   commands:

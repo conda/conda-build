@@ -1462,10 +1462,10 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                                 k: env[k]
                                 for k in ['PREFIX', 'BUILD_PREFIX', 'SRC_DIR'] if k in env
                             }
-                            print("Rewriting env in output: %s" % pprint.pformat(rewrite_env))
+                            print("Rewriting env in output:\n%s" % pprint.pformat(rewrite_env))
 
                         # this should raise if any problems occur while building
-                        utils.check_call_env(cmd, env=env, rewrite_stdout_env=rewrite_env,
+                        utils.check_call_env(cmd, rewrite_stdout_env=rewrite_env,
                                             cwd=src_dir, stats=build_stats)
                         utils.remove_pycache_from_scripts(m.config.host_prefix)
             if build_stats and not provision_only:
@@ -1877,9 +1877,10 @@ def write_build_scripts(m, script, build_file):
             if v:
                 bf.write('export {0}="{1}"\n'.format(k, v))
 
-        if m.config.activate and not m.name() == 'conda':
+        if m.activate_build_script:
             _write_sh_activation_text(bf, m)
     with open(work_file, 'w') as bf:
+        bf.write('set -ex\n')
         bf.write('if [ -z ${CONDA_BUILD+x} ]; then\n')
         bf.write("\tsource {}\n".format(env_file))
         bf.write("fi\n")
@@ -2147,7 +2148,7 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
                     for k in ['PREFIX', 'SRC_DIR'] if k in env
                 }
                 if metadata.config.verbose:
-                    print("Rewriting env in output: %s" % pprint.pformat(rewrite_env))
+                    print("Rewriting env in output:\n%s" % pprint.pformat(rewrite_env))
             utils.check_call_env(cmd, env=env, cwd=metadata.config.test_dir, stats=test_stats, rewrite_stdout_env=rewrite_env)
             log_stats(test_stats, "testing {}".format(metadata.name()))
             if stats is not None and metadata.config.variants:
