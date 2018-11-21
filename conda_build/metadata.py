@@ -898,7 +898,7 @@ class MetaData(object):
 
     @property
     def is_output(self):
-        self_name = self.name()
+        self_name = self.name(fail_ok=True)
         parent_name = self.meta.get('extra', {}).get('parent_recipe', {}).get('name')
         return bool(parent_name) and parent_name != self_name
 
@@ -1622,12 +1622,10 @@ class MetaData(object):
         return None
 
     def get_recipe_text(self, extract_pattern=None, force_top_level=False, apply_selectors=True):
-        parent_recipe = self.meta.get('extra', {}).get('parent_recipe', {})
-        is_output = self.name() != parent_recipe.get('name') and parent_recipe.get('path')
         meta_path = self.meta_path
         if meta_path:
             recipe_text = read_meta_file(meta_path)
-            if is_output and not force_top_level:
+            if self.is_output and not force_top_level:
                 recipe_text = self.extract_single_output_text(self.name(), getattr(self, 'type', None))
         else:
             from conda_build.render import output_yaml
@@ -1648,7 +1646,7 @@ class MetaData(object):
             #    (?:-\sname:\s+%s.*?)requirements:.*?
             # terminate match of other sections
             #    (?=^\s*-\sname|^\s*test:|^\s*extra:|^\s*about:|^outputs:|\Z)
-            f = r'(^requirements:.*?|(?<=-\sname:\s%s\s).*?requirements:.*?)(?=^\s*-\sname|^\s*test:|^\s*script:|^\s*extra:|^\s*about:|^outputs:|\Z)' % self.name()  # NOQA
+            f = r'(^requirements:.*?|(?<=-\sname:).*?requirements:.*?)(?=^\s*-\sname|^\s*test:|^\s*script:|^\s*extra:|^\s*about:|^outputs:|\Z)'  # NOQA
         return self.get_recipe_text(f, force_top_level=force_top_level)
 
     def extract_outputs_text(self, apply_selectors=True):
@@ -2132,8 +2130,6 @@ class MetaData(object):
 
     def _get_used_vars_meta_yaml_helper(self, force_top_level=False, force_global=False,
                                             apply_selectors=False):
-        is_output = (not self.path and self.meta.get('extra', {}).get('parent_recipe'))
-
         if force_global:
             recipe_text = self.get_recipe_text(force_top_level=force_top_level,
                                                 apply_selectors=apply_selectors)
@@ -2141,7 +2137,7 @@ class MetaData(object):
             #     between requirements and the rest
             reqs_text = recipe_text
         else:
-            if is_output and not force_top_level:
+            if self.is_output and not force_top_level:
                 recipe_text = self.extract_single_output_text(self.name(), getattr(self, 'type', None),
                                 apply_selectors=apply_selectors)
             else:
@@ -2228,7 +2224,7 @@ class MetaData(object):
     def activate_build_script(self):
         b = self.meta.get('build', {}) or {}
         should_activate = (self.uses_new_style_compiler_activation or b.get('activate_in_script'))
-        return bool(self.config.activate and not self.name() == 'conda' and should_activate)
+        return bool(self.config.activate or should_activate) and not self.name() == 'conda'
 
     @property
     def build_is_host(self):
@@ -2248,8 +2244,7 @@ class MetaData(object):
         #    fix that here by replacing any PKG_NAME instances with the known
         #    parent name
         parent_recipe = self.meta.get('extra', {}).get('parent_recipe', {})
-        is_output = self.name() != parent_recipe.get('name') and parent_recipe.get('path')
-        alt_name = parent_recipe['name'] if is_output else None
+        alt_name = parent_recipe['name'] if self.is_output else None
         if recipe_no_outputs:
             top_no_outputs = yaml.safe_load(self._get_contents(False,
                                                                template_string=recipe_no_outputs,

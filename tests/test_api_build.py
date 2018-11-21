@@ -802,7 +802,7 @@ def test_build_expands_wildcards(mocker, testing_workdir):
         with open(os.path.join(f, 'meta.yaml'), 'w') as fh:
             fh.write('\n')
     api.build(["a*"], config=config)
-    output = [os.path.join(os.getcwd(), path, 'meta.yaml') for path in files]
+    output = sorted([os.path.join(os.getcwd(), path, 'meta.yaml') for path in files])
     build_tree.assert_called_once_with(output,
                                        mocker.ANY,  # config
                                        mocker.ANY,  # stats
