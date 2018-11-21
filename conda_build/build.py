@@ -1464,8 +1464,11 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                             }
                             print("Rewriting env in output:\n%s" % pprint.pformat(rewrite_env))
 
+                        # clear this, so that the activate script will get run as necessary
+                        del env['CONDA_BUILD']
+
                         # this should raise if any problems occur while building
-                        utils.check_call_env(cmd, rewrite_stdout_env=rewrite_env,
+                        utils.check_call_env(cmd, env=env, rewrite_stdout_env=rewrite_env,
                                             cwd=src_dir, stats=build_stats)
                         utils.remove_pycache_from_scripts(m.config.host_prefix)
             if build_stats and not provision_only:
