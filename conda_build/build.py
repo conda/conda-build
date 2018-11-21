@@ -1441,7 +1441,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                     build_file = join(src_dir, 'bld.bat')
                     with open(build_file, 'w') as bf:
                         bf.write(script)
-                windows.build(m, build_file, stats=build_stats)
+                windows.build(m, build_file, stats=build_stats, provision_only=provision_only)
             else:
                 build_file = join(m.path, 'build.sh')
                 if isfile(build_file) and script:
@@ -1880,7 +1880,9 @@ def write_build_scripts(m, script, build_file):
         if m.config.activate and not m.name() == 'conda':
             _write_sh_activation_text(bf, m)
     with open(work_file, 'w') as bf:
-        bf.write("source {}\n".format(env_file))
+        bf.write('if [ -z ${CONDA_BUILD+x} ]; then\n')
+        bf.write("\tsource {}\n".format(env_file))
+        bf.write("fi\n")
         if script:
                 bf.write(script)
         if isfile(build_file) and not script:

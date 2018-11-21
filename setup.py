@@ -15,7 +15,7 @@ if version_dict['error']:
     raise RuntimeError(version_dict["error"])
 
 deps = ['conda', 'requests', 'filelock', 'pyyaml', 'jinja2', 'pkginfo',
-        'beautifulsoup4', 'chardet', 'pytz', 'tqdm', 'psutil', 'six', 'libarchive-c']
+        'beautifulsoup4', 'chardet', 'pytz', 'tqdm', 'psutil', 'six']
 
 if sys.version_info < (3, 4):
     deps.extend(['contextlib2', 'enum34', 'futures', 'scandir', 'glob2'])

@@ -58,13 +58,13 @@ Set up environments and activation scripts to debug your build or test phase.
 
 def execute(args):
     p, _args = parse_args(args)
-    test = False
+    test = True
 
     try:
         if not any(os.path.splitext(_args.recipe_or_package_file_path)[1] in ext for ext in CONDA_TARBALL_EXTENSIONS):
             # --output silences console output here
             thing_to_debug = render_execute(args, print_results=False)
-            test = True
+            test = False
         else:
             thing_to_debug = _args.recipe_or_package_file_path
         activation_string = api.debug(thing_to_debug, verbose=(not _args.activate_string_only), **_args.__dict__)
