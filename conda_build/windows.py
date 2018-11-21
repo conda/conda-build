@@ -281,13 +281,15 @@ def write_build_scripts(m, env, bld_bat):
         with open(bld_bat) as fi:
             data = fi.read()
         with open(work_script, 'w') as fo:
-            fo.write("call {}".format(env_script))
+            fo.write('IF "%CONDA_BUILD%" == "" (\n')
+            fo.write("    call {}\n".format(env_script))
+            fo.write(')\n')
             fo.write("REM ===== end generated header =====\n")
             fo.write(data)
     return work_script, env_script
 
 
-def build(m, bld_bat, stats):
+def build(m, bld_bat, stats, provision_only=False):
     with path_prepended(m.config.build_prefix):
         with path_prepended(m.config.host_prefix):
             env = environ.get_dict(m=m)
@@ -320,8 +322,9 @@ def build(m, bld_bat, stats):
         if not isdir(path):
             os.makedirs(path)
 
-        write_build_scripts(m, env, bld_bat)
+    write_build_scripts(m, env, bld_bat)
 
+    if not provision_only:
         cmd = ['cmd.exe', '/c', 'bld.bat']
         # rewrite long paths in stdout back to their env variables
         if m.config.debug:
@@ -333,4 +336,4 @@ def build(m, bld_bat, stats):
             }
             print("Rewriting env in output: %s" % pprint.pformat(rewrite_env))
         check_call_env(cmd, cwd=m.config.work_dir, stats=stats, rewrite_stdout_env=rewrite_env)
-    fix_staged_scripts(join(m.config.host_prefix, 'Scripts'), config=m.config)
+        fix_staged_scripts(join(m.config.host_prefix, 'Scripts'), config=m.config)
