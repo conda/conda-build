@@ -281,15 +281,17 @@ different sets of packages."""
         default=cc_conda_build.get('error_overlinking', 'false').lower() == 'true',
     )
     p.add_argument(
-        "--long-test-prefix", default=True, action="store_false",
+        "--long-test-prefix", action="store_true",
         help=("Use a long prefix for the test prefix, as well as the build prefix.  Affects only "
               "Linux and Mac.  Prefix length matches the --prefix-length flag.  This is on by "
-              "default in conda-build 3.0+")
+              "default in conda-build 3.0+"),
+        default=cc_conda_build.get('long_test_prefix', 'true').lower() == 'true',
     )
     p.add_argument(
         "--no-long-test-prefix", dest="long_test_prefix", action="store_false",
         help=("Do not use a long prefix for the test prefix, as well as the build prefix."
-              "  Affects only Linux and Mac.  Prefix length matches the --prefix-length flag.  ")
+              "  Affects only Linux and Mac.  Prefix length matches the --prefix-length flag.  "),
+        default=cc_conda_build.get('long_test_prefix', 'true').lower() == 'true',
     )
     p.add_argument(
         '--keep-going', '-k', action='store_true',
