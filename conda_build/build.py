@@ -962,21 +962,11 @@ def bundle_conda(output, metadata, env, stats, **kw):
     # first filter is so that info_files does not pick up ignored files
     files = utils.filter_files(files, prefix=metadata.config.host_prefix)
     # this is also copying things like run_test.sh into info/recipe
+    utils.rm_rf(os.path.join(metadata.config.info_dir, 'test'))
+
     with tmp_chdir(metadata.config.host_prefix):
         output['checksums'] = create_info_files(metadata, files, prefix=metadata.config.host_prefix)
 
-    for ext in ('.py', '.r', '.pl', '.lua', '.sh', '.bat'):
-        test_dest_path = os.path.join(metadata.config.info_dir, 'test', 'run_test' + ext)
-
-        script = output.get('test', {}).get('script')
-        if script and script.endswith(ext):
-            utils.copy_into(os.path.join(metadata.config.work_dir, output['test']['script']),
-                            test_dest_path, metadata.config.timeout,
-                            locking=metadata.config.locking)
-        # elif (os.path.isfile(test_dest_path) and metadata.is_output and
-        #       not metadata.meta.get('test', {}).get("commands")):
-        #     # the test belongs to the parent recipe.  Don't include it in subpackages.
-        #     utils.rm_rf(test_dest_path)
     # here we add the info files into the prefix, so we want to re-collect the files list
     prefix_files = set(utils.prefix_files(metadata.config.host_prefix))
     files = utils.filter_files(prefix_files - initial_files, prefix=metadata.config.host_prefix)
@@ -1972,12 +1962,12 @@ def write_test_scripts(metadata, env_vars, py_files, pl_files, lua_files, r_file
         if shell_files:
             for shell_file in shell_files:
                 if utils.on_win:
-                    if os.path.splitext(shell_file) == ".bat":
+                    if os.path.splitext(shell_file)[1] == ".bat":
                         tf.write('call "{test_file}"\n'.format(test_file=shell_file))
                         tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
                     else:
                         log.warn("Found sh test file on windows.  Ignoring this for now (PRs welcome)")
-                else:
+                elif os.path.splitext(shell_file)[1] == ".sh":
                     # TODO: Run the test/commands here instead of in run_test.py
                     tf.write('"{shell_path}" {trace}-e "{test_file}"\n'.format(shell_path=shell_path,
                                                                             test_file=shell_file,
@@ -2031,8 +2021,7 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
     copy_test_source_files(metadata, metadata.config.test_dir)
     # this is also copying tests/source_files from work_dir to testing workdir
 
-    _, pl_files, py_files, r_files, lua_files, shell_files = \
-        create_all_test_files(metadata, existing_test_dir=metadata.config.test_dir)
+    _, pl_files, py_files, r_files, lua_files, shell_files = create_all_test_files(metadata)
     if not any([py_files, shell_files, pl_files, lua_files, r_files]):
         print("Nothing to test for:", test_package_name)
         return True
