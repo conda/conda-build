@@ -39,14 +39,15 @@ def _get_output_script_name(m, win_status):
     #   They do not automatically pick up run_test.*, but can be pointed at that explicitly.
 
     ext = '.bat' if win_status else '.sh'
-    for out in m.meta.get('outputs', []):
-        if m.name() == out.get('name'):
-            out_test_script = out.get('test', {}).get('script', 'no-file')
-            if os.path.splitext(out_test_script)[1].lower() == ext:
-                name = out_test_script
-                break
-    else:
-        name = "run_test{}".format(ext)
+    name = "run_test{}".format(ext)
+    if m.is_output:
+        name = 'no-file'
+        for out in m.meta.get('outputs', []):
+            if m.name() == out.get('name'):
+                out_test_script = out.get('test', {}).get('script', 'no-file')
+                if os.path.splitext(out_test_script)[1].lower() == ext:
+                    name = out_test_script
+                    break
     return name
 
 
@@ -60,66 +61,68 @@ def create_shell_files(m, test_dir=None):
     if m.noarch:
         win_status = [False, True]
 
-    patch_files = []
-
+    shell_files = []
     for status in win_status:
         name = _get_output_script_name(m, status)
         dest_file = join(test_dir, name)
         if exists(join(m.path, name)):
             # disable locking to avoid locking a temporary directory (the extracted test folder)
             copy_into(join(m.path, name), dest_file, m.config.timeout, locking=False)
-
-        commands = ensure_list(m.get_value('test/commands', []))
-        if commands:
-            with open(join(test_dir, name), 'a') as f:
-                f.write('\n\n')
-                if not status:
-                    f.write('set -ex\n\n')
-                f.write('\n\n')
-                for cmd in commands:
-                    f.write(cmd)
-                    f.write('\n')
+        if os.path.basename(test_dir) != 'test_tmp':
+            commands = ensure_list(m.get_value('test/commands', []))
+            if commands:
+                if name == 'no-file':
+                    name = 'run_test.{}'.format('bat' if win_status else 'sh')
+                with open(join(test_dir, name), 'a') as f:
+                    f.write('\n\n')
+                    if not status:
+                        f.write('set -ex\n\n')
+                    f.write('\n\n')
+                    for cmd in commands:
+                        f.write(cmd)
+                        f.write('\n')
+                        if status:
+                            f.write("IF %ERRORLEVEL% NEQ 0 exit /B 1\n")
                     if status:
-                        f.write("IF %ERRORLEVEL% NEQ 0 exit /B 1\n")
-                if status:
-                    f.write('exit /B 0\n')
-                else:
-                    f.write('exit 0\n')
+                        f.write('exit /B 0\n')
+                    else:
+                        f.write('exit 0\n')
         if os.path.isfile(dest_file):
-            patch_files.append(dest_file)
-    return patch_files
+            shell_files.append(dest_file)
+    return shell_files
 
 
 def _create_test_files(m, test_dir, ext, comment_char='# '):
-    # the way this works is that each output needs to explicitly define a test script to run
-    #   They do not automatically pick up run_test.*, but can be pointed at that explicitly.
     name = 'run_test' + ext
-    for out in m.meta.get('outputs', []):
-        if m.name() == out.get('name'):
-            out_test_script = out.get('test', {}).get('script', 'no-file')
-            if out_test_script.endswith(ext):
-                name = out_test_script
-                break
+    if m.is_output:
+        name = ''
+        # the way this works is that each output needs to explicitly define a test script to run
+        #   They do not automatically pick up run_test.*, but can be pointed at that explicitly.
+        for out in m.meta.get('outputs', []):
+            if m.name() == out.get('name'):
+                out_test_script = out.get('test', {}).get('script', 'no-file')
+                if out_test_script.endswith(ext):
+                    name = out_test_script
+                    break
 
-    test_file = os.path.join(m.path, name)
     out_file = join(test_dir, 'run_test' + ext)
+    if name:
+        test_file = os.path.join(m.path, name)
+        if os.path.isfile(test_file):
+            with open(out_file, 'w') as fo:
+                fo.write("%s tests for %s (this is a generated file);\n" % (comment_char, m.dist()))
+                fo.write("print('===== testing package: %s =====');\n" % m.dist())
 
-    if os.path.isfile(test_file):
-        with open(out_file, 'w') as fo:
-            fo.write("%s tests for %s (this is a generated file);\n" % (comment_char, m.dist()))
-            fo.write("print('===== testing package: %s =====');\n" % m.dist())
-
-            try:
-                with open(test_file) as fi:
-                    fo.write("print('running {0}');\n".format(name))
-                    fo.write("{0} --- {1} (begin) ---\n".format(comment_char, name))
-                    fo.write(fi.read())
-                    fo.write("{0} --- {1} (end) ---\n".format(comment_char, name))
-            except AttributeError:
-                fo.write("# tests were not packaged with this module, and cannot be run\n")
-            fo.write("\nprint('===== %s OK =====');\n" % m.dist())
-
-    return (out_file, os.path.isfile(test_file) and os.path.basename(test_file) != 'no-file')
+                try:
+                    with open(test_file) as fi:
+                        fo.write("print('running {0}');\n".format(name))
+                        fo.write("{0} --- {1} (begin) ---\n".format(comment_char, name))
+                        fo.write(fi.read())
+                        fo.write("{0} --- {1} (end) ---\n".format(comment_char, name))
+                except AttributeError:
+                    fo.write("# tests were not packaged with this module, and cannot be run\n")
+                fo.write("\nprint('===== %s OK =====');\n" % m.dist())
+    return (out_file, bool(name) and os.path.isfile(out_file) and os.path.basename(test_file) != 'no-file')
 
 
 def create_py_files(m, test_dir=None):
@@ -237,7 +240,7 @@ def create_lua_files(m, test_dir=None):
     return tf if (tf_exists or imports) else False
 
 
-def create_all_test_files(m, test_dir=None, existing_test_dir=None):
+def create_all_test_files(m, test_dir=None):
     if test_dir:
         rm_rf(test_dir)
         os.makedirs(test_dir)
@@ -252,17 +255,9 @@ def create_all_test_files(m, test_dir=None, existing_test_dir=None):
 
     files = create_files(m, test_dir)
 
-    existing_test = lambda ext: (bool(existing_test_dir) and
-                os.path.isfile(os.path.join(existing_test_dir, 'run_test.' + ext)))
-
-    pl_files = existing_test('pl') or create_pl_files(m, test_dir)
-    py_files = existing_test('py') or create_py_files(m, test_dir)
-    r_files = existing_test('r') or create_r_files(m, test_dir)
-    lua_files = existing_test('lua') or create_lua_files(m, test_dir)
-    if existing_test_dir:
-        shell_files = glob(join(existing_test_dir, "*.sh"))
-        if on_win:
-            shell_files.extend(glob(join(existing_test_dir, "*.bat")))
-    else:
-        shell_files = create_shell_files(m, test_dir)
+    pl_files = create_pl_files(m, test_dir)
+    py_files = create_py_files(m, test_dir)
+    r_files = create_r_files(m, test_dir)
+    lua_files = create_lua_files(m, test_dir)
+    shell_files = create_shell_files(m, test_dir)
     return files, pl_files, py_files, r_files, lua_files, shell_files
