@@ -1,3 +1,36 @@
+2018-11-21 3.16.3:
+------------------
+
+Enhancements:
+-------------
+
+* rewrite long prefix paths as $PREFIX, etc. for more readable build logs  #3258
+* make the --output-folder switch configurable in condarc  #3265
+* make the --long-test-prefix switch configurable in condarc, fix logic error with that argument  #3266
+
+Bug fixes:
+----------
+
+* improve robustness of indexing in face of corrupt package data #3238
+* change timeouts to 900 instead of 90  #3239
+* add activation to wheel bundling script  #3240
+* fix PermissionError import from utils, undefined on py2.7  #3247
+* fix outputs with custom build string getting hash incorrectly  #3250
+* fix tests not being run on windows  #3257
+
+Contributors:
+-------------
+
+* @Bezier89
+* @gabm
+* @isuruf
+* @minrk
+* @msarahan
+* @teake
+* @tomashek
+* @tschoonj
+
+
 2018-10-29 3.16.2:
 ------------------
 
