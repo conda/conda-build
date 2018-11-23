@@ -15,6 +15,7 @@ from conda_build.conda_interface import download, reset_context
 from conda_build.tarcheck import TarCheck
 
 from conda_build import api
+from conda_build.config import Config
 from conda_build.utils import (get_site_packages, on_win, get_build_folders, package_has_file,
                                check_call_env, tar_xf)
 from conda_build.conda_interface import TemporaryDirectory, conda_43
@@ -654,3 +655,18 @@ def test_test_extra_dep(testing_metadata):
         args = [output, '-t']
         # extra_deps will add it in
         main_build.execute(args)
+
+
+@pytest.mark.parametrize(
+    'additional_args, is_long_test_prefix',
+    [
+        ([], True),
+        (['--long-test-prefix'], True),
+        (['--no-long-test-prefix'], False)
+    ],
+)
+def test_long_test_prefix(additional_args, is_long_test_prefix):
+    args = ['non_existing_recipe'] + additional_args
+    parser, args = main_build.parse_args(args)
+    config = Config(**args.__dict__)
+    assert config.long_test_prefix is is_long_test_prefix
