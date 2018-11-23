@@ -90,6 +90,7 @@ def recipe(request):
 def test_recipe_builds(recipe, testing_config, testing_workdir, monkeypatch):
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
+    testing_config.activate = True
     monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
     monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
     api.build(recipe, config=testing_config)
@@ -1243,6 +1244,7 @@ def test_provides_features_metadata(testing_config):
 def test_overlinking_detection(testing_config):
     testing_config.activate = True
     testing_config.error_overlinking = True
+    testing_config.verify = False
     recipe = os.path.join(metadata_dir, '_overlinking_detection')
     dest_file = os.path.join(recipe, 'build.sh')
     copy_into(os.path.join(recipe, 'build_scripts', 'default.sh'), dest_file, clobber=True)
@@ -1257,6 +1259,7 @@ def test_overdepending_detection(testing_config):
     testing_config.activate = True
     testing_config.error_overlinking = True
     testing_config.error_overdepending = True
+    testing_config.verify = False
     recipe = os.path.join(metadata_dir, '_overdepending_detection')
     with pytest.raises(OverDependingError):
         api.build(recipe, config=testing_config)
