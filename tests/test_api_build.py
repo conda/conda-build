@@ -194,7 +194,7 @@ def test_build_with_no_activate_does_not_activate():
               anaconda_upload=False)
 
 
-@pytest.mark.xfail(on_win and len(os.getenv('PATH')) > 1024, reason="Long paths make activation fail with obscure messages")
+@pytest.mark.xfail(on_win and len(os.getenv('PATH')) > 1024, reason="Long PATHs make activation fail with obscure messages")
 def test_build_with_activate_does_activate():
     api.build(os.path.join(metadata_dir, '_set_env_var_activate_build'), activate=True,
               anaconda_upload=False)
