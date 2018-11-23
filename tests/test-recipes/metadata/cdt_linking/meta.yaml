@@ -24,6 +24,3 @@ requirements:
     - {{ cdt('libxdamage-devel') }}
     - {{ cdt('libxxf86vm') }}
     - expat
-#  host:
-#    - expat
-#    - {{ cdt('expat') }}
