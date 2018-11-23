@@ -1454,24 +1454,24 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                         cmd = [shell_path] + (['-x'] if m.config.debug else []) + ['-e', work_file]
 
                         # rewrite long paths in stdout back to their env variables
-                    if m.config.debug or m.config.no_rewrite_stdout_env:
+                        if m.config.debug or m.config.no_rewrite_stdout_env:
                             rewrite_env = None
-                    else:
-                        rewrite_env = {
-                            k: env[k]
-                            for k in ['PREFIX', 'BUILD_PREFIX', 'SRC_DIR'] if k in env
-                        }
-                    for k, v in rewrite_env.items():
-                        print('{0} {1}={2}'
-                                .format('set' if build_file.endswith('.bat') else 'export', k, v))
+                        else:
+                            rewrite_env = {
+                                k: env[k]
+                                for k in ['PREFIX', 'BUILD_PREFIX', 'SRC_DIR'] if k in env
+                            }
+                            for k, v in rewrite_env.items():
+                                print('{0} {1}={2}'
+                                        .format('set' if build_file.endswith('.bat') else 'export', k, v))
 
-                    # clear this, so that the activate script will get run as necessary
-                    del env['CONDA_BUILD']
+                        # clear this, so that the activate script will get run as necessary
+                        del env['CONDA_BUILD']
 
-                    # this should raise if any problems occur while building
-                    utils.check_call_env(cmd, env=env, rewrite_stdout_env=rewrite_env,
-                                        cwd=src_dir, stats=build_stats)
-                    utils.remove_pycache_from_scripts(m.config.host_prefix)
+                        # this should raise if any problems occur while building
+                        utils.check_call_env(cmd, env=env, rewrite_stdout_env=rewrite_env,
+                                            cwd=src_dir, stats=build_stats)
+                        utils.remove_pycache_from_scripts(m.config.host_prefix)
             if build_stats and not provision_only:
                 log_stats(build_stats, "building {}".format(m.name()))
                 if stats is not None:
@@ -2145,16 +2145,16 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
         if not provision_only:
             # rewrite long paths in stdout back to their env variables
             if metadata.config.debug or metadata.config.no_rewrite_stdout_env:
-                    rewrite_env = None
+                rewrite_env = None
             else:
                 rewrite_env = {
                     k: env[k]
                     for k in ['PREFIX', 'SRC_DIR'] if k in env
                 }
-            if metadata.config.verbose:
-                for k, v in rewrite_env.items():
-                    print('{0} {1}={2}'
-                        .format('set' if test_script.endswith('.bat') else 'export', k, v))
+                if metadata.config.verbose:
+                    for k, v in rewrite_env.items():
+                        print('{0} {1}={2}'
+                            .format('set' if test_script.endswith('.bat') else 'export', k, v))
             utils.check_call_env(cmd, env=env, cwd=metadata.config.test_dir, stats=test_stats, rewrite_stdout_env=rewrite_env)
             log_stats(test_stats, "testing {}".format(metadata.name()))
             if stats is not None and metadata.config.variants:
