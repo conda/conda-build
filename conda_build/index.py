@@ -277,7 +277,7 @@ def _determine_namespace(info):
         namespace = info['namespace']
     else:
         depends_names = set()
-        for spec in info['depends']:
+        for spec in info.get('depends', []):
             try:
                 depends_names.add(MatchSpec(spec).name)
             except CondaError:
