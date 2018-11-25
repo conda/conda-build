@@ -1456,9 +1456,12 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                         if m.config.debug or m.config.no_rewrite_stdout_env:
                             rewrite_env = None
                         else:
+                            rewrite_vars = ['PREFIX', 'SRC_DIR']
+                            if not m.build_is_host:
+                                rewrite_vars.insert(1, 'BUILD_PREFIX')
                             rewrite_env = {
                                 k: env[k]
-                                for k in ['PREFIX', 'BUILD_PREFIX', 'SRC_DIR'] if k in env
+                                for k in rewrite_vars if k in env
                             }
                             for k, v in rewrite_env.items():
                                 print('{0} {1}={2}'
