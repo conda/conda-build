@@ -448,8 +448,10 @@ def _simplify_to_exact_constraints(metadata):
     metadata.meta['requirements'] = requirements
 
 
-def finalize_metadata(m, permit_unsatisfiable_variants=False):
+def finalize_metadata(m, parent_metadata=None, permit_unsatisfiable_variants=False):
     """Fully render a recipe.  Fill in versions for build/host dependencies."""
+    if not parent_metadata:
+        parent_metadata = m
     if m.skip():
         rendered_metadata = m.copy()
         rendered_metadata.final = True
@@ -474,8 +476,8 @@ def finalize_metadata(m, permit_unsatisfiable_variants=False):
         # extract the topmost section where variables are defined, and put it on top of the
         #     requirements for a particular output
         # Re-parse the output from the original recipe, so that we re-consider any jinja2 stuff
-        output = m.get_rendered_output(m.name())
-        rendered_metadata = m.get_output_metadata(output)
+        output = parent_metadata.get_rendered_output(m.name())
+        rendered_metadata = parent_metadata.get_output_metadata(output)
 
         if output:
             if 'package' in output or 'name' not in output:

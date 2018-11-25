@@ -707,9 +707,10 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
             # get the new output_d from the reparsed top-level metadata, so that we have any
             #    exact subpackage version/build string info
             output_d = om.get_rendered_output(metadata.name()) or {'name': metadata.name()}
+
             om = om.get_output_metadata(output_d)
             if not bypass_env_check:
-                fm = finalize_metadata(om,
+                fm = finalize_metadata(om, parent_metadata=base_metadata,
                                        permit_unsatisfiable_variants=permit_unsatisfiable_variants)
             else:
                 fm = om
