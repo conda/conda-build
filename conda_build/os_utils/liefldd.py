@@ -294,7 +294,7 @@ def _get_resolved_location(codefile,
                                  .replace('$SELFDIR', selfdir) \
                                  .replace('$EXEDIR', exedir)
             exists = os.path.exists(resolved)
-            exists_sysroot = exists or sysroot and resolved.startswith(sysroot)
+            exists_sysroot = exists and sysroot and resolved.startswith(sysroot)
             if resolved_rpath or exists or exists_sysroot:
                 rpath_result = rpath
                 found = True
