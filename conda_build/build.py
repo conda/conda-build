@@ -1272,9 +1272,8 @@ def create_build_envs(m, notest):
     except DependencyNeedsBuildingError as e:
         # subpackages are not actually missing.  We just haven't built them yet.
         from .conda_interface import MatchSpec
-        missing_deps = set(MatchSpec(pkg).name for pkg in e.packages) - set(
-            out.name() for _, out in m.get_output_metadata_set(permit_undefined_jinja=True)
-        )
+
+        missing_deps = set(MatchSpec(pkg).name for pkg in e.packages) - set(out.name() for _, out in m.other_outputs.values())
         if missing_deps:
             e.packages = missing_deps
             raise e
