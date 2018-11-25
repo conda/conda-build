@@ -33,7 +33,8 @@ from conda_build.utils import (copy_into, on_win, check_call_env, convert_path_f
                                package_has_file, check_output_env, get_conda_operation_locks, rm_rf,
                                walk, env_var, FileNotFoundError)
 from conda_build.os_utils.external import find_executable
-from conda_build.exceptions import DependencyNeedsBuildingError, CondaBuildException
+from conda_build.exceptions import (DependencyNeedsBuildingError, CondaBuildException,
+                                    OverLinkingError, OverDependingError)
 from conda_build.conda_interface import reset_context
 from conda.exceptions import ClobberError, CondaMultiError
 from conda_build.conda_interface import conda_46
@@ -89,6 +90,7 @@ def recipe(request):
 def test_recipe_builds(recipe, testing_config, testing_workdir, monkeypatch):
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
+    testing_config.activate = True
     monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
     monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
     api.build(recipe, config=testing_config)
@@ -193,7 +195,7 @@ def test_build_with_no_activate_does_not_activate():
               anaconda_upload=False)
 
 
-@pytest.mark.xfail(on_win and len(os.getenv('PATH')) > 1024, reason="Long paths make activation fail with obscure messages")
+@pytest.mark.xfail(on_win and len(os.getenv('PATH')) > 1024, reason="Long PATHs make activation fail with obscure messages")
 def test_build_with_activate_does_activate():
     api.build(os.path.join(metadata_dir, '_set_env_var_activate_build'), activate=True,
               anaconda_upload=False)
@@ -609,9 +611,10 @@ def test_disable_pip(testing_config, testing_metadata):
         api.build(testing_metadata)
 
 
-@pytest.mark.skipif(not sys.platform.startswith('linux'),
-                    reason="rpath fixup only done on Linux so far.")
-def test_rpath_linux(testing_config):
+@pytest.mark.skipif(sys.platform.startswith('win'),
+                    reason="rpath fixup not done on Windows.")
+def test_rpath_unix(testing_config):
+    testing_config.activate = True
     api.build(os.path.join(metadata_dir, "_rpath"), config=testing_config)
 
 
@@ -1238,19 +1241,28 @@ def test_provides_features_metadata(testing_config):
     assert index['provides_features'] == {'test2': 'also_ok'}
 
 
-@pytest.mark.skipif(not sys.platform.startswith('linux'),
-                    reason="Not implemented outside linux for now")
 def test_overlinking_detection(testing_config):
     testing_config.activate = True
     testing_config.error_overlinking = True
-    recipe = os.path.join(metadata_dir, '_overlinkage_detection')
+    testing_config.verify = False
+    recipe = os.path.join(metadata_dir, '_overlinking_detection')
     dest_file = os.path.join(recipe, 'build.sh')
-    copy_into(os.path.join(recipe, 'build_scripts', 'default.sh'), dest_file)
+    copy_into(os.path.join(recipe, 'build_scripts', 'default.sh'), dest_file, clobber=True)
     api.build(recipe, config=testing_config)
-    copy_into(os.path.join(recipe, 'build_scripts', 'no_as_needed.sh'), dest_file)
-    with pytest.raises(SystemExit):
+    copy_into(os.path.join(recipe, 'build_scripts', 'no_as_needed.sh'), dest_file, clobber=True)
+    with pytest.raises(OverLinkingError):
         api.build(recipe, config=testing_config)
     rm_rf(dest_file)
+
+
+def test_overdepending_detection(testing_config):
+    testing_config.activate = True
+    testing_config.error_overlinking = True
+    testing_config.error_overdepending = True
+    testing_config.verify = False
+    recipe = os.path.join(metadata_dir, '_overdepending_detection')
+    with pytest.raises(OverDependingError):
+        api.build(recipe, config=testing_config)
 
 
 def test_empty_package_with_python_in_build_and_host_barfs(testing_config):

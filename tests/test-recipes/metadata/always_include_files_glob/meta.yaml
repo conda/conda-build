@@ -5,41 +5,47 @@ package:
 build:
   number: 0
   always_include_files:
-    - lib/libpng*.dylib  # [osx]
-    - lib/libpng*.so*     # [linux]
-    - Library/lib/libpng*.lib # [win]
+    - lib/libpng*.dylib        # [osx]
+    - lib/libpng*.so*          # [linux]
+    - Library/lib/libpng*.lib  # [win]
   ignore_run_exports:
     - libpng
   script:
-    - echo "weee" > $PREFIX/top_level.txt
-    - echo "weee" > %PREFIX%\top_level.txt
+    - echo "weee" > $PREFIX/top_level.txt   # [not win]
+    - echo "weee" > %PREFIX%\top_level.txt  # [win]
   missing_dso_whitelist:
     - '*'
 
 requirements:
-    build:
-        - libpng 1.6.34.*
+  build:
+    - {{ compiler('c') }}
+  host:
+    - libpng 1.6.34.*
 
 outputs:
-  - name: conda-build-test-always_include_files-glob
   - name: subpackage
     requirements:
       build:
-        - jpeg  9.*
+        - {{ compiler('c') }}
+      host:
+        - jpeg 9.*
     build:
       always_include_files:
-        - lib/libjpeg*.dylib   # [osx]
-        - lib/libjpeg*.so*     # [linux]
-        - Library/lib/libjpeg*.lib # [win]
+        - lib/libjpeg*.dylib        # [osx]
+        - lib/libjpeg*.so*          # [linux]
+        - Library/lib/libjpeg*.lib  # [win]
       ignore_run_exports:
         - jpeg
-    script: echo_file.sh
+    script: echo_file.sh            # [not win]
+    script: echo_file.bat           # [win]
+    missing_dso_whitelist:
+      - '*'
     test:
       commands:
-        - test -e $PREFIX/test.txt              # [unix]
-        - test -e $PREFIX/lib/libjpeg.9.dylib   # [osx]
-        - test -e $PREFIX/lib/libjpeg.dylib   # [osx]
-        - test -e $PREFIX/lib/libjpeg.so.9      # [linux]
-        - test -e $PREFIX/lib/libjpeg.so      # [linux]
-        - if not exist %PREFIX%\Library\lib\libjpeg.lib exit 1   # [win]
-        - if not exist %PREFIX%\test.txt exit 1   # [win]
+        - test -e $PREFIX/test.txt                              # [unix]
+        - test -e $PREFIX/lib/libjpeg.9.dylib                   # [osx]
+        - test -e $PREFIX/lib/libjpeg.dylib                     # [osx]
+        - test -e $PREFIX/lib/libjpeg.so.9                      # [linux]
+        - test -e $PREFIX/lib/libjpeg.so                        # [linux]
+        - if not exist %PREFIX%\Library\lib\libjpeg.lib exit 1  # [win]
+        - if not exist %PREFIX%\test.txt exit 1                 # [win]

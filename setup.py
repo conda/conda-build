@@ -15,7 +15,12 @@ if version_dict['error']:
     raise RuntimeError(version_dict["error"])
 
 deps = ['conda', 'requests', 'filelock', 'pyyaml', 'jinja2', 'pkginfo',
-        'beautifulsoup4', 'chardet', 'pytz', 'tqdm', 'psutil', 'six']
+        'beautifulsoup4', 'chardet', 'pytz', 'tqdm', 'psutil', 'six', 'libarchive-c']
+
+# We cannot build lief for Python 2.7 on Windows (unless we use mingw-w64 for it, which
+# would be a non-trivial amount of work).
+if sys.platform != 'win-32' or sys.version_info >= (3, 0):
+    deps.extend(['lief'])
 
 if sys.version_info < (3, 4):
     deps.extend(['contextlib2', 'enum34', 'futures', 'scandir', 'glob2'])

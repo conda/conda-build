@@ -19,15 +19,22 @@ except ImportError:
     readlink = False
 
 from conda_build.os_utils import external
-from conda_build.conda_interface import lchmod
-from conda_build.conda_interface import walk_prefix
-from conda_build.conda_interface import md5_file
 from conda_build.conda_interface import PY3
+from conda_build.conda_interface import lchmod
+from conda_build.conda_interface import linked_data
+from conda_build.conda_interface import walk_prefix
+from conda_build.conda_interface import pkgs_dirs
 from conda_build.conda_interface import TemporaryDirectory
+from conda_build.conda_interface import md5_file
 
 from conda_build import utils
-from conda_build.os_utils.pyldd import codefile_type, inspect_linkages, get_runpaths
+from conda_build.os_utils.liefldd import (get_exports_memoized, get_linkages_memoized,
+                                          get_runpaths)
+from conda_build.os_utils.pyldd import codefile_type
+from conda_build.os_utils.ldd import get_package_obj_files
+from conda_build.index import get_run_exports
 from conda_build.inspect_pkg import which_package
+from conda_build.exceptions import (OverLinkingError, OverDependingError)
 
 if sys.platform == 'darwin':
     from conda_build.os_utils import macho
@@ -390,16 +397,13 @@ def mk_relative_osx(path, host_prefix, build_prefix, files, rpaths=('lib',)):
         # Add an rpath to every executable to increase the chances of it
         # being found.
         for rpath in rpaths:
+            # Escape hatch for when you really don't want any rpaths added.
+            if rpath == '':
+                continue
             rpath_new = os.path.join('@loader_path',
-                            os.path.relpath(os.path.join(host_prefix, rpath),
-                                os.path.dirname(path)), '').replace('/./', '/')
+                                     os.path.relpath(os.path.join(host_prefix, rpath), os.path.dirname(path)),
+                                     '').replace('/./', '/')
             macho.add_rpath(path, rpath_new, verbose=True)
-
-        # 10.7 install_name_tool -delete_rpath causes broken dylibs, I will revisit this ASAP.
-        # .. and remove config.build_prefix/lib which was added in-place of
-        # DYLD_FALLBACK_LIBRARY_PATH since El Capitan's SIP.
-        # macho.delete_rpath(path, config.build_prefix + '/lib', verbose = True)
-
     if s:
         # Skip for stub files, which have to use binary_has_prefix_files to be
         # made relocatable.
@@ -434,18 +438,19 @@ def mk_relative_linux(f, prefix, rpaths=('lib',)):
                     new.append(relpath)
     # Ensure that the asked-for paths are also in new.
     for rpath in rpaths:
-        if not rpath.startswith('/'):
-            # IMHO utils.relative shouldn't exist, but I am too paranoid to remove
-            # it, so instead, make sure that what I think it should be replaced by
-            # gives the same result and assert if not. Yeah, I am a chicken.
-            rel_ours = os.path.normpath(utils.relative(f, rpath))
-            rel_stdlib = os.path.normpath(os.path.relpath(rpath, os.path.dirname(f)))
-            assert rel_ours == rel_stdlib, \
-                'utils.relative {0} and relpath {1} disagree for {2}, {3}'.format(
-                rel_ours, rel_stdlib, f, rpath)
-            rpath = '$ORIGIN/' + rel_stdlib
-        if rpath not in new:
-            new.append(rpath)
+        if rpath != '':
+            if not rpath.startswith('/'):
+                # IMHO utils.relative shouldn't exist, but I am too paranoid to remove
+                # it, so instead, make sure that what I think it should be replaced by
+                # gives the same result and assert if not. Yeah, I am a chicken.
+                rel_ours = os.path.normpath(utils.relative(f, rpath))
+                rel_stdlib = os.path.normpath(os.path.relpath(rpath, os.path.dirname(f)))
+                assert rel_ours == rel_stdlib, \
+                    'utils.relative {0} and relpath {1} disagree for {2}, {3}'.format(
+                    rel_ours, rel_stdlib, f, rpath)
+                rpath = '$ORIGIN/' + rel_stdlib
+            if rpath not in new:
+                new.append(rpath)
     rpath = ':'.join(new)
     print('patchelf: file: %s\n    setting rpath to: %s' % (elf, rpath))
     call([patchelf, '--force-rpath', '--set-rpath', rpath, elf])
@@ -456,76 +461,256 @@ def assert_relative_osx(path, prefix):
         assert not name.startswith(prefix), path
 
 
-def check_overlinking(m, files):
+def determine_package_nature(pkg, prefix):
+    dsos = []
+    run_exports = None
+    lib_prefix = pkg.name.startswith('lib')
+    codefiles = get_package_obj_files(pkg, prefix)
+    dsos = [[f for ext in ('.dylib', '.so', '.dll') if ext in f] for f in codefiles]
+    for pkgs_dir in pkgs_dirs:
+        test_filename = os.path.join(pkgs_dir, pkg.fn)
+        if os.path.exists(test_filename):
+            run_exports = get_run_exports(test_filename)
+            break
+    return (dsos, run_exports, lib_prefix)
+
+
+def library_nature(pkg, prefix):
+    '''
+    Result :: "non-library", "dso library", "run-exports library"
+    .. in that order, i.e. if have both dsos and run_exports, it's a run_exports_library.
+    '''
+    dsos, run_exports, lib_prefix = determine_package_nature(pkg, prefix)
+    if run_exports:
+        return "run-exports library"
+    elif len(dsos):
+        # If all DSOs are under site-packages or R/lib/
+        dsos_without_plugins = [dso for dso in dsos if ('lib/R/library', 'site-packages') not in dso]
+        if len(dsos_without_plugins):
+            return "dso library"
+        else:
+            return "plugin library"
+    return "non-library"
+
+
+def dists_from_names(names, prefix):
+    results = []
+    pkgs = linked_data(prefix)
+    for name in names:
+        for pkg in pkgs:
+            if pkg.quad[0] == name:
+                results.append(pkg)
+    return results
+
+
+def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdir,
+                           ignore_run_exports,
+                           requirements_run, requirements_build, requirements_host,
+                           run_prefix, build_prefix,
+                           missing_dso_whitelist, runpath_whitelist,
+                           error_overlinking, error_overdepending, verbose,
+                           exception_on_error, files):
+
     def print_msg(errors, text):
         if text.startswith("  ERROR"):
             errors.append(text)
-        if m.config.verbose:
+        if verbose:
             print(text)
 
-    pkg_name = m.get_value('package/name')
+    verbose = True
 
     errors = []
 
-    run_reqs = [req.split(' ')[0] for req in m.meta.get('requirements', {}).get('run', [])]
+    sysroot_substitution = '$SYSROOT/'
+    build_prefix_substitution = '$PATH/'
+    # Used to detect overlinking (finally)
+    requirements_run = [req.split(' ')[0] for req in requirements_run]
+    packages = dists_from_names(requirements_run, run_prefix)
+    ignore_list = utils.ensure_list(ignore_run_exports)
+    if subdir.startswith('linux'):
+        ignore_list.append('libgcc-ng')
+    package_nature = {package: library_nature(package, run_prefix) for package in packages}
+    lib_packages = set([package for package in packages
+                        if package.quad[0] not in ignore_list and
+                        package_nature[package] != 'non-library'])
+    # The last package of requirements_run is this package itself, add it as being used
+    # incase it qualifies as a library package.
+    if len(packages) and packages[-1] in lib_packages:
+        lib_packages_used = set((packages[-1],))
+    else:
+        lib_packages_used = set()
+
+    pkg_vendoring_name = pkg_name
+    pkg_vendoring_version = pkg_version
+    pkg_vendoring_build_str = build_str
+    pkg_vendoring_build_number = build_number
+
+    class FakeDist:
+        def __init__(self, name, version, build_number, build_str):
+            self.name = name
+            self.quad = [name]
+            self.version = version
+            self.build_number = build_number
+            self.build_string = build_str
+    pkg_vendored_dist = FakeDist(pkg_vendoring_name,
+                                 pkg_vendoring_version,
+                                 pkg_vendoring_build_number,
+                                 pkg_vendoring_build_str)
+
+    ignore_list_syms = ['main', '_main', '*get_pc_thunk*', '___clang_call_terminate', '_timeout']
+    # ignore_for_statics = ['gcc_impl_linux*', 'compiler-rt*', 'llvm-openmp*', 'gfortran_osx*']
     # sysroots and whitelists are similar, but the subtle distinctions are important.
-    sysroot_prefix = m.config.build_prefix if not m.build_is_host else m.config.host_prefix
-    sysroots = glob(os.path.join(sysroot_prefix, '**', 'sysroot'))
+    sysroot_prefix = build_prefix
+    sysroots = [sysroot + os.sep for sysroot in glob(os.path.join(sysroot_prefix, '**', 'sysroot'))]
     whitelist = []
-    if 'target_platform' in m.config.variant and m.config.variant['target_platform'] == 'osx-64':
-        if not len(sysroots):
-            sysroots = ['/usr/lib', '/opt/X11', '/System/Library/Frameworks']
-        whitelist = ['/opt/X11/',
-                     '/usr/lib/libSystem.B.dylib',
-                     '/usr/lib/libcrypto.0.9.8.dylib',
-                     '/usr/lib/libobjc.A.dylib',
-                     '/System/Library/Frameworks/Accelerate.framework/*',
-                     '/System/Library/Frameworks/AGL.framework/*',
-                     '/System/Library/Frameworks/AppKit.framework/*',
-                     '/System/Library/Frameworks/ApplicationServices.framework/*',
-                     '/System/Library/Frameworks/AudioToolbox.framework/*',
-                     '/System/Library/Frameworks/AudioUnit.framework/*',
-                     '/System/Library/Frameworks/AVFoundation.framework/*',
-                     '/System/Library/Frameworks/CFNetwork.framework/*',
-                     '/System/Library/Frameworks/Carbon.framework/*',
-                     '/System/Library/Frameworks/Cocoa.framework/*',
-                     '/System/Library/Frameworks/CoreAudio.framework/*',
-                     '/System/Library/Frameworks/CoreFoundation.framework/*',
-                     '/System/Library/Frameworks/CoreGraphics.framework/*',
-                     '/System/Library/Frameworks/CoreMedia.framework/*',
-                     '/System/Library/Frameworks/CoreBluetooth.framework/*',
-                     '/System/Library/Frameworks/CoreMIDI.framework/*',
-                     '/System/Library/Frameworks/CoreMedia.framework/*',
-                     '/System/Library/Frameworks/CoreServices.framework/*',
-                     '/System/Library/Frameworks/CoreText.framework/*',
-                     '/System/Library/Frameworks/CoreVideo.framework/*',
-                     '/System/Library/Frameworks/CoreWLAN.framework/*',
-                     '/System/Library/Frameworks/DiskArbitration.framework/*',
-                     '/System/Library/Frameworks/Foundation.framework/*',
-                     '/System/Library/Frameworks/GameController.framework/*',
-                     '/System/Library/Frameworks/GLKit.framework/*',
-                     '/System/Library/Frameworks/ImageIO.framework/*',
-                     '/System/Library/Frameworks/IOBluetooth.framework/*',
-                     '/System/Library/Frameworks/IOKit.framework/*',
-                     '/System/Library/Frameworks/IOSurface.framework/*',
-                     '/System/Library/Frameworks/OpenAL.framework/*',
-                     '/System/Library/Frameworks/OpenGL.framework/*',
-                     '/System/Library/Frameworks/Quartz.framework/*',
-                     '/System/Library/Frameworks/QuartzCore.framework/*',
-                     '/System/Library/Frameworks/Security.framework/*',
-                     '/System/Library/Frameworks/StoreKit.framework/*',
-                     '/System/Library/Frameworks/SystemConfiguration.framework/*',
-                     '/System/Library/Frameworks/WebKit.framework/*']
-    whitelist += m.meta.get('build', {}).get('missing_dso_whitelist') or []
-    runpath_whitelist = m.meta.get('build', {}).get('runpath_whitelist') or []
+    if not len(sysroots):
+        if subdir == 'osx-64':
+            sysroots = ['/usr/lib/', '/opt/X11/', '/System/Library/Frameworks/']
+            whitelist = ['/opt/X11/',
+                         '/usr/lib/libSystem.B.dylib',
+                         '/usr/lib/libcrypto.0.9.8.dylib',
+                         '/usr/lib/libobjc.A.dylib',
+                         '/System/Library/Frameworks/Accelerate.framework/*',
+                         '/System/Library/Frameworks/AGL.framework/*',
+                         '/System/Library/Frameworks/AppKit.framework/*',
+                         '/System/Library/Frameworks/ApplicationServices.framework/*',
+                         '/System/Library/Frameworks/AudioToolbox.framework/*',
+                         '/System/Library/Frameworks/AudioUnit.framework/*',
+                         '/System/Library/Frameworks/AVFoundation.framework/*',
+                         '/System/Library/Frameworks/CFNetwork.framework/*',
+                         '/System/Library/Frameworks/Carbon.framework/*',
+                         '/System/Library/Frameworks/Cocoa.framework/*',
+                         '/System/Library/Frameworks/CoreAudio.framework/*',
+                         '/System/Library/Frameworks/CoreFoundation.framework/*',
+                         '/System/Library/Frameworks/CoreGraphics.framework/*',
+                         '/System/Library/Frameworks/CoreMedia.framework/*',
+                         '/System/Library/Frameworks/CoreBluetooth.framework/*',
+                         '/System/Library/Frameworks/CoreMIDI.framework/*',
+                         '/System/Library/Frameworks/CoreMedia.framework/*',
+                         '/System/Library/Frameworks/CoreServices.framework/*',
+                         '/System/Library/Frameworks/CoreText.framework/*',
+                         '/System/Library/Frameworks/CoreVideo.framework/*',
+                         '/System/Library/Frameworks/CoreWLAN.framework/*',
+                         '/System/Library/Frameworks/DiskArbitration.framework/*',
+                         '/System/Library/Frameworks/Foundation.framework/*',
+                         '/System/Library/Frameworks/GameController.framework/*',
+                         '/System/Library/Frameworks/GLKit.framework/*',
+                         '/System/Library/Frameworks/ImageIO.framework/*',
+                         '/System/Library/Frameworks/IOBluetooth.framework/*',
+                         '/System/Library/Frameworks/IOKit.framework/*',
+                         '/System/Library/Frameworks/IOSurface.framework/*',
+                         '/System/Library/Frameworks/OpenAL.framework/*',
+                         '/System/Library/Frameworks/OpenGL.framework/*',
+                         '/System/Library/Frameworks/Quartz.framework/*',
+                         '/System/Library/Frameworks/QuartzCore.framework/*',
+                         '/System/Library/Frameworks/Security.framework/*',
+                         '/System/Library/Frameworks/StoreKit.framework/*',
+                         '/System/Library/Frameworks/SystemConfiguration.framework/*',
+                         '/System/Library/Frameworks/WebKit.framework/*']
+        elif subdir.startswith('win'):
+            sysroots = ['C:/Windows']
+            whitelist = ['**/KERNEL32.dll',
+                         '**/ADVAPI32.dll',
+                         '**/RPCRT4.dll',
+                         '**/ntdll.dll',
+                         '**/msvcrt.dll',
+                         '**/api-ms-win*.dll']
+
+    # LIEF is very slow at decoding some DSOs, so we only let it look at ones that we link to (and ones we
+    # have built).
+    all_needed_dsos = set()
+    needed_dsos_for_file = dict()
+    sysroot = sysroots[0] if sysroots else ''
     for f in files:
-        path = os.path.join(m.config.host_prefix, f)
+        path = os.path.join(run_prefix, f)
+        if not codefile_type(path):
+            continue
+        needed = get_linkages_memoized(path, resolve_filenames=True, recurse=False,
+                                       sysroot=sysroot,
+                                       envroot=run_prefix)
+        if sysroot:
+            needed = [n.replace(sysroot, sysroot_substitution) if n.startswith(sysroot)
+                      else n for n in needed]
+        needed = [n.replace(build_prefix, build_prefix_substitution) if n.startswith(build_prefix)
+                  else n for n in needed]
+        needed = [os.path.relpath(n, run_prefix) if n.startswith(run_prefix)
+                  else n for n in needed]
+        needed_dsos_for_file[f] = needed
+        all_needed_dsos = all_needed_dsos.union(needed)
+        all_needed_dsos.add(f)
+
+    # Form a mapping of file => package
+    prefix_owners = {}
+    contains_dsos = {}
+    contains_static_libs = {}
+    # Used for both dsos and static_libs
+    all_lib_exports = {}
+    for prefix in (run_prefix, build_prefix):
+        for subdir2, dirs, filez in os.walk(prefix):
+            for file in filez:
+                fp = os.path.join(subdir2, file)
+                dynamic_lib = any(glob2.fnmatch.fnmatch(fp, ext) for ext in ('*.so*', '*.dylib*', '*.dll')) and \
+                              codefile_type(fp, skip_symlinks=False) is not None
+                static_lib = any(glob2.fnmatch.fnmatch(fp, ext) for ext in ('*.a', '*.lib'))
+                # Looking at all the files is very slow.
+                if not dynamic_lib and not static_lib:
+                    continue
+                rp = os.path.relpath(fp, prefix)
+                if dynamic_lib and rp not in all_needed_dsos:
+                    continue
+                if rp in all_lib_exports:
+                    continue
+                owners = prefix_owners[rp] if rp in prefix_owners else []
+                # Self-vendoring, not such a big deal but may as well report it?
+                if not len(owners):
+                    if rp in files:
+                        owners.append(pkg_vendored_dist)
+                new_pkgs = list(which_package(rp, prefix))
+                # Cannot filter here as this means the DSO (eg libomp.dylib) will not be found in any package
+                # [owners.append(new_pkg) for new_pkg in new_pkgs if new_pkg not in owners
+                #  and not any([glob2.fnmatch.fnmatch(new_pkg.name, i) for i in ignore_for_statics])]
+                [owners.append(new_pkg) for new_pkg in new_pkgs if new_pkg not in owners]
+                for new_pkg in new_pkgs:
+                    if new_pkg not in owners:
+                        owners.append(new_pkg)
+                prefix_owners[rp] = owners
+                if len(prefix_owners[rp]):
+                    exports = set(e for e in get_exports_memoized(fp) if not
+                                  any(glob2.fnmatch.fnmatch(e, pattern) for pattern in ignore_list_syms))
+                    all_lib_exports[rp] = exports
+                    # Check codefile_type to filter out linker scripts.
+                    if dynamic_lib:
+                        contains_dsos[prefix_owners[rp][0]] = True
+                    elif static_lib:
+                        if sysroot_substitution in fp:
+                            if (prefix_owners[rp][0].name.startswith('gcc_impl_linux') or
+                               prefix_owners[rp][0].name == 'llvm'):
+                                continue
+                            print("sysroot in {}, owner is {}".format(fp, prefix_owners[rp][0]))
+                        contains_static_libs[prefix_owners[rp][0]] = True
+
+    for f in files:
+        path = os.path.join(run_prefix, f)
+        if not codefile_type(path):
+            continue
+        needed = needed_dsos_for_file[f]
+        for needed_dso in needed:
+            if (not needed_dso.startswith('/') and
+               not needed_dso.startswith(sysroot_substitution) and
+               not needed_dso.startswith(build_prefix_substitution) and
+               needed_dso not in prefix_owners):
+                print("  ERROR :: {} not in prefix_owners".format(needed_dso))
+                sys.exit(1)
+
+    whitelist += missing_dso_whitelist
+    for f in files:
+        path = os.path.join(run_prefix, f)
         if not codefile_type(path):
             continue
         warn_prelude = "WARNING ({},{})".format(pkg_name, f)
         err_prelude = "  ERROR ({},{})".format(pkg_name, f)
         info_prelude = "   INFO ({},{})".format(pkg_name, f)
-        msg_prelude = err_prelude if m.config.error_overlinking else warn_prelude
+        msg_prelude = err_prelude if error_overlinking else warn_prelude
 
         try:
             runpaths = get_runpaths(path)
@@ -537,64 +722,87 @@ def check_overlinking(m, files):
             print_msg(errors, '{}: runpaths {} found in {}'.format(msg_prelude,
                                                                    runpaths,
                                                                    path))
-        needed = inspect_linkages(path, resolve_filenames=True, recurse=False)
+        needed = needed_dsos_for_file[f]
+        # imps = get_imports_memoized(path, None)
         for needed_dso in needed:
-            if needed_dso.startswith(m.config.host_prefix):
-                in_prefix_dso = os.path.normpath(needed_dso.replace(m.config.host_prefix + '/', ''))
+            needed_dso = needed_dso.replace('/', os.sep)
+            if not needed_dso.startswith(os.sep) and not needed_dso.startswith('$'):
+                in_prefix_dso = needed_dso
+                if in_prefix_dso == '/':
+                    print('debug')
+                # os.path.normpath(needed_dso.replace(run_prefix + os.sep, ''))
                 n_dso_p = "Needed DSO {}".format(in_prefix_dso)
                 and_also = " (and also in this package)" if in_prefix_dso in files else ""
-                pkgs = list(which_package(in_prefix_dso, m.config.host_prefix))
-                in_pkgs_in_run_reqs = [pkg for pkg in pkgs if pkg.quad[0] in run_reqs]
+                pkgs = list(which_package(in_prefix_dso, run_prefix))
+                in_pkgs_in_run_reqs = [pkg for pkg in pkgs if pkg.quad[0] in requirements_run]
+                # TODO :: metadata build/inherit_child_run_exports (for vc, mro-base-impl).
+                for pkg in in_pkgs_in_run_reqs:
+                    if pkg in lib_packages:
+                        lib_packages_used.add(pkg)
                 in_whitelist = any([glob2.fnmatch.fnmatch(in_prefix_dso, w) for w in whitelist])
-                if in_whitelist:
-                    print_msg(errors, '{}: {} found in the whitelist'.
-                              format(info_prelude, n_dso_p))
-                elif len(in_pkgs_in_run_reqs) == 1:
+                if len(in_pkgs_in_run_reqs) == 1:
                     print_msg(errors, '{}: {} found in {}{}'.format(info_prelude,
                                                                     n_dso_p,
                                                                     in_pkgs_in_run_reqs[0],
                                                                     and_also))
+                elif in_whitelist:
+                    print_msg(errors, '{}: {} found in the whitelist'.
+                              format(info_prelude, n_dso_p))
                 elif len(in_pkgs_in_run_reqs) == 0 and len(pkgs) > 0:
                     print_msg(errors, '{}: {} found in {}{}'.format(msg_prelude,
                                                                     n_dso_p,
                                                                     [p.quad[0] for p in pkgs],
                                                                     and_also))
-                    print_msg(errors, '{}: .. but {} not in reqs/run, i.e. it is overlinked'
+                    print_msg(errors, '{}: .. but {} not in reqs/run, (i.e. it is overlinking)'
                                       ' (likely) or a missing dependency (less likely)'.
                                       format(msg_prelude, [p.quad[0] for p in pkgs]))
                 elif len(in_pkgs_in_run_reqs) > 1:
                     print_msg(errors, '{}: {} found in multiple packages in run/reqs: {}{}'
                                       .format(warn_prelude,
                                               in_prefix_dso,
-                                              [p.quad[0] for p in in_pkgs_in_run_reqs],
+                                              in_pkgs_in_run_reqs,
                                               and_also))
                 else:
                     if in_prefix_dso not in files:
                         print_msg(errors, '{}: {} not found in any packages'.format(msg_prelude,
                                                                                     in_prefix_dso))
-                    else:
+                    elif verbose:
                         print_msg(errors, '{}: {} found in this package'.format(info_prelude,
                                                                                 in_prefix_dso))
-            elif needed_dso.startswith(m.config.build_prefix):
-                print_msg(errors, "ERROR: {} found in build prefix; should never happen".format(
-                    needed_dso))
+            elif needed_dso.startswith(build_prefix):
+                print_msg(errors, "{}: {} found in build prefix; should never happen".format(
+                          err_prelude, needed_dso))
             else:
                 # A system or ignored dependency. We should be able to find it in one of the CDT o
                 # compiler packages on linux or at in a sysroot folder on other OSes. These usually
                 # start with '$RPATH/' which indicates pyldd did not find them, so remove that now.
-                if needed_dso.startswith('$RPATH/'):
-                    needed_dso = needed_dso.replace('$RPATH/', '')
-                in_whitelist = any([glob2.fnmatch.fnmatch(needed_dso, w) for w in whitelist])
-                if in_whitelist:
-                    n_dso_p = "Needed DSO {}".format(needed_dso)
-                    print_msg(errors, '{}: {} found in the whitelist'.
-                              format(info_prelude, n_dso_p))
-                elif len(sysroots):
-                    # Check id we have a CDT package.
+                if needed_dso.startswith(sysroot_substitution):
+                    replacements = [sysroot_substitution] + sysroots
+                else:
+                    replacements = [needed_dso]
+                in_whitelist = False
+                for replacement in replacements:
+                    needed_dso_w = needed_dso.replace(sysroot_substitution, replacement)
+                    in_whitelist = any([glob2.fnmatch.fnmatch(needed_dso_w, w) for w in whitelist])
+                    if in_whitelist:
+                        n_dso_p = "Needed DSO {}".format(needed_dso_w)
+                        print_msg(errors, '{}: {} found in the whitelist'.
+                                  format(info_prelude, n_dso_p))
+                        break
+                if not in_whitelist and len(sysroots):
+                    # Check if we have a CDT package.
                     dso_fname = os.path.basename(needed_dso)
                     sysroot_files = []
+                    dirs_to_glob = []  # Optimization, ideally we'll not glob at all as it's slooow.
                     for sysroot in sysroots:
-                        sysroot_files.extend(glob(os.path.join(sysroot, '**', dso_fname)))
+                        sysroot_os = sysroot.replace('/', os.sep)
+                        if needed_dso.startswith(sysroot_substitution):
+                            # Do we want to do this replace?
+                            sysroot_files.append(needed_dso.replace(sysroot_substitution, sysroot_os))
+                        else:
+                            dirs_to_glob.extend((os.path.join(sysroot_os, '**', dso_fname)))
+                    for dir_to_glob in dirs_to_glob:
+                        sysroot_files.extend(glob(dir_to_glob))
                     if len(sysroot_files):
                         # Removing sysroot_prefix is only *really* for Linux, though we could
                         # use CONDA_BUILD_SYSROOT for macOS. We should figure out what to do about
@@ -605,7 +813,7 @@ def check_overlinking(m, files):
                                       for s in sysroot_files]
                         idx = max(range(len(match_lens)), key=match_lens.__getitem__)
                         in_prefix_dso = os.path.normpath(sysroot_files[idx].replace(
-                            sysroot_prefix + '/', ''))
+                            sysroot_prefix + os.sep, ''))
                         n_dso_p = "Needed DSO {}".format(in_prefix_dso)
                         pkgs = list(which_package(in_prefix_dso, sysroot_prefix))
                         if len(pkgs):
@@ -619,11 +827,55 @@ def check_overlinking(m, files):
                         print_msg(errors, "{}: {} not found in sysroot, is this binary repackaging?"
                                           " .. do you need to use install_name_tool/patchelf?".
                                           format(msg_prelude, needed_dso))
-                else:
+                elif not in_whitelist:
                     print_msg(errors, "{}: did not find - or even know where to look for: {}".
                                       format(msg_prelude, needed_dso))
+    if lib_packages_used != lib_packages:
+        info_prelude = "   INFO ({})".format(pkg_name)
+        warn_prelude = "WARNING ({})".format(pkg_name)
+        err_prelude = "  ERROR ({})".format(pkg_name)
+        for lib in lib_packages - lib_packages_used:
+            if package_nature[lib] == 'run-exports library':
+                msg_prelude = err_prelude if error_overdepending else warn_prelude
+            elif package_nature[lib] == 'plugin library':
+                msg_prelude = info_prelude
+            else:
+                msg_prelude = warn_prelude
+            print_msg(errors, "{}: {} package {} in requirements/run but it is not used "
+                              "(i.e. it is overdepending or perhaps statically linked? "
+                              "If that is what you want then add it to `build/ignore_run_exports`)"
+                              .format(msg_prelude, package_nature[lib], lib))
     if len(errors):
-        sys.exit(1)
+        if exception_on_error:
+            overlinking_errors = [error for error in errors if "overlinking" in error]
+            if len(overlinking_errors):
+                raise OverLinkingError(overlinking_errors)
+            overdepending_errors = [error for error in errors if "overdepending" in error]
+            if len(overdepending_errors):
+                raise OverDependingError(overdepending_errors)
+        else:
+            sys.exit(1)
+
+
+def check_overlinking(m, files):
+    return check_overlinking_impl(m.get_value('package/name'),
+                                  m.get_value('package/version'),
+                                  m.get_value('build/string'),
+                                  m.get_value('build/number'),
+                                  m.config.target_subdir,
+                                  m.get_value('build/ignore_run_exports'),
+                                  [req.split(' ')[0] for req in m.meta.get('requirements', {}).get('run', [])],
+                                  [req.split(' ')[0] for req in m.meta.get('requirements', {}).get('build', [])],
+                                  [req.split(' ')[0] for req in m.meta.get('requirements', {}).get('host', [])],
+                                  m.config.host_prefix,
+                                  m.config.build_prefix,
+                                  m.meta.get('build', {}).get('missing_dso_whitelist', []),
+                                  m.meta.get('build', {}).get('runpath_whitelist', []),
+                                  m.config.error_overlinking,
+                                  m.config.error_overdepending,
+                                  m.config.verbose,
+                                  True,
+                                  files)
 
 
 def post_process_shared_lib(m, f, files):
@@ -668,24 +920,22 @@ def post_build(m, files, build_python):
     for f in files:
         make_hardlink_copy(f, m.config.host_prefix)
 
-    if sys.platform == 'win32':
-        return
+    if not m.config.target_subdir.startswith('win'):
+        binary_relocation = m.binary_relocation()
+        if not binary_relocation:
+            print("Skipping binary relocation logic")
+        osx_is_app = (m.config.target_subdir == 'osx-64' and
+                      bool(m.get_value('build/osx_is_app', False)))
+        check_symlinks(files, m.config.host_prefix, m.config.croot)
+        prefix_files = utils.prefix_files(m.config.host_prefix)
 
-    binary_relocation = m.binary_relocation()
-    if not binary_relocation:
-        print("Skipping binary relocation logic")
-    osx_is_app = bool(m.get_value('build/osx_is_app', False)) and sys.platform == 'darwin'
-
-    check_symlinks(files, m.config.host_prefix, m.config.croot)
-    prefix_files = utils.prefix_files(m.config.host_prefix)
-
-    for f in files:
-        if f.startswith('bin/'):
-            fix_shebang(f, prefix=m.config.host_prefix, build_python=build_python,
-                        osx_is_app=osx_is_app)
-        if binary_relocation is True or (isinstance(binary_relocation, list) and
-                                         f in binary_relocation):
-            post_process_shared_lib(m, f, prefix_files)
+        for f in files:
+            if f.startswith('bin/'):
+                fix_shebang(f, prefix=m.config.host_prefix, build_python=build_python,
+                            osx_is_app=osx_is_app)
+            if binary_relocation is True or (isinstance(binary_relocation, list) and
+                                             f in binary_relocation):
+                post_process_shared_lib(m, f, prefix_files)
     check_overlinking(m, files)
 
 

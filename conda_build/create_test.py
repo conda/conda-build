@@ -39,7 +39,7 @@ def _get_output_script_name(m, win_status):
     #   They do not automatically pick up run_test.*, but can be pointed at that explicitly.
 
     ext = '.bat' if win_status else '.sh'
-    name = "run_test{}".format(ext)
+    name = 'run_test' + ext
     if m.is_output:
         name = 'no-file'
         for out in m.meta.get('outputs', []):
@@ -48,6 +48,7 @@ def _get_output_script_name(m, win_status):
                 if os.path.splitext(out_test_script)[1].lower() == ext:
                     name = out_test_script
                     break
+        
     return name
 
 

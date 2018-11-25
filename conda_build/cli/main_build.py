@@ -225,7 +225,8 @@ different sets of packages."""
     p.add_argument(
         "--output-folder",
         help=("folder to dump output package to.  Package are moved here if build or test succeeds."
-              "  Destination folder must exist prior to using this.")
+              "  Destination folder must exist prior to using this."),
+        default=cc_conda_build.get('output_folder')
     )
     p.add_argument(
         "--no-prefix-length-fallback", dest='prefix_length_fallback',
@@ -280,15 +281,31 @@ different sets of packages."""
         default=cc_conda_build.get('error_overlinking', 'false').lower() == 'true',
     )
     p.add_argument(
-        "--long-test-prefix", default=True, action="store_false",
+        "--error-overdepending", dest='error_overdepending', action="store_true",
+        help=("Enable error when packages with names beginning `lib` or which have "
+              "`run_exports` are not auto-loaded by the OSes DSO loading mechanism by "
+              "any of the files in this package."),
+        default=cc_conda_build.get('error_overdepending', 'false').lower() == 'true',
+    )
+    p.add_argument(
+        "--no-error-overdepending", dest='error_overdepending', action="store_false",
+        help=("Disable error when packages with names beginning `lib` or which have "
+              "`run_exports` are not auto-loaded by the OSes DSO loading mechanism by "
+              "any of the files in this package."),
+        default=cc_conda_build.get('error_overdepending', 'false').lower() == 'true',
+    )
+    p.add_argument(
+        "--long-test-prefix", action="store_true",
         help=("Use a long prefix for the test prefix, as well as the build prefix.  Affects only "
               "Linux and Mac.  Prefix length matches the --prefix-length flag.  This is on by "
-              "default in conda-build 3.0+")
+              "default in conda-build 3.0+"),
+        default=cc_conda_build.get('long_test_prefix', 'true').lower() == 'true',
     )
     p.add_argument(
         "--no-long-test-prefix", dest="long_test_prefix", action="store_false",
         help=("Do not use a long prefix for the test prefix, as well as the build prefix."
-              "  Affects only Linux and Mac.  Prefix length matches the --prefix-length flag.  ")
+              "  Affects only Linux and Mac.  Prefix length matches the --prefix-length flag.  "),
+        default=cc_conda_build.get('long_test_prefix', 'true').lower() == 'true',
     )
     p.add_argument(
         '--keep-going', '-k', action='store_true',
@@ -354,7 +371,7 @@ def check_action(recipe, config):
 
 
 def execute(args):
-    parser, args = parse_args(args)
+    _parser, args = parse_args(args)
     config = Config(**args.__dict__)
     build.check_external()
 

@@ -597,7 +597,7 @@ def _augment_repodata(subdirs, patched_repodata, patch_instructions):
                                         for dep in info['constrains']]
                     info['depends2'] = [_add_namespace_to_spec(fn, info, dep, namemap, missing_dependencies, subdir)
                                         for dep in info['depends'] if dep.split()[0] not in constrains_names]
-                except CondaError as e:
+                except CondaError:
                     log.warn("Encountered a file ({}) that conda does not like.  Error was: {}.  Skipping this one...".format(fn, e))
             else:
                 try:
@@ -690,7 +690,7 @@ def _cache_recipe_log(tar_path, recipe_log_path):
         fh.write(binary_recipe_log)
 
 
-def _cache_run_exports(tar_path, run_exports_cache_path):
+def get_run_exports(tar_path):
     try:
         binary_run_exports = _tar_xf_file(tar_path, 'info/run_exports.json')
         run_exports = json.loads(binary_run_exports.decode("utf-8"))
@@ -701,6 +701,11 @@ def _cache_run_exports(tar_path, run_exports_cache_path):
         except KeyError:
             log.debug("%s has no run_exports file (this is OK)" % tar_path)
             run_exports = {}
+    return run_exports
+
+
+def _cache_run_exports(tar_path, run_exports_cache_path):
+    run_exports = get_run_exports(tar_path)
     with open(run_exports_cache_path, 'w') as fh:
         json.dump(run_exports, fh)
 
@@ -1287,7 +1292,7 @@ class ChannelIndex(object):
 
     def _write_channeldata(self, channeldata):
         # trim out commits, as they can take up a ton of space.  They're really only for the RSS feed.
-        for pkg, pkg_dict in channeldata.get('packages', {}).items():
+        for _pkg, pkg_dict in channeldata.get('packages', {}).items():
             if "commits" in pkg_dict:
                 del pkg_dict['commits']
         channeldata_path = join(self.channel_root, 'channeldata.json')

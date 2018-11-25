@@ -312,12 +312,12 @@ def ensure_matching_hashes(output_metadata):
                 for dep in deps:
                     if (dep.startswith(m.name() + ' ') and len(dep.split(' ')) == 3 and
                             dep.split(' ')[-1] != m.build_id() and _variants_equal(m, om)):
-                        problemos.append((m.name(), om.name()))
+                        problemos.append((m.name(), m.build_id(), dep, om.name()))
 
     if problemos:
         error = ""
         for prob in problemos:
-            error += "Mismatching package: {}; consumer package: {}\n".format(*prob)
+            error += "Mismatching package: {} (id {}); dep: {}; consumer package: {}\n".format(*prob)
         raise exceptions.RecipeError("Mismatching hashes in recipe. Exact pins in dependencies "
                                      "that contribute to the hash often cause this. Can you "
                                      "change one or more exact pins to version bound constraints?\n"
@@ -952,6 +952,9 @@ class MetaData(object):
 
         if self.meta.get('build', {}).get('error_overlinking', False):
             self.config.error_overlinking = self.meta['build']['error_overlinking']
+        if self.meta.get('build', {}).get('error_overdepending', False):
+            self.config.error_overdepending = self.meta['build']['error_overdepending']
+
         self.validate_features()
         self.ensure_no_pip_requirements()
 
@@ -1925,7 +1928,7 @@ class MetaData(object):
                                                              used_zip_key_groups)]
         for key in reduce_keys:
             values = full_collapsed_variants.get(key)
-            if values and not hasattr(values, 'keys') and key != 'zip_keys':
+            if values is not None and len(values) and not hasattr(values, 'keys') and key != 'zip_keys':
                 # save only one element from this key
                 reduced_collapsed_variants[key] = utils.ensure_list(next(iter(values)))
 
