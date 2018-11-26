@@ -733,7 +733,6 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
     # in-place modification
     base_metadata.other_outputs = outputs
     base_metadata.final = False
-    base_metadata.parse_until_resolved()
     final_outputs = OrderedDict()
     for k, (out_d, m) in outputs.items():
         final_outputs[(m.name(), HashableDict({k: m.config.variant[k]
@@ -1998,7 +1997,6 @@ class MetaData(object):
             # format here is {output_dict: metadata_object}
             render_order = toposort(out_metadata_map)
             check_circular_dependencies(render_order)
-
             conda_packages = OrderedDict()
             non_conda_packages = []
 

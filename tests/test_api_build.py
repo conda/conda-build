@@ -908,14 +908,13 @@ def test_run_exports(testing_metadata, testing_config, testing_workdir):
 
     # run_exports is tricky.  We mostly only ever want things in "host".  Here are the conditions:
 
-    #    1. only build section present (legacy recipe).  Here, use run_exports from build.
-    #       note that because strong_run_exports creates a host section, the weak exports from build
-    #       will not apply.
+    #    1. only build section present (legacy recipe).  Here, use run_exports from build.  Because build and host
+    #       will be merged when build subdir == host_subdir, the weak run_exports should be present.
     testing_metadata.meta['requirements']['build'] = ['test_has_run_exports']
     api.output_yaml(testing_metadata, 'meta.yaml')
     m = api.render(testing_workdir, config=testing_config)[0][0]
     assert 'strong_pinned_package 1.0.*' in m.meta['requirements']['run']
-    assert 'weak_pinned_package 1.0.*' not in m.meta['requirements']['run']
+    assert 'weak_pinned_package 1.0.*' in m.meta['requirements']['run']
 
     #    2. host present.  Use run_exports from host, ignore 'weak' ones from build.  All are
     #           weak by default.

@@ -393,7 +393,7 @@ def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
         host_deps = []
         host_unsat = []
         extra_run_specs = set(extra_run_specs_from_build.get('strong', []))
-        if not m.uses_new_style_compiler_activation and m.build_is_host:
+        if m.build_is_host:
             extra_run_specs.update(extra_run_specs_from_build.get('weak', []))
         else:
             host_deps = set(extra_run_specs_from_build.get('strong', []))
