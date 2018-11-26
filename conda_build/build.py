@@ -1886,7 +1886,7 @@ def write_build_scripts(m, script, build_file):
         if m.activate_build_script:
             _write_sh_activation_text(bf, m)
     with open(work_file, 'w') as bf:
-        bf.write('set -ex\n')
+        # bf.write('set -ex\n')
         bf.write('if [ -z ${CONDA_BUILD+x} ]; then\n')
         bf.write("\tsource {}\n".format(env_file))
         bf.write("fi\n")
