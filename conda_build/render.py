@@ -160,7 +160,11 @@ def strip_channel(spec_str):
 
 
 def get_pin_from_build(m, dep, build_dep_versions):
-    dep_name = dep.split()[0]
+    dep_split = dep.split()
+    dep_name = dep_split[0]
+    build = ''
+    if len(dep_split) >= 3:
+        build = dep_split[2]
     pin = None
     version = build_dep_versions.get(dep_name) or m.config.variant.get(dep_name)
     if (version and dep_name in m.config.variant.get('pin_run_as_build', {}) and
@@ -176,7 +180,7 @@ def get_pin_from_build(m, dep, build_dep_versions):
             raise ValueError("numpy x.x specified, but numpy not in build requirements.")
         pin = utils.apply_pin_expressions(version.split()[0], min_pin='x.x', max_pin='x.x')
     if pin:
-        dep = " ".join((dep_name, pin))
+        dep = " ".join((dep_name, pin, build)).strip()
     return dep
 
 
@@ -424,7 +428,12 @@ def _simplify_to_exact_constraints(metadata):
 
         deps_list = []
         for name, values in deps_dict.items():
-            exact_pins = [dep for dep in values if len(dep) > 1]
+            exact_pins = []
+            for dep in values:
+                if len(dep) > 1:
+                    version, build = dep[:2]
+                    if not (any(c in version for c in ('>', '<', '*')) or '*' in build):
+                        exact_pins.append(dep)
             if len(values) == 1 and not any(values):
                 deps_list.append(name)
             elif exact_pins:

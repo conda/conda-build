@@ -26,3 +26,16 @@ def test_reduce_duplicate_specs(testing_metadata):
     simplified_deps = testing_metadata.meta['requirements']
     assert len(simplified_deps['build']) == 1
     assert 'exact 1.2.3 1' in simplified_deps['build']
+
+
+def test_pin_run_as_build_preserve_string(testing_metadata):
+    m = testing_metadata
+    m.config.variant['pin_run_as_build']['pkg'] = {
+        'max_pin': 'x.x'
+    }
+    dep = render.get_pin_from_build(
+        m,
+        'pkg * somestring*',
+        {'pkg': '1.2.3 somestring_h1234'}
+    )
+    assert dep == 'pkg >=1.2.3,<1.3.0a0 somestring*'
