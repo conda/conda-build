@@ -48,7 +48,6 @@ def _get_output_script_name(m, win_status):
                 if os.path.splitext(out_test_script)[1].lower() == ext:
                     name = out_test_script
                     break
-        
     return name
 
 

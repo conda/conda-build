@@ -395,6 +395,7 @@ def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
         extra_run_specs = set(extra_run_specs_from_build.get('strong', []))
         if m.build_is_host:
             extra_run_specs.update(extra_run_specs_from_build.get('weak', []))
+            build_deps = set(build_deps or []).update(extra_run_specs_from_build.get('weak', []))
         else:
             host_deps = set(extra_run_specs_from_build.get('strong', []))
 
@@ -497,15 +498,19 @@ def finalize_metadata(m, parent_metadata=None, permit_unsatisfiable_variants=Fal
         build_unsat, host_unsat = add_upstream_pins(m,
                                                     permit_unsatisfiable_variants,
                                                     exclude_pattern)
+        m = parent_metadata.get_output_metadata(m.get_rendered_output(m.name()))
         # getting this AFTER add_upstream_pins is important, because that function adds deps
         #     to the metadata.
         requirements = m.meta.get('requirements', {})
+
         # this is hacky, but it gets the jinja2 things like pin_compatible from the rendered output
-        run_reqs = utils.expand_reqs(m.get_rendered_output(m.name()).get('requirements', {}))
-        run_reqs = run_reqs.get('run', [])
-        if run_reqs:
-            requirements['run'] = run_reqs
-        m.meta['requirements'] = requirements
+        # rerendered_output = parent_metadata.get_output_metadata(m.get_rendered_output(m.name()))
+        # run_reqs = utils.expand_reqs(rerendered_output.meta.get('requirements', {}))
+        # run_reqs = run_reqs.get('run', [])
+        # if run_reqs:
+        #     requirements['run'] = run_reqs
+        # m.meta['requirements'] = requirements
+        # m.meta['build'] = rerendered_output.meta.get('build', {})
 
         # here's where we pin run dependencies to their build time versions.  This happens based
         #     on the keys in the 'pin_run_as_build' key in the variant, which is a list of package
@@ -719,7 +724,7 @@ def expand_outputs(metadata_tuples):
     expanded_outputs = OrderedDict()
 
     for (_m, download, reparse) in metadata_tuples:
-        for (output_dict, m) in _m.get_output_metadata_set(permit_unsatisfiable_variants=False):
+        for (output_dict, m) in _m.copy().get_output_metadata_set(permit_unsatisfiable_variants=False):
             expanded_outputs[m.dist()] = (output_dict, m)
     return list(expanded_outputs.values())
 

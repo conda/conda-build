@@ -198,6 +198,9 @@ def test_run_exports_with_pin_compatible_in_subpackages(testing_config):
         if m.name().startswith('gfortran_'):
             run_exports = set(m.meta.get('build', {}).get('run_exports', {}).get('strong', []))
             assert len(run_exports) == 1
+            # len after splitting should be more than one because of pin_compatible.  If it's only zlib, we've lost the
+            #    compatibility bound info.  This is generally due to lack of rendering of an output, such that the
+            #    compatibility bounds just aren't added in.
             assert all(len(export.split()) > 1 for export in run_exports), run_exports
 
 

@@ -712,6 +712,7 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
             om = om.get_output_metadata(output_d)
             parent_metadata = base_metadata.copy()
             parent_metadata.config.variant = om.config.variant
+            parent_metadata.parse_until_resolved()
             if not bypass_env_check:
                 fm = finalize_metadata(om, parent_metadata=parent_metadata,
                                        permit_unsatisfiable_variants=permit_unsatisfiable_variants)
@@ -2227,16 +2228,14 @@ class MetaData(object):
     def activate_build_script(self):
         b = self.meta.get('build', {}) or {}
         should_activate = (self.uses_new_style_compiler_activation or b.get('activate_in_script'))
-        return bool(self.config.activate and should_activate) and not self.name() == 'conda'
+        return bool(self.config.activate or should_activate) and not self.name() == 'conda'
 
     @property
     def build_is_host(self):
-        value = (self.config.subdirs_same and (
-            (self.get_value('build/merge_build_host') or
-             self.config.build_is_host) or
-            ('host' not in self.meta.get('requirements', {}) and
-             not self.uses_new_style_compiler_activation)))
-        return value
+        manual_overrides = self.meta.get('build', {}).get('merge_build_host') is True or self.config.build_is_host
+        manually_disabled = self.meta.get('build', {}).get('merge_build_host') is False
+        return manual_overrides or (self.config.subdirs_same and not manually_disabled and
+             'host' not in self.meta.get('requirements', {}) and not self.uses_new_style_compiler_activation)
 
     def get_top_level_recipe_without_outputs(self):
         recipe_no_outputs = self.get_recipe_text(force_top_level=True).replace(

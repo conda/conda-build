@@ -311,6 +311,7 @@ def test_build_msvc_compiler(msvc_ver, monkeypatch):
 @pytest.mark.parametrize("target_compiler", compilers)
 def test_cmake_generator(platform, target_compiler, testing_workdir, testing_config):
     testing_config.variant['python'] = target_compiler
+    testing_config.activate = True
     api.build(os.path.join(metadata_dir, '_cmake_generator'), config=testing_config)
 
 

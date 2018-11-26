@@ -18,11 +18,13 @@ try:
 except:
     pass
 
+
 def is_string(s):
     try:
         return isinstance(s, basestring)
     except NameError:
         return isinstance(s, str)
+
 
 # Some functions can operate on either file names
 # or an already loaded binary. Generally speaking

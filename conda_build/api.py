@@ -189,6 +189,7 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
             except IOError:
                 continue
     metadata = [m for m in recipe_paths_or_metadata if hasattr(m, 'config')]
+
     recipes.extend(metadata)
     absolute_recipes = []
     for recipe in recipes:
