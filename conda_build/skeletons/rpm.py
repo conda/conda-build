@@ -49,7 +49,8 @@ build:
 
 outputs:
   - name: {packagename}
-    noarch: generic
+    build:
+      noarch: generic
 {depends_run}
     about:
       home: {home}
