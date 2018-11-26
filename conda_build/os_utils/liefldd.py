@@ -130,12 +130,14 @@ def get_rpaths(file, exe_dirname, envroot, windows_root=''):
 #        elif binary.format == lief.EXE_FORMATS.MACHO and binary.has_rpath:
 #            rpaths = binary.rpath.path.split(':')
         elif binary.format == lief.EXE_FORMATS.MACHO and binary.has_rpath:
-            rpaths = [command.path.rstrip('/') for command in binary.commands
-                      if command.command == lief.MachO.LOAD_COMMAND_TYPES.RPATH]
+            rpaths.extend([command.path.rstrip('/') for command in binary.commands
+                      if command.command == lief.MachO.LOAD_COMMAND_TYPES.RPATH])
         elif binary.format == lief.EXE_FORMATS.ELF:
             if binary.type == lief.ELF.ELF_CLASS.CLASS32 or binary.type == lief.ELF.ELF_CLASS.CLASS64:
                 dynamic_entries = binary.dynamic_entries
-                rpaths.extend([e.rpath for e in dynamic_entries if e.tag == lief.ELF.DYNAMIC_TAGS.RPATH])
+                rpaths_colons = [e.rpath for e in dynamic_entries if e.tag == lief.ELF.DYNAMIC_TAGS.RPATH]
+                for rpaths_colon in rpaths_colons:
+                    rpaths.extend(rpaths_colon.split(':'))
     return [from_os_varnames(binary, rpath) for rpath in rpaths]
 
 
