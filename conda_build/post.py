@@ -695,7 +695,8 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
             continue
         needed = needed_dsos_for_file[f]
         for needed_dso in needed:
-            if (not needed_dso.startswith('/') and
+            if (error_overlinking and
+               not needed_dso.startswith('/') and
                not needed_dso.startswith(sysroot_substitution) and
                not needed_dso.startswith(build_prefix_substitution) and
                needed_dso not in prefix_owners):
