@@ -1273,7 +1273,9 @@ def create_build_envs(m, notest):
         # subpackages are not actually missing.  We just haven't built them yet.
         from .conda_interface import MatchSpec
 
-        missing_deps = set(MatchSpec(pkg).name for pkg in e.packages) - set(out.name() for _, out in m.other_outputs.values())
+        other_outputs = (m.other_outputs.values() if hasattr(m, 'other_outputs') else
+                         m.get_output_metadata_set(permit_undefined_jinja=True))
+        missing_deps = set(MatchSpec(pkg).name for pkg in e.packages) - set(out.name() for _, out in other_outputs)
         if missing_deps:
             e.packages = missing_deps
             raise e
