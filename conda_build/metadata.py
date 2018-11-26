@@ -702,6 +702,7 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
             # place, so it can refer to it for any pin_subpackage stuff it has.
             om.other_outputs = metadata.other_outputs
             om.config.variant = metadata.config.variant
+
             om.other_outputs.update(outputs)
             om.final = False
             # get the new output_d from the reparsed top-level metadata, so that we have any
@@ -709,8 +710,10 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
             output_d = om.get_rendered_output(metadata.name()) or {'name': metadata.name()}
 
             om = om.get_output_metadata(output_d)
+            parent_metadata = base_metadata.copy()
+            parent_metadata.config.variant = om.config.variant
             if not bypass_env_check:
-                fm = finalize_metadata(om, parent_metadata=base_metadata,
+                fm = finalize_metadata(om, parent_metadata=parent_metadata,
                                        permit_unsatisfiable_variants=permit_unsatisfiable_variants)
             else:
                 fm = om
@@ -1642,15 +1645,15 @@ class MetaData(object):
 
     def extract_requirements_text(self, force_top_level=False):
         # outputs are already filtered into each output for us
-        f = r'(^\s*requirements:.*?)(?=^\s*test:|^\s*extra:|^\s*about:|^\s*-\sname:|^outputs:|\Z)'  # NOQA
-        if 'package:' in self.get_recipe_text():
+        f = r'(^\s*requirements:.*?)(?=^\s*test:|^\s*extra:|^\s*about:|^\s*-\sname:|^outputs:|\Z)'
+        if 'package:' in self.get_recipe_text(force_top_level=force_top_level):
             # match top-level requirements - start of line means top-level requirements
             #    ^requirements:.*?
             # match output with similar name
             #    (?:-\sname:\s+%s.*?)requirements:.*?
             # terminate match of other sections
             #    (?=^\s*-\sname|^\s*test:|^\s*extra:|^\s*about:|^outputs:|\Z)
-            f = r'(^requirements:.*?|(?<=-\sname:).*?requirements:.*?)(?=^\s*-\sname|^\s*test:|^\s*script:|^\s*extra:|^\s*about:|^outputs:|\Z)'  # NOQA
+            f = '(^requirements:.*?)(?=^test:|^extra:|^about:|^outputs:|\Z)'
         return self.get_recipe_text(f, force_top_level=force_top_level)
 
     def extract_outputs_text(self, apply_selectors=True):
@@ -1825,7 +1828,6 @@ class MetaData(object):
         output_metadata._meta_path = ""
 
     def get_output_metadata(self, output):
-        self.parse_until_resolved(allow_no_other_outputs=True)
         if output.get('name') == self.name():
             output_metadata = self
         else:
@@ -1951,20 +1953,19 @@ class MetaData(object):
             used_variables = self.get_used_loop_vars(force_global=True)
             top_loop = self.get_reduced_variant_set(used_variables) or self.config.variants[:1]
 
-            for variant in (top_loop if (hasattr(self.config, 'variants') and
-                                                     self.config.variants)
-                            else [self.config.variant]):
-                self.config.variant = variant
-                if self.needs_source_for_render and self.variant_in_source:
-                    self.parse_again()
-                    utils.rm_rf(self.config.work_dir)
-                    provide(self)
-                    self.parse_again()
+            for variant in (top_loop if (hasattr(self.config, 'variants') and self.config.variants) else [self.config.variant]):
+                ref_metadata = self.copy()
+                ref_metadata.config.variant = variant
+                if ref_metadata.needs_source_for_render and self.variant_in_source:
+                    ref_metadata.parse_again()
+                    utils.rm_rf(ref_metadata.config.work_dir)
+                    provide(ref_metadata)
+                    ref_metadata.parse_again()
                 try:
-                    self.parse_until_resolved(allow_no_other_outputs=True, bypass_env_check=True)
+                    ref_metadata.parse_until_resolved(allow_no_other_outputs=True, bypass_env_check=True)
                 except SystemExit:
                     pass
-                outputs = get_output_dicts_from_metadata(self)
+                outputs = get_output_dicts_from_metadata(ref_metadata)
 
                 try:
                     for out in outputs:
@@ -1974,7 +1975,7 @@ class MetaData(object):
                             for env in ('build', 'host', 'run'):
                                 insert_variant_versions(requirements, variant, env)
                             out['requirements'] = requirements
-                        out_metadata = self.get_output_metadata(out)
+                        out_metadata = ref_metadata.get_output_metadata(out)
 
                         # keeping track of other outputs is necessary for correct functioning of the
                         #    pin_subpackage jinja2 function.  It's important that we store all of
@@ -1985,7 +1986,7 @@ class MetaData(object):
                                              HashableDict({k: out_metadata.config.variant[k]
                                     for k in out_metadata.get_used_vars()}))] = out, out_metadata
                         out_metadata_map[HashableDict(out)] = out_metadata
-                        self.other_outputs = out_metadata.other_outputs = all_output_metadata
+                        ref_metadata.other_outputs = out_metadata.other_outputs = all_output_metadata
                 except SystemExit:
                     if not permit_undefined_jinja:
                         raise
@@ -2025,8 +2026,8 @@ class MetaData(object):
 
             # early stages don't need to do the finalization.  Skip it until the later stages
             #     when we need it.
-            if not permit_undefined_jinja and not self.skip():
-                conda_packages = finalize_outputs_pass(self, conda_packages, pass_no=0,
+            if not permit_undefined_jinja and not ref_metadata.skip():
+                conda_packages = finalize_outputs_pass(ref_metadata, conda_packages, pass_no=0,
                                         permit_unsatisfiable_variants=permit_unsatisfiable_variants,
                                         bypass_env_check=bypass_env_check)
 
@@ -2228,7 +2229,7 @@ class MetaData(object):
     def activate_build_script(self):
         b = self.meta.get('build', {}) or {}
         should_activate = (self.uses_new_style_compiler_activation or b.get('activate_in_script'))
-        return bool(self.config.activate or should_activate) and not self.name() == 'conda'
+        return bool(self.config.activate and should_activate) and not self.name() == 'conda'
 
     @property
     def build_is_host(self):
