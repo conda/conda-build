@@ -790,7 +790,7 @@ def _show_linking_messages(files, errors, needed_dsos_for_file, build_prefix, ru
                              any(fnmatch.fnmatch(f, w) for w in runpath_whitelist)):
             _print_msg(errors, '{}: runpaths {} found in {}'.format(msg_prelude,
                                                                    runpaths,
-                                                                   path))
+                                                                    path), verbose=verbose)
         needed = needed_dsos_for_file[f]
         # imps = get_imports_memoized(path, None)
         for needed_dso in needed:

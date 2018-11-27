@@ -706,11 +706,11 @@ def get_run_exports(tar_or_folder_path):
         try:
             with open(os.path.join(tar_or_folder_path, 'info', 'run_exports.json')) as f:
                 run_exports = json.load(f)
-        except FileNotFoundError:
+        except (IOError, FileNotFoundError):
             try:
                 with open(os.path.join(tar_or_folder_path, 'info', 'run_exports.yaml')) as f:
                     run_exports = yaml.safe_load(f)
-            except FileNotFoundError:
+            except (IOError, FileNotFoundError):
                 log.debug("%s has no run_exports file (this is OK)" % tar_or_folder_path)
     return run_exports
 
