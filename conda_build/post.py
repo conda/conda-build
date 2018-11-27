@@ -480,7 +480,7 @@ def library_nature(pkg, prefix):
     Result :: "non-library", "dso library", "run-exports library"
     .. in that order, i.e. if have both dsos and run_exports, it's a run_exports_library.
     '''
-    dsos, run_exports, lib_prefix = determine_package_nature(pkg, prefix)
+    dsos, run_exports, _ = determine_package_nature(pkg, prefix)
     if run_exports:
         return "run-exports library"
     elif len(dsos):
@@ -646,7 +646,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     # Used for both dsos and static_libs
     all_lib_exports = {}
     for prefix in (run_prefix, build_prefix):
-        for subdir2, dirs, filez in os.walk(prefix):
+        for subdir2, _, filez in os.walk(prefix):
             for file in filez:
                 fp = os.path.join(subdir2, file)
                 dynamic_lib = any(glob2.fnmatch.fnmatch(fp, ext) for ext in ('*.so*', '*.dylib*', '*.dll')) and \
@@ -669,7 +669,6 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                 # Cannot filter here as this means the DSO (eg libomp.dylib) will not be found in any package
                 # [owners.append(new_pkg) for new_pkg in new_pkgs if new_pkg not in owners
                 #  and not any([glob2.fnmatch.fnmatch(new_pkg.name, i) for i in ignore_for_statics])]
-                [owners.append(new_pkg) for new_pkg in new_pkgs if new_pkg not in owners]
                 for new_pkg in new_pkgs:
                     if new_pkg not in owners:
                         owners.append(new_pkg)

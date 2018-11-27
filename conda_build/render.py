@@ -79,24 +79,11 @@ def actions_to_pins(actions):
     return specs
 
 
-def get_env_dependencies(m, env, variant, exclude_pattern=None,
-                         permit_unsatisfiable_variants=False,
-                         merge_build_host_on_same_platform=True):
-    dash_or_under = re.compile("[-_]")
-    specs = m.get_depends_top_and_out(env)
-    # replace x.x with our variant's numpy version, or else conda tries to literally go get x.x
-    if env in ('build', 'host'):
-        no_xx_specs = []
-        for spec in specs:
-            if ' x.x' in spec:
-                pkg_name = spec.split()[0]
-                no_xx_specs.append(' '.join((pkg_name, variant.get(pkg_name, ""))))
-            else:
-                no_xx_specs.append(spec)
-        specs = no_xx_specs
+def _categorize_deps(m, specs, exclude_pattern, variant):
     subpackages = []
     dependencies = []
     pass_through_deps = []
+    dash_or_under = re.compile("[-_]")
     # ones that get filtered from actual versioning, to exclude them from the hash calculation
     for spec in specs:
         if not exclude_pattern or not exclude_pattern.match(spec):
@@ -117,10 +104,30 @@ def get_env_dependencies(m, env, variant, exclude_pattern=None,
                     dependencies.append(" ".join((spec_name, value)))
         elif exclude_pattern.match(spec):
             pass_through_deps.append(spec)
-    random_string = ''.join(random.choice(string.ascii_uppercase + string.digits)
-                            for _ in range(10))
+    return subpackages, dependencies, pass_through_deps
+
+
+def get_env_dependencies(m, env, variant, exclude_pattern=None,
+                         permit_unsatisfiable_variants=False,
+                         merge_build_host_on_same_platform=True):
+    specs = m.get_depends_top_and_out(env)
+    # replace x.x with our variant's numpy version, or else conda tries to literally go get x.x
+    if env in ('build', 'host'):
+        no_xx_specs = []
+        for spec in specs:
+            if ' x.x' in spec:
+                pkg_name = spec.split()[0]
+                no_xx_specs.append(' '.join((pkg_name, variant.get(pkg_name, ""))))
+            else:
+                no_xx_specs.append(spec)
+        specs = no_xx_specs
+
+    subpackages, dependencies, pass_through_deps = _categorize_deps(m, specs, exclude_pattern, variant)
+
     dependencies = set(dependencies)
     unsat = None
+    random_string = ''.join(random.choice(string.ascii_uppercase + string.digits)
+                            for _ in range(10))
     with TemporaryDirectory(prefix="_", suffix=random_string) as tmpdir:
         try:
             actions = environ.get_install_actions(tmpdir, tuple(dependencies), env,

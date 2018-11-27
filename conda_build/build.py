@@ -1900,40 +1900,10 @@ def write_build_scripts(m, script, build_file):
     return work_file, env_file
 
 
-def write_test_scripts(metadata, env_vars, py_files, pl_files, lua_files, r_files, shell_files, trace=""):
+def _write_test_run_script(metadata, test_run_script, test_env_script, py_files, pl_files,
+                           lua_files, r_files, shell_files, trace):
     log = utils.get_logger(__name__)
-    if not metadata.config.activate or metadata.name() == 'conda':
-        # prepend bin (or Scripts) directory
-        env_vars = utils.prepend_bin_path(env_vars, metadata.config.test_prefix, prepend_prefix=True)
-        if utils.on_win:
-            env_vars['PATH'] = metadata.config.test_prefix + os.pathsep + env_vars['PATH']
-
-    # set variables like CONDA_PY in the test environment
-    env_vars.update(set_language_env_vars(metadata.config.variant))
-
-    # Python 2 Windows requires that envs variables be string, not unicode
-    env_vars = {str(key): str(value) for key, value in env_vars.items()}
-    suffix = "bat" if utils.on_win else "sh"
-    test_env_script = join(metadata.config.test_dir,
-                           "conda_test_env_vars.{suffix}".format(suffix=suffix))
-    test_run_script = join(metadata.config.test_dir,
-                           "conda_test_runner.{suffix}".format(suffix=suffix))
-
-    with open(test_env_script, 'w') as tf:
-        if not utils.on_win:
-            tf.write('set {trace}-e\n'.format(trace=trace))
-        if metadata.config.activate and not metadata.name() == 'conda':
-            ext = ".bat" if utils.on_win else ""
-            tf.write('{source} "{conda_root}activate{ext}" "{test_env}"\n'.format(
-                conda_root=utils.root_script_dir + os.path.sep,
-                source="call" if utils.on_win else "source",
-                ext=ext,
-                test_env=metadata.config.test_prefix))
-            if utils.on_win:
-                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
-
     with open(test_run_script, 'w') as tf:
-        ext = ".bat" if utils.on_win else ""
         tf.write('{source} "{test_env_script}"\n'.format(
             source="call" if utils.on_win else "source",
             test_env_script=test_env_script))
@@ -1983,6 +1953,41 @@ def write_test_scripts(metadata, env_vars, py_files, pl_files, lua_files, r_file
                     tf.write('"{shell_path}" {trace}-e "{test_file}"\n'.format(shell_path=shell_path,
                                                                             test_file=shell_file,
                                                                             trace=trace))
+
+
+def write_test_scripts(metadata, env_vars, py_files, pl_files, lua_files, r_files, shell_files, trace=""):
+    if not metadata.config.activate or metadata.name() == 'conda':
+        # prepend bin (or Scripts) directory
+        env_vars = utils.prepend_bin_path(env_vars, metadata.config.test_prefix, prepend_prefix=True)
+        if utils.on_win:
+            env_vars['PATH'] = metadata.config.test_prefix + os.pathsep + env_vars['PATH']
+
+    # set variables like CONDA_PY in the test environment
+    env_vars.update(set_language_env_vars(metadata.config.variant))
+
+    # Python 2 Windows requires that envs variables be string, not unicode
+    env_vars = {str(key): str(value) for key, value in env_vars.items()}
+    suffix = "bat" if utils.on_win else "sh"
+    test_env_script = join(metadata.config.test_dir,
+                           "conda_test_env_vars.{suffix}".format(suffix=suffix))
+    test_run_script = join(metadata.config.test_dir,
+                           "conda_test_runner.{suffix}".format(suffix=suffix))
+
+    with open(test_env_script, 'w') as tf:
+        if not utils.on_win:
+            tf.write('set {trace}-e\n'.format(trace=trace))
+        if metadata.config.activate and not metadata.name() == 'conda':
+            ext = ".bat" if utils.on_win else ""
+            tf.write('{source} "{conda_root}activate{ext}" "{test_env}"\n'.format(
+                conda_root=utils.root_script_dir + os.path.sep,
+                source="call" if utils.on_win else "source",
+                ext=ext,
+                test_env=metadata.config.test_prefix))
+            if utils.on_win:
+                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+
+    _write_test_run_script(metadata, test_run_script, test_env_script, py_files, pl_files,
+                           lua_files, r_files, shell_files, trace)
     return test_run_script, test_env_script
 
 

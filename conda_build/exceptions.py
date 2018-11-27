@@ -98,7 +98,7 @@ class OverLinkingError(VerifyError):
     def __init__(self, error, *args):
         self.error = error
         self.msg = "overlinking check failed \n%s" % (error)
-        super(VerifyError, self).__init__(self.msg)
+        super(OverLinkingError, self).__init__(self.msg)
 
 
 class OverDependingError(VerifyError):
