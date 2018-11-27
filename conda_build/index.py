@@ -690,17 +690,28 @@ def _cache_recipe_log(tar_path, recipe_log_path):
         fh.write(binary_recipe_log)
 
 
-def get_run_exports(tar_path):
-    try:
-        binary_run_exports = _tar_xf_file(tar_path, 'info/run_exports.json')
-        run_exports = json.loads(binary_run_exports.decode("utf-8"))
-    except KeyError:
+def get_run_exports(tar_or_folder_path):
+    run_exports = {}
+    if os.path.isfile(tar_or_folder_path):
         try:
-            binary_run_exports = _tar_xf_file(tar_path, 'info/run_exports.yaml')
-            run_exports = yaml.safe_load(binary_run_exports)
+            binary_run_exports = _tar_xf_file(tar_or_folder_path, 'info/run_exports.json')
+            run_exports = json.loads(binary_run_exports.decode("utf-8"))
         except KeyError:
-            log.debug("%s has no run_exports file (this is OK)" % tar_path)
-            run_exports = {}
+            try:
+                binary_run_exports = _tar_xf_file(tar_or_folder_path, 'info/run_exports.yaml')
+                run_exports = yaml.safe_load(binary_run_exports)
+            except KeyError:
+                log.debug("%s has no run_exports file (this is OK)" % tar_or_folder_path)
+    elif os.path.isdir(tar_or_folder_path):
+        try:
+            with open(os.path.join(tar_or_folder_path, 'info', 'run_exports.json')) as f:
+                run_exports = json.load(f)
+        except FileNotFoundError:
+            try:
+                with open(os.path.join(tar_or_folder_path, 'info', 'run_exports.yaml')) as f:
+                    run_exports = yaml.safe_load(f)
+            except FileNotFoundError:
+                log.debug("%s has no run_exports file (this is OK)" % tar_or_folder_path)
     return run_exports
 
 

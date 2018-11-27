@@ -124,7 +124,7 @@ def test_host_entries_finalized(testing_config):
     recipe = os.path.join(metadata_dir, '_host_entries_finalized')
     metadata = api.render(recipe, config=testing_config)
     assert len(metadata) == 2
-    outputs = api.get_output_file_paths(recipe, config=testing_config)
+    outputs = api.get_output_file_paths(metadata)
     assert any('py27' in out for out in outputs)
     assert any('py36' in out for out in outputs)
 

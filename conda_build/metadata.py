@@ -1943,7 +1943,6 @@ class MetaData(object):
                                 bypass_env_check=False):
         from conda_build.source import provide
         out_metadata_map = {}
-
         if self.final:
             outputs = get_output_dicts_from_metadata(self)[0]
             output_tuples = [(outputs, self)]

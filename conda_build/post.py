@@ -469,8 +469,12 @@ def determine_package_nature(pkg, prefix):
     codefiles = get_package_obj_files(pkg, prefix)
     dsos = [[f for ext in ('.dylib', '.so', '.dll') if ext in f] for f in codefiles]
     for pkgs_dir in pkgs_dirs:
+        test_folder = os.path.join(pkgs_dir, pkg.dist_name)
         test_filename = os.path.join(pkgs_dir, pkg.fn)
-        if os.path.exists(test_filename):
+        if os.path.exists(test_folder):
+            run_exports = get_run_exports(test_folder)
+            break
+        elif os.path.isfile(test_filename):
             run_exports = get_run_exports(test_filename)
             break
     return (dsos, run_exports, lib_prefix)

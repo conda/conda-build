@@ -101,8 +101,8 @@ class OverLinkingError(RuntimeError):
         super(OverLinkingError, self).__init__(self.msg)
 
 
-class OverDependingError(VerifyError):
+class OverDependingError(RuntimeError):
     def __init__(self, error, *args):
         self.error = error
         self.msg = "overdepending check failed \n%s" % (error)
-        super(VerifyError, self).__init__(self.msg)
+        super(OverDependingError, self).__init__(self.msg)
