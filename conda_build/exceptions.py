@@ -94,7 +94,7 @@ class BuildLockError(CondaBuildException):
     """ Raised when we failed to acquire a lock. """
 
 
-class OverLinkingError(VerifyError):
+class OverLinkingError(RuntimeError):
     def __init__(self, error, *args):
         self.error = error
         self.msg = "overlinking check failed \n%s" % (error)
