@@ -478,6 +478,8 @@ def finalize_metadata(m, parent_metadata=None, permit_unsatisfiable_variants=Fal
         # extract the topmost section where variables are defined, and put it on top of the
         #     requirements for a particular output
         # Re-parse the output from the original recipe, so that we re-consider any jinja2 stuff
+        parent_metadata = parent_metadata.copy()
+        parent_metadata.config.variant = m.config.variant
         output = parent_metadata.get_rendered_output(m.name())
 
         if output:
@@ -498,6 +500,7 @@ def finalize_metadata(m, parent_metadata=None, permit_unsatisfiable_variants=Fal
         build_unsat, host_unsat = add_upstream_pins(m,
                                                     permit_unsatisfiable_variants,
                                                     exclude_pattern)
+
         m = parent_metadata.get_output_metadata(m.get_rendered_output(m.name()))
         # getting this AFTER add_upstream_pins is important, because that function adds deps
         #     to the metadata.

@@ -702,6 +702,7 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
             # place, so it can refer to it for any pin_subpackage stuff it has.
             om.other_outputs = metadata.other_outputs
             om.config.variant = metadata.config.variant
+            parent_metadata = om.copy()
 
             om.other_outputs.update(outputs)
             om.final = False
@@ -710,8 +711,6 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
             output_d = om.get_rendered_output(metadata.name()) or {'name': metadata.name()}
 
             om = om.get_output_metadata(output_d)
-            parent_metadata = base_metadata.copy()
-            parent_metadata.config.variant = om.config.variant
             parent_metadata.parse_until_resolved()
             if not bypass_env_check:
                 fm = finalize_metadata(om, parent_metadata=parent_metadata,
@@ -1154,8 +1153,9 @@ class MetaData(object):
         meta_requirements = ensure_list(self.get_value('requirements/' + typ, []))[:]
         req_names = set(req.split()[0] for req in meta_requirements if req)
         extra_reqs = []
-        if 'outputs' in self.meta:
-            matching_output = [out for out in self.meta.get('outputs') if
+        # this is for the edge case of requirements for top-level being also partially defined in a similarly named output
+        if not self.is_output:
+            matching_output = [out for out in self.meta.get('outputs', []) if
                                out.get('name') == self.name()]
             if matching_output:
                 extra_reqs = utils.expand_reqs(
@@ -2228,7 +2228,7 @@ class MetaData(object):
     def activate_build_script(self):
         b = self.meta.get('build', {}) or {}
         should_activate = (self.uses_new_style_compiler_activation or b.get('activate_in_script'))
-        return bool(self.config.activate or should_activate) and not self.name() == 'conda'
+        return bool(self.config.activate and should_activate) and not self.name() == 'conda'
 
     @property
     def build_is_host(self):
