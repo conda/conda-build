@@ -1464,14 +1464,13 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                     # hard-code this because we never want pip's build isolation
                     #    https://github.com/conda/conda-build/pull/2972#discussion_r198290241
                     #
-                    # Note that pip env "NO" variables are inverted logic.
+                    # Note that some pip env "NO" variables are inverted logic.
                     #      PIP_NO_BUILD_ISOLATION=False means don't use build isolation.
                     #
                     env["PIP_NO_BUILD_ISOLATION"] = False
                     # some other env vars to have pip ignore dependencies.
                     # we supply them ourselves instead.
-                    #    See note above about inverted logic on "NO" variables
-                    env["PIP_NO_DEPENDENCIES"] = False
+                    env["PIP_NO_DEPENDENCIES"] = True
                     env["PIP_IGNORE_INSTALLED"] = True
                     # pip's cache directory (PIP_NO_CACHE_DIR) should not be
                     # disabled as this results in .egg-info rather than
