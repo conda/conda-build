@@ -133,6 +133,8 @@ local_index_timestamp = 0
 cached_index = None
 local_subdir = ""
 cached_channels = []
+channel_data = {}
+
 
 MAX_THREADS_DEFAULT = os.cpu_count() if (hasattr(os, "cpu_count") and os.cpu_count() > 1) else 1
 LOCK_TIMEOUT_SECS = 3 * 3600
@@ -186,8 +188,6 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
             local_subdir != subdir or
             mtime > local_index_timestamp or
             cached_channels != channel_urls):
-
-        channel_data = {}
 
         # priority: (local as either croot or output_folder IF NOT EXPLICITLY IN CHANNEL ARGS),
         #     then channels passed as args (if local in this, it remains in same order),

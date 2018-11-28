@@ -844,7 +844,7 @@ def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, 
                                                         channel_urls=tuple(config.channel_urls))
                     else:
                         actions = specs_or_actions
-                    index, index_ts, _ = get_build_index(subdir=subdir,
+                    index, _, _ = get_build_index(subdir=subdir,
                                                     bldpkgs_dir=config.bldpkgs_dir,
                                                     output_folder=config.output_folder,
                                                     channel_urls=config.channel_urls,

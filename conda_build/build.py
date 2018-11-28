@@ -1646,24 +1646,14 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                     subdir = ('noarch' if (m.noarch or m.noarch_python)
                               else m.config.host_subdir)
                     if m.is_cross:
-                        host_index, host_ts, _ = get_build_index(subdir=subdir,
-                                                              bldpkgs_dir=m.config.bldpkgs_dir,
-                                                              output_folder=m.config.output_folder,
-                                                              channel_urls=m.config.channel_urls,
-                                                              debug=m.config.debug,
-                                                              verbose=m.config.verbose,
-                                                              locking=m.config.locking,
-                                                              timeout=m.config.timeout,
-                                                              clear_cache=True)
-                    index, index_timestamp, _ = get_build_index(subdir=subdir,
-                                                             bldpkgs_dir=m.config.bldpkgs_dir,
-                                                             output_folder=m.config.output_folder,
-                                                             channel_urls=m.config.channel_urls,
-                                                             debug=m.config.debug,
-                                                             verbose=m.config.verbose,
-                                                             locking=m.config.locking,
-                                                             timeout=m.config.timeout,
-                                                             clear_cache=True)
+                        get_build_index(subdir=subdir, bldpkgs_dir=m.config.bldpkgs_dir,
+                                        output_folder=m.config.output_folder, channel_urls=m.config.channel_urls,
+                                        debug=m.config.debug, verbose=m.config.verbose, locking=m.config.locking,
+                                        timeout=m.config.timeout, clear_cache=True)
+                    get_build_index(subdir=subdir, bldpkgs_dir=m.config.bldpkgs_dir,
+                                    output_folder=m.config.output_folder, channel_urls=m.config.channel_urls,
+                                    debug=m.config.debug, verbose=m.config.verbose, locking=m.config.locking,
+                                    timeout=m.config.timeout, clear_cache=True)
     else:
         if not provision_only:
             print("STOPPING BUILD BEFORE POST:", m.dist())
@@ -2603,13 +2593,9 @@ def is_package_built(metadata, env, include_local=True):
         from conda.api import SubdirData
         return bool(SubdirData.query_all(spec, channels=urls, subdirs=(subdir, "noarch")))
     else:
-        index, index_ts, _ = get_build_index(subdir=subdir,
-                                          bldpkgs_dir=metadata.config.bldpkgs_dir,
-                                          output_folder=metadata.config.output_folder,
-                                          channel_urls=urls,
-                                          debug=metadata.config.debug,
-                                          verbose=metadata.config.verbose,
-                                          locking=metadata.config.locking,
-                                          timeout=metadata.config.timeout,
-                                          clear_cache=True)
+        index, _, _ = get_build_index(subdir=subdir, bldpkgs_dir=metadata.config.bldpkgs_dir,
+                                      output_folder=metadata.config.output_folder, channel_urls=urls,
+                                      debug=metadata.config.debug, verbose=metadata.config.verbose,
+                                      locking=metadata.config.locking, timeout=metadata.config.timeout,
+                                      clear_cache=True)
         return any(spec.match(prec) for prec in index.values())

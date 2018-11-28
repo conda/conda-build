@@ -872,7 +872,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     all_needed_dsos, needed_dsos_for_file = _collect_needed_dsos(sysroots, files, run_prefix, sysroot_substitution,
                                                                  build_prefix, build_prefix_substitution)
 
-    prefix_owners, contains_dsos, contains_static_libs, all_lib_exports = _map_file_to_package(
+    prefix_owners, _, _, all_lib_exports = _map_file_to_package(
         files, run_prefix, build_prefix, all_needed_dsos, pkg_vendored_dist, ignore_list_syms, sysroot_substitution)
 
     for f in files:
