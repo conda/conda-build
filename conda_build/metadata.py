@@ -1628,15 +1628,15 @@ class MetaData(object):
 
     def extract_requirements_text(self, force_top_level=False):
         # outputs are already filtered into each output for us
-        f = r'(^\s*requirements:.*?)(?=^\s*test:|^\s*extra:|^\s*about:|^\s*-\sname:|^outputs:|\Z)'  # NOQA
+        f = r'(^\s*requirements:.*?)(?=^\s*test:|^\s*extra:|^\s*about:|^\s*-\s+name:|^outputs:|\Z)'  # NOQA
         if 'package:' in self.get_recipe_text():
             # match top-level requirements - start of line means top-level requirements
             #    ^requirements:.*?
             # match output with similar name
-            #    (?:-\sname:\s+%s.*?)requirements:.*?
+            #    (?:-\s+name:\s+%s.*?)requirements:.*?
             # terminate match of other sections
-            #    (?=^\s*-\sname|^\s*test:|^\s*extra:|^\s*about:|^outputs:|\Z)
-            f = r'(^requirements:.*?|(?<=-\sname:\s%s\s).*?requirements:.*?)(?=^\s*-\sname|^\s*test:|^\s*script:|^\s*extra:|^\s*about:|^outputs:|\Z)' % self.name()  # NOQA
+            #    (?=^\s*-\s+name|^\s*test:|^\s*extra:|^\s*about:|^outputs:|\Z)
+            f = r'(^requirements:.*?|(?<=\sname:\s%s\s).*?requirements:.*?)(?=^\s*-\s+name|^\s*test:|^\s*script:|^\s*extra:|^\s*about:|^outputs:|\Z)' % self.name()  # NOQA
         return self.get_recipe_text(f, force_top_level=force_top_level)
 
     def extract_outputs_text(self, apply_selectors=True):
