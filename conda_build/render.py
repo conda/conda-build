@@ -270,7 +270,7 @@ def _read_specs_from_package(pkg_loc, pkg_dist):
 
 
 def execute_download_actions(m, actions, env, package_subset=None, require_files=False):
-    index, index_ts = get_build_index(getattr(m.config, '{}_subdir'.format(env)),
+    index, index_ts, _ = get_build_index(getattr(m.config, '{}_subdir'.format(env)),
                                       bldpkgs_dir=m.config.bldpkgs_dir,
                                       output_folder=m.config.output_folder,
                                       channel_urls=m.config.channel_urls,

@@ -23,5 +23,5 @@ else
     /opt/conda/bin/py.test -v -n 2 --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --forked
     # install conda-verify from its master branch, at least for a while until it's more stable
     pip install git+https://github.com/conda/conda-verify.git
-    /opt/conda/bin/py.test -v -n 0 --basetemp /tmp/cb --cov conda_build --cov-report xml -m "serial" tests --instafail
+    /opt/conda/bin/py.test -v -n 0 --basetemp /tmp/cb --cov conda_build --cov-report xml -m "serial" tests
 fi

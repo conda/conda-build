@@ -32,7 +32,7 @@ from conda_build.os_utils.liefldd import (get_exports_memoized, get_linkages_mem
                                           get_runpaths)
 from conda_build.os_utils.pyldd import codefile_type
 from conda_build.os_utils.ldd import get_package_obj_files
-from conda_build.index import get_run_exports
+from conda_build.index import get_run_exports, get_build_index
 from conda_build.inspect_pkg import which_package
 from conda_build.exceptions import (OverLinkingError, OverDependingError)
 
@@ -462,30 +462,45 @@ def assert_relative_osx(path, prefix):
             raise RuntimeError("library at %s appears to have an absolute path embedded" % path)
 
 
-def determine_package_nature(pkg, prefix):
+def determine_package_nature(pkg, prefix, subdir, bldpkgs_dir, output_folder, channel_urls):
     dsos = []
     run_exports = None
     lib_prefix = pkg.name.startswith('lib')
     codefiles = get_package_obj_files(pkg, prefix)
     dsos = [[f for ext in ('.dylib', '.so', '.dll') if ext in f] for f in codefiles]
-    for pkgs_dir in pkgs_dirs:
-        test_folder = os.path.join(pkgs_dir, pkg.dist_name)
-        test_filename = os.path.join(pkgs_dir, pkg.fn)
-        if os.path.exists(test_folder):
-            run_exports = get_run_exports(test_folder)
-            break
-        if not run_exports and os.path.isfile(test_filename):
-            run_exports = get_run_exports(test_filename)
-            break
+    # we don't care about the actual run_exports value, just whether or not run_exports are present.  We can use channeldata
+    #    and it'll be a more reliable source (no disk race condition nonsense)
+    _, _, channeldata = get_build_index(subdir=subdir,
+                                        bldpkgs_dir=bldpkgs_dir,
+                                        output_folder=output_folder,
+                                        channel_urls=channel_urls,
+                                        debug=False,
+                                        verbose=False,
+                                        clear_cache=False)
+    channel_used = pkg.channel
+    channeldata = channeldata.get(channel_used)
+
+    if channeldata and pkg.name in channeldata['packages']:
+        run_exports = channeldata['packages'][pkg.name].get('run_exports', {})
+    else:
+        for pkgs_dir in pkgs_dirs:
+            test_folder = os.path.join(pkgs_dir, pkg.dist_name)
+            test_filename = os.path.join(pkgs_dir, pkg.fn)
+            if os.path.exists(test_folder):
+                run_exports = get_run_exports(test_folder)
+                break
+            if not run_exports and os.path.isfile(test_filename):
+                run_exports = get_run_exports(test_filename)
+                break
     return (dsos, run_exports, lib_prefix)
 
 
-def library_nature(pkg, prefix):
+def library_nature(pkg, prefix, subdir, bldpkgs_dirs, output_folder, channel_urls):
     '''
     Result :: "non-library", "dso library", "run-exports library"
     .. in that order, i.e. if have both dsos and run_exports, it's a run_exports_library.
     '''
-    dsos, run_exports, _ = determine_package_nature(pkg, prefix)
+    dsos, run_exports, _ = determine_package_nature(pkg, prefix, subdir, bldpkgs_dirs, output_folder, channel_urls)
     if run_exports:
         return "run-exports library"
     elif len(dsos):
@@ -812,7 +827,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                            run_prefix, build_prefix,
                            missing_dso_whitelist, runpath_whitelist,
                            error_overlinking, error_overdepending, verbose,
-                           exception_on_error, files):
+                           exception_on_error, files, bldpkgs_dirs, output_folder, channel_urls):
     verbose = True
     errors = []
 
@@ -824,7 +839,8 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     ignore_list = utils.ensure_list(ignore_run_exports)
     if subdir.startswith('linux'):
         ignore_list.append('libgcc-ng')
-    package_nature = {package: library_nature(package, run_prefix) for package in packages}
+    package_nature = {package: library_nature(package, run_prefix, subdir, bldpkgs_dirs, output_folder, channel_urls)
+                      for package in packages}
     lib_packages = set([package for package in packages
                         if package.quad[0] not in ignore_list and
                         package_nature[package] != 'non-library'])
@@ -923,7 +939,10 @@ def check_overlinking(m, files):
                                   m.config.error_overdepending,
                                   m.config.verbose,
                                   True,
-                                  files)
+                                  files,
+                                  m.config.bldpkgs_dir,
+                                  m.config.output_folder,
+                                  m.config.channel_urls)
 
 
 def post_process_shared_lib(m, f, files):

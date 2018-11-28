@@ -731,7 +731,7 @@ def get_install_actions(prefix, specs, env, retries=0, subdir=None,
 
     bldpkgs_dirs = ensure_list(bldpkgs_dirs)
 
-    index, index_ts = get_build_index(subdir, list(bldpkgs_dirs)[0], output_folder=output_folder,
+    index, index_ts, _ = get_build_index(subdir, list(bldpkgs_dirs)[0], output_folder=output_folder,
                                       channel_urls=channel_urls, debug=debug, verbose=verbose,
                                       locking=locking, timeout=timeout)
     specs = tuple(utils.ensure_valid_spec(spec) for spec in specs if not str(spec).endswith('@'))
@@ -844,7 +844,7 @@ def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, 
                                                         channel_urls=tuple(config.channel_urls))
                     else:
                         actions = specs_or_actions
-                    index, index_ts = get_build_index(subdir=subdir,
+                    index, index_ts, _ = get_build_index(subdir=subdir,
                                                     bldpkgs_dir=config.bldpkgs_dir,
                                                     output_folder=config.output_folder,
                                                     channel_urls=config.channel_urls,

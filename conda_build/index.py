@@ -22,6 +22,7 @@ from uuid import uuid4
 from conda.common.compat import ensure_binary
 # from conda.resolve import dashlist
 
+import requests
 import pytz
 from jinja2 import Environment, PackageLoader
 from tqdm import tqdm
@@ -38,7 +39,7 @@ import libarchive
 
 
 from . import conda_interface, utils
-from .conda_interface import MatchSpec, VersionOrder, human_bytes
+from .conda_interface import MatchSpec, VersionOrder, human_bytes, context
 from .conda_interface import CondaError, CondaHTTPError, get_index, url_path
 from .utils import glob, get_logger, FileNotFoundError, PermissionError
 
@@ -166,6 +167,7 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
     global local_subdir
     global cached_index
     global cached_channels
+    global channel_data
     mtime = 0
 
     channel_urls = list(utils.ensure_list(channel_urls))
@@ -183,6 +185,8 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
             local_subdir != subdir or
             mtime > local_index_timestamp or
             cached_channels != channel_urls):
+
+        channel_data = {}
 
         # priority: (local as either croot or output_folder IF NOT EXPLICITLY IN CHANNEL ARGS),
         #     then channels passed as args (if local in this, it remains in same order),
@@ -233,10 +237,47 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
                                              use_local=False,
                                              use_cache=False,
                                              platform=subdir)
+
+            expanded_channels = {rec.channel for rec in cached_index.values()}
+
+            superchannel = {}
+            # we need channeldata.json too, as it is a more reliable source of run_exports data
+            for channel in expanded_channels:
+                retry = 0
+                max_retries = 5
+                while retry < max_retries:
+                    err = None
+                    try:
+                        # download channeldata.json for url
+                        channel_content = requests.get(channel.base_url + '/channeldata.json')
+                        if channel_content.status_code == 200:
+                            # load its JSON content
+                            channel_data[channel.name] = channel_content.json()
+                            break
+                        elif channel_content.status_code == 404:
+                            break
+                    except requests.exceptions.InvalidSchema as e:
+                        # store exception for potential later use; retry
+                        err = e
+                    log.warn("Problem downloading channeldata for url: %s.  Retrying (%d of %d) in 2 sec" % (
+                        channel.name, retry, max_retries))
+                    time.sleep(2)
+                    retry += 1
+                    if retry == max_retries:
+                        if err:
+                            raise err
+                        else:
+                            log.warn("Problem downloading channeldata for url: %s.  Rerun in debug mode for more info" % channel.name)
+                # collapse defaults metachannel back into one superchannel, merging channeldata
+                if channel.base_url in context.default_channels and channel_data.get(channel.name):
+                    packages = superchannel.get('packages', {})
+                    packages.update(channel_data[channel.name])
+                    superchannel['packages'] = packages
+            channel_data['defaults'] = superchannel
         local_index_timestamp = os.path.getmtime(index_file)
         local_subdir = subdir
         cached_channels = channel_urls
-    return cached_index, local_index_timestamp
+    return cached_index, local_index_timestamp, channel_data
 
 
 def _ensure_valid_channel(local_folder, subdir):
