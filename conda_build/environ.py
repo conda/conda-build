@@ -810,6 +810,10 @@ def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, 
     else:
         external_logger_context = utils.LoggingContext(logging.WARN)
 
+    if os.path.exists(prefix):
+        utils.rm_rf(prefix)
+    os.makedirs(prefix)
+
     with external_logger_context:
         log = utils.get_logger(__name__)
 
@@ -820,114 +824,113 @@ def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, 
             log.debug("Creating environment in %s", prefix)
             log.debug(str(specs_or_actions))
 
-            with utils.path_prepended(prefix):
-                if not locks:
-                    locks = utils.get_conda_operation_locks(config)
-                try:
-                    with utils.try_acquire_locks(locks, timeout=config.timeout):
-                        # input is a list - it's specs in MatchSpec format
-                        if not hasattr(specs_or_actions, 'keys'):
-                            specs = list(set(specs_or_actions))
-                            actions = get_install_actions(prefix, tuple(specs), env,
-                                                          subdir=subdir,
-                                                          verbose=config.verbose,
-                                                          debug=config.debug,
-                                                          locking=config.locking,
-                                                          bldpkgs_dirs=tuple(config.bldpkgs_dirs),
-                                                          timeout=config.timeout,
-                                                          disable_pip=config.disable_pip,
-                                                          max_env_retry=config.max_env_retry,
-                                                          output_folder=config.output_folder,
-                                                          channel_urls=tuple(config.channel_urls))
-                        else:
-                            actions = specs_or_actions
-                        index, index_ts = get_build_index(subdir=subdir,
-                                                        bldpkgs_dir=config.bldpkgs_dir,
-                                                        output_folder=config.output_folder,
-                                                        channel_urls=config.channel_urls,
-                                                        debug=config.debug,
+            if not locks:
+                locks = utils.get_conda_operation_locks(config)
+            try:
+                with utils.try_acquire_locks(locks, timeout=config.timeout):
+                    # input is a list - it's specs in MatchSpec format
+                    if not hasattr(specs_or_actions, 'keys'):
+                        specs = list(set(specs_or_actions))
+                        actions = get_install_actions(prefix, tuple(specs), env,
+                                                        subdir=subdir,
                                                         verbose=config.verbose,
+                                                        debug=config.debug,
                                                         locking=config.locking,
-                                                        timeout=config.timeout)
-                        utils.trim_empty_keys(actions)
-                        if config.verbose:
-                            display_actions(actions, index)
-                        if utils.on_win:
-                            for k, v in os.environ.items():
-                                os.environ[k] = str(v)
-                        with env_var('CONDA_QUIET', not config.verbose, reset_context):
-                            with env_var('CONDA_JSON', not config.verbose, reset_context):
-                                execute_actions(actions, index)
-                except (SystemExit, PaddingError, LinkError, DependencyNeedsBuildingError,
-                        CondaError, BuildLockError) as exc:
-                    if (("too short in" in str(exc) or
-                            re.search('post-link failed for: (?:[a-zA-Z]*::)?openssl', str(exc)) or
-                            isinstance(exc, PaddingError)) and
-                            config.prefix_length > 80):
-                        if config.prefix_length_fallback:
-                            log.warn("Build prefix failed with prefix length %d",
-                                     config.prefix_length)
-                            log.warn("Error was: ")
-                            log.warn(str(exc))
-                            log.warn("One or more of your package dependencies needs to be rebuilt "
-                                    "with a longer prefix length.")
-                            log.warn("Falling back to legacy prefix length of 80 characters.")
-                            log.warn("Your package will not install into prefixes > 80 characters.")
-                            config.prefix_length = 80
+                                                        bldpkgs_dirs=tuple(config.bldpkgs_dirs),
+                                                        timeout=config.timeout,
+                                                        disable_pip=config.disable_pip,
+                                                        max_env_retry=config.max_env_retry,
+                                                        output_folder=config.output_folder,
+                                                        channel_urls=tuple(config.channel_urls))
+                    else:
+                        actions = specs_or_actions
+                    index, index_ts = get_build_index(subdir=subdir,
+                                                    bldpkgs_dir=config.bldpkgs_dir,
+                                                    output_folder=config.output_folder,
+                                                    channel_urls=config.channel_urls,
+                                                    debug=config.debug,
+                                                    verbose=config.verbose,
+                                                    locking=config.locking,
+                                                    timeout=config.timeout)
+                    utils.trim_empty_keys(actions)
+                    if config.verbose:
+                        display_actions(actions, index)
+                    if utils.on_win:
+                        for k, v in os.environ.items():
+                            os.environ[k] = str(v)
+                    with env_var('CONDA_QUIET', not config.verbose, reset_context):
+                        with env_var('CONDA_JSON', not config.verbose, reset_context):
+                            execute_actions(actions, index)
+            except (SystemExit, PaddingError, LinkError, DependencyNeedsBuildingError,
+                    CondaError, BuildLockError) as exc:
+                if (("too short in" in str(exc) or
+                        re.search('post-link failed for: (?:[a-zA-Z]*::)?openssl', str(exc)) or
+                        isinstance(exc, PaddingError)) and
+                        config.prefix_length > 80):
+                    if config.prefix_length_fallback:
+                        log.warn("Build prefix failed with prefix length %d",
+                                    config.prefix_length)
+                        log.warn("Error was: ")
+                        log.warn(str(exc))
+                        log.warn("One or more of your package dependencies needs to be rebuilt "
+                                "with a longer prefix length.")
+                        log.warn("Falling back to legacy prefix length of 80 characters.")
+                        log.warn("Your package will not install into prefixes > 80 characters.")
+                        config.prefix_length = 80
 
-                            host = '_h_env' in prefix
-                            # Set this here and use to create environ
-                            #   Setting this here is important because we use it below (symlink)
-                            prefix = config.host_prefix if host else config.build_prefix
-                            actions['PREFIX'] = prefix
+                        host = '_h_env' in prefix
+                        # Set this here and use to create environ
+                        #   Setting this here is important because we use it below (symlink)
+                        prefix = config.host_prefix if host else config.build_prefix
+                        actions['PREFIX'] = prefix
 
-                            create_env(prefix, actions, config=config, subdir=subdir, env=env,
-                                       clear_cache=clear_cache, is_cross=is_cross)
-                        else:
-                            raise
-                    elif 'lock' in str(exc):
-                        if retry < config.max_env_retry:
-                            log.warn("failed to create env, retrying.  exception was: %s", str(exc))
-                            create_env(prefix, specs_or_actions, config=config, subdir=subdir, env=env,
-                                    clear_cache=clear_cache, retry=retry + 1, is_cross=is_cross)
-                    elif ('requires a minimum conda version' in str(exc) or
-                          'link a source that does not' in str(exc)):
-                        with utils.try_acquire_locks(locks, timeout=config.timeout):
-                            pkg_dir = str(exc)
-                            folder = 0
-                            while os.path.dirname(pkg_dir) not in pkgs_dirs and folder < 20:
-                                pkg_dir = os.path.dirname(pkg_dir)
-                                folder += 1
-                            log.warn("I think conda ended up with a partial extraction for %s.  "
-                                     "Removing the folder and retrying", pkg_dir)
-                            if os.path.isdir(pkg_dir):
-                                utils.rm_rf(pkg_dir)
-                        if retry < config.max_env_retry:
-                            log.warn("failed to create env, retrying.  exception was: %s", str(exc))
-                            create_env(prefix, specs_or_actions, config=config, subdir=subdir, env=env,
-                                       clear_cache=clear_cache, retry=retry + 1, is_cross=is_cross)
-                        else:
-                            log.error("Failed to create env, max retries exceeded.")
-                            raise
+                        create_env(prefix, actions, config=config, subdir=subdir, env=env,
+                                    clear_cache=clear_cache, is_cross=is_cross)
                     else:
                         raise
-                # HACK: some of the time, conda screws up somehow and incomplete packages result.
-                #    Just retry.
-                except (AssertionError, IOError, ValueError, RuntimeError, LockError) as exc:
-                    if isinstance(exc, AssertionError):
-                        with utils.try_acquire_locks(locks, timeout=config.timeout):
-                            pkg_dir = os.path.dirname(os.path.dirname(str(exc)))
-                            log.warn("I think conda ended up with a partial extraction for %s.  "
-                                     "Removing the folder and retrying", pkg_dir)
-                            if os.path.isdir(pkg_dir):
-                                utils.rm_rf(pkg_dir)
+                elif 'lock' in str(exc):
                     if retry < config.max_env_retry:
                         log.warn("failed to create env, retrying.  exception was: %s", str(exc))
                         create_env(prefix, specs_or_actions, config=config, subdir=subdir, env=env,
-                                   clear_cache=clear_cache, retry=retry + 1, is_cross=is_cross)
+                                clear_cache=clear_cache, retry=retry + 1, is_cross=is_cross)
+                elif ('requires a minimum conda version' in str(exc) or
+                        'link a source that does not' in str(exc)):
+                    with utils.try_acquire_locks(locks, timeout=config.timeout):
+                        pkg_dir = str(exc)
+                        folder = 0
+                        while os.path.dirname(pkg_dir) not in pkgs_dirs and folder < 20:
+                            pkg_dir = os.path.dirname(pkg_dir)
+                            folder += 1
+                        log.warn("I think conda ended up with a partial extraction for %s.  "
+                                    "Removing the folder and retrying", pkg_dir)
+                        if os.path.isdir(pkg_dir):
+                            utils.rm_rf(pkg_dir)
+                    if retry < config.max_env_retry:
+                        log.warn("failed to create env, retrying.  exception was: %s", str(exc))
+                        create_env(prefix, specs_or_actions, config=config, subdir=subdir, env=env,
+                                    clear_cache=clear_cache, retry=retry + 1, is_cross=is_cross)
                     else:
                         log.error("Failed to create env, max retries exceeded.")
                         raise
+                else:
+                    raise
+            # HACK: some of the time, conda screws up somehow and incomplete packages result.
+            #    Just retry.
+            except (AssertionError, IOError, ValueError, RuntimeError, LockError) as exc:
+                if isinstance(exc, AssertionError):
+                    with utils.try_acquire_locks(locks, timeout=config.timeout):
+                        pkg_dir = os.path.dirname(os.path.dirname(str(exc)))
+                        log.warn("I think conda ended up with a partial extraction for %s.  "
+                                    "Removing the folder and retrying", pkg_dir)
+                        if os.path.isdir(pkg_dir):
+                            utils.rm_rf(pkg_dir)
+                if retry < config.max_env_retry:
+                    log.warn("failed to create env, retrying.  exception was: %s", str(exc))
+                    create_env(prefix, specs_or_actions, config=config, subdir=subdir, env=env,
+                                clear_cache=clear_cache, retry=retry + 1, is_cross=is_cross)
+                else:
+                    log.error("Failed to create env, max retries exceeded.")
+                    raise
 
     if not is_conda:
         # Symlinking conda is critical here to make sure that activate scripts are not

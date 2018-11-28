@@ -640,7 +640,7 @@ def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_v
                                 continue
                             print("sysroot in {}, owner is {}".format(fp, prefix_owners[rp][0]))
                         contains_static_libs[prefix_owners[rp][0]] = True
-    return prefix_owners, contains_dsos, contains_static_libs, all_lib_exports
+    return prefix_owners, contains_static_libs, all_lib_exports
 
 
 def _get_fake_pkg_dist(pkg_name, pkg_version, build_str, build_number):
@@ -784,7 +784,7 @@ def _show_linking_messages(files, errors, needed_dsos_for_file, build_prefix, ru
         try:
             runpaths = get_runpaths(path)
         except:
-            _print_msg(errors, '{}: pyldd.py failed to process'.format(warn_prelude))
+            _print_msg(errors, '{}: pyldd.py failed to process'.format(warn_prelude), verbose=verbose)
             continue
         if runpaths and not (runpath_whitelist or
                              any(fnmatch.fnmatch(f, w) for w in runpath_whitelist)):
@@ -856,7 +856,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     all_needed_dsos, needed_dsos_for_file = _collect_needed_dsos(sysroots, files, run_prefix, sysroot_substitution,
                                                                  build_prefix, build_prefix_substitution)
 
-    prefix_owners, contains_dsos, contains_static_libs, all_lib_exports = _map_file_to_package(
+    prefix_owners, contains_static_libs, all_lib_exports = _map_file_to_package(
         files, run_prefix, build_prefix, all_needed_dsos, pkg_vendored_dist, ignore_list_syms, sysroot_substitution)
 
     for f in files:
