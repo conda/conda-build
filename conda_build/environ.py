@@ -811,8 +811,8 @@ def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, 
         external_logger_context = utils.LoggingContext(logging.WARN)
 
     if os.path.exists(prefix):
-        utils.rm_rf(prefix)
-    os.makedirs(prefix)
+        for entry in glob(os.path.join(prefix, "*")):
+            utils.rm_rf(entry)
 
     with external_logger_context:
         log = utils.get_logger(__name__)
