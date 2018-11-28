@@ -53,7 +53,7 @@ NOARCH_TYPES = ('python', 'generic', True)
 # We overcome that divide by finding the output index in a rendered set of
 #    outputs, so our names match, then we use that numeric index with this
 #    regex, which extract all outputs in order.
-output_re = re.compile(r"^\s+-\s(?:name|type):.+?(?=^\w|\Z|^\s+-\s(?:name|type))",
+output_re = re.compile(r"^\s+-\s+(?:name|type):.+?(?=^\w|\Z|^\s+-\s+(?:name|type))",
                        flags=re.M | re.S)
 numpy_xx_re = re.compile(r'(numpy\s*x\.x)|pin_compatible\([\'\"]numpy.*max_pin=[\'\"]x\.x[\'\"]')
 # TODO: there's probably a way to combine these, but I can't figure out how to many the x
