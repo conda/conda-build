@@ -153,8 +153,9 @@ def get_runpaths(file):
         if (binary.format == lief.EXE_FORMATS.ELF and  # noqa
             (binary.type == lief.ELF.ELF_CLASS.CLASS32 or binary.type == lief.ELF.ELF_CLASS.CLASS64)):
             dynamic_entries = binary.dynamic_entries
-            for e in dynamic_entries:
-                [rpaths.extend(e.runpath) for e in dynamic_entries if e.tag == lief.ELF.DYNAMIC_TAGS.RUNPATH]
+            rpaths_colons = [e.runpath for e in dynamic_entries if e.tag == lief.ELF.DYNAMIC_TAGS.RUNPATH]
+            for rpaths_colon in rpaths_colons:
+                rpaths.extend(rpaths_colon.split(':'))
     return [from_os_varnames(binary, rpath) for rpath in rpaths]
 
 
