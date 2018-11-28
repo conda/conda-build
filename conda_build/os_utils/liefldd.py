@@ -137,7 +137,10 @@ def get_rpaths(file, exe_dirname, envroot, windows_root=''):
         elif binary.format == lief.EXE_FORMATS.ELF:
             if binary.type == lief.ELF.ELF_CLASS.CLASS32 or binary.type == lief.ELF.ELF_CLASS.CLASS64:
                 dynamic_entries = binary.dynamic_entries
-                rpaths_colons = [e.rpath for e in dynamic_entries if e.tag == lief.ELF.DYNAMIC_TAGS.RPATH]
+                # runpath takes precedence over rpath on GNU/Linux.
+                rpaths_colons = [e.runpath for e in dynamic_entries if e.tag == lief.ELF.DYNAMIC_TAGS.RUNPATH]
+                if not len(rpaths_colons):
+                    rpaths_colons = [e.rpath for e in dynamic_entries if e.tag == lief.ELF.DYNAMIC_TAGS.RPATH]
                 for rpaths_colon in rpaths_colons:
                     rpaths.extend(rpaths_colon.split(':'))
     return [from_os_varnames(binary, rpath) for rpath in rpaths]
@@ -410,8 +413,8 @@ def get_linkages(filename, resolve_filenames=True, recurse=True,
     # We do not support Windows yet with pyldd.
     if (set(result_lief) != set(result_pyldd) and
        codefile_type(filename) not in ('DLLfile', 'EXEfile')):
-        print("WARNING: Disagreement in get_linkages():\n lief: {}\npyldd: {}\n  (using lief)".
-              format(result_lief, result_pyldd))
+        print("WARNING: Disagreement in get_linkages(filename={}, resolve_filenames={}, recurse={}, sysroot={}, envroot={}, arch={}):\n lief: {}\npyldd: {}\n  (using lief)".
+              format(filename, resolve_filenames, recurse, sysroot, envroot, arch, result_lief, result_pyldd))
     return result_lief
 
 
