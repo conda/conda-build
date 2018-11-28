@@ -5,6 +5,9 @@ import os
 from os.path import join
 import sys
 import threading
+
+from six import string_types
+
 # TODO :: Remove all use of pyldd
 # Currently we verify the output of each against the other
 from .pyldd import inspect_linkages as inspect_linkages_pyldd
@@ -102,7 +105,7 @@ def get_libraries(file):
                 binary_name = [command.name for command in binary.commands
                                if command.command == lief.MachO.LOAD_COMMAND_TYPES.ID_DYLIB]
                 binary_name = binary_name[0] if len(binary_name) else None
-            result = [l if isinstance(l, str) else l.name for l in binary.libraries]
+            result = [l if isinstance(l, string_types) else l.name for l in binary.libraries]
             if binary.format == lief.EXE_FORMATS.MACHO:
                 result = [from_os_varnames(binary, l) for l in result
                           if not (binary_name and l.endswith(binary_name))]

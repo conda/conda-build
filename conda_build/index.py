@@ -23,6 +23,7 @@ from conda.common.compat import ensure_binary
 # from conda.resolve import dashlist
 
 import requests
+from requests.exceptions import InvalidSchema
 import pytz
 from jinja2 import Environment, PackageLoader
 from tqdm import tqdm
@@ -244,30 +245,34 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
             # we need channeldata.json too, as it is a more reliable source of run_exports data
             for channel in expanded_channels:
                 retry = 0
-                max_retries = 5
+                max_retries = 1
                 while retry < max_retries:
                     err = None
                     try:
                         # download channeldata.json for url
                         channel_content = requests.get(channel.base_url + '/channeldata.json')
                         if channel_content.status_code == 200:
-                            # load its JSON content
-                            channel_data[channel.name] = channel_content.json()
+                            try:
+                                # load its JSON content
+                                channel_data[channel.name] = channel_content.json()
+                            except ValueError:
+                                # no JSON data; skip it
+                                pass
                             break
                         elif channel_content.status_code == 404:
                             break
-                    except requests.exceptions.InvalidSchema as e:
+                    except InvalidSchema as e:
                         # store exception for potential later use; retry
                         err = e
                     log.warn("Problem downloading channeldata for url: %s.  Retrying (%d of %d) in 2 sec" % (
-                        channel.name, retry, max_retries))
+                        channel.name, retry + 1, max_retries))
                     time.sleep(2)
                     retry += 1
                     if retry == max_retries:
+                        log.warn("Problem downloading channeldata for url: %s.  Exception may follow this message. "
+                                 "Rerun in debug mode for more info" % channel.name)
                         if err:
-                            raise err
-                        else:
-                            log.warn("Problem downloading channeldata for url: %s.  Rerun in debug mode for more info" % channel.name)
+                            log.warn(str(err))
                 # collapse defaults metachannel back into one superchannel, merging channeldata
                 if channel.base_url in context.default_channels and channel_data.get(channel.name):
                     packages = superchannel.get('packages', {})
