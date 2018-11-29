@@ -35,6 +35,7 @@ requirements:
     - patchelf      # [linux]
     - pkginfo
     - psutil
+    - py-lief       # [not win or py>27]
     - python
     - pyyaml
     - scandir       # [py<34]

@@ -187,7 +187,7 @@ def test_rewrite_output(testing_workdir, testing_config, capsys):
     stdout = captured.out
     if sys.platform == 'win32':
         assert "PREFIX=%PREFIX%" in stdout
-        assert "LIBDIR=%PREFIX%\lib" in stdout
+        assert "LIBDIR=%PREFIX%\\lib" in stdout
         assert "PWD=%SRC_DIR%" in stdout
         assert "BUILD_PREFIX=%BUILD_PREFIX%" in stdout
     else:

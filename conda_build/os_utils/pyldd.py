@@ -226,6 +226,13 @@ class fileview(object):
 
 
 class UnixExecutable(object):
+    def __init__(self, file, initial_rpaths_transitive=[]):
+        self.rpaths_transitive = []
+        self.rpaths_nontransitive = []
+        self.shared_libraries = []
+        self.dt_runpath = []
+        self.dt_soname = initial_rpaths_transitive
+
     def get_rpaths_transitive(self):
         return self.rpaths_transitive
 
@@ -240,6 +247,9 @@ class UnixExecutable(object):
 
     def get_runpaths(self):
         return self.dt_runpath
+
+    def get_soname(self):
+        return self.dt_soname
 
 
 def read_data(file, endian, num=1):
@@ -301,14 +311,14 @@ def find_lc_rpath(file, where, bits, endian, cmd, cmdsize):
 
 def do_macho(file, bits, endian, lc_operation, *args):
     # Read Mach-O header (the magic number is assumed read by the caller)
-    cputype, cpusubtype, filetype, ncmds, sizeofcmds, flags \
+    _cputype, _cpusubtype, filetype, ncmds, _sizeofcmds, _flags \
         = read_data(file, endian, 6)
     # 64-bits header has one more field.
     if bits == 64:
         read_data(file, endian)
     # The header is followed by ncmds commands
     results = []
-    for n in range(ncmds):
+    for _n in range(ncmds):
         where = file.tell()
         # Read command header
         cmd, cmdsize = read_data(file, endian, 2)
@@ -332,9 +342,9 @@ def do_file(file, lc_operation, off_sz, arch, results, *args):
     if magic == FAT_MAGIC:
         # Fat binaries contain nfat_arch Mach-O binaries
         nfat_arch = read_data(file, BIG_ENDIAN)
-        for n in range(nfat_arch):
+        for _n in range(nfat_arch):
             # Read arch header
-            cputype, cpusubtype, offset, size, align = \
+            _cputype, _cpusubtype, offset, size, _align = \
                 read_data(file, BIG_ENDIAN, 5)
             do_file(file, lc_operation, offset_size(offset, size), arch,
                     results, *args)
@@ -384,8 +394,8 @@ def mach_o_find_rpaths(ofile, arch):
 
 def _get_resolved_location(codefile,
                            unresolved,
-                           exedir,
-                           selfdir,
+                           exe_dir,
+                           self_dir,
                            LD_LIBRARY_PATH='',
                            default_paths=None,
                            sysroot='',
@@ -437,8 +447,8 @@ def _get_resolved_location(codefile,
                         [dp.replace('$SYSROOT', sysroot) for dp in ensure_list(default_paths)]
         for rpath in these_rpaths:
             resolved = unresolved.replace('$RPATH', rpath) \
-                                 .replace('$SELFDIR', selfdir) \
-                                 .replace('$EXEDIR', exedir)
+                                 .replace('$SELFDIR', self_dir) \
+                                 .replace('$EXEDIR', exe_dir)
             exists = os.path.exists(resolved)
             exists_sysroot = exists and sysroot and resolved.startswith(sysroot)
             if resolved_rpath or exists or exists_sysroot:
@@ -449,15 +459,15 @@ def _get_resolved_location(codefile,
             # Return the so name so that it can be warned about as missing.
             return unresolved, None, False
     elif any(a in unresolved for a in ('$SELFDIR', '$EXEDIR')):
-        resolved = unresolved.replace('$SELFDIR', selfdir) \
-                             .replace('$EXEDIR', exedir)
+        resolved = unresolved.replace('$SELFDIR', self_dir) \
+                             .replace('$EXEDIR', exe_dir)
         exists = os.path.exists(resolved)
         exists_sysroot = exists and sysroot and resolved.startswith(sysroot)
     else:
         if unresolved.startswith('/'):
             return unresolved, None, False
         else:
-            return os.path.join(selfdir, unresolved), None, False
+            return os.path.join(self_dir, unresolved), None, False
 
     return resolved, rpath_result, exists_sysroot
 
@@ -477,16 +487,15 @@ class machofile(UnixExecutable):
         self.filename = file.name
         self.shared_libraries = []
         self.dt_runpath = []
-        # Not actually used ..
-        self.selfdir = os.path.dirname(file.name)
+        self._dir = os.path.dirname(file.name)
         results = mach_o_find_dylibs(file, arch)
         if not results:
             return
         _, sos = zip(*results)
         file.seek(0)
         self.rpaths_transitive = initial_rpaths_transitive
-        filetypes, rpaths = zip(*mach_o_find_rpaths(file, arch))
-        local_rpaths = [self.from_os_varnames(rpath)
+        _filetypes, rpaths = zip(*mach_o_find_rpaths(file, arch))
+        local_rpaths = [self.from_os_varnames(rpath.rstrip('/'))
                         for rpath in rpaths[0] if rpath]
         self.rpaths_transitive.extend(local_rpaths)
         self.rpaths_nontransitive = local_rpaths
@@ -782,7 +791,7 @@ class elfsection(object):
                 elif d_tag == DT_SONAME:
                     dt_soname = d_val_ptr
             if dt_strtab_ptr:
-                strsec, offset = elffile.find_section_and_offset(dt_strtab_ptr)
+                strsec, _offset = elffile.find_section_and_offset(dt_strtab_ptr)
                 if strsec and strsec.sh_type == SHT_STRTAB:
                     for n in dt_needed:
                         end = n + strsec.table[n:].index('\0')
@@ -790,17 +799,13 @@ class elfsection(object):
                     for r in dt_rpath:
                         end = r + strsec.table[r:].index('\0')
                         path = strsec.table[r:end]
-                        rpaths = [path for path in path.split(':') if path]
-                        elffile.dt_rpath.extend([path if not path.endswith('/')
-                                                 else path.rstrip('/')
-                                                 for path in rpaths])
+                        rpaths = [p for p in path.split(':') if path]
+                        elffile.dt_rpath.extend([p.rstrip('/') for p in rpaths])
                     for r in dt_runpath:
                         end = r + strsec.table[r:].index('\0')
                         path = strsec.table[r:end]
-                        rpaths = [path for path in path.split(':') if path]
-                        elffile.dt_runpath.extend([rp if rp.endswith(os.sep)
-                                                   else rp + os.sep
-                                                   for rp in rpaths])
+                        rpaths = [p for p in path.split(':') if path]
+                        elffile.dt_runpath.extend([p.rstrip('/') for p in rpaths])
                     if dt_soname != '$EXECUTABLE':
                         end = dt_soname + strsec.table[dt_soname:].index('\0')
                         elffile.dt_soname = strsec.table[dt_soname:end]
@@ -851,8 +856,7 @@ class elffile(UnixExecutable):
         self.elfsections = []
         self.program_interpreter = None
         self.dt_soname = '$EXECUTABLE'
-        # Not actually used ..
-        self.selfdir = os.path.dirname(file.name)
+        self._dir = os.path.dirname(file.name)
 
         for n in range(self.ehdr.phnum):
             file.seek(self.ehdr.phoff + (n * self.ehdr.phentsize))
@@ -929,14 +933,20 @@ class elffile(UnixExecutable):
             result.append((so_orig, resolved, rpath, in_sysroot))
         return result
 
-    def selfdir(self):
-        return None
+    def get_dir(self):
+        return self._dir
 
     def uniqueness_key(self):
         return self.dt_soname
 
+    def get_soname(self):
+        return self.dt_soname
+
 
 class inscrutablefile(UnixExecutable):
+    def __init__(self, file, initial_rpaths_transitive=[]):
+        self._dir = None
+
     def get_rpaths_transitive(self):
         return []
 
@@ -946,14 +956,42 @@ class inscrutablefile(UnixExecutable):
     def get_runpaths(self):
         return []
 
-    def selfdir(self):
+    def get_dir(self):
+        return self._dir
+
+    def uniqueness_key(self):
+        return 'unknown'
+
+
+class DLLfile(UnixExecutable):
+
+    def __init__(self, file, initial_rpaths_transitive=[]):
+        pass
+
+    def get_rpaths_transitive(self):
+        return []
+
+    def get_resolved_shared_libraries(self, *args, **kw):
+        return []
+
+    def get_runpaths(self):
+        return []
+
+    def get_dir(self):
         return None
 
     def uniqueness_key(self):
         return 'unknown'
 
 
+class EXEfile(object):
+    def __init__(self, file, initial_rpaths_transitive=[]):
+        self.super.__init__(self, file, initial_rpaths_transitive)
+
+
 def codefile(file, arch='any', initial_rpaths_transitive=[]):
+    if file.name.endswith('.dll'):
+        return DLLfile(file, list(initial_rpaths_transitive))
     magic, = struct.unpack(BIG_ENDIAN + 'L', file.read(4))
     file.seek(0)
     if magic in (FAT_MAGIC, MH_MAGIC, MH_CIGAM, MH_CIGAM_64):
@@ -972,6 +1010,10 @@ def codefile_class(filename, skip_symlinks=False):
             filename = os.path.realpath(filename)
     if os.path.isdir(filename):
         return None
+    if filename.endswith('.dll'):
+        return DLLfile
+    if filename.endswith('.exe'):
+        return EXEfile
     # Java .class files share 0xCAFEBABE with Mach-O FAT_MAGIC.
     if filename.endswith('.class'):
         return None
@@ -1010,7 +1052,10 @@ def _trim_sysroot(sysroot):
 
 def _get_arch_if_native(arch):
     if arch == 'native':
-        _, _, _, _, arch = os.uname()
+        if sys.platform == 'win32':
+            arch = 'x86_64' if sys.maxsize > 2**32 else 'i686'
+        else:
+            _, _, _, _, arch = os.uname()
     return arch
 
 
@@ -1044,7 +1089,7 @@ def _inspect_linkages_this(filename, sysroot='', arch='native'):
         results = cf.get_resolved_shared_libraries(dirname, dirname, sysroot)
         if not results:
             return cf.uniqueness_key(), [], []
-        orig_names, resolved_names, _, in_sysroot = map(list, zip(*results))
+        orig_names, resolved_names, _, _in_sysroot = map(list, zip(*results))
         return cf.uniqueness_key(), orig_names, resolved_names
 
 
@@ -1081,7 +1126,8 @@ def get_runpaths(filename, arch='native'):
 
 
 # TODO :: Consider returning a tree structure or a dict when recurse is True?
-def inspect_linkages(filename, resolve_filenames=True, recurse=True, sysroot='', arch='native'):
+def inspect_linkages(filename, resolve_filenames=True, recurse=True,
+                     sysroot='', arch='native'):
     already_seen = set()
     todo = set([filename])
     done = set()

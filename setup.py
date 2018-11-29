@@ -17,6 +17,11 @@ if version_dict['error']:
 deps = ['conda', 'requests', 'filelock', 'pyyaml', 'jinja2', 'pkginfo',
         'beautifulsoup4', 'chardet', 'pytz', 'tqdm', 'psutil', 'six', 'libarchive-c']
 
+# We cannot build lief for Python 2.7 on Windows (unless we use mingw-w64 for it, which
+# would be a non-trivial amount of work).
+if sys.platform != 'win-32' or sys.version_info >= (3, 0):
+    deps.extend(['lief'])
+
 if sys.version_info < (3, 4):
     deps.extend(['contextlib2', 'enum34', 'futures', 'scandir', 'glob2'])
 
@@ -52,6 +57,7 @@ setup(
                             'conda-metapackage = conda_build.cli.main_metapackage:main',
                             'conda-render = conda_build.cli.main_render:main',
                             'conda-skeleton = conda_build.cli.main_skeleton:main',
+                            'conda-debug = conda_build.cli.main_debug:main',
                             ]},
     install_requires=deps,
     package_data={'conda_build': ['templates/*', 'cli-*.exe']},

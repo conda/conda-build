@@ -374,7 +374,7 @@ def filter_by_key_value(variants, key, values, source_name):
     else:
         # break this out into a full loop so that we can show filtering output
         for variant in variants:
-            if variant.get(key) and variant.get(key) in values:
+            if variant.get(key) is not None and variant.get(key) in values:
                 reduced_variants.append(variant)
             else:
                 log = get_logger(__name__)
@@ -411,7 +411,7 @@ def dict_of_lists_to_list_of_dicts(dict_of_lists, extend_keys=None):
         remapped = dict(six.moves.zip(dimensions, x))
         for col in pass_through_keys:
             v = dict_of_lists.get(col)
-            if v:
+            if v or v == '':
                 remapped[col] = v
         # split out zipped keys
         to_del = set()

@@ -1,0 +1,26 @@
+package:
+  name: _cdt_linking
+  version: 0
+
+build:
+  skip: True  # [not linux]
+  merge_build_host: True
+
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+    - pkg-config
+    - {{ cdt('libxcb') }}
+    - {{ cdt('libselinux-devel') }}
+    - {{ cdt('libxi-devel') }}
+    - {{ cdt('libx11-devel') }}
+    - {{ cdt('libxau-devel') }}
+    - {{ cdt('libxext-devel') }}
+    - {{ cdt('libxfixes-devel') }}
+    - {{ cdt('mesa-libgl-devel') }}
+    - {{ cdt('xorg-x11-proto-devel') }}
+    - {{ cdt('mesa-dri-drivers') }}
+    - {{ cdt('libxdamage-devel') }}
+    - {{ cdt('libxxf86vm') }}
+    - expat

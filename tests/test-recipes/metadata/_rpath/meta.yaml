@@ -3,8 +3,18 @@ package:
   version: 0.1
 
 build:
-  script: mkdir -p ${PREFIX}/bin ; echo "int main() { return 0; }" | gcc -x c -o ${PREFIX}/bin/rpath -Wl,-rpath,\$ORIGIN/../previous:\$ORIGIN/../lib:$PREFIX/lib:${PREFIX}/plugins:\$ORIGIN/../successive -
+  skip: True  # [win]
+  script: mkdir -p ${PREFIX}/bin ; echo "int main() { return 0; }" | ${CC} -x c -o ${PREFIX}/bin/rpath -Wl,-rpath,\$ORIGIN/../previous:\$ORIGIN/../lib:${PREFIX}/lib:${PREFIX}/plugins:\$ORIGIN/../successive -  # [linux]
+  script: mkdir -p ${PREFIX}/bin ; echo "int main() { return 0; }" | ${CC} -x c -o ${PREFIX}/bin/rpath -Wl,-rpath,${PREFIX}/../previous -Wl,-rpath,${PREFIX}/../lib -Wl,-rpath,${PREFIX}/plugins -Wl,-rpath,${PREFIX}/../successive -  # [osx]
+  rpaths:
+    - ''
+
+requirements:
+  build:
+    - {{ compiler('c') }}
 
 test:
   commands:
-    - readelf --dynamic ${PREFIX}/bin/rpath | grep \$ORIGIN/../previous:\$ORIGIN/../lib:\$ORIGIN/../plugins:\$ORIGIN/../successive
+    - python -c "import lief; binary = lief.parse(\"${PREFIX}/bin/rpath\"); print([e.rpath for e in binary.dynamic_entries if e.tag == lief.ELF.DYNAMIC_TAGS.RPATH])"  # [linux]
+    - python -c "import lief; binary = lief.parse(\"${PREFIX}/bin/rpath\"); print([e.rpath for e in binary.dynamic_entries if e.tag == lief.ELF.DYNAMIC_TAGS.RPATH])" | grep \$ORIGIN/../previous:\$ORIGIN/../lib:\$ORIGIN/../plugins:\$ORIGIN/../successive  # [linux]
+    - python -c "import lief; binary = lief.parse(\"${PREFIX}/bin/rpath\"); print(':'.join([command.path.rstrip('/') for command in binary.commands if command.command == lief.MachO.LOAD_COMMAND_TYPES.RPATH]))" | grep ${PREFIX}/../previous:${PREFIX}/../lib:${PREFIX}/plugins:${PREFIX}/../successive  # [osx]

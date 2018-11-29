@@ -191,7 +191,7 @@ def _print_dict(d, order=None, level=0, indent=2):
 
 def skeletonize(packages, output_dir=".", version=None, recursive=False,
                 all_urls=False, pypi_url='https://pypi.io/pypi/', noprompt=True,
-                version_compare=False, python_version=default_python, manual_url=False,
+                version_compare=False, python_version=None, manual_url=False,
                 all_extras=False, noarch_python=False, config=None, setup_options=None,
                 extra_specs=[],
                 pin_numpy=False):
@@ -205,6 +205,8 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
 
     if not config:
         config = Config()
+
+    python_version = python_version or config.variant.get('python', default_python)
 
     created_recipes = []
     while packages:
@@ -338,7 +340,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
                 ordered_recipe['build']['noarch'] = 'python'
 
             ordered_recipe['build']['script'] = ('"{{ PYTHON }} -m pip install . --no-deps '
-                                                 '--ignore-installed -vvv ' +
+                                                 '--ignore-installed -vv ' +
                                                  ' '.join(setup_options) + '"')
 
             # Always require python as a dependency.  Pip is because we use pip for

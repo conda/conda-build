@@ -22,6 +22,8 @@ from uuid import uuid4
 from conda.common.compat import ensure_binary
 # from conda.resolve import dashlist
 
+import requests
+from requests.exceptions import InvalidSchema
 import pytz
 from jinja2 import Environment, PackageLoader
 from tqdm import tqdm
@@ -38,7 +40,7 @@ import libarchive
 
 
 from . import conda_interface, utils
-from .conda_interface import MatchSpec, VersionOrder, human_bytes
+from .conda_interface import MatchSpec, VersionOrder, human_bytes, context, memoized
 from .conda_interface import CondaError, CondaHTTPError, get_index, url_path
 from .utils import glob, get_logger, FileNotFoundError, PermissionError
 
@@ -131,6 +133,8 @@ local_index_timestamp = 0
 cached_index = None
 local_subdir = ""
 cached_channels = []
+channel_data = {}
+
 
 MAX_THREADS_DEFAULT = os.cpu_count() if (hasattr(os, "cpu_count") and os.cpu_count() > 1) else 1
 LOCK_TIMEOUT_SECS = 3 * 3600
@@ -159,6 +163,11 @@ except ImportError:  # pragma: no cover
     from conda._vendor.toolz.itertoolz import concat, concatv, groupby  # NOQA
 
 
+@memoized
+def _download_channeldata(channel_url):
+    return requests.get(channel_url)
+
+
 def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
                     omit_defaults=False, channel_urls=None, debug=False, verbose=True,
                     **kwargs):
@@ -166,6 +175,7 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
     global local_subdir
     global cached_index
     global cached_channels
+    global channel_data
     mtime = 0
 
     channel_urls = list(utils.ensure_list(channel_urls))
@@ -233,10 +243,59 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
                                              use_local=False,
                                              use_cache=False,
                                              platform=subdir)
+
+            expanded_channels = {rec.channel for rec in cached_index.values()}
+
+            superchannel = {}
+            # we need channeldata.json too, as it is a more reliable source of run_exports data
+            for channel in expanded_channels:
+                err = None
+                if channel.scheme == "file:":
+                    location = channel.location
+                    if not os.path.isabs(channel.location) and os.path.exists(os.path.join('/', channel.location)):
+                        location = os.path.join('/', channel.location)
+                    with open(os.path.join(location, channel.name, 'channeldata.json')) as f:
+                        channel_data[channel.name] = json.load(f)
+                else:
+                    retry = 0
+                    max_retries = 1
+                    while retry < max_retries:
+                        # download channeldata.json for url
+                        try:
+                            channel_content = _download_channeldata(channel.base_url + '/channeldata.json')
+                            if channel_content.status_code == 200:
+                                try:
+                                    # load its JSON content
+                                    channel_data[channel.name] = channel_content.json()
+                                except ValueError:
+                                    # no JSON data; skip it
+                                    pass
+                                break
+                            elif channel_content.status_code == 404:
+                                break
+                        except InvalidSchema as e:
+                            # store exception for potential later use; retry
+                            err = e
+                            log.warn("Problem downloading channeldata for url: %s.  Retrying (%d of %d) in 2 sec" % (
+                                channel.name, retry + 1, max_retries))
+                            time.sleep(2)
+                            retry += 1
+                            if retry == max_retries:
+                                log.warn("Problem downloading channeldata for url: %s.  Exception may follow this message. "
+                                        "Rerun in debug mode for more info" % channel.name)
+                                if err:
+                                    log.warn(str(err))
+
+                # collapse defaults metachannel back into one superchannel, merging channeldata
+                if channel.base_url in context.default_channels and channel_data.get(channel.name):
+                    packages = superchannel.get('packages', {})
+                    packages.update(channel_data[channel.name])
+                    superchannel['packages'] = packages
+            channel_data['defaults'] = superchannel
         local_index_timestamp = os.path.getmtime(index_file)
         local_subdir = subdir
         cached_channels = channel_urls
-    return cached_index, local_index_timestamp
+    return cached_index, local_index_timestamp, channel_data
 
 
 def _ensure_valid_channel(local_folder, subdir):
@@ -598,13 +657,13 @@ def _augment_repodata(subdirs, patched_repodata, patch_instructions):
                     info['depends2'] = [_add_namespace_to_spec(fn, info, dep, namemap, missing_dependencies, subdir)
                                         for dep in info['depends'] if dep.split()[0] not in constrains_names]
                 except CondaError as e:
-                    log.warn("Encountered a file that conda does not like.  Error was: {}.  Skipping this one...".format(fn))
+                    log.warn("Encountered a file ({}) that conda does not like.  Error was: {}.  Skipping this one...".format(fn, e))
             else:
                 try:
                     info['depends2'] = [_add_namespace_to_spec(fn, info, dep, namemap, missing_dependencies, subdir)
                                         for dep in info['depends']]
                 except CondaError as e:
-                    log.warn("Encountered a file that conda does not like.  Error was: {}.  Skipping this one...".format(fn))
+                    log.warn("Encountered a file ({}) that conda does not like.  Error was: {}.  Skipping this one...".format(fn, e))
             # info['build_string'] =_make_build_string(info["build"], info["build_number"])
         repodata["removed"] = patch_instructions[subdir].get("remove", [])
         augmented_repodata[subdir] = repodata
@@ -690,17 +749,33 @@ def _cache_recipe_log(tar_path, recipe_log_path):
         fh.write(binary_recipe_log)
 
 
-def _cache_run_exports(tar_path, run_exports_cache_path):
-    try:
-        binary_run_exports = _tar_xf_file(tar_path, 'info/run_exports.json')
-        run_exports = json.loads(binary_run_exports.decode("utf-8"))
-    except KeyError:
+def get_run_exports(tar_or_folder_path):
+    run_exports = {}
+    if os.path.isfile(tar_or_folder_path):
         try:
-            binary_run_exports = _tar_xf_file(tar_path, 'info/run_exports.yaml')
-            run_exports = yaml.safe_load(binary_run_exports)
+            binary_run_exports = _tar_xf_file(tar_or_folder_path, 'info/run_exports.json')
+            run_exports = json.loads(binary_run_exports.decode("utf-8"))
         except KeyError:
-            log.debug("%s has no run_exports file (this is OK)" % tar_path)
-            run_exports = {}
+            try:
+                binary_run_exports = _tar_xf_file(tar_or_folder_path, 'info/run_exports.yaml')
+                run_exports = yaml.safe_load(binary_run_exports)
+            except KeyError:
+                log.debug("%s has no run_exports file (this is OK)" % tar_or_folder_path)
+    elif os.path.isdir(tar_or_folder_path):
+        try:
+            with open(os.path.join(tar_or_folder_path, 'info', 'run_exports.json')) as f:
+                run_exports = json.load(f)
+        except (IOError, FileNotFoundError):
+            try:
+                with open(os.path.join(tar_or_folder_path, 'info', 'run_exports.yaml')) as f:
+                    run_exports = yaml.safe_load(f)
+            except (IOError, FileNotFoundError):
+                log.debug("%s has no run_exports file (this is OK)" % tar_or_folder_path)
+    return run_exports
+
+
+def _cache_run_exports(tar_path, run_exports_cache_path):
+    run_exports = get_run_exports(tar_path)
     with open(run_exports_cache_path, 'w') as fh:
         json.dump(run_exports, fh)
 
@@ -1287,7 +1362,7 @@ class ChannelIndex(object):
 
     def _write_channeldata(self, channeldata):
         # trim out commits, as they can take up a ton of space.  They're really only for the RSS feed.
-        for pkg, pkg_dict in channeldata.get('packages', {}).items():
+        for _pkg, pkg_dict in channeldata.get('packages', {}).items():
             if "commits" in pkg_dict:
                 del pkg_dict['commits']
         channeldata_path = join(self.channel_root, 'channeldata.json')

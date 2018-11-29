@@ -312,12 +312,12 @@ def ensure_matching_hashes(output_metadata):
                 for dep in deps:
                     if (dep.startswith(m.name() + ' ') and len(dep.split(' ')) == 3 and
                             dep.split(' ')[-1] != m.build_id() and _variants_equal(m, om)):
-                        problemos.append((m.name(), om.name()))
+                        problemos.append((m.name(), m.build_id(), dep, om.name()))
 
     if problemos:
         error = ""
         for prob in problemos:
-            error += "Mismatching package: {}; consumer package: {}\n".format(*prob)
+            error += "Mismatching package: {} (id {}); dep: {}; consumer package: {}\n".format(*prob)
         raise exceptions.RecipeError("Mismatching hashes in recipe. Exact pins in dependencies "
                                      "that contribute to the hash often cause this. Can you "
                                      "change one or more exact pins to version bound constraints?\n"
@@ -642,6 +642,7 @@ def toposort(output_metadata_map):
                     topodict[name].update((dep,))
         else:
             endorder.add(idx)
+
     topo_order = list(_toposort(topodict))
     keys = [k for pkgname in topo_order for k in output_metadata_map.keys()
             if 'name' in k and k['name'] == pkgname]
@@ -701,16 +702,18 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
             # place, so it can refer to it for any pin_subpackage stuff it has.
             om.other_outputs = metadata.other_outputs
             om.config.variant = metadata.config.variant
+            parent_metadata = om.copy()
+
             om.other_outputs.update(outputs)
             om.final = False
             # get the new output_d from the reparsed top-level metadata, so that we have any
             #    exact subpackage version/build string info
-            base_metadata.append_parent_metadata(om)
             output_d = om.get_rendered_output(metadata.name()) or {'name': metadata.name()}
+
             om = om.get_output_metadata(output_d)
-            base_metadata.append_parent_metadata(om)
+            parent_metadata.parse_until_resolved()
             if not bypass_env_check:
-                fm = finalize_metadata(om,
+                fm = finalize_metadata(om, parent_metadata=parent_metadata,
                                        permit_unsatisfiable_variants=permit_unsatisfiable_variants)
             else:
                 fm = om
@@ -730,7 +733,6 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
     # in-place modification
     base_metadata.other_outputs = outputs
     base_metadata.final = False
-    base_metadata.parse_until_resolved()
     final_outputs = OrderedDict()
     for k, (out_d, m) in outputs.items():
         final_outputs[(m.name(), HashableDict({k: m.config.variant[k]
@@ -768,8 +770,8 @@ def combine_top_level_metadata_with_output(metadata, output):
     """Merge top-level metadata into output when output is same name as top-level"""
     sections = ('requirements', 'build', 'about')
     for section in sections:
-        metadata_section = metadata.meta.get(section, {})
-        output_section = output.get(section, {})
+        metadata_section = metadata.meta.get(section, {}) or {}
+        output_section = output.get(section, {}) or {}
         if section == 'requirements':
             output_section = utils.expand_reqs(output.get(section, {}))
         for k, v in metadata_section.items():
@@ -834,10 +836,10 @@ class MetaData(object):
         self.config = get_or_merge_config(config, variant=variant)
 
         if isfile(path):
-            self.meta_path = path
+            self._meta_path = path
             self.path = os.path.dirname(path)
         else:
-            self.meta_path = find_recipe(path)
+            self._meta_path = find_recipe(path)
             self.path = os.path.dirname(self.meta_path)
         self.requirements_path = join(self.path, 'requirements.txt')
 
@@ -897,6 +899,12 @@ class MetaData(object):
         utils.merge_or_update_dict(self.meta, build_config, self.path, merge=merge,
                                    raise_on_clobber=raise_on_clobber)
 
+    @property
+    def is_output(self):
+        self_name = self.name(fail_ok=True)
+        parent_name = self.meta.get('extra', {}).get('parent_recipe', {}).get('name')
+        return bool(parent_name) and parent_name != self_name
+
     def parse_again(self, permit_undefined_jinja=False, allow_no_other_outputs=False,
                     bypass_env_check=False, **kw):
         """Redo parsing for key-value pairs that are not initialized in the
@@ -947,6 +955,9 @@ class MetaData(object):
 
         if self.meta.get('build', {}).get('error_overlinking', False):
             self.config.error_overlinking = self.meta['build']['error_overlinking']
+        if self.meta.get('build', {}).get('error_overdepending', False):
+            self.config.error_overdepending = self.meta['build']['error_overdepending']
+
         self.validate_features()
         self.ensure_no_pip_requirements()
 
@@ -987,6 +998,9 @@ class MetaData(object):
                              bypass_env_check=bypass_env_check)
             self.final = final
         if undefined_jinja_vars:
+            self.parse_again(permit_undefined_jinja=False,
+                             allow_no_other_outputs=allow_no_other_outputs,
+                             bypass_env_check=bypass_env_check)
             sys.exit("Undefined Jinja2 variables remain ({}).  Please enable "
                      "source downloading and try again.".format(self.undefined_jinja_vars))
 
@@ -1013,7 +1027,7 @@ class MetaData(object):
         """
         m = super(MetaData, cls).__new__(cls)
         m.path = ''
-        m.meta_path = ''
+        m._meta_path = ''
         m.requirements_path = ''
         m.meta = sanitize(metadata)
 
@@ -1139,8 +1153,9 @@ class MetaData(object):
         meta_requirements = ensure_list(self.get_value('requirements/' + typ, []))[:]
         req_names = set(req.split()[0] for req in meta_requirements if req)
         extra_reqs = []
-        if 'outputs' in self.meta:
-            matching_output = [out for out in self.meta.get('outputs') if
+        # this is for the edge case of requirements for top-level being also partially defined in a similarly named output
+        if not self.is_output:
+            matching_output = [out for out in self.meta.get('outputs', []) if
                                out.get('name') == self.name()]
             if matching_output:
                 extra_reqs = utils.expand_reqs(
@@ -1536,11 +1551,16 @@ class MetaData(object):
         return self.__str__()
 
     @property
+    def meta_path(self):
+        meta_path = self._meta_path or self.meta.get('extra', {}).get('parent_recipe', {}).get('path', '')
+        if meta_path and os.path.basename(meta_path) != "meta.yaml":
+            meta_path = os.path.join(meta_path, 'meta.yaml')
+        return meta_path
+
+    @property
     def uses_setup_py_in_meta(self):
         meta_text = ''
-        meta_path = (self.meta_path or
-                     self.meta.get('extra', {}).get('parent_recipe', {}).get('path'))
-        if meta_path:
+        if self.meta_path:
             with open(self.meta_path, 'rb') as f:
                 meta_text = UnicodeDammit(f.read()).unicode_markup
         return u"load_setup_py_data" in meta_text or u"load_setuptools" in meta_text
@@ -1589,7 +1609,7 @@ class MetaData(object):
     @property
     def uses_vcs_in_build(self):
         build_script = "bld.bat" if on_win else "build.sh"
-        build_script = os.path.join(os.path.dirname(self.meta_path), build_script)
+        build_script = os.path.join(self.path, build_script)
         for recipe_file in (build_script, self.meta_path):
             if os.path.isfile(recipe_file):
                 vcs_types = ["git", "svn", "hg"]
@@ -1609,13 +1629,10 @@ class MetaData(object):
         return None
 
     def get_recipe_text(self, extract_pattern=None, force_top_level=False, apply_selectors=True):
-        parent_recipe = self.meta.get('extra', {}).get('parent_recipe', {})
-        is_output = self.name() != parent_recipe.get('name') and parent_recipe.get('path')
-        meta_path = self.meta_path or (os.path.join(parent_recipe['path'], 'meta.yaml')
-                                       if is_output else '')
+        meta_path = self.meta_path
         if meta_path:
             recipe_text = read_meta_file(meta_path)
-            if is_output and not force_top_level:
+            if self.is_output and not force_top_level:
                 recipe_text = self.extract_single_output_text(self.name(), getattr(self, 'type', None))
         else:
             from conda_build.render import output_yaml
@@ -1628,15 +1645,15 @@ class MetaData(object):
 
     def extract_requirements_text(self, force_top_level=False):
         # outputs are already filtered into each output for us
-        f = r'(^\s*requirements:.*?)(?=^\s*test:|^\s*extra:|^\s*about:|^\s*-\s+name:|^outputs:|\Z)'  # NOQA
-        if 'package:' in self.get_recipe_text():
+        f = r'(^\s*requirements:.*?)(?=^\s*test:|^\s*extra:|^\s*about:|^\s*-\s+name:|^outputs:|\Z)'
+        if 'package:' in self.get_recipe_text(force_top_level=force_top_level):
             # match top-level requirements - start of line means top-level requirements
             #    ^requirements:.*?
             # match output with similar name
             #    (?:-\s+name:\s+%s.*?)requirements:.*?
             # terminate match of other sections
-            #    (?=^\s*-\s+name|^\s*test:|^\s*extra:|^\s*about:|^outputs:|\Z)
-            f = r'(^requirements:.*?|(?<=\sname:\s%s\s).*?requirements:.*?)(?=^\s*-\s+name|^\s*test:|^\s*script:|^\s*extra:|^\s*about:|^outputs:|\Z)' % self.name()  # NOQA
+            #    (?=^\s*-\sname|^\s*test:|^\s*extra:|^\s*about:|^outputs:|\Z)
+            f = '(^requirements:.*?)(?=^test:|^extra:|^about:|^outputs:|\Z)'
         return self.get_recipe_text(f, force_top_level=force_top_level)
 
     def extract_outputs_text(self, apply_selectors=True):
@@ -1807,14 +1824,14 @@ class MetaData(object):
                 del build[key]
         output_metadata.meta['build'] = build
 
-        # reset these so that reparsing does not reset the metadata name
-        output_metadata.path = ""
-        output_metadata.meta_path = ""
+        # reset this so that reparsing does not reset the metadata name
+        output_metadata._meta_path = ""
 
     def get_output_metadata(self, output):
-        output_metadata = self.copy() if output else self
-
-        if output:
+        if output.get('name') == self.name():
+            output_metadata = self
+        else:
+            output_metadata = self.copy()
             output_reqs = utils.expand_reqs(output.get('requirements', {}))
             build_reqs = output_reqs.get('build', [])
             host_reqs = output_reqs.get('host', [])
@@ -1851,6 +1868,7 @@ class MetaData(object):
             requirements.update({'run_constrained': constrain_reqs}) if constrain_reqs else None
             requirements.update(other_reqs)
             output_metadata.meta['requirements'] = requirements
+
             output_metadata.meta['package']['version'] = output.get('version') or self.version()
             output_metadata.final = False
             output_metadata.noarch = output.get('noarch', False)
@@ -1888,6 +1906,7 @@ class MetaData(object):
                 output_metadata.meta['test'] = output['test']
             if 'about' in output:
                 output_metadata.meta['about'] = output['about']
+            self.append_parent_metadata(output_metadata)
         return output_metadata
 
     def append_parent_metadata(self, out_metadata):
@@ -1912,7 +1931,7 @@ class MetaData(object):
                                                              used_zip_key_groups)]
         for key in reduce_keys:
             values = full_collapsed_variants.get(key)
-            if values and not hasattr(values, 'keys') and key != 'zip_keys':
+            if values is not None and len(values) and not hasattr(values, 'keys') and key != 'zip_keys':
                 # save only one element from this key
                 reduced_collapsed_variants[key] = utils.ensure_list(next(iter(values)))
 
@@ -1924,7 +1943,6 @@ class MetaData(object):
                                 bypass_env_check=False):
         from conda_build.source import provide
         out_metadata_map = {}
-
         if self.final:
             outputs = get_output_dicts_from_metadata(self)[0]
             output_tuples = [(outputs, self)]
@@ -1934,20 +1952,19 @@ class MetaData(object):
             used_variables = self.get_used_loop_vars(force_global=True)
             top_loop = self.get_reduced_variant_set(used_variables) or self.config.variants[:1]
 
-            for variant in (top_loop if (hasattr(self.config, 'variants') and
-                                                     self.config.variants)
-                            else [self.config.variant]):
-                self.config.variant = variant
-                if self.needs_source_for_render and self.variant_in_source:
-                    self.parse_again()
-                    utils.rm_rf(self.config.work_dir)
-                    provide(self)
-                    self.parse_again()
+            for variant in (top_loop if (hasattr(self.config, 'variants') and self.config.variants) else [self.config.variant]):
+                ref_metadata = self.copy()
+                ref_metadata.config.variant = variant
+                if ref_metadata.needs_source_for_render and self.variant_in_source:
+                    ref_metadata.parse_again()
+                    utils.rm_rf(ref_metadata.config.work_dir)
+                    provide(ref_metadata)
+                    ref_metadata.parse_again()
                 try:
-                    self.parse_until_resolved(allow_no_other_outputs=True, bypass_env_check=True)
+                    ref_metadata.parse_until_resolved(allow_no_other_outputs=True, bypass_env_check=True)
                 except SystemExit:
                     pass
-                outputs = get_output_dicts_from_metadata(self)
+                outputs = get_output_dicts_from_metadata(ref_metadata)
 
                 try:
                     for out in outputs:
@@ -1957,9 +1974,8 @@ class MetaData(object):
                             for env in ('build', 'host', 'run'):
                                 insert_variant_versions(requirements, variant, env)
                             out['requirements'] = requirements
-                        out_metadata = self.get_output_metadata(out)
-                        self.append_parent_metadata(out_metadata)
-                        out_metadata.other_outputs = all_output_metadata
+                        out_metadata = ref_metadata.get_output_metadata(out)
+
                         # keeping track of other outputs is necessary for correct functioning of the
                         #    pin_subpackage jinja2 function.  It's important that we store all of
                         #    our outputs so that they can be referred to in later rendering.  We
@@ -1969,6 +1985,7 @@ class MetaData(object):
                                              HashableDict({k: out_metadata.config.variant[k]
                                     for k in out_metadata.get_used_vars()}))] = out, out_metadata
                         out_metadata_map[HashableDict(out)] = out_metadata
+                        ref_metadata.other_outputs = out_metadata.other_outputs = all_output_metadata
                 except SystemExit:
                     if not permit_undefined_jinja:
                         raise
@@ -1980,9 +1997,9 @@ class MetaData(object):
             # format here is {output_dict: metadata_object}
             render_order = toposort(out_metadata_map)
             check_circular_dependencies(render_order)
-
             conda_packages = OrderedDict()
             non_conda_packages = []
+
             for output_d, m in render_order.items():
                 if not output_d.get('type') or output_d['type'] == 'conda':
                     conda_packages[m.name(), HashableDict({k: m.config.variant[k]
@@ -2007,8 +2024,8 @@ class MetaData(object):
 
             # early stages don't need to do the finalization.  Skip it until the later stages
             #     when we need it.
-            if not permit_undefined_jinja and not self.skip():
-                conda_packages = finalize_outputs_pass(self, conda_packages, pass_no=0,
+            if not permit_undefined_jinja and not ref_metadata.skip():
+                conda_packages = finalize_outputs_pass(ref_metadata, conda_packages, pass_no=0,
                                         permit_unsatisfiable_variants=permit_unsatisfiable_variants,
                                         bypass_env_check=bypass_env_check)
 
@@ -2055,9 +2072,9 @@ class MetaData(object):
 
         outputs = (yaml.safe_load(self._get_contents(permit_undefined_jinja=permit_undefined_jinja,
                                                      template_string=template_string,
-                                                     skip_build_id=True)) or {}).get('outputs', [])
-        if not self.final:
-            self.parse_until_resolved()
+                                                     skip_build_id=True,
+                                                     allow_no_other_outputs=permit_undefined_jinja)) or
+                   {}).get('outputs', [])
         return get_output_dicts_from_metadata(self, outputs=outputs)
 
     def get_rendered_output(self, name, permit_undefined_jinja=False):
@@ -2083,7 +2100,7 @@ class MetaData(object):
 
     def get_used_vars(self, force_top_level=False, force_global=False):
         global used_vars_cache
-        recipe_dir = self.path or self.meta.get('extra', {}).get('parent_recipe', {}).get('path')
+        recipe_dir = self.path
         if hasattr(self.config, 'used_vars'):
             used_vars = self.config.used_vars
         elif (self.name(), recipe_dir, force_top_level,
@@ -2116,8 +2133,6 @@ class MetaData(object):
 
     def _get_used_vars_meta_yaml_helper(self, force_top_level=False, force_global=False,
                                             apply_selectors=False):
-        is_output = (not self.path and self.meta.get('extra', {}).get('parent_recipe'))
-
         if force_global:
             recipe_text = self.get_recipe_text(force_top_level=force_top_level,
                                                 apply_selectors=apply_selectors)
@@ -2125,7 +2140,7 @@ class MetaData(object):
             #     between requirements and the rest
             reqs_text = recipe_text
         else:
-            if is_output and not force_top_level:
+            if self.is_output and not force_top_level:
                 recipe_text = self.extract_single_output_text(self.name(), getattr(self, 'type', None),
                                 apply_selectors=apply_selectors)
             else:
@@ -2188,8 +2203,7 @@ class MetaData(object):
                                                permit_undefined_jinja=True) or {}
         used_vars = set()
         if 'script' in this_output:
-            path = self.meta.get('extra', {}).get('parent_recipe', {}).get('path')
-            script = os.path.join(path, this_output['script'])
+            script = os.path.join(self.path, this_output['script'])
             if os.path.splitext(script)[1] == '.sh':
                 used_vars.update(variants.find_used_variables_in_shell_script(self.config.variant,
                                                                               script))
@@ -2213,16 +2227,14 @@ class MetaData(object):
     def activate_build_script(self):
         b = self.meta.get('build', {}) or {}
         should_activate = (self.uses_new_style_compiler_activation or b.get('activate_in_script'))
-        return bool(self.config.activate and not self.name() == 'conda' and should_activate)
+        return bool(self.config.activate and should_activate) and not self.name() == 'conda'
 
     @property
     def build_is_host(self):
-        value = (self.config.subdirs_same and (
-            (self.get_value('build/merge_build_host') or
-             self.config.build_is_host) or
-            ('host' not in self.meta.get('requirements', {}) and
-             not self.uses_new_style_compiler_activation)))
-        return value
+        manual_overrides = self.meta.get('build', {}).get('merge_build_host') is True or self.config.build_is_host
+        manually_disabled = self.meta.get('build', {}).get('merge_build_host') is False
+        return manual_overrides or (self.config.subdirs_same and not manually_disabled and
+             'host' not in self.meta.get('requirements', {}) and not self.uses_new_style_compiler_activation)
 
     def get_top_level_recipe_without_outputs(self):
         recipe_no_outputs = self.get_recipe_text(force_top_level=True).replace(
@@ -2233,10 +2245,34 @@ class MetaData(object):
         #    fix that here by replacing any PKG_NAME instances with the known
         #    parent name
         parent_recipe = self.meta.get('extra', {}).get('parent_recipe', {})
-        is_output = self.name() != parent_recipe.get('name') and parent_recipe.get('path')
-        alt_name = parent_recipe['name'] if is_output else None
+        alt_name = parent_recipe['name'] if self.is_output else None
         if recipe_no_outputs:
             top_no_outputs = yaml.safe_load(self._get_contents(False,
                                                                template_string=recipe_no_outputs,
                                                                alt_name=alt_name))
         return top_no_outputs or {}
+
+    def get_test_deps(self, py_files, pl_files, lua_files, r_files):
+        specs = ['%s %s %s' % (self.name(), self.version(), self.build_id())]
+
+        # add packages listed in the run environment and test/requires
+        specs.extend(ms.spec for ms in self.ms_depends('run'))
+        specs += utils.ensure_list(self.get_value('test/requires', []))
+
+        if py_files:
+            # as the tests are run by python, ensure that python is installed.
+            # (If they already provided python as a run or test requirement,
+            #  this won't hurt anything.)
+            specs += ['python']
+        if pl_files:
+            # as the tests are run by perl, we need to specify it
+            specs += ['perl']
+        if lua_files:
+            # not sure how this shakes out
+            specs += ['lua']
+        if r_files and not any(s.split()[0] in ('r-base', 'mro-base') for s in specs):
+            # not sure how this shakes out
+            specs += ['r-base']
+
+        specs.extend(utils.ensure_list(self.config.extra_deps))
+        return specs

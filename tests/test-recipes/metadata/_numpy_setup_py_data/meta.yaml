@@ -6,7 +6,7 @@ source:
   path: .
 
 requirements:
-  build:
+  host:
     - cython
     - numpy
     - python

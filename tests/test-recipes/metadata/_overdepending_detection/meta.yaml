@@ -1,0 +1,17 @@
+{% set version = "1" %}
+
+package:
+  name: overdepending
+  version: {{ version }}
+
+source:
+  path: main.c
+
+build:
+  number: 0
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+  host:
+    - libcurl
