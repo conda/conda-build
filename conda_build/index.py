@@ -414,7 +414,8 @@ def _clear_newline_chars(record, field_name):
 
 def _apply_instructions(subdir, repodata, instructions):
     repodata.setdefault("removed", [])
-    utils.merge_or_update_dict(repodata.get('packages', {}), instructions.get('packages', {}), merge=False)
+    utils.merge_or_update_dict(repodata.get('packages', {}), instructions.get('packages', {}), merge=False,
+                               add_missing_keys=False)
 
     for fn in instructions.get('revoke', ()):
         repodata['packages'][fn]['revoked'] = True

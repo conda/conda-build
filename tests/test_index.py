@@ -418,3 +418,14 @@ def test_index_of_removed_pkg(testing_metadata):
     with open(os.path.join(testing_metadata.config.croot, subdir, 'repodata.json')) as f:
         repodata = json.load(f)
     assert not repodata['packages']
+
+
+def test_patch_instructions_with_missing_subdir(testing_workdir):
+    os.makedirs('linux-64')
+    os.makedirs('zos-z')
+    api.update_index('.')
+    # we use conda-forge's patch instructions because they don't have zos-z data, and that triggers an error
+    pkg = "conda-forge-repodata-patches"
+    url = "https://anaconda.org/conda-forge/{0}/20180828/download/noarch/{0}-20180828-0.tar.bz2".format(pkg)
+    patch_instructions = download(url, os.path.join(os.getcwd(), "patches.tar.bz2"))
+    api.update_index('.', patch_generator=patch_instructions)
