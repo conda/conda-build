@@ -1645,12 +1645,12 @@ class MetaData(object):
 
     def extract_requirements_text(self, force_top_level=False):
         # outputs are already filtered into each output for us
-        f = r'(^\s*requirements:.*?)(?=^\s*test:|^\s*extra:|^\s*about:|^\s*-\sname:|^outputs:|\Z)'
+        f = r'(^\s*requirements:.*?)(?=^\s*test:|^\s*extra:|^\s*about:|^\s*-\s+name:|^outputs:|\Z)'
         if 'package:' in self.get_recipe_text(force_top_level=force_top_level):
             # match top-level requirements - start of line means top-level requirements
             #    ^requirements:.*?
             # match output with similar name
-            #    (?:-\sname:\s+%s.*?)requirements:.*?
+            #    (?:-\s+name:\s+%s.*?)requirements:.*?
             # terminate match of other sections
             #    (?=^\s*-\sname|^\s*test:|^\s*extra:|^\s*about:|^outputs:|\Z)
             f = '(^requirements:.*?)(?=^test:|^extra:|^about:|^outputs:|\Z)'
