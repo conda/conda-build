@@ -10,7 +10,7 @@ build:
     - test -e "$PREFIX/lib/libz.so"         # [linux]
     - test -e "$PREFIX/lib/libjpeg.so"      # [linux]
     - |
-      [ "$PREFIX" == "$BUILD_PREFIX" ] || exit 1  # [unix]
+      [ "$PREFIX" == "$BUILD_PREFIX" ] || (echo "PREFIX != BUILD_PREFIX, merge didn't happen in top-level" && exit 1)  # [unix]
     - if "%PREFIX%" NEQ "%BUILD_PREFIX%" exit 1  # [win]
     - if not exist %PREFIX%\Library\bin\zlib.dll exit 1  # [win]
     - if not exist %PREFIX%\Library\bin\libjpeg.dll exit 1  # [win]
@@ -33,7 +33,7 @@ outputs:
       script:
         - set -ex
         - |
-          [ "$PREFIX" == "$BUILD_PREFIX" ] || exit 1  # [unix]
+          [ "$PREFIX" == "$BUILD_PREFIX" ] || (echo "PREFIX != BUILD_PREFIX, merge didn't happen in output" && exit 1)  # [unix]
         - if "%PREFIX%" NEQ "%BUILD_PREFIX%" exit 1  # [win]
         - test -e "$PREFIX/lib/libz.dylib"      # [osx]
         - test -e "$PREFIX/lib/libjpeg.dylib"   # [osx]

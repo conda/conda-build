@@ -1,0 +1,14 @@
+package:
+  name: overlinking
+  version: 0
+
+build:
+  number: 0
+  ignore_run_exports:
+    -  bzip2
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+  host:
+    - bzip2

@@ -11,7 +11,6 @@ import json
 import libarchive
 import os
 from os.path import isdir, isfile, islink, join, dirname
-import pprint
 import random
 import re
 import shutil
@@ -139,8 +138,6 @@ def create_post_scripts(m):
     '''
     Create scripts to run after build step
     '''
-    recipe_dir = (m.path or
-                  m.meta.get('extra', {}).get('parent_recipe', {}).get('path', ""))
     ext = '.bat' if utils.on_win else '.sh'
     for tp in 'pre-link', 'post-link', 'pre-unlink':
         # To have per-output link scripts they must be prefixed by the output name or be explicitly
@@ -154,7 +151,7 @@ def create_post_scripts(m):
                 scriptname = m.name() + '-' + tp
         scriptname += ext
         dst_name = '.' + m.name() + '-' + tp + ext
-        src = join(recipe_dir, scriptname)
+        src = join(m.path, scriptname)
         if isfile(src):
             dst_dir = join(m.config.host_prefix,
                            'Scripts' if m.config.host_subdir.startswith('win-') else 'bin')
@@ -266,21 +263,17 @@ def _copy_top_level_recipe(path, config, dest_dir, destination_subdir=None):
 
 
 def _copy_output_recipe(m, dest_dir):
-    src_dir = m.meta.get('extra', {}).get('parent_recipe', {}).get('path')
-    if src_dir:
-        _copy_top_level_recipe(src_dir, m.config, dest_dir, 'parent')
+    _copy_top_level_recipe(m.path, m.config, dest_dir, 'parent')
 
-        this_output = m.get_rendered_output(m.name()) or {}
-        install_script = this_output.get('script')
-        build_inputs = []
-        inputs = [install_script] + build_inputs
-        file_paths = [script for script in inputs if script]
-        file_paths = utils.filter_files(file_paths, src_dir)
-    else:
-        file_paths = []
+    this_output = m.get_rendered_output(m.name()) or {}
+    install_script = this_output.get('script')
+    build_inputs = []
+    inputs = [install_script] + build_inputs
+    file_paths = [script for script in inputs if script]
+    file_paths = utils.filter_files(file_paths, m.path)
 
     for f in file_paths:
-        utils.copy_into(join(src_dir, f), join(dest_dir, f),
+        utils.copy_into(join(m.path, f), join(dest_dir, f),
                         timeout=m.config.timeout,
                         locking=m.config.locking, clobber=True)
 
@@ -294,13 +287,14 @@ def copy_recipe(m):
             os.makedirs(recipe_dir)
         except:
             pass
-        if os.path.isdir(m.path):
+
+        original_recipe = ""
+
+        if m.is_output:
+            _copy_output_recipe(m, recipe_dir)
+        else:
             _copy_top_level_recipe(m.path, m.config, recipe_dir)
             original_recipe = m.meta_path
-        # it's a subpackage.
-        else:
-            _copy_output_recipe(m, recipe_dir)
-            original_recipe = ""
 
         output_metadata = m.copy()
         # hard code the build string, so that tests don't get it mixed up
@@ -420,7 +414,7 @@ def copy_test_source_files(m, destination):
 
     recipe_test_files = m.get_value('test/files')
     if recipe_test_files:
-        orig_recipe_dir = m.path or m.meta.get('extra', {}).get('parent_recipe', {}).get('path')
+        orig_recipe_dir = m.path
         for pattern in recipe_test_files:
             files = glob(join(orig_recipe_dir, pattern))
             for f in files:
@@ -901,9 +895,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
                                     .format(var))
             env_output[var] = os.environ[var]
         dest_file = os.path.join(metadata.config.work_dir, output['script'])
-        recipe_dir = (metadata.path or
-                      metadata.meta.get('extra', {}).get('parent_recipe', {}).get('path', ''))
-        utils.copy_into(os.path.join(recipe_dir, output['script']), dest_file)
+        utils.copy_into(os.path.join(metadata.path, output['script']), dest_file)
         if activate_script:
             _write_activation_text(dest_file, metadata)
 
@@ -969,21 +961,11 @@ def bundle_conda(output, metadata, env, stats, **kw):
     # first filter is so that info_files does not pick up ignored files
     files = utils.filter_files(files, prefix=metadata.config.host_prefix)
     # this is also copying things like run_test.sh into info/recipe
+    utils.rm_rf(os.path.join(metadata.config.info_dir, 'test'))
+
     with tmp_chdir(metadata.config.host_prefix):
         output['checksums'] = create_info_files(metadata, files, prefix=metadata.config.host_prefix)
 
-    for ext in ('.py', '.r', '.pl', '.lua', '.sh', '.bat'):
-        test_dest_path = os.path.join(metadata.config.info_dir, 'test', 'run_test' + ext)
-
-        script = output.get('test', {}).get('script')
-        if script and script.endswith(ext):
-            utils.copy_into(os.path.join(metadata.config.work_dir, output['test']['script']),
-                            test_dest_path, metadata.config.timeout,
-                            locking=metadata.config.locking)
-        elif (os.path.isfile(test_dest_path) and metadata.meta.get('extra', {}).get('parent_recipe') and
-              not metadata.meta.get('test', {}).get("commands")):
-            # the test belongs to the parent recipe.  Don't include it in subpackages.
-            utils.rm_rf(test_dest_path)
     # here we add the info files into the prefix, so we want to re-collect the files list
     prefix_files = set(utils.prefix_files(metadata.config.host_prefix))
     files = utils.filter_files(prefix_files - initial_files, prefix=metadata.config.host_prefix)
@@ -1226,8 +1208,85 @@ def _write_activation_text(script_path, m):
         fh.write(data)
 
 
+def create_build_envs(m, notest):
+    build_ms_deps = m.ms_depends('build')
+    build_ms_deps = [utils.ensure_valid_spec(spec) for spec in build_ms_deps]
+    host_ms_deps = m.ms_depends('host')
+    host_ms_deps = [utils.ensure_valid_spec(spec) for spec in host_ms_deps]
+
+    m.config._merge_build_host = m.build_is_host
+
+    if m.is_cross and not m.build_is_host:
+        if VersionOrder(conda_version) < VersionOrder('4.3.2'):
+            raise RuntimeError("Non-native subdir support only in conda >= 4.3.2")
+
+        host_actions = environ.get_install_actions(m.config.host_prefix,
+                                                    tuple(host_ms_deps), 'host',
+                                                    subdir=m.config.host_subdir,
+                                                    debug=m.config.debug,
+                                                    verbose=m.config.verbose,
+                                                    locking=m.config.locking,
+                                                    bldpkgs_dirs=tuple(m.config.bldpkgs_dirs),
+                                                    timeout=m.config.timeout,
+                                                    disable_pip=m.config.disable_pip,
+                                                    max_env_retry=m.config.max_env_retry,
+                                                    output_folder=m.config.output_folder,
+                                                    channel_urls=tuple(m.config.channel_urls))
+        environ.create_env(m.config.host_prefix, host_actions, env='host', config=m.config,
+                            subdir=m.config.host_subdir, is_cross=m.is_cross,
+                            is_conda=m.name() == 'conda')
+    if m.build_is_host:
+        build_ms_deps.extend(host_ms_deps)
+    build_actions = environ.get_install_actions(m.config.build_prefix,
+                                                tuple(build_ms_deps), 'build',
+                                                subdir=m.config.build_subdir,
+                                                debug=m.config.debug,
+                                                verbose=m.config.verbose,
+                                                locking=m.config.locking,
+                                                bldpkgs_dirs=tuple(m.config.bldpkgs_dirs),
+                                                timeout=m.config.timeout,
+                                                disable_pip=m.config.disable_pip,
+                                                max_env_retry=m.config.max_env_retry,
+                                                output_folder=m.config.output_folder,
+                                                channel_urls=tuple(m.config.channel_urls))
+
+    try:
+        if not notest:
+            utils.insert_variant_versions(m.meta.get('requirements', {}),
+                                            m.config.variant, 'run')
+            test_run_ms_deps = utils.ensure_list(m.get_value('test/requires', [])) + \
+                                utils.ensure_list(m.get_value('requirements/run', []))
+            # make sure test deps are available before taking time to create build env
+            environ.get_install_actions(m.config.test_prefix,
+                                        tuple(test_run_ms_deps), 'test',
+                                        subdir=m.config.host_subdir,
+                                        debug=m.config.debug,
+                                        verbose=m.config.verbose,
+                                        locking=m.config.locking,
+                                        bldpkgs_dirs=tuple(m.config.bldpkgs_dirs),
+                                        timeout=m.config.timeout,
+                                        disable_pip=m.config.disable_pip,
+                                        max_env_retry=m.config.max_env_retry,
+                                        output_folder=m.config.output_folder,
+                                        channel_urls=tuple(m.config.channel_urls))
+    except DependencyNeedsBuildingError as e:
+        # subpackages are not actually missing.  We just haven't built them yet.
+        from .conda_interface import MatchSpec
+
+        other_outputs = (m.other_outputs.values() if hasattr(m, 'other_outputs') else
+                         m.get_output_metadata_set(permit_undefined_jinja=True))
+        missing_deps = set(MatchSpec(pkg).name for pkg in e.packages) - set(out.name() for _, out in other_outputs)
+        if missing_deps:
+            e.packages = missing_deps
+            raise e
+    if (not m.config.dirty or not os.path.isdir(m.config.build_prefix) or not os.listdir(m.config.build_prefix)):
+        environ.create_env(m.config.build_prefix, build_actions, env='build',
+                            config=m.config, subdir=m.config.build_subdir,
+                            is_cross=m.is_cross, is_conda=m.name() == 'conda')
+
+
 def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=False,
-          built_packages=None, notest=False):
+          built_packages=None, notest=False, provision_only=False):
     '''
     Build the package with the specified metadata.
 
@@ -1280,7 +1339,16 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                   .format(m.get_hash_contents()))
             return default_return
 
-        print("BUILD START:", [os.path.basename(pkg) for pkg in package_locations])
+        if not provision_only:
+            printed_fns = []
+            for pkg in package_locations:
+                if (os.path.splitext(pkg)[1] and any(
+                        os.path.splitext(pkg)[1] in ext for ext in CONDA_TARBALL_EXTENSIONS)):
+                    printed_fns.append(os.path.basename(pkg))
+                else:
+                    printed_fns.append(pkg)
+            print("BUILD START:", printed_fns)
+
         environ.remove_existing_packages([m.config.bldpkgs_dir],
                 [pkg for pkg in package_locations if pkg not in built_packages], m.config)
 
@@ -1294,9 +1362,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
             has_vcs_available = os.path.isfile(external.find_executable(vcs_executable,
                                                                 m.config.build_prefix) or "")
             if not has_vcs_available:
-                if (vcs_source != "mercurial" or
-                        not any(spec.startswith('python') and "3." in spec
-                                for spec in specs)):
+                if (vcs_source != "mercurial" or not any(spec.startswith('python') and "3." in spec for spec in specs)):
                     specs.append(vcs_source)
 
                     log.warn("Your recipe depends on %s at build time (for templates), "
@@ -1328,80 +1394,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
         utils.insert_variant_versions(m.meta.get('requirements', {}), m.config.variant, 'host')
         add_upstream_pins(m, False, exclude_pattern)
 
-        build_ms_deps = m.ms_depends('build')
-        build_ms_deps = [utils.ensure_valid_spec(spec) for spec in build_ms_deps]
-        host_ms_deps = m.ms_depends('host')
-        host_ms_deps = [utils.ensure_valid_spec(spec) for spec in host_ms_deps]
-
-        m.config._merge_build_host = m.build_is_host
-
-        if m.is_cross and not m.build_is_host:
-            if VersionOrder(conda_version) < VersionOrder('4.3.2'):
-                raise RuntimeError("Non-native subdir support only in conda >= 4.3.2")
-
-            host_actions = environ.get_install_actions(m.config.host_prefix,
-                                                       tuple(host_ms_deps), 'host',
-                                                       subdir=m.config.host_subdir,
-                                                       debug=m.config.debug,
-                                                       verbose=m.config.verbose,
-                                                       locking=m.config.locking,
-                                                       bldpkgs_dirs=tuple(m.config.bldpkgs_dirs),
-                                                       timeout=m.config.timeout,
-                                                       disable_pip=m.config.disable_pip,
-                                                       max_env_retry=m.config.max_env_retry,
-                                                       output_folder=m.config.output_folder,
-                                                       channel_urls=tuple(m.config.channel_urls))
-            environ.create_env(m.config.host_prefix, host_actions, env='host', config=m.config,
-                               subdir=m.config.host_subdir, is_cross=m.is_cross,
-                               is_conda=m.name() == 'conda')
-        if m.build_is_host:
-            build_ms_deps.extend(host_ms_deps)
-        build_actions = environ.get_install_actions(m.config.build_prefix,
-                                                    tuple(build_ms_deps), 'build',
-                                                    subdir=m.config.build_subdir,
-                                                    debug=m.config.debug,
-                                                    verbose=m.config.verbose,
-                                                    locking=m.config.locking,
-                                                    bldpkgs_dirs=tuple(m.config.bldpkgs_dirs),
-                                                    timeout=m.config.timeout,
-                                                    disable_pip=m.config.disable_pip,
-                                                    max_env_retry=m.config.max_env_retry,
-                                                    output_folder=m.config.output_folder,
-                                                    channel_urls=tuple(m.config.channel_urls))
-
-        try:
-            if not notest:
-                utils.insert_variant_versions(m.meta.get('requirements', {}),
-                                              m.config.variant, 'run')
-                test_run_ms_deps = utils.ensure_list(m.get_value('test/requires', [])) + \
-                                   utils.ensure_list(m.get_value('requirements/run', []))
-                # make sure test deps are available before taking time to create build env
-                environ.get_install_actions(m.config.test_prefix,
-                                            tuple(test_run_ms_deps), 'test',
-                                            subdir=m.config.host_subdir,
-                                            debug=m.config.debug,
-                                            verbose=m.config.verbose,
-                                            locking=m.config.locking,
-                                            bldpkgs_dirs=tuple(m.config.bldpkgs_dirs),
-                                            timeout=m.config.timeout,
-                                            disable_pip=m.config.disable_pip,
-                                            max_env_retry=m.config.max_env_retry,
-                                            output_folder=m.config.output_folder,
-                                            channel_urls=tuple(m.config.channel_urls))
-        except DependencyNeedsBuildingError as e:
-            # subpackages are not actually missing.  We just haven't built them yet.
-            from .conda_interface import MatchSpec
-            missing_deps = set(MatchSpec(pkg).name for pkg in e.packages) - set(
-                out.name() for _, out in m.get_output_metadata_set(permit_undefined_jinja=True)
-            )
-            if missing_deps:
-                e.packages = missing_deps
-                raise e
-        if (not m.config.dirty or not os.path.isdir(m.config.build_prefix) or
-                not os.listdir(m.config.build_prefix)):
-            environ.create_env(m.config.build_prefix, build_actions, env='build',
-                               config=m.config, subdir=m.config.build_subdir,
-                               is_cross=m.is_cross, is_conda=m.name() == 'conda')
+        create_build_envs(m, notest)
 
         # this check happens for the sake of tests, but let's do it before the build so we don't
         #     make people wait longer only to see an error
@@ -1410,7 +1403,6 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
         # Execute any commands fetching the source (e.g., git) in the _build environment.
         # This makes it possible to provide source fetchers (eg. git, hg, svn) as build
         # dependencies.
-
         with utils.path_prepended(m.config.build_prefix):
             try_download(m, no_download_source=False, raise_error=True)
         if need_source_download and not m.final:
@@ -1423,9 +1415,11 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
         #    dependening on the source.
         src_dir = m.config.work_dir
         if isdir(src_dir):
-            print("source tree in:", src_dir)
+            if m.config.verbose:
+                print("source tree in:", src_dir)
         else:
-            print("no source - creating empty work folder")
+            if m.config.verbose:
+                print("no source - creating empty work folder")
             os.makedirs(src_dir)
 
         utils.rm_rf(m.config.info_dir)
@@ -1447,7 +1441,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                     build_file = join(src_dir, 'bld.bat')
                     with open(build_file, 'w') as bf:
                         bf.write(script)
-                windows.build(m, build_file, stats=build_stats)
+                windows.build(m, build_file, stats=build_stats, provision_only=provision_only)
             else:
                 build_file = join(m.path, 'build.sh')
                 if isfile(build_file) and script:
@@ -1456,60 +1450,33 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                                               "or remove the build/script section in meta.yaml.")
                 # There is no sense in trying to run an empty build script.
                 if isfile(build_file) or script:
+                    work_file, _ = write_build_scripts(m, script, build_file)
+                    if not provision_only:
+                        cmd = [shell_path] + (['-x'] if m.config.debug else []) + ['-e', work_file]
 
-                    with utils.path_prepended(m.config.build_prefix):
-                        env = environ.get_dict(m=m)
-                    env["CONDA_BUILD_STATE"] = "BUILD"
+                        # rewrite long paths in stdout back to their env variables
+                        if m.config.debug or m.config.no_rewrite_stdout_env:
+                            rewrite_env = None
+                        else:
+                            rewrite_vars = ['PREFIX', 'SRC_DIR']
+                            if not m.build_is_host:
+                                rewrite_vars.insert(1, 'BUILD_PREFIX')
+                            rewrite_env = {
+                                k: env[k]
+                                for k in rewrite_vars if k in env
+                            }
+                            for k, v in rewrite_env.items():
+                                print('{0} {1}={2}'
+                                        .format('set' if build_file.endswith('.bat') else 'export', k, v))
 
-                    # hard-code this because we never want pip's build isolation
-                    #    https://github.com/conda/conda-build/pull/2972#discussion_r198290241
-                    #
-                    # Note that some pip env "NO" variables are inverted logic.
-                    #      PIP_NO_BUILD_ISOLATION=False means don't use build isolation.
-                    #
-                    env["PIP_NO_BUILD_ISOLATION"] = False
-                    # some other env vars to have pip ignore dependencies.
-                    # we supply them ourselves instead.
-                    env["PIP_NO_DEPENDENCIES"] = True
-                    env["PIP_IGNORE_INSTALLED"] = True
-                    # pip's cache directory (PIP_NO_CACHE_DIR) should not be
-                    # disabled as this results in .egg-info rather than
-                    # .dist-info directories being created, see gh-3094
+                        # clear this, so that the activate script will get run as necessary
+                        del env['CONDA_BUILD']
 
-                    # set PIP_CACHE_DIR to a path in the work dir that does not exist.
-                    env['PIP_CACHE_DIR'] = m.config.pip_cache_dir
-
-                    work_file = join(m.config.work_dir, 'conda_build.sh')
-                    with open(work_file, 'w') as bf:
-                        for k, v in env.items():
-                            if v:
-                                bf.write('export {0}="{1}"\n'.format(k, v))
-
-                        if m.config.activate and not m.name() == 'conda':
-                            _write_sh_activation_text(bf, m)
-                        if script:
-                                bf.write(script)
-                        if isfile(build_file) and not script:
-                            bf.write(open(build_file).read())
-
-                    os.chmod(work_file, 0o766)
-
-                    cmd = [shell_path] + (['-x'] if m.config.debug else []) + ['-e', work_file]
-                    # rewrite long paths in stdout back to their env variables
-                    if m.config.debug:
-                        rewrite_env = None
-                    else:
-                        rewrite_env = {
-                            k: env[k]
-                            for k in ['PREFIX', 'BUILD_PREFIX', 'SRC_DIR'] if k in env
-                        }
-                        print("Rewriting env in output: %s" % pprint.pformat(rewrite_env))
-
-                    # this should raise if any problems occur while building
-                    utils.check_call_env(cmd, env=env, rewrite_stdout_env=rewrite_env,
-                                         cwd=src_dir, stats=build_stats)
-                    utils.remove_pycache_from_scripts(m.config.host_prefix)
-            if build_stats:
+                        # this should raise if any problems occur while building
+                        utils.check_call_env(cmd, env=env, rewrite_stdout_env=rewrite_env,
+                                            cwd=src_dir, stats=build_stats)
+                        utils.remove_pycache_from_scripts(m.config.host_prefix)
+            if build_stats and not provision_only:
                 log_stats(build_stats, "building {}".format(m.name()))
                 if stats is not None:
                     stats[stats_key(m, 'build')] = build_stats
@@ -1522,7 +1489,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
     new_prefix_files = utils.prefix_files(prefix=m.config.host_prefix) - initial_files
 
     new_pkgs = default_return
-    if post in [True, None]:
+    if not provision_only and post in [True, None]:
         outputs = output_metas or m.get_output_metadata_set(permit_unsatisfiable_variants=False)
         top_level_meta = m
 
@@ -1568,22 +1535,18 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                     output_d['files'] = (utils.prefix_files(prefix=m.config.host_prefix) -
                                          initial_files)
 
-                meta_dir = (m.meta_path or
-                            m.meta.get('extra', {}).get('parent_recipe', {}).get('path'))
-                if meta_dir and meta_dir.endswith('.yaml'):
-                    meta_dir = os.path.dirname(meta_dir)
                 # ensure that packaging scripts are copied over into the workdir
-                if 'script' in output_d and meta_dir:
-                    utils.copy_into(os.path.join(meta_dir, output_d['script']), m.config.work_dir)
+                if 'script' in output_d:
+                    utils.copy_into(os.path.join(m.path, output_d['script']), m.config.work_dir)
 
                 # same thing, for test scripts
                 test_script = output_d.get('test', {}).get('script')
-                if test_script and meta_dir:
-                    if not os.path.isfile(os.path.join(meta_dir, test_script)):
+                if test_script:
+                    if not os.path.isfile(os.path.join(m.path, test_script)):
                         raise ValueError("test script specified as {} does not exist.  Please "
                                          "check for typos or create the file and try again."
                                          .format(test_script))
-                    utils.copy_into(os.path.join(meta_dir, test_script),
+                    utils.copy_into(os.path.join(m.path, test_script),
                                     os.path.join(m.config.work_dir, test_script))
 
                 assert output_d.get('type') != 'conda' or m.final, (
@@ -1683,26 +1646,17 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                     subdir = ('noarch' if (m.noarch or m.noarch_python)
                               else m.config.host_subdir)
                     if m.is_cross:
-                        host_index, host_ts = get_build_index(subdir=subdir,
-                                                              bldpkgs_dir=m.config.bldpkgs_dir,
-                                                              output_folder=m.config.output_folder,
-                                                              channel_urls=m.config.channel_urls,
-                                                              debug=m.config.debug,
-                                                              verbose=m.config.verbose,
-                                                              locking=m.config.locking,
-                                                              timeout=m.config.timeout,
-                                                              clear_cache=True)
-                    index, index_timestamp = get_build_index(subdir=subdir,
-                                                             bldpkgs_dir=m.config.bldpkgs_dir,
-                                                             output_folder=m.config.output_folder,
-                                                             channel_urls=m.config.channel_urls,
-                                                             debug=m.config.debug,
-                                                             verbose=m.config.verbose,
-                                                             locking=m.config.locking,
-                                                             timeout=m.config.timeout,
-                                                             clear_cache=True)
+                        get_build_index(subdir=subdir, bldpkgs_dir=m.config.bldpkgs_dir,
+                                        output_folder=m.config.output_folder, channel_urls=m.config.channel_urls,
+                                        debug=m.config.debug, verbose=m.config.verbose, locking=m.config.locking,
+                                        timeout=m.config.timeout, clear_cache=True)
+                    get_build_index(subdir=subdir, bldpkgs_dir=m.config.bldpkgs_dir,
+                                    output_folder=m.config.output_folder, channel_urls=m.config.channel_urls,
+                                    debug=m.config.debug, verbose=m.config.verbose, locking=m.config.locking,
+                                    timeout=m.config.timeout, clear_cache=True)
     else:
-        print("STOPPING BUILD BEFORE POST:", m.dist())
+        if not provision_only:
+            print("STOPPING BUILD BEFORE POST:", m.dist())
 
     # return list of all package files emitted by this build
     return new_pkgs
@@ -1848,12 +1802,14 @@ def _construct_metadata_for_test_from_package(package, config):
     if local_path not in urls:
         urls.insert(0, local_path)
     metadata.config.channel_urls = urls
+    utils.rm_rf(metadata.config.test_dir)
     return metadata, hash_input
 
 
 def _extract_test_files_from_package(metadata):
-    if metadata.config.recipe_dir:
-        info_dir = os.path.normpath(os.path.join(metadata.config.recipe_dir, 'info'))
+    recipe_dir = metadata.config.recipe_dir if hasattr(metadata.config, "recipe_dir") else metadata.path
+    if recipe_dir:
+        info_dir = os.path.normpath(os.path.join(recipe_dir, 'info'))
         test_files = os.path.join(info_dir, 'test')
         if os.path.exists(test_files) and os.path.isdir(test_files):
             # things are re-extracted into the test dir because that's cwd when tests are run,
@@ -1888,7 +1844,144 @@ def construct_metadata_for_test(recipedir_or_package, config):
     return m, hash_input
 
 
-def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
+def write_build_scripts(m, script, build_file):
+    with utils.path_prepended(m.config.build_prefix):
+        env = environ.get_dict(m=m)
+    env["CONDA_BUILD_STATE"] = "BUILD"
+
+    # hard-code this because we never want pip's build isolation
+    #    https://github.com/conda/conda-build/pull/2972#discussion_r198290241
+    #
+    # Note that pip env "NO" variables are inverted logic.
+    #      PIP_NO_BUILD_ISOLATION=False means don't use build isolation.
+    #
+    env["PIP_NO_BUILD_ISOLATION"] = False
+    # some other env vars to have pip ignore dependencies.
+    # we supply them ourselves instead.
+    env["PIP_NO_DEPENDENCIES"] = True
+    env["PIP_IGNORE_INSTALLED"] = True
+    # pip's cache directory (PIP_NO_CACHE_DIR) should not be
+    # disabled as this results in .egg-info rather than
+    # .dist-info directories being created, see gh-3094
+
+    # set PIP_CACHE_DIR to a path in the work dir that does not exist.
+    env['PIP_CACHE_DIR'] = m.config.pip_cache_dir
+
+    work_file = join(m.config.work_dir, 'conda_build.sh')
+    env_file = join(m.config.work_dir, 'build_env_setup.sh')
+    with open(env_file, 'w') as bf:
+        for k, v in env.items():
+            if v:
+                bf.write('export {0}="{1}"\n'.format(k, v))
+
+        if m.activate_build_script:
+            _write_sh_activation_text(bf, m)
+    with open(work_file, 'w') as bf:
+        # bf.write('set -ex\n')
+        bf.write('if [ -z ${CONDA_BUILD+x} ]; then\n')
+        bf.write("\tsource {}\n".format(env_file))
+        bf.write("fi\n")
+        if script:
+                bf.write(script)
+        if isfile(build_file) and not script:
+            bf.write(open(build_file).read())
+
+    os.chmod(work_file, 0o766)
+    return work_file, env_file
+
+
+def _write_test_run_script(metadata, test_run_script, test_env_script, py_files, pl_files,
+                           lua_files, r_files, shell_files, trace):
+    log = utils.get_logger(__name__)
+    with open(test_run_script, 'w') as tf:
+        tf.write('{source} "{test_env_script}"\n'.format(
+            source="call" if utils.on_win else "source",
+            test_env_script=test_env_script))
+        if utils.on_win:
+            tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+        if py_files:
+            test_python = metadata.config.test_python
+            # use pythonw for import tests when osx_is_app is set
+            if metadata.get_value('build/osx_is_app') and sys.platform == 'darwin':
+                test_python = test_python + 'w'
+            tf.write('"{python}" -s "{test_file}"\n'.format(
+                python=test_python,
+                test_file=join(metadata.config.test_dir, 'run_test.py')))
+            if utils.on_win:
+                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+        if pl_files:
+            tf.write('"{perl}" "{test_file}"\n'.format(
+                perl=metadata.config.perl_bin(metadata.config.test_prefix,
+                                              metadata.config.host_platform),
+                test_file=join(metadata.config.test_dir, 'run_test.pl')))
+            if utils.on_win:
+                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+        if lua_files:
+            tf.write('"{lua}" "{test_file}"\n'.format(
+                lua=metadata.config.lua_bin(metadata.config.test_prefix,
+                                            metadata.config.host_platform),
+                test_file=join(metadata.config.test_dir, 'run_test.lua')))
+            if utils.on_win:
+                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+        if r_files:
+            tf.write('"{r}" "{test_file}"\n'.format(
+                r=metadata.config.rscript_bin(metadata.config.test_prefix,
+                                              metadata.config.host_platform),
+                test_file=join(metadata.config.test_dir, 'run_test.r')))
+            if utils.on_win:
+                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+        if shell_files:
+            for shell_file in shell_files:
+                if utils.on_win:
+                    if os.path.splitext(shell_file)[1] == ".bat":
+                        tf.write('call "{test_file}"\n'.format(test_file=shell_file))
+                        tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+                    else:
+                        log.warn("Found sh test file on windows.  Ignoring this for now (PRs welcome)")
+                elif os.path.splitext(shell_file)[1] == ".sh":
+                    # TODO: Run the test/commands here instead of in run_test.py
+                    tf.write('"{shell_path}" {trace}-e "{test_file}"\n'.format(shell_path=shell_path,
+                                                                            test_file=shell_file,
+                                                                            trace=trace))
+
+
+def write_test_scripts(metadata, env_vars, py_files, pl_files, lua_files, r_files, shell_files, trace=""):
+    if not metadata.config.activate or metadata.name() == 'conda':
+        # prepend bin (or Scripts) directory
+        env_vars = utils.prepend_bin_path(env_vars, metadata.config.test_prefix, prepend_prefix=True)
+        if utils.on_win:
+            env_vars['PATH'] = metadata.config.test_prefix + os.pathsep + env_vars['PATH']
+
+    # set variables like CONDA_PY in the test environment
+    env_vars.update(set_language_env_vars(metadata.config.variant))
+
+    # Python 2 Windows requires that envs variables be string, not unicode
+    env_vars = {str(key): str(value) for key, value in env_vars.items()}
+    suffix = "bat" if utils.on_win else "sh"
+    test_env_script = join(metadata.config.test_dir,
+                           "conda_test_env_vars.{suffix}".format(suffix=suffix))
+    test_run_script = join(metadata.config.test_dir,
+                           "conda_test_runner.{suffix}".format(suffix=suffix))
+
+    with open(test_env_script, 'w') as tf:
+        if not utils.on_win:
+            tf.write('set {trace}-e\n'.format(trace=trace))
+        if metadata.config.activate and not metadata.name() == 'conda':
+            ext = ".bat" if utils.on_win else ""
+            tf.write('{source} "{conda_root}activate{ext}" "{test_env}"\n'.format(
+                conda_root=utils.root_script_dir + os.path.sep,
+                source="call" if utils.on_win else "source",
+                ext=ext,
+                test_env=metadata.config.test_prefix))
+            if utils.on_win:
+                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+
+    _write_test_run_script(metadata, test_run_script, test_env_script, py_files, pl_files,
+                           lua_files, r_files, shell_files, trace)
+    return test_run_script, test_env_script
+
+
+def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, provision_only=False):
     '''
     Execute any test scripts for the given package.
 
@@ -1905,7 +1998,8 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
                         if hasattr(recipedir_or_package_or_metadata, 'dist')
                         else recipedir_or_package_or_metadata)
 
-    print("TEST START:", test_package_name)
+    if not provision_only:
+        print("TEST START:", test_package_name)
 
     if hasattr(recipedir_or_package_or_metadata, 'config'):
         metadata = recipedir_or_package_or_metadata
@@ -1918,7 +2012,6 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
 
     # Must download *after* computing build id, or else computing build id will change
     #     folder destination
-    utils.rm_rf(metadata.config.test_dir)
     _extract_test_files_from_package(metadata)
 
     # When testing a .tar.bz2 in the pkgs dir, clean_pkg_cache() will remove it.
@@ -1933,8 +2026,8 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
 
     copy_test_source_files(metadata, metadata.config.test_dir)
     # this is also copying tests/source_files from work_dir to testing workdir
-    _, pl_files, py_files, r_files, lua_files, shell_files = \
-        create_all_test_files(metadata, existing_test_dir=metadata.config.test_dir)
+
+    _, pl_files, py_files, r_files, lua_files, shell_files = create_all_test_files(metadata)
     if not any([py_files, shell_files, pl_files, lua_files, r_files]):
         print("Nothing to test for:", test_package_name)
         return True
@@ -1965,28 +2058,8 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
                     "in the work directory that are not included with your package")
 
     get_build_metadata(metadata)
-    specs = ['%s %s %s' % (metadata.name(), metadata.version(), metadata.build_id())]
 
-    # add packages listed in the run environment and test/requires
-    specs.extend(ms.spec for ms in metadata.ms_depends('run'))
-    specs += utils.ensure_list(metadata.get_value('test/requires', []))
-
-    if py_files:
-        # as the tests are run by python, ensure that python is installed.
-        # (If they already provided python as a run or test requirement,
-        #  this won't hurt anything.)
-        specs += ['python']
-    if pl_files:
-        # as the tests are run by perl, we need to specify it
-        specs += ['perl']
-    if lua_files:
-        # not sure how this shakes out
-        specs += ['lua']
-    if r_files and not any(s.split()[0] in ('r-base', 'mro-base') for s in specs):
-        # not sure how this shakes out
-        specs += ['r-base']
-
-    specs.extend(utils.ensure_list(metadata.config.extra_deps))
+    specs = metadata.get_test_deps(py_files, pl_files, lua_files, r_files)
 
     with utils.path_prepended(metadata.config.test_prefix):
         env = dict(os.environ.copy())
@@ -2005,10 +2078,6 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
     env['PREFIX'] = metadata.config.test_prefix
     if 'BUILD_PREFIX' in env:
         del env['BUILD_PREFIX']
-
-    suffix = "bat" if utils.on_win else "sh"
-    test_script = join(metadata.config.test_dir,
-                        "conda_test_runner.{suffix}".format(suffix=suffix))
 
     # In the future, we will need to support testing cross compiled
     #     packages on physical hardware. until then it is expected that
@@ -2063,104 +2132,39 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True):
     if metadata.config.remove_work_dir:
         env['SRC_DIR'] = metadata.config.test_dir
 
-    if not metadata.config.activate or metadata.name() == 'conda':
-        # prepend bin (or Scripts) directory
-        env = utils.prepend_bin_path(env, metadata.config.test_prefix, prepend_prefix=True)
-        if utils.on_win:
-            env['PATH'] = metadata.config.test_prefix + os.pathsep + env['PATH']
+    test_script, _ = write_test_scripts(metadata, env, py_files, pl_files, lua_files, r_files, shell_files, trace)
 
-    # set variables like CONDA_PY in the test environment
-    env.update(set_language_env_vars(metadata.config.variant))
-
-    # Python 2 Windows requires that envs variables be string, not unicode
-    env = {str(key): str(value) for key, value in env.items()}
-    suffix = "bat" if utils.on_win else "sh"
-    test_script = join(metadata.config.test_dir,
-                        "conda_test_runner.{suffix}".format(suffix=suffix))
-
-    with open(test_script, 'w') as tf:
-        if not utils.on_win:
-            tf.write('set {trace}-e\n'.format(trace=trace))
-        if metadata.config.activate and not metadata.name() == 'conda':
-            ext = ".bat" if utils.on_win else ""
-            tf.write('{source} "{conda_root}activate{ext}" "{test_env}"\n'.format(
-                conda_root=utils.root_script_dir + os.path.sep,
-                source="call" if utils.on_win else "source",
-                ext=ext,
-                test_env=metadata.config.test_prefix))
-            if utils.on_win:
-                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
-        if py_files:
-            test_python = metadata.config.test_python
-            # use pythonw for import tests when osx_is_app is set
-            if metadata.get_value('build/osx_is_app') and sys.platform == 'darwin':
-                test_python = test_python + 'w'
-            tf.write('"{python}" -s "{test_file}"\n'.format(
-                python=test_python,
-                test_file=join(metadata.config.test_dir, 'run_test.py')))
-            if utils.on_win:
-                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
-        if pl_files:
-            tf.write('"{perl}" "{test_file}"\n'.format(
-                perl=metadata.config.perl_bin(metadata.config.test_prefix,
-                                              metadata.config.host_platform),
-                test_file=join(metadata.config.test_dir, 'run_test.pl')))
-            if utils.on_win:
-                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
-        if lua_files:
-            tf.write('"{lua}" "{test_file}"\n'.format(
-                lua=metadata.config.lua_bin(metadata.config.test_prefix,
-                                            metadata.config.host_platform),
-                test_file=join(metadata.config.test_dir, 'run_test.lua')))
-            if utils.on_win:
-                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
-        if r_files:
-            tf.write('"{r}" "{test_file}"\n'.format(
-                r=metadata.config.rscript_bin(metadata.config.test_prefix,
-                                              metadata.config.host_platform),
-                test_file=join(metadata.config.test_dir, 'run_test.r')))
-            if utils.on_win:
-                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
-        if shell_files:
-            for shell_file in shell_files:
-                if utils.on_win:
-                    if os.path.splitext(shell_file)[1].lower() == ".bat":
-                        tf.write('call "{test_file}"\n'.format(test_file=shell_file))
-                        tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
-                    else:
-                        log.warn("Found sh test file on windows.  Ignoring this for now (PRs welcome)")
-                else:
-                    # TODO: Run the test/commands here instead of in run_test.py
-                    tf.write('"{shell_path}" {trace}-e "{test_file}"\n'.format(shell_path=shell_path,
-                                                                            test_file=shell_file,
-                                                                            trace=trace))
     if utils.on_win:
         cmd = [os.environ.get('COMSPEC', 'cmd.exe'), "/d", "/c", test_script]
     else:
         cmd = [shell_path] + (['-x'] if metadata.config.debug else []) + ['-e', test_script]
     try:
         test_stats = {}
-        # rewrite long paths in stdout back to their env variables
-        if metadata.config.debug:
-            rewrite_env = None
-        else:
-            rewrite_env = {
-                k: env[k]
-                for k in ['PREFIX', 'SRC_DIR'] if k in env
-            }
-            print("Rewriting env in output: %s" % pprint.pformat(rewrite_env))
-        utils.check_call_env(cmd, env=env, cwd=metadata.config.test_dir, stats=test_stats, rewrite_stdout_env=rewrite_env)
-        log_stats(test_stats, "testing {}".format(metadata.name()))
-        if stats is not None and metadata.config.variants:
-            stats[stats_key(metadata, 'test_{}'.format(metadata.name()))] = test_stats
+        if not provision_only:
+            # rewrite long paths in stdout back to their env variables
+            if metadata.config.debug or metadata.config.no_rewrite_stdout_env:
+                rewrite_env = None
+            else:
+                rewrite_env = {
+                    k: env[k]
+                    for k in ['PREFIX', 'SRC_DIR'] if k in env
+                }
+                if metadata.config.verbose:
+                    for k, v in rewrite_env.items():
+                        print('{0} {1}={2}'
+                            .format('set' if test_script.endswith('.bat') else 'export', k, v))
+            utils.check_call_env(cmd, env=env, cwd=metadata.config.test_dir, stats=test_stats, rewrite_stdout_env=rewrite_env)
+            log_stats(test_stats, "testing {}".format(metadata.name()))
+            if stats is not None and metadata.config.variants:
+                stats[stats_key(metadata, 'test_{}'.format(metadata.name()))] = test_stats
+            print("TEST END:", test_package_name)
     except subprocess.CalledProcessError:
         tests_failed(metadata, move_broken=move_broken, broken_dir=metadata.config.broken_dir,
                         config=metadata.config)
         raise
 
-    if config.need_cleanup and config.recipe_dir is not None:
+    if config.need_cleanup and config.recipe_dir is not None and not provision_only:
         utils.rm_rf(config.recipe_dir)
-    print("TEST END:", test_package_name)
 
     return True
 
@@ -2183,9 +2187,12 @@ def tests_failed(package_or_metadata, move_broken, broken_dir, config):
 
     if move_broken:
         log = utils.get_logger(__name__)
-        log.warn('Tests failed for %s - moving package to %s' % (os.path.basename(pkg),
-                 broken_dir))
-        shutil.move(pkg, dest)
+        try:
+            shutil.move(pkg, dest)
+            log.warn('Tests failed for %s - moving package to %s' % (os.path.basename(pkg),
+                    broken_dir))
+        except OSError:
+            pass
         update_index(os.path.dirname(os.path.dirname(pkg)), verbose=config.debug)
     sys.exit("TESTS FAILED: " + os.path.basename(pkg))
 
@@ -2586,13 +2593,9 @@ def is_package_built(metadata, env, include_local=True):
         from conda.api import SubdirData
         return bool(SubdirData.query_all(spec, channels=urls, subdirs=(subdir, "noarch")))
     else:
-        index, index_ts = get_build_index(subdir=subdir,
-                                          bldpkgs_dir=metadata.config.bldpkgs_dir,
-                                          output_folder=metadata.config.output_folder,
-                                          channel_urls=urls,
-                                          debug=metadata.config.debug,
-                                          verbose=metadata.config.verbose,
-                                          locking=metadata.config.locking,
-                                          timeout=metadata.config.timeout,
-                                          clear_cache=True)
+        index, _, _ = get_build_index(subdir=subdir, bldpkgs_dir=metadata.config.bldpkgs_dir,
+                                      output_folder=metadata.config.output_folder, channel_urls=urls,
+                                      debug=metadata.config.debug, verbose=metadata.config.verbose,
+                                      locking=metadata.config.locking, timeout=metadata.config.timeout,
+                                      clear_cache=True)
         return any(spec.match(prec) for prec in index.values())

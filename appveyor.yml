@@ -43,7 +43,7 @@ install:
   - python -c "import sys; print(sys.executable)"
   - python -c "import sys; print(sys.prefix)"
   - conda update -q --all
-  - conda install -q pip pytest pytest-cov jinja2 patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm python-libarchive-c
+  - conda install -q pip pytest pytest-cov jinja2 patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm python-libarchive-c py-lief
   - if "%SYS_PYTHON_VERSION%" == "2.7" conda install -q scandir
   # this is to ensure dependencies
   - python --version
@@ -82,10 +82,10 @@ test_script:
   - conda create -n blarg -yq --download-only python cmake
   # remove all folders to avoid permission errors.  Leave root files (may have coverage info there)
   - for /d %%F in (c:\cbtmp\*) do rd /s /q "%%F"
-  - py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp C:\cbtmp -n 2 -m "not serial"
+  - py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp C:\cbtmp -n 2 -m "not serial" --instafail
   # install conda-verify later, so we are ignoring checks in most tests
   - conda install -y conda-verify
-  - py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp -n 0 -m "serial"
+  - py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp -n 0 -m "serial" --instafail
 
 # For debugging, this is helpful - zip up the test environment and make it available for later download.
 #    However, it eats up a fair amount of time.  Better to disable until you need it.

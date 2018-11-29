@@ -168,6 +168,7 @@ class DummyPsutilProcess(object):
     def children(self, *args, **kwargs):
         return []
 
+
 def _setup_rewrite_pipe(env):
     """Rewrite values of env variables back to $ENV in stdout
 
@@ -987,9 +988,8 @@ def convert_path_for_cygwin_or_msys2(exe, path):
 
 
 def get_skip_message(m):
-    recipe_dir = m.path or m.meta.get('extra', {}).get('parent_recipe', {}).get('path')
     return ("Skipped: {} from {} defines build/skip for this configuration ({}).".format(
-        m.name(), recipe_dir,
+        m.name(), m.path,
         {k: m.config.variant[k] for k in m.get_used_vars()}))
 
 
@@ -1015,7 +1015,7 @@ def package_has_file(package_path, file_path):
 
 def ensure_list(arg):
     if (isinstance(arg, string_types) or not hasattr(arg, '__iter__')):
-        if arg:
+        if arg is not None:
             arg = [arg]
         else:
             arg = []
@@ -1052,7 +1052,7 @@ def expand_globs(path_list, root_dir):
             files.extend(glob_files)
     prefix_path_re = re.compile('^' + re.escape('%s%s' % (root_dir, os.path.sep)))
     files = [prefix_path_re.sub('', f, 1) for f in files]
-    return files
+    return sorted(files)
 
 
 def find_recipe(path):

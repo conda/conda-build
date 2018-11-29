@@ -124,7 +124,7 @@ def test_host_entries_finalized(testing_config):
     recipe = os.path.join(metadata_dir, '_host_entries_finalized')
     metadata = api.render(recipe, config=testing_config)
     assert len(metadata) == 2
-    outputs = api.get_output_file_paths(recipe, config=testing_config)
+    outputs = api.get_output_file_paths(metadata)
     assert any('py27' in out for out in outputs)
     assert any('py36' in out for out in outputs)
 
@@ -144,7 +144,7 @@ def test_pin_depends(testing_config):
     recipe = os.path.join(metadata_dir, '_pin_depends_strict')
     m = api.render(recipe, config=testing_config)[0][0]
     # the recipe python is not pinned, but having pin_depends set will force it to be.
-    assert any(re.search('python\s+[23]\.', dep) for dep in m.meta['requirements']['run'])
+    assert any(re.search(r'python\s+[23]\.', dep) for dep in m.meta['requirements']['run'])
 
 
 def test_cross_recipe_with_only_build_section(testing_config):
@@ -198,6 +198,9 @@ def test_run_exports_with_pin_compatible_in_subpackages(testing_config):
         if m.name().startswith('gfortran_'):
             run_exports = set(m.meta.get('build', {}).get('run_exports', {}).get('strong', []))
             assert len(run_exports) == 1
+            # len after splitting should be more than one because of pin_compatible.  If it's only zlib, we've lost the
+            #    compatibility bound info.  This is generally due to lack of rendering of an output, such that the
+            #    compatibility bounds just aren't added in.
             assert all(len(export.split()) > 1 for export in run_exports), run_exports
 
 

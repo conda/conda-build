@@ -5,12 +5,12 @@ import sys
 import pytest
 
 from conda_build.metadata import select_lines, MetaData
-from conda_build import api, conda_interface, render
+from conda_build import api, conda_interface
 from .utils import thisdir, metadata_dir
 
 
 def test_uses_vcs_in_metadata(testing_workdir, testing_metadata):
-    testing_metadata.meta_path = os.path.join(testing_workdir, 'meta.yaml')
+    testing_metadata._meta_path = os.path.join(testing_workdir, 'meta.yaml')
     with open(testing_metadata.meta_path, 'w') as f:
         f.write('http://hg.something.com')
     assert not testing_metadata.uses_vcs_in_meta

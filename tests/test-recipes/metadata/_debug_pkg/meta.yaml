@@ -1,0 +1,21 @@
+package:
+  name: test_debug_pkg
+  version: 1.0
+
+build:
+  script: echo "weeee"
+  noarch: generic
+
+requirements:
+  build:
+    - zlib
+  host:
+    - jpeg
+  run:
+    - bzip2
+
+test:
+  requires:
+    - xz
+  commands:
+    - echo "steve"

@@ -19,3 +19,4 @@ source:
 requirements:
   build:
     - python {{ PY_VER }}*
+    - setuptools

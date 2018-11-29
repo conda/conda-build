@@ -41,11 +41,16 @@ source:
   - url: {srcrpmurl}
     folder: source
 
+build:
+  missing_dso_whitelist:
+    - '*'
+
 {depends_build}
 
 outputs:
   - name: {packagename}
-    noarch: generic
+    build:
+      noarch: generic
 {depends_run}
     about:
       home: {home}
@@ -100,10 +105,14 @@ BUILDSH = """\
 #!/bin/bash
 
 RPM=$(find ${PWD}/binary -name "*.rpm")
-mkdir -p ${PREFIX}/{hostmachine}/sysroot
-pushd ${PREFIX}/{hostmachine}/sysroot > /dev/null 2>&1
+mkdir -p ${PREFIX}/x86_64-conda_cos6-linux-gnu/sysroot/usr
+pushd ${PREFIX}/x86_64-conda_cos6-linux-gnu/sysroot/usr > /dev/null 2>&1
+if [[ -n "${RPM}" ]]; then
   "${RECIPE_DIR}"/rpm2cpio "${RPM}" | cpio -idmv
-popd > /dev/null 2>&1
+  popd > /dev/null 2>&1
+else
+  cp -Rf "${SRC_DIR}"/binary/* .
+fi
 """
 
 
@@ -581,7 +590,8 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
               'PREFIX': '{PREFIX}',
               'RPM': '{RPM}',
               'PWD': '{PWD}',
-              'RECIPE_DIR': '{RECIPE_DIR}'})
+              'RECIPE_DIR': '{RECIPE_DIR}',
+              'SRC_DIR': '{SRC_DIR}'})
     odir = join(output_dir, package_cdt_name)
     try:
         makedirs(odir)

@@ -33,7 +33,8 @@ from conda_build.utils import (copy_into, on_win, check_call_env, convert_path_f
                                package_has_file, check_output_env, get_conda_operation_locks, rm_rf,
                                walk, env_var, FileNotFoundError)
 from conda_build.os_utils.external import find_executable
-from conda_build.exceptions import DependencyNeedsBuildingError, CondaBuildException
+from conda_build.exceptions import (DependencyNeedsBuildingError, CondaBuildException,
+                                    OverLinkingError, OverDependingError)
 from conda_build.conda_interface import reset_context
 from conda.exceptions import ClobberError, CondaMultiError
 from conda_build.conda_interface import conda_46
@@ -89,6 +90,7 @@ def recipe(request):
 def test_recipe_builds(recipe, testing_config, testing_workdir, monkeypatch):
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
+    testing_config.activate = True
     monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
     monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
     api.build(recipe, config=testing_config)
@@ -193,7 +195,7 @@ def test_build_with_no_activate_does_not_activate():
               anaconda_upload=False)
 
 
-@pytest.mark.xfail(on_win and len(os.getenv('PATH')) > 1024, reason="Long paths make activation fail with obscure messages")
+@pytest.mark.xfail(on_win and len(os.getenv('PATH')) > 1024, reason="Long PATHs make activation fail with obscure messages")
 def test_build_with_activate_does_activate():
     api.build(os.path.join(metadata_dir, '_set_env_var_activate_build'), activate=True,
               anaconda_upload=False)
@@ -309,6 +311,7 @@ def test_build_msvc_compiler(msvc_ver, monkeypatch):
 @pytest.mark.parametrize("target_compiler", compilers)
 def test_cmake_generator(platform, target_compiler, testing_workdir, testing_config):
     testing_config.variant['python'] = target_compiler
+    testing_config.activate = True
     api.build(os.path.join(metadata_dir, '_cmake_generator'), config=testing_config)
 
 
@@ -423,6 +426,10 @@ def test_build_metadata_object(testing_metadata):
 
 def test_numpy_setup_py_data(testing_config):
     recipe_path = os.path.join(metadata_dir, '_numpy_setup_py_data')
+    # this shows an error that is OK to ignore:
+
+    # PackagesNotFoundError: The following packages are missing from the target environment:
+    #    - cython
     subprocess.call('conda remove -y cython'.split())
     with pytest.raises(CondaBuildException) as exc:
         m = api.render(recipe_path, config=testing_config, numpy="1.11")[0][0]
@@ -605,9 +612,10 @@ def test_disable_pip(testing_config, testing_metadata):
         api.build(testing_metadata)
 
 
-@pytest.mark.skipif(not sys.platform.startswith('linux'),
-                    reason="rpath fixup only done on Linux so far.")
-def test_rpath_linux(testing_config):
+@pytest.mark.skipif(sys.platform.startswith('win'),
+                    reason="rpath fixup not done on Windows.")
+def test_rpath_unix(testing_config):
+    testing_config.activate = True
     api.build(os.path.join(metadata_dir, "_rpath"), config=testing_config)
 
 
@@ -798,7 +806,7 @@ def test_build_expands_wildcards(mocker, testing_workdir):
         with open(os.path.join(f, 'meta.yaml'), 'w') as fh:
             fh.write('\n')
     api.build(["a*"], config=config)
-    output = [os.path.join(os.getcwd(), path, 'meta.yaml') for path in files]
+    output = sorted([os.path.join(os.getcwd(), path, 'meta.yaml') for path in files])
     build_tree.assert_called_once_with(output,
                                        mocker.ANY,  # config
                                        mocker.ANY,  # stats
@@ -901,14 +909,13 @@ def test_run_exports(testing_metadata, testing_config, testing_workdir):
 
     # run_exports is tricky.  We mostly only ever want things in "host".  Here are the conditions:
 
-    #    1. only build section present (legacy recipe).  Here, use run_exports from build.
-    #       note that because strong_run_exports creates a host section, the weak exports from build
-    #       will not apply.
+    #    1. only build section present (legacy recipe).  Here, use run_exports from build.  Because build and host
+    #       will be merged when build subdir == host_subdir, the weak run_exports should be present.
     testing_metadata.meta['requirements']['build'] = ['test_has_run_exports']
     api.output_yaml(testing_metadata, 'meta.yaml')
     m = api.render(testing_workdir, config=testing_config)[0][0]
     assert 'strong_pinned_package 1.0.*' in m.meta['requirements']['run']
-    assert 'weak_pinned_package 1.0.*' not in m.meta['requirements']['run']
+    assert 'weak_pinned_package 1.0.*' in m.meta['requirements']['run']
 
     #    2. host present.  Use run_exports from host, ignore 'weak' ones from build.  All are
     #           weak by default.
@@ -1199,13 +1206,13 @@ def test_pin_depends(testing_config):
     m = api.render(recipe, config=testing_config)[0][0]
     # the recipe python is not pinned, and having pin_depends set to record
     # will not show it in record
-    assert not any(re.search('python\s+[23]\.', dep) for dep in m.meta['requirements']['run'])
+    assert not any(re.search(r'python\s+[23]\.', dep) for dep in m.meta['requirements']['run'])
     output = api.build(m, config=testing_config)[0]
     requires = package_has_file(output, 'info/requires')
     assert requires
     if PY3 and hasattr(requires, 'decode'):
         requires = requires.decode()
-    assert re.search('python\=[23]\.', requires), "didn't find pinned python in info/requires"
+    assert re.search(r'python\=[23]\.', requires), "didn't find pinned python in info/requires"
 
 
 def test_failed_patch_exits_build(testing_config):
@@ -1234,19 +1241,28 @@ def test_provides_features_metadata(testing_config):
     assert index['provides_features'] == {'test2': 'also_ok'}
 
 
-@pytest.mark.skipif(not sys.platform.startswith('linux'),
-                    reason="Not implemented outside linux for now")
 def test_overlinking_detection(testing_config):
     testing_config.activate = True
     testing_config.error_overlinking = True
-    recipe = os.path.join(metadata_dir, '_overlinkage_detection')
+    testing_config.verify = False
+    recipe = os.path.join(metadata_dir, '_overlinking_detection')
     dest_file = os.path.join(recipe, 'build.sh')
-    copy_into(os.path.join(recipe, 'build_scripts', 'default.sh'), dest_file)
+    copy_into(os.path.join(recipe, 'build_scripts', 'default.sh'), dest_file, clobber=True)
     api.build(recipe, config=testing_config)
-    copy_into(os.path.join(recipe, 'build_scripts', 'no_as_needed.sh'), dest_file)
-    with pytest.raises(SystemExit):
+    copy_into(os.path.join(recipe, 'build_scripts', 'no_as_needed.sh'), dest_file, clobber=True)
+    with pytest.raises(OverLinkingError):
         api.build(recipe, config=testing_config)
     rm_rf(dest_file)
+
+
+def test_overdepending_detection(testing_config):
+    testing_config.activate = True
+    testing_config.error_overlinking = True
+    testing_config.error_overdepending = True
+    testing_config.verify = False
+    recipe = os.path.join(metadata_dir, '_overdepending_detection')
+    with pytest.raises(OverDependingError):
+        api.build(recipe, config=testing_config)
 
 
 def test_empty_package_with_python_in_build_and_host_barfs(testing_config):

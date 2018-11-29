@@ -92,3 +92,17 @@ class RecipeError(CondaBuildException):
 
 class BuildLockError(CondaBuildException):
     """ Raised when we failed to acquire a lock. """
+
+
+class OverLinkingError(RuntimeError):
+    def __init__(self, error, *args):
+        self.error = error
+        self.msg = "overlinking check failed \n%s" % (error)
+        super(OverLinkingError, self).__init__(self.msg)
+
+
+class OverDependingError(RuntimeError):
+    def __init__(self, error, *args):
+        self.error = error
+        self.msg = "overdepending check failed \n%s" % (error)
+        super(OverDependingError, self).__init__(self.msg)

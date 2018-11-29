@@ -13,6 +13,7 @@ source:
 requirements:
   build:
     - python {{ PY_VER }}
+    - setuptools
 
 extra:
   # make sure that these are set

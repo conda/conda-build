@@ -297,12 +297,14 @@ def git_source(source_dict, git_cache, src_dir, recipe_path=None, verbose=True):
 
     git = external.find_executable('git')
     if not git:
-        sys.exit("Error: git is not installed in your root environment.")
+        sys.exit("Error: git is not installed in your root environment or as a build requirement.")
 
-    git_url = source_dict['git_url']
     git_depth = int(source_dict.get('git_depth', -1))
     git_ref = source_dict.get('git_rev') or 'HEAD'
 
+    git_url = source_dict['git_url']
+    if git_url.startswith('~'):
+        git_url = os.path.expanduser(git_url)
     if git_url.startswith('.'):
         # It's a relative path from the conda recipe
         git_url = abspath(normpath(os.path.join(recipe_path, git_url)))
@@ -659,10 +661,8 @@ def provide(metadata):
                     os.makedirs(src_dir)
 
             patches = ensure_list(source_dict.get('patches', []))
-            recipe_dir = (metadata.path or
-                          metadata.meta.get('extra', {}).get('parent_recipe', {}).get('path', ''))
             for patch in patches:
-                apply_patch(src_dir, join(recipe_dir, patch), metadata.config, git)
+                apply_patch(src_dir, join(metadata.path, patch), metadata.config, git)
 
     except CalledProcessError:
         shutil.move(metadata.config.work_dir, metadata.config.work_dir + '_failed_provide')
