@@ -101,7 +101,8 @@ def ns_cfg(config):
                     py33=bool(py == 33),
                     py34=bool(py == 34),
                     py35=bool(py == 35),
-                    py36=bool(py == 36),))
+                    py36=bool(py == 36),
+                    py37=bool(py == 37),))
 
     np = config.variant.get('numpy')
     if not np:
