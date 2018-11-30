@@ -467,7 +467,7 @@ def determine_package_nature(pkg, prefix, subdir, bldpkgs_dir, output_folder, ch
     run_exports = None
     lib_prefix = pkg.name.startswith('lib')
     codefiles = get_package_obj_files(pkg, prefix)
-    dsos = [[f for ext in ('.dylib', '.so', '.dll') if ext in f] for f in codefiles]
+    dsos = [f for f in codefiles for ext in ('.dylib', '.so', '.dll') if ext in f]
     # we don't care about the actual run_exports value, just whether or not run_exports are present.  We can use channeldata
     #    and it'll be a more reliable source (no disk race condition nonsense)
     _, _, channeldata = get_build_index(subdir=subdir,
@@ -489,7 +489,7 @@ def determine_package_nature(pkg, prefix, subdir, bldpkgs_dir, output_folder, ch
             if os.path.exists(test_folder):
                 run_exports = get_run_exports(test_folder)
                 break
-            if not run_exports and os.path.isfile(test_filename):
+            elif os.path.isfile(test_filename):
                 run_exports = get_run_exports(test_filename)
                 break
     return (dsos, run_exports, lib_prefix)
@@ -497,7 +497,7 @@ def determine_package_nature(pkg, prefix, subdir, bldpkgs_dir, output_folder, ch
 
 def library_nature(pkg, prefix, subdir, bldpkgs_dirs, output_folder, channel_urls):
     '''
-    Result :: "non-library", "dso library", "run-exports library"
+    Result :: "non-library", "plugin library", "dso library", "run-exports library"
     .. in that order, i.e. if have both dsos and run_exports, it's a run_exports_library.
     '''
     dsos, run_exports, _ = determine_package_nature(pkg, prefix, subdir, bldpkgs_dirs, output_folder, channel_urls)
@@ -505,7 +505,9 @@ def library_nature(pkg, prefix, subdir, bldpkgs_dirs, output_folder, channel_url
         return "run-exports library"
     elif len(dsos):
         # If all DSOs are under site-packages or R/lib/
-        dsos_without_plugins = [dso for dso in dsos if ('lib/R/library', 'site-packages') not in dso]
+        dsos_without_plugins = [dso for dso in dsos
+                                if not any(part for part in ('lib/R/library', 'site-packages')
+                                           if part in dso)]
         if len(dsos_without_plugins):
             return "dso library"
         else:
@@ -799,12 +801,12 @@ def _show_linking_messages(files, errors, needed_dsos_for_file, build_prefix, ru
         try:
             runpaths = get_runpaths(path)
         except:
-            _print_msg(errors, '{}: pyldd.py failed to process'.format(warn_prelude), verbose=verbose)
+            _print_msg(errors, '{}: pyldd.py failed to process'.format(warn_prelude))
             continue
         if runpaths and not (runpath_whitelist or
                              any(fnmatch.fnmatch(f, w) for w in runpath_whitelist)):
             _print_msg(errors, '{}: runpaths {} found in {}'.format(msg_prelude,
-                                                                   runpaths,
+                                                                    runpaths,
                                                                     path), verbose=verbose)
         needed = needed_dsos_for_file[f]
         # imps = get_imports_memoized(path, None)
