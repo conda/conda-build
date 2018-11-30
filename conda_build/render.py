@@ -502,11 +502,11 @@ def finalize_metadata(m, parent_metadata=None, permit_unsatisfiable_variants=Fal
                                           m.config.variant, 'build')
             utils.insert_variant_versions(m.meta['requirements'],
                                         m.config.variant, 'host')
+
+        m = parent_metadata.get_output_metadata(m.get_rendered_output(m.name()))
         build_unsat, host_unsat = add_upstream_pins(m,
                                                     permit_unsatisfiable_variants,
                                                     exclude_pattern)
-
-        m = parent_metadata.get_output_metadata(m.get_rendered_output(m.name()))
         # getting this AFTER add_upstream_pins is important, because that function adds deps
         #     to the metadata.
         requirements = m.meta.get('requirements', {})

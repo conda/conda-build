@@ -9,13 +9,11 @@ build:
 
 requirements:
   build:
-    - nomkl  # [blas_impl != "mkl"]
     - python {{ python }}
     - numpy {{ numpy }}
     - setuptools
 
   run:
-    - nomkl  # [blas_impl != "mkl"]
     - python {{ python }}
     - {{ pin_compatible("numpy", min_pin="x.x", max_pin="x.x") }}
 
