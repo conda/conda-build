@@ -1445,36 +1445,39 @@ def _equivalent(base_value, value, path):
     return equivalent
 
 
-def merge_or_update_dict(base, new, path="", merge=True, raise_on_clobber=False):
+def merge_or_update_dict(base, new, path="", merge=True, raise_on_clobber=False, add_missing_keys=True):
+    if base == new:
+        return base
     log = get_logger(__name__)
     for key, value in new.items():
-        base_value = base.get(key, value)
-        if hasattr(value, 'keys'):
-            base_value = merge_or_update_dict(base_value, value, path, merge,
-                                              raise_on_clobber=raise_on_clobber)
-            base[key] = base_value
-        elif hasattr(value, '__iter__') and not isinstance(value, string_types):
-            if merge:
-                if base_value != value:
+        if key in base or add_missing_keys:
+            base_value = base.get(key, value)
+            if hasattr(value, 'keys'):
+                base_value = merge_or_update_dict(base_value, value, path, merge,
+                                                raise_on_clobber=raise_on_clobber)
+                base[key] = base_value
+            elif hasattr(value, '__iter__') and not isinstance(value, string_types):
+                if merge:
+                    if base_value != value:
+                        try:
+                            base_value.extend(value)
+                        except TypeError:
+                            base_value = value
                     try:
-                        base_value.extend(value)
+                        base[key] = list(base_value)
                     except TypeError:
-                        base_value = value
-                try:
-                    base[key] = list(base_value)
-                except TypeError:
-                    base[key] = base_value
+                        base[key] = base_value
+                else:
+                    base[key] = value
             else:
-                base[key] = value
-        else:
-            if (base_value and merge and not _equivalent(base_value, value, path) and
-                    raise_on_clobber):
-                log.debug('clobbering key {} (original value {}) with value {}'.format(key,
-                                                                            base_value, value))
-            if value is None:
-                del base[key]
-            else:
-                base[key] = value
+                if (base_value and merge and not _equivalent(base_value, value, path) and
+                        raise_on_clobber):
+                    log.debug('clobbering key {} (original value {}) with value {}'.format(key,
+                                                                                base_value, value))
+                if value is None and key in base:
+                    del base[key]
+                else:
+                    base[key] = value
     return base
 
 
