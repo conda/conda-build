@@ -1149,7 +1149,7 @@ class ChannelIndex(object):
         tar_path = join(subdir_path, fn)
         # default value indicates either corrupt or removed file.  For corrupt, there
         #      is an error message shown.
-        retval = fn, None, None, None
+        retval = None, None, None, None
 
         if os.path.isfile(tar_path):
             index_cache_path = join(subdir_path, '.cache', 'index', fn + '.json')
