@@ -250,7 +250,7 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
             # we need channeldata.json too, as it is a more reliable source of run_exports data
             for channel in expanded_channels:
                 err = None
-                if channel.scheme == "file:":
+                if channel.scheme == "file":
                     location = channel.location
                     if not os.path.isabs(channel.location) and os.path.exists(os.path.join('/', channel.location)):
                         location = os.path.join('/', channel.location)
