@@ -195,15 +195,22 @@ def _setup_rewrite_pipe(env):
 
     def rewriter():
         while True:
-            line = r.readline()
-            if not line:
-                # reading done
-                r.close()
-                os.close(w_fd)
-                return
-            for s, key in replacements.items():
-                line = line.replace(s, replacement_t.format(key))
-            sys.stdout.write(line)
+            try:
+                line = r.readline()
+                if not line:
+                    # reading done
+                    r.close()
+                    os.close(w_fd)
+                    return
+                for s, key in replacements.items():
+                    line = line.replace(s, replacement_t.format(key))
+                sys.stdout.write(line)
+            except UnicodeDecodeError:
+                try:
+                    txt = os.read(r, 10000)
+                    sys.stdout.write(txt or '')
+                except TypeError:
+                    pass
 
     t = Thread(target=rewriter)
     t.daemon = True
