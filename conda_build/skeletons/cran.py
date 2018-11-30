@@ -101,6 +101,7 @@ about:
   license: {license}
   {summary_comment}summary:{summary}
   license_family: {license_family}
+  {license_file}
 
 {extra_recipe_maintainers}
 
@@ -1097,6 +1098,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         # XXX: We should maybe normalize these
         d['license'] = cran_package.get("License", "None")
         d['license_family'] = guess_license_family(d['license'], allowed_license_families)
+        d['license_file'] = get_license_file(d['license'])
 
         if 'License_is_FOSS' in cran_package:
             d['license'] += ' (FOSS)'
@@ -1403,3 +1405,46 @@ def up_to_date(cran_metadata, package):
         return False
 
     return True
+
+
+def get_license_file(license_text):
+    '''
+    Most R packages on CRAN do not include a license file. Instead, to avoid
+    duplication, R base ships with common software licenses:
+
+    complete: AGPL-3, Artistic-2.0, GPL-2, GPL-3, LGPL-2, LGPL-2.1, LGPL-3
+    template: BSD_2_clause BSD_3_clause, MIT
+
+    The complete licenses can be included in conda binaries by pointing to the
+    license file shipped with R base. The template files are more complicated
+    because they would need to be combined with the license information provided
+    by the package authors (e.g. copyright owners and date).
+
+    This function returns the path to the license file for the unambiguous
+    cases. Any time an R package refers to one of the templates or a custom
+    license file (e.g. 'GPL-2 | file LICENSE'), an empty string is returned.
+    '''
+
+    # The list order matters. The first element should be the name of the
+    # license file shipped with r-base.
+    d_license = {'agpl3': ['AGPL-3', 'AGPL (>= 3)', 'AGPL',
+                           'GNU Affero General Public License'],
+                 'artistic2': ['Artistic-2.0', 'Artistic License 2.0'],
+                 'gpl2': ['GPL-2', 'GPL (>= 2)', 'GNU General Public License (>= 2)'],
+                 'gpl3': ['GPL-3', 'GPL (>= 3)', 'GNU General Public License (>= 3)',
+                          'GPL', 'GNU General Public License'],
+                 'lgpl2': ['LGPL-2', 'LGPL (>= 2)'],
+                 'lgpl21': ['LGPL-2.1', 'LGPL (>= 2.1)'],
+                 'lgpl3': ['LGPL-3', 'LGPL (>= 3)', 'LGPL',
+                           'GNU Lesser General Public License']}
+
+    license_file_template = 'license_file: \'{{{{ environ["PREFIX"] }}}}/lib/R/share/licenses/{license}\''
+
+    for license in d_license.keys():
+        if license_text in d_license[license]:
+            license_file = license_file_template.format(license=d_license[license][0])
+            break
+    else:
+        license_file = ''
+
+    return license_file
