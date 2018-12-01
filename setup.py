@@ -19,8 +19,10 @@ deps = ['conda', 'requests', 'filelock', 'pyyaml', 'jinja2', 'pkginfo',
 
 # We cannot build lief for Python 2.7 on Windows (unless we use mingw-w64 for it, which
 # would be a non-trivial amount of work).
-if sys.platform != 'win32':
-    deps.extend(['lief'])
+# .. lief is missing the egg-info directory so we cannot do this .. besides it is not on
+# pypi.
+# if sys.platform != 'win-32' or sys.version_info >= (3, 0):
+#     deps.extend(['lief'])
 
 if sys.version_info < (3, 4):
     deps.extend(['contextlib2', 'enum34', 'futures', 'scandir', 'glob2'])
