@@ -132,7 +132,8 @@ def get_rpaths(file, exe_dirname, envroot, windows_root=''):
             # entries so we just need rpaths for all files and
             # not to apply them transitively.
             # https://docs.microsoft.com/en-us/windows/desktop/dlls/dynamic-link-library-search-order
-            rpaths.append(exe_dirname.replace('\\', '/'))
+            if exe_dirname:
+                rpaths.append(exe_dirname.replace('\\', '/'))
             if windows_root:
                 rpaths.append('/'.join((windows_root, "System32")))
                 rpaths.append(windows_root)
