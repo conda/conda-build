@@ -1,3 +1,35 @@
+2018-11-28 3.17.0:
+------------------
+
+Enhancements:
+-------------
+
+* tell pip to not go find things on PyPI (turn off downloading)  #3109
+* new "conda debug" command for creating build/host or test envs for working on recipes  #3237
+* new package check: "overdepending" - warns or errors out when your run dependencies include unnecessary shared library packages  #3237
+* utilize LIEF for analyzing shared object data, extending capabilities beyond pyldd  #3237
+
+Bug fixes:
+----------
+
+* avoid discarding build string during pin_run_as_build and ensure_valid_spec  #3264
+* fix conda index's handling of packages where 'depends' key doesn't exist  #3270
+* fix bad inversion assumption about pip's PIP_NO_DEPENDENCIES setting  #3271
+* fix regex to allow for whitespace after hyphens in outputs section  #3274, #3275
+* handle unicode decode fails in output rewriting  #3279
+* fix merge of repodata patches that have keys that don't exist in repo  #3280
+
+Contributors:
+-------------
+
+* @bergtholdt
+* @isuruf
+* @minrk
+* @msarahan
+* @mingwandroid
+* @nehaljwani
+
+
 2018-11-21 3.16.3:
 ------------------
 

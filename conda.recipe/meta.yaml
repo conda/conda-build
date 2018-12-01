@@ -10,6 +10,7 @@ build:
   entry_points:
     - conda-build = conda_build.cli.main_build:main
     - conda-convert = conda_build.cli.main_convert:main
+    - conda-debug = conda_build.cli.main_debug:main
     - conda-develop = conda_build.cli.main_develop:main
     - conda-index = conda_build.cli.main_index:main
     - conda-inspect = conda_build.cli.main_inspect:main
@@ -81,6 +82,8 @@ test:
     - type -P conda-skeleton  # [unix]
     - where conda-skeleton  # [win]
     - conda skeleton -h
+    - where conda-debug  # [win]
+    - conda debug -h
     # test that conda sees entry points appropriately in help
     - conda --help
   imports:
