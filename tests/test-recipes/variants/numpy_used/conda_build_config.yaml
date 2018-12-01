@@ -4,5 +4,3 @@ python:
 numpy:
     - 1.11
     - 1.13
-blas_impl:
-    - mkl

@@ -1,5 +1,7 @@
 package:
   # having this package name be the same as the output below exercises a lot of corner cases
+  # what should happen is that the top-level stuff gets merged in with the output stuff.  Here, the requirements from the output
+  #    should determine the end requirements
   name: xyz
   version: 1.0
 

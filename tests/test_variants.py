@@ -356,8 +356,7 @@ def test_target_platform_looping(testing_config):
 
 @pytest.mark.serial
 def test_numpy_used_variable_looping(testing_config):
-    outputs = api.get_output_file_paths(os.path.join(recipe_dir, 'numpy_used'),
-                                   platform='win', arch='64')
+    outputs = api.get_output_file_paths(os.path.join(recipe_dir, 'numpy_used'))
     assert len(outputs) == 4
 
 
