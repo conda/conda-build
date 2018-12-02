@@ -414,15 +414,17 @@ def get_linkages(filename, resolve_filenames=True, recurse=True,
                  sysroot='', envroot='', arch='native'):
     # When we switch to lief, want to ensure these results do not change.
     # if have_lief:
+    if 'TextFormat' in filename:
+        print('debug')
     result_lief = inspect_linkages_lief(filename, resolve_filenames=resolve_filenames, recurse=recurse,
                                         sysroot=sysroot, envroot=envroot, arch=arch)
-    result_pyldd = inspect_linkages_pyldd(filename, resolve_filenames=resolve_filenames, recurse=recurse,
-                                          sysroot=sysroot, arch=arch)
-    # We do not support Windows yet with pyldd.
-    if (set(result_lief) != set(result_pyldd) and
-       codefile_type(filename) not in ('DLLfile', 'EXEfile')):
-        print("WARNING: Disagreement in get_linkages(filename={}, resolve_filenames={}, recurse={}, sysroot={}, envroot={}, arch={}):\n lief: {}\npyldd: {}\n  (using lief)".
-              format(filename, resolve_filenames, recurse, sysroot, envroot, arch, result_lief, result_pyldd))
+    if codefile_type(filename) not in ('DLLfile', 'EXEfile'):
+        result_pyldd = inspect_linkages_pyldd(filename, resolve_filenames=resolve_filenames, recurse=recurse,
+                                              sysroot=sysroot, arch=arch)
+        # We do not support Windows yet with pyldd.
+        if set(result_lief) != set(result_pyldd):
+            print("WARNING: Disagreement in get_linkages(filename={}, resolve_filenames={}, recurse={}, sysroot={}, envroot={}, arch={}):\n lief: {}\npyldd: {}\n  (using lief)".
+                  format(filename, resolve_filenames, recurse, sysroot, envroot, arch, result_lief, result_pyldd))
     return result_lief
 
 
@@ -431,11 +433,84 @@ def get_imports(file, arch='native'):
     return [str(i) for i in binary.imported_functions]
 
 
+def get_static_lib_exports(file):
+    # References:
+    # https://en.wikipedia.org/wiki/Ar_(Unix)
+    # https://web.archive.org/web/20100314154747/http://www.microsoft.com/whdc/system/platform/firmware/PECOFF.mspx
+    results = []
+    with open(file, 'rb') as f:
+        print("Archive file {}".format(file))
+        index = 0
+        content = f.read()
+        fsize = len(content)
+        sig, = struct.unpack('<8s', content[index:8])
+        if sig != b'!<arch>\n':
+            print("ERROR: {} is not an archive".format(file))
+            return results
+        index += 8
+        '''
+        0   16  File identifier                 ASCII
+        16  12 	File modification timestamp     Decimal
+        28  6   Owner ID                        Decimal
+        34  6   Group ID                        Decimal
+        40  8   File mode                       Octal
+        48  10  File size in bytes              Decimal
+        58  2   Ending characters               0x60 0x0A 
+        '''
+        header_fmt = '<16s 12s 6s 6s 8s 10s 2s'
+        header_sz = struct.calcsize(header_fmt)
+        while (index + header_sz) < fsize:
+            if index & 1:
+                index += 1
+            name, modified, owner, group, mode, size, ending = \
+                struct.unpack(header_fmt, content[index:index + header_sz])
+            try:
+                size = int(size)
+            except:
+                print('ERROR: {} has non-integral size of {}'.format(id, size))
+                return results
+            name_len = 0  # File data in BSD format archives begin with a name of this length. 
+            if name.startswith(b'#1/'):
+                type = 'BSD'
+                name_len = int(name[3:])
+                name, = struct.unpack('<'+str(name_len)+'s', content[index + header_sz:index + header_sz + name_len])
+                if b'\x00' in name:
+                    name = name[:name.find(b'\x00')]
+            elif name.startswith(b'//'):
+                type = 'GNU_TABLE'
+            elif name.strip() == b'/':
+                type = 'GNU_SYMBOLS'
+            elif name.startswith(b'/'):
+                type = 'GNU'
+            else:
+                type = 'NORMAL'
+            print("index={}, name={}, ending={}, size={}, type={}".format(index, name, ending, size, type))
+            index += header_sz + name_len
+            if type == 'GNU_SYMBOLS':
+                # Reference:
+                nsymbols, = struct.unpack('>I', content[index:index+4])
+                return [fname.decode('utf-8')
+                        for fname in content[index+4+(nsymbols*4):index+size].split(b'\x00')[:nsymbols]]
+            elif name.startswith(b'__.SYMDEF'):
+                # Reference:
+                # http://www.manpagez.com/man/5/ranlib/
+                size_ranlib_structs, = struct.unpack('<I', content[index:index+4])
+                # Each of the ranlib structures consists of a zero based offset into the next
+                # section (a string table of symbols) and an offset from the beginning of
+                # the archive to the start of the archive file which defines the symbol
+                nsymbols = size_ranlib_structs // 8
+                size_string_table, = struct.unpack('<I', content[index+4+(nsymbols*8):index+4+4+(nsymbols*8)])
+                return [fname.decode('utf-8')
+                        for fname in content[index+4+4+(nsymbols*8):index+4+4+(nsymbols*8)+size_string_table].split(b'\x00')[:nsymbols]]
+            index += size - name_len
+        return results
+
+
 def get_exports(file, arch='native'):
     result = []
     if isinstance(file, str):
         if os.path.exists(file) and file.endswith('.a') or file.endswith('.lib'):
-            # Crappy, sorry.
+            # Sorry!
             import subprocess
             # syms = os.system('nm -g {}'.filename)
             # on macOS at least:
@@ -455,9 +530,14 @@ def get_exports(file, arch='native'):
                 exports = [r.split(' ')[0] for r in results if (' T ') in r]
                 result = exports
             except OSError:
-                # nm may not be available or have the correct permissions, this
-                # should not cause a failure, see gh-3287
-                print('WARNING: nm: failed to get_exports({})'.format(file))
+            if set(exports) != set(exports2):
+                print("No matchy\nnm:\n{}\nlief:\n{}".format('\n'.join(sorted(exports)), '\n'.join(sorted(exports2))))
+
+            # Now, our own implementation which does not require nm and can
+            # handle .lib files.
+            exports2 = get_static_lib_exports(file)
+            if set(exports) != set(exports2):
+                print("No matchy\nnm:\n{}\nlief:\n{}".format('\n'.join(sorted(exports)), '\n'.join(sorted(exports2))))
 
     if not result:
         binary = ensure_binary(file)
@@ -634,3 +714,19 @@ def get_linkages_memoized(filename, resolve_filenames, recurse,
                           sysroot='', envroot='', arch='native'):
     return get_linkages(filename, resolve_filenames=resolve_filenames,
                         recurse=recurse, sysroot=sysroot, envroot=envroot, arch=arch)
+
+
+#d = get_static_lib_exports('/Users/rdonnelly/conda/bzip2_static.lib')
+#print(d)
+#c = get_static_lib_exports('/Users/rdonnelly/conda/bzip2.lib')
+#print(c)
+#a = get_static_lib_exports('/Users/rdonnelly/conda/libbz2_linux.a')
+#print(a)
+#b = get_static_lib_exports('/Users/rdonnelly/conda/libbz2_macos.a')
+#print(b)
+#print(len(b))
+import glob
+for static_lib in glob.iglob('/opt/conda/pkgs/**/*.a', recursive=True):
+# for static_lib in ['/opt/conda/pkgs/flex-2.6.4-hb56bbfa_1/lib/libfl.a']:
+# for static_lib in ['/opt/conda/pkgs/libtool-2.4.6-h7b6447c_5/lib/libltdl.a']:
+    get_exports(static_lib)

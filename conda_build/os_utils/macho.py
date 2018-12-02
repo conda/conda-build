@@ -189,11 +189,7 @@ def get_id(path):
 
 def get_rpaths(path):
     """Return a list of the dylib rpaths"""
-    # rpaths = otool(path, is_rpath)
-    # res_otool = [rpath['path'] for rpath in rpaths]
     res_pyldd = inspect_rpaths(path, resolve_dirnames=False, use_os_varnames=True)
-    # if set(res_otool) != set(res_pyldd):
-    #     print("disagreement about get_rpaths {} vs {}".format(set(res_otool), set(res_pyldd)))
     return res_pyldd
 
 
