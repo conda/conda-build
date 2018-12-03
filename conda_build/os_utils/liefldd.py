@@ -444,11 +444,17 @@ def get_exports(file, arch='native'):
                 flags = '-PgUj'
             else:
                 flags = '-P'
-            out, _ = subprocess.Popen(['nm', flags, file], shell=False,
-                             stdout=subprocess.PIPE).communicate()
-            results = out.decode('utf-8').splitlines()
-            exports = [r.split(' ')[0] for r in results if (' T ') in r]
-            result = exports
+            try:
+                out, _ = subprocess.Popen(['nm', flags, file], shell=False,
+                                stdout=subprocess.PIPE).communicate()
+                results = out.decode('utf-8').splitlines()
+                exports = [r.split(' ')[0] for r in results if (' T ') in r]
+                result = exports
+            except OSError:
+                # nm may not be available or have the correct permissions, this
+                # should not cause a failure, see gh-3287
+                print('WARNING: nm: failed to get_exports({})'.format(file))
+
     if not result:
         binary = ensure_binary(file)
         if binary:
