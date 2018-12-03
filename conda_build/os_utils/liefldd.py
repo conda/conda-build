@@ -433,64 +433,6 @@ def get_imports(file, arch='native'):
     return [str(i) for i in binary.imported_functions]
 
 
-'''
-    * The n_type field really contains three fields:
-    *	unsigned char N_STAB:3,
-    *		      N_PEXT:1,
-    *		      N_TYPE:3,
-    *		      N_EXT:1;
-'''
-import ctypes
-c_uint8 = ctypes.c_uint8
-c_uint32 = ctypes.c_uint32
-
-# This is likely all utter rubbish!
-# http://mirror.informatimago.com/next/developer.apple.com/documentation/DeveloperTools/Conceptual/MachORuntime/8rt_file_format/chapter_10_section_33.html
-
-class n_type_bits( ctypes.LittleEndianStructure ):
-    '''
-    ("N_STAB",     c_uint8, 3 ),
-    ("N_PEXT",     c_uint8, 1 ),
-    ("N_TYPE",     c_uint8, 3 ),
-    ("N_EXT",      c_uint8, 1 ),
-    '''
-    _fields_ = [
-                ("N_EXT",      c_uint8, 1 ),
-                ("N_TYPE",     c_uint8, 3 ),
-                ("N_PEXT",     c_uint8, 1 ),
-                ("N_STAB",     c_uint8, 3 ),
-            ]
-
-class n_type( ctypes.Union ):
-    _anonymous_ = ("bit",)
-    _fields_ = [
-                ("bit",    n_type_bits ),
-                ("asByte", c_uint8     )
-            ]
-
-
-class n_stab_bits( ctypes.LittleEndianStructure ):
-    '''
-    ("N_VALUE",    c_uint32, 8 ),
-    ("N_DESC",     c_uint32, 8 ),
-    ("N_SEXT",     c_uint32, 8 ),
-    ("N_TYPE",     c_uint32, 8 ),
-    '''
-    _fields_ = [
-                ("N_TYPE",     c_uint32, 8 ),
-                ("N_SECT",     c_uint32, 8 ),
-                ("N_DESC",     c_uint32, 8 ),
-                ("N_VALUE",    c_uint32, 8 ),
-            ]
-
-class n_stab( ctypes.Union ):
-    _anonymous_ = ("bit",)
-    _fields_ = [
-                ("bit",      n_stab_bits ),
-                ("asUint32", c_uint32    )
-            ]
-
-
 def get_static_lib_exports(file):
     # References:
     # https://github.com/bminor/binutils-gdb/tree/master/bfd/archive.c
@@ -545,6 +487,8 @@ def get_static_lib_exports(file):
                 type = 'NORMAL'
             print("index={}, name={}, ending={}, size={}, type={}".format(index, name, ending, size, type))
             index += header_sz + name_len
+            # if QUERY_STATIC_LIB_EXPORTS_VIA_LIEF:
+            object_file_data = content[index:index+size]
             if type == 'GNU_SYMBOLS':
                 # Reference:
                 nsymbols, = struct.unpack('>I', content[index:index+4])
@@ -556,7 +500,11 @@ def get_static_lib_exports(file):
                 # https://opensource.apple.com/source/cctools/cctools-921/misc/libtool.c.auto.html
                 # https://opensource.apple.com/source/cctools/cctools-921/misc/nm.c.auto.html
                 # https://developer.apple.com/documentation/kernel/nlist_64/1583944-n_type?language=objc
-
+                if b'64' in name:
+                    ranlib_struct_fmt = 'Q'
+                else:
+                    ranlib_struct_fmt = 'I'
+                ranlib_struct_sz = struct.calcsize(ranlib_struct_fmt)
                 size_ranlib_structs, = struct.unpack('<I', content[index:index+4])
                 # Each of the ranlib structures consists of a zero based offset into the next
                 # section (a string table of symbols) and an offset from the beginning of
@@ -565,91 +513,31 @@ def get_static_lib_exports(file):
                 size_string_table, = struct.unpack('<I', content[index+4+(nsymbols*8):index+4+4+(nsymbols*8)])
                 ranlib_structs = []
                 for i in range(nsymbols):
-                    ranlib_struct1, ranlib_struct2 = struct.unpack('<II', content[index+4+4+(i*8):index+4+4+((i+1)*8)])
-                    ranlib_structs.append((ranlib_struct1, ranlib_struct2))
-                syms = [fname.decode('utf-8')
-                        for fname in content[index+4+4+(nsymbols*8):index+4+4+(nsymbols*8)+size_string_table].split(b'\x00')[:nsymbols]]
+                    ran_off, ran_strx = struct.unpack('<'+ranlib_struct_fmt+ranlib_struct_fmt,
+                                                      content[index+(i*ranlib_struct_sz*2):index+((i+1)*ranlib_struct_sz*2)])
+                    ranlib_structs.append((ran_strx, ran_off))
+                # This is plain wrong. There is not a 1:1 correspondence between strings and symbols!
+                string_table = content[index+4+4+(nsymbols*ranlib_struct_sz*2):index+4+4+(nsymbols*ranlib_struct_sz*2)+size_string_table]
+                string_table = string_table.decode('utf-8')
                 filtered_syms = []
                 filtered_ranlib_structs = []
+                syms = []
                 for i in range(nsymbols):
-                    sym = syms[i]
                     ranlib_struct = ranlib_structs[i]
-                    print("{} :: {}, {}".format(syms[i], hex(ranlib_struct[0]), hex(ranlib_struct[1])))
-                    ntype = n_type()
-                    ntype.asByte = ranlib_struct[0] & 0xff # (maybe & 0xff000000 >> 24?)
-                    if ntype.N_STAB:
-                        nstab = n_stab()
-                        nstab.asUint32 = ranlib_struct[0]
-                        # If any of these 3 bits are set, the symbol is a symbolic debugging table (stab) entry. In that case, the
-                        # entire n_type field is interpreted as a stab value. See /usr/include/mach-o/stab.h for valid stab values.
-                        #
-                        print('{} :: N_STAB :: N_TYPE {}, N_SECT {}, N_DESC {}, N_VALUE {}'.format(sym, hex(nstab.N_TYPE), hex(nstab.N_SECT), hex(nstab.N_DESC), hex(nstab.N_VALUE)))
-                        if nstab.N_DESC != 0x20 and nstab.N_DESC != 0x22:
-                            # I've seen 0x6 here (only once in libperl.a)
-                            print("N_DESC = {} (N_TYPE really?) not N_GSYM(0x20) nor N_FNAME(0x22)".format(nstab.N_DESC)) 
-
-                        '''
-                        /*
-                        * Symbolic debugger symbols.  The comments give the conventional use for
-                        *    
-                        *      .stabs "n_name", n_type, n_sect, n_desc, n_value
-                        * 
-                        * where n_type is the defined constant and not listed in the comment.  Other
-                        * fields not listed are zero. n_sect is the section ordinal the entry is
-                        * refering to.
-                        */
-                        #define N_GSYM  0x20    /* global symbol: name,,NO_SECT,type,0 */
-                        #define N_FNAME 0x22    /* procedure name (f77 kludge): name,,NO_SECT,0,0 */
-                        #define N_FUN   0x24    /* procedure: name,,n_sect,linenumber,address */
-                        #define N_STSYM 0x26    /* static symbol: name,,n_sect,type,address */
-                        #define N_LCSYM 0x28    /* .lcomm symbol: name,,n_sect,type,address */
-                        #define N_BNSYM 0x2e    /* begin nsect sym: 0,,n_sect,0,address */
-                        #define N_OPT   0x3c    /* emitted with gcc2_compiled and in gcc source */
-                        #define N_RSYM  0x40    /* register sym: name,,NO_SECT,type,register */
-                        #define N_SLINE 0x44    /* src line: 0,,n_sect,linenumber,address */
-                        #define N_ENSYM 0x4e    /* end nsect sym: 0,,n_sect,0,address */
-                        #define N_SSYM  0x60    /* structure elt: name,,NO_SECT,type,struct_offset */
-                        #define N_SO    0x64    /* source file name: name,,n_sect,0,address */
-                        #define N_OSO   0x66    /* object file name: name,,0,0,st_mtime */
-                        #define N_LSYM  0x80    /* local sym: name,,NO_SECT,type,offset */
-                        #define N_BINCL 0x82    /* include file beginning: name,,NO_SECT,0,sum */
-                        #define N_SOL   0x84    /* #included file name: name,,n_sect,0,address */
-                        #define N_PARAMS  0x86  /* compiler parameters: name,,NO_SECT,0,0 */
-                        #define N_VERSION 0x88  /* compiler version: name,,NO_SECT,0,0 */
-                        #define N_OLEVEL  0x8A  /* compiler -O level: name,,NO_SECT,0,0 */
-                        #define N_PSYM  0xa0    /* parameter: name,,NO_SECT,type,offset */
-                        #define N_EINCL 0xa2    /* include file end: name,,NO_SECT,0,0 */
-                        #define N_ENTRY 0xa4    /* alternate entry: name,,n_sect,linenumber,address */
-                        #define N_LBRAC 0xc0    /* left bracket: 0,,NO_SECT,nesting level,address */
-                        #define N_EXCL  0xc2    /* deleted include file: name,,NO_SECT,0,sum */
-                        #define N_RBRAC 0xe0    /* right bracket: 0,,NO_SECT,nesting level,address */
-                        #define N_BCOMM 0xe2    /* begin common: name,,NO_SECT,0,0 */
-                        #define N_ECOMM 0xe4    /* end common: name,,n_sect,0,0 */
-                        #define N_ECOML 0xe8    /* end common (local name): 0,,n_sect,0,address */
-                        #define N_LENG  0xfe    /* second stab entry with length information *
-                        '''
-                        if nstab.N_DESC != 0x20:
-                            filtered_syms.append(sym)
-                            filtered_ranlib_structs.append(ranlib_structs[i])
-                        else:
-                            print("Skipped {}, it is a global symbol I think".format(sym))
-                else:
-                    print('{} : N_STAB {}, N_PEXT {}, N_TYPE {}, N_EXT {}'.format(syms[i], ntype.N_STAB, ntype.N_PEXT, ntype.N_TYPE, ntype.N_EXT))
-                    # if not ranlib_structs[i][0] & 0x8000:
-                    # Symbols that should not appear:
-                    # _PL_mod_latin1_uc :: 0x0bd800, 0x1abd
-                    # _PerlIO_byte      :: 0x239000, 0x7de2
-                    # 0x200000 seems to be "FUNCTION"?!
-#                    if ((not ranlib_structs[i][0] & 0x200000) or (ranlib_structs[i][0] & 0x8000):
-#                        and ranlib_structs[i][0] != 0x239000):
-                    UNDEFINED = 0x5
-                    if ntype.N_TYPE != UNDEFINED:
-                        filtered_syms.append(syms[i])
-                        filtered_ranlib_structs.append(ranlib_structs[i])
+                    strx, off = ranlib_struct
+                    sym = string_table[strx:strx+string_table[strx:].find('\x00')]
+                    syms.append(sym)
+                    print("{} :: strx={}, off={}".format(syms[i], hex(strx), hex(off)))
+                    if True:
+                        filtered_syms.append(sym)
+                        filtered_ranlib_structs.append(ranlib_struct)
                 if not '_PL_simple' in syms:
                     print('wtf')
                 if not '_PL_simple' in filtered_syms:
                     print('wtf 2')
+                # Comment the return out if you want to play with object_file_data, note we are *not* advancing index
+                # past the sting table.
+                # if not QUERY_STATIC_LIB_EXPORTS_VIA_LIEF:
                 return filtered_syms, filtered_ranlib_structs, syms, ranlib_structs
             index += size - name_len
         print("ERROR: Failed to find ranlib symbol defintions or GNU symbols")
@@ -704,7 +592,7 @@ def get_exports(filename, arch='native'):
                     if item not in exports2_all:
                         print('wtf 3 {}'.format(item))
                     idx = exports2_all.index(item)
-                    print("{:>64} : {:08x}".format(item, flags2_all[idx][0]))
+                    print("{:>64} : str_idx={:08x} off={:08x}".format(item, flags2_all[idx][0], flags2_all[idx][1]))
 #                    print("{:>64} : {:032b}".format(item, flags2_all[idx][0]))
 
                 print("\nUnwanted symbols\n")
@@ -713,17 +601,15 @@ def get_exports(filename, arch='native'):
                     if item not in exports2_all:
                         print('wtf 4 {}'.format(item))
                     idx = exports2.index(item)
-                    ntype = n_type()
-                    ntype.asByte = flags2[idx][0] & 0xff
-                    print('{} : N_STAB {}, N_PEXT {}, N_TYPE {}, N_EXT {}'.format(item, ntype.N_STAB, ntype.N_PEXT, ntype.N_TYPE, ntype.N_EXT))
-#                    print("{:>64} : {:08x}".format(item, flags2[idx][0]))
+                    print("{:>64} : str_idx={:08x} off={:08x}".format(item, flags2[idx][0], flags2[idx][1]))
+                    print("{:>64} : {:08x}".format(item, flags2[idx][0]))
 #                    print("{:>64} : {:032b}".format(item, flags2[idx][0]))
 
                 print("\nAll symbols\n")
 
                 for item in exports2_all:
                     idx = exports2_all.index(item)
-                    print("{:>64} : {:08x} {:08x}".format(item, flags2_all[idx][0], flags2_all[idx][1]))
+                    print("{:>64} : str_idx={:08x} off={:08x}".format(item, flags2_all[idx][0], flags2_all[idx][1]))
 #                    print("{:>64} : {:032b}".format(item, flags2_all[idx][0]))
 
     if not result:
