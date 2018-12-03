@@ -290,8 +290,8 @@ def write_build_scripts(m, env, bld_bat):
 
 
 def build(m, bld_bat, stats, provision_only=False):
-    with path_prepended(m.config.build_prefix):
-        with path_prepended(m.config.host_prefix):
+    with path_prepended(m.config.host_prefix):
+        with path_prepended(m.config.build_prefix):
             env = environ.get_dict(m=m)
     env["CONDA_BUILD_STATE"] = "BUILD"
 

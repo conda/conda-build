@@ -36,9 +36,11 @@ def append_hash_to_fn(fn, hash_value):
     return ext_re.sub(r"\1_{}\2".format(hash_value[:10]), fn)
 
 
-def download_to_cache(cache_folder, recipe_path, source_dict):
+def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
     ''' Download a source to the local cache. '''
-    print('Source cache directory is: %s' % cache_folder)
+    log = get_logger(__name__)
+    if verbose:
+        log.info('Source cache directory is: %s' % cache_folder)
     if not isdir(cache_folder):
         os.makedirs(cache_folder)
 
@@ -53,14 +55,15 @@ def download_to_cache(cache_folder, recipe_path, source_dict):
             hash_added = True
             break
     else:
-        log = get_logger(__name__)
         log.warn("No hash (md5, sha1, sha256) provided for {}.  Source download forced.  "
                  "Add hash to recipe to use source cache.".format(unhashed_fn))
     path = join(cache_folder, fn)
     if isfile(path):
-        print('Found source in cache: %s' % fn)
+        if verbose:
+            log.info('Found source in cache: %s' % fn)
     else:
-        print('Downloading source to cache: %s' % fn)
+        if verbose:
+            log.info('Downloading source to cache: %s' % fn)
 
         for url in source_urls:
             if "://" not in url:
@@ -73,17 +76,19 @@ def download_to_cache(cache_folder, recipe_path, source_dict):
                 if url.startswith('file:///~'):
                     url = 'file:///' + expanduser(url[8:]).replace('\\', '/')
             try:
-                print("Downloading %s" % url)
+                if verbose:
+                    log.info("Downloading %s" % url)
                 with LoggingContext():
                     download(url, path)
             except CondaHTTPError as e:
-                print("Error: %s" % str(e).strip(), file=sys.stderr)
+                log.warn("Error: %s" % str(e).strip(), file=sys.stderr)
                 rm_rf(path)
             except RuntimeError as e:
-                print("Error: %s" % str(e).strip(), file=sys.stderr)
+                log.warn("Error: %s" % str(e).strip(), file=sys.stderr)
                 rm_rf(path)
             else:
-                print("Success")
+                if verbose:
+                    log.info("Success")
                 break
         else:  # no break
             rm_rf(path)
@@ -131,7 +136,7 @@ def hoist_single_extracted_folder(nested_folder):
 def unpack(source_dict, src_dir, cache_folder, recipe_path, croot, verbose=False,
            timeout=900, locking=True):
     ''' Uncompress a downloaded source. '''
-    src_path, unhashed_fn = download_to_cache(cache_folder, recipe_path, source_dict)
+    src_path, unhashed_fn = download_to_cache(cache_folder, recipe_path, source_dict, verbose)
 
     if not isdir(src_dir):
         os.makedirs(src_dir)
