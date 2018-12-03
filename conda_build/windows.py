@@ -326,9 +326,9 @@ def build(m, bld_bat, stats, provision_only=False):
         if not isdir(path):
             os.makedirs(path)
 
-    write_build_scripts(m, env, bld_bat)
+    work_script, env_script = write_build_scripts(m, env, bld_bat)
 
-    if not provision_only:
+    if not provision_only and os.path.isfile(work_script):
         cmd = ['cmd.exe', '/c', 'bld.bat']
         # rewrite long paths in stdout back to their env variables
         if m.config.debug:
