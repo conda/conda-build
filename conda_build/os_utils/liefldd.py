@@ -6,11 +6,16 @@ import hashlib
 import json
 import os
 from os.path import join
+import struct
 import sys
 import threading
 
 from six import string_types
 
+import os, sys
+sys.path.append(os.path.dirname(__file__))
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+__name__ = 'conda_build.os_utils.liefldd'
 # TODO :: Remove all use of pyldd
 # Currently we verify the output of each against the other
 from .pyldd import inspect_linkages as inspect_linkages_pyldd
