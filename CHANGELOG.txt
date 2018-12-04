@@ -1,3 +1,21 @@
+2018-12-04 3.17.1
+------------------
+
+Bug fixes:
+----------
+
+* omit LIEF depedency on Windows until it is better tested #3288
+* activate host environment #3288
+* allow calls to nm to fail #3290
+
+Contributors:
+-------------
+
+* @jjhelmus
+* @msarahan
+* @nehaljwani
+
+
 2018-11-28 3.17.0:
 ------------------
 
