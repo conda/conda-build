@@ -1005,7 +1005,9 @@ def post_build(m, files, build_python):
             if binary_relocation is True or (isinstance(binary_relocation, list) and
                                              f in binary_relocation):
                 post_process_shared_lib(m, f, prefix_files)
-    check_overlinking(m, files)
+    # disable overlinking check on win right now, until Ray has time for it.
+    if not utils.on_win:
+        check_overlinking(m, files)
 
 
 def check_symlinks(files, prefix, croot):
