@@ -238,12 +238,10 @@ def get_uniqueness_key(file):
          and  # noqa
          (binary.type == lief.ELF.ELF_CLASS.CLASS32 or binary.type == lief.ELF.ELF_CLASS.CLASS64)):
         dynamic_entries = binary.dynamic_entries
-        for e in dynamic_entries:
-            result = [e.name for e in dynamic_entries if e.tag == lief.ELF.DYNAMIC_TAGS.SONAME]
-            if result:
-                return result[0]
-            return binary.name
-        return binary.soname
+        result = [e.name for e in dynamic_entries if e.tag == lief.ELF.DYNAMIC_TAGS.SONAME]
+        if result:
+            return result[0]
+        return binary.name
     return binary.name
 
 
