@@ -180,3 +180,25 @@ def test_pypi_section_order_preserved(testing_workdir):
     assert list(recipe['requirements']) == REQUIREMENTS_ORDER
     for k, v in PYPI_META_STATIC.items():
         assert list(v.keys()) == list(recipe[k])
+
+
+# CRAN packages to test license_file entry.
+# (package, license_id, license_family, license_file)
+cran_packages = [('r-usethis', 'GPL-3', 'GPL3', 'GPL-3'),
+                 ('r-abf2', 'Artistic-2.0', 'OTHER', 'Artistic-2.0'),
+                 ('r-cortools', 'Artistic License 2.0', 'OTHER', 'Artistic-2.0'),
+                 ('r-ruchardet', 'MPL', 'OTHER', ''),
+                 ]
+
+
+@pytest.mark.parametrize("package, license_id, license_family, license_file", cran_packages)
+def test_cran_license(package, license_id, license_family, license_file, testing_workdir, testing_config):
+    api.skeletonize(packages=package, repo='cran', output_dir=testing_workdir,
+                    config=testing_config)
+    m = api.render(os.path.join(package, 'meta.yaml'))[0][0]
+    m_license_id = m.get_value('about/license')
+    assert m_license_id == license_id
+    m_license_family = m.get_value('about/license_family')
+    assert m_license_family == license_family
+    m_license_file = m.get_value('about/license_file', '')
+    assert os.path.basename(m_license_file) == license_file
