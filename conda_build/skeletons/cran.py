@@ -1438,11 +1438,11 @@ def get_license_file(license_text):
                  'lgpl3': ['LGPL-3', 'LGPL (>= 3)', 'LGPL',
                            'GNU Lesser General Public License']}
 
-    license_file_template = 'license_file: \'{{{{ environ["PREFIX"] }}}}/lib/R/share/licenses/{license}\''
+    license_file_template = 'license_file: \'{{{{ environ["PREFIX"] }}}}/lib/R/share/licenses/{license_id}\''
 
-    for license in d_license.keys():
-        if license_text in d_license[license]:
-            license_file = license_file_template.format(license=d_license[license][0])
+    for license_id in d_license.keys():
+        if license_text in d_license[license_id]:
+            license_file = license_file_template.format(license_id=d_license[license_id][0])
             break
     else:
         license_file = ''
