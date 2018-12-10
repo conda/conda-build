@@ -13,7 +13,6 @@ from six import string_types
 from .pyldd import inspect_linkages as inspect_linkages_pyldd
 # lief cannot handle files it doesn't know about gracefully
 from .pyldd import codefile_type as codefile_type_pyldd
-from conda_build.utils import get_logger
 codefile_type = codefile_type_pyldd
 have_lief = False
 try:
