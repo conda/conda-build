@@ -102,7 +102,7 @@ Additionally, you need to install a few extra packages:
 
 .. code-block:: bash
 
-  conda install pytest pytest-cov mock
+  conda install anaconda-client pytest pytest-cov mock
 
 The test suite runs with py.test. Some useful commands to run select tests,
 assuming you are in the conda-build root folder:
@@ -111,6 +111,11 @@ Run all tests:
 ==============
 
     py.test tests
+
+Run one test file:
+======================
+
+    py.test tests/test_api_build.py
 
 Run one test function:
 ======================
