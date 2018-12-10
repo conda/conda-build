@@ -81,10 +81,10 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
                 with LoggingContext():
                     download(url, path)
             except CondaHTTPError as e:
-                log.warn("Error: %s" % str(e).strip(), file=sys.stderr)
+                log.warn("Error: %s" % str(e).strip())
                 rm_rf(path)
             except RuntimeError as e:
-                log.warn("Error: %s" % str(e).strip(), file=sys.stderr)
+                log.warn("Error: %s" % str(e).strip())
                 rm_rf(path)
             else:
                 if verbose:
