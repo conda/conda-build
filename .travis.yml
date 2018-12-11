@@ -27,6 +27,7 @@ addons:
   apt:
     packages:
     - attr
+    - mercurial
 
 install:
   # show which shell we are running
