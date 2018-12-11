@@ -252,7 +252,6 @@ def pin_compatible(m, package_name, lower_bound=None, upper_bound=None, min_pin=
                     else:
                         compatibility = apply_pin_expressions(version, min_pin, max_pin)
 
-
     if (not compatibility and not permit_undefined_jinja and not bypass_env_check):
         check = re.compile(r'pin_compatible\s*\(\s*[''"]{}[''"]'.format(package_name))
         if check.search(m.extract_requirements_text()):
