@@ -44,6 +44,12 @@ if PY3:
 else:
     from scandir import scandir
 
+filetypes_for_platform = {
+    "win": ('DLLfile', 'EXEfile'),
+    "osx": ['machofile'],
+    "linux": ['elffile'],
+}
+
 
 def fix_shebang(f, prefix, build_python, osx_is_app=False):
     path = os.path.join(prefix, f)
@@ -788,10 +794,11 @@ def _lookup_in_prefix_packages(errors, needed_dso, files, run_prefix, whitelist,
 
 def _show_linking_messages(files, errors, needed_dsos_for_file, build_prefix, run_prefix, pkg_name,
                            error_overlinking, runpath_whitelist, verbose, requirements_run, lib_packages,
-                           lib_packages_used, whitelist, sysroots, sysroot_prefix, sysroot_substitution):
+                           lib_packages_used, whitelist, sysroots, sysroot_prefix, sysroot_substitution, subdir):
     for f in files:
         path = os.path.join(run_prefix, f)
-        if not codefile_type(path):
+        filetype = codefile_type(path)
+        if not filetype or filetype not in filetypes_for_platform[subdir.split('-')[0]]:
             continue
         warn_prelude = "WARNING ({},{})".format(pkg_name, f)
         err_prelude = "  ERROR ({},{})".format(pkg_name, f)
@@ -879,7 +886,8 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
 
     for f in files:
         path = os.path.join(run_prefix, f)
-        if not codefile_type(path):
+        filetype = codefile_type(path)
+        if not filetype or filetype not in filetypes_for_platform[subdir.split('-')[0]]:
             continue
         needed = needed_dsos_for_file[f]
         for needed_dso in needed:
@@ -894,7 +902,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     whitelist += missing_dso_whitelist
     _show_linking_messages(files, errors, needed_dsos_for_file, build_prefix, run_prefix, pkg_name,
                            error_overlinking, runpath_whitelist, verbose, requirements_run, lib_packages,
-                           lib_packages_used, whitelist, sysroots, sysroot_prefix, sysroot_substitution)
+                           lib_packages_used, whitelist, sysroots, sysroot_prefix, sysroot_substitution, subdir)
 
     if lib_packages_used != lib_packages:
         info_prelude = "   INFO ({})".format(pkg_name)
