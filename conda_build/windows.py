@@ -276,7 +276,7 @@ def write_build_scripts(m, env, bld_bat):
         if m.config.activate and m.name() != 'conda':
             _write_bat_activation_text(fo, m)
     # bld_bat may have been generated elsewhere with contents of build/script
-    work_script = join(m.config.work_dir, 'bld.bat')
+    work_script = join(m.config.work_dir, 'conda_build.bat')
     if os.path.isfile(bld_bat):
         with open(bld_bat) as fi:
             data = fi.read()
@@ -329,7 +329,7 @@ def build(m, bld_bat, stats, provision_only=False):
     work_script, env_script = write_build_scripts(m, env, bld_bat)
 
     if not provision_only and os.path.isfile(work_script):
-        cmd = ['cmd.exe', '/c', 'bld.bat']
+        cmd = ['cmd.exe', '/c', os.path.basename(work_script)]
         # rewrite long paths in stdout back to their env variables
         if m.config.debug:
             rewrite_env = None
