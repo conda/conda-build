@@ -552,6 +552,14 @@ def apply_patch(src_dir, path, config, git=None):
     if not isfile(path):
         sys.exit('Error: no such patch: %s' % path)
 
+    if config.verbose:
+        stdout = None
+        stderr = None
+    else:
+        FNULL = open(os.devnull, 'w')
+        stdout = FNULL
+        stderr = FNULL
+
     files, is_git_format = _get_patch_file_details(path)
     if git and is_git_format:
         # Prevents git from asking interactive questions,
@@ -563,10 +571,11 @@ def apply_patch(src_dir, path, config, git=None):
         git_env['GIT_COMMITTER_NAME'] = 'conda-build'
         git_env['GIT_COMMITTER_EMAIL'] = 'conda@conda-build.org'
         check_call_env([git, 'am', '--committer-date-is-author-date', path],
-                       cwd=src_dir, stdout=None, env=git_env)
+                       cwd=src_dir, stdout=stdout, stderr=stderr, env=git_env)
         config.git_commits_since_tag += 1
     else:
-        print('Applying patch: %r' % path)
+        if config.verbose:
+            print('Applying patch: %r' % path)
         patch = external.find_executable('patch', config.build_prefix)
         if patch is None:
             sys.exit("""\
@@ -583,24 +592,27 @@ def apply_patch(src_dir, path, config, git=None):
 
         try:
             log = get_logger(__name__)
-            log.info("Trying to apply patch as-is")
-            check_call_env([patch] + patch_args, cwd=src_dir)
+            if config.verbose:
+                log.info("Trying to apply patch as-is")
+            check_call_env([patch] + patch_args, cwd=src_dir, stdout=stdout, stderr=stderr)
         except CalledProcessError:
             if sys.platform == 'win32':
                 unix_ending_file = _ensure_unix_line_endings(path)
                 patch_args[-1] = unix_ending_file
                 try:
-                    log.info("Applying unmodified patch failed.  "
-                             "Convert to unix line endings and trying again.")
-                    check_call_env([patch] + patch_args, cwd=src_dir)
+                    if config.verbose:
+                        log.info("Applying unmodified patch failed.  "
+                                "Convert to unix line endings and trying again.")
+                    check_call_env([patch] + patch_args, cwd=src_dir, stdout=stdout, stderr=stderr)
                 except:
-                    log.info("Applying unix patch failed.  "
-                             "Convert to CRLF line endings and trying again with --binary.")
+                    if config.verbose:
+                        log.info("Applying unix patch failed.  "
+                                "Convert to CRLF line endings and trying again with --binary.")
                     patch_args.insert(0, '--binary')
                     win_ending_file = _ensure_win_line_endings(path)
                     patch_args[-1] = win_ending_file
                     try:
-                        check_call_env([patch] + patch_args, cwd=src_dir)
+                        check_call_env([patch] + patch_args, cwd=src_dir, stdout=stdout, stderr=stderr)
                     except:
                         raise
                     finally:
