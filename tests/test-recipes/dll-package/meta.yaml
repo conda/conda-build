@@ -1,0 +1,15 @@
+package:
+  name: dll-hello
+  version: 1.0.0
+
+build:
+  number: 0
+  script:
+    - pushd ${RECIPE_DIR}  # [not win]
+    - pushd %RECIPE_DIR%   # [win]
+
+    - cp jansi.dll ${PREFIX}         # [not win]
+    - cp jansi.dll %LIBRARY_PREFIX%  # [win]
+
+about:
+  summary: Tests that standalone dlls can be packaged

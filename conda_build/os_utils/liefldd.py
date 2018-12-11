@@ -117,6 +117,11 @@ def get_rpaths(file, exe_dirname, envroot, windows_root=''):
     rpaths = []
     if binary:
         if binary.format == lief.EXE_FORMATS.PE:
+            if not exe_dirname:
+                # log = get_logger(__name__)
+                # log.warn("Windows library file at %s could not be inspected for rpath.  If it's a standalone "
+                #          "thing from a 3rd party, this is safe to ignore." % file)
+                return []
             # To allow the unix-y rpath code to work we consider
             # exes as having rpaths of env + CONDA_WINDOWS_PATHS
             # and consider DLLs as having no rpaths.
