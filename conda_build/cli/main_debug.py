@@ -81,7 +81,7 @@ def execute(args):
                 test_file = "conda_test_runner.sh" if on_win else "conda_test_runner.sh"
                 print("To run your tests, you might want to start with running the {} file.".format(test_file))
             else:
-                build_file = "bld.bat" if on_win else "conda_build.sh"
+                build_file = "conda_build.bat" if on_win else "conda_build.sh"
                 print("To run your build, you might want to start with running the {} file.".format(build_file))
             print("#" * 80)
 

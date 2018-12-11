@@ -22,8 +22,6 @@ from uuid import uuid4
 from conda.common.compat import ensure_binary
 # from conda.resolve import dashlist
 
-import requests
-from requests.exceptions import InvalidSchema
 import pytz
 from jinja2 import Environment, PackageLoader
 from tqdm import tqdm
@@ -40,8 +38,9 @@ import libarchive
 
 
 from . import conda_interface, utils
-from .conda_interface import MatchSpec, VersionOrder, human_bytes, context, memoized
+from .conda_interface import MatchSpec, VersionOrder, human_bytes, context
 from .conda_interface import CondaError, CondaHTTPError, get_index, url_path
+from .conda_interface import download, TemporaryDirectory
 from .utils import glob, get_logger, FileNotFoundError, PermissionError
 
 try:
@@ -163,9 +162,16 @@ except ImportError:  # pragma: no cover
     from conda._vendor.toolz.itertoolz import concat, concatv, groupby  # NOQA
 
 
-@memoized
 def _download_channeldata(channel_url):
-    return requests.get(channel_url)
+    with TemporaryDirectory() as td:
+        tf = os.path.join(td, "channeldata.json")
+        download(channel_url, tf)
+        try:
+            with open(tf) as f:
+                data = json.load(f)
+        except json.decoder.JSONDecodeError:
+            data = {}
+    return data
 
 
 def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
@@ -249,43 +255,30 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
             superchannel = {}
             # we need channeldata.json too, as it is a more reliable source of run_exports data
             for channel in expanded_channels:
-                err = None
                 if channel.scheme == "file":
                     location = channel.location
-                    if not os.path.isabs(channel.location) and os.path.exists(os.path.join('/', channel.location)):
-                        location = os.path.join('/', channel.location)
-                    with open(os.path.join(location, channel.name, 'channeldata.json')) as f:
-                        channel_data[channel.name] = json.load(f)
-                else:
+                    if utils.on_win:
+                        location = location.lstrip("/")
+                    elif (not os.path.isabs(channel.location) and
+                            os.path.exists(os.path.join(os.path.sep, channel.location))):
+                        location = os.path.join(os.path.sep, channel.location)
+                    channeldata_file = os.path.join(location, channel.name, 'channeldata.json')
                     retry = 0
-                    max_retries = 1
+                    max_retries = 10
                     while retry < max_retries:
-                        # download channeldata.json for url
                         try:
-                            channel_content = _download_channeldata(channel.base_url + '/channeldata.json')
-                            if channel_content.status_code == 200:
-                                try:
-                                    # load its JSON content
-                                    channel_data[channel.name] = channel_content.json()
-                                except ValueError:
-                                    # no JSON data; skip it
-                                    pass
-                                break
-                            elif channel_content.status_code == 404:
-                                break
-                        except InvalidSchema as e:
-                            # store exception for potential later use; retry
-                            err = e
-                            log.warn("Problem downloading channeldata for url: %s.  Retrying (%d of %d) in 2 sec" % (
-                                channel.name, retry + 1, max_retries))
-                            time.sleep(2)
+                            with open(channeldata_file, "r+") as f:
+                                channel_data[channel.name] = json.load(f)
+                            break
+                        except (IOError, json.decoder.JSONDecodeError):
+                            time.sleep(0.2)
                             retry += 1
-                            if retry == max_retries:
-                                log.warn("Problem downloading channeldata for url: %s.  Exception may follow this message. "
-                                        "Rerun in debug mode for more info" % channel.name)
-                                if err:
-                                    log.warn(str(err))
-
+                else:
+                    # download channeldata.json for url
+                    try:
+                        channel_data[channel.name] = _download_channeldata(channel.base_url + '/channeldata.json')
+                    except CondaHTTPError:
+                        continue
                 # collapse defaults metachannel back into one superchannel, merging channeldata
                 if channel.base_url in context.default_channels and channel_data.get(channel.name):
                     packages = superchannel.get('packages', {})
