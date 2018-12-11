@@ -166,8 +166,11 @@ def _download_channeldata(channel_url):
     with TemporaryDirectory() as td:
         tf = os.path.join(td, "channeldata.json")
         download(channel_url, tf)
-        with open(tf) as f:
-            data = json.load(f)
+        try:
+            with open(tf) as f:
+                data = json.load(f)
+        except json.decoder.JSONDecodeError:
+            data = {}
     return data
 
 
@@ -259,8 +262,17 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
                     elif (not os.path.isabs(channel.location) and
                             os.path.exists(os.path.join(os.path.sep, channel.location))):
                         location = os.path.join(os.path.sep, channel.location)
-                    with open(os.path.join(location, channel.name, 'channeldata.json')) as f:
-                        channel_data[channel.name] = json.load(f)
+                    channeldata_file = os.path.join(location, channel.name, 'channeldata.json')
+                    retry = 0
+                    max_retries = 10
+                    while retry < max_retries:
+                        try:
+                            with open(channeldata_file, "r+") as f:
+                                channel_data[channel.name] = json.load(f)
+                            break
+                        except (IOError, json.decoder.JSONDecodeError):
+                            time.sleep(0.2)
+                            retry += 1
                 else:
                     # download channeldata.json for url
                     try:
