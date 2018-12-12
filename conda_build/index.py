@@ -169,7 +169,7 @@ def _download_channeldata(channel_url):
         try:
             with open(tf) as f:
                 data = json.load(f)
-        except json.decoder.JSONDecodeError:
+        except JSONDecodeError:
             data = {}
     return data
 
@@ -270,7 +270,7 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
                             with open(channeldata_file, "r+") as f:
                                 channel_data[channel.name] = json.load(f)
                             break
-                        except (IOError, json.decoder.JSONDecodeError):
+                        except (IOError, JSONDecodeError):
                             time.sleep(0.2)
                             retry += 1
                 else:
