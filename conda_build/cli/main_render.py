@@ -217,7 +217,7 @@ def execute(args, print_results=True):
                 print("----------")
                 print("meta.yaml:")
                 print("----------")
-                print(api.output_yaml(m, args.file))
+                print(api.output_yaml(m, args.file, suppress_outputs=True))
     else:
         return metadata_tuples
 

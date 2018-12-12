@@ -28,8 +28,8 @@ def test_api_render():
 
 def test_api_output_yaml():
     argspec = getargspec(api.output_yaml)
-    assert argspec.args == ['metadata', 'file_path']
-    assert argspec.defaults == (None,)
+    assert argspec.args == ['metadata', 'file_path', 'suppress_outputs']
+    assert argspec.defaults == (None, False)
 
 
 def test_api_get_output_file_path():

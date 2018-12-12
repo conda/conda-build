@@ -77,10 +77,10 @@ def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variant
     return list(output_metas.values())
 
 
-def output_yaml(metadata, file_path=None):
+def output_yaml(metadata, file_path=None, suppress_outputs=False):
     """Save a rendered recipe in its final form to the path given by file_path"""
     from conda_build.render import output_yaml
-    return output_yaml(metadata, file_path)
+    return output_yaml(metadata, file_path, suppress_outputs=suppress_outputs)
 
 
 def get_output_file_paths(recipe_path_or_metadata, no_download_source=False, config=None,

@@ -850,9 +850,12 @@ else:
     yaml.add_representer(unicode, _unicode_representer)
 
 
-def output_yaml(metadata, filename=None):
-    utils.trim_empty_keys(metadata.meta)
-    output = yaml.dump(_MetaYaml(metadata.meta), Dumper=_IndentDumper,
+def output_yaml(metadata, filename=None, suppress_outputs=False):
+    local_metadata = metadata.copy()
+    utils.trim_empty_keys(local_metadata.meta)
+    if suppress_outputs and local_metadata.is_output and 'outputs' in local_metadata.meta:
+        del local_metadata.meta['outputs']
+    output = yaml.dump(_MetaYaml(local_metadata.meta), Dumper=_IndentDumper,
                        default_flow_style=False, indent=4)
     if filename:
         if any(sep in filename for sep in ('\\', '/')):

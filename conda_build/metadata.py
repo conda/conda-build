@@ -1236,6 +1236,7 @@ class MetaData(object):
         #    recipe.  Includes compiler if compiler jinja2 function is used.
         """
         dependencies = set(self.get_used_vars())
+
         trim_build_only_deps(self, dependencies)
 
         # filter out ignored versions
@@ -2107,10 +2108,11 @@ class MetaData(object):
         recipe_dir = self.path
         if hasattr(self.config, 'used_vars'):
             used_vars = self.config.used_vars
-        elif (self.name(), recipe_dir, force_top_level,
-              force_global, self.config.subdir) in used_vars_cache:
+        elif (self.name(), recipe_dir, force_top_level, force_global, self.config.subdir,
+              HashableDict(self.config.variant)) in used_vars_cache:
             used_vars = used_vars_cache[(self.name(), recipe_dir,
-                                         force_top_level, force_global, self.config.subdir)]
+                                         force_top_level, force_global, self.config.subdir,
+                                         HashableDict(self.config.variant))]
         else:
             meta_yaml_reqs = self._get_used_vars_meta_yaml(force_top_level=force_top_level,
                                                            force_global=force_global)
@@ -2131,8 +2133,8 @@ class MetaData(object):
             if self.force_use_keys or self.force_ignore_keys:
                 used_vars = (used_vars - set(self.force_ignore_keys)) | set(self.force_use_keys)
 
-            used_vars_cache[(self.name(), recipe_dir, force_top_level,
-                             force_global, self.config.subdir)] = used_vars
+            used_vars_cache[(self.name(), recipe_dir, force_top_level, force_global,
+                             self.config.subdir, HashableDict(self.config.variant))] = used_vars
         return used_vars
 
     def _get_used_vars_meta_yaml_helper(self, force_top_level=False, force_global=False,
@@ -2167,6 +2169,7 @@ class MetaData(object):
 
         reqs_text, recipe_text = self._get_used_vars_meta_yaml_helper(
             force_top_level=force_top_level, force_global=force_global, apply_selectors=False)
+
         all_used_selectors = variants.find_used_variables_in_text(variant_keys, recipe_text,
                                                                     selectors=True)
 
