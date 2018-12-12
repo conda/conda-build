@@ -442,22 +442,28 @@ def get_imports(file, arch='native'):
     return [str(i) for i in binary.imported_functions]
 
 
+def _get_archive_signature(file):
+    try:
+        with open(file, 'rb') as f:
+            index = 0
+            content = f.read(8)
+            signature, = struct.unpack('<8s', content[index:8])
+            return signature, 8
+    except:
+        return '', 0
+
+
+def is_archive(file):
+    signature, _ = _get_archive_signature(file)
+    return True if signature == b'!<arch>\n' else False
+
+
 def get_static_lib_exports(file):
     # References:
     # https://github.com/bminor/binutils-gdb/tree/master/bfd/archive.c
     # https://en.wikipedia.org/wiki/Ar_(Unix)
     # https://web.archive.org/web/20100314154747/http://www.microsoft.com/whdc/system/platform/firmware/PECOFF.mspx
-    results = []
-    with open(file, 'rb') as f:
-        print("Archive file {}".format(file))
-        index = 0
-        content = f.read()
-        fsize = len(content)
-        signature, = struct.unpack('<8s', content[index:8])
-        if signature != b'!<arch>\n':
-            print("ERROR: {} is not an archive".format(file))
-            return results
-        index += 8
+    def _parse_ar_hdr(content, index):
         '''
         0   16  File identifier                 ASCII
         16  12 	File modification timestamp     Decimal
@@ -465,40 +471,58 @@ def get_static_lib_exports(file):
         34  6   Group ID                        Decimal
         40  8   File mode                       Octal
         48  10  File size in bytes              Decimal
-        58  2   Ending characters               0x60 0x0A 
+        58  2   Ending characters               0x60 0x0A
         '''
         header_fmt = '<16s 12s 6s 6s 8s 10s 2s'
         header_sz = struct.calcsize(header_fmt)
-        while (index + header_sz) < fsize:
+
+        name, modified, owner, group, mode, size, ending = \
+            struct.unpack(header_fmt, content[index:index+header_sz])
+        try:
+            size = int(size)
+        except:
+            print('ERROR: {} has non-integral size of {}'.format(name, size))
+            return index, '', 0, 'INVALID'
+        name_len = 0  # File data in BSD format archives begin with a name of this length.
+        if name.startswith(b'#1/'):
+            typ = 'BSD'
+            name_len = int(name[3:])
+            name, = struct.unpack('<'+str(name_len)+'s', content[index+header_sz:index+header_sz+name_len])
+            if b'\x00' in name:
+                name = name[:name.find(b'\x00')]
+        elif name.startswith(b'//'):
+            typ = 'GNU_TABLE'
+        elif name.strip() == b'/':
+            typ = 'GNU_SYMBOLS'
+        elif name.startswith(b'/'):
+            typ = 'GNU'
+        else:
+            typ = 'NORMAL'
+        print("index={}, name={}, ending={}, size={}, type={}".format(index, name, ending, size, typ))
+        index += header_sz + name_len
+        return index, name, name_len, size, typ
+
+    results = []
+    signature, len_signature = _get_archive_signature(file)
+    if signature != b'!<arch>\n':
+        print("ERROR: {} is not an archive".format(file))
+        return results
+    with open(file, 'rb') as f:
+        print("Archive file {}".format(file))
+        index = 0
+        content = f.read()
+        fsize = len(content)
+        index += len_signature
+        while (index) < fsize:
             if index & 1:
                 index += 1
-            name, modified, owner, group, mode, size, ending = \
-                struct.unpack(header_fmt, content[index:index + header_sz])
-            try:
-                size = int(size)
-            except:
-                print('ERROR: {} has non-integral size of {}'.format(id, size))
-                return results
-            name_len = 0  # File data in BSD format archives begin with a name of this length. 
-            if name.startswith(b'#1/'):
-                type = 'BSD'
-                name_len = int(name[3:])
-                name, = struct.unpack('<'+str(name_len)+'s', content[index + header_sz:index + header_sz + name_len])
-                if b'\x00' in name:
-                    name = name[:name.find(b'\x00')]
-            elif name.startswith(b'//'):
-                type = 'GNU_TABLE'
-            elif name.strip() == b'/':
-                type = 'GNU_SYMBOLS'
-            elif name.startswith(b'/'):
-                type = 'GNU'
-            else:
-                type = 'NORMAL'
-            print("index={}, name={}, ending={}, size={}, type={}".format(index, name, ending, size, type))
-            index += header_sz + name_len
+            print("ar_hdr index = {}".format(hex(index)))
+#            name, modified, owner, group, mode, size, ending = \
+#                struct.unpack(header_fmt, content[index:index + header_sz])
+            index, name, name_len, size, typ = _parse_ar_hdr(content, index)
             # if QUERY_STATIC_LIB_EXPORTS_VIA_LIEF:
-            object_file_data = content[index:index+size]
-            if type == 'GNU_SYMBOLS':
+            #     object_file_data = content[index:index+size]
+            if typ == 'GNU_SYMBOLS':
                 # Reference:
                 nsymbols, = struct.unpack('>I', content[index:index+4])
                 return [fname.decode('utf-8')
@@ -547,16 +571,23 @@ def get_static_lib_exports(file):
                 # Comment the return out if you want to play with object_file_data, note we are *not* advancing index
                 # past the sting table.
                 # if not QUERY_STATIC_LIB_EXPORTS_VIA_LIEF:
-                return filtered_syms, filtered_ranlib_structs, syms, ranlib_structs
+                for ranlib_struct in filtered_ranlib_structs:
+                    ran_off = ranlib_struct[1]
+                    if ran_off > len(content):
+                        print("Well this isn't possible")
+                    # ran_off, name, name_len, typ = _parse_ar_hdr(content, ran_off)
+                    # print(name)
             index += size - name_len
-        print("ERROR: Failed to find ranlib symbol defintions or GNU symbols")
-        return results
+#        print("ERROR: Failed to find ranlib symbol defintions or GNU symbols")
+        return filtered_syms, filtered_ranlib_structs, syms, ranlib_structs
 
 
 def get_exports(filename, arch='native'):
     result = []
     if isinstance(filename, str):
-        if os.path.exists(filename) and filename.endswith('.a') or filename.endswith('.lib'):
+        if (os.path.exists(filename) and
+           (filename.endswith('.a') or filename.endswith('.lib')) and
+           is_archive(filename)):
             # Sorry!
             import subprocess
             # syms = os.system('nm -g {}'.filename)
@@ -611,7 +642,6 @@ def get_exports(filename, arch='native'):
                         print('wtf 4 {}'.format(item))
                     idx = exports2.index(item)
                     print("{:>64} : str_idx={:08x} off={:08x}".format(item, flags2[idx][0], flags2[idx][1]))
-                    print("{:>64} : {:08x}".format(item, flags2[idx][0]))
 #                    print("{:>64} : {:032b}".format(item, flags2[idx][0]))
 
                 print("\nAll symbols\n")
