@@ -539,7 +539,7 @@ def get_static_lib_exports(file):
                 # section (a string table of symbols) and an offset from the beginning of
                 # the archive to the start of the archive file which defines the symbol
                 nsymbols = size_ranlib_structs // 8
-                size_string_table, = struct.unpack('<I', content[index+4+(nsymbols*8):index+4+4+(nsymbols*8)])
+                size_string_table, = struct.unpack('<I', content[index+4+(nsymbols*ranlib_struct_sz*2):index+4+4+(nsymbols*ranlib_struct_sz*2)])
                 ranlib_structs = []
                 for i in range(nsymbols):
                     ran_off, ran_strx = struct.unpack('<'+ranlib_struct_fmt+ranlib_struct_fmt,
@@ -547,7 +547,7 @@ def get_static_lib_exports(file):
                     ranlib_structs.append((ran_strx, ran_off))
                 # This is plain wrong. There is not a 1:1 correspondence between strings and symbols!
                 string_table = content[index+4+4+(nsymbols*ranlib_struct_sz*2):index+4+4+(nsymbols*ranlib_struct_sz*2)+size_string_table]
-                string_table = string_table.decode('utf-8')
+                string_table = string_table.decode('utf-8', errors='ignore')
                 filtered_syms = []
                 filtered_ranlib_structs = []
                 syms = []
