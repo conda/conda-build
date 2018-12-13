@@ -1,3 +1,20 @@
+2018-12-12 3.17.4
+-----------------
+
+Bug fixes:
+----------
+
+* fix python-3 only JSON decode error handling (make py27 compatible)  #3307
+* fix too much caching in getting used vars from meta.yaml leading to inaccurate hash contents  #3311
+* fix merge of build/host not being recognized before an rm_rf call utilized that info  #3311
+
+Contributors:
+-------------
+
+* @Lnaden
+* @msarahan
+
+
 2018-12-11 3.17.3
 -----------------
 
