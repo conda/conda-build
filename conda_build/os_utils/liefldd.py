@@ -449,6 +449,8 @@ def _get_archive_signature(file):
         return '', 0
 
 
+debug_static_archives = True
+
 def is_archive(file):
     signature, _ = _get_archive_signature(file)
     return True if signature == b'!<arch>\n' else False
@@ -494,7 +496,7 @@ def get_static_lib_exports(file):
             typ = 'GNU'
         else:
             typ = 'NORMAL'
-        print("index={}, name={}, ending={}, size={}, type={}".format(index, name, ending, size, typ))
+        if debug_static_archives: print("index={}, name={}, ending={}, size={}, type={}".format(index, name, ending, size, typ))
         index += header_sz + name_len
         return index, name, name_len, size, typ
 
@@ -504,7 +506,7 @@ def get_static_lib_exports(file):
         print("ERROR: {} is not an archive".format(file))
         return results
     with open(file, 'rb') as f:
-        print("Archive file {}".format(file))
+        if debug_static_archives: print("Archive file {}".format(file))
         index = 0
         content = f.read()
         fsize = len(content)
@@ -512,7 +514,7 @@ def get_static_lib_exports(file):
         while (index) < fsize:
             if index & 1:
                 index += 1
-            print("ar_hdr index = {}".format(hex(index)))
+            if debug_static_archives: print("ar_hdr index = {}".format(hex(index)))
 #            name, modified, owner, group, mode, size, ending = \
 #                struct.unpack(header_fmt, content[index:index + header_sz])
             index, name, name_len, size, typ = _parse_ar_hdr(content, index)
@@ -556,14 +558,10 @@ def get_static_lib_exports(file):
                     strx, off = ranlib_struct
                     sym = string_table[strx:strx+string_table[strx:].find('\x00')]
                     syms.append(sym)
-                    print("{} :: strx={}, off={}".format(syms[i], hex(strx), hex(off)))
+                    if debug_static_archives: print("{} :: strx={}, off={}".format(syms[i], hex(strx), hex(off)))
                     if True:
                         filtered_syms.append(sym)
                         filtered_ranlib_structs.append(ranlib_struct)
-                if not '_PL_simple' in syms:
-                    print('wtf')
-                if not '_PL_simple' in filtered_syms:
-                    print('wtf 2')
                 # Comment the return out if you want to play with object_file_data, note we are *not* advancing index
                 # past the sting table.
                 # if not QUERY_STATIC_LIB_EXPORTS_VIA_LIEF:
@@ -616,36 +614,33 @@ def get_exports(filename, arch='native'):
                 diff1 = set(exports).difference(set(exports2))
                 diff2 = set(exports2).difference(set(exports))
                 error_count = len(diff1) + len(diff2)
-                print("errors: {} (-{}, +{})".format(error_count, len(diff1), len(diff2)))
-                print("WARNING :: Disagreement regarding static lib exports in {} between nm (nsyms={}) and lielfldd (nsyms={}):"
+                if debug_static_archives: print("errors: {} (-{}, +{})".format(error_count, len(diff1), len(diff2)))
+                if debug_static_archives: print("WARNING :: Disagreement regarding static lib exports in {} between nm (nsyms={}) and lielfldd (nsyms={}):"
                       .format(filename, len(exports), len(exports2)))
 #                print("nm.diff(liefldd) = \n{}".format('\n'.join(diff1)))
 #                print("liefldd.diff(nm) = \n{}".format('\n'.join(diff2)))
 
-                print("\nMissing symbols\n")
+                if debug_static_archives: print("\nMissing symbols\n")
 
                 for item in diff1:
                     if item not in exports2_all:
                         print('wtf 3 {}'.format(item))
                     idx = exports2_all.index(item)
-                    print("{:>64} : str_idx={:08x} off={:08x}".format(item, flags2_all[idx][0], flags2_all[idx][1]))
-#                    print("{:>64} : {:032b}".format(item, flags2_all[idx][0]))
+                    if debug_static_archives: print("{:>64} : str_idx={:08x} off={:08x}".format(item, flags2_all[idx][0], flags2_all[idx][1]))
 
-                print("\nUnwanted symbols\n")
+                if debug_static_archives: print("\nUnwanted symbols\n")
 
                 for item in diff2:
                     if item not in exports2_all:
-                        print('wtf 4 {}'.format(item))
+                        if debug_static_archives: print('wtf 4 {}'.format(item))
                     idx = exports2.index(item)
-                    print("{:>64} : str_idx={:08x} off={:08x}".format(item, flags2[idx][0], flags2[idx][1]))
-#                    print("{:>64} : {:032b}".format(item, flags2[idx][0]))
+                    if debug_static_archives: print("{:>64} : str_idx={:08x} off={:08x}".format(item, flags2[idx][0], flags2[idx][1]))
 
-                print("\nAll symbols\n")
+                if debug_static_archives: print("\nAll symbols\n")
 
                 for item in exports2_all:
                     idx = exports2_all.index(item)
-                    print("{:>64} : str_idx={:08x} off={:08x}".format(item, flags2_all[idx][0], flags2_all[idx][1]))
-#                    print("{:>64} : {:032b}".format(item, flags2_all[idx][0]))
+                    if debug_static_archives: print("{:>64} : str_idx={:08x} off={:08x}".format(item, flags2_all[idx][0], flags2_all[idx][1]))
 
     if not result:
         binary = ensure_binary(filename)
@@ -837,7 +832,9 @@ import glob
 # for static_lib in glob.iglob('/opt/conda/pkgs/**/*.a', recursive=True):
 # for static_lib in ['/opt/conda/pkgs/flex-2.6.4-hb56bbfa_1/lib/libfl.a']:
 # for static_lib in ['/opt/conda/pkgs/libtool-2.4.6-h7b6447c_5/lib/libltdl.a']:
-for static_lib in ['/opt/conda/pkgs/perl-5.22.2.1-0/lib/perl5/5.22.2/darwin-thread-multi-2level/CORE/libperl.a']:
+# for static_lib in ['/opt/conda/pkgs/perl-5.22.2.1-0/lib/perl5/5.22.2/darwin-thread-multi-2level/CORE/libperl.a']:
+# for static_lib in ['/opt/conda/pkgs/perl-5.22.2.1-0/lib/perl5/5.22.2/darwin-thread-multi-2level/CORE/libperl.a']:
+for static_lib in ['/Users/rdonnelly/conda/libgmp.a']:
     get_exports(static_lib)
 
 # Test a symbol on macOS:
