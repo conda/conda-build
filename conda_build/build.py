@@ -1491,7 +1491,16 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
     new_pkgs = default_return
     if not provision_only and post in [True, None]:
         outputs = output_metas or m.get_output_metadata_set(permit_unsatisfiable_variants=False)
+
         top_level_meta = m
+
+        # check output names
+        for (output_d, mm) in outputs:
+            if output_d['name'] == top_level_meta.meta['package']['name']:
+                if any(_['name'] == output_d['name'] for _ in mm.meta.get('outputs', [])):
+                    raise ValueError(
+                        'Output name and package name are the same: "{}". This is not allowed.'
+                        .format(output_d['name']))
 
         # this is the old, default behavior: conda package, with difference between start
         #    set of files and end set of files
