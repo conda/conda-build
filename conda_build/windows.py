@@ -301,7 +301,6 @@ def build(m, bld_bat, stats, provision_only=False):
     # Note that pip env "NO" variables are inverted logic.
     #      PIP_NO_BUILD_ISOLATION=False means don't use build isolation.
     #
-    # This needs to be a string, falsey values are not written to the env file
     env["PIP_NO_BUILD_ISOLATION"] = 'False'
     # some other env vars to have pip ignore dependencies.
     # we supply them ourselves instead.
