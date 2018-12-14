@@ -264,7 +264,7 @@ def write_build_scripts(m, env, bld_bat):
         # more debuggable with echo on
         fo.write('@echo on\n')
         for key, value in env.items():
-            if value:
+            if value != '' and value is not None:
                 fo.write('set "{key}={value}"\n'.format(key=key, value=value))
         if not m.uses_new_style_compiler_activation:
             fo.write(msvc_env_cmd(bits=m.config.host_arch, config=m.config,
@@ -301,11 +301,11 @@ def build(m, bld_bat, stats, provision_only=False):
     # Note that pip env "NO" variables are inverted logic.
     #      PIP_NO_BUILD_ISOLATION=False means don't use build isolation.
     #
-    env["PIP_NO_BUILD_ISOLATION"] = False
+    env["PIP_NO_BUILD_ISOLATION"] = 'False'
     # some other env vars to have pip ignore dependencies.
     # we supply them ourselves instead.
     #    See note above about inverted logic on "NO" variables
-    env["PIP_NO_DEPENDENCIES"] = False
+    env["PIP_NO_DEPENDENCIES"] = True
     env["PIP_IGNORE_INSTALLED"] = True
 
     # pip's cache directory (PIP_NO_CACHE_DIR) should not be

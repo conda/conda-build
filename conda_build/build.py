@@ -1856,7 +1856,7 @@ def write_build_scripts(m, script, build_file):
     # Note that pip env "NO" variables are inverted logic.
     #      PIP_NO_BUILD_ISOLATION=False means don't use build isolation.
     #
-    env["PIP_NO_BUILD_ISOLATION"] = False
+    env["PIP_NO_BUILD_ISOLATION"] = 'False'
     # some other env vars to have pip ignore dependencies.
     # we supply them ourselves instead.
     env["PIP_NO_DEPENDENCIES"] = True
@@ -1876,7 +1876,7 @@ def write_build_scripts(m, script, build_file):
     env_file = join(m.config.work_dir, 'build_env_setup.sh')
     with open(env_file, 'w') as bf:
         for k, v in env.items():
-            if v:
+            if v != '' and v is not None:
                 bf.write('export {0}="{1}"\n'.format(k, v))
 
         if m.activate_build_script:
