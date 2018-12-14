@@ -264,7 +264,7 @@ def write_build_scripts(m, env, bld_bat):
         # more debuggable with echo on
         fo.write('@echo on\n')
         for key, value in env.items():
-            if value:
+            if value != '':
                 fo.write('set "{key}={value}"\n'.format(key=key, value=value))
         if not m.uses_new_style_compiler_activation:
             fo.write(msvc_env_cmd(bits=m.config.host_arch, config=m.config,
