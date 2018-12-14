@@ -1876,7 +1876,7 @@ def write_build_scripts(m, script, build_file):
     env_file = join(m.config.work_dir, 'build_env_setup.sh')
     with open(env_file, 'w') as bf:
         for k, v in env.items():
-            if v != '':  # do not write empty strings
+            if v != '' and v is not None:
                 bf.write('export {0}="{1}"\n'.format(k, v))
 
         if m.activate_build_script:
