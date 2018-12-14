@@ -1,3 +1,19 @@
+2018-12-14 3.17.5
+-----------------
+
+Bug fixes:
+----------
+
+* fix pip build isolation / fix absence of "falsey" env vars.  Ignore only if empty string or None.  #3319
+* pass-through VS20XYINSTALLDIR var (used by intel compiler to locate VS2017 installation)  #3322
+
+Contributors:
+-------------
+
+* @jjhelmus
+* @msarahan
+
+
 2018-12-12 3.17.4
 -----------------
 
