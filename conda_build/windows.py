@@ -305,7 +305,7 @@ def build(m, bld_bat, stats, provision_only=False):
     # some other env vars to have pip ignore dependencies.
     # we supply them ourselves instead.
     #    See note above about inverted logic on "NO" variables
-    env["PIP_NO_DEPENDENCIES"] = False
+    env["PIP_NO_DEPENDENCIES"] = True
     env["PIP_IGNORE_INSTALLED"] = True
 
     # pip's cache directory (PIP_NO_CACHE_DIR) should not be
