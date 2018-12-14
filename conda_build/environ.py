@@ -549,6 +549,8 @@ def windows_vars(m, get_default, prefix):
     for k in os.environ.keys():
         if re.match('VS[0-9]{2,3}COMNTOOLS', k):
             get_default(k)
+        elif re.match('VS[0-9]{4}INSTALLDIR', k):
+            get_default(k)
 
 
 def unix_vars(m, get_default, prefix):
