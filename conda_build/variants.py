@@ -31,7 +31,7 @@ DEFAULT_VARIANTS = {
     'pin_run_as_build': OrderedDict(python=OrderedDict(min_pin='x.x', max_pin='x.x')),
     'ignore_version': [],
     'ignore_build_only_deps': ['python', 'numpy'],
-    'extend_keys': ['pin_run_as_build', 'ignore_version', 'ignore_build_only_deps'],
+    'extend_keys': ['pin_run_as_build', 'ignore_version', 'ignore_build_only_deps', 'extend_keys'],
     'cran_mirror': "https://cran.r-project.org",
 }
 
@@ -265,9 +265,7 @@ def combine_specs(specs, log_output=True):
                                           log_output=log_output).get('zip_keys', [])
     values = _combine_spec_dictionaries(specs, extend_keys=extend_keys, zip_keys=zip_keys,
                                         log_output=log_output)
-    if 'extend_keys' in values:
-        del values['extend_keys']
-    return values, set(extend_keys)
+    return values
 
 
 def set_language_env_vars(variant):
@@ -395,6 +393,8 @@ def dict_of_lists_to_list_of_dicts(dict_of_lists, extend_keys=None):
     # end result is a collection of dicts, like [{'python': 2.7, 'numpy': 1.11},
     #                                            {'python': 3.5, 'numpy': 1.11}]
     dicts = []
+    if not extend_keys:
+        extend_keys = set(ensure_list(dict_of_lists.get('extend_keys')))
     pass_through_keys = set(['extend_keys', 'zip_keys', 'pin_run_as_build'] +
                             list(ensure_list(extend_keys)) +
                             list(_get_zip_key_set(dict_of_lists)))
@@ -504,8 +504,9 @@ def get_package_variants(recipedir_or_metadata, config=None, variants=None):
 
     # this merges each of the specs, providing a debug message when a given setting is overridden
     #      by a later spec
-    combined_spec, extend_keys = combine_specs(specs, log_output=config.verbose)
+    combined_spec = combine_specs(specs, log_output=config.verbose)
 
+    extend_keys = set(ensure_list(combined_spec.get('extend_keys')))
     extend_keys.update({'zip_keys', 'extend_keys'})
 
     # delete the default specs, so that they don't unnecessarily limit the matrix
@@ -527,7 +528,8 @@ def get_package_variants(recipedir_or_metadata, config=None, variants=None):
 def get_vars(variants, loop_only=False):
     """For purposes of naming/identifying, provide a way of identifying which variables contribute
     to the matrix dimensionality"""
-    special_keys = ('pin_run_as_build', 'zip_keys', 'ignore_version')
+    special_keys = {'pin_run_as_build', 'zip_keys', 'ignore_version'}
+    special_keys.update(set(ensure_list(variants[0].get('extend_keys'))))
     loop_vars = [k for k in variants[0] if k not in special_keys and
                 (not loop_only or
                 any(variant[k] != variants[0][k] for variant in variants[1:]))]

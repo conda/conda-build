@@ -206,7 +206,7 @@ def test_run_exports_with_pin_compatible_in_subpackages(testing_config):
 
 def test_ignore_build_only_deps(testing_config):
     ms = api.render(os.path.join(thisdir, 'test-recipes', 'variants', 'python_in_build_only'),
-                bypass_env_check=True, finalize=False)
+                    bypass_env_check=True, finalize=False)
     assert len(ms) == 1
 
 
