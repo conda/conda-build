@@ -801,8 +801,8 @@ def trim_build_only_deps(metadata, requirements_used):
     host_reqs = {req.split()[0].replace('-', '_') for req in host_reqs if req}
 
     to_remove = set()
-    ignore_build_only_deps = utils.ensure_list(metadata.config.variant.get(
-        'ignore_build_only_deps', []))
+    ignore_build_only_deps = utils.ensure_list(metadata.config.variant.get('ignore_build_only_deps', []))
+
     for dep in requirements_used:
         # filter out stuff that's only in run deps
         if dep in run_reqs:
@@ -816,6 +816,7 @@ def trim_build_only_deps(metadata, requirements_used):
                     dep in requirements_used and
                     dep in ignore_build_only_deps):
                 to_remove.add(dep)
+
     return requirements_used - to_remove
 
 
@@ -1282,12 +1283,17 @@ class MetaData(object):
         # we need the raw recipe for this metadata (possibly an output), so that we can say whether
         #    PKG_HASH is used for anything.
         raw_recipe_text = self.extract_package_and_build_text()
-        if not raw_recipe_text:
+        if not manual_build_string and not raw_recipe_text:
             raise RuntimeError("Couldn't extract raw recipe text for {} output".format(self.name()))
+        raw_recipe_text = self.extract_package_and_build_text()
         raw_manual_build_string = re.search("\s*string:", raw_recipe_text)
-        # default; build/string not set
-        if not manual_build_string or (raw_manual_build_string and
-                                       re.findall('h\{\{\s*PKG_HASH\s*\}\}', raw_manual_build_string.string)):
+        # user setting their own build string.  Don't modify it.
+        if manual_build_string and not (raw_manual_build_string and
+                                        re.findall('h\{\{\s*PKG_HASH\s*\}\}', raw_manual_build_string.string)):
+            check_bad_chrs(manual_build_string, 'build/string')
+            out = manual_build_string
+        else:
+            # default; build/string not set or uses PKG_HASH variable, so we should fill in the hash
             out = build_string_from_metadata(self)
             if self.config.filename_hashing and self.final:
                 hash_ = self.hash_dependencies()
@@ -1302,10 +1308,6 @@ class MetaData(object):
                         out = '_'.join([out] + ret[1:])
                 else:
                     out = re.sub('h[0-9a-f]{%s}' % self.config.hash_length, hash_, out)
-        # user setting their own build string.  Don't modify it.
-        else:
-            check_bad_chrs(manual_build_string, 'build/string')
-            out = manual_build_string
         return out
 
     def dist(self):
@@ -1932,8 +1934,9 @@ class MetaData(object):
         used_zip_key_groups = [group for group in zip_key_groups if any(
             set(group) & set(used_variables))]
 
+        extend_keys = full_collapsed_variants.get('extend_keys', [])
         reduce_keys = [key for key in reduce_keys if not any(key in group for group in
-                                                             used_zip_key_groups)]
+                                                used_zip_key_groups) and key not in extend_keys]
         for key in reduce_keys:
             values = full_collapsed_variants.get(key)
             if values is not None and len(values) and not hasattr(values, 'keys') and key != 'zip_keys':
@@ -2106,6 +2109,7 @@ class MetaData(object):
     def get_used_vars(self, force_top_level=False, force_global=False):
         global used_vars_cache
         recipe_dir = self.path
+
         if hasattr(self.config, 'used_vars'):
             used_vars = self.config.used_vars
         elif (self.name(), recipe_dir, force_top_level, force_global, self.config.subdir,
@@ -2184,7 +2188,7 @@ class MetaData(object):
         #   for omitting things that are only used in run
         if force_global:
             used = all_used
-        if not force_global:
+        else:
             requirements_used = variants.find_used_variables_in_text(variant_keys, reqs_text)
             outside_reqs_used = all_used - requirements_used
 
