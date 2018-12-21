@@ -131,6 +131,12 @@ def test_no_anaconda_upload_condarc(service_name, testing_workdir, testing_confi
     assert "Automatic uploading is disabled" in output, error
 
 
+@pytest.mark.parametrize("service_name", ["binstar", "anaconda"])
+def test_offline(service_name, testing_workdir, testing_config, capfd, monkeypatch):
+    with env_var('CONDA_OFFLINE', 'True', reset_context):
+        api.build(empty_sections, config=testing_config)
+
+
 def test_git_describe_info_on_branch(testing_config):
     recipe_path = os.path.join(metadata_dir, "_git_describe_number_branch")
     m = api.render(recipe_path, config=testing_config)[0][0]

@@ -275,10 +275,11 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
                             retry += 1
                 else:
                     # download channeldata.json for url
-                    try:
-                        channel_data[channel.name] = _download_channeldata(channel.base_url + '/channeldata.json')
-                    except CondaHTTPError:
-                        continue
+                    if not context.offline:
+                        try:
+                            channel_data[channel.name] = _download_channeldata(channel.base_url + '/channeldata.json')
+                        except CondaHTTPError:
+                            continue
                 # collapse defaults metachannel back into one superchannel, merging channeldata
                 if channel.base_url in context.default_channels and channel_data.get(channel.name):
                     packages = superchannel.get('packages', {})
