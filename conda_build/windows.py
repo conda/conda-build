@@ -260,6 +260,8 @@ def _write_bat_activation_text(file_handle, m):
 
 def write_build_scripts(m, env, bld_bat):
     env_script = join(m.config.work_dir, 'build_env_setup.bat')
+    if m.noarch == "python":
+        env["PYTHONDONTWRITEBYTECODE"] = True
     with open(env_script, 'w') as fo:
         # more debuggable with echo on
         fo.write('@echo on\n')
