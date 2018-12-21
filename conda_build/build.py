@@ -1872,6 +1872,9 @@ def write_build_scripts(m, script, build_file):
     # locally, and if we don't, it's a problem.
     env["PIP_NO_INDEX"] = True
 
+    if m.noarch == "python":
+        env["PYTHONDONTWRITEBYTECODE"] = True
+
     work_file = join(m.config.work_dir, 'conda_build.sh')
     env_file = join(m.config.work_dir, 'build_env_setup.sh')
     with open(env_file, 'w') as bf:
