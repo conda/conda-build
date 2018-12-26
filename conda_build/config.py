@@ -250,7 +250,7 @@ class Config(object):
             self._src_cache_root = os.path.abspath(os.path.normpath(
                 os.path.expanduser(source_cache)))
         if croot:
-            self._croot = os.path.abspath(os.path.normpath(croot))
+            self._croot = os.path.abspath(os.path.normpath(os.path.expanduser(croot)))
         else:
             # set default value (not actually None)
             self._croot = getattr(self, '_croot', None)
