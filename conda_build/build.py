@@ -2267,6 +2267,9 @@ def build_tree(recipe_list, config, stats, build_only=False, post=False, notest=
                 if metadata.name() not in metadata.config.build_folder:
                     metadata.config.compute_build_id(metadata.name(), reset=True)
 
+                # Write out metadata for `conda debug`, making it obvious that this is what it is.
+                output_yaml(metadata, os.path.join(metadata.config.work_dir, 'metadata_conda_debug.yaml'))
+
                 packages_from_this = build(metadata, stats,
                                            post=post,
                                            need_source_download=need_source_download,
@@ -2345,6 +2348,11 @@ def build_tree(recipe_list, config, stats, build_only=False, post=False, notest=
             # each metadata element here comes from one recipe, thus it will share one build id
             #    cleaning on the last metadata in the loop should take care of all of the stuff.
             metadata.clean()
+
+            # We *could* delete `metadata_conda_debug.yaml` here, but the user may want to debug
+            # failures that happen after this point and we may as well not make that impossible.
+            # os.unlink(os.path.join(metadata.config.work_dir, 'metadata_conda_debug.yaml'))
+
         except DependencyNeedsBuildingError as e:
             skip_names = ['python', 'r', 'r-base', 'mro-base', 'perl', 'lua']
             built_package_paths = [entry[1][1].path for entry in built_packages.items()]

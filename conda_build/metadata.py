@@ -842,9 +842,11 @@ class MetaData(object):
 
         if isfile(path):
             self._meta_path = path
+            self._meta_name = os.path.basename(path)
             self.path = os.path.dirname(path)
         else:
             self._meta_path = find_recipe(path)
+            self._meta_name = 'meta.yaml'
             self.path = os.path.dirname(self.meta_path)
         self.requirements_path = join(self.path, 'requirements.txt')
 
@@ -1560,8 +1562,8 @@ class MetaData(object):
     @property
     def meta_path(self):
         meta_path = self._meta_path or self.meta.get('extra', {}).get('parent_recipe', {}).get('path', '')
-        if meta_path and os.path.basename(meta_path) != "meta.yaml":
-            meta_path = os.path.join(meta_path, 'meta.yaml')
+        if meta_path and os.path.basename(meta_path) != self._meta_name:
+            meta_path = os.path.join(meta_path, self._meta_name)
         return meta_path
 
     @property
