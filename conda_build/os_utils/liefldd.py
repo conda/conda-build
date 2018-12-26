@@ -453,7 +453,7 @@ def _get_archive_signature(file):
         return '', 0
 
 
-debug_static_archives = True
+debug_static_archives = False
 
 def is_archive(file):
     signature, _ = _get_archive_signature(file)
@@ -484,7 +484,7 @@ def get_static_lib_exports(file):
             size = int(size)
         except:
             print('ERROR: {} has non-integral size of {}'.format(name, size))
-            return index, '', 0, 'INVALID'
+            return index, '', 0, 0, 'INVALID'
         name_len = 0  # File data in BSD format archives begin with a name of this length.
         if name.startswith(b'#1/'):
             typ = 'BSD'
@@ -518,6 +518,7 @@ def get_static_lib_exports(file):
         while (index) < fsize:
             if index & 1:
                 index += 1
+            file_index = index
             if debug_static_archives: print("ar_hdr index = {}".format(hex(index)))
 #            name, modified, owner, group, mode, size, ending = \
 #                struct.unpack(header_fmt, content[index:index + header_sz])
@@ -527,6 +528,7 @@ def get_static_lib_exports(file):
             if typ == 'GNU_SYMBOLS':
                 # Reference:
                 nsymbols, = struct.unpack('>I', content[index:index+4])
+                return [], [], [], []
                 return [fname.decode('utf-8')
                         for fname in content[index+4+(nsymbols*4):index+size].split(b'\x00')[:nsymbols]]
             elif name.startswith(b'__.SYMDEF'):
@@ -551,7 +553,6 @@ def get_static_lib_exports(file):
                     ran_off, ran_strx = struct.unpack('<'+ranlib_struct_fmt+ranlib_struct_fmt,
                                                       content[index+(i*ranlib_struct_sz*2):index+((i+1)*ranlib_struct_sz*2)])
                     ranlib_structs.append((ran_strx, ran_off))
-                # This is plain wrong. There is not a 1:1 correspondence between strings and symbols!
                 string_table = content[index+4+4+(nsymbols*ranlib_struct_sz*2):index+4+4+(nsymbols*ranlib_struct_sz*2)+size_string_table]
                 string_table = string_table.decode('utf-8', errors='ignore')
                 filtered_syms = []
@@ -563,6 +564,8 @@ def get_static_lib_exports(file):
                     sym = string_table[strx:strx+string_table[strx:].find('\x00')]
                     syms.append(sym)
                     if debug_static_archives: print("{} :: strx={}, off={}".format(syms[i], hex(strx), hex(off)))
+                    # This is probably a different structure altogether! Something symobol-y not file-y.
+                    _, name, name_len, size, typ = _parse_ar_hdr(content, file_index+off)
                     if True:
                         filtered_syms.append(sym)
                         filtered_ranlib_structs.append(ranlib_struct)
@@ -624,27 +627,28 @@ def get_exports(filename, arch='native'):
 #                print("nm.diff(liefldd) = \n{}".format('\n'.join(diff1)))
 #                print("liefldd.diff(nm) = \n{}".format('\n'.join(diff2)))
 
-                if debug_static_archives: print("\nMissing symbols\n")
+                if debug_static_archives:
+                    if debug_static_archives: print("\nMissing symbols\n")
 
-                for item in diff1:
-                    if item not in exports2_all:
-                        print('wtf 3 {}'.format(item))
-                    idx = exports2_all.index(item)
-                    if debug_static_archives: print("{:>64} : str_idx={:08x} off={:08x}".format(item, flags2_all[idx][0], flags2_all[idx][1]))
+                    for item in diff1:
+                        if item not in exports2_all:
+                            print('wtf 3 {}'.format(item))
+                        idx = exports2_all.index(item)
+                        if debug_static_archives: print("{:>64} : str_idx={:08x} off={:08x}".format(item, flags2_all[idx][0], flags2_all[idx][1]))
 
-                if debug_static_archives: print("\nUnwanted symbols\n")
+                    if debug_static_archives: print("\nUnwanted symbols\n")
 
-                for item in diff2:
-                    if item not in exports2_all:
-                        if debug_static_archives: print('wtf 4 {}'.format(item))
-                    idx = exports2.index(item)
-                    if debug_static_archives: print("{:>64} : str_idx={:08x} off={:08x}".format(item, flags2[idx][0], flags2[idx][1]))
+                    for item in diff2:
+                        if item not in exports2_all:
+                            if debug_static_archives: print('wtf 4 {}'.format(item))
+                        idx = exports2.index(item)
+                        if debug_static_archives: print("{:>64} : str_idx={:08x} off={:08x}".format(item, flags2[idx][0], flags2[idx][1]))
 
-                if debug_static_archives: print("\nAll symbols\n")
+                    if debug_static_archives: print("\nAll symbols\n")
 
-                for item in exports2_all:
-                    idx = exports2_all.index(item)
-                    if debug_static_archives: print("{:>64} : str_idx={:08x} off={:08x}".format(item, flags2_all[idx][0], flags2_all[idx][1]))
+                    for item in exports2_all:
+                        idx = exports2_all.index(item)
+                        if debug_static_archives: print("{:>64} : str_idx={:08x} off={:08x}".format(item, flags2_all[idx][0], flags2_all[idx][1]))
 
     if not result:
         binary = ensure_binary(filename)
@@ -838,8 +842,8 @@ import glob
 # for static_lib in ['/opt/conda/pkgs/libtool-2.4.6-h7b6447c_5/lib/libltdl.a']:
 # for static_lib in ['/opt/conda/pkgs/perl-5.22.2.1-0/lib/perl5/5.22.2/darwin-thread-multi-2level/CORE/libperl.a']:
 # for static_lib in ['/opt/conda/pkgs/perl-5.22.2.1-0/lib/perl5/5.22.2/darwin-thread-multi-2level/CORE/libperl.a']:
-for static_lib in ['/Users/rdonnelly/conda/libgmp.a']:
-    get_exports(static_lib)
+# for static_lib in ['/Users/rdonnelly/conda/libgmp.a']:
+#     get_exports(static_lib)
 
 # Test a symbol on macOS:
 # nm -PgUj /opt/conda/pkgs/perl-5.22.2.1-0/lib/perl5/5.22.2/darwin-thread-multi-2level/CORE/libperl.a | grep _Perl_allocmy
