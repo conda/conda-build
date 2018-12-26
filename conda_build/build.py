@@ -1368,9 +1368,13 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
             try_download(m, no_download_source=False, raise_error=True)
         if need_source_download and not m.final:
             m.parse_until_resolved(allow_no_other_outputs=True)
-
         elif need_reparse_in_env:
             m = reparse(m)
+
+        # Write out metadata for `conda debug`, making it obvious that this is what it is, must be done
+        # after try_download()
+        output_yaml(m, os.path.join(m.config.work_dir, 'metadata_conda_debug.yaml'))
+
 
         # get_dir here might be just work, or it might be one level deeper,
         #    dependening on the source.
@@ -2266,9 +2270,6 @@ def build_tree(recipe_list, config, stats, build_only=False, post=False, notest=
                     utils.rm_rf(metadata.config.test_prefix)
                 if metadata.name() not in metadata.config.build_folder:
                     metadata.config.compute_build_id(metadata.name(), reset=True)
-
-                # Write out metadata for `conda debug`, making it obvious that this is what it is.
-                output_yaml(metadata, os.path.join(metadata.config.work_dir, 'metadata_conda_debug.yaml'))
 
                 packages_from_this = build(metadata, stats,
                                            post=post,
