@@ -230,7 +230,8 @@ def update_lib_path(path, target_platform, temp_dir=None):
 
     elif target_platform == 'unix':
         python_version = retrieve_python_version(temp_dir)
-        renamed_lib_path = re.sub('\ALib', os.path.join('lib', python_version), path.replace('\\', '\\\\'))
+        lib_python_version = os.path.join('lib', python_version).replace('\\', '\\\\')
+        renamed_lib_path = re.sub('\ALib', lib_python_version, path.replace('\\', '\\\\'))
 
     return os.path.normpath(renamed_lib_path)
 
