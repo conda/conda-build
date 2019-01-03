@@ -89,8 +89,6 @@ notifications:
 git:
   depth: 10000
 
-sudo: false
-
 after_success:
   - pip install codecov
   - codecov --env TRAVIS_PYTHON_VERSION
