@@ -1,0 +1,236 @@
+pin_run_as_build:
+  libboost:
+    max_pin: x.x.x
+apr:
+  - 1.6.3
+blas_impl:
+  - mkl                        # [x86 or x86_64]
+  - openblas
+boost:
+  - 1.67
+bzip2:
+  - 1.0
+cairo:
+  - 1.14
+c_compiler:
+  - vs2008                     # [win]
+  - vs2017                     # [win]
+  - vs2017                     # [win]
+cxx_compiler:
+  - vs2008                     # [win]
+  - vs2017                     # [win]
+  - vs2017                     # [win]
+fortran_compiler:
+  - intel-fortran              # [win]
+fortran_compiler_version:
+  - 13.1.6                       # [win]
+  - 2019.0.0                     # [win]
+  - 2019.0.0                     # [win]
+# matrix on linux, because the ABI breaks at GCC 8
+  - 7.3.0                      # [linux]
+  - 8.2.0                      # [linux]
+rust_compiler:
+  - rust
+rust_compiler_version:
+  - 1.29.0
+CONDA_BUILD_SYSROOT:
+  - /opt/MacOSX10.10.sdk        # [osx]
+VERBOSE_AT:
+  - V=1
+VERBOSE_CM:
+  - VERBOSE=1
+# We use MRAN here because they take snapshots which improves reproducibility.
+cran_mirror:
+  - https://mran.microsoft.com/snapshot/2018-01-01
+# this is global, but can be overridden by other stuff in recipes
+ctng_binutils:
+  - 2.31.1
+ctng_duma:
+  - 2.5.15
+
+ctng_gcc:
+  - 7.3.0
+  - 8.2.0
+# keep zip_keys in mind - these are coupled with a specific gcc version in the ctng_gcc above
+ctng_gcc_build_number:
+  - 2
+  - 2
+# keep zip_keys in mind - these are coupled with a specific gcc version in the ctng_gcc above
+ctng_gcc_activation_build_number:
+  - 5
+  - 2
+
+ctng_gmp:
+  - 6.1.2
+ctng_isl:
+  - 0.19
+ctng_libc:
+  - gnu
+ctng_kernel:
+  - 2.6.32
+ctng_libiconv:
+  - 1.15
+ctng_mpc:
+  - 1
+ctng_nature:
+  - shared
+ctng_ncurses:
+  - 6.1
+c_compiler_version:        # [linux]
+  - 7.3.0                  # [linux]
+cxx_compiler_version:      # [linux]
+  - 7.3.0                  # [linux]
+fortran_compiler_version:  # [linux]
+  - 7.3.0                  # [linux]
+cyrus_sasl:
+  - 2.1.26
+dbus:
+  - 1
+expat:
+  - 2.2
+fontconfig:
+  - 2.13
+freetype:
+  - 2.9
+g2clib:
+  - 1.6
+gstreamer:
+  - 1.14
+gst_plugins_base:
+  - 1.14
+geos:
+  - 3.6.2  # [win]
+  - 3.7.1  # [win]
+  - 3.7.1
+giflib:
+  - 5.1
+glib:
+  - 2.56
+gmp:
+  - 6.1
+# glibc used in ctng compiler builds
+gnu:
+  - 2.12.2
+harfbuzz:
+  - 1.7
+hdf4:
+  - 4.2
+hdf5:
+  - 1.10.4
+hdfeos2:
+  - 2.20
+hdfeos5:
+  - 5.1
+icu:
+  - 58
+jpeg:
+  - 9
+libdap4:
+  - 3.19
+libffi:
+  - 3.2
+libgd:
+  - 2.2.5
+libgdal:
+  - 2.3
+libgsasl:
+  - 1.8
+libkml:
+  - 1.3
+libnetcdf:
+  - 4.6
+libpng:
+  - 1.6
+libtiff:
+  - 4.0
+libwebp:
+  - 1.0.0
+libxml2:
+  - 2.9
+libxslt:
+  - 1.1
+lzo:
+  - 2
+macos_min_version:
+  - 10.9
+macos_machine:
+  - x86_64-apple-darwin13.4.0
+MACOSX_DEPLOYMENT_TARGET:
+  - 10.9
+mkl:
+  - 2019
+mpfr:
+  - 4
+nodejs:
+  - 6.10  # [win]
+  - 8.12  # [win]
+  - 8.12
+# we build for an old version of numpy for forward compatibility
+#    1.11 seems to be the oldest on win that works with scipy 0.19.  Compiler errors otherwise.
+#    also 1.9 fails tests on Python 3.7
+numpy:
+  - 1.11
+openblas:
+  - 0.3.3
+openjpeg:
+  - 2.3
+openssl:
+  - 1.1.1
+  # vs2008 precludes us from newer qt, and we haven't been able to build newer qt with openssl 1.1.1 yet
+  - 1.0.2   # [win and py27]
+perl:
+  - 5.26
+pixman:
+  - 0.34
+proj4:
+  - 5.2.0
+libprotobuf:
+  - 3.6.0
+python:
+  - 2.7
+  - 3.6
+  - 3.7
+r_version:
+  - 3.5.0
+r_implementation:
+  - 'r-base'
+  - 'mro-base'  # [not osx]
+serf:
+  - 1.3.9
+sqlite:
+  - 3
+# This differs from target_platform in that it determines what subdir the compiler
+#    will target, not what subdir the compiler package will be itself.
+#    For example, we need a win-64 vs2008_win-32 package, so that we compile win-32
+#    code on win-64 miniconda.
+cross_compiler_target_platform:
+  - win-32                     # [win]
+  - win-64                     # [win]
+target_platform:
+  - win-64                     # [win]
+  - win-32                     # [win]
+tk:
+  - 8.6                # [not ppc64le]
+vc:
+  - 9                          # [win]
+  - 14                         # [win]
+  - 14                         # [win]
+zlib:
+  - 1.2
+xz:
+  - 5
+qtwebkit:
+  - true
+zip_keys:
+  -                             # [win]
+    - vc                        # [win]
+    - c_compiler                # [win]
+    - cxx_compiler              # [win]
+    - fortran_compiler_version  # [win]
+    - python                    # [win]
+    - nodejs                    # [win]
+    - geos                      # [win]
+  -
+    - ctng_gcc
+    - ctng_gcc_build_number
+    - ctng_gcc_activation_build_number
