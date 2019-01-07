@@ -449,7 +449,7 @@ def _get_archive_signature(file):
         return '', 0
 
 
-debug_static_archives = False
+debug_static_archives = True
 
 def is_archive(file):
     signature, _ = _get_archive_signature(file)
@@ -523,7 +523,14 @@ def get_static_lib_exports(file):
             #     object_file_data = content[index:index+size]
             if typ == 'GNU_SYMBOLS':
                 # Reference:
+                # https://web.archive.org/web/20070924090618/http://www.microsoft.com/msj/0498/hood0498.aspx
                 nsymbols, = struct.unpack('>I', content[index:index+4])
+                # Reference:
+                # https://docs.microsoft.com/en-us/windows/desktop/api/winnt/ns-winnt-_image_file_header
+                for i in range(nsymbols):
+                    offset = struct.unpack('>I', content[index+4+i*4:index+4+(i+1)*4])
+                    string = struct.unpack('>I', content[index+4+(nsymbols*4)+i*4:index+4+(nsymbols*4)+(i+1)*4])
+                    print("offset {}, string {}".format(offset, string))
                 return [], [], [], []
                 return [fname.decode('utf-8')
                         for fname in content[index+4+(nsymbols*4):index+size].split(b'\x00')[:nsymbols]]
@@ -607,7 +614,8 @@ def get_exports(filename, arch='native'):
             except OSError:
                 # nm may not be available or have the correct permissions, this
                 # should not cause a failure, see gh-3287
-                print('WARNING: nm: failed to get_exports({})'.format(file))
+                print('WARNING: nm: failed to get_exports({})'.format(filename))
+                exports = []
 
             # Now, our own implementation which does not require nm and can
             # handle .lib files.
