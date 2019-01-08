@@ -460,6 +460,9 @@ def is_archive(file):
     return True if signature == b'!<arch>\n' else False
 
 
+def get_static_lib_exports_nope(file):
+    return [], [], [], []
+
 def get_static_lib_exports(file):
     # References:
     # https://github.com/bminor/binutils-gdb/tree/master/bfd/archive.c
@@ -531,13 +534,17 @@ def get_static_lib_exports(file):
                 nsymbols, = struct.unpack('>I', content[index:index+4])
                 # Reference:
                 # https://docs.microsoft.com/en-us/windows/desktop/api/winnt/ns-winnt-_image_file_header
+                offsets = []
                 for i in range(nsymbols):
-                    offset = struct.unpack('>I', content[index+4+i*4:index+4+(i+1)*4])
-                    string = struct.unpack('>I', content[index+4+(nsymbols*4)+i*4:index+4+(nsymbols*4)+(i+1)*4])
-                    print("offset {}, string {}".format(offset, string))
-                return [], [], [], []
-                return [fname.decode('utf-8')
-                        for fname in content[index+4+(nsymbols*4):index+size].split(b'\x00')[:nsymbols]]
+                    offset, = struct.unpack('>I', content[index+4+i*4:index+4+(i+1)*4])
+                    offsets.append(offset)
+                    index, name, name_len, size, typ = _parse_ar_hdr(content, offset)
+                    print("name {}".format(name))
+                symnames = [symname.decode('utf-8')
+                            for symname in content[index+4+(nsymbols*4):index+size].split(b'\x00')[:nsymbols]]
+                for i in range(nsymbols):
+                    print("offset {}, symname {}".format(offsets[i], symnames[i]))
+                return symnames, [[0, 0] for sym in symnames], symnames, [[0, 0] for sym in symnames]
             elif name.startswith(b'__.SYMDEF'):
                 # Reference:
                 # http://www.manpagez.com/man/5/ranlib/
