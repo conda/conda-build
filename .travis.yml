@@ -4,13 +4,13 @@ python:
   - 2.7
   - 3.6
 env:
-  - CONDA_VERSION=4.3.x
   - CONDA_VERSION=4.5.x
+  - CONDA_VERSION=master
 matrix:
   fast_finish: true
   exclude:
     - python: 2.7
-      env: CONDA_VERSION=4.3.x
+      env: CONDA_VERSION=4.5.x
   include:
     - python: 3.6
       env:

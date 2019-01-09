@@ -9,10 +9,17 @@ environment:
     - SYS_PYTHON: "C:\\Miniconda36-x64"
       SYS_PYTHON_VERSION: "3.6"
       SYS_PYTHON_ARCH: "64"
+      CONDA_CANARY: "False"
 
     - SYS_PYTHON: "C:\\Miniconda-x64"
       SYS_PYTHON_VERSION: "2.7"
       SYS_PYTHON_ARCH: "64"
+      CONDA_CANARY: "False"
+
+    - SYS_PYTHON: "C:\\Miniconda36-x64"
+      SYS_PYTHON_VERSION: "3.6"
+      SYS_PYTHON_ARCH: "64"
+      CONDA_CANARY: "True"
 
 init:
   - ECHO %SYS_PYTHON% %SYS_PYTHON_VERSION% %SYS_PYTHON_ARCH% %HOME%
@@ -36,7 +43,7 @@ install:
   - set "CONDA_ROOT=C:\Miniconda%BASE_PYTHON_VERSION%%ARCH_LABEL%"
   - set "PATH=%CONDA_ROOT%;%CONDA_ROOT%\Scripts;%CONDA_ROOT%\Library\bin;%PATH%"
   - conda config --set always_yes yes
-  - conda update -q conda
+  - if "%CONDA_CANARY%" == "True" (conda update -c conda-canary conda) else (conda update -q conda)
   - conda config --set auto_update_conda no
   - conda info
   - python -c "import sys; print(sys.version)"
