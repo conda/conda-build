@@ -1,4 +1,4 @@
-All of the people who have made at least one contribution to .
+All of the people who have made at least one contribution to conda-build.
 Authors are sorted by number of commits.
 
 * Aaron Meurer
@@ -29,10 +29,10 @@ Authors are sorted by number of commits.
 * Alex Wiltschko
 * Isuru Fernando
 * Min RK
+* Anthony Scopatz
 * Ullrich Koethe
 * Phil Elson
 * Jillian Rowe
-* Anthony Scopatz
 * Almar Klein
 * Scheah
 * Michael C. Grant
