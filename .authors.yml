@@ -1,0 +1,98 @@
+- name: Michael Sarahan
+  email: msarahan@gmail.com
+  alternate_emails:
+    - msarahan@continuum.io
+
+- name: Jonathan J. Helmus
+  email: jjhelmus@gmail.com
+
+- name: Isuru Fernando
+  email: isuru.11@cse.mrt.ac.lk
+
+- name: Dan Blanchard
+  email: dan.blanchard@gmail.com
+  alternate_emails:
+    - dblanchard@ets.org
+    - dan@parsely.com
+
+- name: Patrick Snape
+  email: patricksnape@gmail.com
+
+- name: Teake Nutma
+  email: t.a.nutma@rug.nl
+
+- name: pelson
+  email: pelson.pub@gmail.com
+
+- name: Mandeep Bhutani
+  email: mbhutani@continuum.io
+  aliases:
+    - mandeep
+  alternate_emails:
+    - mandeep@users.noreply.github.com
+
+- name: ocefpaf
+  email: ocefpaf@gmail.com
+
+- name: tomashek
+  email: todd.m.tomashek@intel.com
+
+- name: Ilan Schnell
+  email: ilan@continuum.io
+  alternate_emails:
+    - ilan@hq-dhcp-20-84.20.10.10.in-addr.arpa
+
+- name: Sean
+  email: srossross@gmail.com
+
+- name: Thomas A Caswell
+  email:
+  alternate_emails:
+    - tcaswell@bnl.gov
+
+- name: Kale Franz
+  email:
+  alternate_emails:
+    - kalefranz@users.noreply.github.com
+
+- name: Heather Kelly
+  email: heather999@users.noreply.github.com
+
+- name: Ryan Grout
+  email: ryan@ryangrout.org
+  alternate_emails:
+    - groutr@users.noreply.github.com
+
+
+- name: Jillian Rowe
+  email: jillian.e.rowe@gmail.com
+
+- name: MatthieuDartiailh
+  email: marul@laposte.net
+
+- name: Matt Craig
+  email: mattwcraig@gmail.com
+
+- name: Mario Juric
+  email: mjuric@astro.washington.edu
+
+- name: MinRK
+  email: benjaminrk@gmail.com
+
+- name: Matty G
+  email: meawoppl@gmail.com
+
+- name: ikalev
+  email: ivan.kalev@gmail.com
+
+- name: Travis Swicegood
+  email: travis@domain51.com
+
+- name: Marius van Niekerk
+  email: marius.v.niekerk@gmail.com
+
+- name: Travis Oliphant
+  email: teoliphant@gmail.com
+
+- name: Robert T. McGibbon
+  email: rmcgibbo@gmail.com
