@@ -11,8 +11,7 @@ $ACTIVITIES = [
 # Basic settings
 #
 $PROJECT = $GITHUB_REPO = "conda-build"
-#$GITHUB_ORG = "conda"
-$GITHUB_ORG = "scopatz"
+$GITHUB_ORG = "conda"
 $AUTHORS_FILENAME = "AUTHORS.txt"
 
 #
