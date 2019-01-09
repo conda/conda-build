@@ -544,7 +544,7 @@ def get_static_lib_exports(file):
                     index2, name, name_len, size, typ = _parse_ar_hdr(content, offsets[i])
                     obj_starts.add(index2)
                     obj_ends.add(offsets[i])
-                    print("symname {}, offset {}, name {}, elf? {}".format(symnames[i], offsets[i], name, content[index2+1:index2+4]))
+                    print("symname {}, offset {}, name {}, elf? {}".format(symnames[i], offsets[i], name, content[index2:index2+4]))
                 obj_ends.add(len(content))
                 obj_starts = sorted(list(obj_starts))
                 obj_ends = sorted(list(obj_ends))[1:]
@@ -552,8 +552,23 @@ def get_static_lib_exports(file):
                 print(obj_ends)
                 functions = []
                 for obj_start, obj_end in zip(obj_starts, obj_ends):
+                    IMAGE_FILE_MACHINE_I386=0x014c
+                    IMAGE_FILE_MACHINE_AMD64=0x8664
+                    MACHINE_TYPE, = struct.unpack('<H', content[obj_start:obj_start+2])
                     print(obj_start, obj_end)
-                    obj = lief.parse(raw=content[obj_start:obj_end-1])
+                    if MACHINE_TYPE in (IMAGE_FILE_MACHINE_I386, IMAGE_FILE_MACHINE_AMD64):
+                        # 'This file is not a PE binary'm (yeah, fair enough, it's a COFF file).
+                        # Reported at https://github.com/lief-project/LIEF/issues/233#issuecomment-452580391
+                        # obj = lief.PE.parse(raw=content[obj_start:obj_end-1])
+                        obj = None
+                    else:
+                        obj = lief.elf.parse(raw=content[obj_start:obj_end-1])
+                    if not obj:
+                        # Cannot do much here except return the index.
+                        return symnames, [[0, 0] for sym in symnames], symnames, [[0, 0] for sym in symnames]
+                    # You can unpack an archive via:
+                    # /mingw64/bin/ar.exe xv /mingw64/lib/libz.dll.a
+                    # obj = lief.PE.parse('C:\\Users\\rdonnelly\\conda\\conda-build\\mingw-w64-libz.dll.a\\d000103.o')
                     for sym in obj.symbols:
                         # Irrespective of whether you pass -g or not to nm, it still
                         # lists symbols that are either exported or is_static.
@@ -627,12 +642,15 @@ def get_exports(filename, arch='native'):
             # g: global (exported) only
             # U: not undefined
             # j is name only
+            nm_exe = 'nm'
+            flags = '-Pg'
             if sys.platform == 'darwin':
                 flags = '-PgUj'
-            else:
-                flags = '-Pg'
+            elif sys.platform == 'win32':
+                filename = 'C:\\msys64\\mingw64\\lib\\libz.dll.a'
+                nm_exe = 'C:\\msys64\\mingw64\\bin\\nm.exe'
             try:
-                out, _ = subprocess.Popen(['nm', flags, filename], shell=False,
+                out, _ = subprocess.Popen([nm_exe, flags, filename], shell=False,
                                     stdout=subprocess.PIPE).communicate()
                 results = out.decode('utf-8').splitlines()
                 exports = [r.split(' ')[0] for r in results if (' T ') in r]
