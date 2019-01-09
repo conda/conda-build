@@ -1,5 +1,6 @@
 - name: Michael Sarahan
   email: msarahan@gmail.com
+  github: msarahan
   alternate_emails:
   - msarahan@continuum.io
   aliases:
@@ -205,6 +206,7 @@
   first_commit: 2018-03-22 14:11:45
 - name: iainsgillis
   email: hello@iainsgillis.com
+  github: iainsgillis
   num_commits: 1
   first_commit: 2018-12-30 17:37:09
 - name: Matt Rendina
@@ -233,6 +235,7 @@
   first_commit: 2017-02-23 12:06:56
 - name: Nicola Soranzo
   email: nicola.soranzo@earlham.ac.uk
+  github: nsoranzo
   num_commits: 4
   first_commit: 2017-06-15 13:31:41
 - name: Diogo de Campos
@@ -437,6 +440,7 @@
   first_commit: 2016-02-17 17:42:28
 - name: Christopher Whelan
   email: topherwhelan@gmail.com
+  github: qwhelan
   num_commits: 1
   first_commit: 2018-12-20 04:25:56
 - name: sophia
@@ -581,6 +585,7 @@
   first_commit: 2014-03-26 13:09:36
 - name: Anthony Scopatz
   email: scopatz@gmail.com
+  github: scopatz
   num_commits: 12
   first_commit: 2014-10-26 14:04:48
 - name: Martin Bergtholdt
