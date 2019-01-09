@@ -503,7 +503,9 @@ def get_static_lib_exports(file):
             typ = 'GNU'
         else:
             typ = 'NORMAL'
-        if debug_static_archives: print("index={}, name={}, ending={}, size={}, type={}".format(index, name, ending, size, typ))
+        if b'/' in name:
+            name = name[:name.find(b'/')]
+        # if debug_static_archives: print("index={}, name={}, ending={}, size={}, type={}".format(index, name, ending, size, typ))
         index += header_sz + name_len
         return index, name, name_len, size, typ
 
@@ -538,13 +540,30 @@ def get_static_lib_exports(file):
                 for i in range(nsymbols):
                     offset, = struct.unpack('>I', content[index+4+i*4:index+4+(i+1)*4])
                     offsets.append(offset)
-                    index, name, name_len, size, typ = _parse_ar_hdr(content, offset)
-                    print("name {}".format(name))
                 symnames = [symname.decode('utf-8')
                             for symname in content[index+4+(nsymbols*4):index+size].split(b'\x00')[:nsymbols]]
+                obj_starts = set()
+                obj_ends = set()
                 for i in range(nsymbols):
-                    print("offset {}, symname {}".format(offsets[i], symnames[i]))
-                return symnames, [[0, 0] for sym in symnames], symnames, [[0, 0] for sym in symnames]
+                    index2, name, name_len, size, typ = _parse_ar_hdr(content, offsets[i])
+                    obj_starts.add(index2)
+                    obj_ends.add(offsets[i])
+                    print("symname {}, offset {}, name {}, elf? {}".format(symnames[i], offsets[i], name, content[index2+1:index2+4]))
+                obj_ends.add(len(content))
+                obj_starts = sorted(list(obj_starts))
+                obj_ends = sorted(list(obj_ends))[1:]
+                print(obj_starts)
+                print(obj_ends)
+                functions = []
+                for obj_start, obj_end in zip(obj_starts, obj_ends):
+                    print(obj_start, obj_end)
+                    obj = lief.parse(raw=content[obj_start:obj_end-1])
+                    for sym in obj.symbols:
+                        # Irrespective of whether you pass -g or not to nm, it still
+                        # lists symbols that are either exported or is_static.
+                        if sym.is_function and (sym.exported or sym.is_static):
+                            functions.append(sym.name)
+                return functions, [[0, 0] for sym in functions], functions, [[0, 0] for sym in functions]
             elif name.startswith(b'__.SYMDEF'):
                 # Reference:
                 # http://www.manpagez.com/man/5/ranlib/
@@ -615,7 +634,7 @@ def get_exports(filename, arch='native'):
             if sys.platform == 'darwin':
                 flags = '-PgUj'
             else:
-                flags = '-P'
+                flags = '-Pg'
             try:
                 out, _ = subprocess.Popen(['nm', flags, filename], shell=False,
                                     stdout=subprocess.PIPE).communicate()
