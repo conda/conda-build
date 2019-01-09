@@ -1,12 +1,18 @@
 $ACTIVITIES = [
-    'authors',
-    'changelog',
-    #'tag',
+    "authors",
+    "changelog",
+    "tag",
+    "push_tag",
+    "ghrelease",
+    "conda_forge"
     ]
 
 #
-# Author settings
+# Basic settings
 #
+$PROJECT = $GITHUB_REPO = "conda-build"
+#$GITHUB_ORG = "conda"
+$GITHUB_ORG = "scopatz"
 $AUTHORS_FILENAME = "AUTHORS.txt"
 
 #
