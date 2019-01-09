@@ -7,24 +7,36 @@
 
 - name: Jonathan J. Helmus
   email: jjhelmus@gmail.com
+  aliases:
+    - Jonathan Helmus
 
 - name: Isuru Fernando
-  email: isuru.11@cse.mrt.ac.lk
+  email:  isuruf@gmail.com
+  alternate_emails:
+    - isuru.11@cse.mrt.ac.lk
 
 - name: Dan Blanchard
   email: dan.blanchard@gmail.com
   alternate_emails:
     - dblanchard@ets.org
     - dan@parsely.com
+  aliases:
+    - Daniel Blanchard
 
 - name: Patrick Snape
   email: patricksnape@gmail.com
+  alternate_emails:
+    - patrick.snape08@imperial.ac.uk
 
 - name: Teake Nutma
-  email: t.a.nutma@rug.nl
+  email: teake.nutma@gmail.com
+  alternate_emails:
+    - t.a.nutma@rug.nl
 
-- name: pelson
+- name: Phil Elson
   email: pelson.pub@gmail.com
+  aliases:
+    - pelson
 
 - name: Mandeep Bhutani
   email: mbhutani@continuum.io
@@ -33,68 +45,101 @@
   alternate_emails:
     - mandeep@users.noreply.github.com
 
-- name: ocefpaf
+- name: Filipe Fernandes
   email: ocefpaf@gmail.com
+  aliases:
+    - ocefpaf
 
-- name: tomashek
+- name: todd.m.tomashek
   email: todd.m.tomashek@intel.com
+  aliases:
+    - tomashek
 
 - name: Ilan Schnell
   email: ilan@continuum.io
   alternate_emails:
     - ilan@hq-dhcp-20-84.20.10.10.in-addr.arpa
+    - ilanschnell@gmail.com
 
 - name: Sean
   email: srossross@gmail.com
+  aliases:
+    - srossross
 
 - name: Thomas A Caswell
-  email:
+  email: tcaswell@gmail.com
   alternate_emails:
     - tcaswell@bnl.gov
 
 - name: Kale Franz
-  email:
+  email: kfranz@continuum.io
   alternate_emails:
     - kalefranz@users.noreply.github.com
 
 - name: Heather Kelly
   email: heather999@users.noreply.github.com
+  alternate_emails:
+    - heather999@users.noreply.github.com
+  aliases:
+    - heather999
 
 - name: Ryan Grout
   email: ryan@ryangrout.org
   alternate_emails:
+    - rgrout@continuum.io
     - groutr@users.noreply.github.com
-
 
 - name: Jillian Rowe
   email: jillian.e.rowe@gmail.com
+  aliases:
+    - jerowe
 
-- name: MatthieuDartiailh
+- name: Matthieu Dartiailh
   email: marul@laposte.net
+  aliases:
+    - MatthieuDartiailh
 
 - name: Matt Craig
   email: mattwcraig@gmail.com
+  aliases:
+    - Matthew Craig
 
 - name: Mario Juric
   email: mjuric@astro.washington.edu
+  alternate_emails:
+    - mjuric@lsst.org
 
-- name: MinRK
+- name: Min RK
   email: benjaminrk@gmail.com
+  aliases:
+    - MinRK
 
 - name: Matty G
   email: meawoppl@gmail.com
+  aliases:
+    - meawoppl
 
-- name: ikalev
+- name: Ivan Kalev
   email: ivan.kalev@gmail.com
+  aliases:
+    - ikalev
 
 - name: Travis Swicegood
   email: travis@domain51.com
+  alternate_emails:
+    - development@domain51.com
 
 - name: Marius van Niekerk
   email: marius.v.niekerk@gmail.com
+  alternate_emails:
+    - mvanniekerk@flatiron.com
 
 - name: Travis Oliphant
   email: teoliphant@gmail.com
+  aliases:
+    - Travis E. Oliphant
 
 - name: Robert T. McGibbon
   email: rmcgibbo@gmail.com
+  aliases:
+    - Robert McGibbon
