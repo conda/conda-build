@@ -1,17 +1,4 @@
 # current developments
-2019-01-09 3.17.7-pre:
-------------------
-
-Contributors:
--------------
-
-* @msarahan
-* @scopatz
-* @nsoranzo
-* @iainsgillis
-* @qwhelan
-
-
 2018-12-19 3.17.6
 -----------------
 
