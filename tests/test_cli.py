@@ -19,6 +19,7 @@ from conda_build.config import Config
 from conda_build.utils import (get_site_packages, on_win, get_build_folders, package_has_file,
                                check_call_env, tar_xf)
 from conda_build.conda_interface import TemporaryDirectory, conda_43
+from conda_build.exceptions import DependencyNeedsBuildingError
 import conda_build
 from .utils import metadata_dir, put_bad_conda_on_path
 
@@ -58,13 +59,13 @@ def test_build_add_channel():
     main_build.execute(args)
 
 
-@pytest.mark.xfail
 def test_build_without_channel_fails(testing_workdir):
     # remove the conda forge channel from the arguments and make sure that we fail.  If we don't,
     #    we probably have channels in condarc, and this is not a good test.
     args = ['--no-anaconda-upload', '--no-activate',
             os.path.join(metadata_dir, "_recipe_requiring_external_channel")]
-    main_build.execute(args)
+    with pytest.raises(DependencyNeedsBuildingError):
+        main_build.execute(args)
 
 
 def test_render_add_channel():

@@ -562,7 +562,7 @@ def _warn_on_ambiguous_namekeys(ambiguous_namekeys, subdirs, patched_repodata):
 
 
 def _add_namespace_to_spec(fn, info, dep_str, namemap, missing_dependencies, subdir):
-    if not conda_interface.conda_46:
+    if not conda_interface.conda_47:
         return dep_str
 
     spec = MatchSpec(dep_str)
