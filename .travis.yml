@@ -60,7 +60,7 @@ install:
   - source /opt/conda/bin/activate
   - conda config --set always_yes yes
   - conda config --set auto_update_conda False
-  - conda config --add create_default_packages nomkl
+  # - conda config --add create_default_packages nomkl
   - conda info
   # avoids a python 3.7 problem
   - conda install -q cytoolz

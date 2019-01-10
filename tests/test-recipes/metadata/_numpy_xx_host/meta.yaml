@@ -6,6 +6,7 @@ requirements:
   host:
     - python
     - numpy  x.x
+    - nomkl    # [unix]
   run:
     - python
     - numpy

@@ -11,6 +11,7 @@ outputs:
       host:
         - python
         - numpy
+        - nomkl    # [unix]
       run:
         - python
         - {{ pin_compatible('numpy') }}

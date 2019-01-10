@@ -11,6 +11,7 @@ requirements:
   build:
     - python {{ python }}
     - numpy {{ numpy }}
+    - nomkl    # [unix]
     - setuptools
 
   run:
