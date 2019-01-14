@@ -222,6 +222,7 @@ def _combine_spec_dictionaries(specs, extend_keys=None, filter_keys=None, zip_ke
                                         keys_in_group = group
                                         break
                             # in order to clobber, one must replace ALL of the zipped keys.
+                            # or the length must match with the other items in the group
                             #    Otherwise, we filter later.
                             if all(group_item in spec for group_item in keys_in_group):
                                 for group_item in keys_in_group:
@@ -232,8 +233,17 @@ def _combine_spec_dictionaries(specs, extend_keys=None, filter_keys=None, zip_ke
                                                                 len(ensure_list(v)),
                                                                 len(ensure_list(spec[group_item]))))
                                     values[group_item] = ensure_list(spec[group_item])
-                            else:
-                                if k in values and any(subvalue not in values[k]
+                            elif k in values:
+                                for group_item in keys_in_group:
+                                    if group_item in spec and \
+                                            len(ensure_list(spec[group_item])) != len(ensure_list(v)):
+                                        break
+                                    if group_item in values and \
+                                            len(ensure_list(values[group_item])) != len(ensure_list(v)):
+                                        break
+                                else:
+                                    values[k] = v.copy()
+                                if any(subvalue not in values[k]
                                                     for subvalue in ensure_list(v)):
 
                                     raise ValueError("variant config in {} is ambiguous because it "
