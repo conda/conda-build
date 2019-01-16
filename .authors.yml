@@ -134,6 +134,7 @@
   email: benjaminrk@gmail.com
   aliases:
   - MinRK
+  github: minrk
   num_commits: 14
   first_commit: 2014-02-13 19:43:59
 - name: Matty G
@@ -352,6 +353,7 @@
   first_commit: 2017-10-07 06:05:05
 - name: Ray Donnelly
   email: mingw.android@gmail.com
+  github: mingwandroid
   num_commits: 308
   first_commit: 2016-03-06 18:52:51
 - name: Paul Madden
@@ -586,7 +588,7 @@
 - name: Anthony Scopatz
   email: scopatz@gmail.com
   github: scopatz
-  num_commits: 12
+  num_commits: 17
   first_commit: 2014-10-26 14:04:48
 - name: Martin Bergtholdt
   email: martin.bergtholdt@philips.com
