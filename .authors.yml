@@ -755,3 +755,11 @@
   github: akovner
   num_commits: 2
   first_commit: 2017-12-12 00:59:23
+- name: Clinical Graphics
+  email: support@clinicalgraphics.com
+  github: ClinicalGraphics
+  is_org: True
+- name: Media24 Efinity
+  email: yusuf.jakoet@media24.com
+  github: esc24
+  is_org: True
