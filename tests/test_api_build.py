@@ -1261,6 +1261,7 @@ def test_overlinking_detection(testing_config):
     rm_rf(dest_file)
 
 
+@pytest.mark.xfail(reason="Need to discuss with Ray")
 def test_overdepending_detection(testing_config):
     testing_config.activate = True
     testing_config.error_overlinking = True

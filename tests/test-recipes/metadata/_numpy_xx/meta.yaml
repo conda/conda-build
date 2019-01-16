@@ -7,6 +7,7 @@ requirements:
     - python
     # legacy "pin run as build"
     - numpy x.x
+    - nomkl    # [unix]
   run:
     - python
     - numpy x.x

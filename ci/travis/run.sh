@@ -2,12 +2,13 @@
 set -ev
 if [[ "$FLAKE8" == "true" ]]; then
     flake8 .
-    cp bdist_conda.py /opt/conda/lib/python${TRAVIS_PYTHON_VERSION}/distutils/command
+    dirname="$(find /opt/conda/lib -iname python* -type d -maxdepth 1)"
+    cp bdist_conda.py $dirname/distutils/command
     pushd tests/bdist-recipe && python setup.py bdist_conda && popd
     conda build --help
     conda build --version
     conda build conda.recipe --no-anaconda-upload
-    conda create -n _cbtest python=$TRAVIS_PYTHON_VERSION conda-build glob2
+    conda create -n _cbtest conda-build glob2
     # because this is a file, conda is not going to process any of its dependencies.
     conda install -n _cbtest $(conda render --output conda.recipe | head -n 1)
     source activate _cbtest

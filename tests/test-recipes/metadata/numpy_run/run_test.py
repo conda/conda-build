@@ -12,11 +12,10 @@ def main():
     with open(info_file, 'r') as fh:
         info = json.load(fh)
 
-    assert len(info['depends']) == 2
     depends = sorted(info['depends'])
     # With no version
-    assert depends[0] == 'numpy'
-    assert depends[1] == 'python'
+    assert depends[-2] == 'numpy'
+    assert depends[-1] == 'python'
 
 
 if __name__ == '__main__':

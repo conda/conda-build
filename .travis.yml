@@ -4,13 +4,13 @@ python:
   - 2.7
   - 3.6
 env:
-  - CONDA_VERSION=4.3.x
   - CONDA_VERSION=4.5.x
+  - CONDA_VERSION=master
 matrix:
   fast_finish: true
   exclude:
     - python: 2.7
-      env: CONDA_VERSION=4.3.x
+      env: CONDA_VERSION=4.5.x
   include:
     - python: 3.6
       env:
@@ -41,34 +41,33 @@ install:
   - mkdir /opt/conda/locks
   # make central lock directory not writable to simulate central "all-users" install
   - chmod -w /opt/conda/locks
-  - export PATH="/opt/conda/bin:$PATH"
-  - hash -r
-  - conda config --set always_yes yes
-  - conda config --set auto_update_conda False
-  - conda config --add create_default_packages nomkl
-  # avoids a python 3.7 problem
-  - conda install -q cytoolz
-  - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-      conda install -q futures scandir;
-    fi
-  - if [ "$CONDA_VERSION" = "4.3.x" ]; then
-        rm -rf /opt/conda/lib/python$TRAVIS_PYTHON_VERSION/site-packages/conda;
-        rm -rf /opt/conda/lib/python$TRAVIS_PYTHON_VERSION/site-packages/conda*.egg-info;
-        git clone -b $CONDA_VERSION --single-branch --depth 1000 https://github.com/conda/conda.git;
-        pushd conda;
-        /opt/conda/bin/python utils/setup-testing.py install;
-        popd;
-        hash -r;
-        conda info;
-    else
+  - if [ "$CONDA_VERSION" = "4.5.x" ]; then
         git clone -b $CONDA_VERSION --single-branch --depth 1000 https://github.com/conda/conda.git;
         pushd conda;
         /opt/conda/bin/python -m conda init --dev;
         hash -r;
         conda info;
         popd;
+    else
+        git clone -b $CONDA_VERSION --single-branch --depth 1000 https://github.com/conda/conda.git;
+        pushd conda;
+        /opt/conda/bin/python -m conda init --dev bash;
+        hash -r;
+        conda info;
+        popd;
     fi
-  - conda install -q anaconda-client requests filelock contextlib2 jinja2 patchelf python=$TRAVIS_PYTHON_VERSION
+  - export PATH=/opt/conda/bin:$PATH
+  - source /opt/conda/bin/activate
+  - conda config --set always_yes yes
+  - conda config --set auto_update_conda False
+  # - conda config --add create_default_packages nomkl
+  - conda info
+  # avoids a python 3.7 problem
+  - conda install -q cytoolz
+  - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
+      conda install -q futures scandir;
+    fi
+  - conda install -q anaconda-client requests filelock contextlib2 jinja2 patchelf
   - conda install -q pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz tqdm python-libarchive-c py-lief
   - pip install pkginfo
   - if [[ "$FLAKE8" == "true" ]]; then
