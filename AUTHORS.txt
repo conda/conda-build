@@ -22,6 +22,7 @@ Authors are sorted by number of commits.
 * Travis Oliphant
 * James Sexton
 * Nehal J Wani
+* Anthony Scopatz
 * Harsh Gupta
 * Jasmine Sandhu
 * Matthias Gabriel
@@ -29,7 +30,6 @@ Authors are sorted by number of commits.
 * Alex Wiltschko
 * Isuru Fernando
 * Min RK
-* Anthony Scopatz
 * Ullrich Koethe
 * Phil Elson
 * Jillian Rowe
