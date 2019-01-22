@@ -6,3 +6,4 @@ requirements:
   run:
     - python
     - numpy
+    - nomkl   # [unix]

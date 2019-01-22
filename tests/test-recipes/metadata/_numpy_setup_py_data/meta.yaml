@@ -9,6 +9,7 @@ requirements:
   host:
     - cython
     - numpy
+    - nomkl    # [unix]
     - python
     - setuptools
   run:

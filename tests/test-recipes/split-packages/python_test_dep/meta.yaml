@@ -6,6 +6,7 @@ test:
   requires:
     - python
     - numpy
+    - nomkl    # [unix]
 
 outputs:
   - name: py_dep_1

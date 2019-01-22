@@ -1,4 +1,30 @@
 # current developments
+2019-01-16 3.17.7
+-----------------
+
+Bug fixes:
+----------
+
+* respect context.offline setting  #3328
+* don't write bytecode when building noarch: python packages  #3330
+* escape path separator in repl  #3336
+* remove deprecated sudo statement from travis CI configuration  #3338
+* fix running of test scripts in outputs  #3343
+* allow overriding one key of zip_keys as long as length of group agrees  #3344
+* fix compatibility with conda 4.6.0+  #3346
+* update centos 7 skeleton (CDT) URL  #3350
+
+Contributors:
+-------------
+
+* @iainsgillis
+* @isuruf
+* @jjhelmus
+* @nsoranzo
+* @msarahan
+* @qwhelan
+
+
 2018-12-19 3.17.6
 -----------------
 
@@ -57,7 +83,7 @@ Bug fixes:
 Contributors:
 -------------
 
-* @msarahan
+* @msarahanl
 
 
 2018-12-11 3.17.2

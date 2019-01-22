@@ -946,6 +946,50 @@ NOTE: Python .py and Perl .pl scripts are valid only
 as part of Python and Perl packages, respectively.
 
 
+Downstream tests
+----------------
+
+Knowing that your software built and ran its tests successfully is necessary,
+but not sufficient for keeping whole systems of software running. To have
+confidence that a new build of a package hasn't broken other downstream
+software, conda-build supports the notion of downstream testing.
+
+.. code-block:: yaml
+
+   test:
+     downstreams:
+       - some_downstream_pkg
+
+This is saying "When I build this recipe, after you run my test suite here, also
+download and run some_downstream_pkg which depends on my package." Conda-build
+takes care of ensuring that the package you just built gets installed into the
+environment for testing some_downstream_pkg. If conda-build can't create that
+environment due to unsatisfiable dependencies, it will skip those downstream
+tests and warn you. This usually happens when you are building a new version of
+a package that will require you to rebuild the downstream dependencies.
+
+Downstreams specs are full conda specs, similar to the requirements section. You
+can put version constraints on your specs in here:
+
+.. code-block:: yaml
+
+   test:
+     downstreams:
+       - some_downstream_pkg  >=2.0
+
+More than one package can be specified to run downstream tests for:
+
+.. code-block:: yaml
+
+   test:
+     downstreams:
+       - some_downstream_pkg
+       - other_downstream_pkg
+
+However, this does not mean that these packages are tested together. Rather,
+each of these are tested for satisfiability with your new package, then each of
+their test suites are run separately with the new package.
+
 .. _package-outputs:
 
 Outputs section

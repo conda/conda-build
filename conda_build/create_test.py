@@ -72,7 +72,9 @@ def create_shell_files(m, test_dir=None):
             commands = ensure_list(m.get_value('test/commands', []))
             if commands:
                 if name == 'no-file':
-                    name = 'run_test.{}'.format('bat' if win_status else 'sh')
+                    name = 'run_test.{}'.format('bat' if status else 'sh')
+                    if status == on_win:
+                        dest_file = join(test_dir, name)
                 with open(join(test_dir, name), 'a') as f:
                     f.write('\n\n')
                     if not status:
