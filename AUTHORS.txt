@@ -1,0 +1,170 @@
+All of the people who have made at least one contribution to conda-build.
+Authors are sorted by number of commits.
+
+* Aaron Meurer
+* Ilan Schnell
+* Ray Donnelly
+* Dan Blanchard
+* Kale Franz
+* sophia
+* Michael Sarahan
+* John Kirkham
+* Stuart Berg
+* Ryan Grout
+* Darren Dale
+* Travis Swicegood
+* Jonathan J. Helmus
+* Matt Craig
+* Johannes Köster
+* Mandeep Bhutani
+* Patrick Snape
+* Sean
+* Travis Oliphant
+* Anthony Scopatz
+* James Sexton
+* Nehal J Wani
+* Harsh Gupta
+* Jasmine Sandhu
+* Matthias Gabriel
+* Marcel Bargull
+* Alex Wiltschko
+* Isuru Fernando
+* Min RK
+* Ullrich Koethe
+* Phil Elson
+* Jillian Rowe
+* Almar Klein
+* Scheah
+* Michael C. Grant
+* Alexander Sturm
+* Teake Nutma
+* John Blischak
+* Tim Snyder
+* neok-m4700
+* Richard Frank
+* Filipe Fernandes
+* Matthieu Dartiailh
+* Brent Pedersen
+* James Abbott
+* Patrick Sodré
+* Bruno Oliveira
+* Bryan W. Weber
+* Thomas A Caswell
+* Mario Juric
+* Ivan Kalev
+* Casey Clements
+* David Hirschfeld
+* Elliot Hughes
+* Amir MOHAMMADI
+* Heather Kelly
+* Geir Ove Myhr
+* Matt Rendina
+* Björn Dahlgren
+* Nicola Soranzo
+* Stephan Hoyer
+* Korijn van Golen
+* Trent Nelson
+* Peter Williams
+* Wes Turner
+* Guilherme Quentel Melo
+* Yu Feng
+* Julien Schueller
+* Matty G
+* Robert T. McGibbon
+* chapmanb
+* Remi Chateauneu
+* Rolando (Max) Espinoza
+* Tadeu Manoel
+* Stefan Zimmermann
+* Thomas Kluyver
+* Martin Bergtholdt
+* Eric Dill
+* Derek Ludwig
+* Vlad Frolov
+* todd.m.tomashek
+* Marius van Niekerk
+* Michael Cormier
+* Christoph Buchner
+* Siu Kwan Lam
+* whitequark
+* joe-hartshorn
+* Benedikt Reinartz
+* Adam Ehlers Nyholm Thomsen
+* Rick Izzo
+* Wolfgang Ulmer
+* Ed Campbell
+* Carsten Haubold
+* christopher
+* Joseph Hunkeler
+* Armin Burgmeier
+* Anthony Bretaudeau
+* Lori Burns
+* Takafumi Arakaki
+* Philip R. Kensche
+* Matt Swain
+* Robert Wall
+* Yann
+* Tom Davidson
+* stuertz
+* aleksey-orekhov
+* Evan Hubinger
+* Johannes Bauer
+* Jan-Hendrik Prinz
+* Alex Kovner
+* Joseph Crail
+* Andres Guzman-Ballen
+* Riccardo Vianello
+* Matt Hollingsworth
+* Henning Schröder
+* iainsgillis
+* Greg Brener
+* Diogo de Campos
+* Morten Lund
+* Guillaume Baty
+* Dave Hirschfeld
+* Tom Schoonjans
+* David Froger
+* Floris Bruynooghe
+* C. E. Ball
+* landon.butterworth
+* Jedrzej Nowak
+* almar
+* Robert Langlois
+* Lukas Schrangl
+* Paul Madden
+* dlovell
+* Lennart Fricke
+* Gaëtan de Menten
+* Robert Coop
+* dpryan79
+* Michael Maltese
+* pwwang
+* zachcp
+* Christopher Whelan
+* Alexandru Coman
+* Matthew Harrigan
+* Anton
+* peter1000
+* daler
+* Aaron Stevens
+* Stas Bekman
+* Evan Klitzke
+* Yoav Ram
+* Thomas Holder
+* Bill Little
+* Marco Rossi
+* soapy1
+* Bradley Kreider
+* jlas
+* Richard Hattersley
+* steamelephant
+* Levi Naden
+* Dougal J. Sutherland
+* David Li
+* wikiped
+* Brant Faircloth
+* Mark Wiebe
+* mel
+* csoja
+
+
