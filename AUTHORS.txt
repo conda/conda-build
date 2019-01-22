@@ -13,16 +13,16 @@ Authors are sorted by number of commits.
 * Ryan Grout
 * Darren Dale
 * Travis Swicegood
-* Matt Craig
 * Jonathan J. Helmus
+* Matt Craig
 * Johannes Köster
 * Mandeep Bhutani
 * Patrick Snape
 * Sean
 * Travis Oliphant
+* Anthony Scopatz
 * James Sexton
 * Nehal J Wani
-* Anthony Scopatz
 * Harsh Gupta
 * Jasmine Sandhu
 * Matthias Gabriel

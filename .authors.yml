@@ -11,14 +11,14 @@
   email: jjhelmus@gmail.com
   aliases:
   - Jonathan Helmus
-  num_commits: 28
+  num_commits: 29
   first_commit: 2014-06-09 17:25:05
   github: jjhelmus
 - name: Isuru Fernando
   email: isuruf@gmail.com
   alternate_emails:
   - isuru.11@cse.mrt.ac.lk
-  num_commits: 14
+  num_commits: 16
   first_commit: 2017-06-16 15:14:34
   github: isuruf
 - name: Dan Blanchard
@@ -341,6 +341,7 @@
   email: korijn@gmail.com
   num_commits: 4
   first_commit: 2016-01-28 01:48:40
+  github: ClinicalGraphics
 - name: John Blischak
   email: jdblischak@gmail.com
   num_commits: 8
@@ -696,7 +697,7 @@
 - name: Anthony Scopatz
   email: scopatz@gmail.com
   github: scopatz
-  num_commits: 20
+  num_commits: 21
   first_commit: 2014-10-26 14:04:48
 - name: Martin Bergtholdt
   email: martin.bergtholdt@philips.com
