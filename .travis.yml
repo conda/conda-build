@@ -4,23 +4,23 @@ python:
   - 2.7
   - 3.6
 env:
-  - CONDA_VERSION=4.5.x
-  - CONDA_VERSION=master
+  - CONDA_VERSION=canary
+  - CONDA_VERSION=normal
 matrix:
   fast_finish: true
   exclude:
     - python: 2.7
-      env: CONDA_VERSION=4.5.x
+      env: CONDA_VERSION=canary
   include:
     - python: 3.6
       env:
         - FLAKE8=true
-        - CONDA_VERSION=4.5.x
+        - CONDA_VERSION=normal
       os: linux
   allow_failures:
     - env:
         - FLAKE8=true
-        - CONDA_VERSION=4.5.x
+        - CONDA_VERSION=normal
       python: 3.6
 
 addons:
@@ -41,25 +41,14 @@ install:
   - mkdir /opt/conda/locks
   # make central lock directory not writable to simulate central "all-users" install
   - chmod -w /opt/conda/locks
-  - if [ "$CONDA_VERSION" = "4.5.x" ]; then
-        git clone -b $CONDA_VERSION --single-branch --depth 1000 https://github.com/conda/conda.git;
-        pushd conda;
-        /opt/conda/bin/python -m conda init --dev;
-        hash -r;
-        conda info;
-        popd;
-    else
-        git clone -b $CONDA_VERSION --single-branch --depth 1000 https://github.com/conda/conda.git;
-        pushd conda;
-        /opt/conda/bin/python -m conda init --dev bash;
-        hash -r;
-        conda info;
-        popd;
-    fi
   - export PATH=/opt/conda/bin:$PATH
   - source /opt/conda/bin/activate
   - conda config --set always_yes yes
   - conda config --set auto_update_conda False
+  - if [[ "$CONDA_VERSION" == "canary" ]]; then
+      conda update -c conda-canary conda;
+      conda init;
+    fi
   # - conda config --add create_default_packages nomkl
   - conda info
   # avoids a python 3.7 problem
