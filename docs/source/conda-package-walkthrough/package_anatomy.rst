@@ -74,15 +74,7 @@ Info
 * index.json
 
   * metadata about the package including platform, version, dependencies, build info
-
-* paths.json
-
-  * a list of files in the package, along with their associated SHA-256, size in bytes,
-    and the type of path (eg. hardlink vs. softlink)
-
-index.json
-----------
-
+  
 .. code-block:: bash
 
   {
@@ -100,8 +92,10 @@ index.json
     "version": "0.0.0"
   }
 
-paths.json
-----------
+* paths.json
+
+  * a list of files in the package, along with their associated SHA-256, size in bytes,
+    and the type of path (eg. hardlink vs. softlink)
 
 .. code-block:: bash
 
