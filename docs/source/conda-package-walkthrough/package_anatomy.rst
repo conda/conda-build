@@ -56,7 +56,7 @@ Package structure
   │   ├── paths.json
   │   └── recipe
   └── lib
-    └── python3.5
+      └── python3.5
 
 * bin contains relevant binaries for the package
 
