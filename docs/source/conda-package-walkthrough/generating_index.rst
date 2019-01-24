@@ -119,7 +119,7 @@ How an index is generated
     * Add package to repodata
 
 EXAMPLE: Building a channel
-----------------------
+---------------------------
 
 * Lets try to build a local channel and put a package in it
 
