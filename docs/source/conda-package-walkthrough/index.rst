@@ -13,10 +13,3 @@ Topics
    generating_index
    conda_install
    building_anaconda
-
-.. Indices and tables
-.. ==================
-
-.. * :ref:`genindex`
-.. * :ref:`modindex`
-.. * :ref:`search`
