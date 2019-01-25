@@ -1587,16 +1587,21 @@ variables are booleans.
    * - py2k
      - True if the Python major version is 2.
    * - py27
-     - True if the Python version is 2.7.
+     - True if the Python version is 2.7. Use of this selector is discouraged.
    * - py34
-     - True if the Python version is 3.4.
+     - True if the Python version is 3.4. Use of this selector is discouraged.
    * - py35
-     - True if the Python version is 3.5.
+     - True if the Python version is 3.5. Use of this selector is discouraged.
    * - py36
-     - True if the Python version is 3.6.
+     - True if the Python version is 3.6. Use of this selector is discouraged.
    * - np
      - The NumPy version as an integer such as ``111``. See the
        CONDA_NPY :ref:`environment variable <build-envs>`.
+
+The use of the Python version selectors, `py27`, `py34`, etc is discouraged.
+Additional selectors in this series will not be added to conda-build.
+The recommended method to specify a selector for a particular version number
+is to use the `py` selector with a comparison operator, for example `py==37`.
 
 Because the selector is any valid Python expression, complicated
 logic is possible:
