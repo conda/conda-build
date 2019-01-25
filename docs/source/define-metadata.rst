@@ -1587,21 +1587,20 @@ variables are booleans.
    * - py2k
      - True if the Python major version is 2.
    * - py27
-     - True if the Python version is 2.7. Use of this selector is discouraged.
+     - True if the Python version is 2.7. Use of this selector is discouraged in favor of comparison operators (e.g. py==27).
    * - py34
-     - True if the Python version is 3.4. Use of this selector is discouraged.
+     - True if the Python version is 3.4. Use of this selector is discouraged in favor of comparison operators (e.g. py==34).
    * - py35
-     - True if the Python version is 3.5. Use of this selector is discouraged.
+     - True if the Python version is 3.5. Use of this selector is discouraged in favor of comparison operators (e.g. py==35).
    * - py36
-     - True if the Python version is 3.6. Use of this selector is discouraged.
+     - True if the Python version is 3.6. Use of this selector is discouraged in favor of comparison operators (e.g. py==36).
    * - np
      - The NumPy version as an integer such as ``111``. See the
        CONDA_NPY :ref:`environment variable <build-envs>`.
 
-The use of the Python version selectors, `py27`, `py34`, etc is discouraged.
-Additional selectors in this series will not be added to conda-build.
-The recommended method to specify a selector for a particular version number
-is to use the `py` selector with a comparison operator, for example `py==37`.
+The use of the Python version selectors, `py27`, `py34`, etc is discouraged in 
+favor of the more general comparison operators.  Additional selectors in this 
+series will not be added to conda-build.
 
 Because the selector is any valid Python expression, complicated
 logic is possible:
@@ -1611,7 +1610,7 @@ logic is possible:
    source:
      url: http://path/to/windows/source      # [win]
      url: http://path/to/python2/unix/source # [unix and py2k]
-     url: http://path/to/python3/unix/source # [unix and py3k]
+     url: http://path/to/python3/unix/source # [unix and py>=35]
 
 NOTE: The selectors delete only the line that they are on, so you
 may need to put the same selector on multiple lines:
