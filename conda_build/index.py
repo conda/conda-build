@@ -41,7 +41,8 @@ from . import conda_interface, utils
 from .conda_interface import MatchSpec, VersionOrder, human_bytes, context
 from .conda_interface import CondaError, CondaHTTPError, get_index, url_path
 from .conda_interface import download, TemporaryDirectory
-from .utils import glob, get_logger, FileNotFoundError, PermissionError
+from .utils import glob, get_logger, FileNotFoundError, PermissionError, check_call_env
+from .os_utils import external
 
 try:
     from conda.base.constants import CONDA_TARBALL_EXTENSIONS
@@ -847,6 +848,43 @@ def _tmp_chdir(dest):
     finally:
         os.chdir(curdir)
 
+def _tar_xf_fallback(tarball, dir_path, mode='r:*'):
+    if tarball.lower().endswith('.tar.z'):
+        uncompress = external.find_executable('uncompress')
+        if not uncompress:
+            uncompress = external.find_executable('gunzip')
+        if not uncompress:
+            sys.exit("""\
+uncompress (or gunzip) is required to unarchive .z source files.
+""")
+        check_call_env([uncompress, '-f', tarball])
+        tarball = tarball[:-2]
+    if not PY3 and tarball.endswith('.tar.xz'):
+        unxz = external.find_executable('unxz')
+        if not unxz:
+            sys.exit("""\
+unxz is required to unarchive .xz source files.
+""")
+
+        check_call_env([unxz, '-f', '-k', tarball])
+        tarball = tarball[:-3]
+    t = tarfile.open(tarball, mode)
+    members = t.getmembers()
+    for i, member in enumerate(members, 0):
+        if os.path.isabs(member.name):
+            member.name = os.path.relpath(member.name, '/')
+        if not os.path.realpath(member.name).startswith(os.getcwd()):
+            member.name = member.name.replace("../", "")
+        if not os.path.realpath(member.name).startswith(os.getcwd()):
+            sys.exit("tarball contains unsafe path: " + member.name)
+        members[i] = member
+
+    if not PY3:
+        t.extractall(path=dir_path.encode(codec))
+    else:
+        t.extractall(path=dir_path)
+    t.close()
+
 
 def _tar_xf(tarball, dir_path):
     flags = libarchive.extract.EXTRACT_TIME | \
@@ -856,8 +894,18 @@ def _tar_xf(tarball, dir_path):
             libarchive.extract.EXTRACT_SECURE_NOABSOLUTEPATHS
     if not os.path.isabs(tarball):
         tarball = os.path.join(os.getcwd(), tarball)
-    with _tmp_chdir(dir_path):
-        libarchive.extract_file(tarball, flags)
+    try:
+        with _tmp_chdir(dir_path):
+            libarchive.extract_file(tarball, flags)
+    except libarchive.exception.ArchiveError:
+        # try again, maybe we are on Windows and the archive contains symlinks
+        # https://github.com/conda/conda-build/issues/3351
+        # https://github.com/libarchive/libarchive/pull/1030
+        if tarball.endswith(('.tar', '.tar.gz', '.tgz', '.tar.bz2',
+                             '.tar.xz', '.tar.z')):
+            _tar_xf_fallback(tarball, dir_path)
+        else:
+            raise
 
 
 def _tar_xf_file(tarball, entries):
