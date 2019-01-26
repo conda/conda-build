@@ -41,8 +41,7 @@ from . import conda_interface, utils
 from .conda_interface import MatchSpec, VersionOrder, human_bytes, context
 from .conda_interface import CondaError, CondaHTTPError, get_index, url_path
 from .conda_interface import download, TemporaryDirectory
-from .utils import glob, get_logger, FileNotFoundError, PermissionError, check_call_env
-from .os_utils import external
+from .utils import glob, get_logger, FileNotFoundError, PermissionError, tar_xf_file, tar_xf_getnames
 
 try:
     from conda.base.constants import CONDA_TARBALL_EXTENSIONS
@@ -707,7 +706,7 @@ def _cache_recipe(tarball, all_paths, recipe_cache_path):
             )
     recipe_path = next((p for p in recipe_path_search_order if p in all_paths), None)
     if recipe_path:
-        recipe_yaml_binary = _tar_xf_file(tarball, recipe_path)
+        recipe_yaml_binary = tar_xf_file(tarball, recipe_path)
     else:
         recipe_yaml_binary = '{}'
     try:
@@ -726,7 +725,7 @@ def _cache_recipe(tarball, all_paths, recipe_cache_path):
 
 def _cache_about_json(tar_path, about_cache_path):
     try:
-        binary_about_json = _tar_xf_file(tar_path, 'info/about.json')
+        binary_about_json = tar_xf_file(tar_path, 'info/about.json')
     except KeyError:
         log.debug("%s has no file info/about.json" % tar_path)
         binary_about_json = b'{}'
@@ -737,7 +736,7 @@ def _cache_about_json(tar_path, about_cache_path):
 
 def _cache_recipe_log(tar_path, recipe_log_path):
     try:
-        binary_recipe_log = _tar_xf_file(tar_path, 'info/recipe_log.json')
+        binary_recipe_log = tar_xf_file(tar_path, 'info/recipe_log.json')
     except KeyError:
         log.debug("%s has no file info/recipe_log.json (this is OK)" % tar_path)
         binary_recipe_log = b'{}'
@@ -749,11 +748,11 @@ def get_run_exports(tar_or_folder_path):
     run_exports = {}
     if os.path.isfile(tar_or_folder_path):
         try:
-            binary_run_exports = _tar_xf_file(tar_or_folder_path, 'info/run_exports.json')
+            binary_run_exports = tar_xf_file(tar_or_folder_path, 'info/run_exports.json')
             run_exports = json.loads(binary_run_exports.decode("utf-8"))
         except KeyError:
             try:
-                binary_run_exports = _tar_xf_file(tar_or_folder_path, 'info/run_exports.yaml')
+                binary_run_exports = tar_xf_file(tar_or_folder_path, 'info/run_exports.yaml')
                 run_exports = yaml.safe_load(binary_run_exports)
             except KeyError:
                 log.debug("%s has no run_exports file (this is OK)" % tar_or_folder_path)
@@ -778,7 +777,7 @@ def _cache_run_exports(tar_path, run_exports_cache_path):
 
 def _cache_paths_json(tar_path, paths_cache_path):
     try:
-        binary_paths_json = _tar_xf_file(tar_path, 'info/paths.json')
+        binary_paths_json = tar_xf_file(tar_path, 'info/paths.json')
     except KeyError:
         log.debug("%s has no file info/paths.json" % tar_path)
         binary_paths_json = b'{}'
@@ -796,7 +795,7 @@ def _cache_icon(tar_path, recipe_json, all_paths, icon_cache_path):
     app_icon_path = recipe_json.get('app', {}).get('icon') or 'info/icon.png'
     if app_icon_path in all_paths:
         icon_cache_path += splitext(app_icon_path)[-1]
-        binary_icon_data = _tar_xf_file(tar_path, 'info/icon.png')
+        binary_icon_data = tar_xf_file(tar_path, 'info/icon.png')
         with open(icon_cache_path, 'wb') as fh:
             fh.write(binary_icon_data)
 
@@ -847,97 +846,6 @@ def _tmp_chdir(dest):
         yield
     finally:
         os.chdir(curdir)
-
-def _tar_xf_fallback(tarball, dir_path, mode='r:*'):
-    if tarball.lower().endswith('.tar.z'):
-        uncompress = external.find_executable('uncompress')
-        if not uncompress:
-            uncompress = external.find_executable('gunzip')
-        if not uncompress:
-            sys.exit("""\
-uncompress (or gunzip) is required to unarchive .z source files.
-""")
-        check_call_env([uncompress, '-f', tarball])
-        tarball = tarball[:-2]
-    if not PY3 and tarball.endswith('.tar.xz'):
-        unxz = external.find_executable('unxz')
-        if not unxz:
-            sys.exit("""\
-unxz is required to unarchive .xz source files.
-""")
-
-        check_call_env([unxz, '-f', '-k', tarball])
-        tarball = tarball[:-3]
-    t = tarfile.open(tarball, mode)
-    members = t.getmembers()
-    for i, member in enumerate(members, 0):
-        if os.path.isabs(member.name):
-            member.name = os.path.relpath(member.name, '/')
-        if not os.path.realpath(member.name).startswith(os.getcwd()):
-            member.name = member.name.replace("../", "")
-        if not os.path.realpath(member.name).startswith(os.getcwd()):
-            sys.exit("tarball contains unsafe path: " + member.name)
-        members[i] = member
-
-    if not PY3:
-        t.extractall(path=dir_path.encode(codec))
-    else:
-        t.extractall(path=dir_path)
-    t.close()
-
-
-def _tar_xf(tarball, dir_path):
-    flags = libarchive.extract.EXTRACT_TIME | \
-            libarchive.extract.EXTRACT_PERM | \
-            libarchive.extract.EXTRACT_SECURE_NODOTDOT | \
-            libarchive.extract.EXTRACT_SECURE_SYMLINKS | \
-            libarchive.extract.EXTRACT_SECURE_NOABSOLUTEPATHS
-    if not os.path.isabs(tarball):
-        tarball = os.path.join(os.getcwd(), tarball)
-    try:
-        with _tmp_chdir(dir_path):
-            libarchive.extract_file(tarball, flags)
-    except libarchive.exception.ArchiveError:
-        # try again, maybe we are on Windows and the archive contains symlinks
-        # https://github.com/conda/conda-build/issues/3351
-        # https://github.com/libarchive/libarchive/pull/1030
-        if tarball.endswith(('.tar', '.tar.gz', '.tgz', '.tar.bz2',
-                             '.tar.xz', '.tar.z')):
-            _tar_xf_fallback(tarball, dir_path)
-        else:
-            raise
-
-
-def _tar_xf_file(tarball, entries):
-    from conda_build.utils import ensure_list
-    entries = ensure_list(entries)
-    if not os.path.isabs(tarball):
-        tarball = os.path.join(os.getcwd(), tarball)
-    result = None
-    n_found = 0
-    with libarchive.file_reader(tarball) as archive:
-        for entry in archive:
-            if entry.name in entries:
-                n_found += 1
-                for block in entry.get_blocks():
-                    if result is None:
-                        result = bytes(block)
-                    else:
-                        result += block
-                break
-    if n_found != len(entries):
-        raise KeyError()
-    return result
-
-
-def _tar_xf_getnames(tarball):
-    if not os.path.isabs(tarball):
-        tarball = os.path.join(os.getcwd(), tarball)
-    result = []
-    with libarchive.file_reader(tarball) as archive:
-        for entry in archive:
-            result.append(entry.name)
-    return result
 
 
 def _collect_commits(package_order, hotfix_source_repo, cutoff_time):
@@ -1205,10 +1113,10 @@ class ChannelIndex(object):
 
             log.debug("hashing, extracting, and caching %s" % tar_path)
             try:
-                binary_index_json = _tar_xf_file(tar_path, 'info/index.json')
+                binary_index_json = tar_xf_file(tar_path, 'info/index.json')
                 index_json = json.loads(binary_index_json.decode('utf-8'))
 
-                all_paths = set(_tar_xf_getnames(tar_path))
+                all_paths = set(tar_xf_getnames(tar_path))
                 _cache_about_json(tar_path, about_cache_path)
                 _cache_run_exports(tar_path, run_exports_cache_path)
                 binary_paths_json = _cache_paths_json(tar_path, paths_cache_path)
