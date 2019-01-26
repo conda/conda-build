@@ -791,7 +791,7 @@ def tar_xf(tarball, dir_path):
         # try again, maybe we are on Windows and the archive contains symlinks
         # https://github.com/conda/conda-build/issues/3351
         # https://github.com/libarchive/libarchive/pull/1030
-        if tarball.endswith(('.tar', '.tar.gz', '.tgz', '.tar.bz2')):
+        if tarball.endswith(('.tar', '.tar.gz', '.tgz', '.tar.bz2', '.tar.z', '.tar.xz')):
             _tar_xf_fallback(tarball, dir_path)
         else:
             raise
