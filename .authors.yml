@@ -5,13 +5,13 @@
   - msarahan@continuum.io
   aliases:
   - Mike Sarahan
-  num_commits: 62
+  num_commits: 66
   first_commit: 2015-09-04 21:31:08
 - name: Jonathan J. Helmus
   email: jjhelmus@gmail.com
   aliases:
   - Jonathan Helmus
-  num_commits: 29
+  num_commits: 30
   first_commit: 2014-06-09 17:25:05
   github: jjhelmus
 - name: Isuru Fernando
@@ -697,7 +697,7 @@
 - name: Anthony Scopatz
   email: scopatz@gmail.com
   github: scopatz
-  num_commits: 21
+  num_commits: 23
   first_commit: 2014-10-26 14:04:48
 - name: Martin Bergtholdt
   email: martin.bergtholdt@philips.com
@@ -881,3 +881,17 @@
   is_org: true
   num_commits: 0
   first_commit: *id001
+- name: Axel Huebl
+  email: axel.huebl@plasma.ninja
+  github: ax3l
+  num_commits: 1
+  first_commit: 2019-01-26 13:17:33
+- name: Rachel
+  email: rrigdon@anaconda.com
+  num_commits: 1
+  first_commit: 2019-01-24 14:12:19
+- name: Rachel Rigdon
+  email: 45607889+rrigdon@users.noreply.github.com
+  num_commits: 6
+  first_commit: 2019-01-24 15:12:09
+  github: rrigdon
