@@ -1,4 +1,18 @@
 # current developments
+2019-01-26 3.17.8:
+------------------
+
+Contributors:
+-------------
+
+* @msarahan
+* @jjhelmus
+* @scopatz
+* @rrigdon
+* @ax3l
+* @rrigdon
+
+
 2019-01-16 3.17.7
 -----------------
 
