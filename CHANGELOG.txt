@@ -2,6 +2,16 @@
 2019-01-26 3.17.8:
 ------------------
 
+Bug fixes:
+----------
+
+* provide fallback from libarchive back to python tarfile handling for handling tarfiles containing symlinks on windows
+
+Other:
+------
+
+* Rever support added for releasing conda-build
+
 Contributors:
 -------------
 
