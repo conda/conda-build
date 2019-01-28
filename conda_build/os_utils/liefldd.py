@@ -21,6 +21,8 @@ __name__ = 'conda_build.os_utils.liefldd'
 from .pyldd import inspect_linkages as inspect_linkages_pyldd
 # lief cannot handle files it doesn't know about gracefully
 from .pyldd import codefile_type as codefile_type_pyldd
+from .external import find_executable
+
 codefile_type = codefile_type_pyldd
 have_lief = False
 try:
