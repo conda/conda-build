@@ -113,7 +113,7 @@ def get_libraries(file):
                 binary_name = [command.name for command in binary.commands
                                if command.command == lief.MachO.LOAD_COMMAND_TYPES.ID_DYLIB]
                 binary_name = binary_name[0] if len(binary_name) else None
-            result = [l if isinstance(l, string_types) else l.name for l in binary.libraries]
+            result = [l if is_string(l) else l.name for l in binary.libraries]
             if binary.format == lief.EXE_FORMATS.MACHO:
                 result = [from_os_varnames(binary, l) for l in result
                           if not (binary_name and l.endswith(binary_name))]
@@ -453,7 +453,7 @@ def _get_archive_signature(file):
         return '', 0
 
 
-debug_static_archives = True
+debug_static_archives = 0
 
 def is_archive(file):
     signature, _ = _get_archive_signature(file)
@@ -463,7 +463,9 @@ def is_archive(file):
 def get_static_lib_exports_nope(file):
     return [], [], [], []
 
+
 def get_static_lib_exports(file):
+    # file = '/Users/rdonnelly/conda/main-augmented-tmp/osx-64_14354bd0cd1882bc620336d9a69ae5b9/lib/python2.7/config/libpython2.7.a'
     # References:
     # https://github.com/bminor/binutils-gdb/tree/master/bfd/archive.c
     # https://en.wikipedia.org/wiki/Ar_(Unix)
@@ -520,113 +522,113 @@ def get_static_lib_exports(file):
         content = f.read()
         fsize = len(content)
         index += len_signature
-        while (index) < fsize:
-            if index & 1:
-                index += 1
-            file_index = index
-            if debug_static_archives: print("ar_hdr index = {}".format(hex(index)))
-#            name, modified, owner, group, mode, size, ending = \
-#                struct.unpack(header_fmt, content[index:index + header_sz])
-            index, name, name_len, size, typ = _parse_ar_hdr(content, index)
-            # if QUERY_STATIC_LIB_EXPORTS_VIA_LIEF:
-            #     object_file_data = content[index:index+size]
-            if typ == 'GNU_SYMBOLS':
-                # Reference:
-                # https://web.archive.org/web/20070924090618/http://www.microsoft.com/msj/0498/hood0498.aspx
-                nsymbols, = struct.unpack('>I', content[index:index+4])
-                # Reference:
-                # https://docs.microsoft.com/en-us/windows/desktop/api/winnt/ns-winnt-_image_file_header
-                offsets = []
-                for i in range(nsymbols):
-                    offset, = struct.unpack('>I', content[index+4+i*4:index+4+(i+1)*4])
-                    offsets.append(offset)
-                symnames = [symname.decode('utf-8')
-                            for symname in content[index+4+(nsymbols*4):index+size].split(b'\x00')[:nsymbols]]
-                obj_starts = set()
-                obj_ends = set()
-                for i in range(nsymbols):
-                    index2, name, name_len, size, typ = _parse_ar_hdr(content, offsets[i])
-                    obj_starts.add(index2)
-                    obj_ends.add(offsets[i])
-                    print("symname {}, offset {}, name {}, elf? {}".format(symnames[i], offsets[i], name, content[index2:index2+4]))
-                obj_ends.add(len(content))
-                obj_starts = sorted(list(obj_starts))
-                obj_ends = sorted(list(obj_ends))[1:]
-                print(obj_starts)
-                print(obj_ends)
-                functions = []
-                for obj_start, obj_end in zip(obj_starts, obj_ends):
-                    IMAGE_FILE_MACHINE_I386=0x014c
-                    IMAGE_FILE_MACHINE_AMD64=0x8664
-                    MACHINE_TYPE, = struct.unpack('<H', content[obj_start:obj_start+2])
-                    print(obj_start, obj_end)
-                    if MACHINE_TYPE in (IMAGE_FILE_MACHINE_I386, IMAGE_FILE_MACHINE_AMD64):
-                        # 'This file is not a PE binary'm (yeah, fair enough, it's a COFF file).
-                        # Reported at https://github.com/lief-project/LIEF/issues/233#issuecomment-452580391
-                        # obj = lief.PE.parse(raw=content[obj_start:obj_end-1])
-                        obj = None
-                    else:
-                        obj = lief.elf.parse(raw=content[obj_start:obj_end-1])
-                    if not obj:
-                        # Cannot do much here except return the index.
-                        return symnames, [[0, 0] for sym in symnames], symnames, [[0, 0] for sym in symnames]
-                    # You can unpack an archive via:
-                    # /mingw64/bin/ar.exe xv /mingw64/lib/libz.dll.a
-                    # obj = lief.PE.parse('C:\\Users\\rdonnelly\\conda\\conda-build\\mingw-w64-libz.dll.a\\d000103.o')
-                    for sym in obj.symbols:
-                        # Irrespective of whether you pass -g or not to nm, it still
-                        # lists symbols that are either exported or is_static.
-                        if sym.is_function and (sym.exported or sym.is_static):
-                            functions.append(sym.name)
-                return functions, [[0, 0] for sym in functions], functions, [[0, 0] for sym in functions]
-            elif name.startswith(b'__.SYMDEF'):
-                # Reference:
-                # http://www.manpagez.com/man/5/ranlib/
-                # https://opensource.apple.com/source/cctools/cctools-921/misc/libtool.c.auto.html
-                # https://opensource.apple.com/source/cctools/cctools-921/misc/nm.c.auto.html
-                # https://developer.apple.com/documentation/kernel/nlist_64/1583944-n_type?language=objc
-                if b'64' in name:
-                    ranlib_struct_fmt = 'Q'
-                else:
-                    ranlib_struct_fmt = 'I'
-                ranlib_struct_sz = struct.calcsize(ranlib_struct_fmt)
-                size_ranlib_structs, = struct.unpack('<I', content[index:index+4])
-                # Each of the ranlib structures consists of a zero based offset into the next
-                # section (a string table of symbols) and an offset from the beginning of
-                # the archive to the start of the archive file which defines the symbol
-                nsymbols = size_ranlib_structs // 8
-                size_string_table, = struct.unpack('<I', content[index+4+(nsymbols*ranlib_struct_sz*2):index+4+4+(nsymbols*ranlib_struct_sz*2)])
-                ranlib_structs = []
-                for i in range(nsymbols):
-                    ran_off, ran_strx = struct.unpack('<'+ranlib_struct_fmt+ranlib_struct_fmt,
-                                                      content[index+(i*ranlib_struct_sz*2):index+((i+1)*ranlib_struct_sz*2)])
-                    ranlib_structs.append((ran_strx, ran_off))
-                string_table = content[index+4+4+(nsymbols*ranlib_struct_sz*2):index+4+4+(nsymbols*ranlib_struct_sz*2)+size_string_table]
-                string_table = string_table.decode('utf-8', errors='ignore')
-                filtered_syms = []
-                filtered_ranlib_structs = []
-                syms = []
-                for i in range(nsymbols):
-                    ranlib_struct = ranlib_structs[i]
-                    strx, off = ranlib_struct
-                    sym = string_table[strx:strx+string_table[strx:].find('\x00')]
-                    syms.append(sym)
-                    if debug_static_archives: print("{} :: strx={}, off={}".format(syms[i], hex(strx), hex(off)))
-                    # This is probably a different structure altogether! Something symobol-y not file-y.
-                    _, name, name_len, size, typ = _parse_ar_hdr(content, file_index+off)
-                    if True:
-                        filtered_syms.append(sym)
-                        filtered_ranlib_structs.append(ranlib_struct)
-                # Comment the return out if you want to play with object_file_data, note we are *not* advancing index
-                # past the sting table.
-                # if not QUERY_STATIC_LIB_EXPORTS_VIA_LIEF:
-                for ranlib_struct in filtered_ranlib_structs:
-                    ran_off = ranlib_struct[1]
-                    if ran_off > len(content):
-                        print("Well this isn't possible")
-                    # ran_off, name, name_len, typ = _parse_ar_hdr(content, ran_off)
-                    # print(name)
-            index += size - name_len
+        obj_starts = set()
+        obj_ends = set()
+        functions = []
+        if index & 1:
+            index += 1
+        file_index = index
+        if debug_static_archives: print("ar_hdr index = {}".format(hex(index)))
+        index, name, name_len, size, typ = _parse_ar_hdr(content, index)
+        if typ == 'GNU_SYMBOLS':
+            # Reference:
+            # https://web.archive.org/web/20070924090618/http://www.microsoft.com/msj/0498/hood0498.aspx
+            nsymbols, = struct.unpack('>I', content[index:index+4])
+            # Reference:
+            # https://docs.microsoft.com/en-us/windows/desktop/api/winnt/ns-winnt-_image_file_header
+            offsets = []
+            for i in range(nsymbols):
+                offset, = struct.unpack('>I', content[index+4+i*4:index+4+(i+1)*4])
+                offsets.append(offset)
+            syms = [symname.decode('utf-8')
+                    for symname in content[index+4+(nsymbols*4):index+size].split(b'\x00')[:nsymbols]]
+            for i in range(nsymbols):
+                index2, name, name_len, size, typ = _parse_ar_hdr(content, offsets[i])
+                obj_starts.add(index2)
+                obj_ends.add(offsets[i])
+                if debug_static_archives: print("symname {}, offset {}, name {}, elf? {}".format(syms[i], offsets[i], name, content[index2:index2+4]))
+        elif name.startswith(b'__.SYMDEF'):
+            # Reference:
+            # http://www.manpagez.com/man/5/ranlib/
+            # https://opensource.apple.com/source/cctools/cctools-921/misc/libtool.c.auto.html
+            # https://opensource.apple.com/source/cctools/cctools-921/misc/nm.c.auto.html
+            # https://opensource.apple.com/source/cctools/cctools-921/libstuff/writeout.c
+            # https://developer.apple.com/documentation/kernel/nlist_64/1583944-n_type?language=objc
+            if b'64' in name:
+                # 2 uint64_t, a string table index and an offset
+                ranlib_struct_field_fmt = 'Q'
+                toc_integers_fmt = 'Q'
+            else:
+                # 2 uint32_t, a string table index and an offset
+                ranlib_struct_field_fmt = 'I'
+                toc_integers_fmt = 'I'
+            ranlib_struct_sz = struct.calcsize(ranlib_struct_field_fmt) * 2
+            toc_integers_sz = struct.calcsize(toc_integers_fmt)
+            size_ranlib_structs, = struct.unpack('<'+toc_integers_fmt, content[index:index+toc_integers_sz])
+            # Each of the ranlib structures consists of a zero based offset into the next
+            # section (a string table of symbols) and an offset from the beginning of
+            # the archive to the start of the archive file which defines the symbol
+            nsymbols = size_ranlib_structs // 8
+            size_string_table, = struct.unpack('<'+toc_integers_fmt, content[index+toc_integers_sz+(nsymbols*ranlib_struct_sz):index+4+4+(nsymbols*ranlib_struct_sz)])
+            ranlib_structs = []
+            ranlib_index = index + (toc_integers_sz * 2)
+            for i in range(nsymbols):
+                ran_off, ran_strx = struct.unpack('<'+ranlib_struct_field_fmt+ranlib_struct_field_fmt,
+                                                    content[ranlib_index+(i*ranlib_struct_sz):ranlib_index+((i+1)*ranlib_struct_sz)])
+                ranlib_structs.append((ran_strx, ran_off))
+            if debug_static_archives > 1: print("string_table: start: {} end: {}".format(hex(ranlib_index+(nsymbols*ranlib_struct_sz)),hex(ranlib_index+(nsymbols*ranlib_struct_sz)+size_string_table)))
+            string_table = content[ranlib_index+(nsymbols*ranlib_struct_sz):ranlib_index+(nsymbols*ranlib_struct_sz)+size_string_table]
+            string_table = string_table.decode('utf-8', errors='ignore')
+            syms = []
+            for i in range(nsymbols):
+                ranlib_struct = ranlib_structs[i]
+                strx, off = ranlib_struct
+                sym = string_table[strx:strx+string_table[strx:].find('\x00')]
+                syms.append(sym)
+                if debug_static_archives > 1: print("{} :: strx={}, off={}".format(syms[i], hex(strx), hex(off)))
+                # This is probably a different structure altogether! Something symobol-y not file-y.
+                off2, name, name_len, size, typ = _parse_ar_hdr(content, off)
+                obj_starts.add(off2)
+                obj_ends.add(off)
+        obj_ends.add(len(content))
+        obj_starts = sorted(list(obj_starts))
+        obj_ends = sorted(list(obj_ends))[1:]
+        if debug_static_archives > 1: print('obj_starts: {}'.format(" ".join('0x{:05x}'.format(o) for o in obj_starts)))
+        if debug_static_archives > 1: print('  obj_ends: {}'.format(" ".join('0x{:05x}'.format(o) for o in obj_ends)))
+        for obj_start, obj_end in zip(obj_starts, obj_ends):
+            IMAGE_FILE_MACHINE_I386=0x014c
+            IMAGE_FILE_MACHINE_AMD64=0x8664
+            MACHINE_TYPE, = struct.unpack('<H', content[obj_start:obj_start+2])
+            if debug_static_archives > 0: print(hex(obj_start), hex(obj_end), obj_end-obj_start)
+            if MACHINE_TYPE in (IMAGE_FILE_MACHINE_I386, IMAGE_FILE_MACHINE_AMD64):
+                # 'This file is not a PE binary' (yeah, fair enough, it's a COFF file).
+                # Reported at https://github.com/lief-project/LIEF/issues/233#issuecomment-452580391
+                # obj = lief.PE.parse(raw=content[obj_start:obj_end-1])
+                obj = None
+            elif MACHINE_TYPE == 0xfacf:
+                obj = lief.parse(raw=content[obj_start:obj_end])
+                # filename = '/Users/rdonnelly/conda/conda-build/macOS-libpython2.7.a/getbuildinfo.o'
+                # obj = lief.parse(filename)
+                # syms_a = get_symbols(obj, defined=True, undefined=False)
+                # obj = lief.parse(filename)
+                # syms_b = get_symbols(obj, defined=True, undefined=False)
+                # print(syms_b)
+            else:
+                obj = lief.ELF.parse(raw=content[obj_start:obj_end])
+            if not obj:
+                # Cannot do much here except return the index.
+                return syms, [[0, 0] for sym in syms], syms, [[0, 0] for sym in syms]
+            # You can unpack an archive via:
+            # /mingw64/bin/ar.exe xv /mingw64/lib/libz.dll.a
+            # obj = lief.PE.parse('C:\\Users\\rdonnelly\\conda\\conda-build\\mingw-w64-libz.dll.a\\d000103.o')
+            # for sym in obj.symbols:
+            #     # Irrespective of whether you pass -g or not to nm, it still
+            #     # lists symbols that are either exported or is_static.
+            #     if sym.is_function and (sym.exported or sym.is_static):
+            #         functions.append(sym.name)
+            functions.extend(get_symbols(obj, defined=True, undefined=False))
+        return functions, [[0, 0] for sym in functions], functions, [[0, 0] for sym in functions]
+
 #        print("ERROR: Failed to find ranlib symbol defintions or GNU symbols")
         return filtered_syms, filtered_ranlib_structs, syms, ranlib_structs
 
@@ -637,7 +639,6 @@ def get_exports(filename, arch='native'):
         if (os.path.exists(filename) and
            (filename.endswith('.a') or filename.endswith('.lib')) and
            is_archive(filename)):
-            # Sorry!
             import subprocess
             # syms = os.system('nm -g {}'.filename)
             # on macOS at least:
@@ -645,13 +646,12 @@ def get_exports(filename, arch='native'):
             # P: posix format
             # g: global (exported) only
             # U: not undefined
-            # j is name only
-            nm_exe = 'nm'
+            # j: name only
+            nm_exe = find_executable('nm')
             flags = '-Pg'
             if sys.platform == 'darwin':
                 flags = '-PgUj'
-            elif sys.platform == 'win32':
-                filename = 'C:\\msys64\\mingw64\\lib\\libz.dll.a'
+            elif sys.platform == 'win32' and not nm_exe:
                 nm_exe = 'C:\\msys64\\mingw64\\bin\\nm.exe'
             try:
                 out, _ = subprocess.Popen([nm_exe, flags, filename], shell=False,
@@ -663,44 +663,21 @@ def get_exports(filename, arch='native'):
                 # nm may not be available or have the correct permissions, this
                 # should not cause a failure, see gh-3287
                 print('WARNING: nm: failed to get_exports({})'.format(filename))
-                exports = []
+                exports = None
 
             # Now, our own implementation which does not require nm and can
             # handle .lib files.
             exports2, flags2, exports2_all, flags2_all = get_static_lib_exports(filename)
             result = exports2
-            if set(exports) != set(exports2):
+            if debug_static_archives and exports and set(exports) != set(exports2):
                 diff1 = set(exports).difference(set(exports2))
                 diff2 = set(exports2).difference(set(exports))
                 error_count = len(diff1) + len(diff2)
                 if debug_static_archives: print("errors: {} (-{}, +{})".format(error_count, len(diff1), len(diff2)))
                 if debug_static_archives: print("WARNING :: Disagreement regarding static lib exports in {} between nm (nsyms={}) and lielfldd (nsyms={}):"
                       .format(filename, len(exports), len(exports2)))
-#                print("nm.diff(liefldd) = \n{}".format('\n'.join(diff1)))
-#                print("liefldd.diff(nm) = \n{}".format('\n'.join(diff2)))
-
-                if debug_static_archives:
-                    if debug_static_archives: print("\nMissing symbols\n")
-
-                    for item in diff1:
-                        if item not in exports2_all:
-                            print('wtf 3 {}'.format(item))
-                        idx = exports2_all.index(item)
-                        if debug_static_archives: print("{:>64} : str_idx={:08x} off={:08x}".format(item, flags2_all[idx][0], flags2_all[idx][1]))
-
-                    if debug_static_archives: print("\nUnwanted symbols\n")
-
-                    for item in diff2:
-                        if item not in exports2_all:
-                            if debug_static_archives: print('wtf 4 {}'.format(item))
-                        idx = exports2.index(item)
-                        if debug_static_archives: print("{:>64} : str_idx={:08x} off={:08x}".format(item, flags2[idx][0], flags2[idx][1]))
-
-                    if debug_static_archives: print("\nAll symbols\n")
-
-                    for item in exports2_all:
-                        idx = exports2_all.index(item)
-                        if debug_static_archives: print("{:>64} : str_idx={:08x} off={:08x}".format(item, flags2_all[idx][0], flags2_all[idx][1]))
+                print("** nm.diff(liefldd) [MISSING SYMBOLS] **\n{}".format('\n'.join(diff1)))
+                print("** liefldd.diff(nm) [  EXTRA SYMBOLS] **\n{}".format('\n'.join(diff2)))
 
     if not result:
         binary = ensure_binary(filename)
@@ -727,85 +704,55 @@ def get_relocations(filename, arch='native'):
     return []
 
 
-def get_symbols(file, defined=True, undefined=True, arch='native'):
+def get_symbols(file, defined=True, undefined=True, notexported=False, arch='native'):
     binary = ensure_binary(file)
-    try:
-        if binary.__class__ == lief.MachO.Binary and binary.has_dyld_info:
+
+    first_undefined_symbol = 0
+    last_undefined_symbol = -1
+    if isinstance(binary, lief.MachO.Binary) and binary.has_dynamic_symbol_command:
+        try:
             dyscmd = binary.dynamic_symbol_command
             first_undefined_symbol = dyscmd.idx_undefined_symbol
             last_undefined_symbol = first_undefined_symbol + dyscmd.nb_undefined_symbols - 1
+        except:
+            pass
+    res = []
+    if len(binary.exported_functions):
+        syms = binary.exported_functions
+    elif len(binary.symbols):
+        syms = binary.symbols
+    elif len(binary.static_symbols):
+        syms = binary.static_symbols
+    for index, s in enumerate(syms):
+        if debug_static_archives > 1: print(s)
+#        if s.type&16:
+#            continue
+        is_notexported = True
+        is_undefined = index >= first_undefined_symbol and index <= last_undefined_symbol
+        if binary.__class__ != lief.MachO.Binary:
+            if isinstance(s, str):
+                s_name = '%s' % s
+            else:
+                s_name = '%s' % s.name
+                if s.exported and s.imported:
+                    print("Weird, symbol {} is both imported and exported".format(s.name))
+                if s.exported:
+                    is_undefined = True
+                    is_notexported = False
+                elif s.imported:
+                    is_undefined = False
         else:
-            first_undefined_symbol = 0
-            last_undefined_symbol = -1
-        res = []
-        if len(binary.exported_functions):
-            syms = binary.exported_functions
-        elif len(binary.symbols):
-            syms = binary.symbols
-        elif len(binary.static_symbols):
-            syms = binary.static_symbols
-        for index, s in enumerate(syms):
-            is_undefined = index >= first_undefined_symbol and index <= last_undefined_symbol
-            if binary.__class__ != lief.MachO.Binary:
-                if isinstance(s, str):
-                    res.append(s)
-                else:
-                    if s.exported and s.imported:
-                        print("Weird, symbol {} is both imported and exported".format(s.name))
-                    if s.exported:
-                        is_undefined = True
-                    elif s.imported:
-                        is_undefined = False
+            s_name = '%s' % s.name
+            is_notexported = False if s.type&1 else True
 
-                    if is_undefined and undefined:
-                        res.append(s.name)
-                    elif not is_undefined and defined:
-                        res.append(s.name)
-            # else:
-            #     print("Skipping {}, is_undefined {}, defined {}, undefined {}".format(s.name, is_undefined, defined, undefined))
-        return res
-    except:
-        print('WARNING: liefldd: failed get_symbols({})'.format(file))
-
-    return []
-
-
-class memoized_by_arg0_inode(object):
-    """Decorator. Caches a function's return value each time it is called.
-    If called later with the same arguments, the cached value is returned
-    (not reevaluated).
-
-    The first argument is required to be an existing filename and it is
-    always converted to an inode number.
-    """
-    def __init__(self, func):
-        self.func = func
-        self.cache = {}
-        self.lock = threading.Lock()
-
-    def __call__(self, *args, **kw):
-        newargs = []
-        for arg in args:
-            if arg is args[0]:
-                s = os.stat(arg)
-                arg = s.st_ino
-            if isinstance(arg, list):
-                newargs.append(tuple(arg))
-            elif not isinstance(arg, Hashable):
-                # uncacheable. a list, for instance.
-                # better to not cache than blow up.
-                return self.func(*args, **kw)
-            else:
-                newargs.append(arg)
-        newargs = tuple(newargs)
-        key = (newargs, frozenset(sorted(kw.items())))
-        with self.lock:
-            if key in self.cache:
-                return self.cache[key]
-            else:
-                value = self.func(*args, **kw)
-                self.cache[key] = value
-                return value
+        # print("{:32s} : s.type 0b{:020b}, s.value 0b{:020b}".format(s.name, s.type, s.value))
+        # print("s.value 0b{:020b} :: s.type 0b{:020b}, {:32s}".format(s.value, s.type, s.name))
+        if notexported == True or is_notexported == False:
+            if is_undefined and undefined:
+                res.append('%s' % s_name)
+            elif not is_undefined and defined:
+                res.append('%s' % s_name)
+    return res
 
 
 class memoized_by_arg0_filehash(object):
@@ -852,7 +799,7 @@ class memoized_by_arg0_filehash(object):
                 return value
 
 
-@memoized_by_arg0_inode
+@memoized_by_arg0_filehash
 def get_exports_memoized(filename, arch='native'):
     return get_exports(filename, arch=arch)
 
