@@ -1017,6 +1017,9 @@ def codefile_class(filename, skip_symlinks=False):
     # Java .class files share 0xCAFEBABE with Mach-O FAT_MAGIC.
     if filename.endswith('.class'):
         return None
+    # Guile .go files use the ELF format, but don't have a .dynstr section
+    if filename.endswith('.go'):
+        return None
     if not os.path.exists(filename) or os.path.getsize(filename) < 4:
         return None
     with open(filename, 'rb') as file:
