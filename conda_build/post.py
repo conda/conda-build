@@ -20,6 +20,7 @@ except ImportError:
 
 from conda_build.os_utils import external
 from conda_build.conda_interface import PY3
+from conda_build.conda_interface import iteritems
 from conda_build.conda_interface import lchmod
 from conda_build.conda_interface import linked_data
 from conda_build.conda_interface import walk_prefix
@@ -27,8 +28,9 @@ from conda_build.conda_interface import TemporaryDirectory
 from conda_build.conda_interface import md5_file
 
 from conda_build import utils
-from conda_build.os_utils.liefldd import (get_exports_memoized, get_linkages_memoized,
-                                          get_runpaths)
+from conda_build.os_utils.liefldd import (get_exports_memoized, get_imports_memoized,
+                                          get_linkages_memoized, get_runpaths,
+                                          get_symbols_memoized)
 from conda_build.os_utils.pyldd import codefile_type
 from conda_build.os_utils.ldd import get_package_obj_files
 from conda_build.index import get_build_index
@@ -665,11 +667,14 @@ def _get_fake_pkg_dist(pkg_name, pkg_version, build_str, build_number):
     pkg_vendoring_version = pkg_version
     pkg_vendoring_build_str = build_str
     pkg_vendoring_build_number = build_number
+    pkg_vendoring_key = '-'.join([pkg_vendoring_name,
+                                  pkg_vendoring_version,
+                                  pkg_vendoring_build_str])
 
     return FakeDist(pkg_vendoring_name,
-                                 pkg_vendoring_version,
-                                 pkg_vendoring_build_number,
-                                 pkg_vendoring_build_str)
+                    pkg_vendoring_version,
+                    pkg_vendoring_build_number,
+                    pkg_vendoring_build_str), pkg_vendoring_key
 
 
 def _print_msg(errors, text, verbose):
@@ -833,6 +838,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                            exception_on_error, files, bldpkgs_dirs, output_folder, channel_urls):
     verbose = True
     errors = []
+    error_static_linking = False
 
     sysroot_substitution = '$SYSROOT/'
     build_prefix_substitution = '$PATH/'
@@ -854,14 +860,15 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     else:
         lib_packages_used = set()
 
-    pkg_vendored_dist = _get_fake_pkg_dist(pkg_name, pkg_version, build_str, build_number)
+    pkg_vendored_dist, pkg_vendoring_key = _get_fake_pkg_dist(pkg_name, pkg_version, build_str, build_number)
 
     ignore_list_syms = ['main', '_main', '*get_pc_thunk*', '___clang_call_terminate', '_timeout']
-    # ignore_for_statics = ['gcc_impl_linux*', 'compiler-rt*', 'llvm-openmp*', 'gfortran_osx*']
+    ignore_for_statics = ['gcc_impl_linux*', 'compiler-rt*', 'llvm-openmp*', 'gfortran_osx*']
     # sysroots and whitelists are similar, but the subtle distinctions are important.
     sysroot_prefix = build_prefix
     sysroots = [sysroot + os.sep for sysroot in glob(os.path.join(sysroot_prefix, '**', 'sysroot'))]
     whitelist = []
+    vendoring_record = dict()
     if not len(sysroots):
         if subdir == 'osx-64':
             sysroots = ['/usr/lib/', '/opt/X11/', '/System/Library/Frameworks/']
@@ -910,9 +917,9 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
             else:
                 msg_prelude = warn_prelude
             _print_msg(errors, "{}: {} package {} in requirements/run but it is not used "
-                              "(i.e. it is overdepending or perhaps statically linked? "
-                              "If that is what you want then add it to `build/ignore_run_exports`)"
-                              .format(msg_prelude, package_nature[lib], lib), verbose=verbose)
+                               "(i.e. it is overdepending or perhaps statically linked? "
+                               "If that is what you want then add it to `build/ignore_run_exports`)"
+                               .format(msg_prelude, package_nature[lib], lib), verbose=verbose)
     if len(errors):
         if exception_on_error:
             overlinking_errors = [error for error in errors if "overlinking" in error]
@@ -923,6 +930,12 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                 raise OverDependingError(overdepending_errors)
         else:
             sys.exit(1)
+
+    if pkg_vendoring_key in vendoring_record:
+        imports = vendoring_record[pkg_vendoring_key]
+        return imports
+    else:
+        return dict()
 
 
 def check_overlinking(m, files):
