@@ -1,4 +1,4 @@
-from collections import Hashable
+from collections.abc import Hashable
 import hashlib
 import json
 import os
