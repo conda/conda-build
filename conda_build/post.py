@@ -621,6 +621,8 @@ def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_v
         for subdir2, _, filez in os.walk(prefix):
             for file in filez:
                 fp = os.path.join(subdir2, file)
+                if 'libclang.dylib' in fp:
+                    import pdb; pdb.set_trace()
                 dynamic_lib = any(glob2.fnmatch.fnmatch(fp, ext) for ext in ('*.so*', '*.dylib*', '*.dll')) and \
                               codefile_type(fp, skip_symlinks=False) is not None
                 static_lib = any(glob2.fnmatch.fnmatch(fp, ext) for ext in ('*.a', '*.lib'))
@@ -898,6 +900,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                not needed_dso.startswith(build_prefix_substitution) and
                needed_dso not in prefix_owners):
                 print("  ERROR :: {} not in prefix_owners".format(needed_dso))
+                import pdb; pdb.set_trace()
                 sys.exit(1)
 
     whitelist += missing_dso_whitelist or []
