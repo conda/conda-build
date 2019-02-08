@@ -10,11 +10,6 @@ Conda packages walkthrough and building Anaconda installers
    conda_install
    building_anaconda
    
-********
-Overview
-********
-
-
 What is a “package”?
 --------------------
 
