@@ -1,11 +1,9 @@
-.. _index:
 
-=========================
 Conda-build Documentation
 =========================
 
 Building a conda package requires
-:doc:`installing conda build <install-conda-build>` and
+:doc:`installing conda-build <install-conda-build>` and
 creating a conda :doc:`recipe <recipe>`. Use the ``conda build``
 command to build the conda package from the conda recipe.
 
@@ -22,9 +20,9 @@ Anaconda Cloud, you will need an
    :maxdepth: 3
 
    source/install-conda-build
-   source/conda-package-walkthrough/index
    source/package-spec
    source/package-naming-conv
+   source/user-guide/index
    source/recipe
    source/channels
    source/define-metadata
