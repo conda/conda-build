@@ -25,7 +25,6 @@ Anaconda Cloud, you will need an
    source/user-guide/index
    source/package-spec
    source/package-naming-conv
-   source/user-guide/index
    source/recipe
    source/channels
    source/define-metadata
