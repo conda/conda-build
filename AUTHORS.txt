@@ -16,11 +16,11 @@ Authors are sorted by number of commits.
 * Jonathan J. Helmus
 * Matt Craig
 * Johannes Köster
+* Anthony Scopatz
 * Mandeep Bhutani
 * Patrick Snape
 * Sean
 * Travis Oliphant
-* Anthony Scopatz
 * James Sexton
 * Nehal J Wani
 * Harsh Gupta
@@ -49,6 +49,7 @@ Authors are sorted by number of commits.
 * Patrick Sodré
 * Bruno Oliveira
 * Bryan W. Weber
+* Rachel Rigdon
 * Thomas A Caswell
 * Mario Juric
 * Ivan Kalev
@@ -166,5 +167,7 @@ Authors are sorted by number of commits.
 * Mark Wiebe
 * mel
 * csoja
+* Axel Huebl
+* Rachel
 
 

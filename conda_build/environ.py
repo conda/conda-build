@@ -394,12 +394,15 @@ def r_vars(metadata, prefix, escape_backslash):
     if any(r_pkg in deps for r_pkg in R_PACKAGES) or \
             metadata.name(fail_ok=True) in R_PACKAGES:
         r_bin = metadata.config.r_bin(prefix, metadata.config.host_subdir)
+        # set R_USER explicitly to prevent crosstalk with existing R_LIBS_USER packages
+        r_user = join(prefix, 'Libs', 'R')
 
         if utils.on_win and escape_backslash:
             r_bin = r_bin.replace('\\', '\\\\')
 
         vars_.update({
             'R': r_bin,
+            'R_USER': r_user,
         })
     return vars_
 
@@ -591,7 +594,7 @@ def linux_vars(m, get_default, prefix):
     # the GNU triplet is powerpc, not ppc. This matters.
     if build_arch.startswith('ppc'):
         build_arch = build_arch.replace('ppc', 'powerpc')
-    if build_arch.startswith('powerpc'):
+    if build_arch.startswith('powerpc') or build_arch.startswith('aarch64'):
         build_distro = 'cos7'
     else:
         build_distro = 'cos6'
