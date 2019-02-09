@@ -32,6 +32,7 @@ Anaconda Cloud, you will need an
    source/features
    source/environment-variables
    source/make-relocatable
+   source/debugging
    source/link-scripts
    source/variants
    source/use-shared-libraries
