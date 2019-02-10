@@ -40,9 +40,9 @@ def test_long_test_prefix_length(config):
     assert config.long_test_prefix
     assert '_plac' in config.test_prefix
     config.long_test_prefix = True
-    config.prefix_length = 80
+    config.prefix_length = 78
     assert len(config.test_prefix) == config.prefix_length
-    config.prefix_length = 255
+    config.prefix_length = 253
     assert len(config.test_prefix) == config.prefix_length
 
 
