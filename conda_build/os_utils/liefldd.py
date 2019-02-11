@@ -725,6 +725,8 @@ def get_symbols(file, defined=True, undefined=True, notexported=False, arch='nat
         syms = binary.symbols
     elif len(binary.static_symbols):
         syms = binary.static_symbols
+    else:
+        syms = []
     for index, s in enumerate(syms):
         if debug_static_archives > 1: print(s)
 #        if s.type&16:
