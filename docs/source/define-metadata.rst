@@ -10,9 +10,46 @@ Defining metadata (meta.yaml)
 
 
 All the metadata in the conda build recipe is specified in the
-``meta.yaml`` file, as in this simple example:
+``meta.yaml`` file. See the example below: 
 
-.. literalinclude:: ../../tutorials/meta.yaml
+.. code-block:: RST
+
+    {% set version = "1.1.0" %}
+
+    package:
+      name: imagesize
+      version: {{ version }}
+
+    source:
+      url: https://pypi.io/packages/source/i/imagesize/imagesize-{{ version }}.tar.gz
+      sha256: f3832918bc3c66617f92e35f5d70729187676313caa60c187eb0f28b8fe5e3b5
+
+    build:
+      noarch: python
+      number: 0
+      script: python -m pip install --no-deps --ignore-installed .
+
+    requirements:
+      host:
+        - python
+        - pip
+      run:
+        - python
+
+    test:
+      imports:
+        - imagesize
+
+    about:
+      home: https://github.com/shibukawa/imagesize_py
+      license: MIT
+      summary: 'Getting image size from png/jpeg/jpeg2000/gif file'
+      description: |
+        This module analyzes jpeg/jpeg2000/png/gif image header and
+        return image size.
+      dev_url: https://github.com/shibukawa/imagesize_py
+      doc_url: https://pypi.python.org/pypi/imagesize
+      doc_source_url: https://github.com/shibukawa/imagesize_py/blob/master/README.rst
 
 All sections are optional except for ``package/name`` and
 ``package/version``.
