@@ -1,14 +1,12 @@
-***********************************************************
-Conda packages walkthrough and building Anaconda installers
-***********************************************************
+*********
+Concepts
+*********
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 3
 
-   package_anatomy
-   generating_index
-   conda_install
-   building_anaconda
+   package-anatomy
+   generating-index
    
 What is a “package”?
 --------------------
@@ -46,3 +44,7 @@ Building Anaconda installers
 
 * The idea is to build an Anaconda metapackage and bundle it together with some
   other packages to build an Anaconda installer
+
+* For more information about building Anaconda installers, check out
+  :doc:`building-anaconda`.
+

@@ -21,7 +21,9 @@ Anaconda Cloud, you will need an
    :maxdepth: 3
 
    source/install-conda-build
-   source/conda-package-walkthrough/index
+   source/concepts/index
+   source/concepts/building-anaconda
+   source/concepts/conda-install
    source/user-guide/index
    source/package-spec
    source/package-naming-conv
