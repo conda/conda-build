@@ -22,8 +22,6 @@ Anaconda Cloud, you will need an
 
    source/install-conda-build
    source/concepts/index
-   source/concepts/building-anaconda
-   source/concepts/conda-install
    source/user-guide/index
    source/package-spec
    source/package-naming-conv

@@ -40,11 +40,8 @@ What about channels
 Building Anaconda installers
 ----------------------------
 
-* Anaconda(/Miniconda) installers are built with a modified version of constructor
+* Anaconda(/Miniconda) installers are built with a modified version of constructor.
 
 * The idea is to build an Anaconda metapackage and bundle it together with some
-  other packages to build an Anaconda installer
-
-* For more information about building Anaconda installers, check out
-  :doc:`building-anaconda`.
+  other packages to build an Anaconda installer.
 

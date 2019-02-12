@@ -4,7 +4,7 @@ Installing and updating conda build
 
 To enable building conda packages:
 
-* :doc:`install conda <./install/index>`
+* `install conda <https://conda.io/projects/conda/en/latest/user-guide/install/index.html>`_
 * install conda build
 * update conda and conda build
 
@@ -14,7 +14,7 @@ To enable building conda packages:
 Installing conda build
 ======================
 
-To install conda build, in your Terminal window or an Anaconda Prompt, run:
+To install conda build, in your terminal window or an Anaconda Prompt, run:
 
 .. code-block:: bash
 
@@ -27,7 +27,7 @@ Updating conda and conda build
 Keep your versions of conda and conda build up to date to
 take advantage of bug fixes and new features.
 
-To update conda and conda build, in your Terminal window or an Anaconda Prompt, run:
+To update conda and conda build, in your terminal window or an Anaconda Prompt, run:
 
 .. code-block:: bash
 
