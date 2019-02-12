@@ -4,8 +4,8 @@ Conda-build Documentation
 =========================
 
 Building a conda package requires
-:doc:`installing conda-build <install-conda-build>` and
-creating a conda :doc:`recipe <recipe>`. Use the ``conda build``
+:doc:`installing conda-build <source/install-conda-build>` and
+creating a conda :doc:`recipe <source/recipe>`. Use the ``conda build``
 command to build the conda package from the conda recipe.
 
 You can build conda packages from a variety of source code

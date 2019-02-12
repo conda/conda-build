@@ -218,7 +218,7 @@ Link and unlink scripts
 =======================
 
 You may optionally execute scripts before and after the link
-and unlink steps. For more information, see :doc:`add-scripts`.
+and unlink steps. For more information, see :doc:`link-scripts`.
 
 
 .. _repo-si:
@@ -233,7 +233,7 @@ file ``repodata.json`` lists all conda packages in the platform
 subdirectory. Use ``conda index`` to create such an index from
 the conda packages within a directory. It is simple mapping of
 the full conda package filename to the dictionary object in
-``info/index.json`` described in :doc:`add-scripts`.
+``info/index.json`` described in :doc:`link-scripts`.
 
 In the following example, a repository provides the conda package
 ``misc-1.0-np17py27_0.tar.bz2`` on 64-bit Linux and 32-bit
