@@ -12,7 +12,7 @@ Defining metadata (meta.yaml)
 All the metadata in the conda build recipe is specified in the
 ``meta.yaml`` file. See the example below: 
 
-.. code-block:: RST
+.. code-block:: YAML
 
     {% set version = "1.1.0" %}
 
