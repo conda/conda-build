@@ -40,10 +40,12 @@ def test_long_test_prefix_length(config):
     assert config.long_test_prefix
     assert '_plac' in config.test_prefix
     config.long_test_prefix = True
-    config.prefix_length = 78
-    assert len(config.test_prefix) == config.prefix_length
-    config.prefix_length = 253
-    assert len(config.test_prefix) == config.prefix_length
+    # The length of the testing prefix is reduced by 2 characters to check if the null
+    # byte padding causes issues
+    config.prefix_length = 80
+    assert len(config.test_prefix) == config.prefix_length - 2
+    config.prefix_length = 255
+    assert len(config.test_prefix) == config.prefix_length - 2
 
 
 def test_build_id_at_end_of_long_build_prefix(config):
