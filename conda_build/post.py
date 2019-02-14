@@ -814,9 +814,10 @@ def _show_linking_messages(files, errors, needed_dsos_for_file, build_prefix, ru
         msg_prelude = err_prelude if error_overlinking else warn_prelude
 
         try:
-            runpaths = get_runpaths(path)
+            runpaths, _, _ = get_runpaths_raw(path)
         except:
-            _print_msg(errors, '{}: pyldd.py failed to process'.format(warn_prelude))
+            _print_msg(errors, '{}: pyldd.py failed to process'.format(warn_prelude),
+                       verbose=verbose)
             continue
         if runpaths and not (runpath_whitelist or
                              any(fnmatch.fnmatch(f, w) for w in runpath_whitelist)):
