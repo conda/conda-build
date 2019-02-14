@@ -471,13 +471,20 @@ def detect_and_record_prefix_files(m, files, prefix):
 
         with open(join(m.config.info_dir, 'has_prefix'), 'w') as fo:
             for pfix, mode, fn in files_with_prefix:
+
+                if fn in binary_has_prefix_files:
+                    if mode != 'binary':
+                        print("Forcing %s to be treated as binary instead of %s" % (fn, mode))
+                        mode = 'binary'
+                    binary_has_prefix_files.remove(fn)
+                elif fn in text_has_prefix_files:
+                    if mode != 'text':
+                        print("Forcing %s to be treated as text instead of %s" % (fn, mode))
+                        mode = 'text'
+                    text_has_prefix_files.remove(fn)
+
                 print("Detected hard-coded path in %s file %s" % (mode, fn))
                 fo.write(fmt_str % (pfix, mode, fn))
-
-                if mode == 'binary' and fn in binary_has_prefix_files:
-                    binary_has_prefix_files.remove(fn)
-                elif mode == 'text' and fn in text_has_prefix_files:
-                    text_has_prefix_files.remove(fn)
 
     # make sure we found all of the files expected
     errstr = ""
