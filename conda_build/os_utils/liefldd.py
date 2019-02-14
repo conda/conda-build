@@ -2,6 +2,7 @@ try:
     from collections.abc import Hashable
 except ImportError:
     from collections import Hashable
+from functools import partial
 import hashlib
 import json
 import os
@@ -109,73 +110,120 @@ def get_libraries(file):
         if binary.format == lief.EXE_FORMATS.PE:
             result = binary.libraries
         else:
+            result = [l if is_string(l) else l.name for l in binary.libraries]
             # LIEF returns LC_ID_DYLIB name @rpath/libbz2.dylib in binary.libraries. Strip that.
             binary_name = None
-            if binary.format == lief.EXE_FORMATS.MACHO and binary.has_rpath:
+            if binary.format == lief.EXE_FORMATS.MACHO:
                 binary_name = [command.name for command in binary.commands
                                if command.command == lief.MachO.LOAD_COMMAND_TYPES.ID_DYLIB]
                 binary_name = binary_name[0] if len(binary_name) else None
-            result = [l if is_string(l) else l.name for l in binary.libraries]
-            if binary.format == lief.EXE_FORMATS.MACHO:
-                result = [from_os_varnames(binary, l) for l in result
-                          if not (binary_name and l.endswith(binary_name))]
+                result = [from_os_varnames(binary.format, None, l) for l in result
+                          if not binary_name or l != binary_name]
     return result
 
 
-def get_rpaths(file, exe_dirname, envroot, windows_root=''):
+def _get_elf_rpathy_thing(binary, attribute, dyn_tag):
+    rpaths = []
+    dynamic_entries = binary.dynamic_entries
+    rpaths_colons = [getattr(e, attribute)
+                     for e in dynamic_entries if e.tag == dyn_tag]
+    return rpaths_colons
+
+
+def _set_elf_rpathy_thing(binary, old_matching, new_rpath, set_rpath, set_runpath):
+    dynamic_entries = binary.dynamic_entries
+    changed = False
+    for e in dynamic_entries:
+        if (set_runpath and
+            e.tag == lief.ELF.DYNAMIC_TAGS.RUNPATH and
+            glob2.fnmatch.fnmatch(e.runpath, old_matching) and
+            e.runpath != new_rpath):
+            e.runpath = new_rpath
+            changed = True
+        elif (set_rpath and
+            e.tag == lief.ELF.DYNAMIC_TAGS.RPATH and
+            glob2.fnmatch.fnmatch(e.rpath, old_matching) and
+            e.rpath != new_rpath):
+            e.rpath = new_rpath
+            changed = True
+    return changed
+
+
+def get_rpathy_thing_raw_partial(file, elf_attribute, elf_dyn_tag):
+    '''
+    By raw we mean that no processing is done on them whatsoever. The values are taken directly from
+    LIEF. For anything but Linux, this means an empty list.
+    '''
+
+    binary_format = None
+    binary_type = None
     binary = ensure_binary(file)
     rpaths = []
     if binary:
-        if binary.format == lief.EXE_FORMATS.PE:
-            if not exe_dirname:
-                # log = get_logger(__name__)
-                # log.warn("Windows library file at %s could not be inspected for rpath.  If it's a standalone "
-                #          "thing from a 3rd party, this is safe to ignore." % file)
-                return []
-            # To allow the unix-y rpath code to work we consider
-            # exes as having rpaths of env + CONDA_WINDOWS_PATHS
-            # and consider DLLs as having no rpaths.
-            # .. scratch that, we don't pass exes in as the root
-            # entries so we just need rpaths for all files and
-            # not to apply them transitively.
-            # https://docs.microsoft.com/en-us/windows/desktop/dlls/dynamic-link-library-search-order
-            if exe_dirname:
-                rpaths.append(exe_dirname.replace('\\', '/'))
-            if windows_root:
-                rpaths.append('/'.join((windows_root, "System32")))
-                rpaths.append(windows_root)
-            if envroot:
-                # and not lief.PE.HEADER_CHARACTERISTICS.DLL in binary.header.characteristics_list:
-                rpaths.extend(list(_get_path_dirs(envroot)))
-# This only returns the first entry.
-#        elif binary.format == lief.EXE_FORMATS.MACHO and binary.has_rpath:
-#            rpaths = binary.rpath.path.split(':')
-        elif binary.format == lief.EXE_FORMATS.MACHO and binary.has_rpath:
-            rpaths.extend([command.path.rstrip('/') for command in binary.commands
+        binary_format = binary.format
+        if binary_format == lief.EXE_FORMATS.ELF:
+            binary_type = binary.type
+            if binary_type == lief.ELF.ELF_CLASS.CLASS32 or binary_type == lief.ELF.ELF_CLASS.CLASS64:
+                rpaths = _get_elf_rpathy_thing(binary, elf_attribute, elf_dyn_tag)
+        elif (binary_format == lief.EXE_FORMATS.MACHO and
+              binary.has_rpath and
+              elf_dyn_tag == lief.ELF.DYNAMIC_TAGS.RPATH):
+            rpaths.extend([command.path for command in binary.commands
                       if command.command == lief.MachO.LOAD_COMMAND_TYPES.RPATH])
-        elif binary.format == lief.EXE_FORMATS.ELF:
-            if binary.type == lief.ELF.ELF_CLASS.CLASS32 or binary.type == lief.ELF.ELF_CLASS.CLASS64:
-                dynamic_entries = binary.dynamic_entries
-                # runpath takes precedence over rpath on GNU/Linux.
-                rpaths_colons = [e.runpath for e in dynamic_entries if e.tag == lief.ELF.DYNAMIC_TAGS.RUNPATH]
-                if not len(rpaths_colons):
-                    rpaths_colons = [e.rpath for e in dynamic_entries if e.tag == lief.ELF.DYNAMIC_TAGS.RPATH]
-                for rpaths_colon in rpaths_colons:
-                    rpaths.extend(rpaths_colon.split(':'))
-    return [from_os_varnames(binary, rpath) for rpath in rpaths]
+    return rpaths, binary_format, binary_type
 
 
-def get_runpaths(file):
+get_runpaths_raw = partial(get_rpathy_thing_raw_partial, elf_attribute='runpath', elf_dyn_tag=lief.ELF.DYNAMIC_TAGS.RUNPATH)
+get_rpaths_raw = partial(get_rpathy_thing_raw_partial, elf_attribute='rpath', elf_dyn_tag=lief.ELF.DYNAMIC_TAGS.RPATH)
+
+def get_runpaths_or_rpaths_raw(file):
+    '''
+    Can be called on all OSes. On linux, if runpaths are present they are
+    returned.
+    '''
+    rpaths, binary_format, binary_type = get_runpaths_raw(file)
+    if not len(rpaths):
+        rpaths, _, _ = get_rpaths_raw(file)
+        rpaths_type = 'rpaths'
+    else:
+        rpaths_type = 'runpaths'
+    return rpaths, rpaths_type, binary_format, binary_type
+
+
+def set_rpath(old_matching, new_rpath, file):
     binary = ensure_binary(file)
-    rpaths = []
-    if binary:
-        if (binary.format == lief.EXE_FORMATS.ELF and  # noqa
-            (binary.type == lief.ELF.ELF_CLASS.CLASS32 or binary.type == lief.ELF.ELF_CLASS.CLASS64)):
-            dynamic_entries = binary.dynamic_entries
-            rpaths_colons = [e.runpath for e in dynamic_entries if e.tag == lief.ELF.DYNAMIC_TAGS.RUNPATH]
-            for rpaths_colon in rpaths_colons:
-                rpaths.extend(rpaths_colon.split(':'))
-    return [from_os_varnames(binary, rpath) for rpath in rpaths]
+    if (binary.format == lief.EXE_FORMATS.ELF and
+    (binary.type == lief.ELF.ELF_CLASS.CLASS32 or binary.type == lief.ELF.ELF_CLASS.CLASS64)):
+        if _set_elf_rpathy_thing(binary, old_matching, new_rpath, set_rpath = True, set_runpath = False):
+            binary.write(file)
+
+
+def get_rpaths(file, exe_dirname, envroot, windows_root=''):
+    rpaths, rpaths_type, binary_format, binary_type = get_runpaths_or_rpaths_raw(file)
+    if binary_format == lief.EXE_FORMATS.PE:
+        # To allow the unix-y rpath code to work we consider
+        # exes as having rpaths of env + CONDA_WINDOWS_PATHS
+        # and consider DLLs as having no rpaths.
+        # .. scratch that, we don't pass exes in as the root
+        # entries so we just need rpaths for all files and
+        # not to apply them transitively.
+        # https://docs.microsoft.com/en-us/windows/desktop/dlls/dynamic-link-library-search-order
+        if exe_dirname:
+            rpaths.append(exe_dirname.replace('\\', '/'))
+        if windows_root:
+            rpaths.append('/'.join((windows_root, "System32")))
+            rpaths.append(windows_root)
+        if envroot:
+            # and not lief.PE.HEADER_CHARACTERISTICS.DLL in binary.header.characteristics_list:
+            rpaths.extend(list(_get_path_dirs(envroot)))
+    elif binary_format == lief.EXE_FORMATS.MACHO:
+        rpaths = [rpath.rstrip('/') for rpath in rpaths]
+    elif binary_format == lief.EXE_FORMATS.ELF:
+        result = []
+        for rpath in rpaths:
+            result.extend(rpath.split(':'))
+        rpaths = result
+    return [from_os_varnames(binary_format, binary_type, rpath) for rpath in rpaths]
 
 
 # TODO :: Consider memoizing instead of repeatedly scanning
@@ -220,20 +268,20 @@ def to_os_varnames(binary, input_):
             .replace(libdir, '$LIB')
 
 
-def from_os_varnames(binary, input_):
+def from_os_varnames(binary_format, binary_type, input_):
     """Don't make these functions - they are methods to match the API for elffiles."""
-    if binary.format == lief.EXE_FORMATS.MACHO:
+    if binary_format == lief.EXE_FORMATS.MACHO:
         return input_.replace('@loader_path', '$SELFDIR')     \
                      .replace('@executable_path', '$EXEDIR')  \
                      .replace('@rpath', '$RPATH')
-    elif binary.format == lief.EXE_FORMATS.ELF:
-        if binary.type == lief.ELF.ELF_CLASS.CLASS64:
+    elif binary_format == lief.EXE_FORMATS.ELF:
+        if binary_type == lief.ELF.ELF_CLASS.CLASS64:
             libdir = '/lib64'
         else:
             libdir = '/lib'
         return input_.replace('$ORIGIN', '$SELFDIR')  \
             .replace('$LIB', libdir)
-    elif binary.format == lief.EXE_FORMATS.PE:
+    elif binary_format == lief.EXE_FORMATS.PE:
         return input_
 
 
@@ -313,10 +361,10 @@ def _get_resolved_location(codefile,
         these_rpaths = [resolved_rpath] if resolved_rpath else \
                         rpaths_transitive + \
                         ld_library_paths + \
-                        [dp.replace('$SYSROOT/', sysroot) for dp in default_paths]
+                        [dp.replace('$SYSROOT', sysroot) for dp in default_paths]
         for rpath in these_rpaths:
-            resolved = unresolved.replace('$RPATH', rpath) \
-                                 .replace('$SELFDIR', selfdir) \
+            resolved = unresolved.replace('$RPATH', rpath)      \
+                                 .replace('$SELFDIR', selfdir)  \
                                  .replace('$EXEDIR', exedir)
             exists = os.path.exists(resolved)
             exists_sysroot = exists and sysroot and resolved.startswith(sysroot)
@@ -353,9 +401,10 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
 
     default_paths = []
     if binary.format == lief.EXE_FORMATS.ELF:
-        default_paths = ['$SYSROOT/lib', '$SYSROOT/usr/lib']
         if binary.type == lief.ELF.ELF_CLASS.CLASS64:
-            default_paths.extend(['$SYSROOT/lib64', '$SYSROOT/usr/lib64'])
+            default_paths = ['$SYSROOT/lib64', '$SYSROOT/usr/lib64', '$SYSROOT/lib', '$SYSROOT/usr/lib']
+        else:
+            default_paths = ['$SYSROOT/lib', '$SYSROOT/usr/lib']
     elif binary.format == lief.EXE_FORMATS.MACHO:
         default_paths = ['$SYSROOT/usr/lib']
     elif binary.format == lief.EXE_FORMATS.PE:
