@@ -1,4 +1,7 @@
-from collections.abc import Hashable
+try:
+    from collections.abc import Hashable
+except ImportError:
+    from collections import Hashable
 from functools import partial
 import hashlib
 import json
