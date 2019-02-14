@@ -689,7 +689,7 @@ def _print_msg(errors, text, verbose):
 
 def _lookup_in_system_whitelists(errors, whitelist, needed_dso, sysroots, msg_prelude, info_prelude,
                                  sysroot_prefix, sysroot_substitution, verbose):
-    # A system or ignored dependency. We should be able to find it in one of the CDT o
+    # A system or ignored dependency. We should be able to find it in one of the CDT or
     # compiler packages on linux or at in a sysroot folder on other OSes. These usually
     # start with '$RPATH/' which indicates pyldd did not find them, so remove that now.
     if needed_dso.startswith(sysroot_substitution):
@@ -716,7 +716,7 @@ def _lookup_in_system_whitelists(errors, whitelist, needed_dso, sysroots, msg_pr
                 # Do we want to do this replace?
                 sysroot_files.append(needed_dso.replace(sysroot_substitution, sysroot_os))
             else:
-                dirs_to_glob.extend((os.path.join(sysroot_os, '**', dso_fname)))
+                dirs_to_glob.append(os.path.join(sysroot_os, '**', dso_fname))
         for dir_to_glob in dirs_to_glob:
             sysroot_files.extend(glob(dir_to_glob))
         if len(sysroot_files):
