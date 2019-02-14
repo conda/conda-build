@@ -30,13 +30,13 @@ from conda_build.conda_interface import md5_file
 
 from conda_build import utils
 from conda_build.os_utils.liefldd import (get_exports_memoized, get_imports_memoized,
-                                          get_linkages_memoized, get_runpaths,
-                                          get_symbols_memoized)
+                                          get_linkages_memoized, get_rpaths, get_runpaths_raw,
+                                          get_symbols_memoized, set_rpath)
 from conda_build.os_utils.pyldd import codefile_type
 from conda_build.os_utils.ldd import get_package_obj_files
 from conda_build.index import get_run_exports, get_build_index
 from conda_build.inspect_pkg import which_package
-from conda_build.exceptions import (OverLinkingError, OverDependingError)
+from conda_build.exceptions import (OverLinkingError, OverDependingError, RunPathError)
 
 if sys.platform == 'darwin':
     from conda_build.os_utils import macho
@@ -460,8 +460,7 @@ def mk_relative_linux(f, prefix, rpaths=('lib',)):
             if rpath not in new:
                 new.append(rpath)
     rpath = ':'.join(new)
-    print('patchelf: file: %s\n    setting rpath to: %s' % (elf, rpath))
-    call([patchelf, '--force-rpath', '--set-rpath', rpath, elf])
+    set_rpath(old_matching='*', new_rpath=rpath, file=elf)
 
 
 def assert_relative_osx(path, prefix):
@@ -931,7 +930,10 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                                .format(msg_prelude, package_nature[lib], lib), verbose=verbose)
     if len(errors):
         if exception_on_error:
-            overlinking_errors = [error for error in errors if "overlinking" in error]
+            runpaths_errors = [error for error in errors if re.match(r".*runpaths.*found in.*", error)]
+            if len(runpaths_errors):
+                raise RunPathError(runpaths_errors)
+            overlinking_errors = [error for error in errors if re.match(r".*(overlinking|not found in|did not find).*", error)]
             if len(overlinking_errors):
                 raise OverLinkingError(overlinking_errors)
             overdepending_errors = [error for error in errors if "overdepending" in error]
