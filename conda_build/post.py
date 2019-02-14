@@ -599,8 +599,10 @@ def _collect_needed_dsos(sysroots, files, run_prefix, sysroot_substitution, buil
         if sysroot:
             needed = [n.replace(sysroot, sysroot_substitution) if n.startswith(sysroot)
                       else n for n in needed]
-        needed = [n.replace(build_prefix, build_prefix_substitution) if n.startswith(build_prefix)
-                  else n for n in needed]
+        # We do not want to do this substitution when merging build and host prefixes.
+        if build_prefix != run_prefix:
+            needed = [n.replace(build_prefix, build_prefix_substitution) if n.startswith(build_prefix)
+                    else n for n in needed]
         needed = [os.path.relpath(n, run_prefix) if n.startswith(run_prefix)
                   else n for n in needed]
         needed_dsos_for_file[f] = needed
