@@ -604,7 +604,9 @@ class Config(object):
         """The temporary folder where the test environment is created"""
         if on_win or not self.long_test_prefix:
             return self._short_test_prefix
-        return self._long_prefix(self._short_test_prefix)
+        # Reduce the length of the prefix by 2 characters to check if the null
+        # byte padding causes issues
+        return self._long_prefix(self._short_test_prefix)[:-2]
 
     @property
     def build_python(self):
