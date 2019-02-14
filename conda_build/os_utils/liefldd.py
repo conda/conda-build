@@ -10,10 +10,6 @@ import threading
 
 from six import string_types
 
-import os, sys
-sys.path.append(os.path.dirname(__file__))
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-__name__ = 'conda_build.os_utils.liefldd'
 # TODO :: Remove all use of pyldd
 # Currently we verify the output of each against the other
 from .pyldd import inspect_linkages as inspect_linkages_pyldd
@@ -873,25 +869,3 @@ def get_linkages_memoized(filename, resolve_filenames, recurse,
                           sysroot='', envroot='', arch='native'):
     return get_linkages(filename, resolve_filenames=resolve_filenames,
                         recurse=recurse, sysroot=sysroot, envroot=envroot, arch=arch)
-
-
-#d = get_static_lib_exports('/Users/rdonnelly/conda/bzip2_static.lib')
-#print(d)
-#c = get_static_lib_exports('/Users/rdonnelly/conda/bzip2.lib')
-#print(c)
-#a = get_static_lib_exports('/Users/rdonnelly/conda/libbz2_linux.a')
-#print(a)
-#b = get_static_lib_exports('/Users/rdonnelly/conda/libbz2_macos.a')
-#print(b)
-#print(len(b))
-import glob
-# for static_lib in glob.iglob('/opt/conda/pkgs/**/*.a', recursive=True):
-# for static_lib in ['/opt/conda/pkgs/flex-2.6.4-hb56bbfa_1/lib/libfl.a']:
-# for static_lib in ['/opt/conda/pkgs/libtool-2.4.6-h7b6447c_5/lib/libltdl.a']:
-# for static_lib in ['/opt/conda/pkgs/perl-5.22.2.1-0/lib/perl5/5.22.2/darwin-thread-multi-2level/CORE/libperl.a']:
-# for static_lib in ['/opt/conda/pkgs/perl-5.22.2.1-0/lib/perl5/5.22.2/darwin-thread-multi-2level/CORE/libperl.a']:
-# for static_lib in ['/Users/rdonnelly/conda/libgmp.a']:
-#     get_exports(static_lib)
-
-# Test a symbol on macOS:
-# nm -PgUj /opt/conda/pkgs/perl-5.22.2.1-0/lib/perl5/5.22.2/darwin-thread-multi-2level/CORE/libperl.a | grep _Perl_allocmy
