@@ -825,9 +825,9 @@ def _show_linking_messages(files, errors, needed_dsos_for_file, build_prefix, ru
             if not needed_dso.startswith(os.sep) and not needed_dso.startswith('$'):
                 _lookup_in_prefix_packages(errors, needed_dso, files, run_prefix, whitelist, info_prelude, msg_prelude,
                                warn_prelude, verbose, requirements_run, lib_packages, lib_packages_used)
-            elif needed_dso.startswith(build_prefix):
+            elif needed_dso.startswith('$PATH'):
                 _print_msg(errors, "{}: {} found in build prefix; should never happen".format(
-                          err_prelude, needed_dso), verbose=verbose)
+                           err_prelude, needed_dso), verbose=verbose)
             else:
                 _lookup_in_system_whitelists(errors, whitelist, needed_dso, sysroots, msg_prelude,
                                              info_prelude, sysroot_prefix, sysroot_substitution, verbose)
@@ -844,8 +844,8 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     errors = []
     error_static_linking = False
 
-    sysroot_substitution = '$SYSROOT/'
-    build_prefix_substitution = '$PATH/'
+    sysroot_substitution = '$SYSROOT'
+    build_prefix_substitution = '$PATH'
     # Used to detect overlinking (finally)
     requirements_run = [req.split(' ')[0] for req in requirements_run]
     packages = dists_from_names(requirements_run, run_prefix)
@@ -875,7 +875,13 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     vendoring_record = dict()
     if not len(sysroots):
         if subdir == 'osx-64':
-            sysroots = ['/usr/lib/', '/opt/X11/', '/System/Library/Frameworks/']
+            # This is a bit confused! A sysroot shouldn't contain /usr/lib (it's the bit before that)
+            # what we are really specifying here are subtrees of sysroots to search in and it may be
+            # better to store each element of this as a tuple with a string and a nested tuple, e.g.
+            # [('/', ('/usr/lib', '/opt/X11', '/System/Library/Frameworks'))]
+            # Here we mean that we have a sysroot at '/' (could be a tokenized value like '$SYSROOT'?)
+            # .. and in that sysroot there are 3 suddirs in which we may search for DSOs.
+            sysroots = ['/usr/lib', '/opt/X11', '/System/Library/Frameworks']
             whitelist = DEFAULT_MAC_WHITELIST
         elif subdir.startswith('win'):
             sysroots = ['C:/Windows']
