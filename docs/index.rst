@@ -23,22 +23,11 @@ Anaconda Cloud, you will need an
    source/install-conda-build
    source/concepts/index
    source/user-guide/index
-   source/package-spec
+   source/resources/index
    source/package-naming-conv
-   source/recipe
-   source/channels
-   source/define-metadata
-   source/build-scripts
    source/features
    source/environment-variables
-   source/make-relocatable
    source/debugging
-   source/link-scripts
-   source/variants
-   source/use-shared-libraries
-   source/compiler-tools
-   source/add-win-start-menu-items
    source/sample-recipes
    source/build-without-recipe
    source/wheel-files
-   source/commands/index
