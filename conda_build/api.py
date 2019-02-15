@@ -412,7 +412,8 @@ def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False,
     args = {"set_build_id": False}
     path_is_build_dir = False
     workdirs = [os.path.join(recipe_or_package_path_or_metadata_tuples, d)
-                for d in os.listdir(recipe_or_package_path_or_metadata_tuples)
+                for d in (os.listdir(recipe_or_package_path_or_metadata_tuples) if
+                    os.path.isdir(recipe_or_package_path_or_metadata_tuples) else [])
                 if (d.startswith('work') and
                 os.path.isdir(os.path.join(recipe_or_package_path_or_metadata_tuples, d)))]
     metadatas_conda_debug = [os.path.join(f, "metadata_conda_debug.yaml") for f in workdirs
