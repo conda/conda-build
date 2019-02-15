@@ -18,7 +18,7 @@ Anaconda Cloud, you will need an
 `Anaconda Cloud <http://anaconda.org>`_ account and client.
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 1
 
    source/install-conda-build
    source/concepts/index
@@ -42,3 +42,4 @@ Anaconda Cloud, you will need an
    source/build-without-recipe
    source/wheel-files
    source/commands/index
+   source/release-notes
