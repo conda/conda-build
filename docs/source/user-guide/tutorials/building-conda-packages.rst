@@ -1,13 +1,13 @@
-==================================
-Building conda packages on Windows
-==================================
+=======================
+Building conda packages
+=======================
 
 .. contents::
    :local:
    :depth: 2
 
 This tutorial describes how to use conda build to create conda
-packages on the Windows operating system, using the examples of
+packages on Windows, Linux and Mac operating systems using the examples of
 SEP and GDAL.
 
 The final built packages from this tutorial are available on
@@ -19,17 +19,20 @@ The final built packages from this tutorial are available on
 
 This tutorial also describes writing recipes. You can see the
 final `SEP recipe
-<https://github.com/conda/conda-docs/tree/master/docs/source/user-guide/tutorials/sep>`_
+<https://github.com/conda-forge/sep-feedstock>`_
 and the `GDAL recipe
 <https://github.com/conda-forge/gdal-feedstock>`_
 on GitHub in the `conda documentation repository
-<https://github.com/conda/conda/docs>`_.
+<https://github.com/conda/conda-build/tree/master/docs>`_.
 
 
 Before you start
 =================
 
-Before you start, check the :doc:`prerequisites <index>`.
+Before you start, make sure you have installed:
+   * conda
+   * conda-build
+   * any compilers you want
 
 
 Toolkit
@@ -69,7 +72,7 @@ compilers:
   <https://www.microsoft.com/en-us/download/details.aspx?id=8279>`_.
 
 * Make sure that you also install `VS 2010 Service Pack 1 (SP1)
-  <https://www.microsoft.com/en-us/download/details.aspx?id=23691>`_.
+  <https://www.microsoft.com/en-us/download/details.aspx?id=34677>`_.
 
 * Due to a bug in the VS 2010 SP1 installer, the compiler tools
   may be removed during installation of VS 2010 SP1. They can be
@@ -226,7 +229,8 @@ Edit the skeleton files
 For this package, ``bld.bat`` and ``build.sh`` need no changes.
 You need to edit the ``meta.yaml`` file to add the dependency on
 NumPy and add an optional test for the built package by importing
-It. For more information about what can be specified in meta.yaml, see https://conda.io/projects/conda-build/en/latest/source/define-metadata.html.
+It. For more information about what can be specified in meta.yaml,
+see :doc:`../resources/define-metadata`.
 
 #. In the requirements section of the ``meta.yaml`` file, add a
    line that adds NumPy as a requirement to build the package.
@@ -260,7 +264,7 @@ should be installed when the package is installed.
 
 NOTE: Using the letters ``x.x`` instead of a specific version
 such as ``1.11`` pins NumPy dynamically, so that the actual
-version of NumPy is taken from the build command. Currently NumPy
+version of NumPy is taken from the build command. Currently, NumPy
 is the only package that can be pinned dynamically. Pinning is
 important for SEP because this package uses NumPy's C API through
 Cython. That API changes between NumPy versions, so it is
@@ -327,13 +331,17 @@ Check the output
 
 
 Building a GDAL package with conda and Python 2 or 3
-=========================================================
+====================================================
 
 This procedure describes how to build a package with Python 2 or Python 3.
 Follow the instructions for your preferred version.
 
-To begin, install Anaconda or Miniconda and conda build., If you are using a
+To begin, install Anaconda or Miniconda and conda build. If you are using a
 Windows machine, also use conda to install git and the m2-patch.
+
+``conda install git``
+
+``conda install m2-patch``
 
 Because GDAL includes C and C++, building it on Windows requires Visual Studio.
 This procedure describes how to build a package with Python 2 or
@@ -387,7 +395,7 @@ Let’s take a better look at what’s happening inside the gdal-feedstock.
 In particular, what is happening in the meta.yaml.
 
 The first interesting bit happens under ``source``, it’s the patches
-section
+section:
 ::
 
   patches:
@@ -402,7 +410,8 @@ This section says that when this package is being built on a Windows
 platform, apply the following patch files. Notice that the patch files
 are in the `patches` directory of the recipe. These patches will only
 be applied to windows since the ``# [win]`` selector is applied to each
-of the patch entries. For more about selectors, see https://docs.conda.io/projects/conda-build/en/latest/source/define-metadata.html#preprocessing-selectors.
+of the patch entries. For more about selectors, see
+:ref:`preprocess-selectors`.
 
 In the requirements section, notice how there are both a build and
 host set of requirements. For this recipe, all the compilers required to
@@ -414,21 +423,24 @@ Notice that the C compilers are pulled into the recipe using the syntax
 function ``compiler()`` to specify compiler packages dynamically. So, using
 the ``compiler(‘c’)`` function in a conda recipe will pull in the correct
 compiler for any build platform. For more information about compilers with
-conda build see https://conda.io/projects/conda-build/en/latest/source/compiler-tools.html#anaconda-compilers-and-conda-build-3.
+conda build see :doc:`../resources/compiler-tools`.
 
 Also note that the compilers used by conda build can be specified using
-a conda_build_config.yaml. For more information about how to do that, see https://conda.io/projects/conda-build/en/latest/source/compiler-tools.html#using-your-customized-compiler-package-with-conda-build-3.
+a conda_build_config.yaml. For more information about how to do that,
+see :ref:`using-your-customized-compiler-package-with-conda-build-3`.
 
 Notice that this package has an ``outputs`` section.
-This section is a list of packages to output as a result of building this package.
-In this case, the packages libgdal and GDAL will be built. Similar to a normal recipe,
-the outputs can have build scripts, tests scripts and requirements specified.
-For more information on how outputs work, see https://conda.io/projects/conda-build/en/latest/source/define-metadata.html#outputs-section.
+This section is a list of packages to output as a result of building
+this package. In this case, the packages libgdal and GDAL will be built.
+Similar to a normal recipe, the outputs can have build scripts,
+tests scripts and requirements specified.
+For more information on how outputs work, see the :ref:`package-outputs`.
 
 Now, let's try to build GDAL against some build matrix.
 We will specify building against Python 2.7 and 3.7 using a conda build config.
 
-Add a conda_build_config.yaml file to the directory you are calling conda build from.
+Add a conda_build_config.yaml file to the directory you are calling
+conda build from.
 The file should look something like the following:
 
 ..  code-block:: python
@@ -448,5 +460,5 @@ Or explicitly set the location of the conda build variant matrix
 
 If you want to know more about build variants and conda_build_config.yaml,
 including how to specify a config file and what can go into it, take a look
-at: https://docs.conda.io/projects/conda-build/en/latest/source/variants.html#creating-conda-build-variant-config-files
+at :ref:`conda-build-variant-config-files`.
 
