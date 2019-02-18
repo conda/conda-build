@@ -4,4 +4,4 @@ Tutorials
 
 .. toctree::
 
-  build-windows
+   building-conda-packages

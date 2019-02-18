@@ -314,6 +314,8 @@ With that warning in mind, let's look at good ways to customize clang.
    on macOS and are modifying a different recipe, you should end up with an
    equivalent package for your platform.
 
+.. _using-your-customized-compiler-package-with-conda-build-3:
+
 Using your customized compiler package with conda-build 3
 =========================================================
 
