@@ -776,6 +776,12 @@ class elfsection(object):
             dt_rpath = []
             dt_runpath = []
             dt_soname = '$EXECUTABLE'
+            if self.sh_entsize == 0:
+                # Some ELF files (e.g., Guile's .go files) include sections
+                # without a table of entries in which case sh_entsize will be 0
+                num_entries = 0
+            else:
+                num_entries = int(self.sh_size / self.sh_entsize)
             for m in range(int(self.sh_size / self.sh_entsize)):
                 file.seek(self.sh_offset + (m * self.sh_entsize))
                 d_tag, = struct.unpack(endian + ptr_type, file.read(sz_ptr))
@@ -1016,9 +1022,6 @@ def codefile_class(filename, skip_symlinks=False):
         return EXEfile
     # Java .class files share 0xCAFEBABE with Mach-O FAT_MAGIC.
     if filename.endswith('.class'):
-        return None
-    # Guile .go files use the ELF format, but don't have a .dynstr section
-    if filename.endswith('.go'):
         return None
     if not os.path.exists(filename) or os.path.getsize(filename) < 4:
         return None
