@@ -6,7 +6,7 @@ Enhancements:
 Bug fixes:
 ----------
 
-* Don't try to patch Guile object (.go) files  
+* Fix ZeroDivisionError in ELF sections that have zero entries  
 
 Deprecations:
 -------------
