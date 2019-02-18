@@ -782,7 +782,7 @@ class elfsection(object):
                 num_entries = 0
             else:
                 num_entries = int(self.sh_size / self.sh_entsize)
-            for m in range(int(self.sh_size / self.sh_entsize)):
+            for m in range(num_entries):
                 file.seek(self.sh_offset + (m * self.sh_entsize))
                 d_tag, = struct.unpack(endian + ptr_type, file.read(sz_ptr))
                 d_val_ptr, = struct.unpack(endian + ptr_type, file.read(sz_ptr))
