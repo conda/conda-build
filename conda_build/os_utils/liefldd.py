@@ -3,6 +3,7 @@ try:
 except ImportError:
     from collections import Hashable
 from functools import partial
+import glob2
 import hashlib
 import json
 import os
