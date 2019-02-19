@@ -430,6 +430,11 @@ def mk_relative_linux(f, prefix, rpaths=('lib',)):
     except CalledProcessError:
         print('patchelf: --print-rpath failed for %s\n' % (elf))
         return
+    print("existing paths via patchelf: {}".format(existing))
+    existing2 = get_rpaths(elf)
+    print("existing paths via get_rpaths(): {}".format(existing2))
+    if existing != existing2:
+        print('ERROR :: get_rpaths() and patchelf disagree for {}'.format(elf))
     existing = existing.split(os.pathsep)
     new = []
     for old in existing:
@@ -475,8 +480,8 @@ def determine_package_nature(pkg, prefix, subdir, bldpkgs_dir, output_folder, ch
     lib_prefix = pkg.name.startswith('lib')
     codefiles = get_package_obj_files(pkg, prefix)
     dsos = [f for f in codefiles for ext in ('.dylib', '.so', '.dll') if ext in f]
-    # we don't care about the actual run_exports value, just whether or not run_exports are present.  We can use channeldata
-    #    and it'll be a more reliable source (no disk race condition nonsense)
+    # we don't care about the actual run_exports value, just whether or not run_exports are present.
+    # We can use channeldata and it'll be a more reliable source (no disk race condition nonsense)
     _, _, channeldata = get_build_index(subdir=subdir,
                                         bldpkgs_dir=bldpkgs_dir,
                                         output_folder=output_folder,
@@ -583,13 +588,23 @@ DEFAULT_MAC_WHITELIST = ['/opt/X11/',
                          '/System/Library/Frameworks/SystemConfiguration.framework/*',
                          '/System/Library/Frameworks/WebKit.framework/*']
 
-DEFAULT_WIN_WHITELIST = ['**/KERNEL32.dll',
-                         '**/ADVAPI32.dll',
+DEFAULT_WIN_WHITELIST = ['**/ADVAPI32.dll',
+                         '**/COMCTL32.dll',
+                         '**/COMDLG32.dll',
+                         '**/GDI32.dll',
+                         '**/IMM32.dll',
+                         '**/KERNEL32.dll',
+                         '**/NETAPI32.dll',
+                         '**/ole32.dll',
+                         '**/OLEAUT32.dll',
                          '**/RPCRT4.dll',
+                         '**/SHELL32.dll',
+                         '**/USER32.dll',
+                         '**/USERENV.dll',
+                         '**/WS2_32.dll',
                          '**/ntdll.dll',
                          '**/msvcrt.dll',
                          '**/api-ms-win*.dll']
-
 
 def _collect_needed_dsos(sysroots, files, run_prefix, sysroot_substitution, build_prefix, build_prefix_substitution):
     all_needed_dsos = set()
@@ -694,7 +709,7 @@ def _print_msg(errors, text, verbose):
 def _lookup_in_system_whitelists(errors, whitelist, needed_dso, sysroots, msg_prelude, info_prelude,
                                  sysroot_prefix, sysroot_substitution, verbose):
     # A system or ignored dependency. We should be able to find it in one of the CDT or
-    # compiler packages on linux or at in a sysroot folder on other OSes. These usually
+    # compiler packages on linux or in a sysroot folder on other OSes. These usually
     # start with '$RPATH/' which indicates pyldd did not find them, so remove that now.
     if needed_dso.startswith(sysroot_substitution):
         replacements = [sysroot_substitution] + sysroots
@@ -877,6 +892,9 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     sysroots = [sysroot + os.sep for sysroot in glob(os.path.join(sysroot_prefix, '**', 'sysroot'))]
     whitelist = []
     vendoring_record = dict()
+    # When build_is_host is True we perform file existence checks for files in the sysroot (e.g. C:\Windows)
+    # When build_is_host is False we must skip things that match the whitelist from the prefix_owners (we could
+    #   create some packages for the Windows System DLLs as an alternative?)
     if not len(sysroots):
         if subdir == 'osx-64':
             # This is a bit confused! A sysroot shouldn't contain /usr/lib (it's the bit before that)
@@ -887,9 +905,11 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
             # .. and in that sysroot there are 3 suddirs in which we may search for DSOs.
             sysroots = ['/usr/lib', '/opt/X11', '/System/Library/Frameworks']
             whitelist = DEFAULT_MAC_WHITELIST
+            build_is_host = True if sys.platform == 'darwin' else False
         elif subdir.startswith('win'):
             sysroots = ['C:/Windows']
             whitelist = DEFAULT_WIN_WHITELIST
+            build_is_host = True if sys.platform == 'win-32' else False
 
     # LIEF is very slow at decoding some DSOs, so we only let it look at ones that we link to (and ones we
     # have built).
@@ -911,9 +931,17 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                not needed_dso.startswith(sysroot_substitution) and
                not needed_dso.startswith(build_prefix_substitution) and
                needed_dso not in prefix_owners):
-                print("  ERROR :: {} not in prefix_owners".format(needed_dso))
+                in_whitelist = False
+                if not build_is_host:
+                    in_whitelist = any([glob2.fnmatch.fnmatch(needed_dso, w) for w in whitelist])
+                if not in_whitelist:
+                    print("  ERROR :: {} not in prefix_owners".format(needed_dso))
 
+    # Should the whitelist be expanded before the 'not in prefix_owners' check?
+    # i.e. Do we want to be able to use the whitelist to allow missing files in general? If so move this up to
+    # the line before 'for needed_dso in needed'
     whitelist += missing_dso_whitelist
+
     _show_linking_messages(files, errors, needed_dsos_for_file, build_prefix, run_prefix, pkg_name,
                            error_overlinking, runpath_whitelist, verbose, requirements_run, lib_packages,
                            lib_packages_used, whitelist, sysroots, sysroot_prefix, sysroot_substitution, subdir)
