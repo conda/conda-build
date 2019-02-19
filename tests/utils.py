@@ -14,6 +14,7 @@ thisdir = os.path.dirname(os.path.realpath(__file__))
 metadata_dir = os.path.join(thisdir, "test-recipes/metadata")
 subpackage_dir = os.path.join(thisdir, "test-recipes/split-packages")
 fail_dir = os.path.join(thisdir, "test-recipes/fail")
+archive_dir = os.path.join(thisdir, "archives")
 
 
 def is_valid_dir(parent_dir, dirname):

@@ -226,12 +226,12 @@ def update_lib_path(path, target_platform, temp_dir=None):
     """
     if target_platform == 'win':
         python_version = retrieve_python_version(path)
-        renamed_lib_path = re.sub('\Alib', 'Lib', path).replace(python_version, '')
+        renamed_lib_path = re.sub(r'\Alib', 'Lib', path).replace(python_version, '')
 
     elif target_platform == 'unix':
         python_version = retrieve_python_version(temp_dir)
         lib_python_version = os.path.join('lib', python_version).replace('\\', '\\\\')
-        renamed_lib_path = re.sub('\ALib', lib_python_version, path.replace('\\', '\\\\'))
+        renamed_lib_path = re.sub(r'\ALib', lib_python_version, path.replace('\\', '\\\\'))
 
     return os.path.normpath(renamed_lib_path)
 
@@ -300,13 +300,13 @@ def update_executable_path(temp_dir, file_path, target_platform):
     """
     if target_platform == 'win':
         if os.path.basename(file_path).startswith('.') or is_binary_file(temp_dir, file_path):
-            renamed_executable_path = re.sub('\Abin', 'Scripts', file_path)
+            renamed_executable_path = re.sub(r'\Abin', 'Scripts', file_path)
         else:
             renamed_path = os.path.splitext(re.sub('\Abin', 'Scripts', file_path))[0]
             renamed_executable_path = '{}-script.py' .format(renamed_path)
 
     elif target_platform == 'unix':
-        renamed_path = re.sub('\AScripts', 'bin', file_path)
+        renamed_path = re.sub(r'\AScripts', 'bin', file_path)
         renamed_executable_path = renamed_path.replace('-script.py', '')
 
     return renamed_executable_path

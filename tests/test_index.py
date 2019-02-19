@@ -9,10 +9,14 @@ import requests
 import shutil
 import tarfile
 
+import mock
+import conda_package_handling.api
+
 from conda_build import api
-from conda_build.index import update_index
+import conda_build.index
+from conda_build.utils import copy_into
 from conda_build.conda_interface import subdir
-from .utils import metadata_dir
+from .utils import metadata_dir, archive_dir
 
 log = getLogger(__name__)
 
@@ -36,7 +40,7 @@ def test_index_on_single_subdir_1(testing_workdir):
     test_package_url = 'https://conda.anaconda.org/conda-test/osx-64/conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2'
     download(test_package_url, test_package_path)
 
-    update_index(testing_workdir, channel_name='test-channel')
+    conda_build.index.update_index(testing_workdir, channel_name='test-channel')
 
     # #######################################
     # tests for osx-64 subdir
@@ -129,7 +133,7 @@ def test_index_noarch_osx64_1(testing_workdir):
     test_package_url = 'https://conda.anaconda.org/conda-test/noarch/conda-index-pkg-a-1.0-pyhed9eced_1.tar.bz2'
     download(test_package_url, test_package_path)
 
-    update_index(testing_workdir, channel_name='test-channel')
+    conda_build.index.update_index(testing_workdir, channel_name='test-channel')
 
     # #######################################
     # tests for osx-64 subdir
@@ -297,7 +301,7 @@ def _patch_repodata(repodata, subdir):
 
     # indexing a second time with the same patchset should keep the removals
     for i in (1, 2):
-        update_index(testing_workdir, patch_generator=patch_file, verbose=True)
+        conda_build.index.update_index(testing_workdir, patch_generator=patch_file, verbose=True)
         with open(os.path.join(testing_workdir, subdir, 'repodata.json')) as f:
             patched_metadata = json.load(f)
 
@@ -341,7 +345,7 @@ def test_channel_patch_instructions_json(testing_workdir):
     with open(os.path.join(testing_workdir, subdir, 'patch_instructions.json'), 'w') as f:
         json.dump(patch, f)
 
-    update_index(testing_workdir)
+    conda_build.index.update_index(testing_workdir)
 
     with open(os.path.join(testing_workdir, subdir, 'repodata.json')) as f:
         patched_metadata = json.load(f)
@@ -389,7 +393,7 @@ def test_patch_from_tarball(testing_workdir):
     with tarfile.open("patch_archive.tar.bz2", "w:bz2") as archive:
         archive.add("patch_instructions.json", "%s/patch_instructions.json" % subdir)
 
-    update_index(testing_workdir, patch_generator="patch_archive.tar.bz2")
+    conda_build.index.update_index(testing_workdir, patch_generator="patch_archive.tar.bz2")
 
     with open(os.path.join(testing_workdir, subdir, 'repodata.json')) as f:
         patched_metadata = json.load(f)
@@ -429,3 +433,74 @@ def test_patch_instructions_with_missing_subdir(testing_workdir):
     url = "https://anaconda.org/conda-forge/{0}/20180828/download/noarch/{0}-20180828-0.tar.bz2".format(pkg)
     patch_instructions = download(url, os.path.join(os.getcwd(), "patches.tar.bz2"))
     api.update_index('.', patch_generator=patch_instructions)
+
+
+def test_stat_cache_used(testing_workdir, mocker):
+    test_package_path = join(testing_workdir, 'osx-64', 'conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2')
+    test_package_url = 'https://conda.anaconda.org/conda-test/osx-64/conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2'
+    download(test_package_url, test_package_path)
+    conda_build.index.update_index(testing_workdir, channel_name='test-channel')
+
+    cph_extract = mocker.spy(conda_package_handling.api, 'extract')
+    conda_build.index.update_index(testing_workdir, channel_name='test-channel')
+    cph_extract.assert_not_called()
+
+
+def test_new_pkg_format_preferred(testing_workdir, mocker):
+    test_package_path = join(testing_workdir, 'osx-64', 'conda-index-pkg-a-1.0-py27h5e241af_0')
+    exts = ('.tar.bz2', '.conda')
+    for ext in exts:
+        copy_into(os.path.join(archive_dir, 'conda-index-pkg-a-1.0-py27h5e241af_0' + ext), test_package_path + ext)
+    # mock the extract function, so that we can assert that it is not called
+    #     with the .tar.bz2, because the .conda should be preferred
+    cph_extract = mocker.spy(conda_package_handling.api, 'extract')
+    conda_build.index.update_index(testing_workdir, channel_name='test-channel')
+    cph_extract.assert_called_once_with(test_package_path + '.conda', mock.ANY, 'info')
+
+    with open(join(testing_workdir, 'osx-64', 'repodata.json')) as fh:
+        actual_repodata_json = json.loads(fh.read())
+
+    expected_repodata_json = {
+        "info": {
+            'subdir': 'osx-64',
+        },
+        "packages": {
+            "conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2": {
+                "build": "py27h5e241af_0",
+                "build_number": 0,
+                "depends": [
+                    "python >=2.7,<2.8.0a0"
+                ],
+                "license": "BSD",
+                "md5": "37861df8111170f5eed4bff27868df59",
+                "name": "conda-index-pkg-a",
+                "sha256": "459f3e9b2178fa33bdc4e6267326405329d1c1ab982273d9a1c0a5084a1ddc30",
+                "size": 8733,
+                "subdir": "osx-64",
+                "timestamp": 1508520039632,
+                "version": "1.0",
+                "conda_size": 9296,
+                "conda_inner_sha256": "b67471d17941cf1a918601170773acb399a5bf2508164033b2cf8518b6beb2c1",
+                "conda_outer_sha256": "67b07b644105439515cc5c8c22c86939514cacf30c8c574cd70f5f1267a40f19",
+            },
+        },
+        "removed": [],
+        "repodata_version": 1,
+    }
+    assert actual_repodata_json == expected_repodata_json
+
+
+def test_new_pkg_format_stat_cache_used(testing_workdir, mocker):
+    test_package_path = join(testing_workdir, 'osx-64', 'conda-index-pkg-a-1.0-py27h5e241af_0')
+    exts = ('.tar.bz2', '.conda')
+    for ext in exts:
+        copy_into(os.path.join(archive_dir, 'conda-index-pkg-a-1.0-py27h5e241af_0' + ext), test_package_path + ext)
+    conda_build.index.update_index(testing_workdir, channel_name='test-channel')
+
+    # mock the extract function, so that we can assert that it is not called, because the stat cache should exist
+    #    if this doesn't work, something about the stat cache is confused.  It's a little convoluted, because
+    #    the index has keys for .tar.bz2's, but the stat cache comes from .conda files when they are available
+    #    because extracting them is much, much faster.
+    cph_extract = mocker.spy(conda_package_handling.api, 'extract')
+    conda_build.index.update_index(testing_workdir, channel_name='test-channel')
+    cph_extract.assert_not_called()

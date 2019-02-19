@@ -13,9 +13,9 @@ from distutils.msvc9compiler import find_vcvarsall as distutils_find_vcvarsall
 from distutils.msvc9compiler import Reg, WINSDK_BASE
 
 from conda_build import environ
-from conda_build.conda_interface import conda_46
 from conda_build.utils import check_call_env, root_script_dir, path_prepended, copy_into, get_logger
 from conda_build.variants import set_language_env_vars, get_default_variant
+from conda_build.conda_interface import conda_46
 
 
 assert sys.platform == 'win32'

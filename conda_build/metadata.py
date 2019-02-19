@@ -626,13 +626,13 @@ def toposort(output_metadata_map):
     # We only care about the conda packages built by this recipe. Non-conda
     # packages get sorted to the end.
     these_packages = [output_d['name'] for output_d in output_metadata_map
-                      if output_d.get('type', 'conda') == 'conda']
+                      if output_d.get('type', 'conda').startswith('conda')]
     topodict = dict()
     order = dict()
     endorder = set()
 
     for idx, (output_d, output_m) in enumerate(output_metadata_map.items()):
-        if output_d.get('type', 'conda') == 'conda':
+        if output_d.get('type', 'conda').startswith('conda'):
             deps = (output_m.get_value('requirements/run', []) +
                     output_m.get_value('requirements/host', []))
             if not output_m.is_cross:
@@ -721,7 +721,7 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
                                        permit_unsatisfiable_variants=permit_unsatisfiable_variants)
             else:
                 fm = om
-            if not output_d.get('type') or output_d.get('type') == 'conda':
+            if not output_d.get('type') or output_d.get('type').startswith('conda'):
                 outputs[(fm.name(), HashableDict({k: fm.config.variant[k]
                                                   for k in fm.get_used_vars()}))] = (output_d, fm)
         except exceptions.DependencyNeedsBuildingError as e:
@@ -1685,7 +1685,9 @@ class MetaData(object):
 
         try:
             if output_type:
-                output_tuples = [(out.get('name', self.name()), out.get('type', 'conda')) for out in outputs]
+                output_tuples = [(out.get('name', self.name()),
+                                  out.get('type', 'conda_v2' if self.config.conda_pkg_format == "2" else 'conda'))
+                                 for out in outputs]
                 output_index = output_tuples.index((output_name, output_type))
             else:
                 output_tuples = [out.get('name', self.name()) for out in outputs]
@@ -1752,7 +1754,8 @@ class MetaData(object):
         new.config = self.config.copy()
         new.config.variant = copy.deepcopy(self.config.variant)
         new.meta = copy.deepcopy(self.meta)
-        new.type = getattr(self, 'type', 'conda')
+        new.type = getattr(self, 'type', 'conda_v2' if self.config.conda_pkg_format == "2" else
+                           'conda')
         return new
 
     @property
@@ -1836,7 +1839,10 @@ class MetaData(object):
 
     def get_output_metadata(self, output):
         if output.get('name') == self.name():
-            output_metadata = self
+            output_metadata = self.copy()
+            output_metadata.type = output.get('type', 'conda_v2' if self.config.conda_pkg_format == "2" else
+                                              'conda')
+
         else:
             output_metadata = self.copy()
             output_reqs = utils.expand_reqs(output.get('requirements', {}))
@@ -1854,7 +1860,8 @@ class MetaData(object):
             if self.name() != output.get('name') or (output.get('script') or output.get('files')):
                 self.reconcile_metadata_with_output_dict(output_metadata, output)
 
-            output_metadata.type = output.get('type', 'conda')
+            output_metadata.type = output.get('type', 'conda_v2' if self.config.conda_pkg_format == "2" else
+                                              'conda')
 
             if 'name' in output:
                 # since we are copying reqs from the top-level package, which
@@ -2009,7 +2016,7 @@ class MetaData(object):
             non_conda_packages = []
 
             for output_d, m in render_order.items():
-                if not output_d.get('type') or output_d['type'] == 'conda':
+                if not output_d.get('type') or output_d['type'] in ('conda', 'conda_v2'):
                     conda_packages[m.name(), HashableDict({k: m.config.variant[k]
                                                   for k in m.get_used_vars()})] = (output_d, m)
                 elif output_d.get('type') == 'wheel':

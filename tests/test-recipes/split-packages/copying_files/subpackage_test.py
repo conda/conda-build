@@ -10,7 +10,7 @@ assert "weee" in contents, 'incorrect file contents: %s' % contents
 print("plain file OK")
 
 filename = os.path.join(os.environ['PREFIX'], 'somedir', 'subpackage_file1')
-assert os.path.isfile(filename)
+assert os.path.isfile(filename), filename + " is missing"
 contents = open(filename).read().rstrip()
 if hasattr(contents, 'decode'):
     contents = contents.decode()

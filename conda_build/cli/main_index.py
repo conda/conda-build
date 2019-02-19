@@ -59,6 +59,13 @@ def parse_args(args):
     p.add_argument(
         "--no-progress", help="Hide progress bars", action="store_false", dest="progress"
     )
+    p.add_argument(
+        "--convert",
+        help=("convert files to new .conda package format if those aren't "
+              "present alongside .tar.bz2"),
+        action="store_true",
+        dest="convert_if_not_present"
+    )
 
     args = p.parse_args(args)
     return p, args
@@ -68,7 +75,8 @@ def execute(args):
     _, args = parse_args(args)
     api.update_index(args.dir, check_md5=args.check_md5, channel_name=args.channel_name,
                      threads=args.threads, subdir=args.subdir, patch_generator=args.patch_generator,
-                     verbose=args.verbose, progress=args.progress, hotfix_source_repo=args.hotfix_source_repo)
+                     verbose=args.verbose, progress=args.progress, hotfix_source_repo=args.hotfix_source_repo,
+                     convert_if_not_present=args.convert_if_not_present)
 
 
 def main():
