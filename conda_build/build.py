@@ -922,9 +922,6 @@ def bundle_conda(output, metadata, env, stats, **kw):
         initial_files = set(item for item in (pfx_files - keep_files)
                             if not any(keep_file.startswith(item + os.path.sep)
                                        for keep_file in keep_files))
-        initial_files = set(item for item in (pfx_files - keep_files)
-                            if not any(keep_file.startswith(item + os.path.sep)
-                                       for keep_file in keep_files))
     else:
         if not metadata.always_include_files():
             log.warn("No files or script found for output {}".format(output.get('name')))
