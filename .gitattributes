@@ -1,1 +1,2 @@
 conda_build/_version.py export-subst
+* text=auto eol=lf
