@@ -5,5 +5,5 @@ Tutorials
 .. toctree::
    :maxdepth: 1
 
-  build-windows
+  building-conda-packages
   add-win-start-menu-items
