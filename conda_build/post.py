@@ -483,7 +483,8 @@ def determine_package_nature(pkg, prefix, subdir, bldpkgs_dir, output_folder, ch
     run_exports = None
     lib_prefix = pkg.name.startswith('lib')
     codefiles = get_package_obj_files(pkg, prefix)
-    dsos = [f for f in codefiles for ext in ('.dylib', '.so', '.dll') if ext in f]
+    # get_package_obj_files already filters by extension and I'm not sure we need two.
+    dsos = [f for f in codefiles for ext in ('.dylib', '.so', '.dll', '.pyd') if ext in f]
     # we don't care about the actual run_exports value, just whether or not run_exports are present.
     # We can use channeldata and it'll be a more reliable source (no disk race condition nonsense)
     _, _, channeldata = get_build_index(subdir=subdir,
@@ -889,6 +890,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     # When build_is_host is True we perform file existence checks for files in the sysroot (e.g. C:\Windows)
     # When build_is_host is False we must skip things that match the whitelist from the prefix_owners (we could
     #   create some packages for the Windows System DLLs as an alternative?)
+    build_is_host = False
     if not len(sysroots):
         if subdir == 'osx-64':
             # This is a bit confused! A sysroot shouldn't contain /usr/lib (it's the bit before that)

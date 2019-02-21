@@ -1016,7 +1016,7 @@ def codefile_class(filename, skip_symlinks=False):
             filename = os.path.realpath(filename)
     if os.path.isdir(filename):
         return None
-    if filename.endswith('.dll'):
+    if filename.endswith(('.dll', '.pyd')):
         return DLLfile
     if filename.endswith('.exe'):
         return EXEfile
