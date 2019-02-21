@@ -68,7 +68,7 @@ install:
       conda install -q futures scandir;
     fi
   - conda install -q anaconda-client requests filelock contextlib2 jinja2 patchelf
-  - conda install -q pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz tqdm python-libarchive-c py-lief
+  - conda install -q pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz tqdm conda-package-handling py-lief
   - pip install pkginfo
   - if [[ "$FLAKE8" == "true" ]]; then
       conda install -q flake8;
