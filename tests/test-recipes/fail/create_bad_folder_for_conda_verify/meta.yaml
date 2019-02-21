@@ -7,4 +7,4 @@ build:
     - mkdir $PREFIX/conda-bld        # [unix]
     - touch $PREFIX/conda-bld/file   # [unix]
     - mkdir %PREFIX%\\conda-bld       # [win]
-    - echo . > %PREFIX\\conda-bld\\file  # [win]
+    - echo . > %PREFIX%\\conda-bld\\file  # [win]

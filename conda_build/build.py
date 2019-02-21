@@ -8,7 +8,6 @@ import fnmatch
 from glob import glob
 import io
 import json
-import libarchive
 import os
 from os.path import isdir, isfile, islink, join, dirname
 import random
@@ -19,7 +18,6 @@ import string
 import subprocess
 import sys
 import time
-from tempfile import NamedTemporaryFile
 
 # this is to compensate for a requests idna encoding error.  Conda is a better place to fix,
 #   eventually
@@ -35,6 +33,7 @@ try:
 except Exception:
     from conda.base.constants import CONDA_TARBALL_EXTENSION
     CONDA_TARBALL_EXTENSIONS = (CONDA_TARBALL_EXTENSION,)
+import conda_package_handling.api
 
 # used to get version
 from .conda_interface import env_path_backup_var_exists, conda_45, conda_46
@@ -922,9 +921,6 @@ def bundle_conda(output, metadata, env, stats, **kw):
         initial_files = set(item for item in (pfx_files - keep_files)
                             if not any(keep_file.startswith(item + os.path.sep)
                                        for keep_file in keep_files))
-        initial_files = set(item for item in (pfx_files - keep_files)
-                            if not any(keep_file.startswith(item + os.path.sep)
-                                       for keep_file in keep_files))
     else:
         if not metadata.always_include_files():
             log.warn("No files or script found for output {}".format(output.get('name')))
@@ -980,54 +976,12 @@ def bundle_conda(output, metadata, env, stats, **kw):
     basename = '-'.join([output['name'], metadata.version(), metadata.build_id()])
     tmp_archives = []
     final_outputs = []
+    ext = '.conda' if (output.get('type') == 'conda_v2' or
+                       metadata.config.conda_pkg_format == "2") else '.tar.bz2'
     with TemporaryDirectory() as tmp:
-        tmp_path = os.path.join(tmp, basename)
-
-        def order(f):
-            # we don't care about empty files so send them back via 100000
-            fsize = os.stat(join(metadata.config.host_prefix, f)).st_size or 100000
-            # info/* records will be False == 0, others will be 1.
-            info_order = int(os.path.dirname(f) != 'info')
-            if info_order:
-                _, ext = os.path.splitext(f)
-                # Strip any .dylib.* and .so.* and rename .dylib to .so
-                ext = re.sub(r'(\.dylib|\.so).*$', r'.so', ext)
-                if not ext:
-                    # Files without extensions should be sorted by dirname
-                    info_order = 1 + hash(os.path.dirname(f)) % (10 ** 8)
-                else:
-                    info_order = 1 + abs(hash(ext)) % (10 ** 8)
-            return info_order, fsize
-
-        binsort = os.path.join(sys.prefix, 'bin', 'binsort')
-        if os.path.exists(binsort):
-            with NamedTemporaryFile(mode='w', suffix='.filelist', delete=False) as fl:
-                with tmp_chdir(metadata.config.host_prefix):
-                    fl.writelines(map(lambda x: '.' + os.sep + x + '\n', files))
-                    fl.close()
-                    cmd = binsort + ' -t 1 -q -d -o 1000 {}'.format(fl.name)
-                    out, _ = subprocess.Popen(cmd, shell=True,
-                                              stdout=subprocess.PIPE).communicate()
-                    files_list = out.decode('utf-8').strip().split('\n')
-                    # binsort returns the absolute paths.
-                    files_list = [f.split(metadata.config.host_prefix + os.sep, 1)[-1]
-                                  for f in files_list]
-                    os.unlink(fl.name)
-        else:
-                files_list = list(f for f in sorted(files, key=order))
-
-        for (ext, filter, opts) in (('.tar.bz2', 'bzip2', ''), ('.tar.zst', 'zstd', 'zstd:compression-level=22')):
-            if ext not in CONDA_TARBALL_EXTENSIONS:
-                continue
-            # add files in order of a) in info directory, b) increasing size so
-            # we can access small manifest or json files without decompressing
-            # possible large binary or data files
-            fullpath = tmp_path + ext
-            print("Compressing to {}".format(fullpath))
-            with tmp_chdir(metadata.config.host_prefix):
-                with libarchive.file_writer(fullpath, 'gnutar', filter_name=filter, options=opts) as archive:
-                    archive.add_files(*files_list)
-                tmp_archives.append(fullpath)
+        conda_package_handling.api.create(metadata.config.host_prefix, files,
+                                          basename + ext, out_folder=tmp)
+        tmp_archives = [os.path.join(tmp, basename + ext)]
 
         # we're done building, perform some checks
         for tmp_path in tmp_archives:

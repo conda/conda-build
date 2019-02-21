@@ -174,7 +174,13 @@ def _get_default_settings():
             Setting('extra_deps', []),
 
             # customize this so pip doesn't look in places we don't want.  Per-build path by default.
-            Setting('_pip_cache_dir', None)
+            Setting('_pip_cache_dir', None),
+
+            # set up compression algorithm used in new-style packages
+            Setting('compression_tuple', ('.tar.zst', 'zstd', 'zstd:compression-level=22')),
+
+            # this can be set to different values (currently only 2 means anything) to use package formats
+            Setting('conda_pkg_format', cc_conda_build.get('pkg_format', None))
             ]
 
 

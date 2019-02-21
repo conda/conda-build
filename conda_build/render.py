@@ -61,8 +61,19 @@ def bldpkg_path(m):
     '''
     subdir = 'noarch' if m.noarch or m.noarch_python else m.config.host_subdir
 
-    if not hasattr(m, 'type') or m.type == "conda":
+    if not hasattr(m, 'type'):
+        if m.config.conda_pkg_format == "2":
+            pkg_type = "conda_v2"
+        else:
+            pkg_type = "conda"
+    else:
+        pkg_type = m.type
+
+    # the default case will switch over to conda_v2 at some point
+    if pkg_type == "conda":
         path = os.path.join(m.config.output_folder, subdir, '%s%s' % (m.dist(), CONDA_TARBALL_EXTENSIONS[0]))
+    elif pkg_type == "conda_v2":
+        path = os.path.join(m.config.output_folder, subdir, '%s%s' % (m.dist(), '.conda'))
     else:
         path = '{} file for {} in: {}'.format(m.type, m.name(), os.path.join(m.config.output_folder, subdir))
     return path

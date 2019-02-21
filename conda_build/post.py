@@ -23,7 +23,6 @@ from conda_build.conda_interface import PY3
 from conda_build.conda_interface import lchmod
 from conda_build.conda_interface import linked_data
 from conda_build.conda_interface import walk_prefix
-from conda_build.conda_interface import pkgs_dirs
 from conda_build.conda_interface import TemporaryDirectory
 from conda_build.conda_interface import md5_file
 
@@ -32,7 +31,7 @@ from conda_build.os_utils.liefldd import (get_exports_memoized, get_linkages_mem
                                           get_runpaths)
 from conda_build.os_utils.pyldd import codefile_type
 from conda_build.os_utils.ldd import get_package_obj_files
-from conda_build.index import get_run_exports, get_build_index
+from conda_build.index import get_build_index
 from conda_build.inspect_pkg import which_package
 from conda_build.exceptions import (OverLinkingError, OverDependingError)
 
@@ -488,16 +487,6 @@ def determine_package_nature(pkg, prefix, subdir, bldpkgs_dir, output_folder, ch
 
     if channeldata and pkg.name in channeldata['packages']:
         run_exports = channeldata['packages'][pkg.name].get('run_exports', {})
-    else:
-        for pkgs_dir in pkgs_dirs:
-            test_folder = os.path.join(pkgs_dir, pkg.dist_name)
-            test_filename = os.path.join(pkgs_dir, pkg.fn)
-            if os.path.exists(test_folder):
-                run_exports = get_run_exports(test_folder)
-                break
-            elif os.path.isfile(test_filename):
-                run_exports = get_run_exports(test_filename)
-                break
     return (dsos, run_exports, lib_prefix)
 
 

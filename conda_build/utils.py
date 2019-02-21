@@ -41,7 +41,7 @@ from .conda_interface import memoized
 from .conda_interface import StringIO
 from .conda_interface import VersionOrder, MatchSpec
 from .conda_interface import cc_conda_build
-from .conda_interface import conda_43, Dist
+from .conda_interface import conda_43, conda_46, Dist
 from .conda_interface import context
 # NOQA because it is not used in this file.
 from conda_build.conda_interface import rm_rf as _rm_rf # NOQA
@@ -1402,6 +1402,8 @@ def filter_info_files(files_list, prefix):
 
 
 def rm_rf(path, config=None):
+    if conda_46:
+        return _rm_rf(path)
     if os.path.isdir(path):
         try:
             # subprocessing to delete large folders can be quite a bit faster
