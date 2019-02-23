@@ -858,8 +858,7 @@ def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, 
                                                     locking=config.locking,
                                                     timeout=config.timeout)
                     utils.trim_empty_keys(actions)
-                    if config.verbose:
-                        display_actions(actions, index)
+                    display_actions(actions, index)
                     if utils.on_win:
                         for k, v in os.environ.items():
                             os.environ[k] = str(v)
