@@ -128,12 +128,12 @@ to use::
         - {{ compiler('c') }}
 
 "Cross-capable" recipes can be used to make packages with a host platform
-different than the build platform where conda-build runs. To write cross-capable
-recipes you may also need to use the "host" section in the requirements
-section. In this example we set "host" to "zlib" to tell conda-build to use
-the zlib in the conda environment and not the system zlib. This makes sure
-conda-build uses the zlib for the host platform and not the zlib for the build
-platform.
+different than the build platform where conda-build runs. To write
+cross-capable recipes you may also need to use the "host" section in the
+requirements section. In this example we set "host" to "zlib" to tell
+conda-build to use the zlib in the conda environment and not the system
+zlib. This makes sure conda-build uses the zlib for the host platform
+and not the zlib for the build platform.
 
 ::
 
@@ -147,7 +147,7 @@ Generally the build section should include compilers and other build tools, and
 the host section should include everything else, including shared libraries,
 Python, and Python libraries.
 
-An aside on cmake and sysroots
+An aside on CMake and sysroots
 ==============================
 
 Anaconda's compilers for Linux are built with something called crosstool-ng.
@@ -155,16 +155,16 @@ They include not only GCC, but also a "sysroot" with glibc, as well as the rest
 of the toolchain (binutils). Ordinarily, the sysroot is something that your
 system provides, and it is what establishes the libc compatibility bound for
 your compiled code. Any compilation that uses a sysroot other than the system
-sysroot is said to be "cross-compiling." When the target OS and the build OS are
-the same, it is called a "pseudo-cross-compiler." This is the case for normal
-builds with Anaconda's compilers on Linux.
+sysroot is said to be "cross-compiling." When the target OS and the build OS
+are the same, it is called a "pseudo-cross-compiler." This is the case for
+normal builds with Anaconda's compilers on Linux.
 
 Unfortunately, some software tools do not handle sysroots in intuitive ways.
 CMake is especially bad for this. Even though the compiler itself understands
 its own sysroot, CMake insists on ignoring that.  We've filed issues at:
 
 * https://gitlab.kitware.com/cmake/cmake/issues/17483
-*
+
 
 Additionally, this Stack Overflow issue has some more information: https://stackoverflow.com/questions/36195791/cmake-missing-sysroot-when-cross-compiling
 

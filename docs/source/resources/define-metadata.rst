@@ -89,11 +89,12 @@ interpreted as a string.
    package:
      version: "1.1.4"
 
-NOTE: Post-build versioning: In some cases, you may not know the
-version, build number or build string of the package until after
-it is built. In these cases, you can perform
-:ref:`jinja-templates` or utilize :ref:`git-env` and
-:ref:`inherited-env-vars`.
+.. note::
+   Post-build versioning: In some cases, you may not know the
+   version, build number or build string of the package until after
+   it is built. In these cases, you can perform
+   :ref:`jinja-templates` or utilize :ref:`git-env` and
+   :ref:`inherited-env-vars`.
 
 
 Source section
@@ -244,7 +245,8 @@ Example:
 Here, the two URL tarballs will go into one folder, and the git repo
 is checked out into its own space. Git will not clone into a non-empty folder.
 
-Note: Dashes denote list items in YAML syntax.
+.. note::
+   Dashes denote list items in YAML syntax.
 
 
 .. _meta-build:
@@ -260,7 +262,8 @@ your project you can use a pattern similar to the following one:
 "\*\*/myproject/\*\*/\*.txt". This pattern will match any .txt file found in
 your project.
 
-NOTE: The quotation marks ("") are required for patterns that start with a \*.
+.. note::
+   The quotation marks ("") are required for patterns that start with a \*.
 
 Recursive globbing using \*\* is supported only in conda-build >= 3.0.
 
@@ -461,11 +464,12 @@ with the install prefix at installation time. Conda can
 automatically identify and register such files. The default is
 ``True``.
 
-NOTE: The default changed from ``False`` to ``True`` in conda
-build 2.0. Setting this to ``False`` means that binary
-relocation---RPATH---replacement will still be done, but
-hard-coded prefixes in binaries will not be replaced. Prefixes
-in text files will still be replaced.
+.. note::
+   The default changed from ``False`` to ``True`` in conda
+   build 2.0. Setting this to ``False`` means that binary
+   relocation---RPATH---replacement will still be done, but
+   hard-coded prefixes in binaries will not be replaced. Prefixes
+   in text files will still be replaced.
 
 .. code-block:: yaml
 
@@ -603,11 +607,10 @@ conda >=4.3 to install.
      noarch_python: True
 
 .. warning::
-
-  At the time of this writing, ``noarch`` packages should not make use of `preprocess-selectors`_:
-  ``noarch`` packages are built with the directives which evaluate to ``True`` in the platform
-  it was built, which probably will result in incorrect/incomplete installation in other
-  platforms.
+   At the time of this writing, ``noarch`` packages should not make use of `preprocess-selectors`_:
+   ``noarch`` packages are built with the directives which evaluate to ``True`` in the platform
+   it was built, which probably will result in incorrect/incomplete installation in other
+   platforms.
 
 Include build recipe
 --------------------
@@ -643,14 +646,16 @@ seen by the conda build process itself, a UserWarning is
 emitted during the build process and the variable remains
 undefined.
 
-NOTE: Inheriting environment variables can make it difficult for
-others to reproduce binaries from source with your recipe. Use
-this feature with caution or avoid it.
+.. note::
+   Inheriting environment variables can make it difficult for
+   others to reproduce binaries from source with your recipe. Use
+   this feature with caution or avoid it.
 
-NOTE: If you split your build and test phases with ``--no-test`` and ``--test``,
-you need to ensure that the environment variables present at build time and test
-time match. If you do not, the package hashes may use different values, and your
-package may not be testable, because the hashes will differ.
+.. note:: 
+   If you split your build and test phases with ``--no-test`` and ``--test``,
+   you need to ensure that the environment variables present at build time and test
+   time match. If you do not, the package hashes may use different values, and your
+   package may not be testable, because the hashes will differ.
 
 
 .. _run_exports:
@@ -799,10 +804,11 @@ words, a Python package would list ``python`` here and an R package would list
      host:
        - python
 
-Note: when both build and host sections are defined, the build section can be
-thought of as "build tools" - things that run on the native platform, but output
-results for the target platform. For example, a cross-compiler that runs on
-linux-64, but targets linux-armv7.
+.. note::
+   When both build and host sections are defined, the build section can be
+   thought of as "build tools" - things that run on the native platform, but output
+   results for the target platform. For example, a cross-compiler that runs on
+   linux-64, but targets linux-armv7.
 
 The PREFIX environment variable points to the host prefix.  With respect to
 activation during builds, both the host and build environments are activated.
@@ -881,10 +887,11 @@ The line in the ``meta.yaml`` file should literally say
        - python
        - numpy x.x
 
-**NOTE**: Instead of manually specifying run requirements, since
-conda-build 3 you can augment the packages used in your build and host
-sections with :ref:`run_exports <run_exports>` which are then automatically
-added to the run requirements for you.
+.. note::
+   Instead of manually specifying run requirements, since
+   conda-build 3 you can augment the packages used in your build and host
+   sections with :ref:`run_exports <run_exports>` which are then automatically
+   added to the run requirements for you.
 
 .. _meta-test:
 
@@ -979,8 +986,9 @@ Run test script
 The script ``run_test.sh``---or ``.bat``, ``.py`` or
 ``.pl``---is run automatically if it is part of the recipe.
 
-NOTE: Python .py and Perl .pl scripts are valid only
-as part of Python and Perl packages, respectively.
+.. note::
+   Python .py and Perl .pl scripts are valid only
+   as part of Python and Perl packages, respectively.
 
 
 Downstream tests
@@ -1047,15 +1055,16 @@ in conda build 2.1.0.
        version: 2.0
 
 
-NOTE: If any output is specified in the outputs section, the
-default packaging behavior of conda build is bypassed. In other
-words, if any subpackage is specified, then you do not get the
-normal top-level build for this recipe without explicitly
-defining a subpackage for it. This is an alternative to the
-existing behavior, not an addition to it. For more information,
-see :ref:`implicit_metapackages`. Each output may have its own version and
-requirements. Additionally, subpackages may impose downstream pinning similarly
-to :ref:`Pin downstream <run_exports>` to help keep your packages aligned.
+.. note::
+   If any output is specified in the outputs section, the
+   default packaging behavior of conda build is bypassed. In other
+   words, if any subpackage is specified, then you do not get the
+   normal top-level build for this recipe without explicitly
+   defining a subpackage for it. This is an alternative to the
+   existing behavior, not an addition to it. For more information,
+   see :ref:`implicit_metapackages`. Each output may have its own version and
+   requirements. Additionally, subpackages may impose downstream pinning similarly
+   to :ref:`Pin downstream <run_exports>` to help keep your packages aligned.
 
 
 Specifying files to include in output
@@ -1109,11 +1118,12 @@ working directory is provided at the start of each script
 execution. This ensures that results between scripts are
 independent of one another.
 
-NOTE: For either the file list or the script approach, having
-more than 1 package contain a given file is not explicitly
-forbidden, but may prevent installation of both packages
-simultaneously. Conda disallows this condition, because it
-creates ambiguous runtime conditions.
+.. note::
+   For either the file list or the script approach, having
+   more than 1 package contain a given file is not explicitly
+   forbidden, but may prevent installation of both packages
+   simultaneously. Conda disallows this condition, because it
+   creates ambiguous runtime conditions.
 
 
 Subpackage requirements
@@ -1169,10 +1179,11 @@ requirement:
 
 See the :ref:`run_exports` section for additional information.
 
-Note: Variant expressions are very powerful here. You can express the version
-requirement in the run_exports entry as a jinja function to insert values
-based on the actual version of libgcc produced by the recipe. Read more about
-them at :ref:`referencing_subpackages`.
+.. note::
+   Variant expressions are very powerful here. You can express the version
+   requirement in the run_exports entry as a jinja function to insert values
+   based on the actual version of libgcc produced by the recipe. Read more about
+   them at :ref:`referencing_subpackages`.
 
 .. _implicit_metapackages:
 
@@ -1310,7 +1321,8 @@ Conda build does support using Twine to upload packages to PyPI.
 See the conda build help output for the list of arguments
 accepted that will be passed through to Twine.
 
-NOTE: You must use pip to install Twine in order for this to work.
+.. note::
+   You must use pip to install Twine in order for this to work.
 
 
 .. _about-section:
@@ -1572,7 +1584,8 @@ the end of a line.
      url: http://path/to/unix/source    # [not win]
      url: http://path/to/windows/source # [win]
 
-NOTE: Preprocessing selectors are evaluated after Jinja templates.
+.. note::
+   Preprocessing selectors are evaluated after Jinja templates.
 
 A selector is a valid Python statement that is executed. The
 following variables are defined. Unless otherwise stated, the
@@ -1649,8 +1662,9 @@ logic is possible:
      url: http://path/to/python2/unix/source # [unix and py2k]
      url: http://path/to/python3/unix/source # [unix and py>=35]
 
-NOTE: The selectors delete only the line that they are on, so you
-may need to put the same selector on multiple lines:
+.. note::
+   The selectors delete only the line that they are on, so you
+   may need to put the same selector on multiple lines:
 
 .. code-block:: yaml
 
