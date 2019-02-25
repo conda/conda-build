@@ -142,10 +142,10 @@ Python 3.
 Installing only one makes it easier to keep track of
 the builds, but it is possible to have both installed on the same
 system at the same time. If you have both installed, use the
-``where`` command to see which version comes first on PATH since
+``which`` command to see which version comes first on PATH since
 this is the one you will be using::
 
-  where python
+  which python
 
 To build a package for a Python version other than the one in
 your Miniconda installation, use the ``--python`` option in the
