@@ -17,18 +17,20 @@ matrix:
         - FLAKE8=true
         - CONDA_VERSION=4.5.x
       os: linux
-    - python: 3.7
+    - python: 3.6
       env:
         - DOCS=true
+        - CONDA_VERSION=master
       os: linux
   allow_failures:
     - env:
         - FLAKE8=true
         - CONDA_VERSION=4.5.x
       python: 3.6
-    - python: 3.7
+    - python: 3.6
       env:
         - DOCS=true
+        - CONDA_VERSION=master
 
 addons:
   apt:
@@ -80,7 +82,7 @@ install:
   - if [[ "$FLAKE8" == "true" ]]; then
       conda install -q flake8;
     elif [[ "$DOCS" == "true" ]]; then
-      pip install -r requirements-doc
+      pip install -r requirements-docs.txt;
     else
       conda install -c c3i_test -q perl;
       conda install -q pytest pip pytest-cov pytest-forked pytest-xdist nomkl numpy mock pytest-mock;

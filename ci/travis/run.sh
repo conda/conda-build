@@ -17,8 +17,8 @@ elif [[ "$DOCS" == "true" ]]; then
     cd docs
     make html
 else
-    FILES_CHANGED=$(git status --porcelain | wc -l)
-    DOCS_FILES_CHANGED=$(git status --porcelain | grep docs | wc -l)
+    FILES_CHANGED=$(git diff master --name-only | wc -l)
+    DOCS_FILES_CHANGED=$(git diff master --name-only | grep docs | wc -l)
     if [[ $FILES_CHANGED == $DOCS_FILES_CHANGED ]]; then
       echo "Only docs changed detected, skipping tests"
     else
