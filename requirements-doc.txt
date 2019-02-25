@@ -1,4 +1,3 @@
--r requirements.txt
 sphinx
 sphinx-autobuild
 sphinx-argparse==0.2.5
