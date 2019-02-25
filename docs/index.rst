@@ -5,8 +5,9 @@ Conda-build Documentation
 
 Building a conda package requires
 :doc:`installing conda-build <source/install-conda-build>` and
-creating a conda :doc:`recipe <source/recipe>`. Use the ``conda build``
-command to build the conda package from the conda recipe.
+creating a conda :doc:`recipe <../source/concepts/recipe>`.
+Use the ``conda build`` command to build the conda package
+from the conda recipe.
 
 You can build conda packages from a variety of source code
 projects, most notably Python. For help packing a Python project,
@@ -31,7 +32,5 @@ Anaconda Cloud, you will need an
    source/sample-recipes
    source/build-without-recipe
    source/wheel-files
-   source/commands/index
    source/release-notes
-   source/wheel-files
 
