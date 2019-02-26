@@ -27,7 +27,7 @@ on GitHub in the `conda documentation repository
 
 
 Before you start
-=================
+================
 
 Before you start, make sure you have installed:
    * conda
@@ -36,10 +36,10 @@ Before you start, make sure you have installed:
 
 
 Toolkit
-=========
+=======
 
 Microsoft Visual Studio
-------------------------
+-----------------------
 
 In the standard practices of the conda developers, conda packages
 for different versions of Python are each built with their own
@@ -155,9 +155,9 @@ EXAMPLE: To build a Python 3.5 package with Miniconda2::
 
     conda-build recipeDirectory --python=3.5
 
-NOTE: Replace ``recipeDirectory`` with the name and path of your
-recipe directory.
-
+.. note::
+   Replace ``recipeDirectory`` with the name and path of your
+   recipe directory.
 
 Automated testing
 ==================
@@ -167,9 +167,10 @@ named ``run_test.bat`` on Windows, or ``run_test.sh`` on macOS or Linux,
 or ``run_test.py`` on any platform, the file runs to test the package,
 and any errors are reported.
 
-NOTE: Use the :ref:`Test section of the meta.yaml file
-<meta-test>` to move data files from the recipe directory to the
-test directory when the test is run.
+.. note:: 
+   Use the :ref:`Test section of the meta.yaml file
+   <meta-test>` to move data files from the recipe directory to the
+   test directory when the test is run.
 
 
 Building a SEP package with conda and Python 2 or 3
@@ -262,14 +263,15 @@ platform when the target platform is not necessarily the same as
 the native build platform. Run represents the dependencies that
 should be installed when the package is installed.
 
-NOTE: Using the letters ``x.x`` instead of a specific version
-such as ``1.11`` pins NumPy dynamically, so that the actual
-version of NumPy is taken from the build command. Currently, NumPy
-is the only package that can be pinned dynamically. Pinning is
-important for SEP because this package uses NumPy's C API through
-Cython. That API changes between NumPy versions, so it is
-important to use the same NumPy version at runtime that was used
-at build time.
+.. note::
+   Using the letters ``x.x`` instead of a specific version
+   such as ``1.11`` pins NumPy dynamically, so that the actual
+   version of NumPy is taken from the build command. Currently, NumPy
+   is the only package that can be pinned dynamically. Pinning is
+   important for SEP because this package uses NumPy's C API through
+   Cython. That API changes between NumPy versions, so it is
+   important to use the same NumPy version at runtime that was used
+   at build time.
 
 OPTIONAL: Add a test for the built package
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

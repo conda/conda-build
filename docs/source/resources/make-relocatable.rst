@@ -35,12 +35,13 @@ packages relocatable:
   pads the build prefix to 255 characters by appending 
   ``_placehold``\'s to the end of the build directory name.  
 
-  NOTE: The prefix length was changed in conda build 2.0 from 80 
-  characters to 255 characters. Legacy packages with 
-  80-character prefixes must be rebuilt to take advantage of the
-  longer prefix.
+.. note::
+   The prefix length was changed in conda build 2.0 from 80
+   characters to 255 characters. Legacy packages with
+   80-character prefixes must be rebuilt to take advantage of the
+   longer prefix.
 
-* There may be cases where conda identified a file as binary, but 
-  it needs to have the build prefix replaced as if it were 
-  text---no padding with null terminators. Such files can be 
+* There may be cases where conda identified a file as binary, but
+  it needs to have the build prefix replaced as if it were
+  text---no padding with null terminators. Such files can be
   listed in build/has_prefix_files in ``meta.yaml``.

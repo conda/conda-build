@@ -42,7 +42,7 @@ info/index.json
 ---------------
 
 This file contains basic information about the package, such as
-name, version, build string and dependencies. The content of this
+name, version, build string, and dependencies. The content of this
 file is stored in ``repodata.json``, which is the repository
 index file, hence the name ``index.json``. The json object is a
 dictionary containing the keys shown below. The filename of the
@@ -89,9 +89,9 @@ conda package is composed of the first 3 values, as in:
 
        Unlike the build string, the build_number is inspected by
        conda. Conda uses it to sort packages that have otherwise
-       identical names and versions, to determine the latest one.
+       identical names and versions to determine the latest one.
        This is important because new builds that contain bug
-       fixes to the way a package is built may be added to a
+       fixes for the way a package is built may be added to a
        repository.
 
    * - depends
@@ -136,13 +136,14 @@ Optional file. Lists all files that contain a hard-coded build
 prefix or placeholder prefix, which needs to be replaced by the
 install prefix at installation time.
 
-NOTE: Due to the way the binary replacement works, the
-placeholder prefix must be longer than the install prefix.
+.. note::
+   Due to the way the binary replacement works, the
+   placeholder prefix must be longer than the install prefix.
 
 Each line of this file should be either a path, in which case it
 is considered a text file with the default placeholder
 ``/opt/anaconda1anaconda2anaconda3``, or a space-separated list
-of placeholder, mode and path, where:
+of placeholder, mode, and path, where:
 
 * Placeholder is the build or placeholder prefix.
 * Mode is either ``text`` or ``binary``.
@@ -160,14 +161,15 @@ EXAMPLE: On macOS or Linux::
   /Users/username/anaconda/envs/_build binary bin/binary
   /Users/username/anaconda/envs/_build text share/text
 
-NOTE: The directory delimiter for the relative path must always
-be "/", even on Windows. The placeholder may contain either "\\"
-or "/" on Windows, but the replacement prefix will match the
-delimiter used in the placeholder. The default placeholder
-``/opt/anaconda1anaconda2anaconda3`` is an exception, being
-replaced with the install prefix using the native path
-delimiter. On Windows, the placeholder and path always appear
-in quotes to support paths with spaces.
+.. note::
+   The directory delimiter for the relative path must always
+   be "/", even on Windows. The placeholder may contain either "\\"
+   or "/" on Windows, but the replacement prefix will match the
+   delimiter used in the placeholder. The default placeholder
+   ``/opt/anaconda1anaconda2anaconda3`` is an exception, being
+   replaced with the install prefix using the native path
+   delimiter. On Windows, the placeholder and path always appear
+   in quotes to support paths with spaces.
 
 info/license.txt
 ----------------
@@ -177,8 +179,8 @@ Optional file. The software license for the package.
 info/no_link
 ------------
 
-Optional file. Lists all files that cannot be linked---either
-soft-linked or hard-linked---into environments and are copied
+Optional file. Lists all files that cannot be linked - either
+soft-linked or hard-linked - into environments and are copied
 instead.
 
 info/about.json
@@ -226,7 +228,7 @@ and unlink steps. For more information, see :doc:`link-scripts`.
 Repository structure and index
 ==============================
 
-A conda repository---or channel---is a directory tree, usually
+A conda repository - or channel - is a directory tree, usually
 served over HTTPS, which has platform subdirectories, each of
 which contain conda packages and a repository index. The index
 file ``repodata.json`` lists all conda packages in the platform
@@ -246,9 +248,10 @@ Windows::
                      repodata.json.bz2
                      misc-1.0-np17py27_0.tar.bz2
 
-NOTE: Both conda packages have identical filenames and are
-distinguished only by the repository subdirectory that contains
-them.
+.. note::
+   Both conda packages have identical filenames and are
+   distinguished only by the repository subdirectory that contains
+   them.
 
 
 .. _build-version-spec:
@@ -264,7 +267,7 @@ command line syntax to the spec defined in this section.
 EXAMPLE: python=3.4 is translated to python 3.4*.
 
 Package dependencies are specified using a match specification.
-A match specification is a space-separated string of 1, 2 or 3
+A match specification is a space-separated string of 1, 2, or 3
 parts:
 
 * The first part is always the exact name of the package.
@@ -310,14 +313,14 @@ parts:
   3 parts, the second part must be the exact version.
 
 Remember that the version specification cannot contain spaces,
-as spaces are used to delimit the package, version and build
+as spaces are used to delimit the package, version, and build
 string in the whole match specification. ``python >= 2.7`` is an
 invalid match specification. Furthermore, ``python>=2.7`` is
 matched as any version of a package named ``python>=2.7``.
 
 When using the command line, put double quotes around any package
 version specification that contains the space character or any of
-the following characters: <, >, * or \|.
+the following characters: <, >, \*, or \|.
 
 EXAMPLE::
 
@@ -338,9 +341,9 @@ The AND constraint "numpy>=1.8,<2" matches with 1.8 and 1.9 but
 not 2.0.
 
 The fuzzy constraint numpy=1.11 matches 1.11, 1.11.0, 1.11.1,
-1.11.2, 1.11.18 and so on.
+1.11.2, 1.11.18, and so on.
 
-The exact constraint numpy==1.11 matches 1.11, 1.11.0, 1.11.0.0
+The exact constraint numpy==1.11 matches 1.11, 1.11.0, 1.11.0.0,
 and so on.
 
 The build string constraint "numpy=1.11.2=*nomkl*" matches the
