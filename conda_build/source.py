@@ -645,8 +645,7 @@ def provide(metadata):
     try:
         for source_dict in dicts:
             folder = source_dict.get('folder')
-            src_dir = (os.path.join(metadata.config.work_dir, folder) if folder else
-                    metadata.config.work_dir)
+            src_dir = os.path.join(metadata.config.work_dir, folder if folder else '')
             if any(k in source_dict for k in ('fn', 'url')):
                 unpack(source_dict, src_dir, metadata.config.src_cache, recipe_path=metadata.path,
                     croot=metadata.config.croot, verbose=metadata.config.verbose,
@@ -667,12 +666,29 @@ def provide(metadata):
             elif 'path' in source_dict:
                 source_path = os.path.expanduser(source_dict['path'])
                 path = normpath(abspath(join(metadata.path, source_path)))
-                if metadata.config.verbose:
-                    print("Copying %s to %s" % (path, src_dir))
-                # careful here: we set test path to be outside of conda-build root in setup.cfg.
-                #    If you don't do that, this is a recursive function
-                copy_into(path, src_dir, metadata.config.timeout, symlinks=True,
-                        locking=metadata.config.locking, clobber=True)
+                path_via_symlink = 'path_via_symlink' in source_dict
+                if path_via_symlink and not folder:
+                    print("WARNING: `path_via_symlink` is too dangerous without specifying a folder,\n"
+                          "  conda could end up changing - or deleting - your local source code!\n"
+                          "  Going to make copies instead. When using `path_via_symlink` you should\n"
+                          "  also take care to run the build outside of your local source code folder(s)\n"
+                          "  unless that is your intention.")
+                    path_via_symlink = False
+                    sys.exit(1)
+                if path_via_symlink:
+                    src_dir_symlink = os.path.dirname(src_dir)
+                    if not isdir(src_dir_symlink):
+                        os.makedirs(src_dir_symlink)
+                    if metadata.config.verbose:
+                        print("Creating sybmolic link pointing to %s at %s" % (path, src_dir))
+                    os.symlink(path, src_dir)
+                else:
+                    if metadata.config.verbose:
+                        print("Copying %s to %s" % (path, src_dir))
+                    # careful here: we set test path to be outside of conda-build root in setup.cfg.
+                    #    If you don't do that, this is a recursive function
+                    copy_into(path, src_dir, metadata.config.timeout, symlinks=True,
+                            locking=metadata.config.locking, clobber=True)
             else:  # no source
                 if not isdir(src_dir):
                     os.makedirs(src_dir)
