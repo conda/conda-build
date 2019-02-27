@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-wget -c https://raw.githubusercontent.com/python/cpython/3.6/PC/launcher.c -O launcher.c
-patch -p0 < $(dirname ${BASH_SOURCE[0]})/cpython-launcher-c-mods-for-setuptools.patch
+curl -SLO https://raw.githubusercontent.com/python/cpython/3.7/PC/launcher.c -O launcher.c
+patch -p0 < $(dirname ${BASH_SOURCE[0]})/cpython-launcher-c-mods-for-setuptools.3.7.patch
 RCFILE=$(dirname ${BASH_SOURCE[0]})/resources.rc
 [[ -f ${RCFILE} ]] && rm -f ${RCFILE}
 echo "#include \"winuser.h\""      > ${RCFILE}

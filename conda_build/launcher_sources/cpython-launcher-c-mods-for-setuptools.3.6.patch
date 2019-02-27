@@ -1,0 +1,248 @@
+--- launcher.c.orig	2019-02-27 15:42:25.000000000 +0100
++++ launcher.c	2019-02-27 15:54:25.000000000 +0100
+@@ -8,11 +8,72 @@
+  * Curt Hagenlocher (job management)
+  */
+ 
++
++#if defined(_MSC_VER)
++#ifdef NDEBUG
++// /Og (global optimizations), /Os (favor small code), /Oy (no frame pointers)
++#pragma optimize("gsy",on)
++
++// Note that merging the .rdata section will result in LARGER exe's if you using
++// MFC (esp. static link). If this is desirable, define _MERGE_RDATA_ in your project.
++#ifdef _MERGE_RDATA_
++#pragma comment(linker,"/merge:.rdata=.data")
++#endif // _MERGE_RDATA_
++
++#endif // NDEBUG
++#endif
++
+ #include <windows.h>
+ #include <shlobj.h>
+ #include <stdio.h>
+ #include <tchar.h>
+ 
++/* To build on MSYS2 use the following script:
++#!/usr/bin/env bash
++
++wget -c https://raw.githubusercontent.com/python/cpython/3.6/PC/launcher.c -O launcher.c
++patch -p0 < $(dirname ${BASH_SOURCE[0]})/cpython-launcher-c-mods-for-setuptools.patch
++RCFILE=$(dirname ${BASH_SOURCE[0]})/resources.rc
++[[ -f ${RCFILE} ]] && rm -f ${RCFILE}
++echo "#include \"winuser.h\""      > ${RCFILE}
++echo "1 RT_MANIFEST manifest.xml" >> ${RCFILE}
++for _BITS in 64 32; do
++  [[ -f resources-${_BITS}.res ]] && rm -f resources-${_BITS}.res
++  PATH=/mingw${_BITS}/bin:$PATH windres --input ${RCFILE} --output resources-${_BITS}.res --output-format=coff
++  for _TYPE in cli gui; do
++    if [[ ${_TYPE} == cli ]]; then
++      CPPFLAGS=
++      LDFLAGS=
++    else
++      CPPFLAGS="-D_WINDOWS -mwindows"
++      LDFLAGS="-mwindows"
++    fi
++    # You *could* use MSVC 2008 here, but you'd end up with much larger (~230k) executables.
++    # cl.exe -opt:nowin98 -D NDEBUG -D "GUI=0" -D "WIN32_LEAN_AND_MEAN" -ZI -Gy -MT -MERGE launcher.c -Os -link -MACHINE:x64 -SUBSYSTEM:CONSOLE version.lib advapi32.lib shell32.lib
++    PATH=/mingw${_BITS}/bin:$PATH gcc -O2 -DSCRIPT_WRAPPER -DUNICODE -D_UNICODE -DMINGW_HAS_SECURE_API ${CPPFLAGS} launcher.c -c -o ${_TYPE}-${_BITS}.o
++    PATH=/mingw${_BITS}/bin:$PATH gcc -Wl,-s --static -static-libgcc -municode ${LDFLAGS} ${_TYPE}-${_BITS}.o resources-${_BITS}.res -o ${_TYPE}-${_BITS}.exe
++  done
++done
++ls -l *.exe
++echo "Debug this from cmd.exe via:"
++echo "set PYLAUNCH_DEBUG=1"
++ */
++
++/* Previosuly GetFileVersionInfoW was used here, but I would rather save
++ * the 1.5k that costs. If we bring this back, add -lversion to the link
++ * command line.
++ */
++
++#define VERSION_HIGH 0
++#define VERSION_LOW 1
++
++/* Previously BUFSIZE was used for this but 256 is not enough for even 260
++ * ASCII characters and far too little for unicode (it is a char array, not
++ * a wchar_t array, though it needs to be even bigger than 260 wchar_ts as
++ * the source script file could contain UTF-8 or UTF-32 (wchar_t is 2-byte)
++ */
++#define SHEBANG_BUFSIZE 2048
++
+ #define BUFSIZE 256
+ #define MSGSIZE 1024
+ 
+@@ -767,6 +828,25 @@
+ 
+ static COMMAND path_command;
+ 
++#if !defined(_MSC_VER)
++errno_t _wdupenv_s_emulated(wchar_t **buffer,
++                            size_t *numberOfElements,
++                            const wchar_t *varname)
++{
++    size_t szreq;
++
++    errno_t err = _wgetenv_s(&szreq, NULL, 0, varname);
++    if (szreq == 0)
++        return 1;
++    *buffer = (wchar_t*) malloc(sizeof(wchar_t) * szreq);
++    if (!*buffer)
++        return 1;
++    err = _wgetenv_s(&szreq, *buffer, szreq, varname);
++    return err;
++}
++#define _wdupenv_s _wdupenv_s_emulated
++#endif
++
+ static COMMAND * find_on_path(wchar_t * name)
+ {
+     wchar_t * pathext;
+@@ -890,7 +970,7 @@
+ 
+ static BOOL
+ parse_shebang(wchar_t * shebang_line, int nchars, wchar_t ** command,
+-              wchar_t ** suffix, BOOL *search)
++              wchar_t ** suffix, BOOL *search, wchar_t * argv0)
+ {
+     BOOL rc = FALSE;
+     SHEBANG * vpp;
+@@ -900,11 +980,40 @@
+     wchar_t * endp = shebang_line + nchars - 1;
+     COMMAND * cp;
+     wchar_t * skipped;
++    wchar_t tidied[_MAX_DRIVE+_MAX_DIR+_MAX_FNAME+_MAX_EXT] = L"";
+ 
+     *command = NULL;    /* failure return */
+     *suffix = NULL;
+     *search = FALSE;
+ 
++    if ((shebang_line[0] != L'#') || (shebang_line[1] != L'!')) {
++        /* This is deliberately very similar to find_exe() in:
++         * https://raw.githubusercontent.com/pypa/setuptools/master/launcher.c
++         * I was tempted to use _wsplitpath_s twice to get the parent dir, but
++         * any change of behaviour here would cause big trouble.
++         */
++        wchar_t drive[_MAX_DRIVE];
++        wchar_t dir[_MAX_DIR];
++        wchar_t fname[_MAX_FNAME];
++        wchar_t ext[_MAX_EXT];
++        wchar_t * tmp, wc;
++        debug(L"parse_shebang called without a valid shebang %s (for argv0 %s)\n", shebang_line, argv0);
++        if (wcslen(argv0)-1 < _countof(tidied)) {
++            wcsncpy_s(tidied, _countof(tidied), argv0, _TRUNCATE);
++            tmp = &tidied[0];
++            while (wc = *tmp++) {
++                if (wc == L'/') tmp[-1] = L'\\';
++            }
++            _wsplitpath_s(tidied, drive, _countof(drive), dir, _countof(dir), fname, _countof(fname), ext, _countof(ext));
++            tmp = dir+wcslen(dir)-1;
++            if (*tmp == L'\\') tmp--;
++            while (*tmp != L'\\' && tmp>=dir) *tmp-- = 0;
++            _snwprintf_s(tidied, _countof(tidied), _TRUNCATE, L"#!%s%s%s", drive, dir, PYTHON_EXECUTABLE);
++            debug(L"invented shebang: %s\n", tidied);
++            shebang_line = tidied;
++        }
++    }
++
+     if ((*shebang_line++ == L'#') && (*shebang_line++ == L'!')) {
+         shebang_line = skip_whitespace(shebang_line);
+         if (*shebang_line) {
+@@ -1123,7 +1232,7 @@
+  */
+     FILE * fp;
+     errno_t rc = _wfopen_s(&fp, *argv, L"rb");
+-    char buffer[BUFSIZE];
++    char buffer[SHEBANG_BUFSIZE];
+     wchar_t shebang_line[BUFSIZE + 1];
+     size_t read;
+     char *p;
+@@ -1140,7 +1249,7 @@
+     INSTALLED_PYTHON * ip;
+ 
+     if (rc == 0) {
+-        read = fread(buffer, sizeof(char), BUFSIZE, fp);
++        read = fread(buffer, sizeof(char), SHEBANG_BUFSIZE, fp);
+         debug(L"maybe_handle_shebang: read %d bytes\n", read);
+         fclose(fp);
+ 
+@@ -1165,7 +1274,7 @@
+                   bom->code_page);
+             start = &buffer[bom->length];
+         }
+-        p = find_terminator(start, BUFSIZE, bom);
++        p = find_terminator(start, SHEBANG_BUFSIZE, bom);
+         /*
+          * If no CR or LF was found in the heading,
+          * we assume it's not a shebang file.
+@@ -1249,7 +1358,7 @@
+             if (nchars > 0) {
+                 shebang_line[--nchars] = L'\0';
+                 is_virt = parse_shebang(shebang_line, nchars, &command,
+-                                        &suffix, &search);
++                                        &suffix, &search, *argv);
+                 if (command != NULL) {
+                     debug(L"parse_shebang: found command: %ls\n", command);
+                     if (!is_virt) {
+@@ -1370,6 +1479,7 @@
+     int newlen;
+     wchar_t * newcommand;
+     wchar_t * av[2];
++    int quoted = 0;
+ #endif
+ 
+     setvbuf(stderr, (char *)NULL, _IONBF, 0);
+@@ -1407,6 +1517,7 @@
+         }
+     }
+     plen = GetModuleFileNameW(NULL, launcher_ini_path, MAX_PATH);
++/*
+     size = GetFileVersionInfoSizeW(launcher_ini_path, &size);
+     if (size == 0) {
+         winerror(GetLastError(), message, MSGSIZE);
+@@ -1432,6 +1543,9 @@
+             free(version_data);
+         }
+     }
++*/
++    version_high = VERSION_HIGH;
++    version_low = VERSION_LOW;
+     p = wcsrchr(launcher_ini_path, L'\\');
+     if (p == NULL) {
+         debug(L"GetModuleFileNameW returned value has no backslash: %ls\n",
+@@ -1466,13 +1580,23 @@
+     locate_wrapped_script();
+ 
+     /* Add the wrapped script to the start of command */
+-    newlen = wcslen(wrapped_script_path) + wcslen(command) + 2; /* ' ' + NUL */
++    p = wcsrchr(wrapped_script_path, L' ');
++    if (p != NULL)
++        quoted = 1;
++    newlen = wcslen(wrapped_script_path) + wcslen(command) + 2 + (2 * quoted); /* ' ' + NUL */
+     newcommand = malloc(sizeof(wchar_t) * newlen);
+     if (!newcommand) {
+         error(RC_NO_MEMORY, L"Could not allocate new command line");
+     }
+     else {
+-        wcscpy_s(newcommand, newlen, wrapped_script_path);
++        newcommand[0] = L'\0';
++        if (quoted) {
++            wcscpy_s(newcommand, newlen, L"\"");
++        }
++        wcscat_s(newcommand, newlen, wrapped_script_path);
++        if (quoted) {
++            wcscat_s(newcommand, newlen, L"\"");
++        }
+         wcscat_s(newcommand, newlen, L" ");
+         wcscat_s(newcommand, newlen, command);
+         debug(L"Running wrapped script with command line '%ls'\n", newcommand);
+@@ -1537,7 +1661,7 @@
+ 
+             get_version_info(version_text, MAX_PATH);
+             fwprintf(stdout, L"\
+-Python Launcher for Windows Version %ls\n\n", version_text);
++Python Launcher for Windows (Anaconda/Setuptools variant) Version %ls\n\n", version_text);
+             fwprintf(stdout, L"\
+ usage: %ls [ launcher-arguments ] [ python-arguments ] script [ script-arguments ]\n\n", argv[0]);
+             fputws(L"\
