@@ -419,7 +419,6 @@ default_structs = {
 def sanitize(meta):
     """
     Sanitize the meta-data to remove aliases/handle deprecation
-
     """
     sanitize_funs = {'source': [_git_clean], 'package': [_str_version], 'build': [_str_version]}
     for section, funs in sanitize_funs.items():
