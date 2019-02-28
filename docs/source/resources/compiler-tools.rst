@@ -48,7 +48,7 @@ you use will be something like ``x86_64-conda_cos6-linux-gnu-gcc``. These full
 compiler names are shown in the build logs, recording the host platform and
 helping prevent the common mistake of using the wrong compiler.
 
-Many build tools such as ``make`` and ``cmake`` search by default for a
+Many build tools such as ``make`` and ``CMake`` search by default for a
 compiler named simply ``gcc``, so we set environment variables to point these
 tools to the correct compiler.
 

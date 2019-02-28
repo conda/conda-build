@@ -6,3 +6,6 @@ User guide
    :maxdepth: 2
 
    tutorials/index
+   recipes/index
+   environment-variables
+   wheel-files
