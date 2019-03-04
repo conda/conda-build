@@ -25,12 +25,5 @@ Anaconda Cloud, you will need an
    source/concepts/index
    source/user-guide/index
    source/resources/index
-   source/package-naming-conv
-   source/features
-   source/environment-variables
-   source/debugging
-   source/sample-recipes
-   source/build-without-recipe
-   source/wheel-files
    source/release-notes
 

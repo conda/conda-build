@@ -3,12 +3,14 @@ Concepts
 ********
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
 
    package-anatomy
-   generating-index
    channels
+   generating-index
    recipe
+   package-naming-conv
+   features
    
 What is a “package”?
 --------------------
