@@ -173,7 +173,7 @@ def _print_dict(d, order=None, level=0, indent=2):
                 if isinstance(_v, string_types) or not hasattr(_v, "__iter__"):
                     rendered_recipe += __print_with_indent(_k, suffix=':', level=level + indent,
                                                           newline=False)
-                    if isinstance(_v, str):
+                    if isinstance(_v, string_types):
                         rendered_recipe += ' "' + _v + '"\n'
                     else:
                         rendered_recipe += ' ' + str(_v) + '\n'
