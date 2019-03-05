@@ -316,7 +316,7 @@ Environment variables to set build features
 
 The environment variables listed in the following table are
 inherited from the process running conda build. These variables
-control :doc:`features`.
+control :ref:`features<concepts_features>`.
 
 .. list-table::
    :widths: 15 43 42

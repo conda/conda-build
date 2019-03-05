@@ -1,3 +1,5 @@
+.. _make-relocatable:
+
 ===========================
 Making packages relocatable
 ===========================

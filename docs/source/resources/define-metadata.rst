@@ -10,7 +10,7 @@ Defining metadata (meta.yaml)
 
 
 All the metadata in the conda build recipe is specified in the
-``meta.yaml`` file. See the example below: 
+``meta.yaml`` file. See the example below:
 
 .. code-block:: Python
 
@@ -311,7 +311,7 @@ Features
 --------
 
 Defines what features a package has. For more information, see
-:doc:`features`.
+:ref:`features<concepts_features>`.
 
 .. code-block:: yaml
 
@@ -327,7 +327,7 @@ To enable a feature, install a package that tracks that feature.
 A package can have a feature, track that feature, or both, or
 neither. Usually it is best for the package that tracks a
 feature to be a metapackage that does not have the feature. For
-more information, see :doc:`features`.
+more information, see :ref:`features<concepts_features>`.
 
 .. code-block:: yaml
 
@@ -651,7 +651,7 @@ undefined.
    others to reproduce binaries from source with your recipe. Use
    this feature with caution or avoid it.
 
-.. note:: 
+.. note::
    If you split your build and test phases with ``--no-test`` and ``--test``,
    you need to ensure that the environment variables present at build time and test
    time match. If you do not, the package hashes may use different values, and your
@@ -1508,8 +1508,8 @@ practice means changing the conda build source code. See the
 
 For more information, see the `Jinja2 template
 documentation <http://jinja.pocoo.org/docs/dev/templates/>`_
-and :doc:`the list of available environment
-variables <environment-variables>`.
+and :ref:`the list of available environment
+variables <env-vars>`.
 
 Jinja templates are evaluated during the build process. To
 retrieve a fully rendered ``meta.yaml`` use the
@@ -1648,8 +1648,8 @@ variables are booleans.
      - The NumPy version as an integer such as ``111``. See the
        CONDA_NPY :ref:`environment variable <build-envs>`.
 
-The use of the Python version selectors, `py27`, `py34`, etc is discouraged in 
-favor of the more general comparison operators.  Additional selectors in this 
+The use of the Python version selectors, `py27`, `py34`, etc is discouraged in
+favor of the more general comparison operators.  Additional selectors in this
 series will not be added to conda-build.
 
 Because the selector is any valid Python expression, complicated

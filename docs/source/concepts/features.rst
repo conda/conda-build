@@ -1,3 +1,5 @@
+.. _concepts_features:
+
 ========
 Features
 ========
