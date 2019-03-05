@@ -2,7 +2,7 @@
 Conda build recipes
 ===================
 
-To enable building conda packages, :doc:`install and update conda
+To enable building conda packages, :ref:`install and update conda
 and conda build <install-conda-build>`.
 
 Building a conda package requires a recipe. A conda build recipe
@@ -65,7 +65,7 @@ Conda build process
    conda package metadata.
 
 #. Tests the new conda package if the recipe includes tests:
-  
+
    #. Deletes the build environment.
 
    #. Creates a test environment with the package and its

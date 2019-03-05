@@ -1,3 +1,5 @@
+.. _compiler-tools:
+
 =======================
 Anaconda compiler tools
 =======================

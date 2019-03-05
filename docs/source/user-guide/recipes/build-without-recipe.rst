@@ -101,7 +101,7 @@ install_name_tool on macOS or patchelf on Linux. The default is
 
    conda_binary_relocation=False
 
-For more information, see :doc:`make-relocatable`.
+For more information, see :ref:`make-relocatable <make-relocatable>`.
 
 
 Preserve egg directory
@@ -128,7 +128,7 @@ A list of features for the package.
 
 NOTE: Replace ``mkl`` with the features that you want to list.
 
-For more information, see :doc:`features`.
+For more information, see :ref:`features<concepts_features>`.
 
 
 Track features
@@ -141,7 +141,7 @@ installed.
 
    conda_track_features=['mkl']
 
-For more information, see :doc:`features`.
+For more information, see :ref:`features<concepts_features>`.
 
 
 Command line options
