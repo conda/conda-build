@@ -142,7 +142,7 @@ Python 3.
 Installing only one makes it easier to keep track of
 the builds, but it is possible to have both installed on the same
 system at the same time. If you have both installed, use the
-``where`` command to see which version comes first on PATH since
+``where`` command on Windows, or ``which`` command on Linux to see which version comes first on PATH since
 this is the one you will be using::
 
   where python
