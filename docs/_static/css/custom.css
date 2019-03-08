@@ -78,5 +78,6 @@ h1, h2, .rst-content .toctree-wrapper p.caption, h3, h4, h5, h6, legend {
 }
 
 .wy-nav-top {
+    /*color of nav at top when the window is narrow*/
     background: #43B02A;
 }
