@@ -19,6 +19,16 @@
    background-color:#EEEEEE;
 }
 
+.wy-menu a:hover {
+    /*background color of text upon hovering*/
+    background: #c9c9c9
+}
+
+.wy-menu-vertical li.on a:hover,.wy-menu-vertical li.current>a:hover {
+    /*background color of text upon hovering an open list*/
+    background: #c9c9c9
+}
+
 .wy-menu-vertical {
     /* text color of expanded menu items in the sidebar */
     color:#414042;
@@ -28,7 +38,7 @@
     /*header 1 text color */
     color: #047704;
  }
- 
+  
 .rst-content .toctree-wrapper p.caption, h2, h3, h4, h5, h6, legend {
     /*text color of rst content and subheads*/
     color: #414042;
@@ -61,4 +71,13 @@ h1, h2, .rst-content .toctree-wrapper p.caption, h3, h4, h5, h6, legend {
 .wy-menu-vertical li.toctree-l1.current>a {
     /*text color of toctree*/
     color: #025C02;
+}
+
+.toctree-l1:hover {
+    background-color: #EEEEEE;
+}
+
+.wy-nav-top {
+    /*color of nav at top when the window is narrow*/
+    background: #43B02A;
 }
