@@ -10,6 +10,7 @@
 }
 
 .wy-side-nav-search {
+    /*background color of the top search bar*/
     background-color: #43B02A;
 }
 
@@ -19,14 +20,17 @@
 }
 
 .wy-menu-vertical {
-    color: black;
+    /* text color of expanded menu items in the sidebar */
+    color:#414042;
 }
 
-h1 {
-   color: #047704;
-}
-
+.section h1 {
+    /*header 1 text color */
+    color: #047704;
+ }
+ 
 .rst-content .toctree-wrapper p.caption, h2, h3, h4, h5, h6, legend {
+    /*text color of rst content and subheads*/
     color: #414042;
 }
 
@@ -41,6 +45,7 @@ h1 {
 }
 
 .section-title {
+    /*text color of section titles*/
     color:#078E07;
 }
 
@@ -50,8 +55,10 @@ h1 {
 }
 
 h1, h2, .rst-content .toctree-wrapper p.caption, h3, h4, h5, h6, legend {
+    /*font formats*/
     font-family: "Proxima Nova","Helvetica","Arial",sans-serif;
 }
 .wy-menu-vertical li.toctree-l1.current>a {
+    /*text color of toctree*/
     color: #025C02;
 }
