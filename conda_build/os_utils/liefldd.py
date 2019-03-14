@@ -416,10 +416,12 @@ def get_linkages(filename, resolve_filenames=True, recurse=True,
                  sysroot='', envroot='', arch='native'):
     # When we switch to lief, want to ensure these results do not change.
     # if have_lief:
-    result_lief = inspect_linkages_lief(filename, resolve_filenames=resolve_filenames, recurse=recurse,
-                                        sysroot=sysroot, envroot=envroot, arch=arch)
     result_pyldd = inspect_linkages_pyldd(filename, resolve_filenames=resolve_filenames, recurse=recurse,
                                           sysroot=sysroot, arch=arch)
+    if not have_lief:
+        return result_pyldd
+    result_lief = inspect_linkages_lief(filename, resolve_filenames=resolve_filenames, recurse=recurse,
+                                        sysroot=sysroot, envroot=envroot, arch=arch)
     # We do not support Windows yet with pyldd.
     if (set(result_lief) != set(result_pyldd) and
        codefile_type(filename) not in ('DLLfile', 'EXEfile')):
