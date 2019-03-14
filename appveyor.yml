@@ -21,9 +21,12 @@ environment:
       SYS_PYTHON_ARCH: "64"
       CONDA_CANARY: "True"
 
+skip_commits:
+  files:
+    - docs/*
+
 init:
   - ECHO %SYS_PYTHON% %SYS_PYTHON_VERSION% %SYS_PYTHON_ARCH% %HOME%
-
 
 install:
   # If there is a newer build queued for the same PR, cancel this one.
