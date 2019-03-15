@@ -180,7 +180,7 @@ Windows example file path:
 
 .. code-block:: text
 
-    C:\Users\jsmith\Miniconda\conda-bld\win-64\click-7.0-py37_0.tar.bz2
+    C:\Users\jsmith\Miniconda\conda-bld\win-64\click-7.0-py27_0.tar.bz2
 
 OS X example file path:
 
