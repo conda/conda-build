@@ -186,7 +186,7 @@ OS X example file path:
 
 .. code-block:: text
 
-    /Users/jsmith/miniconda/conda-bld/osx-64/click-7.0-py37_0.tar.bz2
+    /Users/jsmith/miniconda/conda-bld/osx-64/click-7.0-py27_0.tar.bz2
 
 
 Linux example file path:
