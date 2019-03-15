@@ -208,8 +208,12 @@ Optional---Converting conda package for other platforms
 
 Now that you have built a package for your current platform with
 conda build, you can convert it for use on other platforms with
-the ``conda convert`` command and a platform specifier from this
-list:
+the ``conda convert`` command. This works only for pure Python
+packages where there is no compiled code. Conda convert does 
+nothing to change compiled code, it only adapts file paths to
+take advantage of the fact that Python scripts are mostly
+platform-independent. Conda convert accepts a platform specifier
+from this and a platform specifier from this list:
 
 * osx-64.
 * linux-32.
