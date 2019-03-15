@@ -193,7 +193,7 @@ Linux example file path:
 
 .. code-block:: text
 
-    /home/jsmith/miniconda/conda-bld/linux-64/click-7.0-py37_0.tar.bz2
+    /home/jsmith/miniconda/conda-bld/linux-64/click-7.0-py27_0.tar.bz2
 
 
 .. note::
