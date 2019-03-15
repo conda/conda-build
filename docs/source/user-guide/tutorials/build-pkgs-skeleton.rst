@@ -253,6 +253,11 @@ directory for the platform, where ``$ARCH`` can be ``osx-64``,
 A simpler way is to upload all of the bz2 files to Anaconda.org
 as described in the next task.
 
+If you find yourself needing to use ``conda convert``, you might
+instead prefer to change your recipe to make your package a "noarch" package.
+Noarch packages run anywhere and do not require conda convert. 
+Some of the ecosystem tools don't yet support noarch packages but,
+for the most part, noarch packages are a better way to go.
 
 .. _`upload-to-anaconda-org`:
 
