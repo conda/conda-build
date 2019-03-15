@@ -165,11 +165,11 @@ By default, conda build creates packages for the version of
 Python installed in the root environment. To build packages for
 other versions of Python, you use the ``--python`` flag followed
 by a version. For example, to explicitly build a version of the
-Click package for Python 3, use:
+Click package for Python 2.7, use:
 
 .. code-block:: bash
 
-    conda-build --python 3 click
+    conda-build --python 2.7 click
 
 Notice that the file printed at the end of the ``conda-build``
 output has changed to reflect the requested version of Python.
