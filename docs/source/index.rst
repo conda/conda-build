@@ -1,6 +1,6 @@
 .. _index:
 
-Conda-build Documentation
+Conda Build Documentation
 =========================
 
 Building a conda package requires
