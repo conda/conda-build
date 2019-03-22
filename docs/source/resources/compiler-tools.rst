@@ -91,17 +91,16 @@ correct compiler arguments, e.g. for Clang this would be::
 
     clang .. -isysroot ${CONDA_BUILD_SYSROOT} -mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET} ..
 
-Most build tools, e.g. CMake and distutils (setuptools) will automatically pick
-up ``MACOSX_DEPLOYMENT_TARGET``, but you need to pass ``CONDA_BUILD_SYSROOT``
+Most build tools, e.g. CMake and distutils (setuptools), will automatically pick
+up ``MACOSX_DEPLOYMENT_TARGET`` but you need to pass ``CONDA_BUILD_SYSROOT``
 explicitly. For CMake, this can be done with the option
 ``-DCMAKE_OSX_SYSROOT=${CONDA_BUILD_SYSROOT}``. When building Python extensions
-with distutils, one should always extend ``CFLAGS``, before calling
+with distutils, one should always extend ``CFLAGS`` before calling
 ``setup.py``::
 
     export CFLAGS="${CFLAGS} -i sysroot ${CONDA_BUILD_SYSROOT}"
 
-When building C++ extensions with Cython, also ``CXXFLAGS`` must modified
-similarly.
+When building C++ extensions with Cython, ``CXXFLAGS`` must be similarly modified.
 
 
 Backward compatibility
