@@ -66,17 +66,14 @@ macOS SDK
 =========
 
 The macOS compilers require the macOS 10.9 SDK. The SDK license prevents it
-from being bundled in the conda package.
-
-We know of two current sources for the macOS 10.9 SDK:
+from being bundled in the conda package. We know of two current sources for the
+macOS 10.9 SDK:
 
 - https://github.com/devernay/xcodelegacy
 - https://github.com/phracker/MacOSX-SDKs
 
 We usually install this SDK at ``/opt/MacOSX10.9.sdk`` but you may install it
-anywhere.
-
-Edit your ``conda_build_config.yaml`` file to point to it, like this::
+anywhere. Edit your ``conda_build_config.yaml`` file to point to it, like this::
 
     CONDA_BUILD_SYSROOT:
       - /opt/MacOSX10.9.sdk        # [osx]
@@ -84,10 +81,27 @@ Edit your ``conda_build_config.yaml`` file to point to it, like this::
 At Anaconda we have this configuration setting in a centralized
 ``conda_build_config.yaml`` at the root of our recipe repository. Since we run
 build commands from that location, the file and the setting are used for all
-recipes.
-
-The ``conda_build_config.yaml`` search order is described further at
+recipes. The ``conda_build_config.yaml`` search order is described further at
 :ref:`conda-build-variant-config-files`.
+
+Build scripts for OSX should make use of the variables
+``MACOSX_DEPLOYMENT_TARGET`` and ``CONDA_BUILD_SYSROOT``, which are set by
+conda-build, see :ref:`env-vars`. These variables should be translated into
+correct compiler arguments, e.g. for Clang this would be::
+
+    clang .. -isysroot ${CONDA_BUILD_SYSROOT} -mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET} ..
+
+Most build tools, e.g. CMake and distutils (setuptools), will automatically pick
+up ``MACOSX_DEPLOYMENT_TARGET`` but you need to pass ``CONDA_BUILD_SYSROOT``
+explicitly. For CMake, this can be done with the option
+``-DCMAKE_OSX_SYSROOT=${CONDA_BUILD_SYSROOT}``. When building Python extensions
+with distutils, one should always extend ``CFLAGS`` before calling
+``setup.py``::
+
+    export CFLAGS="${CFLAGS} -i sysroot ${CONDA_BUILD_SYSROOT}"
+
+When building C++ extensions with Cython, ``CXXFLAGS`` must be similarly modified.
+
 
 Backward compatibility
 ======================
