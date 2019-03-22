@@ -840,10 +840,14 @@ Note that what qualifies as a "system" dependency is a matter of opinion. The
 Anaconda Distribution chose not to provide X11 or GL packages, so we use CDT
 packages for X11. Conda-forge chose to provide X11 and GL packages.
 
-On macOS, you can use the equivalent compiler packages in conjunction with the standard
-MACOSX_DEPLOYMENT_TARGET environment variable and set the CONDA_BUILD_SYSROOT environment variable.
-This will specify a folder containing a macOS SDK. This achieves backwards compatability
-while still providing access to C++14 and C++1z.
+On macOS, you can also use ``{{ compiler() }}`` to get compiler packages
+provided by Anaconda Inc. in the ``defaults`` meta-channel. The
+environment variables ``MACOSX_DEPLOYMENT_TARGET`` and ``CONDA_BUILD_SYSROOT``
+will be set appropriately by conda-build. (See :ref:`env-vars`.)
+``CONDA_BUILD_SYSROOT`` will specify a folder containing a macOS SDK. These
+settings achieve backwards compatibility while still providing access to C++14
+and C++17. Note that conda-build will set ``CONDA_BUILD_SYSROOT`` by parsing the
+``conda_build_config.yaml``. For more details, see :ref:`compiler-tools`.
 
 **TL;DR**: If you use the new ``{{ compiler() }}`` jinja2 to utilize our new
 compilers, you also must move anything that is not strictly a build tool into
