@@ -1733,9 +1733,9 @@ class MetaData(object):
                     break
         subpackage_pin = False
         if not in_reqs and self.meta_path:
-                data = self.extract_requirements_text(force_top_level=True)
-                if data:
-                    subpackage_pin = re.search("{{\s*pin_subpackage\(.*\)\s*}}", data)
+            data = self.extract_requirements_text(force_top_level=True)
+            if data:
+                subpackage_pin = re.search("{{\s*pin_subpackage\(.*\)\s*}}", data)
         return in_reqs or bool(subpackage_pin)
 
     @property

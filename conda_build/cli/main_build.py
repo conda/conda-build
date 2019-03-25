@@ -98,7 +98,8 @@ different sets of packages."""
         metavar='RECIPE_PATH',
         nargs='+',
         help="Path to recipe directory.  Pass 'purge' here to clean the "
-        "work and test intermediates.",
+        "work and test intermediates. Pass 'purge-all' to also remove "
+        "previously built packages.",
     )
     p.add_argument(
         '--skip-existing',

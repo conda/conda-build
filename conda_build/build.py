@@ -1851,7 +1851,7 @@ def write_build_scripts(m, script, build_file):
         bf.write("\tsource {}\n".format(env_file))
         bf.write("fi\n")
         if script:
-                bf.write(script)
+            bf.write(script)
         if isfile(build_file) and not script:
             bf.write(open(build_file).read())
 
