@@ -84,7 +84,7 @@ def actions_to_pins(actions):
     if conda_43:
         spec_name = lambda x: x.dist_name
     else:
-        spec_name = lambda x: x
+        spec_name = lambda x: str(x)
     if 'LINK' in actions:
         specs = [' '.join(spec_name(spec).split()[0].rsplit('-', 2)) for spec in actions['LINK']]
     return specs
