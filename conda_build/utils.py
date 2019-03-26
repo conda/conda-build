@@ -1365,7 +1365,8 @@ def filter_files(files_list, prefix, filter_patterns=('(.*[\\\\/])?\.git[\\\\/].
                                                       '(.*[\\\\/])?\.git$',
                                                       '(.*)?\.DS_Store.*',
                                                       '.*\.la$',
-                                                      'conda-meta.*')):
+                                                      'conda-meta.*',
+                                                      '.*\.conda_trash$')):
     """Remove things like the .git directory from the list of files to be copied"""
     for pattern in filter_patterns:
         r = re.compile(pattern)
