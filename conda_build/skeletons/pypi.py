@@ -72,8 +72,8 @@ PYPI_META_HEADER = """{{% set name = "{packagename}" %}}
 # etc. is determined by EXPECTED_SECTION_ORDER.
 PYPI_META_STATIC = {
     'package': OrderedDict([
-        ('name', '"{{ name|lower }}"'),
-        ('version', '"{{ version }}"'),
+        ('name', '{{ name|lower }}'),
+        ('version', '{{ version }}'),
     ]),
     'source': OrderedDict([
         ('url', '/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz'),  # NOQA
@@ -173,7 +173,10 @@ def _print_dict(d, order=None, level=0, indent=2):
                 if isinstance(_v, string_types) or not hasattr(_v, "__iter__"):
                     rendered_recipe += __print_with_indent(_k, suffix=':', level=level + indent,
                                                           newline=False)
-                    rendered_recipe += ' ' + str(_v) + '\n'
+                    if isinstance(_v, string_types):
+                        rendered_recipe += ' "' + _v + '"\n'
+                    else:
+                        rendered_recipe += ' ' + str(_v) + '\n'
                 elif hasattr(_v, 'keys'):
                     rendered_recipe += _print_dict(_v, sorted(list(_v.keys())))
                 # assume that it's a list if it exists at all
@@ -339,9 +342,9 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
             if noarch_python:
                 ordered_recipe['build']['noarch'] = 'python'
 
-            ordered_recipe['build']['script'] = ('"{{ PYTHON }} -m pip install . --no-deps '
+            ordered_recipe['build']['script'] = ('{{ PYTHON }} -m pip install . --no-deps '
                                                  '--ignore-installed -vv ' +
-                                                 ' '.join(setup_options) + '"')
+                                                 ' '.join(setup_options))
 
             # Always require python as a dependency.  Pip is because we use pip for
             #    the install line.
