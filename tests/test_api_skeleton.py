@@ -187,7 +187,7 @@ def test_pypi_section_order_preserved(testing_workdir):
 cran_packages = [('r-usethis', 'GPL-3', 'GPL3', 'GPL-3'),
                  ('r-abf2', 'Artistic-2.0', 'OTHER', 'Artistic-2.0'),
                  ('r-cortools', 'Artistic License 2.0', 'OTHER', 'Artistic-2.0'),
-                 ('r-ruchardet', 'MPL', 'OTHER', ''),
+                 ('r-udpipe', 'MPL-2.0', 'OTHER', ''),
                  ]
 
 
