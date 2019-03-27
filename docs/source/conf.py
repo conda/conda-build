@@ -15,9 +15,10 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath('../..'))
 
-os.chdir('..')
+
+os.chdir('../..')
 import versioneer
 
 version = versioneer.get_versions()['version']
@@ -25,7 +26,7 @@ version = versioneer.get_versions()['version']
 os.chdir('docs')
 # -- Project information -----------------------------------------------------
 
-project = 'conda-build'
+project = 'conda build'
 copyright = '2018, Anaconda, Inc.'
 author = 'Anaconda, Inc.'
 
@@ -182,4 +183,4 @@ intersphinx_mapping = {'https://docs.python.org/': None}
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True
 
-html_style = 'css/no_fixed_width.css'
+html_style = 'css/custom.css'

@@ -142,7 +142,7 @@ Python 3.
 Installing only one makes it easier to keep track of
 the builds, but it is possible to have both installed on the same
 system at the same time. If you have both installed, use the
-``where`` command to see which version comes first on PATH since
+``where`` command on Windows, or ``which`` command on Linux to see which version comes first on PATH since
 this is the one you will be using::
 
   where python
@@ -167,7 +167,7 @@ named ``run_test.bat`` on Windows, or ``run_test.sh`` on macOS or Linux,
 or ``run_test.py`` on any platform, the file runs to test the package,
 and any errors are reported.
 
-.. note:: 
+.. note::
    Use the :ref:`Test section of the meta.yaml file
    <meta-test>` to move data files from the recipe directory to the
    test directory when the test is run.
@@ -231,7 +231,7 @@ For this package, ``bld.bat`` and ``build.sh`` need no changes.
 You need to edit the ``meta.yaml`` file to add the dependency on
 NumPy and add an optional test for the built package by importing
 It. For more information about what can be specified in meta.yaml,
-see :doc:`../resources/define-metadata`.
+see :ref:`define-metadata<meta-yaml>`.
 
 #. In the requirements section of the ``meta.yaml`` file, add a
    line that adds NumPy as a requirement to build the package.
@@ -425,7 +425,7 @@ Notice that the C compilers are pulled into the recipe using the syntax
 function ``compiler()`` to specify compiler packages dynamically. So, using
 the ``compiler(‘c’)`` function in a conda recipe will pull in the correct
 compiler for any build platform. For more information about compilers with
-conda build see :doc:`../resources/compiler-tools`.
+conda build see :ref:`compiler-tools<compiler-tools>`.
 
 Also note that the compilers used by conda build can be specified using
 a conda_build_config.yaml. For more information about how to do that,
@@ -463,4 +463,3 @@ Or explicitly set the location of the conda build variant matrix
 If you want to know more about build variants and conda_build_config.yaml,
 including how to specify a config file and what can go into it, take a look
 at :ref:`conda-build-variant-config-files`.
-

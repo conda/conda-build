@@ -122,7 +122,8 @@ Cleanup
 
 Debugging folders are named in a way that the ``conda build purge`` command will
 find and clean up. If you use the -p/--path CLI argument, conda-build will not
-detect these, and you'll need to manually clean up yourself.
+detect these, and you'll need to manually clean up yourself. ``conda build
+purge-all`` will also remove previously built packages.
 
 Quirks
 ------
