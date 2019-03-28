@@ -20,7 +20,7 @@ packages to your Anaconda.org account.
 
 
 Who is this for?
-=================
+================
 
 This tutorial is for Windows, macOS, and Linux users who wish to
 build a conda package from a PyPI package. No prior knowledge of
@@ -30,7 +30,7 @@ conda build or conda recipes is required.
 .. _before-you-start1:
 
 Before you start
-=================
+================
 
 Before you start, check the :doc:`prerequisites <index>`.
 
@@ -52,8 +52,9 @@ In this section you are going to use conda skeleton to generate a
 conda recipe, which informs conda build about where the source
 files are located and how to build and install the package.
 
-You'll be working with a package named Click_ that is hosted on PyPI. Click is a
-tool for exposing Python functions to create command line interfaces.
+You'll be working with a package named Click_ that is hosted on PyPI.
+Click is a tool for exposing Python functions to create command line
+interfaces.
 
 .. _Click: https://github.com/pallets/click
 
@@ -124,7 +125,7 @@ Linux example file path:
    installation and operating system. Save the path and filename
    information for the next step.
 
-Now you can install your newly-built package in your conda
+Now you can install your newly built package in your conda
 environment by using the use-local flag:
 
 .. code-block:: bash
@@ -212,7 +213,7 @@ the ``conda convert`` command. This works only for pure Python
 packages where there is no compiled code. Conda convert does 
 nothing to change compiled code, it only adapts file paths to
 take advantage of the fact that Python scripts are mostly
-platform-independent. Conda convert accepts a platform specifier
+platform independent. Conda convert accepts a platform specifier
 from this and a platform specifier from this list:
 
 * osx-64.
@@ -262,7 +263,7 @@ for the most part, noarch packages are a better way to go.
 .. _`upload-to-anaconda-org`:
 
 Optional---Uploading packages to Anaconda.org
-==============================================
+=============================================
 
 Anaconda.org, formerly known as binstar.org, is a repository for
 public or private packages. Uploading to Anaconda.org allows you
@@ -313,10 +314,7 @@ versions 2.7, 3.4, and 3.5 along with all of the architectures.
 .. tip::
    If you want to always automatically upload a successful
    build to Anaconda.org, run:
-
-   .. code-block:: bash
-
-      conda config --set anaconda_upload yes
+   ``conda config --set anaconda_upload yes``
 
 You can log out of your Anaconda.org account with the command:
 
@@ -380,6 +378,6 @@ packages, even those that are already available to conda install.
 .. _`help1`:
 
 More information
-=================
+================
 
 For more options, see the full :doc:`conda skeleton command documentation <../../resources/commands/conda-skeleton>`.

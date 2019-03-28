@@ -25,6 +25,7 @@ and the `GDAL recipe
 on GitHub in the `conda documentation repository
 <https://github.com/conda/conda-build/tree/master/docs>`_.
 
+.. _before-you-start4:
 
 Before you start
 ================
