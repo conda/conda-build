@@ -197,7 +197,8 @@ def test_expand_globs(testing_workdir):
 def test_filter_files():
     # Files that should be filtered out.
     files_list = ['.git/a', 'something/.git/a', '.git\\a', 'something\\.git\\a',
-                 'file.la', 'something/file.la']
+                  'file.la', 'something/file.la', 'python.exe.conda_trash', 
+                  'bla.dll.conda_trash_1', 'bla.dll.conda_trash.conda_trash']
     assert not utils.filter_files(files_list, '')
 
     # Files that should *not* be filtered out.
@@ -205,7 +206,8 @@ def test_filter_files():
     #    lib/python3.4/site-packages/craftr/stl/craftr.utils.git/Craftrfile
     files_list = ['a', 'x.git/a', 'something/x.git/a',
                   'x.git\\a', 'something\\x.git\\a', 'something/.gitmodules',
-                  'some/template/directory/.gitignore', 'another.lab']
+                  'some/template/directory/.gitignore', 'another.lab',
+                  'miniconda_trashcan.py', 'conda_trash_avoider.py']
     assert len(utils.filter_files(files_list, '')) == len(files_list)
 
 
