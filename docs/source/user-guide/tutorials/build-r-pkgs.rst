@@ -57,7 +57,7 @@ First, in your user home directory, run the conda skeleton command:
 
     conda skeleton cran fansi
 
-The two arguments to ``conda skeleton`` are the hosting location,
+The two arguments to ``conda skeleton`` are the type of hosting location,
 in this case ``cran``, and the name of the package.
 
 This creates a directory named ``r-fansi`` and creates one
@@ -71,9 +71,8 @@ CRAN metadata and in many cases will not need to be edited.
 Files in the folder with meta.yaml are collectively referred to
 as the "conda build recipe":
 
-* ``meta.yaml``---Contains all the metadata in the recipe. Only
-  the package name and package version sections are
-  required---everything else is optional.
+* ``meta.yaml``---Contains all the metadata in the recipe. The package name and 
+   package version sections are required---everything else is optional.
 
 * ``bld.bat``---Windows commands to build the package.
 
