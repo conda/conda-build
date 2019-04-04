@@ -36,7 +36,7 @@ DEFAULT_VARIANTS = {
 }
 
 # set this outside the initialization because of the dash in the key
-DEFAULT_VARIANTS['pin_run_as_build']['r-base'] = OrderedDict(min_pin='x.x.x', max_pin='x.x.x')
+DEFAULT_VARIANTS['pin_run_as_build']['r-base'] = OrderedDict(min_pin='x.x', max_pin='x.x')
 
 # map python version to default compiler on windows, to match upstream python
 #    This mapping only sets the "native" compiler, and can be overridden by specifying a compiler
