@@ -93,7 +93,7 @@ Example file path:
 
 .. code-block:: text
 
-    /Users/jsmith/anaconda3/conda-bld/osx-64/r-fansi-0.4.0-r351h46e59ec_0.tar.bz2
+    /Users/jsmith/anaconda3/conda-bld/osx-64/r-fansi-0.4.0-r353h46e59ec_0.tar.bz2
 
 .. note::
    Your path and filename will vary depending on your
@@ -124,7 +124,7 @@ Notice that fansi is coming from the local conda build channel.
    # Name                    Version                   Build  Channel
    qtpy                      1.5.0                    py37_0  
    r-base                    3.5.1                h539fb6c_1  
-   r-fansi                   0.4.0            r351h46e59ec_0    local
+   r-fansi                   0.4.0            r353h46e59ec_0    local
 
 The version of R will be what you have in your base environment.
 
@@ -243,9 +243,8 @@ Example file path:
 
 Optional---Uploading packages to Anaconda.org
 =============================================
-Anaconda.org, formerly known as binstar.org, is a
-repository for public or private packages. Uploading to
-Anaconda.org allows you to easily install your package
+Anaconda.org is a repository for public or private packages.
+Uploading to Anaconda.org allows you to easily install your package
 in any environment with just the ``conda install`` command,
 rather than manually copying or moving the tarball file from
 one location to another. You can choose to make your files
@@ -267,7 +266,7 @@ Now you can upload the new local packages to Anaconda.org.
 
 .. code-block:: text
 
-    anaconda upload /Users/jsmith/anaconda3/conda-bld/osx-64/r-fansi-0.4.0-r351h46e59ec_0.tar.bz2
+    anaconda upload /Users/jsmith/anaconda3/conda-bld/osx-64/r-fansi-0.4.0-r353h46e59ec_0.tar.bz2
 
 
 .. note::
