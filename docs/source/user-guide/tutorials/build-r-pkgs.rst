@@ -71,8 +71,7 @@ CRAN metadata and in many cases will not need to be edited.
 Files in the folder with meta.yaml are collectively referred to
 as the "conda build recipe":
 
-* ``meta.yaml``---Contains all the metadata in the recipe. The package name and 
-   package version sections are required---everything else is optional.
+* ``meta.yaml``---Contains all the metadata in the recipe. The package name and package version sections are required---everything else is optional.
 
 * ``bld.bat``---Windows commands to build the package.
 
