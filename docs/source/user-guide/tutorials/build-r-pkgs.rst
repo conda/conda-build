@@ -232,7 +232,7 @@ Example file path:
 
 .. code-block:: text
 
-    /Users/jsmith/anaconda3/conda-bld/osx-64/r-fansi-0.4.0-r351h46e59ec_0.tar.bz2
+    /Users/jsmith/anaconda3/conda-bld/osx-64/r-fansi-0.4.0-r353h46e59ec_0.tar.bz2
  
 .. note::
    Your path and filename will vary depending on your
