@@ -265,7 +265,7 @@ for the most part, noarch packages are a better way to go.
 Optional---Uploading packages to Anaconda.org
 =============================================
 
-Anaconda.org, formerly known as binstar.org, is a repository for
+Anaconda.org is a repository for
 public or private packages. Uploading to Anaconda.org allows you
 to easily install your package in any environment with just the
 `conda install` command, rather than manually copying or moving the
