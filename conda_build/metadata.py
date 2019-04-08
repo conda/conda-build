@@ -1494,7 +1494,7 @@ class MetaData(object):
         env = jinja2.Environment(loader=loader, undefined=undefined_type)
 
         env.globals.update(ns_cfg(self.config))
-        env.globals.update(environ.get_dict(m=self))
+        env.globals.update(environ.get_dict(m=self, skip_build_id=skip_build_id))
         env.globals.update({"CONDA_BUILD_STATE": "RENDER"})
         env.globals.update(context_processor(self, path, config=self.config,
                                              permit_undefined_jinja=permit_undefined_jinja,

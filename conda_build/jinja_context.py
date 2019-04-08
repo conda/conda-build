@@ -261,7 +261,7 @@ def pin_compatible(m, package_name, lower_bound=None, upper_bound=None, min_pin=
 
 
 def pin_subpackage_against_outputs(metadata, matching_package_keys, outputs, min_pin, max_pin,
-                                   exact, permit_undefined_jinja):
+                                   exact, permit_undefined_jinja, skip_build_id=False):
     pin = None
     if matching_package_keys:
         # two ways to match:
@@ -288,7 +288,8 @@ def pin_subpackage_against_outputs(metadata, matching_package_keys, outputs, min
                 pin = None
             else:
                 if exact:
-                    pin = " ".join([sp_m.name(), sp_m.version(), sp_m.build_id()])
+                    pin = " ".join([sp_m.name(), sp_m.version(),
+                                    sp_m.build_id() if not skip_build_id else str(sp_m.build_number())])
                 else:
                     pin = "{0} {1}".format(sp_m.name(),
                                         apply_pin_expressions(sp_m.version(), min_pin,
@@ -299,7 +300,8 @@ def pin_subpackage_against_outputs(metadata, matching_package_keys, outputs, min
 
 
 def pin_subpackage(metadata, subpackage_name, min_pin='x.x.x.x.x.x', max_pin='x',
-                   exact=False, permit_undefined_jinja=False, allow_no_other_outputs=False):
+                   exact=False, permit_undefined_jinja=False, allow_no_other_outputs=False,
+                   skip_build_id=False):
     """allow people to specify pinnings based on subpackages that are defined in the recipe.
 
     For example, given a compiler package, allow it to specify either a compatible or exact
@@ -321,7 +323,8 @@ def pin_subpackage(metadata, subpackage_name, min_pin='x.x.x.x.x.x', max_pin='x'
         matching_package_keys = [k for k in keys if k[0] == subpackage_name]
         pin = pin_subpackage_against_outputs(metadata, matching_package_keys,
                                              metadata.other_outputs, min_pin, max_pin,
-                                             exact, permit_undefined_jinja)
+                                             exact, permit_undefined_jinja,
+                                             skip_build_id=skip_build_id)
     if not pin:
         pin = subpackage_name
         if not permit_undefined_jinja and not allow_no_other_outputs:
@@ -515,7 +518,8 @@ def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jin
                                bypass_env_check=bypass_env_check),
         pin_subpackage=partial(pin_subpackage, initial_metadata,
                                permit_undefined_jinja=permit_undefined_jinja,
-                               allow_no_other_outputs=allow_no_other_outputs),
+                               allow_no_other_outputs=allow_no_other_outputs,
+                               skip_build_id=skip_build_id),
         compiler=partial(compiler, config=config, permit_undefined_jinja=permit_undefined_jinja),
         cdt=partial(cdt, config=config, permit_undefined_jinja=permit_undefined_jinja),
         resolved_packages=partial(resolved_packages, initial_metadata,
