@@ -16,4 +16,5 @@ Conda-build and git can each be installed using conda.
    building-conda-packages
    build-pkgs-skeleton
    build-pkgs
+   build-r-pkgs
    add-win-start-menu-items
