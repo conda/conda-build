@@ -30,5 +30,5 @@ about:
 {%- endblock %}
 
 # See
-# http://docs.continuum.io/conda/build.html for
+# https://docs.conda.io/projects/conda-build for
 # more information about meta.yaml

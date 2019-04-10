@@ -51,7 +51,7 @@ def test_show_imports(testing_workdir, base_platform, package, capfd):
         if platform == source_platform:
             platforms.remove(platform)
 
-    f = 'http://repo.continuum.io/pkgs/free/{}-64/{}-py36_0.tar.bz2'.format(base_platform,
+    f = 'http://repo.anaconda.com/pkgs/free/{}-64/{}-py36_0.tar.bz2'.format(base_platform,
                                                                             package_name)
     fn = "{}-py36_0.tar.bz2".format(package_name)
     download(f, fn)
@@ -73,7 +73,7 @@ def test_show_imports(testing_workdir, base_platform, package, capfd):
 def test_no_imports_found(testing_workdir, base_platform, package, capfd):
     package_name, example_file = package
 
-    f = 'http://repo.continuum.io/pkgs/free/{}-64/{}-py36_0.tar.bz2'.format(base_platform,
+    f = 'http://repo.anaconda.com/pkgs/free/{}-64/{}-py36_0.tar.bz2'.format(base_platform,
                                                                             package_name)
     fn = "{}-py36_0.tar.bz2".format(package_name)
     download(f, fn)
@@ -90,7 +90,7 @@ def test_no_imports_found(testing_workdir, base_platform, package, capfd):
 def test_no_platform(testing_workdir, base_platform, package):
     package_name, example_file = package
 
-    f = 'http://repo.continuum.io/pkgs/free/{}-64/{}-py36_0.tar.bz2'.format(base_platform,
+    f = 'http://repo.anaconda.com/pkgs/free/{}-64/{}-py36_0.tar.bz2'.format(base_platform,
                                                                             package_name)
     fn = "{}-py36_0.tar.bz2".format(package_name)
     download(f, fn)
@@ -113,7 +113,7 @@ def test_c_extension_error(testing_workdir, base_platform, package):
         if platform == source_platform:
             platforms.remove(platform)
 
-    f = 'http://repo.continuum.io/pkgs/free/{}-64/{}-py36_0.tar.bz2'.format(base_platform,
+    f = 'http://repo.anaconda.com/pkgs/free/{}-64/{}-py36_0.tar.bz2'.format(base_platform,
                                                                             package_name)
     fn = "{}-py36_0.tar.bz2".format(package_name)
     download(f, fn)
@@ -138,7 +138,7 @@ def test_c_extension_conversion(testing_workdir, base_platform, package):
         if platform == source_platform:
             platforms.remove(platform)
 
-    f = 'http://repo.continuum.io/pkgs/free/{}-64/{}-py36_0.tar.bz2'.format(base_platform,
+    f = 'http://repo.anaconda.com/pkgs/free/{}-64/{}-py36_0.tar.bz2'.format(base_platform,
                                                                             package_name)
     fn = "{}-py36_0.tar.bz2".format(package_name)
     download(f, fn)
@@ -155,7 +155,7 @@ def test_c_extension_conversion(testing_workdir, base_platform, package):
 def test_convert_platform_to_others(testing_workdir, base_platform, package):
     package_name, example_file = package
     subdir = '{}-64'.format(base_platform)
-    f = 'http://repo.continuum.io/pkgs/free/{}/{}-py27_0.tar.bz2'.format(subdir,
+    f = 'http://repo.anaconda.com/pkgs/free/{}/{}-py27_0.tar.bz2'.format(subdir,
                                                                          package_name)
     fn = "{}-py27_0.tar.bz2".format(package_name)
     download(f, fn)
@@ -224,7 +224,7 @@ def test_convert_from_unix_to_win_creates_entry_points(testing_config):
 def test_convert_dependencies(testing_workdir, base_platform, package):
     package_name, example_file = package
     subdir = '{}-64'.format(base_platform)
-    f = 'http://repo.continuum.io/pkgs/free/{}/{}-np112py36_0.tar.bz2'.format(subdir,
+    f = 'http://repo.anaconda.com/pkgs/free/{}/{}-np112py36_0.tar.bz2'.format(subdir,
                                                                               package_name)
     fn = "{}-np112py36_0.tar.bz2".format(package_name)
     download(f, fn)
@@ -257,7 +257,7 @@ def test_convert_dependencies(testing_workdir, base_platform, package):
 def test_convert_no_dependencies(testing_workdir, base_platform, package):
     package_name, example_file = package
     subdir = '{}-64'.format(base_platform)
-    f = 'http://repo.continuum.io/pkgs/free/{}/{}-np112py36_0.tar.bz2'.format(subdir,
+    f = 'http://repo.anaconda.com/pkgs/free/{}/{}-np112py36_0.tar.bz2'.format(subdir,
                                                                               package_name)
     fn = "{}-np112py36_0.tar.bz2".format(package_name)
     download(f, fn)
@@ -288,7 +288,7 @@ def test_skip_conversion(testing_workdir, base_platform, package, capfd):
     package_name, example_file = package
     source_plat_arch = '{}-64' .format(base_platform)
 
-    f = 'http://repo.continuum.io/pkgs/free/{}-64/{}-np112py36_0.tar.bz2'.format(base_platform,
+    f = 'http://repo.anaconda.com/pkgs/free/{}-64/{}-np112py36_0.tar.bz2'.format(base_platform,
                                                                             package_name)
     fn = "{}-np112py36_0.tar.bz2".format(package_name)
     download(f, fn)
@@ -321,7 +321,7 @@ def test_renaming_executables(testing_workdir, base_platform, package):
     """
     package_name, example_file = package
     subdir = '{}-64'.format(base_platform)
-    f = 'http://repo.continuum.io/pkgs/free/{}/{}-py27_0.tar.bz2'.format(subdir,
+    f = 'http://repo.anaconda.com/pkgs/free/{}/{}-py27_0.tar.bz2'.format(subdir,
                                                                          package_name)
     fn = "{}-py27_0.tar.bz2".format(package_name)
     download(f, fn)

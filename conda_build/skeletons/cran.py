@@ -110,7 +110,7 @@ about:
 {cran_metadata}
 
 # See
-# http://docs.continuum.io/conda/build.html for
+# https://docs.conda.io/projects/conda-build for
 # more information about meta.yaml
 
 """
@@ -135,7 +135,7 @@ $R CMD INSTALL --build .
 # Add more build steps here, if they are necessary.
 
 # See
-# http://docs.continuum.io/conda/build.html
+# https://docs.conda.io/projects/conda-build
 # for a list of environment variables that are set during the build process.
 """
 
