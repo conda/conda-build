@@ -207,6 +207,7 @@ def package_exists(package_name):
         cmd = ['cpan', '-D', package_name]
         if on_win:
             cmd.insert(0, '/c')
+            cmd.insert(0, '/d')
             cmd.insert(0, 'cmd.exe')
         check_call_env(cmd)
         in_repo = True
