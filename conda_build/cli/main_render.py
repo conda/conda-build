@@ -9,18 +9,17 @@ from __future__ import absolute_import, division, print_function
 import argparse
 import logging
 import sys
-import os
 from pprint import pprint
 
 import yaml
 from yaml.parser import ParserError
 
-from conda_build.conda_interface import (ArgumentParser, add_parser_channels, cc_conda_build,
-                                         url_path)
+from conda_build.conda_interface import (ArgumentParser, add_parser_channels,
+                                         cc_conda_build)
 
 from conda_build import __version__, api
 
-from conda_build.config import get_or_merge_config
+from conda_build.config import get_or_merge_config, get_channel_urls
 from conda_build.variants import get_package_variants, set_language_env_vars
 from conda_build.utils import LoggingContext
 
@@ -179,18 +178,7 @@ def execute(args, print_results=True):
     variants = get_package_variants(args.recipe, config, variants=args.variants)
     set_language_env_vars(variants)
 
-    channel_urls = args.__dict__.get('channel') or args.__dict__.get('channels') or ()
-    config.channel_urls = []
-
-    for url in channel_urls:
-        # allow people to specify relative or absolute paths to local channels
-        #    These channels still must follow conda rules - they must have the
-        #    appropriate platform-specific subdir (e.g. win-64)
-        if os.path.isdir(url):
-            if not os.path.isabs(url):
-                url = os.path.normpath(os.path.abspath(os.path.join(os.getcwd(), url)))
-            url = url_path(url)
-        config.channel_urls.append(url)
+    config.channel_urls = get_channel_urls(args.__dict__)
 
     config.override_channels = args.override_channels
 

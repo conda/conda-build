@@ -15,7 +15,7 @@ import time
 from .conda_interface import root_dir, root_writable
 from .conda_interface import binstar_upload
 from .variants import get_default_variant
-from .conda_interface import cc_platform, cc_conda_build, subdir
+from .conda_interface import cc_platform, cc_conda_build, subdir, url_path
 
 from .utils import get_build_folders, rm_rf, get_logger, get_conda_operation_locks
 
@@ -803,6 +803,23 @@ def get_or_merge_config(config, variant=None, **kwargs):
     if variant:
         config.variant.update(variant)
     return config
+
+
+def get_channel_urls(args):
+    channel_urls = args.get('channel') or args.get('channels') or ()
+    final_channel_urls = []
+
+    for url in channel_urls:
+        # allow people to specify relative or absolute paths to local channels
+        #    These channels still must follow conda rules - they must have the
+        #    appropriate platform-specific subdir (e.g. win-64)
+        if os.path.isdir(url):
+            if not os.path.isabs(url):
+                url = os.path.normpath(os.path.abspath(os.path.join(os.getcwd(), url)))
+            url = url_path(url)
+        final_channel_urls.append(url)
+
+    return final_channel_urls
 
 
 # legacy exports for conda
