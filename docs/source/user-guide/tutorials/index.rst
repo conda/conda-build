@@ -6,7 +6,7 @@ Prerequisites
 -------------
 
 Before starting these tutorials, we recommend that
-you install `Miniconda or Anaconda <https://docs.continuum.io/anaconda/install/>`_, conda-build, and git.
+you install `Miniconda or Anaconda <https://docs.anaconda.com/anaconda/install/>`_, conda-build, and git.
 
 Conda-build and git can each be installed using conda.
 

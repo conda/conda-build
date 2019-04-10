@@ -426,7 +426,7 @@ def test_develop(testing_env):
 
 def test_convert(testing_workdir, testing_config):
     # download a sample py2.7 package
-    f = 'https://repo.continuum.io/pkgs/free/win-64/affine-2.0.0-py27_0.tar.bz2'
+    f = 'https://repo.anaconda.com/pkgs/free/win-64/affine-2.0.0-py27_0.tar.bz2'
     pkg_name = "affine-2.0.0-py27_0.tar.bz2"
     download(f, pkg_name)
     # convert it to all platforms

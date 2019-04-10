@@ -390,7 +390,7 @@ In R recipes, you'd have::
 This example is a little contrived, because the ``m2w64-gcc_win-64`` package is
 not available. You'd need to create a metapackage ``m2w64-gcc_win-64`` to
 point at the ``m2w64-gcc`` package, which does exist on the msys2 channel on
-`repo.continuum.io <https://repo.continuum.io/>`_ .
+`repo.anaconda.com <https://repo.anaconda.com/>`_ .
 
 Anaconda compilers implicitly add RPATH pointing to the conda environment
 =========================================================================
