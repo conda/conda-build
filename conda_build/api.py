@@ -19,7 +19,8 @@ but only use those kwargs in config.  Config must change to support new features
 import sys as _sys
 
 # make the Config class available in the api namespace
-from conda_build.config import Config, get_or_merge_config, DEFAULT_PREFIX_LENGTH as _prefix_length
+from conda_build.config import (Config, get_or_merge_config, get_channel_urls,
+                                DEFAULT_PREFIX_LENGTH as _prefix_length)
 from conda_build.utils import ensure_list as _ensure_list
 from conda_build.utils import expand_globs as _expand_globs
 from conda_build.utils import get_logger as _get_logger
@@ -414,6 +415,8 @@ def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False, outp
         path = os.path.join(default_config.croot, "debug_{}".format(int(time.time() * 1000)))
     config = get_or_merge_config(config=default_config, croot=path, verbose=verbose, _prefix_length=10,
                                  **args)
+
+    config.channel_urls = get_channel_urls(kwargs)
 
     metadata_tuples = []
 
