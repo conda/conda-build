@@ -329,7 +329,7 @@ def build(m, bld_bat, stats, provision_only=False):
     work_script, env_script = write_build_scripts(m, env, bld_bat)
 
     if not provision_only and os.path.isfile(work_script):
-        cmd = ['cmd.exe', '/c', os.path.basename(work_script)]
+        cmd = ['cmd.exe', '/d', '/c', os.path.basename(work_script)]
         # rewrite long paths in stdout back to their env variables
         if m.config.debug:
             rewrite_env = None

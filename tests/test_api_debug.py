@@ -18,7 +18,7 @@ ambiguous_recipe_path = os.path.join(metadata_dir, "_debug_pkg_multiple_outputs"
 tarball_path = os.path.join(thisdir, "archives", "test_debug_pkg-1.0-0.tar.bz2")
 
 if on_win:
-    shell_cmd = ["cmd.exe", "/c"]
+    shell_cmd = ["cmd.exe", "/d", "/c"]
 else:
     shell_cmd = ["bash", "-c"]
 
