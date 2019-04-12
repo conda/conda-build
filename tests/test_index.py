@@ -47,9 +47,12 @@ def test_index_on_single_subdir_1(testing_workdir):
     # #######################################
     assert isfile(join(testing_workdir, 'osx-64', 'index.html'))
     assert isfile(join(testing_workdir, 'osx-64', 'repodata.json.bz2'))
+    assert isfile(join(testing_workdir, 'osx-64', 'repodata_from_packages.json.bz2'))
 
     with open(join(testing_workdir, 'osx-64', 'repodata.json')) as fh:
         actual_repodata_json = json.loads(fh.read())
+    with open(join(testing_workdir, 'osx-64', 'repodata_from_packages.json')) as fh:
+        actual_pkg_repodata_json = json.loads(fh.read())
     expected_repodata_json = {
         "info": {
             'subdir': 'osx-64',
@@ -75,6 +78,7 @@ def test_index_on_single_subdir_1(testing_workdir):
         "repodata_version": 1,
     }
     assert actual_repodata_json == expected_repodata_json
+    assert actual_pkg_repodata_json == expected_repodata_json
 
     # #######################################
     # tests for full channel
@@ -141,15 +145,20 @@ def test_index_noarch_osx64_1(testing_workdir):
     assert isfile(join(testing_workdir, 'osx-64', 'index.html'))
     assert isfile(join(testing_workdir, 'osx-64', 'repodata.json'))  # repodata is tested in test_index_on_single_subdir_1
     assert isfile(join(testing_workdir, 'osx-64', 'repodata.json.bz2'))
+    assert isfile(join(testing_workdir, 'osx-64', 'repodata_from_packages.json'))
+    assert isfile(join(testing_workdir, 'osx-64', 'repodata_from_packages.json.bz2'))
 
     # #######################################
     # tests for noarch subdir
     # #######################################
-    assert isfile(join(testing_workdir, 'osx-64', 'index.html'))
-    assert isfile(join(testing_workdir, 'osx-64', 'repodata.json.bz2'))
+    assert isfile(join(testing_workdir, 'noarch', 'index.html'))
+    assert isfile(join(testing_workdir, 'noarch', 'repodata.json.bz2'))
+    assert isfile(join(testing_workdir, 'noarch', 'repodata_from_packages.json.bz2'))
 
     with open(join(testing_workdir, 'noarch', 'repodata.json')) as fh:
         actual_repodata_json = json.loads(fh.read())
+    with open(join(testing_workdir, 'noarch', 'repodata_from_packages.json')) as fh:
+        actual_pkg_repodata_json = json.loads(fh.read())
     expected_repodata_json = {
         "info": {
             'subdir': 'noarch',
@@ -176,6 +185,7 @@ def test_index_noarch_osx64_1(testing_workdir):
         "repodata_version": 1,
     }
     assert actual_repodata_json == expected_repodata_json
+    assert actual_pkg_repodata_json == expected_repodata_json
 
     # #######################################
     # tests for full channel
@@ -325,6 +335,21 @@ def _patch_repodata(repodata, subdir):
         assert "remove_test-1.0-0.tar.bz2" in patched_metadata['removed'], "removed list not populated in run %d" % i
         print("pass %s remove ok" % i)
 
+        with open(os.path.join(testing_workdir, subdir, 'repodata_from_packages.json')) as f:
+            pkg_metadata = json.load(f)
+
+        pkg_list = pkg_metadata['packages']
+        assert "track_features_test-1.0-0.tar.bz2" in pkg_list
+        assert pkg_list["track_features_test-1.0-0.tar.bz2"]["track_features"] == "dummy"
+
+        assert "hotfix_depends_test-1.0-dummy_0.tar.bz2" in pkg_list
+        assert pkg_list["hotfix_depends_test-1.0-dummy_0.tar.bz2"]["features"] == "dummy"
+        assert "zlib" in pkg_list["hotfix_depends_test-1.0-dummy_0.tar.bz2"]["depends"]
+
+        assert "revoke_test-1.0-0.tar.bz2" in pkg_list
+        assert "zlib" in pkg_list["revoke_test-1.0-0.tar.bz2"]["depends"]
+        assert "package_has_been_revoked" not in pkg_list["revoke_test-1.0-0.tar.bz2"]["depends"]
+
 
 def test_channel_patch_instructions_json(testing_workdir):
     _build_test_index(testing_workdir)
@@ -364,6 +389,23 @@ def test_channel_patch_instructions_json(testing_workdir):
     assert "package_has_been_revoked" in pkg_list["revoke_test-1.0-0.tar.bz2"]["depends"]
 
     assert "remove_test-1.0-0.tar.bz2" not in pkg_list
+
+    with open(os.path.join(testing_workdir, subdir, 'repodata_from_packages.json')) as f:
+        pkg_repodata = json.load(f)
+
+    pkg_list = pkg_repodata['packages']
+    assert "track_features_test-1.0-0.tar.bz2" in pkg_list
+    assert pkg_list["track_features_test-1.0-0.tar.bz2"]["track_features"] == "dummy"
+
+    assert "hotfix_depends_test-1.0-dummy_0.tar.bz2" in pkg_list
+    assert pkg_list["hotfix_depends_test-1.0-dummy_0.tar.bz2"]["features"] == "dummy"
+    assert "zlib" in pkg_list["hotfix_depends_test-1.0-dummy_0.tar.bz2"]["depends"]
+
+    assert "revoke_test-1.0-0.tar.bz2" in pkg_list
+    assert "zlib" in pkg_list["revoke_test-1.0-0.tar.bz2"]["depends"]
+    assert "package_has_been_revoked" not in pkg_list["revoke_test-1.0-0.tar.bz2"]["depends"]
+
+    assert "remove_test-1.0-0.tar.bz2" in pkg_list
 
 
 def test_patch_from_tarball(testing_workdir):
@@ -413,6 +455,23 @@ def test_patch_from_tarball(testing_workdir):
 
     assert "remove_test-1.0-0.tar.bz2" not in pkg_list
 
+    with open(os.path.join(testing_workdir, subdir, 'repodata_from_packages.json')) as f:
+        pkg_repodata = json.load(f)
+
+    pkg_list = pkg_repodata['packages']
+    assert "track_features_test-1.0-0.tar.bz2" in pkg_list
+    assert pkg_list["track_features_test-1.0-0.tar.bz2"]["track_features"] == "dummy"
+
+    assert "hotfix_depends_test-1.0-dummy_0.tar.bz2" in pkg_list
+    assert pkg_list["hotfix_depends_test-1.0-dummy_0.tar.bz2"]["features"] == "dummy"
+    assert "zlib" in pkg_list["hotfix_depends_test-1.0-dummy_0.tar.bz2"]["depends"]
+
+    assert "revoke_test-1.0-0.tar.bz2" in pkg_list
+    assert "zlib" in pkg_list["revoke_test-1.0-0.tar.bz2"]["depends"]
+    assert "package_has_been_revoked" not in pkg_list["revoke_test-1.0-0.tar.bz2"]["depends"]
+
+    assert "remove_test-1.0-0.tar.bz2" in pkg_list
+
 
 def test_index_of_removed_pkg(testing_metadata):
     out_files = api.build(testing_metadata)
@@ -420,6 +479,9 @@ def test_index_of_removed_pkg(testing_metadata):
         os.remove(f)
     api.update_index(testing_metadata.config.croot)
     with open(os.path.join(testing_metadata.config.croot, subdir, 'repodata.json')) as f:
+        repodata = json.load(f)
+    assert not repodata['packages']
+    with open(os.path.join(testing_metadata.config.croot, subdir, 'repodata_from_packages.json')) as f:
         repodata = json.load(f)
     assert not repodata['packages']
 
