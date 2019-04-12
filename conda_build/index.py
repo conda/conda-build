@@ -938,6 +938,7 @@ class ChannelIndex(object):
                 self._write_channeldata(channel_data)
 
     def index_subdir(self, subdir, verbose=False, progress=False, convert_if_not_present=False):
+        # TODO Use REPODATA_FROM_PKGS_JSON_FN in this method
         subdir_path = join(self.channel_root, subdir)
         self._ensure_dirs(subdir)
         repodata_json_path = join(subdir_path, REPODATA_JSON_FN)
@@ -1280,6 +1281,8 @@ class ChannelIndex(object):
         extra_paths = OrderedDict()
         _add_extra_path(extra_paths, join(subdir_path, REPODATA_JSON_FN))
         _add_extra_path(extra_paths, join(subdir_path, REPODATA_JSON_FN + '.bz2'))
+        _add_extra_path(extra_paths, join(subdir_path, REPODATA_FROM_PKGS_JSON_FN))
+        _add_extra_path(extra_paths, join(subdir_path, REPODATA_FROM_PKGS_JSON_FN + '.bz2'))
         _add_extra_path(extra_paths, join(subdir_path, "repodata2.json"))
         _add_extra_path(extra_paths, join(subdir_path, "patch_instructions.json"))
         rendered_html = _make_subdir_index_html(
