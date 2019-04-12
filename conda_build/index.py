@@ -374,6 +374,7 @@ def _make_seconds(timestamp):
 REPODATA_VERSION = 1
 CHANNELDATA_VERSION = 1
 REPODATA_JSON_FN = 'repodata.json'
+REPODATA_FROM_PKGS_JSON_FN = 'repodata_from_packages.json'
 CHANNELDATA_FIELDS = (
     "description",
     "dev_url",
@@ -891,7 +892,7 @@ class ChannelIndex(object):
 
             # Step 1. Lock local channel.
             with utils.try_acquire_locks([utils.get_lock(self.channel_root)], timeout=900):
-                # Step 2. Collect repodata from packages.
+                # Step 2. Collect repodata from packages, save to pkg_repodata.json file
                 repodata_from_packages = {}
                 with tqdm(total=len(subdirs), disable=(verbose or not progress)) as t:
                     for subdir in subdirs:
@@ -901,6 +902,8 @@ class ChannelIndex(object):
                         repodata_from_packages[subdir] = self.index_subdir(
                             subdir, verbose=verbose, progress=progress,
                             convert_if_not_present=convert_if_not_present)
+                        self._write_repodata(subdir, repodata_from_packages[subdir],
+                                             REPODATA_FROM_PKGS_JSON_FN)
 
                 # Step 3. Apply patch instructions.
                 patched_repodata = {}
