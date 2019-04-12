@@ -912,13 +912,13 @@ class ChannelIndex(object):
                 # Step 4. Save patched and augmented repodata.
                 for subdir in subdirs:
                     # If the contents of repodata have changed, write a new repodata.json file.
-                    # Also create associated index.html.
-                    self._write_repodata(subdir, patched_repodata[subdir])
+                    self._write_repodata(subdir, patched_repodata[subdir], REPODATA_JSON_FN)
 
                 # Step 5. Augment repodata with additional information.
                 augmented_repodata = _augment_repodata(subdirs, patched_repodata, patch_instructions)
 
                 # Step 6. Create and save repodata2.json
+                # Also create associated index.html.
                 repodata2 = {}
                 for subdir in subdirs:
                     repodata2[subdir] = self._create_repodata2(subdir, augmented_repodata[subdir])
@@ -1251,8 +1251,8 @@ class ChannelIndex(object):
             data["run_exports"] = {}
         return data
 
-    def _write_repodata(self, subdir, repodata):
-        repodata_json_path = join(self.channel_root, subdir, REPODATA_JSON_FN)
+    def _write_repodata(self, subdir, repodata, json_filename):
+        repodata_json_path = join(self.channel_root, subdir, json_filename)
         new_repodata_binary = json.dumps(repodata, indent=2, sort_keys=True,
                                   separators=(',', ': ')).encode("utf-8")
         write_result = _maybe_write(repodata_json_path, new_repodata_binary, write_newline_end=True)
