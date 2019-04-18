@@ -2130,6 +2130,8 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
             log_stats(test_stats, "testing {}".format(metadata.name()))
             if stats is not None and metadata.config.variants:
                 stats[stats_key(metadata, 'test_{}'.format(metadata.name()))] = test_stats
+            if os.path.exists(join(metadata.config.test_dir, 'TEST_FAILED')):
+                raise subprocess.CalledProcessError(-1, '')
             print("TEST END:", test_package_name)
     except subprocess.CalledProcessError:
         tests_failed(metadata, move_broken=move_broken, broken_dir=metadata.config.broken_dir,
