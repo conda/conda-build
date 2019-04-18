@@ -1138,7 +1138,7 @@ def expand_globs(path_list, root_dir):
             files.extend(glob_files)
     prefix_path_re = re.compile('^' + re.escape('%s%s' % (root_dir, os.path.sep)))
     files = [prefix_path_re.sub('', f, 1) for f in files]
-    return sorted(files)
+    return files
 
 
 def find_recipe(path):
