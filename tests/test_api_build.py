@@ -1247,6 +1247,8 @@ def test_provides_features_metadata(testing_config):
     assert index['provides_features'] == {'test2': 'also_ok'}
 
 
+@pytest.mark.skipif(sys.platform == "win32",
+                    reason="not supported on Windows yet")
 def test_overlinking_detection(testing_config):
     testing_config.activate = True
     testing_config.error_overlinking = True
