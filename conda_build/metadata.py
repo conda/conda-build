@@ -2075,7 +2075,7 @@ class MetaData(object):
 
         return (yaml.safe_load(self._get_contents(permit_undefined_jinja=permit_undefined_jinja,
                                                   template_string=template_string,
-                                                  skip_build_id=True)) or {})
+                                                  skip_build_id=False)) or {})
 
     def get_rendered_outputs_section(self, permit_undefined_jinja=False):
         extract_pattern = r'(.*)package:'
@@ -2087,7 +2087,7 @@ class MetaData(object):
 
         outputs = (yaml.safe_load(self._get_contents(permit_undefined_jinja=permit_undefined_jinja,
                                                      template_string=template_string,
-                                                     skip_build_id=True,
+                                                     skip_build_id=False,
                                                      allow_no_other_outputs=permit_undefined_jinja)) or
                    {}).get('outputs', [])
         return get_output_dicts_from_metadata(self, outputs=outputs)
