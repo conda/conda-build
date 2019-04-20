@@ -9,11 +9,14 @@ build:
     - mkdir \%PREFIX\%\bin  # [win]
     - echo echo ♥>\%PREFIX\%\bin\♥.bat  # [win]
 
-    - "echo \"echo \u0023/usr/bin/env bash\" >$PREFIX/bin/♥"  # [not win]
+    - "echo \"\u0023\u0021/usr/bin/env bash\" >$PREFIX/bin/♥"  # [not win]
     - echo "echo '♥'" >>$PREFIX/bin/♥  # [not win]
     - chmod +x $PREFIX/bin/♥  # [not win]
 
 test:
   commands:
-    - "[[ $($PREFIX/bin/♥) == ♥ ]] || (echo \"Where is the ♥?\" && exit 1)"  # [not win]
+    # The .*'s are for newlines.
+    - "[[ $($PREFIX/bin/♥) =~ .*♥.* ]] || (echo \"Where is the ♥?\" && exit 1)"  # [not win]
     - "call %%PREFIX%%\\bin\\♥.bat | findstr ♥"  # [win]
+    - eval $($CONDA_EXE shell.bash hook)   # [not win]
+    - "[[ $($CONDA_EXE run ♥) =~ .*♥.* ]] || (echo \"Where is the conda run ♥?\" && exit 1)"  # [not win]

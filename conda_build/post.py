@@ -681,7 +681,7 @@ def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_v
 
 def _get_fake_pkg_dist(pkg_name, pkg_version, build_str, build_number):
     pkg_vendoring_name = pkg_name
-    pkg_vendoring_version = pkg_version
+    pkg_vendoring_version = str(pkg_version)
     pkg_vendoring_build_str = build_str
     pkg_vendoring_build_number = build_number
     pkg_vendoring_key = '-'.join([pkg_vendoring_name,
