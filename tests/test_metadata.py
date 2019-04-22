@@ -11,6 +11,7 @@ from .utils import thisdir, metadata_dir
 
 def test_uses_vcs_in_metadata(testing_workdir, testing_metadata):
     testing_metadata._meta_path = os.path.join(testing_workdir, 'meta.yaml')
+    testing_metadata._meta_name = 'meta.yaml'
     with open(testing_metadata.meta_path, 'w') as f:
         f.write('http://hg.something.com')
     assert not testing_metadata.uses_vcs_in_meta
