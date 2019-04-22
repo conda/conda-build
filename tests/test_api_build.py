@@ -1119,7 +1119,7 @@ def test_setup_py_data_in_env(testing_config):
     api.build(recipe, config=testing_config)
     # make sure it fails with our special python logic
     with pytest.raises(subprocess.CalledProcessError):
-        api.build(recipe, config=testing_config, python='3.4')
+        api.build(recipe, config=testing_config, python='3.5')
 
 
 def test_numpy_xx(testing_config):
@@ -1134,7 +1134,7 @@ def test_numpy_xx_host(testing_config):
 
 def test_python_xx(testing_config):
     recipe = os.path.join(metadata_dir, '_python_xx')
-    api.build(recipe, config=testing_config, python='3.4')
+    api.build(recipe, config=testing_config, python='3.5')
 
 
 def test_indirect_numpy_dependency(testing_metadata):
