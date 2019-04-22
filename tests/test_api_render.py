@@ -103,7 +103,7 @@ def test_output_without_jinja_does_not_download(mock_source, testing_workdir, te
 def test_pin_compatible_semver(testing_config):
     recipe_dir = os.path.join(metadata_dir, '_pin_compatible')
     metadata = api.render(recipe_dir, config=testing_config)[0][0]
-    assert 'zlib >=1.2.8,<2.0a0' in metadata.get_value('requirements/run')
+    assert 'zlib >=1.2.11,<2.0a0' in metadata.get_value('requirements/run')
 
 
 def test_resolved_packages_recipe(testing_config):

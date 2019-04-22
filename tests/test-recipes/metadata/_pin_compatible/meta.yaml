@@ -4,6 +4,6 @@ package:
 
 requirements:
   build:
-    - zlib   1.2.8
+    - zlib   1.2.11
   run:
     - {{ pin_compatible('zlib') }}
