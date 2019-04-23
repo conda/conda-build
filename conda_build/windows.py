@@ -264,7 +264,8 @@ def write_build_scripts(m, env, bld_bat):
     env_script = join(m.config.work_dir, 'build_env_setup.bat')
     if m.noarch == "python":
         env["PYTHONDONTWRITEBYTECODE"] = True
-    with open(env_script, 'w') as fo:
+    import codecs
+    with codecs.getwriter('utf-8')(open(env_script, 'wb')) as fo:
         # more debuggable with echo on
         fo.write('@echo on\n')
         for key, value in env.items():
@@ -284,7 +285,7 @@ def write_build_scripts(m, env, bld_bat):
     if os.path.isfile(bld_bat):
         with open(bld_bat) as fi:
             data = fi.read()
-        with open(work_script, 'w') as fo:
+        with codecs.getwriter('utf-8')(open(work_script, 'wb')) as fo:
             fo.write('IF "%CONDA_BUILD%" == "" (\n')
             fo.write("    call {}\n".format(env_script))
             fo.write(')\n')

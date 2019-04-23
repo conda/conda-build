@@ -1396,7 +1396,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
         # Use script from recipe?
         script = utils.ensure_list(m.get_value('build/script', None))
         if script:
-            script = '\n'.join(script)
+            script = u'\n'.join(script)
 
         if isdir(src_dir):
             build_stats = {}
@@ -1404,7 +1404,8 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                 build_file = join(m.path, 'bld.bat')
                 if script:
                     build_file = join(src_dir, 'bld.bat')
-                    with open(build_file, 'w') as bf:
+                    import codecs
+                    with codecs.getwriter('utf-8')(open(build_file, 'wb')) as bf:
                         bf.write(script)
                 windows.build(m, build_file, stats=build_stats, provision_only=provision_only)
             else:
