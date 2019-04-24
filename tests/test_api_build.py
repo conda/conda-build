@@ -526,7 +526,8 @@ def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monke
         else:
             # Once we use a more recent Git for Windows than 2.6.4 on Windows or m2-git we
             # can change this to `git submodule update --recursive`.
-            check_call_env([git, 'submodule', 'foreach', git, 'pull'], env=sys_git_env)
+            gits = git.replace('\\', '/')
+            check_call_env([git, 'submodule', 'foreach', gits, 'pull'], env=sys_git_env)
         check_call_env([git, 'commit', '-am', 'added submodules@{}'.format(tag)],
                               env=sys_git_env)
         check_call_env([git, 'tag', '-a', str(tag), '-m', 'tag {}'.format(tag)],
