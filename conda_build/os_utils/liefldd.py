@@ -146,32 +146,36 @@ def _set_elf_rpathy_thing(binary, old_matching, new_rpath, set_rpath, set_runpat
     return changed
 
 
-def get_rpathy_thing_raw_partial(file, elf_attribute, elf_dyn_tag):
-    '''
-    By raw we mean that no processing is done on them whatsoever. The values are taken directly from
-    LIEF. For anything but Linux, this means an empty list.
-    '''
+if have_lief:
+    def get_rpathy_thing_raw_partial(file, elf_attribute, elf_dyn_tag):
+        '''
+        By raw we mean that no processing is done on them whatsoever. The values are taken directly from
+        LIEF. For anything but Linux, this means an empty list.
+        '''
 
-    binary_format = None
-    binary_type = None
-    binary = ensure_binary(file)
-    rpaths = []
-    if binary:
-        binary_format = binary.format
-        if binary_format == lief.EXE_FORMATS.ELF:
-            binary_type = binary.type
-            if binary_type == lief.ELF.ELF_CLASS.CLASS32 or binary_type == lief.ELF.ELF_CLASS.CLASS64:
-                rpaths = _get_elf_rpathy_thing(binary, elf_attribute, elf_dyn_tag)
-        elif (binary_format == lief.EXE_FORMATS.MACHO and
-              binary.has_rpath and
-              elf_dyn_tag == lief.ELF.DYNAMIC_TAGS.RPATH):
-            rpaths.extend([command.path for command in binary.commands
-                      if command.command == lief.MachO.LOAD_COMMAND_TYPES.RPATH])
-    return rpaths, binary_format, binary_type
-
-
-get_runpaths_raw = partial(get_rpathy_thing_raw_partial, elf_attribute='runpath', elf_dyn_tag=lief.ELF.DYNAMIC_TAGS.RUNPATH)
-get_rpaths_raw = partial(get_rpathy_thing_raw_partial, elf_attribute='rpath', elf_dyn_tag=lief.ELF.DYNAMIC_TAGS.RPATH)
+        binary_format = None
+        binary_type = None
+        binary = ensure_binary(file)
+        rpaths = []
+        if binary:
+            binary_format = binary.format
+            if binary_format == lief.EXE_FORMATS.ELF:
+                binary_type = binary.type
+                if binary_type == lief.ELF.ELF_CLASS.CLASS32 or binary_type == lief.ELF.ELF_CLASS.CLASS64:
+                    rpaths = _get_elf_rpathy_thing(binary, elf_attribute, elf_dyn_tag)
+            elif (binary_format == lief.EXE_FORMATS.MACHO and
+                binary.has_rpath and
+                elf_dyn_tag == lief.ELF.DYNAMIC_TAGS.RPATH):
+                rpaths.extend([command.path for command in binary.commands
+                        if command.command == lief.MachO.LOAD_COMMAND_TYPES.RPATH])
+        return rpaths, binary_format, binary_type
+    get_runpaths_raw = partial(get_rpathy_thing_raw_partial, elf_attribute='runpath', elf_dyn_tag=lief.ELF.DYNAMIC_TAGS.RUNPATH)
+    get_rpaths_raw = partial(get_rpathy_thing_raw_partial, elf_attribute='rpath', elf_dyn_tag=lief.ELF.DYNAMIC_TAGS.RPATH)
+else:
+    def get_runpaths_raw(file):
+        return []
+    def get_rpaths_raw(file):
+        return []
 
 def get_runpaths_or_rpaths_raw(file):
     '''
