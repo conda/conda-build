@@ -93,11 +93,10 @@ test_script:
   - conda create -n blarg -yq --download-only python cmake
   # remove all folders to avoid permission errors.  Leave root files (may have coverage info there)
   - for /d %%F in (c:\cbtmp\*) do rd /s /q "%%F"
-  # - py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp C:\cbtmp -n 2 -m "not serial"
+  - py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp C:\cbtmp -n 2 -m "not serial"
   # install conda-verify later, so we are ignoring checks in most tests
   - conda install -y conda-verify
-  # - py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp -n 0 -m "serial"
-  - py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp -n 0 -k "test_api_skeleton or test_python_xx or test_failed_recipe_leaves_folders"
+  - py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp -n 0 -m "serial"
 
 # For debugging, this is helpful - zip up the test environment and make it available for later download.
 #    However, it eats up a fair amount of time.  Better to disable until you need it.
