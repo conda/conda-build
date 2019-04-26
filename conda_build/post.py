@@ -888,7 +888,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                 print("  ERROR :: {} not in prefix_owners".format(needed_dso))
                 sys.exit(1)
 
-    whitelist += missing_dso_whitelist
+    whitelist += missing_dso_whitelist or []
     _show_linking_messages(files, errors, needed_dsos_for_file, build_prefix, run_prefix, pkg_name,
                            error_overlinking, runpath_whitelist, verbose, requirements_run, lib_packages,
                            lib_packages_used, whitelist, sysroots, sysroot_prefix, sysroot_substitution, subdir)
