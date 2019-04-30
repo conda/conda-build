@@ -378,22 +378,26 @@ def create_metapackage(name, version, entry_points=(), build_string=None, build_
 
 def update_index(dir_paths, config=None, force=False, check_md5=False, remove=False, channel_name=None,
                  subdir=None, threads=None, patch_generator=None, verbose=False, progress=False,
-                 hotfix_source_repo=None, convert_if_not_present=False, **kwargs):
+                 hotfix_source_repo=None, convert_if_not_present=False, gpg_sign=False, gpg_tool='gpg',
+                 gpg_identity=None, **kwargs):
     from locale import getpreferredencoding
     import os
     from .conda_interface import PY3
     from conda_build.index import update_index
-    from conda_build.utils import ensure_list
+    from conda_build.utils import ensure_list, GPGWrapper
     dir_paths = [os.path.abspath(path) for path in _ensure_list(dir_paths)]
     # Don't use byte strings in Python 2
     if not PY3:
         dir_paths = [path.decode(getpreferredencoding()) for path in dir_paths]
 
+    gpg_wrapper = GPGWrapper(tool=gpg_tool, identity=gpg_identity) if gpg_sign else None
+
     for path in dir_paths:
         update_index(path, check_md5=check_md5, channel_name=channel_name,
                      patch_generator=patch_generator, threads=threads, verbose=verbose,
                      progress=progress, hotfix_source_repo=hotfix_source_repo,
-                     subdirs=ensure_list(subdir), convert_if_not_present=convert_if_not_present)
+                     subdirs=ensure_list(subdir), convert_if_not_present=convert_if_not_present,
+                     gpg_wrapper=gpg_wrapper)
 
 
 def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False, output_id=None, config=None,

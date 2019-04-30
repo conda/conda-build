@@ -308,7 +308,7 @@ def _ensure_valid_channel(local_folder, subdir):
 
 def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=None, threads=MAX_THREADS_DEFAULT,
                  verbose=False, progress=False, hotfix_source_repo=None, subdirs=None, warn=True,
-                 convert_if_not_present=False):
+                 convert_if_not_present=False, gpg_wrapper=None):
     """
     If dir_path contains a directory named 'noarch', the path tree therein is treated
     as though it's a full channel, with a level of subdirs, each subdir having an update
@@ -327,12 +327,14 @@ def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=N
         return update_index(base_path, check_md5=check_md5, channel_name=channel_name,
                             threads=threads, verbose=verbose, progress=progress,
                             hotfix_source_repo=hotfix_source_repo,
-                            convert_if_not_present=convert_if_not_present)
+                            convert_if_not_present=convert_if_not_present,
+                            gpg_wrapper=gpg_wrapper)
     return ChannelIndex(dir_path, channel_name, subdirs=subdirs, threads=threads,
                         deep_integrity_check=check_md5).index(patch_generator=patch_generator, verbose=verbose,
                                                               progress=progress,
                                                               hotfix_source_repo=hotfix_source_repo,
-                                                              convert_if_not_present=convert_if_not_present)
+                                                              convert_if_not_present=convert_if_not_present,
+                                                              gpg_wrapper=gpg_wrapper)
 
 
 def _determine_namespace(info):
@@ -874,7 +876,7 @@ class ChannelIndex(object):
         self.deep_integrity_check = deep_integrity_check
 
     def index(self, patch_generator, hotfix_source_repo=None, verbose=False, progress=False,
-              convert_if_not_present=False):
+              convert_if_not_present=False, gpg_wrapper=None):
         if verbose:
             level = logging.DEBUG
         else:
@@ -933,6 +935,13 @@ class ChannelIndex(object):
                 self._write_channeldata_index_html(channel_data)
                 self._write_channeldata_rss(channel_data, package_mtimes, hotfix_source_repo)
                 self._write_channeldata(channel_data)
+
+                # Step 8. Sign the repodata
+                if gpg_wrapper:
+                    for subdir in subdirs:
+                        for _file in ["repodata.json.bz2", "repodata.json", "repodata2.json"]:
+                            _repodata_to_sign = join(self.channel_root, subdir, _file)
+                            gpg_wrapper.sign(artifacts=utils.ensure_list(_repodata_to_sign))
 
     def index_subdir(self, subdir, verbose=False, progress=False, convert_if_not_present=False):
         subdir_path = join(self.channel_root, subdir)

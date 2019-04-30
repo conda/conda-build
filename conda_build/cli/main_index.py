@@ -66,6 +66,23 @@ def parse_args(args):
         action="store_true",
         dest="convert_if_not_present"
     )
+    p.add_argument(
+        "--gpg-sign",
+        help="Sign artifacts using GPG",
+        action="store_true",
+        dest="gpg_sign"
+    )
+    p.add_argument(
+        "--gpg-tool",
+        help="GPG program used to sign artifacts",
+        default="gpg",
+        dest="gpg_tool"
+    )
+    p.add_argument(
+        "--gpg-identity",
+        help="GPG identity used to sign artifacts",
+        dest="gpg_identity"
+    )
 
     args = p.parse_args(args)
     return p, args
@@ -76,7 +93,8 @@ def execute(args):
     api.update_index(args.dir, check_md5=args.check_md5, channel_name=args.channel_name,
                      threads=args.threads, subdir=args.subdir, patch_generator=args.patch_generator,
                      verbose=args.verbose, progress=args.progress, hotfix_source_repo=args.hotfix_source_repo,
-                     convert_if_not_present=args.convert_if_not_present)
+                     convert_if_not_present=args.convert_if_not_present, gpg_sign=args.gpg_sign,
+                     gpg_tool=args.gpg_tool, gpg_identity=args.gpg_identity)
 
 
 def main():
