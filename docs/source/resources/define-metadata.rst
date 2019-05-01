@@ -176,7 +176,7 @@ git_url can build only up to the latest commit.
 
 
 Patches
----------
+-------
 
 Patches may optionally be applied to the source.
 
@@ -760,7 +760,8 @@ Specifies the build and runtime requirements. Dependencies of
 these requirements are included automatically.
 
 Versions for requirements must follow the conda match
-specification. See :ref:`build-version-spec` .
+specification. See `Package match specifications <https://conda.io/projects/conda/en/latest/user-guide/concepts.html#package-match-specifications>`_.
+
 
 
 Build
@@ -862,8 +863,7 @@ Run
 
 Packages required to run the package. These are the dependencies
 that are installed automatically whenever the package is
-installed. Package names should follow the
-:ref:`build-version-spec`.
+installed. Package names should follow the `package match specifications <https://conda.io/projects/conda/en/latest/user-guide/concepts.html#package-match-specifications>`_.
 
 .. code-block:: yaml
 
