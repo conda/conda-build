@@ -5,7 +5,6 @@ Concepts
 .. toctree::
    :maxdepth: 1
 
-   package-anatomy
    channels
    generating-index
    recipe
