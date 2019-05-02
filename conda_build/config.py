@@ -502,7 +502,7 @@ class Config(object):
         return res
 
     def _get_r(self, prefix, platform):
-        if platform.startswith('win'):
+        if platform.startswith('win') or (platform == "noarch" and sys.platform == 'win32'):
             res = join(prefix, 'Scripts', 'R.exe')
             # MRO test:
             if not os.path.exists(res):
