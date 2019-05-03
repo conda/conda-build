@@ -2,8 +2,6 @@
 Adding pre-link, post-link, and pre-unlink scripts
 ==================================================
 
-.. TODO: Add post-unlink
-
 You can add scripts to a recipe. They must be located in the same directory
 as the meta.yaml file. The following scripts can be added:
 
