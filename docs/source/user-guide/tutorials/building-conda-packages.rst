@@ -7,7 +7,7 @@ Building conda packages
    :depth: 2
 
 This tutorial describes how to use conda build to create conda
-packages on Windows, Linux and Mac operating systems using the examples of
+packages on Windows, Linux, and Mac operating systems using the examples of
 SEP and GDAL.
 
 The final built packages from this tutorial are available on
