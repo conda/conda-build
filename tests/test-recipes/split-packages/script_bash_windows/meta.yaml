@@ -1,16 +1,20 @@
 package:
-  name: split_packages_autodetect_interpreter
+  name: split_packages_bash_windows
   version: 1.0
 
 requirements:
-  build:
-    - posix  # [win]
   run:
-    - {{ pin_subpackage('my_script_subpackage') }}
-    - {{ pin_subpackage('my_script_subpackage_shell') }}
+    - {{ pin_subpackage('my_script_subpackage_shell_1') }}
+    - {{ pin_subpackage('my_script_subpackage_shell_2') }}
 
 outputs:
-  - name: my_script_subpackage
+  - name: my_script_subpackage_shell_1
     script: subpackage1.sh
-  - name: my_script_subpackage_shell
+    requirements:
+      build:
+        - posix  # [win]
+  - name: my_script_subpackage_shell_2
     script: subpackage2.sh
+    requirements:
+      build:
+        - posix  # [win]
