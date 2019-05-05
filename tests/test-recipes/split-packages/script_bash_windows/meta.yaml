@@ -1,0 +1,16 @@
+package:
+  name: split_packages_autodetect_interpreter
+  version: 1.0
+
+requirements:
+  build:
+    - posix  # [win]
+  run:
+    - {{ pin_subpackage('my_script_subpackage') }}
+    - {{ pin_subpackage('my_script_subpackage_shell') }}
+
+outputs:
+  - name: my_script_subpackage
+    script: subpackage1.sh
+  - name: my_script_subpackage_shell
+    script: subpackage2.sh
