@@ -397,8 +397,8 @@ def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
 def mk_relative_osx(path, host_prefix, build_prefix, files, rpaths=('lib',)):
     assert sys.platform == 'darwin'
 
-    names = macho.otool(path)
-    s = macho.install_name_change(path,
+    names = macho.otool(path, build_prefix)
+    s = macho.install_name_change(path, build_prefix,
                                   partial(osx_ch_link,
                                           host_prefix=host_prefix,
                                           build_prefix=build_prefix,
@@ -419,7 +419,7 @@ def mk_relative_osx(path, host_prefix, build_prefix, files, rpaths=('lib',)):
     if s:
         # Skip for stub files, which have to use binary_has_prefix_files to be
         # made relocatable.
-        assert_relative_osx(path, host_prefix)
+        assert_relative_osx(path, build_prefix, host_prefix)
 
 
 def mk_relative_linux(f, prefix, rpaths=('lib',)):
