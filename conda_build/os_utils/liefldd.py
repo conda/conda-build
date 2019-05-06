@@ -288,11 +288,11 @@ def from_os_varnames(binary_format, binary_type, input_):
 
 # TODO :: Use conda's version of this (or move the constant strings into constants.py
 def _get_path_dirs(prefix):
-    yield join(prefix, 'Library', 'mingw-w64', 'bin')
-    yield join(prefix, 'Library', 'usr', 'bin')
-    yield join(prefix, 'Library', 'bin')
-    yield join(prefix, 'Scripts')
-    yield join(prefix, 'bin')
+    yield '/'.join((prefix, 'Library', 'mingw-w64', 'bin'))
+    yield '/'.join((prefix, 'Library', 'usr', 'bin'))
+    yield '/'.join((prefix, 'Library', 'bin'))
+    yield '/'.join((prefix, 'Scripts'))
+    yield '/'.join((prefix, 'bin'))
 
 
 def get_uniqueness_key(file):
@@ -484,7 +484,7 @@ def get_linkages(filename, resolve_filenames=True, recurse=True,
         return result_pyldd
 
     result_lief = inspect_linkages_lief(filename, resolve_filenames=resolve_filenames, recurse=recurse,
-                                        sysroot=sysroot, arch=arch)
+                                        sysroot=sysroot, envroot=envroot, arch=arch)
     if result_pyldd and set(result_lief) != set(result_pyldd):
         print("WARNING: Disagreement in get_linkages(filename={}, resolve_filenames={}, recurse={}, sysroot={}, envroot={}, arch={}):\n lief: {}\npyldd: {}\n  (using lief)".
               format(filename, resolve_filenames, recurse, sysroot, envroot, arch, result_lief, result_pyldd))
