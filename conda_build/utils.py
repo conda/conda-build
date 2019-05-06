@@ -703,7 +703,7 @@ def relative(f, d='lib'):
 # This is the lowest common denominator of the formats supported by our libarchive/python-libarchive-c
 # packages across all platforms
 decompressible_exts = ('.7z', '.tar', '.tar.bz2', '.tar.gz', '.tar.lzma', '.tar.xz',
-                       '.tar.z', '.tgz', '.whl', '.zip', '.rpm', '.deb')
+                       '.tar.z', '.tar.zst', '.tgz', '.whl', '.zip', '.rpm', '.deb')
 
 
 def _tar_xf_fallback(tarball, dir_path, mode='r:*'):
