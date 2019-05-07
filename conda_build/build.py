@@ -1144,7 +1144,9 @@ def _write_sh_activation_text(file_handle, m):
                                 cygpath_suffix))
 
     if conda_46:
-        file_handle.write("conda activate --stack \"{0}\"\n".format(build_prefix_path))
+        # Do not stack against base env when not cross.
+        stack = '--stack' if m.is_cross else ''
+        file_handle.write("conda activate {0} \"{1}\"\n".format(stack, build_prefix_path))
     else:
         file_handle.write('source "{0}" "{1}"\n'.format(activate_path, build_prefix_path))
 
@@ -1855,7 +1857,7 @@ def write_build_scripts(m, script, build_file):
     with open(work_file, 'w') as bf:
         # bf.write('set -ex\n')
         bf.write('if [ -z ${CONDA_BUILD+x} ]; then\n')
-        bf.write("\tsource {}\n".format(env_file))
+        bf.write("    source {}\n".format(env_file))
         bf.write("fi\n")
         if script:
             bf.write(script)
