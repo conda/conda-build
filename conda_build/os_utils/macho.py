@@ -51,7 +51,7 @@ def is_dylib(path):
 
 
 def human_filetype(path):
-    ot = find_preferably_prefixed_executable('otool', build_prefix)
+    ot = find_preferably_prefixed_executable('otool')
     output = check_output((ot, '-h', path)).decode('utf-8')
     lines = output.splitlines()
     if not lines[0].startswith((path, 'Mach header')):

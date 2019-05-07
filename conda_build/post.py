@@ -434,11 +434,10 @@ def mk_relative_linux(f, prefix, rpaths=('lib',)):
     except CalledProcessError:
         print('patchelf: --print-rpath failed for %s\n' % (elf))
         return
-    print("existing paths via patchelf: {}".format(existing))
     existing2, _, _ = get_rpaths_raw(elf)
-    print("existing paths via get_rpaths_raw(): {}".format(existing2))
     if existing != existing2:
-        print('ERROR :: get_rpaths_raw() and patchelf disagree for {}'.format(elf))
+        print('ERROR :: get_rpaths_raw()={} and patchelf={} disagree for {} :: '.format(
+            existing2, existing, elf))
     existing = existing.split(os.pathsep)
     new = []
     for old in existing:
