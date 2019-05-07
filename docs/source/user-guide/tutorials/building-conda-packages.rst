@@ -143,8 +143,8 @@ Python 3.
 Installing only one makes it easier to keep track of
 the builds, but it is possible to have both installed on the same
 system at the same time. If you have both installed, use the
-``where`` command on Windows, or ``which`` command on Linux to see which version comes first on PATH since
-this is the one you will be using::
+``where`` command on Windows, or ``which`` command on Linux to
+see which version comes first on PATH since this is the one you will be using::
 
   where python
 
@@ -166,7 +166,10 @@ Automated testing
 After the build, if the recipe directory contains a test file
 named ``run_test.bat`` on Windows, or ``run_test.sh`` on macOS or Linux,
 or ``run_test.py`` on any platform, the file runs to test the package,
-and any errors are reported.
+and any errors are reported. After seeing "check the output," you can
+also test if this package was built by using the command::
+
+$ conda build --test <path to package>.tar.bz2
 
 .. note::
    Use the :ref:`Test section of the meta.yaml file
