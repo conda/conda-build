@@ -5,7 +5,7 @@ import sys
 import pytest
 
 from conda_build import post, api
-from conda_build.utils import on_win, package_has_file
+from conda_build.utils import on_win, package_has_file, get_site_packages
 
 from .utils import add_mangling, metadata_dir
 
@@ -72,3 +72,10 @@ def test_postlink_script_in_output_implicit(testing_config):
     pkg = api.build(recipe, config=testing_config, notest=True)[0]
     assert (package_has_file(pkg, 'bin/.out1-post-link.sh') or
             package_has_file(pkg, 'Scripts/.out1-post-link.bat'))
+
+
+def test_pypi_installer_metadata(testing_config):
+    recipe = os.path.join(metadata_dir, '_pypi_installer_metadata')
+    pkg = api.build(recipe, config=testing_config, notest=True)[0]
+    expected_installer = '{}/imagesize-1.1.0.dist-info/INSTALLER'.format(get_site_packages('', 3.7))
+    assert 'conda' == (package_has_file(pkg, expected_installer).decode('utf-8'))
