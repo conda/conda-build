@@ -397,7 +397,7 @@ def update_index(dir_paths, config=None, force=False, check_md5=False, remove=Fa
 
 
 def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False,
-          link_source_method='auto', output_id=None, config=None, verbose=True, **kwargs):
+          output_id=None, config=None, verbose=True, link_source_method='auto', **kwargs):
     """Set up either build/host or test environments, leaving you with a quick tool to debug
     your package's build or test phase.
     """
