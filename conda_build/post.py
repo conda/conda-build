@@ -472,10 +472,11 @@ def mk_relative_linux(f, prefix, rpaths=('lib',)):
     set_rpath(old_matching='*', new_rpath=rpath, file=elf)
 
 
-def assert_relative_osx(path, prefix):
+def assert_relative_osx(path, host_prefix, build_prefix):
     for name in macho.get_dylibs(path):
-        if name.startswith(prefix):
-            raise RuntimeError("library at %s appears to have an absolute path embedded" % path)
+        for prefix in (host_prefix, build_prefix):
+            if name.startswith(prefix):
+                raise RuntimeError("library at %s appears to have an absolute path embedded" % path)
 
 
 def determine_package_nature(pkg, prefix, subdir, bldpkgs_dir, output_folder, channel_urls):
