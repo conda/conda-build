@@ -17,6 +17,8 @@ import uuid
 import conda
 
 from conda_build.conda_interface import PY3, url_path, LinkError, CondaError, cc_conda_build
+from conda_build.conda_interface import linked
+
 import conda_build
 
 from binstar_client.commands import remove, show
@@ -430,6 +432,11 @@ def test_build_metadata_object(testing_metadata):
     api.build(testing_metadata)
 
 
+def numpy_installed():
+    return any([True for dist in linked(sys.prefix) if dist.name == 'numpy'])
+
+
+@pytest.mark.skipif(not numpy_installed(), reason="numpy not installed in base environment")
 def test_numpy_setup_py_data(testing_config):
     recipe_path = os.path.join(metadata_dir, '_numpy_setup_py_data')
     # this shows an error that is OK to ignore:
