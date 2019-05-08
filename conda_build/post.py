@@ -765,9 +765,6 @@ def _lookup_in_system_whitelists(errors, whitelist, needed_dso, sysroots, msg_pr
 def _lookup_in_prefix_packages(errors, needed_dso, files, run_prefix, whitelist, info_prelude, msg_prelude,
                                warn_prelude, verbose, requirements_run, lib_packages, lib_packages_used):
     in_prefix_dso = needed_dso
-    if in_prefix_dso == '/':
-        print('debug')
-    # os.path.normpath(needed_dso.replace(run_prefix + os.sep, ''))
     n_dso_p = "Needed DSO {}".format(in_prefix_dso)
     and_also = " (and also in this package)" if in_prefix_dso in files else ""
     pkgs = list(which_package(in_prefix_dso, run_prefix))

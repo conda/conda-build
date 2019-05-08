@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 import os
+import stat
 import sys
 from os.path import isfile, join, expanduser
 
@@ -38,8 +39,10 @@ def find_executable(executable, prefix=None):
         for ext in exts:
             path = expanduser(join(dir_path, executable + ext))
             if isfile(path):
-                result = path
-                break
+                st = os.stat(path)
+                if sys.platform == 'win32' or st.st_mode & stat.S_IEXEC:
+                    result = path
+                    break
         if not result and any([f in executable for f in ('*', '?', '.')]):
             matches = glob(os.path.join(dir_path, executable))
             if matches:
