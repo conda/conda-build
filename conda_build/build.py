@@ -1379,7 +1379,6 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
         # after try_download()
         output_yaml(m, os.path.join(m.config.work_dir, 'metadata_conda_debug.yaml'))
 
-
         # get_dir here might be just work, or it might be one level deeper,
         #    dependening on the source.
         src_dir = m.config.work_dir

@@ -20,7 +20,6 @@ except ImportError:
 
 from conda_build.os_utils import external
 from conda_build.conda_interface import PY3
-from conda_build.conda_interface import iteritems
 from conda_build.conda_interface import lchmod
 from conda_build.conda_interface import linked_data
 from conda_build.conda_interface import walk_prefix
@@ -601,6 +600,7 @@ DEFAULT_WIN_WHITELIST = ['**/ADVAPI32.dll',
                          '**/msvcrt.dll',
                          '**/api-ms-win*.dll']
 
+
 def _collect_needed_dsos(sysroots, files, run_prefix, sysroot_substitution, build_prefix, build_prefix_substitution):
     all_needed_dsos = set()
     needed_dsos_for_file = dict()
@@ -856,7 +856,6 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                            exception_on_error, files, bldpkgs_dirs, output_folder, channel_urls):
     verbose = True
     errors = []
-    error_static_linking = False
 
     sysroot_substitution = '$SYSROOT'
     build_prefix_substitution = '$PATH'

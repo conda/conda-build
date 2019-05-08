@@ -473,7 +473,7 @@ def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False,
 
     if best_link_source_method == 'symlink':
         for metadata, _, _ in metadata_tuples:
-            debug_source_loc = os.path.join(os.sep+'usr', 'local', 'src', 'conda',
+            debug_source_loc = os.path.join(os.sep + 'usr', 'local', 'src', 'conda',
                                             '{}-{}'.format(metadata.get_value('package/name'),
                                                            metadata.get_value('package/version')))
             link_target = os.path.dirname(metadata.meta_path)
@@ -481,7 +481,7 @@ def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False,
                 dn = os.path.dirname(debug_source_loc)
                 try:
                     os.makedirs(dn)
-                except FileExistsError as e:
+                except FileExistsError:
                     pass
                 try:
                     os.unlink(debug_source_loc)
