@@ -74,6 +74,7 @@ def test_index_on_single_subdir_1(testing_workdir):
                 "version": "1.0",
             },
         },
+        "packages.conda": {},
         "removed": [],
         "repodata_version": 1,
     }
@@ -181,6 +182,7 @@ def test_index_noarch_osx64_1(testing_workdir):
                 "version": "1.0",
             },
         },
+        "packages.conda": {},
         "removed": [],
         "repodata_version": 1,
     }
@@ -518,7 +520,8 @@ def test_new_pkg_format_preferred(testing_workdir, mocker):
     #     with the .tar.bz2, because the .conda should be preferred
     cph_extract = mocker.spy(conda_package_handling.api, 'extract')
     conda_build.index.update_index(testing_workdir, channel_name='test-channel')
-    cph_extract.assert_called_once_with(test_package_path + '.conda', mock.ANY, 'info')
+    # extract should get called once by default.  Within a channel, we assume that a .tar.bz2 and .conda have the same contents.
+    cph_extract.assert_called_with(test_package_path + '.conda', mock.ANY, 'info')
 
     with open(join(testing_workdir, 'osx-64', 'repodata.json')) as fh:
         actual_repodata_json = json.loads(fh.read())
@@ -542,9 +545,23 @@ def test_new_pkg_format_preferred(testing_workdir, mocker):
                 "subdir": "osx-64",
                 "timestamp": 1508520039632,
                 "version": "1.0",
-                "conda_size": 9296,
-                "conda_inner_sha256": "b67471d17941cf1a918601170773acb399a5bf2508164033b2cf8518b6beb2c1",
-                "conda_outer_sha256": "67b07b644105439515cc5c8c22c86939514cacf30c8c574cd70f5f1267a40f19",
+            },
+        },
+        "packages.conda": {
+            "conda-index-pkg-a-1.0-py27h5e241af_0.conda": {
+                "build": "py27h5e241af_0",
+                "build_number": 0,
+                "depends": [
+                    "python >=2.7,<2.8.0a0"
+                ],
+                "license": "BSD",
+                "md5": "4ed4b435f400dac1aabdc1fff06f78ff",
+                "name": "conda-index-pkg-a",
+                "sha256": "67b07b644105439515cc5c8c22c86939514cacf30c8c574cd70f5f1267a40f19",
+                "size": 9296,
+                "subdir": "osx-64",
+                "timestamp": 1508520039632,
+                "version": "1.0",
             },
         },
         "removed": [],
@@ -552,6 +569,21 @@ def test_new_pkg_format_preferred(testing_workdir, mocker):
     }
     assert actual_repodata_json == expected_repodata_json
 '''
+
+
+def test_no_shared_format_cache(testing_workdir, mocker):
+    test_package_path = join(testing_workdir, 'osx-64', 'conda-index-pkg-a-1.0-py27h5e241af_0')
+    exts = ('.tar.bz2', '.conda')
+    for ext in exts:
+        copy_into(os.path.join(archive_dir, 'conda-index-pkg-a-1.0-py27h5e241af_0' + ext), test_package_path + ext)
+    # mock the extract function, so that we can assert that it is not called
+    #     with the .tar.bz2, because the .conda should be preferred
+    cph_extract = mocker.spy(conda_package_handling.api, 'extract')
+    conda_build.index.update_index(testing_workdir, channel_name='test-channel', shared_format_cache=False)
+    # extract will get called twice.  It's not really safe to assume that .conda files will be the
+    #     exact same as .tar.bz2, since they can be uploaded separately.
+    cph_extract.assert_any_call(test_package_path + '.conda', mock.ANY, 'info')
+    cph_extract.assert_any_call(test_package_path + '.tar.bz2', mock.ANY, 'info')
 
 
 def test_new_pkg_format_stat_cache_used(testing_workdir, mocker):
