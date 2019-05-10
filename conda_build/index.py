@@ -418,15 +418,19 @@ def _apply_instructions(subdir, repodata, instructions):
     repodata.setdefault("removed", [])
     utils.merge_or_update_dict(repodata.get('packages', {}), instructions.get('packages', {}), merge=False,
                                add_missing_keys=False)
+    utils.merge_or_update_dict(repodata.get('packages.conda', {}), instructions.get('packages.conda', {}), merge=False,
+                               add_missing_keys=False)
 
     for fn in instructions.get('revoke', ()):
-        repodata['packages'][fn]['revoked'] = True
-        repodata['packages'][fn]['depends'].append('package_has_been_revoked')
+        for key in ('packages', 'packages.conda'):
+            repodata[key][fn]['revoked'] = True
+            repodata[key][fn]['depends'].append('package_has_been_revoked')
 
     for fn in instructions.get('remove', ()):
-        popped = repodata['packages'].pop(fn, None)
-        if popped:
-            repodata["removed"].append(fn)
+        for key in ('packages', 'packages.conda'):
+            popped = repodata[key].pop(fn, None)
+            if popped:
+                repodata["removed"].append(fn)
     repodata["removed"].sort()
 
     return repodata
@@ -515,6 +519,7 @@ def _collect_namemap(subdirs, patched_repodata, patch_instructions):
     ambiguous_namekeys = defaultdict(set)  # name, namekey
     for subdir in subdirs:
         repodata = patched_repodata[subdir]
+        # TODO: should use packages.conda here somehow
         for info in repodata['packages'].values():
             namespace, name_in_channel, name = _determine_namespace(info)
             namekey = namespace + ":" + name
@@ -548,6 +553,7 @@ def _warn_on_ambiguous_namekeys(ambiguous_namekeys, subdirs, patched_repodata):
         abc = defaultdict(lambda: defaultdict(list))
         for subdir in subdirs:
             repodata = patched_repodata[subdir]
+            # TODO: should use packages.conda here somehow
             for fn, info in repodata['packages'].items():
                 if info["name"] in ambiguous_namekeys:
                     abc[info["name"]][info["namespace"]].append(subdir + "/" + fn)
@@ -650,24 +656,25 @@ def _augment_repodata(subdirs, patched_repodata, patch_instructions):
     # Step 2. Add depends2 and constrains2, and other fields
     for subdir in subdirs:
         repodata = patched_repodata[subdir]
-        for fn, info in repodata['packages'].items():
-            info['record_version'] = 1
-            if 'constrains' in info:
-                constrains_names = set(dep.split()[0] for dep in info["constrains"])
-                try:
-                    info['constrains2'] = [_add_namespace_to_spec(fn, info, dep, namemap, missing_dependencies, subdir)
-                                        for dep in info['constrains']]
-                    info['depends2'] = [_add_namespace_to_spec(fn, info, dep, namemap, missing_dependencies, subdir)
-                                        for dep in info['depends'] if dep.split()[0] not in constrains_names]
-                except CondaError as e:
-                    log.warn("Encountered a file ({}) that conda does not like.  Error was: {}.  Skipping this one...".format(fn, e))
-            else:
-                try:
-                    info['depends2'] = [_add_namespace_to_spec(fn, info, dep, namemap, missing_dependencies, subdir)
-                                        for dep in info['depends']]
-                except CondaError as e:
-                    log.warn("Encountered a file ({}) that conda does not like.  Error was: {}.  Skipping this one...".format(fn, e))
-            # info['build_string'] =_make_build_string(info["build"], info["build_number"])
+        for key in ('packages', 'packages.conda'):
+            for fn, info in repodata[key].items():
+                info['record_version'] = 1
+                if 'constrains' in info:
+                    constrains_names = set(dep.split()[0] for dep in info["constrains"])
+                    try:
+                        info['constrains2'] = [_add_namespace_to_spec(fn, info, dep, namemap, missing_dependencies, subdir)
+                                            for dep in info['constrains']]
+                        info['depends2'] = [_add_namespace_to_spec(fn, info, dep, namemap, missing_dependencies, subdir)
+                                            for dep in info['depends'] if dep.split()[0] not in constrains_names]
+                    except CondaError as e:
+                        log.warn("Encountered a file ({}) that conda does not like.  Error was: {}.  Skipping this one...".format(fn, e))
+                else:
+                    try:
+                        info['depends2'] = [_add_namespace_to_spec(fn, info, dep, namemap, missing_dependencies, subdir)
+                                            for dep in info['depends']]
+                    except CondaError as e:
+                        log.warn("Encountered a file ({}) that conda does not like.  Error was: {}.  Skipping this one...".format(fn, e))
+                # info['build_string'] =_make_build_string(info["build"], info["build_number"])
         repodata["removed"] = patch_instructions[subdir].get("remove", [])
         augmented_repodata[subdir] = repodata
     _warn_on_missing_dependencies(missing_dependencies, patched_repodata)
@@ -1326,11 +1333,13 @@ class ChannelIndex(object):
         _maybe_write(channeldata_path, content, True)
 
     def _load_patch_instructions_tarball(self, subdir, patch_generator):
-        patch_instructions_file = utils.package_has_file(patch_generator,
-                                                         os.path.join(subdir, "patch_instructions.json"))
         instructions = {}
-        if patch_instructions_file:
-            instructions = json.loads(patch_instructions_file)
+        with TemporaryDirectory() as tmpdir:
+            conda_package_handling.api.extract(patch_generator, dest_dir=tmpdir)
+            instructions_file = os.path.join(tmpdir, subdir, "patch_instructions.json")
+            if os.path.isfile(instructions_file):
+                with open(instructions_file):
+                    instructions = json.loads(instructions_file)
         return instructions
 
     def _create_patch_instructions(self, subdir, repodata, patch_generator=None):
@@ -1380,7 +1389,7 @@ class ChannelIndex(object):
         return {}
 
     def _patch_repodata(self, subdir, repodata, patch_generator=None):
-        if patch_generator and patch_generator.endswith("bz2"):
+        if patch_generator and any(patch_generator.endswith(ext) for ext in CONDA_TARBALL_EXTENSIONS):
             instructions = self._load_patch_instructions_tarball(subdir, patch_generator)
         else:
             instructions = self._create_patch_instructions(subdir, repodata, patch_generator)
