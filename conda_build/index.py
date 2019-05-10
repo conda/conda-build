@@ -5,6 +5,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import bz2
 from collections import OrderedDict, defaultdict
+import copy
 from datetime import datetime
 
 import json
@@ -37,11 +38,16 @@ import logging
 import libarchive
 import conda_package_handling.api
 
+#  BAD BAD BAD - conda internals
+from conda.core.subdir_data import SubdirData
+from conda.models.channel import Channel
+
 
 from . import conda_interface, utils
 from .conda_interface import MatchSpec, VersionOrder, human_bytes, context
 from .conda_interface import CondaError, CondaHTTPError, get_index, url_path
 from .conda_interface import download, TemporaryDirectory
+from .conda_interface import Resolve
 from .utils import glob, get_logger, FileNotFoundError, PermissionError
 
 # try:
@@ -860,6 +866,90 @@ def _remove_file_extension(fn):
     return cache_fn
 
 
+def _get_resolve_object(subdir, file_path=None, precs=None):
+    packages = {}
+    if file_path:
+        with open(file_path) as fi:
+            packages = json.load(fi)
+    repodata = {
+        "info": {
+            "subdir": subdir,
+            "arch": context.arch_name,
+            "platform": context.platform,
+        },
+        "packages": packages,
+    }
+
+    channel = Channel('https://conda.anaconda.org/channel-1/%s' % subdir)
+    sd = SubdirData(channel)
+    sd._process_raw_repodata_str(json.dumps(repodata))
+    sd._loaded = True
+    SubdirData._cache_[channel.url(with_credentials=True)] = sd
+
+    index = {prec: prec for prec in precs or sd._package_records}
+    r = Resolve(index, channels=(channel,))
+    return r
+
+
+def _get_newest_versions(r, pins={}):
+    groups = {}
+    for g_name, g_recs in r.groups.items():
+        if g_name in pins:
+            matches = []
+            for pin in pins[g_name]:
+                version = r.find_matches(MatchSpec('%s=%s' % (g_name, pin)))[0].version
+                matches.extend(r.find_matches(MatchSpec('%s=%s' % (g_name, version))))
+        else:
+            version = r.groups[g_name][0].version
+            matches = r.find_matches(MatchSpec('%s=%s' % (g_name, version)))
+        groups[g_name] = matches
+
+    return [pkg for group in groups.values() for pkg in group]
+
+
+def _add_missing_deps(new_r, original_r):
+    """For each package in new_r, if any deps are not satisfiable, backfill them from original_r."""
+
+    expanded_groups = copy.deepcopy(new_r.groups)
+    seen_specs = set()
+    for g_name, g_recs in new_r.groups.items():
+        for g_rec in g_recs:
+            for dep_spec in g_rec.depends:
+                if dep_spec in seen_specs:
+                    continue
+                ms = MatchSpec(dep_spec)
+                if not new_r.find_matches(ms):
+                    version = original_r.find_matches(ms)[0].version
+                    expanded_groups[g_name].extend(original_r.find_matches(MatchSpec('%s=%s' % (g_name, version))))
+                seen_specs.add(dep_spec)
+    return [pkg for group in expanded_groups.values() for pkg in group]
+
+
+def _shard_newest_packages(r, pins=None):
+    """Captures only the newest versions of software in the resolve object.
+
+    For things where more than one version is supported simultaneously (like Python),
+    pass pins as a dictionary, with the key being the package name, and the value being
+    a list of supported versions.  For example:
+
+    {'python': ["2.7", "3.6"]}
+    """
+    groups = {}
+    pins = pins or {}
+    for g_name, g_recs in r.groups.items():
+        if g_name in pins:
+            matches = []
+            for pin in pins[g_name]:
+                version = r.find_matches(MatchSpec('%s=%s' % (g_name, pin)))[0].version
+                matches.extend(r.find_matches(MatchSpec('%s=%s' % (g_name, version))))
+        else:
+            version = r.groups[g_name][0].version
+            matches = r.find_matches(MatchSpec('%s=%s' % (g_name, version)))
+        groups[g_name] = matches
+    new_r = _get_resolve_object(r.subdir, precs=[pkg for group in groups.values() for pkg in group])
+    return _add_missing_deps(new_r, r)
+
+
 class ChannelIndex(object):
 
     def __init__(self, channel_root, channel_name, subdirs=None, threads=MAX_THREADS_DEFAULT,
@@ -1481,3 +1571,6 @@ class ChannelIndex(object):
         repodata_json_path = join(self.channel_root, subdir, "repodata2.json")
         new_repodata = json.dumps(repodata2, indent=2, sort_keys=True, separators=(',', ': '))
         return _maybe_write(repodata_json_path, new_repodata, True)
+
+    def _write_sharded_repodata_from_resolve(self, r, fn):
+        pass
