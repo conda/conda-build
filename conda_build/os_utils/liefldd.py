@@ -104,15 +104,15 @@ def get_libraries(file):
         if binary.format == lief.EXE_FORMATS.PE:
             result = binary.libraries
         else:
-            result = [l if is_string(l) else l.name for l in binary.libraries]
+            result = [lib if is_string(lib) else lib.name for lib in binary.libraries]
             # LIEF returns LC_ID_DYLIB name @rpath/libbz2.dylib in binary.libraries. Strip that.
             binary_name = None
             if binary.format == lief.EXE_FORMATS.MACHO:
                 binary_name = [command.name for command in binary.commands
                                if command.command == lief.MachO.LOAD_COMMAND_TYPES.ID_DYLIB]
                 binary_name = binary_name[0] if len(binary_name) else None
-                result = [from_os_varnames(binary.format, None, l) for l in result
-                          if not binary_name or l != binary_name]
+                result = [from_os_varnames(binary.format, None, lib) for lib in result
+                          if not binary_name or lib != binary_name]
     return result
 
 
@@ -689,9 +689,6 @@ def get_static_lib_exports(file):
             #         functions.append(sym.name)
             functions.extend(get_symbols(obj, defined=True, undefined=False))
         return functions, [[0, 0] for sym in functions], functions, [[0, 0] for sym in functions]
-
-#        print("ERROR: Failed to find ranlib symbol defintions or GNU symbols")
-        return filtered_syms, filtered_ranlib_structs, syms, ranlib_structs
 
 
 def get_exports(filename, arch='native'):

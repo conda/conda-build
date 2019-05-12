@@ -27,9 +27,8 @@ from conda_build.conda_interface import TemporaryDirectory
 from conda_build.conda_interface import md5_file
 
 from conda_build import utils
-from conda_build.os_utils.liefldd import (get_exports_memoized, get_imports_memoized,
-                                          get_linkages_memoized, get_rpaths_raw, get_runpaths_raw,
-                                          get_symbols_memoized, set_rpath)
+from conda_build.os_utils.liefldd import (get_exports_memoized, get_linkages_memoized,
+                                          get_rpaths_raw, get_runpaths_raw, set_rpath)
 from conda_build.os_utils.pyldd import codefile_type
 from conda_build.os_utils.ldd import get_package_obj_files
 from conda_build.index import get_build_index
@@ -835,7 +834,6 @@ def _show_linking_messages(files, errors, needed_dsos_for_file, build_prefix, ru
                                                                     runpaths,
                                                                     path), verbose=verbose)
         needed = needed_dsos_for_file[f]
-        # imps = get_imports_memoized(path, None)
         for needed_dso in needed:
             needed_dso = needed_dso.replace('/', os.sep)
             if not needed_dso.startswith(os.sep) and not needed_dso.startswith('$'):
