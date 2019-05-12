@@ -95,6 +95,8 @@ def test_recipe_builds(recipe, testing_config, testing_workdir, monkeypatch):
     testing_config.activate = True
     monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
     monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
+    if 'unicode_all_over' in recipe and sys.version_info[0] == 2:
+        pytest.skip('unicode_all_over does not work on Python 2')
     api.build(recipe, config=testing_config)
 
 
