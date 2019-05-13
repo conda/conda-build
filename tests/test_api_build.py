@@ -279,7 +279,7 @@ def test_checkout_tool_as_dependency(testing_workdir, testing_config, monkeypatc
     with pytest.raises(subprocess.CalledProcessError, message="Dummy svn was not executed"):
         check_call_env([exename, '--version'], stderr=FNULL)
     FNULL.close()
-    env = dict(os.environ)
+    env = os.environ.copy()
     env["PATH"] = os.pathsep.join([testing_workdir, env["PATH"]])
     api.build(os.path.join(metadata_dir, '_checkout_tool_as_dependency'), config=testing_config)
 
