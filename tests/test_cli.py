@@ -243,13 +243,12 @@ def test_render_output_build_path_set_python(testing_workdir, testing_metadata, 
 
 
 def test_skeleton_pypi(testing_workdir, testing_config):
-    args = ['pypi', 'Click']
+    args = ['pypi', 'peppercorn']
     main_skeleton.execute(args)
-    assert os.path.isdir('click')
+    assert os.path.isdir('peppercorn')
 
     # ensure that recipe generated is buildable
-    args = ['click', '--no-anaconda-upload', '--no-activate']
-    main_build.execute(args)
+    main_build.execute(('peppercorn',))
     # output, error = capfd.readouterr()
     # if hasattr(output, 'decode'):
     #     output = output.decode()
