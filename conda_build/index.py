@@ -313,7 +313,8 @@ def _ensure_valid_channel(local_folder, subdir):
 
 
 def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=None, threads=MAX_THREADS_DEFAULT,
-                 verbose=False, progress=False, hotfix_source_repo=None, subdirs=None, warn=True, shared_format_cache=True):
+                 verbose=False, progress=False, hotfix_source_repo=None, subdirs=None, warn=True,
+                 shared_format_cache=True, current_index_versions=None):
     """
     If dir_path contains a directory named 'noarch', the path tree therein is treated
     as though it's a full channel, with a level of subdirs, each subdir having an update
@@ -331,12 +332,14 @@ def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=N
                     "Please update your code to point it at the channel root, rather than a subdir.")
         return update_index(base_path, check_md5=check_md5, channel_name=channel_name,
                             threads=threads, verbose=verbose, progress=progress,
-                            hotfix_source_repo=hotfix_source_repo, shared_format_cache=shared_format_cache)
+                            hotfix_source_repo=hotfix_source_repo, shared_format_cache=shared_format_cache,
+                            current_index_versions=current_index_versions)
     return ChannelIndex(dir_path, channel_name, subdirs=subdirs, threads=threads,
                         deep_integrity_check=check_md5).index(patch_generator=patch_generator, verbose=verbose,
                                                               progress=progress,
                                                               hotfix_source_repo=hotfix_source_repo,
-                                                              shared_format_cache=shared_format_cache)
+                                                              shared_format_cache=shared_format_cache,
+                                                              current_index_versions=current_index_versions)
 
 
 def _determine_namespace(info):
@@ -995,7 +998,8 @@ class ChannelIndex(object):
         self.thread_executor = ThreadLimitedThreadPoolExecutor(threads)
         self.deep_integrity_check = deep_integrity_check
 
-    def index(self, patch_generator, hotfix_source_repo=None, verbose=False, progress=False, shared_format_cache=True):
+    def index(self, patch_generator, hotfix_source_repo=None, verbose=False, progress=False, shared_format_cache=True,
+              current_index_versions=None):
         if verbose:
             level = logging.DEBUG
         else:
@@ -1039,7 +1043,8 @@ class ChannelIndex(object):
                     # If the contents of repodata have changed, write a new repodata.json file.
                     # Also create associated index.html.
                     self._write_repodata(subdir, patched_repodata[subdir], REPODATA_JSON_FN)
-                    current_repodata = _build_current_repodata(subdir, patched_repodata[subdir], pins=None)
+                    current_repodata = _build_current_repodata(subdir, patched_repodata[subdir],
+                                                               pins=current_index_versions)
                     self._write_repodata(subdir, current_repodata, fn="current_repodata.json")
 
                 # Step 5. Augment repodata with additional information.
@@ -1288,7 +1293,7 @@ class ChannelIndex(object):
             retval = fn, mtime, size, index_json
         except (libarchive.exception.ArchiveError, tarfile.ReadError, KeyError, EOFError) as e:
             log.error("Package %s appears to be corrupt.  Please remove it and re-download it" % abs_fn)
-            log.error(e.message)
+            log.error(str(e))
         return retval
 
     def _load_index_from_cache(self, subdir, fn, stat_cache, shared_format_cache):

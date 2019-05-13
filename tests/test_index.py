@@ -633,3 +633,27 @@ def test_current_index_reduces_space():
                                                                 "one-gets-filtered-1.3.10-h7b6447c_3.conda"}
     else:
         assert set(trimmed_repodata['packages'].keys()) == tar_bz2_keys | {"one-gets-filtered-1.2.11-h7b6447c_3.tar.bz2"}
+
+
+def test_current_index_version_keys_keep_older_packages(testing_workdir):
+    pkg_dir = os.path.join(os.path.dirname(__file__), 'index_data', 'packages')
+
+    # pass no version file
+    api.update_index(pkg_dir)
+    with open(os.path.join(pkg_dir, 'osx-64', 'current_repodata.json')) as f:
+        repodata = json.load(f)
+    # only the newest version is kept
+    assert len(repodata['packages']) == 1
+    assert list(repodata['packages'].values())[0]['version'] == "2.0"
+
+    # pass version file
+    api.update_index(pkg_dir, current_index_versions=os.path.join(pkg_dir, 'versions.yml'))
+    with open(os.path.join(pkg_dir, 'osx-64', 'current_repodata.json')) as f:
+        repodata = json.load(f)
+    assert len(repodata['packages']) == 2
+
+    # pass dict that is equivalent to version file
+    api.update_index(pkg_dir, current_index_versions={'dummy-package': ["1.0"]})
+    with open(os.path.join(pkg_dir, 'osx-64', 'current_repodata.json')) as f:
+        repodata = json.load(f)
+    assert list(repodata['packages'].values())[0]['version'] == "1.0"
