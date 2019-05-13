@@ -42,11 +42,7 @@ def test_build():
 # regression test for https://github.com/conda/conda-build/issues/1450
 def test_build_with_conda_not_on_path(testing_workdir):
     with put_bad_conda_on_path(testing_workdir):
-        # using subprocess is not ideal, but it is the easiest way to ensure that PATH
-        #    is altered the way we want here.
-        check_call_env('conda-build {0} --no-anaconda-upload'.format(
-            os.path.join(metadata_dir, "python_run")).split(),
-                       env=os.environ)
+        main_build.execute([os.path.join(metadata_dir, "python_run"), "--no-anaconda-upload"])
 
 
 def test_build_add_channel():

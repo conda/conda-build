@@ -1945,11 +1945,25 @@ def write_test_scripts(metadata, env_vars, py_files, pl_files, lua_files, r_file
             tf.write('set {trace}-e\n'.format(trace=trace))
         if metadata.config.activate and not metadata.name() == 'conda':
             ext = ".bat" if utils.on_win else ""
-            tf.write('{source} "{conda_root}activate{ext}" "{test_env}"\n'.format(
-                conda_root=utils.root_script_dir + os.path.sep,
-                source="call" if utils.on_win else "source",
-                ext=ext,
-                test_env=metadata.config.test_prefix))
+            if conda_46:
+                if utils.on_win:
+                    tf.write('set "CONDA_SHLVL=" '
+                             '&& @CALL {}\\condabin\\conda_hook.bat {}'
+                             '&& set CONDA_EXE={}'
+                             '&& set _CE_M=-m'
+                             '&& set _CE_CONDA=conda'.format(sys.prefix,
+                                                             '--dev' if metadata.config.debug else '',
+                                                             sys.executable))
+
+                else:
+                    tf.write("eval \"$('{sys_python}' -m conda shell.bash hook)\"\n".format(
+                        sys_python=sys.executable))
+            else:
+                tf.write('{source} "{conda_root}activate{ext}" "{test_env}"\n'.format(
+                    conda_root=utils.root_script_dir + os.path.sep,
+                    source="call" if utils.on_win else "source",
+                    ext=ext,
+                    test_env=metadata.config.test_prefix))
             if utils.on_win:
                 tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
 

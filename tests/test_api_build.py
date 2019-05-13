@@ -1048,7 +1048,7 @@ def test_failed_recipe_leaves_folders(testing_config, testing_workdir):
             any_locks = True
             dest_path = base64.b64decode(os.path.basename(lock.lock_file))
             if PY3 and hasattr(dest_path, 'decode'):
-                dest_path = dest_path.decode()
+                dest_path = dest_path.decode(sys.getfilesystemencoding())
             locks_list.add((lock.lock_file, dest_path))
     assert not any_locks, "remaining locks:\n{}".format('\n'.join('->'.join((l, r))
                                                                 for (l, r) in locks_list))
