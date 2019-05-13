@@ -1951,9 +1951,9 @@ def write_test_scripts(metadata, env_vars, py_files, pl_files, lua_files, r_file
                              '&& @CALL {}\\condabin\\conda_hook.bat {}'
                              '&& set CONDA_EXE={}'
                              '&& set _CE_M=-m'
-                             '&& set _CE_CONDA=conda'.format(sys.prefix,
-                                                             '--dev' if metadata.config.debug else '',
-                                                             sys.executable))
+                             '&& set _CE_CONDA=conda\n'.format(sys.prefix,
+                                                               '--dev' if metadata.config.debug else '',
+                                                               sys.executable))
 
                 else:
                     tf.write("eval \"$('{sys_python}' -m conda shell.bash hook)\"\n".format(
