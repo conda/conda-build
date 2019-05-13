@@ -866,21 +866,30 @@ def _remove_file_extension(fn):
     return cache_fn
 
 
-def _get_resolve_object(subdir, file_path=None, precs=None):
+def _get_resolve_object(subdir, file_path=None, precs=None, repodata=None):
     packages = {}
+    conda_packages = {}
     if file_path:
         with open(file_path) as fi:
             packages = json.load(fi)
-    repodata = {
-        "info": {
-            "subdir": subdir,
-            "arch": context.arch_name,
-            "platform": context.platform,
-        },
-        "packages": packages,
-    }
+            recs = json.load(fi)
+            for k, v in recs.items():
+                if k.endswith('.tar.bz2'):
+                    packages[k] = v
+                elif k.endswith('.conda'):
+                    conda_packages[k] = v
+    if not repodata:
+        repodata = {
+            "info": {
+                "subdir": subdir,
+                "arch": context.arch_name,
+                "platform": context.platform,
+            },
+            "packages": packages,
+            "packages.conda": conda_packages,
+        }
 
-    channel = Channel('https://conda.anaconda.org/channel-1/%s' % subdir)
+    channel = Channel('https://conda.anaconda.org/dummy-channel/%s' % subdir)
     sd = SubdirData(channel)
     sd._process_raw_repodata_str(json.dumps(repodata))
     sd._loaded = True
@@ -903,7 +912,6 @@ def _get_newest_versions(r, pins={}):
             version = r.groups[g_name][0].version
             matches = r.find_matches(MatchSpec('%s=%s' % (g_name, version)))
         groups[g_name] = matches
-
     return [pkg for group in groups.values() for pkg in group]
 
 
@@ -919,13 +927,15 @@ def _add_missing_deps(new_r, original_r):
                     continue
                 ms = MatchSpec(dep_spec)
                 if not new_r.find_matches(ms):
-                    version = original_r.find_matches(ms)[0].version
-                    expanded_groups[g_name].extend(original_r.find_matches(MatchSpec('%s=%s' % (g_name, version))))
+                    matches = original_r.find_matches(ms)
+                    if matches:
+                        version = matches[0].version
+                        expanded_groups[g_name].extend(original_r.find_matches(MatchSpec('%s=%s' % (g_name, version))))
                 seen_specs.add(dep_spec)
     return [pkg for group in expanded_groups.values() for pkg in group]
 
 
-def _shard_newest_packages(r, pins=None):
+def _shard_newest_packages(subdir, r, pins=None):
     """Captures only the newest versions of software in the resolve object.
 
     For things where more than one version is supported simultaneously (like Python),
@@ -946,8 +956,29 @@ def _shard_newest_packages(r, pins=None):
             version = r.groups[g_name][0].version
             matches = r.find_matches(MatchSpec('%s=%s' % (g_name, version)))
         groups[g_name] = matches
-    new_r = _get_resolve_object(r.subdir, precs=[pkg for group in groups.values() for pkg in group])
+    new_r = _get_resolve_object(subdir, precs=[pkg for group in groups.values() for pkg in group])
     return _add_missing_deps(new_r, r)
+
+
+def _build_current_repodata(subdir, repodata, pins):
+    r = _get_resolve_object(subdir, repodata=repodata)
+    keep_pkgs = _shard_newest_packages(subdir, r, pins)
+    new_repodata = {k: repodata[k] for k in set(repodata.keys()) - set(['packages', 'packages.conda'])}
+    packages = {}
+    conda_packages = {}
+    for keep_pkg in keep_pkgs:
+        if keep_pkg.fn.endswith('.conda'):
+            conda_packages[keep_pkg.fn] = repodata['packages.conda'][keep_pkg.fn]
+            # in order to prevent package churn we consider the md5 for the .tar.bz2 that matches the .conda file
+            #    This holds when .conda files contain the same files as .tar.bz2, which is an assumption we'll make
+            #    until it becomes more prevalent that people provide only .conda files and just skip .tar.bz2
+            counterpart = keep_pkg.fn.replace('.conda', '.tar.bz2')
+            conda_packages[keep_pkg.fn]['legacy_bz2_md5'] = repodata['packages'].get(counterpart, {}).get('md5')
+        elif keep_pkg.fn.endswith('.tar.bz2'):
+            packages[keep_pkg.fn] = repodata['packages'][keep_pkg.fn]
+    new_repodata['packages'] = packages
+    new_repodata['packages.conda'] = conda_packages
+    return new_repodata
 
 
 class ChannelIndex(object):
@@ -1002,7 +1033,10 @@ class ChannelIndex(object):
                 # Step 4. Save patched and augmented repodata.
                 for subdir in subdirs:
                     # If the contents of repodata have changed, write a new repodata.json file.
+                    # Also create associated index.html.
                     self._write_repodata(subdir, patched_repodata[subdir], REPODATA_JSON_FN)
+                    current_repodata = _build_current_repodata(subdir, patched_repodata[subdir], pins=None)
+                    self._write_repodata(subdir, current_repodata, fn="current_repodata.json")
 
                 # Step 5. Augment repodata with additional information.
                 augmented_repodata = _augment_repodata(subdirs, patched_repodata, patch_instructions)
@@ -1571,6 +1605,3 @@ class ChannelIndex(object):
         repodata_json_path = join(self.channel_root, subdir, "repodata2.json")
         new_repodata = json.dumps(repodata2, indent=2, sort_keys=True, separators=(',', ': '))
         return _maybe_write(repodata_json_path, new_repodata, True)
-
-    def _write_sharded_repodata_from_resolve(self, r, fn):
-        pass
