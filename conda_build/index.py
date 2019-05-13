@@ -430,8 +430,9 @@ def _apply_instructions(subdir, repodata, instructions):
 
     for fn in instructions.get('revoke', ()):
         for key in ('packages', 'packages.conda'):
-            repodata[key][fn]['revoked'] = True
-            repodata[key][fn]['depends'].append('package_has_been_revoked')
+            if fn in repodata[key]:
+                repodata[key][fn]['revoked'] = True
+                repodata[key][fn]['depends'].append('package_has_been_revoked')
 
     for fn in instructions.get('remove', ()):
         for key in ('packages', 'packages.conda'):
@@ -583,7 +584,8 @@ def _warn_on_ambiguous_namekeys(ambiguous_namekeys, subdirs, patched_repodata):
 
 
 def _add_namespace_to_spec(fn, info, dep_str, namemap, missing_dependencies, subdir):
-    if not conda_interface.conda_47:
+    # Punt on this until we have namespaces implemented
+    if not conda_interface.conda_48:
         return dep_str
 
     spec = MatchSpec(dep_str)
@@ -930,7 +932,9 @@ def _add_missing_deps(new_r, original_r):
                     matches = original_r.find_matches(ms)
                     if matches:
                         version = matches[0].version
-                        expanded_groups[g_name].extend(original_r.find_matches(MatchSpec('%s=%s' % (g_name, version))))
+                        expanded_groups[ms.name] = (
+                            set(expanded_groups.get(ms.name, [])) |
+                            set(original_r.find_matches(MatchSpec('%s=%s' % (ms.name, version)))))
                 seen_specs.add(dep_spec)
     return [pkg for group in expanded_groups.values() for pkg in group]
 
@@ -948,16 +952,16 @@ def _shard_newest_packages(subdir, r, pins=None):
     pins = pins or {}
     for g_name, g_recs in r.groups.items():
         if g_name in pins:
-            matches = []
+            matches = set()
             for pin in pins[g_name]:
                 version = r.find_matches(MatchSpec('%s=%s' % (g_name, pin)))[0].version
-                matches.extend(r.find_matches(MatchSpec('%s=%s' % (g_name, version))))
+                matches.update(r.find_matches(MatchSpec('%s=%s' % (g_name, version))))
         else:
             version = r.groups[g_name][0].version
-            matches = r.find_matches(MatchSpec('%s=%s' % (g_name, version)))
+            matches = set(r.find_matches(MatchSpec('%s=%s' % (g_name, version))))
         groups[g_name] = matches
     new_r = _get_resolve_object(subdir, precs=[pkg for group in groups.values() for pkg in group])
-    return _add_missing_deps(new_r, r)
+    return set(_add_missing_deps(new_r, r))
 
 
 def _build_current_repodata(subdir, repodata, pins):
@@ -1471,8 +1475,8 @@ class ChannelIndex(object):
             conda_package_handling.api.extract(patch_generator, dest_dir=tmpdir)
             instructions_file = os.path.join(tmpdir, subdir, "patch_instructions.json")
             if os.path.isfile(instructions_file):
-                with open(instructions_file):
-                    instructions = json.loads(instructions_file)
+                with open(instructions_file) as f:
+                    instructions = json.load(f)
         return instructions
 
     def _create_patch_instructions(self, subdir, repodata, patch_generator=None):
