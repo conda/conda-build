@@ -1147,9 +1147,10 @@ def test_python_xx(testing_config):
     api.render(recipe, config=testing_config, python='3.5')
 
 
-def test_indirect_numpy_dependency(testing_metadata):
+def test_indirect_numpy_dependency(testing_metadata, testing_workdir, testing_config):
     testing_metadata.meta['requirements']['build'] = ['pandas']
-    api.render(testing_metadata, numpy=1.13, notest=True)
+    api.output_yaml(testing_metadata, os.path.join(testing_workdir, 'meta.yaml'))
+    api.render(testing_workdir, numpy='1.13', notest=True)
 
 
 def test_dependencies_with_notest(testing_workdir, testing_config):
