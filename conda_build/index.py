@@ -1087,6 +1087,7 @@ class ChannelIndex(object):
         except (EnvironmentError, JSONDecodeError):
             # log.info("no repodata found at %s", repodata_json_path)
             old_repodata = {}
+
         old_repodata_packages = old_repodata.get("packages", {})
         old_repodata_conda_packages = old_repodata.get("packages.conda", {})
         old_repodata_fns = set(old_repodata_packages) | set(old_repodata_conda_packages)
@@ -1137,8 +1138,11 @@ class ChannelIndex(object):
             new_repodata_conda_packages = {}
             for fn in sorted(unchanged_set):
                 try:
-                    new_repodata_packages[fn] = self._load_index_from_cache(subdir, fn, stat_cache,
-                                                                            shared_format_cache)
+                    rec = self._load_index_from_cache(subdir, fn, stat_cache, shared_format_cache)
+                    if fn.endswith('.tar.bz2'):
+                        new_repodata_packages[fn] = rec
+                    else:
+                        new_repodata_conda_packages[fn] = rec
                 except IOError:
                     update_set.add(fn)
 
