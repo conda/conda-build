@@ -106,3 +106,10 @@ class OverDependingError(RuntimeError):
         self.error = error
         self.msg = "overdepending check failed \n%s" % (error)
         super(OverDependingError, self).__init__(self.msg)
+
+
+class RunPathError(RuntimeError):
+    def __init__(self, error, *args):
+        self.error = error
+        self.msg = "runpaths check failed \n%s" % (error)
+        super(RunPathError, self).__init__(self.msg)

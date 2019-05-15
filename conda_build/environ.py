@@ -20,7 +20,7 @@ from .conda_interface import (CondaError, LinkError, LockError, NoPackagesFoundE
 from .conda_interface import display_actions, execute_actions, execute_plan, install_actions
 from .conda_interface import memoized
 from .conda_interface import package_cache, TemporaryDirectory
-from .conda_interface import pkgs_dirs, root_dir, symlink_conda, create_default_packages
+from .conda_interface import pkgs_dirs, root_dir, create_default_packages
 from .conda_interface import reset_context
 
 from conda_build import utils
@@ -935,15 +935,6 @@ def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, 
                 else:
                     log.error("Failed to create env, max retries exceeded.")
                     raise
-
-    if not is_conda:
-        # Symlinking conda is critical here to make sure that activate scripts are not
-        #    accidentally included in packages.
-        if utils.on_win:
-            shell = "cmd.exe"
-        else:
-            shell = "bash"
-        symlink_conda(prefix, sys.prefix, shell)
 
 
 def get_pkg_dirs_locks(dirs, config):

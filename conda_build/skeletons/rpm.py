@@ -329,13 +329,13 @@ def get_repo_dict(repomd_url, data_type, dict_massager, cdt, src_cache):
         open_csum = child.findall("open-checksum")[0].text
         xml_file = join(src_cache, open_csum)
         try:
-            xml_file, xml_csum = cache_file(src_cache, xml_file, cdt['checksummer'])
+            xml_file, xml_csum = cache_file(src_cache, xml_file, None, cdt['checksummer'])
         except:
             csum = child.findall("checksum")[0].text
             location = child.findall("location")[0].attrib['href']
             xmlgz_file = dirname(dirname(repomd_url)) + '/' + location
             cached_path, cached_csum = cache_file(src_cache, xmlgz_file,
-                                                  csum, cdt['checksummer'])
+                                                  None, cdt['checksummer'])
             assert csum == cached_csum, "Checksum for {} does not match value in {}".format(
                 xmlgz_file, repomd_url)
             with gzip.open(cached_path, 'rb') as gz:

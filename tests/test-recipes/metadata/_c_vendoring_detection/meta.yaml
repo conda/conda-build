@@ -1,0 +1,14 @@
+package:
+  name: c_vendoring
+  version: 0
+
+build:
+  number: 0
+  ignore_run_exports:
+    - zlib
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+  host:
+    - zlib

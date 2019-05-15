@@ -18,7 +18,7 @@ build:
 
 requirements:
   build:
-    - {{ compiler('c') }}
+    - {{ compiler('c') }}  # [linux]
   host:
     - libpng 1.6.34.*
 
@@ -26,7 +26,7 @@ outputs:
   - name: subpackage
     requirements:
       build:
-        - {{ compiler('c') }}
+        - {{ compiler('c') }}  # [linux]
       host:
         - jpeg 9.*
     build:

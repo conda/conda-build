@@ -3,14 +3,14 @@ package:
   version: {{ ctng_gcc }}
 
 outputs:
-  - name: gfortran_{{ ctng_target_platform }}
+  - name: gfortran_{{ target_platform }}
     requirements:
       host:
         # So that pin_compatible has something to work with:
         - zlib {{ zlib }}.*
       run:
         # for activation of binutils env vars:
-        - {{ pin_subpackage('binutils_' ~ ctng_target_platform, exact=True) }}
+        - {{ pin_subpackage('binutils_' ~ target_platform, exact=True) }}
     run_exports:
       strong:
         - {{ pin_compatible('zlib', min_pin='x') }}
@@ -19,7 +19,7 @@ outputs:
       home: https://gcc.gnu.org/
       license: GPL
 
-  - name: binutils_{{ ctng_target_platform }}
+  - name: binutils_{{ target_platform }}
     about:
       summary: The GNU Binutils are a collection of binary tools (activation scripts)
       home: https://www.gnu.org/software/binutils/

@@ -776,7 +776,13 @@ class elfsection(object):
             dt_rpath = []
             dt_runpath = []
             dt_soname = '$EXECUTABLE'
-            for m in range(int(self.sh_size / self.sh_entsize)):
+            if self.sh_entsize == 0:
+                # Some ELF files (e.g., Guile's .go files) include sections
+                # without a table of entries in which case sh_entsize will be 0
+                num_entries = 0
+            else:
+                num_entries = int(self.sh_size / self.sh_entsize)
+            for m in range(num_entries):
                 file.seek(self.sh_offset + (m * self.sh_entsize))
                 d_tag, = struct.unpack(endian + ptr_type, file.read(sz_ptr))
                 d_val_ptr, = struct.unpack(endian + ptr_type, file.read(sz_ptr))
@@ -1010,7 +1016,7 @@ def codefile_class(filename, skip_symlinks=False):
             filename = os.path.realpath(filename)
     if os.path.isdir(filename):
         return None
-    if filename.endswith('.dll'):
+    if filename.endswith(('.dll', '.pyd')):
         return DLLfile
     if filename.endswith('.exe'):
         return EXEfile

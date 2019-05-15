@@ -895,6 +895,8 @@ def bundle_conda(output, metadata, env, stats, **kw):
         env_output['TOP_PKG_VERSION'] = env['PKG_VERSION']
         env_output['PKG_VERSION'] = metadata.version()
         env_output['PKG_NAME'] = metadata.get_value('package/name')
+        env_output["MSYS2_PATH_TYPE"] = "inherit"
+        env_output["CHERE_INVOKING"] = "1"
         for var in utils.ensure_list(metadata.get_value('build/script_env')):
             if var not in os.environ:
                 raise ValueError("env var '{}' specified in script_env, but is not set."
@@ -1142,7 +1144,9 @@ def _write_sh_activation_text(file_handle, m):
                                 cygpath_suffix))
 
     if conda_46:
-        file_handle.write("conda activate --stack \"{0}\"\n".format(build_prefix_path))
+        # Do not stack against base env when not cross.
+        stack = '--stack' if m.is_cross else ''
+        file_handle.write("conda activate {0} \"{1}\"\n".format(stack, build_prefix_path))
     else:
         file_handle.write('source "{0}" "{1}"\n'.format(activate_path, build_prefix_path))
 
@@ -1368,9 +1372,12 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
             try_download(m, no_download_source=False, raise_error=True)
         if need_source_download and not m.final:
             m.parse_until_resolved(allow_no_other_outputs=True)
-
         elif need_reparse_in_env:
             m = reparse(m)
+
+        # Write out metadata for `conda debug`, making it obvious that this is what it is, must be done
+        # after try_download()
+        output_yaml(m, os.path.join(m.config.work_dir, 'metadata_conda_debug.yaml'))
 
         # get_dir here might be just work, or it might be one level deeper,
         #    dependening on the source.
@@ -1392,7 +1399,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
         # Use script from recipe?
         script = utils.ensure_list(m.get_value('build/script', None))
         if script:
-            script = '\n'.join(script)
+            script = u'\n'.join(script)
 
         if isdir(src_dir):
             build_stats = {}
@@ -1400,7 +1407,8 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                 build_file = join(m.path, 'bld.bat')
                 if script:
                     build_file = join(src_dir, 'bld.bat')
-                    with open(build_file, 'w') as bf:
+                    import codecs
+                    with codecs.getwriter('utf-8')(open(build_file, 'wb')) as bf:
                         bf.write(script)
                 windows.build(m, build_file, stats=build_stats, provision_only=provision_only)
             else:
@@ -1628,7 +1636,7 @@ def guess_interpreter(script_filename):
     # Since the MSYS2 installation is probably a set of conda packages we do not
     # need to worry about system environmental pollution here. For that reason I
     # do not pass -l on other OSes.
-    extensions_to_run_commands = {'.sh': ['bash{}'.format('.exe' if utils.on_win else '')],
+    extensions_to_run_commands = {'.sh': ['bash.exe', '-l'] if utils.on_win else ['bash'],
                                   '.bat': [os.environ.get('COMSPEC', 'cmd.exe'), '/d', '/c'],
                                   '.ps1': ['powershell', '-executionpolicy', 'bypass', '-File'],
                                   '.py': ['python']}
@@ -1848,7 +1856,7 @@ def write_build_scripts(m, script, build_file):
     with open(work_file, 'w') as bf:
         # bf.write('set -ex\n')
         bf.write('if [ -z ${CONDA_BUILD+x} ]; then\n')
-        bf.write("\tsource {}\n".format(env_file))
+        bf.write("    source {}\n".format(env_file))
         bf.write("fi\n")
         if script:
             bf.write(script)
@@ -1937,11 +1945,25 @@ def write_test_scripts(metadata, env_vars, py_files, pl_files, lua_files, r_file
             tf.write('set {trace}-e\n'.format(trace=trace))
         if metadata.config.activate and not metadata.name() == 'conda':
             ext = ".bat" if utils.on_win else ""
-            tf.write('{source} "{conda_root}activate{ext}" "{test_env}"\n'.format(
-                conda_root=utils.root_script_dir + os.path.sep,
-                source="call" if utils.on_win else "source",
-                ext=ext,
-                test_env=metadata.config.test_prefix))
+            if conda_46:
+                if utils.on_win:
+                    tf.write('set "CONDA_SHLVL=" '
+                             '&& @CALL {}\\condabin\\conda_hook.bat {}'
+                             '&& set CONDA_EXE={}'
+                             '&& set _CE_M=-m'
+                             '&& set _CE_CONDA=conda\n'.format(sys.prefix,
+                                                               '--dev' if metadata.config.debug else '',
+                                                               sys.executable))
+
+                else:
+                    tf.write("eval \"$('{sys_python}' -m conda shell.bash hook)\"\n".format(
+                        sys_python=sys.executable))
+            else:
+                tf.write('{source} "{conda_root}activate{ext}" "{test_env}"\n'.format(
+                    conda_root=utils.root_script_dir + os.path.sep,
+                    source="call" if utils.on_win else "source",
+                    ext=ext,
+                    test_env=metadata.config.test_prefix))
             if utils.on_win:
                 tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
 
@@ -2126,6 +2148,8 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
             log_stats(test_stats, "testing {}".format(metadata.name()))
             if stats is not None and metadata.config.variants:
                 stats[stats_key(metadata, 'test_{}'.format(metadata.name()))] = test_stats
+            if os.path.exists(join(metadata.config.test_dir, 'TEST_FAILED')):
+                raise subprocess.CalledProcessError(-1, '')
             print("TEST END:", test_package_name)
     except subprocess.CalledProcessError:
         tests_failed(metadata, move_broken=move_broken, broken_dir=metadata.config.broken_dir,
@@ -2345,6 +2369,11 @@ def build_tree(recipe_list, config, stats, build_only=False, post=False, notest=
             # each metadata element here comes from one recipe, thus it will share one build id
             #    cleaning on the last metadata in the loop should take care of all of the stuff.
             metadata.clean()
+
+            # We *could* delete `metadata_conda_debug.yaml` here, but the user may want to debug
+            # failures that happen after this point and we may as well not make that impossible.
+            # os.unlink(os.path.join(metadata.config.work_dir, 'metadata_conda_debug.yaml'))
+
         except DependencyNeedsBuildingError as e:
             skip_names = ['python', 'r', 'r-base', 'mro-base', 'perl', 'lua']
             built_package_paths = [entry[1][1].path for entry in built_packages.items()]

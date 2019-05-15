@@ -6,3 +6,7 @@ source:
   path: .
   patches:
     - test.patch
+
+requirements:
+  build:
+    - m2-patch  # [win]

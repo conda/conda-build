@@ -17,6 +17,8 @@ import uuid
 import conda
 
 from conda_build.conda_interface import PY3, url_path, LinkError, CondaError, cc_conda_build
+from conda_build.conda_interface import linked
+
 import conda_build
 
 from binstar_client.commands import remove, show
@@ -93,6 +95,8 @@ def test_recipe_builds(recipe, testing_config, testing_workdir, monkeypatch):
     testing_config.activate = True
     monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
     monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
+    if 'unicode_all_over' in recipe and sys.version_info[0] == 2:
+        pytest.skip('unicode_all_over does not work on Python 2')
     api.build(recipe, config=testing_config)
 
 
@@ -275,7 +279,7 @@ def test_checkout_tool_as_dependency(testing_workdir, testing_config, monkeypatc
     with pytest.raises(subprocess.CalledProcessError, message="Dummy svn was not executed"):
         check_call_env([exename, '--version'], stderr=FNULL)
     FNULL.close()
-    env = dict(os.environ)
+    env = os.environ.copy()
     env["PATH"] = os.pathsep.join([testing_workdir, env["PATH"]])
     api.build(os.path.join(metadata_dir, '_checkout_tool_as_dependency'), config=testing_config)
 
@@ -430,6 +434,11 @@ def test_build_metadata_object(testing_metadata):
     api.build(testing_metadata)
 
 
+def numpy_installed():
+    return any([True for dist in linked(sys.prefix) if dist.name == 'numpy'])
+
+
+@pytest.mark.skipif(not numpy_installed(), reason="numpy not installed in base environment")
 def test_numpy_setup_py_data(testing_config):
     recipe_path = os.path.join(metadata_dir, '_numpy_setup_py_data')
     # this shows an error that is OK to ignore:
@@ -526,7 +535,8 @@ def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monke
         else:
             # Once we use a more recent Git for Windows than 2.6.4 on Windows or m2-git we
             # can change this to `git submodule update --recursive`.
-            check_call_env([git, 'submodule', 'foreach', git, 'pull'], env=sys_git_env)
+            gits = git.replace('\\', '/')
+            check_call_env([git, 'submodule', 'foreach', gits, 'pull'], env=sys_git_env)
         check_call_env([git, 'commit', '-am', 'added submodules@{}'.format(tag)],
                               env=sys_git_env)
         check_call_env([git, 'tag', '-a', str(tag), '-m', 'tag {}'.format(tag)],
@@ -1038,7 +1048,7 @@ def test_failed_recipe_leaves_folders(testing_config, testing_workdir):
             any_locks = True
             dest_path = base64.b64decode(os.path.basename(lock.lock_file))
             if PY3 and hasattr(dest_path, 'decode'):
-                dest_path = dest_path.decode()
+                dest_path = dest_path.decode(sys.getfilesystemencoding())
             locks_list.add((lock.lock_file, dest_path))
     assert not any_locks, "remaining locks:\n{}".format('\n'.join('->'.join((l, r))
                                                                 for (l, r) in locks_list))
@@ -1119,27 +1129,28 @@ def test_setup_py_data_in_env(testing_config):
     api.build(recipe, config=testing_config)
     # make sure it fails with our special python logic
     with pytest.raises(subprocess.CalledProcessError):
-        api.build(recipe, config=testing_config, python='3.4')
+        api.build(recipe, config=testing_config, python='3.5')
 
 
 def test_numpy_xx(testing_config):
     recipe = os.path.join(metadata_dir, '_numpy_xx')
-    api.build(recipe, config=testing_config, numpy='1.15', python="3.6")
+    api.render(recipe, config=testing_config, numpy='1.15', python="3.6")
 
 
 def test_numpy_xx_host(testing_config):
     recipe = os.path.join(metadata_dir, '_numpy_xx_host')
-    api.build(recipe, config=testing_config, numpy='1.15', python="3.6")
+    api.render(recipe, config=testing_config, numpy='1.15', python="3.6")
 
 
 def test_python_xx(testing_config):
     recipe = os.path.join(metadata_dir, '_python_xx')
-    api.build(recipe, config=testing_config, python='3.4')
+    api.render(recipe, config=testing_config, python='3.5')
 
 
-def test_indirect_numpy_dependency(testing_metadata):
+def test_indirect_numpy_dependency(testing_metadata, testing_workdir, testing_config):
     testing_metadata.meta['requirements']['build'] = ['pandas']
-    api.build(testing_metadata, numpy=1.13, notest=True)
+    api.output_yaml(testing_metadata, os.path.join(testing_workdir, 'meta.yaml'))
+    api.render(testing_workdir, numpy='1.13', notest=True)
 
 
 def test_dependencies_with_notest(testing_workdir, testing_config):

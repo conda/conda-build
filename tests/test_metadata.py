@@ -11,6 +11,7 @@ from .utils import thisdir, metadata_dir
 
 def test_uses_vcs_in_metadata(testing_workdir, testing_metadata):
     testing_metadata._meta_path = os.path.join(testing_workdir, 'meta.yaml')
+    testing_metadata._meta_name = 'meta.yaml'
     with open(testing_metadata.meta_path, 'w') as f:
         f.write('http://hg.something.com')
     assert not testing_metadata.uses_vcs_in_meta
@@ -140,8 +141,8 @@ def test_build_bootstrap_env_by_path(testing_metadata):
 
 
 @pytest.mark.parametrize('py_ver', [('2.7', 'vs2008_win-x86_64'),
-                                    ('3.4', 'vs2010_win-x86_64'),
-                                    ('3.5', 'vs2015_win-x86_64'), ])
+                                    ('3.6', 'vs2010_win-x86_64'),
+                                    ('3.7', 'vs2015_win-x86_64'), ])
 def test_native_compiler_metadata_win(testing_config, py_ver, mocker):
     testing_config.platform = 'win'
     metadata = api.render(os.path.join(metadata_dir, '_compiler_jinja2'), config=testing_config,
