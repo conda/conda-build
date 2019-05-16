@@ -374,6 +374,7 @@ def _make_seconds(timestamp):
 REPODATA_VERSION = 1
 CHANNELDATA_VERSION = 1
 REPODATA_JSON_FN = 'repodata.json'
+REPODATA_FROM_PKGS_JSON_FN = 'repodata_from_packages.json'
 CHANNELDATA_FIELDS = (
     "description",
     "dev_url",
@@ -891,7 +892,7 @@ class ChannelIndex(object):
 
             # Step 1. Lock local channel.
             with utils.try_acquire_locks([utils.get_lock(self.channel_root)], timeout=900):
-                # Step 2. Collect repodata from packages.
+                # Step 2. Collect repodata from packages, save to pkg_repodata.json file
                 repodata_from_packages = {}
                 with tqdm(total=len(subdirs), disable=(verbose or not progress)) as t:
                     for subdir in subdirs:
@@ -901,6 +902,8 @@ class ChannelIndex(object):
                         repodata_from_packages[subdir] = self.index_subdir(
                             subdir, verbose=verbose, progress=progress,
                             convert_if_not_present=convert_if_not_present)
+                        self._write_repodata(subdir, repodata_from_packages[subdir],
+                                             REPODATA_FROM_PKGS_JSON_FN)
 
                 # Step 3. Apply patch instructions.
                 patched_repodata = {}
@@ -912,13 +915,13 @@ class ChannelIndex(object):
                 # Step 4. Save patched and augmented repodata.
                 for subdir in subdirs:
                     # If the contents of repodata have changed, write a new repodata.json file.
-                    # Also create associated index.html.
-                    self._write_repodata(subdir, patched_repodata[subdir])
+                    self._write_repodata(subdir, patched_repodata[subdir], REPODATA_JSON_FN)
 
                 # Step 5. Augment repodata with additional information.
                 augmented_repodata = _augment_repodata(subdirs, patched_repodata, patch_instructions)
 
                 # Step 6. Create and save repodata2.json
+                # Also create associated index.html.
                 repodata2 = {}
                 for subdir in subdirs:
                     repodata2[subdir] = self._create_repodata2(subdir, augmented_repodata[subdir])
@@ -935,6 +938,7 @@ class ChannelIndex(object):
                 self._write_channeldata(channel_data)
 
     def index_subdir(self, subdir, verbose=False, progress=False, convert_if_not_present=False):
+        # TODO Use REPODATA_FROM_PKGS_JSON_FN in this method
         subdir_path = join(self.channel_root, subdir)
         self._ensure_dirs(subdir)
         repodata_json_path = join(subdir_path, REPODATA_JSON_FN)
@@ -1251,8 +1255,8 @@ class ChannelIndex(object):
             data["run_exports"] = {}
         return data
 
-    def _write_repodata(self, subdir, repodata):
-        repodata_json_path = join(self.channel_root, subdir, REPODATA_JSON_FN)
+    def _write_repodata(self, subdir, repodata, json_filename):
+        repodata_json_path = join(self.channel_root, subdir, json_filename)
         new_repodata_binary = json.dumps(repodata, indent=2, sort_keys=True,
                                   separators=(',', ': ')).encode("utf-8")
         write_result = _maybe_write(repodata_json_path, new_repodata_binary, write_newline_end=True)
@@ -1277,6 +1281,8 @@ class ChannelIndex(object):
         extra_paths = OrderedDict()
         _add_extra_path(extra_paths, join(subdir_path, REPODATA_JSON_FN))
         _add_extra_path(extra_paths, join(subdir_path, REPODATA_JSON_FN + '.bz2'))
+        _add_extra_path(extra_paths, join(subdir_path, REPODATA_FROM_PKGS_JSON_FN))
+        _add_extra_path(extra_paths, join(subdir_path, REPODATA_FROM_PKGS_JSON_FN + '.bz2'))
         _add_extra_path(extra_paths, join(subdir_path, "repodata2.json"))
         _add_extra_path(extra_paths, join(subdir_path, "patch_instructions.json"))
         rendered_html = _make_subdir_index_html(
