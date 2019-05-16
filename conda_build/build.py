@@ -5,7 +5,6 @@ from __future__ import absolute_import, division, print_function
 
 from collections import deque, OrderedDict
 import fnmatch
-from glob import glob
 import io
 import json
 import os
@@ -56,7 +55,7 @@ from .conda_interface import UnsatisfiableError
 from .conda_interface import NoPackagesFoundError
 from .conda_interface import CondaError
 from .conda_interface import pkgs_dirs
-from .utils import env_var, tmp_chdir
+from .utils import env_var, glob, tmp_chdir
 
 from conda_build import __version__
 from conda_build import environ, source, tarcheck, utils
