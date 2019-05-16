@@ -484,7 +484,7 @@ def _str_version(package_meta):
 # conda-docs/docs/source/build.rst
 FIELDS = {
     'package': {'name', 'version'},
-    'source': {'fn', 'url', 'md5', 'sha1', 'sha256', 'path',
+    'source': {'fn', 'url', 'md5', 'sha1', 'sha256', 'path', 'path_via_symlinks',
                'git_url', 'git_tag', 'git_branch', 'git_rev', 'git_depth',
                'hg_url', 'hg_tag',
                'svn_url', 'svn_rev', 'svn_ignore_externals',
@@ -842,9 +842,11 @@ class MetaData(object):
 
         if isfile(path):
             self._meta_path = path
+            self._meta_name = os.path.basename(path)
             self.path = os.path.dirname(path)
         else:
             self._meta_path = find_recipe(path)
+            self._meta_name = 'meta.yaml'
             self.path = os.path.dirname(self.meta_path)
         self.requirements_path = join(self.path, 'requirements.txt')
 
@@ -1560,8 +1562,8 @@ class MetaData(object):
     @property
     def meta_path(self):
         meta_path = self._meta_path or self.meta.get('extra', {}).get('parent_recipe', {}).get('path', '')
-        if meta_path and os.path.basename(meta_path) != "meta.yaml":
-            meta_path = os.path.join(meta_path, 'meta.yaml')
+        if meta_path and os.path.basename(meta_path) != self._meta_name:
+            meta_path = os.path.join(meta_path, self._meta_name)
         return meta_path
 
     @property
@@ -2075,7 +2077,7 @@ class MetaData(object):
 
         return (yaml.safe_load(self._get_contents(permit_undefined_jinja=permit_undefined_jinja,
                                                   template_string=template_string,
-                                                  skip_build_id=True)) or {})
+                                                  skip_build_id=False)) or {})
 
     def get_rendered_outputs_section(self, permit_undefined_jinja=False):
         extract_pattern = r'(.*)package:'
@@ -2087,7 +2089,7 @@ class MetaData(object):
 
         outputs = (yaml.safe_load(self._get_contents(permit_undefined_jinja=permit_undefined_jinja,
                                                      template_string=template_string,
-                                                     skip_build_id=True,
+                                                     skip_build_id=False,
                                                      allow_no_other_outputs=permit_undefined_jinja)) or
                    {}).get('outputs', [])
         return get_output_dicts_from_metadata(self, outputs=outputs)

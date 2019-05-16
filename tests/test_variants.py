@@ -184,6 +184,8 @@ def test_variant_input_with_zip_keys_keeps_zip_keys_list():
 
 @pytest.mark.xfail(sys.platform=='win32', reason="console readout issues on appveyor")
 def test_ensure_valid_spec_on_run_and_test(testing_workdir, testing_config, caplog):
+    testing_config.debug = True
+    testing_config.verbose = True
     recipe = os.path.join(recipe_dir, '14_variant_in_run_and_test')
     api.render(recipe, config=testing_config)
 

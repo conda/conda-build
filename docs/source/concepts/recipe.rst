@@ -2,7 +2,7 @@
 Conda build recipes
 ===================
 
-To enable building conda packages, :ref:`install and update conda
+To enable building `conda packages <https://conda.io/projects/conda/en/latest/user-guide/concepts/packages.html>`_, :ref:`install and update conda
 and conda build <install-conda-build>`.
 
 Building a conda package requires a recipe. A conda build recipe
@@ -33,9 +33,8 @@ is a flat directory that contains the following files:
   the first 3 files---``meta.yaml``, ``build.sh``, and
   ``bld.bat``---are automatically generated for you.
 
-
 Conda build process
-====================
+===================
 
 ``conda-build`` performs the following steps:
 
@@ -50,7 +49,7 @@ Conda build process
 #. Re-evaluates the metadata, if source is necessary to fill any
    metadata values.
 
-#. Creates a build environment, and then installs the build
+#. Creates a build environment and then installs the build
    dependencies there.
 
 #. Runs the build script. The current working directory is the
@@ -86,3 +85,15 @@ contains example recipes for many conda packages.
 The `conda skeleton <skeleton_ref>` command can help to make
 skeleton recipes for common repositories, such as `PyPI
 <https://pypi.python.org/pypi>`_.
+
+More information
+================
+
+Review :doc:`../resources/define-metadata` to see a breakdown of the
+components of a recipe, including:
+
+  * package name
+  * package version
+  * descriptive metadata
+  * where to obtain source code
+  * how to test the package

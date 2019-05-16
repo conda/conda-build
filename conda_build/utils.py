@@ -703,7 +703,7 @@ def relative(f, d='lib'):
 # This is the lowest common denominator of the formats supported by our libarchive/python-libarchive-c
 # packages across all platforms
 decompressible_exts = ('.7z', '.tar', '.tar.bz2', '.tar.gz', '.tar.lzma', '.tar.xz',
-                       '.tar.z', '.tgz', '.whl', '.zip', '.rpm', '.deb')
+                       '.tar.z', '.tar.zst', '.tgz', '.whl', '.zip', '.rpm', '.deb')
 
 
 def _tar_xf_fallback(tarball, dir_path, mode='r:*'):
@@ -1138,7 +1138,7 @@ def expand_globs(path_list, root_dir):
             files.extend(glob_files)
     prefix_path_re = re.compile('^' + re.escape('%s%s' % (root_dir, os.path.sep)))
     files = [prefix_path_re.sub('', f, 1) for f in files]
-    return sorted(files)
+    return files
 
 
 def find_recipe(path):

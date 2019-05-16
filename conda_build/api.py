@@ -396,8 +396,8 @@ def update_index(dir_paths, config=None, force=False, check_md5=False, remove=Fa
                      subdirs=ensure_list(subdir), convert_if_not_present=convert_if_not_present)
 
 
-def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False, output_id=None, config=None,
-          verbose=True, **kwargs):
+def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False,
+          output_id=None, config=None, verbose=True, link_source_method='auto', **kwargs):
     """Set up either build/host or test environments, leaving you with a quick tool to debug
     your package's build or test phase.
     """
@@ -411,6 +411,18 @@ def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False, outp
     is_package = False
     default_config = get_or_merge_config(config, **kwargs)
     args = {"set_build_id": False}
+    path_is_build_dir = False
+    workdirs = [os.path.join(recipe_or_package_path_or_metadata_tuples, d)
+                for d in (os.listdir(recipe_or_package_path_or_metadata_tuples) if
+                    os.path.isdir(recipe_or_package_path_or_metadata_tuples) else [])
+                if (d.startswith('work') and
+                os.path.isdir(os.path.join(recipe_or_package_path_or_metadata_tuples, d)))]
+    metadatas_conda_debug = [os.path.join(f, "metadata_conda_debug.yaml") for f in workdirs
+                            if os.path.isfile(os.path.join(f, "metadata_conda_debug.yaml"))]
+    metadatas_conda_debug = sorted(metadatas_conda_debug)
+    if len(metadatas_conda_debug):
+        path_is_build_dir = True
+        path = recipe_or_package_path_or_metadata_tuples
     if not path:
         path = os.path.join(default_config.croot, "debug_{}".format(int(time.time() * 1000)))
     config = get_or_merge_config(config=default_config, croot=path, verbose=verbose, _prefix_length=10,
@@ -420,14 +432,22 @@ def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False, outp
 
     metadata_tuples = []
 
+    best_link_source_method = 'skip'
     if isinstance(recipe_or_package_path_or_metadata_tuples, string_types):
-        ext = os.path.splitext(recipe_or_package_path_or_metadata_tuples)[1]
-        if not ext or not any(ext in _ for _ in CONDA_TARBALL_EXTENSIONS):
-            metadata_tuples = render(recipe_or_package_path_or_metadata_tuples, config=config, **kwargs)
+        if path_is_build_dir:
+            for metadata_conda_debug in metadatas_conda_debug:
+                best_link_source_method = 'symlink'
+                from conda_build.metadata import MetaData
+                metadata = MetaData(metadata_conda_debug, config, {})
+                metadata_tuples.append((metadata, False, True))
         else:
-            # this is a package, we only support testing
-            test = True
-            is_package = True
+            ext = os.path.splitext(recipe_or_package_path_or_metadata_tuples)[1]
+            if not ext or not any(ext in _ for _ in CONDA_TARBALL_EXTENSIONS):
+                metadata_tuples = render(recipe_or_package_path_or_metadata_tuples, config=config, **kwargs)
+            else:
+                # this is a package, we only support testing
+                test = True
+                is_package = True
     else:
         metadata_tuples = recipe_or_package_path_or_metadata_tuples
 
@@ -441,7 +461,7 @@ def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False, outp
                     "a single output is found.".format(matched_outputs))
             elif not matched_outputs:
                 raise ValueError("Specified --output-id did not match any outputs.  Available outputs are: {} Please check it and try again".format(outputs))
-        if len(matched_outputs) > 1:
+        if len(matched_outputs) > 1 and not path_is_build_dir:
             raise ValueError("More than one output found for this recipe ({}).  Please use the --output-id argument to filter down "
                             "to a single output.".format(outputs))
         else:
@@ -451,6 +471,30 @@ def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False, outp
         # make sure that none of the _placehold stuff gets added to env paths
         target_metadata.config.prefix_length = 10
 
+    if best_link_source_method == 'symlink':
+        for metadata, _, _ in metadata_tuples:
+            debug_source_loc = os.path.join(os.sep + 'usr', 'local', 'src', 'conda',
+                                            '{}-{}'.format(metadata.get_value('package/name'),
+                                                           metadata.get_value('package/version')))
+            link_target = os.path.dirname(metadata.meta_path)
+            try:
+                dn = os.path.dirname(debug_source_loc)
+                try:
+                    os.makedirs(dn)
+                except FileExistsError:
+                    pass
+                try:
+                    os.unlink(debug_source_loc)
+                except:
+                    pass
+                print("Making debug info source symlink: {} => {}".format(debug_source_loc, link_target))
+                os.symlink(link_target, debug_source_loc)
+            except PermissionError as e:
+                raise Exception("You do not have the necessary permissions to create symlinks in {}\nerror: {}"
+                                .format(dn, str(e)))
+            except Exception as e:
+                raise Exception("Unknown error creating symlinks in {}\nerror: {}"
+                                .format(dn, str(e)))
     ext = ".bat" if on_win else ".sh"
 
     if verbose:
@@ -458,7 +502,13 @@ def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False, outp
     else:
         log_context = LoggingContext(logging.CRITICAL + 1)
 
-    if not test:
+    if path_is_build_dir:
+        activation_file = "build_env_setup" + ext
+        activation_string = "cd {work_dir} && {source} {activation_file}\n".format(
+            work_dir=target_metadata.config.work_dir,
+            source="call" if on_win else "source",
+            activation_file=os.path.join(target_metadata.config.work_dir, activation_file))
+    elif not test:
         with log_context:
             run_build(target_metadata, stats={}, provision_only=True)
         activation_file = "build_env_setup" + ext

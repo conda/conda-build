@@ -16,6 +16,7 @@ import sys
 import tempfile
 
 from conda_build.os_utils.ldd import get_linkages, get_package_obj_files, get_untracked_obj_files
+from conda_build.os_utils.liefldd import codefile_type
 from conda_build.os_utils.macho import get_rpaths, human_filetype
 from conda_build.utils import (groupby, getter, comma_join, rm_rf, package_has_file, get_logger,
                                ensure_list)
@@ -308,10 +309,12 @@ def inspect_objects(packages, prefix=sys.prefix, groupby='package'):
         for f in obj_files:
             f_info = {}
             path = join(prefix, f)
-            f_info['filetype'] = human_filetype(path)
-            f_info['rpath'] = ':'.join(get_rpaths(path))
-            f_info['filename'] = f
-            info.append(f_info)
+            filetype = codefile_type(path)
+            if filetype == 'machofile':
+                f_info['filetype'] = human_filetype(path)
+                f_info['rpath'] = ':'.join(get_rpaths(path))
+                f_info['filename'] = f
+                info.append(f_info)
 
         output_string += print_object_info(info, groupby)
     if hasattr(output_string, 'decode'):

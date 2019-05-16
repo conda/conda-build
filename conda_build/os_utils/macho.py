@@ -8,6 +8,7 @@ import os
 from conda_build.os_utils.pyldd import inspect_rpaths
 from conda_build import utils
 from itertools import islice
+from conda_build.os_utils.external import find_preferably_prefixed_executable
 
 NO_EXT = (
     '.py', '.pyc', '.pyo', '.h', '.a', '.c', '.txt', '.html',
@@ -50,7 +51,8 @@ def is_dylib(path):
 
 
 def human_filetype(path):
-    output = check_output(['otool', '-h', path]).decode('utf-8')
+    ot = find_preferably_prefixed_executable('otool')
+    output = check_output((ot, '-h', path)).decode('utf-8')
     lines = output.splitlines()
     if not lines[0].startswith((path, 'Mach header')):
         raise ValueError(
@@ -144,7 +146,7 @@ def _get_matching_load_commands(lines, cb_filter):
     return result
 
 
-def otool(path, cb_filter=is_dylib_info):
+def otool(path, build_prefix=None, cb_filter=is_dylib_info):
     """A wrapper around otool -l
 
     Parse the output of the otool -l 'load commands', filtered by
@@ -161,7 +163,8 @@ def otool(path, cb_filter=is_dylib_info):
     Any key values that can be converted to integers are converted
     to integers, the rest are strings.
     """
-    lines = check_output(['otool', '-l', path], stderr=STDOUT).decode('utf-8')
+    lines = check_output([find_preferably_prefixed_executable('otool', build_prefix), '-l', path],
+                          stderr=STDOUT).decode('utf-8')
     # llvm-objdump returns 0 for some things that are anything but successful completion.
     lines_split = lines.splitlines()
     # 'invalid', 'expected' and 'unexpected' are too generic
@@ -172,15 +175,15 @@ def otool(path, cb_filter=is_dylib_info):
     return _get_matching_load_commands(lines_split, cb_filter)
 
 
-def get_dylibs(path):
+def get_dylibs(path, build_prefix=None):
     """Return a list of the loaded dylib pathnames"""
-    dylib_loads = otool(path, is_load_dylib)
+    dylib_loads = otool(path, build_prefix, is_load_dylib)
     return [dylib_load['name'] for dylib_load in dylib_loads]
 
 
-def get_id(path):
+def get_id(path, build_prefix=None):
     """Returns the id name of the Mach-O file `path` or an empty string"""
-    dylib_loads = otool(path, is_id_dylib)
+    dylib_loads = otool(path, build_prefix, is_id_dylib)
     try:
         return [dylib_load['name'] for dylib_load in dylib_loads][0]
     except:
@@ -189,11 +192,7 @@ def get_id(path):
 
 def get_rpaths(path):
     """Return a list of the dylib rpaths"""
-    # rpaths = otool(path, is_rpath)
-    # res_otool = [rpath['path'] for rpath in rpaths]
     res_pyldd = inspect_rpaths(path, resolve_dirnames=False, use_os_varnames=True)
-    # if set(res_otool) != set(res_pyldd):
-    #     print("disagreement about get_rpaths {} vs {}".format(set(res_otool), set(res_pyldd)))
     return res_pyldd
 
 
@@ -205,8 +204,9 @@ def _chmod(filename, mode):
         log.warn(str(e))
 
 
-def install_name_tool(args, verbose=False):
-    args_full = ['install_name_tool'] + args
+def install_name_tool(args, build_prefix=None, verbose=False):
+    args_full = [find_preferably_prefixed_executable('install_name_tool', build_prefix)]
+    args_full.extend(args)
     if verbose:
         print(' '.join(args_full))
     old_mode = stat.S_IMODE(os.stat(args[-1]).st_mode)
@@ -222,10 +222,10 @@ def install_name_tool(args, verbose=False):
     return subproc.returncode, out, err
 
 
-def add_rpath(path, rpath, verbose=False):
+def add_rpath(path, rpath, build_prefix=None, verbose=False):
     """Add an `rpath` to the Mach-O file at `path`"""
     args = ['-add_rpath', rpath, path]
-    code, _, stderr = install_name_tool(args)
+    code, _, stderr = install_name_tool(args, build_prefix)
     if "Mach-O dynamic shared library stub file" in stderr:
         print("Skipping Mach-O dynamic shared library stub file %s\n" % path)
         return
@@ -256,7 +256,7 @@ def delete_rpath(path, rpath, verbose=False):
         % code)
 
 
-def install_name_change(path, cb_func, dylibs, verbose=False):
+def install_name_change(path, build_prefix, cb_func, dylibs, verbose=False):
     """Change dynamic shared library load name or id name of Mach-O Binary `path`.
 
     `cb_func` is called for each shared library load command. The dictionary of
@@ -280,7 +280,7 @@ def install_name_change(path, cb_func, dylibs, verbose=False):
             args.extend(('-id', new_name, path))
         else:
             args.extend(('-change', dylibs[index]['name'], new_name, path))
-        code, _, stderr = install_name_tool(args)
+        code, _, stderr = install_name_tool(args, build_prefix)
         if "Mach-O dynamic shared library stub file" in stderr:
             print("Skipping Mach-O dynamic shared library stub file %s" % path)
             ret = False

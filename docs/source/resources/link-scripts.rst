@@ -1,10 +1,9 @@
-=================================================
-Adding pre-link, post-link and pre-unlink scripts
-=================================================
+==================================================
+Adding pre-link, post-link, and pre-unlink scripts
+==================================================
 
-.. TODO: Add post-unlink
-
-You can add scripts to a recipe. They must be located in the same directory as the meta.yaml file. The following scripts can be added:
+You can add scripts to a recipe. They must be located in the same directory
+as the meta.yaml file. The following scripts can be added:
 
 * ``pre-link``---Executed before the package is installed. An error is
   indicated by a nonzero exit and causes conda to stop and causes the

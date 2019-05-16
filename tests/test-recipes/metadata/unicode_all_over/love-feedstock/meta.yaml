@@ -1,0 +1,27 @@
+{% set name='♥' %}
+
+package:
+  name: {{ name }}
+  version: 1
+
+build:
+  # Nearly there (for Python 3 at least), but not ready yet.
+  skip: True  # [win]
+  script:
+
+    - chcp 65001  # [win]
+    - "mkdir %%PREFIX%%\\bin"  # [win]
+    - "echo echo {{ name }}>%%PREFIX%%\\bin\\{{ name }}.bat"  # [win]
+
+    - mkdir $PREFIX/bin  # [not win]
+    - "echo \"\u0023\u0021/usr/bin/env bash\" >$PREFIX/bin/{{ name }}"  # [not win]
+    - echo "echo '{{ name }}'" >>$PREFIX/bin/{{ name }}  # [not win]
+    - chmod +x $PREFIX/bin/{{ name }}  # [not win]
+
+test:
+  commands:
+    # The .*'s are for newlines.
+    - "[[ $($PREFIX/bin/{{ name }}) =~ .*{{ name }}.* ]] || (echo \"Where is the {{ name }}?\" && exit 1)"  # [not win]
+    - "call %%PREFIX%%\\bin\\{{ name }}.bat | findstr {{ name }}"  # [win]
+    - eval $($CONDA_EXE shell.bash hook)   # [not win]
+    - "[[ $($CONDA_EXE run {{ name }}) =~ .*{{ name }}.* ]] || (echo \"Where is the conda run {{ name }}?\" && exit 1)"  # [not win]

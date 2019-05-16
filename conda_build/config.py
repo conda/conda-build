@@ -1,7 +1,7 @@
 '''
 Module to store conda build settings.
 '''
-from __future__ import absolute_import, division, print_function
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 import copy
 from collections import namedtuple
@@ -27,13 +27,18 @@ on_win = (sys.platform == 'win32')
 
 conda_build = "conda-build"
 
+# Python2 silliness:
+def python2_fs_encode(strin):
+    return strin.decode(sys.getfilesystemencoding()) if hasattr(strin, 'decode') else strin
+
 
 def _ensure_dir(path):
     # this can fail in parallel operation, depending on timing.  Just try to make the dir,
     #    but don't bail if fail.
-    if not os.path.isdir(path):
+    encpath = python2_fs_encode(path)
+    if not os.path.isdir(encpath):
         try:
-            os.makedirs(path)
+            os.makedirs(encpath)
         except OSError:
             pass
 
@@ -250,7 +255,7 @@ class Config(object):
             self._src_cache_root = os.path.abspath(os.path.normpath(
                 os.path.expanduser(source_cache)))
         if croot:
-            self._croot = os.path.abspath(os.path.normpath(croot))
+            self._croot = os.path.abspath(os.path.normpath(os.path.expanduser(croot)))
         else:
             # set default value (not actually None)
             self._croot = getattr(self, '_croot', None)
@@ -397,7 +402,7 @@ class Config(object):
                 self._croot = join(root_dir, 'conda-bld')
             else:
                 self._croot = abspath(expanduser('~/conda-bld'))
-        return self._croot
+        return python2_fs_encode(self._croot)
 
     @croot.setter
     def croot(self, croot):
@@ -502,7 +507,7 @@ class Config(object):
         return res
 
     def _get_r(self, prefix, platform):
-        if platform.startswith('win'):
+        if platform.startswith('win') or (platform == "noarch" and sys.platform == 'win32'):
             res = join(prefix, 'Scripts', 'R.exe')
             # MRO test:
             if not os.path.exists(res):
@@ -553,7 +558,7 @@ class Config(object):
         _build_id = _build_id.rstrip("/").rstrip("\\")
         assert not os.path.isabs(_build_id), ("build_id should not be an absolute path, "
                                               "to preserve croot during path joins")
-        self._build_id = _build_id
+        self._build_id = python2_fs_encode(_build_id)
 
     @property
     def prefix_length(self):
