@@ -238,30 +238,27 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
             _ensure_valid_channel(output_folder, subdir)
             update_index(output_folder, verbose=debug, shared_format_cache=shared_format_cache)
 
-            # silence output from conda about fetching index files
-            capture = contextlib.contextmanager(lambda: (yield))
+            # replace noarch with native subdir - this ends up building an index with both the
+            #      native content and the noarch content.
 
-            with capture():
-                # replace noarch with native subdir - this ends up building an index with both the
-                #      native content and the noarch content.
-                if subdir == 'noarch':
-                    subdir = conda_interface.subdir
-                try:
-                    cached_index = get_index(channel_urls=urls,
-                                    prepend=not omit_defaults,
-                                    use_local=False,
-                                    use_cache=False,
-                                    platform=subdir)
-                # HACK: defaults does not have the many subfolders we support.  Omit it and
-                #          try again.
-                except CondaHTTPError:
-                    if 'defaults' in urls:
-                        urls.remove('defaults')
-                    cached_index = get_index(channel_urls=urls,
-                                             prepend=omit_defaults,
-                                             use_local=False,
-                                             use_cache=False,
-                                             platform=subdir)
+            if subdir == 'noarch':
+                subdir = conda_interface.subdir
+            try:
+                cached_index = get_index(channel_urls=urls,
+                                prepend=not omit_defaults,
+                                use_local=False,
+                                use_cache=context.offline,
+                                platform=subdir)
+            # HACK: defaults does not have the many subfolders we support.  Omit it and
+            #          try again.
+            except CondaHTTPError:
+                if 'defaults' in urls:
+                    urls.remove('defaults')
+                cached_index = get_index(channel_urls=urls,
+                                            prepend=omit_defaults,
+                                            use_local=False,
+                                            use_cache=context.offline,
+                                            platform=subdir)
 
             expanded_channels = {rec.channel for rec in cached_index.values()}
 
@@ -277,15 +274,16 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
                         location = os.path.join(os.path.sep, channel.location)
                     channeldata_file = os.path.join(location, channel.name, 'channeldata.json')
                     retry = 0
-                    max_retries = 10
-                    while retry < max_retries:
-                        try:
-                            with open(channeldata_file, "r+") as f:
-                                channel_data[channel.name] = json.load(f)
-                            break
-                        except (IOError, JSONDecodeError):
-                            time.sleep(0.2)
-                            retry += 1
+                    max_retries = 1
+                    if os.path.isfile(channeldata_file):
+                        while retry < max_retries:
+                            try:
+                                with open(channeldata_file, "r+") as f:
+                                    channel_data[channel.name] = json.load(f)
+                                break
+                            except (IOError, JSONDecodeError):
+                                time.sleep(0.2)
+                                retry += 1
                 else:
                     # download channeldata.json for url
                     if not context.offline:

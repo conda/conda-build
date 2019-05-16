@@ -136,7 +136,7 @@ def test_no_anaconda_upload_condarc(service_name, testing_workdir, testing_confi
 
 
 @pytest.mark.parametrize("service_name", ["binstar", "anaconda"])
-def test_offline(service_name, testing_workdir, testing_config, capfd, monkeypatch):
+def test_offline(service_name, testing_config):
     with env_var('CONDA_OFFLINE', 'True', reset_context):
         api.build(empty_sections, config=testing_config)
 
