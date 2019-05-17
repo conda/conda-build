@@ -1306,12 +1306,14 @@ def test_downstream_tests(testing_config):
 
 
 @pytest.mark.xfail(not conda_46, reason="conda 4.6 changed logger level from info to warn")
-def test_warning_on_file_clobbering(testing_config, caplog):
+def test_warning_on_file_clobbering(testing_config, capfd):
     recipe_dir = os.path.join(metadata_dir, '_overlapping_files_warning')
 
     api.build(os.path.join(recipe_dir, 'a', ), config=testing_config)
     api.build(os.path.join(recipe_dir, 'b', ), config=testing_config)
-    assert "Conda was asked to clobber an existing path" in caplog.text
+    # The clobber warning here is raised when creating the test environment for b
+    out, err = capfd.readouterr()
+    assert "ClobberWarning" in err
     with pytest.raises((ClobberError, CondaMultiError)):
         with env_var('CONDA_PATH_CONFLICT', 'prevent', reset_context):
             api.build(os.path.join(recipe_dir, 'b'), config=testing_config)
