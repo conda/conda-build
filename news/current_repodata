@@ -1,0 +1,25 @@
+Enhancements:
+-------------
+
+* add creation of "current_repodata.json" - like repodata.json, but only has the newest version of each file
+* change repodata layout to support .conda files.  They live under the "packages.conda" key and have similar subkeys to their .tar.bz2 counterparts.
+
+Bug fixes:
+----------
+
+* <news item>
+
+Deprecations:
+-------------
+
+* <news item>
+
+Docs:
+-----
+
+* <news item>
+
+Other:
+------
+
+* <news item>
