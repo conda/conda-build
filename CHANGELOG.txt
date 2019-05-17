@@ -2,6 +2,60 @@
 2019-05-17 3.18.0:
 ------------------
 
+Enhancements:
+-------------
+* Set R_USER environment variable when building R packages
+* Make Centos 7 default cdt distribution for linux-aarch64
+* Bump default python3 version to 3.7 for CI
+* Build docs if any docs related file changes
+* Add support for conda pkgv2 (.conda) format
+* add creation of "current_repodata.json" - like repodata.json, but only has the newest version of each file
+* change repodata layout to support .conda files.  They live under the "packages.conda" key and have similar subkeys to their .tar.bz2 counterparts.
+* Always show display actions, regardless of verbosity level
+* Ignore registry autorun for all cmd.exe invocations
+* Relax default pinning on r-base for benefit of noarch R packages
+* Make conda index produce repodata_from_packages.json{,.bz2} which contains unpatched metadata
+* Use a shorter environment prefix when testing on unix-like platforms
+* Prevent pip from clobbering conda installed python packages by populating .dist_info INSTALLER file
+
+
+Bug fixes:
+----------
+* Allow build/missing_dso_whitelist section to be empty
+* Make conda-debug honor custom channels passed using -c
+* Do not attempt linkages inspection via lief if not installed
+* Fix all lief related regressions brought in v3.17.x
+* Fix ZeroDivisionError in ELF sections that have zero entries
+* `binary_has_prefix_files` and `text_has_prefix_files` now override the automatically detected prefix replacement mode
+* Handle special characters properly in pypi conda skeleton
+* Build recipes in order of dependencies when passed to CB as directories
+* Fix run_test script name for recipes with multiple outputs
+* Fix recursion error with subpackages and build_id
+* Avoid mutating global variable to fix tests on Windows
+* Update CRAN license test case (replace r-ruchardet with r-udpipe)
+* Update utils.filter_files to filter out generated .conda_trash files
+* Replace stdlib glob with utils.glob. Latter supports recursion (**)
+
+
+Docs:
+-----
+* Updated Sphinx theme to make notes and warnings more visible
+* Added tutorial on building R-language packages using skeleton CRAN
+* Add 37 to the list of valid values for CONDA_PY
+* Corrected argparse rendering error
+* Added tutorials section, reorganized content, and added a Windows tutorial
+* Added Concepts section, removed extraneous content
+* Added release notes section
+* Reorganized sections
+* Clarify to use 'where' on Windows and 'which' on Linux to inspect files in PATH
+* Add RPATH information to compiler-tools documentation
+* Improve the documentation on how to use the macOS SDK in build scripts.
+* Document ``conda build purge-all``.
+* Fix user-guide index
+* Add example for meta.yaml
+* Updated theme
+* Reorganized conda-build topics, updated link-scripts
+
 Contributors:
 -------------
 
