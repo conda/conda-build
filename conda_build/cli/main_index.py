@@ -60,11 +60,23 @@ def parse_args(args):
         "--no-progress", help="Hide progress bars", action="store_false", dest="progress"
     )
     p.add_argument(
-        "--convert",
-        help=("convert files to new .conda package format if those aren't "
-              "present alongside .tar.bz2"),
-        action="store_true",
-        dest="convert_if_not_present"
+        "--no-shared-format-cache", action="store_false", dest="shared_format_cache",
+        help=("Do not share a cache between .tar.bz2 and .conda files.  By default, "
+              "we assume that two files that differ only by extension can be treated "
+              "as similar for the purposes of caching metadata.  This flag disables that assumption.")
+    )
+    p.add_argument(
+        "--current-index-versions-file", "-m",
+        help="""
+        YAML file containing name of package as key, and list of versions as values.  The current_index.json
+        will contain the newest from this series of versions.  For example:
+
+        python:
+          - 2.7
+          - 3.6
+
+        will keep python 2.7.X and 3.6.Y in the current_index.json, instead of only the very latest python version.
+        """
     )
 
     args = p.parse_args(args)
@@ -73,10 +85,11 @@ def parse_args(args):
 
 def execute(args):
     _, args = parse_args(args)
+
     api.update_index(args.dir, check_md5=args.check_md5, channel_name=args.channel_name,
                      threads=args.threads, subdir=args.subdir, patch_generator=args.patch_generator,
                      verbose=args.verbose, progress=args.progress, hotfix_source_repo=args.hotfix_source_repo,
-                     convert_if_not_present=args.convert_if_not_present)
+                     shared_format_cache=args.shared_format_cache, current_index_versions=args.current_index_versions_file)
 
 
 def main():

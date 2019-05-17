@@ -32,6 +32,7 @@ conda_44 = parse_version(CONDA_VERSION) >= parse_version("4.4.0a0")
 conda_45 = parse_version(CONDA_VERSION) >= parse_version("4.5.0a0")
 conda_46 = parse_version(CONDA_VERSION) >= parse_version("4.6.0a0")
 conda_47 = parse_version(CONDA_VERSION) >= parse_version("4.7.0a0")
+conda_48 = parse_version(CONDA_VERSION) >= parse_version("4.8.0a0")
 
 if conda_44:
     from conda.exports import display_actions, execute_actions, execute_plan, install_actions

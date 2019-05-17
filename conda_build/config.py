@@ -27,6 +27,7 @@ on_win = (sys.platform == 'win32')
 
 conda_build = "conda-build"
 
+
 # Python2 silliness:
 def python2_fs_encode(strin):
     return strin.decode(sys.getfilesystemencoding()) if hasattr(strin, 'decode') else strin

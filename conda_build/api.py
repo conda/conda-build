@@ -378,10 +378,11 @@ def create_metapackage(name, version, entry_points=(), build_string=None, build_
 
 def update_index(dir_paths, config=None, force=False, check_md5=False, remove=False, channel_name=None,
                  subdir=None, threads=None, patch_generator=None, verbose=False, progress=False,
-                 hotfix_source_repo=None, convert_if_not_present=False, **kwargs):
+                 hotfix_source_repo=None, shared_format_cache=True, current_index_versions=None, **kwargs):
+    import yaml
     from locale import getpreferredencoding
     import os
-    from .conda_interface import PY3
+    from .conda_interface import PY3, string_types
     from conda_build.index import update_index
     from conda_build.utils import ensure_list
     dir_paths = [os.path.abspath(path) for path in _ensure_list(dir_paths)]
@@ -389,11 +390,16 @@ def update_index(dir_paths, config=None, force=False, check_md5=False, remove=Fa
     if not PY3:
         dir_paths = [path.decode(getpreferredencoding()) for path in dir_paths]
 
+    if isinstance(current_index_versions, string_types):
+        with open(current_index_versions) as f:
+            current_index_versions = yaml.safe_load(f)
+
     for path in dir_paths:
         update_index(path, check_md5=check_md5, channel_name=channel_name,
                      patch_generator=patch_generator, threads=threads, verbose=verbose,
                      progress=progress, hotfix_source_repo=hotfix_source_repo,
-                     subdirs=ensure_list(subdir), convert_if_not_present=convert_if_not_present)
+                     subdirs=ensure_list(subdir), shared_format_cache=shared_format_cache,
+                     current_index_versions=current_index_versions)
 
 
 def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False,

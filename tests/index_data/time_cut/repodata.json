@@ -1,0 +1,155 @@
+{
+  "info" : {
+    "subdir" : "linux-64"
+  },
+  "packages" : {
+      "one-gets-filtered-1.2.11-h7b6447c_3.tar.bz2": {
+          "build": "h7b6447c_3",
+          "build_number": 3,
+          "depends": [],
+          "license": "zlib",
+          "license_family": "Other",
+          "md5": "2e5b81671cc2b53177b94b258b1658b2",
+          "name": "one-gets-filtered",
+          "sha256": "1f07873d6aa0cd18760a7b215d9956f7fa63c2f2761b03f293c659fe982923fa",
+          "size": 122456,
+          "subdir": "linux-64",
+          "timestamp": 1542814864621,
+          "version": "1.2.11"
+      },
+      "one-gets-filtered-1.2.10-h7b6447c_3.tar.bz2": {
+          "build": "h7b6447c_3",
+          "build_number": 3,
+          "depends": [],
+          "license": "zlib",
+          "license_family": "Other",
+          "md5": "2e5b81671cc2b53177b94b258b1658b2",
+          "name": "one-gets-filtered",
+          "sha256": "1f07873d6aa0cd18760a7b215d9956f7fa63c2f2761b03f293c659fe982923fa",
+          "size": 122456,
+          "subdir": "linux-64",
+          "timestamp": 1542814864100,
+          "version": "1.2.10"
+      },
+      "one-gets-filtered-1.3.10-h7b6447c_3.tar.bz2": {
+          "build": "h7b6447c_3",
+          "build_number": 3,
+          "depends": [],
+          "license": "zlib",
+          "license_family": "Other",
+          "md5": "2e5b81671cc2b53177b94b258b1658b2",
+          "name": "one-gets-filtered",
+          "sha256": "1f07873d6aa0cd18760a7b215d9956f7fa63c2f2761b03f293c659fe982923fa",
+          "size": 122456,
+          "subdir": "linux-64",
+          "timestamp": 1542814864100,
+          "version": "1.3.10"
+      },
+      "two-because-satisfiability-1.2.11-h7b6447c_3.tar.bz2": {
+          "build": "h7b6447c_3",
+          "build_number": 3,
+          "depends": [],
+          "license": "zlib",
+          "license_family": "Other",
+          "md5": "2e5b81671cc2b53177b94b258b1658b2",
+          "name": "two-because-satisfiability",
+          "sha256": "1f07873d6aa0cd18760a7b215d9956f7fa63c2f2761b03f293c659fe982923fa",
+          "size": 122456,
+          "subdir": "linux-64",
+          "timestamp": 1542814864621,
+          "version": "1.2.11"
+      },
+      "two-because-satisfiability-1.2.10-h7b6447c_3.tar.bz2": {
+          "build": "h7b6447c_3",
+          "build_number": 3,
+          "depends": [],
+          "license": "zlib",
+          "license_family": "Other",
+          "md5": "2e5b81671cc2b53177b94b258b1658b2",
+          "name": "two-because-satisfiability",
+          "sha256": "1f07873d6aa0cd18760a7b215d9956f7fa63c2f2761b03f293c659fe982923fa",
+          "size": 122456,
+          "subdir": "linux-64",
+          "timestamp": 1542814864100,
+          "version": "1.2.10"
+      },
+      "depends-on-older-1.2.10-h7b6447c_3.tar.bz2": {
+          "build": "h7b6447c_3",
+          "build_number": 3,
+          "depends": [
+              "two-because-satisfiability <1.2.11"
+          ],
+          "license": "zlib",
+          "license_family": "Other",
+          "md5": "2e5b81671cc2b53177b94b258b1658b2",
+          "name": "depends-on-older",
+          "sha256": "1f07873d6aa0cd18760a7b215d9956f7fa63c2f2761b03f293c659fe982923fa",
+          "size": 122456,
+          "subdir": "linux-64",
+          "timestamp": 1542814864100,
+          "version": "1.2.10"
+      },
+      "ancient-package-1.2.10-h7b6447c_3.tar.bz2": {
+          "build": "h7b6447c_3",
+          "build_number": 3,
+          "depends": [
+              "two-because-satisfiability <1.2.11"
+          ],
+          "license": "zlib",
+          "license_family": "Other",
+          "md5": "2e5b81671cc2b53177b94b258b1658b2",
+          "name": "ancient-package",
+          "sha256": "1f07873d6aa0cd18760a7b215d9956f7fa63c2f2761b03f293c659fe982923fa",
+          "size": 122456,
+          "subdir": "linux-64",
+          "timestamp": 1451623400000,
+          "version": "1.2.10"
+      }
+    },
+    "packages.conda": {
+        "one-gets-filtered-1.2.11-h7b6447c_3.conda": {
+            "build": "h7b6447c_3",
+            "build_number": 3,
+            "depends": [],
+            "license": "zlib",
+            "license_family": "Other",
+            "md5": "2e5b81671cc2b53177b94b258b1658b2",
+            "name": "one-gets-filtered",
+            "sha256": "1f07873d6aa0cd18760a7b215d9956f7fa63c2f2761b03f293c659fe982923fa",
+            "size": 122456,
+            "subdir": "linux-64",
+            "timestamp": 1542814864621,
+            "version": "1.2.11"
+        },
+        "one-gets-filtered-1.2.10-h7b6447c_3.conda": {
+            "build": "h7b6447c_3",
+            "build_number": 3,
+            "depends": [],
+            "license": "zlib",
+            "license_family": "Other",
+            "md5": "2e5b81671cc2b53177b94b258b1658b2",
+            "name": "one-gets-filtered",
+            "sha256": "1f07873d6aa0cd18760a7b215d9956f7fa63c2f2761b03f293c659fe982923fa",
+            "size": 122456,
+            "subdir": "linux-64",
+            "timestamp": 1542814864100,
+            "version": "1.2.10"
+        },
+        "one-gets-filtered-1.3.10-h7b6447c_3.conda": {
+            "build": "h7b6447c_3",
+            "build_number": 3,
+            "depends": [],
+            "license": "zlib",
+            "license_family": "Other",
+            "md5": "2e5b81671cc2b53177b94b258b1658b2",
+            "name": "one-gets-filtered",
+            "sha256": "1f07873d6aa0cd18760a7b215d9956f7fa63c2f2761b03f293c659fe982923fa",
+            "size": 122456,
+            "subdir": "linux-64",
+            "timestamp": 1542814864100,
+            "version": "1.3.10"
+        }
+    },
+  "removed": [],
+  "repodata_version": 1
+}
