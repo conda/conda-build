@@ -2,54 +2,57 @@ All of the people who have made at least one contribution to conda-build.
 Authors are sorted by number of commits.
 
 * Aaron Meurer
-* Ilan Schnell
 * Ray Donnelly
+* Ilan Schnell
 * Dan Blanchard
 * Kale Franz
 * sophia
 * Michael Sarahan
 * John Kirkham
 * Stuart Berg
+* Rachel
 * Ryan Grout
 * Darren Dale
-* Travis Swicegood
 * Jonathan J. Helmus
+* Travis Swicegood
+* Nehal J Wani
 * Matt Craig
 * Johannes Köster
 * Anthony Scopatz
+* James Sexton
 * Mandeep Bhutani
 * Patrick Snape
 * Sean
 * Travis Oliphant
-* James Sexton
-* Nehal J Wani
+* Rachel Rigdon
 * Harsh Gupta
 * Jasmine Sandhu
 * Matthias Gabriel
 * Marcel Bargull
-* Alex Wiltschko
 * Isuru Fernando
+* Alex Wiltschko
 * Min RK
 * Ullrich Koethe
 * Phil Elson
 * Jillian Rowe
 * Almar Klein
+* Teake Nutma
+* John Blischak
 * Scheah
 * Michael C. Grant
 * Alexander Sturm
-* Teake Nutma
-* John Blischak
 * Tim Snyder
 * neok-m4700
 * Richard Frank
 * Filipe Fernandes
 * Matthieu Dartiailh
+* Christoph Buchner
 * Brent Pedersen
 * James Abbott
 * Patrick Sodré
 * Bruno Oliveira
 * Bryan W. Weber
-* Rachel Rigdon
+* soapy1
 * Thomas A Caswell
 * Mario Juric
 * Ivan Kalev
@@ -57,6 +60,7 @@ Authors are sorted by number of commits.
 * David Hirschfeld
 * Elliot Hughes
 * Amir MOHAMMADI
+* Chris Hogan
 * Heather Kelly
 * Geir Ove Myhr
 * Matt Rendina
@@ -65,27 +69,29 @@ Authors are sorted by number of commits.
 * Stephan Hoyer
 * Korijn van Golen
 * Trent Nelson
+* Tadeu Manoel
 * Peter Williams
 * Wes Turner
+* Tom Davidson
 * Guilherme Quentel Melo
 * Yu Feng
 * Julien Schueller
+* Toon Verstraelen
 * Matty G
 * Robert T. McGibbon
 * chapmanb
 * Remi Chateauneu
 * Rolando (Max) Espinoza
-* Tadeu Manoel
 * Stefan Zimmermann
 * Thomas Kluyver
 * Martin Bergtholdt
 * Eric Dill
 * Derek Ludwig
 * Vlad Frolov
+* Christopher Burr
 * todd.m.tomashek
 * Marius van Niekerk
 * Michael Cormier
-* Christoph Buchner
 * Siu Kwan Lam
 * whitequark
 * joe-hartshorn
@@ -105,13 +111,15 @@ Authors are sorted by number of commits.
 * Matt Swain
 * Robert Wall
 * Yann
-* Tom Davidson
 * stuertz
 * aleksey-orekhov
 * Evan Hubinger
 * Johannes Bauer
 * Jan-Hendrik Prinz
 * Alex Kovner
+* Kai Tietz
+* Chris Burr
+* Harun Reşit Zafer
 * Joseph Crail
 * Andres Guzman-Ballen
 * Riccardo Vianello
@@ -154,7 +162,6 @@ Authors are sorted by number of commits.
 * Thomas Holder
 * Bill Little
 * Marco Rossi
-* soapy1
 * Bradley Kreider
 * jlas
 * Richard Hattersley
@@ -168,6 +175,13 @@ Authors are sorted by number of commits.
 * mel
 * csoja
 * Axel Huebl
-* Rachel
+* Zane Dufour
+* Gabriel Reis
+* Julian Rüth
+* satoshi
+* Uilian Ries
+* Jayaramchandar Pazhanikumar
+* Shaun Walbridge
+* spalmrot-tic
 
 

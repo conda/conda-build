@@ -5,20 +5,20 @@
   - msarahan@continuum.io
   aliases:
   - Mike Sarahan
-  num_commits: 66
+  num_commits: 78
   first_commit: 2015-09-04 21:31:08
 - name: Jonathan J. Helmus
   email: jjhelmus@gmail.com
   aliases:
   - Jonathan Helmus
-  num_commits: 30
+  num_commits: 37
   first_commit: 2014-06-09 17:25:05
   github: jjhelmus
 - name: Isuru Fernando
   email: isuruf@gmail.com
   alternate_emails:
   - isuru.11@cse.mrt.ac.lk
-  num_commits: 16
+  num_commits: 17
   first_commit: 2017-06-16 15:14:34
   github: isuruf
 - name: Dan Blanchard
@@ -41,7 +41,7 @@
   email: teake.nutma@gmail.com
   alternate_emails:
   - t.a.nutma@rug.nl
-  num_commits: 8
+  num_commits: 9
   first_commit: 2018-08-16 10:53:19
   github: teake
 - name: Phil Elson
@@ -232,7 +232,7 @@
   github: hajs
 - name: Christoph Buchner
   email: bilderbuchi@users.noreply.github.com
-  num_commits: 2
+  num_commits: 6
   first_commit: 2018-03-22 14:11:45
   github: bilderbuchi
 - name: iainsgillis
@@ -344,7 +344,7 @@
   github: ClinicalGraphics
 - name: John Blischak
   email: jdblischak@gmail.com
-  num_commits: 8
+  num_commits: 9
   first_commit: 2017-08-11 13:23:55
   github: jdblischak
 - name: Floris Bruynooghe
@@ -414,7 +414,7 @@
 - name: Ray Donnelly
   email: mingw.android@gmail.com
   github: mingwandroid
-  num_commits: 308
+  num_commits: 392
   first_commit: 2016-03-06 18:52:51
 - name: Paul Madden
   email: maddenp@colorado.edu
@@ -464,9 +464,11 @@
   github: gdementen
 - name: Tadeu Manoel
   email: tadeu@esss.com.br
-  num_commits: 3
+  num_commits: 4
   first_commit: 2016-02-18 14:33:53
   github: ESSS
+  alternate_emails:
+  - tadeu@users.noreply.github.com
 - name: Robert Coop
   email: coopster@gmail.com
   github: RobertCoop
@@ -617,7 +619,7 @@
   github: yannpaul
 - name: Tom Davidson
   email: tjd@alum.mit.edu
-  num_commits: 2
+  num_commits: 4
   first_commit: 2018-07-04 16:44:19
   github: tjd2002
 - name: Thomas Kluyver
@@ -681,7 +683,7 @@
   github: yoavram
 - name: Nehal J Wani
   email: nehaljw.kkd1@gmail.com
-  num_commits: 20
+  num_commits: 32
   first_commit: 2017-06-25 06:04:10
   github: nehaljwani
 - name: John Kirkham
@@ -697,7 +699,7 @@
 - name: Anthony Scopatz
   email: scopatz@gmail.com
   github: scopatz
-  num_commits: 23
+  num_commits: 24
   first_commit: 2014-10-26 14:04:48
 - name: Martin Bergtholdt
   email: martin.bergtholdt@philips.com
@@ -740,7 +742,7 @@
   github: gqmelo
 - name: soapy1
   email: scastellarin@anaconda.com
-  num_commits: 1
+  num_commits: 6
   first_commit: 2018-10-22 16:40:33
   github: soapy1
 - name: Yu Feng
@@ -798,7 +800,7 @@
   github: dougalsutherland
 - name: James Sexton
   email: TwistedLadder@gmail.com
-  num_commits: 21
+  num_commits: 23
   first_commit: 2017-07-28 16:39:11
   github: Bezier89
 - name: Amir MOHAMMADI
@@ -888,11 +890,79 @@
   first_commit: 2019-01-26 13:17:33
 - name: Rachel
   email: rrigdon@anaconda.com
-  num_commits: 1
+  num_commits: 45
   first_commit: 2019-01-24 14:12:19
   github: rrigdon
 - name: Rachel Rigdon
   email: 45607889+rrigdon@users.noreply.github.com
-  num_commits: 6
+  num_commits: 21
   first_commit: 2019-01-24 15:12:09
   github: rrigdon
+- name: Zane Dufour
+  email: zane.dufour@gmail.com
+  github: zdog234
+  aliases:
+  - zdog234
+  num_commits: 1
+  first_commit: 2019-02-28 08:50:28
+- name: Chris Hogan
+  email: c096h800@gmail.com
+  num_commits: 5
+  first_commit: 2019-01-31 13:02:27
+- name: Gabriel Reis
+  email: gabriel.reis@gazprom-mt.com
+  num_commits: 1
+  first_commit: 2019-02-19 09:26:21
+  github: gabrielcnr
+- name: Julian Rüth
+  email: julian.rueth@fsfe.org
+  num_commits: 1
+  first_commit: 2019-04-26 11:13:44
+  github: saraedum
+- name: satoshi
+  email: satoshi.yagi@yahoo.com
+  num_commits: 1
+  first_commit: 2019-05-07 12:38:29
+- name: Uilian Ries
+  email: uilianries@gmail.com
+  num_commits: 1
+  first_commit: 2019-03-05 08:37:58
+  github: uilianries
+- name: Jayaramchandar Pazhanikumar
+  email: jayaramchandar@gmail.com
+  num_commits: 1
+  first_commit: 2019-02-23 00:44:12
+  github: theultimate1
+- name: Kai Tietz
+  email: ktietz@anaconda.com
+  num_commits: 2
+  first_commit: 2019-04-04 02:38:29
+  github: katietz
+- name: Toon Verstraelen
+  email: Toon.Verstraelen@UGent.be
+  num_commits: 4
+  first_commit: 2019-03-22 08:45:40
+  github: tovrstra
+- name: Shaun Walbridge
+  email: shaun.walbridge@gmail.com
+  num_commits: 1
+  first_commit: 2019-01-30 00:47:29
+  github: scw
+- name: Christopher Burr
+  email: christopher.burr@cern.ch
+  num_commits: 3
+  first_commit: 2019-02-10 12:42:33
+  github: chrisburr
+- name: Chris Burr
+  email: chrisburr@users.noreply.github.com
+  num_commits: 2
+  first_commit: 2019-02-10 08:32:58
+- name: Harun Reşit Zafer
+  email: harunzafer@gmail.com
+  num_commits: 2
+  first_commit: 2019-02-25 12:33:19
+  github: hrzafer
+- name: spalmrot-tic
+  email: steve.palmroth@tudor.com
+  num_commits: 1
+  first_commit: 2019-03-19 15:29:25
