@@ -390,7 +390,7 @@ def update_index(dir_paths, config=None, force=False, check_md5=False, remove=Fa
     if not PY3:
         dir_paths = [path.decode(getpreferredencoding()) for path in dir_paths]
 
-    if current_index_versions and isinstance(current_index_versions, string_types):
+    if isinstance(current_index_versions, string_types):
         with open(current_index_versions) as f:
             current_index_versions = yaml.safe_load(f)
 

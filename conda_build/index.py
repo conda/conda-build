@@ -225,7 +225,6 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
             log_context = partial(utils.LoggingContext, logging.WARN, loggers=loggers)
         else:
             log_context = partial(utils.LoggingContext, logging.CRITICAL + 1, loggers=loggers)
-            capture = utils.capture
         with log_context():
             # this is where we add the "local" channel.  It's a little smarter than conda, because
             #     conda does not know about our output_folder when it is not the default setting.
@@ -1023,8 +1022,7 @@ class ChannelIndex(object):
                         _ensure_valid_channel(self.channel_root, subdir)
                         repodata_from_packages[subdir] = self.index_subdir(
                             subdir, verbose=verbose, progress=progress,
-                            shared_format_cache=shared_format_cache,
-                            REPODATA_FROM_PKGS_JSON_FN)
+                            shared_format_cache=shared_format_cache)
 
                         self._write_repodata(subdir, repodata_from_packages[subdir],
                                              REPODATA_FROM_PKGS_JSON_FN)
@@ -1043,7 +1041,7 @@ class ChannelIndex(object):
                     self._write_repodata(subdir, patched_repodata[subdir], REPODATA_JSON_FN)
                     current_repodata = _build_current_repodata(subdir, patched_repodata[subdir],
                                                                pins=current_index_versions)
-                    self._write_repodata(subdir, current_repodata, fn="current_repodata.json")
+                    self._write_repodata(subdir, current_repodata, json_filename="current_repodata.json")
 
                 # Step 5. Augment repodata with additional information.
                 augmented_repodata = _augment_repodata(subdirs, patched_repodata, patch_instructions)
