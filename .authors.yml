@@ -953,10 +953,10 @@
   num_commits: 3
   first_commit: 2019-02-10 12:42:33
   github: chrisburr
-- name: Chris Burr
-  email: chrisburr@users.noreply.github.com
-  num_commits: 2
-  first_commit: 2019-02-10 08:32:58
+  aliases:
+    - Chris Burr
+  alternate_emails:
+    - email: chrisburr@users.noreply.github.com
 - name: Harun Reşit Zafer
   email: harunzafer@gmail.com
   num_commits: 2
@@ -966,3 +966,4 @@
   email: steve.palmroth@tudor.com
   num_commits: 1
   first_commit: 2019-03-19 15:29:25
+  github: spalmrot-tic

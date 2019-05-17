@@ -1,4 +1,38 @@
 # current developments
+2019-05-17 3.18.0:
+------------------
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @msarahan
+* @rrigdon
+* @jjhelmus
+* @nehaljwani
+* @scopatz
+* @Bezier89
+* @rrigdon
+* @isuruf
+* @teake
+* @jdblischak
+* @bilderbuchi
+* @soapy1
+* @ESSS
+* @tjd2002
+* @tovrstra
+* @chrisburr
+* @katietz
+* @hrzafer
+* @zdog234
+* @gabrielcnr
+* @saraedum
+* @uilianries
+* @theultimate1
+* @scw
+* @spalmrot-tic
+
+
 2019-01-26 3.17.8:
 ------------------
 
