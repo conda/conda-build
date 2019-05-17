@@ -61,6 +61,7 @@ Authors are sorted by number of commits.
 * Elliot Hughes
 * Amir MOHAMMADI
 * Chris Hogan
+* Christopher Burr
 * Heather Kelly
 * Geir Ove Myhr
 * Matt Rendina
@@ -88,7 +89,6 @@ Authors are sorted by number of commits.
 * Eric Dill
 * Derek Ludwig
 * Vlad Frolov
-* Christopher Burr
 * todd.m.tomashek
 * Marius van Niekerk
 * Michael Cormier
@@ -117,8 +117,8 @@ Authors are sorted by number of commits.
 * Johannes Bauer
 * Jan-Hendrik Prinz
 * Alex Kovner
+* Zane Dufour
 * Kai Tietz
-* Chris Burr
 * Harun Reşit Zafer
 * Joseph Crail
 * Andres Guzman-Ballen
@@ -175,7 +175,6 @@ Authors are sorted by number of commits.
 * mel
 * csoja
 * Axel Huebl
-* Zane Dufour
 * Gabriel Reis
 * Julian Rüth
 * satoshi

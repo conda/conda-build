@@ -903,12 +903,13 @@
   github: zdog234
   aliases:
   - zdog234
-  num_commits: 1
+  num_commits: 2
   first_commit: 2019-02-28 08:50:28
 - name: Chris Hogan
   email: c096h800@gmail.com
   num_commits: 5
   first_commit: 2019-01-31 13:02:27
+  github: ChristopherHogan
 - name: Gabriel Reis
   email: gabriel.reis@gazprom-mt.com
   num_commits: 1
@@ -923,6 +924,7 @@
   email: satoshi.yagi@yahoo.com
   num_commits: 1
   first_commit: 2019-05-07 12:38:29
+  github: satoshi
 - name: Uilian Ries
   email: uilianries@gmail.com
   num_commits: 1
@@ -950,13 +952,13 @@
   github: scw
 - name: Christopher Burr
   email: christopher.burr@cern.ch
-  num_commits: 3
+  num_commits: 5
   first_commit: 2019-02-10 12:42:33
   github: chrisburr
   aliases:
-    - Chris Burr
+  - Chris Burr
   alternate_emails:
-    - email: chrisburr@users.noreply.github.com
+  - chrisburr@users.noreply.github.com
 - name: Harun Reşit Zafer
   email: harunzafer@gmail.com
   num_commits: 2

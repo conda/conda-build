@@ -72,6 +72,7 @@ David Hirschfeld <david.hirschfeld@gazprom-mt.com>
 Elliot Hughes <e.hughes@winton.com>
 Amir MOHAMMADI <amir.mohammadi@idiap.ch>
 Chris Hogan <c096h800@gmail.com>
+Christopher Burr <christopher.burr@cern.ch> Chris Burr <chrisburr@users.noreply.github.com>
 Heather Kelly <heather999@users.noreply.github.com> heather999 <heather999@users.noreply.github.com>
 Geir Ove Myhr <Geir.Ove.Myhr@lr.org>
 Matt Rendina <mrendina@stsci.edu>
@@ -99,7 +100,6 @@ Martin Bergtholdt <martin.bergtholdt@philips.com>
 Eric Dill <edill@bnl.gov>
 Derek Ludwig <dludwig@continuum.io>
 Vlad Frolov <frolvlad@gmail.com>
-Christopher Burr <christopher.burr@cern.ch>
 todd.m.tomashek <todd.m.tomashek@intel.com> tomashek <todd.m.tomashek@intel.com>
 Marius van Niekerk <marius.v.niekerk@gmail.com> Marius van Niekerk <mvanniekerk@flatiron.com>
 Michael Cormier <u1138933@kingspeak23.wasatch.peaks>
@@ -128,8 +128,8 @@ Evan Hubinger <evanjhub@gmail.com>
 Johannes Bauer <git@tatome.de>
 Jan-Hendrik Prinz <jan.prinz@gmx.de>
 Alex Kovner <dev@alexkovner.com>
+Zane Dufour <zane.dufour@gmail.com> zdog234 <zane.dufour@gmail.com>
 Kai Tietz <ktietz@anaconda.com>
-Chris Burr <chrisburr@users.noreply.github.com>
 Harun Reşit Zafer <harunzafer@gmail.com>
 Joseph Crail <jbcrail@gmail.com>
 Andres Guzman-Ballen <andres.guzman-ballen@intel.com>
@@ -186,7 +186,6 @@ Mark Wiebe <mwwiebe@gmail.com>
 mel <mel@anybodytech.com>
 csoja <crystal.soja@continuum.io>
 Axel Huebl <axel.huebl@plasma.ninja>
-Zane Dufour <zane.dufour@gmail.com> zdog234 <zane.dufour@gmail.com>
 Gabriel Reis <gabriel.reis@gazprom-mt.com>
 Julian Rüth <julian.rueth@fsfe.org>
 satoshi <satoshi.yagi@yahoo.com>
