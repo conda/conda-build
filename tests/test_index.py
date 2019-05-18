@@ -580,7 +580,8 @@ def test_no_shared_format_cache(testing_workdir, mocker):
     # mock the extract function, so that we can assert that it is not called
     #     with the .tar.bz2, because the .conda should be preferred
     cph_extract = mocker.spy(conda_package_handling.api, 'extract')
-    conda_build.index.update_index(testing_workdir, channel_name='test-channel', shared_format_cache=False)
+    # debug here uses a single-threaded bypass of the ProcessPool.  Mocking doesn't work otherwise.
+    conda_build.index.update_index(testing_workdir, channel_name='test-channel', shared_format_cache=False, debug=True)
     # extract will get called twice.  It's not really safe to assume that .conda files will be the
     #     exact same as .tar.bz2, since they can be uploaded separately.
     cph_extract.assert_any_call(test_package_path + '.conda', mock.ANY, 'info')
@@ -619,7 +620,7 @@ def test_current_index_reduces_space():
     }
     # conda 4.7 removes .tar.bz2 files in favor of .conda files
     if conda_47:
-        del tar_bz2_keys["one-gets-filtered-1.3.10-h7b6447c_3.tar.bz2"]
+        tar_bz2_keys.remove("one-gets-filtered-1.3.10-h7b6447c_3.tar.bz2")
 
     # .conda files will replace .tar.bz2 files.  Older packages that are necessary for satisfiability will remain
     assert set(trimmed_repodata['packages'].keys()) == tar_bz2_keys
@@ -629,8 +630,8 @@ def test_current_index_reduces_space():
     # we can keep more than one version series using a collection of keys
     trimmed_repodata = conda_build.index._build_current_repodata("linux-64", repodata, {'one-gets-filtered': ['1.2', '1.3']})
     if conda_47:
-        assert set(trimmed_repodata['packages.conda'].keys()) == {"one-gets-filtered-1.2.10-h7b6447c_3.conda",
-                                                                "one-gets-filtered-1.3.10-h7b6447c_3.conda"}
+        assert set(trimmed_repodata['packages.conda'].keys()) == {"one-gets-filtered-1.2.11-h7b6447c_3.conda",
+                                                                  "one-gets-filtered-1.3.10-h7b6447c_3.conda"}
     else:
         assert set(trimmed_repodata['packages'].keys()) == tar_bz2_keys | {"one-gets-filtered-1.2.11-h7b6447c_3.tar.bz2"}
 

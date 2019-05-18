@@ -1,0 +1,26 @@
+Enhancements:
+-------------
+
+* rearrange steps in index.py to optimize away unnecessary work
+* restore parallel extract and hash in index operations
+
+Bug fixes:
+----------
+
+* <news item>
+
+Deprecations:
+-------------
+
+* <news item>
+
+Docs:
+-----
+
+* <news item>
+
+Other:
+------
+
+* <news item>
+

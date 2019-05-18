@@ -7,7 +7,6 @@ import bz2
 from collections import OrderedDict, defaultdict
 import copy
 from datetime import datetime
-
 import json
 from numbers import Number
 import os
@@ -38,6 +37,10 @@ import logging
 import libarchive
 import conda_package_handling.api
 
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import Future, Executor
+from threading import Lock
+
 #  BAD BAD BAD - conda internals
 from conda.core.subdir_data import SubdirData
 from conda.models.channel import Channel
@@ -67,51 +70,32 @@ except ImportError:
 
 log = get_logger(__name__)
 
-try:
-    from conda.common.io import ThreadLimitedThreadPoolExecutor, as_completed
-except ImportError:
-    from concurrent.futures import ThreadPoolExecutor, _base, as_completed
-    from concurrent.futures.thread import _WorkItem
 
-    class ThreadLimitedThreadPoolExecutor(ThreadPoolExecutor):
+# use this for debugging, because ProcessPoolExecutor isn't pdb/ipdb friendly
+class DummyExecutor(Executor):
+    def __init__(self):
+        self._shutdown = False
+        self._shutdownLock = Lock()
 
-        def __init__(self, max_workers=10):
-            super(ThreadLimitedThreadPoolExecutor, self).__init__(max_workers)
+    def submit(self, fn, *args, **kwargs):
+        with self._shutdownLock:
+            if self._shutdown:
+                raise RuntimeError('cannot schedule new futures after shutdown')
 
-        def submit(self, fn, *args, **kwargs):
-            """
-            This is an exact reimplementation of the `submit()` method on the parent class, except
-            with an added `try/except` around `self._adjust_thread_count()`.  So long as there is at
-            least one living thread, this thread pool will not throw an exception if threads cannot
-            be expanded to `max_workers`.
+            f = Future()
+            try:
+                result = fn(*args, **kwargs)
+            except BaseException as e:
+                f.set_exception(e)
+            else:
+                f.set_result(result)
 
-            In the implementation, we use "protected" attributes from concurrent.futures (`_base`
-            and `_WorkItem`). Consider vendoring the whole concurrent.futures library
-            as an alternative to these protected imports.
+            return f
 
-            https://github.com/agronholm/pythonfutures/blob/3.2.0/concurrent/futures/thread.py#L121-L131  # NOQA
-            https://github.com/python/cpython/blob/v3.6.4/Lib/concurrent/futures/thread.py#L114-L124
-            """
-            with self._shutdown_lock:
-                if self._shutdown:
-                    raise RuntimeError('cannot schedule new futures after shutdown')
+    def shutdown(self, wait=True):
+        with self._shutdownLock:
+            self._shutdown = True
 
-                f = _base.Future()
-                w = _WorkItem(f, fn, args, kwargs)
-
-                self._work_queue.put(w)
-                try:
-                    self._adjust_thread_count()
-                except RuntimeError:
-                    # RuntimeError: can't start new thread
-                    # See https://github.com/conda/conda/issues/6624
-                    if len(self._threads) > 0:
-                        # It's ok to not be able to start new threads if we already have at least
-                        # one thread alive.
-                        pass
-                    else:
-                        raise
-                return f
 
 try:
     from conda.base.constants import NAMESPACES_MAP, NAMESPACE_PACKAGE_NAMES
@@ -148,7 +132,7 @@ channel_data = {}
 # TODO: support for libarchive seems to have broken ability to use multiple threads here.
 #    The new conda format is so much faster that it more than makes up for it.  However, it
 #    would be nice to fix this at some point.
-MAX_THREADS_DEFAULT = 1  # os.cpu_count() if (hasattr(os, "cpu_count") and os.cpu_count() > 1) else 1
+MAX_THREADS_DEFAULT = os.cpu_count() if (hasattr(os, "cpu_count") and os.cpu_count() > 1) else 1
 LOCK_TIMEOUT_SECS = 3 * 3600
 LOCKFILE_NAME = ".lock"
 DEFAULT_SUBDIRS = (
@@ -311,7 +295,7 @@ def _ensure_valid_channel(local_folder, subdir):
 
 def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=None, threads=MAX_THREADS_DEFAULT,
                  verbose=False, progress=False, hotfix_source_repo=None, subdirs=None, warn=True,
-                 shared_format_cache=True, current_index_versions=None):
+                 shared_format_cache=True, current_index_versions=None, debug=False):
     """
     If dir_path contains a directory named 'noarch', the path tree therein is treated
     as though it's a full channel, with a level of subdirs, each subdir having an update
@@ -332,11 +316,12 @@ def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=N
                             hotfix_source_repo=hotfix_source_repo, shared_format_cache=shared_format_cache,
                             current_index_versions=current_index_versions)
     return ChannelIndex(dir_path, channel_name, subdirs=subdirs, threads=threads,
-                        deep_integrity_check=check_md5).index(patch_generator=patch_generator, verbose=verbose,
-                                                              progress=progress,
-                                                              hotfix_source_repo=hotfix_source_repo,
-                                                              shared_format_cache=shared_format_cache,
-                                                              current_index_versions=current_index_versions)
+                        deep_integrity_check=check_md5, debug=debug).index(
+                            patch_generator=patch_generator, verbose=verbose,
+                            progress=progress,
+                            hotfix_source_repo=hotfix_source_repo,
+                            shared_format_cache=shared_format_cache,
+                            current_index_versions=current_index_versions)
 
 
 def _determine_namespace(info):
@@ -738,10 +723,10 @@ def _cache_recipe(tmpdir, recipe_cache_path):
             except (ConstructorError, ParserError, ScannerError):
                 pass
     try:
-        recipe_json_str = json.dumps(recipe_json, skipkeys=True)
+        recipe_json_str = json.dumps(recipe_json)
     except TypeError:
         recipe_json.get('requirements', {}).pop('build')
-        recipe_json_str = json.dumps(recipe_json, skipkeys=True)
+        recipe_json_str = json.dumps(recipe_json)
     with open(recipe_cache_path, 'w') as fh:
         fh.write(recipe_json_str)
     return recipe_json
@@ -988,11 +973,11 @@ def _build_current_repodata(subdir, repodata, pins):
 class ChannelIndex(object):
 
     def __init__(self, channel_root, channel_name, subdirs=None, threads=MAX_THREADS_DEFAULT,
-                 deep_integrity_check=False):
+                 deep_integrity_check=False, debug=False):
         self.channel_root = abspath(channel_root)
         self.channel_name = channel_name or basename(channel_root.rstrip('/'))
         self._subdirs = subdirs
-        self.thread_executor = ThreadLimitedThreadPoolExecutor(threads)
+        self.thread_executor = DummyExecutor() if debug else ProcessPoolExecutor(threads)
         self.deep_integrity_check = deep_integrity_check
 
     def index(self, patch_generator, hotfix_source_repo=None, verbose=False, progress=False, shared_format_cache=True,
@@ -1015,7 +1000,7 @@ class ChannelIndex(object):
             with utils.try_acquire_locks([utils.get_lock(self.channel_root)], timeout=900):
                 # Step 2. Collect repodata from packages, save to pkg_repodata.json file
                 repodata_from_packages = {}
-                with tqdm(total=len(subdirs), disable=(verbose or not progress)) as t:
+                with tqdm(total=len(subdirs), disable=(verbose or not progress), leave=False) as t:
                     for subdir in subdirs:
                         t.set_description("Subdir: %s" % subdir)
                         t.update()
@@ -1030,12 +1015,12 @@ class ChannelIndex(object):
                 # Step 3. Apply patch instructions.
                 patched_repodata = {}
                 patch_instructions = {}
-                for subdir in subdirs:
+                for subdir in tqdm(subdirs, desc="Patching repodata", leave=False):
                     patched_repodata[subdir], patch_instructions[subdir] = self._patch_repodata(
                         subdir, repodata_from_packages[subdir], patch_generator)
 
                 # Step 4. Save patched and augmented repodata.
-                for subdir in subdirs:
+                for subdir in tqdm(subdirs, desc="Saving repodata to disk", leave=False):
                     # If the contents of repodata have changed, write a new repodata.json file.
                     # Also create associated index.html.
                     self._write_repodata(subdir, patched_repodata[subdir], REPODATA_JSON_FN)
@@ -1049,7 +1034,7 @@ class ChannelIndex(object):
                 # Step 6. Create and save repodata2.json
                 # Also create associated index.html.
                 repodata2 = {}
-                for subdir in subdirs:
+                for subdir in tqdm(subdirs, desc="Writing repodata2 and subdir index html", leave=False):
                     repodata2[subdir] = self._create_repodata2(subdir, augmented_repodata[subdir])
                     changed = self._write_repodata2(subdir, repodata2[subdir])
                     if changed:
@@ -1117,7 +1102,7 @@ class ChannelIndex(object):
             #     not using md5 here because it takes too long. If needing to do full md5 checks,
             #     use the --deep-integrity-check flag / self.deep_integrity_check option.
             update_set = self._calculate_update_set(
-                subdir, add_set, old_repodata_fns, stat_cache,
+                subdir, fns_in_subdir, old_repodata_fns, stat_cache,
                 verbose=verbose, progress=progress
             )
             # unchanged_set: packages in old repodata whose information can carry straight
@@ -1139,7 +1124,7 @@ class ChannelIndex(object):
                         new_repodata_packages[fn] = rec
                     else:
                         new_repodata_conda_packages[fn] = rec
-                except IOError:
+                except (IOError, JSONDecodeError):
                     update_set.add(fn)
 
             # Invalidate cached files for update_set.
@@ -1150,24 +1135,27 @@ class ChannelIndex(object):
             hash_extract_set = sorted(set(concatv(add_set, update_set)),
                                       key=lambda x: os.path.splitext(x)[1],
                                       reverse=True)
-            # log.info("hashing and extracting %d packages", len(hash_extract_set))
-            futures = tuple(self.thread_executor.submit(
-                self._extract_to_cache, subdir, fn, shared_format_cache
-            ) for fn in hash_extract_set)
-            with tqdm(desc="hash & extract packages for %s" % subdir,
-                      total=len(futures), disable=(verbose or not progress)) as t:
-                for future in as_completed(futures):
-                    fn, mtime, size, index_json = future.result()
-                    # fn can be None if the file was corrupt or no longer there
-                    if fn and mtime:
-                        # the progress bar shows package names, but we don't know what their name is before they complete.
-                        t.set_description("Hash & extract: %s" % fn)
-                        t.update()
-                        stat_cache[fn] = {'mtime': int(mtime), 'size': size}
-                        if fn.endswith(".conda"):
-                            new_repodata_conda_packages[fn] = index_json
-                        else:
-                            new_repodata_packages[fn] = index_json
+
+            # split up the set by .conda packages first, then .tar.bz2.  This avoids race conditions
+            #    with execution in parallel that would end up in the same place.
+            for conda_format in tqdm(CONDA_TARBALL_EXTENSIONS, desc="File format:", leave=False):
+                futures = tuple(self.thread_executor.submit(
+                    ChannelIndex._extract_to_cache, self.channel_root, subdir, fn, shared_format_cache
+                ) for fn in hash_extract_set if fn.endswith(conda_format))
+                with tqdm(desc="hash & extract packages for %s" % subdir,
+                          total=len(futures), disable=(verbose or not progress), leave=False) as t:
+                    for future in as_completed(futures):
+                        fn, mtime, size, index_json = future.result()
+                        # fn can be None if the file was corrupt or no longer there
+                        if fn and mtime:
+                            # the progress bar shows package names, but we don't know what their name is before they complete.
+                            t.set_description("Updated: %s" % fn)
+                            t.update()
+                            stat_cache[fn] = {'mtime': int(mtime), 'size': size}
+                            if fn.endswith(".conda"):
+                                new_repodata_conda_packages[fn] = index_json
+                            else:
+                                new_repodata_packages[fn] = index_json
             new_repodata = {
                 'packages': new_repodata_packages,
                 'packages.conda': new_repodata_conda_packages,
@@ -1199,38 +1187,43 @@ class ChannelIndex(object):
         ensure(join(self.channel_root, 'icons'))
         ensure(join(cache_path, 'recipe_log'))
 
-    def _calculate_update_set(self, subdir, fns_in_subdir, old_repodata_fns, stat_cache, verbose=False, progress=False):
+    def _calculate_update_set(self, subdir, fns_in_subdir, old_repodata_fns, stat_cache,
+                              verbose=False, progress=True):
         # Determine the packages that already exist in repodata, but need to be updated.
         # We're not using md5 here because it takes too long.
         candidate_fns = fns_in_subdir & old_repodata_fns
         subdir_path = join(self.channel_root, subdir)
 
-        stat_results = tuple((fn, os.lstat(
-            join(subdir_path, fn))) for fn in candidate_fns)
-
-        update_set = set(fn for fn, stat_result in tqdm(stat_results, desc="Finding updated files",
-                                                        disable=(verbose or not progress))
-                         if int(stat_result.st_mtime) != stat_cache.get(fn, {}).get('mtime') or
-                         stat_result.st_size != stat_cache.get(fn, {}).get('size'))
+        update_set = set()
+        for fn in tqdm(iter(candidate_fns), desc="Finding updated files",
+                       disable=(verbose or not progress), leave=False):
+            if fn not in stat_cache:
+                update_set.add(fn)
+            else:
+                stat_result = os.stat(join(subdir_path, fn))
+                if (int(stat_result.st_mtime) != int(stat_cache[fn]['mtime']) or
+                        stat_result.st_size != stat_cache[fn]['size']):
+                    update_set.add(fn)
         return update_set
 
-    def _extract_to_cache(self, subdir, fn, shared_format_cache):
+    @staticmethod
+    def _extract_to_cache(channel_root, subdir, fn, shared_format_cache, second_try=False):
         # This method WILL reread the tarball. Probably need another one to exit early if
         # there are cases where it's fine not to reread.  Like if we just rebuild repodata
         # from the cached files, but don't use the existing repodata.json as a starting point.
-        subdir_path = join(self.channel_root, subdir)
-
-        # try to use any existing .conda format here, because extracting it will be much, much faster
-        # default value indicates either corrupt or removed file.  For corrupt, there
-        #      is an error message shown.
-        retval = fn, None, None, None
+        subdir_path = join(channel_root, subdir)
 
         # allow .conda files to reuse cache from .tar.bz2 and vice-versa.
         # Assumes that .tar.bz2 and .conda files have exactly the same
         # contents. This is convention, but not guaranteed, nor checked.
-        cache_fn = _remove_file_extension(fn) if shared_format_cache else fn
+        cache_fn = _remove_file_extension(fn) + '.tar.bz2' if shared_format_cache else fn
 
         abs_fn = os.path.join(subdir_path, fn)
+
+        stat_result = os.stat(abs_fn)
+        size = stat_result.st_size
+        mtime = stat_result.st_mtime
+        retval = fn, mtime, size, None
 
         index_cache_path = join(subdir_path, '.cache', 'index', cache_fn + '.json')
         about_cache_path = join(subdir_path, '.cache', 'about', cache_fn + '.json')
@@ -1241,8 +1234,9 @@ class ChannelIndex(object):
         icon_cache_path = join(subdir_path, '.cache', 'icon', cache_fn)
 
         log.debug("hashing, extracting, and caching %s" % fn)
+
         try:
-            if not os.path.exists(index_cache_path):
+            if second_try or not os.path.exists(index_cache_path):
                 with TemporaryDirectory() as tmpdir:
                     conda_package_handling.api.extract(abs_fn, dest_dir=tmpdir, components="info")
                     index_file = os.path.join(tmpdir, 'info', 'index.json')
@@ -1259,47 +1253,51 @@ class ChannelIndex(object):
                     recipe_json = _cache_recipe(tmpdir, recipe_cache_path)
                     _cache_icon(tmpdir, recipe_json, icon_cache_path)
 
+                # decide what fields to filter out, like has_prefix
+                filter_fields = {
+                    'arch',
+                    'has_prefix',
+                    'mtime',
+                    'platform',
+                    'ucs',
+                    'requires_features',
+                    'binstar',
+                    'target-triplet',
+                    'machine',
+                    'operatingsystem',
+                }
+                for field_name in filter_fields & set(index_json):
+                    del index_json[field_name]
+
+                # calculate extra stuff to add to index.json cache, size, md5, sha256
+                #    This is done for both the old and possibly the new file format.
+                #    The old one is the one that shows up in repodata.json.  The new
+                #    one makes up the stat cache.
+                index_json.update(conda_package_handling.api.get_pkg_details(abs_fn))
+
+                with open(index_cache_path, 'w') as fh:
+                    json.dump(index_json, fh)
             else:
                 with open(index_cache_path) as f:
                     index_json = json.load(f)
 
-            # calculate extra stuff to add to index.json cache, size, md5, sha256
-            #    This is done for both the old and possibly the new file format.
-            #    The old one is the one that shows up in repodata.json.  The new
-            #    one makes up the stat cache.
-            stat_result = os.lstat(abs_fn)
-            size = stat_result.st_size
-            mtime = stat_result.st_mtime
-            index_json.update(conda_package_handling.api.get_pkg_details(abs_fn))
-
-            # decide what fields to filter out, like has_prefix
-            filter_fields = {
-                'arch',
-                'has_prefix',
-                'mtime',
-                'platform',
-                'ucs',
-                'requires_features',
-                'binstar',
-                'target-triplet',
-                'machine',
-                'operatingsystem',
-            }
-            for field_name in filter_fields & set(index_json):
-                del index_json[field_name]
-
-            with open(index_cache_path, 'w') as fh:
-                json.dump(index_json, fh)
+                # if we are sharing the cache, the filename of the thing in the cache is
+                #    ambiguous.  We need to update the md5, sha256, and size for the actual
+                #    file we have here
+                if index_json['size'] != size:
+                    index_json.update(conda_package_handling.api.get_pkg_details(abs_fn))
             retval = fn, mtime, size, index_json
-        except (libarchive.exception.ArchiveError, tarfile.ReadError, KeyError, EOFError) as e:
+        except (libarchive.exception.ArchiveError, tarfile.ReadError, KeyError,
+                EOFError, JSONDecodeError) as e:
+            if not second_try:
+                return ChannelIndex._extract_to_cache(channel_root, subdir, fn, shared_format_cache, second_try=True)
             log.error("Package %s appears to be corrupt.  Please remove it and re-download it" % abs_fn)
             log.error(str(e))
         return retval
 
     def _load_index_from_cache(self, subdir, fn, stat_cache, shared_format_cache):
-        cache_fn = fn
-        if shared_format_cache:
-            cache_fn = _remove_file_extension(fn)
+        # sharing a format cache means using the old name, since that's what everyone has.
+        cache_fn = _remove_file_extension(fn) + '.tar.bz2' if shared_format_cache else fn
         index_cache_path = join(self.channel_root, subdir, '.cache', 'index', cache_fn + '.json')
         log.debug("loading index cache %s" % index_cache_path)
 
@@ -1308,14 +1306,14 @@ class ChannelIndex(object):
 
         return index_json
 
-    def _load_all_from_cache(self, subdir, fn, shared_format_cache):
-        subdir_path = join(self.channel_root, subdir)
+    @staticmethod
+    def _load_all_from_cache(channel_root, subdir, fn, shared_format_cache):
+        subdir_path = join(channel_root, subdir)
         # allow .conda files to reuse cache from .tar.bz2 and vice-versa.
         # Assumes that .tar.bz2 and .conda files have exactly the same
         # contents. This is convention, but not guaranteed, nor checked.
-        cache_fn = fn
-        if shared_format_cache:
-            cache_fn = _remove_file_extension(fn)
+        # sharing a format cache means using the old name, since that's what everyone has.
+        cache_fn = _remove_file_extension(fn) + '.tar.bz2' if shared_format_cache else fn
 
         try:
             mtime = getmtime(join(subdir_path, fn))
@@ -1346,7 +1344,7 @@ class ChannelIndex(object):
             icon_ext = icon_cache_path.rsplit('.', 1)[-1]
             channel_icon_fn = "%s.%s" % (data['name'], icon_ext)
             icon_url = "icons/" + channel_icon_fn
-            icon_channel_path = join(self.channel_root, 'icons', channel_icon_fn)
+            icon_channel_path = join(channel_root, 'icons', channel_icon_fn)
             icon_md5 = utils.md5_file(icon_cache_path)
             icon_hash = "md5:%s:%s" % (icon_md5, getsize(icon_cache_path))
             data.update(icon_hash=icon_hash, icon_url=icon_url)
@@ -1376,8 +1374,7 @@ class ChannelIndex(object):
 
     def _write_repodata(self, subdir, repodata, json_filename):
         repodata_json_path = join(self.channel_root, subdir, json_filename)
-        new_repodata_binary = json.dumps(repodata, indent=2, sort_keys=True,
-                                  separators=(',', ': ')).encode("utf-8")
+        new_repodata_binary = json.dumps(repodata, indent=2, sort_keys=True,).replace("':'", "': '").encode("utf-8")
         write_result = _maybe_write(repodata_json_path, new_repodata_binary, write_newline_end=True)
         if write_result:
             repodata_bz2_path = repodata_json_path + ".bz2"
@@ -1448,7 +1445,7 @@ class ChannelIndex(object):
         package_mtimes = {}
 
         futures = tuple(self.thread_executor.submit(
-            self._load_all_from_cache, rec["subdir"], rec["fn"], shared_format_cache
+            ChannelIndex._load_all_from_cache, self.channel_root, rec["subdir"], rec["fn"], shared_format_cache
         ) for rec in reference_packages)
         for rec, future in zip(reference_packages, futures):
             data = future.result()
@@ -1471,7 +1468,7 @@ class ChannelIndex(object):
             if "commits" in pkg_dict:
                 del pkg_dict['commits']
         channeldata_path = join(self.channel_root, 'channeldata.json')
-        content = json.dumps(channeldata, indent=2, sort_keys=True, separators=(',', ': '))
+        content = json.dumps(channeldata, indent=2, sort_keys=True).replace("':'", "': '")
         _maybe_write(channeldata_path, content, True)
 
     def _load_patch_instructions_tarball(self, subdir, patch_generator):
@@ -1515,7 +1512,7 @@ class ChannelIndex(object):
             return {}
 
     def _write_patch_instructions(self, subdir, instructions):
-        new_patch = json.dumps(instructions, indent=2, sort_keys=True, separators=(',', ': '))
+        new_patch = json.dumps(instructions, indent=2, sort_keys=True).replace("':'", "': '")
         patch_instructions_path = join(self.channel_root, subdir, 'patch_instructions.json')
         _maybe_write(patch_instructions_path, new_patch, True)
 
@@ -1612,5 +1609,5 @@ class ChannelIndex(object):
 
     def _write_repodata2(self, subdir, repodata2):
         repodata_json_path = join(self.channel_root, subdir, "repodata2.json")
-        new_repodata = json.dumps(repodata2, indent=2, sort_keys=True, separators=(',', ': '))
+        new_repodata = json.dumps(repodata2, indent=2, sort_keys=True).replace("':'", "': '")
         return _maybe_write(repodata_json_path, new_repodata, True)
