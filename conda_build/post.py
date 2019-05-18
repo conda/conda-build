@@ -1,6 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import fnmatch
 from functools import partial
 import glob2
@@ -605,10 +605,10 @@ DEFAULT_WIN_WHITELIST = ['**/ADVAPI32.dll',
                          '**/api-ms-win*.dll']
 
 
-def _collect_needed_dsos(sysroots, files, run_prefix, sysroot_substitution, build_prefix, build_prefix_substitution):
+def _collect_needed_dsos(sysroots_files, files, run_prefix, sysroot_substitution, build_prefix, build_prefix_substitution):
     all_needed_dsos = set()
     needed_dsos_for_file = dict()
-    sysroot = sysroots[0] if sysroots else ''
+    sysroot = list(sysroots_files.keys())[0]
     for f in files:
         path = os.path.join(run_prefix, f)
         if not codefile_type(path):
@@ -705,38 +705,42 @@ def _print_msg(errors, text, verbose):
         print(text)
 
 
-def _lookup_in_system_whitelists(errors, whitelist, needed_dso, sysroots, msg_prelude, info_prelude,
+def _lookup_in_system_whitelists(errors, whitelist, needed_dso, sysroots_files, msg_prelude, info_prelude,
                                  sysroot_prefix, sysroot_substitution, verbose):
     # A system or ignored dependency. We should be able to find it in one of the CDT or
     # compiler packages on linux or in a sysroot folder on other OSes. These usually
     # start with '$RPATH/' which indicates pyldd did not find them, so remove that now.
     if needed_dso.startswith(sysroot_substitution):
-        replacements = [sysroot_substitution] + sysroots
+        replacements = [sysroot_substitution] + [sysroot for sysroot, _ in sysroots_files.items()]
     else:
         replacements = [needed_dso]
     in_whitelist = False
+    # It takes a very long time to glob in C:/Windows so cache it.
     for replacement in replacements:
         needed_dso_w = needed_dso.replace(sysroot_substitution, replacement)
-        in_whitelist = any([glob2.fnmatch.fnmatch(needed_dso_w, w) for w in whitelist])
+        from glob2.fnmatch import fnmatch, fnmatchcase
+        in_whitelist = any([fnmatch(needed_dso_w, w) for w in whitelist])
         if in_whitelist:
             n_dso_p = "Needed DSO {}".format(needed_dso_w)
             _print_msg(errors, '{}: {} found in the whitelist'.
-                        format(info_prelude, n_dso_p), verbose=verbose)
+                       format(info_prelude, n_dso_p), verbose=verbose)
             break
-    if not in_whitelist and len(sysroots):
+    if not in_whitelist and len(sysroots_files):
         # Check if we have a CDT package.
         dso_fname = os.path.basename(needed_dso)
         sysroot_files = []
         dirs_to_glob = []  # Optimization, ideally we'll not glob at all as it's slooow.
-        for sysroot in sysroots:
+        for sysroot, files in sysroots_files.items():
             sysroot_os = sysroot.replace('/', os.sep)
+            wild = os.path.join('**', dso_fname)
             if needed_dso.startswith(sysroot_substitution):
                 # Do we want to do this replace?
                 sysroot_files.append(needed_dso.replace(sysroot_substitution, sysroot_os))
             else:
-                dirs_to_glob.append(os.path.join(sysroot_os, '**', dso_fname))
-        for dir_to_glob in dirs_to_glob:
-            sysroot_files.extend(glob(dir_to_glob))
+                found = [file for file in files if fnmatchcase(file, wild)]
+                sysroot_files.extend(found)
+#        for dir_to_glob in dirs_to_glob:
+#            sysroot_files.extend(glob(dir_to_glob))
         if len(sysroot_files):
             # Removing sysroot_prefix is only *really* for Linux, though we could
             # use CONDA_BUILD_SYSROOT for macOS. We should figure out what to do about
@@ -906,9 +910,16 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
             whitelist = DEFAULT_WIN_WHITELIST
             build_is_host = True if sys.platform == 'win-32' else False
 
-    # LIEF is very slow at decoding some DSOs, so we only let it look at ones that we link to (and ones we
-    # have built).
-    all_needed_dsos, needed_dsos_for_file = _collect_needed_dsos(sysroots, files, run_prefix, sysroot_substitution,
+    # Sort the sysroots by the number of files in them so things can assume that
+    # the first sysroot is more important than others.
+    sysroots_files = dict()
+    for sysroot in sysroots:
+        from conda_build.utils import prefix_files
+        sysroots_files[sysroot] = prefix_files(sysroot)
+    sysroots_files = OrderedDict(sorted(sysroots_files.items(), key=lambda x: -len(x[1])))
+
+    all_needed_dsos, needed_dsos_for_file = _collect_needed_dsos(sysroots_files, files, run_prefix,
+                                                                 sysroot_substitution,
                                                                  build_prefix, build_prefix_substitution)
 
     prefix_owners, _, _, all_lib_exports = _map_file_to_package(
@@ -939,7 +950,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
 
     _show_linking_messages(files, errors, needed_dsos_for_file, build_prefix, run_prefix, pkg_name,
                            error_overlinking, runpath_whitelist, verbose, requirements_run, lib_packages,
-                           lib_packages_used, whitelist, sysroots, sysroot_prefix, sysroot_substitution, subdir)
+                           lib_packages_used, whitelist, sysroots_files, sysroot_prefix, sysroot_substitution, subdir)
 
     if lib_packages_used != lib_packages:
         info_prelude = "   INFO ({})".format(pkg_name)
