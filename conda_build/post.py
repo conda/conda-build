@@ -613,6 +613,8 @@ def _collect_needed_dsos(sysroots_files, files, run_prefix, sysroot_substitution
         path = os.path.join(run_prefix, f)
         if not codefile_type(path):
             continue
+        build_prefix = build_prefix.replace(os.sep, '/')
+        run_prefix = run_prefix.replace(os.sep, '/')
         needed = get_linkages_memoized(path, resolve_filenames=True, recurse=False,
                                        sysroot=sysroot,
                                        envroot=run_prefix)
@@ -623,7 +625,7 @@ def _collect_needed_dsos(sysroots_files, files, run_prefix, sysroot_substitution
         if build_prefix != run_prefix:
             needed = [n.replace(build_prefix, build_prefix_substitution) if n.startswith(build_prefix)
                     else n for n in needed]
-        needed = [os.path.relpath(n, run_prefix) if n.startswith(run_prefix)
+        needed = [os.path.relpath(n, run_prefix).replace(os.sep, '/') if n.startswith(run_prefix)
                   else n for n in needed]
         needed_dsos_for_file[f] = needed
         all_needed_dsos = all_needed_dsos.union(needed)
