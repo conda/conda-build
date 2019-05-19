@@ -1117,7 +1117,7 @@ class ChannelIndex(object):
             #     not using md5 here because it takes too long. If needing to do full md5 checks,
             #     use the --deep-integrity-check flag / self.deep_integrity_check option.
             update_set = self._calculate_update_set(
-                subdir, add_set, old_repodata_fns, stat_cache,
+                subdir, fns_in_subdir, old_repodata_fns, stat_cache,
                 verbose=verbose, progress=progress
             )
             # unchanged_set: packages in old repodata whose information can carry straight
