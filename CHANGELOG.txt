@@ -1,4 +1,19 @@
 # current developments
+2019-05-18 3.18.1:
+------------------
+
+Enhancements:
+-------------
+
+* rearrange steps in index.py to optimize away unnecessary work
+* restore parallel extract and hash in index operations
+
+Contributors:
+-------------
+
+* @msarahan
+
+
 2019-05-17 3.18.0:
 ------------------
 
