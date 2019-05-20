@@ -1,3 +1,4 @@
-requirements_file: requirements-docs.txt
+conda:
+  file: utils/environment.yml
 python:
   version: 3
