@@ -48,15 +48,16 @@ version of Visual Studio (VS):
 
 * Python 2.7 packages with Visual Studio 2008
 * Python 3.4 packages with VS 2010
-* Python 3.5 packages with VS 2015, 2017
-* Python 3.6 packages with VS 2015, 2017
-* Python 3.7 packages with VS 2015, 2017
+* Python 3.5 packages with VS 2015, (default) 2017
+* Python 3.6 packages with VS 2015, (default) 2017
+* Python 3.7 packages with VS 2015, (default) 2017
 
 Using these versions of VS to build packages for each of these
 versions of Python is also the practice used for the official
 python.org builds of Python. Currently VS 2008 and VS 2010 are
 available only through resellers, while VS 2015 and VS 2017 can
-be purchased online from Microsoft.
+be purchased online from Microsoft. Note there is also a community
+edition of VS 2015 and VS 2017 which may be used.
 
 
 Alternatives to Microsoft Visual Studio
@@ -197,7 +198,7 @@ Install Visual Studio
 If you have not already done so, install the appropriate
 version of Visual Studio:
 
-* For Python 3---Visual Studio 2015:
+* For Python 3---Visual Studio 2017:
 
   #. Choose Custom install.
 
@@ -275,19 +276,6 @@ should be installed when the package is installed.
    Cython. That API changes between NumPy versions, so it is
    important to use the same NumPy version at runtime that was used
    at build time.
-
-
-Create a conda_build_config.yaml
---------------------------------
-
-Conda build will default to using the VS 2015 compilers unless specified
-otherwise in a conda_build_config.yaml. Create a conda_build_config.yaml
-in the same directory as meta.yaml. It should have the form:
-
-.. code-block:: yaml
-
-    c_compiler:
-      - vs2017
 
 
 OPTIONAL: Add a test for the built package
@@ -381,40 +369,32 @@ To build a GDAL package:
      Choose Custom install. Choose to install X64 Compilers and Tools.
      Install Visual Studio 2008 Service Pack 1.
 
+
 2. Install Git.
    Because the GDAL package sources are retrieved from GitHub
    for the build, you must install Git.
 
    ``conda install git m2-patch conda-build``
 
+
 3. Get gdal-feedstock. For the purpose of this tutorial, we will be using a recipe from Anaconda.
 
    ``git clone https://github.com/AnacondaRecipes/gdal-feedstock.git``
 
-4. Once the repo is downloaded, add a conda_build_config.yaml to the gdal-feedstock directory.
 
-.. code-block:: yaml
-
-    c_compiler:
-      - vs2017
-
-    cxx_compiler:
-      - vs2017
-
-
-5. Use conda build to build the gdal-feedstock.
+4. Use conda build to build the gdal-feedstock.
 
    ``conda build gdal-feedstock``
 
 
-6. Check the output to make sure the build completed
+5. Check the output to make sure the build completed
    successfully. The output also contains the location of the
    final package file and a command to upload the package to
    Cloud. For this package in particular, there should be two
    packages outputted: libgdal and GDAL.
 
 
-7. In case of any linker or compiler errors, modify the recipe
+6. In case of any linker or compiler errors, modify the recipe
    and run it again.
 
 Let’s take a better look at what’s happening inside the gdal-feedstock.
@@ -463,14 +443,14 @@ tests scripts and requirements specified.
 For more information on how outputs work, see the :ref:`package-outputs`.
 
 Now, let's try to build GDAL against some build matrix.
-We will specify building against Numpy 1.11 and 1.10 using a conda build config.
+We will specify building against Python 3.7 and 3.5 using a conda build config.
 Add the following to your conda_build_config.yaml
 
 ..  code-block:: yaml
 
-    numpy:
-       - 1.11
-       - 1.16
+    python:
+       - 3.7
+       - 3.5
 
 
 Now you can build GDAL using conda build with the command
