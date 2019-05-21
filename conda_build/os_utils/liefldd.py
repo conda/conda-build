@@ -7,6 +7,7 @@ import glob2
 import hashlib
 import json
 import os
+from subprocess import Popen, PIPE
 import struct
 import sys
 import threading
@@ -505,7 +506,7 @@ def _get_archive_signature(file):
         return '', 0
 
 
-debug_static_archives = 0
+debug_static_archives = 1
 
 
 def is_archive(file):
@@ -664,8 +665,8 @@ def get_static_lib_exports(file):
             if MACHINE_TYPE in (IMAGE_FILE_MACHINE_I386, IMAGE_FILE_MACHINE_AMD64):
                 # 'This file is not a PE binary' (yeah, fair enough, it's a COFF file).
                 # Reported at https://github.com/lief-project/LIEF/issues/233#issuecomment-452580391
-                # obj = lief.PE.parse(raw=content[obj_start:obj_end-1])
-                obj = None
+                obj = lief.PE.parse(raw=content[obj_start:obj_end-1])
+                # obj = None
             elif MACHINE_TYPE == 0xfacf:
                 obj = lief.parse(raw=content[obj_start:obj_end])
                 # filename = '/Users/rdonnelly/conda/conda-build/macOS-libpython2.7.a/getbuildinfo.o'
@@ -691,6 +692,33 @@ def get_static_lib_exports(file):
         return functions, [[0, 0] for sym in functions], functions, [[0, 0] for sym in functions]
 
 
+def get_static_lib_exports_nm(filename):
+    '''
+    > dumpbin /SYMBOLS /NOLOGO C:\msys64\mingw64\lib\libasprintf.a
+    > C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.20.27508\bin\Hostx64\x64\dumpbin.exe
+    > 020 00000000 UNDEF  notype ()    External     | malloc
+    > vs
+    > 004 00000010 SECT1  notype ()    External     | _ZN3gnu11autosprintfC1EPKcz
+    '''
+    nm_exe = find_executable('nm')
+    flags = '-Pg'
+    if sys.platform == 'darwin':
+        flags = '-PgUj'
+    elif sys.platform == 'win32' and not nm_exe:
+        nm_exe = 'C:\\msys64\\mingw64\\bin\\nm.exe'
+    try:
+        out, _ = Popen([nm_exe, flags, filename], shell=False,
+                                  stdout=PIPE).communicate()
+        results = out.decode('utf-8').splitlines()
+        exports = [r.split(' ')[0] for r in results if (' T ') in r]
+        result = exports
+    except OSError:
+        # nm may not be available or have the correct permissions, this
+        # should not cause a failure, see gh-3287
+        print('WARNING: nm: failed to get_exports({})'.format(filename))
+        exports = None
+
+
 def get_exports(filename, arch='native'):
     result = []
     if isinstance(filename, str):
@@ -705,39 +733,24 @@ def get_exports(filename, arch='native'):
             # g: global (exported) only
             # U: not undefined
             # j: name only
-            nm_exe = find_executable('nm')
-            flags = '-Pg'
-            if sys.platform == 'darwin':
-                flags = '-PgUj'
-            elif sys.platform == 'win32' and not nm_exe:
-                nm_exe = 'C:\\msys64\\mingw64\\bin\\nm.exe'
-            try:
-                out, _ = subprocess.Popen([nm_exe, flags, filename], shell=False,
-                                    stdout=subprocess.PIPE).communicate()
-                results = out.decode('utf-8').splitlines()
-                exports = [r.split(' ')[0] for r in results if (' T ') in r]
-                result = exports
-            except OSError:
-                # nm may not be available or have the correct permissions, this
-                # should not cause a failure, see gh-3287
-                print('WARNING: nm: failed to get_exports({})'.format(filename))
-                exports = None
-
+            if debug_static_archives:
+                exports = get_static_lib_exports_nm(filename)
             # # Now, our own implementation which does not require nm and can
             # # handle .lib files.
             # exports2, flags2, exports2_all, flags2_all = get_static_lib_exports(filename)
             # result = exports2
-            # if debug_static_archives and exports and set(exports) != set(exports2):
-            #     diff1 = set(exports).difference(set(exports2))
-            #     diff2 = set(exports2).difference(set(exports))
-            #     error_count = len(diff1) + len(diff2)
-            #     if debug_static_archives:
-            #         print("errors: {} (-{}, +{})".format(error_count, len(diff1), len(diff2)))
-            #     if debug_static_archives:
-            #         print("WARNING :: Disagreement regarding static lib exports in {} between nm (nsyms={}) and lielfldd (nsyms={}):"
-            #               .format(filename, len(exports), len(exports2)))
-            #     print("** nm.diff(liefldd) [MISSING SYMBOLS] **\n{}".format('\n'.join(diff1)))
-            #     print("** liefldd.diff(nm) [  EXTRA SYMBOLS] **\n{}".format('\n'.join(diff2)))
+            if debug_static_archives:
+                if exports and set(exports) != set(exports2):
+                    diff1 = set(exports).difference(set(exports2))
+                    diff2 = set(exports2).difference(set(exports))
+                    error_count = len(diff1) + len(diff2)
+                    if debug_static_archives:
+                        print("errors: {} (-{}, +{})".format(error_count, len(diff1), len(diff2)))
+                    if debug_static_archives:
+                        print("WARNING :: Disagreement regarding static lib exports in {} between nm (nsyms={}) and lielfldd (nsyms={}):"
+                              .format(filename, len(exports), len(exports2)))
+                    print("** nm.diff(liefldd) [MISSING SYMBOLS] **\n{}".format('\n'.join(diff1)))
+                    print("** liefldd.diff(nm) [  EXTRA SYMBOLS] **\n{}".format('\n'.join(diff2)))
 
     if not result:
         binary = ensure_binary(filename)
