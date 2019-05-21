@@ -106,7 +106,7 @@ built on Windows 10.
 Other tools
 ------------
 
-Some environments initially lack tools such as bzip2, patch or Git
+Some environments initially lack tools such as bzip2, patch, or Git
 that may be needed for some build workflows.
 
 On Windows these can be installed with conda:
@@ -387,11 +387,11 @@ To build a GDAL package:
 
    ``conda install git m2-patch conda-build``
 
-3. Get gdal-feedstock. For the purpose of this tutorial,  we will be using a recipe from anaconda.
+3. Get gdal-feedstock. For the purpose of this tutorial, we will be using a recipe from Anaconda.
 
    ``git clone https://github.com/AnacondaRecipes/gdal-feedstock.git``
 
-4. Once the repo is downloaded add a conda_build_config.yaml to the gdal-feedstock directory
+4. Once the repo is downloaded, add a conda_build_config.yaml to the gdal-feedstock directory.
 
 .. code-block:: yaml
 
