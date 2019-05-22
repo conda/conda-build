@@ -894,8 +894,8 @@ def bundle_conda(output, metadata, env, stats, **kw):
         env_output['TOP_PKG_VERSION'] = env['PKG_VERSION']
         env_output['PKG_VERSION'] = metadata.version()
         env_output['PKG_NAME'] = metadata.get_value('package/name')
-        env_output["MSYS2_PATH_TYPE"] = "inherit"
-        env_output["CHERE_INVOKING"] = "1"
+        env_output['MSYS2_PATH_TYPE'] = 'inherit'
+        env_output['CHERE_INVOKING'] = '1'
         for var in utils.ensure_list(metadata.get_value('build/script_env')):
             if var not in os.environ:
                 raise ValueError("env var '{}' specified in script_env, but is not set."

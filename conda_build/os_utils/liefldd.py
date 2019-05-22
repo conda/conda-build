@@ -287,6 +287,7 @@ def from_os_varnames(binary_format, binary_type, input_):
 
 # TODO :: Use conda's version of this (or move the constant strings into constants.py)
 def _get_path_dirs(prefix):
+    yield '/'.join((prefix,))
     yield '/'.join((prefix, 'Library', 'mingw-w64', 'bin'))
     yield '/'.join((prefix, 'Library', 'usr', 'bin'))
     yield '/'.join((prefix, 'Library', 'bin'))
