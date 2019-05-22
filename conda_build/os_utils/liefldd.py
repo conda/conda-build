@@ -706,7 +706,7 @@ def get_static_lib_exports_nm(filename):
         out, _ = Popen([nm_exe, flags, filename], shell=False,
                                   stdout=PIPE).communicate()
         results = out.decode('utf-8').replace('\r\n', '\n').splitlines()
-        exports = [r for r in results if (' T ') in r]
+        exports = [r.split(' ')[0] for r in results if ' T ' in r and not r.startswith('.text ')]
         result = exports.sort()
     except OSError:
         # nm may not be available or have the correct permissions, this
@@ -726,20 +726,50 @@ def get_static_lib_exports_dumpbin(filename):
     '''
     dumpbin_exe = find_executable('dumpbin')
     if not dumpbin_exe:
+        '''
+        Oh the fun:
+        https://stackoverflow.com/questions/41106407/programmatically-finding-the-vs2017-installation-directory
+        Nice to see MS avoiding the Windows Registry though, took them a while! Still, let's ignore that, we just
+        want a good dumpbin!
+        '''
+        pfx86 = os.environ['PROGRAMFILES(X86)']
+        programs = [p for p in os.listdir(pfx86) if p.startswith("Microsoft Visual Studio")]
+        results = []
+        for p in programs:
+            from conda_build.utils import rec_glob
+            dumpbin = rec_glob(os.path.join(pfx86, p), ("dumpbin.exe",))
+            for result in dumpbin:
+                try:
+                    out, _ = Popen([result, filename], shell=False,
+                                   stdout=PIPE).communicate()
+                    lines = out.decode('utf-8').splitlines()
+                    version = lines[0].split(' ')[-1]
+                    results.append((result, version))
+                except:
+                    pass
+        from conda_build.conda_interface import VersionOrder
+        results = sorted(results, key=lambda x: VersionOrder(x[1]))
+        dumpbin_exe = results[-1][0]
+    if not dumpbin_exe:
         return None
-    flags = '/SYMBOLS /NOLOGO'
-    try:
-        out, _ = Popen([dumpbin_exe, flags, filename], shell=False,
-                       stdout=PIPE).communicate()
-        results = out.decode('utf-8').splitlines()
-        exports = [r.split(' ')[-1] for r in results if ('External ' in r and 'UNDEF ' not in r)]
-        result = exports.sort()
-    except OSError:
-        # nm may not be available or have the correct permissions, this
-        # should not cause a failure, see gh-3287
-        print('WARNING: nm: failed to get_exports({})'.format(filename))
-        result = None
-    return result
+    flags = ['/NOLOGO']
+    exports = []
+    for flag in ('/SYMBOLS', '/EXPORTS'):
+        try:
+            out, _ = Popen([dumpbin_exe] + flags + [flag] + [filename], shell=False,
+                           stdout=PIPE).communicate()
+            results = out.decode('utf-8').splitlines()
+            if flag == '/EXPORTS':
+                exports.extend([r.split(' ')[-1] for r in results if r.startswith('                  ')])
+            else:
+                exports.extend([r.split(' ')[-1] for r in results if ('External ' in r and 'UNDEF ' not in r)])
+        except OSError:
+            # nm may not be available or have the correct permissions, this
+            # should not cause a failure, see gh-3287
+            print('WARNING: nm: failed to get_exports({})'.format(filename))
+            exports = None
+    exports.sort()
+    return exports
 
 
 def get_static_lib_exports_externally(filename):
@@ -752,6 +782,7 @@ def get_static_lib_exports_externally(filename):
     if res_nm != res_dumpbin:
         log.error("res_nm != res_dumpbin\n{}\n != \n{}\n")
     return res_nm
+
 
 def get_exports(filename, arch='native'):
     result = []
