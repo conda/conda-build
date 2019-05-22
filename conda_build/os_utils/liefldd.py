@@ -507,7 +507,7 @@ def _get_archive_signature(file):
         return '', 0
 
 
-debug_static_archives = 1
+debug_static_archives = 0
 
 
 def is_archive(file):
@@ -694,6 +694,29 @@ def get_static_lib_exports(file):
 
 
 def get_static_lib_exports_nm(filename):
+    nm_exe = find_executable('nm')
+    if sys.platform == 'win32' and not nm_exe:
+        nm_exe = 'C:\\msys64\\mingw64\\bin\\nm.exe'
+    if not nm_exe or not os.path.exists(nm_exe):
+        return None
+    flags = '-Pg'
+    if sys.platform == 'darwin':
+        flags = '-PgUj'
+    try:
+        out, _ = Popen([nm_exe, flags, filename], shell=False,
+                                  stdout=PIPE).communicate()
+        results = out.decode('utf-8').replace('\r\n', '\n').splitlines()
+        exports = [r for r in results if (' T ') in r]
+        result = exports.sort()
+    except OSError:
+        # nm may not be available or have the correct permissions, this
+        # should not cause a failure, see gh-3287
+        print('WARNING: nm: failed to get_exports({})'.format(filename))
+        result = None
+    return result
+
+
+def get_static_lib_exports_dumpbin(filename):
     '''
     > dumpbin /SYMBOLS /NOLOGO C:\msys64\mingw64\lib\libasprintf.a
     > C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.20.27508\bin\Hostx64\x64\dumpbin.exe
@@ -701,24 +724,34 @@ def get_static_lib_exports_nm(filename):
     > vs
     > 004 00000010 SECT1  notype ()    External     | _ZN3gnu11autosprintfC1EPKcz
     '''
-    nm_exe = find_executable('nm')
-    flags = '-Pg'
-    if sys.platform == 'darwin':
-        flags = '-PgUj'
-    elif sys.platform == 'win32' and not nm_exe:
-        nm_exe = 'C:\\msys64\\mingw64\\bin\\nm.exe'
+    dumpbin_exe = find_executable('dumpbin')
+    if not dumpbin_exe:
+        return None
+    flags = '/SYMBOLS /NOLOGO'
     try:
-        out, _ = Popen([nm_exe, flags, filename], shell=False,
-                                  stdout=PIPE).communicate()
+        out, _ = Popen([dumpbin_exe, flags, filename], shell=False,
+                       stdout=PIPE).communicate()
         results = out.decode('utf-8').splitlines()
-        exports = [r.split(' ')[0] for r in results if (' T ') in r]
-        result = exports
+        exports = [r.split(' ')[-1] for r in results if ('External ' in r and 'UNDEF ' not in r)]
+        result = exports.sort()
     except OSError:
         # nm may not be available or have the correct permissions, this
         # should not cause a failure, see gh-3287
         print('WARNING: nm: failed to get_exports({})'.format(filename))
-        exports = None
+        result = None
+    return result
 
+
+def get_static_lib_exports_externally(filename):
+    res_nm = get_static_lib_exports_nm(filename)
+    res_dumpbin = get_static_lib_exports_dumpbin(filename)
+    if res_nm is None:
+        return res_dumpbin
+    if res_dumpbin is None:
+        return res_dumpbin
+    if res_nm != res_dumpbin:
+        log.error("res_nm != res_dumpbin\n{}\n != \n{}\n")
+    return res_nm
 
 def get_exports(filename, arch='native'):
     result = []
@@ -734,12 +767,16 @@ def get_exports(filename, arch='native'):
             # g: global (exported) only
             # U: not undefined
             # j: name only
-            if debug_static_archives:
-                exports = get_static_lib_exports_nm(filename)
-            # # Now, our own implementation which does not require nm and can
-            # # handle .lib files.
-            # exports2, flags2, exports2_all, flags2_all = get_static_lib_exports(filename)
-            # result = exports2
+            if debug_static_archives or sys.platform == 'win32':
+                exports = get_static_lib_exports_externally(filename)
+            # Now, our own implementation which does not require nm and can
+            # handle .lib files.
+            if sys.platform == 'win32':
+                # Sorry, LIEF does not handle COFF (only PECOFF) and object files are COFF.
+                exports2 = exports
+            else:
+                exports2, flags2, exports2_all, flags2_all = get_static_lib_exports(filename)
+            result = exports2
             if debug_static_archives:
                 if exports and set(exports) != set(exports2):
                     diff1 = set(exports).difference(set(exports2))
