@@ -1957,6 +1957,7 @@ def write_test_scripts(metadata, env_vars, py_files, pl_files, lua_files, r_file
                 else:
                     tf.write("eval \"$('{sys_python}' -m conda shell.bash hook)\"\n".format(
                         sys_python=sys.executable))
+                tf.write('conda activate "{test_env}"\n'.format(test_env=metadata.config.test_prefix))
             else:
                 tf.write('{source} "{conda_root}activate{ext}" "{test_env}"\n'.format(
                     conda_root=utils.root_script_dir + os.path.sep,
