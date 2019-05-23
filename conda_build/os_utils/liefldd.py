@@ -707,13 +707,13 @@ def get_static_lib_exports_nm(filename):
                                   stdout=PIPE).communicate()
         results = out.decode('utf-8').replace('\r\n', '\n').splitlines()
         exports = [r.split(' ')[0] for r in results if ' T ' in r and not r.startswith('.text ')]
-        result = exports.sort()
+        results.sort()
     except OSError:
         # nm may not be available or have the correct permissions, this
         # should not cause a failure, see gh-3287
         print('WARNING: nm: failed to get_exports({})'.format(filename))
-        result = None
-    return result
+        results = None
+    return results
 
 
 def get_static_lib_exports_dumpbin(filename):
