@@ -1294,6 +1294,9 @@ class ChannelIndex(object):
                 return ChannelIndex._extract_to_cache(channel_root, subdir, fn, shared_format_cache, second_try=True)
             log.error("Package %s appears to be corrupt.  Please remove it and re-download it" % abs_fn)
             log.error(str(e))
+        except FileNotFoundError as e:
+            log.error("Package %s appears to be corrupt.  Please remove it and re-download it" % abs_fn)
+            log.error(str(e))
         return retval
 
     def _load_index_from_cache(self, subdir, fn, stat_cache, shared_format_cache):
