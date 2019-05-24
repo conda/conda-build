@@ -1275,22 +1275,18 @@ class ChannelIndex(object):
                 for field_name in filter_fields & set(index_json):
                     del index_json[field_name]
 
-                # calculate extra stuff to add to index.json cache, size, md5, sha256
-                #    This is done for both the old and possibly the new file format.
-                #    The old one is the one that shows up in repodata.json.  The new
-                #    one makes up the stat cache.
-                index_json.update(conda_package_handling.api.get_pkg_details(abs_fn))
-
                 with open(index_cache_path, 'w') as fh:
                     json.dump(index_json, fh)
+
             else:
                 with open(index_cache_path) as f:
                     index_json = json.load(f)
 
-                # if we are sharing the cache, the filename of the thing in the cache is
-                #    ambiguous.  We need to update the md5, sha256, and size for the actual
-                #    file we have here
-                index_json.update(conda_package_handling.api.get_pkg_details(abs_fn))
+            # calculate extra stuff to add to index.json cache, size, md5, sha256
+            #    This is done always for all files, whether the cache is loaded or not,
+            #    because the cache may be from the other file type.  We don't store this
+            #    info in the cache to avoid confusion.
+            index_json.update(conda_package_handling.api.get_pkg_details(abs_fn))
             retval = fn, mtime, size, index_json
         except (libarchive.exception.ArchiveError, tarfile.ReadError, KeyError,
                 EOFError, JSONDecodeError) as e:
