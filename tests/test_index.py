@@ -104,8 +104,6 @@ def test_index_on_single_subdir_1(testing_workdir):
                 "doc_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a",
                 "home": "https://anaconda.org/conda-test/conda-index-pkg-a",
                 "license": "BSD",
-                "reference_package": "osx-64/conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2",
-                "source_git_rev": "master",
                 "source_git_url": "https://github.com/kalefranz/conda-test-packages.git",
                 "subdirs": [
                     "osx-64",
@@ -212,8 +210,6 @@ def test_index_noarch_osx64_1(testing_workdir):
                 "doc_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a",
                 "home": "https://anaconda.org/conda-test/conda-index-pkg-a",
                 "license": "BSD",
-                "reference_package": "noarch/conda-index-pkg-a-1.0-pyhed9eced_1.tar.bz2",
-                "source_git_rev": "master",
                 "source_git_url": "https://github.com/kalefranz/conda-test-packages.git",
                 "subdirs": [
                     "noarch",
@@ -227,7 +223,7 @@ def test_index_noarch_osx64_1(testing_workdir):
                 "pre_link": False,
                 "pre_unlink": False,
                 "binary_prefix": False,
-                "text_prefix": False,
+                "text_prefix": True,
                 "run_exports": {},
             }
         },
@@ -511,8 +507,8 @@ def test_stat_cache_used(testing_workdir, mocker):
     cph_extract.assert_not_called()
 
 
-'''
 def test_new_pkg_format_preferred(testing_workdir, mocker):
+    """Test that in one pass, the .conda file is extracted before the .tar.bz2, and the .tar.bz2 uses the cache"""
     test_package_path = join(testing_workdir, 'osx-64', 'conda-index-pkg-a-1.0-py27h5e241af_0')
     exts = ('.tar.bz2', '.conda')
     for ext in exts:
@@ -520,9 +516,9 @@ def test_new_pkg_format_preferred(testing_workdir, mocker):
     # mock the extract function, so that we can assert that it is not called
     #     with the .tar.bz2, because the .conda should be preferred
     cph_extract = mocker.spy(conda_package_handling.api, 'extract')
-    conda_build.index.update_index(testing_workdir, channel_name='test-channel')
+    conda_build.index.update_index(testing_workdir, channel_name='test-channel', debug=True)
     # extract should get called once by default.  Within a channel, we assume that a .tar.bz2 and .conda have the same contents.
-    cph_extract.assert_called_with(test_package_path + '.conda', mock.ANY, 'info')
+    cph_extract.assert_called_once_with(test_package_path + '.conda', mock.ANY, 'info')
 
     with open(join(testing_workdir, 'osx-64', 'repodata.json')) as fh:
         actual_repodata_json = json.loads(fh.read())
@@ -569,7 +565,6 @@ def test_new_pkg_format_preferred(testing_workdir, mocker):
         "repodata_version": 1,
     }
     assert actual_repodata_json == expected_repodata_json
-'''
 
 
 def test_no_shared_format_cache(testing_workdir, mocker):
@@ -589,19 +584,65 @@ def test_no_shared_format_cache(testing_workdir, mocker):
 
 
 def test_new_pkg_format_stat_cache_used(testing_workdir, mocker):
+    # if we have old .tar.bz2 index cache stuff, assert that we pick up correct md5, sha26 and size for .conda
     test_package_path = join(testing_workdir, 'osx-64', 'conda-index-pkg-a-1.0-py27h5e241af_0')
-    exts = ('.tar.bz2', '.conda')
-    for ext in exts:
-        copy_into(os.path.join(archive_dir, 'conda-index-pkg-a-1.0-py27h5e241af_0' + ext), test_package_path + ext)
+    copy_into(os.path.join(archive_dir, 'conda-index-pkg-a-1.0-py27h5e241af_0' + '.tar.bz2'), test_package_path + '.tar.bz2')
     conda_build.index.update_index(testing_workdir, channel_name='test-channel')
 
     # mock the extract function, so that we can assert that it is not called, because the stat cache should exist
     #    if this doesn't work, something about the stat cache is confused.  It's a little convoluted, because
     #    the index has keys for .tar.bz2's, but the stat cache comes from .conda files when they are available
     #    because extracting them is much, much faster.
+    copy_into(os.path.join(archive_dir, 'conda-index-pkg-a-1.0-py27h5e241af_0' + '.conda'), test_package_path + '.conda')
     cph_extract = mocker.spy(conda_package_handling.api, 'extract')
-    conda_build.index.update_index(testing_workdir, channel_name='test-channel')
+    conda_build.index.update_index(testing_workdir, channel_name='test-channel', debug=True)
     cph_extract.assert_not_called()
+
+    with open(join(testing_workdir, 'osx-64', 'repodata.json')) as fh:
+        actual_repodata_json = json.loads(fh.read())
+
+    expected_repodata_json = {
+        "info": {
+            'subdir': 'osx-64',
+        },
+        "packages": {
+            "conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2": {
+                "build": "py27h5e241af_0",
+                "build_number": 0,
+                "depends": [
+                    "python >=2.7,<2.8.0a0"
+                ],
+                "license": "BSD",
+                "md5": "37861df8111170f5eed4bff27868df59",
+                "name": "conda-index-pkg-a",
+                "sha256": "459f3e9b2178fa33bdc4e6267326405329d1c1ab982273d9a1c0a5084a1ddc30",
+                "size": 8733,
+                "subdir": "osx-64",
+                "timestamp": 1508520039632,
+                "version": "1.0",
+            },
+        },
+        "packages.conda": {
+            "conda-index-pkg-a-1.0-py27h5e241af_0.conda": {
+                "build": "py27h5e241af_0",
+                "build_number": 0,
+                "depends": [
+                    "python >=2.7,<2.8.0a0"
+                ],
+                "license": "BSD",
+                "md5": "4ed4b435f400dac1aabdc1fff06f78ff",
+                "name": "conda-index-pkg-a",
+                "sha256": "67b07b644105439515cc5c8c22c86939514cacf30c8c574cd70f5f1267a40f19",
+                "size": 9296,
+                "subdir": "osx-64",
+                "timestamp": 1508520039632,
+                "version": "1.0",
+            },
+        },
+        "removed": [],
+        "repodata_version": 1,
+    }
+    assert actual_repodata_json == expected_repodata_json
 
 
 def test_current_index_reduces_space():

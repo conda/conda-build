@@ -500,36 +500,34 @@ def _gather_channeldata_reference_packages(all_repodata_packages):
     return reference_packages
 
 
-def _collect_namemap(subdirs, patched_repodata, patch_instructions):
+def _collect_namemap(patched_repodata, patch_instructions):
     external_dependencies = {
         name_in_channel: namekey
-        for pi in patch_instructions.values()
-        for name_in_channel, namekey in pi.get('external_dependencies', {}).items()
+        for name_in_channel, namekey in patch_instructions.get('external_dependencies', {}).items()
     }
     namemap = {}  # name_in_channel, cuid_namekey
     namemap.update(external_dependencies)
 
     ambiguous_namekeys = defaultdict(set)  # name, namekey
-    for subdir in subdirs:
-        repodata = patched_repodata[subdir]
-        # TODO: should use packages.conda here somehow
-        for info in repodata['packages'].values():
-            namespace, name_in_channel, name = _determine_namespace(info)
-            namekey = namespace + ":" + name
-            # TODO: this name_in_channel thing should be dropped if the package has an explicitly assigned namespace
-            if name_in_channel in namemap:
-                # This assertion is important. It guarantees that we don't have packages bridging namespaces.
-                # assert namekey == namemap[name_in_channel], (subdir, namekey, namemap[name_in_channel])
-                if namekey != namemap[name_in_channel]:
-                    ambiguous_namekeys[name_in_channel].add(namemap[name_in_channel])
-                    ambiguous_namekeys[name_in_channel].add(namekey)
-                    # ambiguous_namekeys.append((subdir, name_in_channel, namekey, namemap[name_in_channel], fn))
-            else:
-                namemap[name_in_channel] = namekey
+    repodata = patched_repodata
+    # TODO: should use packages.conda here somehow
+    for info in repodata['packages'].values():
+        namespace, name_in_channel, name = _determine_namespace(info)
+        namekey = namespace + ":" + name
+        # TODO: this name_in_channel thing should be dropped if the package has an explicitly assigned namespace
+        if name_in_channel in namemap:
+            # This assertion is important. It guarantees that we don't have packages bridging namespaces.
+            # assert namekey == namemap[name_in_channel], (subdir, namekey, namemap[name_in_channel])
+            if namekey != namemap[name_in_channel]:
+                ambiguous_namekeys[name_in_channel].add(namemap[name_in_channel])
+                ambiguous_namekeys[name_in_channel].add(namekey)
+                # ambiguous_namekeys.append((subdir, name_in_channel, namekey, namemap[name_in_channel], fn))
+        else:
+            namemap[name_in_channel] = namekey
     return namemap, ambiguous_namekeys
 
 
-def _warn_on_ambiguous_namekeys(ambiguous_namekeys, subdirs, patched_repodata):
+def _warn_on_ambiguous_namekeys(ambiguous_namekeys, subdir, patched_repodata):
     """
     The following packages ambiguously straddle namespaces and require metadata correction:
         package_name:
@@ -544,12 +542,11 @@ def _warn_on_ambiguous_namekeys(ambiguous_namekeys, subdirs, patched_repodata):
     """
     if ambiguous_namekeys:
         abc = defaultdict(lambda: defaultdict(list))
-        for subdir in subdirs:
-            repodata = patched_repodata[subdir]
-            # TODO: should use packages.conda here somehow
-            for fn, info in repodata['packages'].items():
-                if info["name"] in ambiguous_namekeys:
-                    abc[info["name"]][info["namespace"]].append(subdir + "/" + fn)
+        repodata = patched_repodata[subdir]
+        # TODO: should use packages.conda here somehow
+        for fn, info in repodata['packages'].items():
+            if info["name"] in ambiguous_namekeys:
+                abc[info["name"]][info["namespace"]].append(subdir + "/" + fn)
 
         builder = ["WARNING: The following packages ambiguously straddle namespaces and require metadata correction:"]
         for package_name in sorted(abc):
@@ -636,43 +633,39 @@ def _warn_on_missing_dependencies(missing_dependencies, patched_repodata):
         log.warn("\n".join(builder))
 
 
-def _augment_repodata(subdirs, patched_repodata, patch_instructions):
-    augmented_repodata = {}
-
+def _augment_repodata(subdir, patched_repodata, patch_instructions):
     # TODO: handle packages that need to be renamed
 
     # Step 1. Collect all package names and associated namespaces.
     #         Attach namespace to every package.
-    namemap, ambiguous_namekeys = _collect_namemap(subdirs, patched_repodata, patch_instructions)
-    _warn_on_ambiguous_namekeys(ambiguous_namekeys, subdirs, patched_repodata)
+    namemap, ambiguous_namekeys = _collect_namemap(patched_repodata, patch_instructions)
+    _warn_on_ambiguous_namekeys(ambiguous_namekeys, subdir, patched_repodata)
     missing_dependencies = defaultdict(list)
 
     # Step 2. Add depends2 and constrains2, and other fields
-    for subdir in subdirs:
-        repodata = patched_repodata[subdir]
-        for key in ('packages', 'packages.conda'):
-            for fn, info in repodata[key].items():
-                info['record_version'] = 1
-                if 'constrains' in info:
-                    constrains_names = set(dep.split()[0] for dep in info["constrains"])
-                    try:
-                        info['constrains2'] = [_add_namespace_to_spec(fn, info, dep, namemap, missing_dependencies, subdir)
-                                            for dep in info['constrains']]
-                        info['depends2'] = [_add_namespace_to_spec(fn, info, dep, namemap, missing_dependencies, subdir)
-                                            for dep in info['depends'] if dep.split()[0] not in constrains_names]
-                    except CondaError as e:
-                        log.warn("Encountered a file ({}) that conda does not like.  Error was: {}.  Skipping this one...".format(fn, e))
-                else:
-                    try:
-                        info['depends2'] = [_add_namespace_to_spec(fn, info, dep, namemap, missing_dependencies, subdir)
-                                            for dep in info['depends']]
-                    except CondaError as e:
-                        log.warn("Encountered a file ({}) that conda does not like.  Error was: {}.  Skipping this one...".format(fn, e))
-                # info['build_string'] =_make_build_string(info["build"], info["build_number"])
-        repodata["removed"] = patch_instructions[subdir].get("remove", [])
-        augmented_repodata[subdir] = repodata
+    repodata = patched_repodata.copy()
+    for key in ('packages', 'packages.conda'):
+        for fn, info in repodata[key].items():
+            info['record_version'] = 1
+            if 'constrains' in info:
+                constrains_names = set(dep.split()[0] for dep in info["constrains"])
+                try:
+                    info['constrains2'] = [_add_namespace_to_spec(fn, info, dep, namemap, missing_dependencies, subdir)
+                                        for dep in info['constrains']]
+                    info['depends2'] = [_add_namespace_to_spec(fn, info, dep, namemap, missing_dependencies, subdir)
+                                        for dep in info['depends'] if dep.split()[0] not in constrains_names]
+                except CondaError as e:
+                    log.warn("Encountered a file ({}) that conda does not like.  Error was: {}.  Skipping this one...".format(fn, e))
+            else:
+                try:
+                    info['depends2'] = [_add_namespace_to_spec(fn, info, dep, namemap, missing_dependencies, subdir)
+                                        for dep in info['depends']]
+                except CondaError as e:
+                    log.warn("Encountered a file ({}) that conda does not like.  Error was: {}.  Skipping this one...".format(fn, e))
+            # info['build_string'] =_make_build_string(info["build"], info["build_number"])
+    repodata["removed"] = patch_instructions.get("remove", [])
     _warn_on_missing_dependencies(missing_dependencies, patched_repodata)
-    return augmented_repodata
+    return repodata
 
 
 def _cache_post_install_details(paths_cache_path, post_install_cache_path):
@@ -998,52 +991,64 @@ class ChannelIndex(object):
 
             # Step 1. Lock local channel.
             with utils.try_acquire_locks([utils.get_lock(self.channel_root)], timeout=900):
+                channel_data = {}
+                package_mtimes = {}
                 # Step 2. Collect repodata from packages, save to pkg_repodata.json file
-                repodata_from_packages = {}
                 with tqdm(total=len(subdirs), disable=(verbose or not progress), leave=False) as t:
                     for subdir in subdirs:
                         t.set_description("Subdir: %s" % subdir)
                         t.update()
-                        _ensure_valid_channel(self.channel_root, subdir)
-                        repodata_from_packages[subdir] = self.index_subdir(
-                            subdir, verbose=verbose, progress=progress,
-                            shared_format_cache=shared_format_cache)
+                        with tqdm(total=9, disable=(verbose or not progress), leave=False) as t2:
+                            t2.set_description("Gathering repodata")
+                            t2.update()
+                            _ensure_valid_channel(self.channel_root, subdir)
+                            repodata_from_packages = self.index_subdir(
+                                subdir, verbose=verbose, progress=progress,
+                                shared_format_cache=shared_format_cache)
 
-                        self._write_repodata(subdir, repodata_from_packages[subdir],
-                                             REPODATA_FROM_PKGS_JSON_FN)
+                            t2.set_description("Writing pre-patch repodata")
+                            t2.update()
+                            self._write_repodata(subdir, repodata_from_packages,
+                                                REPODATA_FROM_PKGS_JSON_FN)
 
-                # Step 3. Apply patch instructions.
-                patched_repodata = {}
-                patch_instructions = {}
-                for subdir in tqdm(subdirs, desc="Patching repodata", leave=False):
-                    patched_repodata[subdir], patch_instructions[subdir] = self._patch_repodata(
-                        subdir, repodata_from_packages[subdir], patch_generator)
+                            # Step 3. Apply patch instructions.
+                            t2.set_description("Applying patch instructions")
+                            t2.update()
+                            patched_repodata, patch_instructions = self._patch_repodata(
+                                subdir, repodata_from_packages, patch_generator)
 
-                # Step 4. Save patched and augmented repodata.
-                for subdir in tqdm(subdirs, desc="Saving repodata to disk", leave=False):
-                    # If the contents of repodata have changed, write a new repodata.json file.
-                    # Also create associated index.html.
-                    self._write_repodata(subdir, patched_repodata[subdir], REPODATA_JSON_FN)
-                    current_repodata = _build_current_repodata(subdir, patched_repodata[subdir],
-                                                               pins=current_index_versions)
-                    self._write_repodata(subdir, current_repodata, json_filename="current_repodata.json")
+                            # Step 4. Save patched and augmented repodata.
+                            # If the contents of repodata have changed, write a new repodata.json file.
+                            # Also create associated index.html.
 
-                # Step 5. Augment repodata with additional information.
-                augmented_repodata = _augment_repodata(subdirs, patched_repodata, patch_instructions)
+                            t2.set_description("Writing patched repodata")
+                            t2.update()
+                            self._write_repodata(subdir, patched_repodata, REPODATA_JSON_FN)
+                            t2.set_description("Building current_repodata subset")
+                            t2.update()
+                            current_repodata = _build_current_repodata(subdir, patched_repodata,
+                                                                       pins=current_index_versions)
+                            t2.set_description("Writing current_repodata subset")
+                            t2.update()
+                            self._write_repodata(subdir, current_repodata, json_filename="current_repodata.json")
 
-                # Step 6. Create and save repodata2.json
-                # Also create associated index.html.
-                repodata2 = {}
-                for subdir in tqdm(subdirs, desc="Writing repodata2 and subdir index html", leave=False):
-                    repodata2[subdir] = self._create_repodata2(subdir, augmented_repodata[subdir])
-                    changed = self._write_repodata2(subdir, repodata2[subdir])
-                    if changed:
-                        self._write_subdir_index_html(subdir, repodata2[subdir])
+                            # Step 5. Augment repodata with additional information.
+                            t2.set_description("Augmenting repodata with namespace")
+                            t2.update()
+                            augmented_repodata = _augment_repodata(subdirs, patched_repodata, patch_instructions)
+
+                            # Step 6. Create and save repodata2.json
+                            # Also create associated index.html.
+                            t2.set_description("Writing repodata2")
+                            t2.update()
+                            repodata2 = self._create_repodata2(subdir, augmented_repodata)
+                            changed = self._write_repodata2(subdir, repodata2)
+                            if changed:
+                                self._write_subdir_index_html(subdir, repodata2)
+
+                            self._update_channeldata(channel_data, package_mtimes, patched_repodata, subdir, shared_format_cache)
 
                 # Step 7. Create and write channeldata.
-                all_repodata_packages = tuple(concat(repodata["packages"] for repodata in repodata2.values()))
-                reference_packages = _gather_channeldata_reference_packages(all_repodata_packages)
-                channel_data, package_mtimes = self._build_channeldata(subdirs, reference_packages, shared_format_cache)
                 self._write_channeldata_index_html(channel_data)
                 self._write_channeldata_rss(channel_data, package_mtimes, hotfix_source_repo)
                 self._write_channeldata(channel_data)
@@ -1152,10 +1157,11 @@ class ChannelIndex(object):
                             t.set_description("Updated: %s" % fn)
                             t.update()
                             stat_cache[fn] = {'mtime': int(mtime), 'size': size}
-                            if fn.endswith(".conda"):
-                                new_repodata_conda_packages[fn] = index_json
-                            else:
-                                new_repodata_packages[fn] = index_json
+                            if index_json:
+                                if fn.endswith(".conda"):
+                                    new_repodata_conda_packages[fn] = index_json
+                                else:
+                                    new_repodata_packages[fn] = index_json
             new_repodata = {
                 'packages': new_repodata_packages,
                 'packages.conda': new_repodata_conda_packages,
@@ -1284,8 +1290,7 @@ class ChannelIndex(object):
                 # if we are sharing the cache, the filename of the thing in the cache is
                 #    ambiguous.  We need to update the md5, sha256, and size for the actual
                 #    file we have here
-                if index_json['size'] != size:
-                    index_json.update(conda_package_handling.api.get_pkg_details(abs_fn))
+                index_json.update(conda_package_handling.api.get_pkg_details(abs_fn))
             retval = fn, mtime, size, index_json
         except (libarchive.exception.ArchiveError, tarfile.ReadError, KeyError,
                 EOFError, JSONDecodeError) as e:
@@ -1440,27 +1445,61 @@ class ChannelIndex(object):
         index_path = join(self.channel_root, 'index.html')
         _maybe_write(index_path, rendered_html)
 
-    def _build_channeldata(self, subdirs, reference_packages, shared_format_cache):
-        package_data = {}
-        package_mtimes = {}
+    def _update_channeldata(self, channel_data, package_mtimes, repodata, subdir, shared_format_cache):
+        legacy_packages = repodata["packages"]
+        conda_packages = repodata["packages.conda"]
+
+        use_these_legacy_keys = set(legacy_packages.keys()) - set(k[:-6] + '.tar.bz2' for k in conda_packages.keys())
+        all_repodata_packages = conda_packages.copy()
+        all_repodata_packages.update({k: legacy_packages[k] for k in use_these_legacy_keys})
+        package_data = channel_data.get('packages', {})
+
+        def _replace_if_newer_and_present(pd, data, erec, data_newer, k):
+            value = data.get(k) if data_newer else erec.get(k)
+            if value:
+                pd[k] = value
 
         futures = tuple(self.thread_executor.submit(
-            ChannelIndex._load_all_from_cache, self.channel_root, rec["subdir"], rec["fn"], shared_format_cache
-        ) for rec in reference_packages)
-        for rec, future in zip(reference_packages, futures):
+            ChannelIndex._load_all_from_cache, self.channel_root, subdir, fn, shared_format_cache
+        ) for fn in all_repodata_packages.keys())
+        for rec, future in zip(all_repodata_packages.values(), futures):
             data = future.result()
             if data:
                 data.update(rec)
                 name = data['name']
-                package_data[name] = {k: v for k, v in data.items() if k in CHANNELDATA_FIELDS}
-                package_mtimes[name] = data['mtime']
+                # existing record
+                erec = package_data.get(name, {})
+                data_v = data.get('version', '0')
+                erec_v = erec.get('version', '0')
+                data_newer = VersionOrder(data_v) > VersionOrder(erec_v)
 
-        channeldata = {
+                package_data[name] = package_data.get(name, {})
+                # keep newer value for these
+                for k in ('description', 'dev_url', 'doc_url', 'doc_source_url', 'home', 'license',
+                          'source_url', 'source_git_url', 'summary', 'icon_url', 'icon_hash', 'tags',
+                          'identifiers', 'keywords', 'recipe_origin', 'version'):
+                    _replace_if_newer_and_present(package_data[name], data, erec, data_newer, k)
+
+                # keep any true value for these, since we don't distinguish subdirs
+                for k in ("binary_prefix", "text_prefix", "activate.d", "deactivate.d", "pre_link",
+                          "post_link", "pre_unlink"):
+                    package_data[name][k] = data.get(k, False) or erec.get(k, False)
+
+                package_data[name]['subdirs'] = erec.get('subdirs', []) + [subdir]
+                # keep one run_exports entry per version of the package, since these vary by version
+                run_exports = erec.get('run_exports', {})
+                exports_from_this_version = data.get('run_exports')
+                if exports_from_this_version:
+                    run_exports[data_v] = data.get('run_exports')
+                package_data[name]['run_exports'] = run_exports
+
+                package_mtimes[name] = max(data['mtime'], package_mtimes.get(name, 0))
+
+        channel_data.update({
             'channeldata_version': CHANNELDATA_VERSION,
-            'subdirs': subdirs,
+            'subdirs': channel_data.get('subdirs', []) + [subdir],
             'packages': package_data,
-        }
-        return channeldata, package_mtimes
+        })
 
     def _write_channeldata(self, channeldata):
         # trim out commits, as they can take up a ton of space.  They're really only for the RSS feed.
