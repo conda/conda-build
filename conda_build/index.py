@@ -1121,15 +1121,24 @@ class ChannelIndex(object):
 
             new_repodata_packages = {}
             new_repodata_conda_packages = {}
-            for fn in sorted(unchanged_set):
-                try:
-                    rec = self._load_index_from_cache(subdir, fn, stat_cache)
-                    if fn.endswith('.tar.bz2'):
-                        new_repodata_packages[fn] = rec
+            futures = tuple(self.thread_executor.submit(
+                ChannelIndex._load_index_from_cache, self.channel_root, subdir, fn, stat_cache
+            ) for fn in unchanged_set)
+            with tqdm(desc="Loading unchanged packages",
+                        total=len(futures), disable=(verbose or not progress), leave=False) as t:
+                for future in as_completed(futures):
+                    fn, rec = future.result()
+                    t.set_description("Updated: %s" % fn)
+                    t.update()
+                    # this is how we pass an exception through.  When fn == rec, there's been a problem,
+                    #    and we need to reload this file
+                    if fn == rec:
+                        update_set.add(fn)
                     else:
-                        new_repodata_conda_packages[fn] = rec
-                except (IOError, JSONDecodeError):
-                    update_set.add(fn)
+                        if fn.endswith('.tar.bz2'):
+                            new_repodata_packages[fn] = rec
+                        else:
+                            new_repodata_conda_packages[fn] = rec
 
             # Invalidate cached files for update_set.
             # Extract and cache update_set and add_set, then add to new_repodata_packages.
@@ -1321,15 +1330,16 @@ class ChannelIndex(object):
             log.error(str(e))
         return retval
 
-    def _load_index_from_cache(self, subdir, fn, stat_cache):
-        # sharing a format cache means using the old name, since that's what everyone has.
-        index_cache_path = join(self.channel_root, subdir, '.cache', 'index', fn + '.json')
-        log.debug("loading index cache %s" % index_cache_path)
+    @staticmethod
+    def _load_index_from_cache(channel_root, subdir, fn, stat_cache):
+        index_cache_path = join(channel_root, subdir, '.cache', 'index', fn + '.json')
+        try:
+            with open(index_cache_path) as fh:
+                index_json = json.load(fh)
+        except (IOError, JSONDecodeError):
+            index_json = fn
 
-        with open(index_cache_path) as fh:
-            index_json = json.load(fh)
-
-        return index_json
+        return fn, index_json
 
     @staticmethod
     def _load_all_from_cache(channel_root, subdir, fn):
