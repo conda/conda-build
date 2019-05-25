@@ -10,8 +10,8 @@ from datetime import datetime
 import json
 from numbers import Number
 import os
-from os.path import abspath, basename, getmtime, getsize, isdir, isfile, join, lexists, splitext, dirname
-from shutil import copy2, move
+from os.path import abspath, basename, getmtime, getsize, isdir, isfile, join, splitext, dirname
+from shutil import move
 import subprocess
 import tarfile
 from tempfile import gettempdir
@@ -1367,11 +1367,8 @@ class ChannelIndex(object):
             icon_md5 = utils.md5_file(icon_cache_path)
             icon_hash = "md5:%s:%s" % (icon_md5, getsize(icon_cache_path))
             data.update(icon_hash=icon_hash, icon_url=icon_url)
-            if lexists(icon_channel_path) and utils.md5_file(icon_channel_path) != icon_md5:
-                os.unlink(icon_channel_path)
-            if not lexists(icon_channel_path):
-                # log.info("writing icon from %s to %s", icon_cache_path, icon_channel_path)
-                copy2(icon_cache_path, icon_channel_path)
+            # log.info("writing icon from %s to %s", icon_cache_path, icon_channel_path)
+            utils.copy_into(icon_cache_path, icon_channel_path)
 
         # have to stat again, because we don't have access to the stat cache here
         data['mtime'] = mtime
