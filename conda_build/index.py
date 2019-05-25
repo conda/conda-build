@@ -173,7 +173,7 @@ def _download_channeldata(channel_url):
 
 def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
                     omit_defaults=False, channel_urls=None, debug=False, verbose=True,
-                    shared_format_cache=True, **kwargs):
+                    **kwargs):
     global local_index_timestamp
     global local_subdir
     global cached_index
@@ -219,7 +219,7 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
                 if local_path not in urls:
                     urls.insert(0, local_path)
             _ensure_valid_channel(output_folder, subdir)
-            update_index(output_folder, verbose=debug, shared_format_cache=shared_format_cache)
+            update_index(output_folder, verbose=debug)
 
             # replace noarch with native subdir - this ends up building an index with both the
             #      native content and the noarch content.
@@ -295,7 +295,7 @@ def _ensure_valid_channel(local_folder, subdir):
 
 def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=None, threads=MAX_THREADS_DEFAULT,
                  verbose=False, progress=False, hotfix_source_repo=None, subdirs=None, warn=True,
-                 shared_format_cache=True, current_index_versions=None, debug=False):
+                 current_index_versions=None, debug=False):
     """
     If dir_path contains a directory named 'noarch', the path tree therein is treated
     as though it's a full channel, with a level of subdirs, each subdir having an update
@@ -313,14 +313,13 @@ def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=N
                     "Please update your code to point it at the channel root, rather than a subdir.")
         return update_index(base_path, check_md5=check_md5, channel_name=channel_name,
                             threads=threads, verbose=verbose, progress=progress,
-                            hotfix_source_repo=hotfix_source_repo, shared_format_cache=shared_format_cache,
+                            hotfix_source_repo=hotfix_source_repo,
                             current_index_versions=current_index_versions)
     return ChannelIndex(dir_path, channel_name, subdirs=subdirs, threads=threads,
                         deep_integrity_check=check_md5, debug=debug).index(
                             patch_generator=patch_generator, verbose=verbose,
                             progress=progress,
                             hotfix_source_repo=hotfix_source_repo,
-                            shared_format_cache=shared_format_cache,
                             current_index_versions=current_index_versions)
 
 
@@ -839,11 +838,12 @@ def _cache_info_file(tmpdir, info_fn, cache_path):
         move(info_path, cache_path)
 
 
-def _remove_file_extension(fn):
+def _alternate_file_extension(fn):
     cache_fn = fn
     for ext in CONDA_TARBALL_EXTENSIONS:
         cache_fn = cache_fn.replace(ext, '')
-    return cache_fn
+    other_ext = set(CONDA_TARBALL_EXTENSIONS) - set([fn.replace(cache_fn, '')])
+    return cache_fn + next(iter(other_ext))
 
 
 def _get_resolve_object(subdir, file_path=None, precs=None, repodata=None):
@@ -973,7 +973,7 @@ class ChannelIndex(object):
         self.thread_executor = DummyExecutor() if debug else ProcessPoolExecutor(threads)
         self.deep_integrity_check = deep_integrity_check
 
-    def index(self, patch_generator, hotfix_source_repo=None, verbose=False, progress=False, shared_format_cache=True,
+    def index(self, patch_generator, hotfix_source_repo=None, verbose=False, progress=False,
               current_index_versions=None):
         if verbose:
             level = logging.DEBUG
@@ -1003,8 +1003,7 @@ class ChannelIndex(object):
                             t2.update()
                             _ensure_valid_channel(self.channel_root, subdir)
                             repodata_from_packages = self.index_subdir(
-                                subdir, verbose=verbose, progress=progress,
-                                shared_format_cache=shared_format_cache)
+                                subdir, verbose=verbose, progress=progress)
 
                             t2.set_description("Writing pre-patch repodata")
                             t2.update()
@@ -1046,14 +1045,14 @@ class ChannelIndex(object):
                             if changed:
                                 self._write_subdir_index_html(subdir, repodata2)
 
-                            self._update_channeldata(channel_data, package_mtimes, patched_repodata, subdir, shared_format_cache)
+                            self._update_channeldata(channel_data, package_mtimes, patched_repodata, subdir)
 
                 # Step 7. Create and write channeldata.
                 self._write_channeldata_index_html(channel_data)
                 self._write_channeldata_rss(channel_data, package_mtimes, hotfix_source_repo)
                 self._write_channeldata(channel_data)
 
-    def index_subdir(self, subdir, verbose=False, progress=False, shared_format_cache=True):
+    def index_subdir(self, subdir, verbose=False, progress=False):
         # TODO Use REPODATA_FROM_PKGS_JSON_FN in this method
         subdir_path = join(self.channel_root, subdir)
         self._ensure_dirs(subdir)
@@ -1124,7 +1123,7 @@ class ChannelIndex(object):
             new_repodata_conda_packages = {}
             for fn in sorted(unchanged_set):
                 try:
-                    rec = self._load_index_from_cache(subdir, fn, stat_cache, shared_format_cache)
+                    rec = self._load_index_from_cache(subdir, fn, stat_cache)
                     if fn.endswith('.tar.bz2'):
                         new_repodata_packages[fn] = rec
                     else:
@@ -1145,7 +1144,7 @@ class ChannelIndex(object):
             #    with execution in parallel that would end up in the same place.
             for conda_format in tqdm(CONDA_TARBALL_EXTENSIONS, desc="File format:", leave=False):
                 futures = tuple(self.thread_executor.submit(
-                    ChannelIndex._extract_to_cache, self.channel_root, subdir, fn, shared_format_cache
+                    ChannelIndex._extract_to_cache, self.channel_root, subdir, fn
                 ) for fn in hash_extract_set if fn.endswith(conda_format))
                 with tqdm(desc="hash & extract packages for %s" % subdir,
                           total=len(futures), disable=(verbose or not progress), leave=False) as t:
@@ -1213,7 +1212,7 @@ class ChannelIndex(object):
         return update_set
 
     @staticmethod
-    def _extract_to_cache(channel_root, subdir, fn, shared_format_cache, second_try=False):
+    def _extract_to_cache(channel_root, subdir, fn, second_try=False):
         # This method WILL reread the tarball. Probably need another one to exit early if
         # there are cases where it's fine not to reread.  Like if we just rebuild repodata
         # from the cached files, but don't use the existing repodata.json as a starting point.
@@ -1222,7 +1221,8 @@ class ChannelIndex(object):
         # allow .conda files to reuse cache from .tar.bz2 and vice-versa.
         # Assumes that .tar.bz2 and .conda files have exactly the same
         # contents. This is convention, but not guaranteed, nor checked.
-        cache_fn = _remove_file_extension(fn) + '.tar.bz2' if shared_format_cache else fn
+        alternate_cache_fn = _alternate_file_extension(fn)
+        cache_fn = fn
 
         abs_fn = os.path.join(subdir_path, fn)
 
@@ -1241,8 +1241,13 @@ class ChannelIndex(object):
 
         log.debug("hashing, extracting, and caching %s" % fn)
 
+        alternate_cache = False
+        if (not os.path.exists(index_cache_path) and
+                os.path.exists(index_cache_path.replace(fn, alternate_cache_fn))):
+            alternate_cache = True
+
         try:
-            if second_try or not os.path.exists(index_cache_path):
+            if not alternate_cache and (second_try or not os.path.exists(index_cache_path)):
                 with TemporaryDirectory() as tmpdir:
                     conda_package_handling.api.extract(abs_fn, dest_dir=tmpdir, components="info")
                     index_file = os.path.join(tmpdir, 'info', 'index.json')
@@ -1274,24 +1279,38 @@ class ChannelIndex(object):
                 }
                 for field_name in filter_fields & set(index_json):
                     del index_json[field_name]
+            elif alternate_cache:
+                # we hit the cache of the other file type.  Copy files to this name, and replace
+                #    the size, md5, and sha256 values
+                paths = [index_cache_path, about_cache_path, paths_cache_path, recipe_cache_path,
+                         run_exports_cache_path, post_install_cache_path, icon_cache_path]
+                bizarro_paths = [_.replace(fn, alternate_cache_fn) for _ in paths]
+                for src, dest in zip(bizarro_paths, paths):
+                    if os.path.exists(src):
+                        try:
+                            os.makedirs(os.path.dirname(dest))
+                        except:
+                            pass
+                        utils.copy_into(src, dest)
 
-                with open(index_cache_path, 'w') as fh:
-                    json.dump(index_json, fh)
-
-            else:
                 with open(index_cache_path) as f:
                     index_json = json.load(f)
+            else:
+                raise ValueError("Mike didn't think this out very well")
 
             # calculate extra stuff to add to index.json cache, size, md5, sha256
             #    This is done always for all files, whether the cache is loaded or not,
             #    because the cache may be from the other file type.  We don't store this
             #    info in the cache to avoid confusion.
             index_json.update(conda_package_handling.api.get_pkg_details(abs_fn))
+
+            with open(index_cache_path, 'w') as fh:
+                json.dump(index_json, fh)
             retval = fn, mtime, size, index_json
         except (libarchive.exception.ArchiveError, tarfile.ReadError, KeyError,
                 EOFError, JSONDecodeError) as e:
             if not second_try:
-                return ChannelIndex._extract_to_cache(channel_root, subdir, fn, shared_format_cache, second_try=True)
+                return ChannelIndex._extract_to_cache(channel_root, subdir, fn, second_try=True)
             log.error("Package %s appears to be corrupt.  Please remove it and re-download it" % abs_fn)
             log.error(str(e))
         except FileNotFoundError as e:
@@ -1299,10 +1318,9 @@ class ChannelIndex(object):
             log.error(str(e))
         return retval
 
-    def _load_index_from_cache(self, subdir, fn, stat_cache, shared_format_cache):
+    def _load_index_from_cache(self, subdir, fn, stat_cache):
         # sharing a format cache means using the old name, since that's what everyone has.
-        cache_fn = _remove_file_extension(fn) + '.tar.bz2' if shared_format_cache else fn
-        index_cache_path = join(self.channel_root, subdir, '.cache', 'index', cache_fn + '.json')
+        index_cache_path = join(self.channel_root, subdir, '.cache', 'index', fn + '.json')
         log.debug("loading index cache %s" % index_cache_path)
 
         with open(index_cache_path) as fh:
@@ -1311,27 +1329,21 @@ class ChannelIndex(object):
         return index_json
 
     @staticmethod
-    def _load_all_from_cache(channel_root, subdir, fn, shared_format_cache):
+    def _load_all_from_cache(channel_root, subdir, fn):
         subdir_path = join(channel_root, subdir)
-        # allow .conda files to reuse cache from .tar.bz2 and vice-versa.
-        # Assumes that .tar.bz2 and .conda files have exactly the same
-        # contents. This is convention, but not guaranteed, nor checked.
-        # sharing a format cache means using the old name, since that's what everyone has.
-        cache_fn = _remove_file_extension(fn) + '.tar.bz2' if shared_format_cache else fn
-
         try:
             mtime = getmtime(join(subdir_path, fn))
         except FileNotFoundError:
             return {}
         # In contrast to self._load_index_from_cache(), this method reads up pretty much
         # all of the cached metadata, except for paths. It all gets dumped into a single map.
-        index_cache_path = join(subdir_path, '.cache', 'index', cache_fn + '.json')
-        about_cache_path = join(subdir_path, '.cache', 'about', cache_fn + '.json')
-        recipe_cache_path = join(subdir_path, '.cache', 'recipe', cache_fn + '.json')
-        run_exports_cache_path = join(subdir_path, '.cache', 'run_exports', cache_fn + '.json')
-        post_install_cache_path = join(subdir_path, '.cache', 'post_install', cache_fn + '.json')
-        icon_cache_path_glob = join(subdir_path, '.cache', 'icon', cache_fn + ".*")
-        recipe_log_path = join(subdir_path, '.cache', 'recipe_log', cache_fn + '.json')
+        index_cache_path = join(subdir_path, '.cache', 'index', fn + '.json')
+        about_cache_path = join(subdir_path, '.cache', 'about', fn + '.json')
+        recipe_cache_path = join(subdir_path, '.cache', 'recipe', fn + '.json')
+        run_exports_cache_path = join(subdir_path, '.cache', 'run_exports', fn + '.json')
+        post_install_cache_path = join(subdir_path, '.cache', 'post_install', fn + '.json')
+        icon_cache_path_glob = join(subdir_path, '.cache', 'icon', fn + ".*")
+        recipe_log_path = join(subdir_path, '.cache', 'recipe_log', fn + '.json')
 
         data = {}
         for path in (recipe_cache_path, about_cache_path, index_cache_path, post_install_cache_path, recipe_log_path):
@@ -1444,7 +1456,7 @@ class ChannelIndex(object):
         index_path = join(self.channel_root, 'index.html')
         _maybe_write(index_path, rendered_html)
 
-    def _update_channeldata(self, channel_data, package_mtimes, repodata, subdir, shared_format_cache):
+    def _update_channeldata(self, channel_data, package_mtimes, repodata, subdir):
         legacy_packages = repodata["packages"]
         conda_packages = repodata["packages.conda"]
 
@@ -1459,7 +1471,7 @@ class ChannelIndex(object):
                 pd[k] = value
 
         futures = tuple(self.thread_executor.submit(
-            ChannelIndex._load_all_from_cache, self.channel_root, subdir, fn, shared_format_cache
+            ChannelIndex._load_all_from_cache, self.channel_root, subdir, fn
         ) for fn in all_repodata_packages.keys())
         for rec, future in zip(all_repodata_packages.values(), futures):
             data = future.result()

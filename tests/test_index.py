@@ -14,7 +14,7 @@ import conda_package_handling.api
 
 from conda_build import api
 import conda_build.index
-from conda_build.utils import copy_into
+from conda_build.utils import copy_into, rm_rf
 from conda_build.conda_interface import subdir
 from conda_build.conda_interface import conda_47
 from .utils import metadata_dir, archive_dir
@@ -93,12 +93,12 @@ def test_index_on_single_subdir_1(testing_workdir):
         "packages": {
             "conda-index-pkg-a": {
                 "description": "Description field for conda-index-pkg-a. Actually, this is just the python description. "
-                                "Python is a widely used high-level, general-purpose, interpreted, dynamic "
-                                "programming language. Its design philosophy emphasizes code "
-                                "readability, and its syntax allows programmers to express concepts in "
-                                "fewer lines of code than would be possible in languages such as C++ or "
-                                "Java. The language provides constructs intended to enable clear programs "
-                                "on both a small and large scale.",
+                               "Python is a widely used high-level, general-purpose, interpreted, dynamic "
+                               "programming language. Its design philosophy emphasizes code "
+                               "readability, and its syntax allows programmers to express concepts in "
+                               "fewer lines of code than would be possible in languages such as C++ or "
+                               "Java. The language provides constructs intended to enable clear programs "
+                               "on both a small and large scale.",
                 "dev_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a/meta.yaml",
                 "doc_source_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a/README.md",
                 "doc_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a",
@@ -199,12 +199,12 @@ def test_index_noarch_osx64_1(testing_workdir):
         "packages": {
             "conda-index-pkg-a": {
                 "description": "Description field for conda-index-pkg-a. Actually, this is just the python description. "
-                                "Python is a widely used high-level, general-purpose, interpreted, dynamic "
-                                "programming language. Its design philosophy emphasizes code "
-                                "readability, and its syntax allows programmers to express concepts in "
-                                "fewer lines of code than would be possible in languages such as C++ or "
-                                "Java. The language provides constructs intended to enable clear programs "
-                                "on both a small and large scale.",
+                               "Python is a widely used high-level, general-purpose, interpreted, dynamic "
+                               "programming language. Its design philosophy emphasizes code "
+                               "readability, and its syntax allows programmers to express concepts in "
+                               "fewer lines of code than would be possible in languages such as C++ or "
+                               "Java. The language provides constructs intended to enable clear programs "
+                               "on both a small and large scale.",
                 "dev_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a/meta.yaml",
                 "doc_source_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a/README.md",
                 "doc_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a",
@@ -566,21 +566,17 @@ def test_new_pkg_format_preferred(testing_workdir, mocker):
     }
     assert actual_repodata_json == expected_repodata_json
 
+    # if we clear the stat cache, we force a re-examination.  This re-examination will load files
+    #     from the cache.  This has been a source of bugs in the past, where the wrong cached file
+    #     being loaded resulted in incorrect hashes/sizes for either the .tar.bz2 or .conda, depending
+    #     on which of those 2 existed in the cache.
+    rm_rf(os.path.join(testing_workdir, 'osx-64', 'stat.json'))
+    conda_build.index.update_index(testing_workdir, channel_name='test-channel', debug=True)
 
-def test_no_shared_format_cache(testing_workdir, mocker):
-    test_package_path = join(testing_workdir, 'osx-64', 'conda-index-pkg-a-1.0-py27h5e241af_0')
-    exts = ('.tar.bz2', '.conda')
-    for ext in exts:
-        copy_into(os.path.join(archive_dir, 'conda-index-pkg-a-1.0-py27h5e241af_0' + ext), test_package_path + ext)
-    # mock the extract function, so that we can assert that it is not called
-    #     with the .tar.bz2, because the .conda should be preferred
-    cph_extract = mocker.spy(conda_package_handling.api, 'extract')
-    # debug here uses a single-threaded bypass of the ProcessPool.  Mocking doesn't work otherwise.
-    conda_build.index.update_index(testing_workdir, channel_name='test-channel', shared_format_cache=False, debug=True)
-    # extract will get called twice.  It's not really safe to assume that .conda files will be the
-    #     exact same as .tar.bz2, since they can be uploaded separately.
-    cph_extract.assert_any_call(test_package_path + '.conda', mock.ANY, 'info')
-    cph_extract.assert_any_call(test_package_path + '.tar.bz2', mock.ANY, 'info')
+    with open(join(testing_workdir, 'osx-64', 'repodata.json')) as fh:
+        actual_repodata_json = json.loads(fh.read())
+
+    assert actual_repodata_json == expected_repodata_json
 
 
 def test_new_pkg_format_stat_cache_used(testing_workdir, mocker):
