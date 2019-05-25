@@ -541,7 +541,7 @@ def _warn_on_ambiguous_namekeys(ambiguous_namekeys, subdir, patched_repodata):
     """
     if ambiguous_namekeys:
         abc = defaultdict(lambda: defaultdict(list))
-        repodata = patched_repodata[subdir]
+        repodata = patched_repodata
         # TODO: should use packages.conda here somehow
         for fn, info in repodata['packages'].items():
             if info["name"] in ambiguous_namekeys:
@@ -555,9 +555,9 @@ def _warn_on_ambiguous_namekeys(ambiguous_namekeys, subdir, patched_repodata):
                 for subdir_fn in sorted(abc[package_name][namespace]):
                     builder.append("      - %s" % subdir_fn)
                     subdir, fn = subdir_fn.split("/")
-                    popped = patched_repodata[subdir]["packages"].pop(fn, None)
+                    popped = patched_repodata["packages"].pop(fn, None)
                     if popped:
-                        patched_repodata[subdir]["removed"].append(fn)
+                        patched_repodata["removed"].append(fn)
         # we remove them from the v2 repodata, not b1
         # builder.append("The associated packages are being removed from the index.")
         builder.append('')
@@ -623,9 +623,9 @@ def _warn_on_missing_dependencies(missing_dependencies, patched_repodata):
             for subdir_fn in sorted(missing_dependencies[dep_name]):
                 builder.append("    - %s" % subdir_fn)
                 subdir, fn = subdir_fn.split("/")
-                popped = patched_repodata[subdir]["packages"].pop(fn, None)
+                popped = patched_repodata["packages"].pop(fn, None)
                 if popped:
-                    patched_repodata[subdir]["removed"].append(fn)
+                    patched_repodata["removed"].append(fn)
 
         builder.append("The associated packages are being removed from the index.")
         builder.append('')
@@ -1034,7 +1034,7 @@ class ChannelIndex(object):
                             # Step 5. Augment repodata with additional information.
                             t2.set_description("Augmenting repodata with namespace")
                             t2.update()
-                            augmented_repodata = _augment_repodata(subdirs, patched_repodata, patch_instructions)
+                            augmented_repodata = _augment_repodata(subdir, patched_repodata, patch_instructions)
 
                             # Step 6. Create and save repodata2.json
                             # Also create associated index.html.
@@ -1247,7 +1247,10 @@ class ChannelIndex(object):
             alternate_cache = True
 
         try:
-            if not alternate_cache and (second_try or not os.path.exists(index_cache_path)):
+            if os.path.isfile(index_cache_path):
+                with open(index_cache_path) as f:
+                    index_json = json.load(f)
+            elif not alternate_cache and (second_try or not os.path.exists(index_cache_path)):
                 with TemporaryDirectory() as tmpdir:
                     conda_package_handling.api.extract(abs_fn, dest_dir=tmpdir, components="info")
                     index_file = os.path.join(tmpdir, 'info', 'index.json')
