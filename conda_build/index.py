@@ -1062,10 +1062,9 @@ class ChannelIndex(object):
                 self._write_channeldata(channel_data)
 
     def index_subdir(self, subdir, verbose=False, progress=False):
-        # TODO Use REPODATA_FROM_PKGS_JSON_FN in this method
         subdir_path = join(self.channel_root, subdir)
         self._ensure_dirs(subdir)
-        repodata_json_path = join(subdir_path, REPODATA_JSON_FN)
+        repodata_json_path = join(subdir_path, REPODATA_FROM_PKGS_JSON_FN)
 
         if verbose:
             log.info("Building repodata for %s" % subdir_path)
@@ -1128,17 +1127,12 @@ class ChannelIndex(object):
                 if fn in stat_cache:
                     del stat_cache[fn]
 
-            new_repodata_packages = {}
-            new_repodata_conda_packages = {}
-            futures = tuple(self.thread_executor.submit(
-                ChannelIndex._load_index_from_cache, self.channel_root, subdir, fn, stat_cache
-            ) for fn in unchanged_set)
-            with tqdm(desc="Loading unchanged packages",
-                        total=len(futures), disable=(verbose or not progress), leave=False) as t:
-                for future in as_completed(futures):
-                    fn, rec = future.result()
-                    t.set_description("Updated: %s" % fn)
-                    t.update()
+            new_repodata_packages = {k: v for k, v in old_repodata.get('packages', {}).items() if k in unchanged_set}
+            new_repodata_conda_packages = {k: v for k, v in old_repodata.get('packages.conda', {}).items() if k in unchanged_set}
+
+            for k in unchanged_set:
+                if not (k in new_repodata_packages or k in new_repodata_conda_packages):
+                    fn, rec = ChannelIndex._load_index_from_cache(self.channel_root, subdir, fn, stat_cache)
                     # this is how we pass an exception through.  When fn == rec, there's been a problem,
                     #    and we need to reload this file
                     if fn == rec:
