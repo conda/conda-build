@@ -236,7 +236,10 @@ def test_index_noarch_osx64_1(testing_workdir):
 
 
 def _build_test_index(workdir):
-    api.build(os.path.join(metadata_dir, "_index_hotfix_pkgs"), croot=workdir)
+    pkgs = api.build(os.path.join(metadata_dir, "_index_hotfix_pkgs"), croot=workdir)
+    for pkg in pkgs:
+        conda_package_handling.api.transmute(pkg, '.conda')
+    api.update_index(workdir)
 
     with open(os.path.join(workdir, subdir, 'repodata.json')) as f:
         original_metadata = json.load(f)
@@ -374,37 +377,40 @@ def test_channel_patch_instructions_json(testing_workdir):
     with open(os.path.join(testing_workdir, subdir, 'repodata.json')) as f:
         patched_metadata = json.load(f)
 
-    pkg_list = patched_metadata['packages']
-    assert "track_features_test-1.0-0.tar.bz2" in pkg_list
-    assert "track_features" not in pkg_list["track_features_test-1.0-0.tar.bz2"]
+    formats = (('packages', '.tar.bz2'), ('packages.conda', '.conda'))
 
-    assert "hotfix_depends_test-1.0-dummy_0.tar.bz2" in pkg_list
-    assert "features" not in pkg_list["hotfix_depends_test-1.0-dummy_0.tar.bz2"]
-    assert "zlib" in pkg_list["hotfix_depends_test-1.0-dummy_0.tar.bz2"]["depends"]
-    assert "dummy" in pkg_list["hotfix_depends_test-1.0-dummy_0.tar.bz2"]["depends"]
+    for key, ext in formats:
+        pkg_list = patched_metadata[key]
+        assert "track_features_test-1.0-0" + ext in pkg_list
+        assert "track_features" not in pkg_list["track_features_test-1.0-0" + ext]
 
-    assert "revoke_test-1.0-0.tar.bz2" in pkg_list
-    assert "zlib" in pkg_list["revoke_test-1.0-0.tar.bz2"]["depends"]
-    assert "package_has_been_revoked" in pkg_list["revoke_test-1.0-0.tar.bz2"]["depends"]
+        assert "hotfix_depends_test-1.0-dummy_0" + ext in pkg_list
+        assert "features" not in pkg_list["hotfix_depends_test-1.0-dummy_0" + ext]
+        assert "zlib" in pkg_list["hotfix_depends_test-1.0-dummy_0" + ext]["depends"]
+        assert "dummy" in pkg_list["hotfix_depends_test-1.0-dummy_0" + ext]["depends"]
 
-    assert "remove_test-1.0-0.tar.bz2" not in pkg_list
+        assert "revoke_test-1.0-0" + ext in pkg_list
+        assert "zlib" in pkg_list["revoke_test-1.0-0" + ext]["depends"]
+        assert "package_has_been_revoked" in pkg_list["revoke_test-1.0-0" + ext]["depends"]
 
-    with open(os.path.join(testing_workdir, subdir, 'repodata_from_packages.json')) as f:
-        pkg_repodata = json.load(f)
+        assert "remove_test-1.0-0" + ext not in pkg_list
 
-    pkg_list = pkg_repodata['packages']
-    assert "track_features_test-1.0-0.tar.bz2" in pkg_list
-    assert pkg_list["track_features_test-1.0-0.tar.bz2"]["track_features"] == "dummy"
+        with open(os.path.join(testing_workdir, subdir, 'repodata_from_packages.json')) as f:
+            pkg_repodata = json.load(f)
 
-    assert "hotfix_depends_test-1.0-dummy_0.tar.bz2" in pkg_list
-    assert pkg_list["hotfix_depends_test-1.0-dummy_0.tar.bz2"]["features"] == "dummy"
-    assert "zlib" in pkg_list["hotfix_depends_test-1.0-dummy_0.tar.bz2"]["depends"]
+        pkg_list = pkg_repodata[key]
+        assert "track_features_test-1.0-0" + ext in pkg_list
+        assert pkg_list["track_features_test-1.0-0" + ext]["track_features"] == "dummy"
 
-    assert "revoke_test-1.0-0.tar.bz2" in pkg_list
-    assert "zlib" in pkg_list["revoke_test-1.0-0.tar.bz2"]["depends"]
-    assert "package_has_been_revoked" not in pkg_list["revoke_test-1.0-0.tar.bz2"]["depends"]
+        assert "hotfix_depends_test-1.0-dummy_0" + ext in pkg_list
+        assert pkg_list["hotfix_depends_test-1.0-dummy_0" + ext]["features"] == "dummy"
+        assert "zlib" in pkg_list["hotfix_depends_test-1.0-dummy_0" + ext]["depends"]
 
-    assert "remove_test-1.0-0.tar.bz2" in pkg_list
+        assert "revoke_test-1.0-0" + ext in pkg_list
+        assert "zlib" in pkg_list["revoke_test-1.0-0" + ext]["depends"]
+        assert "package_has_been_revoked" not in pkg_list["revoke_test-1.0-0" + ext]["depends"]
+
+        assert "remove_test-1.0-0" + ext in pkg_list
 
 
 def test_patch_from_tarball(testing_workdir):

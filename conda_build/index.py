@@ -409,17 +409,26 @@ def _apply_instructions(subdir, repodata, instructions):
     repodata.setdefault("removed", [])
     utils.merge_or_update_dict(repodata.get('packages', {}), instructions.get('packages', {}), merge=False,
                                add_missing_keys=False)
+    # we could have totally separate instructions for .conda than .tar.bz2, but it's easier if we assume
+    #    that a similarly-named .tar.bz2 file is the same content as .conda, and shares fixes
+    new_pkg_fixes = {k.replace('.tar.bz2', '.conda'): v for k, v in instructions.get('packages', {}).items()}
+    utils.merge_or_update_dict(repodata.get('packages.conda', {}), new_pkg_fixes, merge=False,
+                               add_missing_keys=False)
     utils.merge_or_update_dict(repodata.get('packages.conda', {}), instructions.get('packages.conda', {}), merge=False,
                                add_missing_keys=False)
 
     for fn in instructions.get('revoke', ()):
         for key in ('packages', 'packages.conda'):
+            if fn.endswith('.tar.bz2') and key == 'packages.conda':
+                fn = fn.replace('.tar.bz2', '.conda')
             if fn in repodata[key]:
                 repodata[key][fn]['revoked'] = True
                 repodata[key][fn]['depends'].append('package_has_been_revoked')
 
     for fn in instructions.get('remove', ()):
         for key in ('packages', 'packages.conda'):
+            if fn.endswith('.tar.bz2') and key == 'packages.conda':
+                fn = fn.replace('.tar.bz2', '.conda')
             popped = repodata[key].pop(fn, None)
             if popped:
                 repodata["removed"].append(fn)
