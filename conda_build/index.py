@@ -1479,9 +1479,10 @@ class ChannelIndex(object):
         package_data = channel_data.get('packages', {})
 
         def _replace_if_newer_and_present(pd, data, erec, data_newer, k):
-            value = data.get(k) if data_newer else erec.get(k)
-            if value:
-                pd[k] = value
+            if data.get(k) and (data_newer or not erec.get(k)):
+                pd[k] = data[k]
+            else:
+                pd[k] = erec.get(k)
 
         futures = tuple(self.thread_executor.submit(
             ChannelIndex._load_all_from_cache, self.channel_root, subdir, fn
@@ -1507,9 +1508,9 @@ class ChannelIndex(object):
                 # keep any true value for these, since we don't distinguish subdirs
                 for k in ("binary_prefix", "text_prefix", "activate.d", "deactivate.d", "pre_link",
                           "post_link", "pre_unlink"):
-                    package_data[name][k] = data.get(k, False) or erec.get(k, False)
+                    package_data[name][k] = any(data.get(k), erec.get(k))
 
-                package_data[name]['subdirs'] = erec.get('subdirs', []) + [subdir]
+                package_data[name]['subdirs'] = sorted(list(set(erec.get('subdirs', []) + [subdir])))
                 # keep one run_exports entry per version of the package, since these vary by version
                 run_exports = erec.get('run_exports', {})
                 exports_from_this_version = data.get('run_exports')
@@ -1521,7 +1522,7 @@ class ChannelIndex(object):
 
         channel_data.update({
             'channeldata_version': CHANNELDATA_VERSION,
-            'subdirs': channel_data.get('subdirs', []) + [subdir],
+            'subdirs': sorted(list(set(channel_data.get('subdirs', []) + [subdir]))),
             'packages': package_data,
         })
 
