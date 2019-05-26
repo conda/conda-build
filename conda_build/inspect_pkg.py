@@ -30,7 +30,7 @@ from conda_build.conda_interface import memoized
 @memoized
 def dist_files(prefix, dist):
     meta = is_linked(prefix, dist)
-    return set(meta['files'])
+    return set(meta['files']) if meta else set()
 
 
 def which_package(in_prefix_path, prefix):
