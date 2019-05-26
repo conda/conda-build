@@ -14,7 +14,7 @@ import conda_package_handling.api
 
 from conda_build import api
 import conda_build.index
-from conda_build.utils import copy_into
+from conda_build.utils import copy_into, rm_rf
 from conda_build.conda_interface import subdir
 from conda_build.conda_interface import conda_47
 from .utils import metadata_dir, archive_dir
@@ -93,19 +93,17 @@ def test_index_on_single_subdir_1(testing_workdir):
         "packages": {
             "conda-index-pkg-a": {
                 "description": "Description field for conda-index-pkg-a. Actually, this is just the python description. "
-                                "Python is a widely used high-level, general-purpose, interpreted, dynamic "
-                                "programming language. Its design philosophy emphasizes code "
-                                "readability, and its syntax allows programmers to express concepts in "
-                                "fewer lines of code than would be possible in languages such as C++ or "
-                                "Java. The language provides constructs intended to enable clear programs "
-                                "on both a small and large scale.",
+                               "Python is a widely used high-level, general-purpose, interpreted, dynamic "
+                               "programming language. Its design philosophy emphasizes code "
+                               "readability, and its syntax allows programmers to express concepts in "
+                               "fewer lines of code than would be possible in languages such as C++ or "
+                               "Java. The language provides constructs intended to enable clear programs "
+                               "on both a small and large scale.",
                 "dev_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a/meta.yaml",
                 "doc_source_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a/README.md",
                 "doc_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a",
                 "home": "https://anaconda.org/conda-test/conda-index-pkg-a",
                 "license": "BSD",
-                "reference_package": "osx-64/conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2",
-                "source_git_rev": "master",
                 "source_git_url": "https://github.com/kalefranz/conda-test-packages.git",
                 "subdirs": [
                     "osx-64",
@@ -201,19 +199,17 @@ def test_index_noarch_osx64_1(testing_workdir):
         "packages": {
             "conda-index-pkg-a": {
                 "description": "Description field for conda-index-pkg-a. Actually, this is just the python description. "
-                                "Python is a widely used high-level, general-purpose, interpreted, dynamic "
-                                "programming language. Its design philosophy emphasizes code "
-                                "readability, and its syntax allows programmers to express concepts in "
-                                "fewer lines of code than would be possible in languages such as C++ or "
-                                "Java. The language provides constructs intended to enable clear programs "
-                                "on both a small and large scale.",
+                               "Python is a widely used high-level, general-purpose, interpreted, dynamic "
+                               "programming language. Its design philosophy emphasizes code "
+                               "readability, and its syntax allows programmers to express concepts in "
+                               "fewer lines of code than would be possible in languages such as C++ or "
+                               "Java. The language provides constructs intended to enable clear programs "
+                               "on both a small and large scale.",
                 "dev_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a/meta.yaml",
                 "doc_source_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a/README.md",
                 "doc_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a",
                 "home": "https://anaconda.org/conda-test/conda-index-pkg-a",
                 "license": "BSD",
-                "reference_package": "noarch/conda-index-pkg-a-1.0-pyhed9eced_1.tar.bz2",
-                "source_git_rev": "master",
                 "source_git_url": "https://github.com/kalefranz/conda-test-packages.git",
                 "subdirs": [
                     "noarch",
@@ -227,7 +223,7 @@ def test_index_noarch_osx64_1(testing_workdir):
                 "pre_link": False,
                 "pre_unlink": False,
                 "binary_prefix": False,
-                "text_prefix": False,
+                "text_prefix": True,
                 "run_exports": {},
             }
         },
@@ -240,7 +236,10 @@ def test_index_noarch_osx64_1(testing_workdir):
 
 
 def _build_test_index(workdir):
-    api.build(os.path.join(metadata_dir, "_index_hotfix_pkgs"), croot=workdir)
+    pkgs = api.build(os.path.join(metadata_dir, "_index_hotfix_pkgs"), croot=workdir)
+    for pkg in pkgs:
+        conda_package_handling.api.transmute(pkg, '.conda')
+    api.update_index(workdir)
 
     with open(os.path.join(workdir, subdir, 'repodata.json')) as f:
         original_metadata = json.load(f)
@@ -378,37 +377,40 @@ def test_channel_patch_instructions_json(testing_workdir):
     with open(os.path.join(testing_workdir, subdir, 'repodata.json')) as f:
         patched_metadata = json.load(f)
 
-    pkg_list = patched_metadata['packages']
-    assert "track_features_test-1.0-0.tar.bz2" in pkg_list
-    assert "track_features" not in pkg_list["track_features_test-1.0-0.tar.bz2"]
+    formats = (('packages', '.tar.bz2'), ('packages.conda', '.conda'))
 
-    assert "hotfix_depends_test-1.0-dummy_0.tar.bz2" in pkg_list
-    assert "features" not in pkg_list["hotfix_depends_test-1.0-dummy_0.tar.bz2"]
-    assert "zlib" in pkg_list["hotfix_depends_test-1.0-dummy_0.tar.bz2"]["depends"]
-    assert "dummy" in pkg_list["hotfix_depends_test-1.0-dummy_0.tar.bz2"]["depends"]
+    for key, ext in formats:
+        pkg_list = patched_metadata[key]
+        assert "track_features_test-1.0-0" + ext in pkg_list
+        assert "track_features" not in pkg_list["track_features_test-1.0-0" + ext]
 
-    assert "revoke_test-1.0-0.tar.bz2" in pkg_list
-    assert "zlib" in pkg_list["revoke_test-1.0-0.tar.bz2"]["depends"]
-    assert "package_has_been_revoked" in pkg_list["revoke_test-1.0-0.tar.bz2"]["depends"]
+        assert "hotfix_depends_test-1.0-dummy_0" + ext in pkg_list
+        assert "features" not in pkg_list["hotfix_depends_test-1.0-dummy_0" + ext]
+        assert "zlib" in pkg_list["hotfix_depends_test-1.0-dummy_0" + ext]["depends"]
+        assert "dummy" in pkg_list["hotfix_depends_test-1.0-dummy_0" + ext]["depends"]
 
-    assert "remove_test-1.0-0.tar.bz2" not in pkg_list
+        assert "revoke_test-1.0-0" + ext in pkg_list
+        assert "zlib" in pkg_list["revoke_test-1.0-0" + ext]["depends"]
+        assert "package_has_been_revoked" in pkg_list["revoke_test-1.0-0" + ext]["depends"]
 
-    with open(os.path.join(testing_workdir, subdir, 'repodata_from_packages.json')) as f:
-        pkg_repodata = json.load(f)
+        assert "remove_test-1.0-0" + ext not in pkg_list
 
-    pkg_list = pkg_repodata['packages']
-    assert "track_features_test-1.0-0.tar.bz2" in pkg_list
-    assert pkg_list["track_features_test-1.0-0.tar.bz2"]["track_features"] == "dummy"
+        with open(os.path.join(testing_workdir, subdir, 'repodata_from_packages.json')) as f:
+            pkg_repodata = json.load(f)
 
-    assert "hotfix_depends_test-1.0-dummy_0.tar.bz2" in pkg_list
-    assert pkg_list["hotfix_depends_test-1.0-dummy_0.tar.bz2"]["features"] == "dummy"
-    assert "zlib" in pkg_list["hotfix_depends_test-1.0-dummy_0.tar.bz2"]["depends"]
+        pkg_list = pkg_repodata[key]
+        assert "track_features_test-1.0-0" + ext in pkg_list
+        assert pkg_list["track_features_test-1.0-0" + ext]["track_features"] == "dummy"
 
-    assert "revoke_test-1.0-0.tar.bz2" in pkg_list
-    assert "zlib" in pkg_list["revoke_test-1.0-0.tar.bz2"]["depends"]
-    assert "package_has_been_revoked" not in pkg_list["revoke_test-1.0-0.tar.bz2"]["depends"]
+        assert "hotfix_depends_test-1.0-dummy_0" + ext in pkg_list
+        assert pkg_list["hotfix_depends_test-1.0-dummy_0" + ext]["features"] == "dummy"
+        assert "zlib" in pkg_list["hotfix_depends_test-1.0-dummy_0" + ext]["depends"]
 
-    assert "remove_test-1.0-0.tar.bz2" in pkg_list
+        assert "revoke_test-1.0-0" + ext in pkg_list
+        assert "zlib" in pkg_list["revoke_test-1.0-0" + ext]["depends"]
+        assert "package_has_been_revoked" not in pkg_list["revoke_test-1.0-0" + ext]["depends"]
+
+        assert "remove_test-1.0-0" + ext in pkg_list
 
 
 def test_patch_from_tarball(testing_workdir):
@@ -511,8 +513,8 @@ def test_stat_cache_used(testing_workdir, mocker):
     cph_extract.assert_not_called()
 
 
-'''
 def test_new_pkg_format_preferred(testing_workdir, mocker):
+    """Test that in one pass, the .conda file is extracted before the .tar.bz2, and the .tar.bz2 uses the cache"""
     test_package_path = join(testing_workdir, 'osx-64', 'conda-index-pkg-a-1.0-py27h5e241af_0')
     exts = ('.tar.bz2', '.conda')
     for ext in exts:
@@ -520,9 +522,9 @@ def test_new_pkg_format_preferred(testing_workdir, mocker):
     # mock the extract function, so that we can assert that it is not called
     #     with the .tar.bz2, because the .conda should be preferred
     cph_extract = mocker.spy(conda_package_handling.api, 'extract')
-    conda_build.index.update_index(testing_workdir, channel_name='test-channel')
+    conda_build.index.update_index(testing_workdir, channel_name='test-channel', debug=True)
     # extract should get called once by default.  Within a channel, we assume that a .tar.bz2 and .conda have the same contents.
-    cph_extract.assert_called_with(test_package_path + '.conda', mock.ANY, 'info')
+    cph_extract.assert_called_once_with(test_package_path + '.conda', mock.ANY, 'info')
 
     with open(join(testing_workdir, 'osx-64', 'repodata.json')) as fh:
         actual_repodata_json = json.loads(fh.read())
@@ -569,39 +571,80 @@ def test_new_pkg_format_preferred(testing_workdir, mocker):
         "repodata_version": 1,
     }
     assert actual_repodata_json == expected_repodata_json
-'''
 
+    # if we clear the stat cache, we force a re-examination.  This re-examination will load files
+    #     from the cache.  This has been a source of bugs in the past, where the wrong cached file
+    #     being loaded resulted in incorrect hashes/sizes for either the .tar.bz2 or .conda, depending
+    #     on which of those 2 existed in the cache.
+    rm_rf(os.path.join(testing_workdir, 'osx-64', 'stat.json'))
+    conda_build.index.update_index(testing_workdir, channel_name='test-channel', debug=True)
 
-def test_no_shared_format_cache(testing_workdir, mocker):
-    test_package_path = join(testing_workdir, 'osx-64', 'conda-index-pkg-a-1.0-py27h5e241af_0')
-    exts = ('.tar.bz2', '.conda')
-    for ext in exts:
-        copy_into(os.path.join(archive_dir, 'conda-index-pkg-a-1.0-py27h5e241af_0' + ext), test_package_path + ext)
-    # mock the extract function, so that we can assert that it is not called
-    #     with the .tar.bz2, because the .conda should be preferred
-    cph_extract = mocker.spy(conda_package_handling.api, 'extract')
-    # debug here uses a single-threaded bypass of the ProcessPool.  Mocking doesn't work otherwise.
-    conda_build.index.update_index(testing_workdir, channel_name='test-channel', shared_format_cache=False, debug=True)
-    # extract will get called twice.  It's not really safe to assume that .conda files will be the
-    #     exact same as .tar.bz2, since they can be uploaded separately.
-    cph_extract.assert_any_call(test_package_path + '.conda', mock.ANY, 'info')
-    cph_extract.assert_any_call(test_package_path + '.tar.bz2', mock.ANY, 'info')
+    with open(join(testing_workdir, 'osx-64', 'repodata.json')) as fh:
+        actual_repodata_json = json.loads(fh.read())
+
+    assert actual_repodata_json == expected_repodata_json
 
 
 def test_new_pkg_format_stat_cache_used(testing_workdir, mocker):
+    # if we have old .tar.bz2 index cache stuff, assert that we pick up correct md5, sha26 and size for .conda
     test_package_path = join(testing_workdir, 'osx-64', 'conda-index-pkg-a-1.0-py27h5e241af_0')
-    exts = ('.tar.bz2', '.conda')
-    for ext in exts:
-        copy_into(os.path.join(archive_dir, 'conda-index-pkg-a-1.0-py27h5e241af_0' + ext), test_package_path + ext)
+    copy_into(os.path.join(archive_dir, 'conda-index-pkg-a-1.0-py27h5e241af_0' + '.tar.bz2'), test_package_path + '.tar.bz2')
     conda_build.index.update_index(testing_workdir, channel_name='test-channel')
 
     # mock the extract function, so that we can assert that it is not called, because the stat cache should exist
     #    if this doesn't work, something about the stat cache is confused.  It's a little convoluted, because
     #    the index has keys for .tar.bz2's, but the stat cache comes from .conda files when they are available
     #    because extracting them is much, much faster.
+    copy_into(os.path.join(archive_dir, 'conda-index-pkg-a-1.0-py27h5e241af_0' + '.conda'), test_package_path + '.conda')
     cph_extract = mocker.spy(conda_package_handling.api, 'extract')
-    conda_build.index.update_index(testing_workdir, channel_name='test-channel')
+    conda_build.index.update_index(testing_workdir, channel_name='test-channel', debug=True)
     cph_extract.assert_not_called()
+
+    with open(join(testing_workdir, 'osx-64', 'repodata.json')) as fh:
+        actual_repodata_json = json.loads(fh.read())
+
+    expected_repodata_json = {
+        "info": {
+            'subdir': 'osx-64',
+        },
+        "packages": {
+            "conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2": {
+                "build": "py27h5e241af_0",
+                "build_number": 0,
+                "depends": [
+                    "python >=2.7,<2.8.0a0"
+                ],
+                "license": "BSD",
+                "md5": "37861df8111170f5eed4bff27868df59",
+                "name": "conda-index-pkg-a",
+                "sha256": "459f3e9b2178fa33bdc4e6267326405329d1c1ab982273d9a1c0a5084a1ddc30",
+                "size": 8733,
+                "subdir": "osx-64",
+                "timestamp": 1508520039632,
+                "version": "1.0",
+            },
+        },
+        "packages.conda": {
+            "conda-index-pkg-a-1.0-py27h5e241af_0.conda": {
+                "build": "py27h5e241af_0",
+                "build_number": 0,
+                "depends": [
+                    "python >=2.7,<2.8.0a0"
+                ],
+                "license": "BSD",
+                "md5": "4ed4b435f400dac1aabdc1fff06f78ff",
+                "name": "conda-index-pkg-a",
+                "sha256": "67b07b644105439515cc5c8c22c86939514cacf30c8c574cd70f5f1267a40f19",
+                "size": 9296,
+                "subdir": "osx-64",
+                "timestamp": 1508520039632,
+                "version": "1.0",
+            },
+        },
+        "removed": [],
+        "repodata_version": 1,
+    }
+    assert actual_repodata_json == expected_repodata_json
 
 
 def test_current_index_reduces_space():
