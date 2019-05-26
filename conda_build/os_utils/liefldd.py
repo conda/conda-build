@@ -723,21 +723,21 @@ def get_exports(filename, arch='native'):
                 print('WARNING: nm: failed to get_exports({})'.format(filename))
                 exports = None
 
-            # Now, our own implementation which does not require nm and can
-            # handle .lib files.
-            exports2, flags2, exports2_all, flags2_all = get_static_lib_exports(filename)
-            result = exports2
-            if debug_static_archives and exports and set(exports) != set(exports2):
-                diff1 = set(exports).difference(set(exports2))
-                diff2 = set(exports2).difference(set(exports))
-                error_count = len(diff1) + len(diff2)
-                if debug_static_archives:
-                    print("errors: {} (-{}, +{})".format(error_count, len(diff1), len(diff2)))
-                if debug_static_archives:
-                    print("WARNING :: Disagreement regarding static lib exports in {} between nm (nsyms={}) and lielfldd (nsyms={}):"
-                          .format(filename, len(exports), len(exports2)))
-                print("** nm.diff(liefldd) [MISSING SYMBOLS] **\n{}".format('\n'.join(diff1)))
-                print("** liefldd.diff(nm) [  EXTRA SYMBOLS] **\n{}".format('\n'.join(diff2)))
+            # # Now, our own implementation which does not require nm and can
+            # # handle .lib files.
+            # exports2, flags2, exports2_all, flags2_all = get_static_lib_exports(filename)
+            # result = exports2
+            # if debug_static_archives and exports and set(exports) != set(exports2):
+            #     diff1 = set(exports).difference(set(exports2))
+            #     diff2 = set(exports2).difference(set(exports))
+            #     error_count = len(diff1) + len(diff2)
+            #     if debug_static_archives:
+            #         print("errors: {} (-{}, +{})".format(error_count, len(diff1), len(diff2)))
+            #     if debug_static_archives:
+            #         print("WARNING :: Disagreement regarding static lib exports in {} between nm (nsyms={}) and lielfldd (nsyms={}):"
+            #               .format(filename, len(exports), len(exports2)))
+            #     print("** nm.diff(liefldd) [MISSING SYMBOLS] **\n{}".format('\n'.join(diff1)))
+            #     print("** liefldd.diff(nm) [  EXTRA SYMBOLS] **\n{}".format('\n'.join(diff2)))
 
     if not result:
         binary = ensure_binary(filename)

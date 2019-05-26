@@ -1,10 +1,8 @@
 from __future__ import absolute_import, division, print_function
 
-from collections import defaultdict
-import fnmatch
+from collections import defaultdict, OrderedDict
 from functools import partial
-import glob2
-from glob2 import glob
+from fnmatch import fnmatch, fnmatchcase, filter as fnmatch_filter
 import io
 import locale
 import re
@@ -129,7 +127,7 @@ def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
     absfiles = [os.path.join(prefix, f) for f in files]
     py_ver = '.'.join(config.variant['python'].split('.')[:2])
     sp_dir = utils.get_site_packages(prefix, py_ver)
-    for egg_path in glob(os.path.join(sp_dir, '*-py*.egg')):
+    for egg_path in utils.glob(os.path.join(sp_dir, '*-py*.egg')):
         if os.path.isdir(egg_path):
             if preserve_egg_dir or not any(os.path.join(egg_path, i) in absfiles for i
                     in walk_prefix(egg_path, False, windows_forward_slashes=False)):
@@ -229,7 +227,7 @@ def compile_missing_pyc(files, cwd, python_exe, skip_compile_pyc=()):
     skip_compile_pyc_n = [os.path.normpath(skip) for skip in skip_compile_pyc]
     skipped_files = set()
     for skip in skip_compile_pyc_n:
-        skipped_files.update(set(fnmatch.filter(files, skip)))
+        skipped_files.update(set(fnmatch_filter(files, skip)))
     unskipped_files = set(files) - skipped_files
     for fn in unskipped_files:
         # omit files in Library/bin, Scripts, and the root prefix - they are not generally imported
@@ -605,29 +603,32 @@ DEFAULT_WIN_WHITELIST = ['**/ADVAPI32.dll',
                          '**/api-ms-win*.dll']
 
 
-def _collect_needed_dsos(sysroots, files, run_prefix, sysroot_substitution, build_prefix, build_prefix_substitution):
+def _collect_needed_dsos(sysroots_files, files, run_prefix, sysroot_substitution, build_prefix, build_prefix_substitution):
     all_needed_dsos = set()
     needed_dsos_for_file = dict()
-    sysroot = sysroots[0] if sysroots else ''
-    for f in files:
-        path = os.path.join(run_prefix, f)
-        if not codefile_type(path):
-            continue
-        needed = get_linkages_memoized(path, resolve_filenames=True, recurse=False,
-                                       sysroot=sysroot,
-                                       envroot=run_prefix)
-        if sysroot:
-            needed = [n.replace(sysroot, sysroot_substitution) if n.startswith(sysroot)
-                      else n for n in needed]
-        # We do not want to do this substitution when merging build and host prefixes.
-        if build_prefix != run_prefix:
-            needed = [n.replace(build_prefix, build_prefix_substitution) if n.startswith(build_prefix)
+    if sysroots_files:
+        sysroot = list(sysroots_files.keys())[0]
+        for f in files:
+            path = os.path.join(run_prefix, f)
+            if not codefile_type(path):
+                continue
+            build_prefix = build_prefix.replace(os.sep, '/')
+            run_prefix = run_prefix.replace(os.sep, '/')
+            needed = get_linkages_memoized(path, resolve_filenames=True, recurse=False,
+                                        sysroot=sysroot,
+                                        envroot=run_prefix)
+            if sysroot:
+                needed = [n.replace(sysroot, sysroot_substitution) if n.startswith(sysroot)
+                        else n for n in needed]
+            # We do not want to do this substitution when merging build and host prefixes.
+            if build_prefix != run_prefix:
+                needed = [n.replace(build_prefix, build_prefix_substitution) if n.startswith(build_prefix)
+                        else n for n in needed]
+            needed = [os.path.relpath(n, run_prefix).replace(os.sep, '/') if n.startswith(run_prefix)
                     else n for n in needed]
-        needed = [os.path.relpath(n, run_prefix) if n.startswith(run_prefix)
-                  else n for n in needed]
-        needed_dsos_for_file[f] = needed
-        all_needed_dsos = all_needed_dsos.union(needed)
-        all_needed_dsos.add(f)
+            needed_dsos_for_file[f] = needed
+            all_needed_dsos = all_needed_dsos.union(needed)
+            all_needed_dsos.add(f)
     return all_needed_dsos, needed_dsos_for_file
 
 
@@ -642,9 +643,9 @@ def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_v
         for subdir2, _, filez in os.walk(prefix):
             for file in filez:
                 fp = os.path.join(subdir2, file)
-                dynamic_lib = any(glob2.fnmatch.fnmatch(fp, ext) for ext in ('*.so*', '*.dylib*', '*.dll')) and \
+                dynamic_lib = any(fnmatch(fp, ext) for ext in ('*.so*', '*.dylib*', '*.dll')) and \
                               codefile_type(fp, skip_symlinks=False) is not None
-                static_lib = any(glob2.fnmatch.fnmatch(fp, ext) for ext in ('*.a', '*.lib'))
+                static_lib = any(fnmatch(fp, ext) for ext in ('*.a', '*.lib'))
                 # Looking at all the files is very slow.
                 if not dynamic_lib and not static_lib:
                     continue
@@ -661,14 +662,14 @@ def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_v
                 new_pkgs = list(which_package(rp, prefix))
                 # Cannot filter here as this means the DSO (eg libomp.dylib) will not be found in any package
                 # [owners.append(new_pkg) for new_pkg in new_pkgs if new_pkg not in owners
-                #  and not any([glob2.fnmatch.fnmatch(new_pkg.name, i) for i in ignore_for_statics])]
+                #  and not any([fnmatch(new_pkg.name, i) for i in ignore_for_statics])]
                 for new_pkg in new_pkgs:
                     if new_pkg not in owners:
                         owners.append(new_pkg)
                 prefix_owners[rp] = owners
                 if len(prefix_owners[rp]):
                     exports = set(e for e in get_exports_memoized(fp) if not
-                                  any(glob2.fnmatch.fnmatch(e, pattern) for pattern in ignore_list_syms))
+                                  any(fnmatch(e, pattern) for pattern in ignore_list_syms))
                     all_lib_exports[rp] = exports
                     # Check codefile_type to filter out linker scripts.
                     if dynamic_lib:
@@ -705,38 +706,38 @@ def _print_msg(errors, text, verbose):
         print(text)
 
 
-def _lookup_in_system_whitelists(errors, whitelist, needed_dso, sysroots, msg_prelude, info_prelude,
+def _lookup_in_system_whitelists(errors, whitelist, needed_dso, sysroots_files, msg_prelude, info_prelude,
                                  sysroot_prefix, sysroot_substitution, verbose):
     # A system or ignored dependency. We should be able to find it in one of the CDT or
     # compiler packages on linux or in a sysroot folder on other OSes. These usually
     # start with '$RPATH/' which indicates pyldd did not find them, so remove that now.
     if needed_dso.startswith(sysroot_substitution):
-        replacements = [sysroot_substitution] + sysroots
+        replacements = [sysroot_substitution] + [sysroot for sysroot, _ in sysroots_files.items()]
     else:
         replacements = [needed_dso]
     in_whitelist = False
+    # It takes a very long time to glob in C:/Windows so cache it.
     for replacement in replacements:
         needed_dso_w = needed_dso.replace(sysroot_substitution, replacement)
-        in_whitelist = any([glob2.fnmatch.fnmatch(needed_dso_w, w) for w in whitelist])
+        in_whitelist = any([fnmatch(needed_dso_w, w) for w in whitelist])
         if in_whitelist:
             n_dso_p = "Needed DSO {}".format(needed_dso_w)
             _print_msg(errors, '{}: {} found in the whitelist'.
-                        format(info_prelude, n_dso_p), verbose=verbose)
+                       format(info_prelude, n_dso_p), verbose=verbose)
             break
-    if not in_whitelist and len(sysroots):
+    if not in_whitelist and len(sysroots_files):
         # Check if we have a CDT package.
         dso_fname = os.path.basename(needed_dso)
         sysroot_files = []
-        dirs_to_glob = []  # Optimization, ideally we'll not glob at all as it's slooow.
-        for sysroot in sysroots:
+        for sysroot, files in sysroots_files.items():
             sysroot_os = sysroot.replace('/', os.sep)
+            wild = os.path.join('**', dso_fname)
             if needed_dso.startswith(sysroot_substitution):
                 # Do we want to do this replace?
                 sysroot_files.append(needed_dso.replace(sysroot_substitution, sysroot_os))
             else:
-                dirs_to_glob.append(os.path.join(sysroot_os, '**', dso_fname))
-        for dir_to_glob in dirs_to_glob:
-            sysroot_files.extend(glob(dir_to_glob))
+                found = [file for file in files if fnmatchcase(file, wild)]
+                sysroot_files.extend(found)
         if len(sysroot_files):
             # Removing sysroot_prefix is only *really* for Linux, though we could
             # use CONDA_BUILD_SYSROOT for macOS. We should figure out what to do about
@@ -777,7 +778,7 @@ def _lookup_in_prefix_packages(errors, needed_dso, files, run_prefix, whitelist,
     for pkg in in_pkgs_in_run_reqs:
         if pkg in lib_packages:
             lib_packages_used.add(pkg)
-    in_whitelist = any([glob2.fnmatch.fnmatch(in_prefix_dso, w) for w in whitelist])
+    in_whitelist = any([fnmatch(in_prefix_dso, w) for w in whitelist])
     if len(in_pkgs_in_run_reqs) == 1:
         _print_msg(errors, '{}: {} found in {}{}'.format(info_prelude,
                                                         n_dso_p,
@@ -829,7 +830,7 @@ def _show_linking_messages(files, errors, needed_dsos_for_file, build_prefix, ru
                        verbose=verbose)
             continue
         if runpaths and not (runpath_whitelist or
-                             any(fnmatch.fnmatch(f, w) for w in runpath_whitelist)):
+                             any(fnmatch(f, w) for w in runpath_whitelist)):
             _print_msg(errors, '{}: runpaths {} found in {}'.format(msg_prelude,
                                                                     runpaths,
                                                                     path), verbose=verbose)
@@ -883,7 +884,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     # ignore_for_statics = ['gcc_impl_linux*', 'compiler-rt*', 'llvm-openmp*', 'gfortran_osx*']
     # sysroots and whitelists are similar, but the subtle distinctions are important.
     sysroot_prefix = build_prefix
-    sysroots = [sysroot + os.sep for sysroot in glob(os.path.join(sysroot_prefix, '**', 'sysroot'))]
+    sysroots = [sysroot + os.sep for sysroot in utils.glob(os.path.join(sysroot_prefix, '**', 'sysroot'))]
     whitelist = []
     vendoring_record = dict()
     # When build_is_host is True we perform file existence checks for files in the sysroot (e.g. C:\Windows)
@@ -906,9 +907,16 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
             whitelist = DEFAULT_WIN_WHITELIST
             build_is_host = True if sys.platform == 'win-32' else False
 
-    # LIEF is very slow at decoding some DSOs, so we only let it look at ones that we link to (and ones we
-    # have built).
-    all_needed_dsos, needed_dsos_for_file = _collect_needed_dsos(sysroots, files, run_prefix, sysroot_substitution,
+    # Sort the sysroots by the number of files in them so things can assume that
+    # the first sysroot is more important than others.
+    sysroots_files = dict()
+    for sysroot in sysroots:
+        from conda_build.utils import prefix_files
+        sysroots_files[sysroot] = prefix_files(sysroot)
+    sysroots_files = OrderedDict(sorted(sysroots_files.items(), key=lambda x: -len(x[1])))
+
+    all_needed_dsos, needed_dsos_for_file = _collect_needed_dsos(sysroots_files, files, run_prefix,
+                                                                 sysroot_substitution,
                                                                  build_prefix, build_prefix_substitution)
 
     prefix_owners, _, _, all_lib_exports = _map_file_to_package(
@@ -928,7 +936,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                needed_dso not in prefix_owners):
                 in_whitelist = False
                 if not build_is_host:
-                    in_whitelist = any([glob2.fnmatch.fnmatch(needed_dso, w) for w in whitelist])
+                    in_whitelist = any([fnmatch(needed_dso, w) for w in whitelist])
                 if not in_whitelist:
                     print("  ERROR :: {} not in prefix_owners".format(needed_dso))
 
@@ -939,7 +947,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
 
     _show_linking_messages(files, errors, needed_dsos_for_file, build_prefix, run_prefix, pkg_name,
                            error_overlinking, runpath_whitelist, verbose, requirements_run, lib_packages,
-                           lib_packages_used, whitelist, sysroots, sysroot_prefix, sysroot_substitution, subdir)
+                           lib_packages_used, whitelist, sysroots_files, sysroot_prefix, sysroot_substitution, subdir)
 
     if lib_packages_used != lib_packages:
         info_prelude = "   INFO ({})".format(pkg_name)
