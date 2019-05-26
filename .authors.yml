@@ -414,7 +414,7 @@
 - name: Ray Donnelly
   email: mingw.android@gmail.com
   github: mingwandroid
-  num_commits: 392
+  num_commits: 397
   first_commit: 2016-03-06 18:52:51
 - name: Paul Madden
   email: maddenp@colorado.edu
@@ -890,7 +890,7 @@
   first_commit: 2019-01-26 13:17:33
 - name: Rachel
   email: rrigdon@anaconda.com
-  num_commits: 45
+  num_commits: 47
   first_commit: 2019-01-24 14:12:19
   github: rrigdon
 - name: Rachel Rigdon
