@@ -1,4 +1,22 @@
 # current developments
+2019-05-26 3.18.2:
+------------------
+
+Bug fixes:
+----------
+
+* speed up post-link checks
+* fix activation not running during tests
+* improve indexing to show status better, and fix bug where size/hashes were being mixed up between .tar.bz2 and .conda files
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @msarahan
+* @rrigdon
+
+
 2019-05-18 3.18.1:
 ------------------
 
