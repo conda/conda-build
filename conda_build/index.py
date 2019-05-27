@@ -29,6 +29,7 @@ import yaml
 from yaml.constructor import ConstructorError
 from yaml.parser import ParserError
 from yaml.scanner import ScannerError
+from yaml.reader import ReaderError
 
 import contextlib
 import fnmatch
@@ -721,7 +722,7 @@ def _cache_recipe(tmpdir, recipe_cache_path):
         with open(recipe_path) as f:
             try:
                 recipe_json = yaml.safe_load(f)
-            except (ConstructorError, ParserError, ScannerError):
+            except (ConstructorError, ParserError, ScannerError, ReaderError):
                 pass
     try:
         recipe_json_str = json.dumps(recipe_json)
@@ -1148,13 +1149,11 @@ class ChannelIndex(object):
             # This is also where we update the contents of the stat_cache for successfully
             #   extracted packages.
             # Sorting here prioritizes .conda files ('c') over .tar.bz2 files ('b')
-            hash_extract_set = sorted(set(concatv(add_set, update_set)),
-                                      key=lambda x: os.path.splitext(x)[1],
-                                      reverse=True)
+            hash_extract_set = tuple(concatv(add_set, update_set))
 
             # split up the set by .conda packages first, then .tar.bz2.  This avoids race conditions
             #    with execution in parallel that would end up in the same place.
-            for conda_format in tqdm(CONDA_TARBALL_EXTENSIONS, desc="File format:", leave=False):
+            for conda_format in tqdm(CONDA_TARBALL_EXTENSIONS, desc="File format", leave=False):
                 futures = tuple(self.thread_executor.submit(
                     ChannelIndex._extract_to_cache, self.channel_root, subdir, fn
                 ) for fn in hash_extract_set if fn.endswith(conda_format))
