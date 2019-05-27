@@ -691,10 +691,10 @@ def _cache_post_install_details(paths_cache_path, post_install_cache_path):
                     post_install_details_json['binary_prefix'] = True
                 elif f.get('file_mode') == 'text':
                     post_install_details_json['text_prefix'] = True
-                # check for any activate.d/deactivate.d scripts
-                for k in ('activate.d', 'deactivate.d'):
-                    if not post_install_details_json.get(k) and f['_path'].startswith('etc/conda/%s' % k):
-                        post_install_details_json[k] = True
+            # check for any activate.d/deactivate.d scripts
+            for k in ('activate.d', 'deactivate.d'):
+                if not post_install_details_json.get(k) and f['_path'].startswith('etc/conda/%s' % k):
+                    post_install_details_json[k] = True
             # check for any link scripts
             for pat in ('pre-link', 'post-link', 'pre-unlink'):
                 if not post_install_details_json.get(pat) and fnmatch.fnmatch(f['_path'], '*/.*-%s.*' % pat):
@@ -1508,7 +1508,7 @@ class ChannelIndex(object):
                 # keep any true value for these, since we don't distinguish subdirs
                 for k in ("binary_prefix", "text_prefix", "activate.d", "deactivate.d", "pre_link",
                           "post_link", "pre_unlink"):
-                    package_data[name][k] = any(data.get(k), erec.get(k))
+                    package_data[name][k] = any((data.get(k), erec.get(k)))
 
                 package_data[name]['subdirs'] = sorted(list(set(erec.get('subdirs', []) + [subdir])))
                 # keep one run_exports entry per version of the package, since these vary by version
