@@ -814,7 +814,9 @@ def post_process_files(m, initial_prefix_files):
     new_files = sorted(current_prefix_files - initial_prefix_files)
     new_files = utils.filter_files(new_files, prefix=m.config.host_prefix)
 
-    if any(m.config.meta_dir in join(m.config.host_prefix, f) for f in new_files):
+    host_prefix = m.config.host_prefix
+    meta_dir = m.config.meta_dir
+    if any(meta_dir in join(host_prefix, f) for f in new_files):
         meta_files = (tuple(f for f in new_files if m.config.meta_dir in
                 join(m.config.host_prefix, f)),)
         sys.exit(indent("""Error: Untracked file(s) %s found in conda-meta directory.

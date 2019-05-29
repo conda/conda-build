@@ -1048,8 +1048,9 @@ def fix_permissions(files, prefix):
 def post_build(m, files, build_python):
     print('number of files:', len(files))
 
+    host_prefix = m.config.host_prefix
     for f in files:
-        make_hardlink_copy(f, m.config.host_prefix)
+        make_hardlink_copy(f, host_prefix)
 
     if not m.config.target_subdir.startswith('win'):
         binary_relocation = m.binary_relocation()
@@ -1057,12 +1058,12 @@ def post_build(m, files, build_python):
             print("Skipping binary relocation logic")
         osx_is_app = (m.config.target_subdir == 'osx-64' and
                       bool(m.get_value('build/osx_is_app', False)))
-        check_symlinks(files, m.config.host_prefix, m.config.croot)
-        prefix_files = utils.prefix_files(m.config.host_prefix)
+        check_symlinks(files, host_prefix, m.config.croot)
+        prefix_files = utils.prefix_files(host_prefix)
 
         for f in files:
             if f.startswith('bin/'):
-                fix_shebang(f, prefix=m.config.host_prefix, build_python=build_python,
+                fix_shebang(f, prefix=host_prefix, build_python=build_python,
                             osx_is_app=osx_is_app)
             if binary_relocation is True or (isinstance(binary_relocation, list) and
                                              f in binary_relocation):
