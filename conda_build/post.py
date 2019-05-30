@@ -606,29 +606,30 @@ DEFAULT_WIN_WHITELIST = ['**/ADVAPI32.dll',
 def _collect_needed_dsos(sysroots_files, files, run_prefix, sysroot_substitution, build_prefix, build_prefix_substitution):
     all_needed_dsos = set()
     needed_dsos_for_file = dict()
+    sysroot = ''
     if sysroots_files:
         sysroot = list(sysroots_files.keys())[0]
-        for f in files:
-            path = os.path.join(run_prefix, f)
-            if not codefile_type(path):
-                continue
-            build_prefix = build_prefix.replace(os.sep, '/')
-            run_prefix = run_prefix.replace(os.sep, '/')
-            needed = get_linkages_memoized(path, resolve_filenames=True, recurse=False,
-                                        sysroot=sysroot,
-                                        envroot=run_prefix)
-            if sysroot:
-                needed = [n.replace(sysroot, sysroot_substitution) if n.startswith(sysroot)
-                        else n for n in needed]
-            # We do not want to do this substitution when merging build and host prefixes.
-            if build_prefix != run_prefix:
-                needed = [n.replace(build_prefix, build_prefix_substitution) if n.startswith(build_prefix)
-                        else n for n in needed]
-            needed = [os.path.relpath(n, run_prefix).replace(os.sep, '/') if n.startswith(run_prefix)
+    for f in files:
+        path = os.path.join(run_prefix, f)
+        if not codefile_type(path):
+            continue
+        build_prefix = build_prefix.replace(os.sep, '/')
+        run_prefix = run_prefix.replace(os.sep, '/')
+        needed = get_linkages_memoized(path, resolve_filenames=True, recurse=False,
+                                    sysroot=sysroot,
+                                    envroot=run_prefix)
+        if sysroot:
+            needed = [n.replace(sysroot, sysroot_substitution) if n.startswith(sysroot)
                     else n for n in needed]
-            needed_dsos_for_file[f] = needed
-            all_needed_dsos = all_needed_dsos.union(needed)
-            all_needed_dsos.add(f)
+        # We do not want to do this substitution when merging build and host prefixes.
+        if build_prefix != run_prefix:
+            needed = [n.replace(build_prefix, build_prefix_substitution) if n.startswith(build_prefix)
+                    else n for n in needed]
+        needed = [os.path.relpath(n, run_prefix).replace(os.sep, '/') if n.startswith(run_prefix)
+                else n for n in needed]
+        needed_dsos_for_file[f] = needed
+        all_needed_dsos = all_needed_dsos.union(needed)
+        all_needed_dsos.add(f)
     return all_needed_dsos, needed_dsos_for_file
 
 
@@ -643,7 +644,7 @@ def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_v
         for subdir2, _, filez in os.walk(prefix):
             for file in filez:
                 fp = os.path.join(subdir2, file)
-                dynamic_lib = any(fnmatch(fp, ext) for ext in ('*.so*', '*.dylib*', '*.dll')) and \
+                dynamic_lib = any(fnmatch(fp, ext) for ext in ('*.so.*', '*.dylib.*', '*.dll')) and \
                               codefile_type(fp, skip_symlinks=False) is not None
                 static_lib = any(fnmatch(fp, ext) for ext in ('*.a', '*.lib'))
                 # Looking at all the files is very slow.
