@@ -515,10 +515,6 @@ def is_archive(file):
     return True if signature == b'!<arch>\n' else False
 
 
-def get_static_lib_exports_nope(file):
-    return [], [], [], []
-
-
 def get_static_lib_exports(file):
     # file = '/Users/rdonnelly/conda/main-augmented-tmp/osx-64_14354bd0cd1882bc620336d9a69ae5b9/lib/python2.7/config/libpython2.7.a'
     # References:
@@ -666,10 +662,16 @@ def get_static_lib_exports(file):
             if MACHINE_TYPE in (IMAGE_FILE_MACHINE_I386, IMAGE_FILE_MACHINE_AMD64):
                 # 'This file is not a PE binary' (yeah, fair enough, it's a COFF file).
                 # Reported at https://github.com/lief-project/LIEF/issues/233#issuecomment-452580391
-                obj = lief.PE.parse(raw=content[obj_start:obj_end-1])
-                # obj = None
+                try:
+                    obj = lief.PE.parse(raw=content[obj_start:obj_end-1])
+                except:
+                    if debug_static_archives > 0:
+                        print("get_static_lib_exports failed, PECOFF not supported by LIEF nor pyldd.")
+                    pass
+                    obj = None
             elif MACHINE_TYPE == 0xfacf:
                 obj = lief.parse(raw=content[obj_start:obj_end])
+
                 # filename = '/Users/rdonnelly/conda/conda-build/macOS-libpython2.7.a/getbuildinfo.o'
                 # obj = lief.parse(filename)
                 # syms_a = get_symbols(obj, defined=True, undefined=False)
@@ -691,6 +693,10 @@ def get_static_lib_exports(file):
             #         functions.append(sym.name)
             functions.extend(get_symbols(obj, defined=True, undefined=False))
         return functions, [[0, 0] for sym in functions], functions, [[0, 0] for sym in functions]
+
+
+def get_static_lib_exports_nope(file):
+    return [], [], [], []
 
 
 def get_static_lib_exports_nm(filename):
