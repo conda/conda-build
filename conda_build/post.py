@@ -934,7 +934,8 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                not needed_dso.startswith('/') and
                not needed_dso.startswith(sysroot_substitution) and
                not needed_dso.startswith(build_prefix_substitution) and
-               needed_dso not in prefix_owners):
+               needed_dso not in prefix_owners and
+               needed_dso not in files):
                 in_whitelist = False
                 if not build_is_host:
                     in_whitelist = any([fnmatch(needed_dso, w) for w in whitelist])
