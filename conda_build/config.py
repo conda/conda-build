@@ -190,7 +190,7 @@ def _get_default_settings():
 
             # This allows build orchestrators to introspect and change variant spec parsing behavior.
             # This is an advanced feature only intended when using conda-build as a library.
-            Setting("post_variant_combine_hook", None)
+            Setting("post_variant_combine_hook", None),
 
             ]
 
