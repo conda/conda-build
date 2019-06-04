@@ -746,7 +746,7 @@ class Config(object):
 
     @post_variant_combine_hook.setter
     def post_variant_combine_hook(self, fn):
-        if not callable(fn):
+        if fn and not callable(fn):
             raise ValueError("fn is expected to be a callable of the form:"
                              "\ndef post_variant_combine_hook("
                              "\n        specs, combined_spec, config=config, log_output=log_output):"
