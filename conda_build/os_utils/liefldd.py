@@ -786,7 +786,7 @@ def get_static_lib_exports_externally(filename):
     if res_dumpbin is None:
         return res_dumpbin
     if res_nm != res_dumpbin:
-        log.error("res_nm != res_dumpbin\n{}\n != \n{}\n")
+        print("ERROR :: res_nm != res_dumpbin\n{}\n != \n{}\n".format(res_nm, res_dumpbin))
     return res_nm
 
 
