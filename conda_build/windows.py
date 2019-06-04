@@ -2,7 +2,6 @@ from __future__ import absolute_import, division, print_function
 
 import os
 import pprint
-import sys
 from os.path import isdir, join, dirname, isfile
 
 # importing setuptools patches distutils so that it knows how to find VC for python 2.7
@@ -17,10 +16,9 @@ except:
     pass
 
 from conda_build import environ
-from conda_build.utils import (check_call_env, root_script_dir, path_prepended,
+from conda_build.utils import (check_call_env, path_prepended,
                                copy_into, get_logger, write_bat_activation_text)
 from conda_build.variants import set_language_env_vars, get_default_variant
-from conda_build.conda_interface import conda_46
 
 
 VS_VERSION_STRING = {

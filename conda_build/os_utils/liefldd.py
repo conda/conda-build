@@ -663,7 +663,7 @@ def get_static_lib_exports(file):
                 # 'This file is not a PE binary' (yeah, fair enough, it's a COFF file).
                 # Reported at https://github.com/lief-project/LIEF/issues/233#issuecomment-452580391
                 try:
-                    obj = lief.PE.parse(raw=content[obj_start:obj_end-1])
+                    obj = lief.PE.parse(raw=content[obj_start:obj_end - 1])
                 except:
                     if debug_static_archives > 0:
                         print("get_static_lib_exports failed, PECOFF not supported by LIEF nor pyldd.")
@@ -712,7 +712,7 @@ def get_static_lib_exports_nm(filename):
         out, _ = Popen([nm_exe, flags, filename], shell=False,
                                   stdout=PIPE).communicate()
         results = out.decode('utf-8').replace('\r\n', '\n').splitlines()
-        exports = [r.split(' ')[0] for r in results if ' T ' in r and not r.startswith('.text ')]
+        results = [r.split(' ')[0] for r in results if ' T ' in r and not r.startswith('.text ')]
         results.sort()
     except OSError:
         # nm may not be available or have the correct permissions, this
@@ -796,7 +796,6 @@ def get_exports(filename, arch='native'):
         if (os.path.exists(filename) and
            (filename.endswith('.a') or filename.endswith('.lib')) and
            is_archive(filename)) and sys.platform != 'win32':
-            import subprocess
             # syms = os.system('nm -g {}'.filename)
             # on macOS at least:
             # -PgUj is:
