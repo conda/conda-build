@@ -413,6 +413,7 @@ def _apply_instructions(subdir, repodata, instructions):
     # we could have totally separate instructions for .conda than .tar.bz2, but it's easier if we assume
     #    that a similarly-named .tar.bz2 file is the same content as .conda, and shares fixes
     new_pkg_fixes = {k.replace('.tar.bz2', '.conda'): v for k, v in instructions.get('packages', {}).items()}
+
     utils.merge_or_update_dict(repodata.get('packages.conda', {}), new_pkg_fixes, merge=False,
                                add_missing_keys=False)
     utils.merge_or_update_dict(repodata.get('packages.conda', {}), instructions.get('packages.conda', {}), merge=False,
@@ -1008,7 +1009,7 @@ class ChannelIndex(object):
                     for subdir in subdirs:
                         t.set_description("Subdir: %s" % subdir)
                         t.update()
-                        with tqdm(total=9, disable=(verbose or not progress), leave=False) as t2:
+                        with tqdm(total=10, disable=(verbose or not progress), leave=False) as t2:
                             t2.set_description("Gathering repodata")
                             t2.update()
                             _ensure_valid_channel(self.channel_root, subdir)
@@ -1055,6 +1056,8 @@ class ChannelIndex(object):
                             if changed:
                                 self._write_subdir_index_html(subdir, repodata2)
 
+                            t2.set_description("Updating channeldata")
+                            t2.update()
                             self._update_channeldata(channel_data, package_mtimes, patched_repodata, subdir)
 
                 # Step 7. Create and write channeldata.
@@ -1477,6 +1480,17 @@ class ChannelIndex(object):
         all_repodata_packages.update({k: legacy_packages[k] for k in use_these_legacy_keys})
         package_data = channel_data.get('packages', {})
 
+        package_groups = groupby(lambda x: x[1]['name'], all_repodata_packages.items())
+        # keep only the newest package within a group
+        package_groups = [next(iter(sorted(pkg_tuples, key=lambda x: x[1]['timestamp'])))
+                          for pkg_name, pkg_tuples in package_groups.items()]
+
+        package_groups = [group for group in package_groups
+                          if group[1]['name'] not in package_mtimes or
+                          package_mtimes[group[1]['name']] < group[1]['timestamp'] / 1000 or
+                          subdir not in channel_data.get(group[1]['name'], {}).get('subdirs', [])
+                          ]
+
         def _replace_if_newer_and_present(pd, data, erec, data_newer, k):
             if data.get(k) and (data_newer or not erec.get(k)):
                 pd[k] = data[k]
@@ -1485,11 +1499,11 @@ class ChannelIndex(object):
 
         futures = tuple(self.thread_executor.submit(
             ChannelIndex._load_all_from_cache, self.channel_root, subdir, fn
-        ) for fn in all_repodata_packages.keys())
-        for rec, future in zip(all_repodata_packages.values(), futures):
+        ) for fn, fn_dict in package_groups)
+        for fn_dict, future in zip((_[1] for _ in package_groups), futures):
             data = future.result()
             if data:
-                data.update(rec)
+                data.update(fn_dict)
                 name = data['name']
                 # existing record
                 erec = package_data.get(name, {})

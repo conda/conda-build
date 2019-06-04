@@ -118,6 +118,13 @@ def test_index_on_single_subdir_1(testing_workdir):
                 "binary_prefix": False,
                 "text_prefix": True,
                 "run_exports": {},
+                'icon_hash': None,
+                'icon_url': None,
+                'identifiers': None,
+                'keywords': None,
+                'recipe_origin': None,
+                'source_url': None,
+                'tags': None,
             }
         },
         "subdirs": [
@@ -211,6 +218,7 @@ def test_index_noarch_osx64_1(testing_workdir):
                 "home": "https://anaconda.org/conda-test/conda-index-pkg-a",
                 "license": "BSD",
                 "source_git_url": "https://github.com/kalefranz/conda-test-packages.git",
+                'source_url': None,
                 "subdirs": [
                     "noarch",
                     "osx-64",
@@ -225,6 +233,12 @@ def test_index_noarch_osx64_1(testing_workdir):
                 "binary_prefix": False,
                 "text_prefix": True,
                 "run_exports": {},
+                'icon_hash': None,
+                'icon_url': None,
+                'identifiers': None,
+                'tags': None,
+                'keywords': None,
+                'recipe_origin': None,
             }
         },
         "subdirs": [
