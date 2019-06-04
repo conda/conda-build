@@ -520,8 +520,9 @@ def get_package_variants(recipedir_or_metadata, config=None, variants=None):
     # provide a hook so that more complex build systems have a place during which they can modify
     # the variant that gets generated.
     if config.post_variant_combine_hook is not None:
-        combined_spec = config.post_variant_combine_hook(specs, combined_spec, 
-                                                         config=config, log_output=log_output)
+        combined_spec = config.post_variant_combine_hook(specs, combined_spec,
+                                                         config=config,
+                                                         log_output=config.verbose)
 
     extend_keys = set(ensure_list(combined_spec.get('extend_keys')))
     extend_keys.update({'zip_keys', 'extend_keys'})
