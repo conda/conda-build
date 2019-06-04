@@ -187,6 +187,11 @@ def _get_default_settings():
 
             # this can be set to different values (currently only 2 means anything) to use package formats
             Setting('conda_pkg_format', cc_conda_build.get('pkg_format', None))
+
+            # This allows build orchestrators to introspect and change variant spec parsing behavior.
+            # This is an advanced feature only intended when using conda-build as a library.
+            Setting("post_variant_combine_hook", None)
+
             ]
 
 
@@ -734,6 +739,20 @@ class Config(object):
     @pip_cache_dir.setter
     def pip_cache_dir(self, path):
         self._pip_cache_dir = path
+
+    @property
+    def post_variant_combine_hook(self):
+        return self._post_variant_combine_hook
+
+    @post_variant_combine_hook.setter
+    def post_variant_combine_hook(self, fn):
+        if not callable(fn):
+            raise ValueError("{} is expected to be a callable of the form:"
+                             "\ndef post_variant_combine_hook(
+                             "\n        specs, combined_spec, config=config, log_output=log_output):"
+                             "\n     ..."
+                             "\n     return combined_specs") 
+        self._post_variant_combine_hook = fn
 
     @property
     def test_dir(self):
