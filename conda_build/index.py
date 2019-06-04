@@ -29,6 +29,7 @@ import yaml
 from yaml.constructor import ConstructorError
 from yaml.parser import ParserError
 from yaml.scanner import ScannerError
+from yaml.reader import ReaderError
 
 import contextlib
 import fnmatch
@@ -691,10 +692,10 @@ def _cache_post_install_details(paths_cache_path, post_install_cache_path):
                     post_install_details_json['binary_prefix'] = True
                 elif f.get('file_mode') == 'text':
                     post_install_details_json['text_prefix'] = True
-                # check for any activate.d/deactivate.d scripts
-                for k in ('activate.d', 'deactivate.d'):
-                    if not post_install_details_json.get(k) and f['_path'].startswith('etc/conda/%s' % k):
-                        post_install_details_json[k] = True
+            # check for any activate.d/deactivate.d scripts
+            for k in ('activate.d', 'deactivate.d'):
+                if not post_install_details_json.get(k) and f['_path'].startswith('etc/conda/%s' % k):
+                    post_install_details_json[k] = True
             # check for any link scripts
             for pat in ('pre-link', 'post-link', 'pre-unlink'):
                 if not post_install_details_json.get(pat) and fnmatch.fnmatch(f['_path'], '*/.*-%s.*' % pat):
@@ -721,7 +722,7 @@ def _cache_recipe(tmpdir, recipe_cache_path):
         with open(recipe_path) as f:
             try:
                 recipe_json = yaml.safe_load(f)
-            except (ConstructorError, ParserError, ScannerError):
+            except (ConstructorError, ParserError, ScannerError, ReaderError):
                 pass
     try:
         recipe_json_str = json.dumps(recipe_json)
@@ -1148,13 +1149,11 @@ class ChannelIndex(object):
             # This is also where we update the contents of the stat_cache for successfully
             #   extracted packages.
             # Sorting here prioritizes .conda files ('c') over .tar.bz2 files ('b')
-            hash_extract_set = sorted(set(concatv(add_set, update_set)),
-                                      key=lambda x: os.path.splitext(x)[1],
-                                      reverse=True)
+            hash_extract_set = tuple(concatv(add_set, update_set))
 
             # split up the set by .conda packages first, then .tar.bz2.  This avoids race conditions
             #    with execution in parallel that would end up in the same place.
-            for conda_format in tqdm(CONDA_TARBALL_EXTENSIONS, desc="File format:", leave=False):
+            for conda_format in tqdm(CONDA_TARBALL_EXTENSIONS, desc="File format", leave=False):
                 futures = tuple(self.thread_executor.submit(
                     ChannelIndex._extract_to_cache, self.channel_root, subdir, fn
                 ) for fn in hash_extract_set if fn.endswith(conda_format))
@@ -1479,9 +1478,10 @@ class ChannelIndex(object):
         package_data = channel_data.get('packages', {})
 
         def _replace_if_newer_and_present(pd, data, erec, data_newer, k):
-            value = data.get(k) if data_newer else erec.get(k)
-            if value:
-                pd[k] = value
+            if data.get(k) and (data_newer or not erec.get(k)):
+                pd[k] = data[k]
+            else:
+                pd[k] = erec.get(k)
 
         futures = tuple(self.thread_executor.submit(
             ChannelIndex._load_all_from_cache, self.channel_root, subdir, fn
@@ -1507,9 +1507,9 @@ class ChannelIndex(object):
                 # keep any true value for these, since we don't distinguish subdirs
                 for k in ("binary_prefix", "text_prefix", "activate.d", "deactivate.d", "pre_link",
                           "post_link", "pre_unlink"):
-                    package_data[name][k] = data.get(k, False) or erec.get(k, False)
+                    package_data[name][k] = any((data.get(k), erec.get(k)))
 
-                package_data[name]['subdirs'] = erec.get('subdirs', []) + [subdir]
+                package_data[name]['subdirs'] = sorted(list(set(erec.get('subdirs', []) + [subdir])))
                 # keep one run_exports entry per version of the package, since these vary by version
                 run_exports = erec.get('run_exports', {})
                 exports_from_this_version = data.get('run_exports')
@@ -1521,7 +1521,7 @@ class ChannelIndex(object):
 
         channel_data.update({
             'channeldata_version': CHANNELDATA_VERSION,
-            'subdirs': channel_data.get('subdirs', []) + [subdir],
+            'subdirs': sorted(list(set(channel_data.get('subdirs', []) + [subdir]))),
             'packages': package_data,
         })
 
