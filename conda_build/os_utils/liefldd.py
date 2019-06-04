@@ -795,7 +795,7 @@ def get_exports(filename, arch='native'):
     if isinstance(filename, str):
         if (os.path.exists(filename) and
            (filename.endswith('.a') or filename.endswith('.lib')) and
-           is_archive(filename)):
+           is_archive(filename)) and sys.platform != 'win32':
             import subprocess
             # syms = os.system('nm -g {}'.filename)
             # on macOS at least:
