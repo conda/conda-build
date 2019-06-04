@@ -186,7 +186,7 @@ def _get_default_settings():
             Setting('compression_tuple', ('.tar.zst', 'zstd', 'zstd:compression-level=22')),
 
             # this can be set to different values (currently only 2 means anything) to use package formats
-            Setting('conda_pkg_format', cc_conda_build.get('pkg_format', None))
+            Setting('conda_pkg_format', cc_conda_build.get('pkg_format', None)),
 
             # This allows build orchestrators to introspect and change variant spec parsing behavior.
             # This is an advanced feature only intended when using conda-build as a library.
