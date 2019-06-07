@@ -48,14 +48,16 @@ version of Visual Studio (VS):
 
 * Python 2.7 packages with Visual Studio 2008
 * Python 3.4 packages with VS 2010
-* Python 3.5 packages with VS 2015
-* Python 3.6 packages with VS 2015
+* Python 3.5 packages with VS 2015, (default) 2017
+* Python 3.6 packages with VS 2015, (default) 2017
+* Python 3.7 packages with VS 2015, (default) 2017
 
 Using these versions of VS to build packages for each of these
 versions of Python is also the practice used for the official
 python.org builds of Python. Currently VS 2008 and VS 2010 are
-available only through resellers, while VS 2015 can be purchased
-online from Microsoft.
+available only through resellers, while VS 2015 and VS 2017 can
+be purchased online from Microsoft. Note there is also a community
+edition of VS 2015 and VS 2017 which may be used.
 
 
 Alternatives to Microsoft Visual Studio
@@ -100,23 +102,21 @@ Windows versions
 -----------------
 
 You can use any recent version of Windows. These examples were
-built on Windows 8.1.
+built on Windows 10.
 
 Other tools
 ------------
 
-Some environments initially lack tools such as bzip2 or Git
+Some environments initially lack tools such as bzip2, patch, or Git
 that may be needed for some build workflows.
 
-Git is available through conda: ``conda install git``
+On Windows these can be installed with conda:
 
-You can obtain bzip2 the same way. The conda bzip2 package
-includes only the bzip2 library and not the bzip2 executable, so
-some users may need to install the bzip2 executable from another
-source such as http://gnuwin32.sourceforge.net/packages/bzip2.htm.
-Place this executable somewhere on PATH. One good option is to
-place it in your Miniconda/Anaconda install path in the
-``Library/bin`` folder.
+```
+conda install bzip2 git m2-patch
+```
+
+On macOS and Linux replace `m2-patch` with patch
 
 
 Developing a build strategy
@@ -198,7 +198,7 @@ Install Visual Studio
 If you have not already done so, install the appropriate
 version of Visual Studio:
 
-* For Python 3---Visual Studio 2015:
+* For Python 3---Visual Studio 2017:
 
   #. Choose Custom install.
 
@@ -276,6 +276,7 @@ should be installed when the package is installed.
    Cython. That API changes between NumPy versions, so it is
    important to use the same NumPy version at runtime that was used
    at build time.
+
 
 OPTIONAL: Add a test for the built package
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -368,33 +369,32 @@ To build a GDAL package:
      Choose Custom install. Choose to install X64 Compilers and Tools.
      Install Visual Studio 2008 Service Pack 1.
 
+
 2. Install Git.
    Because the GDAL package sources are retrieved from GitHub
    for the build, you must install Git.
 
-   ``conda install git m2-patch``
+   ``conda install git m2-patch conda-build``
 
-3. Get gdal-feedstock. For the purpose of this tutorial,  we will be using a recipe from conda-forge. Conda-forge is a community that builds conda packages. For more information about what they do and how they do it, see https://conda-forge.org/.
 
-   ``git clone https://github.com/conda-forge/gdal-feedstock.git``
+3. Get gdal-feedstock. For the purpose of this tutorial, we will be using a recipe from Anaconda.
 
-4. Install conda build.
+   ``git clone https://github.com/AnacondaRecipes/gdal-feedstock.git``
 
-   ``conda install conda-build``
 
-5. Once conda build installs, build the gdal-feedstock.
+4. Use conda build to build the gdal-feedstock.
 
    ``conda build gdal-feedstock``
 
 
-6. Check the output to make sure the build completed
+5. Check the output to make sure the build completed
    successfully. The output also contains the location of the
    final package file and a command to upload the package to
    Cloud. For this package in particular, there should be two
    packages outputted: libgdal and GDAL.
 
 
-7. In case of any linker or compiler errors, modify the recipe
+6. In case of any linker or compiler errors, modify the recipe
    and run it again.
 
 Let’s take a better look at what’s happening inside the gdal-feedstock.
@@ -406,11 +406,11 @@ section:
 
   patches:
     # BUILT_AS_DYNAMIC_LIB.
-    - patches/windowshdf5.patch  # [win]
+    - 0001-windowshdf5.patch
     # Use multiple cores on Windows.
-    - patches/multiprocessor.patch  # [win]
+    - 0002-multiprocessor.patch
     # disable 12 bit jpeg on Windows as we aren't using internal jpeg
-    - patches/disable_jpeg12.patch  # [win]
+    - 0003-disable_jpeg12.patch
 
 This section says that when this package is being built on a Windows
 platform, apply the following patch files. Notice that the patch files
@@ -443,26 +443,23 @@ tests scripts and requirements specified.
 For more information on how outputs work, see the :ref:`package-outputs`.
 
 Now, let's try to build GDAL against some build matrix.
-We will specify building against Python 2.7 and 3.7 using a conda build config.
+We will specify building against Python 3.7 and 3.5 using a conda build config.
+Add the following to your conda_build_config.yaml
 
-Add a conda_build_config.yaml file to the directory you are calling
-conda build from.
-The file should look something like the following:
-
-..  code-block:: python
+..  code-block:: yaml
 
     python:
-       - 2.7
        - 3.7
+       - 3.5
 
 
 Now you can build GDAL using conda build with the command
 
-``Conda build gdal-feedstock``
+``conda build gdal-feedstock``
 
 Or explicitly set the location of the conda build variant matrix
 
-``Conda build gdal-feedstock --variant-config-file conda_build_config.yaml``
+``conda build gdal-feedstock --variant-config-file conda_build_config.yaml``
 
 If you want to know more about build variants and conda_build_config.yaml,
 including how to specify a config file and what can go into it, take a look
