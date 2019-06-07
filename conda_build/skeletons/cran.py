@@ -1195,17 +1195,17 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             # Put non-R dependencies first.
             if dep_type == 'build':
                 if need_c:
-                    deps.append("{indent}{{{{ compiler('c') }}}}      {sel}".format(
+                    deps.append("{indent}{{{{ compiler('c') }}}}            {sel}".format(
                         indent=INDENT, sel=sel_src_not_win))
-                    deps.append("{indent}{{{{ compiler('m2w64_c') }}}}{sel}".format(
+                    deps.append("{indent}{{{{ compiler('m2w64_c') }}}}      {sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
                 if need_cxx:
-                    deps.append("{indent}{{{{ compiler('cxx') }}}}    {sel}".format(
+                    deps.append("{indent}{{{{ compiler('cxx') }}}}          {sel}".format(
                         indent=INDENT, sel=sel_src_not_win))
-                    deps.append("{indent}{{{{ compiler('m2w64_cxx') }}}}{sel}".format(
+                    deps.append("{indent}{{{{ compiler('m2w64_cxx') }}}}    {sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
                 if need_f:
-                    deps.append("{indent}{{{{ compiler('fortran') }}}}{sel}".format(
+                    deps.append("{indent}{{{{ compiler('fortran') }}}}      {sel}".format(
                         indent=INDENT, sel=sel_src_not_win))
                     deps.append("{indent}{{{{ compiler('m2w64_fortran') }}}}{sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
