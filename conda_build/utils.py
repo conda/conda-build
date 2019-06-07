@@ -26,12 +26,15 @@ import time
 import yaml
 
 import filelock
+import conda_package_handling.api
 
 try:
     from conda.base.constants import CONDA_TARBALL_EXTENSIONS
 except Exception:
     from conda.base.constants import CONDA_TARBALL_EXTENSION
     CONDA_TARBALL_EXTENSIONS = (CONDA_TARBALL_EXTENSION,)
+
+from conda.api import PackageCacheData
 
 from .conda_interface import hashsum_file, md5_file, unix_path_to_win, win_path_to_unix
 from .conda_interface import PY3, iteritems
@@ -1081,22 +1084,26 @@ def get_skip_message(m):
 
 @memoized
 def package_has_file(package_path, file_path):
-    try:
-        locks = get_conda_operation_locks()
-        with try_acquire_locks(locks, timeout=900):
-            with tarfile.open(package_path) as t:
-                try:
-                    # internal paths are always forward slashed on all platforms
-                    file_path = file_path.replace('\\', '/')
-                    text = t.extractfile(file_path).read()
-                    return text
-                except KeyError:
-                    return False
-                except OSError as e:
-                    raise RuntimeError("Could not extract %s (%s)" % (package_path, e))
-    except (tarfile.ReadError, IOError, EOFError):
-        raise RuntimeError("Could not extract metadata from %s. File probably corrupt.  "
-                           "Please manually remove this file and try again." % package_path)
+    locks = get_conda_operation_locks()
+    with try_acquire_locks(locks, timeout=900):
+        folder_name = conda_package_handling.api.get_default_extracted_folder(package_path)
+        # look in conda's package cache
+        cache_path = next(iter([d for d in pkgs_dirs
+                                if os.path.isdir(os.path.join(d, folder_name))]))
+        if not cache_path:
+            cache_path = PackageCacheData.first_writable()
+        resolved_file_path = os.path.join(cache_path, file_path)
+        if not os.path.isdir(cache_path) or not os.path.isfile(resolved_file_path):
+            if file_path.startswith('info'):
+                conda_package_handling.api.extract(package_path, cache_path, 'info')
+            else:
+                conda_package_handling.api.extract(package_path, cache_path)
+        if not os.path.isfile(resolved_file_path):
+            return False
+        else:
+            with open(resolved_file_path) as f:
+                content = f.read()
+    return content
 
 
 def ensure_list(arg):
