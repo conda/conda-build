@@ -1,0 +1,25 @@
+Enhancements:
+-------------
+
+* Update cran skeleton to use m2w64 compilers for windows instead of toolchain.
+  The linter is telling since long: Using toolchain directly in this manner is deprecated.
+
+Bug fixes:
+----------
+
+* <news item>
+
+Deprecations:
+-------------
+
+* <news item>
+
+Docs:
+-----
+
+* <news item>
+
+Other:
+------
+
+* <news item>

@@ -1195,14 +1195,20 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             # Put non-R dependencies first.
             if dep_type == 'build':
                 if need_c:
-                    deps.append("{indent}{{{{ compiler('c') }}}}      {sel}".format(
+                    deps.append("{indent}{{{{ compiler('c') }}}}            {sel}".format(
                         indent=INDENT, sel=sel_src_not_win))
+                    deps.append("{indent}{{{{ compiler('m2w64_c') }}}}      {sel}".format(
+                        indent=INDENT, sel=sel_src_and_win))
                 if need_cxx:
-                    deps.append("{indent}{{{{ compiler('cxx') }}}}    {sel}".format(
+                    deps.append("{indent}{{{{ compiler('cxx') }}}}          {sel}".format(
                         indent=INDENT, sel=sel_src_not_win))
+                    deps.append("{indent}{{{{ compiler('m2w64_cxx') }}}}    {sel}".format(
+                        indent=INDENT, sel=sel_src_and_win))
                 if need_f:
-                    deps.append("{indent}{{{{ compiler('fortran') }}}}{sel}".format(
+                    deps.append("{indent}{{{{ compiler('fortran') }}}}      {sel}".format(
                         indent=INDENT, sel=sel_src_not_win))
+                    deps.append("{indent}{{{{ compiler('m2w64_fortran') }}}}{sel}".format(
+                        indent=INDENT, sel=sel_src_and_win))
                 if use_rtools_win:
                     need_c = need_cxx = need_f = need_autotools = need_make = False
                     deps.append("{indent}rtools                   {sel}".format(
@@ -1212,9 +1218,6 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     # for non-MRO builds or maybe switch to Jeroen's toolchain?)
                     # deps.append("{indent}{{{{native}}}}extsoft     {sel}".format(
                     #     indent=INDENT, sel=sel_src_and_win))
-                if need_c or need_cxx or need_f:
-                    deps.append("{indent}{{{{native}}}}toolchain      {sel}".format(
-                        indent=INDENT, sel=sel_src_and_win))
                 if need_autotools or need_make or need_git:
                     deps.append("{indent}{{{{posix}}}}filesystem      {sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
