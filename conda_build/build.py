@@ -171,13 +171,46 @@ def have_prefix_files(files, prefix):
 
     prefix_bytes = prefix.encode(utils.codec)
     prefix_placeholder_bytes = prefix_placeholder.encode(utils.codec)
+    searches = {prefix: prefix_bytes}
     if utils.on_win:
+        # some windows libraries use unix-style path separators
         forward_slash_prefix = prefix.replace('\\', '/')
         forward_slash_prefix_bytes = forward_slash_prefix.encode(utils.codec)
+        searches[forward_slash_prefix] = forward_slash_prefix_bytes
+        # some windows libraries have double backslashes as escaping
         double_backslash_prefix = prefix.replace('\\', '\\\\')
         double_backslash_prefix_bytes = double_backslash_prefix.encode(utils.codec)
+        searches[double_backslash_prefix] = double_backslash_prefix_bytes
+    searches[prefix_placeholder] = prefix_placeholder_bytes
+    min_prefix = min([len(k) for k, _ in searches.items()])
+
+    # mm.find is incredibly slow, so ripgrep is used to pre-filter the list.
+    # Really, ripgrep could be used on its own with a bit more work though.
+    rg_matches = []
+    rg = external.find_executable('rg')
+    if rg:
+        for rep_prefix, _ in searches.items():
+            try:
+                args = [rg,
+                        '--no-heading',
+                        '--with-filename',
+                        '--files-with-matches',
+                        '--fixed-strings',
+                        '--text',
+                        rep_prefix,
+                        prefix]
+                matches = subprocess.check_output(args)
+            except subprocess.CalledProcessError as e:
+                matches = e.output
+            rg_matches.extend(matches.decode('utf-8').replace('\r\n', '\n').splitlines())
+        rg_matches = [rg_match[len(prefix)+1:]
+                      for rg_match in rg_matches if rg_match.startswith(prefix)]
+    else:
+        print("WARNING: Detecting which files contain PREFIX is slow, installing ripgrep makes it faster")
 
     for f in files:
+        if rg_matches and f not in rg_matches:
+            continue
         if f.endswith(('.pyc', '.pyo')):
             continue
         path = join(prefix, f)
@@ -188,8 +221,9 @@ def have_prefix_files(files, prefix):
             # skip symbolic links (as we can on Linux)
             continue
 
-        # dont try to mmap an empty file
-        if os.stat(path).st_size == 0:
+        # dont try to mmap an empty file, and no point checking files that are smaller
+        # than the smallest prefix.
+        if os.stat(path).st_size < min_prefix:
             continue
 
         try:
@@ -205,6 +239,7 @@ def have_prefix_files(files, prefix):
 
         mode = 'binary' if mm.find(b'\x00') != -1 else 'text'
         if mode == 'text':
+            # TODO :: Ask why we do not do this on Windows too?!
             if not utils.on_win and mm.find(prefix_bytes) != -1:
                 # Use the placeholder for maximal backwards compatibility, and
                 # to minimize the occurrences of usernames appearing in built
@@ -215,16 +250,9 @@ def have_prefix_files(files, prefix):
                 rewrite_file_with_new_prefix(path, data, prefix_bytes, prefix_placeholder_bytes)
                 fi = open(path, 'rb+')
                 mm = utils.mmap_mmap(fi.fileno(), 0, tagname=None, flags=utils.mmap_MAP_PRIVATE)
-        if mm.find(prefix_bytes) != -1:
-            yield (prefix, mode, f)
-        if utils.on_win and mm.find(forward_slash_prefix_bytes) != -1:
-            # some windows libraries use unix-style path separators
-            yield (forward_slash_prefix, mode, f)
-        elif utils.on_win and mm.find(double_backslash_prefix_bytes) != -1:
-            # some windows libraries have double backslashes as escaping
-            yield (double_backslash_prefix, mode, f)
-        if mm.find(prefix_placeholder_bytes) != -1:
-            yield (prefix_placeholder, mode, f)
+        for rep_prefix, rep_prefix_bytes in searches.items():
+            if mm.find(rep_prefix_bytes) != -1:
+                yield (rep_prefix, mode, f)
         mm.close()
         fi.close()
 
