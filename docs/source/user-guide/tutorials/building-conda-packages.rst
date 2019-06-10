@@ -31,6 +31,7 @@ Before you start
 ================
 
 Before you start, make sure you have installed:
+
    * conda
    * conda-build
    * any compilers you want
