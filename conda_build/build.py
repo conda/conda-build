@@ -450,8 +450,7 @@ def get_files_with_prefix(m, files, prefix):
     return files_with_prefix
 
 
-def detect_and_record_prefix_files(m, files, prefix):
-    files_with_prefix = get_files_with_prefix(m, files, prefix)
+def record_prefix_files(m, files_with_prefix):
     binary_has_prefix_files = m.binary_has_prefix_files()
     text_has_prefix_files = m.has_prefix_files()
 
@@ -676,7 +675,7 @@ def create_info_files(m, files, prefix):
     files_with_prefix = get_files_with_prefix(m, files, prefix)
     checksums = create_info_files_json_v1(m, m.config.info_dir, prefix, files, files_with_prefix)
 
-    detect_and_record_prefix_files(m, files, prefix)
+    record_prefix_files(m, files_with_prefix)
     write_no_link(m, files)
 
     sources = m.get_section('source')
