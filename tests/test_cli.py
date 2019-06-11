@@ -327,6 +327,40 @@ def test_metapackage_metadata(testing_config, testing_workdir):
     assert info['summary'] == 'wee'
 
 
+def test_metapackage_content(testing_config, testing_workdir):
+    # generate a simple content txt file
+    nested_dir = os.makedirs(os.path.join(testing_workdir, [ 'conda', 'nested', 'dir' ]))
+
+    for basedir in [testing_workdir, nested_dir]:
+        dest_file = os.path.join(testing_workdir, 'content.txt')
+        with open(dest_file, 'w') as f:
+            f.write('content in metapackage')
+        assert os.path.isfile(dest_file)
+
+
+    args = ['metapackage_content', '1.0',
+            '--content', 'content.txt', '/',
+            '--content', 'content.txt', '/renamed.txt',
+            '--content', 'content.txt', '/abc/',
+            '--content', 'conda', '/',
+            '--content', 'conda/nested', '/',
+            '--content', 'conda', '/my',
+            '--content', 'conda', '/your/',
+            '--no-anaconda-upload']
+    main_metapackage.execute(args)
+
+    test_path = glob(os.path.join(sys.prefix, "conda-bld", testing_config.host_subdir,
+                             'metapackage_content-1.0-0.tar.bz2'))[0]
+    assert os.path.isfile(test_path)
+    assert package_has_file(test_path, 'content.txt')
+    assert package_has_file(test_path, 'renamed.txt')
+    assert package_has_file(test_path, 'abc/content.txt')
+    assert package_has_file(test_path, 'conda/nested/dir//content.txt')
+    assert package_has_file(test_path, 'nested/dir/content.txt')
+    assert package_has_file(test_path, 'my/nested/dir/content.txt')
+    assert package_has_file(test_path, 'your/conda/nested/dir/content.txt')
+
+
 def testing_index(testing_workdir):
     args = ['.']
     main_index.execute(args)
