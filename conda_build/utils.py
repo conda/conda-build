@@ -1088,12 +1088,15 @@ def package_has_file(package_path, file_path):
     with try_acquire_locks(locks, timeout=900):
         folder_name = conda_package_handling.api.get_default_extracted_folder(package_path)
         # look in conda's package cache
-        cache_path = next(iter([d for d in pkgs_dirs
-                                if os.path.isdir(os.path.join(d, folder_name))]))
-        if not cache_path:
-            cache_path = PackageCacheData.first_writable()
+        try:
+            # conda 4.7.2 added this
+            cache_path = PackageCacheData.first_writable().pkgs_dir
+        except:
+            # fallback; assum writable first path.  Not as reliable.
+            cache_path = pkgs_dirs[0]
+
         resolved_file_path = os.path.join(cache_path, file_path)
-        if not os.path.isdir(cache_path) or not os.path.isfile(resolved_file_path):
+        if not os.path.isfile(resolved_file_path):
             if file_path.startswith('info'):
                 conda_package_handling.api.extract(package_path, cache_path, 'info')
             else:
