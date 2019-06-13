@@ -1,4 +1,4 @@
-Build Variants
+Build variants
 ==============
 
 The nature of binary compatibility (and incompatibility) means that we

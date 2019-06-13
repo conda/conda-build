@@ -6,6 +6,7 @@ Building R packages with skeleton CRAN
    :local:
    :depth: 1
 
+
 This tutorial describes how to quickly build
 an R-language package on macOS for an R module
 that is already available on CRAN.
