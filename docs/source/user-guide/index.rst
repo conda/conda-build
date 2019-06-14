@@ -27,13 +27,14 @@ scratch, or building R packages using skeleton CRAN.
 **Recipes**
 
 Conda build uses :doc:`recipes <../user-guide/recipes/index>` to create conda packages.
-We have guides on how to build a package without a recipe and
-debugging conda recipes, as well as sample recipes for you to use.
+We have guides on debugging conda recipes, sample recipes for you to use, and 
+how to build a package without a recipe.
 
 **Environment variables**
 
 Use our :doc:`environment variables <environment-variables>` guide
-to set variables and see what environment variables affect processes.
+to understand which environment variables are available, set,
+and inherited, and how they affect different processes.
 
 **Wheel files**
 
