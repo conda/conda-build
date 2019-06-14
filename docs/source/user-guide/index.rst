@@ -7,6 +7,7 @@ tutorials and recipes as well as information about environment
 variables and wheel files.
 
 .. toctree::
+   :hidden:
    :maxdepth: 1
 
    getting-started
