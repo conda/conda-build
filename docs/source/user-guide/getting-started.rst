@@ -6,7 +6,7 @@ Before starting the tutorials, consider reviewing
 :doc:`how to install and update conda build <../../install-conda-build>`
 and :doc:`conda build concepts <../../concepts/index>`.
 
-As you explore, you may find our :doc:`resources <../../resources/index>`
+You may also find our :doc:`resources <../../resources/index>`
 collection helpful.
 
 .. _prereqs:
@@ -14,10 +14,12 @@ collection helpful.
 Prerequisites
 =============
 
-Before starting the tutorials, we recommend that
-you install `Miniconda or Anaconda <https://docs.anaconda.com/anaconda/install/>`_, conda build, and git.
+Before starting the tutorials, you will need to
+install `Miniconda or Anaconda <https://docs.anaconda.com/anaconda/install/>`_,
+conda build, and git.
 
-Conda build and git can each be installed using conda.
+After you've installed Miniconda or Anaconda, you can use conda
+to install conda build and git.
 
 Submit tutorial topics
 ======================
@@ -25,4 +27,4 @@ Submit tutorial topics
 .. _documentation@anaconda.com: documentation@anaconda.com
 
 Have an idea for a tutorial? You can submit your suggestions
-to Anaconda by emailing `documentation@anaconda.com`_.
+to Anaconda by emailing us at `documentation@anaconda.com`_.
