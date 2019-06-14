@@ -4,7 +4,8 @@ Building conda packages
 
 .. contents::
    :local:
-   :depth: 2
+   :depth: 1
+
 
 This tutorial describes how to use conda build to create conda
 packages on Windows, Linux, and Mac operating systems using the examples of

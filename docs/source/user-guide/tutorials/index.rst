@@ -2,13 +2,8 @@
 Tutorials
 *********
 
-Prerequisites
--------------
-
-Before starting these tutorials, we recommend that
-you install `Miniconda or Anaconda <https://docs.anaconda.com/anaconda/install/>`_, conda-build, and git.
-
-Conda-build and git can each be installed using conda.
+Before starting the tutorials, review the
+:doc:`getting started <../getting-started>` guide.
 
 .. toctree::
    :maxdepth: 1

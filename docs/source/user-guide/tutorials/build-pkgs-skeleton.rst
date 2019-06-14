@@ -32,7 +32,7 @@ conda build or conda recipes is required.
 Before you start
 ================
 
-Before you start, check the :doc:`prerequisites <index>`.
+Before you start, check the :ref:`prereqs`.
 
 
 .. _conda-build-skeleton:
