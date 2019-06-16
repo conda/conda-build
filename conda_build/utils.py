@@ -1588,11 +1588,11 @@ def prefix_files(prefix):
     res = set()
     for root, dirs, files in walk(prefix):
         for fn in files:
-            res.add(join(root, fn)[len(prefix) + 1:])
+            res.add(os.path.relpath(join(root, fn), prefix))
         for dn in dirs:
             path = join(root, dn)
             if islink(path):
-                res.add(path[len(prefix) + 1:])
+                res.add(os.path.relpath(path, prefix))
     res = set(expand_globs(res, prefix))
     return res
 
