@@ -491,115 +491,6 @@ def _maybe_write(path, content, write_newline_end=False, content_is_binary=False
     return True
 
 
-def _gather_channeldata_reference_packages(all_repodata_packages):
-    groups = groupby('name', all_repodata_packages)
-    reference_packages = []
-    for group in groups.values():
-        try:
-            version_groups = groupby('version', group)
-            latest_version = sorted(version_groups, key=VersionOrder)[-1]
-            build_number_groups = groupby('build_number', version_groups[latest_version])
-            latest_build_number = sorted(build_number_groups)[-1]
-            ref_pkg = sorted(build_number_groups[latest_build_number],
-                                key=lambda x: x['subdir'])[-1]
-            ref_pkg["subdirs"] = sorted(set(rec['subdir'] for rec in group))
-            ref_pkg["reference_package"] = "%s/%s" % (ref_pkg["subdir"], ref_pkg["fn"])
-            reference_packages.append(ref_pkg)
-        except KeyError as e:
-            log.warn("group {} failed to gather channeldata.  Error was {}.  Skipping this one...".format(group, e))
-    return reference_packages
-
-
-def _collect_namemap(patched_repodata, patch_instructions):
-    external_dependencies = {
-        name_in_channel: namekey
-        for name_in_channel, namekey in patch_instructions.get('external_dependencies', {}).items()
-    }
-    namemap = {}  # name_in_channel, cuid_namekey
-    namemap.update(external_dependencies)
-
-    ambiguous_namekeys = defaultdict(set)  # name, namekey
-    repodata = patched_repodata
-    # TODO: should use packages.conda here somehow
-    for info in repodata['packages'].values():
-        namespace, name_in_channel, name = _determine_namespace(info)
-        namekey = namespace + ":" + name
-        # TODO: this name_in_channel thing should be dropped if the package has an explicitly assigned namespace
-        if name_in_channel in namemap:
-            # This assertion is important. It guarantees that we don't have packages bridging namespaces.
-            # assert namekey == namemap[name_in_channel], (subdir, namekey, namemap[name_in_channel])
-            if namekey != namemap[name_in_channel]:
-                ambiguous_namekeys[name_in_channel].add(namemap[name_in_channel])
-                ambiguous_namekeys[name_in_channel].add(namekey)
-                # ambiguous_namekeys.append((subdir, name_in_channel, namekey, namemap[name_in_channel], fn))
-        else:
-            namemap[name_in_channel] = namekey
-    return namemap, ambiguous_namekeys
-
-
-def _warn_on_ambiguous_namekeys(ambiguous_namekeys, subdir, patched_repodata):
-    """
-    The following packages ambiguously straddle namespaces and require metadata correction:
-        package_name:
-        namespace1:
-            - subdir/fn1.tar.bz2
-            - subdir/fn2.tar.bz2
-        namespace2:
-            - subdir/fn3.tar.bz2
-            - subdir/fn4.tar.bz2
-
-    The associated packages are being removed from the index.
-    """
-    if ambiguous_namekeys:
-        abc = defaultdict(lambda: defaultdict(list))
-        repodata = patched_repodata
-        # TODO: should use packages.conda here somehow
-        for fn, info in repodata['packages'].items():
-            if info["name"] in ambiguous_namekeys:
-                abc[info["name"]][info["namespace"]].append(subdir + "/" + fn)
-
-        builder = ["WARNING: The following packages ambiguously straddle namespaces and require metadata correction:"]
-        for package_name in sorted(abc):
-            builder.append("  %s:" % package_name)
-            for namespace in sorted(abc[package_name]):
-                builder.append("    %s:" % namespace)
-                for subdir_fn in sorted(abc[package_name][namespace]):
-                    builder.append("      - %s" % subdir_fn)
-                    subdir, fn = subdir_fn.split("/")
-                    popped = patched_repodata["packages"].pop(fn, None)
-                    if popped:
-                        patched_repodata["removed"].append(fn)
-        # we remove them from the v2 repodata, not b1
-        # builder.append("The associated packages are being removed from the index.")
-        builder.append('')
-        log.warn("\n".join(builder))
-
-
-def _add_namespace_to_spec(fn, info, dep_str, namemap, missing_dependencies, subdir):
-    # Punt on this until we have namespaces implemented
-    if not conda_interface.conda_48:
-        return dep_str
-
-    spec = MatchSpec(dep_str)
-    if hasattr(spec, 'namespace') and spec.namespace:
-        # this spec is fine
-        return dep_str
-    else:
-        # look up namekey
-        # spec.name refers to name_in_channel; need to convert to namekey, but the
-        #   correct namekey might not even be in the channel
-        if spec.name not in namemap:
-            missing_dependencies[spec.name].append(subdir + "/" + fn)
-            return dep_str
-        namekey = namemap[spec.name]
-        namespace, name = namekey.split(":", 1)
-        try:
-            spec = MatchSpec(spec, namespace=namespace, name=name)
-        except CondaError:
-            spec = MatchSpec(spec, name=name)
-        return spec.conda_build_form()
-
-
 def _make_build_string(build, build_number):
     build_number_as_string = str(build_number)
     if build.endswith(build_number_as_string):
@@ -641,41 +532,6 @@ def _warn_on_missing_dependencies(missing_dependencies, patched_repodata):
         builder.append("The associated packages are being removed from the index.")
         builder.append('')
         log.warn("\n".join(builder))
-
-
-def _augment_repodata(subdir, patched_repodata, patch_instructions):
-    # TODO: handle packages that need to be renamed
-
-    # Step 1. Collect all package names and associated namespaces.
-    #         Attach namespace to every package.
-    namemap, ambiguous_namekeys = _collect_namemap(patched_repodata, patch_instructions)
-    _warn_on_ambiguous_namekeys(ambiguous_namekeys, subdir, patched_repodata)
-    missing_dependencies = defaultdict(list)
-
-    # Step 2. Add depends2 and constrains2, and other fields
-    repodata = patched_repodata.copy()
-    for key in ('packages', 'packages.conda'):
-        for fn, info in repodata[key].items():
-            info['record_version'] = 1
-            if 'constrains' in info:
-                constrains_names = set(dep.split()[0] for dep in info["constrains"])
-                try:
-                    info['constrains2'] = [_add_namespace_to_spec(fn, info, dep, namemap, missing_dependencies, subdir)
-                                        for dep in info['constrains']]
-                    info['depends2'] = [_add_namespace_to_spec(fn, info, dep, namemap, missing_dependencies, subdir)
-                                        for dep in info['depends'] if dep.split()[0] not in constrains_names]
-                except CondaError as e:
-                    log.warn("Encountered a file ({}) that conda does not like.  Error was: {}.  Skipping this one...".format(fn, e))
-            else:
-                try:
-                    info['depends2'] = [_add_namespace_to_spec(fn, info, dep, namemap, missing_dependencies, subdir)
-                                        for dep in info['depends']]
-                except CondaError as e:
-                    log.warn("Encountered a file ({}) that conda does not like.  Error was: {}.  Skipping this one...".format(fn, e))
-            # info['build_string'] =_make_build_string(info["build"], info["build_number"])
-    repodata["removed"] = patch_instructions.get("remove", [])
-    _warn_on_missing_dependencies(missing_dependencies, patched_repodata)
-    return repodata
 
 
 def _cache_post_install_details(paths_cache_path, post_install_cache_path):
@@ -802,41 +658,6 @@ def _get_source_repo_git_info(path):
             commits.append({"hash": _hash, "timestamp": int(_time),
                             "author": _author, "description": _desc})
     return commits
-
-
-@contextlib.contextmanager
-def _tmp_chdir(dest):
-    curdir = os.getcwd()
-    try:
-        os.chdir(dest)
-        yield
-    finally:
-        os.chdir(curdir)
-
-
-def _collect_commits(package_order, hotfix_source_repo, cutoff_time):
-    commit_info = {}
-
-    for package_name, info in package_order.items():
-        commits = info.get('commits', [])
-        for commit in commits:
-            commit['timestamp'] = int(commit['timestamp'])
-        commits = [commit for commit in commits if commit['timestamp'] > cutoff_time]
-        commits.sort(key=lambda x: x['timestamp'], reverse=True)
-        if commits:
-            commit_info["%s (%s)" % (package_name, info['version'])] = {"recipe_origin": info.get('recipe_origin'),
-                                                                        "commits": commits}
-    if hotfix_source_repo:
-        commit_info['index hotfixes'] = {"recipe_origin": hotfix_source_repo,
-                                        "commits": sorted([commit for commit in _get_source_repo_git_info(hotfix_source_repo)
-                                                if commit["timestamp"] > cutoff_time],
-                                            key=lambda x: x["timestamp"], reverse=True)}
-    sorted_commit_info = OrderedDict()
-
-    order = sorted(commit_info, key=lambda k: commit_info[k]['commits'][0]['timestamp'], reverse=True)
-    for k in order:
-        sorted_commit_info[k] = commit_info[k]
-    return sorted_commit_info
 
 
 def _cache_info_file(tmpdir, info_fn, cache_path):
@@ -1003,13 +824,16 @@ class ChannelIndex(object):
             # Step 1. Lock local channel.
             with utils.try_acquire_locks([utils.get_lock(self.channel_root)], timeout=900):
                 channel_data = {}
-                package_mtimes = {}
+                channeldata_file = os.path.join(self.channel_root, 'channeldata.json')
+                if os.path.isfile(channeldata_file):
+                    with open(channeldata_file) as f:
+                        channel_data = json.load(f)
                 # Step 2. Collect repodata from packages, save to pkg_repodata.json file
                 with tqdm(total=len(subdirs), disable=(verbose or not progress), leave=False) as t:
                     for subdir in subdirs:
                         t.set_description("Subdir: %s" % subdir)
                         t.update()
-                        with tqdm(total=10, disable=(verbose or not progress), leave=False) as t2:
+                        with tqdm(total=8, disable=(verbose or not progress), leave=False) as t2:
                             t2.set_description("Gathering repodata")
                             t2.update()
                             _ensure_valid_channel(self.channel_root, subdir)
@@ -1042,27 +866,16 @@ class ChannelIndex(object):
                             t2.update()
                             self._write_repodata(subdir, current_repodata, json_filename="current_repodata.json")
 
-                            # Step 5. Augment repodata with additional information.
-                            t2.set_description("Augmenting repodata with namespace")
+                            t2.set_description("Writing subdir index HTML")
                             t2.update()
-                            augmented_repodata = _augment_repodata(subdir, patched_repodata, patch_instructions)
-
-                            # Step 6. Create and save repodata2.json
-                            # Also create associated index.html.
-                            t2.set_description("Writing repodata2")
-                            t2.update()
-                            repodata2 = self._create_repodata2(subdir, augmented_repodata)
-                            changed = self._write_repodata2(subdir, repodata2)
-                            if changed:
-                                self._write_subdir_index_html(subdir, repodata2)
+                            self._write_subdir_index_html(subdir, patched_repodata)
 
                             t2.set_description("Updating channeldata")
                             t2.update()
-                            self._update_channeldata(channel_data, package_mtimes, patched_repodata, subdir)
+                            self._update_channeldata(channel_data, patched_repodata, subdir)
 
                 # Step 7. Create and write channeldata.
                 self._write_channeldata_index_html(channel_data)
-                self._write_channeldata_rss(channel_data, package_mtimes, hotfix_source_repo)
                 self._write_channeldata(channel_data)
 
     def index_subdir(self, subdir, verbose=False, progress=False):
@@ -1156,7 +969,8 @@ class ChannelIndex(object):
 
             # split up the set by .conda packages first, then .tar.bz2.  This avoids race conditions
             #    with execution in parallel that would end up in the same place.
-            for conda_format in tqdm(CONDA_TARBALL_EXTENSIONS, desc="File format", leave=False):
+            for conda_format in tqdm(CONDA_TARBALL_EXTENSIONS, desc="File format",
+                                     disable=(verbose or not progress), leave=False):
                 futures = tuple(self.thread_executor.submit(
                     ChannelIndex._extract_to_cache, self.channel_root, subdir, fn
                 ) for fn in hash_extract_set if fn.endswith(conda_format))
@@ -1175,6 +989,7 @@ class ChannelIndex(object):
                                     new_repodata_conda_packages[fn] = index_json
                                 else:
                                     new_repodata_packages[fn] = index_json
+
             new_repodata = {
                 'packages': new_repodata_packages,
                 'packages.conda': new_repodata_conda_packages,
@@ -1414,7 +1229,7 @@ class ChannelIndex(object):
         return write_result
 
     def _write_subdir_index_html(self, subdir, repodata):
-        repodata_packages = repodata["packages"]
+        repodata_packages = repodata["packages"].values()
         subdir_path = join(self.channel_root, subdir)
 
         def _add_extra_path(extra_paths, path):
@@ -1422,6 +1237,7 @@ class ChannelIndex(object):
                 extra_paths[basename(path)] = {
                     'size': getsize(path),
                     'timestamp': int(getmtime(path)),
+                    'sha256': utils.sha256_checksum(path),
                     'md5': utils.md5_file(path),
                 }
 
@@ -1430,39 +1246,13 @@ class ChannelIndex(object):
         _add_extra_path(extra_paths, join(subdir_path, REPODATA_JSON_FN + '.bz2'))
         _add_extra_path(extra_paths, join(subdir_path, REPODATA_FROM_PKGS_JSON_FN))
         _add_extra_path(extra_paths, join(subdir_path, REPODATA_FROM_PKGS_JSON_FN + '.bz2'))
-        _add_extra_path(extra_paths, join(subdir_path, "repodata2.json"))
+        # _add_extra_path(extra_paths, join(subdir_path, "repodata2.json"))
         _add_extra_path(extra_paths, join(subdir_path, "patch_instructions.json"))
         rendered_html = _make_subdir_index_html(
             self.channel_name, subdir, repodata_packages, extra_paths
         )
         index_path = join(subdir_path, 'index.html')
         return _maybe_write(index_path, rendered_html)
-
-    def _write_channeldata_rss(self, channeldata, package_mtimes, hotfix_source_repo):
-        cutoff_time = time.time() - 14 * 24 * 3600
-
-        current = {name: channeldata['packages'][name] for name, mtime in package_mtimes.items()
-                   if mtime > cutoff_time}
-
-        # our RSS feed is fed by up to 2 things:
-        #    - package recipe_log.json files
-        #    - commit log from the repo where we get our patch instructions from.  This is a config option and cli flag.
-        commit_info = _collect_commits(current, hotfix_source_repo, cutoff_time)
-
-        environment = _get_jinja2_environment()
-        template = environment.get_template('rss.xml.j2')
-        rendered_xml = template.render(
-            channel_name=self.channel_name,
-            channel_url="https://anaconda.org",  # TODO: figure this out
-            current_time=datetime.utcnow().replace(tzinfo=pytz.timezone("UTC")),
-
-            commit_info=commit_info,
-            trim_blocks=True
-        )
-
-        rss_path = join(self.channel_root, 'rss.xml')
-        _maybe_write(rss_path, rendered_xml)
-        return rendered_xml
 
     def _write_channeldata_index_html(self, channeldata):
         rendered_html = _make_channeldata_index_html(
@@ -1471,7 +1261,7 @@ class ChannelIndex(object):
         index_path = join(self.channel_root, 'index.html')
         _maybe_write(index_path, rendered_html)
 
-    def _update_channeldata(self, channel_data, package_mtimes, repodata, subdir):
+    def _update_channeldata(self, channel_data, repodata, subdir):
         legacy_packages = repodata["packages"]
         conda_packages = repodata["packages.conda"]
 
@@ -1485,9 +1275,9 @@ class ChannelIndex(object):
         package_groups = [next(iter(sorted(pkg_tuples, key=lambda x: x[1]['timestamp'])))
                           for pkg_name, pkg_tuples in package_groups.items()]
 
-        package_groups = [group for group in package_groups
-                          if group[1]['name'] not in package_mtimes or
-                          package_mtimes[group[1]['name']] < group[1]['timestamp'] / 1000 or
+        package_groups = [group for group in package_groups if
+                          channel_data.get(group[1]['name'], {}).get('timestamp', 0) <
+                              _make_seconds(group[1]['timestamp']) or
                           subdir not in channel_data.get(group[1]['name'], {}).get('subdirs', [])
                           ]
 
@@ -1530,8 +1320,8 @@ class ChannelIndex(object):
                 if exports_from_this_version:
                     run_exports[data_v] = data.get('run_exports')
                 package_data[name]['run_exports'] = run_exports
-
-                package_mtimes[name] = max(data['mtime'], package_mtimes.get(name, 0))
+                package_data[name]['timestamp'] = _make_seconds(max(
+                    data['timestamp'], channel_data.get(name, {}).get('timestamp', 0)))
 
         channel_data.update({
             'channeldata_version': CHANNELDATA_VERSION,
@@ -1618,73 +1408,3 @@ class ChannelIndex(object):
 
         return _apply_instructions(subdir, repodata, instructions), instructions
 
-    def _create_repodata2(self, subdir, augmented_repodata):
-        repodata2 = augmented_repodata  # I guess we're mutating in place for now
-        repodata2["repodata_version"] = 2
-        revoked_set = set()
-
-        channel_name = self.channel_name
-
-        for fn, info in repodata2["packages"].items():
-            info["record_version"] = 2
-            if 'depends2' not in info:
-                continue
-            info["requires"] = info["depends2"]
-            del info["depends"]
-            del info["depends2"]
-            if "constrains2" in info:
-                info["constrains"] = info["constrains2"]
-                del info["constrains2"]
-
-            info["fn"] = fn  # rename fn to filename?
-            # add "location", relative to subdir
-
-            info["channel_name"] = channel_name
-            if "timestamp" in info:
-                info["timestamp"] = _make_seconds(info["timestamp"])
-
-            # noarch -> package_type: noarch_generic, noarch_python
-            if "noarch" in info:
-                if info["noarch"] == "python":
-                    info["package_type"] = "noarch_python"
-                del info["noarch"]
-
-            # dump features
-            info.pop("features", None)  # 😱
-
-            # convert track_features to list
-            if "track_features" in info:
-                info["track_features"] = info["track_features"].split(" ")
-
-            # enforce md5 and sha256
-            assert "md5" in info
-            # assert "sha256" in info  # TODO: re-enable
-            assert "size" in info, (subdir, fn, info)
-
-            # drop arch and platform, enforce subdir
-            info.pop("arch", None)
-            info.pop("platform", None)
-            info["subdir"] = subdir
-
-            if info.get('revoked'):
-                revoked_set.add(fn)
-
-        sort_key = lambda x: (
-            x["namespace"] == "global" and "0" or x["namespace"],
-            x["name"],
-            VersionOrder(x["version"]),
-            x["build_number"],
-            # x["build_string"],
-            x["build"],
-        )
-
-        package_groups = groupby(lambda x: x.get('revoked', False), augmented_repodata["packages"].values())
-        repodata2["packages"] = sorted(package_groups.get(False, ()), key=sort_key)
-        repodata2["revoked"] = sorted(package_groups.get(True, ()), key=sort_key)
-
-        return repodata2
-
-    def _write_repodata2(self, subdir, repodata2):
-        repodata_json_path = join(self.channel_root, subdir, "repodata2.json")
-        new_repodata = json.dumps(repodata2, indent=2, sort_keys=True).replace("':'", "': '")
-        return _maybe_write(repodata_json_path, new_repodata, True)

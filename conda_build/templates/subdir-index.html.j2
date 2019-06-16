@@ -57,6 +57,7 @@
       <td>{{ path | add_href(path) }}</td>
       <td class="s">{{ record.size | human_bytes }}</td>
       <td>{% if record.timestamp %}{{ record.timestamp|strftime("%Y-%m-%d %H:%M:%S %z") }}{% endif %}</td>
+      <td>{{ record.sha256 }}</td>
       <td>{{ record.md5 }}</td>
     </tr>
 {%- endfor %}

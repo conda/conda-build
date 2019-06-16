@@ -1082,7 +1082,6 @@ def get_skip_message(m):
         {k: m.config.variant[k] for k in m.get_used_vars()}))
 
 
-@memoized
 def package_has_file(package_path, file_path):
     locks = get_conda_operation_locks()
     with try_acquire_locks(locks, timeout=900):

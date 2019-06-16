@@ -125,6 +125,7 @@ def test_index_on_single_subdir_1(testing_workdir):
                 'recipe_origin': None,
                 'source_url': None,
                 'tags': None,
+                'timestamp': 1508520039,
             }
         },
         "subdirs": [
@@ -237,6 +238,7 @@ def test_index_noarch_osx64_1(testing_workdir):
                 'icon_url': None,
                 'identifiers': None,
                 'tags': None,
+                'timestamp': 1508520039,
                 'keywords': None,
                 'recipe_origin': None,
             }
