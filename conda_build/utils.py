@@ -1093,7 +1093,7 @@ def package_has_file(package_path, file_path):
         except:
             # fallback; assum writable first path.  Not as reliable.
             cache_path = pkgs_dirs[0]
-
+        cache_path = os.path.join(cache_path, folder_name)
         resolved_file_path = os.path.join(cache_path, file_path)
         if not os.path.isfile(resolved_file_path):
             if file_path.startswith('info'):
