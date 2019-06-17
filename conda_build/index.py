@@ -136,19 +136,6 @@ channel_data = {}
 MAX_THREADS_DEFAULT = os.cpu_count() if (hasattr(os, "cpu_count") and os.cpu_count() > 1) else 1
 LOCK_TIMEOUT_SECS = 3 * 3600
 LOCKFILE_NAME = ".lock"
-DEFAULT_SUBDIRS = (
-    "linux-64",
-    "linux-32",
-    "linux-ppc64le",
-    "linux-armv6l",
-    "linux-armv7l",
-    "linux-aarch64",
-    "win-64",
-    "win-32",
-    "osx-64",
-    "zos-z",
-    "noarch",
-)
 
 # TODO: this is to make sure that the index doesn't leak tokens.  It breaks use of private channels, though.
 # os.environ['CONDA_ADD_ANACONDA_TOKEN'] = "false"
@@ -308,7 +295,7 @@ def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=N
 
     """
     base_path, dirname = os.path.split(dir_path)
-    if dirname in DEFAULT_SUBDIRS:
+    if dirname in utils.DEFAULT_SUBDIRS:
         if warn:
             log.warn("The update_index function has changed to index all subdirs at once.  You're pointing it at a single subdir.  "
                     "Please update your code to point it at the channel root, rather than a subdir.")
@@ -815,7 +802,7 @@ class ChannelIndex(object):
         with utils.LoggingContext(level, loggers=[__name__]):
             if not self._subdirs:
                 detected_subdirs = set(subdir for subdir in os.listdir(self.channel_root)
-                                    if subdir in DEFAULT_SUBDIRS and isdir(join(self.channel_root, subdir)))
+                                    if subdir in utils.DEFAULT_SUBDIRS and isdir(join(self.channel_root, subdir)))
                 log.debug("found subdirs %s" % detected_subdirs)
                 self.subdirs = subdirs = sorted(detected_subdirs | {'noarch'})
             else:

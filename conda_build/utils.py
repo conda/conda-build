@@ -86,6 +86,19 @@ mmap_MAP_PRIVATE = 0 if on_win else mmap.MAP_PRIVATE
 mmap_PROT_READ = 0 if on_win else mmap.PROT_READ
 mmap_PROT_WRITE = 0 if on_win else mmap.PROT_WRITE
 
+DEFAULT_SUBDIRS = {
+    "linux-64",
+    "linux-32",
+    "linux-ppc64le",
+    "linux-armv6l",
+    "linux-armv7l",
+    "linux-aarch64",
+    "win-64",
+    "win-32",
+    "osx-64",
+    "zos-z",
+    "noarch",
+}
 
 PY_TMPL = """
 # -*- coding: utf-8 -*-
@@ -1082,20 +1095,23 @@ def get_skip_message(m):
         {k: m.config.variant[k] for k in m.get_used_vars()}))
 
 
-def package_has_file(package_path, file_path):
+def package_has_file(package_path, file_path, refresh=False):
     locks = get_conda_operation_locks()
+    possible_subdir = os.path.basename(os.path.dirname(package_path))
+    possible_subdir = possible_subdir if possible_subdir in DEFAULT_SUBDIRS else ''
     with try_acquire_locks(locks, timeout=900):
-        folder_name = conda_package_handling.api.get_default_extracted_folder(package_path)
+        folder_name = os.path.basename(conda_package_handling.api.get_default_extracted_folder(package_path))
         # look in conda's package cache
         try:
             # conda 4.7.2 added this
             cache_path = PackageCacheData.first_writable().pkgs_dir
         except:
-            # fallback; assum writable first path.  Not as reliable.
+            # fallback; assume writable first path.  Not as reliable.
             cache_path = pkgs_dirs[0]
+        cache_path = os.path.join(cache_path, possible_subdir) if possible_subdir else cache_path
         cache_path = os.path.join(cache_path, folder_name)
         resolved_file_path = os.path.join(cache_path, file_path)
-        if not os.path.isfile(resolved_file_path):
+        if not os.path.isfile(resolved_file_path) or refresh:
             if file_path.startswith('info'):
                 conda_package_handling.api.extract(package_path, cache_path, 'info')
             else:
@@ -1103,8 +1119,12 @@ def package_has_file(package_path, file_path):
         if not os.path.isfile(resolved_file_path):
             return False
         else:
-            with open(resolved_file_path) as f:
-                content = f.read()
+            try:
+                with open(resolved_file_path) as f:
+                    content = f.read()
+            except UnicodeDecodeError:
+                with open(resolved_file_path, 'rb') as f:
+                    content = f.read()
     return content
 
 

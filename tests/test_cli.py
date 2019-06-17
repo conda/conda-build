@@ -155,7 +155,7 @@ def test_slash_in_recipe_arg_keeps_build_id(testing_workdir, testing_config):
     args = [os.path.join(metadata_dir, "has_prefix_files"), '--croot', testing_config.croot,
             '--no-anaconda-upload']
     outputs = main_build.execute(args)
-    data = package_has_file(outputs[0], 'binary-has-prefix')
+    data = package_has_file(outputs[0], 'binary-has-prefix', refresh=True)
     assert data
     if hasattr(data, 'decode'):
         data = data.decode('UTF-8')
@@ -177,7 +177,7 @@ def test_build_no_build_id(testing_workdir, testing_config):
     args = [os.path.join(metadata_dir, "has_prefix_files"), '--no-build-id',
             '--croot', testing_config.croot, '--no-activate', '--no-anaconda-upload']
     outputs = main_build.execute(args)
-    data = package_has_file(outputs[0], 'binary-has-prefix')
+    data = package_has_file(outputs[0], 'binary-has-prefix', refresh=True)
     assert data
     if hasattr(data, 'decode'):
         data = data.decode('UTF-8')
