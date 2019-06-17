@@ -643,13 +643,13 @@ def test_noarch_none_value(testing_workdir, testing_config):
 
 def test_noarch_foo_value(testing_config):
     outputs = api.build(os.path.join(metadata_dir, "noarch_generic"), config=testing_config)
-    metadata = json.loads(package_has_file(outputs[0], 'info/index.json').decode())
+    metadata = json.loads(package_has_file(outputs[0], 'info/index.json'))
     assert metadata['noarch'] == "generic"
 
 
 def test_about_json_content(testing_metadata):
     outputs = api.build(testing_metadata)
-    about = json.loads(package_has_file(outputs[0], 'info/about.json').decode())
+    about = json.loads(package_has_file(outputs[0], 'info/about.json'))
     assert 'conda_version' in about and about['conda_version'] == conda.__version__
     assert 'conda_build_version' in about and about['conda_build_version'] == __version__
     assert 'channels' in about and about['channels']
@@ -681,7 +681,7 @@ def test_noarch_python_with_tests(testing_config):
 def test_noarch_python_1(testing_config):
     output = api.build(os.path.join(metadata_dir, "_noarch_python"), config=testing_config)[0]
     assert package_has_file(output, 'info/files') is not ''
-    extra = json.loads(package_has_file(output, 'info/link.json').decode())
+    extra = json.loads(package_has_file(output, 'info/link.json'))
     assert 'noarch' in extra
     assert 'entry_points' in extra['noarch']
     assert 'type' in extra['noarch']

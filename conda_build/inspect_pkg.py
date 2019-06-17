@@ -329,7 +329,7 @@ def get_hash_input(packages):
         hash_inputs[pkgname] = {}
         hash_input = package_has_file(pkg, 'info/hash_input.json')
         if hash_input:
-            hash_inputs[pkgname]['recipe'] = json.loads(hash_input.decode())
+            hash_inputs[pkgname]['recipe'] = json.loads(hash_input)
         else:
             hash_inputs[pkgname] = "<no hash_input.json in file>"
 
