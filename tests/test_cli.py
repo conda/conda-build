@@ -39,12 +39,6 @@ def test_build():
     main_build.execute(args)
 
 
-# regression test for https://github.com/conda/conda-build/issues/1450
-def test_build_with_conda_not_on_path(testing_workdir):
-    with put_bad_conda_on_path(testing_workdir):
-        main_build.execute([os.path.join(metadata_dir, "python_run"), "--no-anaconda-upload"])
-
-
 def test_build_add_channel():
     """This recipe requires the conda_build_test_requirement package, which is
     only on the conda_build_test channel. This verifies that the -c argument
