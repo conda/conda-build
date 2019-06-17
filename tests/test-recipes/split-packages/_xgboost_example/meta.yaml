@@ -28,26 +28,17 @@ outputs:
     requirements:
       host:
         - {{ pin_subpackage('libxgboost', exact=True) }}
-        - python
-        - setuptools
-        - pip
       run:
         - {{ pin_subpackage('libxgboost', exact=True) }}
         - {{ pin_subpackage('_py-xgboost-mutex', exact=True) }}
-        - python
 
   - name: py-xgboost-cpu
     requirements:
-      host:
-        - python
       run:
-        - python
         - {{ pin_subpackage('py-xgboost', exact=True) }}
 
   - name: xgboost
     requirements:
-      host:
-        - python
       run:
         - {{ pin_subpackage('py-xgboost', exact=True) }}
 

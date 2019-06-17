@@ -1051,8 +1051,9 @@ def codefile_type(filename, skip_symlinks=True):
 
 
 def _trim_sysroot(sysroot):
-    while sysroot.endswith('/') or sysroot.endswith('\\'):
-        sysroot = sysroot[:-1]
+    if sysroot:
+        while sysroot.endswith('/') or sysroot.endswith('\\'):
+            sysroot = sysroot[:-1]
     return sysroot
 
 
