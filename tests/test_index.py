@@ -9,10 +9,12 @@ import requests
 import shutil
 import tarfile
 
+import pytest
 import mock
 import conda_package_handling.api
 
 from conda_build import api
+from conda_build.conda_interface import context
 import conda_build.index
 from conda_build.utils import copy_into, rm_rf
 from conda_build.conda_interface import subdir
@@ -663,6 +665,7 @@ def test_new_pkg_format_stat_cache_used(testing_workdir, mocker):
     assert actual_repodata_json == expected_repodata_json
 
 
+@pytest.mark.skipif(getattr(context, 'use_only_tar_bz2'), reason="conda is set to auto-disable .conda for old conda-build.")
 def test_current_index_reduces_space():
     repodata = os.path.join(os.path.dirname(__file__), 'index_data', 'time_cut', 'repodata.json')
     with open(repodata) as f:
