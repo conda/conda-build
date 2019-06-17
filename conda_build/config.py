@@ -186,7 +186,8 @@ def _get_default_settings():
             Setting('compression_tuple', ('.tar.zst', 'zstd', 'zstd:compression-level=22')),
 
             # this can be set to different values (currently only 2 means anything) to use package formats
-            Setting('conda_pkg_format', cc_conda_build.get('pkg_format', None))
+            Setting('conda_pkg_format', cc_conda_build.get('pkg_format', None)),
+
             ]
 
 

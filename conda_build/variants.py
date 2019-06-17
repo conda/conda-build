@@ -486,7 +486,10 @@ def list_of_dicts_to_dict_of_lists(list_of_dicts):
     return squished
 
 
-def get_package_variants(recipedir_or_metadata, config=None, variants=None):
+def get_package_combined_spec(recipedir_or_metadata, config=None, variants=None):
+    # outputs a tuple of (combined_spec_dict_of_lists, used_spec_file_dict)
+    #
+    # The output of this function is order preserving, unlike get_package_variants
     if hasattr(recipedir_or_metadata, 'config'):
         config = recipedir_or_metadata.config
     if not config:
@@ -516,6 +519,10 @@ def get_package_variants(recipedir_or_metadata, config=None, variants=None):
     # this merges each of the specs, providing a debug message when a given setting is overridden
     #      by a later spec
     combined_spec = combine_specs(specs, log_output=config.verbose)
+    return combined_spec, specs
+
+
+def filter_combined_spec_to_used_keys(combined_spec, specs):
 
     extend_keys = set(ensure_list(combined_spec.get('extend_keys')))
     extend_keys.update({'zip_keys', 'extend_keys'})
@@ -524,6 +531,7 @@ def get_package_variants(recipedir_or_metadata, config=None, variants=None):
     specs = specs.copy()
     del specs['internal_defaults']
 
+    # TODO: act here? 
     combined_spec = dict_of_lists_to_list_of_dicts(combined_spec, extend_keys=extend_keys)
     for source, source_specs in reversed(specs.items()):
         for k, vs in source_specs.items():
@@ -534,6 +542,11 @@ def get_package_variants(recipedir_or_metadata, config=None, variants=None):
                 combined_spec = (filter_by_key_value(combined_spec, k, vs, source_name=source) or
                                  combined_spec)
     return combined_spec
+
+
+def get_package_variants(recipedir_or_metadata, config=None, variants=None):
+    combined_spec, specs = get_package_combined_spec(recipedir_or_metadata, config=config, variants=variants)
+    return filter_combined_spec_to_used_keys(combined_spec, specs=specs)
 
 
 def get_vars(variants, loop_only=False):

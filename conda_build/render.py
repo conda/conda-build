@@ -34,7 +34,7 @@ from conda_build import exceptions, utils, environ
 from conda_build.metadata import MetaData, combine_top_level_metadata_with_output
 import conda_build.source as source
 from conda_build.variants import (get_package_variants, list_of_dicts_to_dict_of_lists,
-                                  filter_by_key_value)
+                                  filter_by_key_value, filter_combined_spec_to_used_keys)
 from conda_build.exceptions import DependencyNeedsBuildingError
 from conda_build.index import get_build_index
 # from conda_build.jinja_context import pin_subpackage_against_outputs

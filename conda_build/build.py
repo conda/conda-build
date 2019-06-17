@@ -70,7 +70,8 @@ from conda_build.post import (post_process, post_build,
 
 from conda_build.exceptions import indent, DependencyNeedsBuildingError, CondaBuildException
 from conda_build.variants import (set_language_env_vars, dict_of_lists_to_list_of_dicts,
-                                  get_package_variants)
+                                  get_package_variants, get_package_combined_spec, 
+                                  filter_combined_spec_to_used_keys)
 from conda_build.create_test import create_all_test_files
 
 import conda_build.noarch_python as noarch_python
