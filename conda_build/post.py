@@ -633,7 +633,7 @@ def _collect_needed_dsos(sysroots_files, files, run_prefix, sysroot_substitution
     return all_needed_dsos, needed_dsos_for_file
 
 
-def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_vendored_dist, ignore_list_syms, sysroot_substitution):
+def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_vendored_dist, ignore_list_syms, sysroot_substitution, enable_static):
     # Form a mapping of file => package
     prefix_owners = {}
     contains_dsos = {}
@@ -669,7 +669,7 @@ def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_v
                         owners.append(new_pkg)
                 prefix_owners[rp] = owners
                 if len(prefix_owners[rp]):
-                    exports = set(e for e in get_exports_memoized(fp) if not
+                    exports = set(e for e in get_exports_memoized(fp, enable_static=enable_static) if not
                                   any(fnmatch(e, pattern) for pattern in ignore_list_syms))
                     all_lib_exports[rp] = exports
                     # Check codefile_type to filter out linker scripts.
@@ -855,7 +855,8 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                            run_prefix, build_prefix,
                            missing_dso_whitelist, runpath_whitelist,
                            error_overlinking, error_overdepending, verbose,
-                           exception_on_error, files, bldpkgs_dirs, output_folder, channel_urls):
+                           exception_on_error, files, bldpkgs_dirs, output_folder, channel_urls,
+                           enable_static=False):
     verbose = True
     errors = []
 
@@ -921,7 +922,8 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                                                                  build_prefix, build_prefix_substitution)
 
     prefix_owners, _, _, all_lib_exports = _map_file_to_package(
-        files, run_prefix, build_prefix, all_needed_dsos, pkg_vendored_dist, ignore_list_syms, sysroot_substitution)
+        files, run_prefix, build_prefix, all_needed_dsos, pkg_vendored_dist, ignore_list_syms,
+        sysroot_substitution, enable_static)
 
     for f in files:
         path = os.path.join(run_prefix, f)
@@ -1008,7 +1010,8 @@ def check_overlinking(m, files):
                                   files,
                                   m.config.bldpkgs_dir,
                                   m.config.output_folder,
-                                  m.config.channel_urls)
+                                  m.config.channel_urls,
+                                  m.config.enable_static)
 
 
 def post_process_shared_lib(m, f, files):
