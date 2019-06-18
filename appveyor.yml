@@ -87,8 +87,8 @@ test_script:
   # cache several files to avoid race condition errors
   - echo "safety_checks: disabled" >> ~/.condarc
   - echo "local_repodata_ttl: 1800" >> ~/.condarc
-  - conda create -n blarg -yq --download-only python=2.7 libpng=1.6.17
-  - conda create -n blarg -yq --download-only python=3.5 libpng=1.6.17
+  - conda create -n blarg -yq --download-only python=2.7
+  - conda create -n blarg -yq --download-only python=3.5
   # no libpng here because we already have the right version from the 3.5 install
   - conda create -n blarg -yq --download-only python cmake
   # remove all folders to avoid permission errors.  Leave root files (may have coverage info there)
