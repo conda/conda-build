@@ -665,7 +665,8 @@ def test_new_pkg_format_stat_cache_used(testing_workdir, mocker):
     assert actual_repodata_json == expected_repodata_json
 
 
-@pytest.mark.skipif(getattr(context, 'use_only_tar_bz2'), reason="conda is set to auto-disable .conda for old conda-build.")
+@pytest.mark.skipif(not hasattr(context, 'use_only_tar_bz2') or getattr(context, 'use_only_tar_bz2'),
+                    reason="conda is set to auto-disable .conda for old conda-build.")
 def test_current_index_reduces_space():
     repodata = os.path.join(os.path.dirname(__file__), 'index_data', 'time_cut', 'repodata.json')
     with open(repodata) as f:
