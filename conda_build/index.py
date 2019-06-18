@@ -51,6 +51,7 @@ from .conda_interface import MatchSpec, VersionOrder, human_bytes, context
 from .conda_interface import CondaError, CondaHTTPError, get_index, url_path
 from .conda_interface import download, TemporaryDirectory
 from .conda_interface import Resolve
+from .conda_interface import memoized
 from .utils import glob, get_logger, FileNotFoundError, PermissionError
 
 # try:
@@ -146,6 +147,7 @@ except ImportError:  # pragma: no cover
     from conda._vendor.toolz.itertoolz import concat, concatv, groupby  # NOQA
 
 
+@memoized
 def _download_channeldata(channel_url):
     with TemporaryDirectory() as td:
         tf = os.path.join(td, "channeldata.json")
