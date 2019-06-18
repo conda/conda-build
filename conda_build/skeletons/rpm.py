@@ -46,9 +46,7 @@ build:
   missing_dso_whitelist:
     - '*'
 
-requirements:
-{depends_build}
-{depends_run}
+{depends}
 
 about:
   home: {home}
@@ -547,6 +545,7 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
                                                  src_cache)
 
     sn = cdt['short_name'] + '-' + arch
+    dependsstr = ""
     if len(depends):
         depends_specs = ["{}-{}-{} {}{}".format(depend['name'].lower().replace('+', 'x'),
                                                 cdt['short_name'], depend['arch'],
@@ -555,10 +554,8 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
         dependsstr_part = '\n'.join(['    - {}'.format(depends_spec)
                                      for depends_spec in depends_specs])
         dependsstr_build = '  build:\n' + dependsstr_part + '\n'
-        dependsstr_run = '  run:\n    ' + '\n    '.join(dependsstr_part.split('\n')) + '\n'
-    else:
-        dependsstr_build = ''
-        dependsstr_run = ''
+        dependsstr_run = '  run:\n' + dependsstr_part
+        dependsstr = 'requirements:\n' + dependsstr_build + dependsstr_run
 
     package_l = package.lower().replace('+', 'x')
     package_cdt_name = package_l + '-' + sn
@@ -567,8 +564,7 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
               'packagename': package_cdt_name,
               'hostmachine': cdt['host_machine'],
               'hostsubdir': cdt['host_subdir'],
-              'depends_build': dependsstr_build,
-              'depends_run': dependsstr_run,
+              'depends': dependsstr,
               'rpmurl': rpm_url,
               'srcrpmurl': srpm_url,
               'home': entry['home'],
