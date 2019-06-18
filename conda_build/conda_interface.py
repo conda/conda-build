@@ -4,8 +4,9 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from functools import partial
 import os
 from os import lstat
-from pkg_resources import parse_version
 from importlib import import_module
+
+from pkg_resources import parse_version
 
 from conda import __version__ as CONDA_VERSION
 
