@@ -1451,7 +1451,7 @@ class MetaData(object):
 
     def _get_contents(self, permit_undefined_jinja, allow_no_other_outputs=False,
                       bypass_env_check=False, template_string=None, skip_build_id=False,
-                      alt_name=None):
+                      alt_name=None, variant=None):
         '''
         Get the contents of our [meta.yaml|conda.yaml] file.
         If jinja is installed, then the template.render function is called
@@ -1502,7 +1502,7 @@ class MetaData(object):
                                              permit_undefined_jinja=permit_undefined_jinja,
                                              allow_no_other_outputs=allow_no_other_outputs,
                                              bypass_env_check=bypass_env_check,
-                                             skip_build_id=skip_build_id))
+                                             skip_build_id=skip_build_id, variant=variant))
         # override PKG_NAME with custom value.  This gets used when an output needs to pretend
         #   that it is top-level when getting the top-level recipe data.
         if alt_name:
@@ -2079,7 +2079,7 @@ class MetaData(object):
                                                   template_string=template_string,
                                                   skip_build_id=False)) or {})
 
-    def get_rendered_outputs_section(self, permit_undefined_jinja=False):
+    def get_rendered_outputs_section(self, permit_undefined_jinja=False, variant=None):
         extract_pattern = r'(.*)package:'
         template_string = '\n'.join((self.get_recipe_text(extract_pattern=extract_pattern,
                                                           force_top_level=True),
@@ -2090,18 +2090,19 @@ class MetaData(object):
         outputs = (yaml.safe_load(self._get_contents(permit_undefined_jinja=permit_undefined_jinja,
                                                      template_string=template_string,
                                                      skip_build_id=False,
-                                                     allow_no_other_outputs=permit_undefined_jinja)) or
+                                                     allow_no_other_outputs=permit_undefined_jinja,
+                                                     variant=variant)) or
                    {}).get('outputs', [])
         return get_output_dicts_from_metadata(self, outputs=outputs)
 
-    def get_rendered_output(self, name, permit_undefined_jinja=False):
+    def get_rendered_output(self, name, permit_undefined_jinja=False, variant=None):
         """This is for obtaining the rendered, parsed, dictionary-object representation of an
         output. It's not useful for saying what variables are used. You need earlier, more raw
         versions of the metadata for that. It is useful, however, for getting updated, re-rendered
         contents of outputs."""
         output = None
         for output_ in self.get_rendered_outputs_section(
-                permit_undefined_jinja=permit_undefined_jinja):
+                permit_undefined_jinja=permit_undefined_jinja, variant=variant):
             if output_.get('name') == name:
                 output = output_
                 break

@@ -491,7 +491,8 @@ def resolved_packages(m, env, permit_undefined_jinja=False,
 
 
 def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jinja,
-                      allow_no_other_outputs=False, bypass_env_check=False, skip_build_id=False):
+                      allow_no_other_outputs=False, bypass_env_check=False, skip_build_id=False,
+                      variant=None):
     """
     Return a dictionary to use as context for jinja templates.
 
@@ -499,7 +500,7 @@ def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jin
                       Used to bootstrap metadata contents via multiple parsing passes.
     """
     ctx = get_environ(m=initial_metadata, for_env=False, skip_build_id=skip_build_id,
-                      escape_backslash=True)
+                      escape_backslash=True, variant=variant)
     environ = dict(os.environ)
     environ.update(get_environ(m=initial_metadata, skip_build_id=skip_build_id))
 

@@ -470,10 +470,8 @@ def finalize_metadata(m, parent_metadata=None, permit_unsatisfiable_variants=Fal
     if not parent_metadata:
         parent_metadata = m
     if m.skip():
-        rendered_metadata = m.copy()
         rendered_metadata.final = True
     else:
-
         exclude_pattern = None
         excludes = set(m.config.variant.get('ignore_version', []))
 
@@ -494,14 +492,13 @@ def finalize_metadata(m, parent_metadata=None, permit_unsatisfiable_variants=Fal
         # extract the topmost section where variables are defined, and put it on top of the
         #     requirements for a particular output
         # Re-parse the output from the original recipe, so that we re-consider any jinja2 stuff
-        parent_metadata = parent_metadata.copy()
-        parent_metadata.config.variant = m.config.variant
-        output = parent_metadata.get_rendered_output(m.name())
+        output = parent_metadata.get_rendered_output(m.name(), variant=m.config.variant)
 
         if output:
             if 'package' in output or 'name' not in output:
                 # it's just a top-level recipe
                 output = {'name': m.name()}
+                is_top_level = True
 
             if not parent_recipe or parent_recipe['name'] == m.name():
                 combine_top_level_metadata_with_output(m, output)
@@ -521,15 +518,6 @@ def finalize_metadata(m, parent_metadata=None, permit_unsatisfiable_variants=Fal
         # getting this AFTER add_upstream_pins is important, because that function adds deps
         #     to the metadata.
         requirements = m.meta.get('requirements', {})
-
-        # this is hacky, but it gets the jinja2 things like pin_compatible from the rendered output
-        # rerendered_output = parent_metadata.get_output_metadata(m.get_rendered_output(m.name()))
-        # run_reqs = utils.expand_reqs(rerendered_output.meta.get('requirements', {}))
-        # run_reqs = run_reqs.get('run', [])
-        # if run_reqs:
-        #     requirements['run'] = run_reqs
-        # m.meta['requirements'] = requirements
-        # m.meta['build'] = rerendered_output.meta.get('build', {})
 
         # here's where we pin run dependencies to their build time versions.  This happens based
         #     on the keys in the 'pin_run_as_build' key in the variant, which is a list of package
@@ -617,6 +605,8 @@ def finalize_metadata(m, parent_metadata=None, permit_unsatisfiable_variants=Fal
                 log.warn("Host: {}".format(host_unsat))
         else:
             m.final = True
+    if is_top_level:
+        parent_metadata = m
     return m
 
 

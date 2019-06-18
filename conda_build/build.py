@@ -1322,11 +1322,14 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
         package_locations = []
         # TODO: should we check both host and build envs?  These are the same, except when
         #    cross compiling.
+        top_level_pkg = m
         for _, om in output_metas:
             if om.skip() or (m.config.skip_existing and is_package_built(om, 'host')):
                 skipped.append(bldpkg_path(om))
             else:
                 package_locations.append(bldpkg_path(om))
+            if om.name() == m.name():
+                top_level_pkg = om
         if not package_locations:
             print("Packages for ", m.path or m.name(), "with variant {} "
                   "are already built and available from your configured channels "
@@ -1383,13 +1386,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
             exclude_pattern = re.compile(r'|'.join(r'(?:^{}(?:\s|$|\Z))'.format(exc)
                                             for exc in excludes | output_excludes))
 
-        # this metadata object may not be finalized - the outputs are, but this is the
-        #     top-level metadata.  We need to make sure that the variant pins are added in.
-        utils.insert_variant_versions(m.meta.get('requirements', {}), m.config.variant, 'build')
-        utils.insert_variant_versions(m.meta.get('requirements', {}), m.config.variant, 'host')
-        add_upstream_pins(m, False, exclude_pattern)
-
-        create_build_envs(m, notest)
+        create_build_envs(top_level_pkg, notest)
 
         # this check happens for the sake of tests, but let's do it before the build so we don't
         #     make people wait longer only to see an error
@@ -1711,8 +1708,6 @@ def _construct_metadata_for_test_from_recipe(recipe_dir, config):
         if not metadata.source_provided:
             try_download(metadata, no_download_source=False)
 
-    if not metadata.final:
-        metadata = finalize_metadata(metadata)
     return metadata, hash_input
 
 
