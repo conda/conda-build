@@ -494,11 +494,13 @@ def finalize_metadata(m, parent_metadata=None, permit_unsatisfiable_variants=Fal
         # Re-parse the output from the original recipe, so that we re-consider any jinja2 stuff
         output = parent_metadata.get_rendered_output(m.name(), variant=m.config.variant)
 
+        is_top_level = True
         if output:
             if 'package' in output or 'name' not in output:
                 # it's just a top-level recipe
                 output = {'name': m.name()}
-                is_top_level = True
+            else:
+                is_top_level = False
 
             if not parent_recipe or parent_recipe['name'] == m.name():
                 combine_top_level_metadata_with_output(m, output)
@@ -790,7 +792,6 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
     #   folder until rendering is complete, because package names can have variant jinja2 in them.
     if m.needs_source_for_render and not m.source_provided:
         try_download(m, no_download_source=no_download_source)
-
     if m.final:
         if not hasattr(m.config, 'variants') or not m.config.variant:
             m.config.ignore_system_variants = True

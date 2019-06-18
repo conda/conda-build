@@ -860,6 +860,16 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     verbose = True
     errors = []
 
+    files_to_inspect = []
+    for f in files:
+        path = os.path.join(run_prefix, f)
+        filetype = codefile_type(path)
+        if filetype and filetype in filetypes_for_platform[subdir.split('-')[0]]:
+            files_to_inspect.append(f)
+
+    if not files_to_inspect:
+        return dict()
+
     sysroot_substitution = '$SYSROOT'
     build_prefix_substitution = '$PATH'
     # Used to detect overlinking (finally)
@@ -925,11 +935,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
         files, run_prefix, build_prefix, all_needed_dsos, pkg_vendored_dist, ignore_list_syms,
         sysroot_substitution, enable_static)
 
-    for f in files:
-        path = os.path.join(run_prefix, f)
-        filetype = codefile_type(path)
-        if not filetype or filetype not in filetypes_for_platform[subdir.split('-')[0]]:
-            continue
+    for f in files_to_inspect:
         needed = needed_dsos_for_file[f]
         for needed_dso in needed:
             if (error_overlinking and
