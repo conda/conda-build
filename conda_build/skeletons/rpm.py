@@ -42,22 +42,20 @@ source:
     folder: source
 
 build:
+  noarch: generic
   missing_dso_whitelist:
     - '*'
 
+requirements:
 {depends_build}
-
-outputs:
-  - name: {packagename}
-    build:
-      noarch: generic
 {depends_run}
-    about:
-      home: {home}
-      license: {license}
-      license_family: {license_family}
-      summary: {summary}
-      description: {description}
+
+about:
+  home: {home}
+  license: {license}
+  license_family: {license_family}
+  summary: {summary}
+  description: {description}
 """
 
 
@@ -556,10 +554,8 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
                          for depend in depends]
         dependsstr_part = '\n'.join(['    - {}'.format(depends_spec)
                                      for depends_spec in depends_specs])
-        dependsstr_build = 'requirements:\n' \
-                           '  build:\n' + dependsstr_part + '\n'
-        dependsstr_run = '    requirements:\n' \
-                           '      run:\n    ' + '\n    '.join(dependsstr_part.split('\n')) + '\n'
+        dependsstr_build = '  build:\n' + dependsstr_part + '\n'
+        dependsstr_run = '  run:\n    ' + '\n    '.join(dependsstr_part.split('\n')) + '\n'
     else:
         dependsstr_build = ''
         dependsstr_run = ''
