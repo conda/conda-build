@@ -87,18 +87,14 @@ def test_subpackage_variant_override(testing_config):
     assert len(outputs) == 3
 
 
-@pytest.mark.skipif(sys.platform == 'darwin', reason="R has dumb binary issues, just run this on linux/win")
 def test_intradependencies(testing_workdir, testing_config):
-    # Only necessary because for conda<4.3, the `r` channel was not in `defaults`
-    testing_config.channel_urls = ('r')
-    testing_config.activate = True
     recipe = os.path.join(subpackage_dir, '_intradependencies')
     outputs1 = api.get_output_file_paths(recipe, config=testing_config)
     outputs1_set = set([os.path.basename(p) for p in outputs1])
-    # 2 * (2 * pythons, 1 * lib, 1 * R)
-    assert len(outputs1) == 8
+    # 2 * abc + 1 foo + 2 * (2 * abc, 1 * lib, 1 * foo)
+    assert len(outputs1) == 11
     outputs2 = api.build(recipe, config=testing_config)
-    assert len(outputs2) == 8
+    assert len(outputs2) == 11
     outputs2_set = set([os.path.basename(p) for p in outputs2])
     assert outputs1_set == outputs2_set, 'pkgs differ :: get_output_file_paths()=%s but build()=%s' % (outputs1_set,
                                                                                                        outputs2_set)

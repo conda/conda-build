@@ -10,19 +10,24 @@ requirements:
     - git    # [not win]
 
 outputs:
+  - name: abc
+    version: {{ abc }}
+  - name: foo
+    version: {{ foo }}
+
   - name: lib1intradependencies
     script: install-lib1intradependencies.sh
 
   - name: py1-intradependencies
     requirements:
       - {{ pin_subpackage('lib1intradependencies', exact=True) }}
-      - python {{ python }}
+      - abc {{ abc }}
     script: install-py1-intradependencies.sh
 
   - name: r1-intradependencies
     requirements:
       - {{ pin_subpackage('lib1intradependencies', exact=True) }}
-      - r-base {{ r }}
+      - foo {{ foo }}
     script: install-r1-intradependencies.sh
 
   - name: lib2intradependencies
@@ -31,11 +36,11 @@ outputs:
   - name: py2-intradependencies
     requirements:
       - {{ pin_subpackage('lib2intradependencies', exact=True) }}
-      - python {{ python }}
+      - abc {{ abc }}
     script: install-py2-intradependencies.sh
 
   - name: r2-intradependencies
     requirements:
       - {{ pin_subpackage('lib2intradependencies', exact=True) }}
-      - r-base {{ r }}
+      - foo {{ foo }}
     script: install-r2-intradependencies.sh

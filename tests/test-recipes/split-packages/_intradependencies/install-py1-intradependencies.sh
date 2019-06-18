@@ -26,4 +26,4 @@ if [[ ! -d ${PREFIX}/bin ]]; then
   mkdir -p ${PREFIX}/bin
 fi
 
-${PYTHON} -c "print('py1-intradependencies')" > ${PREFIX}/bin/py1-intreadependencies
+echo 'py1-intradependencies' > ${PREFIX}/bin/py1-intradependencies

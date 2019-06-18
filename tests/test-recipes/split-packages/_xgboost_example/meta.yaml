@@ -15,9 +15,6 @@ requirements:
 
 outputs:
   - name: libxgboost
-    requirements:
-      build:
-        - make
 
   - name: _py-xgboost-mutex
     version: 2.0
@@ -42,6 +39,9 @@ outputs:
       run:
         - {{ pin_subpackage('py-xgboost', exact=True) }}
 
+  - name: fake_r_{{ r_implementation }}
+    version: {{ r_version }}
+
   - name: _r-xgboost-mutex
     version: 2.0
     build:
@@ -54,19 +54,18 @@ outputs:
     requirements:
       host:
         - {{ pin_subpackage('libxgboost', exact=True) }}
-        - {{ r_implementation }}
+        - fake_r_{{ r_implementation }}
       run:
         - {{ pin_subpackage('libxgboost', exact=True) }}
         - {{ pin_subpackage('_r-xgboost-mutex', exact=True) }}
-        - llvm-openmp >=4.0.1    # [osx]
-        - {{ r_implementation }}
+        - fake_r_{{ r_implementation }}
 
   - name: r-xgboost-cpu
     requirements:
       host:
-        - {{ r_implementation }}
+        - fake_r_{{ r_implementation }}
       run:
-        - {{ r_implementation }}
+        - fake_r_{{ r_implementation }}
         - {{ pin_subpackage('r-xgboost', exact=True) }}
 
 about:
