@@ -1606,14 +1606,16 @@ def prefix_files(prefix):
     Returns a set of all files in prefix.
     '''
     res = set()
+    prefix_rep = prefix + os.path.sep
     for root, dirs, files in walk(prefix):
         for fn in files:
-            res.add(os.path.relpath(join(root, fn), prefix))
+            # this is relpath, just hacked to be faster
+            res.add(join(root, fn).replace(prefix_rep, '', 1))
         for dn in dirs:
             path = join(root, dn)
             if islink(path):
-                res.add(os.path.relpath(path, prefix))
-    res = set(expand_globs(res, prefix))
+                res.add(path.replace(prefix_rep, '', 1))
+                res.update(expand_globs((path, ), prefix))
     return res
 
 
