@@ -70,8 +70,7 @@ from conda_build.post import (post_process, post_build,
 
 from conda_build.exceptions import indent, DependencyNeedsBuildingError, CondaBuildException
 from conda_build.variants import (set_language_env_vars, dict_of_lists_to_list_of_dicts,
-                                  get_package_variants, get_package_combined_spec, 
-                                  filter_combined_spec_to_used_keys)
+                                  get_package_variants)
 from conda_build.create_test import create_all_test_files
 
 import conda_build.noarch_python as noarch_python
@@ -204,7 +203,7 @@ def have_prefix_files(files, prefix):
             except subprocess.CalledProcessError as e:
                 matches = e.output
             rg_matches.extend(matches.decode('utf-8').replace('\r\n', '\n').splitlines())
-        rg_matches = [rg_match[len(prefix)+1:]
+        rg_matches = [os.path.relpath(rg_match, prefix)
                       for rg_match in rg_matches if rg_match.startswith(prefix)]
     else:
         print("WARNING: Detecting which files contain PREFIX is slow, installing ripgrep makes it faster")

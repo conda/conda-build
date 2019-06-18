@@ -4,7 +4,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import bz2
-from collections import OrderedDict, defaultdict
+from collections import OrderedDict
 import copy
 from datetime import datetime
 import json
@@ -31,7 +31,6 @@ from yaml.parser import ParserError
 from yaml.scanner import ScannerError
 from yaml.reader import ReaderError
 
-import contextlib
 import fnmatch
 from functools import partial
 import logging
@@ -1394,4 +1393,3 @@ class ChannelIndex(object):
             raise RuntimeError("Incompatible patch instructions version")
 
         return _apply_instructions(subdir, repodata, instructions), instructions
-
