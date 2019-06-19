@@ -200,14 +200,17 @@ def have_prefix_files(files, prefix):
                         prefix]
                 matches = subprocess.check_output(args)
                 rg_matches.extend(matches.decode('utf-8').replace('\r\n', '\n').splitlines())
-            except subprocess.CalledProcessError:
+            except subprocess.CalledProcessError as e:
                 continue
-        rg_matches = [rg_match for rg_match in rg_matches if rg_match.startswith(prefix)]
+        rg_matches = [os.path.relpath(rg_match, prefix)
+                      for rg_match in rg_matches if rg_match.startswith(prefix)]
     else:
         print("WARNING: Detecting which files contain PREFIX is slow, installing ripgrep makes it faster."
               " 'conda install ripgrep'")
 
     for f in files:
+        if os.path.isabs(f):
+            f = os.path.relpath(f, prefix)
         if rg_matches and f not in rg_matches:
             continue
         if f.endswith(('.pyc', '.pyo')):
