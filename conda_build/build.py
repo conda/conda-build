@@ -186,6 +186,7 @@ def have_prefix_files(files, prefix):
     # mm.find is incredibly slow, so ripgrep is used to pre-filter the list.
     # Really, ripgrep could be used on its own with a bit more work though.
     rg_matches = []
+    prefix_len = len(prefix) + 1
     rg = external.find_executable('rg')
     if rg:
         for rep_prefix, _ in searches.items():
@@ -202,15 +203,15 @@ def have_prefix_files(files, prefix):
                 rg_matches.extend(matches.decode('utf-8').replace('\r\n', '\n').splitlines())
             except subprocess.CalledProcessError:
                 continue
-        rg_matches = [os.path.relpath(rg_match, prefix)
-                      for rg_match in rg_matches if rg_match.startswith(prefix)]
+        # HACK: this is basically os.path.relpath, just simpler and faster
+        rg_matches = [rg_match[prefix_len:] for rg_match in rg_matches]
     else:
         print("WARNING: Detecting which files contain PREFIX is slow, installing ripgrep makes it faster."
               " 'conda install ripgrep'")
 
     for f in files:
         if os.path.isabs(f):
-            f = os.path.relpath(f, prefix)
+            f = f[prefix_len:]
         if rg_matches and f not in rg_matches:
             continue
         if f.endswith(('.pyc', '.pyo')):
