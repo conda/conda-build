@@ -66,7 +66,7 @@ Glossary (optional)
 Tutorial tasks
 ==============
 
-* *Provide descriptive titles for each step*.
+* *Provide descriptive titles for each section*.
 * *Identify the major tasks*.
 * *Separate each major task into subtasks*.
 * *Write a series of steps that walk the user through each subtask*.
