@@ -206,7 +206,8 @@ def have_prefix_files(files, prefix):
         rg_matches = [os.path.relpath(rg_match, prefix)
                       for rg_match in rg_matches if rg_match.startswith(prefix)]
     else:
-        print("WARNING: Detecting which files contain PREFIX is slow, installing ripgrep makes it faster")
+        print("WARNING: Detecting which files contain PREFIX is slow, installing ripgrep makes it faster."
+              " 'conda install ripgrep'")
 
     for f in files:
         if rg_matches and f not in rg_matches:
