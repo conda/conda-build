@@ -14,4 +14,6 @@ Resources
    use-shared-libraries
    variants
    commands/index
+   style-guide
+   tutorial-template
 
