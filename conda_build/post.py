@@ -171,7 +171,8 @@ def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
             print('found egg:', egg_path)
             write_pth(egg_path, config=config)
 
-    installer_files = [f for f in absfiles if f.endswith(".dist-info/INSTALLER")]
+    installer_files = [f for f in absfiles
+                       if f.endswith(".dist-info{}INSTALLER".format(os.path.sep))]
     for file in installer_files:
         with open(file, 'w') as f:
             f.write('conda')

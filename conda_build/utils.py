@@ -1116,7 +1116,7 @@ def package_has_file(package_path, file_path, refresh=False):
         try:
             # conda 4.7.2 added this
             cache_path = PackageCacheData.first_writable().pkgs_dir
-        except:
+        except AttributeError:
             # fallback; assume writable first path.  Not as reliable.
             cache_path = pkgs_dirs[0]
         cache_path = os.path.join(cache_path, possible_subdir) if possible_subdir else cache_path
