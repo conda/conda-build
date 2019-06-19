@@ -200,7 +200,7 @@ def have_prefix_files(files, prefix):
                         prefix]
                 matches = subprocess.check_output(args)
                 rg_matches.extend(matches.decode('utf-8').replace('\r\n', '\n').splitlines())
-            except subprocess.CalledProcessError as e:
+            except subprocess.CalledProcessError:
                 continue
         rg_matches = [os.path.relpath(rg_match, prefix)
                       for rg_match in rg_matches if rg_match.startswith(prefix)]
