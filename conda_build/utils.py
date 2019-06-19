@@ -584,6 +584,7 @@ def move_with_fallback(src, dst):
         try:
             os.unlink(src)
         except PermissionError:
+            log = get_logger(__name__)
             log.debug("Failed to clean up temp path due to permission error: %s" % src)
 
 

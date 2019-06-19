@@ -11,8 +11,8 @@ import json
 from numbers import Number
 import os
 from os.path import abspath, basename, getmtime, getsize, isdir, isfile, join, splitext, dirname
-from shutil import move
 import subprocess
+import sys
 import tarfile
 from tempfile import gettempdir
 import time
@@ -52,7 +52,7 @@ from .conda_interface import CondaError, CondaHTTPError, get_index, url_path
 from .conda_interface import download, TemporaryDirectory
 from .conda_interface import Resolve
 from .conda_interface import memoized
-from .utils import glob, get_logger, FileNotFoundError, PermissionError
+from .utils import glob, get_logger, FileNotFoundError
 
 # try:
 #     from conda.base.constants import CONDA_TARBALL_EXTENSIONS
@@ -782,7 +782,9 @@ class ChannelIndex(object):
         self.channel_root = abspath(channel_root)
         self.channel_name = channel_name or basename(channel_root.rstrip('/'))
         self._subdirs = subdirs
-        self.thread_executor = DummyExecutor() if debug else ProcessPoolExecutor(threads)
+        self.thread_executor = (DummyExecutor()
+                                if (debug or sys.version_info.major == 2)
+                                else ProcessPoolExecutor(threads))
         self.deep_integrity_check = deep_integrity_check
 
     def index(self, patch_generator, hotfix_source_repo=None, verbose=False, progress=False,
