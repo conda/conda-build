@@ -42,6 +42,7 @@ source:
     folder: source
 
 build:
+  number: 0
   noarch: generic
   missing_dso_whitelist:
     - '*'
