@@ -21,6 +21,7 @@ Overview
 ========
 
 *Provide descriptions of the tutorial's*:
+
     * *Purpose*.
     * *Benefits*.
     * *Application*.
