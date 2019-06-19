@@ -475,7 +475,10 @@ def _maybe_write(path, content, write_newline_end=False, content_is_binary=False
         move(temp_path, path)
     except PermissionError:
         utils.copy_into(temp_path, path)
-        os.unlink(temp_path)
+        try:
+            os.unlink(temp_path)
+        except PermissionError:
+            log.debug("Failed to clean up temp path due to permission error: %s" % temp_path)
     return True
 
 
@@ -607,7 +610,7 @@ def _cache_icon(tmpdir, recipe_json, icon_cache_path):
             icon_path = os.path.join(tmpdir, 'info', 'icon.png')
         if os.path.lexists(icon_path):
             icon_cache_path += splitext(app_icon_path)[-1]
-            move(icon_path, icon_cache_path)
+            utils.copy_into(icon_path, icon_cache_path)
 
 
 def _make_subdir_index_html(channel_name, subdir, repodata_packages, extra_paths):
@@ -651,11 +654,7 @@ def _get_source_repo_git_info(path):
 def _cache_info_file(tmpdir, info_fn, cache_path):
     info_path = os.path.join(tmpdir, 'info', info_fn)
     if os.path.lexists(info_path):
-        try:
-            os.makedirs(os.path.dirname(cache_path))
-        except:
-            pass
-        move(info_path, cache_path)
+        copy_into(info_path, cache_path)
 
 
 def _alternate_file_extension(fn):
