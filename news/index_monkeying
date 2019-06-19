@@ -1,0 +1,29 @@
+Enhancements:
+-------------
+
+* <news item>
+
+Bug fixes:
+----------
+
+* fix package_has_file function for .conda format
+* fix off-by-one path trimming in prefix_files
+* disable overlinking checks when no files in the package have any shared library linkage
+* try to avoid finalizing top-level metadata twice
+* try to address permission errors on Appveyor and Azure by falling back to copy and warning (not erroring) if removing a file after copying fails
+
+Deprecations:
+-------------
+
+* The repodata2.json file is no longer created as part of indexing.  It was not used by anything.  It has been removed as an optimization.  Its purpose was to explore namespaces, and we'll bring its functionality back when we address that fully.
+
+Docs:
+-----
+
+* <news item>
+
+Other:
+------
+
+* <news item>
+

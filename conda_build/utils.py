@@ -576,6 +576,17 @@ def copy_into(src, dst, timeout=900, symlinks=False, lock=None, locking=True, cl
                             os.path.basename(src), dst)
 
 
+def move_with_fallback(src, dst):
+    try:
+        shutil.move(src, dst)
+    except PermissionError:
+        copy_into(src, dst)
+        try:
+            os.unlink(src)
+        except PermissionError:
+            log.debug("Failed to clean up temp path due to permission error: %s" % src)
+
+
 # http://stackoverflow.com/a/22331852/1170370
 def copytree(src, dst, symlinks=False, ignore=None, dry_run=False):
     if not os.path.exists(dst):

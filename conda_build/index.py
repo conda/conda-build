@@ -175,7 +175,7 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
     if not output_folder:
         output_folder = dirname(bldpkgs_dir)
 
-    # check file modification time - this is the age of our index.
+    # check file modification time - this is the age of our local index.
     index_file = os.path.join(output_folder, subdir, 'repodata.json')
     if os.path.isfile(index_file):
         mtime = os.path.getmtime(index_file)
@@ -471,14 +471,7 @@ def _maybe_write(path, content, write_newline_end=False, content_is_binary=False
             os.unlink(temp_path)
             return False
     # log.info("writing %s", path)
-    try:
-        move(temp_path, path)
-    except PermissionError:
-        utils.copy_into(temp_path, path)
-        try:
-            os.unlink(temp_path)
-        except PermissionError:
-            log.debug("Failed to clean up temp path due to permission error: %s" % temp_path)
+    utils.move_with_fallback(temp_path, path)
     return True
 
 
@@ -610,7 +603,7 @@ def _cache_icon(tmpdir, recipe_json, icon_cache_path):
             icon_path = os.path.join(tmpdir, 'info', 'icon.png')
         if os.path.lexists(icon_path):
             icon_cache_path += splitext(app_icon_path)[-1]
-            utils.copy_into(icon_path, icon_cache_path)
+            utils.move_with_fallback(icon_path, icon_cache_path)
 
 
 def _make_subdir_index_html(channel_name, subdir, repodata_packages, extra_paths):
@@ -654,7 +647,7 @@ def _get_source_repo_git_info(path):
 def _cache_info_file(tmpdir, info_fn, cache_path):
     info_path = os.path.join(tmpdir, 'info', info_fn)
     if os.path.lexists(info_path):
-        utils.copy_into(info_path, cache_path)
+        utils.move_with_fallback(info_path, cache_path)
 
 
 def _alternate_file_extension(fn):
@@ -1110,7 +1103,7 @@ class ChannelIndex(object):
                             os.makedirs(os.path.dirname(dest))
                         except:
                             pass
-                        utils.copy_into(src, dest)
+                        utils.move_with_fallback(src, dest)
 
                 with open(index_cache_path) as f:
                     index_json = json.load(f)
@@ -1185,7 +1178,7 @@ class ChannelIndex(object):
             icon_hash = "md5:%s:%s" % (icon_md5, getsize(icon_cache_path))
             data.update(icon_hash=icon_hash, icon_url=icon_url)
             # log.info("writing icon from %s to %s", icon_cache_path, icon_channel_path)
-            utils.copy_into(icon_cache_path, icon_channel_path)
+            utils.move_with_fallback(icon_cache_path, icon_channel_path)
 
         # have to stat again, because we don't have access to the stat cache here
         data['mtime'] = mtime
