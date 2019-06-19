@@ -7,6 +7,8 @@ Building conda packages from scratch
    :local:
    :depth: 1
 
+Overview
+========
 
 This tutorial describes how to build a conda package for
 Click by writing the required files in the conda build recipe.
