@@ -21,10 +21,16 @@ conda build, and git.
 After you've installed Miniconda or Anaconda, you can use conda
 to install conda build and git.
 
-Submit tutorial topics
-======================
+.. _submissions:
+
+Tutorial submissions
+====================
 
 .. _documentation@anaconda.com: documentation@anaconda.com
 
 Have an idea for a tutorial? You can submit your suggestions
 to Anaconda by emailing us at `documentation@anaconda.com`_.
+
+To create your own tutorials, follow the
+:doc:`writing style guide <../resources/style-guide>`
+and :doc:`tutorial template <../resources/tutorial-template>`.
