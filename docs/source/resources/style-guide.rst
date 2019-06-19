@@ -14,7 +14,7 @@ Technical language
 ==================
 Match the level of technical language with the audience's
 level of proficiency. It's better to uderestimate the
-knowledge of your readers rather than overestimate it.
+knowledge of your readers than overestimate it.
 Limit technical terms to those the user will encounter.
 If you must define a large number of terms, use a glossary
 to supplement definitions in the text.
@@ -29,5 +29,5 @@ the verb: "Choose an option from the menu and press Enter."
 Format
 ======
 See the :doc:`tutorial template <tutorial-template>`
-for the required format. Provide descriptive task and subtask titles.
-Do not number headings.
+for the format. Provide descriptive task and subtask titles and 
+do not number headings.
