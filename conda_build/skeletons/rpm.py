@@ -57,58 +57,12 @@ about:
 """
 
 
-RPM2CPIO = """\
-#!/bin/sh
-
-# Based on:
-# https://www.redhat.com/archives/rpm-list/2003-June/msg00367.html
-# Modified to also support xz compression.
-
-pkg=$1
-if [ "$pkg" = "" -o ! -e "$pkg" ]; then
-    echo "no package supplied" 1>&2
-   exit 1
-fi
-
-leadsize=96
-o=`expr $leadsize + 8`
-set `od -j $o -N 8 -t u1 $pkg`
-il=`expr 256 \* \( 256 \* \( 256 \* $2 + $3 \) + $4 \) + $5`
-dl=`expr 256 \* \( 256 \* \( 256 \* $6 + $7 \) + $8 \) + $9`
-
-sigsize=`expr 8 + 16 \* $il + $dl`
-o=`expr $o + $sigsize + \( 8 - \( $sigsize \% 8 \) \) \% 8 + 8`
-set `od -j $o -N 8 -t u1 $pkg`
-il=`expr 256 \* \( 256 \* \( 256 \* $2 + $3 \) + $4 \) + $5`
-dl=`expr 256 \* \( 256 \* \( 256 \* $6 + $7 \) + $8 \) + $9`
-
-hdrsize=`expr 8 + 16 \* $il + $dl`
-o=`expr $o + $hdrsize`
-
-hdr=`dd if=$pkg ibs=$o skip=1 count=1 2>/dev/null | od -N 2 -t x1 -An`
-# macOS dd and Linux od give different results
-hdr="${hdr#"${hdr%%[![:space:]]*}"}"
-# remove trailing whitespace characters
-hdr="${hdr%"${hdr##*[![:space:]]}"}"
-if [[ "$hdr" == "1f 8b" ]] || [[ "$hdr" == "1f  8b" ]]; then
-  dd if=$pkg ibs=$o skip=1 2>/dev/null | gunzip
-else
-  dd if=$pkg ibs=$o skip=1 2>/dev/null | xz -d
-fi
-"""
-
 BUILDSH = """\
 #!/bin/bash
 
-RPM=$(find ${PWD}/binary -name "*.rpm")
 mkdir -p ${PREFIX}/x86_64-conda_cos6-linux-gnu/sysroot
 pushd ${PREFIX}/x86_64-conda_cos6-linux-gnu/sysroot > /dev/null 2>&1
-if [[ -n "${RPM}" ]]; then
-  "${RECIPE_DIR}"/rpm2cpio "${RPM}" | cpio -idmv
-  popd > /dev/null 2>&1
-else
-  cp -Rf "${SRC_DIR}"/binary/* .
-fi
+cp -Rf "${SRC_DIR}"/binary/* .
 """
 
 
@@ -591,10 +545,6 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
         pass
     with open(join(odir, 'meta.yaml'), 'w') as f:
         f.write(RPM_META.format(**d))
-    rpm2cpio = join(odir, 'rpm2cpio')
-    with open(rpm2cpio, 'w') as f:
-        chmod(rpm2cpio, 0o755)
-        f.write(RPM2CPIO)
     buildsh = join(odir, 'build.sh')
     with open(buildsh, 'w') as f:
         chmod(buildsh, 0o755)
