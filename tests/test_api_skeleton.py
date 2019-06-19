@@ -112,7 +112,7 @@ def test_pypi_with_extra_specs(testing_workdir, testing_config):
     # regression test for https://github.com/conda/conda-build/issues/1697
     # For mpi4py:
     testing_config.channel_urls.append('https://repo.anaconda.com/pkgs/free')
-    api.skeletonize('bigfile', 'pypi', extra_specs=["cython", "mpi4py"],
+    api.skeletonize('bigfile', 'pypi', extra_specs=["cython", "mpi4py", 'nomkl'],
                     version='0.1.24', python="3.6", config=testing_config)
     m = api.render('bigfile')[0][0]
     assert parse_version(m.version()) == parse_version("0.1.24")
@@ -124,7 +124,7 @@ def test_pypi_with_version_inconsistency(testing_workdir, testing_config):
     # regression test for https://github.com/conda/conda-build/issues/189
     # For mpi4py:
     testing_config.channel_urls.append('https://repo.anaconda.com/pkgs/free')
-    api.skeletonize('mpi4py_test', 'pypi', extra_specs=["mpi4py"],
+    api.skeletonize('mpi4py_test', 'pypi', extra_specs=["mpi4py", 'nomkl'],
                     version='0.0.10', python="3.6", config=testing_config)
     m = api.render('mpi4py_test')[0][0]
     assert parse_version(m.version()) == parse_version("0.0.10")

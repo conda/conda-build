@@ -470,7 +470,7 @@ def finalize_metadata(m, parent_metadata=None, permit_unsatisfiable_variants=Fal
     if not parent_metadata:
         parent_metadata = m
     if m.skip():
-        rendered_metadata.final = True
+        m.final = True
     else:
         exclude_pattern = None
         excludes = set(m.config.variant.get('ignore_version', []))

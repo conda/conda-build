@@ -60,9 +60,8 @@ from .utils import env_var, glob, tmp_chdir
 from conda_build import __version__
 from conda_build import environ, source, tarcheck, utils
 from conda_build.index import get_build_index, update_index
-from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse, finalize_metadata,
-                                distribute_variants, expand_outputs, try_download,
-                                add_upstream_pins, execute_download_actions)
+from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse, distribute_variants,
+                                expand_outputs, try_download, execute_download_actions)
 import conda_build.os_utils.external as external
 from conda_build.metadata import FIELDS, MetaData, default_structs
 from conda_build.post import (post_process, post_build,
@@ -200,11 +199,10 @@ def have_prefix_files(files, prefix):
                         rep_prefix,
                         prefix]
                 matches = subprocess.check_output(args)
-            except subprocess.CalledProcessError as e:
-                matches = e.output
-            rg_matches.extend(matches.decode('utf-8').replace('\r\n', '\n').splitlines())
-        rg_matches = [os.path.relpath(rg_match, prefix)
-                      for rg_match in rg_matches if rg_match.startswith(prefix)]
+                rg_matches.extend(matches.decode('utf-8').replace('\r\n', '\n').splitlines())
+            except subprocess.CalledProcessError:
+                continue
+        rg_matches = [rg_match for rg_match in rg_matches if rg_match.startswith(prefix)]
     else:
         print("WARNING: Detecting which files contain PREFIX is slow, installing ripgrep makes it faster."
               " 'conda install ripgrep'")
@@ -1371,21 +1369,6 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                     raise ValueError("Your recipe uses mercurial in build, but mercurial"
                                     " does not yet support Python 3.  Please handle all of "
                                     "your mercurial actions outside of your build script.")
-
-        exclude_pattern = None
-        excludes = set(m.config.variant.get('ignore_version', []))
-
-        for key in m.config.variant.get('pin_run_as_build', {}).keys():
-            if key in excludes:
-                excludes.remove(key)
-
-        output_excludes = set()
-        if hasattr(m, 'other_outputs'):
-            output_excludes = set(name for (name, variant) in m.other_outputs.keys())
-
-        if excludes or output_excludes:
-            exclude_pattern = re.compile(r'|'.join(r'(?:^{}(?:\s|$|\Z))'.format(exc)
-                                            for exc in excludes | output_excludes))
 
         create_build_envs(top_level_pkg, notest)
 

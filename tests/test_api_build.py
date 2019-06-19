@@ -688,7 +688,7 @@ def test_noarch_python_1(testing_config):
     assert 'package_metadata_version' in extra
 
 
-@pytest.mark.xfail(conda_47, reason="parallel verify/execute in conda 4.7 breaks legacy noarch, which depends on having the env files present before pre-link scripts are run."
+@pytest.mark.xfail(conda_47, reason="parallel verify/execute in conda 4.7 breaks legacy noarch, which depends on having the env files present before pre-link scripts are run.")
 def test_legacy_noarch_python(testing_config):
     output = api.build(os.path.join(metadata_dir, "_legacy_noarch_python"),
                        config=testing_config)[0]
