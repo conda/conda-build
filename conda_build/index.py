@@ -654,7 +654,7 @@ def _get_source_repo_git_info(path):
 def _cache_info_file(tmpdir, info_fn, cache_path):
     info_path = os.path.join(tmpdir, 'info', info_fn)
     if os.path.lexists(info_path):
-        copy_into(info_path, cache_path)
+        utils.copy_into(info_path, cache_path)
 
 
 def _alternate_file_extension(fn):

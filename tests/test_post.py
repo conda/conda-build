@@ -78,4 +78,4 @@ def test_pypi_installer_metadata(testing_config):
     recipe = os.path.join(metadata_dir, '_pypi_installer_metadata')
     pkg = api.build(recipe, config=testing_config, notest=True)[0]
     expected_installer = '{}/imagesize-1.1.0.dist-info/INSTALLER'.format(get_site_packages('', 3.7))
-    assert 'conda' == (package_has_file(pkg, expected_installer))
+    assert 'conda' == (package_has_file(pkg, expected_installer, refresh=True))
