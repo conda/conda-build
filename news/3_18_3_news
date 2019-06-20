@@ -1,0 +1,26 @@
+Enhancements:
+-------------
+
+* Make VS2017 default Visual Studio
+* Add hook for customizing the behavior of conda render
+* Drop `/usr` from CDT skeleton path
+
+Bug fixes:
+----------
+
+* Update cran skeleton to not use toolchain for win
+
+Deprecations:
+-------------
+
+* <news item>
+
+Docs:
+-----
+
+* <news item>
+
+Other:
+------
+
+* <news item>
