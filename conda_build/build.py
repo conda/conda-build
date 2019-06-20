@@ -60,9 +60,8 @@ from .utils import env_var, glob, tmp_chdir
 from conda_build import __version__
 from conda_build import environ, source, tarcheck, utils
 from conda_build.index import get_build_index, update_index
-from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse, finalize_metadata,
-                                distribute_variants, expand_outputs, try_download,
-                                add_upstream_pins, execute_download_actions)
+from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse, distribute_variants,
+                                expand_outputs, try_download, execute_download_actions)
 import conda_build.os_utils.external as external
 from conda_build.metadata import FIELDS, MetaData, default_structs
 from conda_build.post import (post_process, post_build,
@@ -70,8 +69,7 @@ from conda_build.post import (post_process, post_build,
 
 from conda_build.exceptions import indent, DependencyNeedsBuildingError, CondaBuildException
 from conda_build.variants import (set_language_env_vars, dict_of_lists_to_list_of_dicts,
-                                  get_package_variants, get_package_combined_spec, 
-                                  filter_combined_spec_to_used_keys)
+                                  get_package_variants)
 from conda_build.create_test import create_all_test_files
 
 import conda_build.noarch_python as noarch_python
@@ -188,6 +186,7 @@ def have_prefix_files(files, prefix):
     # mm.find is incredibly slow, so ripgrep is used to pre-filter the list.
     # Really, ripgrep could be used on its own with a bit more work though.
     rg_matches = []
+    prefix_len = len(prefix) + 1
     rg = external.find_executable('rg')
     if rg:
         for rep_prefix, _ in searches.items():
@@ -201,15 +200,18 @@ def have_prefix_files(files, prefix):
                         rep_prefix,
                         prefix]
                 matches = subprocess.check_output(args)
-            except subprocess.CalledProcessError as e:
-                matches = e.output
-            rg_matches.extend(matches.decode('utf-8').replace('\r\n', '\n').splitlines())
-        rg_matches = [rg_match[len(prefix)+1:]
-                      for rg_match in rg_matches if rg_match.startswith(prefix)]
+                rg_matches.extend(matches.decode('utf-8').replace('\r\n', '\n').splitlines())
+            except subprocess.CalledProcessError:
+                continue
+        # HACK: this is basically os.path.relpath, just simpler and faster
+        rg_matches = [rg_match[prefix_len:] for rg_match in rg_matches]
     else:
-        print("WARNING: Detecting which files contain PREFIX is slow, installing ripgrep makes it faster")
+        print("WARNING: Detecting which files contain PREFIX is slow, installing ripgrep makes it faster."
+              " 'conda install ripgrep'")
 
     for f in files:
+        if os.path.isabs(f):
+            f = f[prefix_len:]
         if rg_matches and f not in rg_matches:
             continue
         if f.endswith(('.pyc', '.pyo')):
@@ -1323,11 +1325,14 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
         package_locations = []
         # TODO: should we check both host and build envs?  These are the same, except when
         #    cross compiling.
+        top_level_pkg = m
         for _, om in output_metas:
             if om.skip() or (m.config.skip_existing and is_package_built(om, 'host')):
                 skipped.append(bldpkg_path(om))
             else:
                 package_locations.append(bldpkg_path(om))
+            if om.name() == m.name():
+                top_level_pkg = om
         if not package_locations:
             print("Packages for ", m.path or m.name(), "with variant {} "
                   "are already built and available from your configured channels "
@@ -1369,28 +1374,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                                     " does not yet support Python 3.  Please handle all of "
                                     "your mercurial actions outside of your build script.")
 
-        exclude_pattern = None
-        excludes = set(m.config.variant.get('ignore_version', []))
-
-        for key in m.config.variant.get('pin_run_as_build', {}).keys():
-            if key in excludes:
-                excludes.remove(key)
-
-        output_excludes = set()
-        if hasattr(m, 'other_outputs'):
-            output_excludes = set(name for (name, variant) in m.other_outputs.keys())
-
-        if excludes or output_excludes:
-            exclude_pattern = re.compile(r'|'.join(r'(?:^{}(?:\s|$|\Z))'.format(exc)
-                                            for exc in excludes | output_excludes))
-
-        # this metadata object may not be finalized - the outputs are, but this is the
-        #     top-level metadata.  We need to make sure that the variant pins are added in.
-        utils.insert_variant_versions(m.meta.get('requirements', {}), m.config.variant, 'build')
-        utils.insert_variant_versions(m.meta.get('requirements', {}), m.config.variant, 'host')
-        add_upstream_pins(m, False, exclude_pattern)
-
-        create_build_envs(m, notest)
+        create_build_envs(top_level_pkg, notest)
 
         # this check happens for the sake of tests, but let's do it before the build so we don't
         #     make people wait longer only to see an error
@@ -1712,8 +1696,6 @@ def _construct_metadata_for_test_from_recipe(recipe_dir, config):
         if not metadata.source_provided:
             try_download(metadata, no_download_source=False)
 
-    if not metadata.final:
-        metadata = finalize_metadata(metadata)
     return metadata, hash_input
 
 

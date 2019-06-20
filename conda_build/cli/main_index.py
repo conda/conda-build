@@ -7,7 +7,8 @@ import sys
 from conda_build.conda_interface import ArgumentParser
 
 from conda_build import api
-from conda_build.index import DEFAULT_SUBDIRS, MAX_THREADS_DEFAULT
+from conda_build.index import MAX_THREADS_DEFAULT
+from conda_build.utils import DEFAULT_SUBDIRS
 
 logging.basicConfig(level=logging.INFO)
 

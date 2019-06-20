@@ -26,12 +26,15 @@ import time
 import yaml
 
 import filelock
+import conda_package_handling.api
 
 try:
     from conda.base.constants import CONDA_TARBALL_EXTENSIONS
 except Exception:
     from conda.base.constants import CONDA_TARBALL_EXTENSION
     CONDA_TARBALL_EXTENSIONS = (CONDA_TARBALL_EXTENSION,)
+
+from conda.api import PackageCacheData
 
 from .conda_interface import hashsum_file, md5_file, unix_path_to_win, win_path_to_unix
 from .conda_interface import PY3, iteritems
@@ -83,6 +86,19 @@ mmap_MAP_PRIVATE = 0 if on_win else mmap.MAP_PRIVATE
 mmap_PROT_READ = 0 if on_win else mmap.PROT_READ
 mmap_PROT_WRITE = 0 if on_win else mmap.PROT_WRITE
 
+DEFAULT_SUBDIRS = {
+    "linux-64",
+    "linux-32",
+    "linux-ppc64le",
+    "linux-armv6l",
+    "linux-armv7l",
+    "linux-aarch64",
+    "win-64",
+    "win-32",
+    "osx-64",
+    "zos-z",
+    "noarch",
+}
 
 PY_TMPL = """
 # -*- coding: utf-8 -*-
@@ -558,6 +574,18 @@ def copy_into(src, dst, timeout=900, symlinks=False, lock=None, locking=True, cl
             except shutil.Error:
                 log.debug("skipping %s - already exists in %s",
                             os.path.basename(src), dst)
+
+
+def move_with_fallback(src, dst):
+    try:
+        shutil.move(src, dst)
+    except PermissionError:
+        copy_into(src, dst)
+        try:
+            os.unlink(src)
+        except PermissionError:
+            log = get_logger(__name__)
+            log.debug("Failed to clean up temp path due to permission error: %s" % src)
 
 
 # http://stackoverflow.com/a/22331852/1170370
@@ -1079,24 +1107,37 @@ def get_skip_message(m):
         {k: m.config.variant[k] for k in m.get_used_vars()}))
 
 
-@memoized
-def package_has_file(package_path, file_path):
-    try:
-        locks = get_conda_operation_locks()
-        with try_acquire_locks(locks, timeout=900):
-            with tarfile.open(package_path) as t:
-                try:
-                    # internal paths are always forward slashed on all platforms
-                    file_path = file_path.replace('\\', '/')
-                    text = t.extractfile(file_path).read()
-                    return text
-                except KeyError:
-                    return False
-                except OSError as e:
-                    raise RuntimeError("Could not extract %s (%s)" % (package_path, e))
-    except (tarfile.ReadError, IOError, EOFError):
-        raise RuntimeError("Could not extract metadata from %s. File probably corrupt.  "
-                           "Please manually remove this file and try again." % package_path)
+def package_has_file(package_path, file_path, refresh=False):
+    locks = get_conda_operation_locks()
+    possible_subdir = os.path.basename(os.path.dirname(package_path))
+    possible_subdir = possible_subdir if possible_subdir in DEFAULT_SUBDIRS else ''
+    with try_acquire_locks(locks, timeout=900):
+        folder_name = os.path.basename(conda_package_handling.api.get_default_extracted_folder(package_path))
+        # look in conda's package cache
+        try:
+            # conda 4.7.2 added this
+            cache_path = PackageCacheData.first_writable().pkgs_dir
+        except AttributeError:
+            # fallback; assume writable first path.  Not as reliable.
+            cache_path = pkgs_dirs[0]
+        cache_path = os.path.join(cache_path, possible_subdir) if possible_subdir else cache_path
+        cache_path = os.path.join(cache_path, folder_name)
+        resolved_file_path = os.path.join(cache_path, file_path)
+        if not os.path.isfile(resolved_file_path) or refresh:
+            if file_path.startswith('info'):
+                conda_package_handling.api.extract(package_path, cache_path, 'info')
+            else:
+                conda_package_handling.api.extract(package_path, cache_path)
+        if not os.path.isfile(resolved_file_path):
+            return False
+        else:
+            try:
+                with open(resolved_file_path) as f:
+                    content = f.read()
+            except UnicodeDecodeError:
+                with open(resolved_file_path, 'rb') as f:
+                    content = f.read()
+    return content
 
 
 def ensure_list(arg):
@@ -1577,14 +1618,16 @@ def prefix_files(prefix):
     Returns a set of all files in prefix.
     '''
     res = set()
+    prefix_rep = prefix + os.path.sep
     for root, dirs, files in walk(prefix):
         for fn in files:
-            res.add(join(root, fn)[len(prefix) + 1:])
+            # this is relpath, just hacked to be faster
+            res.add(join(root, fn).replace(prefix_rep, '', 1))
         for dn in dirs:
             path = join(root, dn)
             if islink(path):
-                res.add(path[len(prefix) + 1:])
-    res = set(expand_globs(res, prefix))
+                res.add(path.replace(prefix_rep, '', 1))
+                res.update(expand_globs((path, ), prefix))
     return res
 
 

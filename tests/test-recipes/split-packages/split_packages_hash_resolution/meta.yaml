@@ -19,9 +19,9 @@ outputs:
         - zlib
       build:
         - {{ compiler('c') }}
-        - make
+        - make  # [unix]
       run:
-        - nomkl    # [blas_impl != 'mkl']
+        - nomkl    # [unix and blas_impl != 'mkl']
     test:
       commands:
         - echo hello

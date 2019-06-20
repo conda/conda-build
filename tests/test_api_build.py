@@ -39,7 +39,7 @@ from conda_build.exceptions import (DependencyNeedsBuildingError, CondaBuildExce
                                     OverLinkingError, OverDependingError)
 from conda_build.conda_interface import reset_context
 from conda.exceptions import ClobberError, CondaMultiError
-from conda_build.conda_interface import conda_46
+from conda_build.conda_interface import conda_46, conda_47
 
 from .utils import is_valid_dir, metadata_dir, fail_dir, add_mangling
 
@@ -643,13 +643,13 @@ def test_noarch_none_value(testing_workdir, testing_config):
 
 def test_noarch_foo_value(testing_config):
     outputs = api.build(os.path.join(metadata_dir, "noarch_generic"), config=testing_config)
-    metadata = json.loads(package_has_file(outputs[0], 'info/index.json').decode())
+    metadata = json.loads(package_has_file(outputs[0], 'info/index.json'))
     assert metadata['noarch'] == "generic"
 
 
 def test_about_json_content(testing_metadata):
     outputs = api.build(testing_metadata)
-    about = json.loads(package_has_file(outputs[0], 'info/about.json').decode())
+    about = json.loads(package_has_file(outputs[0], 'info/about.json'))
     assert 'conda_version' in about and about['conda_version'] == conda.__version__
     assert 'conda_build_version' in about and about['conda_build_version'] == __version__
     assert 'channels' in about and about['channels']
@@ -681,13 +681,14 @@ def test_noarch_python_with_tests(testing_config):
 def test_noarch_python_1(testing_config):
     output = api.build(os.path.join(metadata_dir, "_noarch_python"), config=testing_config)[0]
     assert package_has_file(output, 'info/files') is not ''
-    extra = json.loads(package_has_file(output, 'info/link.json').decode())
+    extra = json.loads(package_has_file(output, 'info/link.json'))
     assert 'noarch' in extra
     assert 'entry_points' in extra['noarch']
     assert 'type' in extra['noarch']
     assert 'package_metadata_version' in extra
 
 
+@pytest.mark.xfail(conda_47, reason="parallel verify/execute in conda 4.7 breaks legacy noarch, which depends on having the env files present before pre-link scripts are run.")
 def test_legacy_noarch_python(testing_config):
     output = api.build(os.path.join(metadata_dir, "_legacy_noarch_python"),
                        config=testing_config)[0]
@@ -1031,6 +1032,7 @@ def test_extract_tarball_with_unicode_filename(testing_config):
     api.build(recipe, config=testing_config)
 
 
+@pytest.mark.xfail(os.getenv("APPVEYOR"), reason="permission error on appveyor leaves lock in place")
 def test_failed_recipe_leaves_folders(testing_config, testing_workdir):
     recipe = os.path.join(fail_dir, 'recursive-build')
     m = api.render(recipe, config=testing_config)[0][0]

@@ -790,9 +790,9 @@ def get_static_lib_exports_externally(filename):
     return res_nm
 
 
-def get_exports(filename, arch='native'):
+def get_exports(filename, arch='native', enable_static=False):
     result = []
-    if isinstance(filename, str):
+    if enable_static and isinstance(filename, str):
         if (os.path.exists(filename) and
            (filename.endswith('.a') or filename.endswith('.lib')) and
            is_archive(filename)) and sys.platform != 'win32':
@@ -950,8 +950,8 @@ class memoized_by_arg0_filehash(object):
 
 
 @memoized_by_arg0_filehash
-def get_exports_memoized(filename, arch='native'):
-    return get_exports(filename, arch=arch)
+def get_exports_memoized(filename, arch='native', enable_static=False):
+    return get_exports(filename, arch=arch, enable_static=enable_static)
 
 
 @memoized_by_arg0_filehash

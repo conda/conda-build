@@ -243,7 +243,7 @@ def get_hg_build_info(repo):
     return d
 
 
-def get_dict(m, prefix=None, for_env=True, skip_build_id=False, escape_backslash=False):
+def get_dict(m, prefix=None, for_env=True, skip_build_id=False, escape_backslash=False, variant=None):
     if not prefix:
         prefix = m.config.host_prefix
 
@@ -268,7 +268,8 @@ def get_dict(m, prefix=None, for_env=True, skip_build_id=False, escape_backslash
     d.update({feat.upper(): str(int(value)) for feat, value in
               feature_list})
 
-    for k, v in m.config.variant.items():
+    variant = variant or m.config.variant
+    for k, v in variant.items():
         if not for_env or (k.upper() not in d and k.upper() not in LANGUAGES):
             d[k] = v
     return d

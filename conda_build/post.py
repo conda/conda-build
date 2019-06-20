@@ -171,7 +171,8 @@ def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
             print('found egg:', egg_path)
             write_pth(egg_path, config=config)
 
-    installer_files = [f for f in absfiles if f.endswith(".dist-info/INSTALLER")]
+    installer_files = [f for f in absfiles
+                       if f.endswith(".dist-info{}INSTALLER".format(os.path.sep))]
     for file in installer_files:
         with open(file, 'w') as f:
             f.write('conda')
@@ -633,55 +634,56 @@ def _collect_needed_dsos(sysroots_files, files, run_prefix, sysroot_substitution
     return all_needed_dsos, needed_dsos_for_file
 
 
-def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_vendored_dist, ignore_list_syms, sysroot_substitution):
+def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_vendored_dist, ignore_list_syms, sysroot_substitution, enable_static):
     # Form a mapping of file => package
     prefix_owners = {}
     contains_dsos = {}
     contains_static_libs = {}
     # Used for both dsos and static_libs
     all_lib_exports = {}
-    for prefix in (run_prefix, build_prefix):
-        for subdir2, _, filez in os.walk(prefix):
-            for file in filez:
-                fp = os.path.join(subdir2, file)
-                dynamic_lib = any(fnmatch(fp, ext) for ext in ('*.so.*', '*.dylib.*', '*.dll')) and \
-                              codefile_type(fp, skip_symlinks=False) is not None
-                static_lib = any(fnmatch(fp, ext) for ext in ('*.a', '*.lib'))
-                # Looking at all the files is very slow.
-                if not dynamic_lib and not static_lib:
-                    continue
-                rp = os.path.relpath(fp, prefix)
-                if dynamic_lib and rp not in all_needed_dsos:
-                    continue
-                if rp in all_lib_exports:
-                    continue
-                owners = prefix_owners[rp] if rp in prefix_owners else []
-                # Self-vendoring, not such a big deal but may as well report it?
-                if not len(owners):
-                    if rp in files:
-                        owners.append(pkg_vendored_dist)
-                new_pkgs = list(which_package(rp, prefix))
-                # Cannot filter here as this means the DSO (eg libomp.dylib) will not be found in any package
-                # [owners.append(new_pkg) for new_pkg in new_pkgs if new_pkg not in owners
-                #  and not any([fnmatch(new_pkg.name, i) for i in ignore_for_statics])]
-                for new_pkg in new_pkgs:
-                    if new_pkg not in owners:
-                        owners.append(new_pkg)
-                prefix_owners[rp] = owners
-                if len(prefix_owners[rp]):
-                    exports = set(e for e in get_exports_memoized(fp) if not
-                                  any(fnmatch(e, pattern) for pattern in ignore_list_syms))
-                    all_lib_exports[rp] = exports
-                    # Check codefile_type to filter out linker scripts.
-                    if dynamic_lib:
-                        contains_dsos[prefix_owners[rp][0]] = True
-                    elif static_lib:
-                        if sysroot_substitution in fp:
-                            if (prefix_owners[rp][0].name.startswith('gcc_impl_linux') or
-                               prefix_owners[rp][0].name == 'llvm'):
-                                continue
-                            print("sysroot in {}, owner is {}".format(fp, prefix_owners[rp][0]))
-                        contains_static_libs[prefix_owners[rp][0]] = True
+    if all_needed_dsos:
+        for prefix in (run_prefix, build_prefix):
+            for subdir2, _, filez in os.walk(prefix):
+                for file in filez:
+                    fp = os.path.join(subdir2, file)
+                    dynamic_lib = any(fnmatch(fp, ext) for ext in ('*.so.*', '*.dylib.*', '*.dll')) and \
+                                codefile_type(fp, skip_symlinks=False) is not None
+                    static_lib = any(fnmatch(fp, ext) for ext in ('*.a', '*.lib'))
+                    # Looking at all the files is very slow.
+                    if not dynamic_lib and not static_lib:
+                        continue
+                    rp = os.path.relpath(fp, prefix)
+                    if dynamic_lib and rp not in all_needed_dsos:
+                        continue
+                    if rp in all_lib_exports:
+                        continue
+                    owners = prefix_owners[rp] if rp in prefix_owners else []
+                    # Self-vendoring, not such a big deal but may as well report it?
+                    if not len(owners):
+                        if rp in files:
+                            owners.append(pkg_vendored_dist)
+                    new_pkgs = list(which_package(rp, prefix))
+                    # Cannot filter here as this means the DSO (eg libomp.dylib) will not be found in any package
+                    # [owners.append(new_pkg) for new_pkg in new_pkgs if new_pkg not in owners
+                    #  and not any([fnmatch(new_pkg.name, i) for i in ignore_for_statics])]
+                    for new_pkg in new_pkgs:
+                        if new_pkg not in owners:
+                            owners.append(new_pkg)
+                    prefix_owners[rp] = owners
+                    if len(prefix_owners[rp]):
+                        exports = set(e for e in get_exports_memoized(fp, enable_static=enable_static) if not
+                                    any(fnmatch(e, pattern) for pattern in ignore_list_syms))
+                        all_lib_exports[rp] = exports
+                        # Check codefile_type to filter out linker scripts.
+                        if dynamic_lib:
+                            contains_dsos[prefix_owners[rp][0]] = True
+                        elif static_lib:
+                            if sysroot_substitution in fp:
+                                if (prefix_owners[rp][0].name.startswith('gcc_impl_linux') or
+                                prefix_owners[rp][0].name == 'llvm'):
+                                    continue
+                                print("sysroot in {}, owner is {}".format(fp, prefix_owners[rp][0]))
+                            contains_static_libs[prefix_owners[rp][0]] = True
     return prefix_owners, contains_dsos, contains_static_libs, all_lib_exports
 
 
@@ -855,9 +857,20 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                            run_prefix, build_prefix,
                            missing_dso_whitelist, runpath_whitelist,
                            error_overlinking, error_overdepending, verbose,
-                           exception_on_error, files, bldpkgs_dirs, output_folder, channel_urls):
+                           exception_on_error, files, bldpkgs_dirs, output_folder, channel_urls,
+                           enable_static=False):
     verbose = True
     errors = []
+
+    files_to_inspect = []
+    for f in files:
+        path = os.path.join(run_prefix, f)
+        filetype = codefile_type(path)
+        if filetype and filetype in filetypes_for_platform[subdir.split('-')[0]]:
+            files_to_inspect.append(f)
+
+    if not files_to_inspect:
+        return dict()
 
     sysroot_substitution = '$SYSROOT'
     build_prefix_substitution = '$PATH'
@@ -921,13 +934,10 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                                                                  build_prefix, build_prefix_substitution)
 
     prefix_owners, _, _, all_lib_exports = _map_file_to_package(
-        files, run_prefix, build_prefix, all_needed_dsos, pkg_vendored_dist, ignore_list_syms, sysroot_substitution)
+        files, run_prefix, build_prefix, all_needed_dsos, pkg_vendored_dist, ignore_list_syms,
+        sysroot_substitution, enable_static)
 
-    for f in files:
-        path = os.path.join(run_prefix, f)
-        filetype = codefile_type(path)
-        if not filetype or filetype not in filetypes_for_platform[subdir.split('-')[0]]:
-            continue
+    for f in files_to_inspect:
         needed = needed_dsos_for_file[f]
         for needed_dso in needed:
             if (error_overlinking and
@@ -1008,7 +1018,8 @@ def check_overlinking(m, files):
                                   files,
                                   m.config.bldpkgs_dir,
                                   m.config.output_folder,
-                                  m.config.channel_urls)
+                                  m.config.channel_urls,
+                                  m.config.enable_static)
 
 
 def post_process_shared_lib(m, f, files):

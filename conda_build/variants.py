@@ -531,7 +531,7 @@ def filter_combined_spec_to_used_keys(combined_spec, specs):
     specs = specs.copy()
     del specs['internal_defaults']
 
-    # TODO: act here? 
+    # TODO: act here?
     combined_spec = dict_of_lists_to_list_of_dicts(combined_spec, extend_keys=extend_keys)
     for source, source_specs in reversed(specs.items()):
         for k, vs in source_specs.items():

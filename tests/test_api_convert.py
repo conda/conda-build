@@ -184,28 +184,30 @@ def test_convert_from_unix_to_win_creates_entry_points(testing_config):
         assert package_has_file(converted_fn, "Scripts/test-script-manual.exe")
         script_contents = package_has_file(converted_fn, "Scripts/test-script-setup-script.py")
         assert script_contents
-        assert "Test script setup" in script_contents.decode()
+        assert "Test script setup" in script_contents
         bat_contents = package_has_file(converted_fn, "Scripts/test-script-setup.exe")
         assert bat_contents
         assert_package_consistency(converted_fn)
-        paths_content = json.loads(package_has_file(converted_fn, 'info/paths.json').decode())
+        paths_content = json.loads(package_has_file(converted_fn, 'info/paths.json'))
 
         # Check the validity of the sha and filesize of the converted scripts
         with tarfile.open(converted_fn) as t:
             for f in paths_content['paths']:
                 if f['_path'].startswith('Scripts/') and f['_path'].endswith('-script.py'):
                     script_content = package_has_file(converted_fn, f['_path'])
+                    if hasattr(script_content, 'encode'):
+                        script_content = script_content.encode()
                     assert f['sha256'] == hashlib.sha256(script_content).hexdigest()
                     assert f['size_in_bytes'] == t.getmember(f['_path']).size
 
         paths_list = {f['_path'] for f in paths_content['paths']}
-        files = {p.decode() for p in package_has_file(converted_fn, 'info/files').splitlines()}
+        files = {p for p in package_has_file(converted_fn, 'info/files').splitlines()}
         assert files == paths_list
 
-        index = json.loads(package_has_file(converted_fn, 'info/index.json').decode())
+        index = json.loads(package_has_file(converted_fn, 'info/index.json'))
         assert index['subdir'] == platform
 
-        has_prefix_files = package_has_file(converted_fn, "info/has_prefix").decode()
+        has_prefix_files = package_has_file(converted_fn, "info/has_prefix")
         fieldnames = ['prefix', 'type', 'path']
         csv_dialect = csv.Sniffer().sniff(has_prefix_files)
         csv_dialect.lineterminator = '\n'

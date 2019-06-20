@@ -1,13 +1,5 @@
-python:
+abc:
   - 2.7.16
   - 3.7.3
-r:
+foo:
   - 3.5.1
-
-pin_run_as_build:
-  python:
-    min_pin: 'x.x'
-    max_pin: 'x.x'
-  r-base:
-    min_pin: 'x.x.x'
-    max_pin: 'x.x.x'

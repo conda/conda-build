@@ -115,7 +115,8 @@ def _get_default_settings():
             #    cli/main_build.py that this default will switch in conda-build 4.0.
             Setting('error_overlinking', cc_conda_build.get('error_overlinking',
                                                            'false').lower() == 'true'),
-
+            Setting('enable_static', cc_conda_build.get('enable_static',
+                                                           'false').lower() == 'true'),
             Setting('error_overdepending', cc_conda_build.get('error_overdepending',
                                                               'false').lower() == 'true'),
 

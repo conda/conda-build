@@ -45,7 +45,7 @@ requirements:
     - glob2  >=0.6
     - pytz
     - tqdm
-    - conda-package-handling  >=1.1
+    - conda-package-handling  >=1.2
 
 test:
   requires:

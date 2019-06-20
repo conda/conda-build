@@ -39,12 +39,6 @@ def test_build():
     main_build.execute(args)
 
 
-# regression test for https://github.com/conda/conda-build/issues/1450
-def test_build_with_conda_not_on_path(testing_workdir):
-    with put_bad_conda_on_path(testing_workdir):
-        main_build.execute([os.path.join(metadata_dir, "python_run"), "--no-anaconda-upload"])
-
-
 def test_build_add_channel():
     """This recipe requires the conda_build_test_requirement package, which is
     only on the conda_build_test channel. This verifies that the -c argument
@@ -155,7 +149,7 @@ def test_slash_in_recipe_arg_keeps_build_id(testing_workdir, testing_config):
     args = [os.path.join(metadata_dir, "has_prefix_files"), '--croot', testing_config.croot,
             '--no-anaconda-upload']
     outputs = main_build.execute(args)
-    data = package_has_file(outputs[0], 'binary-has-prefix')
+    data = package_has_file(outputs[0], 'binary-has-prefix', refresh=True)
     assert data
     if hasattr(data, 'decode'):
         data = data.decode('UTF-8')
@@ -177,7 +171,7 @@ def test_build_no_build_id(testing_workdir, testing_config):
     args = [os.path.join(metadata_dir, "has_prefix_files"), '--no-build-id',
             '--croot', testing_config.croot, '--no-activate', '--no-anaconda-upload']
     outputs = main_build.execute(args)
-    data = package_has_file(outputs[0], 'binary-has-prefix')
+    data = package_has_file(outputs[0], 'binary-has-prefix', refresh=True)
     assert data
     if hasattr(data, 'decode'):
         data = data.decode('UTF-8')
@@ -320,9 +314,9 @@ def test_metapackage_metadata(testing_config, testing_workdir):
     test_path = glob(os.path.join(sys.prefix, "conda-bld", testing_config.host_subdir,
                              'metapackage_testing_metadata-1.0-0.tar.bz2'))[0]
     assert os.path.isfile(test_path)
-    info = json.loads(package_has_file(test_path, 'info/index.json').decode('utf-8'))
+    info = json.loads(package_has_file(test_path, 'info/index.json'))
     assert info['license'] == 'BSD'
-    info = json.loads(package_has_file(test_path, 'info/about.json').decode('utf-8'))
+    info = json.loads(package_has_file(test_path, 'info/about.json'))
     assert info['home'] == 'http://abc.com'
     assert info['summary'] == 'wee'
 
@@ -493,12 +487,12 @@ def test_no_force_upload(mocker, testing_workdir, testing_metadata):
 
 
 def test_conda_py_no_period(testing_workdir, testing_metadata, monkeypatch):
-    monkeypatch.setenv('CONDA_PY', '34')
+    monkeypatch.setenv('CONDA_PY', '36')
     testing_metadata.meta['requirements'] = {'host': ['python'],
                                              'run': ['python']}
     api.output_yaml(testing_metadata, 'meta.yaml')
     outputs = api.build(testing_workdir, notest=True)
-    assert any('py34' in output for output in outputs)
+    assert any('py36' in output for output in outputs)
 
 
 def test_build_skip_existing(testing_workdir, capfd, mocker):
