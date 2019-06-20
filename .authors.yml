@@ -5,7 +5,7 @@
   - msarahan@continuum.io
   aliases:
   - Mike Sarahan
-  num_commits: 78
+  num_commits: 114
   first_commit: 2015-09-04 21:31:08
 - name: Jonathan J. Helmus
   email: jjhelmus@gmail.com
@@ -180,7 +180,7 @@
   email: marius.v.niekerk@gmail.com
   alternate_emails:
   - mvanniekerk@flatiron.com
-  num_commits: 2
+  num_commits: 6
   first_commit: 2018-02-22 13:07:33
   github: mariusvniekerk
 - name: Travis Oliphant
@@ -414,7 +414,7 @@
 - name: Ray Donnelly
   email: mingw.android@gmail.com
   github: mingwandroid
-  num_commits: 397
+  num_commits: 412
   first_commit: 2016-03-06 18:52:51
 - name: Paul Madden
   email: maddenp@colorado.edu
@@ -742,7 +742,7 @@
   github: gqmelo
 - name: soapy1
   email: scastellarin@anaconda.com
-  num_commits: 6
+  num_commits: 11
   first_commit: 2018-10-22 16:40:33
   github: soapy1
 - name: Yu Feng
@@ -890,12 +890,12 @@
   first_commit: 2019-01-26 13:17:33
 - name: Rachel
   email: rrigdon@anaconda.com
-  num_commits: 47
+  num_commits: 54
   first_commit: 2019-01-24 14:12:19
   github: rrigdon
 - name: Rachel Rigdon
   email: 45607889+rrigdon@users.noreply.github.com
-  num_commits: 21
+  num_commits: 31
   first_commit: 2019-01-24 15:12:09
   github: rrigdon
 - name: Zane Dufour
@@ -971,3 +971,16 @@
   github: spalmrot-tic
 - name: John Kirkham
   email: jakirkham@gmail.com
+  num_commits: 5
+  first_commit: 2019-06-06 14:26:02
+  github: jakirkham
+- name: Daniel Bast
+  email: 2790401+dbast@users.noreply.github.com
+  num_commits: 3
+  first_commit: 2019-06-07 02:44:13
+  github: dbast
+- name: Duncan Macleod
+  email: duncan.macleod@ligo.org
+  num_commits: 1
+  first_commit: 2019-06-13 08:07:25
+  github: duncanmmacleod
