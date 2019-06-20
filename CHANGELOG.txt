@@ -1,4 +1,47 @@
 # current developments
+2019-06-20 3.18.3:
+------------------
+
+Enhancements:
+-------------
+
+* Make VS2017 default Visual Studio
+* Add hook for customizing the behavior of conda render
+* Drop `/usr` from CDT skeleton path
+* Update cran skeleton to use m2w64 compilers for windows instead of toolchain.
+  The linter is telling since long: Using toolchain directly in this manner is deprecated.
+
+Bug fixes:
+----------
+
+* Update cran skeleton to not use toolchain for win
+* fix package_has_file so it supports .conda files (use cph)
+* fix package_has_file function for .conda format
+* fix off-by-one path trimming in prefix_files
+* disable overlinking checks when no files in the package have any shared library linkage
+* try to avoid finalizing top-level metadata twice
+* try to address permission errors on Appveyor and Azure by falling back to copy and warning (not erroring) if removing a file after copying fails
+* reduce the files inspected/loaded for channeldata, so that indexing goes faster
+
+Deprecations:
+-------------
+
+* The repodata2.json file is no longer created as part of indexing.  It was not used by anything.  It has been removed as an optimization.  Its purpose was to explore namespaces, and we'll bring its functionality back when we address that fully.
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @msarahan
+* @rrigdon
+* @rrigdon
+* @soapy1
+* @mariusvniekerk
+* @jakirkham
+* @dbast
+* @duncanmmacleod
+
+
 2019-05-26 3.18.2:
 ------------------
 
