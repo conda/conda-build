@@ -1,0 +1,8 @@
+package:
+  name: run_exports_versions
+  version: {{ VERSION }}
+
+build:
+  noarch: generic
+  run_exports:
+    - run_exports_version {{ VERSION }}

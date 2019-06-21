@@ -721,3 +721,14 @@ def test_current_index_version_keys_keep_older_packages(testing_workdir):
     with open(os.path.join(pkg_dir, 'osx-64', 'current_repodata.json')) as f:
         repodata = json.load(f)
     assert list(repodata['packages'].values())[0]['version'] == "1.0"
+
+
+def test_channeldata_picks_up_all_versions_of_run_exports():
+    pkg_dir = os.path.join(os.path.dirname(__file__), 'index_data', 'packages')
+    api.update_index(pkg_dir)
+    with open(os.path.join(pkg_dir, 'channeldata.json')) as f:
+        repodata = json.load(f)
+    run_exports = repodata['packages']['run_exports_versions']['run_exports']
+    assert len(run_exports) == 2
+    assert "1.0" in run_exports
+    assert "2.0" in run_exports
