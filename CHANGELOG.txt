@@ -1,4 +1,23 @@
 # current developments
+2019-06-21 3.18.4:
+------------------
+
+Enhancements:
+-------------
+
+* channeldata reworked a bit to try to capture any available run_exports for all versions available
+
+Bug fixes:
+----------
+
+* make "timestamp" an optional field in conda index operations
+
+Contributors:
+-------------
+
+* @msarahan
+
+
 2019-06-20 3.18.3:
 ------------------
 
