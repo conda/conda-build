@@ -5,7 +5,7 @@
   - msarahan@continuum.io
   aliases:
   - Mike Sarahan
-  num_commits: 114
+  num_commits: 119
   first_commit: 2015-09-04 21:31:08
 - name: Jonathan J. Helmus
   email: jjhelmus@gmail.com
@@ -742,7 +742,7 @@
   github: gqmelo
 - name: soapy1
   email: scastellarin@anaconda.com
-  num_commits: 11
+  num_commits: 13
   first_commit: 2018-10-22 16:40:33
   github: soapy1
 - name: Yu Feng

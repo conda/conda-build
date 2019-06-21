@@ -32,8 +32,8 @@ Authors are sorted by number of commits.
 * Isuru Fernando
 * Alex Wiltschko
 * Min RK
-* Ullrich Koethe
 * soapy1
+* Ullrich Koethe
 * Phil Elson
 * Jillian Rowe
 * Almar Klein
