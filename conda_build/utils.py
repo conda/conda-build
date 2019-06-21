@@ -23,6 +23,12 @@ import tarfile
 import tempfile
 from threading import Thread
 import time
+
+try:
+    from json.decoder import JSONDecodeError
+except ImportError:
+    JSONDecodeError = ValueError
+
 import yaml
 
 import filelock
@@ -1883,7 +1889,7 @@ def download_channeldata(channel_url):
                     download(url + '/channeldata.json', tf)
                     with open(tf) as f:
                         data = json.load(f)
-                except (json.JSONDecodeError, CondaHTTPError):
+                except (JSONDecodeError, CondaHTTPError):
                     data = {}
             merge_or_update_dict(channeldata, data)
         channeldata_cache[channel_url] = channeldata

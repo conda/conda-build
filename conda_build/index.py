@@ -51,7 +51,7 @@ from .conda_interface import MatchSpec, VersionOrder, human_bytes, context
 from .conda_interface import CondaError, CondaHTTPError, get_index, url_path
 from .conda_interface import TemporaryDirectory
 from .conda_interface import Resolve
-from .utils import glob, get_logger, FileNotFoundError
+from .utils import glob, get_logger, FileNotFoundError, JSONDecodeError
 
 # try:
 #     from conda.base.constants import CONDA_TARBALL_EXTENSIONS
@@ -61,11 +61,6 @@ from .utils import glob, get_logger, FileNotFoundError
 
 # TODO: better to define this in conda; doing it here because we're implementing it in conda-build first
 CONDA_TARBALL_EXTENSIONS = ('.conda', '.tar.bz2')
-
-try:
-    from json.decoder import JSONDecodeError
-except ImportError:
-    JSONDecodeError = ValueError
 
 
 log = get_logger(__name__)
