@@ -1071,8 +1071,6 @@ def test_only_perl_env_vars_defined(testing_config):
 @pytest.mark.skipif(on_win, reason='no lua package on win')
 def test_only_lua_env(testing_config):
     recipe = os.path.join(metadata_dir, '_lua_env_defined')
-    testing_config.channel_urls = ('conda-forge', )
-    testing_config.prefix_length = 80
     testing_config.set_build_id = False
     api.build(recipe, config=testing_config)
 
