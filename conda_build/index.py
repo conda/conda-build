@@ -49,9 +49,8 @@ from conda.models.channel import Channel
 from . import conda_interface, utils
 from .conda_interface import MatchSpec, VersionOrder, human_bytes, context
 from .conda_interface import CondaError, CondaHTTPError, get_index, url_path
-from .conda_interface import download, TemporaryDirectory
+from .conda_interface import TemporaryDirectory
 from .conda_interface import Resolve
-from .conda_interface import memoized
 from .utils import glob, get_logger, FileNotFoundError
 
 # try:
@@ -145,19 +144,6 @@ try:
     from cytoolz.itertoolz import concat, concatv, groupby
 except ImportError:  # pragma: no cover
     from conda._vendor.toolz.itertoolz import concat, concatv, groupby  # NOQA
-
-
-@memoized
-def _download_channeldata(channel_url):
-    with TemporaryDirectory() as td:
-        tf = os.path.join(td, "channeldata.json")
-        download(channel_url, tf)
-        try:
-            with open(tf) as f:
-                data = json.load(f)
-        except JSONDecodeError:
-            data = {}
-    return data
 
 
 def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
@@ -260,7 +246,7 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
                     # download channeldata.json for url
                     if not context.offline:
                         try:
-                            channel_data[channel.name] = _download_channeldata(channel.base_url + '/channeldata.json')
+                            channel_data[channel.name] = utils.download_channeldata(channel.base_url + '/channeldata.json')
                         except CondaHTTPError:
                             continue
                 # collapse defaults metachannel back into one superchannel, merging channeldata

@@ -46,6 +46,7 @@ from .conda_interface import VersionOrder, MatchSpec
 from .conda_interface import cc_conda_build
 from .conda_interface import conda_43, conda_46, Dist
 from .conda_interface import context
+from .conda_interface import download, TemporaryDirectory, get_conda_channel, CondaHTTPError
 # NOQA because it is not used in this file.
 from conda_build.conda_interface import rm_rf as _rm_rf # NOQA
 from conda_build.exceptions import BuildLockError
@@ -1584,7 +1585,7 @@ def merge_or_update_dict(base, new, path="", merge=True, raise_on_clobber=False,
                     if base_value != value:
                         try:
                             base_value.extend(value)
-                        except TypeError:
+                        except (TypeError, AttributeError):
                             base_value = value
                     try:
                         base[key] = list(base_value)
@@ -1864,3 +1865,28 @@ def write_bat_activation_text(file_handle, m):
         file_handle.write('call "{conda_root}\\activate.bat" "{prefix}"\n'.format(
             conda_root=root_script_dir,
             prefix=m.config.build_prefix))
+
+
+channeldata_cache = {}
+
+
+def download_channeldata(channel_url):
+    global channeldata_cache
+    if channel_url.startswith('file://') or channel_url not in channeldata_cache:
+        urls = get_conda_channel(channel_url).urls()
+        urls = set(url.rsplit('/', 1)[0] for url in urls)
+        channeldata = {}
+        for url in urls:
+            with TemporaryDirectory() as td:
+                tf = os.path.join(td, "channeldata.json")
+                try:
+                    download(url + '/channeldata.json', tf)
+                    with open(tf) as f:
+                        data = json.load(f)
+                except (json.JSONDecodeError, CondaHTTPError):
+                    data = {}
+            merge_or_update_dict(channeldata, data)
+        channeldata_cache[channel_url] = channeldata
+    else:
+        data = channeldata_cache[channel_url]
+    return data
