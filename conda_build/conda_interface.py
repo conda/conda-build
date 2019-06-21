@@ -132,6 +132,12 @@ get_rc_urls = lambda: list(context.channels)
 get_prefix = partial(context_get_prefix, context)
 cc_conda_build = context.conda_build if hasattr(context, 'conda_build') else {}
 
+try:
+    from conda.exports import Channel
+except:
+    from conda.models.channel import Channel
+get_conda_channel = Channel.from_value
+
 # disallow softlinks.  This avoids a lot of dumb issues, at the potential cost of disk space.
 os.environ[str('CONDA_ALLOW_SOFTLINKS')] = str('false')
 reset_context()

@@ -1,0 +1,25 @@
+Enhancements:
+-------------
+
+* channeldata reworked a bit to try to capture any available run_exports for all versions available
+
+Bug fixes:
+----------
+
+* make "timestamp" an optional field in conda index operations
+
+Deprecations:
+-------------
+
+* <news item>
+
+Docs:
+-----
+
+* <news item>
+
+Other:
+------
+
+* <news item>
+

@@ -49,10 +49,9 @@ from conda.models.channel import Channel
 from . import conda_interface, utils
 from .conda_interface import MatchSpec, VersionOrder, human_bytes, context
 from .conda_interface import CondaError, CondaHTTPError, get_index, url_path
-from .conda_interface import download, TemporaryDirectory
+from .conda_interface import TemporaryDirectory
 from .conda_interface import Resolve
-from .conda_interface import memoized
-from .utils import glob, get_logger, FileNotFoundError
+from .utils import glob, get_logger, FileNotFoundError, JSONDecodeError
 
 # try:
 #     from conda.base.constants import CONDA_TARBALL_EXTENSIONS
@@ -62,11 +61,6 @@ from .utils import glob, get_logger, FileNotFoundError
 
 # TODO: better to define this in conda; doing it here because we're implementing it in conda-build first
 CONDA_TARBALL_EXTENSIONS = ('.conda', '.tar.bz2')
-
-try:
-    from json.decoder import JSONDecodeError
-except ImportError:
-    JSONDecodeError = ValueError
 
 
 log = get_logger(__name__)
@@ -145,19 +139,6 @@ try:
     from cytoolz.itertoolz import concat, concatv, groupby
 except ImportError:  # pragma: no cover
     from conda._vendor.toolz.itertoolz import concat, concatv, groupby  # NOQA
-
-
-@memoized
-def _download_channeldata(channel_url):
-    with TemporaryDirectory() as td:
-        tf = os.path.join(td, "channeldata.json")
-        download(channel_url, tf)
-        try:
-            with open(tf) as f:
-                data = json.load(f)
-        except JSONDecodeError:
-            data = {}
-    return data
 
 
 def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
@@ -260,7 +241,7 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
                     # download channeldata.json for url
                     if not context.offline:
                         try:
-                            channel_data[channel.name] = _download_channeldata(channel.base_url + '/channeldata.json')
+                            channel_data[channel.name] = utils.download_channeldata(channel.base_url + '/channeldata.json')
                         except CondaHTTPError:
                             continue
                 # collapse defaults metachannel back into one superchannel, merging channeldata
@@ -1252,16 +1233,32 @@ class ChannelIndex(object):
         all_repodata_packages.update({k: legacy_packages[k] for k in use_these_legacy_keys})
         package_data = channel_data.get('packages', {})
 
-        package_groups = groupby(lambda x: x[1]['name'], all_repodata_packages.items())
-        # keep only the newest package within a group
-        package_groups = [next(iter(sorted(pkg_tuples, key=lambda x: x[1]['timestamp'])))
-                          for pkg_name, pkg_tuples in package_groups.items()]
+        def _append_group(groups, candidate):
+            pkg_dict = candidate[1]
+            pkg_name = pkg_dict['name']
 
-        package_groups = [group for group in package_groups if
-                          channel_data.get(group[1]['name'], {}).get('timestamp', 0) <
-                              _make_seconds(group[1]['timestamp']) or
-                          subdir not in channel_data.get(group[1]['name'], {}).get('subdirs', [])
-                          ]
+            run_exports = package_data.get(pkg_name, {}).get('run_exports', {})
+            if (pkg_name not in package_data or
+                    subdir not in package_data.get(pkg_name, {}).get('subdirs', []) or
+                    package_data.get(pkg_name, {}).get('timestamp', 0) <
+                        _make_seconds(pkg_dict.get('timestamp', 0)) or
+                    run_exports and pkg_dict['version'] not in run_exports):
+                groups.append(candidate)
+
+        groups = []
+        package_groups = groupby(lambda x: x[1]['name'], all_repodata_packages.items())
+        for groupname, group in package_groups.items():
+            if (groupname not in package_data or package_data[groupname].get('run_exports')):
+                # pay special attention to groups that have run_exports - we need to process each version
+                # group by version; take newest per version group.  We handle groups that are not
+                #    in the index t all yet similarly, because we can't check if they have any run_exports
+                for vgroup in groupby(lambda x: x[1]['version'], group).values():
+                    candidate = next(iter(sorted(vgroup, key=lambda x: x[1].get('timestamp', 0), reverse=True)))
+                    _append_group(groups, candidate)
+            else:
+                # take newest per group
+                candidate = next(iter(sorted(group, key=lambda x: x[1].get('timestamp', 0), reverse=True)))
+                _append_group(groups, candidate)
 
         def _replace_if_newer_and_present(pd, data, erec, data_newer, k):
             if data.get(k) and (data_newer or not erec.get(k)):
@@ -1269,10 +1266,15 @@ class ChannelIndex(object):
             else:
                 pd[k] = erec.get(k)
 
+        # unzipping
+        fns, fn_dicts = [], []
+        if groups:
+            fns, fn_dicts = zip(*groups)
+
         futures = tuple(self.thread_executor.submit(
             ChannelIndex._load_all_from_cache, self.channel_root, subdir, fn
-        ) for fn, fn_dict in package_groups)
-        for fn_dict, future in zip((_[1] for _ in package_groups), futures):
+        ) for fn in fns)
+        for fn_dict, future in zip(fn_dicts, futures):
             data = future.result()
             if data:
                 data.update(fn_dict)
