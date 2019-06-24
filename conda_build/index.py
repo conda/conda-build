@@ -1039,7 +1039,11 @@ class ChannelIndex(object):
             alternate_cache = True
 
         try:
-            if os.path.isfile(index_cache_path):
+            # allow .tar.bz2 files to use the .conda cache, but not vice-versa.
+            #    .conda readup is very fast (essentially free), but .conda files come from
+            #    converting .tar.bz2 files, which can go wrong.  Forcing extraction for
+            #    .conda files gives us a check on the validity of that conversion.
+            if not fn.endswith('.conda') and os.path.isfile(index_cache_path):
                 with open(index_cache_path) as f:
                     index_json = json.load(f)
             elif not alternate_cache and (second_try or not os.path.exists(index_cache_path)):

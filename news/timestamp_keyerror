@@ -7,6 +7,7 @@ Bug fixes:
 ----------
 
 * fix one more keyerror with missing timestamp data
+* when indexing, allow .tar.bz2 files to use .conda cache, but not vice versa.  This acts as a sanity check on the .conda files.
 
 Deprecations:
 -------------
