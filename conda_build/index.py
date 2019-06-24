@@ -1305,7 +1305,7 @@ class ChannelIndex(object):
                     run_exports[data_v] = data.get('run_exports')
                 package_data[name]['run_exports'] = run_exports
                 package_data[name]['timestamp'] = _make_seconds(max(
-                    data['timestamp'], channel_data.get(name, {}).get('timestamp', 0)))
+                    data.get('timestamp', 0), channel_data.get(name, {}).get('timestamp', 0)))
 
         channel_data.update({
             'channeldata_version': CHANNELDATA_VERSION,
