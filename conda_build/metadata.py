@@ -496,8 +496,8 @@ FIELDS = {
               'no_link', 'binary_relocation', 'script', 'noarch', 'noarch_python',
               'has_prefix_files', 'binary_has_prefix_files', 'ignore_prefix_files',
               'detect_binary_files_with_prefix', 'skip_compile_pyc', 'rpaths',
-              'script_env', 'always_include_files', 'skip', 'msvc_compiler',
-              'pin_depends', 'include_recipe',  # pin_depends is experimental still
+              'rpaths_patcher', 'script_env', 'always_include_files', 'skip',
+              'msvc_compiler', 'pin_depends', 'include_recipe',  # pin_depends is experimental still
               'preferred_env', 'preferred_env_executable_paths', 'run_exports',
               'ignore_run_exports', 'requires_features', 'provides_features',
               'force_use_keys', 'force_ignore_keys', 'merge_build_host',

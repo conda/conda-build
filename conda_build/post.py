@@ -25,8 +25,9 @@ from conda_build.conda_interface import TemporaryDirectory
 from conda_build.conda_interface import md5_file
 
 from conda_build import utils
-from conda_build.os_utils.liefldd import (get_exports_memoized, get_linkages_memoized,
-                                          get_rpaths_raw, get_runpaths_raw, set_rpath)
+from conda_build.os_utils.liefldd import (have_lief, get_exports_memoized,
+                                          get_linkages_memoized, get_rpaths_raw,
+                                          get_runpaths_raw, set_rpath)
 from conda_build.os_utils.pyldd import codefile_type
 from conda_build.os_utils.ldd import get_package_obj_files
 from conda_build.index import get_build_index
@@ -419,7 +420,64 @@ def mk_relative_osx(path, host_prefix, build_prefix, files, rpaths=('lib',)):
         assert_relative_osx(path, build_prefix, host_prefix)
 
 
-def mk_relative_linux(f, prefix, rpaths=('lib',)):
+'''
+# Both patchelf and LIEF have bugs in them. Neither can be used on all binaries we have seen.
+# This code tries each and tries to keep count of which worked between the original binary and
+# patchelf-patched, LIEF-patched versions.
+#
+# Please do not delete it until you are sure the bugs in both projects have been fixed.
+#
+
+from subprocess import STDOUT
+
+def check_binary(binary, expected=None):
+    from ctypes import cdll
+    print("trying {}".format(binary))
+    # import pdb; pdb.set_trace()
+    try:
+        txt = check_output([sys.executable, '-c', 'from ctypes import cdll; cdll.LoadLibrary("' + binary + '")'], timeout=2)
+        # mydll = cdll.LoadLibrary(binary)
+    except Exception as e:
+        print(e)
+        return None, None
+    try:
+        txt = check_output(binary, stderr=STDOUT, timeout=0.1)
+    except Exception as e:
+        print(e)
+        txt = e.output
+    if expected is not None:
+        return txt == expected, txt
+    return True, txt
+
+
+worksd = {'original': 0,
+          'LIEF': 0,
+          'patchelf': 0}
+
+
+def check_binary_patchers(elf, prefix, rpath):
+    patchelf = external.find_executable('patchelf', prefix)
+    tmpname_pe = elf+'.patchelf'
+    tmpname_le = elf+'.lief'
+    shutil.copy(elf, tmpname_pe)
+    shutil.copy(elf, tmpname_le)
+    import pdb; pdb.set_trace()
+    works, original = check_binary(elf)
+    if works:
+        worksd['original'] += 1
+        set_rpath(old_matching='*', new_rpath=rpath, file=tmpname_le)
+        works, LIEF = check_binary(tmpname_le, original)
+        call([patchelf, '--force-rpath', '--set-rpath', rpath, tmpname_pe])
+        works, pelf = check_binary(tmpname_pe, original)
+        if original == LIEF and works:
+            worksd['LIEF'] += 1
+        if original == pelf and works:
+            worksd['patchelf'] += 1
+    print('\n' + str(worksd) + '\n')
+'''
+
+
+def mk_relative_linux(f, prefix, rpaths=('lib',), method='LIEF'):
     'Respects the original values and converts abs to $ORIGIN-relative'
 
     elf = os.path.join(prefix, f)
@@ -431,10 +489,11 @@ def mk_relative_linux(f, prefix, rpaths=('lib',)):
     except CalledProcessError:
         print('patchelf: --print-rpath failed for %s\n' % (elf))
         return
-    existing2, _, _ = get_rpaths_raw(elf)
-    if existing != existing2:
-        print('ERROR :: get_rpaths_raw()={} and patchelf={} disagree for {} :: '.format(
-            existing2, existing, elf))
+    if have_lief:
+        existing2, _, _ = get_rpaths_raw(elf)
+        if existing != existing2:
+            print('ERROR :: get_rpaths_raw()={} and patchelf={} disagree for {} :: '.format(
+                existing2, existing, elf))
     existing = existing.split(os.pathsep)
     new = []
     for old in existing:
@@ -465,7 +524,13 @@ def mk_relative_linux(f, prefix, rpaths=('lib',)):
             if rpath not in new:
                 new.append(rpath)
     rpath = ':'.join(new)
-    set_rpath(old_matching='*', new_rpath=rpath, file=elf)
+
+    # check_binary_patchers(elf, prefix, rpath)
+
+    if method == 'LIEF' or not patchelf:
+        set_rpath(old_matching='*', new_rpath=rpath, file=elf)
+    else:
+        call([patchelf, '--force-rpath', '--set-rpath', rpath, elf])
 
 
 def assert_relative_osx(path, host_prefix, build_prefix):
@@ -1029,7 +1094,8 @@ def post_process_shared_lib(m, f, files):
         return
     rpaths = m.get_value('build/rpaths', ['lib'])
     if sys.platform.startswith('linux') and codefile_t == 'elffile':
-        mk_relative_linux(f, m.config.host_prefix, rpaths=rpaths)
+        mk_relative_linux(f, m.config.host_prefix, rpaths=rpaths,
+                          method=m.get_value('build/rpaths_patcher', 'patchelf'))
     elif sys.platform == 'darwin' and codefile_t == 'machofile':
         mk_relative_osx(path, m.config.host_prefix, m.config.build_prefix, files=files, rpaths=rpaths)
 
