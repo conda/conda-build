@@ -5,7 +5,7 @@
   - msarahan@continuum.io
   aliases:
   - Mike Sarahan
-  num_commits: 119
+  num_commits: 125
   first_commit: 2015-09-04 21:31:08
 - name: Jonathan J. Helmus
   email: jjhelmus@gmail.com
@@ -414,7 +414,7 @@
 - name: Ray Donnelly
   email: mingw.android@gmail.com
   github: mingwandroid
-  num_commits: 412
+  num_commits: 413
   first_commit: 2016-03-06 18:52:51
 - name: Paul Madden
   email: maddenp@colorado.edu
@@ -984,3 +984,8 @@
   num_commits: 1
   first_commit: 2019-06-13 08:07:25
   github: duncanmmacleod
+- name: Chris Osborn
+  email: csosborn@users.noreply.github.com
+  num_commits: 1
+  first_commit: 2019-06-21 14:22:46
+  github: csosborn
