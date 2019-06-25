@@ -25,8 +25,9 @@ from conda_build.conda_interface import TemporaryDirectory
 from conda_build.conda_interface import md5_file
 
 from conda_build import utils
-from conda_build.os_utils.liefldd import (get_exports_memoized, get_linkages_memoized,
-                                          get_rpaths_raw, get_runpaths_raw, set_rpath)
+from conda_build.os_utils.liefldd import (have_lief, get_exports_memoized,
+                                          get_linkages_memoized, get_rpaths_raw,
+                                          get_runpaths_raw)
 from conda_build.os_utils.pyldd import codefile_type
 from conda_build.os_utils.ldd import get_package_obj_files
 from conda_build.index import get_build_index
@@ -431,10 +432,11 @@ def mk_relative_linux(f, prefix, rpaths=('lib',)):
     except CalledProcessError:
         print('patchelf: --print-rpath failed for %s\n' % (elf))
         return
-    existing2, _, _ = get_rpaths_raw(elf)
-    if existing != existing2:
-        print('ERROR :: get_rpaths_raw()={} and patchelf={} disagree for {} :: '.format(
-            existing2, existing, elf))
+    if have_lief:
+        existing2, _, _ = get_rpaths_raw(elf)
+        if existing != existing2:
+            print('ERROR :: get_rpaths_raw()={} and patchelf={} disagree for {} :: '.format(
+                existing2, existing, elf))
     existing = existing.split(os.pathsep)
     new = []
     for old in existing:
