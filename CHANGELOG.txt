@@ -1,4 +1,22 @@
 # current developments
+2019-06-25 3.18.5:
+------------------
+
+Bug fixes:
+----------
+
+* fix one more keyerror with missing timestamp data
+* when indexing, allow .tar.bz2 files to use .conda cache, but not vice versa.  This acts as a sanity check on the .conda files.
+* add build/rpaths_patcher to meta.yaml, to allow switching between lief and patchelf for binary mangling
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @msarahan
+* @csosborn
+
+
 2019-06-21 3.18.4:
 ------------------
 
