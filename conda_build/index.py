@@ -1086,7 +1086,7 @@ class ChannelIndex(object):
                             os.makedirs(os.path.dirname(dest))
                         except:
                             pass
-                        utils.move_with_fallback(src, dest)
+                        utils.copy_into(src, dest)
 
                 with open(index_cache_path) as f:
                     index_json = json.load(f)
