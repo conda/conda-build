@@ -465,7 +465,8 @@ def mk_relative_linux(f, prefix, rpaths=('lib',)):
             if rpath not in new:
                 new.append(rpath)
     rpath = ':'.join(new)
-    set_rpath(old_matching='*', new_rpath=rpath, file=elf)
+    print('patchelf: file: %s\n    setting rpath to: %s' % (elf, rpath))
+    call([patchelf, '--force-rpath', '--set-rpath', rpath, elf])
 
 
 def assert_relative_osx(path, host_prefix, build_prefix):
