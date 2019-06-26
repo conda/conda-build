@@ -1196,7 +1196,7 @@ class ChannelIndex(object):
         return write_result
 
     def _write_subdir_index_html(self, subdir, repodata):
-        repodata_packages = repodata["packages"].values()
+        repodata_packages = repodata["packages"]
         subdir_path = join(self.channel_root, subdir)
 
         def _add_extra_path(extra_paths, path):
