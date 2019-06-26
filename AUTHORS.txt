@@ -12,8 +12,8 @@ Authors are sorted by number of commits.
 * John Kirkham
 * Stuart Berg
 * Ryan Grout
-* Darren Dale
 * Jonathan J. Helmus
+* Darren Dale
 * Travis Swicegood
 * Nehal J Wani
 * Rachel Rigdon

@@ -5,13 +5,13 @@
   - msarahan@continuum.io
   aliases:
   - Mike Sarahan
-  num_commits: 125
+  num_commits: 127
   first_commit: 2015-09-04 21:31:08
 - name: Jonathan J. Helmus
   email: jjhelmus@gmail.com
   aliases:
   - Jonathan Helmus
-  num_commits: 37
+  num_commits: 39
   first_commit: 2014-06-09 17:25:05
   github: jjhelmus
 - name: Isuru Fernando
@@ -890,7 +890,7 @@
   first_commit: 2019-01-26 13:17:33
 - name: Rachel
   email: rrigdon@anaconda.com
-  num_commits: 54
+  num_commits: 56
   first_commit: 2019-01-24 14:12:19
   github: rrigdon
 - name: Rachel Rigdon
