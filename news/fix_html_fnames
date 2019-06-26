@@ -1,9 +1,0 @@
-Enhancements:
--------------
-
-* package sha256 sums are includex in index.html
-
-Bug fixes:
-----------
-
-* fix bug where package filenames were not included in the index.html
