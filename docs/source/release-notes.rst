@@ -5,6 +5,86 @@ Release notes
 This information is drawn from the GitHub conda-build project
 changelog: https://github.com/conda/conda-build/blob/master/CHANGELOG.txt
 
+
+3.18.5 (2019-06-25)
+------------------
+
+Bug fixes
+^^^^^^^^^
+
+* Fix one more keyerror with missing timestamp data
+* When indexing, allow .tar.bz2 files to use .conda cache, but not vice versa.  This acts as a sanity check on the .conda files.
+* Add build/rpaths_patcher to meta.yaml to allow switching between lief and patchelf for binary mangling
+
+Contributors
+^^^^^^^^^^^^
+
+* @mingwandroid
+* @msarahan
+* @csosborn
+
+
+3.18.4 (2019-06-21)
+-------------------
+
+Enhancements
+^^^^^^^^^^^^
+
+* Channeldata reworked a bit to try to capture any available run_exports for all versions available
+
+Bug fixes
+^^^^^^^^^
+
+* Make "timestamp" an optional field in conda index operations
+
+Contributors
+^^^^^^^^^^^^
+
+* @msarahan
+
+
+3.18.3 (2019-06-20)
+-------------------
+
+Enhancements
+^^^^^^^^^^^^
+
+* Make VS2017 default Visual Studio
+* Add hook for customizing the behavior of conda render
+* Drop `/usr` from CDT skeleton path
+* Update cran skeleton to use m2w64 compilers for windows instead of toolchain.
+  The linter is telling since long: Using toolchain directly in this manner is deprecated.
+
+Bug fixes
+^^^^^^^^^
+
+* Update cran skeleton to not use toolchain for win
+* Fix package_has_file so it supports .conda files (use cph)
+* Fix package_has_file function for .conda format
+* Fix off-by-one path trimming in prefix_files
+* Disable overlinking checks when no files in the package have any shared library linkage
+* Try to avoid finalizing top-level metadata twice
+* Try to address permission errors on Appveyor and Azure by falling back to copy and warning (not erroring) if removing a file after copying fails
+* Reduce the files inspected/loaded for channeldata, so that indexing goes faster
+
+Deprecations
+^^^^^^^^^^^^
+
+* The repodata2.json file is no longer created as part of indexing.  It was not used by anything.  It has been removed as an optimization.  Its purpose was to explore namespaces and we'll bring its functionality back when we address that fully.
+
+Contributors
+^^^^^^^^^^^^
+
+* @mingwandroid
+* @msarahan
+* @rrigdon
+* @soapy1
+* @mariusvniekerk
+* @jakirkham
+* @dbast
+* @duncanmmacleod
+
+
 3.18.2 (2019-05-26)
 -------------------
 
