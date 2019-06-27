@@ -111,12 +111,12 @@ which shows the matrix of things to build against. The
 For example, defining a conda_build_config.yaml of the form
 and filling it defines a matrix of 4 packages to build::
 
-   python:
-     - 3.7
-     - 2.7
-   vs:
-     - 2008
-     - 2017
+   foo:
+     - 1.0
+     - 2.0
+   bar:
+     - 1.2.0
+     - 1.4.0
 
 After this, conda build determines what the outputs will be.
 For example, if your ``conda build config`` indicates that you
