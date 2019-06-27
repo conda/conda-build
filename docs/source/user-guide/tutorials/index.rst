@@ -12,4 +12,3 @@ Before starting the tutorials, review the
    build-pkgs-skeleton
    build-pkgs
    build-r-pkgs
-   add-win-start-menu-items

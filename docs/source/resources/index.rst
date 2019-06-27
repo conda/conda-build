@@ -20,6 +20,7 @@ documentation.
    use-shared-libraries
    variants
    commands/index
+   add-win-start-menu-items
    style-guide
    tutorial-template
 
