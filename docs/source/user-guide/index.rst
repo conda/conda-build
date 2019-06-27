@@ -20,8 +20,8 @@ variables and wheel files.
 **Tutorials**
 
 The :doc:`tutorials <../user-guide/tutorials/index>` will guide you through
-how to build conda packages---whether you're creating a simple
-package without compilers, using conda skeleton, creating from
+how to build conda packages---whether you're creating a 
+package with compilers, using conda skeleton, creating from
 scratch, or building R packages using skeleton CRAN.
 
 **Recipes**
