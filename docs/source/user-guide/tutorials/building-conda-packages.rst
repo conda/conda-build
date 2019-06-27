@@ -11,7 +11,8 @@ Overview
 
 This tutorial describes how to use conda build to create conda
 packages on Windows, Linux, and Mac operating systems using the examples of
-SEP and GDAL.
+SEP and GDAL. Additional Windows-specific instructions are provided in the
+:ref:`toolkit` section.
 
 The final built packages from this tutorial are available on
 `Anaconda Cloud <https://anaconda.org>`_:
@@ -28,6 +29,15 @@ and the `GDAL recipe
 on GitHub in the `conda documentation repository
 <https://github.com/conda/conda-build/tree/master/docs>`_.
 
+Who is this for?
+================
+
+This tutorial is for Windows, macOS, and Linux users who wish to
+build more complex conda packages. This tutorial will involve building
+scientific packages, which require compilers for several different
+Python versions.
+
+
 .. _before-you-start4:
 
 Before you start
@@ -36,9 +46,10 @@ Before you start
 Before you start, make sure you have installed:
 
    * conda
-   * conda-build
+   * conda build
    * any compilers you want
 
+.. _toolkit:
 
 Toolkit
 =======

@@ -7,7 +7,7 @@ changelog: https://github.com/conda/conda-build/blob/master/CHANGELOG.txt
 
 
 3.18.5 (2019-06-25)
-------------------
+-------------------
 
 Bug fixes
 ^^^^^^^^^
