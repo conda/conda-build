@@ -45,8 +45,8 @@ Before you start
 
 Before you start, make sure you have installed:
 
-   * conda
-   * conda build
+   * `conda <https://conda.io/projects/conda/en/latest/user-guide/install/index.html>`_
+   * :ref:`conda build <install-conda-build>`
    * any compilers you want
 
 .. _toolkit:
