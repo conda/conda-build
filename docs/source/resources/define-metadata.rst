@@ -96,6 +96,7 @@ interpreted as a string.
    :ref:`jinja-templates` or utilize :ref:`git-env` and
    :ref:`inherited-env-vars`.
 
+.. _source-section:
 
 Source section
 ==============
@@ -380,6 +381,8 @@ soft linked or hard linked.
    build:
      no_link:
        - bin/*.py  # Don't link any .py files in bin/
+
+.. _build-script:
 
 Script
 ------
