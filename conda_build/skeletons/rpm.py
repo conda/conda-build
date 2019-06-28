@@ -38,8 +38,6 @@ source:
   - url: {rpmurl}
     {checksum_name}: {checksum}
     folder: binary
-  - url: {srcrpmurl}
-    folder: source
 
 build:
   number: 0
@@ -521,7 +519,6 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
               'hostsubdir': cdt['host_subdir'],
               'depends': dependsstr,
               'rpmurl': rpm_url,
-              'srcrpmurl': srpm_url,
               'home': entry['home'],
               'license': license,
               'license_family': license_family,
