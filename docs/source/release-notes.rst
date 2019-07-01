@@ -5,6 +5,25 @@ Release notes
 This information is drawn from the GitHub conda-build project
 changelog: https://github.com/conda/conda-build/blob/master/CHANGELOG.txt
 
+3.18.6 (2019-06-26)
+-------------------
+
+Enhancements
+^^^^^^^^^^^^
+
+* Package sha256 sums are included in index.html
+
+Bug fixes
+^^^^^^^^^
+
+* Fix bug where package filenames were not included in the index.html
+
+Contributors
+^^^^^^^^^^^^
+
+* @rrigdon
+* @jjhelmus
+
 
 3.18.5 (2019-06-25)
 -------------------
