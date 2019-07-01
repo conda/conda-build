@@ -347,6 +347,8 @@ cran_packages = [('r-usethis', 'GPL-3', 'GPL3', 'GPL-3'),
                  ('r-broom', 'MIT', 'MIT', ['MIT', 'LICENSE']),
                  ('r-meanr', 'BSD_2_clause', 'BSD', ['BSD_2_clause', 'LICENSE']),
                  ('r-rsed', 'BSD_3_clause', 'BSD', ['BSD_3_clause', 'LICENSE']),
+                 ('r-zoo', 'GPL-2 | GPL-3', 'GPL3', ['GPL-2', 'GPL-3']),
+                 ('r-magree', 'GPL-3 | GPL-2', 'GPL3', ['GPL-3', 'GPL-2']),
                  ]
 
 
