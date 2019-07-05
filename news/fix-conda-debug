@@ -1,0 +1,4 @@
+Bug fixes:
+----------
+
+* fix conda debug output being suppressed
