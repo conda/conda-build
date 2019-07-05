@@ -724,11 +724,10 @@ def get_install_actions(prefix, specs, env, retries=0, subdir=None,
     specs = list(specs)
     if specs:
         specs.extend(create_default_packages)
-    if verbose:
+    if verbose or debug:
         capture = contextlib.contextmanager(lambda: (yield))
-    elif debug:
-        capture = contextlib.contextmanager(lambda: (yield))
-        conda_log_level = logging.DEBUG
+        if debug:
+            conda_log_level = logging.DEBUG
     else:
         capture = utils.capture
     for feature, value in feature_list:
