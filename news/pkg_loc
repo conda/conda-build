@@ -1,0 +1,26 @@
+Enhancements:
+-------------
+
+* <news item>
+
+Bug fixes:
+----------
+
+* Fixed issue where file systems paths were ``None``, causing a failure to
+  read specs from a package.
+
+Deprecations:
+-------------
+
+* <news item>
+
+Docs:
+-----
+
+* <news item>
+
+Other:
+------
+
+* <news item>
+
