@@ -355,7 +355,13 @@ def get_upstream_pins(m, actions, env):
     additional_specs = {}
     for pkg in linked_packages:
         channeldata = utils.download_channeldata(pkg.channel)
-        run_exports = channeldata.get('packages', {}).get(pkg.name, {}).get('run_exports', {}).get(pkg.version, {})
+        if channeldata:
+            run_exports = channeldata.get('packages', {}).get(pkg.name, {}).get(
+                'run_exports', {}).get(pkg.version, {})
+        else:
+            locs_and_dists = execute_download_actions(m, [pkg], env=env,
+                                                      package_subset=linked_packages)
+            run_exports = _read_specs_from_package(*locs_and_dists[0])
         specs = _filter_run_exports(run_exports, ignore_list)
         if specs:
             additional_specs = utils.merge_dicts_of_lists(additional_specs, specs)
