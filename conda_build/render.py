@@ -8,6 +8,7 @@ from __future__ import absolute_import, division, print_function
 
 from collections import OrderedDict, defaultdict
 from locale import getpreferredencoding
+import copy
 import json
 import os
 from os.path import isdir, isfile, abspath
@@ -287,10 +288,11 @@ def execute_download_actions(m, actions, env, package_subset=None, require_files
                                   timeout=m.config.timeout)
 
     # this should be just downloading packages.  We don't need to extract them -
-    #    we read contents directly
+
+    download_actions = {k: v for k, v in actions.items() if k in ('FETCH', 'EXTRACT', 'PREFIX')}
     if 'FETCH' in actions or 'EXTRACT' in actions:
         # this is to force the download
-        execute_actions(actions, index, verbose=m.config.debug)
+        execute_actions(download_actions, index, verbose=m.config.debug)
 
     pkg_files = {}
 
@@ -353,15 +355,21 @@ def get_upstream_pins(m, actions, env):
 
     ignore_list = utils.ensure_list(m.get_value('build/ignore_run_exports'))
     additional_specs = {}
+    run_exports = {}
     for pkg in linked_packages:
         channeldata = utils.download_channeldata(pkg.channel)
         if channeldata:
             run_exports = channeldata.get('packages', {}).get(pkg.name, {}).get(
                 'run_exports', {}).get(pkg.version, {})
-        else:
-            locs_and_dists = execute_download_actions(m, [pkg], env=env,
+        if not run_exports:
+            fetch_actions = [a for a in actions.get('FETCH', []) if a == pkg]
+            extract_actions = [a for a in actions.get('EXTRACT', []) if a == pkg]
+            inner_actions = copy.copy(actions)
+            inner_actions.update({"FETCH": fetch_actions, "EXTRACT": extract_actions})
+            locs_and_dists = execute_download_actions(m, inner_actions, env=env,
                                                       package_subset=linked_packages)
-            run_exports = _read_specs_from_package(*locs_and_dists[0])
+            locs_and_dists = [v for k, v in locs_and_dists.items() if k == pkg]
+            run_exports = _read_specs_from_package(*next(iter(locs_and_dists)))
         specs = _filter_run_exports(run_exports, ignore_list)
         if specs:
             additional_specs = utils.merge_dicts_of_lists(additional_specs, specs)
