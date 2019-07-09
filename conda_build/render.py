@@ -8,7 +8,6 @@ from __future__ import absolute_import, division, print_function
 
 from collections import OrderedDict, defaultdict
 from locale import getpreferredencoding
-import copy
 import json
 import os
 from os.path import isdir, isfile, abspath
