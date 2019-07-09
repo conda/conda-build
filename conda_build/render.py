@@ -362,11 +362,7 @@ def get_upstream_pins(m, actions, env):
             run_exports = channeldata.get('packages', {}).get(pkg.name, {}).get(
                 'run_exports', {}).get(pkg.version, {})
         if not run_exports:
-            fetch_actions = [a for a in actions.get('FETCH', []) if a == pkg]
-            extract_actions = [a for a in actions.get('EXTRACT', []) if a == pkg]
-            inner_actions = copy.copy(actions)
-            inner_actions.update({"FETCH": fetch_actions, "EXTRACT": extract_actions})
-            locs_and_dists = execute_download_actions(m, inner_actions, env=env,
+            locs_and_dists = execute_download_actions(m, actions, env=env,
                                                       package_subset=linked_packages)
             locs_and_dists = [v for k, v in locs_and_dists.items() if k == pkg]
             run_exports = _read_specs_from_package(*next(iter(locs_and_dists)))
