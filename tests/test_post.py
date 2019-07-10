@@ -45,9 +45,8 @@ def test_postbuild_files_raise(testing_metadata, testing_workdir):
         with open(os.path.join(testing_metadata.config.work_dir,
                                '__conda_{}__.txt'.format(f)), 'w') as fh:
             fh.write('123')
-        with pytest.raises(ValueError) as exc:
+        with pytest.raises(ValueError, match=f) as exc:
             post.get_build_metadata(testing_metadata)
-        assert f in str(exc)
 
 
 @pytest.mark.skipif(on_win, reason="fix_shebang is not executed on win32")
