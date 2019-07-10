@@ -722,14 +722,13 @@ def _shard_newest_packages(subdir, r, pins=None):
     groups = {}
     pins = pins or {}
     for g_name, g_recs in r.groups.items():
+        # always do the latest implicitly
+        version = r.groups[g_name][0].version
+        matches = set(r.find_matches(MatchSpec('%s=%s' % (g_name, version))))
         if g_name in pins:
-            matches = set()
-            for pin in pins[g_name]:
-                version = r.find_matches(MatchSpec('%s=%s' % (g_name, pin)))[0].version
+            for pin_value in pins[g_name]:
+                version = r.find_matches(MatchSpec('%s=%s' % (g_name, pin_value)))[0].version
                 matches.update(r.find_matches(MatchSpec('%s=%s' % (g_name, version))))
-        else:
-            version = r.groups[g_name][0].version
-            matches = set(r.find_matches(MatchSpec('%s=%s' % (g_name, version))))
         groups[g_name] = matches
     new_r = _get_resolve_object(subdir, precs=[pkg for group in groups.values() for pkg in group])
     return set(_add_missing_deps(new_r, r))
