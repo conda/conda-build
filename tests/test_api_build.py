@@ -276,7 +276,7 @@ def test_checkout_tool_as_dependency(testing_workdir, testing_config, monkeypatc
     exename = dummy_executable(testing_workdir, "svn")
     monkeypatch.setenv("PATH", testing_workdir, prepend=os.pathsep)
     FNULL = open(os.devnull, 'w')
-    with pytest.raises(subprocess.CalledProcessError, match="Dummy svn was not executed"):
+    with pytest.raises(subprocess.CalledProcessError):
         check_call_env([exename, '--version'], stderr=FNULL)
     FNULL.close()
     env = os.environ.copy()
@@ -333,7 +333,7 @@ def test_symlink_fail(testing_workdir, testing_config):
 
 
 def test_pip_in_meta_yaml_fail(testing_workdir, testing_config):
-    with pytest.raises(ValueError, match='environment\.yml'):
+    with pytest.raises(ValueError, match='environment.yml'):
         api.build(os.path.join(fail_dir, "pip_reqs_fail_informatively"), config=testing_config)
 
 
@@ -347,7 +347,7 @@ def test_recursive_fail(testing_workdir, testing_config):
 
 
 def test_jinja_typo(testing_workdir, testing_config):
-    with pytest.raises(SystemExit, match="GIT_DESCRIBE_TAG") as exc:
+    with pytest.raises(SystemExit, match="GIT_DSECRIBE_TAG") as exc:
         api.build(os.path.join(fail_dir, "source_git_jinja2_oops"), config=testing_config)
 
 
@@ -490,7 +490,7 @@ def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monke
     # Strangely ..
     #   stderr=FNULL suppresses the output from echo on OS X whereas
     #   stdout=FNULL suppresses the output from echo on Windows
-    with pytest.raises(subprocess.CalledProcessError, match="Dummy git was not executed"):
+    with pytest.raises(subprocess.CalledProcessError):
         check_call_env([exename, '--version'], stdout=FNULL, stderr=FNULL)
     FNULL.close()
 
