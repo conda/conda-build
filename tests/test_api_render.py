@@ -5,6 +5,7 @@ should go in test_render.py
 
 import os
 import re
+import sys
 
 import mock
 import pytest
@@ -218,3 +219,12 @@ def test_merge_build_host_build_key(testing_workdir, testing_metadata):
 def test_merge_build_host_empty_host_section(testing_config):
     m = api.render(os.path.join(metadata_dir, '_empty_host_avoids_merge'))[0][0]
     assert not any('bzip2' in dep for dep in m.meta['requirements']['run'])
+
+
+@pytest.mark.skipif(sys.platform != "linux2", reason="package on remote end is only on linux")
+def test_run_exports_from_repo_without_channeldata(testing_config):
+    ms = api.render(os.path.join(metadata_dir, '_run_export_no_channeldata'), config=testing_config)
+    assert ms[0][0].meta['requirements']['build'] == ["exporty"]
+    # these two will be missing if run_exports has failed.
+    assert ms[0][0].meta['requirements']['host'] == ["exporty"]
+    assert ms[0][0].meta['requirements']['run'] == ["exporty"]

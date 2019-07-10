@@ -1,6 +1,9 @@
 import os
+import sys
 from conda_build import api
 from conda_build import render
+
+import pytest
 
 
 def test_output_with_noarch_says_noarch(testing_metadata):

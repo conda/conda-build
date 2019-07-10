@@ -287,10 +287,11 @@ def execute_download_actions(m, actions, env, package_subset=None, require_files
                                   timeout=m.config.timeout)
 
     # this should be just downloading packages.  We don't need to extract them -
-    #    we read contents directly
+
+    download_actions = {k: v for k, v in actions.items() if k in ('FETCH', 'EXTRACT', 'PREFIX')}
     if 'FETCH' in actions or 'EXTRACT' in actions:
         # this is to force the download
-        execute_actions(actions, index, verbose=m.config.debug)
+        execute_actions(download_actions, index, verbose=m.config.debug)
 
     pkg_files = {}
 
@@ -353,9 +354,19 @@ def get_upstream_pins(m, actions, env):
 
     ignore_list = utils.ensure_list(m.get_value('build/ignore_run_exports'))
     additional_specs = {}
+    run_exports = {}
+    empty_run_exports = False
     for pkg in linked_packages:
         channeldata = utils.download_channeldata(pkg.channel)
-        run_exports = channeldata.get('packages', {}).get(pkg.name, {}).get('run_exports', {}).get(pkg.version, {})
+        if channeldata:
+            pkg_data = channeldata.get('packages', {}).get(pkg.name, {})
+            run_exports = pkg_data.get('run_exports', {}).get(pkg.version, {})
+            empty_run_exports = run_exports == {}
+        if not run_exports and not empty_run_exports:
+            locs_and_dists = execute_download_actions(m, actions, env=env,
+                                                      package_subset=linked_packages)
+            locs_and_dists = [v for k, v in locs_and_dists.items() if k == pkg]
+            run_exports = _read_specs_from_package(*next(iter(locs_and_dists)))
         specs = _filter_run_exports(run_exports, ignore_list)
         if specs:
             additional_specs = utils.merge_dicts_of_lists(additional_specs, specs)

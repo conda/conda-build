@@ -276,7 +276,7 @@ def test_checkout_tool_as_dependency(testing_workdir, testing_config, monkeypatc
     exename = dummy_executable(testing_workdir, "svn")
     monkeypatch.setenv("PATH", testing_workdir, prepend=os.pathsep)
     FNULL = open(os.devnull, 'w')
-    with pytest.raises(subprocess.CalledProcessError, message="Dummy svn was not executed"):
+    with pytest.raises(subprocess.CalledProcessError):
         check_call_env([exename, '--version'], stderr=FNULL)
     FNULL.close()
     env = os.environ.copy()
@@ -327,32 +327,28 @@ def test_cmake_generator(platform, target_compiler, testing_workdir, testing_con
 
 @pytest.mark.skipif(sys.platform == "win32",
                     reason="No windows symlinks")
-def test_symlink_fail(testing_workdir, testing_config, capfd):
+def test_symlink_fail(testing_workdir, testing_config):
     with pytest.raises((SystemExit, FileNotFoundError)):
         api.build(os.path.join(fail_dir, "symlinks"), config=testing_config)
-    # output, error = capfd.readouterr()
-    # assert error.count("Error") == 6, "did not find appropriate count of Error in: " + error
 
 
 def test_pip_in_meta_yaml_fail(testing_workdir, testing_config):
-    with pytest.raises(ValueError) as exc:
+    with pytest.raises(ValueError, match='environment.yml'):
         api.build(os.path.join(fail_dir, "pip_reqs_fail_informatively"), config=testing_config)
-    assert "environment.yml" in str(exc)
 
 
 def test_recursive_fail(testing_workdir, testing_config):
-    with pytest.raises((RuntimeError, exceptions.DependencyNeedsBuildingError)) as exc:
+    with pytest.raises((RuntimeError, exceptions.DependencyNeedsBuildingError),
+                       match="recursive-build2"):
         api.build(os.path.join(fail_dir, "recursive-build"), config=testing_config)
     # indentation critical here.  If you indent this, and the exception is not raised, then
     #     the exc variable here isn't really completely created and shows really strange errors:
     #     AttributeError: 'ExceptionInfo' object has no attribute 'typename'
-    assert "recursive-build2" in str(exc.value)
 
 
 def test_jinja_typo(testing_workdir, testing_config):
-    with pytest.raises(SystemExit) as exc:
+    with pytest.raises(SystemExit, match="GIT_DSECRIBE_TAG") as exc:
         api.build(os.path.join(fail_dir, "source_git_jinja2_oops"), config=testing_config)
-    assert "GIT_DSECRIBE_TAG" in exc.exconly()
 
 
 def test_skip_existing(testing_workdir, testing_config, capfd):
@@ -387,9 +383,8 @@ def test_skip_existing_url(testing_metadata, testing_workdir, capfd):
 
 def test_failed_tests_exit_build(testing_workdir, testing_config):
     """https://github.com/conda/conda-build/issues/1112"""
-    with pytest.raises(SystemExit) as exc:
+    with pytest.raises(SystemExit, match='TESTS FAILED') as exc:
         api.build(os.path.join(metadata_dir, "_test_failed_test_exits"), config=testing_config)
-    assert 'TESTS FAILED' in str(exc)
 
 
 def test_requirements_txt_for_run_reqs(testing_workdir, testing_config):
@@ -495,7 +490,7 @@ def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monke
     # Strangely ..
     #   stderr=FNULL suppresses the output from echo on OS X whereas
     #   stdout=FNULL suppresses the output from echo on Windows
-    with pytest.raises(subprocess.CalledProcessError, message="Dummy git was not executed"):
+    with pytest.raises(subprocess.CalledProcessError):
         check_call_env([exename, '--version'], stdout=FNULL, stderr=FNULL)
     FNULL.close()
 

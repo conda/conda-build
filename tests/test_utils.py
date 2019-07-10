@@ -313,7 +313,7 @@ def test_try_acquire_locks(testing_workdir):
     lock1_copy = filelock.FileLock(os.path.join(testing_workdir, 'lock1'))
     # Also verify that the error message contains the word "lock", since we rely
     # on this elsewhere.
-    with pytest.raises(BuildLockError, message='Failed to acquire all locks'):
+    with pytest.raises(BuildLockError, match='Failed to acquire all locks'):
         with utils.try_acquire_locks([lock1, lock1_copy], timeout=1):
             pass
 
