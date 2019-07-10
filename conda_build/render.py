@@ -355,12 +355,14 @@ def get_upstream_pins(m, actions, env):
     ignore_list = utils.ensure_list(m.get_value('build/ignore_run_exports'))
     additional_specs = {}
     run_exports = {}
+    empty_run_exports = False
     for pkg in linked_packages:
         channeldata = utils.download_channeldata(pkg.channel)
         if channeldata:
-            run_exports = channeldata.get('packages', {}).get(pkg.name, {}).get(
-                'run_exports', {}).get(pkg.version, {})
-        if not run_exports:
+            pkg_data = channeldata.get('packages', {}).get(pkg.name, {})
+            run_exports = pkg_data.get('run_exports', {}).get(pkg.version, {})
+            empty_run_exports = run_exports == {}
+        if not run_exports and not empty_run_exports:
             locs_and_dists = execute_download_actions(m, actions, env=env,
                                                       package_subset=linked_packages)
             locs_and_dists = [v for k, v in locs_and_dists.items() if k == pkg]
