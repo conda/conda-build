@@ -18,17 +18,17 @@ Authors are sorted by number of commits.
 * Nehal J Wani
 * Rachel Rigdon
 * Matt Craig
-* Johannes Köster
 * Anthony Scopatz
+* Johannes Köster
 * James Sexton
 * Mandeep Bhutani
 * Patrick Snape
 * Sean
 * Travis Oliphant
+* Marcel Bargull
 * Harsh Gupta
 * Jasmine Sandhu
 * Matthias Gabriel
-* Marcel Bargull
 * Isuru Fernando
 * Alex Wiltschko
 * Min RK
@@ -54,6 +54,7 @@ Authors are sorted by number of commits.
 * Patrick Sodré
 * Bruno Oliveira
 * Bryan W. Weber
+* John Kirkham
 * Thomas A Caswell
 * Mario Juric
 * Ivan Kalev
@@ -63,7 +64,6 @@ Authors are sorted by number of commits.
 * Amir MOHAMMADI
 * Chris Hogan
 * Christopher Burr
-* John Kirkham
 * Heather Kelly
 * Geir Ove Myhr
 * Matt Rendina
@@ -186,5 +186,6 @@ Authors are sorted by number of commits.
 * spalmrot-tic
 * Duncan Macleod
 * Chris Osborn
+* Oleksandr Pavlyk
 
 

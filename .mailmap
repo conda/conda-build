@@ -29,17 +29,17 @@ Travis Swicegood <travis@domain51.com> Travis Swicegood <development@domain51.co
 Nehal J Wani <nehaljw.kkd1@gmail.com>
 Rachel Rigdon <45607889+rrigdon@users.noreply.github.com>
 Matt Craig <mattwcraig@gmail.com> Matthew Craig <mattwcraig@gmail.com>
-Johannes Köster <johannes.koester@tu-dortmund.de>
 Anthony Scopatz <scopatz@gmail.com>
+Johannes Köster <johannes.koester@tu-dortmund.de>
 James Sexton <TwistedLadder@gmail.com>
 Mandeep Bhutani <mbhutani@continuum.io> mandeep <mandeep@users.noreply.github.com>
 Patrick Snape <patricksnape@gmail.com> Patrick Snape <patrick.snape08@imperial.ac.uk>
 Sean <srossross@gmail.com> srossross <srossross@gmail.com>
 Travis Oliphant <teoliphant@gmail.com> Travis E. Oliphant <teoliphant@gmail.com>
+Marcel Bargull <marcel.bargull@udo.edu>
 Harsh Gupta <gupta.harsh96@gmail.com>
 Jasmine Sandhu <jsandhu@continuum.io>
 Matthias Gabriel <matthias.gabriel@etit.tu-chemnitz.de>
-Marcel Bargull <marcel.bargull@udo.edu>
 Isuru Fernando <isuruf@gmail.com> Isuru Fernando <isuru.11@cse.mrt.ac.lk>
 Alex Wiltschko <alex.bw@gmail.com>
 Min RK <benjaminrk@gmail.com> MinRK <benjaminrk@gmail.com>
@@ -65,6 +65,7 @@ James Abbott <j.abbott@dundee.ac.uk>
 Patrick Sodré <psodre@gmail.com>
 Bruno Oliveira <nicoddemus@gmail.com>
 Bryan W. Weber <bryan.w.weber@gmail.com>
+John Kirkham <jakirkham@gmail.com>
 Thomas A Caswell <tcaswell@gmail.com> Thomas A Caswell <tcaswell@bnl.gov>
 Mario Juric <mjuric@astro.washington.edu> Mario Juric <mjuric@lsst.org>
 Ivan Kalev <ivan.kalev@gmail.com> ikalev <ivan.kalev@gmail.com>
@@ -74,7 +75,6 @@ Elliot Hughes <e.hughes@winton.com>
 Amir MOHAMMADI <amir.mohammadi@idiap.ch>
 Chris Hogan <c096h800@gmail.com>
 Christopher Burr <christopher.burr@cern.ch> Chris Burr <chrisburr@users.noreply.github.com>
-John Kirkham <jakirkham@gmail.com>
 Heather Kelly <heather999@users.noreply.github.com> heather999 <heather999@users.noreply.github.com>
 Geir Ove Myhr <Geir.Ove.Myhr@lr.org>
 Matt Rendina <mrendina@stsci.edu>
@@ -197,3 +197,4 @@ Shaun Walbridge <shaun.walbridge@gmail.com>
 spalmrot-tic <steve.palmroth@tudor.com>
 Duncan Macleod <duncan.macleod@ligo.org>
 Chris Osborn <csosborn@users.noreply.github.com>
+Oleksandr Pavlyk <oleksandr.pavlyk@intel.com>
