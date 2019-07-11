@@ -380,14 +380,13 @@ def copy_license(m):
     license_files = utils.ensure_list(m.get_value('about/license_file', []))
     if not license_files:
         return
-    for license_file in license_files:
+    for i, license_file in enumerate(license_files):
         src_file = join(m.config.work_dir, license_file)
         if not os.path.isfile(src_file):
             src_file = os.path.join(m.path, license_file)
         if os.path.isfile(src_file):
-            filename = os.path.basename(license_file)
             utils.copy_into(src_file,
-                            join(m.config.info_dir, 'licenses', filename), m.config.timeout,
+                            join(m.config.info_dir, 'licenses', "LICENSE{}.txt".format(i)), m.config.timeout,
                             locking=m.config.locking)
         else:
             raise ValueError("License file given in about/license_file ({}) does not exist in "
