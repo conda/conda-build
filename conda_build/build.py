@@ -382,6 +382,9 @@ def copy_license(m):
         return
     count = 0
     for license_file in license_files:
+        # To not break existing recipes, ignore an empty string.
+        if license_file == "":
+            continue
         src_file = join(m.config.work_dir, license_file)
         if not os.path.isfile(src_file):
             src_file = os.path.join(m.path, license_file)
