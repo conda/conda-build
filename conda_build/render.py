@@ -357,16 +357,12 @@ def get_upstream_pins(m, actions, env):
     run_exports = {}
     empty_run_exports = False
     for pkg in linked_packages:
-        channeldata = utils.download_channeldata(pkg.channel)
-        if channeldata:
-            pkg_data = channeldata.get('packages', {}).get(pkg.name, {})
-            run_exports = pkg_data.get('run_exports', {}).get(pkg.version, {})
-            empty_run_exports = run_exports == {}
-        if not run_exports and not empty_run_exports:
-            locs_and_dists = execute_download_actions(m, actions, env=env,
-                                                      package_subset=linked_packages)
-            locs_and_dists = [v for k, v in locs_and_dists.items() if k == pkg]
-            run_exports = _read_specs_from_package(*next(iter(locs_and_dists)))
+        # here we can't use channeldata.json, because it doesn't
+        # handle multiple builds of packages for the same version
+        locs_and_dists = execute_download_actions(m, actions, env=env,
+                                                  package_subset=linked_packages)
+        locs_and_dists = [v for k, v in locs_and_dists.items() if k == pkg]
+        run_exports = _read_specs_from_package(*next(iter(locs_and_dists)))
         specs = _filter_run_exports(run_exports, ignore_list)
         if specs:
             additional_specs = utils.merge_dicts_of_lists(additional_specs, specs)
