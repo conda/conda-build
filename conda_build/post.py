@@ -491,9 +491,9 @@ def mk_relative_linux(f, prefix, rpaths=('lib',), method='LIEF'):
         return
     if have_lief:
         existing2, _, _ = get_rpaths_raw(elf)
-        if existing != existing2:
+        if [existing] != existing2:
             print('ERROR :: get_rpaths_raw()={} and patchelf={} disagree for {} :: '.format(
-                existing2, existing, elf))
+                existing2, [existing], elf))
     existing = existing.split(os.pathsep)
     new = []
     for old in existing:
