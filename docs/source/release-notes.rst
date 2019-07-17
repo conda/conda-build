@@ -5,6 +5,46 @@ Release notes
 This information is drawn from the GitHub conda-build project
 changelog: https://github.com/conda/conda-build/blob/master/CHANGELOG.txt
 
+3.18.7 (2019-07-09)
+-------------------
+
+Enhancements
+^^^^^^^^^^^^
+
+* Update authorship for 3.18.7
+* Add note on single threading for indexing during build
+* Add in fallback for run_exports when channeldata not available
+* Make pins for current_repodata additive - always newest, and pins are additions to that
+* Limit indexing in build to using one thread
+* Speed up by allowing empty run_exports entries in channeldata be valid results
+* Bump conda-package-handling to 1.3+
+* Add test for run_exports without channeldata
+* Fallback to file-based run_exports if channeldata has no results
+* Add Mozilla as valid license family
+* Add in fallback for run_exports when channeldata not available
+* Updated tutorials and resource documentation
+
+
+Bug fixes
+^^^^^^^^^
+* Flake8 and test fixes from pytest deprecations
+* Fix in render.py::_read_specs_from_package
+* Fix for pkg_loc
+* Fix conda debug output being suppressed
+
+
+Contributors
+^^^^^^^^^^^^
+
+* @msarahan
+* @rrigdon
+* @scopatz
+* @mbargull
+* @jakirkham
+* @oleksandr-pavlyk
+
+
+
 3.18.6 (2019-06-26)
 -------------------
 
