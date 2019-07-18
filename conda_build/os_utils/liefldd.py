@@ -399,6 +399,7 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
     exedir = os.path.dirname(filename)
     binary = lief.parse(filename)
     todo = [[filename, binary]]
+    sysroot = _trim_sysroot(sysroot)
 
     default_paths = []
     if binary.format == lief.EXE_FORMATS.ELF:
