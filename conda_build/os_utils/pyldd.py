@@ -444,7 +444,7 @@ def _get_resolved_location(codefile,
                         codefile.get_rpaths_transitive() + \
                         ld_library_paths + \
                         codefile.get_rpaths_nontransitive() + \
-                        [dp.replace('$SYSROOT', sysroot) for dp in ensure_list(default_paths)]
+                        [dp.replace('$SYSROOT', sysroot or '') for dp in ensure_list(default_paths)]
         for rpath in these_rpaths:
             resolved = unresolved.replace('$RPATH', rpath) \
                                  .replace('$SELFDIR', self_dir) \
@@ -488,19 +488,20 @@ class machofile(UnixExecutable):
         self.shared_libraries = []
         self.dt_runpath = []
         self._dir = os.path.dirname(file.name)
-        results = mach_o_find_dylibs(file, arch)
-        if not results:
-            return
-        _, sos = zip(*results)
-        file.seek(0)
+        dylibs = mach_o_find_dylibs(file, arch)
+        rpaths = mach_o_find_rpaths(file, arch)
         self.rpaths_transitive = initial_rpaths_transitive
-        _filetypes, rpaths = zip(*mach_o_find_rpaths(file, arch))
-        local_rpaths = [self.from_os_varnames(rpath.rstrip('/'))
-                        for rpath in rpaths[0] if rpath]
-        self.rpaths_transitive.extend(local_rpaths)
-        self.rpaths_nontransitive = local_rpaths
-        self.shared_libraries.extend(
-            [(so, self.from_os_varnames(so)) for so in sos[0] if so])
+        self.rpaths_nontransitive = []
+        if dylibs and rpaths:
+            _, sos = zip(*dylibs)
+            file.seek(0)
+            _filetypes, rpaths = zip(*rpaths)
+            local_rpaths = [self.from_os_varnames(rpath.rstrip('/'))
+                            for rpath in rpaths[0] if rpath]
+            self.rpaths_transitive.extend(local_rpaths)
+            self.rpaths_nontransitive = local_rpaths
+            self.shared_libraries.extend(
+                [(so, self.from_os_varnames(so)) for so in sos[0] if so])
         file.seek(0)
 
     def to_os_varnames(self, input_):
@@ -977,6 +978,9 @@ class DLLfile(UnixExecutable):
     def get_rpaths_transitive(self):
         return []
 
+    def get_rpaths_nontransitive(self):
+        return []
+
     def get_resolved_shared_libraries(self, *args, **kw):
         return []
 
@@ -1134,15 +1138,18 @@ def get_runpaths(filename, arch='native'):
 
 # TODO :: Consider returning a tree structure or a dict when recurse is True?
 def inspect_linkages(filename, resolve_filenames=True, recurse=True,
-                     sysroot='', arch='native'):
+                     sysroot='', arch='native', dsos_info={}):
     already_seen = set()
-    todo = set([filename])
+    todo = set((filename,))
     done = set()
     results = set()
     while todo != done:
         filename = next(iter(todo - done))
+        dso_info = dsos_info[filename]
         uniqueness_key, these_orig, these_resolved = _inspect_linkages_this(
-            filename, sysroot=sysroot, arch=arch)
+            dso_info['fullpath'], sysroot=sysroot, arch=arch)
+        these_orig = dso_info['libraries']['original']
+        these_resolved = dso_info['libraries']['resolved']
         if uniqueness_key not in already_seen:
             if resolve_filenames:
                 results.update(these_resolved)
