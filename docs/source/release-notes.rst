@@ -5,6 +5,33 @@ Release notes
 This information is drawn from the GitHub conda-build project
 changelog: https://github.com/conda/conda-build/blob/master/CHANGELOG.txt
 
+3.18.8 (2019-07-18)
+-------------------
+
+Enhancements
+^^^^^^^^^^^^
+
+* License_file can optionally be a yaml list
+
+
+Bug fixes
+^^^^^^^^^
+
+* Fix readup of existing index.json in cache while extracting
+* Fix spurious post build errors/warning message
+* Merge channeldata from all urls
+
+
+Contributors
+^^^^^^^^^^^^
+
+* @msarahan
+* @rrigdon
+* @jjhelmus
+* @isuruf
+* @ddamiani
+
+
 3.18.7 (2019-07-09)
 -------------------
 
