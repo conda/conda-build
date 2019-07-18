@@ -7,3 +7,8 @@ source:
     url: ../../../archives/a.tar.bz2
   - folder: 'f2'
     url: ../../../archives/b.tar.bz2
+
+about:
+  license_file:
+    - f1/a
+    - f2/b

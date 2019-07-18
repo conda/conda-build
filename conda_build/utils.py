@@ -1440,7 +1440,8 @@ def filter_info_files(files_list, prefix):
                     'info[\\\\/]recipe_log.json',
                     'info[\\\\/]recipe.tar',
                     'info[\\\\/]test[\\\\/].*',
-                    'info[\\\\/]LICENSE.txt',
+                    'info[\\\\/]LICENSE.txt',        # legacy, some tests rely on this
+                    'info[\\\\/]licenses[\\\\/]*',
                     'info[\\\\/]requires',
                     'info[\\\\/]meta',
                     'info[\\\\/]platform',

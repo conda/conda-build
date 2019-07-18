@@ -377,19 +377,30 @@ def copy_readme(m):
 
 
 def copy_license(m):
-    license_file = m.get_value('about/license_file')
-    if license_file:
+    license_files = utils.ensure_list(m.get_value('about/license_file', []))
+    if not license_files:
+        return
+    count = 0
+    for license_file in license_files:
+        # To not break existing recipes, ignore an empty string.
+        if license_file == "":
+            continue
         src_file = join(m.config.work_dir, license_file)
         if not os.path.isfile(src_file):
             src_file = os.path.join(m.path, license_file)
         if os.path.isfile(src_file):
+            if os.path.isabs(license_file):
+                filename = "LICENSE{}.txt".format(count)
+                count += 1
+            else:
+                filename = license_file
             utils.copy_into(src_file,
-                            join(m.config.info_dir, 'LICENSE.txt'), m.config.timeout,
+                            join(m.config.info_dir, 'licenses', filename), m.config.timeout,
                             locking=m.config.locking)
-            print("Packaged license file.")
         else:
             raise ValueError("License file given in about/license_file ({}) does not exist in "
                              "source root dir or in recipe root dir (with meta.yaml)".format(src_file))
+    print("Packaged license file/s.")
 
 
 def copy_recipe_log(m):
