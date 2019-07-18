@@ -471,7 +471,12 @@ def write_hash_input(m):
 
 
 def get_files_with_prefix(m, files, prefix):
+
+    import time
+    start = time.time()
     files_with_prefix = sorted(have_prefix_files(files, prefix))
+    end = time.time()
+    print(end - start)
 
     ignore_files = m.ignore_prefix_files()
     ignore_types = set()

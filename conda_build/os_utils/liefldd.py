@@ -92,7 +92,7 @@ if have_lief:
     codefile_type = codefile_type_liefldd
 
 
-def _trim_sysroot(sysroot):
+def trim_sysroot(sysroot):
     while sysroot.endswith('/') or sysroot.endswith('\\'):
         sysroot = sysroot[:-1]
     return sysroot
@@ -198,24 +198,19 @@ def set_rpath(old_matching, new_rpath, file):
             binary.write(file)
 
 
-def get_rpaths(file, exe_dirname, envroot, windows_root=''):
+def get_rpaths(file, path_replacements):
     rpaths, rpaths_type, binary_format, binary_type = get_runpaths_or_rpaths_raw(file)
     if binary_format == lief.EXE_FORMATS.PE:
-        # To allow the unix-y rpath code to work we consider
-        # exes as having rpaths of env + CONDA_WINDOWS_PATHS
-        # and consider DLLs as having no rpaths.
-        # .. scratch that, we don't pass exes in as the root
-        # entries so we just need rpaths for all files and
-        # not to apply them transitively.
         # https://docs.microsoft.com/en-us/windows/desktop/dlls/dynamic-link-library-search-order
-        if exe_dirname:
-            rpaths.append(exe_dirname.replace('\\', '/'))
-        if windows_root:
-            rpaths.append('/'.join((windows_root, "System32")))
-            rpaths.append(windows_root)
-        if envroot:
+        # .. but CONDA_DLL_SEARCH_MODIFICATION_ENABLE=1 also.
+        if 'exedirname' in path_replacements:
+            rpaths.append(path_replacements['exedirname'])
+        if 'windowsroot' in path_replacements:
+            rpaths.append('/'.join((path_replacements['windowsroot'], "System32")))
+            rpaths.append(path_replacements['windowsroot'])
+        if 'runprefix' in path_replacements:
             # and not lief.PE.HEADER_CHARACTERISTICS.DLL in binary.header.characteristics_list:
-            rpaths.extend(list(_get_path_dirs(envroot)))
+            rpaths.extend(list(_get_path_dirs(path_replacements['runprefix'])))
     elif binary_format == lief.EXE_FORMATS.MACHO:
         rpaths = [rpath.rstrip('/') for rpath in rpaths]
     elif binary_format == lief.EXE_FORMATS.ELF:
@@ -310,8 +305,7 @@ def get_uniqueness_key(file):
     return binary.name
 
 
-def _get_resolved_location(codefile,
-                           unresolved,
+def _get_resolved_location(unresolved,
                            exedir,
                            selfdir,
                            rpaths_transitive,
@@ -391,40 +385,41 @@ def _get_resolved_location(codefile,
 
 
 # TODO :: Consider returning a tree structure or a dict when recurse is True?
-def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
-                          sysroot='', envroot='', arch='native'):
+def inspect_linkages_lief(dsos_info, filename, resolve_filenames=True, recurse=True,
+                          sysroot='', envroot='', arch='native', binary=None):
     # Already seen is partly about implementing single SONAME
     # rules and its appropriateness on macOS is TBD!
+
     already_seen = set()
-    exedir = os.path.dirname(filename)
-    binary = lief.parse(filename)
-    todo = [[filename, binary]]
+    dso_info = dsos_info[filename]
+    if not binary:
+        binary = ensure_binary(dso_info['fullpath'])
+    exedir = os.path.dirname(dso_info['fullpath'])
     sysroot = _trim_sysroot(sysroot)
 
     default_paths = []
-    if binary.format == lief.EXE_FORMATS.ELF:
-        if binary.type == lief.ELF.ELF_CLASS.CLASS64:
+    if dso_info['filetype'] == 'elf64':
             default_paths = ['$SYSROOT/lib64', '$SYSROOT/usr/lib64', '$SYSROOT/lib', '$SYSROOT/usr/lib']
-        else:
+    elif dso_info['filetype'] == 'elf':
             default_paths = ['$SYSROOT/lib', '$SYSROOT/usr/lib']
-    elif binary.format == lief.EXE_FORMATS.MACHO:
+    elif dso_info['filetype'] == 'macho':
         default_paths = ['$SYSROOT/usr/lib']
-    elif binary.format == lief.EXE_FORMATS.PE:
+    elif dso_info['filetype'] == 'pecoff':
         # We do not include C:\Windows nor C:\Windows\System32 in this list. They are added in
         # get_rpaths() instead since we need to carefully control the order.
         default_paths = ['$SYSROOT/System32/Wbem', '$SYSROOT/System32/WindowsPowerShell/v1.0']
     results = set()
     rpaths_by_binary = dict()
     parents_by_filename = dict({filename: None})
+    todo = [(filename, binary)]
     while todo:
-        for element in todo:
+        for (filename2, binary) in todo:
             todo.pop(0)
-            filename2 = element[0]
-            binary = element[1]
-            uniqueness_key = get_uniqueness_key(binary)
-            if uniqueness_key not in already_seen:
+            dso_info = dsos_info[filename2]
+            key = dso_info['key']
+            if key not in already_seen:
                 parent_exe_dirname = None
-                if binary.format == lief.EXE_FORMATS.PE:
+                if dso_info['filetype'] == 'pecoff':
                     tmp_filename = filename2
                     while tmp_filename:
                         if not parent_exe_dirname and codefile_type(tmp_filename) == 'EXEfile':
@@ -436,15 +431,22 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
                                                          parent_exe_dirname,
                                                          envroot.replace(os.sep, '/'),
                                                          sysroot)
+                print(filename2)
+                print(dso_info['rpaths'])
+                print(rpaths_by_binary[filename2])
+                assert dso_info['rpaths'] == rpaths_by_binary[filename2]
+                rpaths_by_binary[filename2] = dso_info['rpaths']
                 tmp_filename = filename2
                 rpaths_transitive = []
-                if binary.format == lief.EXE_FORMATS.PE:
+                if dso_info['filetype'] == 'pecoff':
                     rpaths_transitive = rpaths_by_binary[tmp_filename]
                 else:
                     while tmp_filename:
                         rpaths_transitive[:0] = rpaths_by_binary[tmp_filename]
                         tmp_filename = parents_by_filename[tmp_filename]
                 libraries = get_libraries(binary)
+                assert libraries == dso_info['libraries']['original']
+                libraries = dso_info['libraries']['original']
                 if filename2 in libraries:  # Happens on macOS, leading to cycles.
                     libraries.remove(filename2)
                 # RPATH is implicit everywhere except macOS, make it explicit to simplify things.
@@ -452,8 +454,7 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
                                binary.format != lief.EXE_FORMATS.MACHO else lib)
                               for lib in libraries]
                 for orig in these_orig:
-                    resolved = _get_resolved_location(binary,
-                                                      orig,
+                    resolved = _get_resolved_location(orig,
                                                       exedir,
                                                       exedir,
                                                       rpaths_transitive=rpaths_transitive,
@@ -467,25 +468,26 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
                     if recurse:
                         if os.path.exists(resolved[0]):
                             todo.append([resolved[0], lief.parse(resolved[0])])
-                already_seen.add(get_uniqueness_key(binary))
+                already_seen.add(key)
     return results
 
 
-def get_linkages(filename, resolve_filenames=True, recurse=True,
+def get_linkages(dsos_info, filename, resolve_filenames=True, recurse=True,
                  sysroot='', envroot='', arch='native'):
-    # When we switch to lief, want to ensure these results do not change.
-    # We do not support Windows yet with pyldd.
     result_pyldd = []
-    if codefile_type(filename) not in ('DLLfile', 'EXEfile'):
-        result_pyldd = inspect_linkages_pyldd(filename, resolve_filenames=resolve_filenames, recurse=recurse,
+
+    dso_info = dsos_info[filename]
+    fullpath = dso_info['fullpath']
+    if codefile_type(fullpath) not in ('DLLfile', 'EXEfile'):
+        result_pyldd = inspect_linkages_pyldd(dsos_info, filename, resolve_filenames=resolve_filenames, recurse=recurse,
                                               sysroot=sysroot, arch=arch)
         if not have_lief:
             return result_pyldd
     if not have_lief:
         return result_pyldd
 
-    result_lief = inspect_linkages_lief(filename, resolve_filenames=resolve_filenames, recurse=recurse,
-                                        sysroot=sysroot, envroot=envroot, arch=arch)
+    result_lief = inspect_linkages_lief(dsos_info, filename, resolve_filenames=resolve_filenames, recurse=recurse,
+                                        sysroot=sysroot, envroot=envroot, arch=arch, binary=None) # binary=dso_info['binary'])
     if result_pyldd and set(result_lief) != set(result_pyldd):
         print("WARNING: Disagreement in get_linkages(filename={}, resolve_filenames={}, recurse={}, sysroot={}, envroot={}, arch={}):\n lief: {}\npyldd: {}\n  (using lief)".
               format(filename, resolve_filenames, recurse, sysroot, envroot, arch, result_lief, result_pyldd))
@@ -912,7 +914,7 @@ class memoized_by_arg0_filehash(object):
     (not reevaluated).
 
     The first argument is required to be an existing filename and it is
-    always converted to an inode number.
+    always converted to an sha1 checksum. Other args are hashed normally.
     """
     def __init__(self, func):
         self.func = func
@@ -931,8 +933,10 @@ class memoized_by_arg0_filehash(object):
                             break
                         sha1.update(data)
                 arg = sha1.hexdigest()
-            if isinstance(arg, list):
+            elif isinstance(arg, list):
                 newargs.append(tuple(arg))
+            elif isinstance(arg, set):
+                newargs.append(frozenset())
             elif not isinstance(arg, Hashable):
                 # uncacheable. a list, for instance.
                 # better to not cache than blow up.
@@ -975,3 +979,131 @@ def get_linkages_memoized(filename, resolve_filenames, recurse,
                           sysroot='', envroot='', arch='native'):
     return get_linkages(filename, resolve_filenames=resolve_filenames,
                         recurse=recurse, sysroot=sysroot, envroot=envroot, arch=arch)
+
+
+#original_lief_parse = lief.parse
+#@memoized_by_arg0_filehash
+#def lief_parse_wrapper(file):
+#    if is_string(file):
+#        print("called on lief_parse_wrapper({})".format(os.path.basename(file)))
+#    return original_lief_parse(file)
+#lief.parse = lief_parse_wrapper
+
+
+def lief_parse_wrapper(file):
+    if not hasattr(lief_parse_wrapper, 'seen'):
+        lief_parse_wrapper.seen = dict()
+    if file in lief_parse_wrapper.seen:
+        print("Seen {} already".format(file))
+    lief_parse_wrapper.seen[file] = 1
+    return lief.parse(file)
+
+
+
+# TODO :: Maybe remove. It's for fat binaries really but .. well ..
+#         we only ever pass 'arch' as 'native' anyway.
+def _get_arch_if_native(arch):
+    if arch == 'native':
+        if sys.platform == 'win32':
+            arch = 'x86_64' if sys.maxsize > 2**32 else 'i686'
+        else:
+            _, _, _, _, arch = os.uname()
+    return arch
+
+
+@memoized_by_arg0_filehash
+def lief_parse(filename, path_replacements):
+    '''
+    Parses DSOs using LIEF (or pyldd) into the same structure.
+    This ensures that LIEF isn't called more than once per file and
+    that if we want to continue with pyldd as a fallback and checker
+    it does not impinge badly upon the general code quality.
+
+    We do *not* recurse here at all.
+
+    :param filename: File to collect DSO information about.
+    '''
+
+    check_pyldd = True
+
+    fullpath = os.path.normpath(filename)
+    if filename.endswith(('.a', '.lib')):
+        debug_it = 1
+    binary = lief.parse(fullpath) if have_lief else None
+    if not binary:
+        # Static libs here. Remove this.
+        return {'fullpath': fullpath,
+                'filetype': None,
+                'rpaths': [],
+                'exports': get_exports(fullpath),
+                'key': fullpath,
+                'libraries': {}}
+
+    for k, v in path_replacements.items():
+        assert not '\\' in v
+
+    if have_lief:
+        runpaths, runpaths_type, _, _ = get_runpaths_or_rpaths_raw(binary)
+        if runpaths_type != 'runpath':
+            runpaths = []
+        rpaths = get_rpaths(binary, path_replacements)
+        libs_original = get_libraries(binary)
+        if filename in libs_original:  # Happens on macOS, leading to cycles.
+            assert False, "I did not know this could happen!"
+            libs_original.remove(filename)
+
+        default_paths = None
+        filetype = None
+        if binary.format == lief.EXE_FORMATS.ELF:
+            if binary.type == lief.ELF.ELF_CLASS.CLASS64:
+                default_paths = ['$SYSROOT/lib64', '$SYSROOT/usr/lib64', '$SYSROOT/lib', '$SYSROOT/usr/lib']
+                filetype = 'elf64'
+            else:
+                default_paths = ['$SYSROOT/lib', '$SYSROOT/usr/lib']
+                filetype = 'elf'
+        elif binary.format == lief.EXE_FORMATS.MACHO:
+            filetype = 'macho'
+        elif binary.format == EXE_FORMATS.PE:
+            filetype = 'pecoff'
+
+        result_lief = {'fullpath': fullpath,
+                       'filetype': filetype,
+                       'rpaths': rpaths,
+                       'runpaths': runpaths,
+                       'exports': get_exports(binary),
+                       'key': get_uniqueness_key(binary),
+                       'default_paths': default_paths,
+                       'libraries': {'original': libs_original}}
+
+    if check_pyldd or not have_lief:
+        from .pyldd import _inspect_linkages_this, get_runpaths, codefile
+
+        with open(filename, 'rb') as f:
+            cf = codefile(f, 'any', ['/lib', '/usr/lib'])
+            if cf.__class__ == 'elffile':
+                filetype = 'elf64' if cf.bitness == 64 else 32
+            elif cf.__class__ == 'machofile':
+                filetype = 'machofile'
+            elif cf.__class__ == 'DLLfile':
+                filetype = 'pecoff'
+            key, libs_original, libs_resolved = _inspect_linkages_this(filename, sysroot=sysroot)
+            if filename in libs_original:
+                assert False, "I did not know this could happen!"
+                libs_original = tuple(f for f in libs_original if f != filename)
+
+            result_pyldd = {'fullpath': fullpath,
+                            'filetype': filetype,
+                            'rpaths': cf.get_rpaths_transitive(),
+                            'runpaths': cf.get_runpaths(),
+                            'exports': None,
+                            'key': key,
+                            'libraries': {'original': libs_original,
+                                          'resolved': libs_resolved}}
+
+        # if check_pyldd:
+        #     assert result_lief == result_pyldd
+
+    if have_lief:
+        return result_lief
+
+    return result_pyldd

@@ -25,9 +25,10 @@ from conda_build.conda_interface import TemporaryDirectory
 from conda_build.conda_interface import md5_file
 
 from conda_build import utils
-from conda_build.os_utils.liefldd import (have_lief, get_exports_memoized,
+from conda_build.os_utils.liefldd import (get_exports_memoized, get_linkages_memoized,
                                           get_linkages_memoized, get_rpaths_raw,
-                                          get_runpaths_raw, set_rpath)
+                                          get_rpaths_raw, get_runpaths_raw, set_rpath)
+                                          lief_parse)
 from conda_build.os_utils.pyldd import codefile_type
 from conda_build.os_utils.ldd import get_package_obj_files
 from conda_build.index import get_build_index
@@ -43,9 +44,9 @@ else:
     from scandir import scandir
 
 filetypes_for_platform = {
-    "win": ('DLLfile', 'EXEfile'),
-    "osx": ['machofile'],
-    "linux": ['elffile'],
+    "win": ('DLLfile', 'EXEfile', 'pecoff'),
+    "osx": ['machofile', 'macho'],
+    "linux": ['elffile', 'elf', 'elf64'],
 }
 
 
@@ -669,34 +670,34 @@ DEFAULT_WIN_WHITELIST = ['**/ADVAPI32.dll',
                          '**/api-ms-win*.dll']
 
 
-def _collect_needed_dsos(sysroots_files, files, run_prefix, sysroot_substitution, build_prefix, build_prefix_substitution):
-    all_needed_dsos = set()
-    needed_dsos_for_file = dict()
+def _resolve_needed_dsos(sysroots_files, libs_info, run_prefix,
+                         sysroot_substitution, build_prefix, build_prefix_substitution):
     sysroot = ''
     if sysroots_files:
         sysroot = list(sysroots_files.keys())[0]
-    for f in files:
-        path = os.path.join(run_prefix, f)
-        if not codefile_type(path):
+    for f, lib_info in libs_info.items():
+        if 'filetype' not in lib_info or 'original' not in lib_info['libraries']:
             continue
         build_prefix = build_prefix.replace(os.sep, '/')
         run_prefix = run_prefix.replace(os.sep, '/')
-        needed = get_linkages_memoized(path, resolve_filenames=True, recurse=False,
-                                    sysroot=sysroot,
-                                    envroot=run_prefix)
+        needed = lib_info['libraries']['original']
         if sysroot:
             needed = [n.replace(sysroot, sysroot_substitution) if n.startswith(sysroot)
-                    else n for n in needed]
+                      else n for n in needed]
         # We do not want to do this substitution when merging build and host prefixes.
         if build_prefix != run_prefix:
             needed = [n.replace(build_prefix, build_prefix_substitution) if n.startswith(build_prefix)
-                    else n for n in needed]
+                      else n for n in needed]
         needed = [os.path.relpath(n, run_prefix).replace(os.sep, '/') if n.startswith(run_prefix)
                 else n for n in needed]
-        needed_dsos_for_file[f] = needed
-        all_needed_dsos = all_needed_dsos.union(needed)
-        all_needed_dsos.add(f)
-    return all_needed_dsos, needed_dsos_for_file
+        # Only the pyldd version of lief_parse (yeah, I know, the name, right?) sets 'libraries/resolved'.
+        # .. may as well check it gets the same result as doing it here (chances are high it does not =>
+        # also note, we have not called our liefldd resolver at all yet. It is in
+        if 'resolved' in lib_info['libraries']:
+            assert lib_info['libraries']['resolved'] == needed, "pyldd's resolver disagrees"
+        if lib_info['libraries']['original'] != needed:
+            print("Yes, _resolve_needed_dsos did change\n{} .. to ..\n{}".format(lib_info['libraries']['original'], needed))
+        lib_info['libraries']['resolved'] = needed
 
 
 def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_vendored_dist, ignore_list_syms, sysroot_substitution, enable_static):
@@ -710,10 +711,13 @@ def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_v
         for prefix in (run_prefix, build_prefix):
             for subdir2, _, filez in os.walk(prefix):
                 for file in filez:
+                if file == 'lib/rustlib/x86_64-apple-darwin/lib/python2.7/site-packages/lldb/_lldb.so':
+                    print("Debug me .. why you not find libLLVM.dylib in the run_prefix?!")
                     fp = os.path.join(subdir2, file)
                     dynamic_lib = any(fnmatch(fp, ext) for ext in ('*.so.*', '*.dylib.*', '*.dll')) and \
                                 codefile_type(fp, skip_symlinks=False) is not None
                     static_lib = any(fnmatch(fp, ext) for ext in ('*.a', '*.lib'))
+                static_lib = False
                     # Looking at all the files is very slow.
                     if not dynamic_lib and not static_lib:
                         continue
@@ -749,7 +753,7 @@ def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_v
                                     continue
                                 print("sysroot in {}, owner is {}".format(fp, prefix_owners[rp][0]))
                             contains_static_libs[prefix_owners[rp][0]] = True
-    return prefix_owners, contains_dsos, contains_static_libs, all_lib_exports
+    return prefix_owners, contains_dsos, contains_static_libs
 
 
 def _get_fake_pkg_dist(pkg_name, pkg_version, build_str, build_number):
@@ -878,7 +882,7 @@ def _lookup_in_prefix_packages(errors, needed_dso, files, run_prefix, whitelist,
                                                                      in_prefix_dso), verbose=verbose)
 
 
-def _show_linking_messages(files, errors, needed_dsos_for_file, build_prefix, run_prefix, pkg_name,
+def _show_linking_messages(files, errors, file_info, build_prefix, run_prefix, pkg_name,
                            error_overlinking, runpath_whitelist, verbose, requirements_run, lib_packages,
                            lib_packages_used, whitelist, sysroots, sysroot_prefix, sysroot_substitution, subdir):
     for f in files:
@@ -890,19 +894,13 @@ def _show_linking_messages(files, errors, needed_dsos_for_file, build_prefix, ru
         err_prelude = "  ERROR ({},{})".format(pkg_name, f)
         info_prelude = "   INFO ({},{})".format(pkg_name, f)
         msg_prelude = err_prelude if error_overlinking else warn_prelude
-
-        try:
-            runpaths, _, _ = get_runpaths_raw(path)
-        except:
-            _print_msg(errors, '{}: pyldd.py failed to process'.format(warn_prelude),
-                       verbose=verbose)
-            continue
+        runpaths = file_info[f]['runpaths']
         if runpaths and not (runpath_whitelist or
                              any(fnmatch(f, w) for w in runpath_whitelist)):
             _print_msg(errors, '{}: runpaths {} found in {}'.format(msg_prelude,
                                                                     runpaths,
                                                                     path), verbose=verbose)
-        needed = needed_dsos_for_file[f]
+        needed = file_info[f]['libraries']['resolved']
         for needed_dso in needed:
             needed_dso = needed_dso.replace('/', os.sep)
             if not needed_dso.startswith(os.sep) and not needed_dso.startswith('$'):
@@ -916,29 +914,60 @@ def _show_linking_messages(files, errors, needed_dsos_for_file, build_prefix, ru
                                              info_prelude, sysroot_prefix, sysroot_substitution, verbose)
 
 
+import collections
+
+class FrozenDict(collections.Mapping):
+    """Don't forget the docstrings!!"""
+
+    def __init__(self, *args, **kwargs):
+        self._d = dict(*args, **kwargs)
+        self._hash = None
+
+    def __iter__(self):
+        return iter(self._d)
+
+    def __len__(self):
+        return len(self._d)
+
+    def __getitem__(self, key):
+        return self._d[key]
+
+    def __hash__(self):
+        # It would have been simpler and maybe more obvious to
+        # use hash(tuple(sorted(self._d.iteritems()))) from this discussion
+        # so far, but this solution is O(n). I don't know what kind of
+        # n we are going to run into, but sometimes it's hard to resist the
+        # urge to optimize when it will gain improved algorithmic performance.
+        if self._hash is None:
+            self._hash = 0
+            for k, v in self.items():
+                if isinstance(v, set):
+                    v = frozenset(v)
+                self._hash ^= hash(k)
+                self._hash ^= hash(v)
+        return self._hash
+
+
 def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdir,
                            ignore_run_exports,
                            requirements_run, requirements_build, requirements_host,
                            run_prefix, build_prefix,
                            missing_dso_whitelist, runpath_whitelist,
                            error_overlinking, error_overdepending, verbose,
-                           exception_on_error, files, bldpkgs_dirs, output_folder, channel_urls,
-                           enable_static=False):
+                           exception_on_error, files, bldpkgs_dirs, output_folder, channel_urls):
     verbose = True
     errors = []
 
-    files_to_inspect = []
-    for f in files:
-        path = os.path.join(run_prefix, f)
-        filetype = codefile_type(path)
-        if filetype and filetype in filetypes_for_platform[subdir.split('-')[0]]:
-            files_to_inspect.append(f)
+    sysroot_sub = '$SYSROOT'
+    buildprefix_sub = '$BUILDPREFIX'
+    runprefix_sub = '$RUNPREFIX'
+    exedirname_sub = '$EXEDIRNAME'
 
-    if not files_to_inspect:
-        return dict()
+    path_replacements = {"runprefix": {run_prefix: runprefix_sub}}
 
-    sysroot_substitution = '$SYSROOT'
-    build_prefix_substitution = '$PATH'
+    if build_prefix != run_prefix:
+        path_replacements["buildprefix"] = {build_prefix: buildprefix_sub}
+
     # Used to detect overlinking (finally)
     requirements_run = [req.split(' ')[0] for req in requirements_run]
     packages = dists_from_names(requirements_run, run_prefix)
@@ -951,7 +980,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                         if package.quad[0] not in ignore_list and
                         package_nature[package] != 'non-library'])
     # The last package of requirements_run is this package itself, add it as being used
-    # incase it qualifies as a library package.
+    # in case it qualifies as a library package.
     if len(packages) and packages[-1] in lib_packages:
         lib_packages_used = set((packages[-1],))
     else:
@@ -986,29 +1015,70 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
             whitelist = DEFAULT_WIN_WHITELIST
             build_is_host = True if sys.platform == 'win-32' else False
 
-    # Sort the sysroots by the number of files in them so things can assume that
-    # the first sysroot is more important than others.
+    # Sort the sysroots by the number of files in them so you can
+    # assume that the first sysroot is more 'important' than others.
     sysroots_files = dict()
     for sysroot in sysroots:
         from conda_build.utils import prefix_files
         sysroots_files[sysroot] = prefix_files(sysroot)
     sysroots_files = OrderedDict(sorted(sysroots_files.items(), key=lambda x: -len(x[1])))
+    for index, sysroot in enumerate(sysroots_files):
+        path_replacements['sysroot'+str(index)] = {sysroot: sysroot_sub[:0]+str(index)}
 
-    all_needed_dsos, needed_dsos_for_file = _collect_needed_dsos(sysroots_files, files, run_prefix,
-                                                                 sysroot_substitution,
-                                                                 build_prefix, build_prefix_substitution)
+    # file_info collects any and all information about the files present.
+    # Process only the packaged files.
+    file_info = dict()
+    program_files = [f for f in files if (
+            codefile_type(os.path.join(run_prefix, f))
+            or codefile_type(os.path.join(run_prefix, f)) in filetypes_for_platform[subdir.split('-')[0]]) \
+            or f.endswith(('.a', '.lib'))]
 
-    prefix_owners, _, _, all_lib_exports = _map_file_to_package(
-        files, run_prefix, build_prefix, all_needed_dsos, pkg_vendored_dist, ignore_list_syms,
-        sysroot_substitution, enable_static)
+    # We care only for created program binaries (exes and DSOs) and static libs
+    for f in program_files:
+        path_replacements_this = path_replacements
+        path_replacements_this['exedirname'] = {os.path.join(run_prefix, f).replace('\\', '/'): exedirname_sub}
+        file_info[f] = lief_parse(os.path.join(run_prefix, f), path_replacements_this)
+        file_info[f]['package'] = pkg_vendored_dist
 
-    for f in files_to_inspect:
-        needed = needed_dsos_for_file[f]
+    for prefix in (run_prefix, build_prefix):
+        for subdir2, _, filez in os.walk(prefix):
+            for file in filez:
+                fullpath = os.path.join(subdir2, file)
+                relpath = os.path.relpath(fullpath, prefix)
+                if relpath in file_info:
+                    if prefix is run_prefix:
+                        assert file_info[relpath]['fullpath'] == fullpath
+                elif relpath in files:
+                    file_info[relpath] = {'package': pkg_vendored_dist,
+                                          'fullpath': fullpath}
+                else:
+                    file_info[relpath] = {'package': which_package(relpath, prefix),
+                                          'fullpath': fullpath}
+
+    # Does little, what it does do could be moved to lief_parse() too, pyldd does resolve already ..
+    _resolve_needed_dsos(sysroots_files, file_info, run_prefix, sysroot_sub, build_prefix, buildprefix_sub)
+
+    prefix_owners = {}
+    for k, v in file_info.items():
+        prefix_owners[k] = v['package']
+
+    for f in files:
+        fi = file_info[f]
+        if not 'filetype' in fi:
+            continue
+        filetype = fi['filetype']
+        path = os.path.join(run_prefix, f)
+        #filetype = codefile_type(path)
+        #if not filetype or filetype not in filetypes_for_platform[subdir.split('-')[0]]:
+        #    continue
+        if not filetype or filetype not in filetypes_for_platform[subdir.split('-')[0]]:
+            continue
+        needed = fi['libraries']['resolved']
         for needed_dso in needed:
             if (error_overlinking and
                not needed_dso.startswith('/') and
-               not needed_dso.startswith(sysroot_substitution) and
-               not needed_dso.startswith(build_prefix_substitution) and
+               not needed_dso.startswith(sysroot_sub) and
+               not needed_dso.startswith(build_prefix_sub) and
                needed_dso not in prefix_owners and
                needed_dso not in files):
                 in_whitelist = False
@@ -1022,9 +1092,9 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     # the line before 'for needed_dso in needed'
     whitelist += missing_dso_whitelist or []
 
-    _show_linking_messages(files, errors, needed_dsos_for_file, build_prefix, run_prefix, pkg_name,
+    _show_linking_messages(files, errors, file_info, build_prefix, run_prefix, pkg_name,
                            error_overlinking, runpath_whitelist, verbose, requirements_run, lib_packages,
-                           lib_packages_used, whitelist, sysroots_files, sysroot_prefix, sysroot_substitution, subdir)
+                           lib_packages_used, whitelist, sysroots_files, sysroot_prefix, sysroot_sub, subdir)
 
     if lib_packages_used != lib_packages:
         info_prelude = "   INFO ({})".format(pkg_name)
@@ -1083,8 +1153,7 @@ def check_overlinking(m, files):
                                   files,
                                   m.config.bldpkgs_dir,
                                   m.config.output_folder,
-                                  m.config.channel_urls,
-                                  m.config.enable_static)
+                                  m.config.channel_urls)
 
 
 def post_process_shared_lib(m, f, files):
@@ -1094,8 +1163,7 @@ def post_process_shared_lib(m, f, files):
         return
     rpaths = m.get_value('build/rpaths', ['lib'])
     if sys.platform.startswith('linux') and codefile_t == 'elffile':
-        mk_relative_linux(f, m.config.host_prefix, rpaths=rpaths,
-                          method=m.get_value('build/rpaths_patcher', 'patchelf'))
+        mk_relative_linux(f, m.config.host_prefix, rpaths=rpaths)
     elif sys.platform == 'darwin' and codefile_t == 'machofile':
         mk_relative_osx(path, m.config.host_prefix, m.config.build_prefix, files=files, rpaths=rpaths)
 
@@ -1131,22 +1199,27 @@ def post_build(m, files, build_python):
     for f in files:
         make_hardlink_copy(f, host_prefix)
 
+    cwda = os.getcwd()
     if not m.config.target_subdir.startswith('win'):
-        binary_relocation = m.binary_relocation()
-        if not binary_relocation:
-            print("Skipping binary relocation logic")
         osx_is_app = (m.config.target_subdir == 'osx-64' and
                       bool(m.get_value('build/osx_is_app', False)))
         check_symlinks(files, host_prefix, m.config.croot)
         prefix_files = utils.prefix_files(host_prefix)
 
+        binary_relocation = m.binary_relocation()
+        if not binary_relocation:
+            print("Skipping binary relocation logic")
+
         for f in files:
             if f.startswith('bin/'):
                 fix_shebang(f, prefix=host_prefix, build_python=build_python,
                             osx_is_app=osx_is_app)
+            cwdb = os.getcwd()
             if binary_relocation is True or (isinstance(binary_relocation, list) and
                                              f in binary_relocation):
                 post_process_shared_lib(m, f, prefix_files)
+                cwdc = os.getcwd()
+                print(cwda, cwdb, cwdc)
     check_overlinking(m, files)
 
 

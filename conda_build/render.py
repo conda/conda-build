@@ -253,6 +253,7 @@ def _read_specs_from_package(pkg_loc, pkg_dist):
         elif os.path.isfile(downstream_file + '.json'):
             with open(downstream_file + '.json') as f:
                 specs = json.load(f)
+
     if not specs and pkg_loc and os.path.isfile(pkg_loc):
         # switching to json for consistency in conda-build 4
         specs_yaml = utils.package_has_file(pkg_loc, 'info/run_exports.yaml')
