@@ -1094,7 +1094,8 @@ class ChannelIndex(object):
                 with open(index_cache_path) as f:
                     index_json = json.load(f)
             else:
-                raise ValueError("Mike didn't think this out very well")
+                with open(index_cache_path) as f:
+                    index_json = json.load(f)
 
             # calculate extra stuff to add to index.json cache, size, md5, sha256
             #    This is done always for all files, whether the cache is loaded or not,
