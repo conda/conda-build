@@ -19,6 +19,7 @@ Authors are sorted by number of commits.
 * Rachel Rigdon
 * Matt Craig
 * Anthony Scopatz
+* Isuru Fernando
 * Johannes Köster
 * James Sexton
 * Mandeep Bhutani
@@ -29,7 +30,6 @@ Authors are sorted by number of commits.
 * Harsh Gupta
 * Jasmine Sandhu
 * Matthias Gabriel
-* Isuru Fernando
 * Alex Wiltschko
 * Min RK
 * soapy1
@@ -122,6 +122,7 @@ Authors are sorted by number of commits.
 * Zane Dufour
 * Kai Tietz
 * Harun Reşit Zafer
+* Daniel Damiani
 * Joseph Crail
 * Andres Guzman-Ballen
 * Riccardo Vianello
