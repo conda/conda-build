@@ -1881,18 +1881,18 @@ def download_channeldata(channel_url):
     if channel_url.startswith('file://') or channel_url not in channeldata_cache:
         urls = get_conda_channel(channel_url).urls()
         urls = set(url.rsplit('/', 1)[0] for url in urls)
-        channeldata = {}
+        data = {}
         for url in urls:
             with TemporaryDirectory() as td:
                 tf = os.path.join(td, "channeldata.json")
                 try:
                     download(url + '/channeldata.json', tf)
                     with open(tf) as f:
-                        data = json.load(f)
+                        new_channeldata = json.load(f)
                 except (JSONDecodeError, CondaHTTPError):
-                    data = {}
-            merge_or_update_dict(channeldata, data)
-        channeldata_cache[channel_url] = channeldata
+                    new_channeldata = {}
+            merge_or_update_dict(data, new_channeldata)
+        channeldata_cache[channel_url] = data
     else:
         data = channeldata_cache[channel_url]
     return data
