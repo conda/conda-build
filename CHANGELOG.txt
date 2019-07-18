@@ -1,4 +1,27 @@
 # current developments
+2019-07-18 3.18.8:
+------------------
+
+Enhancements:
+-------------
+
+* license_file can optionally be a yaml list
+
+Bug fixes:
+----------
+
+* fix readup of existing index.json in cache while extracting
+
+Contributors:
+-------------
+
+* @msarahan
+* @rrigdon
+* @jjhelmus
+* @isuruf
+* @ddamiani
+
+
 2019-07-09 3.18.7:
 ------------------
 
