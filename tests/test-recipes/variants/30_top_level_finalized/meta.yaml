@@ -3,16 +3,16 @@ package:
   version: 1.0
 
 build:
-  script: "echo $bzip2 > ${PREFIX}/bzip2_version"
+  script: "xzcat --version > ${PREFIX}/xzcat_output"
 
 requirements:
   host:
-    - bzip2
+    - xz
 
 outputs:
   - name: output_level
     files:
-      - bzip2_version
-    requirments:
+      - xzcat_output
+    requirements:
       host:
-        - bzip2
+        - xz
