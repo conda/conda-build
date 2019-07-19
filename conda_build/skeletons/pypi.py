@@ -732,8 +732,6 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
                         spec = ' '.join((spec, marker))
                     deps.append(spec)
 
-        if 'setuptools' in deps:
-            setuptools_run = False
         d['build_depends'] = ['pip'] + deps
         # Never add setuptools to runtime dependencies.
         d['run_depends'] = deps
@@ -853,7 +851,7 @@ def get_entry_points(pkginfo):
                 if section in ['console_scripts', 'gui_scripts']:
                     entry_points[section] = [
                         '%s=%s' % (option, _config.get(section, option))
-                         for option in _config.options(section)
+                        for option in _config.options(section)
                     ]
 
     if isinstance(entry_points, dict):
