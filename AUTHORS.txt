@@ -187,5 +187,5 @@ Authors are sorted by number of commits.
 * Duncan Macleod
 * Chris Osborn
 * Oleksandr Pavlyk
-
+* Marcelo Duarte Trevisani
 

@@ -702,62 +702,13 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
                           setup_options=setup_options,
                           config=config)
 
-    setuptools_run = False
-
-    # Look at the entry_points and construct console_script and
-    #  gui_scripts entry_points for conda
-    entry_points = pkginfo.get('entry_points', [])
-    if entry_points:
-        if isinstance(entry_points, str):
-            # makes sure it is left-shifted
-            newstr = "\n".join(x.strip()
-                                for x in entry_points.splitlines())
-            _config = configparser.ConfigParser()
-            entry_points = {}
-            try:
-                _config.readfp(StringIO(newstr))
-            except Exception as err:
-                print("WARNING: entry-points not understood: ",
-                        err)
-                print("The string was", newstr)
-                entry_points = pkginfo['entry_points']
-            else:
-                setuptools_run = True
-                for section in _config.sections():
-                    if section in ['console_scripts', 'gui_scripts']:
-                        value = ['%s=%s' % (option, _config.get(section, option))
-                                    for option in _config.options(section)]
-                        entry_points[section] = value
-        if not isinstance(entry_points, dict):
-            print("WARNING: Could not add entry points. They were:")
-            print(entry_points)
-        else:
-            cs = entry_points.get('console_scripts', [])
-            gs = entry_points.get('gui_scripts', [])
-            if isinstance(cs, string_types):
-                cs = [cs]
-            elif cs and isinstance(cs, list) and isinstance(cs[0], list):
-                # We can have lists of lists here
-                cs = [item for sublist in [s for s in cs] for item in sublist]
-            if isinstance(gs, string_types):
-                gs = [gs]
-            elif gs and isinstance(gs, list) and isinstance(gs[0], list):
-                gs = [item for sublist in [s for s in gs] for item in sublist]
-            # We have *other* kinds of entry-points so we need
-            # setuptools at run-time
-            if set(entry_points.keys()) - {'console_scripts', 'gui_scripts'}:
-                setuptools_run = True
-            # TODO: Use pythonw for gui scripts
-            entry_list = (cs + gs)
-            if len(cs + gs) != 0:
-                d['entry_points'] = entry_list
-                d['test_commands'] = make_entry_tests(entry_list)
+    d.update(get_entry_points(pkginfo))
 
     requires = get_requirements(package, pkginfo, all_extras=all_extras)
 
-    if requires or setuptools_run:
+    if requires or is_setuptools_enabled(pkginfo):
         deps = []
-        if setuptools_run:
+        if is_setuptools_enabled(pkginfo):
             deps.append('setuptools')
         for deptext in requires:
             if isinstance(deptext, string_types):
@@ -829,14 +780,13 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
         d['summary'] = "Summary of the package"
 
     license_classifier = "License :: OSI Approved :: "
-    if pkginfo.get('classifiers'):
-        licenses = [classifier.split(license_classifier, 1)[1] for
-            classifier in pkginfo['classifiers'] if classifier.startswith(license_classifier)]
-    elif data and 'classifiers' in data:
-        licenses = [classifier.split(license_classifier, 1)[1] for classifier in
-                data['classifiers'] if classifier.startswith(license_classifier)]
-    else:
-        licenses = []
+    pkg_classifier = pkginfo.get('classifiers', data.get("classifiers", []))
+    licenses = [
+        classifier.split(license_classifier, 1)[1]
+        for classifier in pkg_classifier
+        if classifier.startswith(license_classifier)
+    ]
+
     if not licenses:
         if pkginfo.get('license'):
             license_name = pkginfo['license']
@@ -844,10 +794,9 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
             license_name = data['license']
         else:
             license_name = None
+
         if license_name:
-            if noprompt:
-                pass
-            elif '\n' not in license_name:
+            if not noprompt and '\n' not in license_name:
                 print('Using "%s" for the license' % license_name)
             else:
                 # Some projects put the whole license text in this field
@@ -856,21 +805,107 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
                 print(license_name)
                 print()
                 license_name = input("What license string should I use? ")
+        elif noprompt:
+            license_name = "UNKNOWN"
         else:
-            if noprompt:
-                license_name = "UNKNOWN"
-            else:
-                license_name = input(("No license could be found for %s on " +
-                                    "PyPI or in the source. What license should I use? ") %
-                                package)
+            license_name = input(
+                "No license could be found for %s on PyPI or in the source. "
+                "What license should I use? " % package
+            )
     else:
         license_name = ' or '.join(licenses)
     # remove the word license from the license
-    clean_license_name = re.subn(r'(.*)\s+license', r'\1', license_name, flags=re.IGNORECASE)[0]
+    clean_license_name = re.subn(
+        r'(.*)\s+license', r'\1', license_name, flags=re.IGNORECASE
+    )[0]
     d['license'] = clean_license_name
-    d['license_family'] = guess_license_family(license_name, allowed_license_families)
+    d['license_family'] = guess_license_family(
+        license_name, allowed_license_families
+    )
     if 'new_hash_value' in pkginfo:
         d['digest'] = pkginfo['new_hash_value']
+
+
+def get_entry_points(pkginfo):
+    """Look at the entry_points and construct console_script and gui_scripts entry_points for conda
+    :param pkginfo:
+    :return dict:
+    """
+    entry_points = pkginfo.get('entry_points')
+    if not entry_points:
+        return {}
+
+    if isinstance(entry_points, str):
+        # makes sure it is left-shifted
+        newstr = "\n".join(x.strip() for x in entry_points.splitlines())
+        _config = configparser.ConfigParser()
+
+        try:
+            # TODO: Should we use read_file instead of readfp?
+            #  Because readfp is deprecated
+            _config.readfp(StringIO(newstr))
+        except Exception as err:
+            print("WARNING: entry-points not understood: ", err)
+            print("The string was", newstr)
+        else:
+            entry_points = {}
+            for section in _config.sections():
+                if section in ['console_scripts', 'gui_scripts']:
+                    entry_points[section] = [
+                        '%s=%s' % (option, _config.get(section, option))
+                         for option in _config.options(section)
+                    ]
+
+    if isinstance(entry_points, dict):
+        console_script = convert_to_flat_list(
+            entry_points.get('console_scripts', [])
+        )
+        gui_scripts = convert_to_flat_list(
+            entry_points.get('gui_scripts', [])
+        )
+
+        # TODO: Use pythonw for gui scripts
+        entry_list = console_script + gui_scripts
+        if entry_list:
+            return {
+                "entry_points": entry_list,
+                "test_commands": make_entry_tests(entry_list)
+            }
+    else:
+        print("WARNING: Could not add entry points. They were:")
+        print(entry_points)
+    return {}
+
+
+def convert_to_flat_list(var_scripts):
+    """Convert a string to a list.
+    If the first element of the list is a nested list this function will
+    convert it to a flat list.
+
+    :param str/list var_scripts: Receives a string or a list to be converted
+    :return list: Return a flat list
+    """
+    if isinstance(var_scripts, string_types):
+        var_scripts = [var_scripts]
+    elif var_scripts and isinstance(var_scripts, list) and isinstance(var_scripts[0], list):
+        var_scripts = [item for sublist in [s for s in var_scripts] for item in sublist]
+    return var_scripts
+
+
+def is_setuptools_enabled(pkginfo):
+    """Function responsible to inspect if skeleton requires setuptools
+    :param dict pkginfo: Dict which holds the package information
+    :return Bool: Return True if it is enabled or False otherwise
+    """
+    entry_points = pkginfo.get("entry_points")
+    if not isinstance(entry_points, dict):
+        return False
+
+    # We have *other* kinds of entry-points so we need
+    # setuptools at run-time
+    if set(entry_points.keys()) - {'console_scripts', 'gui_scripts'}:
+        return True
+    return False
 
 
 def valid(name):
