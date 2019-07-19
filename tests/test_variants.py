@@ -456,3 +456,12 @@ def test_different_git_vars():
     versions = [m[0].version() for m in ms]
     assert "1.20.0" in versions
     assert "1.21.11" in versions
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="recipe uses a unix specific script")
+def test_top_level_finalized(testing_config):
+    # see https://github.com/conda/conda-build/issues/3618
+    recipe = os.path.join(recipe_dir, '30_top_level_finalized')
+    outputs = api.build(recipe, config=testing_config)
+    bzip2_version = package_has_file(outputs[0], 'bzip2_version')
+    assert bzip2_version.startswith('1.0.6')

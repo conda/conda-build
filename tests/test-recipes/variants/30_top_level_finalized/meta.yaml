@@ -1,0 +1,18 @@
+package:
+  name: top_level
+  version: 1.0
+
+build:
+  script: "echo $bzip2 > ${PREFIX}/bzip2_version"
+
+requirements:
+  host:
+    - bzip2
+
+outputs:
+  - name: output_level
+    files:
+      - bzip2_version
+    requirments:
+      host:
+        - bzip2
