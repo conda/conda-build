@@ -61,7 +61,8 @@ from conda_build import __version__
 from conda_build import environ, source, tarcheck, utils
 from conda_build.index import get_build_index, update_index
 from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse, distribute_variants,
-                                expand_outputs, try_download, execute_download_actions)
+                                expand_outputs, try_download, execute_download_actions,
+                                add_upstream_pins)
 import conda_build.os_utils.external as external
 from conda_build.metadata import FIELDS, MetaData, default_structs
 from conda_build.post import (post_process, post_build,
@@ -1337,6 +1338,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
         # TODO: should we check both host and build envs?  These are the same, except when
         #    cross compiling.
         top_level_pkg = m
+        top_level_needs_finalizing = True
         for _, om in output_metas:
             if om.skip() or (m.config.skip_existing and is_package_built(om, 'host')):
                 skipped.append(bldpkg_path(om))
@@ -1344,6 +1346,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                 package_locations.append(bldpkg_path(om))
             if om.name() == m.name():
                 top_level_pkg = om
+                top_level_needs_finalizing = False
         if not package_locations:
             print("Packages for ", m.path or m.name(), "with variant {} "
                   "are already built and available from your configured channels "
@@ -1384,6 +1387,22 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                     raise ValueError("Your recipe uses mercurial in build, but mercurial"
                                     " does not yet support Python 3.  Please handle all of "
                                     "your mercurial actions outside of your build script.")
+
+        if top_level_needs_finalizing:
+            utils.insert_variant_versions(
+                top_level_pkg.meta.get('requirements', {}), top_level_pkg.config.variant, 'build')
+            utils.insert_variant_versions(
+                top_level_pkg.meta.get('requirements', {}), top_level_pkg.config.variant, 'host')
+
+            exclude_pattern = None
+            excludes = set(top_level_pkg.config.variant.get('ignore_version', []))
+            for key in top_level_pkg.config.variant.get('pin_run_as_build', {}).keys():
+                if key in excludes:
+                    excludes.remove(key)
+            if excludes:
+                exclude_pattern = re.compile(r'|'.join(r'(?:^{}(?:\s|$|\Z))'.format(exc)
+                                                for exc in excludes))
+            add_upstream_pins(m, False, exclude_pattern)
 
         create_build_envs(top_level_pkg, notest)
 
