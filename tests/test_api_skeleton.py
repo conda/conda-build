@@ -24,9 +24,7 @@ thisdir = os.path.dirname(os.path.realpath(__file__))
 
 repo_packages = [('', 'pypi', 'pip', '8.1.2'),
                  ('r', 'cran', 'acs', ''),
-                 (
-                 'r', 'cran', 'https://github.com/twitter/AnomalyDetection.git',
-                 ''),
+                 ('r', 'cran', 'https://github.com/twitter/AnomalyDetection.git', ''),
                  ('perl', 'cpan', 'Moo', ''),
                  ('', 'rpm', 'libX11-devel', ''),
                  # ('lua', luarocks', 'LuaSocket', ''),
@@ -39,8 +37,7 @@ def test_repo(prefix, repo, package, version, testing_workdir, testing_config):
                     config=testing_config)
     try:
         base_package, _ = os.path.splitext(os.path.basename(package))
-        package_name = "-".join(
-            [prefix, base_package]) if prefix else base_package
+        package_name = "-".join([prefix, base_package]) if prefix else base_package
         contents = os.listdir(testing_workdir)
         assert len([content for content in contents
                     if content.startswith(package_name.lower()) and
@@ -51,8 +48,7 @@ def test_repo(prefix, repo, package, version, testing_workdir, testing_config):
 
 
 def test_name_with_version_specified(testing_workdir, testing_config):
-    api.skeletonize(packages='sympy', repo='pypi', version='0.7.5',
-                    config=testing_config)
+    api.skeletonize(packages='sympy', repo='pypi', version='0.7.5', config=testing_config)
     m = api.render('sympy/meta.yaml')[0][0]
     assert m.version() == "0.7.5"
 
@@ -347,16 +343,13 @@ def test_pypi_section_order_preserved(testing_workdir):
 # (package, license_id, license_family, license_file)
 cran_packages = [('r-usethis', 'GPL-3', 'GPL3', 'GPL-3'),
                  ('r-abf2', 'Artistic-2.0', 'OTHER', 'Artistic-2.0'),
-                 (
-                 'r-cortools', 'Artistic License 2.0', 'OTHER', 'Artistic-2.0'),
+                 ('r-cortools', 'Artistic License 2.0', 'OTHER', 'Artistic-2.0'),
                  ('r-udpipe', 'MPL-2.0', 'OTHER', ''),
                  ]
 
 
-@pytest.mark.parametrize("package, license_id, license_family, license_file",
-                         cran_packages)
-def test_cran_license(package, license_id, license_family, license_file,
-                      testing_workdir, testing_config):
+@pytest.mark.parametrize("package, license_id, license_family, license_file", cran_packages)
+def test_cran_license(package, license_id, license_family, license_file, testing_workdir, testing_config):
     api.skeletonize(packages=package, repo='cran', output_dir=testing_workdir,
                     config=testing_config)
     m = api.render(os.path.join(package, 'meta.yaml'))[0][0]

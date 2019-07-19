@@ -796,7 +796,9 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
             license_name = None
 
         if license_name:
-            if not noprompt and '\n' not in license_name:
+            if noprompt:
+                pass
+            elif '\n' not in license_name:
                 print('Using "%s" for the license' % license_name)
             else:
                 # Some projects put the whole license text in this field
@@ -815,13 +817,9 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
     else:
         license_name = ' or '.join(licenses)
     # remove the word license from the license
-    clean_license_name = re.subn(
-        r'(.*)\s+license', r'\1', license_name, flags=re.IGNORECASE
-    )[0]
+    clean_license_name = re.subn(r'(.*)\s+license', r'\1', license_name, flags=re.IGNORECASE)[0]
     d['license'] = clean_license_name
-    d['license_family'] = guess_license_family(
-        license_name, allowed_license_families
-    )
+    d['license_family'] = guess_license_family(license_name, allowed_license_families)
     if 'new_hash_value' in pkginfo:
         d['digest'] = pkginfo['new_hash_value']
 
