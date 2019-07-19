@@ -780,7 +780,9 @@ def get_package_metadata(package, d, data, output_dir, python_version, all_extra
         d['summary'] = "Summary of the package"
 
     license_classifier = "License :: OSI Approved :: "
-    pkg_classifier = pkginfo.get('classifiers', data.get("classifiers", []))
+    data_classifier = data.get("classifiers", []) if data else []
+    pkg_classifier = pkginfo.get('classifiers', data_classifier)
+    pkg_classifier = pkg_classifier if pkg_classifier else data_classifier
     licenses = [
         classifier.split(license_classifier, 1)[1]
         for classifier in pkg_classifier
