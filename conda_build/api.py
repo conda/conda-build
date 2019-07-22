@@ -270,7 +270,7 @@ def skeletonize(packages, repo, output_dir=".", version=None, recursive=False,
     packages = _ensure_list(packages)
 
     # This is a little bit of black magic.  The idea is that for any keyword argument that
-    #    we inspect from the given module's skeletonize funtion, we should hoist the argument
+    #    we inspect from the given module's skeletonize function, we should hoist the argument
     #    off of the config object, and pass it as a keyword argument.  This is sort of the
     #    inverse of what we do in the CLI code - there we take CLI arguments and dangle them
     #    all on the config object as attributes.

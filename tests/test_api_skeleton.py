@@ -4,6 +4,9 @@ import sys
 from pkg_resources import parse_version
 import pytest
 
+from conda_build.skeletons.pypi import get_package_metadata, get_pkginfo, \
+    get_entry_points, is_setuptools_enabled, convert_to_flat_list
+
 try:
     import ruamel_yaml
 except ImportError:
@@ -12,7 +15,6 @@ except ImportError:
     except ImportError:
         raise ImportError("No ruamel_yaml library available.\n"
                           "To proceed, conda install ruamel_yaml")
-
 
 from conda_build import api
 from conda_build.exceptions import DependencyNeedsBuildingError
@@ -57,6 +59,148 @@ def test_pypi_url(testing_workdir, testing_config):
                     repo='pypi', config=testing_config)
     m = api.render('sympy/meta.yaml')[0][0]
     assert m.version() == "0.7.5"
+
+
+@pytest.fixture
+def url_pylint_package():
+    return "https://pypi.python.org/packages/source/p/pylint/pylint-2.3.1.tar.gz#sha256=723e3db49555abaf9bf79dc474c6b9e2935ad82230b10c1138a71ea41ac0fff1"
+
+
+@pytest.fixture
+def mock_metada_pylint(url_pylint_package):
+    import re
+
+    version, hash_type, hash_value = re.findall(
+        r"pylint-(.*).tar.gz#(.*)=(.*)$", url_pylint_package
+    )[0]
+
+    return {
+        'run_depends': '',
+        'build_depends': '',
+        'entry_points': '',
+        'test_commands': '',
+        'tests_require': '',
+        'version': 'UNKNOWN',
+        'pypiurl': url_pylint_package,
+        'filename': "black-{version}.tar.gz".format(version=version),
+        'digest': [hash_type, hash_value],
+        'import_tests': '',
+        'summary': ''
+    }
+
+
+def test_get_entry_points(
+        testing_workdir, testing_config, mock_metada_pylint, url_pylint_package
+):
+    pkginfo = get_pkginfo(url_pylint_package,
+                          filename=mock_metada_pylint['filename'],
+                          pypiurl=mock_metada_pylint['pypiurl'],
+                          digest=mock_metada_pylint['digest'],
+                          python_version="3.7",
+                          extra_specs=[],
+                          setup_options=[],
+                          config=testing_config)
+
+    assert get_entry_points(pkginfo) == {
+        'entry_points': [
+            'pylint = pylint:run_pylint',
+            'epylint = pylint:run_epylint',
+            'pyreverse = pylint:run_pyreverse',
+            'symilar = pylint:run_symilar'
+        ],
+        'test_commands': [
+            'pylint --help',
+            'epylint --help',
+            'pyreverse --help',
+            'symilar --help'
+        ],
+    }
+
+
+def test_convert_to_flat_list():
+    assert convert_to_flat_list("STRING") == ["STRING"]
+    assert convert_to_flat_list([["LIST1", "LIST2"]]) == ["LIST1", "LIST2"]
+
+
+def test_is_setuptools_enabled():
+    assert not is_setuptools_enabled({"entry_points": "STRING"})
+    assert not is_setuptools_enabled({
+        "entry_points": {
+            "console_scripts": ["CONSOLE"],
+            "gui_scripts": ["GUI"],
+        }
+    })
+
+    assert is_setuptools_enabled({
+        "entry_points": {
+            "console_scripts": ["CONSOLE"],
+            "gui_scripts": ["GUI"],
+            "foo_scripts": ["SCRIPTS"],
+        }
+    })
+
+
+
+def test_get_package_metadata(
+        testing_workdir, testing_config, url_pylint_package, mock_metada_pylint
+):
+    get_package_metadata(
+        url_pylint_package,
+        mock_metada_pylint,
+        {},
+        ".",
+        "3.7",
+        False,
+        False,
+        [url_pylint_package],
+        False,
+        True,
+        [],
+        [],
+        config=testing_config,
+        setup_options=[],
+    )
+    assert mock_metada_pylint == {
+        'run_depends': [
+            'astroid >=2.2.0,<3', 'isort >=4.2.5,<5', 'mccabe >=0.6,<0.7'
+        ],
+        'build_depends': [
+            'pip', 'astroid >=2.2.0,<3', 'isort >=4.2.5,<5', 'mccabe >=0.6,<0.7'
+        ],
+        'entry_points': [
+            'pylint = pylint:run_pylint',
+            'epylint = pylint:run_epylint',
+            'pyreverse = pylint:run_pyreverse',
+            'symilar = pylint:run_symilar'
+        ],
+        'test_commands': [
+            'pylint --help',
+            'epylint --help',
+            'pyreverse --help',
+            'symilar --help'
+        ],
+        'tests_require': ['pytest'],
+        'version': '2.3.1',
+        'pypiurl': url_pylint_package,
+        'filename': 'black-2.3.1.tar.gz',
+        'digest': [
+            'sha256',
+            '723e3db49555abaf9bf79dc474c6b9e2935ad82230b10c1138a71ea41ac0fff1'
+        ],
+        'import_tests': [
+            'pylint',
+            'pylint.checkers',
+            'pylint.extensions',
+            'pylint.pyreverse',
+            'pylint.reporters',
+            'pylint.reporters.ureports'
+        ],
+        'summary': 'python code static checker',
+        'packagename': 'pylint',
+        'home': 'https://github.com/PyCQA/pylint',
+        'license': 'GNU General Public (GPL)',
+        'license_family': 'LGPL'
+    }
 
 
 def test_pypi_with_setup_options(testing_workdir, testing_config):
