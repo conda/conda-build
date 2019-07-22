@@ -1,0 +1,18 @@
+package:
+  name: top_level
+  version: 1.0
+
+build:
+  script: "xzcat --version > ${PREFIX}/xzcat_output"
+
+requirements:
+  host:
+    - xz
+
+outputs:
+  - name: output_level
+    files:
+      - xzcat_output
+    requirements:
+      host:
+        - xz
