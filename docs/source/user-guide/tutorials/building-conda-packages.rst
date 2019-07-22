@@ -122,13 +122,13 @@ built on Windows 10.
 Other tools
 ------------
 
-Some environments initially lack tools such as bzip2, patch, or Git
+Some environments initially lack tools such as patch or Git
 that may be needed for some build workflows.
 
 On Windows these can be installed with conda:
 
 ```
-conda install bzip2 git m2-patch
+conda install git m2-patch
 ```
 
 On macOS and Linux replace `m2-patch` with patch
