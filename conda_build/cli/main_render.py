@@ -137,12 +137,18 @@ source to try fill in related template variables.",
               "yours to handle. Any variants with overlapping names within a "
               "build will clobber each other.")
     )
+    p.add_argument(
+        '--use-channeldata',
+        action='store_true',
+        dest='use_channeldata',
+        help=("Use channeldata, if available, to determine run_exports. Otherwise packages "
+              "are downloaded to determine this information")
+    )
     p.add_argument('--variants',
                    nargs=1,
                    action=ParseYAMLArgument,
                    help=('Variants to extend the build matrix. Must be a valid YAML instance, '
                          'such as "{python: [3.6, 3.7]}"'))
-
     add_parser_channels(p)
     return p
 

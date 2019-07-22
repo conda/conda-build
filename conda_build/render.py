@@ -354,19 +354,18 @@ def get_upstream_pins(m, actions, env):
 
     ignore_list = utils.ensure_list(m.get_value('build/ignore_run_exports'))
     additional_specs = {}
-    run_exports = {}
-    empty_run_exports = False
     for pkg in linked_packages:
-        channeldata = utils.download_channeldata(pkg.channel)
-        if channeldata:
-            pkg_data = channeldata.get('packages', {}).get(pkg.name, {})
-            run_exports = pkg_data.get('run_exports', {}).get(pkg.version, {})
-            empty_run_exports = run_exports == {}
-        if not run_exports and not empty_run_exports:
-            locs_and_dists = execute_download_actions(m, actions, env=env,
-                                                      package_subset=linked_packages)
-            locs_and_dists = [v for k, v in locs_and_dists.items() if k == pkg]
-            run_exports = _read_specs_from_package(*next(iter(locs_and_dists)))
+        run_exports = None
+        if m.config.use_channeldata:
+            channeldata = utils.download_channeldata(pkg.channel)
+            # only use channeldata if requested, channeldata exists and contains
+            # a packages key, otherwise use run_exports from the packages themselves
+            if 'packages' in channeldata:
+                pkg_data = channeldata['packages'].get(pkg.name, {})
+                run_exports = pkg_data.get('run_exports', {}).get(pkg.version, {})
+        if run_exports is None:
+            loc, dist = execute_download_actions(m, actions, env=env, package_subset=pkg)[pkg]
+            run_exports = _read_specs_from_package(loc, dist)
         specs = _filter_run_exports(run_exports, ignore_list)
         if specs:
             additional_specs = utils.merge_dicts_of_lists(additional_specs, specs)

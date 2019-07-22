@@ -100,6 +100,11 @@ def _get_default_settings():
             # should rendering cut out any skipped metadata?
             Setting('trim_skip', True),
 
+            # Use channeldata.json for run_export information during rendering.
+            # Falls back to downloading packages if False or channeldata does
+            # not exist for the channel.
+            Setting('use_channeldata', False),
+
             # Disable the overlinking test for this package. This test checks that transitive DSOs
             # are not referenced by DSOs in the package being built. When this happens something
             # has gone wrong with:
