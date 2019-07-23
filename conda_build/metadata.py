@@ -491,7 +491,7 @@ FIELDS = {
                'folder',
                'patches'
                },
-    'build': {'number', 'string', 'entry_points', 'osx_is_app',
+    'build': {'number', 'string', 'entry_points', 'osx_is_app', 'disable_pip',
               'features', 'track_features', 'preserve_egg_dir',
               'no_link', 'binary_relocation', 'script', 'noarch', 'noarch_python',
               'has_prefix_files', 'binary_has_prefix_files', 'ignore_prefix_files',
