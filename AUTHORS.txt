@@ -10,13 +10,13 @@ Authors are sorted by number of commits.
 * sophia
 * Rachel
 * John Kirkham
+* Jonathan J. Helmus
 * Stuart Berg
 * Ryan Grout
-* Jonathan J. Helmus
 * Darren Dale
 * Travis Swicegood
-* Nehal J Wani
 * Rachel Rigdon
+* Nehal J Wani
 * Matt Craig
 * Anthony Scopatz
 * Isuru Fernando
@@ -45,6 +45,7 @@ Authors are sorted by number of commits.
 * Tim Snyder
 * neok-m4700
 * Richard Frank
+* John Kirkham
 * Filipe Fernandes
 * Matthieu Dartiailh
 * Marius van Niekerk
@@ -54,7 +55,6 @@ Authors are sorted by number of commits.
 * Patrick Sodré
 * Bruno Oliveira
 * Bryan W. Weber
-* John Kirkham
 * Thomas A Caswell
 * Mario Juric
 * Ivan Kalev
@@ -64,6 +64,7 @@ Authors are sorted by number of commits.
 * Amir MOHAMMADI
 * Chris Hogan
 * Christopher Burr
+* Marcelo Duarte Trevisani
 * Heather Kelly
 * Geir Ove Myhr
 * Matt Rendina
@@ -188,5 +189,5 @@ Authors are sorted by number of commits.
 * Duncan Macleod
 * Chris Osborn
 * Oleksandr Pavlyk
-* Marcelo Duarte Trevisani
+
 

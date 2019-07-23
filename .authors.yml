@@ -11,7 +11,7 @@
   email: jjhelmus@gmail.com
   aliases:
   - Jonathan Helmus
-  num_commits: 40
+  num_commits: 49
   first_commit: 2014-06-09 17:25:05
   github: jjhelmus
 - name: Isuru Fernando
@@ -800,7 +800,7 @@
   github: dougalsutherland
 - name: James Sexton
   email: TwistedLadder@gmail.com
-  num_commits: 23
+  num_commits: 24
   first_commit: 2017-07-28 16:39:11
   github: Bezier89
 - name: Amir MOHAMMADI
@@ -890,12 +890,12 @@
   first_commit: 2019-01-26 13:17:33
 - name: Rachel
   email: rrigdon@anaconda.com
-  num_commits: 62
+  num_commits: 63
   first_commit: 2019-01-24 14:12:19
   github: rrigdon
 - name: Rachel Rigdon
   email: 45607889+rrigdon@users.noreply.github.com
-  num_commits: 32
+  num_commits: 33
   first_commit: 2019-01-24 15:12:09
   github: rrigdon
 - name: Zane Dufour
@@ -971,7 +971,7 @@
   github: spalmrot-tic
 - name: John Kirkham
   email: jakirkham@gmail.com
-  num_commits: 6
+  num_commits: 7
   first_commit: 2019-06-06 14:26:02
   github: jakirkham
 - name: Daniel Bast
@@ -999,3 +999,8 @@
   num_commits: 2
   first_commit: 2019-07-15 18:19:26
   github: ddamiani
+- name: Marcelo Duarte Trevisani
+  email: marceloduartetrevisani@gmail.com
+  num_commits: 5
+  first_commit: 2019-07-19 10:00:00
+  github: marcelotrevisani
