@@ -5,6 +5,44 @@ Release notes
 This information is drawn from the GitHub conda-build project
 changelog: https://github.com/conda/conda-build/blob/master/CHANGELOG.txt
 
+3.18.9 (2019-07-23)
+-------------------
+
+Enhancements
+^^^^^^^^^^^^
+
+* Add --use-channeldata argument to conda render/build.
+* Extract the part in the skeletons pypi responsible to get the package metadata to a free function. 
+* Creat unittests for the get_package_metadata (skeletons/pypi.py) and for the new functions.
+
+
+Bug fixes
+^^^^^^^^^
+
+* Limit threads to 61 on Windows.
+* Do not use channeldata for run_exports unless --use-channeldata specified.
+* Finalize top-level metadata if not present as an output.
+
+Docs
+^^^^
+
+* Add 3.18.7 release notes
+
+Other
+^^^^^
+
+* Add disable_pip to FIELDS
+
+Contributors
+^^^^^^^^^^^^
+
+* @jjhelmus
+* @rrigdon
+* @Bezier89
+* @jakirkham
+* @marcelotrevisani
+
+
 3.18.8 (2019-07-18)
 -------------------
 
