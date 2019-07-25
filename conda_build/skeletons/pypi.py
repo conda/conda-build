@@ -687,141 +687,207 @@ def parse_dep_with_env_marker(dep_str):
     return name, env_mark
 
 
-def get_package_metadata(package, d, data, output_dir, python_version, all_extras,
-                         recursive, created_recipes, noarch_python, noprompt, packages,
+def get_package_metadata(package, metadata, data, output_dir, python_version, all_extras,
+                         recursive, created_recipes, noarch_python, no_prompt, packages,
                          extra_specs, config, setup_options):
 
     print("Downloading %s" % package)
-    print("PyPI URL: ", d['pypiurl'])
+    print("PyPI URL: ", metadata['pypiurl'])
     pkginfo = get_pkginfo(package,
-                          filename=d['filename'],
-                          pypiurl=d['pypiurl'],
-                          digest=d['digest'],
+                          filename=metadata['filename'],
+                          pypiurl=metadata['pypiurl'],
+                          digest=metadata['digest'],
                           python_version=python_version,
                           extra_specs=extra_specs,
                           setup_options=setup_options,
                           config=config)
 
-    d.update(get_entry_points(pkginfo))
+    metadata.update(get_entry_points(pkginfo))
 
     requires = get_requirements(package, pkginfo, all_extras=all_extras)
 
     if requires or is_setuptools_enabled(pkginfo):
-        deps = []
-        if is_setuptools_enabled(pkginfo):
-            deps.append('setuptools')
-        for deptext in requires:
-            if isinstance(deptext, string_types):
-                deptext = deptext.splitlines()
-            # Every item may be a single requirement
-            #  or a multiline requirements string...
-            for dep in deptext:
-                # ... and may also contain comments...
-                dep = dep.split('#')[0].strip()
-                if dep:  # ... and empty (or comment only) lines
-                    dep, marker = parse_dep_with_env_marker(dep)
-                    spec = spec_from_line(dep)
-                    if spec is None:
-                        sys.exit("Error: Could not parse: %s" % dep)
-                    if '~' in spec:
-                        version = spec.split()[-1]
-                        tilde_version = '~ {}' .format(version)
-                        pin_compatible = convert_version(version)
-                        spec = spec.replace(tilde_version, pin_compatible)
-                    if marker:
-                        spec = ' '.join((spec, marker))
-                    deps.append(spec)
+        list_deps = get_dependencies(requires, is_setuptools_enabled(pkginfo))
 
-        d['build_depends'] = ['pip'] + deps
+        metadata['build_depends'] = ['pip'] + list_deps
         # Never add setuptools to runtime dependencies.
-        d['run_depends'] = deps
+        metadata['run_depends'] = list_deps
 
         if recursive:
-            for dep in deps:
-                dep = dep.split()[0]
-                if not exists(join(output_dir, dep)):
-                    if dep not in created_recipes:
-                        packages.append(dep)
+            packages += get_recursive_deps(created_recipes, list_deps, output_dir)
 
-    if 'packagename' not in d:
-        d['packagename'] = pkginfo['name'].lower()
-    if d['version'] == 'UNKNOWN':
-        d['version'] = pkginfo['version']
+    if 'packagename' not in metadata:
+        metadata['packagename'] = pkginfo['name'].lower()
 
-    if pkginfo.get('packages'):
-        deps = set(pkginfo['packages'])
-        if d['import_tests']:
-            if not d['import_tests'] or d['import_tests'] == 'PLACEHOLDER':
-                olddeps = []
-            else:
-                olddeps = [x for x in d['import_tests'].split()
-                        if x != '-']
-            deps = set(olddeps) | deps
-        d['import_tests'] = sorted(deps)
+    if metadata['version'] == 'UNKNOWN':
+        metadata['version'] = pkginfo['version']
 
-        d['tests_require'] = sorted([spec_from_line(pkg) for pkg
-                                     in ensure_list(pkginfo['tests_require'])])
+    metadata["import_tests"] = get_import_tests(pkginfo, metadata.get("import_tests"))
+    metadata['tests_require'] = get_tests_require(pkginfo)
 
+    metadata["home"] = get_home(pkginfo, data)
+
+    if not metadata.get("summary"):
+        metadata["summary"] = get_summary(pkginfo)
+
+    license_name = get_license_name(package, pkginfo, no_prompt, data)
+    metadata["license"] = clean_license_name(license_name)
+    metadata['license_family'] = guess_license_family(license_name, allowed_license_families)
+
+    if 'new_hash_value' in pkginfo:
+        metadata['digest'] = pkginfo['new_hash_value']
+
+
+def get_recursive_deps(created_recipes, list_deps, output_dir):
+    """Function responsible to return the list of dependencies of the other
+    projects which were requested.
+
+    :param list created_recipes:
+    :param list list_deps:
+    :param output_dir:
+    :return list:
+    """
+    recursive_deps = []
+    for dep in list_deps:
+        dep = dep.split()[0]
+        if exists(join(output_dir, dep)) or dep in created_recipes:
+            continue
+        recursive_deps.append(dep)
+
+    return recursive_deps
+
+
+def get_dependencies(requires, setuptools_enabled=True):
+    """Return the whole dependencies of the specified package
+    :param list requires: List of requirements
+    :param Bool setuptools_enabled: True if setuptools is enabled and False otherwise
+    :return list: Return list of dependencies
+    """
+    list_deps = ["setuptools"] if setuptools_enabled else []
+
+    for dep_text in requires:
+        if isinstance(dep_text, string_types):
+            dep_text = dep_text.splitlines()
+        # Every item may be a single requirement
+        #  or a multiline requirements string...
+        for dep in dep_text:
+            # ... and may also contain comments...
+            dep = dep.split('#')[0].strip()
+            if not dep:
+                continue
+
+            dep, marker = parse_dep_with_env_marker(dep)
+            spec = spec_from_line(dep)
+
+            if spec is None:
+                sys.exit("Error: Could not parse: %s" % dep)
+
+            if '~' in spec:
+                version = spec.split()[-1]
+                tilde_version = '~ {}'.format(version)
+                pin_compatible = convert_version(version)
+                spec = spec.replace(tilde_version, pin_compatible)
+
+            if marker:
+                spec = ' '.join((spec, marker))
+
+            list_deps.append(spec)
+    return list_deps
+
+
+def get_import_tests(pkginfo, import_tests_metada=""):
+    """Return the section import in tests
+
+    :param dict pkginfo: Package information
+    :param dict import_tests_metada: Imports already present
+    :return list: Sorted list with the libraries necessary for the test phase
+    """
+    if not pkginfo.get("packages"):
+        return import_tests_metada
+
+    olddeps = []
+    if import_tests_metada != "PLACEHOLDER":
+        olddeps = [
+            x for x in import_tests_metada.split() if x != "-"
+        ]
+    return sorted(set(olddeps) | set(pkginfo["packages"]))
+
+
+def get_tests_require(pkginfo):
+    return sorted([
+        spec_from_line(pkg) for pkg in ensure_list(pkginfo['tests_require'])
+    ])
+
+
+def get_home(pkginfo, data=None):
+    default_home = "The package home page"
     if pkginfo.get('home'):
-        d['home'] = pkginfo['home']
-    else:
-        if data and 'home' in data:
-            d['home'] = data['home']
-        else:
-            d['home'] = "The package home page"
+        return pkginfo['home']
+    if data:
+        return data.get("home", default_home)
+    return default_home
 
-    if pkginfo.get('summary'):
-        if 'summary' in d and not d['summary']:
-            # Need something here, use what the package had
-            d['summary'] = pkginfo['summary']
-    else:
-        d['summary'] = "Summary of the package"
 
+def get_summary(pkginfo):
+    return pkginfo.get("summary", "Summary of the package")
+
+def get_license_name(package, pkginfo, no_prompt=False, data=None):
+    """Responsible to return the license name
+    :param str package: Package's name
+    :param dict pkginfo:Package information
+    :param no_prompt: If Prompt is not enabled
+    :param dict data: Data
+    :return str: License name
+    """
     license_classifier = "License :: OSI Approved :: "
+
     data_classifier = data.get("classifiers", []) if data else []
     pkg_classifier = pkginfo.get('classifiers', data_classifier)
     pkg_classifier = pkg_classifier if pkg_classifier else data_classifier
+
     licenses = [
         classifier.split(license_classifier, 1)[1]
         for classifier in pkg_classifier
         if classifier.startswith(license_classifier)
     ]
 
-    if not licenses:
-        if pkginfo.get('license'):
-            license_name = pkginfo['license']
-        elif data and 'license' in data:
-            license_name = data['license']
-        else:
-            license_name = None
+    if licenses:
+        return ' or '.join(licenses)
 
-        if license_name:
-            if noprompt:
-                pass
-            elif '\n' not in license_name:
-                print('Using "%s" for the license' % license_name)
-            else:
-                # Some projects put the whole license text in this field
-                print("This is the license for %s" % package)
-                print()
-                print(license_name)
-                print()
-                license_name = input("What license string should I use? ")
-        elif noprompt:
-            license_name = "UNKNOWN"
-        else:
-            license_name = input(
-                "No license could be found for %s on PyPI or in the source. "
-                "What license should I use? " % package
-            )
+    if pkginfo.get('license'):
+        license_name = pkginfo['license']
+    elif data and 'license' in data:
+        license_name = data['license']
     else:
-        license_name = ' or '.join(licenses)
-    # remove the word license from the license
-    clean_license_name = re.subn(r'(.*)\s+license', r'\1', license_name, flags=re.IGNORECASE)[0]
-    d['license'] = clean_license_name
-    d['license_family'] = guess_license_family(license_name, allowed_license_families)
-    if 'new_hash_value' in pkginfo:
-        d['digest'] = pkginfo['new_hash_value']
+        license_name = None
+
+    if license_name:
+        if no_prompt:
+            return license_name
+        elif '\n' not in license_name:
+            print('Using "%s" for the license' % license_name)
+        else:
+            # Some projects put the whole license text in this field
+            print("This is the license for %s" % package)
+            print()
+            print(license_name)
+            print()
+            license_name = input("What license string should I use? ")
+    elif no_prompt:
+        license_name = "UNKNOWN"
+    else:
+        license_name = input(
+            "No license could be found for %s on PyPI or in the source. "
+            "What license should I use? " % package
+        )
+    return license_name
+
+def clean_license_name(license_name):
+    """Remove the word ``license`` from the license
+    :param str license_name: Receives the license name
+    :return str: Return a string without the word ``license``
+    """
+    return re.subn(r'(.*)\s+license', r'\1', license_name, flags=re.IGNORECASE)[0]
 
 
 def get_entry_points(pkginfo):

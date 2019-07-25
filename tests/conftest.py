@@ -39,7 +39,7 @@ def testing_workdir(tmpdir, request):
 
 
 @pytest.fixture(scope='function')
-def testing_config(testing_workdir, request):
+def testing_config(testing_workdir):
     return Config(croot=testing_workdir, anaconda_upload=False, verbose=True,
                   activate=False, debug=False, variant=None)
 
@@ -75,10 +75,6 @@ def testing_env(testing_workdir, request, monkeypatch):
     # cleanup is done by just cleaning up the testing_workdir
     return env_path
 
-
-# @pytest.fixture(scope='session')
-# def testing_example_package(tmpdir, testing_metadata):
-#     return api.build(testing_metadata)
 
 # these are functions so that they get regenerated each time we use them.
 #    They could be fixtures, I guess.
