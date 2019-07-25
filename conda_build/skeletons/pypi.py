@@ -831,6 +831,7 @@ def get_home(pkginfo, data=None):
 def get_summary(pkginfo):
     return pkginfo.get("summary", "Summary of the package")
 
+
 def get_license_name(package, pkginfo, no_prompt=False, data=None):
     """Responsible to return the license name
     :param str package: Package's name
@@ -881,6 +882,7 @@ def get_license_name(package, pkginfo, no_prompt=False, data=None):
             "What license should I use? " % package
         )
     return license_name
+
 
 def clean_license_name(license_name):
     """Remove the word ``license`` from the license
