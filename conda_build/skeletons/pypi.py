@@ -839,9 +839,7 @@ def get_entry_points(pkginfo):
         _config = configparser.ConfigParser()
 
         try:
-            # TODO: Should we use read_file instead of readfp?
-            #  Because readfp is deprecated
-            _config.readfp(StringIO(newstr))
+            _config.read_file(StringIO(newstr))
         except Exception as err:
             print("WARNING: entry-points not understood: ", err)
             print("The string was", newstr)
