@@ -127,11 +127,10 @@ that may be needed for some build workflows.
 
 On Windows these can be installed with conda:
 
-```
-conda install git m2-patch
-```
+``conda install git m2-patch``
 
-On macOS and Linux replace `m2-patch` with patch
+
+On macOS and Linux replace ``m2-patch`` with patch
 
 
 Developing a build strategy
@@ -143,7 +142,7 @@ or linker errors, often caused by missing dependencies. The person
 writing the recipe then examines these errors and modifies the
 recipe to include the missing dependencies, usually as part of the
 ``meta.yaml`` file. Then the recipe writer attempts the build
-again, and after a few of these cycles of trial and error, the
+again and, after a few of these cycles of trial and error, the
 package builds successfully.
 
 
@@ -249,8 +248,8 @@ Edit the skeleton files
 For this package, ``bld.bat`` and ``build.sh`` need no changes.
 You need to edit the ``meta.yaml`` file to add the dependency on
 NumPy and add an optional test for the built package by importing
-It. For more information about what can be specified in meta.yaml,
-see :ref:`define-metadata<meta-yaml>`.
+it. For more information about what can be specified in meta.yaml,
+see :doc:`../../resources/define-metadata`.
 
 #. In the requirements section of the ``meta.yaml`` file, add a
    line that adds NumPy as a requirement to build the package.
@@ -318,7 +317,7 @@ Build the package
 
 Build the package using the recipe you just created::
 
-    conda build
+    conda build sep
 
 
 Check the output
@@ -478,4 +477,5 @@ Or explicitly set the location of the conda build variant matrix
 
 If you want to know more about build variants and conda_build_config.yaml,
 including how to specify a config file and what can go into it, take a look
+at :ref:`conda-build-variant-config-files`.
 at :ref:`conda-build-variant-config-files`.
