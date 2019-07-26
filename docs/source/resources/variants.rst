@@ -1055,13 +1055,14 @@ Conda-build 2.1 brought in the ability to build multiple output packages from a
 single recipe. This is useful in cases where you have a big build that outputs a
 lot of things at once, but those things really belong in their own packages. For
 example, building gcc outputs not only gcc, but also gfortran, g++, and runtime
-libraries for gcc, gfotran and g++. Each of those should be their own package to
+libraries for gcc, gfotran, and g++. Each of those should be their own package to
 make things as clean as possible. Unfortunately, if there are separate recipes
 to repack the different pieces from a larger whole package, it can be hard to
 keep them in sync. That's where variants come in. Variants, and more
 specifically the ``pin_subpackage(name)`` function, give you a way to refer to
 the subpackage with control over how tightly the subpackage version relationship
-should be in relation to other subpackages or the parent package.
+should be in relation to other subpackages or the parent package. The following
+will output 5 conda packages.
 
 meta.yaml:
 
