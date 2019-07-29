@@ -1095,10 +1095,8 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 d['version_binary' + str(binary_id)] = VERSION_META.format(**archive_details)
                 binary_id += 1
 
-        # XXX: We should maybe normalize these
-        d['license'] = cran_package.get("License", "None")
-        d['license_family'] = guess_license_family(d['license'], allowed_license_families)
-        d['license_file'] = get_license_file(d['license'])
+        license_info = get_license_info(cran_package.get("License", "None"), allowed_license_families)
+        d['license'], d['license_file'], d['license_family'] = license_info
 
         if 'License_is_FOSS' in cran_package:
             d['license'] += ' (FOSS)'
@@ -1410,7 +1408,7 @@ def up_to_date(cran_metadata, package):
     return True
 
 
-def get_license_file(license_text):
+def get_license_info(license_text, allowed_license_families):
     '''
     Most R packages on CRAN do not include a license file. Instead, to avoid
     duplication, R base ships with common software licenses:
@@ -1421,12 +1419,18 @@ def get_license_file(license_text):
     The complete licenses can be included in conda binaries by pointing to the
     license file shipped with R base. The template files are more complicated
     because they would need to be combined with the license information provided
-    by the package authors (e.g. copyright owners and date).
+    by the package authors. In this case, the template file and the license
+    information file are both packaged.
 
     This function returns the path to the license file for the unambiguous
-    cases. Any time an R package refers to one of the templates or a custom
-    license file (e.g. 'GPL-2 | file LICENSE'), an empty string is returned.
+    cases.
     '''
+
+    license_extra_file = None
+    if '+ file' in license_text:
+        idx = license_text.index(" + file ")
+        license_extra_file = license_text[idx+8:]
+        license_text = license_text[:idx]
 
     # The list order matters. The first element should be the name of the
     # license file shipped with r-base.
@@ -1439,15 +1443,24 @@ def get_license_file(license_text):
                  'lgpl2': ['LGPL-2', 'LGPL (>= 2)'],
                  'lgpl21': ['LGPL-2.1', 'LGPL (>= 2.1)'],
                  'lgpl3': ['LGPL-3', 'LGPL (>= 3)', 'LGPL',
-                           'GNU Lesser General Public License']}
+                           'GNU Lesser General Public License'],
+                 'bsd2': ['BSD_2_clause', 'BSD_2_Clause', 'BSD 2-clause License'],
+                 'bsd3': ['BSD_3_clause', 'BSD_3_Clause', 'BSD 3-clause License'],
+                 'mit': ['MIT'],
+                }
 
-    license_file_template = 'license_file: \'{{{{ environ["PREFIX"] }}}}/lib/R/share/licenses/{license_id}\''
+    license_file_template = 'license_file:\n    - \'{{{{ environ["PREFIX"] }}}}/lib/R/share/licenses/{license_id}\''
 
     for license_id in d_license.keys():
         if license_text in d_license[license_id]:
-            license_file = license_file_template.format(license_id=d_license[license_id][0])
+            license_text = d_license[license_id][0]
+            license_file = license_file_template.format(license_id=license_text)
             break
     else:
         license_file = ''
 
-    return license_file
+    if license_extra_file is not None and license_file != '':
+        license_file = license_file + '\n    - ' + license_extra_file
+
+    license_family = guess_license_family(license_text, allowed_license_families)
+    return license_text, license_file, license_family

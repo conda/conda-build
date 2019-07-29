@@ -20,7 +20,7 @@ except ImportError:
 
 from conda_build import api
 from conda_build.exceptions import DependencyNeedsBuildingError
-from conda_build.utils import on_win
+from conda_build.utils import on_win, ensure_list
 
 thisdir = os.path.dirname(os.path.realpath(__file__))
 
@@ -436,20 +436,18 @@ def test_pypi_section_order_preserved(testing_workdir):
 
 
 # CRAN packages to test license_file entry.
-# (package, license_id, license_family, license_file)
+# (package, license_id, license_family, license_files)
 cran_packages = [('r-usethis', 'GPL-3', 'GPL3', 'GPL-3'),
-                 ('r-abf2', 'Artistic-2.0', 'OTHER', 'Artistic-2.0'),
-                 (
-                     'r-cortools', 'Artistic License 2.0', 'OTHER',
-                     'Artistic-2.0'),
+                 ('r-cortools', 'Artistic-2.0', 'OTHER', 'Artistic-2.0'),
                  ('r-udpipe', 'MPL-2.0', 'OTHER', ''),
+                 ('r-broom', 'MIT', 'MIT', ['MIT', 'LICENSE']),
+                 ('r-meanr', 'BSD_2_clause', 'BSD', ['BSD_2_clause', 'LICENSE']),
+                 ('r-rsed', 'BSD_3_clause', 'BSD', ['BSD_3_clause', 'LICENSE']),
                  ]
 
 
-@pytest.mark.parametrize("package, license_id, license_family, license_file",
-                         cran_packages)
-def test_cran_license(package, license_id, license_family, license_file,
-                      testing_workdir, testing_config):
+@pytest.mark.parametrize("package, license_id, license_family, license_files", cran_packages)
+def test_cran_license(package, license_id, license_family, license_files, testing_workdir, testing_config):
     api.skeletonize(packages=package, repo='cran', output_dir=testing_workdir,
                     config=testing_config)
     m = api.render(os.path.join(package, 'meta.yaml'))[0][0]
@@ -457,5 +455,7 @@ def test_cran_license(package, license_id, license_family, license_file,
     assert m_license_id == license_id
     m_license_family = m.get_value('about/license_family')
     assert m_license_family == license_family
-    m_license_file = m.get_value('about/license_file', '')
-    assert os.path.basename(m_license_file) == license_file
+    m_license_files = ensure_list(m.get_value('about/license_file', ''))
+    license_files = ensure_list(license_files)
+    for m_license_file in m_license_files:
+        assert os.path.basename(m_license_file) in license_files
