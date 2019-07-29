@@ -261,7 +261,7 @@ def test_license_name(url_pylint_package, pkginfo_pylint):
     license_name = "GNU General Public License (GPL)"
     assert get_license_name(url_pylint_package, pkginfo_pylint, True, {}) \
            == license_name
-    assert clean_license_name(license_name) == license_name
+    assert clean_license_name(license_name) == "GNU General Public (GPL)"
     assert clean_license_name("MIT License") == "MIT"
 
 
