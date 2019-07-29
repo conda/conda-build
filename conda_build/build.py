@@ -390,7 +390,8 @@ def copy_license(m):
         if not os.path.isfile(src_file):
             src_file = os.path.join(m.path, license_file)
         if os.path.isfile(src_file):
-            if os.path.isabs(license_file):
+            # Rename absolute file paths or relative file paths starting with .. or .
+            if os.path.isabs(license_file) or license_file.startswith("."):
                 filename = "LICENSE{}.txt".format(count)
                 count += 1
             else:
