@@ -204,7 +204,12 @@ class bdist_conda(install):
                 c = configparser.ConfigParser()
                 entry_points = {}
                 try:
-                    c.readfp(StringIO(newstr))
+                    import six
+
+                    if six.PY2:
+                        c.readfp(StringIO(newstr))
+                    else:
+                        c.read_file(StringIO(newstr))
                 except Exception as err:
                     # This seems to be the best error here
                     raise DistutilsGetoptError("ERROR: entry-points not understood: " +

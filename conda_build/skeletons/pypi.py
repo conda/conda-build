@@ -9,6 +9,8 @@ import keyword
 import os
 from os import makedirs, listdir, getcwd, chdir
 from os.path import join, isdir, exists, isfile, abspath
+
+import six
 from pkg_resources import parse_version
 import re
 from shutil import copy2
@@ -839,9 +841,10 @@ def get_entry_points(pkginfo):
         _config = configparser.ConfigParser()
 
         try:
-            # TODO: Should we use read_file instead of readfp?
-            #  Because readfp is deprecated
-            _config.readfp(StringIO(newstr))
+            if six.PY2:
+                _config.readfp(StringIO(newstr))
+            else:
+                _config.read_file(StringIO(newstr))
         except Exception as err:
             print("WARNING: entry-points not understood: ", err)
             print("The string was", newstr)
