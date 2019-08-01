@@ -350,6 +350,7 @@ cran_packages = [('r-usethis', 'GPL-3', 'GPL3', 'GPL-3'),
                  ('r-zoo', 'GPL-2 | GPL-3', 'GPL3', ['GPL-2', 'GPL-3']),
                  ('r-magree', 'GPL-3 | GPL-2', 'GPL3', ['GPL-3', 'GPL-2']),
                  ('r-dt', 'GPL-3', 'GPL3', 'GPL-3'),
+                 ('r-mglm', 'GPL-2', 'GPL2', 'GPL-2'),
                  ]
 
 
