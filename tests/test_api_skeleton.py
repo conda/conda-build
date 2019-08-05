@@ -5,7 +5,9 @@ from pkg_resources import parse_version
 import pytest
 
 from conda_build.skeletons.pypi import get_package_metadata, get_pkginfo, \
-    get_entry_points, is_setuptools_enabled, convert_to_flat_list
+    get_entry_points, is_setuptools_enabled, convert_to_flat_list, \
+    get_dependencies, get_import_tests, get_tests_require, get_home, \
+    get_summary, get_license_name, clean_license_name
 
 try:
     import ruamel_yaml
@@ -24,7 +26,10 @@ thisdir = os.path.dirname(os.path.realpath(__file__))
 
 repo_packages = [('', 'pypi', 'pip', '8.1.2'),
                  ('r', 'cran', 'acs', ''),
-                 ('r', 'cran', 'https://github.com/twitter/AnomalyDetection.git', ''),
+                 (
+                     'r', 'cran',
+                     'https://github.com/twitter/AnomalyDetection.git',
+                     ''),
                  ('perl', 'cpan', 'Moo', ''),
                  ('', 'rpm', 'libX11-devel', ''),
                  # ('lua', luarocks', 'LuaSocket', ''),
@@ -37,7 +42,8 @@ def test_repo(prefix, repo, package, version, testing_workdir, testing_config):
                     config=testing_config)
     try:
         base_package, _ = os.path.splitext(os.path.basename(package))
-        package_name = "-".join([prefix, base_package]) if prefix else base_package
+        package_name = "-".join(
+            [prefix, base_package]) if prefix else base_package
         contents = os.listdir(testing_workdir)
         assert len([content for content in contents
                     if content.startswith(package_name.lower()) and
@@ -48,7 +54,8 @@ def test_repo(prefix, repo, package, version, testing_workdir, testing_config):
 
 
 def test_name_with_version_specified(testing_workdir, testing_config):
-    api.skeletonize(packages='sympy', repo='pypi', version='0.7.5', config=testing_config)
+    api.skeletonize(packages='sympy', repo='pypi', version='0.7.5',
+                    config=testing_config)
     m = api.render('sympy/meta.yaml')[0][0]
     assert m.version() == "0.7.5"
 
@@ -63,7 +70,8 @@ def test_pypi_url(testing_workdir, testing_config):
 
 @pytest.fixture
 def url_pylint_package():
-    return "https://pypi.python.org/packages/source/p/pylint/pylint-2.3.1.tar.gz#sha256=723e3db49555abaf9bf79dc474c6b9e2935ad82230b10c1138a71ea41ac0fff1"
+    return "https://pypi.python.org/packages/source/p/pylint/pylint-2.3.1.tar.gz#" \
+           "sha256=723e3db49555abaf9bf79dc474c6b9e2935ad82230b10c1138a71ea41ac0fff1"
 
 
 @pytest.fixture
@@ -89,32 +97,64 @@ def mock_metada_pylint(url_pylint_package):
     }
 
 
-def test_get_entry_points(
-        testing_workdir, testing_config, mock_metada_pylint, url_pylint_package
-):
-    pkginfo = get_pkginfo(url_pylint_package,
-                          filename=mock_metada_pylint['filename'],
-                          pypiurl=mock_metada_pylint['pypiurl'],
-                          digest=mock_metada_pylint['digest'],
-                          python_version="3.7",
-                          extra_specs=[],
-                          setup_options=[],
-                          config=testing_config)
-
-    assert get_entry_points(pkginfo) == {
-        'entry_points': [
-            'pylint = pylint:run_pylint',
-            'epylint = pylint:run_epylint',
-            'pyreverse = pylint:run_pyreverse',
-            'symilar = pylint:run_symilar'
+@pytest.fixture
+def pkginfo_pylint(url_pylint_package):
+    # Hardcoding it to avoid to use the get_pkginfo because it takes too much time
+    return {
+        'classifiers': [
+            'Development Status :: 6 - Mature',
+            'Environment :: Console',
+            'Intended Audience :: Developers',
+            'License :: OSI Approved :: GNU General Public License (GPL)',
+            'Operating System :: OS Independent',
+            'Programming Language :: Python',
+            'Programming Language :: Python :: 3',
+            'Programming Language :: Python :: 3.4',
+            'Programming Language :: Python :: 3.5',
+            'Programming Language :: Python :: 3.6',
+            'Programming Language :: Python :: 3.7',
+            'Programming Language :: Python :: 3 :: Only',
+            'Programming Language :: Python :: Implementation :: CPython',
+            'Programming Language :: Python :: Implementation :: PyPy',
+            'Topic :: Software Development :: Debuggers',
+            'Topic :: Software Development :: Quality Assurance',
+            'Topic :: Software Development :: Testing'
         ],
-        'test_commands': [
-            'pylint --help',
-            'epylint --help',
-            'pyreverse --help',
-            'symilar --help'
+        'entry_points': {
+            'console_scripts': [
+                'pylint = pylint:run_pylint',
+                'epylint = pylint:run_epylint',
+                'pyreverse = pylint:run_pyreverse',
+                'symilar = pylint:run_symilar'
+            ]
+        },
+        'extras_require': {':sys_platform=="win32"': ['colorama']},
+        'home': 'https://github.com/PyCQA/pylint',
+        'install_requires': [
+            'astroid>=2.2.0,<3', 'isort>=4.2.5,<5', 'mccabe>=0.6,<0.7'
         ],
+        'license': 'GPL',
+        'name': 'pylint',
+        'packages': [
+            'pylint', 'pylint.checkers', 'pylint.pyreverse',
+            'pylint.extensions', 'pylint.reporters', 'pylint.reporters.ureports'
+        ],
+        'setuptools': True,
+        'summary': 'python code static checker',
+        'tests_require': ['pytest'],
+        'version': '2.3.1'
     }
+
+
+def test_get_entry_points(testing_workdir, pkginfo_pylint,
+                          result_metadata_pylint):
+    pkginfo = pkginfo_pylint
+    entry_points = get_entry_points(pkginfo)
+
+    assert entry_points["entry_points"] == result_metadata_pylint[
+        "entry_points"]
+    assert entry_points["test_commands"] == result_metadata_pylint[
+        "test_commands"]
 
 
 def test_convert_to_flat_list():
@@ -140,27 +180,9 @@ def test_is_setuptools_enabled():
     })
 
 
-
-def test_get_package_metadata(
-        testing_workdir, testing_config, url_pylint_package, mock_metada_pylint
-):
-    get_package_metadata(
-        url_pylint_package,
-        mock_metada_pylint,
-        {},
-        ".",
-        "3.7",
-        False,
-        False,
-        [url_pylint_package],
-        False,
-        True,
-        [],
-        [],
-        config=testing_config,
-        setup_options=[],
-    )
-    assert mock_metada_pylint == {
+@pytest.fixture
+def result_metadata_pylint(url_pylint_package):
+    return {
         'run_depends': [
             'astroid >=2.2.0,<3', 'isort >=4.2.5,<5', 'mccabe >=0.6,<0.7'
         ],
@@ -203,13 +225,85 @@ def test_get_package_metadata(
     }
 
 
+def test_get_dependencies():
+    assert get_dependencies(
+        ['astroid >=2.2.0,<3  #COMMENTS', 'isort >=4.2.5,<5',
+         'mccabe >=0.6,<0.7'],
+        False
+    ) == ['astroid >=2.2.0,<3', 'isort >=4.2.5,<5', 'mccabe >=0.6,<0.7']
+
+    assert get_dependencies(
+        ['astroid >=2.2.0,<3  #COMMENTS', 'isort >=4.2.5,<5',
+         'mccabe >=0.6,<0.7'],
+        True
+    ) == ['setuptools', 'astroid >=2.2.0,<3', 'isort >=4.2.5,<5',
+          'mccabe >=0.6,<0.7']
+
+
+def test_get_import_tests(pkginfo_pylint, result_metadata_pylint):
+    assert get_import_tests(pkginfo_pylint) \
+           == result_metadata_pylint["import_tests"]
+
+
+def test_get_home():
+    assert get_home({}) == "The package home page"
+    assert get_home({}, {}) == "The package home page"
+    assert get_home({"home": "HOME"}) == "HOME"
+    assert get_home({}, {"home": "HOME"}) == "HOME"
+
+
+def test_get_summary():
+    assert get_summary({}) == "Summary of the package"
+    assert get_summary({"summary": "SUMMARY"}) == "SUMMARY"
+
+
+def test_license_name(url_pylint_package, pkginfo_pylint):
+    license_name = "GNU General Public License (GPL)"
+    assert get_license_name(url_pylint_package, pkginfo_pylint, True, {}) \
+           == license_name
+    assert clean_license_name(license_name) == "GNU General Public (GPL)"
+    assert clean_license_name("MIT License") == "MIT"
+
+
+def test_get_tests_require(pkginfo_pylint, result_metadata_pylint):
+    assert get_tests_require(pkginfo_pylint) == result_metadata_pylint[
+        "tests_require"]
+
+
+def test_get_package_metadata(
+        testing_workdir,
+        testing_config,
+        url_pylint_package,
+        mock_metada_pylint,
+        result_metadata_pylint
+):
+    get_package_metadata(
+        url_pylint_package,
+        mock_metada_pylint,
+        {},
+        ".",
+        "3.7",
+        False,
+        False,
+        [url_pylint_package],
+        False,
+        True,
+        [],
+        [],
+        config=testing_config,
+        setup_options=[],
+    )
+    assert mock_metada_pylint == result_metadata_pylint
+
+
 def test_pypi_with_setup_options(testing_workdir, testing_config):
     # Use photutils package below because skeleton will fail unless the setup.py is given
     # the flag --offline because of a bootstrapping a helper file that
     # occurs by default.
 
     # Test that the setup option is used in constructing the skeleton.
-    api.skeletonize(packages='photutils', repo='pypi', version='0.2.2', setup_options='--offline',
+    api.skeletonize(packages='photutils', repo='pypi', version='0.2.2',
+                    setup_options='--offline',
                     config=testing_config)
 
     # Check that the setup option occurs in bld.bat and build.sh.
@@ -220,7 +314,8 @@ def test_pypi_with_setup_options(testing_workdir, testing_config):
 def test_pypi_pin_numpy(testing_workdir, testing_config):
     # The package used here must have a numpy dependence for pin-numpy to have
     # any effect.
-    api.skeletonize(packages='msumastro', repo='pypi', version='0.9.0', config=testing_config,
+    api.skeletonize(packages='msumastro', repo='pypi', version='0.9.0',
+                    config=testing_config,
                     pin_numpy=True)
     with open(os.path.join('msumastro', 'meta.yaml')) as f:
         assert f.read().count('numpy x.x') == 2
@@ -326,7 +421,8 @@ def test_pypi_section_order_preserved(testing_workdir):
         lines = [l for l in file.readlines() if not l.startswith("{%")]
 
     # The loader below preserves the order of entries...
-    recipe = ruamel_yaml.load('\n'.join(lines), Loader=ruamel_yaml.RoundTripLoader)
+    recipe = ruamel_yaml.load('\n'.join(lines),
+                              Loader=ruamel_yaml.RoundTripLoader)
 
     major_sections = list(recipe.keys())
     # Blank fields are omitted when skeletonizing, so prune any missing ones
