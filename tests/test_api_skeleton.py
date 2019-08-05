@@ -255,6 +255,7 @@ def test_get_home():
 def test_get_summary():
     assert get_summary({}) == "Summary of the package"
     assert get_summary({"summary": "SUMMARY"}) == "SUMMARY"
+    assert get_summary({"summary": 'SUMMARY "QUOTES"'}) == r"SUMMARY \"QUOTES\""
 
 
 def test_license_name(url_pylint_package, pkginfo_pylint):
