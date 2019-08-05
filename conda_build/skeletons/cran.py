@@ -1442,7 +1442,7 @@ def get_license_info(license_text, allowed_license_families):
                  'bsd2': ['BSD_2_clause', 'BSD_2_Clause', 'BSD 2-clause License'],
                  'bsd3': ['BSD_3_clause', 'BSD_3_Clause', 'BSD 3-clause License'],
                  'mit': ['MIT'],
-                }
+                 }
 
     license_file_template = '\'{{{{ environ["PREFIX"] }}}}/lib/R/share/licenses/{license_id}\''
 
