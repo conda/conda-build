@@ -1449,23 +1449,24 @@ def get_license_info(license_text, allowed_license_families):
     license_texts = []
     license_files = []
 
-    license_text_parts = [l_opt.strip() for l_opt in license_text.split("|")]
+    # split license_text by "|" and "+" into parts for further matching
+    license_text_parts = [l_opt.strip() for l_opt in re.split('\||\+', license_text)]
     for l_opt in license_text_parts:
-        license_extra_file = None
-        if "+ file" in l_opt:
-            idx = license_text.index(" + file ")
-            license_extra_file = l_opt[idx+8:]
-            l_opt = l_opt[:idx]
+        # the file case
+        if l_opt.startswith("file "):
+            license_files.append(l_opt[5:])
+            break
+
+        # license id string to match
         for license_id in d_license.keys():
             if l_opt in d_license[license_id]:
                 l_opt_text = d_license[license_id][0]
 
                 license_texts.append(l_opt_text)
                 license_files.append(license_file_template.format(license_id=l_opt_text))
-                if license_extra_file:
-                    license_files.append(license_extra_file)
+                break
 
-    # Fallback to original license_text if matched license_texts is empty
+    # Join or fallback to original license_text if matched license_texts is empty
     license_text = " | ".join(license_texts) or license_text
 
     # Build the license_file entry and ensure it is empty if no license file
