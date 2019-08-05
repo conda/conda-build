@@ -1198,7 +1198,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 # m2w64_... recipes aren't imported from conda-forge
                 # so use old toolchain variant on windows
                 if need_c or need_cxx or need_f:
-                    deps.append("{indent}{{{{ native }}}}toolchain      {sel}".format(
+                    deps.append("{indent}{{{{native}}}}toolchain      {sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
                 if need_cxx:
                     deps.append("{indent}{{{{ compiler('cxx') }}}}          {sel}".format(
