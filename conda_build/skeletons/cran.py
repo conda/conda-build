@@ -1455,7 +1455,7 @@ def get_license_info(license_text, allowed_license_families):
         # the file case
         if l_opt.startswith("file "):
             license_files.append(l_opt[5:])
-            break
+            continue
 
         # license id string to match
         for license_id in d_license.keys():
