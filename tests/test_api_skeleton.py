@@ -438,12 +438,16 @@ def test_pypi_section_order_preserved(testing_workdir):
 
 # CRAN packages to test license_file entry.
 # (package, license_id, license_family, license_files)
-cran_packages = [('r-usethis', 'GPL-3', 'GPL3', 'GPL-3'),
-                 ('r-cortools', 'Artistic-2.0', 'OTHER', 'Artistic-2.0'),
-                 ('r-udpipe', 'MPL-2.0', 'OTHER', ''),
-                 ('r-broom', 'MIT', 'MIT', ['MIT', 'LICENSE']),
-                 ('r-meanr', 'BSD_2_clause', 'BSD', ['BSD_2_clause', 'LICENSE']),
-                 ('r-rsed', 'BSD_3_clause', 'BSD', ['BSD_3_clause', 'LICENSE']),
+cran_packages = [('r-usethis', 'GPL-3', 'GPL3', 'GPL-3'),  # cran: 'GPL-3'
+                 ('r-cortools', 'Artistic-2.0', 'OTHER', 'Artistic-2.0'),  # cran: 'Artistic License 2.0'
+                 ('r-udpipe', 'MPL-2.0', 'OTHER', ''),  # cran: 'MPL-2.0'
+                 ('r-broom', 'MIT', 'MIT', ['MIT', 'LICENSE']),  # cran: 'MIT + file LICENSE'
+                 ('r-meanr', 'BSD_2_clause', 'BSD', ['BSD_2_clause', 'LICENSE']),  # cran: 'BSD 2-clause License + file LICENSE'
+                 ('r-rsed', 'BSD_3_clause', 'BSD', ['BSD_3_clause', 'LICENSE']),  # cran: 'BSD_3_clause + file LICENSE'
+                 ('r-zoo', 'GPL-2 | GPL-3', 'GPL3', ['GPL-2', 'GPL-3']),  # cran: 'GPL-2 | GPL-3'
+                 ('r-magree', 'GPL-3 | GPL-2', 'GPL3', ['GPL-3', 'GPL-2']),  # cran: 'GPL-3 | GPL-2'
+                 ('r-dt', 'GPL-3', 'GPL3', ['GPL-3', 'LICENSE']),  # cran: 'GPL-3 | file LICENSE'
+                 ('r-mglm', 'GPL-2', 'GPL2', 'GPL-2'),  # cran: 'GPL (>= 2)'
                  ]
 
 

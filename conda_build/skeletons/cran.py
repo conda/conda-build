@@ -1409,7 +1409,7 @@ def up_to_date(cran_metadata, package):
 
 
 def get_license_info(license_text, allowed_license_families):
-    '''
+    """
     Most R packages on CRAN do not include a license file. Instead, to avoid
     duplication, R base ships with common software licenses:
 
@@ -1420,17 +1420,12 @@ def get_license_info(license_text, allowed_license_families):
     license file shipped with R base. The template files are more complicated
     because they would need to be combined with the license information provided
     by the package authors. In this case, the template file and the license
-    information file are both packaged.
+    information file are both packaged. All optional ('|' seperated) licenses
+    are included, if they are matching.
 
     This function returns the path to the license file for the unambiguous
     cases.
-    '''
-
-    license_extra_file = None
-    if '+ file' in license_text:
-        idx = license_text.index(" + file ")
-        license_extra_file = license_text[idx+8:]
-        license_text = license_text[:idx]
+    """
 
     # The list order matters. The first element should be the name of the
     # license file shipped with r-base.
@@ -1447,20 +1442,37 @@ def get_license_info(license_text, allowed_license_families):
                  'bsd2': ['BSD_2_clause', 'BSD_2_Clause', 'BSD 2-clause License'],
                  'bsd3': ['BSD_3_clause', 'BSD_3_Clause', 'BSD 3-clause License'],
                  'mit': ['MIT'],
-                }
+                 }
 
-    license_file_template = 'license_file:\n    - \'{{{{ environ["PREFIX"] }}}}/lib/R/share/licenses/{license_id}\''
+    license_file_template = '\'{{{{ environ["PREFIX"] }}}}/lib/R/share/licenses/{license_id}\''
 
-    for license_id in d_license.keys():
-        if license_text in d_license[license_id]:
-            license_text = d_license[license_id][0]
-            license_file = license_file_template.format(license_id=license_text)
-            break
-    else:
-        license_file = ''
+    license_texts = []
+    license_files = []
 
-    if license_extra_file is not None and license_file != '':
-        license_file = license_file + '\n    - ' + license_extra_file
+    # split license_text by "|" and "+" into parts for further matching
+    license_text_parts = [l_opt.strip() for l_opt in re.split('\||\+', license_text)]
+    for l_opt in license_text_parts:
+        # the file case
+        if l_opt.startswith("file "):
+            license_files.append(l_opt[5:])
+            continue
 
+        # license id string to match
+        for license_id in d_license.keys():
+            if l_opt in d_license[license_id]:
+                l_opt_text = d_license[license_id][0]
+
+                license_texts.append(l_opt_text)
+                license_files.append(license_file_template.format(license_id=l_opt_text))
+                break
+
+    # Join or fallback to original license_text if matched license_texts is empty
+    license_text = " | ".join(license_texts) or license_text
+
+    # Build the license_file entry and ensure it is empty if no license file
+    license_file = "license_file:\n    - " + "\n    - ".join(license_files) if license_files else ""
+
+    # Only one family is allowed, so guessing it once
     license_family = guess_license_family(license_text, allowed_license_families)
+
     return license_text, license_file, license_family
