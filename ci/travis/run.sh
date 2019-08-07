@@ -8,7 +8,7 @@ if [[ "$FLAKE8" == "true" ]]; then
     conda build --help
     conda build --version
     conda build conda.recipe --no-anaconda-upload
-    conda create -n _cbtest conda-build glob2
+    conda create -n _cbtest conda-build glob2 six
     # because this is a file, conda is not going to process any of its dependencies.
     conda install -n _cbtest $(conda render --output conda.recipe | head -n 1)
     source activate _cbtest
