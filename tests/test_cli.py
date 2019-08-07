@@ -48,6 +48,13 @@ def test_build_add_channel():
             os.path.join(metadata_dir, "_recipe_requiring_external_channel")]
     main_build.execute(args)
 
+def test_build_yaml_channel():
+    """This recipe requires the conda_build_test_requirement package, which is
+    only on the conda_build_test channel. This verifies that specifying channels in the meta.yaml file works."""
+
+    args = [os.path.join(metadata_dir, "_recipe_requiring_external_channel_in_yaml")]
+    main_build.execute(args)
+
 
 def test_build_without_channel_fails(testing_workdir):
     # remove the conda forge channel from the arguments and make sure that we fail.  If we don't,
@@ -66,6 +73,22 @@ def test_render_add_channel():
         rendered_filename = os.path.join(tmpdir, 'out.yaml')
         args = ['-c', 'conda_build_test', os.path.join(metadata_dir,
                             "_recipe_requiring_external_channel"), '--file', rendered_filename]
+        main_render.execute(args)
+        rendered_meta = yaml.safe_load(open(rendered_filename, 'r'))
+        required_package_string = [pkg for pkg in rendered_meta['requirements']['build'] if
+                                   'conda_build_test_requirement' in pkg][0]
+        required_package_details = required_package_string.split(' ')
+        assert len(required_package_details) > 1, ("Expected version number on successful "
+                                    "rendering, but got only {}".format(required_package_details))
+        assert required_package_details[1] == '1.0', "Expected version number 1.0 on successful rendering, but got {}".format(required_package_details[1])
+
+
+def test_render_yaml_channel():
+    """This recipe requires the conda_build_test_requirement package, which is
+    only on the conda_build_test channel. This verifies specifying channels in the meta.yaml file works for rendering."""
+    with TemporaryDirectory() as tmpdir:
+        rendered_filename = os.path.join(tmpdir, 'out.yaml')
+        args = [os.path.join(metadata_dir, "_recipe_requiring_external_channel_in_yaml"), '--file', rendered_filename]
         main_render.execute(args)
         rendered_meta = yaml.safe_load(open(rendered_filename, 'r'))
         required_package_string = [pkg for pkg in rendered_meta['requirements']['build'] if
