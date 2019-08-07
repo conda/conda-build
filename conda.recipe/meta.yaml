@@ -23,6 +23,7 @@ requirements:
     - git
     - python
     - setuptools
+    - six
   run:
     - beautifulsoup4
     - chardet
