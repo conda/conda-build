@@ -65,7 +65,7 @@ install:
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
       conda install -q futures scandir;
     fi
-  - conda install -q anaconda-client requests filelock contextlib2 jinja2 patchelf ripgrep pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz tqdm conda-package-handling py-lief
+  - conda install -q anaconda-client six requests filelock contextlib2 jinja2 patchelf ripgrep pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz tqdm conda-package-handling py-lief
   - pip install pkginfo
   - if [[ "$FLAKE8" == "true" ]]; then
       conda install -q flake8;
