@@ -23,7 +23,7 @@ from .conda_interface import string_types
 from conda_build import exceptions, utils, variants, environ
 from conda_build.conda_interface import memoized
 from conda_build.features import feature_list
-from conda_build.config import Config, get_or_merge_config
+from conda_build.config import Config, get_or_merge_config, get_channel_urls
 from conda_build.utils import (ensure_list, find_recipe, expand_globs, get_installed_packages,
                                HashableDict, insert_variant_versions)
 from conda_build.license_family import ensure_valid_license_family
@@ -390,6 +390,7 @@ default_structs = {
     'build/force_ignore_keys': list,
     'build/merge_build_host': bool,
     'build/msvc_compiler': text_type,
+    'requirements/channels': list,
     'requirements/build': list,
     'requirements/host': list,
     'requirements/run': list,
@@ -505,7 +506,7 @@ FIELDS = {
               },
     'outputs': {'name', 'version', 'number', 'script', 'script_interpreter', 'build',
                 'requirements', 'test', 'about', 'files', 'type'},
-    'requirements': {'build', 'host', 'run', 'conflicts', 'run_constrained'},
+    'requirements': {'requirements', 'build', 'host', 'run', 'conflicts', 'run_constrained'},
     'app': {'entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'},
     'test': {'requires', 'commands', 'files', 'imports', 'source_files', 'downstreams'},
@@ -965,6 +966,10 @@ class MetaData(object):
         if self.meta.get('build', {}).get('error_overdepending', False):
             self.config.error_overdepending = self.meta['build']['error_overdepending']
 
+        additional_channels = ensure_list(self.get_value('requirements/channels') or [])
+        if additional_channels:
+            self._add_channels_to_config(additional_channels)
+
         self.validate_features()
         self.ensure_no_pip_requirements()
 
@@ -1155,6 +1160,11 @@ class MetaData(object):
         except (ValueError, TypeError):
             build_int = ""
         return build_int
+
+    def _add_channels_to_config(self, channels):
+        for url in get_channel_urls({'channels': channels}):
+            if url not in self.config.channel_urls:
+                self.config.channel_urls.append(url)
 
     def get_depends_top_and_out(self, typ):
         meta_requirements = ensure_list(self.get_value('requirements/' + typ, []))[:]
