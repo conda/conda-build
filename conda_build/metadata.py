@@ -506,7 +506,7 @@ FIELDS = {
               },
     'outputs': {'name', 'version', 'number', 'script', 'script_interpreter', 'build',
                 'requirements', 'test', 'about', 'files', 'type'},
-    'requirements': {'requirements', 'build', 'host', 'run', 'conflicts', 'run_constrained'},
+    'requirements': {'channels', 'build', 'host', 'run', 'conflicts', 'run_constrained'},
     'app': {'entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'},
     'test': {'requires', 'commands', 'files', 'imports', 'source_files', 'downstreams'},
