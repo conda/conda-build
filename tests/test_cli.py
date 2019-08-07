@@ -48,11 +48,21 @@ def test_build_add_channel():
             os.path.join(metadata_dir, "_recipe_requiring_external_channel")]
     main_build.execute(args)
 
-def test_build_yaml_channel():
+
+def test_build_add_channel_from_yaml():
     """This recipe requires the conda_build_test_requirement package, which is
     only on the conda_build_test channel. This verifies that specifying channels in the meta.yaml file works."""
 
     args = [os.path.join(metadata_dir, "_recipe_requiring_external_channel_in_yaml")]
+    main_build.execute(args)
+
+
+def test_build_duplicate_channel():
+    """This recipe requires the conda_build_test_requirement package, which is
+    only on the conda_build_test channel. This verifies that specifying channels in the meta.yaml and using the -c argument simultaneously does not cause problems."""
+
+    args = ['-c', 'conda_build_test', '--no-activate', '--no-anaconda-upload', 
+            os.path.join(metadata_dir, "_recipe_requiring_external_channel_in_yaml")]
     main_build.execute(args)
 
 
@@ -83,7 +93,7 @@ def test_render_add_channel():
         assert required_package_details[1] == '1.0', "Expected version number 1.0 on successful rendering, but got {}".format(required_package_details[1])
 
 
-def test_render_yaml_channel():
+def test_render_add_channel_from_yaml():
     """This recipe requires the conda_build_test_requirement package, which is
     only on the conda_build_test channel. This verifies specifying channels in the meta.yaml file works for rendering."""
     with TemporaryDirectory() as tmpdir:
