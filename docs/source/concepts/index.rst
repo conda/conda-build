@@ -12,11 +12,11 @@ Concepts
    features
    
 What is a “package”?
---------------------
+====================
 
 * A package is anything you install using your package manager
 
-* A "conda package" is a compressed tarball that contains
+* A "conda package" is a compressed tarball or .conda file that contains
 
   * the module to be installed
 
@@ -25,7 +25,7 @@ What is a “package”?
 * You can use conda-build to build a conda package
 
 What about channels
--------------------
+===================
 
 * Channels contain packages
 
@@ -41,10 +41,68 @@ What about channels
   solve for requirements and dependencies
 
 Building Anaconda installers
-----------------------------
+============================
 
 * Anaconda(/Miniconda) installers are built with a modified version of constructor.
 
 * The idea is to build an Anaconda metapackage and bundle it together with some
   other packages to build an Anaconda installer.
+
+Constructor
+-----------
+
+Constructor is a tool that allows constructing an installer for a
+collection of conda packages. Basically, it creates an Anaconda-like
+installer consisting of conda packages. This tool was previously
+proprietary and known as ``cas-installer``.
+
+Conda constructor supports building installers with the .conda file
+format as well as noarch packages.
+
+Installing constructor
+**********************
+
+Constructor can be installed into the base environment using::
+
+$ conda install constructor
+
+Once installed, the constructor command will be available::
+
+$ constructor -h
+
+
+Using constructor
+*****************
+
+The constructor command takes an installer specification directory
+as its argument. This directory needs to contain a ``construct.yaml``
+file, which specifies the name of the installer, the conda channels
+to pull packages from, the conda packages included in the installer,
+etc. The complete list of keys in this file can be found in
+`CONSTRUCT.md <https://github.com/conda/constructor/blob/master/CONSTRUCT.md>`_.
+The directory may contain some additional optional files, such as a
+license file and image files for the Windows installer.
+
+An example is located in `examples/maxiconda <https://github.com/conda/constructor/blob/master/examples/maxiconda>`_.
+
+Notes
+*****
+
+* Prior to Anaconda 2019.07, constructor did not work with
+  noarch-Python packages.
+* An installer created by constructor does not need to include conda
+  itself. If you require the ability to use conda after installation,
+  add conda to the package list.
+* An installer created by constructor is not the same as Miniconda.
+  All packages you want to include in the installer need to be
+  listed explicitly. In particular, on Windows this means that if
+  you want the "Anaconda Prompt," you will have to list
+  ``console_shortcut``, as well as ``menuinst``.
+* For Windows builds, add the Anaconda channel ``/msys2`` to the
+  file ``constructor.yaml``. This provides packages such as
+  ``m2w64-toolchain``, which is a dependency of ``theano``.
+  It is best to add ``/msys2`` as http://repo.anaconda.com/pkgs/msys2.
+* Constructor requires conda >=4.5.0
+
+
 
