@@ -446,7 +446,7 @@ cran_packages = [('r-usethis', 'GPL-3', 'GPL3', 'GPL-3'),  # cran: 'GPL-3'
                  ('r-rsed', 'BSD_3_clause', 'BSD', ['BSD_3_clause', 'LICENSE']),  # cran: 'BSD_3_clause + file LICENSE'
                  ('r-zoo', 'GPL-2 | GPL-3', 'GPL3', ['GPL-2', 'GPL-3']),  # cran: 'GPL-2 | GPL-3'
                  ('r-magree', 'GPL-3 | GPL-2', 'GPL3', ['GPL-3', 'GPL-2']),  # cran: 'GPL-3 | GPL-2'
-                 ('r-dt', 'GPL-3', 'GPL3', ['GPL-3', 'LICENSE']),  # cran: 'GPL-3 | file LICENSE'
+                 ('r-shiny', 'GPL-3', 'GPL3', ['GPL-3', 'LICENSE']),  # cran: 'GPL-3 | file LICENSE'
                  ('r-mglm', 'GPL-2', 'GPL2', 'GPL-2'),  # cran: 'GPL (>= 2)'
                  ]
 
