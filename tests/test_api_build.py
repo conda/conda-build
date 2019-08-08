@@ -288,7 +288,7 @@ platforms = ["64" if sys.maxsize > 2**32 else "32"]
 if sys.platform == "win32":
     platforms = sorted(list(set(["32", ] + platforms)))
     compilers = ["2.7", "3.6"]
-    msvc_vers = ['9.0', '14.0']
+    msvc_vers = ['9.0', '15.0']
 else:
     msvc_vers = []
     compilers = [".".join([str(sys.version_info.major), str(sys.version_info.minor)])]
