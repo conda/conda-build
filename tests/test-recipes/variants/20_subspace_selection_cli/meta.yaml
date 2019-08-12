@@ -5,6 +5,6 @@ package:
 requirements:
   build:
     - python
-    - vc
+    - six
   run:
     - python
