@@ -278,8 +278,6 @@ https://creativecommons.org/publicdomain/zero/1.0/ .
 
 from __future__ import print_function
 
-import six
-
 try:
     import configparser
 except ImportError:
@@ -343,9 +341,9 @@ def get_config_from_root(root):
     # the top of versioneer.py for instructions on writing your setup.cfg .
     setup_cfg = os.path.join(root, "setup.cfg")
 
-    parser = configparser.SafeConfigParser() if six.PY2 else configparser.ConfigParser()
+    parser = configparser.SafeConfigParser() if sys.version_info < (3, 2) else configparser.ConfigParser()
     with open(setup_cfg, "r") as f:
-        if six.PY2:
+        if sys.version_info < (3, 2):
             parser.readfp(f)
         else:
             parser.read_file(f)
