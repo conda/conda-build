@@ -7,6 +7,7 @@ if [[ "$FLAKE8" == "true" ]]; then
     pushd tests/bdist-recipe && python setup.py bdist_conda && popd
     conda build --help
     conda build --version
+    conda render conda.recipe
     conda build conda.recipe --no-anaconda-upload
     conda create -n _cbtest conda-build glob2 six
     # because this is a file, conda is not going to process any of its dependencies.
