@@ -10,16 +10,49 @@ environment:
       SYS_PYTHON_VERSION: "3.7"
       SYS_PYTHON_ARCH: "64"
       CONDA_CANARY: "False"
+      SLOW_TESTS: "True"
+
+    - SYS_PYTHON: "C:\\Miniconda37-x64"
+      SYS_PYTHON_VERSION: "3.7"
+      SYS_PYTHON_ARCH: "64"
+      CONDA_CANARY: "False"
+      SANITY: "True"
+
+    - SYS_PYTHON: "C:\\Miniconda37-x64"
+      SYS_PYTHON_VERSION: "3.7"
+      SYS_PYTHON_ARCH: "64"
+      CONDA_CANARY: "False"
+      SLOW_TESTS: "False"
 
     - SYS_PYTHON: "C:\\Miniconda-x64"
       SYS_PYTHON_VERSION: "2.7"
       SYS_PYTHON_ARCH: "64"
       CONDA_CANARY: "False"
+      SANITY: "True"
+
+    - SYS_PYTHON: "C:\\Miniconda-x64"
+      SYS_PYTHON_VERSION: "2.7"
+      SYS_PYTHON_ARCH: "64"
+      CONDA_CANARY: "False"
+      SLOW_TESTS: "False"
+
+    - SYS_PYTHON: "C:\\Miniconda-x64"
+      SYS_PYTHON_VERSION: "2.7"
+      SYS_PYTHON_ARCH: "64"
+      CONDA_CANARY: "False"
+      SLOW_TESTS: "True"
 
     - SYS_PYTHON: "C:\\Miniconda37-x64"
       SYS_PYTHON_VERSION: "3.7"
       SYS_PYTHON_ARCH: "64"
       CONDA_CANARY: "True"
+      SLOW_TESTS: "False"
+
+    - SYS_PYTHON: "C:\\Miniconda37-x64"
+      SYS_PYTHON_VERSION: "3.7"
+      SYS_PYTHON_ARCH: "64"
+      CONDA_CANARY: "True"
+      SLOW_TESTS: "True"
 
 skip_commits:
   files:
@@ -80,6 +113,7 @@ test_script:
   - set "PATH=%CONDA_ROOT%;%CONDA_ROOT%\Scripts;%CONDA_ROOT%\Library\bin;%PATH%"
   - set PATH
   - mkdir C:\cbtmp
+  - mkdir C:\cbtmp_serial
   # unset other language env vars - we only want to test if conda-build sets them itself
   - set PERL=
   - set LUA=
@@ -93,10 +127,19 @@ test_script:
   - conda create -n blarg -yq --download-only python cmake
   # remove all folders to avoid permission errors.  Leave root files (may have coverage info there)
   - for /d %%F in (c:\cbtmp\*) do rd /s /q "%%F"
-  - py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp C:\cbtmp -n 2 -m "not serial"
+  - for /d %%F in (c:\cbtmp_serial\*) do rd /s /q "%%F"
   # install conda-verify later, so we are ignoring checks in most tests
-  - conda install -y conda-verify
-  - py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp -n 0 -m "serial"
+  - set "SLOW_MARK=and not slow"
+  - if "%SLOW_TESTS%" == "True" set "SLOW_MARK=and slow"
+  - if "%SANITY%" == "True" (
+        conda install -y conda-verify &
+        py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp C:\cbtmp -n auto -m "sanity and not slow and not serial" &
+        py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp C:\cbtmp_serial -n 0 -m "sanity and not slow and serial"
+    ) else (
+        py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp C:\cbtmp -n auto -m "not serial %SLOW_MARK% and not sanity" &
+        conda install -y conda-verify &
+        if "%SLOW_MARK%" == "and not slow" ( py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp_serial -n 0 -m "serial %SLOW_MARK% and not sanity" )
+    )
 
 # For debugging, this is helpful - zip up the test environment and make it available for later download.
 #    However, it eats up a fair amount of time.  Better to disable until you need it.
@@ -105,5 +148,5 @@ test_script:
 #   - appveyor PushArtifact cbtmp.7z
 
 on_success:
-  - pip install codecov
+  - conda install -c conda-forge codecov -y
   - codecov --env SYS_PYTHON_VERSION --file C:\projects\conda-build\coverage.xml

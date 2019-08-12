@@ -33,6 +33,7 @@ import conda_build.cli.main_inspect as main_inspect
 import conda_build.cli.main_index as main_index
 
 
+@pytest.mark.sanity
 def test_build():
     args = ['--no-anaconda-upload', os.path.join(metadata_dir, "empty_sections"), '--no-activate',
             '--no-anaconda-upload']
@@ -156,6 +157,7 @@ def test_slash_in_recipe_arg_keeps_build_id(testing_workdir, testing_config):
     assert 'conda-build-test-has-prefix-files_1' in data
 
 
+@pytest.mark.sanity
 @pytest.mark.skipif(on_win, reason="prefix is always short on win.")
 def test_build_long_test_prefix_default_enabled(mocker, testing_workdir):
     recipe_path = os.path.join(metadata_dir, '_test_long_test_prefix')
@@ -178,6 +180,7 @@ def test_build_no_build_id(testing_workdir, testing_config):
     assert 'has_prefix_files_1' not in data
 
 
+@pytest.mark.sanity
 def test_build_multiple_recipes(testing_metadata, testing_workdir, testing_config):
     """Test that building two recipes in one CLI call separates the build environment for each"""
     os.makedirs('recipe1')
@@ -236,6 +239,7 @@ def test_render_output_build_path_set_python(testing_workdir, testing_metadata, 
     assert os.path.basename(output.rstrip()) == test_path, error
 
 
+@pytest.mark.sanity
 def test_skeleton_pypi(testing_workdir, testing_config):
     args = ['pypi', 'peppercorn']
     main_skeleton.execute(args)
@@ -243,13 +247,9 @@ def test_skeleton_pypi(testing_workdir, testing_config):
 
     # ensure that recipe generated is buildable
     main_build.execute(('peppercorn',))
-    # output, error = capfd.readouterr()
-    # if hasattr(output, 'decode'):
-    #     output = output.decode()
-    # assert 'Nothing to test for' not in output
-    # assert 'Nothing to test for' not in error
 
 
+@pytest.mark.slow
 def test_skeleton_pypi_arguments_work(testing_workdir):
     """
     These checks whether skeleton executes without error when these
@@ -486,6 +486,7 @@ def test_no_force_upload(mocker, testing_workdir, testing_metadata):
     assert call.called_once_with(['anaconda', 'upload', '--force', pkg])
 
 
+@pytest.mark.slow
 def test_conda_py_no_period(testing_workdir, testing_metadata, monkeypatch):
     monkeypatch.setenv('CONDA_PY', '36')
     testing_metadata.meta['requirements'] = {'host': ['python'],
@@ -520,6 +521,7 @@ def test_build_skip_existing_croot(testing_workdir, capfd):
     assert "are already built" in output
 
 
+@pytest.mark.sanity
 def test_package_test(testing_workdir, testing_metadata):
     """Test calling conda build -t <package file> - rather than <recipe dir>"""
     api.output_yaml(testing_metadata, 'recipe/meta.yaml')
@@ -591,6 +593,7 @@ def test_relative_path_test_recipe():
     main_build.execute(args)
 
 
+@pytest.mark.slow
 def test_render_with_python_arg_reduces_subspace(capfd):
     recipe = os.path.join(metadata_dir, "..", "variants", "20_subspace_selection_cli")
     # build the package
@@ -630,6 +633,7 @@ def test_render_with_python_arg_CLI_reduces_subspace(capfd):
     assert(len(out.splitlines()) == 1)
 
 
+@pytest.mark.sanity
 def test_test_extra_dep(testing_metadata):
     testing_metadata.meta['test']['imports'] = ['imagesize']
     api.output_yaml(testing_metadata, 'meta.yaml')

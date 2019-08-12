@@ -63,6 +63,7 @@ def namespace_setup(testing_workdir, request):
     return testing_workdir
 
 
+@pytest.mark.sanity
 def test_disallow_merge_conflicts(namespace_setup, testing_config):
     duplicate = os.path.join(namespace_setup, 'dupe', 'namespace', 'package', 'module.py')
     makefile(duplicate)
@@ -71,6 +72,7 @@ def test_disallow_merge_conflicts(namespace_setup, testing_config):
                                                  'package'))
 
 
+@pytest.mark.sanity
 def test_disallow_in_tree_merge(testing_workdir):
     with open('testfile', 'w') as f:
         f.write("test")
@@ -230,6 +232,9 @@ def test_logger_filtering(caplog, capfd):
     assert 'test warn message' in err
     assert 'test error message' in err
     assert caplog.text.count('duplicate') == 1
+
+    log.removeHandler(logging.StreamHandler(sys.stdout))
+    log.removeHandler(logging.StreamHandler(sys.stderr))
 
 
 def test_logger_config_from_file(testing_workdir, caplog, capfd, mocker):

@@ -4,7 +4,7 @@ import sys
 from pkg_resources import parse_version
 import pytest
 
-from conda_build.skeletons.pypi import get_package_metadata, get_pkginfo, \
+from conda_build.skeletons.pypi import get_package_metadata, \
     get_entry_points, is_setuptools_enabled, convert_to_flat_list, \
     get_dependencies, get_import_tests, get_tests_require, get_home, \
     get_summary, get_license_name, clean_license_name
@@ -53,6 +53,7 @@ def test_repo(prefix, repo, package, version, testing_workdir, testing_config):
         raise
 
 
+@pytest.mark.slow
 def test_name_with_version_specified(testing_workdir, testing_config):
     api.skeletonize(packages='sympy', repo='pypi', version='0.7.5',
                     config=testing_config)
@@ -297,6 +298,7 @@ def test_get_package_metadata(
     assert mock_metada_pylint == result_metadata_pylint
 
 
+@pytest.mark.slow
 def test_pypi_with_setup_options(testing_workdir, testing_config):
     # Use photutils package below because skeleton will fail unless the setup.py is given
     # the flag --offline because of a bootstrapping a helper file that
@@ -349,6 +351,7 @@ def test_pypi_with_version_arg(testing_workdir):
     assert parse_version(m.version()) == parse_version("0.7.2")
 
 
+@pytest.mark.slow
 def test_pypi_with_extra_specs(testing_workdir, testing_config):
     # regression test for https://github.com/conda/conda-build/issues/1697
     # For mpi4py:
@@ -364,6 +367,7 @@ def test_pypi_with_extra_specs(testing_workdir, testing_config):
     assert any('mpi4py' in req for req in m.meta['requirements']['host'])
 
 
+@pytest.mark.slow
 def test_pypi_with_version_inconsistency(testing_workdir, testing_config):
     # regression test for https://github.com/conda/conda-build/issues/189
     # For mpi4py:
@@ -449,7 +453,7 @@ cran_packages = [('r-usethis', 'GPL-3', 'GPL3', 'GPL-3'),  # cran: 'GPL-3'
                  ('r-mglm', 'GPL-2', 'GPL2', 'GPL-2'),  # cran: 'GPL (>= 2)'
                  ]
 
-
+@pytest.mark.slow
 @pytest.mark.parametrize("package, license_id, license_family, license_files", cran_packages)
 def test_cran_license(package, license_id, license_family, license_files, testing_workdir, testing_config):
     api.skeletonize(packages=package, repo='cran', output_dir=testing_workdir,

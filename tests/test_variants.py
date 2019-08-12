@@ -93,6 +93,7 @@ def test_pinning_in_build_requirements():
     assert all(len(req.split(' ')) == 3 for req in build_requirements)
 
 
+@pytest.mark.sanity
 def test_no_satisfiable_variants_raises_error():
     recipe = os.path.join(recipe_dir, '01_basic_templating')
     with pytest.raises(exceptions.DependencyNeedsBuildingError):
@@ -182,6 +183,7 @@ def test_variant_input_with_zip_keys_keeps_zip_keys_list():
     assert 'zip_keys' in variant_list[0] and variant_list[0]['zip_keys']
 
 
+@pytest.mark.serial
 @pytest.mark.xfail(sys.platform=='win32', reason="console readout issues on appveyor")
 def test_ensure_valid_spec_on_run_and_test(testing_workdir, testing_config, caplog):
     testing_config.debug = True
@@ -356,7 +358,6 @@ def test_target_platform_looping(testing_config):
     assert len(outputs) == 2
 
 
-@pytest.mark.serial
 def test_numpy_used_variable_looping(testing_config):
     outputs = api.get_output_file_paths(os.path.join(recipe_dir, 'numpy_used'))
     assert len(outputs) == 4
@@ -409,7 +410,6 @@ def test_exclusive_config_file(testing_workdir):
     assert variant['abc'] == '123'
 
 
-@pytest.mark.serial
 def test_inner_python_loop_with_output(testing_config):
     outputs = api.get_output_file_paths(os.path.join(recipe_dir, 'test_python_as_subpackage_loop'),
                                         config=testing_config)

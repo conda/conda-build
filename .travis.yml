@@ -4,8 +4,12 @@ python:
   - 2.7
   - 3.7
 env:
-  - CONDA_VERSION=release
-  - CONDA_VERSION=canary
+  - CONDA_VERSION=release SLOW_TESTS=true SANITY=false
+  - CONDA_VERSION=release SLOW_TESTS=false SANITY=false
+  - CONDA_VERSION=release SANITY=true
+  - CONDA_VERSION=canary SLOW_TESTS=false SANITY=false
+  - CONDA_VERSION=canary SLOW_TESTS=true SANITY=false
+  - CONDA_VERSION=canary SANITY=true
 matrix:
   fast_finish: true
   exclude:
