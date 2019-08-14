@@ -176,6 +176,7 @@ class PerlTmpDownload(TmpDownload):
 
             return dst
 
+
 def LooseVersion(version):
     """
     Wrap distutils.version.LooseVersion, coercing passed version into str
@@ -314,7 +315,7 @@ def skeletonize(packages, output_dir=".", version=None,
 
         # Add Perl version to core module requirements, since these are empty
         # packages, unless we're newer than what's in core
-        if (core_version is not None and 
+        if (core_version is not None and
            ((version in [None, '']) or (core_version >= LooseVersion(version)))):
             if not write_core:
                 print('We found core module %s. Skipping recipe creation.' %
@@ -490,7 +491,6 @@ def core_module_version(module, version, config):
               the module is actually part of the Perl core, the version of Perl
               passed in will be used as the module version.
     '''
-
 
     # In case we were given a dist, convert to module
     module = module.replace('-', '::')
@@ -733,9 +733,9 @@ def get_release_info(cpan_url, package, version, perl_version, config,
     # request
 
     version_str = str(version)
-    if (version is not None and 
-        LooseVersion('0') != LooseVersion(version_str) and
-        LooseVersion(rel_dict['version']) != LooseVersion(version_str)):
+    if (version is not None and
+            LooseVersion('0') != LooseVersion(version_str) and
+            LooseVersion(rel_dict['version']) != LooseVersion(version_str)):
         author = rel_dict['author']
         try:
             new_rel_dict = get_cpan_api_url('{0}/release/{1}/{2}-{3}'.format(cpan_url,
