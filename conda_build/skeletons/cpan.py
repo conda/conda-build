@@ -303,12 +303,12 @@ def skeletonize(packages, output_dir=".", version=None,
 
         # Fetch all metadata from CPAN
         core_version = core_module_version(package, perl_version, config=config)
-        if version in [None, ''] and core_version is None:
+        if not version and not core_version:
             release_data = latest_release_data
         else:
             release_data = get_release_info(meta_cpan_url, package,
                                             (LooseVersion(version) if
-                                             version not in [None, ''] else
+                                             version else
                                              core_version),
                                              perl_version,
                                              config=config)
@@ -316,7 +316,7 @@ def skeletonize(packages, output_dir=".", version=None,
         # Add Perl version to core module requirements, since these are empty
         # packages, unless we're newer than what's in core
         if (core_version is not None and
-           ((version in [None, '']) or (core_version >= LooseVersion(version)))):
+           (not version or core_version >= LooseVersion(version))):
             if not write_core:
                 print('We found core module %s. Skipping recipe creation.' %
                       packagename)
@@ -494,7 +494,7 @@ def core_module_version(module, version, config):
 
     # In case we were given a dist, convert to module
     module = module.replace('-', '::')
-    if version in [None, '']:
+    if not version:
         version = LooseVersion(config.variant['perl'])
     else:
         version = LooseVersion(version)
@@ -580,7 +580,7 @@ def deps_for_package(package, release_data, perl_version, output_dir,
     for dep_dict in release_data['dependency']:
         # Only care about requirements outside the develop phase
         try:
-            if dep_dict['relationship'] == 'requires' and dep_dict['phase'] not in ['develop']:
+            if dep_dict['relationship'] == 'requires' and dep_dict['phase'] != 'develop':
                 print('.', end='')
                 sys.stdout.flush()
                 # Format dependency string (with Perl trailing dist comment)
