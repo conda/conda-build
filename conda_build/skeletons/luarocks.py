@@ -103,7 +103,7 @@ about:
 LUAROCKS_BUILD_SH = """\
 #!/bin/bash
 
-set -o errexit
+set -o errexit -o pipefail
 
 # Make sure luarocks can see all local dependencies
 "${{PREFIX}}"/bin/luarocks-admin make_manifest --local-tree

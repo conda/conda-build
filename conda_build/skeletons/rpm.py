@@ -61,7 +61,7 @@ about:
 BUILDSH = """\
 #!/bin/bash
 
-set -o errexit
+set -o errexit -o pipefail
 
 mkdir -p "${PREFIX}"/{hostmachine}/sysroot
 pushd "${PREFIX}"/{hostmachine}/sysroot > /dev/null 2>&1
