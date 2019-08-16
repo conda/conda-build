@@ -10,7 +10,7 @@ package naming conventions listed below.
     pair: terminology; package name
     seealso: name; package name
 
-package name
+Package name
 ============
 
 The name of a package, without any reference to a particular
@@ -24,7 +24,7 @@ by ``package_name``.
     pair: terminology; package version
     seealso: name; package version
 
-package version
+Package version
 ===============
 
 A version number or string, often similar to ``X.Y`` or
@@ -35,7 +35,7 @@ A version number or string, often similar to ``X.Y`` or
     pair: terminology; build string
     seealso: name; build string
 
-build string
+Build string
 ============
 
 An arbitrary string that identifies a particular build of a
@@ -48,10 +48,10 @@ to parse it for any specific information.
     pair: terminology; canonical name
     seealso: name; canonical name
 
-canonical name
+Canonical name
 ==============
 
-The package name, version and build string joined together by
+The package name, version, and build string joined together by
 hyphens---name-version-buildstring. In usage documentation, these
 are referred to by ``canonical_name``.
 
@@ -59,28 +59,38 @@ are referred to by ``canonical_name``.
 .. index::
     pair: terminology; filename
 
-filename
+Filename
 ========
 
 Conda package filenames are canonical names, plus the suffix
-``.tar.bz2``.
+``.tar.bz2`` or ``.conda``.
 
 The following figure compares a canonical name to a filename:
 
 .. figure:: /img/conda_names.png
    :align:  center
 
-   Conda package naming.
+   Conda package naming
 
 |
 
+Conda supports both ``.conda`` and ``.tar.bz2`` package extensions. The ``.conda``
+format is generally smaller and more efficient than ``.tar.bz2`` packages.
+Read our `blog post <https://www.anaconda.com/understanding-and-improving-condas-performance/>`_
+about it to learn more.
+
+The build string is created as the package is built. Things that
+contribute to it are the variants specified either by the command
+line or the configuration from the ``conda_build_config.yaml``, and the
+build number in the recipe. If there are no variants,
+then the build string is the build number that is specified in the recipe.
 
 .. _package_spec:
 .. index::
     pair: terminology; package specification
     seealso: package spec; package specification
 
-package specification
+Package specification
 =====================
 
 A package name together with a package version---which may be
