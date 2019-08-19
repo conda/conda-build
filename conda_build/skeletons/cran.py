@@ -1168,7 +1168,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         need_git = is_github_url
         if cran_package.get("NeedsCompilation", 'no') == 'yes':
             with tarfile.open(available['source']['cached_path']) as tf:
-                need_f = any([f.name.lower().endswith(('.f', '.f90', '.f77')) for f in tf])
+                need_f = any([f.name.lower().endswith(('.f', '.f90', '.f77', '.f95', '.f03')) for f in tf])
                 # Fortran builds use CC to perform the link (they do not call the linker directly).
                 need_c = True if need_f else \
                     any([f.name.lower().endswith('.c') for f in tf])
