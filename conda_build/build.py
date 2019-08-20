@@ -494,8 +494,9 @@ def get_files_with_prefix(m, files, prefix):
 
 
 def record_prefix_files(m, files_with_prefix):
-    binary_has_prefix_files = m.binary_has_prefix_files()
-    text_has_prefix_files = m.has_prefix_files()
+    # Copies are made to ease debugging. Sorry.
+    binary_has_prefix_files = m.binary_has_prefix_files().copy()
+    text_has_prefix_files = m.has_prefix_files().copy()
 
     if files_with_prefix and not m.noarch:
         if utils.on_win:
@@ -509,22 +510,30 @@ def record_prefix_files(m, files_with_prefix):
             # versions of conda don't support quotes in has_prefix
             fmt_str = '%s %s %s\n'
 
+        print("Files containing CONDA_PREFIX")
+        print("-----------------------------")
         with open(join(m.config.info_dir, 'has_prefix'), 'w') as fo:
             for pfix, mode, fn in files_with_prefix:
-
+                ignored_because = None
                 if fn in binary_has_prefix_files:
                     if mode != 'binary':
                         print("Forcing %s to be treated as binary instead of %s" % (fn, mode))
                         mode = 'binary'
                     binary_has_prefix_files.remove(fn)
-                elif fn in text_has_prefix_files:
+                elif fn in text_has_prefix_files or (not len(text_has_prefix_files) and mode == 'text'):
                     if mode != 'text':
                         print("Forcing %s to be treated as text instead of %s" % (fn, mode))
                         mode = 'text'
-                    text_has_prefix_files.remove(fn)
+                    if fn in text_has_prefix_files:
+                        text_has_prefix_files.remove(fn)
+                else:
+                    ignored_because = " :: Not in build/%s_has_prefix_files" % (mode)
 
-                print("Detected hard-coded path in %s file %s" % (mode, fn))
-                fo.write(fmt_str % (pfix, mode, fn))
+                print("{fn} ({mode}): {action}{reason}".format(fn=fn, mode=mode,
+                                                               action="Ignoring" if ignored_because else "Patching",
+                                                               reason=ignored_because))
+                if not ignored_because:
+                    fo.write(fmt_str % (pfix, mode, fn))
 
     # make sure we found all of the files expected
     errstr = ""
