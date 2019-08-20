@@ -1585,6 +1585,8 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                     if not (m.is_output or
                             (os.path.isdir(m.config.host_prefix) and
                              len(os.listdir(m.config.host_prefix)) <= 1)):
+                        # This log message contradicts both the not (m.is_output or ..) check above
+                        # and also the comment "For more than one output, ..."
                         log.debug('Not creating new env for output - already exists from top-level')
                     else:
                         m.config._merge_build_host = m.build_is_host
@@ -1636,6 +1638,9 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                         if f.startswith('conda-meta'):
                             to_remove.add(f)
 
+                    # This is wrong, files has not been expanded at this time and could contain
+                    # wildcards.  Also well, I just do not understand this, because when this
+                    # does contain wildcards, the files in to_remove will slip back in.
                     if 'files' in output_d:
                         output_d['files'] = set(output_d['files']) - to_remove
 
