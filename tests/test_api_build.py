@@ -212,6 +212,7 @@ def test_output_build_path_git_source(testing_workdir, testing_config):
 
 
 @pytest.mark.sanity
+@pytest.mark.serial
 def test_build_with_no_activate_does_not_activate():
     api.build(os.path.join(metadata_dir, '_set_env_var_no_activate_build'), activate=False,
               anaconda_upload=False)
@@ -441,6 +442,7 @@ def test_compileall_compiles_all_good_files(testing_workdir, testing_config):
 
 
 @pytest.mark.sanity
+@pytest.mark.serial
 def test_render_setup_py_old_funcname(testing_workdir, testing_config, caplog):
     api.build(os.path.join(metadata_dir, "_source_setuptools"), config=testing_config)
     assert "Deprecation notice: the load_setuptools function has been renamed to " in caplog.text
@@ -463,6 +465,7 @@ def numpy_installed():
     return any([True for dist in linked(sys.prefix) if dist.name == 'numpy'])
 
 
+@pytest.mark.serial
 @pytest.mark.skipif(not numpy_installed(), reason="numpy not installed in base environment")
 def test_numpy_setup_py_data(testing_config):
     recipe_path = os.path.join(metadata_dir, '_numpy_setup_py_data')
@@ -471,10 +474,10 @@ def test_numpy_setup_py_data(testing_config):
     # PackagesNotFoundError: The following packages are missing from the target environment:
     #    - cython
     subprocess.call('conda remove -y cython'.split())
-    with pytest.raises(CondaBuildException) as exc:
-        m = api.render(recipe_path, config=testing_config, numpy="1.11")[0][0]
-        assert "Cython" in str(exc)
-    subprocess.check_call('conda install -y cython'.split())
+    with pytest.raises(CondaBuildException) as exc_info:
+        api.render(recipe_path, config=testing_config, numpy="1.11")[0][0]
+    assert exc_info.match("Cython")
+    subprocess.check_call(["conda", "install", "-y", "cython"])
     m = api.render(recipe_path, config=testing_config, numpy="1.11")[0][0]
     _hash = m.hash_dependencies()
     assert os.path.basename(api.get_output_file_path(m)[0]) == \

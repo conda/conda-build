@@ -1,0 +1,151 @@
+trigger:
+- master
+
+jobs:
+
+- job: 'Linux'
+  pool:
+    vmImage: ubuntu-16.04
+  strategy:
+    maxParallel: 10
+    matrix:
+      py27-release:
+        PYTHON_VERSION: '2.7'
+        CONDA_VERSION: 'release'
+      py27-canary:
+        PYTHON_VERSION: '2.7'
+        CONDA_VERSION: 'canary'
+      py37-canary:
+        PYTHON_VERSION: '3.7'
+        CONDA_VERSION: 'release'
+      py37-release:
+        PYTHON_VERSION: '3.7'
+        CONDA_VERSION: 'canary'
+  timeoutInMinutes: 480
+  steps:
+  - script: |
+      sudo apt update
+      sudo apt install attr -y
+      conda info
+      ps -ef | grep $$
+      conda install python=$PYTHON_VERSION -y
+      mkdir -p /usr/share/miniconda/locks
+      mkdir -p /usr/share/miniconda/bin
+      chmod -w /usr/share/miniconda/locks
+      source /usr/share/miniconda/bin/activate
+      if [ "$CONDA_VERSION" = "release" ]; then
+        conda update -y conda;
+      else
+        conda install -y -c conda-canary conda;
+      fi
+      conda config --set always_yes yes
+      conda config --set auto_update_conda False
+      conda info
+      # avoids a python 3.7 problem
+      conda install -q cytoolz
+      if [[ "$PYTHON_VERSION" == "2.7" ]]; then
+        conda install -q futures scandir;
+      fi
+      conda install -q anaconda-client git requests filelock contextlib2 jinja2 patchelf ripgrep pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz tqdm conda-package-handling py-lief
+      conda install -c conda-forge pytest-azurepipelines -y
+      pip install pkginfo
+      conda install -c c3i_test -q perl;
+      conda install -q pytest pip pytest-cov pytest-forked pytest-xdist nomkl numpy mock pytest-mock;
+      pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd;
+      pip install --no-deps .
+      conda info -a
+    displayName: Preparing test environment
+
+  - script: |
+      conda install conda-verify -y
+      /usr/share/miniconda/bin/py.test --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="Linux-SerialTests-$CONDA_VERSION-Python$PYTHON_VERSION"
+    displayName: 'Serial Tests'
+
+  - script: |
+      conda remove conda-verify -y
+      echo "safety_checks: disabled" >> ~/.condarc
+      echo "local_repodata_ttl: 1800" >> ~/.condarc
+      mkdir -p ~/.conda
+      conda create -n blarg1 -yq python=2.7
+      conda create -n blarg3 -yq python=3.7
+      conda create -n blarg4 -yq python nomkl numpy pandas svn
+      /usr/share/miniconda/bin/py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --test-run-title="Linux-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION"
+    displayName: 'Parallel Tests'
+
+
+- job: 'Windows'
+  pool:
+    vmImage: "windows-2019"
+  strategy:
+    maxParallel: 10
+    matrix:
+      py27-release:
+        PYTHON_VERSION: '2.7'
+        CONDA_VERSION: 'release'
+      py27-canary:
+        PYTHON_VERSION: '2.7'
+        CONDA_VERSION: 'canary'
+      py37-canary:
+        PYTHON_VERSION: '3.7'
+        CONDA_VERSION: 'release'
+      py37-release:
+        PYTHON_VERSION: '3.7'
+        CONDA_VERSION: 'canary'
+  timeoutInMinutes: 480
+  steps:
+  - checkout: self
+    persistCredentials: true
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '$(PYTHON_VERSION)'
+  - powershell: Write-Host "##vso[task.prependpath]$env:CONDA\Scripts"
+    displayName: Add conda to PATH
+  - script: |
+      conda --help
+      conda --version
+      conda install python="%PYTHON_VERSION%" -y
+      if "%CONDA_VERSION%" == "canary" (conda update -c conda-canary conda) else (conda update -q conda)
+      conda config --set always_yes yes
+      conda config --set auto_update_conda no
+      conda info
+      python -c "import sys; print(sys.version)"
+      python -c "import sys; print(sys.executable)"
+      python -c "import sys; print(sys.prefix)"
+      conda update -q --all
+      conda install -q pip pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling
+      conda install -c conda-forge pytest-azurepipelines -y
+      if "%PYTHON_VERSION%" == "2.7" conda install -q scandir
+      if "%PYTHON_VERSION%" == "3.7" conda install -q py-lief
+      python --version
+      python -c "import struct; print(struct.calcsize('P') * 8)"
+      pip install --no-deps .
+      conda build --version
+      call ci\appveyor\setup_x64.bat
+      copy "C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\bin\vcvars64.bat" "C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\bin\amd64\vcvarsamd64.bat"
+      pushd .. && git clone https://github.com/conda/conda_build_test_recipe  && popd
+    displayName: 'Configuration'
+  - script: |
+      mkdir C:\cbtmp_serial
+      for /d %%F in (c:\cbtmp_serial\*) do rd /s /q "%%F"
+      conda install -y conda-verify
+      py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp C:\cbtmp_serial -n 0 -m "serial" --test-run-title="Win-SerialTests-%CONDA_VERSION%-Python%PYTHON_VERSION%"
+    displayName: 'Serial Tests'
+  - script: |
+      conda remove -y conda-verify
+      mkdir C:\cbtmp
+      # unset other language env vars - we only want to test if conda-build sets them itself
+      set PERL=
+      set LUA=
+      set R=
+      # cache several files to avoid race condition errors
+      echo "safety_checks: disabled" >> ~/.condarc
+      echo "local_repodata_ttl: 1800" >> ~/.condarc
+      conda create -n blarg -yq --download-only python=2.7
+      conda create -n blarg -yq --download-only python=3.7
+      conda create -n blarg -yq --download-only python cmake
+      # remove all folders to avoid permission errors.  Leave root files (may have coverage info there)
+      for /d %%F in (C:\cbtmp\*) do rd /s /q "%%F"
+      # install conda-verify later, so we are ignoring checks in most tests
+      py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp C:\cbtmp -n auto -m "not serial %SLOW_MARK% and not sanity" --test-run-title="Win-ParallelTests-%CONDA_VERSION%-Python%PYTHON_VERSION%"
+    displayName: 'Parallel Tests'
+
