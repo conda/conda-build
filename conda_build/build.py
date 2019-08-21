@@ -494,6 +494,10 @@ def get_files_with_prefix(m, files, prefix):
 
 
 def record_prefix_files(m, files_with_prefix):
+
+    if not files_with_prefix:
+        return
+
     # Copies are made to ease debugging. Sorry.
     binary_has_prefix_files = m.binary_has_prefix_files().copy()
     text_has_prefix_files = m.has_prefix_files().copy()
@@ -531,7 +535,7 @@ def record_prefix_files(m, files_with_prefix):
 
                 print("{fn} ({mode}): {action}{reason}".format(fn=fn, mode=mode,
                                                                action="Ignoring" if ignored_because else "Patching",
-                                                               reason=ignored_because))
+                                                               reason=ignored_because if ignored_because else ""))
                 if not ignored_because:
                     fo.write(fmt_str % (pfix, mode, fn))
 
