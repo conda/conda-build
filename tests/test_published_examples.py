@@ -11,6 +11,7 @@ from .utils import metadata_dir, is_valid_dir
 published_examples = os.path.join(os.path.dirname(metadata_dir), 'published_code')
 
 
+@pytest.mark.sanity
 def test_skeleton_pypi(testing_workdir):
     """published in docs at http://conda.pydata.org/docs/build_tutorials/pkgs.html"""
     conda_path = os.path.join(sys.prefix, 'Scripts' if sys.platform == 'win32' else 'bin', 'conda')
@@ -27,6 +28,7 @@ def recipe(request):
 
 
 # This tests any of the folders in the test-recipes/published_code folder that don't start with _
+@pytest.mark.sanity
 def test_recipe_builds(recipe, testing_config, testing_workdir):
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts

@@ -107,6 +107,7 @@ def test_pin_compatible_semver(testing_config):
     assert 'zlib >=1.2.11,<2.0a0' in metadata.get_value('requirements/run')
 
 
+@pytest.mark.slow
 def test_resolved_packages_recipe(testing_config):
     recipe_dir = os.path.join(metadata_dir, '_resolved_packages_host_build')
     metadata = api.render(recipe_dir, config=testing_config)[0][0]
@@ -121,6 +122,7 @@ def test_resolved_packages_recipe(testing_config):
         assert package in run_requirements
 
 
+@pytest.mark.slow
 def test_host_entries_finalized(testing_config):
     recipe = os.path.join(metadata_dir, '_host_entries_finalized')
     metadata = api.render(recipe, config=testing_config)
@@ -222,6 +224,7 @@ def test_merge_build_host_empty_host_section(testing_config):
 
 
 @pytest.mark.skipif(sys.platform != "linux2", reason="package on remote end is only on linux")
+@pytest.mark.xfail(reason="It needs to be fixed for Python v2.7. #3681")
 def test_run_exports_from_repo_without_channeldata(testing_config):
     ms = api.render(os.path.join(metadata_dir, '_run_export_no_channeldata'), config=testing_config)
     assert ms[0][0].meta['requirements']['build'] == ["exporty"]

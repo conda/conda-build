@@ -18,10 +18,12 @@ def recipe(request):
     return os.path.join(subpackage_dir, request.param)
 
 
+@pytest.mark.slow
 def test_subpackage_recipes(recipe, testing_config):
     api.build(recipe, config=testing_config)
 
 
+@pytest.mark.sanity
 def test_autodetect_raises_on_invalid_extension(testing_config):
     with pytest.raises(NotImplementedError):
         api.build(os.path.join(subpackage_dir, '_invalid_script_extension'), config=testing_config)
@@ -158,6 +160,7 @@ def test_about_metadata(testing_config):
             assert info['home'] == 'http://not.a.url'
 
 
+@pytest.mark.slow
 def test_toplevel_entry_points_do_not_apply_to_subpackages(testing_config):
     recipe_dir = os.path.join(subpackage_dir, '_entry_points')
     outputs = api.build(recipe_dir, config=testing_config)
@@ -216,6 +219,7 @@ def test_overlapping_files(testing_config, caplog):
     assert sum(int("Exact overlap" in rec.message) for rec in caplog.records) == 1
 
 
+@pytest.mark.sanity
 def test_per_output_tests(testing_config):
     recipe_dir = os.path.join(subpackage_dir, '_per_output_tests')
     api.build(recipe_dir, config=testing_config)
@@ -226,6 +230,7 @@ def test_per_output_tests(testing_config):
     # assert out.count("top-level test") == count, out
 
 
+@pytest.mark.sanity
 def test_per_output_tests_script(testing_config):
     recipe_dir = os.path.join(subpackage_dir, '_output_test_script')
     with pytest.raises(SystemExit):
@@ -263,12 +268,14 @@ def test_subpackage_order_bad(testing_config):
     assert len(outputs) == 2
 
 
+@pytest.mark.sanity
 def test_build_script_and_script_env(testing_config):
     recipe = os.path.join(subpackage_dir, '_build_script')
     os.environ['TEST_FN'] = 'test'
     api.build(recipe, config=testing_config)
 
 
+@pytest.mark.sanity
 @pytest.mark.skipif(sys.platform != 'darwin', reason="only implemented for mac")
 def test_strong_run_exports_from_build_applies_to_host(testing_config):
     recipe = os.path.join(subpackage_dir, '_strong_run_exports_applies_from_build_to_host')
@@ -314,6 +321,7 @@ def test_merge_build_host_applies_in_outputs(testing_config):
     api.build(recipe, config=testing_config)
 
 
+@pytest.mark.sanity
 def test_activation_in_output_scripts(testing_config):
     recipe = os.path.join(subpackage_dir, '_output_activation')
     testing_config.activate = True
@@ -328,6 +336,7 @@ def test_inherit_build_number(testing_config):
         assert int(m.meta['build']['number']) == 1, "build number should have been inherited as '1'"
 
 
+@pytest.mark.slow
 def test_loops_do_not_remove_earlier_packages(testing_config):
     recipe = os.path.join(subpackage_dir, '_xgboost_example')
     output_files = api.get_output_file_paths(recipe, config=testing_config)

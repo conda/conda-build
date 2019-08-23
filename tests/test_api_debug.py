@@ -47,6 +47,7 @@ def check_test_files_present(work_dir, test=True):
         assert os.path.exists(os.path.join(work_dir, "conda_test_runner.sh")) == test
 
 
+@pytest.mark.slow
 def test_debug_recipe_default_path(testing_config):
     activation_string = api.debug(recipe_path, config=testing_config)
     assert activation_string and "debug_1" in activation_string
@@ -68,6 +69,7 @@ def test_debug_package_default_path(testing_config):
     assert_correct_folders(work_dir, build=False)
 
 
+@pytest.mark.slow
 def test_debug_recipe_custom_path(testing_workdir):
     activation_string = api.debug(recipe_path, path=testing_workdir)
     assert activation_string and "debug_1" not in activation_string
@@ -99,11 +101,13 @@ def test_specific_output():
     assert_correct_folders(work_dir, build=True)
 
 
+@pytest.mark.sanity
 def test_error_on_ambiguous_output():
     with pytest.raises(ValueError):
         api.debug(ambiguous_recipe_path)
 
 
+@pytest.mark.sanity
 def test_error_on_unmatched_output():
     with pytest.raises(ValueError):
         api.debug(ambiguous_recipe_path, output_id="frank")

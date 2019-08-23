@@ -97,6 +97,7 @@ def test_git_repo_with_single_subdir_does_not_enter_subdir(testing_metadata):
     assert os.path.basename(testing_metadata.config.work_dir) != 'one_folder'
 
 
+@pytest.mark.sanity
 def test_source_user_expand(testing_workdir):
     with TemporaryDirectory(dir=os.path.expanduser('~')) as tmp:
         with TemporaryDirectory() as tbz_srcdir:

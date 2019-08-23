@@ -10,6 +10,7 @@ from conda_build import api
 from .utils import metadata_dir
 
 
+@pytest.mark.sanity
 def test_recipe_test(testing_workdir, testing_config):
     """Test calling conda build -t <recipe dir>"""
     recipe = os.path.join(metadata_dir, 'has_prefix_files')
@@ -18,6 +19,7 @@ def test_recipe_test(testing_workdir, testing_config):
     api.test(recipe, config=metadata.config)
 
 
+@pytest.mark.sanity
 def test_package_test(testing_workdir, testing_config):
     """Test calling conda build -t <package file> - rather than <recipe dir>"""
     recipe = os.path.join(metadata_dir, 'has_prefix_files')
@@ -45,6 +47,7 @@ def test_package_with_jinja2_does_not_redownload_source(testing_workdir, testing
     assert not provide.called
 
 
+@pytest.mark.sanity
 def test_api_extra_dep(testing_metadata):
     testing_metadata.meta['test']['imports'] = ['click']
     output = api.build(testing_metadata, notest=True, anaconda_upload=False)[0]
