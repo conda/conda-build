@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 from collections import defaultdict, OrderedDict
 from functools import partial
-from fnmatch import fnmatch, fnmatchcase, filter as fnmatch_filter
+from fnmatch import fnmatch, filter as fnmatch_filter
 import io
 import locale
 import re
@@ -189,7 +189,7 @@ def rm_py_along_so(prefix):
         if fn.is_file() and fn.name.endswith(('.so', '.pyd')):
             name, _ = os.path.splitext(fn.path)
             for ext in '.py', '.pyc', '.pyo':
-                if name + ext in files:
+                if any(fnmatch(name + ext, w) for w in files):
                     os.unlink(name + ext)
 
 
@@ -306,7 +306,7 @@ def post_process(name, version, files, prefix, config, preserve_egg_dir=False, n
 def find_lib(link, prefix, files, path=None):
     if link.startswith(prefix):
         link = os.path.normpath(link[len(prefix) + 1:])
-        if link not in files:
+        if not any(fnmatch(link, w) for w in files):
             sys.exit("Error: Could not find %s" % link)
         return link
     if link.startswith('/'):  # but doesn't start with the build prefix
@@ -718,14 +718,14 @@ def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_v
                     if not dynamic_lib and not static_lib:
                         continue
                     rp = os.path.relpath(fp, prefix)
-                    if dynamic_lib and rp not in all_needed_dsos:
+                    if dynamic_lib and not any(fnmatch(rp, w) for w in all_needed_dsos):
                         continue
-                    if rp in all_lib_exports:
+                    if any(fnmatch(rp, w) for w in all_lib_exports):
                         continue
                     owners = prefix_owners[rp] if rp in prefix_owners else []
                     # Self-vendoring, not such a big deal but may as well report it?
                     if not len(owners):
-                        if rp in files:
+                        if any(fnmatch(rp, w) for w in files):
                             owners.append(pkg_vendored_dist)
                     new_pkgs = list(which_package(rp, prefix))
                     # Cannot filter here as this means the DSO (eg libomp.dylib) will not be found in any package
@@ -804,7 +804,7 @@ def _lookup_in_system_whitelists(errors, whitelist, needed_dso, sysroots_files, 
                 # Do we want to do this replace?
                 sysroot_files.append(needed_dso.replace(sysroot_substitution, sysroot_os))
             else:
-                found = [file for file in files if fnmatchcase(file, wild)]
+                found = [file for file in files if fnmatch(file, wild)]
                 sysroot_files.extend(found)
         if len(sysroot_files):
             # Removing sysroot_prefix is only *really* for Linux, though we could
@@ -870,7 +870,7 @@ def _lookup_in_prefix_packages(errors, needed_dso, files, run_prefix, whitelist,
                                     in_pkgs_in_run_reqs,
                                     and_also), verbose=verbose)
     else:
-        if in_prefix_dso not in files:
+        if not any(fnmatch(in_prefix_dso, w) for w in files):
             _print_msg(errors, '{}: {} not found in any packages'.format(msg_prelude,
                                                                         in_prefix_dso), verbose=verbose)
         elif verbose:
