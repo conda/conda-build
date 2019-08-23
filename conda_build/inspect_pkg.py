@@ -25,7 +25,7 @@ from conda_build.conda_interface import (iteritems, specs_from_args, is_linked, 
                                          get_index)
 from conda_build.conda_interface import display_actions, install_actions
 from conda_build.conda_interface import memoized
-
+from fnmatch import fnmatch
 
 @memoized
 def dist_files(prefix, dist):
@@ -39,8 +39,10 @@ def which_package(in_prefix_path, prefix):
     the conda packages the file came from.  Usually the iteration yields
     only one package.
     """
+    norm_ipp = in_prefix_path.replace(os.sep, '/')
     for dist in linked(prefix):
-        if in_prefix_path.replace(os.sep, '/') in dist_files(prefix, dist):
+        dfiles = dist_files(prefix, dist)
+        if any(fnmatch(norm_ipp, w) for w in dfiles):
             yield dist
 
 
