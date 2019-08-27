@@ -24,6 +24,7 @@ install:
   - ps -ef | grep $$
   - wget http://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
   - bash miniconda.sh -b -p /opt/conda
+  - source /opt/conda/bin/activate
   - conda update -y conda;
   - conda config --set always_yes yes
   - conda config --set auto_update_conda False
