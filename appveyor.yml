@@ -148,5 +148,5 @@ test_script:
 #   - appveyor PushArtifact cbtmp.7z
 
 on_success:
-  - conda install -c conda-forge codecov -y
+  - conda install codecov -y
   - codecov --env SYS_PYTHON_VERSION --file C:\projects\conda-build\coverage.xml
