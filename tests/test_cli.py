@@ -116,6 +116,20 @@ def test_render_output_build_path(testing_workdir, testing_metadata, capfd, capl
     assert error == ""
 
 
+def test_render_output_build_path_and_file(testing_workdir, testing_metadata, capfd, caplog):
+    api.output_yaml(testing_metadata, 'meta.yaml')
+    rendered_filename = 'out.yaml'
+    args = ['--output', '--file', rendered_filename, os.path.join(testing_workdir)]
+    main_render.execute(args)
+    test_path = os.path.join(sys.prefix, "conda-bld", testing_metadata.config.host_subdir,
+                             "test_render_output_build_path_and_file-1.0-1.tar.bz2")
+    output, error = capfd.readouterr()
+    assert output.rstrip() == test_path, error
+    assert error == ""
+    rendered_meta = yaml.safe_load(open(rendered_filename, 'r'))
+    assert rendered_meta['package']['name'] == 'test_render_output_build_path_and_file'
+
+
 def test_build_output_build_path(testing_workdir, testing_metadata, testing_config, capfd):
     api.output_yaml(testing_metadata, 'meta.yaml')
     testing_config.verbose = False
