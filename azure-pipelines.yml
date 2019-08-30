@@ -128,10 +128,10 @@ jobs:
     displayName: 'Configuration'
 
   - script: |
-      mkdir D:\a\cbtmp_serial
-      for /d %%F in (D:\a\cbtmp_serial\*) do rd /s /q "%%F"
+#      mkdir D:\a\cbtmp_serial
+#      for /d %%F in (D:\a\cbtmp_serial\*) do rd /s /q "%%F"
       conda install -y conda-verify
-      py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp D:\a\cbtmp_serial -n 0 -m "serial" --test-run-title="Win-SerialTests-%CONDA_VERSION%-Python%PYTHON_VERSION%"
+      py.test --color=yes -v --cov conda_build --cov-report xml tests -n 0 -m "serial" --test-run-title="Win-SerialTests-%CONDA_VERSION%-Python%PYTHON_VERSION%"
     displayName: 'Serial Tests'
 
   - script: |
