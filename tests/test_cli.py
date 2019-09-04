@@ -107,7 +107,7 @@ def test_no_filename_hash(testing_workdir, testing_metadata, capfd):
 
 def test_render_output_build_path(testing_workdir, testing_metadata, capfd, caplog):
     api.output_yaml(testing_metadata, 'meta.yaml')
-    args = ['--output', os.path.join(testing_workdir)]
+    args = ['--output', testing_workdir]
     main_render.execute(args)
     test_path = os.path.join(sys.prefix, "conda-bld", testing_metadata.config.host_subdir,
                              "test_render_output_build_path-1.0-1.tar.bz2")
@@ -119,7 +119,7 @@ def test_render_output_build_path(testing_workdir, testing_metadata, capfd, capl
 def test_render_output_build_path_and_file(testing_workdir, testing_metadata, capfd, caplog):
     api.output_yaml(testing_metadata, 'meta.yaml')
     rendered_filename = 'out.yaml'
-    args = ['--output', '--file', rendered_filename, os.path.join(testing_workdir)]
+    args = ['--output', '--file', rendered_filename, testing_workdir]
     main_render.execute(args)
     test_path = os.path.join(sys.prefix, "conda-bld", testing_metadata.config.host_subdir,
                              "test_render_output_build_path_and_file-1.0-1.tar.bz2")
@@ -134,7 +134,7 @@ def test_build_output_build_path(testing_workdir, testing_metadata, testing_conf
     api.output_yaml(testing_metadata, 'meta.yaml')
     testing_config.verbose = False
     testing_config.debug = False
-    args = ['--output', os.path.join(testing_workdir)]
+    args = ['--output', testing_workdir]
     main_build.execute(args)
     test_path = os.path.join(sys.prefix, "conda-bld", testing_config.host_subdir,
                                   "test_build_output_build_path-1.0-1.tar.bz2")
