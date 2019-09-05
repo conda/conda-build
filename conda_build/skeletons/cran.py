@@ -69,6 +69,7 @@ build:
   merge_build_host: True{sel_src_and_win}
   # If this is a new build for the same version, increment the build number.
   number: {build_number}
+  {skip_os}
   {noarch_generic}
 
   # This is required to make R link correctly on Linux.
@@ -1114,7 +1115,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             else:
                 d['homeurl'] = ' https://CRAN.R-project.org/package={}'.format(package)
 
-        if not use_noarch_generic or cran_package.get("NeedsCompilation", 'no') == 'yes':
+        if not use_noarch_generic or cran_package.get("NeedsCompilation", 'no') == 'yes' or os_type != '':
             d['noarch_generic'] = ''
         else:
             d['noarch_generic'] = 'noarch: generic'
@@ -1164,6 +1165,23 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
 
         if 'R' not in dep_dict:
             dep_dict['R'] = ''
+
+        if 'rJava' in dep_dict:
+            print("Java is in dependencies")
+        os_type = cran_package.get("OS_type", '')
+        if os_type != 'unix' and os_type != 'windows' and os_type != '':
+            print("Unknown OS_type: {} in CRAN package".format(os_type))
+            os_type = ''
+        if 'rJava' in dep_dict:
+            if os_type == '' or os_type == 'unix':
+                d['skip_os'] = 'skip: True  # [not linux]'
+                os_type = 'linux'
+        if os_type == 'unix':
+            d['skip_os'] = 'skip: True  # [not unix]'
+        if os_type == 'windows':
+            d['skip_os'] = 'skip: True  # [not win]'
+        if os_type == '':
+            d['skip_os'] = '# no skip'
 
         need_git = is_github_url
         if cran_package.get("NeedsCompilation", 'no') == 'yes':
