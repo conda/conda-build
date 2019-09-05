@@ -1172,6 +1172,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             os_type = ''
         if os_type == 'unix':
             d['skip_os'] = 'skip: True  # [not unix]'
+            d["noarch_generic"] = ""
         if os_type == 'windows':
             d['skip_os'] = 'skip: True  # [not win]'
         if os_type == '':
