@@ -1115,7 +1115,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             else:
                 d['homeurl'] = ' https://CRAN.R-project.org/package={}'.format(package)
 
-        if not use_noarch_generic or cran_package.get("NeedsCompilation", 'no') == 'yes' or os_type != '':
+        if not use_noarch_generic or cran_package.get("NeedsCompilation", 'no') == 'yes':
             d['noarch_generic'] = ''
         else:
             d['noarch_generic'] = 'noarch: generic'
