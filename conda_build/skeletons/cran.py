@@ -1166,8 +1166,6 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         if 'R' not in dep_dict:
             dep_dict['R'] = ''
 
-        if 'rJava' in dep_dict:
-            print("Java is in dependencies")
         os_type = cran_package.get("OS_type", '')
         if os_type != 'unix' and os_type != 'windows' and os_type != '':
             print("Unknown OS_type: {} in CRAN package".format(os_type))
