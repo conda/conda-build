@@ -1170,10 +1170,6 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         if os_type != 'unix' and os_type != 'windows' and os_type != '':
             print("Unknown OS_type: {} in CRAN package".format(os_type))
             os_type = ''
-        if 'rJava' in dep_dict:
-            if os_type == '' or os_type == 'unix':
-                d['skip_os'] = 'skip: True  # [not linux]'
-                os_type = 'linux'
         if os_type == 'unix':
             d['skip_os'] = 'skip: True  # [not unix]'
         if os_type == 'windows':
