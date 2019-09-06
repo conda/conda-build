@@ -1,4 +1,3 @@
-import unittest
 import json
 from os.path import join
 
@@ -8,20 +7,17 @@ import conda_build._link as _link
 from conda_build.conda_interface import PathType, EntityEncoder, CrossPlatformStLink
 
 
-class TestLink(unittest.TestCase):
+def test_pyc_f_2():
+    assert _link.pyc_f('sp/utils.py', (2, 7, 9)) == 'sp/utils.pyc'
 
-    def test_pyc_f_2(self):
-        self.assertEqual(_link.pyc_f('sp/utils.py', (2, 7, 9)),
-                                     'sp/utils.pyc')
-
-    def test_pyc_f_3(self):
-        for f, r in [
-                ('sp/utils.py',
-                 'sp/__pycache__/utils.cpython-34.pyc'),
-                ('sp/foo/utils.py',
-                 'sp/foo/__pycache__/utils.cpython-34.pyc'),
-        ]:
-            self.assertEqual(_link.pyc_f(f, (3, 4, 2)), r)
+def test_pyc_f_3():
+    for f, r in [
+            ('sp/utils.py',
+             'sp/__pycache__/utils.cpython-34.pyc'),
+            ('sp/foo/utils.py',
+             'sp/foo/__pycache__/utils.cpython-34.pyc'),
+    ]:
+        assert _link.pyc_f(f, (3, 4, 2)) == r
 
 
 def test_pathtype():
