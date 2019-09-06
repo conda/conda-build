@@ -7,6 +7,7 @@ import bz2
 from collections import OrderedDict
 import copy
 from datetime import datetime
+import functools
 import json
 from numbers import Number
 import os
@@ -34,8 +35,9 @@ from yaml.reader import ReaderError
 import fnmatch
 from functools import partial
 import logging
-import libarchive
 import conda_package_handling.api
+from conda_package_handling.api import InvalidArchiveError
+
 
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from concurrent.futures import Future, Executor
@@ -68,28 +70,10 @@ log = get_logger(__name__)
 
 # use this for debugging, because ProcessPoolExecutor isn't pdb/ipdb friendly
 class DummyExecutor(Executor):
-    def __init__(self):
-        self._shutdown = False
-        self._shutdownLock = Lock()
-
-    def submit(self, fn, *args, **kwargs):
-        with self._shutdownLock:
-            if self._shutdown:
-                raise RuntimeError('cannot schedule new futures after shutdown')
-
-            f = Future()
-            try:
-                result = fn(*args, **kwargs)
-            except BaseException as e:
-                f.set_exception(e)
-            else:
-                f.set_result(result)
-
-            return f
-
-    def shutdown(self, wait=True):
-        with self._shutdownLock:
-            self._shutdown = True
+    def map(self, func, *iterables):
+        for iterable in iterables:
+            for thing in iterable:
+                yield func(thing)
 
 
 try:
@@ -765,7 +749,7 @@ class ChannelIndex(object):
         self.channel_name = channel_name or basename(channel_root.rstrip('/'))
         self._subdirs = subdirs
         self.thread_executor = (DummyExecutor()
-                                if (debug or sys.version_info.major == 2)
+                                if (debug or sys.version_info.major == 2 or threads==1)
                                 else ProcessPoolExecutor(threads))
         self.deep_integrity_check = deep_integrity_check
 
@@ -931,28 +915,31 @@ class ChannelIndex(object):
             # Sorting here prioritizes .conda files ('c') over .tar.bz2 files ('b')
             hash_extract_set = tuple(concatv(add_set, update_set))
 
+            extract_func = functools.partial(ChannelIndex._extract_to_cache,
+                                                self.channel_root, subdir)
             # split up the set by .conda packages first, then .tar.bz2.  This avoids race conditions
             #    with execution in parallel that would end up in the same place.
             for conda_format in tqdm(CONDA_TARBALL_EXTENSIONS, desc="File format",
                                      disable=(verbose or not progress), leave=False):
-                futures = tuple(self.thread_executor.submit(
-                    ChannelIndex._extract_to_cache, self.channel_root, subdir, fn
-                ) for fn in hash_extract_set if fn.endswith(conda_format))
-                with tqdm(desc="hash & extract packages for %s" % subdir,
-                          total=len(futures), disable=(verbose or not progress), leave=False) as t:
-                    for future in as_completed(futures):
-                        fn, mtime, size, index_json = future.result()
-                        # fn can be None if the file was corrupt or no longer there
-                        if fn and mtime:
-                            # the progress bar shows package names, but we don't know what their name is before they complete.
-                            t.set_description("Updated: %s" % fn)
-                            t.update()
-                            stat_cache[fn] = {'mtime': int(mtime), 'size': size}
-                            if index_json:
-                                if fn.endswith(".conda"):
-                                    new_repodata_conda_packages[fn] = index_json
-                                else:
-                                    new_repodata_packages[fn] = index_json
+                for fn, mtime, size, index_json in tqdm(
+                        self.thread_executor.map(
+                            extract_func,
+                            (fn for fn in hash_extract_set if fn.endswith(conda_format))),
+                        desc="hash & extract packages for %s" % subdir,
+                        disable=(verbose or not progress), leave=False):
+
+                    # fn can be None if the file was corrupt or no longer there
+                    if fn and mtime:
+                        stat_cache[fn] = {'mtime': int(mtime), 'size': size}
+                        if index_json:
+                            if fn.endswith(".conda"):
+                                new_repodata_conda_packages[fn] = index_json
+                            else:
+                                new_repodata_packages[fn] = index_json
+                        else:
+                            log.error("Package at %s did not contain valid index.json data.  Please"
+                                      " check the file and remove/redownload if necessary to obtain "
+                                      "a valid package." % os.path.join(subdir_path, fn))
 
             new_repodata = {
                 'packages': new_repodata_packages,
@@ -1108,15 +1095,9 @@ class ChannelIndex(object):
             with open(index_cache_path, 'w') as fh:
                 json.dump(index_json, fh)
             retval = fn, mtime, size, index_json
-        except (libarchive.exception.ArchiveError, tarfile.ReadError, KeyError,
-                EOFError, JSONDecodeError) as e:
+        except (InvalidArchiveError, KeyError, EOFError, JSONDecodeError) as e:
             if not second_try:
                 return ChannelIndex._extract_to_cache(channel_root, subdir, fn, second_try=True)
-            log.error("Package %s appears to be corrupt.  Please remove it and re-download it" % abs_fn)
-            log.error(str(e))
-        except FileNotFoundError as e:
-            log.error("Package %s appears to be corrupt.  Please remove it and re-download it" % abs_fn)
-            log.error(str(e))
         return retval
 
     @staticmethod
@@ -1156,18 +1137,21 @@ class ChannelIndex(object):
             except (OSError, EOFError, IOError):
                 pass
 
-        icon_cache_paths = glob(icon_cache_path_glob)
-        if icon_cache_paths:
-            icon_cache_path = sorted(icon_cache_paths)[-1]
-            icon_ext = icon_cache_path.rsplit('.', 1)[-1]
-            channel_icon_fn = "%s.%s" % (data['name'], icon_ext)
-            icon_url = "icons/" + channel_icon_fn
-            icon_channel_path = join(channel_root, 'icons', channel_icon_fn)
-            icon_md5 = utils.md5_file(icon_cache_path)
-            icon_hash = "md5:%s:%s" % (icon_md5, getsize(icon_cache_path))
-            data.update(icon_hash=icon_hash, icon_url=icon_url)
-            # log.info("writing icon from %s to %s", icon_cache_path, icon_channel_path)
-            utils.move_with_fallback(icon_cache_path, icon_channel_path)
+        try:
+            icon_cache_paths = glob(icon_cache_path_glob)
+            if icon_cache_paths:
+                icon_cache_path = sorted(icon_cache_paths)[-1]
+                icon_ext = icon_cache_path.rsplit('.', 1)[-1]
+                channel_icon_fn = "%s.%s" % (data['name'], icon_ext)
+                icon_url = "icons/" + channel_icon_fn
+                icon_channel_path = join(channel_root, 'icons', channel_icon_fn)
+                icon_md5 = utils.md5_file(icon_cache_path)
+                icon_hash = "md5:%s:%s" % (icon_md5, getsize(icon_cache_path))
+                data.update(icon_hash=icon_hash, icon_url=icon_url)
+                # log.info("writing icon from %s to %s", icon_cache_path, icon_channel_path)
+                utils.move_with_fallback(icon_cache_path, icon_channel_path)
+        except:
+            pass
 
         # have to stat again, because we don't have access to the stat cache here
         data['mtime'] = mtime
@@ -1277,11 +1261,9 @@ class ChannelIndex(object):
         if groups:
             fns, fn_dicts = zip(*groups)
 
-        futures = tuple(self.thread_executor.submit(
-            ChannelIndex._load_all_from_cache, self.channel_root, subdir, fn
-        ) for fn in fns)
-        for fn_dict, future in zip(fn_dicts, futures):
-            data = future.result()
+        load_func = functools.partial(ChannelIndex._load_all_from_cache,
+                                      self.channel_root, subdir,)
+        for fn_dict, data in zip(fn_dicts, self.thread_executor.map(load_func, fns)):
             if data:
                 data.update(fn_dict)
                 name = data['name']
