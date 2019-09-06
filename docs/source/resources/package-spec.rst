@@ -6,12 +6,12 @@ Conda package specification
    :local:
    :depth: 1
 
-A conda package is a bzipped tar archive---.tar.bz2---that
-contains:
+A conda package is a bzipped tar archive (.tar.bz2) or `.conda <https://docs.conda.io/projects/conda/en/latest/user-guide/concepts/packages.html#conda-file-format>`_
+file that contains:
 
-* Metadata under the ``info/`` directory.
+* Metadata under the ``info/`` directory
 * A collection of files that are installed directly into an
-  install prefix.
+  install prefix
 
 The format is identical across platforms and operating systems.
 During the install process, all files are extracted into the
@@ -190,14 +190,14 @@ Optional file. Contains the entries in the :ref:`about-section`
 of the ``meta.yaml`` file. The following keys are
 added to ``info/about.json`` if present in the build recipe:
 
-* home.
-* dev_url.
-* doc_url.
-* license_url.
-* license.
-* summary.
-* description.
-* license_family.
+* home
+* dev_url
+* doc_url
+* license_url
+* license
+* summary
+* description
+* license_family
 
 info/recipe
 -----------
@@ -207,11 +207,50 @@ A directory containing the full contents of the build recipe.
 meta.yaml.rendered
 ------------------
 
-The fully rendered build recipe. See
-`./commands/build/conda-render`.
+The fully rendered build recipe. See :doc:`../resources/commands/conda-render`.
 
-This directory is present only when the the include_recipe flag
+This directory is present only when the the ``include_recipe`` flag
 is ``True`` in the :ref:`meta-build`.
+
+info/paths.json
+---------------
+Contains basic information about each file contained in the package.
+It appeared in conda 4.3 to replace ``info/file``, ``info/has_prefix``,
+and ``info/no_link``. ``info/no_link`` is the JSON object with a
+dictionary containing two keys:
+
+- ``paths_version`` - holds the file format version (currently 1)
+- ``paths`` - contains a list with one dictionary per file
+
+The per-file dictionary contains the following keys:
+
+    ``_path``: string
+      The path to the file.
+
+    ``sha256``: string
+      The SHA-256 checksum of the file.
+
+    ``size_in_bytes``: int
+      The size of the files in number of bytes.
+
+    ``path_type``: string
+      The type of link. Could be ``hardlink``, ``softlink``, or ``directory``.
+
+    ``no_link``: boolean
+      Is set to ``True`` for files that cannot be linked (either soft or hard)
+      into environments, and are copied instead.
+
+    ``prefix_placeholder``: string (optional)
+      Hard-coded prefix placeholder in the file. The default prefix placeholder is
+      ``/opt/anaconda1anaconda2anaconda3``, but others may be used.
+
+    ``file_mode``: string (optional)
+      Whether the file is a binary file or text file. Could be ``text`` or ``binary`` (default).
+      Primarily used in conjunction with ``prefix_placeholder``, in order to determine
+      how that prefix placeholder is to be replaced.
+
+    ``inode_paths``: list of strings (optional)
+      List of other files which share the same inode (i.e. they are hard links).
 
 
 .. _link_unlink:
