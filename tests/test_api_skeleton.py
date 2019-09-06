@@ -467,3 +467,17 @@ def test_cran_license(package, license_id, license_family, license_files, testin
     license_files = ensure_list(license_files)
     for m_license_file in m_license_files:
         assert os.path.basename(m_license_file) in license_files
+
+# CRAN packages to test skip entry.
+# (package, skip_text)
+cran_os_type_pkgs = [('bigReg', 'skip: True  # [not unix]'),
+                     ('blatr',  'skip: True  # [not win]')
+                    ]
+
+@pytest.mark.parametrize("package, skip_text", cran_os_type_pkgs)
+def test_cran_os_type(package, skip_text, testing_workdir, testing_config):
+    api.skeletonize(packages=package, repo='cran', output_dir=testing_workdir,
+                    config=testing_config)
+    fpath = os.path.join(testing_workdir, 'r-' + package.lower(), 'meta.yaml') 
+    with open(fpath) as f:
+        assert skip_text in f.read()
