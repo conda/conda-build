@@ -24,6 +24,7 @@ from conda_build.variants import get_package_variants, set_language_env_vars
 from conda_build.utils import LoggingContext
 
 on_win = (sys.platform == 'win32')
+log = logging.getLogger(__name__)
 
 
 # see: https://stackoverflow.com/questions/29986185/python-argparse-dict-arg
@@ -196,11 +197,18 @@ def execute(args, print_results=True):
                                  no_download_source=args.no_source,
                                  variants=args.variants)
 
+    if args.file and len(metadata_tuples) > 1:
+        log.warning("Multiple variants rendered. "
+                    "Only one will be written to the file you specified ({}).".format(args.file))
+
     if print_results:
         if args.output:
             with LoggingContext(logging.CRITICAL + 1):
                 paths = api.get_output_file_paths(metadata_tuples, config=config)
                 print('\n'.join(sorted(paths)))
+            if args.file:
+                m = metadata_tuples[-1][0]
+                api.output_yaml(m, args.file, suppress_outputs=True)
         else:
             logging.basicConfig(level=logging.INFO)
             for (m, _, _) in metadata_tuples:

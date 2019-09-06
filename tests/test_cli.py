@@ -68,7 +68,8 @@ def test_render_add_channel():
         args = ['-c', 'conda_build_test', os.path.join(metadata_dir,
                             "_recipe_requiring_external_channel"), '--file', rendered_filename]
         main_render.execute(args)
-        rendered_meta = yaml.safe_load(open(rendered_filename, 'r'))
+        with open(rendered_filename, 'r') as rendered_file:
+            rendered_meta = yaml.safe_load(rendered_file)
         required_package_string = [pkg for pkg in rendered_meta['requirements']['build'] if
                                    'conda_build_test_requirement' in pkg][0]
         required_package_details = required_package_string.split(' ')
@@ -83,7 +84,8 @@ def test_render_without_channel_fails():
         rendered_filename = os.path.join(tmpdir, 'out.yaml')
         args = ['--override-channels', os.path.join(metadata_dir, "_recipe_requiring_external_channel"), '--file', rendered_filename]
         main_render.execute(args)
-        rendered_meta = yaml.safe_load(open(rendered_filename, 'r'))
+        with open(rendered_filename, 'r') as rendered_file:
+            rendered_meta = yaml.safe_load(rendered_file)
         required_package_string = [pkg for pkg in
                                    rendered_meta.get('requirements', {}).get('build', [])
                                    if 'conda_build_test_requirement' in pkg][0]
@@ -107,7 +109,7 @@ def test_no_filename_hash(testing_workdir, testing_metadata, capfd):
 
 def test_render_output_build_path(testing_workdir, testing_metadata, capfd, caplog):
     api.output_yaml(testing_metadata, 'meta.yaml')
-    args = ['--output', os.path.join(testing_workdir)]
+    args = ['--output', testing_workdir]
     main_render.execute(args)
     test_path = os.path.join(sys.prefix, "conda-bld", testing_metadata.config.host_subdir,
                              "test_render_output_build_path-1.0-1.tar.bz2")
@@ -116,11 +118,26 @@ def test_render_output_build_path(testing_workdir, testing_metadata, capfd, capl
     assert error == ""
 
 
+def test_render_output_build_path_and_file(testing_workdir, testing_metadata, capfd, caplog):
+    api.output_yaml(testing_metadata, 'meta.yaml')
+    rendered_filename = 'out.yaml'
+    args = ['--output', '--file', rendered_filename, testing_workdir]
+    main_render.execute(args)
+    test_path = os.path.join(sys.prefix, "conda-bld", testing_metadata.config.host_subdir,
+                             "test_render_output_build_path_and_file-1.0-1.tar.bz2")
+    output, error = capfd.readouterr()
+    assert output.rstrip() == test_path, error
+    assert error == ""
+    with open(rendered_filename, 'r') as rendered_file:
+        rendered_meta = yaml.safe_load(rendered_file)
+    assert rendered_meta['package']['name'] == 'test_render_output_build_path_and_file'
+
+
 def test_build_output_build_path(testing_workdir, testing_metadata, testing_config, capfd):
     api.output_yaml(testing_metadata, 'meta.yaml')
     testing_config.verbose = False
     testing_config.debug = False
-    args = ['--output', os.path.join(testing_workdir)]
+    args = ['--output', testing_workdir]
     main_build.execute(args)
     test_path = os.path.join(sys.prefix, "conda-bld", testing_config.host_subdir,
                                   "test_build_output_build_path-1.0-1.tar.bz2")
@@ -405,11 +422,12 @@ def test_develop(testing_env):
     args = ['-p', testing_env, extract_folder]
     main_develop.execute(args)
     py_ver = '.'.join((str(sys.version_info.major), str(sys.version_info.minor)))
-    assert cwd in open(os.path.join(get_site_packages(testing_env, py_ver), 'conda.pth')).read()
+    with open(os.path.join(get_site_packages(testing_env, py_ver), 'conda.pth')) as f_pth:
+        assert cwd in f_pth.read()
     args = ['--uninstall', '-p', testing_env, extract_folder]
     main_develop.execute(args)
-    assert (cwd not in open(os.path.join(get_site_packages(testing_env, py_ver),
-                                         'conda.pth')).read())
+    with open(os.path.join(get_site_packages(testing_env, py_ver), 'conda.pth')) as f_pth:
+        assert cwd not in f_pth.read()
 
 
 def test_convert(testing_workdir, testing_config):
