@@ -107,6 +107,7 @@ def test_clobber_section_data(testing_metadata):
     testing_metadata.meta['about']['home'] = 'sweet home'
 
 
+@pytest.mark.serial
 def test_build_bootstrap_env_by_name(testing_metadata):
     assert not any("git" in pkg for pkg in testing_metadata.meta["requirements"].get("build", [])), \
         testing_metadata.meta["requirements"].get("build", [])

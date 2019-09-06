@@ -213,6 +213,7 @@ def test_filter_files():
     assert len(utils.filter_files(files_list, '')) == len(files_list)
 
 
+@pytest.mark.serial
 def test_logger_filtering(caplog, capfd):
     import logging
     log = utils.get_logger(__name__, level=logging.DEBUG)
@@ -232,7 +233,6 @@ def test_logger_filtering(caplog, capfd):
     assert 'test warn message' in err
     assert 'test error message' in err
     assert caplog.text.count('duplicate') == 1
-
     log.removeHandler(logging.StreamHandler(sys.stdout))
     log.removeHandler(logging.StreamHandler(sys.stderr))
 

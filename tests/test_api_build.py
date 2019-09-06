@@ -101,7 +101,6 @@ def test_recipe_builds(recipe, testing_config, testing_workdir, monkeypatch):
     api.build(recipe, config=testing_config)
 
 
-@pytest.mark.sanity
 @pytest.mark.serial
 def test_token_upload(testing_workdir, testing_metadata):
     folder_uuid = uuid.uuid4().hex
@@ -212,6 +211,7 @@ def test_output_build_path_git_source(testing_workdir, testing_config):
 
 
 @pytest.mark.sanity
+@pytest.mark.serial
 def test_build_with_no_activate_does_not_activate():
     api.build(os.path.join(metadata_dir, '_set_env_var_no_activate_build'), activate=False,
               anaconda_upload=False)
@@ -252,7 +252,6 @@ def test_relative_git_url_git_versioning(testing_workdir, testing_config):
     assert tag in output
 
 
-@pytest.mark.sanity
 def test_dirty_variable_available_in_build_scripts(testing_workdir, testing_config):
     recipe = os.path.join(metadata_dir, "_dirty_skip_section")
     testing_config.dirty = True
@@ -286,7 +285,6 @@ def dummy_executable(folder, exename):
     return exename
 
 
-@pytest.mark.sanity
 def test_checkout_tool_as_dependency(testing_workdir, testing_config, monkeypatch):
     # "hide" svn by putting a known bad one on PATH
     exename = dummy_executable(testing_workdir, "svn")
@@ -310,7 +308,6 @@ else:
     compilers = [".".join([str(sys.version_info.major), str(sys.version_info.minor)])]
 
 
-@pytest.mark.sanity
 @pytest.mark.skipif(sys.platform != "win32", reason="MSVC only on windows")
 @pytest.mark.parametrize("msvc_ver", msvc_vers)
 def test_build_msvc_compiler(msvc_ver, monkeypatch):
@@ -343,7 +340,6 @@ def test_cmake_generator(platform, target_compiler, testing_workdir, testing_con
     api.build(os.path.join(metadata_dir, '_cmake_generator'), config=testing_config)
 
 
-@pytest.mark.sanity
 @pytest.mark.skipif(sys.platform == "win32",
                     reason="No windows symlinks")
 def test_symlink_fail(testing_workdir, testing_config):
@@ -405,7 +401,6 @@ def test_skip_existing_url(testing_metadata, testing_workdir, capfd):
     assert "are already built" in output
 
 
-@pytest.mark.sanity
 def test_failed_tests_exit_build(testing_workdir, testing_config):
     """https://github.com/conda/conda-build/issues/1112"""
     with pytest.raises(SystemExit, match='TESTS FAILED') as exc:
@@ -427,7 +422,6 @@ def test_requirements_txt_for_run_reqs(testing_workdir, testing_config):
     api.build(os.path.join(metadata_dir, "_requirements_txt_run_reqs"), config=testing_config)
 
 
-@pytest.mark.sanity
 def test_compileall_compiles_all_good_files(testing_workdir, testing_config):
     output = api.build(os.path.join(metadata_dir, "_compile-test"), config=testing_config)[0]
     good_files = ['f1.py', 'f3.py']
@@ -441,6 +435,7 @@ def test_compileall_compiles_all_good_files(testing_workdir, testing_config):
 
 
 @pytest.mark.sanity
+@pytest.mark.serial
 def test_render_setup_py_old_funcname(testing_workdir, testing_config, caplog):
     api.build(os.path.join(metadata_dir, "_source_setuptools"), config=testing_config)
     assert "Deprecation notice: the load_setuptools function has been renamed to " in caplog.text
@@ -463,6 +458,7 @@ def numpy_installed():
     return any([True for dist in linked(sys.prefix) if dist.name == 'numpy'])
 
 
+@pytest.mark.serial
 @pytest.mark.skipif(not numpy_installed(), reason="numpy not installed in base environment")
 def test_numpy_setup_py_data(testing_config):
     recipe_path = os.path.join(metadata_dir, '_numpy_setup_py_data')
@@ -471,10 +467,10 @@ def test_numpy_setup_py_data(testing_config):
     # PackagesNotFoundError: The following packages are missing from the target environment:
     #    - cython
     subprocess.call('conda remove -y cython'.split())
-    with pytest.raises(CondaBuildException) as exc:
-        m = api.render(recipe_path, config=testing_config, numpy="1.11")[0][0]
-        assert "Cython" in str(exc)
-    subprocess.check_call('conda install -y cython'.split())
+    with pytest.raises(CondaBuildException) as exc_info:
+        api.render(recipe_path, config=testing_config, numpy="1.11")[0][0]
+    assert exc_info.match("Cython")
+    subprocess.check_call(["conda", "install", "-y", "cython"])
     m = api.render(recipe_path, config=testing_config, numpy="1.11")[0][0]
     _hash = m.hash_dependencies()
     assert os.path.basename(api.get_output_file_path(m)[0]) == \
@@ -640,7 +636,6 @@ def test_noarch(testing_workdir):
         assert (os.path.sep + "noarch" + os.path.sep not in output or noarch)
 
 
-@pytest.mark.sanity
 def test_disable_pip(testing_config, testing_metadata):
     testing_metadata.config.disable_pip = True
     testing_metadata.meta['requirements'] = {'host': ['python'],
@@ -663,7 +658,6 @@ def test_rpath_unix(testing_config):
     api.build(os.path.join(metadata_dir, "_rpath"), config=testing_config)
 
 
-@pytest.mark.sanity
 def test_noarch_none_value(testing_workdir, testing_config):
     recipe = os.path.join(metadata_dir, "_noarch_none")
     with pytest.raises(exceptions.CondaBuildException):
@@ -869,7 +863,6 @@ def test_build_expands_wildcards(mocker, testing_workdir):
                                        post=None, variants=None)
 
 
-@pytest.mark.sanity
 @pytest.mark.parametrize('set_build_id', [True, False])
 def test_remove_workdir_default(testing_config, caplog, set_build_id):
     recipe = os.path.join(metadata_dir, '_keep_work_dir')
@@ -882,7 +875,6 @@ def test_remove_workdir_default(testing_config, caplog, set_build_id):
     assert not glob(os.path.join(metadata.config.work_dir, '*'))
 
 
-@pytest.mark.sanity
 def test_keep_workdir_and_dirty_reuse(testing_config, capfd):
     recipe = os.path.join(metadata_dir, '_keep_work_dir')
     # make a metadata object - otherwise the build folder is computed within the build, but does

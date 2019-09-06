@@ -197,7 +197,6 @@ def test_build_no_build_id(testing_workdir, testing_config):
     assert 'has_prefix_files_1' not in data
 
 
-@pytest.mark.sanity
 def test_build_multiple_recipes(testing_metadata, testing_workdir, testing_config):
     """Test that building two recipes in one CLI call separates the build environment for each"""
     os.makedirs('recipe1')
@@ -651,7 +650,6 @@ def test_render_with_python_arg_CLI_reduces_subspace(capfd):
     assert(len(out.splitlines()) == 1)
 
 
-@pytest.mark.sanity
 def test_test_extra_dep(testing_metadata):
     testing_metadata.meta['test']['imports'] = ['imagesize']
     api.output_yaml(testing_metadata, 'meta.yaml')
