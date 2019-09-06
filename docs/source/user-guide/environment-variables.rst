@@ -70,7 +70,7 @@ inherited from the shell environment in which you invoke
      - Set to 1 if the ``--dirty`` flag is passed to the
        ``conda-build`` command. May be used to  skip parts of a
        build script conditionally for faster iteration time when
-       developing recipes. For example, downloads, extraction and
+       developing recipes. For example, downloads, extraction, and
        other things that need not be repeated.
    * - HTTP_PROXY
      - Inherited from your shell environment.
@@ -99,16 +99,20 @@ inherited from the shell environment in which you invoke
      - Name of the package being built.
    * - PKG_VERSION
      - Version of the package being built.
-   * - ``PKG_BUILD_STRING``
+   * - PKG_BUILD_STRING
      - Complete build string of the package being built, including hash.
        EXAMPLE: py27h21422ab_0 . Conda-build 3.0+.
-   * - ``PKG_HASH``
+   * - PKG_HASH
      - Hash of the package being built, without leading h. EXAMPLE: 21422ab .
        Conda-build 3.0+.
    * - PYTHON
      - Path to the Python executable in the host prefix. Python
        is installed only in the host prefix when it is listed as
        a host requirement.
+   * - SYS_PYTHON
+     - Path to Python executable in root environment. Useful when Python
+       is used as a tool in building a package, but that package is not
+       actually a Python package.
    * - PY3K
      - ``1`` when Python 3 is installed in the build prefix,
        otherwise ``0``.
@@ -183,7 +187,7 @@ defined only on macOS.
    * - LDFLAGS
      - Same as CFLAGS.
    * - MACOSX_DEPLOYMENT_TARGET
-     - Same as the Anaconda Python macOS deployment target. Currently ``10.9``.
+     - Same as the Anaconda Python macOS deployment target.
    * - OSX_ARCH
      - ``i386`` or ``x86_64``, depending on Python build.
 
@@ -275,17 +279,20 @@ to inherit additional environment variables by adding them to
         - DYLD_LIBRARY_PATH # [osx]
 
 If an inherited variable is missing from your shell environment,
-it remains unassigned, but a warning is issued noting that it has
+it remains unassigned but a warning is issued noting that it has
 no value assigned.
 
-NOTE: Inheriting environment variables can make it difficult for
-others to reproduce binaries from source with your recipe. Use
-this feature with caution or avoid it.
+.. note::
+  Inheriting environment variables can make it difficult for
+  others to reproduce binaries from source with your recipe. Use
+  this feature with caution or avoid it.
 
-NOTE: If you split your build and test phases with ``--no-test`` and ``--test``,
-you need to ensure that the environment variables present at build time and test
-time match. If you do not, the package hashes may use different values, and your
-package may not be testable, because the hashes will differ.
+.. note::
+  If you split your build and test phases with ``--no-test`` and
+  ``--test``, you need to ensure that the environment variables
+  present at build time and test time match. If you do not, the
+  package hashes may use different values and your package may
+  not be testable because the hashes will differ.
 
 
 .. _build-envs:
@@ -298,10 +305,10 @@ Environment variables that affect the build process
 
    * - CONDA_PY
      - The Python version used to build the package. Should
-       be ``27``, ``34``, ``35``, ``36`` or ``37``.
+       be ``27``, ``34``, ``35``, ``36``, or ``37``.
    * - CONDA_NPY
      - The NumPy version used to build the package, such as
-       ``19``, ``110`` or ``111``.
+       ``19``, ``110``, or ``111``.
    * - CONDA_PREFIX
      - The path to the conda environment used to build the
        package, such as ``/path/to/conda/env``. Useful to pass as
