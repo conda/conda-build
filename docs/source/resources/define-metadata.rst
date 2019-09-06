@@ -131,6 +131,18 @@ The git_url can also be a relative path to the recipe directory.
    source:
      git_url: https://github.com/ilanschnell/bsdiff4.git
      git_rev: 1.1.4
+     git_depth: 1 # (Defaults to -1/not shallow)
+
+The depth argument relates to the ability to perform a shallow clone.
+A shallow clone means that you only download part of the history from
+Git. If you know that you only need the most recent changes, you can
+say, ``git_depth: 1``, which is faster than cloning the entire repo.
+The downside to setting it at 1 is that, unless the tag is on that
+specific commit, then you won't have that tag when you go to reference
+it in ``git_rev`` (for example). If your ``git_depth`` is insufficient
+to capture the tag in ``git_rev``, you'll encounter an error. So in the
+example above, unless the 1.1.4 is the very head commit and the one
+that you're going to grab, you may encounter an error. 
 
 
 Source from hg
