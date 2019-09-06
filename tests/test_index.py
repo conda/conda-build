@@ -732,3 +732,11 @@ def test_channeldata_picks_up_all_versions_of_run_exports():
     assert len(run_exports) == 2
     assert "1.0" in run_exports
     assert "2.0" in run_exports
+
+
+def test_index_invalid_packages():
+    pkg_dir = os.path.join(os.path.dirname(__file__), 'index_data', 'corrupt')
+    api.update_index(pkg_dir)
+    with open(os.path.join(pkg_dir, 'channeldata.json')) as f:
+        repodata = json.load(f)
+    assert len(repodata['packages']) == 0
