@@ -2,10 +2,7 @@ import sys
 import os
 import os.path
 
-import pytest
-
 from conda_build.os_utils.external import find_executable
-from conda_build.exceptions import RecipeError
 
 
 def test_find_executable(testing_workdir, monkeypatch):

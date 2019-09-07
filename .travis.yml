@@ -1,20 +1,6 @@
 dist: xenial
 language: python
-python:
-  - 2.7
-  - 3.7
-env:
-  - CONDA_VERSION=release SLOW_TESTS=true SANITY=false
-  - CONDA_VERSION=release SLOW_TESTS=false SANITY=false
-  - CONDA_VERSION=release SANITY=true
-  - CONDA_VERSION=canary SLOW_TESTS=false SANITY=false
-  - CONDA_VERSION=canary SLOW_TESTS=true SANITY=false
-  - CONDA_VERSION=canary SANITY=true
 matrix:
-  fast_finish: true
-  exclude:
-    - python: 2.7
-      env: CONDA_VERSION=release
   include:
     - python: 3.7
       env:
@@ -26,15 +12,6 @@ matrix:
         - DOCS=true
         - CONDA_VERSION=release
       dist: xenial
-  allow_failures:
-    - env:
-        - FLAKE8=true
-        - CONDA_VERSION=release
-      python: 3.7
-    - python: 3.7
-      env:
-        - DOCS=true
-        - CONDA_VERSION=release
 
 addons:
   apt:
@@ -45,40 +22,21 @@ addons:
 install:
   # show which shell we are running
   - ps -ef | grep $$
-  - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-      wget http://repo.anaconda.com/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda.sh;
-    else
-      wget http://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
-    fi
+  - wget http://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
   - bash miniconda.sh -b -p /opt/conda
-  - mkdir /opt/conda/locks
-  # make central lock directory not writable to simulate central "all-users" install
-  - chmod -w /opt/conda/locks
   - source /opt/conda/bin/activate
-  - if [ "$CONDA_VERSION" = "release" ]; then
-        conda update -y conda;
-    else
-        conda install -y -c conda-canary conda;
-    fi
+  - conda update -y conda;
   - conda config --set always_yes yes
   - conda config --set auto_update_conda False
-  # - conda config --add create_default_packages nomkl
   - conda info
   # avoids a python 3.7 problem
   - conda install -q cytoolz
-  - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
-      conda install -q futures scandir;
-    fi
   - conda install -q anaconda-client requests filelock contextlib2 jinja2 patchelf ripgrep pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz tqdm conda-package-handling py-lief
   - pip install pkginfo
   - if [[ "$FLAKE8" == "true" ]]; then
       conda install -q flake8;
-    elif [[ "$DOCS" == "true" ]]; then
-      pip install -r requirements-docs.txt;
     else
-      conda install -c c3i_test -q perl;
-      conda install -q pytest pip pytest-cov pytest-forked pytest-xdist nomkl numpy mock pytest-mock;
-      pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd;
+      pip install -r requirements-docs.txt;
     fi
   - pip install --no-deps .
   - conda info -a
@@ -91,6 +49,3 @@ notifications:
 git:
   depth: 10000
 
-after_success:
-  - pip install codecov
-  - codecov --env TRAVIS_PYTHON_VERSION

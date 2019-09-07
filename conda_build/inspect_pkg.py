@@ -27,6 +27,7 @@ from conda_build.conda_interface import display_actions, install_actions
 from conda_build.conda_interface import memoized
 from fnmatch import fnmatch
 
+
 @memoized
 def dist_files(prefix, dist):
     meta = is_linked(prefix, dist)
