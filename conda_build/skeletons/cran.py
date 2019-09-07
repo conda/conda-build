@@ -546,6 +546,25 @@ def get_package_metadata(cran_url, package, session):
     return d
 
 
+def get_archive_metadata(cran_url, package, version, cache, verbose=True):
+    filename_rendered = package + '_' + version + '.tar.gz'
+    package_url = cran_url + '/src/contrib/Archive/' + package + '/' + filename_rendered
+    if verbose:
+        print("Downloading {} from {}".format('source', package_url))
+    cached_path, _ = source.download_to_cache(cache, '',
+        {'url': package_url, 'fn': 'source' + '-' + filename_rendered})
+    with tarfile.open(cached_path) as tf:
+        try:
+            member = tf.getmember(package + '/DESCRIPTION')
+        except KeyError:
+            print("logic error, file {} should have a DESCRIPTION".format(package_url))
+            sys.exit(1)
+        DESCRIPTION = tf.extractfile(member).read().decode('utf-8')
+    d = dict_from_cran_lines(remove_package_line_continuations(DESCRIPTION.splitlines()))
+    d['orig_description'] = DESCRIPTION
+    return d
+
+
 def get_latest_git_tag(config):
     # SO says to use taggerdate instead of committerdate, but that is invalid for lightweight tags.
     p = subprocess.Popen(['git', 'for-each-ref',
@@ -594,17 +613,43 @@ def get_session(output_dir, verbose=True):
     return session
 
 
-def get_cran_metadata(cran_url, output_dir, verbose=True):
+def get_cran_archive_versions(cran_url, output_dir, package, verbose=True):
     session = get_session(output_dir, verbose=verbose)
     if verbose:
-        print("Fetching metadata from %s" % cran_url)
-    r = session.get(cran_url + "/src/contrib/PACKAGES")
+        print("Fetching archived versions for package %s from %s" % (package, cran_url))
+    r = session.get(cran_url + "/src/contrib/Archive/" + package + "/")
+    try:
+        r.raise_for_status()
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 404:
+            print("No archive directory for package %s" % package)
+            return []
+        raise
+    versions = []
+    for p in re.findall(r'<td><a href="([^"]+)">\1</a></td>', r.text):
+        if p.endswith('.tar.gz') and '_' in p:
+            name, version = p.rsplit('.', 2)[0].split('_', 1)
+            versions.append(version)
+    return versions
+
+
+def get_cran_index(cran_url, output_dir, verbose=True):
+    session = get_session(output_dir, verbose=verbose)
+    if verbose:
+        print("Fetching main index from %s" % cran_url)
+    r = session.get(cran_url + "/src/contrib/")
     r.raise_for_status()
-    PACKAGES = r.text
-    package_list = [remove_package_line_continuations(i.splitlines())
-                    for i in PACKAGES.split('\n\n')]
-    return {d['Package'].lower(): d for d in map(dict_from_cran_lines,
-        package_list)}
+    records = {}
+    for p in re.findall(r'<td><a href="([^"]+)">\1</a></td>', r.text):
+        if p.endswith('.tar.gz') and '_' in p:
+            name, version = p.rsplit('.', 2)[0].split('_', 1)
+            records[name.lower()] = (name, version)
+    r = session.get(cran_url + "/src/contrib/Archive/")
+    r.raise_for_status()
+    for p in re.findall(r'<td><a href="([^"]+)/">\1/</a></td>', r.text):
+        if re.match(r'^[A-Za-z]', p):
+            records.setdefault(p.lower(), (p, None))
+    return records
 
 
 def make_array(m, key, allow_empty=False):
@@ -761,7 +806,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
     package_list = []
 
     cran_url = cran_url.rstrip('/')
-    cran_metadata = get_cran_metadata(cran_url, output_dir)
+    cran_index = get_cran_index(cran_url, output_dir)
 
     cran_layout_template = \
                   {'source': {'selector': '{others}',
@@ -800,6 +845,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         pkg_name = inputs['pkg-name']
         is_github_url = location and 'github.com' in location
         is_tarfile = location and isfile(location) and tarfile.is_tarfile(location)
+        is_archive = False
         url = inputs['location']
 
         dir_path = inputs['new-location']
@@ -847,28 +893,42 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             d = dict_from_cran_lines(remove_package_line_continuations(
                 description_text.splitlines()))
             d['orig_description'] = description_text
-            package = d['Package'].lower()
-            cran_metadata[package] = d
+            cran_package = d
         else:
-            package = pkg_name
-
-        if pkg_name not in cran_metadata:
-            sys.exit("Package %s not found" % pkg_name)
-
-        # Make sure package always uses the CRAN capitalization
-        package = cran_metadata[package.lower()]['Package']
-
-        if not is_github_url and not is_tarfile:
+            if pkg_name.lower() not in cran_index:
+                sys.exit("Package %s not found" % pkg_name)
+            package, cran_version = cran_index[pkg_name.lower()]
+            if version is None:
+                if cran_version is None:
+                    sys.exit("%s is an archived package: to build, an explicit version must be specified")
+                version = cran_version
+            elif version == cran_version:
+                version = None
+            else:
+                is_archive = True
+                all_versions = get_cran_archive_versions(cran_url, output_dir, package)
+                if version not in all_versions:
+                    versions = [cran_version] + sorted(all_versions, reverse=True)
+                    msg = 'ERROR: version %s of package %s not found;  available versions: ' % (version, package)
+                    print(msg + ', '.join(versions))
+                    sys.exit(1)
+                elif not archive:
+                    print('ERROR: version %s of package %s is archived, but --no-archive was selected' % (version, package))
+                    sys.exit(1)
             session = get_session(output_dir)
-            cran_metadata[package.lower()].update(get_package_metadata(cran_url,
-            package, session))
+            if version == cran_version:
+                cran_package = get_package_metadata(cran_url, package, session)
+            else:
+                cran_package = get_archive_metadata(cran_url, package, version, config.src_cache)
 
-        cran_package = cran_metadata[package.lower()]
+        package = cran_package['Package']
+        plower = package.lower()
 
-        package_dicts[package.lower()].update(
+        d = package_dicts[plower]
+        d.update(
             {
                 'cran_packagename': package,
-                'packagename': 'r-' + package.lower(),
+                'packagename': 'r-' + plower,
                 'patches': '',
                 'build_number': 0,
                 'build_depends': '',
@@ -880,13 +940,8 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 'summary_comment': '#',
                 'summary': '',
             })
-        d = package_dicts[package.lower()]
         d['binary1'] = ''
         d['binary2'] = ''
-
-        if version:
-            d['version'] = version
-            raise NotImplementedError("Package versions from CRAN are not yet implemented")
 
         d['cran_version'] = cran_package['Version']
         # Conda versions cannot have -. Conda (verlib) will treat _ as a .
@@ -930,6 +985,8 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             contrib_url = ''
             archive_details['cran_version'] = d['cran_version']
             archive_details['conda_version'] = d['conda_version']
+            if is_archive:
+                archive_details['dir'] += 'Archive/' + package + '/'
             available_artefact = True if archive_type == 'source' else \
                 package in archive_details['binaries'] and \
                 any(d['cran_version'] == v for v, _ in archive_details['binaries'][package])
@@ -956,7 +1013,6 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             cached_path = None
             sha256 = hashlib.sha256()
             if archive_details['use_this'] and available_artefact:
-                print(archive_details['binaries'])
                 if is_tarfile:
                     filename = basename(location)
                     contrib_url = relpath(location, dir_path)
@@ -1054,7 +1110,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 if archive:
                     if is_tarfile:
                         available_details['cranurl'] = (INDENT + contrib_url)
-                    else:
+                    elif not is_archive:
                         available_details['cranurl'] = (INDENT + contrib_url +
                             filename + sel_src + INDENT + contrib_url +
                             'Archive/{}/'.format(package) + filename + sel_src)
@@ -1295,7 +1351,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                                    "(and --update-policy is 'error'): %s" % dir_path)
             elif update_policy == 'overwrite':
                 rm_rf(dir_path)
-        elif update_policy == 'skip-up-to-date' and up_to_date(cran_metadata,
+        elif update_policy == 'skip-up-to-date' and up_to_date(cran_index,
                                                                d['inputs']['old-metadata']):
             continue
         elif update_policy == 'skip-existing' and d['inputs']['old-metadata']:
@@ -1344,7 +1400,7 @@ def version_compare(recipe_dir, newest_conda_version):
     return local_version == newest_conda_version
 
 
-def get_outdated(output_dir, cran_metadata, packages=()):
+def get_outdated(output_dir, cran_index, packages=()):
     to_update = []
     recipes = listdir(output_dir)
     for recipe in recipes:
@@ -1356,12 +1412,12 @@ def get_outdated(output_dir, cran_metadata, packages=()):
         if packages and not (recipe_name in packages or recipe in packages):
             continue
 
-        if recipe_name not in cran_metadata:
+        if recipe_name not in cran_index:
             print("Skipping %s, not found on CRAN" % recipe)
             continue
 
         version_compare(join(output_dir, recipe),
-            cran_metadata[recipe_name]['Version'].replace('-', '_'))
+            cran_index[recipe_name][1].replace('-', '_'))
 
         print("Updating %s" % recipe)
         to_update.append(recipe_name)
@@ -1369,7 +1425,7 @@ def get_outdated(output_dir, cran_metadata, packages=()):
     return to_update
 
 
-def get_existing(output_dir, cran_metadata, packages=()):
+def get_existing(output_dir, cran_index, packages=()):
 
     existing = []
     recipes = listdir(output_dir)
@@ -1387,7 +1443,7 @@ def get_existing(output_dir, cran_metadata, packages=()):
     return existing
 
 
-def up_to_date(cran_metadata, package):
+def up_to_date(cran_index, package):
     r_pkg_name, location, old_git_rev, m = package
     cran_pkg_name = r_pkg_name[2:]
 
@@ -1399,10 +1455,11 @@ def up_to_date(cran_metadata, package):
     if 'github.com' in location:
         return False
     else:
-        if cran_pkg_name not in cran_metadata:
+        if cran_pkg_name not in cran_index:
             return False
 
-    if m.version() != cran_metadata[cran_pkg_name]['Version'].replace('-', '_'):
+    name, version = cran_index[cran_pkg_name]
+    if version is not None and m.version() != version:
         return False
 
     return True
