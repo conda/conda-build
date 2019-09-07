@@ -27,31 +27,35 @@ def test_version_compare():
 
 
 def test_print_dict():
-    recipe_metadata = OrderedDict(
-        {
+    recipe_metadata = {
             "about": OrderedDict(
-                {
-                    "home": "https://conda.io",
-                    "license": "MIT",
-                    "license_family": "MIT",
-                    "summary": "SUMMARY SUMMARY SUMMARY",
-                    "description": "DESCRIPTION DESCRIPTION DESCRIPTION",
-                }
+                [
+                    ("home", "https://conda.io"),
+                    ("license", "MIT"),
+                    ("license_family", "MIT"),
+                    ("summary", "SUMMARY SUMMARY SUMMARY"),
+                    ("description", "DESCRIPTION DESCRIPTION DESCRIPTION"),
+                ]
             ),
             "source": OrderedDict(
-                {
-                    "sha256": "4d24b03ffa67638a3fa931c09fd9e0273ffa904e95ebebe7d4b1a54c93d7b732",
-                    "url": "https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz",
-                }
+                [
+                    ("sha256", "4d24b03ffa67638a3fa931c09fd9e0273ffa904e95ebebe7d4b1a54c93d7b732"),
+                    ("url", "https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz"),
+                ]
             ),
             "package": OrderedDict(
-                {"name": "{{ name|lower }}", "version": "{{ version }}"}
+                [("name", "{{ name|lower }}"), ("version", "{{ version }}")]
+            ),
+            "build": OrderedDict(
+                [
+                    ("number", 0),
+                    ("script", "{{ PYTHON }} -m pip install . -vv"),
+                ]
             ),
         }
-    )
 
     assert (
-        _print_dict(recipe_metadata, order=["package", "source", "about"])
+        _print_dict(recipe_metadata, order=["package", "source", "build", "about"])
         == """package:
   name: {{ name|lower }}
   version: "{{ version }}"
@@ -59,6 +63,10 @@ def test_print_dict():
 source:
   sha256: 4d24b03ffa67638a3fa931c09fd9e0273ffa904e95ebebe7d4b1a54c93d7b732
   url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
+
+build:
+  number: 0
+  script: "{{ PYTHON }} -m pip install . -vv"
 
 about:
   home: https://conda.io

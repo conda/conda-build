@@ -184,8 +184,8 @@ def _print_dict(recipe_metadata, order=None, level=0, indent=2):
                 if isinstance(attribute_value, string_types) or not hasattr(attribute_value, "__iter__"):
                     rendered_recipe += __print_with_indent(attribute_name, suffix=':', level=level + indent,
                                                           newline=False)
-                    if attribute_name in ["summary", "description", "version"]:
-                        rendered_recipe += ' "' + attribute_value + '"\n'
+                    if attribute_name in ["summary", "description", "version", "script"]:
+                        rendered_recipe += ' "' + str(attribute_value) + '"\n'
                     else:
                         rendered_recipe += ' ' + str(attribute_value) + '\n'
                 elif hasattr(attribute_value, 'keys'):
