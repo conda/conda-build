@@ -61,6 +61,8 @@ about:
 BUILDSH = """\
 #!/bin/bash
 
+set -o errexit
+
 mkdir -p ${PREFIX}/{hostmachine}/sysroot
 pushd ${PREFIX}/{hostmachine}/sysroot > /dev/null 2>&1
 cp -Rf "${SRC_DIR}"/binary/* .

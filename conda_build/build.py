@@ -1467,7 +1467,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                 if isfile(build_file) or script:
                     work_file, _ = write_build_scripts(m, script, build_file)
                     if not provision_only:
-                        cmd = [shell_path] + (['-x'] if m.config.debug else []) + ['-e', work_file]
+                        cmd = [shell_path] + (['-x'] if m.config.debug else []) + ['-o', 'errexit', work_file]
 
                         # rewrite long paths in stdout back to their env variables
                         if m.config.debug or m.config.no_rewrite_stdout_env:
@@ -2173,7 +2173,7 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
     if utils.on_win:
         cmd = [os.environ.get('COMSPEC', 'cmd.exe'), "/d", "/c", test_script]
     else:
-        cmd = [shell_path] + (['-x'] if metadata.config.debug else []) + ['-e', test_script]
+        cmd = [shell_path] + (['-x'] if metadata.config.debug else []) + ['-o', 'errexit', test_script]
     try:
         test_stats = {}
         if not provision_only:

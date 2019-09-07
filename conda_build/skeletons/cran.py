@@ -144,6 +144,8 @@ $R CMD INSTALL --build .
 CRAN_BUILD_SH_MIXED = """\
 #!/bin/bash
 
+set -o errexit
+
 if {source_pf_bash}; then
   export DISABLE_AUTOBREW=1
   mv DESCRIPTION DESCRIPTION.old
@@ -184,6 +186,9 @@ fi
 
 CRAN_BUILD_SH_BINARY = """\
 #!/bin/bash
+
+set -o errexit
+
 mkdir -p $PREFIX/lib/R/library/{cran_packagename}
 mv * $PREFIX/lib/R/library/{cran_packagename}
 fi
