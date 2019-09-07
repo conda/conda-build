@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 from conda_build.skeletons import pypi
-from conda_build.skeletons.pypi import _print_dict
+from conda_build.skeletons.pypi import _print_dict, _formating_value
 
 
 def test_version_compare():
@@ -24,6 +24,14 @@ def test_version_compare():
     assert pypi.convert_version(rc_version) == ' >=1.4.5rc4,<1.5'
     assert pypi.convert_version(padding_version_short) == ' >=2.2.0,<2.3'
     assert pypi.convert_version(padding_version_long) == ' >=1.4.5.0,<1.4.6'
+
+
+def test_formating_value():
+    assert _formating_value("summary", "SUMMARY SUMMARY") == " \"SUMMARY SUMMARY\"\n"
+    assert _formating_value("description", "DESCRIPTION DESCRIPTION") == " \"DESCRIPTION DESCRIPTION\"\n"
+    assert _formating_value("script", "SCRIPT VALUE") == " \"SCRIPT VALUE\"\n"
+    assert _formating_value("name", "{{name|lower}}") == " \"{{name|lower}}\"\n"
+    assert _formating_value("name", "NORMAL NAME") == " NORMAL NAME\n"
 
 
 def test_print_dict():

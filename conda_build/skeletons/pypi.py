@@ -184,10 +184,7 @@ def _print_dict(recipe_metadata, order=None, level=0, indent=2):
                 if isinstance(attribute_value, string_types) or not hasattr(attribute_value, "__iter__"):
                     rendered_recipe += __print_with_indent(attribute_name, suffix=':', level=level + indent,
                                                           newline=False)
-                    if attribute_name in ["summary", "description", "version", "script"]:
-                        rendered_recipe += ' "' + str(attribute_value) + '"\n'
-                    else:
-                        rendered_recipe += ' ' + str(attribute_value) + '\n'
+                    rendered_recipe += _formating_value(attribute_name, attribute_value)
                 elif hasattr(attribute_value, 'keys'):
                     rendered_recipe += _print_dict(attribute_value, sorted(list(attribute_value.keys())))
                 # assume that it's a list if it exists at all
@@ -201,6 +198,21 @@ def _print_dict(recipe_metadata, order=None, level=0, indent=2):
                 rendered_recipe += '\n'
 
     return rendered_recipe
+
+
+def _formating_value(attribute_name, attribute_value):
+    """Format the value of the yaml file. This function will quote the
+    attribute value if needed.
+
+    :param string attribute_name: Attribute name
+    :param string attribute_value: Attribute value
+    :return string: Value quoted if need
+    """
+    pattern_search = re.compile('[@_!#$%^&*()<>?/\|}{~:]')
+    if pattern_search.search(attribute_value) \
+        or attribute_name in ["summary", "description", "version", "script"] :
+        return ' "' + str(attribute_value) + '"\n'
+    return ' ' + str(attribute_value) + '\n'
 
 
 def skeletonize(packages, output_dir=".", version=None, recursive=False,
