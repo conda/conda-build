@@ -930,17 +930,17 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             contrib_url = ''
             archive_details['cran_version'] = d['cran_version']
             archive_details['conda_version'] = d['conda_version']
-            available_artifact = True if archive_type == 'source' else \
+            available_artefact = True if archive_type == 'source' else \
                 package in archive_details['binaries'] and \
                 any(d['cran_version'] == v for v, _ in archive_details['binaries'][package])
-            if not available_artifact:
+            if not available_artefact:
                 if use_when_no_binary == 'error':
                     print("ERROR: --use-when-no-binary is error (and there is no binary)")
                     sys.exit(1)
                 elif use_when_no_binary.startswith('old'):
                     if package not in archive_details['binaries']:
                         if use_when_no_binary.endswith('src'):
-                            available_artifact = False
+                            available_artefact = False
                             archive_details['use_this'] = False
                             continue
                         else:
@@ -951,11 +951,11 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     archive_details['cranurl'] = archive_details['binaries'][package][-1][1]
                     archive_details['conda_version'] = archive_details['binaries'][package][-1][0]
                     archive_details['cran_version'] = archive_details['conda_version'].replace('_', '-')
-                    available_artifact = True
+                    available_artefact = True
             # We may need to inspect the file later to determine which compilers are needed.
             cached_path = None
             sha256 = hashlib.sha256()
-            if archive_details['use_this'] and available_artifact:
+            if archive_details['use_this'] and available_artefact:
                 print(archive_details['binaries'])
                 if is_tarfile:
                     filename = basename(location)
