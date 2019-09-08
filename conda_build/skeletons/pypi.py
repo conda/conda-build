@@ -209,8 +209,9 @@ def _formating_value(attribute_name, attribute_value):
     :return string: Value quoted if need
     """
     pattern_search = re.compile('[@_!#$%^&*()<>?/\|}{~:]')
-    if isinstance(attribute_value, string_types) and pattern_search.search(attribute_value) \
-        or attribute_name in ["summary", "description", "version", "script"] :
+    if isinstance(attribute_value, string_types) \
+            and pattern_search.search(attribute_value) \
+            or attribute_name in ["summary", "description", "version", "script"]:
         return ' "' + str(attribute_value) + '"\n'
     return ' ' + str(attribute_value) + '\n'
 
