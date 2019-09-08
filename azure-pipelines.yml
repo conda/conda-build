@@ -46,8 +46,7 @@ jobs:
       if [[ "$PYTHON_VERSION" == "2.7" ]]; then
         conda install -q futures scandir;
       fi
-      conda install -q anaconda-client git requests filelock contextlib2 jinja2 patchelf ripgrep pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz tqdm conda-package-handling py-lief
-      conda install -c conda-forge pytest-azurepipelines -y
+      conda install -q pytest-azurepipelines anaconda-client git requests filelock contextlib2 jinja2 patchelf ripgrep pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz tqdm conda-package-handling py-lief
       pip install pkginfo
       conda install -c c3i_test -q perl;
       conda install -q pytest pip pytest-cov pytest-forked pytest-xdist nomkl numpy mock pytest-mock;
