@@ -50,6 +50,11 @@ from .conda_interface import TemporaryDirectory
 from .conda_interface import Resolve
 from .utils import glob, get_logger, FileNotFoundError, JSONDecodeError
 
+# try:
+#     from conda.base.constants import CONDA_TARBALL_EXTENSIONS
+# except Exception:
+#     from conda.base.constants import CONDA_TARBALL_EXTENSION
+#     CONDA_TARBALL_EXTENSIONS = (CONDA_TARBALL_EXTENSION,)
 
 # TODO: better to define this in conda; doing it here because we're implementing it in conda-build first
 CONDA_TARBALL_EXTENSIONS = ('.conda', '.tar.bz2')
