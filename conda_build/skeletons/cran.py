@@ -721,30 +721,15 @@ def package_to_inputs_dict(output_dir, output_suffix, git_tag, package):
 
 
 def get_available_binaries(cran_url, details):
-    import requests
-    from bs4 import BeautifulSoup
-
-    def get_url_paths(url, ext='', params={}):
-        response = requests.get(url, params=params)
-        if response.ok:
-            response_text = response.text
-        else:
-            return response.raise_for_status()
-        soup = BeautifulSoup(response_text, 'html.parser')
-        parent = [url + node.get('href') for node in soup.find_all('a') if node.get('href').endswith(ext)]
-        return parent
-
     url = cran_url + '/' + details['dir']
+    response = requests.get(url)
+    response.raise_for_status()
     ext = details['ext']
-    result = get_url_paths(url, ext)
-    for p in result:
-        filename = basename(p)
-        pkg, _, ver = filename.rpartition('_')
-        ver, _, _ = ver.rpartition(ext)
-        if pkg in details['binaries']:
-            details['binaries'][pkg.lower()].extend((ver, p))
-        else:
-            details['binaries'][pkg.lower()] = [(ver, p)]
+    for filename in re.findall(r'<a href="([^"]*)">\1</a>', response.text):
+        if filename.endswith(ext):
+            pkg, _, ver = filename.rpartition('_')
+            ver, _, _ = ver.rpartition(ext)
+            details['binaries'].setdefault(pkg, []).append((ver, url + filename))
 
 
 def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=None, version=None,
@@ -945,17 +930,17 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             contrib_url = ''
             archive_details['cran_version'] = d['cran_version']
             archive_details['conda_version'] = d['conda_version']
-            avaliable_artefact = True if archive_type == 'source' else \
+            available_artifact = True if archive_type == 'source' else \
                 package in archive_details['binaries'] and \
-                d['cran_version'] in archive_details['binaries'][package][0]
-            if not avaliable_artefact:
+                any(d['cran_version'] == v for v, _ in archive_details['binaries'][package])
+            if not available_artifact:
                 if use_when_no_binary == 'error':
                     print("ERROR: --use-when-no-binary is error (and there is no binary)")
                     sys.exit(1)
                 elif use_when_no_binary.startswith('old'):
                     if package not in archive_details['binaries']:
                         if use_when_no_binary.endswith('src'):
-                            avaliable_artefact = False
+                            available_artifact = False
                             archive_details['use_this'] = False
                             continue
                         else:
@@ -966,11 +951,12 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     archive_details['cranurl'] = archive_details['binaries'][package][-1][1]
                     archive_details['conda_version'] = archive_details['binaries'][package][-1][0]
                     archive_details['cran_version'] = archive_details['conda_version'].replace('_', '-')
-                    avaliable_artefact = True
+                    available_artifact = True
             # We may need to inspect the file later to determine which compilers are needed.
             cached_path = None
             sha256 = hashlib.sha256()
-            if archive_details['use_this'] and avaliable_artefact:
+            if archive_details['use_this'] and available_artifact:
+                print(archive_details['binaries'])
                 if is_tarfile:
                     filename = basename(location)
                     contrib_url = relpath(location, dir_path)
