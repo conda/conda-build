@@ -14,14 +14,12 @@ import os
 from os.path import abspath, basename, getmtime, getsize, isdir, isfile, join, splitext, dirname
 import subprocess
 import sys
-import tarfile
 from tempfile import gettempdir
 import time
 from uuid import uuid4
 
 # Lots of conda internals here.  Should refactor to use exports.
 from conda.common.compat import ensure_binary
-# from conda.resolve import dashlist
 
 import pytz
 from jinja2 import Environment, PackageLoader
@@ -38,15 +36,12 @@ import logging
 import conda_package_handling.api
 from conda_package_handling.api import InvalidArchiveError
 
-
-from concurrent.futures import ProcessPoolExecutor, as_completed
-from concurrent.futures import Future, Executor
-from threading import Lock
+from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import Executor
 
 #  BAD BAD BAD - conda internals
 from conda.core.subdir_data import SubdirData
 from conda.models.channel import Channel
-
 
 from . import conda_interface, utils
 from .conda_interface import MatchSpec, VersionOrder, human_bytes, context
@@ -749,7 +744,7 @@ class ChannelIndex(object):
         self.channel_name = channel_name or basename(channel_root.rstrip('/'))
         self._subdirs = subdirs
         self.thread_executor = (DummyExecutor()
-                                if (debug or sys.version_info.major == 2 or threads==1)
+                                if(debug or sys.version_info.major == 2 or threads == 1)
                                 else ProcessPoolExecutor(threads))
         self.deep_integrity_check = deep_integrity_check
 
@@ -1095,7 +1090,7 @@ class ChannelIndex(object):
             with open(index_cache_path, 'w') as fh:
                 json.dump(index_json, fh)
             retval = fn, mtime, size, index_json
-        except (InvalidArchiveError, KeyError, EOFError, JSONDecodeError) as e:
+        except (InvalidArchiveError, KeyError, EOFError, JSONDecodeError):
             if not second_try:
                 return ChannelIndex._extract_to_cache(channel_root, subdir, fn, second_try=True)
         return retval

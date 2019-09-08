@@ -344,9 +344,8 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
             if noarch_python:
                 ordered_recipe['build']['noarch'] = 'python'
 
-            ordered_recipe['build']['script'] = (
-                    '{{ PYTHON }} -m pip install . -vv ' + ' '.join(setup_options)
-                )
+            recipe_script_cmd = ["{{ PYTHON }} -m pip install . -vv"]
+            ordered_recipe['build']['script'] = ' '.join(recipe_script_cmd + setup_options)
 
             # Always require python as a dependency.  Pip is because we use pip for
             #    the install line.
