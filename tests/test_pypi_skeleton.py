@@ -65,19 +65,19 @@ def test_print_dict():
     assert (
         _print_dict(recipe_metadata, order=["package", "source", "build", "about"])
         == """package:
-  name: {{ name|lower }}
+  name: "{{ name|lower }}"
   version: "{{ version }}"
 
 source:
   sha256: 4d24b03ffa67638a3fa931c09fd9e0273ffa904e95ebebe7d4b1a54c93d7b732
-  url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
+  url: "https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz"
 
 build:
   number: 0
   script: "{{ PYTHON }} -m pip install . -vv"
 
 about:
-  home: https://conda.io
+  home: "https://conda.io"
   license: MIT
   license_family: MIT
   summary: "SUMMARY SUMMARY SUMMARY"
