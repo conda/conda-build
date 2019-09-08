@@ -57,7 +57,6 @@ from .conda_interface import CondaError
 from .conda_interface import pkgs_dirs
 from .utils import env_var, glob, tmp_chdir
 
-from conda_build import __version__
 from conda_build import environ, source, tarcheck, utils
 from conda_build.index import get_build_index, update_index
 from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse, distribute_variants,
@@ -349,7 +348,7 @@ def copy_recipe(m):
 
         if not original_recipe or not original_recipe_text == rendered:
             with open(join(recipe_dir, "meta.yaml"), 'w') as f:
-                f.write("# This file created by conda-build {}\n".format(__version__))
+                f.write("# This file created by conda-build {}\n".format(conda_build_version))
                 if original_recipe:
                     f.write("# meta.yaml template originally from:\n")
                     f.write("# " + source.get_repository_info(m.path) + "\n")
