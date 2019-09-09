@@ -162,29 +162,35 @@ def __print_with_indent(line, prefix='', suffix='', level=0, newline=True):
     return output + prefix + line + suffix + ('\n' if newline else '')
 
 
-def _print_dict(d, order=None, level=0, indent=2):
+def _print_dict(recipe_metadata, order=None, level=0, indent=2):
+    """Free function responsible to get the metadata which represents the
+    recipe and convert it to the yaml format.
+
+    :param OrderedDict recipe_metadata:
+    :param list order: Order to be write each section
+    :param int level:
+    :param int indent: Indentation - Number of empty spaces for each level
+    :return string: Recipe rendered with the metadata
+    """
     rendered_recipe = ''
     if not order:
-        order = sorted(list(d.keys()))
-    for k in order:
-        if k in d and d[k]:
-            rendered_recipe += __print_with_indent(k, suffix=':')
-            for _k, _v in d[k].items():
-                if _v is None:
+        order = sorted(list(recipe_metadata.keys()))
+    for section_name in order:
+        if section_name in recipe_metadata and recipe_metadata[section_name]:
+            rendered_recipe += __print_with_indent(section_name, suffix=':')
+            for attribute_name, attribute_value in recipe_metadata[section_name].items():
+                if attribute_value is None:
                     continue
-                if isinstance(_v, string_types) or not hasattr(_v, "__iter__"):
-                    rendered_recipe += __print_with_indent(_k, suffix=':', level=level + indent,
+                if isinstance(attribute_value, string_types) or not hasattr(attribute_value, "__iter__"):
+                    rendered_recipe += __print_with_indent(attribute_name, suffix=':', level=level + indent,
                                                           newline=False)
-                    if isinstance(_v, string_types):
-                        rendered_recipe += ' "' + _v + '"\n'
-                    else:
-                        rendered_recipe += ' ' + str(_v) + '\n'
-                elif hasattr(_v, 'keys'):
-                    rendered_recipe += _print_dict(_v, sorted(list(_v.keys())))
+                    rendered_recipe += _formating_value(attribute_name, attribute_value)
+                elif hasattr(attribute_value, 'keys'):
+                    rendered_recipe += _print_dict(attribute_value, sorted(list(attribute_value.keys())))
                 # assume that it's a list if it exists at all
-                elif _v:
-                    rendered_recipe += __print_with_indent(_k, suffix=':', level=level + indent)
-                    for item in _v:
+                elif attribute_value:
+                    rendered_recipe += __print_with_indent(attribute_name, suffix=':', level=level + indent)
+                    for item in attribute_value:
                         rendered_recipe += __print_with_indent(item, prefix='- ',
                                                                level=level + indent)
             # add a newline in between sections
@@ -192,6 +198,22 @@ def _print_dict(d, order=None, level=0, indent=2):
                 rendered_recipe += '\n'
 
     return rendered_recipe
+
+
+def _formating_value(attribute_name, attribute_value):
+    """Format the value of the yaml file. This function will quote the
+    attribute value if needed.
+
+    :param string attribute_name: Attribute name
+    :param string attribute_value: Attribute value
+    :return string: Value quoted if need
+    """
+    pattern_search = re.compile('[@_!#$%^&*()<>?/\|}{~:]')
+    if isinstance(attribute_value, string_types) \
+            and pattern_search.search(attribute_value) \
+            or attribute_name in ["summary", "description", "version", "script"]:
+        return ' "' + str(attribute_value) + '"\n'
+    return ' ' + str(attribute_value) + '\n'
 
 
 def skeletonize(packages, output_dir=".", version=None, recursive=False,
