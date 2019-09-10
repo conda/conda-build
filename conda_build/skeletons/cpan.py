@@ -191,9 +191,7 @@ def LooseVersion(version):
     :param version: version string or number
     :return: distutils.version.LooseVersion(str(version).lstrip('v'))
     """
-    if version is None:
-        return version
-    else:
+    if version:
         return distutils.version.LooseVersion(str(version).lstrip('v'))
 
 
