@@ -661,8 +661,10 @@ def make_array(m, key, allow_empty=False):
     return result
 
 
-def existing_recipe_dir(output_dir, output_suffix, package):
+def existing_recipe_dir(output_dir, output_suffix, package, version):
     result = None
+    if version:
+        package = package + '-' + version.replace('-', '_')
     if exists(join(output_dir, package)):
         result = normpath(join(output_dir, package))
     elif exists(join(output_dir, package + output_suffix)):
@@ -678,7 +680,7 @@ def strip_end(string, end):
     return string
 
 
-def package_to_inputs_dict(output_dir, output_suffix, git_tag, package):
+def package_to_inputs_dict(output_dir, output_suffix, git_tag, package, version=None):
     """
     Converts `package` (*) into a tuple of:
 
@@ -720,19 +722,19 @@ def package_to_inputs_dict(output_dir, output_suffix, git_tag, package):
         location = package.replace('file://', '')
         pkg_filename = basename(location)
         pkg_name = re.match(r'(.*)_(.*)', pkg_filename).group(1).lower()
-        existing_location = existing_recipe_dir(output_dir, output_suffix, 'r-' + pkg_name)
+        existing_location = existing_recipe_dir(output_dir, output_suffix, 'r-' + pkg_name, version)
     elif isabs(package):
         commp = commonprefix((package, output_dir))
         if commp != output_dir:
             raise RuntimeError("package %s specified with abs path outside of output-dir %s" % (
                 package, output_dir))
         location = package
-        existing_location = existing_recipe_dir(output_dir, output_suffix, 'r-' + pkg_name)
+        existing_location = existing_recipe_dir(output_dir, output_suffix, 'r-' + pkg_name, version)
     elif 'github.com' in package:
         location = package
-        existing_location = existing_recipe_dir(output_dir, output_suffix, 'r-' + pkg_name)
+        existing_location = existing_recipe_dir(output_dir, output_suffix, 'r-' + pkg_name, version)
     else:
-        location = existing_location = existing_recipe_dir(output_dir, output_suffix, package)
+        location = existing_location = existing_recipe_dir(output_dir, output_suffix, package, version)
     if existing_location:
         try:
             m = metadata.MetaData(existing_location)
@@ -751,14 +753,16 @@ def package_to_inputs_dict(output_dir, output_suffix, git_tag, package):
             location = git_url
             old_git_rev = m.get_value('source/git_rev', None)
 
-    new_location = join(output_dir, 'r-' + pkg_name + output_suffix)
+    vstr = '-' + version.replace('-', '_') if version else ''
+    new_location = join(output_dir, 'r-' + pkg_name + vstr + output_suffix)
     print(".. name: %s location: %s new_location: %s" % (pkg_name, location, new_location))
 
     return {'pkg-name': pkg_name,
             'location': location,
             'old-git-rev': old_git_rev,
             'old-metadata': m,
-            'new-location': new_location}
+            'new-location': new_location,
+            'version': version}
 
 
 def get_available_binaries(cran_url, details):
@@ -831,7 +835,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             get_available_binaries(cran_url, archive_details)
 
     for package in in_packages:
-        inputs_dict = package_to_inputs_dict(output_dir, output_suffix, git_tag, package)
+        inputs_dict = package_to_inputs_dict(output_dir, output_suffix, git_tag, package, version)
         if inputs_dict:
             package_dicts.update({inputs_dict['pkg-name']: {'inputs': inputs_dict}})
 
@@ -842,6 +846,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         inputs = package_dicts[package_list.pop()]['inputs']
         location = inputs['location']
         pkg_name = inputs['pkg-name']
+        version = inputs['version']
         is_github_url = location and 'github.com' in location
         is_tarfile = location and isfile(location) and tarfile.is_tarfile(location)
         is_archive = False
@@ -1326,7 +1331,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                             lower_name = name.lower()
                             if lower_name not in package_dicts:
                                 inputs_dict = package_to_inputs_dict(output_dir, output_suffix,
-                                                                     git_tag, lower_name)
+                                                                     git_tag, lower_name, None)
                                 assert lower_name == inputs_dict['pkg-name'], \
                                     "name %s != inputs_dict['pkg-name'] %s" % (
                                         name, inputs_dict['pkg-name'])
@@ -1456,7 +1461,7 @@ def up_to_date(cran_index, package):
             return False
 
     name, version = cran_index[cran_pkg_name]
-    if version is not None and m.version() != version:
+    if version and m.version() != version:
         return False
 
     return True
