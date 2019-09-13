@@ -160,6 +160,7 @@ def get_git_info(git_exe, repo, debug):
     """
     Given a repo to a git repo, return a dictionary of:
       GIT_DESCRIBE_TAG
+      GIT_DESCRIBE_TAG_PEP440
       GIT_DESCRIBE_NUMBER
       GIT_DESCRIBE_HASH
       GIT_FULL_HASH
@@ -189,6 +190,8 @@ def get_git_info(git_exe, repo, debug):
         parts = output.rsplit('-', 2)
         if len(parts) == 3:
             d.update(dict(zip(keys, parts)))
+        from conda._vendor.auxlib.packaging import _get_version_from_git_tag
+        d['GIT_DESCRIBE_TAG_PEP440'] = str(_get_version_from_git_tag(output))
     except subprocess.CalledProcessError:
         msg = (
             "Failed to obtain git tag information.\n"
