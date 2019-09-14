@@ -147,7 +147,7 @@ CRAN_BUILD_SH_MIXED = """\
 if {source_pf_bash}; then
   export DISABLE_AUTOBREW=1
   mv DESCRIPTION DESCRIPTION.old
-  grep -v '^Priority: ' DESCRIPTION.old > DESCRIPTION
+  grep -va '^Priority: ' DESCRIPTION.old > DESCRIPTION
   $R CMD INSTALL --build .
 else
   mkdir -p $PREFIX/lib/R/library/{cran_packagename}
@@ -937,7 +937,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 'summary': '',
                 'binary1': '',
                 'binary2': ''
-            })
+                })
 
         if version_compare:
             sys.exit(not version_compare(dir_path, d['conda_version']))
