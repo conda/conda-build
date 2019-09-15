@@ -204,13 +204,13 @@ def get_rpaths(file, path_replacements):
         # https://docs.microsoft.com/en-us/windows/desktop/dlls/dynamic-link-library-search-order
         # .. but CONDA_DLL_SEARCH_MODIFICATION_ENABLE=1 also.
         if 'exedirname' in path_replacements:
-            rpaths.append(path_replacements['exedirname'])
+            rpaths.append(os.path.dirname(next(iter(path_replacements['exedirname']))))
         if 'windowsroot' in path_replacements:
-            rpaths.append('/'.join((path_replacements['windowsroot'], "System32")))
-            rpaths.append(path_replacements['windowsroot'])
+            rpaths.append('/'.join((next(iter(path_replacements['windowsroot'])), "System32")))
+            rpaths.append(next(iter(path_replacements['windowsroot'])))
         if 'runprefix' in path_replacements:
             # and not lief.PE.HEADER_CHARACTERISTICS.DLL in binary.header.characteristics_list:
-            rpaths.extend(list(_get_path_dirs(path_replacements['runprefix'])))
+            rpaths.extend(list(_get_path_dirs(next(iter(path_replacements['runprefix'])))))
     elif binary_format == lief.EXE_FORMATS.MACHO:
         rpaths = [rpath.rstrip('/') for rpath in rpaths]
     elif binary_format == lief.EXE_FORMATS.ELF:
@@ -1063,7 +1063,7 @@ def lief_parse(filename, path_replacements):
                 filetype = 'elf'
         elif binary.format == lief.EXE_FORMATS.MACHO:
             filetype = 'macho'
-        elif binary.format == EXE_FORMATS.PE:
+        elif binary.format == lief.EXE_FORMATS.PE:
             filetype = 'pecoff'
 
         result_lief = {'fullpath': fullpath,
