@@ -505,11 +505,11 @@ def mk_relative_linux(f, prefix, rpaths=('lib',), method='LIEF'):
             new.append(old)
         elif old.startswith('/'):
             # Test if this absolute path is outside of prefix. That is fatal.
-            relp = relpath(old, prefix)
+            relpath = relpath(old, prefix)
             if relp.startswith('..' + os.sep):
                 print('Warning: rpath {0} is outside prefix {1} (removing it)'.format(old, prefix))
             else:
-                relp = '$ORIGIN/' + relpath(old, origin)
+                relpath = '$ORIGIN/' + relpath(old, origin)
                 if relp not in new:
                     new.append(relp)
     # Ensure that the asked-for paths are also in new.
@@ -1051,7 +1051,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
         for subdir2, _, filez in os.walk(prefix):
             for file in filez:
                 fullpath = join(subdir2, file)
-                relp = relpath(fullpath, prefix)
+                relpath = relpath(fullpath, prefix)
                 if relp in file_info:
                     if prefix is run_prefix:
                         assert file_info[relp]['fullpath'] == fullpath
