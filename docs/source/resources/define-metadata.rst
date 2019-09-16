@@ -294,6 +294,19 @@ string plus the build number.
      number: 1
      string: abc
 
+Hashes will appear when binary compatibility matters, but not when it doesn't.
+The build hash will be added to the build string if these are true for any
+dependency:
+
+  * package is an explicit dependency in build, host, or run deps
+  * package has a matching entry in conda_build_config.yaml which
+    is a pin to a specific version, not a lower bound
+  * that package is not ignored by ignore_version
+
+OR
+
+  * package uses {{ compiler() }} jinja2 function
+
 
 Python entry points
 -------------------
