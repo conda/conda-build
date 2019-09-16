@@ -207,8 +207,7 @@ A directory containing the full contents of the build recipe.
 meta.yaml.rendered
 ------------------
 
-The fully rendered build recipe. See
-`./commands/build/conda-render`.
+The fully rendered build recipe. See :doc:`../resources/commands/conda-render`.
 
 This directory is present only when the the include_recipe flag
 is ``True`` in the :ref:`meta-build`.
