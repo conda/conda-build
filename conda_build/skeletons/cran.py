@@ -17,6 +17,7 @@ import hashlib
 
 import requests
 import tarfile
+import zipfile
 import unicodedata
 import yaml
 
@@ -146,7 +147,7 @@ CRAN_BUILD_SH_MIXED = """\
 if {source_pf_bash}; then
   export DISABLE_AUTOBREW=1
   mv DESCRIPTION DESCRIPTION.old
-  grep -v '^Priority: ' DESCRIPTION.old > DESCRIPTION
+  grep -va '^Priority: ' DESCRIPTION.old > DESCRIPTION
   $R CMD INSTALL --build .
 else
   mkdir -p $PREFIX/lib/R/library/{cran_packagename}
@@ -531,19 +532,35 @@ def clear_whitespace(string):
     return '\n'.join(lines)
 
 
-def get_package_metadata(cran_url, package, session):
-    url = cran_url + '/web/packages/' + package + '/DESCRIPTION'
-    r = session.get(url)
-    try:
-        r.raise_for_status()
-    except requests.exceptions.HTTPError as e:
-        if e.response.status_code == 404:
-            sys.exit("ERROR: %s (404 Not Found)" % url)
-        raise
-    DESCRIPTION = r.text
-    d = dict_from_cran_lines(remove_package_line_continuations(DESCRIPTION.splitlines()))
-    d['orig_description'] = DESCRIPTION
-    return d
+def read_description_contents(fp):
+    bytes = fp.read()
+    text = bytes.decode('utf-8', errors='replace')
+    text = clear_whitespace(text)
+    lines = remove_package_line_continuations(text.splitlines())
+    return dict_from_cran_lines(lines)
+
+
+def get_archive_metadata(path, verbose=True):
+    if verbose:
+        print('Reading package metadata from %s' % path)
+    if basename(path) == 'DESCRIPTION':
+        with open(path, 'rb') as fp:
+            return read_description_contents(fp)
+    elif tarfile.is_tarfile(path):
+        with tarfile.open(path, 'r') as tf:
+            for member in tf:
+                if re.match(r'^[^/]+/DESCRIPTION$', member.name):
+                    fp = tf.extractfile(member)
+                    return read_description_contents(fp)
+    elif path.endswith('.zip'):
+        with zipfile.ZipFile(path, 'r') as zf:
+            for member in zf.infolist():
+                if re.match(r'^[^/]+/DESCRIPTION$', member.filename):
+                    fp = zf.open(member, 'r')
+                    return read_description_contents(fp)
+    else:
+        sys.exit('Cannot extract a DESCRIPTION from file %s' % path)
+    sys.exit('%s does not seem to be a CRAN package (no DESCRIPTION) file' % path)
 
 
 def get_latest_git_tag(config):
@@ -594,17 +611,41 @@ def get_session(output_dir, verbose=True):
     return session
 
 
-def get_cran_metadata(cran_url, output_dir, verbose=True):
-    session = get_session(output_dir, verbose=verbose)
+def get_cran_archive_versions(cran_url, session, package, verbose=True):
     if verbose:
-        print("Fetching metadata from %s" % cran_url)
-    r = session.get(cran_url + "/src/contrib/PACKAGES")
+        print("Fetching archived versions for package %s from %s" % (package, cran_url))
+    r = session.get(cran_url + "/src/contrib/Archive/" + package + "/")
+    try:
+        r.raise_for_status()
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 404:
+            print("No archive directory for package %s" % package)
+            return []
+        raise
+    versions = []
+    for p in re.findall(r'<td><a href="([^"]+)">\1</a></td>', r.text):
+        if p.endswith('.tar.gz') and '_' in p:
+            name, version = p.rsplit('.', 2)[0].split('_', 1)
+            versions.append(version)
+    return versions
+
+
+def get_cran_index(cran_url, session, verbose=True):
+    if verbose:
+        print("Fetching main index from %s" % cran_url)
+    r = session.get(cran_url + "/src/contrib/")
     r.raise_for_status()
-    PACKAGES = r.text
-    package_list = [remove_package_line_continuations(i.splitlines())
-                    for i in PACKAGES.split('\n\n')]
-    return {d['Package'].lower(): d for d in map(dict_from_cran_lines,
-        package_list)}
+    records = {}
+    for p in re.findall(r'<td><a href="([^"]+)">\1</a></td>', r.text):
+        if p.endswith('.tar.gz') and '_' in p:
+            name, version = p.rsplit('.', 2)[0].split('_', 1)
+            records[name.lower()] = (name, version)
+    r = session.get(cran_url + "/src/contrib/Archive/")
+    r.raise_for_status()
+    for p in re.findall(r'<td><a href="([^"]+)/">\1/</a></td>', r.text):
+        if re.match(r'^[A-Za-z]', p):
+            records.setdefault(p.lower(), (p, None))
+    return records
 
 
 def make_array(m, key, allow_empty=False):
@@ -620,8 +661,10 @@ def make_array(m, key, allow_empty=False):
     return result
 
 
-def existing_recipe_dir(output_dir, output_suffix, package):
+def existing_recipe_dir(output_dir, output_suffix, package, version):
     result = None
+    if version:
+        package = package + '-' + version.replace('-', '_')
     if exists(join(output_dir, package)):
         result = normpath(join(output_dir, package))
     elif exists(join(output_dir, package + output_suffix)):
@@ -637,7 +680,7 @@ def strip_end(string, end):
     return string
 
 
-def package_to_inputs_dict(output_dir, output_suffix, git_tag, package):
+def package_to_inputs_dict(output_dir, output_suffix, git_tag, package, version=None):
     """
     Converts `package` (*) into a tuple of:
 
@@ -679,19 +722,19 @@ def package_to_inputs_dict(output_dir, output_suffix, git_tag, package):
         location = package.replace('file://', '')
         pkg_filename = basename(location)
         pkg_name = re.match(r'(.*)_(.*)', pkg_filename).group(1).lower()
-        existing_location = existing_recipe_dir(output_dir, output_suffix, 'r-' + pkg_name)
+        existing_location = existing_recipe_dir(output_dir, output_suffix, 'r-' + pkg_name, version)
     elif isabs(package):
         commp = commonprefix((package, output_dir))
         if commp != output_dir:
             raise RuntimeError("package %s specified with abs path outside of output-dir %s" % (
                 package, output_dir))
         location = package
-        existing_location = existing_recipe_dir(output_dir, output_suffix, 'r-' + pkg_name)
+        existing_location = existing_recipe_dir(output_dir, output_suffix, 'r-' + pkg_name, version)
     elif 'github.com' in package:
         location = package
-        existing_location = existing_recipe_dir(output_dir, output_suffix, 'r-' + pkg_name)
+        existing_location = existing_recipe_dir(output_dir, output_suffix, 'r-' + pkg_name, version)
     else:
-        location = existing_location = existing_recipe_dir(output_dir, output_suffix, package)
+        location = existing_location = existing_recipe_dir(output_dir, output_suffix, package, version)
     if existing_location:
         try:
             m = metadata.MetaData(existing_location)
@@ -710,14 +753,16 @@ def package_to_inputs_dict(output_dir, output_suffix, git_tag, package):
             location = git_url
             old_git_rev = m.get_value('source/git_rev', None)
 
-    new_location = join(output_dir, 'r-' + pkg_name + output_suffix)
+    vstr = '-' + version.replace('-', '_') if version else ''
+    new_location = join(output_dir, 'r-' + pkg_name + vstr + output_suffix)
     print(".. name: %s location: %s new_location: %s" % (pkg_name, location, new_location))
 
     return {'pkg-name': pkg_name,
             'location': location,
             'old-git-rev': old_git_rev,
             'old-metadata': m,
-            'new-location': new_location}
+            'new-location': new_location,
+            'version': version}
 
 
 def get_available_binaries(cran_url, details):
@@ -761,7 +806,10 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
     package_list = []
 
     cran_url = cran_url.rstrip('/')
-    cran_metadata = get_cran_metadata(cran_url, output_dir)
+
+    # Get cran index lazily so we don't have to go to CRAN
+    # for a github repo or a local tarball
+    cran_index = None
 
     cran_layout_template = \
                   {'source': {'selector': '{others}',
@@ -787,7 +835,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             get_available_binaries(cran_url, archive_details)
 
     for package in in_packages:
-        inputs_dict = package_to_inputs_dict(output_dir, output_suffix, git_tag, package)
+        inputs_dict = package_to_inputs_dict(output_dir, output_suffix, git_tag, package, version)
         if inputs_dict:
             package_dicts.update({inputs_dict['pkg-name']: {'inputs': inputs_dict}})
 
@@ -798,36 +846,36 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         inputs = package_dicts[package_list.pop()]['inputs']
         location = inputs['location']
         pkg_name = inputs['pkg-name']
+        version = inputs['version']
         is_github_url = location and 'github.com' in location
         is_tarfile = location and isfile(location) and tarfile.is_tarfile(location)
+        is_archive = False
         url = inputs['location']
 
         dir_path = inputs['new-location']
         print("Making/refreshing recipe for {}".format(pkg_name))
 
         # Bodges GitHub packages into cran_metadata
-        if is_github_url or is_tarfile:
+        if is_tarfile:
+            cran_package = get_archive_metadata(location)
+
+        elif is_github_url or is_tarfile:
             rm_rf(config.work_dir)
-            if is_github_url:
-                m = metadata.MetaData.fromdict({'source': {'git_url': location}}, config=config)
-                source.git_source(m.get_section('source'), m.config.git_cache, m.config.work_dir)
-                new_git_tag = git_tag if git_tag else get_latest_git_tag(config)
-                p = subprocess.Popen(['git', 'checkout', new_git_tag], stdout=subprocess.PIPE,
-                                     stderr=subprocess.PIPE, cwd=config.work_dir)
-                stdout, stderr = p.communicate()
-                stdout = stdout.decode('utf-8')
-                stderr = stderr.decode('utf-8')
-                if p.returncode:
-                    sys.exit("Error: 'git checkout %s' failed (%s).\nInvalid tag?" %
-                             (new_git_tag, stderr.strip()))
-                if stdout:
-                    print(stdout, file=sys.stdout)
-                if stderr:
-                    print(stderr, file=sys.stderr)
-            else:
-                m = metadata.MetaData.fromdict({'source': {'url': location}}, config=config)
-                source.unpack(m.get_section('source'), m.config.work_dir, m.config.src_cache,
-                              output_dir, m.config.work_dir)
+            m = metadata.MetaData.fromdict({'source': {'git_url': location}}, config=config)
+            source.git_source(m.get_section('source'), m.config.git_cache, m.config.work_dir)
+            new_git_tag = git_tag if git_tag else get_latest_git_tag(config)
+            p = subprocess.Popen(['git', 'checkout', new_git_tag], stdout=subprocess.PIPE,
+                                 stderr=subprocess.PIPE, cwd=config.work_dir)
+            stdout, stderr = p.communicate()
+            stdout = stdout.decode('utf-8')
+            stderr = stderr.decode('utf-8')
+            if p.returncode:
+                sys.exit("Error: 'git checkout %s' failed (%s).\nInvalid tag?" %
+                         (new_git_tag, stderr.strip()))
+            if stdout:
+                print(stdout, file=sys.stdout)
+            if stderr:
+                print(stderr, file=sys.stderr)
             DESCRIPTION = join(config.work_dir, "DESCRIPTION")
             if not isfile(DESCRIPTION):
                 sub_description_pkg = join(config.work_dir, 'pkg', "DESCRIPTION")
@@ -840,35 +888,43 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     sys.exit("%s does not appear to be a valid R package "
                              "(no DESCRIPTION file in %s, %s)"
                                  % (location, sub_description_pkg, sub_description_name))
+            cran_package = get_archive_metadata(DESCRIPTION)
 
-            with open(DESCRIPTION) as f:
-                description_text = clear_whitespace(f.read())
-
-            d = dict_from_cran_lines(remove_package_line_continuations(
-                description_text.splitlines()))
-            d['orig_description'] = description_text
-            package = d['Package'].lower()
-            cran_metadata[package] = d
         else:
-            package = pkg_name
+            if cran_index is None:
+                session = get_session(output_dir)
+                cran_index = get_cran_index(cran_url, session)
+            if pkg_name.lower() not in cran_index:
+                sys.exit("Package %s not found" % pkg_name)
+            package, cran_version = cran_index[pkg_name.lower()]
+            if version and version != cran_version:
+                is_archive = True
+                all_versions = get_cran_archive_versions(cran_url, session, package)
+                if version not in all_versions:
+                    versions = [cran_version] + sorted(all_versions, reverse=True)
+                    msg = 'ERROR: Version %s of package %s not found.\n  Available versions: ' % (version, package)
+                    print(msg + ', '.join(versions))
+                    sys.exit(1)
+                elif not archive:
+                    print('ERROR: Version %s of package %s is archived, but --no-archive was selected' % (version, package))
+                    sys.exit(1)
+            elif not cran_version:
+                sys.exit("Package %s is archived; to build, an explicit version must be specified")
+            else:
+                version = cran_version
+            cran_package = None
 
-        if pkg_name not in cran_metadata:
-            sys.exit("Package %s not found" % pkg_name)
-
-        # Make sure package always uses the CRAN capitalization
-        package = cran_metadata[package.lower()]['Package']
-
-        if not is_github_url and not is_tarfile:
-            session = get_session(output_dir)
-            cran_metadata[package.lower()].update(get_package_metadata(cran_url,
-            package, session))
-
-        cran_package = cran_metadata[package.lower()]
-
-        package_dicts[package.lower()].update(
-            {
+        if cran_package is not None:
+            package = cran_package['Package']
+            version = cran_package['Version']
+        plower = package.lower()
+        d = package_dicts[pkg_name]
+        d.update({
                 'cran_packagename': package,
-                'packagename': 'r-' + package.lower(),
+                'cran_version': version,
+                'packagename': 'r-' + plower,
+                # Conda versions cannot have -. Conda (verlib) will treat _ as a .
+                'conda_version': version.replace('-', '_'),
                 'patches': '',
                 'build_number': 0,
                 'build_depends': '',
@@ -879,18 +935,10 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 'homeurl': '',
                 'summary_comment': '#',
                 'summary': '',
-            })
-        d = package_dicts[package.lower()]
-        d['binary1'] = ''
-        d['binary2'] = ''
+                'binary1': '',
+                'binary2': ''
+                })
 
-        if version:
-            d['version'] = version
-            raise NotImplementedError("Package versions from CRAN are not yet implemented")
-
-        d['cran_version'] = cran_package['Version']
-        # Conda versions cannot have -. Conda (verlib) will treat _ as a .
-        d['conda_version'] = d['cran_version'].replace('-', '_')
         if version_compare:
             sys.exit(not version_compare(dir_path, d['conda_version']))
 
@@ -926,10 +974,13 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         cran_layout = copy.deepcopy(cran_layout_template)
         available = {}
 
+        description_path = None
         for archive_type, archive_details in iteritems(cran_layout):
             contrib_url = ''
             archive_details['cran_version'] = d['cran_version']
             archive_details['conda_version'] = d['conda_version']
+            if is_archive and archive_type == 'source':
+                archive_details['dir'] += 'Archive/' + package + '/'
             available_artefact = True if archive_type == 'source' else \
                 package in archive_details['binaries'] and \
                 any(d['cran_version'] == v for v, _ in archive_details['binaries'][package])
@@ -956,7 +1007,6 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             cached_path = None
             sha256 = hashlib.sha256()
             if archive_details['use_this'] and available_artefact:
-                print(archive_details['binaries'])
                 if is_tarfile:
                     filename = basename(location)
                     contrib_url = relpath(location, dir_path)
@@ -978,6 +1028,8 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                         print("logic error, file {} should exist, we found it in a dir listing earlier."
                               .format(package_url))
                         sys.exit(1)
+                    if description_path is None or archive_type == 'source':
+                        description_path = cached_path
                 available_details = {}
                 available_details['selector'] = archive_details['selector']
                 available_details['cran_version'] = archive_details['cran_version']
@@ -1054,7 +1106,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 if archive:
                     if is_tarfile:
                         available_details['cranurl'] = (INDENT + contrib_url)
-                    else:
+                    elif not is_archive:
                         available_details['cranurl'] = (INDENT + contrib_url +
                             filename + sel_src + INDENT + contrib_url +
                             'Archive/{}/'.format(package) + filename + sel_src)
@@ -1066,6 +1118,9 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                                                     '  {hash_entry}{sel}'.format(
                     **available_details)
 
+        # Extract the DESCRIPTION data from the source
+        if cran_package is None:
+            cran_package = get_archive_metadata(description_path)
         d['cran_metadata'] = '\n'.join(['# %s' % l for l in
             cran_package['orig_lines'] if l])
 
@@ -1276,7 +1331,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                             lower_name = name.lower()
                             if lower_name not in package_dicts:
                                 inputs_dict = package_to_inputs_dict(output_dir, output_suffix,
-                                                                     git_tag, lower_name)
+                                                                     git_tag, lower_name, None)
                                 assert lower_name == inputs_dict['pkg-name'], \
                                     "name %s != inputs_dict['pkg-name'] %s" % (
                                         name, inputs_dict['pkg-name'])
@@ -1295,9 +1350,12 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                                    "(and --update-policy is 'error'): %s" % dir_path)
             elif update_policy == 'overwrite':
                 rm_rf(dir_path)
-        elif update_policy == 'skip-up-to-date' and up_to_date(cran_metadata,
-                                                               d['inputs']['old-metadata']):
-            continue
+        elif update_policy == 'skip-up-to-date':
+            if cran_index is None:
+                session = get_session(output_dir)
+                cran_index = get_cran_index(cran_url, session)
+            if up_to_date(cran_index, d['inputs']['old-metadata']):
+                continue
         elif update_policy == 'skip-existing' and d['inputs']['old-metadata']:
             continue
 
@@ -1344,7 +1402,7 @@ def version_compare(recipe_dir, newest_conda_version):
     return local_version == newest_conda_version
 
 
-def get_outdated(output_dir, cran_metadata, packages=()):
+def get_outdated(output_dir, cran_index, packages=()):
     to_update = []
     recipes = listdir(output_dir)
     for recipe in recipes:
@@ -1356,12 +1414,12 @@ def get_outdated(output_dir, cran_metadata, packages=()):
         if packages and not (recipe_name in packages or recipe in packages):
             continue
 
-        if recipe_name not in cran_metadata:
+        if recipe_name not in cran_index:
             print("Skipping %s, not found on CRAN" % recipe)
             continue
 
         version_compare(join(output_dir, recipe),
-            cran_metadata[recipe_name]['Version'].replace('-', '_'))
+            cran_index[recipe_name][1].replace('-', '_'))
 
         print("Updating %s" % recipe)
         to_update.append(recipe_name)
@@ -1369,7 +1427,7 @@ def get_outdated(output_dir, cran_metadata, packages=()):
     return to_update
 
 
-def get_existing(output_dir, cran_metadata, packages=()):
+def get_existing(output_dir, cran_index, packages=()):
 
     existing = []
     recipes = listdir(output_dir)
@@ -1387,7 +1445,7 @@ def get_existing(output_dir, cran_metadata, packages=()):
     return existing
 
 
-def up_to_date(cran_metadata, package):
+def up_to_date(cran_index, package):
     r_pkg_name, location, old_git_rev, m = package
     cran_pkg_name = r_pkg_name[2:]
 
@@ -1399,10 +1457,11 @@ def up_to_date(cran_metadata, package):
     if 'github.com' in location:
         return False
     else:
-        if cran_pkg_name not in cran_metadata:
+        if cran_pkg_name not in cran_index:
             return False
 
-    if m.version() != cran_metadata[cran_pkg_name]['Version'].replace('-', '_'):
+    name, version = cran_index[cran_pkg_name]
+    if version and m.version() != version:
         return False
 
     return True
