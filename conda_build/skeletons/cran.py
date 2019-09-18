@@ -54,6 +54,7 @@ CRAN_META = """\
 {version_source}
 {version_binary1}
 {version_binary2}
+{cran_mirror_fixed}
 
 {{% set posix = 'm2-' if win else '' %}}
 {{% set native = 'm2w64-' if win else '' %}}
@@ -350,6 +351,14 @@ def add_parser(repos):
         help="URL to use for as source package repository",
     )
     cran.add_argument(
+        "--fix-cran-url",
+        action='store_true',
+        dest='fix_cran_url',
+        help="""Hardcode the URL of the cran mirror into the recipe.
+                Normally it is represented as Jinja2 variable "cran_mirror"
+                that can be adjusted with the variant file.""",
+    )
+    cran.add_argument(
         "--r-interp",
         default='r-base',
         help="Declare R interpreter package",
@@ -379,15 +388,16 @@ def add_parser(repos):
         help=("Mark packages that do not need compilation as `noarch: generic`"),
     )
     cran.add_argument(
-        "--fetch-all",
-        action='store_true',
-        dest='fetch_all',
-        help=("Build recipes for package in the index. Obviously very slow."),
-    )
-    cran.add_argument(
         "--use-rtools-win",
         action='store_true',
         help="Use Rtools when building from source on Windows",
+    )
+    cran.add_argument(
+        "--fetch-all",
+        action='store_true',
+        dest='fetch_all',
+        help="""Build recipes for all packages found in the main index.
+                Use with care! This is obviously quite slow.""",
     )
     cran.add_argument(
         "--recursive",
@@ -648,19 +658,12 @@ def get_cran_index(cran_url, session, verbose=True):
     r = session.get(cran_url + "/src/contrib/PACKAGES.gz")
     r.raise_for_status()
     records = {}
-    package = None
     for line in gzip.decompress(r.content).decode('utf-8', errors='replace').splitlines():
-        if package is None:
-            if line.startswith('Package: '):
-                package = line.rstrip().split(' ', 1)[1]
+        if line.startswith('Package: '):
+            package = line.rstrip().split(' ', 1)[1]
         elif line.startswith('Version: '):
             records[package.lower()] = (package, line.rstrip().split(' ', 1)[1])
-            package = None
     r = session.get(cran_url + "/src/contrib/Archive/")
-    if r.status_code == 403:
-        if verbose:
-            print("Cannot fetch an archive index from %s" % cran_url)
-        return records
     r.raise_for_status()
     for p in re.findall(r'<td><a href="([^"]+)/">\1/</a></td>', r.text):
         if re.match(r'^[A-Za-z]', p):
@@ -801,7 +804,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 git_tag=None, cran_url=None, recursive=False, archive=True,
                 version_compare=False, update_policy='', r_interp='r-base', use_binaries_ver=None,
                 use_noarch_generic=False, use_when_no_binary='src', use_rtools_win=False, config=None,
-                variant_config_files=None, fetch_all=False):
+                variant_config_files=None, fetch_all=False, fix_cran_url=False):
 
     if use_when_no_binary != 'error' and \
        use_when_no_binary != 'src' and \
@@ -960,8 +963,11 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 'summary_comment': '#',
                 'summary': '',
                 'binary1': '',
-                'binary2': ''
+                'binary2': '',
+                'cran_mirror_fixed': ''
                 })
+        if fix_cran_url:
+            d['cran_mirror_fixed'] = "{% set cran_mirror = '" + cran_url + "' %}"
 
         if version_compare:
             sys.exit(not version_compare(dir_path, d['conda_version']))
