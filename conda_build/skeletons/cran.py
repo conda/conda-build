@@ -14,6 +14,7 @@ import re
 import subprocess
 import sys
 import hashlib
+import gzip
 
 import requests
 import tarfile
@@ -313,7 +314,7 @@ def add_parser(repos):
     )
     cran.add_argument(
         "packages",
-        nargs='+',
+        nargs='*',
         help="""CRAN packages to create recipe skeletons for.""",
     )
     cran.add_argument(
@@ -376,6 +377,12 @@ def add_parser(repos):
         action='store_true',
         dest='use_noarch_generic',
         help=("Mark packages that do not need compilation as `noarch: generic`"),
+    )
+    cran.add_argument(
+        "--fetch-all",
+        action='store_true',
+        dest='fetch_all',
+        help=("Build recipes for package in the index. Obviously very slow."),
     )
     cran.add_argument(
         "--use-rtools-win",
@@ -638,14 +645,22 @@ def get_cran_archive_versions(cran_url, session, package, verbose=True):
 def get_cran_index(cran_url, session, verbose=True):
     if verbose:
         print("Fetching main index from %s" % cran_url)
-    r = session.get(cran_url + "/src/contrib/")
+    r = session.get(cran_url + "/src/contrib/PACKAGES.gz")
     r.raise_for_status()
     records = {}
-    for p in re.findall(r'<td><a href="([^"]+)">\1</a></td>', r.text):
-        if p.endswith('.tar.gz') and '_' in p:
-            name, version = p.rsplit('.', 2)[0].split('_', 1)
-            records[name.lower()] = (name, version)
+    package = None
+    for line in gzip.decompress(r.content).decode('utf-8', errors='replace').splitlines():
+        if package is None:
+            if line.startswith('Package: '):
+                package = line.rstrip().split(' ', 1)[1]
+        elif line.startswith('Version: '):
+            records[package.lower()] = (package, line.rstrip().split(' ', 1)[1])
+            package = None
     r = session.get(cran_url + "/src/contrib/Archive/")
+    if r.status_code == 403:
+        if verbose:
+            print("Cannot fetch an archive index from %s" % cran_url)
+        return records
     r.raise_for_status()
     for p in re.findall(r'<td><a href="([^"]+)/">\1/</a></td>', r.text):
         if re.match(r'^[A-Za-z]', p):
@@ -786,7 +801,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 git_tag=None, cran_url=None, recursive=False, archive=True,
                 version_compare=False, update_policy='', r_interp='r-base', use_binaries_ver=None,
                 use_noarch_generic=False, use_when_no_binary='src', use_rtools_win=False, config=None,
-                variant_config_files=None):
+                variant_config_files=None, fetch_all=False):
 
     if use_when_no_binary != 'error' and \
        use_when_no_binary != 'src' and \
@@ -801,20 +816,24 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         with TemporaryDirectory() as t:
             _variant = get_package_variants(t, config)[0]
         cran_url = ensure_list(_variant.get('cran_mirror', DEFAULT_VARIANTS['cran_mirror']))[0]
-
-    if len(in_packages) > 1 and version_compare:
-        raise ValueError("--version-compare only works with one package at a time")
-    if update_policy == 'error' and not in_packages:
-        raise ValueError("At least one package must be supplied")
-
-    package_dicts = {}
-    package_list = []
-
     cran_url = cran_url.rstrip('/')
-
     # Get cran index lazily so we don't have to go to CRAN
     # for a github repo or a local tarball
     cran_index = None
+
+    if len(in_packages) > 1 and version_compare:
+        raise ValueError("--version-compare only works with one package at a time")
+    if update_policy == 'error' and not in_packages and not fetch_all:
+        raise ValueError("At least one package must be supplied")
+    if fetch_all:
+        if in_packages:
+            raise ValueError("Must not supply any explicit packages with --fetch-all")
+        session = get_session(output_dir)
+        cran_index = get_cran_index(cran_url, session)
+        in_packages = list(key for key, (_, version) in cran_index.items() if version)
+
+    package_dicts = {}
+    package_list = []
 
     cran_layout_template = \
                   {'source': {'selector': '{others}',
