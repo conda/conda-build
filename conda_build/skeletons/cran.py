@@ -14,6 +14,7 @@ import re
 import subprocess
 import sys
 import hashlib
+import gzip
 
 import requests
 import tarfile
@@ -644,14 +645,22 @@ def get_cran_archive_versions(cran_url, session, package, verbose=True):
 def get_cran_index(cran_url, session, verbose=True):
     if verbose:
         print("Fetching main index from %s" % cran_url)
-    r = session.get(cran_url + "/src/contrib/")
+    r = session.get(cran_url + "/src/contrib/PACKAGES.gz")
     r.raise_for_status()
     records = {}
-    for p in re.findall(r'<td><a href="([^"]+)">\1</a></td>', r.text):
-        if p.endswith('.tar.gz') and '_' in p:
-            name, version = p.rsplit('.', 2)[0].split('_', 1)
-            records[name.lower()] = (name, version)
+    package = None
+    for line in gzip.decompress(r.content).decode('utf-8', errors='replace').splitlines():
+        if package is None:
+            if line.startswith('Package: '):
+                package = line.rstrip().split(' ', 1)[1]
+        elif line.startswith('Version: '):
+            records[package.lower()] = (package, line.rstrip().split(' ', 1)[1])
+            package = None
     r = session.get(cran_url + "/src/contrib/Archive/")
+    if r.status_code == 403:
+        if verbose:
+            print("Cannot fetch an archive index from %s" % cran_url)
+        return records
     r.raise_for_status()
     for p in re.findall(r'<td><a href="([^"]+)/">\1/</a></td>', r.text):
         if re.match(r'^[A-Za-z]', p):
