@@ -1183,8 +1183,8 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             d['home_comment'] = ''
             if is_github_url:
                 d['homeurl'] = ' {}'.format(location)
-            else:
-                d['homeurl'] = ' https://CRAN.R-project.org/package={}'.format(package)
+            elif fix_cran_url:
+                d['homeurl'] = ' {}/html/{}.html'.format(cran_url, package)
 
         if not use_noarch_generic or cran_package.get("NeedsCompilation", 'no') == 'yes':
             d['noarch_generic'] = ''
