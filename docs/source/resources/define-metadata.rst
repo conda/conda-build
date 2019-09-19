@@ -944,6 +944,21 @@ The line in the ``meta.yaml`` file should literally say
    sections with :ref:`run_exports <run_exports>` which are then automatically
    added to the run requirements for you.
 
+Run_constrained
+---------------
+
+Packages that are optional at runtime but must obey the supplied additional constraint if they are installed.
+
+Package names should follow the `package match specifications <https://conda.io/projects/conda/en/latest/user-guide/concepts.html#package-match-specifications>`_.
+
+
+.. code-block:: yaml
+
+   requirements:
+     run_constrained:
+       - optional-subpackage =={{ version }}
+
+
 .. _meta-test:
 
 Test section
