@@ -294,7 +294,12 @@ string plus the build number.
      number: 1
      string: abc
 
-Hashes will appear when binary compatibility matters, but not when it doesn't.
+A hash will appear when the package is affected by one or more variables from
+the conda_build_config.yaml file. The hash is made up from the "used" variables
+- if anything is used, you have a hash. If you don't use these variables then you
+won't have a hash. There are a few special cases that do not affect the hash, such as
+Python and R or anything that already had a place in the build string.
+
 The build hash will be added to the build string if these are true for any
 dependency:
 
