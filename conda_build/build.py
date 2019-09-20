@@ -1133,6 +1133,7 @@ def scan_metadata(path):
 
 bundlers = {
     'conda': bundle_conda,
+    'conda_v2': bundle_conda,
     'wheel': bundle_wheel,
 }
 
