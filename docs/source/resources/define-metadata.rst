@@ -294,6 +294,24 @@ string plus the build number.
      number: 1
      string: abc
 
+A hash will appear when the package is affected by one or more variables from
+the conda_build_config.yaml file. The hash is made up from the "used" variables
+- if anything is used, you have a hash. If you don't use these variables then you
+won't have a hash. There are a few special cases that do not affect the hash, such as
+Python and R or anything that already had a place in the build string.
+
+The build hash will be added to the build string if these are true for any
+dependency:
+
+  * package is an explicit dependency in build, host, or run deps
+  * package has a matching entry in conda_build_config.yaml which
+    is a pin to a specific version, not a lower bound
+  * that package is not ignored by ignore_version
+
+OR
+
+  * package uses {{ compiler() }} jinja2 function
+
 
 Python entry points
 -------------------
