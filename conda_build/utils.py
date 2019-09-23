@@ -35,10 +35,11 @@ import filelock
 import conda_package_handling.api
 
 try:
-    from conda.base.constants import CONDA_TARBALL_EXTENSIONS
+    from conda.base.constants import CONDA_PACKAGE_EXTENSIONS
 except Exception:
     from conda.base.constants import CONDA_TARBALL_EXTENSION
-    CONDA_TARBALL_EXTENSIONS = (CONDA_TARBALL_EXTENSION,)
+    CONDA_PACKAGE_EXTENSIONS = (CONDA_TARBALL_EXTENSION,)
+CONDA_TARBALL_EXTENSIONS = CONDA_PACKAGE_EXTENSIONS # noqa: shim for previous interface
 
 from conda.api import PackageCacheData
 
@@ -432,7 +433,11 @@ def get_recipe_abspath(recipe):
     if isfile(recipe):
         if recipe.lower().endswith(decompressible_exts) or recipe.lower().endswith(CONDA_TARBALL_EXTENSIONS):
             recipe_dir = tempfile.mkdtemp()
-            tar_xf(recipe, recipe_dir)
+            if recipe.lower().endswith(CONDA_TARBALL_EXTENSIONS):
+                import conda_package_handling.api
+                conda_package_handling.api.extract(recipe, recipe_dir)
+            else:
+                tar_xf(recipe, recipe_dir)
             # At some stage the old build system started to tar up recipes.
             recipe_tarfile = os.path.join(recipe_dir, 'info', 'recipe.tar')
             if isfile(recipe_tarfile):

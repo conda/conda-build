@@ -27,11 +27,6 @@ import encodings.idna  # NOQA
 from bs4 import UnicodeDammit
 import yaml
 
-try:
-    from conda.base.constants import CONDA_TARBALL_EXTENSIONS
-except Exception:
-    from conda.base.constants import CONDA_TARBALL_EXTENSION
-    CONDA_TARBALL_EXTENSIONS = (CONDA_TARBALL_EXTENSION,)
 import conda_package_handling.api
 
 # used to get version
@@ -55,7 +50,7 @@ from .conda_interface import UnsatisfiableError
 from .conda_interface import NoPackagesFoundError
 from .conda_interface import CondaError
 from .conda_interface import pkgs_dirs
-from .utils import env_var, glob, tmp_chdir
+from .utils import env_var, glob, tmp_chdir, CONDA_TARBALL_EXTENSIONS
 
 from conda_build import environ, source, tarcheck, utils
 from conda_build.index import get_build_index, update_index
@@ -1133,6 +1128,7 @@ def scan_metadata(path):
 
 bundlers = {
     'conda': bundle_conda,
+    'conda_v2': bundle_conda,
     'wheel': bundle_wheel,
 }
 
