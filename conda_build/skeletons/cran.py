@@ -422,7 +422,12 @@ def add_parser(repos):
         help="""Variant config file to add.  These yaml files can contain
         keys such as `cran_mirror`.  Only one can be provided here."""
     )
-
+    cran.add_argument(
+        '-z', '--map-deps',
+        default=cc_conda_build.get('map_deps', None),
+        help="""Variant config file to add dependency mappings from CRAN.  The
+        yaml file contains dependency description for skeleton definition."""
+    )
 
 def dict_from_cran_lines(lines):
     d = {}
@@ -751,7 +756,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 git_tag=None, cran_url=None, recursive=False, archive=True,
                 version_compare=False, update_policy='', r_interp='r-base', use_binaries_ver=None,
                 use_noarch_generic=False, use_when_no_binary='src', use_rtools_win=False, config=None,
-                variant_config_files=None):
+                variant_config_files=None, map_deps=None):
 
     if use_when_no_binary != 'error' and \
        use_when_no_binary != 'src' and \
@@ -761,6 +766,12 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         sys.exit(1)
     output_dir = realpath(output_dir)
     config = get_or_merge_config(config, variant_config_files=variant_config_files)
+    print(*map_deps)
+    try:
+      with open(map_deps, 'r') as stream:
+          print(yaml.safe_load(stream))
+    except yaml.YAMLError as exc:
+          print(exc)
 
     if not cran_url:
         with TemporaryDirectory() as t:

@@ -143,6 +143,9 @@ def _get_default_settings():
             Setting('variant_config_files', []),
             # these files preclude usage of any system-wide or cwd config files.
             #    Config files in recipes are still respected, and they override this file.
+            Setting('map_deps', []),
+            # these files define cran package dependency mapping
+
             Setting('exclusive_config_files', []),
             Setting('ignore_system_variants', False),
             Setting('hash_length', 7),
