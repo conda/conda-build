@@ -538,8 +538,8 @@ def mk_relative_linux(f, prefix, rpaths=('lib',), method='LIEF'):
 
 
 def assert_relative_osx(path, host_prefix, build_prefix):
-    prefix = build_prefix if os.path.exists(build_prefix) else host_prefix
-    for name in macho.get_dylibs(path, prefix):
+    tools_prefix = build_prefix if os.path.exists(build_prefix) else host_prefix
+    for name in macho.get_dylibs(path, tools_prefix):
         for prefix in (host_prefix, build_prefix):
             if prefix and name.startswith(prefix):
                 raise RuntimeError("library at %s appears to have an absolute path embedded" % path)
