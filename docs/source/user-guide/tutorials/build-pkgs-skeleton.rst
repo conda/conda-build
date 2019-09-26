@@ -26,7 +26,7 @@ Who is this for?
 
 This tutorial is for Windows, macOS, and Linux users who wish to
 build a conda package from a PyPI package. No prior knowledge of
-conda build or conda recipes is required.
+conda-build or conda recipes is required.
 
 
 .. _before-you-start1:
@@ -43,7 +43,7 @@ Building a simple package with conda skeleton pypi
 ==================================================
 
 The ``conda skeleton`` command picks up the PyPI package metadata
-and prepares the conda build recipe. The final step is to
+and prepares the conda-build recipe. The final step is to
 build the package itself and install it into your conda environment.
 
 It is easy to build a skeleton recipe for any Python package that
@@ -51,7 +51,7 @@ is hosted on PyPI, the official third-party software repository
 for the Python programming language.
 
 In this section you are going to use conda skeleton to generate a
-conda recipe, which informs conda build about where the source
+conda recipe, which informs conda-build about where the source
 files are located and how to build and install the package.
 
 You'll be working with a package named Click_ that is hosted on PyPI.
@@ -78,7 +78,7 @@ these extra files are unnecessary and the build/script section in the meta.yaml
 is sufficient. Use the ``ls`` command on OS X or Linux or the ``dir`` command on
 Windows to verify that this file has been created. The meta.yaml file has been
 populated with information from the PyPI metadata and in many cases will not
-need to be edited.
+need to be edited. 
 
 Files in the folder with meta.yaml are collectively referred to as the "conda
 build recipe":
@@ -91,14 +91,14 @@ build recipe":
 
 * ``build.sh``---macOS and Linux commands to build the package.
 
-Now that you have the conda build recipe ready, you can use conda
+Now that you have the conda-build recipe ready, you can use conda
 build to create the package:
 
 .. code-block:: bash
 
     conda-build click
 
-When conda build is finished, it displays the exact path and
+When conda-build is finished, it displays the exact path and
 filename of the conda package. See :ref:`troubleshooting` if the
 ``conda-build`` command fails.
 
@@ -134,7 +134,7 @@ environment by using the use-local flag:
 
     conda install --use-local click
 
-Notice that Click is coming from the local conda build channel.
+Notice that Click is coming from the local conda-build channel.
 
 .. code-block:: bash
    
@@ -164,7 +164,7 @@ architectures and how to upload them to your Anaconda.org account.
 
 Optional---Building for a different Python version
 ==================================================
-By default, conda build creates packages for the version of
+By default, conda-build creates packages for the version of
 Python installed in the root environment. To build packages for
 other versions of Python, you use the ``--python`` flag followed
 by a version. For example, to explicitly build a version of the
@@ -210,20 +210,20 @@ Optional---Converting conda package for other platforms
 ========================================================
 
 Now that you have built a package for your current platform with
-conda build, you can convert it for use on other platforms with
+conda-build, you can convert it for use on other platforms with
 the ``conda convert`` command. This works only for pure Python
-packages where there is no compiled code. Conda convert does 
+packages where there is no compiled code. Conda convert does
 nothing to change compiled code, it only adapts file paths to
 take advantage of the fact that Python scripts are mostly
 platform independent. Conda convert accepts a platform specifier
 from this and a platform specifier from this list:
 
-* osx-64.
-* linux-32.
-* linux-64.
-* win-32.
-* win-64.
-* all.
+* osx-64
+* linux-32
+* linux-64
+* win-32
+* win-64
+* all
 
 In the output directory, 1 folder will be created for each of the
 1 or more platforms you chose and each folder will contain a
@@ -330,7 +330,7 @@ You can log out of your Anaconda.org account with the command:
 Troubleshooting a sample issue
 ===============================
 
-Conda build may produce the error message "Build Package missing."
+Conda-build may produce the error message "Build Package missing."
 
 To explore this error:
 
@@ -341,7 +341,7 @@ To explore this error:
 
        conda skeleton pypi skyfield
 
-   This command creates the skyfield conda build recipe.
+   This command creates the skyfield conda-build recipe.
 
 #. Run ``conda-build skyfield`` and observe that it fails with
    the following output:
