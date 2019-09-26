@@ -87,9 +87,10 @@ conda build to create the package:
 
     conda-build r-fansi
 
-When conda build is finished, it displays the exact path and
+When conda-build is finished, it displays the exact path and
 filename of the conda package. See :ref:`troubleshooting` if the
-``conda-build`` command fails.
+``conda-build`` command fails. If you receive an error with SDK on macOS,
+review our :ref:`resources for macOS and SDK <mac-SDK>`.
 
 Example file path:
 
