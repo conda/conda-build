@@ -23,7 +23,7 @@ Who is this for?
 ================
 This tutorial is for macOS users who wish to
 build an R-language package from CRAN.
-No prior knowledge of conda build or conda recipes
+No prior knowledge of conda-build or conda recipes
 is required.
 
 
@@ -40,13 +40,13 @@ Building a simple package with conda skeleton CRAN
 ==================================================
 
 The conda skeleton command picks up the CRAN package
-metadata and prepares the conda build recipe. The final
+metadata and prepares the conda-build recipe. The final
 step is to build the package itself and install it into
 your conda environment.
 
 It is easy to build a skeleton recipe for any R package that is hosted on CRAN.
 In this section you are going to use conda skeleton to generate a conda recipe,
-which informs conda build about where the source files are located and how to
+which informs conda-build about where the source files are located and how to
 build and install the package.
 
 You'll be working with a package that is hosted on CRAN named fansi_,
@@ -72,7 +72,7 @@ The meta.yaml file has been populated with information from the
 CRAN metadata and in many cases will not need to be edited.
 
 Files in the folder with meta.yaml are collectively referred to
-as the "conda build recipe":
+as the "conda-build recipe":
 
 * ``meta.yaml``---Contains all the metadata in the recipe. The package name and package version sections are required---everything else is optional.
 
@@ -80,8 +80,8 @@ as the "conda build recipe":
 
 * ``build.sh``---macOS and Linux commands to build the package.
 
-Now that you have the conda build recipe ready, you can use
-conda build to create the package:
+Now that you have the conda-build recipe ready, you can use
+conda-build to create the package:
 
 .. code-block:: bash
 
@@ -118,7 +118,7 @@ Now verify that fansi installed successfully:
 
 Scroll through the list until you find ``r-fansi``.
 
-Notice that fansi is coming from the local conda build channel.
+Notice that fansi is coming from the local conda-build channel.
 
 .. code-block:: bash
 
@@ -162,8 +162,8 @@ to verify that this file has been created. The meta.yaml
 file has been populated with information from the CRAN
 metadata and in many cases will not need to be edited.
 
-Now that you have the conda build recipe ready, you can
-use conda build to create the package:
+Now that you have the conda-build recipe ready, you can
+use conda-build to create the package:
 
 .. code-block:: bash
 
@@ -214,17 +214,17 @@ and how to upload them to your Anaconda.org account.
 Optional---Building for a different R version
 =============================================
 
-By default, conda build creates packages for the version
+By default, conda-build creates packages for the version
 of R installed in the root environment. To build packages
-for other versions of R, you use the `--r` flag followed by
+for other versions of R, you use the `--R` flag followed by
 a version.
 
 For example, to explicitly build a version of the fansi package
-for R 3.5.3, use:
+for R 3.6.1, use:
 
 .. code-block:: bash
 
-    conda-build --r 3.5.3 r-fansi
+    conda-build --R 3.6.1 r-fansi
 
 Notice that the file printed at the end of the conda-build
 output has changed to reflect the requested version of R.
