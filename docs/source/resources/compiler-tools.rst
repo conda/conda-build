@@ -60,7 +60,9 @@ run. Conda-build does this activation for you using activation hooks installed
 with the compiler packages in ``CONDA_PREFIX/etc/conda/activate.d``, so no
 additional effort is necessary.
 
-You can activate the root environment with the command ``source activate root``.
+You can activate the root environment with the command ``conda activate root``.
+
+.. _mac-SDK:
 
 macOS SDK
 =========
