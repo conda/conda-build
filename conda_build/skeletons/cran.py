@@ -19,6 +19,7 @@ import requests
 import tarfile
 import unicodedata
 import yaml
+import mapdeps
 
 # try to import C dumper
 try:
@@ -767,11 +768,8 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
     output_dir = realpath(output_dir)
     config = get_or_merge_config(config, variant_config_files=variant_config_files)
     print(*map_deps)
-    try:
-      with open(map_deps, 'r') as stream:
-          print(yaml.safe_load(stream))
-    except yaml.YAMLError as exc:
-          print(exc)
+    for fn in map_deps:
+      print(mapdefs.mapdeps_load(fn))
 
     if not cran_url:
         with TemporaryDirectory() as t:
