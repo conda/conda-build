@@ -7,6 +7,7 @@ import pytest
 
 from conda_build.exceptions import BuildLockError
 import conda_build.utils as utils
+from conda_build.utils import find_recipe
 
 
 def makefile(name, contents=""):
@@ -337,3 +338,18 @@ def test_get_lock(testing_workdir):
     # ...even when not normalized
     lock1_unnormalized = utils.get_lock(os.path.join(testing_workdir, 'foo', '..', 'lock1'))
     assert lock1.lock_file == lock1_unnormalized.lock_file
+
+
+def test_recipe_path_meta(tmpdir, capsys):
+    dir_recipe_path = tmpdir.mkdir("recipe-path")
+    recipe_path = dir_recipe_path.join("meta.yaml")
+    recipe_path.write("")
+
+    assert find_recipe(str(recipe_path)) == str(dir_recipe_path)
+    captured = capsys.readouterr()
+    assert "WARNING" in captured.out
+    assert str(recipe_path) in captured.out
+
+    assert find_recipe(str(dir_recipe_path)) == str(recipe_path)
+    captured = capsys.readouterr()
+    assert "" in captured.out

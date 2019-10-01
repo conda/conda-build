@@ -1196,6 +1196,12 @@ def find_recipe(path):
 
     If we have a base level meta.yaml and other supplemental ones, use that first"""
     if os.path.isfile(path) and os.path.basename(path) in ["meta.yaml", "conda.yaml"]:
+        warning_msg = "RECIPE_PATH received is a file. File: {}".format(path)
+        get_logger(__name__).warning(warning_msg)
+        print("-- WARNING --")
+        print(warning_msg)
+        print("It should be a path to a folder. Forcing conda-build to use the recipe.")
+        print("-------------")
         return os.path.dirname(path)
     results = rec_glob(path, ["meta.yaml", "conda.yaml"])
     if len(results) > 1:
