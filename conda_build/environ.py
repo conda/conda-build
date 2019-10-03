@@ -419,10 +419,12 @@ def meta_vars(meta, skip_build_id=False):
             )
         else:
             d[var_name] = value
+            is_secret = re.search("TOKEN|SECRET|PRIVATE|PASS", value, re.IGNORECASE)
             warnings.warn(
-                "The environment variable '%s' is being passed through.  "
+                "The environment variable '%s' is being passed through with value '%s'.  "
                 "If you are splitting build and test phases with --no-test, please ensure "
-                "that this value is also set similarly at test time." % (var_name,),
+                "that this value is also set similarly at test time." %
+                (var_name, "<hidden>" if is_secret else value),
                 UserWarning
             )
 
