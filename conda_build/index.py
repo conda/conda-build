@@ -50,6 +50,12 @@ from .conda_interface import TemporaryDirectory
 from .conda_interface import Resolve
 from .utils import glob, get_logger, FileNotFoundError, JSONDecodeError
 
+# TODO: Rename module?
+from .authenticate import sha512256  # 512trunc256 is not available in hashlib
+from .authenticate import build_repodata_verification_metadata
+from .authenticate import wrap_as_signable, sign_signable, keyfiles_to_keys
+from .authenticate import canonserialize
+
 # try:
 #     from conda.base.constants import CONDA_TARBALL_EXTENSIONS
 # except Exception:
@@ -61,6 +67,14 @@ CONDA_TARBALL_EXTENSIONS = ('.conda', '.tar.bz2')
 
 
 log = get_logger(__name__)
+
+
+
+
+# # DEBUG ONLY
+# test_dir = ''
+
+
 
 
 # use this for debugging, because ProcessPoolExecutor isn't pdb/ipdb friendly
@@ -244,9 +258,11 @@ def _ensure_valid_channel(local_folder, subdir):
             os.makedirs(path)
 
 
-def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=None, threads=MAX_THREADS_DEFAULT,
-                 verbose=False, progress=False, hotfix_source_repo=None, subdirs=None, warn=True,
-                 current_index_versions=None, debug=False):
+def update_index(
+        dir_path, check_md5=False, channel_name=None, patch_generator=None,
+        threads=MAX_THREADS_DEFAULT, verbose=False, progress=False,
+        hotfix_source_repo=None, subdirs=None, warn=True,
+        current_index_versions=None, debug=False, indexer_signing_key=None):
     """
     If dir_path contains a directory named 'noarch', the path tree therein is treated
     as though it's a full channel, with a level of subdirs, each subdir having an update
@@ -256,6 +272,14 @@ def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=N
     one '*.tar.bz2' file, the directory is assumed to be a standard subdir, and only repodata.json
     information will be updated.
 
+    # TODO: ✅ This function needs a proper docstring enumerating and
+    #       explaining its arguments and effects.
+
+    Note that if indexer_signing_key is provided, the indexing will produce
+    a signed repodata_verify.json file.  If the key is not provided, the
+    repodata_verify.json file will be produced without signatures, and may be
+    signed and rewritten later. indexer_signing_key must be an instance of
+    cryptography.hazmat.primitives.asymmetric.ed25519.Ed25519PrivateKey.
     """
     base_path, dirname = os.path.split(dir_path)
     if dirname in utils.DEFAULT_SUBDIRS:
@@ -267,6 +291,7 @@ def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=N
                             hotfix_source_repo=hotfix_source_repo,
                             current_index_versions=current_index_versions)
     return ChannelIndex(dir_path, channel_name, subdirs=subdirs, threads=threads,
+                        signing_key=indexer_signing_key,
                         deep_integrity_check=check_md5, debug=debug).index(
                             patch_generator=patch_generator, verbose=verbose,
                             progress=progress,
@@ -314,6 +339,7 @@ REPODATA_VERSION = 1
 CHANNELDATA_VERSION = 1
 REPODATA_JSON_FN = 'repodata.json'
 REPODATA_FROM_PKGS_JSON_FN = 'repodata_from_packages.json'
+REPODATA_VERIFY_JSON_FN = 'repodata_verify.json'
 CHANNELDATA_FIELDS = (
     "description",
     "dev_url",
@@ -739,7 +765,7 @@ def _build_current_repodata(subdir, repodata, pins):
 class ChannelIndex(object):
 
     def __init__(self, channel_root, channel_name, subdirs=None, threads=MAX_THREADS_DEFAULT,
-                 deep_integrity_check=False, debug=False):
+                 deep_integrity_check=False, debug=False, signing_key=None):
         self.channel_root = abspath(channel_root)
         self.channel_name = channel_name or basename(channel_root.rstrip('/'))
         self._subdirs = subdirs
@@ -748,12 +774,49 @@ class ChannelIndex(object):
                                 else ProcessPoolExecutor(threads))
         self.deep_integrity_check = deep_integrity_check
 
+        # TODO: Apply key management rules for first deployment.
+        #       This will ultimately support both HSM plugin and key-in-memory
+        #       (the latter for non-Anaconda folks doing mirroring / channel-to-
+        #       -channel migration).
+        self.indexer_signing_key = signing_key
+
+        # # 💣💣💥💥⚠️⚠️❌❌❌ DEMO PURPOSES ONLY:
+        # if self.indexer_signing_key is None:
+        #     private, junk = keyfiles_to_keys('keytest_old') # discard public
+        #     self.indexer_signing_key = private
+
     def index(self, patch_generator, hotfix_source_repo=None, verbose=False, progress=False,
               current_index_versions=None):
         if verbose:
             level = logging.DEBUG
         else:
             level = logging.ERROR
+
+
+
+        # # DEBUG ONLY
+        # import string
+        # import random
+        # import os
+        # rand_str = ''
+        # for i in range(6):
+        #     rand_str += random.choice(string.ascii_lowercase)
+        # global test_dir
+        # test_dir = '/Volumes/VMware Shared Folders/conda-build/sample_channel-' + rand_str
+        # os.mkdir(test_dir)
+
+
+
+
+        # The sha224  hash of every *repodata.json file
+        # (that we write now) in this channel.
+        # TODO: If we're concerned about how much time the hashing of all these
+        #       takes (probably not?), there might be a way to batch-hash them?
+        #       sha512 is supposed to be good at simultaneous hashing, if
+        #       hashlib has a way to do that...?  (I may be thinking of the
+        #       wrong thing -- say, parallel execution of hashing a single long
+        #       file).
+        repodata_hashmap = {}
 
         with utils.LoggingContext(level, loggers=[__name__]):
             if not self._subdirs:
@@ -766,12 +829,14 @@ class ChannelIndex(object):
 
             # Step 1. Lock local channel.
             with utils.try_acquire_locks([utils.get_lock(self.channel_root)], timeout=900):
+                # TODO: consider security implications for current uses of
+                #       channel_data, which is not yet secured.
                 channel_data = {}
                 channeldata_file = os.path.join(self.channel_root, 'channeldata.json')
                 if os.path.isfile(channeldata_file):
                     with open(channeldata_file) as f:
                         channel_data = json.load(f)
-                # Step 2. Collect repodata from packages, save to pkg_repodata.json file
+                # Step 2. Collect repodata from packages, save to repodata_from_packages.json file
                 with tqdm(total=len(subdirs), disable=(verbose or not progress), leave=False) as t:
                     for subdir in subdirs:
                         t.set_description("Subdir: %s" % subdir)
@@ -785,8 +850,25 @@ class ChannelIndex(object):
 
                             t2.set_description("Writing pre-patch repodata")
                             t2.update()
-                            self._write_repodata(subdir, repodata_from_packages,
-                                                REPODATA_FROM_PKGS_JSON_FN)
+                            junk, serialized_data = self._write_repodata(
+                              subdir, repodata_from_packages,
+                              REPODATA_FROM_PKGS_JSON_FN)
+
+
+
+                            # # DEBUG ONLY
+                            # with open(os.path.join(test_dir, REPODATA_FROM_PKGS_JSON_FN), 'wb') as fobj:
+                            #     fobj.write(serialized_data)
+
+
+
+
+                            # TODO: verify status (junk)?
+                            # Hash the repodata output and store the hash.
+                            repodata_hashmap[os.path.join(
+                              subdir, REPODATA_FROM_PKGS_JSON_FN)
+                              ] = sha512256(serialized_data) #= hashlib.sha512(serialized_data).hexdigest()
+
 
                             # Step 3. Apply patch instructions.
                             t2.set_description("Applying patch instructions")
@@ -800,14 +882,45 @@ class ChannelIndex(object):
 
                             t2.set_description("Writing patched repodata")
                             t2.update()
-                            self._write_repodata(subdir, patched_repodata, REPODATA_JSON_FN)
+                            junk, serialized_data = self._write_repodata(
+                                    subdir, patched_repodata, REPODATA_JSON_FN)
+                            # TODO: Verify status (junk)?
+                            # Hash the repodata output and store the hash.
+                            repodata_hashmap[os.path.join(
+                              subdir, REPODATA_JSON_FN)] = sha512256(
+                              serialized_data) #= hashlib.sha512(serialized_data).hexdigest()
+
+
+
+                            # # DEBUG ONLY
+                            # with open(os.path.join(test_dir, REPODATA_JSON_FN), 'wb') as fobj:
+                            #     fobj.write(serialized_data)
+
+
+
                             t2.set_description("Building current_repodata subset")
                             t2.update()
                             current_repodata = _build_current_repodata(subdir, patched_repodata,
                                                                        pins=current_index_versions)
                             t2.set_description("Writing current_repodata subset")
                             t2.update()
-                            self._write_repodata(subdir, current_repodata, json_filename="current_repodata.json")
+                            junk, serialized_data = self._write_repodata(
+                              subdir, current_repodata,
+                              json_filename="current_repodata.json")
+                            # TODO: Verify status (junk)?
+
+
+
+                            # # DEBUG ONLY
+                            # with open(os.path.join(test_dir, 'current_repodata.json'), 'wb') as fobj:
+                            #     fobj.write(serialized_data)
+
+
+
+                            # Hash the repodata output and store the hash.
+                            repodata_hashmap[os.path.join(
+                              subdir, "current_repodata.json")] = sha512256(
+                              serialized_data) #= hashlib.sha512(serialized_data).hexdigest()
 
                             t2.set_description("Writing subdir index HTML")
                             t2.update()
@@ -816,6 +929,29 @@ class ChannelIndex(object):
                             t2.set_description("Updating channeldata")
                             t2.update()
                             self._update_channeldata(channel_data, patched_repodata, subdir)
+
+
+                # with open(os.path.join(test_dir, 'repodata_hashmap.json'), 'wb') as fobj:
+                #     fobj.write(json.dumps(repodata_hashmap, indent=4, sort_keys=True).encode('utf-8'))
+
+
+                # Build, sign (if possible), and write the repodata_verify
+                # metadata (providing hashes for all repodata files).
+                verifier_metadata = build_repodata_verification_metadata(
+                        repodata_hashmap)
+                verifier_metadata = wrap_as_signable(verifier_metadata)
+                # Include a signature in repodata_verify.json if we have been
+                # provided a signing key, else leave it unsigned.  (It can be
+                # signed and rewritten later.)
+                if self.indexer_signing_key is not None:
+                    sign_signable(verifier_metadata, self.indexer_signing_key)
+                _maybe_write(
+                        join(self.channel_root, REPODATA_VERIFY_JSON_FN),
+                        canonserialize(verifier_metadata))
+
+                # DEBUG ONLY 💥💥❌❌💣💣
+                with open('/Users/vs/repodata_verify.json', 'wb') as fobj:
+                    fobj.write(canonserialize(verifier_metadata))
 
                 # Step 7. Create and write channeldata.
                 self._write_channeldata_index_html(channel_data)
@@ -1174,7 +1310,7 @@ class ChannelIndex(object):
             repodata_bz2_path = repodata_json_path + ".bz2"
             bz2_content = bz2.compress(new_repodata_binary)
             _maybe_write(repodata_bz2_path, bz2_content, content_is_binary=True)
-        return write_result
+        return write_result, new_repodata_binary
 
     def _write_subdir_index_html(self, subdir, repodata):
         repodata_packages = repodata["packages"]
@@ -1208,6 +1344,18 @@ class ChannelIndex(object):
         )
         index_path = join(self.channel_root, 'index.html')
         _maybe_write(index_path, rendered_html)
+
+
+
+
+        # # DEBUG ONLY
+        # with open(os.path.join(test_dir, 'index.html'), 'wb') as fobj:
+        #     fobj.write(rendered_html.encode('utf-8'))
+
+
+
+
+
 
     def _update_channeldata(self, channel_data, repodata, subdir):
         legacy_packages = repodata["packages"]
@@ -1304,6 +1452,15 @@ class ChannelIndex(object):
         channeldata_path = join(self.channel_root, 'channeldata.json')
         content = json.dumps(channeldata, indent=2, sort_keys=True).replace("':'", "': '")
         _maybe_write(channeldata_path, content, True)
+
+
+
+        # # DEBUG ONLY
+        # with open(os.path.join(test_dir, 'CHANNELDATA.json'), 'wb') as fobj:
+        #     fobj.write(content.encode('utf-8'))
+
+
+
 
     def _load_patch_instructions_tarball(self, subdir, patch_generator):
         instructions = {}

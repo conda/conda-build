@@ -20,10 +20,16 @@ from conda_build.utils import copy_into, rm_rf
 from conda_build.conda_interface import subdir
 from conda_build.conda_interface import conda_47
 from .utils import metadata_dir, archive_dir
+from conda_build.verify import private_key_from_bytes
 
 log = getLogger(__name__)
 
 # NOTE: The recipes for test packages used in this module are at https://github.com/kalefranz/conda-test-packages
+
+# A testing-only signing key for use in the repodata-signing tests below.
+TEST_SIGNING_KEY = private_key_from_bytes(
+        b'\xc9\xc2\x06\r~\r\x93al&T\x84\x0bI\x83\xd0\x02!\xd8\xb6\xb6\x9c'
+        b'\x85\x01\x07\xdat\xb4!h\xf97')
 
 
 def download(url, local_path):
@@ -39,6 +45,109 @@ def download(url, local_path):
 
 
 def test_index_on_single_subdir_1(testing_workdir):
+    test_package_path = join(testing_workdir, 'osx-64', 'conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2')
+    test_package_url = 'https://conda.anaconda.org/conda-test/osx-64/conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2'
+    download(test_package_url, test_package_path)
+
+    conda_build.index.update_index(
+            testing_workdir, channel_name='test-channel',
+            indexer_signing_key=TEST_SIGNING_KEY)
+
+    # #######################################
+    # tests for osx-64 subdir
+    # #######################################
+    assert isfile(join(testing_workdir, 'osx-64', 'index.html'))
+    assert isfile(join(testing_workdir, 'osx-64', 'repodata.json.bz2'))
+    assert isfile(join(testing_workdir, 'osx-64', 'repodata_from_packages.json.bz2'))
+
+    with open(join(testing_workdir, 'osx-64', 'repodata.json')) as fh:
+        actual_repodata_json = json.loads(fh.read())
+    with open(join(testing_workdir, 'osx-64', 'repodata_from_packages.json')) as fh:
+        actual_pkg_repodata_json = json.loads(fh.read())
+    expected_repodata_json = {
+        "info": {
+            'subdir': 'osx-64',
+        },
+        "packages": {
+            "conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2": {
+                "build": "py27h5e241af_0",
+                "build_number": 0,
+                "depends": [
+                    "python >=2.7,<2.8.0a0"
+                ],
+                "license": "BSD",
+                "md5": "37861df8111170f5eed4bff27868df59",
+                "name": "conda-index-pkg-a",
+                "sha256": "459f3e9b2178fa33bdc4e6267326405329d1c1ab982273d9a1c0a5084a1ddc30",
+                "size": 8733,
+                "subdir": "osx-64",
+                "timestamp": 1508520039632,
+                "version": "1.0",
+            },
+        },
+        "packages.conda": {},
+        "removed": [],
+        "repodata_version": 1,
+    }
+    assert actual_repodata_json == expected_repodata_json
+    assert actual_pkg_repodata_json == expected_repodata_json
+
+    # #######################################
+    # tests for full channel
+    # #######################################
+
+    with open(join(testing_workdir, 'channeldata.json')) as fh:
+        actual_channeldata_json = json.loads(fh.read())
+    expected_channeldata_json = {
+        "channeldata_version": 1,
+        "packages": {
+            "conda-index-pkg-a": {
+                "description": "Description field for conda-index-pkg-a. Actually, this is just the python description. "
+                               "Python is a widely used high-level, general-purpose, interpreted, dynamic "
+                               "programming language. Its design philosophy emphasizes code "
+                               "readability, and its syntax allows programmers to express concepts in "
+                               "fewer lines of code than would be possible in languages such as C++ or "
+                               "Java. The language provides constructs intended to enable clear programs "
+                               "on both a small and large scale.",
+                "dev_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a/meta.yaml",
+                "doc_source_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a/README.md",
+                "doc_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a",
+                "home": "https://anaconda.org/conda-test/conda-index-pkg-a",
+                "license": "BSD",
+                "source_git_url": "https://github.com/kalefranz/conda-test-packages.git",
+                "subdirs": [
+                    "osx-64",
+                ],
+                "summary": "Summary field for conda-index-pkg-a",
+                "version": "1.0",
+                "activate.d": False,
+                "deactivate.d": False,
+                "post_link": True,
+                "pre_link": False,
+                "pre_unlink": False,
+                "binary_prefix": False,
+                "text_prefix": True,
+                "run_exports": {},
+                'icon_hash': None,
+                'icon_url': None,
+                'identifiers': None,
+                'keywords': None,
+                'recipe_origin': None,
+                'source_url': None,
+                'tags': None,
+                'timestamp': 1508520039,
+            }
+        },
+        "subdirs": [
+            "noarch",
+            "osx-64"
+        ]
+    }
+    assert actual_channeldata_json == expected_channeldata_json
+
+
+
+def test_index_on_single_subdir_2(testing_workdir):
     test_package_path = join(testing_workdir, 'osx-64', 'conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2')
     test_package_url = 'https://conda.anaconda.org/conda-test/osx-64/conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2'
     download(test_package_url, test_package_path)
@@ -136,6 +245,7 @@ def test_index_on_single_subdir_1(testing_workdir):
         ]
     }
     assert actual_channeldata_json == expected_channeldata_json
+
 
 
 def test_index_noarch_osx64_1(testing_workdir):
