@@ -1198,10 +1198,10 @@ def find_recipe(path):
     if os.path.isfile(path) and os.path.basename(path) in ["meta.yaml", "conda.yaml"]:
         warning_msg = "RECIPE_PATH received is a file. File: {}".format(path)
         get_logger(__name__).warning(warning_msg)
-        print("-- WARNING --")
-        print(warning_msg)
-        print("It should be a path to a folder. Forcing conda-build to use the recipe.")
-        print("-------------")
+        warnings.warn(
+          warning_msg + "\nIt should be a path to a folder. Forcing conda-build to use the recipe file."
+          UserWarning
+        )
         return os.path.dirname(path)
     results = rec_glob(path, ["meta.yaml", "conda.yaml"])
     if len(results) > 1:
