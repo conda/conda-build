@@ -50,7 +50,8 @@ from .conda_interface import TemporaryDirectory
 from .conda_interface import Resolve
 from .utils import glob, get_logger, FileNotFoundError, JSONDecodeError
 
-# TODO: Rename module?
+# TODO: ✅ Update location of authenticate module when it's published in
+#          conda.common.
 from .authenticate import sha512256  # 512trunc256 is not available in hashlib
 from .authenticate import build_repodata_verification_metadata
 from .authenticate import wrap_as_signable, sign_signable, keyfiles_to_keys

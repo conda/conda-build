@@ -8,6 +8,7 @@ from os.path import dirname, isdir, join, isfile
 import requests
 import shutil
 import tarfile
+import binascii # for Python2/3-friendly bytes<->hex
 
 import pytest
 import mock
@@ -20,7 +21,8 @@ from conda_build.utils import copy_into, rm_rf
 from conda_build.conda_interface import subdir
 from conda_build.conda_interface import conda_47
 from .utils import metadata_dir, archive_dir
-from conda_build.verify import private_key_from_bytes
+from conda_build.authenticate import (
+        private_key_from_bytes, public_key_from_bytes, verify_signable)
 
 log = getLogger(__name__)
 
@@ -30,8 +32,10 @@ log = getLogger(__name__)
 TEST_SIGNING_KEY = private_key_from_bytes(
         b'\xc9\xc2\x06\r~\r\x93al&T\x84\x0bI\x83\xd0\x02!\xd8\xb6\xb6\x9c'
         b'\x85\x01\x07\xdat\xb4!h\xf97')
-
-
+TEST_PUBLIC_KEY_HEX = binascii.hexlify(
+        b"\x01=\xddqIb\x86m\x12\xba[\xae'?"
+        b"\x14\xd4\x8c\x89\xcf\x07s\xde\xe2\xdb\xf6\xd4V\x1eR\x1c\x83\xf7"
+        ).decode('utf-8')
 def download(url, local_path):
     # NOTE: The tests in this module download packages from the conda-test channel.
     #       These packages are small, and could easily be included in the conda-build git
@@ -95,6 +99,51 @@ def test_index_on_single_subdir_1(testing_workdir):
     # #######################################
     # tests for full channel
     # #######################################
+
+    assert isfile(join(testing_workdir, 'channeldata.json'))
+    assert isfile(join(testing_workdir, 'repodata_verify.json'))
+
+
+    with open(join(testing_workdir, 'repodata_verify.json')) as fobj:
+        actual_repodata_verify_json = json.loads(fobj.read())
+
+
+    # Timestamp and expiry will vary (and therefore so will the signature).
+    almost_expected_repodata_verify_json = {
+        "signatures": {
+            "013ddd714962866d12ba5bae273f14d48c89cf0773dee2dbf6d4561e521c83f7":
+            "225c7cd6fff72fbe60de7d026cd68a6065642a27e1a454742371bfe025db91f72d1a960fd71c14b6d53668689c6495f517edc72c2489bdbde2e3194042e5c504"},
+        "signed": {
+            "type": "repodata_verify",
+            "metadata_spec_version": "0.0.5",  # This test has to be updated if the spec changes, whether or not this is hardcoded.
+            "expiration": "2019-11-00T00:00:00Z",  # won't match
+            "timestamp": "2019-10-00T00:00:00Z",  # won't match
+            "secured_files": {
+                "noarch/current_repodata.json": "908724926552827ab58dfc0bccba92426cec9f1f483883da3ff0d8664e18c0fe",
+                "noarch/repodata.json": "908724926552827ab58dfc0bccba92426cec9f1f483883da3ff0d8664e18c0fe",
+                "noarch/repodata_from_packages.json": "908724926552827ab58dfc0bccba92426cec9f1f483883da3ff0d8664e18c0fe",
+                "osx-64/current_repodata.json": "fc9268ea2b4add37e090b7f2b2c88b95c513cab445fb099e8631d8815a384ae4",
+                "osx-64/repodata.json": "fc9268ea2b4add37e090b7f2b2c88b95c513cab445fb099e8631d8815a384ae4",
+                "osx-64/repodata_from_packages.json": "fc9268ea2b4add37e090b7f2b2c88b95c513cab445fb099e8631d8815a384ae4"}}}
+
+    assert len(actual_repodata_verify_json) == len(almost_expected_repodata_verify_json)
+    assert actual_repodata_verify_json.keys() == \
+            almost_expected_repodata_verify_json.keys()
+    assert actual_repodata_verify_json['signed'].keys() == \
+            almost_expected_repodata_verify_json['signed'].keys()
+    for k in actual_repodata_verify_json['signed']:
+        if k in ['timestamp', 'expiration']:
+            # TODO: ✅ Check that these times are within an expected range.
+            # We'll check the signature with a verify_signable call below.
+            continue
+        assert actual_repodata_verify_json['signed'][k] == \
+                almost_expected_repodata_verify_json['signed'][k]
+
+    # Make sure that the produced repodata_verify.json is signed as expected.
+    verify_signable(
+            actual_repodata_verify_json, threshold=1,
+            authorized_pub_keys=[TEST_PUBLIC_KEY_HEX])
+
 
     with open(join(testing_workdir, 'channeldata.json')) as fh:
         actual_channeldata_json = json.loads(fh.read())
