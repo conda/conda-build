@@ -344,8 +344,7 @@ different sets of packages."""
 
     p.add_argument('--suppress-variables',
                    action='store_true',
-                   help=("Do not display value of environment variables specified in build.script_env."),
-    )
+                   help=("Do not display value of environment variables specified in build.script_env."), )
 
     add_parser_channels(p)
 
