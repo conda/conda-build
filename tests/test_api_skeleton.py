@@ -487,6 +487,7 @@ def test_cran_os_type(package, skip_text, testing_workdir, testing_config):
         assert skip_text in f.read()
 
 
+@pytest.mark.slow
 @pytest.mark.skipif(not external.find_executable("shellcheck"), reason="requires shellcheck >=0.7.0")
 @pytest.mark.parametrize(
     "package, repo", [("r-usethis", "cran"), ("Perl::Lint", "cpan"), ("screen", "rpm")]
