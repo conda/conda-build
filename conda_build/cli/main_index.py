@@ -73,6 +73,9 @@ def parse_args(args):
         will keep python 2.7.X and 3.6.Y in the current_index.json, instead of only the very latest python version.
         """
     )
+    p.add_argument(
+        "--key-interface", help="Sign metadata artifacts with a reference to an HSM or with a key file"
+    )
 
     args = p.parse_args(args)
     return p, args
@@ -84,7 +87,7 @@ def execute(args):
     api.update_index(args.dir, check_md5=args.check_md5, channel_name=args.channel_name,
                      threads=args.threads, subdir=args.subdir, patch_generator=args.patch_generator,
                      verbose=args.verbose, progress=args.progress, hotfix_source_repo=args.hotfix_source_repo,
-                     current_index_versions=args.current_index_versions_file)
+                     current_index_versions=args.current_index_versions_file, key_interface=args.key_interface)
 
 
 def main():

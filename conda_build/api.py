@@ -378,7 +378,7 @@ def create_metapackage(name, version, entry_points=(), build_string=None, build_
 
 def update_index(dir_paths, config=None, force=False, check_md5=False, remove=False, channel_name=None,
                  subdir=None, threads=None, patch_generator=None, verbose=False, progress=False,
-                 hotfix_source_repo=None, current_index_versions=None, **kwargs):
+                 hotfix_source_repo=None, current_index_versions=None, key_interface=None, **kwargs):
     import yaml
     from locale import getpreferredencoding
     import os
@@ -394,11 +394,20 @@ def update_index(dir_paths, config=None, force=False, check_md5=False, remove=Fa
         with open(current_index_versions) as f:
             current_index_versions = yaml.safe_load(f)
 
+    if os.path.lexists(key_interface):
+        # TODO: Update location of authenticate module when it's published in
+        #         conda.common.
+        from .authenticate import keyfiles_to_keys
+        priv_key, _ = keyfiles_to_keys(key_interface)
+    else:
+        priv_key = None
+
     for path in dir_paths:
         update_index(path, check_md5=check_md5, channel_name=channel_name,
                      patch_generator=patch_generator, threads=threads, verbose=verbose,
                      progress=progress, hotfix_source_repo=hotfix_source_repo,
-                     subdirs=ensure_list(subdir), current_index_versions=current_index_versions)
+                     subdirs=ensure_list(subdir), current_index_versions=current_index_versions,
+                     indexer_signing_key=priv_key)
 
 
 def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False,
