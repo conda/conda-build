@@ -2,7 +2,7 @@
 # Copyright (C) 2019 Anaconda, Inc
 # SPDX-License-Identifier: ❓UNDETERMINED
 
-# 🔥Python2 Compatibility🔥
+# Python2 Compatibility
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 # Standard libraries
@@ -11,8 +11,8 @@ import os.path
 import copy
 import datetime
 import json
-import sys # for Python version checking, for strings 🤦‍♂️
-import binascii # for Python2/3-compatible hex string <- -> bytes conversion 🤦‍♂️
+import sys # for Python version checking, for strings
+import binascii # for Python2/3-compatible hex string <- -> bytes conversion
 
 # Dependency-provided libraries
 import cryptography
@@ -308,6 +308,7 @@ def serialize_and_sign(private_key, obj):
 
 def canonserialize(obj):
     """
+    Canonicalize and then serialize.
     Given a JSON-compatible object, does the following:
      - serializes the dictionary as utf-8-encoded JSON, lazy-canonicalized
        such that any dictionary keys in any dictionaries inside <dictionary>

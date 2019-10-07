@@ -70,14 +70,6 @@ CONDA_TARBALL_EXTENSIONS = ('.conda', '.tar.bz2')
 log = get_logger(__name__)
 
 
-
-
-# # DEBUG ONLY
-# test_dir = ''
-
-
-
-
 # use this for debugging, because ProcessPoolExecutor isn't pdb/ipdb friendly
 class DummyExecutor(Executor):
     def map(self, func, *iterables):
@@ -775,16 +767,7 @@ class ChannelIndex(object):
                                 else ProcessPoolExecutor(threads))
         self.deep_integrity_check = deep_integrity_check
 
-        # TODO: Apply key management rules for first deployment.
-        #       This will ultimately support both HSM plugin and key-in-memory
-        #       (the latter for non-Anaconda folks doing mirroring / channel-to-
-        #       -channel migration).
         self.indexer_signing_key = signing_key
-
-        # # 💣💣💥💥⚠️⚠️❌❌❌ DEMO PURPOSES ONLY:
-        # if self.indexer_signing_key is None:
-        #     private, junk = keyfiles_to_keys('keytest_old') # discard public
-        #     self.indexer_signing_key = private
 
     def index(self, patch_generator, hotfix_source_repo=None, verbose=False, progress=False,
               current_index_versions=None):
@@ -793,30 +776,8 @@ class ChannelIndex(object):
         else:
             level = logging.ERROR
 
-
-
-        # # DEBUG ONLY
-        # import string
-        # import random
-        # import os
-        # rand_str = ''
-        # for i in range(6):
-        #     rand_str += random.choice(string.ascii_lowercase)
-        # global test_dir
-        # test_dir = '/Volumes/VMware Shared Folders/conda-build/sample_channel-' + rand_str
-        # os.mkdir(test_dir)
-
-
-
-
         # The sha224  hash of every *repodata.json file
         # (that we write now) in this channel.
-        # TODO: If we're concerned about how much time the hashing of all these
-        #       takes (probably not?), there might be a way to batch-hash them?
-        #       sha512 is supposed to be good at simultaneous hashing, if
-        #       hashlib has a way to do that...?  (I may be thinking of the
-        #       wrong thing -- say, parallel execution of hashing a single long
-        #       file).
         repodata_hashmap = {}
 
         with utils.LoggingContext(level, loggers=[__name__]):
@@ -855,16 +816,7 @@ class ChannelIndex(object):
                               subdir, repodata_from_packages,
                               REPODATA_FROM_PKGS_JSON_FN)
 
-
-
-                            # # DEBUG ONLY
-                            # with open(os.path.join(test_dir, REPODATA_FROM_PKGS_JSON_FN), 'wb') as fobj:
-                            #     fobj.write(serialized_data)
-
-
-
-
-                            # TODO: verify status (junk)?
+                            # TODO: verify status of write?
                             # Hash the repodata output and store the hash.
                             repodata_hashmap[os.path.join(
                               subdir, REPODATA_FROM_PKGS_JSON_FN)
@@ -891,14 +843,6 @@ class ChannelIndex(object):
                               subdir, REPODATA_JSON_FN)] = sha512256(
                               serialized_data) #= hashlib.sha512(serialized_data).hexdigest()
 
-
-
-                            # # DEBUG ONLY
-                            # with open(os.path.join(test_dir, REPODATA_JSON_FN), 'wb') as fobj:
-                            #     fobj.write(serialized_data)
-
-
-
                             t2.set_description("Building current_repodata subset")
                             t2.update()
                             current_repodata = _build_current_repodata(subdir, patched_repodata,
@@ -908,15 +852,8 @@ class ChannelIndex(object):
                             junk, serialized_data = self._write_repodata(
                               subdir, current_repodata,
                               json_filename="current_repodata.json")
-                            # TODO: Verify status (junk)?
 
-
-
-                            # # DEBUG ONLY
-                            # with open(os.path.join(test_dir, 'current_repodata.json'), 'wb') as fobj:
-                            #     fobj.write(serialized_data)
-
-
+                            # TODO: Verify status of write?
 
                             # Hash the repodata output and store the hash.
                             repodata_hashmap[os.path.join(
@@ -931,11 +868,6 @@ class ChannelIndex(object):
                             t2.update()
                             self._update_channeldata(channel_data, patched_repodata, subdir)
 
-
-                # with open(os.path.join(test_dir, 'repodata_hashmap.json'), 'wb') as fobj:
-                #     fobj.write(json.dumps(repodata_hashmap, indent=4, sort_keys=True).encode('utf-8'))
-
-
                 # Build, sign (if possible), and write the repodata_verify
                 # metadata (providing hashes for all repodata files).
                 verifier_metadata = build_repodata_verification_metadata(
@@ -949,10 +881,6 @@ class ChannelIndex(object):
                 _maybe_write(
                         join(self.channel_root, REPODATA_VERIFY_JSON_FN),
                         canonserialize(verifier_metadata))
-
-                # DEBUG ONLY 💥💥❌❌💣💣
-                with open('/Users/vs/repodata_verify.json', 'wb') as fobj:
-                    fobj.write(canonserialize(verifier_metadata))
 
                 # Step 7. Create and write channeldata.
                 self._write_channeldata_index_html(channel_data)
@@ -1352,16 +1280,6 @@ class ChannelIndex(object):
 
 
 
-
-        # # DEBUG ONLY
-        # with open(os.path.join(test_dir, 'index.html'), 'wb') as fobj:
-        #     fobj.write(rendered_html.encode('utf-8'))
-
-
-
-
-
-
     def _update_channeldata(self, channel_data, repodata, subdir):
         legacy_packages = repodata["packages"]
         conda_packages = repodata["packages.conda"]
@@ -1457,13 +1375,6 @@ class ChannelIndex(object):
         channeldata_path = join(self.channel_root, 'channeldata.json')
         content = json.dumps(channeldata, indent=2, sort_keys=True).replace("':'", "': '")
         _maybe_write(channeldata_path, content, True)
-
-
-
-        # # DEBUG ONLY
-        # with open(os.path.join(test_dir, 'CHANNELDATA.json'), 'wb') as fobj:
-        #     fobj.write(content.encode('utf-8'))
-
 
 
 

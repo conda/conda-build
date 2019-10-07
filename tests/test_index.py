@@ -296,7 +296,6 @@ def test_index_on_single_subdir_2(testing_workdir):
     assert actual_channeldata_json == expected_channeldata_json
 
 
-
 def test_index_noarch_osx64_1(testing_workdir):
     test_package_path = join(testing_workdir, 'osx-64', 'conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2')
     test_package_url = 'https://conda.anaconda.org/conda-test/osx-64/conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2'
