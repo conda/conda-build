@@ -1305,6 +1305,10 @@ class ChannelIndex(object):
 
     def _write_repodata(self, subdir, repodata, json_filename):
         repodata_json_path = join(self.channel_root, subdir, json_filename)
+        # Note that if this serialization changes at all (e.g. indent size,
+        # sorting, space-after-colons, etc.) the code in conda that checks
+        # hashes on repodata files also needs to be updated (at the time of
+        # this writing, that is conda.core.subdir_data._validate_repodata).
         new_repodata_binary = json.dumps(repodata, indent=2, sort_keys=True,).replace("':'", "': '").encode("utf-8")
         write_result = _maybe_write(repodata_json_path, new_repodata_binary, write_newline_end=True)
         if write_result:
