@@ -340,16 +340,16 @@ def test_get_lock(testing_workdir):
     assert lock1.lock_file == lock1_unnormalized.lock_file
 
 
-def test_recipe_path_meta(tmpdir, capsys):
+def test_recipe_path_meta(tmpdir, recwarn):
     dir_recipe_path = tmpdir.mkdir("recipe-path")
     recipe_path = dir_recipe_path.join("meta.yaml")
     recipe_path.write("")
 
     assert find_recipe(str(recipe_path)) == str(dir_recipe_path)
-    captured = capsys.readouterr()
-    assert "WARNING" in captured.out
-    assert str(recipe_path) in captured.out
+    assert "RECIPE_PATH received is a file. File: {}\n" \
+           "It should be a path to a folder. \n" \
+           "Forcing conda-build to use the recipe file.".format(str(recipe_path)) \
+           == str(recwarn.pop(UserWarning).message)
 
     assert find_recipe(str(dir_recipe_path)) == str(recipe_path)
-    captured = capsys.readouterr()
-    assert "" in captured.out
+    assert not recwarn.list

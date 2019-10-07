@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+import warnings
 from collections import OrderedDict, defaultdict
 import contextlib
 import fnmatch
@@ -893,7 +894,7 @@ def comma_join(items):
     'a'
     >>> comma_join(['a', 'b'])
     'a and b'
-    >>> comma_join(['a', 'b', 'c])
+    >>> comma_join(['a', 'b', 'c'])
     'a, b, and c'
     """
     return ' and '.join(items) if len(items) <= 2 else ', '.join(items[:-1]) + ', and ' + items[-1]
@@ -1196,11 +1197,11 @@ def find_recipe(path):
 
     If we have a base level meta.yaml and other supplemental ones, use that first"""
     if os.path.isfile(path) and os.path.basename(path) in ["meta.yaml", "conda.yaml"]:
-        warning_msg = "RECIPE_PATH received is a file. File: {}".format(path)
-        get_logger(__name__).warning(warning_msg)
         warnings.warn(
-          warning_msg + "\nIt should be a path to a folder. Forcing conda-build to use the recipe file."
-          UserWarning
+            "RECIPE_PATH received is a file. File: {}\n"
+            "It should be a path to a folder. \n"
+            "Forcing conda-build to use the recipe file.".format(path),
+            UserWarning
         )
         return os.path.dirname(path)
     results = rec_glob(path, ["meta.yaml", "conda.yaml"])
