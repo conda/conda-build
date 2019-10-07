@@ -194,6 +194,7 @@ def _get_default_settings():
             # this can be set to different values (currently only 2 means anything) to use package formats
             Setting('conda_pkg_format', cc_conda_build.get('pkg_format', None)),
 
+            Setting('suppress_variables', False),
             ]
 
 
