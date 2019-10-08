@@ -1189,9 +1189,9 @@ class MetaData(object):
                 ms = MatchSpec(spec)
             except AssertionError:
                 raise RuntimeError("Invalid package specification: %r" % spec)
-            except (AttributeError, ValueError):
+            except (AttributeError, ValueError) as e:
                 raise RuntimeError("Received dictionary as spec.  Note that pip requirements are "
-                                   "not supported in conda-build meta.yaml.")
+                                   "not supported in conda-build meta.yaml.  Error message: " + str(e))
             if ms.name == self.name():
                 raise RuntimeError("%s cannot depend on itself" % self.name())
             for name, ver in name_ver_list:
