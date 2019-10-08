@@ -1408,3 +1408,26 @@ def test_ignore_verify_codes(testing_config):
     # this recipe intentionally has a license error.  If ignore_verify_codes works,
     #    it will build OK.  If not, it will error out.
     api.build(recipe_dir, config=testing_config)
+
+
+def test_script_env_warnings(testing_config, recwarn):
+    recipe_dir = os.path.join(metadata_dir, '_script_env_warnings')
+    token = 'CONDA_BUILD_PYTEST_SCRIPT_ENV_TEST_TOKEN'
+    def assert_keyword(keyword):
+        messages = [str(w.message) for w in recwarn.list]
+        assert any([token in m and keyword in m for m in messages])
+        recwarn.clear()
+
+    api.build(recipe_dir, config=testing_config)
+    assert_keyword('undefined')
+
+    os.environ[token] ='SECRET'
+    try:
+        api.build(recipe_dir, config=testing_config)
+        assert_keyword('SECRET')
+
+        testing_config.suppress_variables = True
+        api.build(recipe_dir, config=testing_config)
+        assert_keyword('<hidden>')
+    finally:
+        os.environ.pop(token)
