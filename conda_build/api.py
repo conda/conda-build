@@ -397,8 +397,10 @@ def update_index(dir_paths, config=None, force=False, check_md5=False, remove=Fa
     if os.path.lexists(key_interface):
         # TODO: Update location of authenticate module when it's published in
         #         conda.common.
-        from .authenticate import keyfiles_to_keys
-        priv_key, _ = keyfiles_to_keys(key_interface)
+        from .authenticate import private_key_from_bytes
+        with open(key_interface,  'rb') as fobj:
+            private_bytes = fobj.read()
+        priv_key = private_key_from_bytes(private_bytes)
     else:
         priv_key = None
 
