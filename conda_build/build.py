@@ -1542,7 +1542,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
 
                 if (top_level_meta.name() == output_d.get('name') and not (output_d.get('files') or
                                                                            output_d.get('script'))):
-                    output_d['files'] = (utils.prefix_files(prefix=m.config.host_prefix) -
+                    output_d['files'] = (utils.prefix_files(prefix=prefix_files_backup) -
                                          initial_files)
 
                 # ensure that packaging scripts are copied over into the workdir
