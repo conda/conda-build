@@ -502,6 +502,7 @@ FIELDS = {
               'ignore_run_exports', 'requires_features', 'provides_features',
               'force_use_keys', 'force_ignore_keys', 'merge_build_host',
               'pre-link', 'post-link', 'pre-unlink', 'missing_dso_whitelist',
+              'error-overdepending', 'error-overlinking',
               },
     'outputs': {'name', 'version', 'number', 'script', 'script_interpreter', 'build',
                 'requirements', 'test', 'about', 'files', 'type', 'run_exports'},
