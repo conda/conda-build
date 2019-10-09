@@ -1,0 +1,11 @@
+package:
+  name: subpackage_has_about_metadata
+  version: 1.0
+
+outputs:
+  - name: abc
+    extra:
+      enthusiasm: weee
+  - name: def
+    extra:
+      dummy_url: http://not.a.url
