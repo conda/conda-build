@@ -394,7 +394,7 @@ def update_index(dir_paths, config=None, force=False, check_md5=False, remove=Fa
         with open(current_index_versions) as f:
             current_index_versions = yaml.safe_load(f)
 
-    if os.path.lexists(key_interface):
+    if key_interface is not None and os.path.lexists(key_interface):
         # TODO: Update location of authenticate module when it's published in
         #         conda.common.
         from .authenticate import private_key_from_bytes
