@@ -398,9 +398,9 @@ def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
 
 def mk_relative_osx(path, host_prefix, build_prefix, files, rpaths=('lib',)):
     assert sys.platform == 'darwin'
-
-    names = macho.otool(path, build_prefix)
-    s = macho.install_name_change(path, build_prefix,
+    prefix = build_prefix if os.path.exists(build_prefix) else host_prefix
+    names = macho.otool(path, prefix)
+    s = macho.install_name_change(path, prefix,
                                   partial(osx_ch_link,
                                           host_prefix=host_prefix,
                                           build_prefix=build_prefix,
@@ -417,7 +417,7 @@ def mk_relative_osx(path, host_prefix, build_prefix, files, rpaths=('lib',)):
             rpath_new = join('@loader_path',
                              relpath(join(host_prefix, rpath), dirname(path)),
                              '').replace('/./', '/')
-            macho.add_rpath(path, rpath_new, build_prefix=build_prefix, verbose=True)
+            macho.add_rpath(path, rpath_new, build_prefix=prefix, verbose=True)
     if s:
         # Skip for stub files, which have to use binary_has_prefix_files to be
         # made relocatable.
@@ -538,7 +538,8 @@ def mk_relative_linux(f, prefix, rpaths=('lib',), method='LIEF'):
 
 
 def assert_relative_osx(path, host_prefix, build_prefix):
-    for name in macho.get_dylibs(path, build_prefix):
+    prefix = build_prefix if os.path.exists(build_prefix) else host_prefix
+    for name in macho.get_dylibs(path, prefix):
         for prefix in (host_prefix, build_prefix):
             if prefix and name.startswith(prefix):
                 raise RuntimeError("library at %s appears to have an absolute path embedded" % path)
