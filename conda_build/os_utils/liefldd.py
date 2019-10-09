@@ -1086,7 +1086,7 @@ def lief_parse(filename, path_replacements):
                 filetype = 'machofile'
             elif cf.__class__ == 'DLLfile':
                 filetype = 'pecoff'
-            key, libs_original, libs_resolved = _inspect_linkages_this(filename, sysroot=sysroot)
+            key, libs_original, libs_resolved = _inspect_linkages_this(filename, sysroot=None)
             if filename in libs_original:
                 assert False, "I did not know this could happen!"
                 libs_original = tuple(f for f in libs_original if f != filename)
