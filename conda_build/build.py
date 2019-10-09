@@ -187,6 +187,7 @@ def have_prefix_files(files, prefix):
         for rep_prefix, _ in searches.items():
             try:
                 args = [rg,
+                        '--unrestricted',
                         '--no-heading',
                         '--with-filename',
                         '--files-with-matches',
