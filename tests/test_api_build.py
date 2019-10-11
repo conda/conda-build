@@ -91,6 +91,10 @@ def recipe(request):
 # This tests any of the folders in the test-recipes/metadata folder that don't start with _
 @pytest.mark.slow
 def test_recipe_builds(recipe, testing_config, testing_workdir, monkeypatch):
+    # TODO: After we fix #3754 this mark can be removed. This specific test
+    #   ``source_setup_py_data_subdir`` reproduces the problem.
+    if os.path.basename(recipe) == "source_setup_py_data_subdir":
+        pytest.xfail("Issue related to #3754 on conda-build.")
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
     testing_config.activate = True
