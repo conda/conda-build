@@ -413,11 +413,11 @@ def mk_relative_osx(path, host_prefix, build_prefix, files, rpaths=('lib',)):
             rpath_new = os.path.join('@loader_path',
                                      os.path.relpath(os.path.join(host_prefix, rpath), os.path.dirname(path)),
                                      '').replace('/./', '/')
-            macho.add_rpath(path, rpath_new, verbose=True)
+            macho.add_rpath(path, rpath_new, build_prefix=build_prefix, verbose=True)
     if s:
         # Skip for stub files, which have to use binary_has_prefix_files to be
         # made relocatable.
-        assert_relative_osx(path, build_prefix, host_prefix)
+        assert_relative_osx(path, host_prefix, build_prefix)
 
 
 '''
@@ -534,9 +534,9 @@ def mk_relative_linux(f, prefix, rpaths=('lib',), method='LIEF'):
 
 
 def assert_relative_osx(path, host_prefix, build_prefix):
-    for name in macho.get_dylibs(path):
+    for name in macho.get_dylibs(path, build_prefix):
         for prefix in (host_prefix, build_prefix):
-            if name.startswith(prefix):
+            if prefix and name.startswith(prefix):
                 raise RuntimeError("library at %s appears to have an absolute path embedded" % path)
 
 
