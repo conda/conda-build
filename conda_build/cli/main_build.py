@@ -342,6 +342,10 @@ different sets of packages."""
                          'is only enabled for testing with the -t or --test flag.  Change '
                          'meta.yaml or use templates otherwise.'), )
 
+    p.add_argument('--suppress-variables',
+                   action='store_true',
+                   help=("Do not display value of environment variables specified in build.script_env."), )
+
     add_parser_channels(p)
 
     args = p.parse_args(args)

@@ -1,0 +1,7 @@
+package:
+  name: test_script_env_warnings
+  version: '1.0'
+
+build:
+  script_env:
+     - CONDA_BUILD_PYTEST_SCRIPT_ENV_TEST_TOKEN
