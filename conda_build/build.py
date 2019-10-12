@@ -1240,9 +1240,12 @@ def create_build_envs(m, notest):
     host_ms_deps = m.ms_depends('host')
     host_ms_deps = [utils.ensure_valid_spec(spec) for spec in host_ms_deps]
 
-    m.config._merge_build_host = m.build_is_host
+    # m.config._merge_build_host = m.build_is_host
+    m.config._merge_build_host = False
+    m_is_cross = True # m.is_cross
+    m_build_is_host = False # m.build_is_host
 
-    if m.is_cross and not m.build_is_host:
+    if m_is_cross and not m_build_is_host:
         if VersionOrder(conda_version) < VersionOrder('4.3.2'):
             raise RuntimeError("Non-native subdir support only in conda >= 4.3.2")
 
@@ -1261,7 +1264,7 @@ def create_build_envs(m, notest):
         environ.create_env(m.config.host_prefix, host_actions, env='host', config=m.config,
                             subdir=m.config.host_subdir, is_cross=m.is_cross,
                             is_conda=m.name() == 'conda')
-    if m.build_is_host:
+    if m_build_is_host:
         build_ms_deps.extend(host_ms_deps)
     build_actions = environ.get_install_actions(m.config.build_prefix,
                                                 tuple(build_ms_deps), 'build',
@@ -1584,6 +1587,8 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                 pkg_path = bldpkg_path(m)
                 if pkg_path not in built_packages and pkg_path not in new_pkgs:
                     log.info("Packaging {}".format(m.name()))
+                    if 'libllvm9' in m.name():
+                        print('debug this')
                     # for more than one output, we clear and rebuild the environment before each
                     #    package.  We also do this for single outputs that present their own
                     #    build reqs.
@@ -1594,15 +1599,19 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                         # and also the comment "For more than one output, ..."
                         log.debug('Not creating new env for output - already exists from top-level')
                     else:
-                        m.config._merge_build_host = m.build_is_host
+                        # m.config._merge_build_host = m.build_is_host
+                        m.config._merge_build_host = False
 
                         utils.rm_rf(m.config.host_prefix)
                         utils.rm_rf(m.config.build_prefix)
                         utils.rm_rf(m.config.test_prefix)
 
+                        # It is high time we stop this nonsense.
+                        m_is_cross = True # m.is_cross
+                        m_build_is_host = False # m.build_is_host
                         host_ms_deps = m.ms_depends('host')
                         sub_build_ms_deps = m.ms_depends('build')
-                        if m.is_cross and not m.build_is_host:
+                        if m_is_cross and not m_build_is_host:
                             host_actions = environ.get_install_actions(m.config.host_prefix,
                                                     tuple(host_ms_deps), 'host',
                                                     subdir=m.config.host_subdir,
