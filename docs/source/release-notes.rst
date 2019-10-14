@@ -5,6 +5,56 @@ Release notes
 This information is drawn from the GitHub conda-build project
 changelog: https://github.com/conda/conda-build/blob/master/CHANGELOG.txt
 
+3.18.10 (2019-10-14)
+--------------------
+
+Enhancements
+^^^^^^^^^^^^
+
+* Add the error message when an invalid pip dependency version expression is used.
+* Conda skeleton pypi quoting just ``version``, ``summary``, and ``description``
+  of attributes with special characters.
+* Set up CI Azure pipeline for Linux.
+* Update cran skeleton to match supported optional licenses for license file derivation.
+* Migrate Unittests to PyTest.
+* Update script command on conda skeleton pypi to use ``{{ PYTHON }} -m pip install . -vv``.
+* Add a warning when a received a file on ``RECIPE_PATH``.
+* Refactor the skeletons/pypi.py get_package_metadata to be more modular.
+* Add --suppress-variables switch to hide environment variables from console output.
+
+Bug fixes
+^^^^^^^^^
+
+* Fix build of ``.conda`` packages enabled via ``conda config --set conda_build.pkg_format 2``.
+* Workaround for future deprecations of the SafeConfigParser and readfp of the same module.
+
+Docs
+^^^^
+
+* Remove bzip2 package from build toolkit description.
+
+
+Contributors
+^^^^^^^^^^^^
+
+* @msarahan
+* @jakirkham
+* @marcelotrevisani
+* @duncanmmacleod
+* @kinow
+* @saraedum
+* @jjhelmus
+* @rrigdon
+* @mingwandroid
+* @asford
+* @timsnyder
+* @mcg1969
+* @kaitietz
+* @stuarteberg
+* @isuruf
+* @dbast
+* @Bezier89
+
 3.18.9 (2019-07-23)
 -------------------
 
