@@ -696,12 +696,21 @@ undefined.
 Export runtime requirements
 ---------------------------
 
-Some build or host :ref:`requirements` will impose a runtime requirement.
-Most commonly this is true for shared libraries (e.g. libpng), which are
-required for linking at build time, and for resolving the link at run time.
-With ``run_exports`` (new in conda-build 3) such a runtime requirement can be
-implicitly added by host requirements (e.g. libpng exports libpng), and with
+Some build or host :ref:`requirements <requirements>` will impose a
+runtime requirement. You may want to review our :ref:`requirements`
+covering the host and run sections. These exports are describing
+oneself for downstream customers. Note that only dynamic and shared
+libraries need ``run_exports`` - static libraries do not.
+
+The runtime requirement is most commonly true for shared libraries
+(e.g. libpng), which are required for linking at build time
+and for resolving the link at run time.
+
+With ``run_exports`` (new in conda-build 3), such a runtime requirement can be
+implicitly added by host requirements (e.g. libpng exports libpng).
+Less commonly, a runtime requirement can be implicitly added with
 ``run_exports/strong`` even by build requirements (e.g. gcc exports libgcc).
+
 
 .. code-block:: yaml
 
@@ -710,10 +719,10 @@ implicitly added by host requirements (e.g. libpng exports libpng), and with
      run_exports:
        - libpng
 
-Here, because no specific kind of run_exports is specified, libpng's run_exports
+Here, because no specific kind of ``run_exports`` is specified, libpng's ``run_exports``
 are considered "weak." This means they will only apply when libpng is in the
-host section, when they will add their export to the run section.  If libpng were
-listed in the build section, the run_exports would not apply to the run section.
+host section, when they will add their export to the run section. If libpng were
+listed in the build section, the ``run_exports`` would not apply to the run section.
 
 .. code-block:: yaml
 
@@ -723,10 +732,10 @@ listed in the build section, the run_exports would not apply to the run section.
        strong:
          - libgcc
 
-Strong run_exports are used for things like runtimes, where the same runtime
+Strong ``run_exports`` are used for things like runtimes, where the same runtime
 needs to be present in the host and the run environment, and exactly which
 runtime that should be is determined by what's present in the build section.
-This mechanism is how we line up appropriate software on windows, where we must
+This mechanism is how we line up appropriate software on Windows, where we must
 match MSVC versions used across all of the shared libraries in an environment.
 
 .. code-block:: yaml
@@ -757,24 +766,25 @@ pinning relative to versions present at build time:
 With this example, if libpng were version 1.6.34, this pinning expression would
 evaluate to ``>=1.6.34,<1.7``.
 
-Note that ``run_exports`` can be specified both in the build section, and on
+Note that ``run_exports`` can be specified both in the build section and on
 a per-output basis for split packages.
 
 ``run_exports`` only affects directly named dependencies. For example, if you
 have a metapackage that includes a compiler that lists ``run_exports``, you also
 need to define ``run_exports`` in the metapackage so that it takes effect
-when people install your metapackage.  This is important, because if
+when people install your metapackage. This is important, because if
 ``run_exports`` affected transitive dependencies, you would see many added
 dependencies to shared libraries where they are not actually direct
 dependencies. For example, Python uses bzip2, which can use ``run_exports`` to
 make sure that people use a compatible build of bzip2. If people list python as
-a build time dependency, bzip2 should only be imposed for python itself, and
+a build time dependency, bzip2 should only be imposed for Python itself, and
 should not be automatically imposed as a runtime dependency for the thing using
-python.
+Python. ``run_exports`` are derived into each dependency of a dependency
+with the ``ignore_run_exports`` counter measure discussed below. 
 
 The potential downside of this feature is that it takes some control over
 constraints away from downstream users. If an upstream package has a problematic
-run_exports constraint, you can ignore it in your recipe by listing the upstream
+``run_exports`` constraint, you can ignore it in your recipe by listing the upstream
 package name in the ``build/ignore_run_exports`` section:
 
 .. code-block:: yaml
@@ -853,13 +863,22 @@ Host
 
 This section was added in conda-build 3.0. It represents packages that need to
 be specific to the target platform when the target platform is not necessarily
-the same as the native build platform. For example, in order for a recipe to
-"cross-capable", shared libraries requirements must be listed in the host
-section, rather than the build section, so that the shared libraries that get
-linked are ones for the target platform, rather than the native build platform.
-You should also include the base interpreter for packages that need one. In other
-words, a Python package would list ``python`` here and an R package would list
-``mro-base`` or ``r-base``.
+the same as the native build platform. Library dependencies (both shared and
+static) go exclusively in the host section.
+
+For example, in order for a recipe to be
+"cross-capable", library (both static and/or shared) requirements must be
+listed in the host section, rather than the build section. This is so that
+the shared libraries that get linked are ones for the target platform,
+rather than the native build platform. Static libraries also go into the
+host section and must be fitting for the target architecture. Note that
+binary Python import modules are always shared libraries at this point.
+
+
+You should also include the base
+interpreter for packages that need one. In other words, a Python package
+would list ``python`` here and an R package would list ``mro-base`` or
+``r-base``.
 
 .. code-block:: yaml
 
@@ -887,13 +906,13 @@ both are defined, or when ``{{ compiler() }}`` jinja2 functions are used. The
 only time that build and host are merged is when the host section is absent, and
 no ``{{ compiler() }}`` jinja2 functions are used in meta.yaml. Because these
 are separate, you may see some build failures when migrating your recipes. For
-example, let's say you have a recipe to build a python extension. If you add the
-compiler jinja2 functions to the build section, but you do not move your python
+example, let's say you have a recipe to build a Python extension. If you add the
+compiler jinja2 functions to the build section, but you do not move your Python
 dependency from the build section to the host section, your recipe will fail. It
 will fail because the host environment is where new files are detected, but
-because you have python only in the build environment, your extension will be
+because you have Python only in the build environment, your extension will be
 installed into the build environment. No files will be detected. Also, variables
-such as PYTHON will not be defined when python is not installed into the host
+such as PYTHON will not be defined when Python is not installed into the host
 environment.
 
 On Linux, using the compiler packages provided by Anaconda Inc. in the ``defaults``
@@ -909,7 +928,7 @@ packages for X11. Conda-forge chose to provide X11 and GL packages.
 On macOS, you can also use ``{{ compiler() }}`` to get compiler packages
 provided by Anaconda Inc. in the ``defaults`` meta-channel. The
 environment variables ``MACOSX_DEPLOYMENT_TARGET`` and ``CONDA_BUILD_SYSROOT``
-will be set appropriately by conda-build. (See :ref:`env-vars`.)
+will be set appropriately by conda-build. See :ref:`env-vars`.
 ``CONDA_BUILD_SYSROOT`` will specify a folder containing a macOS SDK. These
 settings achieve backwards compatibility while still providing access to C++14
 and C++17. Note that conda-build will set ``CONDA_BUILD_SYSROOT`` by parsing the
@@ -917,10 +936,10 @@ and C++17. Note that conda-build will set ``CONDA_BUILD_SYSROOT`` by parsing the
 
 **TL;DR**: If you use the new ``{{ compiler() }}`` jinja2 to utilize our new
 compilers, you also must move anything that is not strictly a build tool into
-your host dependencies. This includes python, python libraries, and any shared
+your host dependencies. This includes Python, Python libraries, and any shared
 libraries that you need to link against in your build. Examples of build tools
 include any {{ compiler() }}, make, autoconf, perl (for running scripts, not
-installing perl software), python (for running scripts, not for installing
+installing perl software), and Python (for running scripts, not for installing
 software).
 
 Run
