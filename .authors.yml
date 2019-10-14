@@ -5,20 +5,20 @@
   - msarahan@continuum.io
   aliases:
   - Mike Sarahan
-  num_commits: 142
+  num_commits: 144
   first_commit: 2015-09-04 21:31:08
 - name: Jonathan J. Helmus
   email: jjhelmus@gmail.com
   aliases:
   - Jonathan Helmus
-  num_commits: 49
+  num_commits: 52
   first_commit: 2014-06-09 17:25:05
   github: jjhelmus
 - name: Isuru Fernando
   email: isuruf@gmail.com
   alternate_emails:
   - isuru.11@cse.mrt.ac.lk
-  num_commits: 25
+  num_commits: 28
   first_commit: 2017-06-16 15:14:34
   github: isuruf
 - name: Dan Blanchard
@@ -414,7 +414,7 @@
 - name: Ray Donnelly
   email: mingw.android@gmail.com
   github: mingwandroid
-  num_commits: 413
+  num_commits: 415
   first_commit: 2016-03-06 18:52:51
 - name: Paul Madden
   email: maddenp@colorado.edu
@@ -423,7 +423,7 @@
   github: maddenp
 - name: Tim Snyder
   email: snyder.tim@gmail.com
-  num_commits: 8
+  num_commits: 9
   first_commit: 2017-04-28 11:08:14
   github: timsnyder
 - name: dlovell
@@ -565,7 +565,7 @@
   first_commit: 2015-08-30 06:44:37
 - name: Marcel Bargull
   email: marcel.bargull@udo.edu
-  num_commits: 20
+  num_commits: 21
   first_commit: 2016-09-26 11:45:54
   github: mbargull
 - name: Philip R. Kensche
@@ -653,7 +653,7 @@
   first_commit: 2016-07-05 14:53:35
 - name: Michael C. Grant
   email: mcg@cvxr.com
-  num_commits: 9
+  num_commits: 15
   first_commit: 2016-03-08 17:42:53
   github: mcg1969
   alternate_emails:
@@ -744,7 +744,7 @@
   github: gqmelo
 - name: soapy1
   email: scastellarin@anaconda.com
-  num_commits: 13
+  num_commits: 14
   first_commit: 2018-10-22 16:40:33
   github: soapy1
 - name: Yu Feng
@@ -754,7 +754,7 @@
   github: rainwoodman
 - name: Stuart Berg
   email: bergs@janelia.hhmi.org
-  num_commits: 47
+  num_commits: 48
   first_commit: 2015-09-13 14:49:05
   github: stuarteberg
 - name: Richard Frank
@@ -802,7 +802,7 @@
   github: dougalsutherland
 - name: James Sexton
   email: TwistedLadder@gmail.com
-  num_commits: 24
+  num_commits: 25
   first_commit: 2017-07-28 16:39:11
   github: Bezier89
 - name: Amir MOHAMMADI
@@ -892,12 +892,12 @@
   first_commit: 2019-01-26 13:17:33
 - name: Rachel
   email: rrigdon@anaconda.com
-  num_commits: 63
+  num_commits: 73
   first_commit: 2019-01-24 14:12:19
   github: rrigdon
 - name: Rachel Rigdon
   email: 45607889+rrigdon@users.noreply.github.com
-  num_commits: 33
+  num_commits: 34
   first_commit: 2019-01-24 15:12:09
   github: rrigdon
 - name: Zane Dufour
@@ -919,7 +919,7 @@
   github: gabrielcnr
 - name: Julian Rüth
   email: julian.rueth@fsfe.org
-  num_commits: 1
+  num_commits: 8
   first_commit: 2019-04-26 11:13:44
   github: saraedum
 - name: satoshi
@@ -939,7 +939,7 @@
   github: theultimate1
 - name: Kai Tietz
   email: ktietz@anaconda.com
-  num_commits: 2
+  num_commits: 5
   first_commit: 2019-04-04 02:38:29
   github: katietz
   alternate_emails:
@@ -975,17 +975,17 @@
   github: spalmrot-tic
 - name: John Kirkham
   email: jakirkham@gmail.com
-  num_commits: 7
+  num_commits: 9
   first_commit: 2019-06-06 14:26:02
   github: jakirkham
 - name: Daniel Bast
   email: 2790401+dbast@users.noreply.github.com
-  num_commits: 3
+  num_commits: 4
   first_commit: 2019-06-07 02:44:13
   github: dbast
 - name: Duncan Macleod
   email: duncan.macleod@ligo.org
-  num_commits: 1
+  num_commits: 2
   first_commit: 2019-06-13 08:07:25
   github: duncanmmacleod
 - name: Chris Osborn
@@ -1005,8 +1005,17 @@
   github: ddamiani
 - name: Marcelo Duarte Trevisani
   email: marceloduartetrevisani@gmail.com
-  num_commits: 5
+  num_commits: 46
   first_commit: 2019-07-19 10:00:00
   github: marcelotrevisani
   alternate_emails:
   - marcelotrevisani@users.noreply.github.com
+- name: Bruno P. Kinoshita
+  email: kinow@users.noreply.github.com
+  num_commits: 1
+  first_commit: 2019-10-08 04:56:12
+- name: Alex Ford
+  email: a.sewall.ford@gmail.com
+  num_commits: 10
+  first_commit: 2019-09-20 19:35:25
+  github: asford
