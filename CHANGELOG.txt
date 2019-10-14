@@ -2,6 +2,55 @@
 2019-10-14 3.18.10:
 ------------------
 
+Enhancements:
+-------------
+
+* Added the error message when an invalid pip dependency version expression is used
+* Conda skeleton pypi quoting just `version`, `summary`` and `description` or attributes with special characters
+* Set up CI Azure pipeline for Linux
+* Update cran skeleton to match supported optional licenses for license file derivation.
+* Migrate Unittests to PyTest
+* Update script command on conda skeleton pypi to use `{{ PYTHON }} -m pip install . -vv`
+* Add a warning when a received a file on `RECIPE_PATH`
+* Refactored the skeletons/pypi.py get_package_metadata to be more modular
+* added --suppress-variables switch to hide environment variables from console output
+
+Bug fixes:
+----------
+
+* Fixed build of '.conda' packages enabled via 'conda config --set conda_build.pkg_format 2'
+* Workaround for future deprecations of the SafeConfigParser and readfp of the same module.
+
+Docs:
+-----
+
+* Remove bzip2 package from build toolkit description.
+
+Other:
+------
+
+
+Contributors:
+-------------
+
+* @msarahan
+* @jakirkham
+* @marcelotrevisani
+* @duncanmmacleod
+* @kinow
+* @saraedum
+* @jjhelmus
+* @rrigdon
+* @mingwandroid
+* @asford
+* @timsnyder
+* @mcg1969
+* @kaitietz
+* @stuarteberg
+* @isuruf
+* @dbast
+* @Bezier89
+
 
 2019-07-23 3.18.9:
 ------------------
