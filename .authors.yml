@@ -656,6 +656,8 @@
   num_commits: 9
   first_commit: 2016-03-08 17:42:53
   github: mcg1969
+  alternate_emails:
+  - mgrant@anaconda.com
 - name: Casey Clements
   email: casey.clements@continuum.io
   num_commits: 5
@@ -940,6 +942,8 @@
   num_commits: 2
   first_commit: 2019-04-04 02:38:29
   github: katietz
+  alternate_emails:
+  - 47363620+katietz@users.noreply.github.com
 - name: Toon Verstraelen
   email: Toon.Verstraelen@UGent.be
   num_commits: 4
@@ -1004,3 +1008,5 @@
   num_commits: 5
   first_commit: 2019-07-19 10:00:00
   github: marcelotrevisani
+  alternate_emails:
+  - marcelotrevisani@users.noreply.github.com
