@@ -758,7 +758,7 @@ uncompress (or gunzip) is required to unarchive .z source files.
 """)
         check_call_env([uncompress, '-f', tarball])
         tarball = tarball[:-2]
-    if not PY3 and tarball.endswith('.tar.xz'):
+    if not PY3 and tarball.lower().endswith('.tar.xz'):
         unxz = external.find_executable('unxz')
         if not unxz:
             sys.exit("""\
@@ -832,7 +832,7 @@ def tar_xf(tarball, dir_path):
         # try again, maybe we are on Windows and the archive contains symlinks
         # https://github.com/conda/conda-build/issues/3351
         # https://github.com/libarchive/libarchive/pull/1030
-        if tarball.endswith(('.tar', '.tar.gz', '.tgz', '.tar.bz2', '.tar.z', '.tar.xz')):
+        if tarball.lower().endswith(('.tar', '.tar.gz', '.tgz', '.tar.bz2', '.tar.z', '.tar.xz')):
             _tar_xf_fallback(tarball, dir_path)
         else:
             raise
