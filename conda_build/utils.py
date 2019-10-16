@@ -489,7 +489,7 @@ def try_acquire_locks(locks, timeout):
         # If we reach this point, we weren't able to acquire all locks within
         # the specified timeout. We shouldn't be holding any locks anymore at
         # this point, so we just raise an exception.
-        raise BuildLockError('Failed to acquire all locks')
+        raise BuildLockError('Failed to acquire all locks {}'.format(str(lock) for lock in locks))
 
     try:
         yield

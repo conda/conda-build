@@ -444,7 +444,7 @@ def _get_resolved_location(codefile,
                         codefile.get_rpaths_transitive() + \
                         ld_library_paths + \
                         codefile.get_rpaths_nontransitive() + \
-                        [dp.replace('$SYSROOT', sysroot) for dp in ensure_list(default_paths)]
+                        [dp.replace('$SYSROOT', sysroot or '') for dp in ensure_list(default_paths)]
         for rpath in these_rpaths:
             resolved = unresolved.replace('$RPATH', rpath) \
                                  .replace('$SELFDIR', self_dir) \
