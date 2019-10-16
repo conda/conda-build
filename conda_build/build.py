@@ -199,7 +199,11 @@ def have_prefix_files(files, prefix):
             except subprocess.CalledProcessError:
                 continue
         # HACK: this is basically os.path.relpath, just simpler and faster
-        rg_matches = [rg_match[prefix_len:] for rg_match in rg_matches]
+        # NOTE: path normalization needs to be in sync with create_info_files
+        if utils.on_win:
+            rg_matches = [rg_match.replace('\\', '/')[prefix_len:] for rg_match in rg_matches]
+        else:
+            rg_matches = [rg_match[prefix_len:] for rg_match in rg_matches]
     else:
         print("WARNING: Detecting which files contain PREFIX is slow, installing ripgrep makes it faster."
               " 'conda install ripgrep'")
