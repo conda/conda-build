@@ -148,7 +148,8 @@ def unpack(source_dict, src_dir, cache_folder, recipe_path, croot, verbose=False
             tar_xf(src_path, tmpdir)
         else:
             # In this case, the build script will need to deal with unpacking the source
-            print("Warning: Unrecognized source format. Source file will be copied to the SRC_DIR")
+            print("Warning: Unrecognized source format. Source file will be copied to the SRC_DIR (){}".
+                  format(src_path))
             copy_into(src_path, unhashed_dest, timeout, locking=locking)
         if src_path.lower().endswith('.whl'):
             # copy wheel itself *and* unpack it

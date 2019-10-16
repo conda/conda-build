@@ -72,16 +72,19 @@ import conda_build.noarch_python as noarch_python
 from conda import __version__ as conda_version
 from conda_build import __version__ as conda_build_version
 
+from conda_build.os_utils.external import find_preferably_prefixed_executable
+
 if sys.platform == 'win32':
     import conda_build.windows as windows
 
+'''
 if 'bsd' in sys.platform:
     shell_path = '/bin/sh'
 elif utils.on_win:
     shell_path = 'bash'
 else:
     shell_path = '/bin/bash'
-
+'''
 
 def stats_key(metadata, desc):
     # get the build string from whatever conda-build makes of the configuration
@@ -1485,6 +1488,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                 if isfile(build_file) or script:
                     work_file, _ = write_build_scripts(m, script, build_file)
                     if not provision_only:
+                        shell_path = find_preferably_prefixed_executable('bash', m.config.build_prefix)
                         cmd = [shell_path] + (['-x'] if m.config.debug else []) + ['-e', work_file]
 
                         # rewrite long paths in stdout back to their env variables
@@ -1605,6 +1609,9 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                         utils.rm_rf(m.config.host_prefix)
                         utils.rm_rf(m.config.build_prefix)
                         utils.rm_rf(m.config.test_prefix)
+
+                        # We should remove the DRY here and call (but need to modify):
+                        # create_build_envs(m)
 
                         # It is high time we stop this nonsense.
                         m_is_cross = True # m.is_cross
@@ -1941,7 +1948,7 @@ def write_build_scripts(m, script, build_file):
 
 
 def _write_test_run_script(metadata, test_run_script, test_env_script, py_files, pl_files,
-                           lua_files, r_files, shell_files, trace):
+                           lua_files, r_files, shell_files, trace, shell_path):
     log = utils.get_logger(__name__)
     with open(test_run_script, 'w') as tf:
         tf.write('{source} "{test_env_script}"\n'.format(
@@ -1995,7 +2002,8 @@ def _write_test_run_script(metadata, test_run_script, test_env_script, py_files,
                                                                             trace=trace))
 
 
-def write_test_scripts(metadata, env_vars, py_files, pl_files, lua_files, r_files, shell_files, trace=""):
+def write_test_scripts(metadata, env_vars, py_files, pl_files, lua_files, r_files,
+                       shell_files, trace="", shell_path='bash'):
     if not metadata.config.activate or metadata.name() == 'conda':
         # prepend bin (or Scripts) directory
         env_vars = utils.prepend_bin_path(env_vars, metadata.config.test_prefix, prepend_prefix=True)
@@ -2042,7 +2050,7 @@ def write_test_scripts(metadata, env_vars, py_files, pl_files, lua_files, r_file
                 tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
 
     _write_test_run_script(metadata, test_run_script, test_env_script, py_files, pl_files,
-                           lua_files, r_files, shell_files, trace)
+                           lua_files, r_files, shell_files, trace, shell_path)
     return test_run_script, test_env_script
 
 
@@ -2197,11 +2205,16 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
     if metadata.config.remove_work_dir:
         env['SRC_DIR'] = metadata.config.test_dir
 
-    test_script, _ = write_test_scripts(metadata, env, py_files, pl_files, lua_files, r_files, shell_files, trace)
+    shell_path_b = find_preferably_prefixed_executable('bash', metadata.config.build_prefix)
+    shell_path_t = find_preferably_prefixed_executable('bash', metadata.config.test_prefix)
+    shell_path = shell_path_t if shell_path_t else shell_path_b
+    test_script, _ = write_test_scripts(metadata, env, py_files, pl_files, lua_files,
+                                        r_files, shell_files, trace, shell_path)
 
     if utils.on_win:
         cmd = [os.environ.get('COMSPEC', 'cmd.exe'), "/d", "/c", test_script]
     else:
+        # TODO :: Pass this in to write_test_scripts (which also calls it).
         cmd = [shell_path] + (['-x'] if metadata.config.debug else []) + ['-e', test_script]
     try:
         test_stats = {}
