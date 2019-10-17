@@ -699,7 +699,7 @@ Export runtime requirements
 Some build or host :ref:`requirements <requirements>` will impose a
 runtime requirement. You may want to review our :ref:`requirements`
 covering the host and run sections. These exports are describing
-oneself for downstream customers. Note that only dynamic and shared
+oneself for downstream consumers. Note that only dynamic and shared
 libraries need ``run_exports`` - static libraries do not.
 
 The runtime requirement is most commonly true for shared libraries
