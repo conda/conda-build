@@ -157,7 +157,9 @@ def unpack(source_dict, src_dir, cache_folder, recipe_path, croot, verbose=False
             copy_into(src_path, unhashed_dest, timeout, locking=locking)
         flist = os.listdir(tmpdir)
         folder = os.path.join(tmpdir, flist[0])
-        if len(flist) == 1 and os.path.isdir(folder):
+        # Hoisting is destructive of information, in CDT packages, a single top level
+        # folder of /usr64 must not be discarded.
+        if len(flist) == 1 and os.path.isdir(folder) and 'no_hoist' not in source_dict:
             hoist_single_extracted_folder(folder)
         flist = os.listdir(tmpdir)
         for f in flist:

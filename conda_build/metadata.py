@@ -488,8 +488,8 @@ FIELDS = {
                'git_url', 'git_tag', 'git_branch', 'git_rev', 'git_depth',
                'hg_url', 'hg_tag',
                'svn_url', 'svn_rev', 'svn_ignore_externals',
-               'folder',
-               'patches'
+               'folder', 'no_hoist',
+               'patches',
                },
     'build': {'number', 'string', 'entry_points', 'osx_is_app', 'disable_pip',
               'features', 'track_features', 'preserve_egg_dir',
