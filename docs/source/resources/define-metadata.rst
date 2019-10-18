@@ -142,7 +142,7 @@ specific commit, then you won't have that tag when you go to reference
 it in ``git_rev`` (for example). If your ``git_depth`` is insufficient
 to capture the tag in ``git_rev``, you'll encounter an error. So in the
 example above, unless the 1.1.4 is the very head commit and the one
-that you're going to grab, you may encounter an error. 
+that you're going to grab, you may encounter an error.
 
 
 Source from hg
@@ -780,7 +780,7 @@ make sure that people use a compatible build of bzip2. If people list python as
 a build time dependency, bzip2 should only be imposed for Python itself, and
 should not be automatically imposed as a runtime dependency for the thing using
 Python. ``run_exports`` are derived into each dependency of a dependency
-with the ``ignore_run_exports`` counter measure discussed below. 
+with the ``ignore_run_exports`` counter measure discussed below.
 
 The potential downside of this feature is that it takes some control over
 constraints away from downstream users. If an upstream package has a problematic
@@ -805,7 +805,7 @@ There are two possible behaviors:
 
  build:
    pin_depends: record
- 
+
 With a value of ``record``, conda-build will record all
 requirements exactly as they would be installed in a file
 called info/requires. These pins will not
@@ -817,7 +817,7 @@ package. It is only adding in this new file.
 
  build:
    pin_depends: strict
-  
+
 With a value of ``strict``, conda-build applies the pins
 to the actual metadata. This does affect the output of
 ``conda render`` and also affects the end result
@@ -1359,10 +1359,9 @@ explicitly in the script section:
          script: run_test.py
 
 
-Test requirements for subpackages are not supported. Instead,
-subpackage tests install their runtime requirements---but not the
-run requirements for the top-level package---and the test-time
-requirements of the top-level package.
+Test requirements for subpackages can be specified using the optional test/requires
+section of subpackage tests. Subpackage tests install their runtime requirements
+during testing as well.
 
 EXAMPLE: In this example, the test for ``subpackage-name``
 installs ``some-test-dep`` and ``subpackage-run-req``, but not
@@ -1374,16 +1373,14 @@ installs ``some-test-dep`` and ``subpackage-run-req``, but not
      run:
        - some-top-level-run-req
 
-   test:
-     requires:
-       - some-test-dep
-
    outputs:
      - name: subpackage-name
        requirements:
          - subpackage-run-req
        test:
          script: run_test.py
+       requires:
+         - some-test-dep
 
 
 Output type
