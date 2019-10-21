@@ -1049,10 +1049,42 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
 
     # We care only for created program binaries (exes and DSOs) and static libs
     program_files = [p for p in program_files if not p.endswith('.debug')]
-    for f in program_files:
-        path_replacements_this = path_replacements
+    from concurrent.futures import ThreadPoolExecutor
+
+    def lief_parse_this(filename, path_replacements):
+        path_replacements_this = path_replacements.copy()
         path_replacements_this['exedirname'] = {join(run_prefix, f).replace('\\', '/'): exedirname_sub}
-        file_info[f] = lief_parse(join(run_prefix, f), path_replacements_this)
+        return lief_parse(filename, path_replacements_this)
+
+    parallel = True
+    serial = False
+
+    if serial:
+        file_info_serial = dict()
+        for f in program_files:
+            file_info_serial[f] = lief_parse_this(join(run_prefix, f), path_replacements)
+
+    if parallel:
+        file_info_parallel = dict()
+        results = {}
+        with ThreadPoolExecutor(min(os.cpu_count(), max(1, len(program_files)))) as executor:
+            for f in program_files:
+                results[f] = executor.submit(lief_parse_this, join(run_prefix, f), path_replacements)
+
+        for f in program_files:
+            file_info_parallel[f] = results[f].result()
+
+    if serial:
+        print(file_info_serial)
+    if parallel:
+        print(file_info_parallel)
+
+    if serial:
+        file_info = file_info_serial
+    else:
+        file_info = file_info_parallel
+
+    for f in program_files:
         file_info[f]['package'] = pkg_vendored_dist
 
     for prefix in (run_prefix, build_prefix):
