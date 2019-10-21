@@ -1109,7 +1109,7 @@ def check_overlinking(m, files, host_prefix=None):
 def post_process_shared_lib(m, f, files, host_prefix=None):
     if not host_prefix:
         host_prefix = m.config.host_prefix
-    path = os.path.join(host_prefix, f)
+    path = join(host_prefix, f)
     codefile_t = codefile_type(path)
     if not codefile_t or path.endswith('.debug'):
         return
