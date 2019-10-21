@@ -485,18 +485,25 @@ def mk_relative_linux(f, prefix, rpaths=('lib',), method='LIEF'):
     elf = os.path.join(prefix, f)
     origin = os.path.dirname(elf)
 
+    existing, _, _ = get_rpaths_raw(elf)
     patchelf = external.find_executable('patchelf', prefix)
-    try:
-        existing = check_output([patchelf, '--print-rpath', elf]).decode('utf-8').splitlines()[0]
-    except CalledProcessError:
-        print('patchelf: --print-rpath failed for %s\n' % (elf))
-        return
-    if have_lief:
-        existing2, _, _ = get_rpaths_raw(elf)
-        if [existing] != existing2:
-            print('ERROR :: get_rpaths_raw()={} and patchelf={} disagree for {} :: '.format(
-                existing2, [existing], elf))
-    existing = existing.split(os.pathsep)
+    if not patchelf:
+        print("ERROR :: You should install patchelf, will proceed with LIEF for {} (was {})".format(elf, method))
+        method = 'LIEF'
+    else:
+        try:
+            existing_pe = check_output([patchelf, '--print-rpath', elf]).decode('utf-8').splitlines()[0]
+        except CalledProcessError:
+            print("ERROR :: `patchelf --print-rpath` failed for {}, will proceed with LIEF (was {})".format(
+                elf, method))
+            method = 'LIEF'
+        else:
+            if have_lief:
+                if existing != [existing_pe]:
+                    print('ERROR :: get_rpaths_raw()={} and patchelf={} disagree for {} :: '.format(
+                        existing, [existing_pe], elf))
+                # Use LIEF if method is LIEF to get the initial value?
+                existing = existing_pe.split(os.pathsep)
     new = []
     for old in existing:
         if old.startswith('$ORIGIN'):
@@ -529,7 +536,7 @@ def mk_relative_linux(f, prefix, rpaths=('lib',), method='LIEF'):
 
     # check_binary_patchers(elf, prefix, rpath)
 
-    if method == 'LIEF' or not patchelf:
+    if method.upper() == 'LIEF' or not patchelf:
         set_rpath(old_matching='*', new_rpath=rpath, file=elf)
     else:
         call([patchelf, '--force-rpath', '--set-rpath', rpath, elf])
@@ -1096,7 +1103,7 @@ def post_process_shared_lib(m, f, files, host_prefix=None):
         host_prefix = m.config.host_prefix
     path = os.path.join(host_prefix, f)
     codefile_t = codefile_type(path)
-    if not codefile_t:
+    if not codefile_t or path.endswith('.debug'):
         return
     rpaths = m.get_value('build/rpaths', ['lib'])
     if sys.platform.startswith('linux') and codefile_t == 'elffile':
