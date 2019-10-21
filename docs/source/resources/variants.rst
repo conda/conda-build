@@ -265,7 +265,7 @@ First, the meta.yaml file:
 
        - name: r-xgboost
          requirements:
-             - {{ pin_subpackage('libxgboost', exact=True)
+             - {{ pin_subpackage('libxgboost', exact=True) }}
              - r-base  {{ r_base }}
 
 Next, the conda_build_config.yaml file, specifying our build matrix:
