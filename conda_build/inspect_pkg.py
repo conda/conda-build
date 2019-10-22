@@ -7,6 +7,7 @@
 from __future__ import absolute_import, division, print_function
 
 from collections import defaultdict
+import fnmatch
 import json
 from operator import itemgetter
 from os.path import abspath, join, dirname, exists, basename
@@ -25,7 +26,6 @@ from conda_build.conda_interface import (iteritems, specs_from_args, is_linked, 
                                          get_index)
 from conda_build.conda_interface import display_actions, install_actions
 from conda_build.conda_interface import memoized
-from fnmatch import fnmatch
 
 
 @memoized
@@ -41,9 +41,10 @@ def which_package(in_prefix_path, prefix):
     only one package.
     """
     norm_ipp = in_prefix_path.replace(os.sep, '/')
+    match = re.compile(fnmatch.translate(norm_ipp)).match
     for dist in linked(prefix):
         dfiles = dist_files(prefix, dist)
-        if any(fnmatch(norm_ipp, w) for w in dfiles):
+        if any(map(match, dfiles)):
             yield dist
 
 
