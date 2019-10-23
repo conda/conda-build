@@ -2504,6 +2504,9 @@ def write_test_scripts(metadata, env_vars, py_files, pl_files, lua_files, r_file
                     test_env=metadata.config.test_prefix))
             if utils.on_win:
                 tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+        # In-case people source this, it's essential errors are not fatal in an interactive shell.
+        if not utils.on_win:
+            tf.write('set +e\n')
 
     _write_test_run_script(metadata, test_run_script, test_env_script, py_files, pl_files,
                            lua_files, r_files, shell_files, trace)
