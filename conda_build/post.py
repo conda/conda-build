@@ -1084,26 +1084,25 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     else:
         file_info = file_info_parallel
 
-    for f in program_files:
-        file_info[f]['package'] = pkg_vendored_dist
+    _resolve_needed_dsos(sysroots_files, file_info, run_prefix, sysroot_sub, build_prefix, buildprefix_sub)
 
     for prefix in (run_prefix, build_prefix):
         for subdir2, _, filez in os.walk(prefix):
             for file in filez:
+                if file.endswith('libterm-bd8f21e3bdd6cbdc.so'):
+                    print("Why does this not make it?")
                 fullpath = join(subdir2, file)
                 rp = relpath(fullpath, prefix)
                 if rp in file_info:
                     if prefix is run_prefix:
+                        file_info[rp]['package'] = pkg_vendored_dist
                         assert file_info[rp]['fullpath'] == fullpath
                 elif rp in files:
                     file_info[rp] = {'package': pkg_vendored_dist,
-                                          'fullpath': fullpath}
+                                     'fullpath': fullpath}
                 else:
                     file_info[rp] = {'package': which_package(rp, prefix),
-                                          'fullpath': fullpath}
-
-    # Does little, what it does do could be moved to lief_parse() too, pyldd does resolve already ..
-    _resolve_needed_dsos(sysroots_files, file_info, run_prefix, sysroot_sub, build_prefix, buildprefix_sub)
+                                     'fullpath': fullpath}
 
     prefix_owners = {}
     for k, v in file_info.items():
