@@ -71,3 +71,116 @@ jobs:
       /usr/share/miniconda/bin/py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --test-run-title="Linux-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION"
     displayName: 'Parallel Tests'
 
+
+- job: 'Windows'
+  pool:
+    vmImage: "vs2017-win2016"
+  strategy:
+    maxParallel: 10
+    matrix:
+      py27-release:
+        PYTHON_VERSION: '2.7'
+        CONDA_VERSION: 'release'
+      py27-canary:
+        PYTHON_VERSION: '2.7'
+        CONDA_VERSION: 'canary'
+      py37-canary:
+        PYTHON_VERSION: '3.7'
+        CONDA_VERSION: 'release'
+      py37-release:
+        PYTHON_VERSION: '3.7'
+        CONDA_VERSION: 'canary'
+  timeoutInMinutes: 480
+  steps:
+  - checkout: self
+    persistCredentials: true
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '$(PYTHON_VERSION)'
+
+  - script: |
+      choco install vcpython27 -fdv -y --debug
+    condition: contains(variables['PYTHON_VERSION'], '2.7')
+    displayName: Install vcpython27.msi (if needed)
+
+  - script: |
+      choco install wget
+      wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe
+      start /wait "" Miniconda3-latest-Windows-x86_64.exe /InstallationType=JustMe /S /D=%UserProfile%\Miniconda3
+      set PATH=%UserProfile%\Miniconda3;%UserProfile%\Miniconda3\Scripts;%UserProfile%\Miniconda3\Library\bin;%PATH%
+      conda info -a
+    displayName: Install miniconda
+
+  - powershell: |
+      Set-PSDebug -Trace 1
+      $batchcontent = @"
+      ECHO ON
+      SET vcpython=C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0
+      DIR "%vcpython%"
+      CALL "%vcpython%\vcvarsall.bat" %*
+      "@
+      $batchDir = "C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC"
+      $batchPath = "$batchDir" + "\vcvarsall.bat"
+      New-Item -Path $batchPath -ItemType "file" -Force
+      Set-Content -Value $batchcontent -Path $batchPath
+      Get-ChildItem -Path $batchDir
+      Get-ChildItem -Path ($batchDir + '\..')
+    condition: contains(variables['PYTHON_VERSION'], '2.7')
+    displayName: Patch vs2008 (if needed)
+
+  - powershell: |
+      Write-Host "##vso[task.prependpath]$ENV:UserProfile\Miniconda3;$ENV:UserProfile\Miniconda3\Scripts;$ENV:UserProfile\Miniconda3\Library\bin"
+    displayName: Add conda to PATH
+
+  - script: |
+      set PATH=%UserProfile%\Miniconda3;%UserProfile%\Miniconda3\Scripts;%UserProfile%\Miniconda3\Library\bin;%PATH%
+      conda activate base
+      conda --help
+      conda --version
+      conda install python="%PYTHON_VERSION%" -y
+      if "%CONDA_VERSION%" == "canary" (conda update -c conda-canary conda) else (conda update -q conda)
+      conda config --set always_yes yes
+      conda config --set auto_update_conda no
+      conda info
+      python -c "import sys; print(sys.version)"
+      python -c "import sys; print(sys.executable)"
+      python -c "import sys; print(sys.prefix)"
+      conda update -q --all
+      conda install -q pip python-libarchive-c pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling
+      conda install -c conda-forge pytest-azurepipelines -y
+      echo "safety_checks: disabled" >> ~/.condarc
+      echo "local_repodata_ttl: 1800" >> ~/.condarc
+      if "%PYTHON_VERSION%" == "2.7" conda install -q scandir
+      if "%PYTHON_VERSION%" == "3.7" conda install -q py-lief
+      python --version
+      python -c "import struct; print(struct.calcsize('P') * 8)"
+      pip install --no-deps .
+      conda build --version
+      call ci\appveyor\setup_x64.bat
+      dir "C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\bin"
+      copy "C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\bin\vcvars64.bat" "C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\bin\amd64\vcvarsamd64.bat"
+      pushd .. && git clone https://github.com/conda/conda_build_test_recipe  && popd
+      mkdir %UserProfile%\cbtmp_serial
+      mkdir %UserProfile%\cbtmp
+      for /d %%F in (%UserProfile%\cbtmp_serial\*) do rd /s /q "%%F"
+      for /d %%F in (%UserProfile%\cbtmp\*) do rd /s /q "%%F"
+      conda create -n blarg -yq --download-only python=2.7
+      conda create -n blarg -yq --download-only python=3.7
+      conda create -n blarg -yq --download-only python cmake
+    displayName: 'Configuration'
+
+  - script: |
+      conda activate base
+      conda install -y conda-verify
+      py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp %UserProfile%\cbtmp_serial -n 0 -m "serial" --test-run-title="Win-SerialTests-%CONDA_VERSION%-Python%PYTHON_VERSION%"
+    displayName: 'Serial Tests'
+
+  - script: |
+      conda activate base
+      conda remove -y conda-verify
+      # unset other language env vars - we only want to test if conda-build sets them itself
+      set PERL=
+      set LUA=
+      set R=
+      py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp %UserProfile%\cbtmp -n auto -m "not serial %SLOW_MARK% and not sanity" --test-run-title="Win-ParallelTests-%CONDA_VERSION%-Python%PYTHON_VERSION%"
+    displayName: 'Parallel Tests'
