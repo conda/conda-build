@@ -134,7 +134,6 @@ jobs:
 
   - script: |
       set PATH=%UserProfile%\Miniconda3;%UserProfile%\Miniconda3\Scripts;%UserProfile%\Miniconda3\Library\bin;%PATH%
-      conda activate base
       conda --help
       conda --version
       conda install python="%PYTHON_VERSION%" -y
@@ -170,13 +169,11 @@ jobs:
     displayName: 'Configuration'
 
   - script: |
-      conda activate base
       conda install -y conda-verify
       py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp %UserProfile%\cbtmp_serial -n 0 -m "serial" --test-run-title="Win-SerialTests-%CONDA_VERSION%-Python%PYTHON_VERSION%"
     displayName: 'Serial Tests'
 
   - script: |
-      conda activate base
       conda remove -y conda-verify
       # unset other language env vars - we only want to test if conda-build sets them itself
       set PERL=
