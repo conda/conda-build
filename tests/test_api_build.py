@@ -3,6 +3,7 @@ This module tests the build API.  These are high-level integration tests.
 """
 
 import base64
+import locale
 from collections import OrderedDict
 from glob import glob
 import logging
@@ -40,6 +41,7 @@ from conda_build.exceptions import (DependencyNeedsBuildingError, CondaBuildExce
 from conda_build.conda_interface import reset_context
 from conda.exceptions import ClobberError, CondaMultiError
 from conda_build.conda_interface import conda_46, conda_47
+from tests import utils
 
 from .utils import is_valid_dir, metadata_dir, fail_dir, add_mangling
 
@@ -1079,7 +1081,9 @@ def test_extract_tarball_with_unicode_filename(testing_config):
     api.build(recipe, config=testing_config)
 
 
-@pytest.mark.xfail(os.getenv("APPVEYOR"), reason="permission error on appveyor leaves lock in place")
+# @pytest.mark.xfail(
+#     utils.on_win, reason="permission error on win leaves lock in place"
+# )
 def test_failed_recipe_leaves_folders(testing_config, testing_workdir):
     recipe = os.path.join(fail_dir, 'recursive-build')
     m = api.render(recipe, config=testing_config)[0][0]
@@ -1092,6 +1096,7 @@ def test_failed_recipe_leaves_folders(testing_config, testing_workdir):
     #    centralized installations
     any_locks = False
     locks_list = set()
+    locale.getpreferredencoding(False)
     for lock in locks:
         if os.path.isfile(lock.lock_file):
             any_locks = True
