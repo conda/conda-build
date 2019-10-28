@@ -9,7 +9,10 @@ from glob import glob
 import pytest
 import subprocess
 
+import sys
+
 from conda_build import api
+from tests import utils
 
 from .utils import metadata_dir, thisdir, on_win
 
@@ -59,6 +62,10 @@ def test_debug_recipe_default_path(testing_config):
     assert_correct_folders(work_dir)
 
 
+@pytest.mark.skipif(
+    utils.on_win and sys.version_info <= (3, 4),
+    reason="Skipping on windows and vc<14"
+)
 def test_debug_package_default_path(testing_config):
     activation_string = api.debug(tarball_path, config=testing_config)
     _, work_dir, _, src_command, env_activation_script = activation_string.split()
