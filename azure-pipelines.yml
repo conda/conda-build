@@ -100,8 +100,7 @@ jobs:
 
   - script: |
       choco install vcpython27 -fdv -y --debug
-    condition: contains(variables['PYTHON_VERSION'], '2.7')
-    displayName: Install vcpython27.msi (if needed)
+    displayName: Install vcpython27.msi 
 
   - script: |
       choco install wget
@@ -125,8 +124,7 @@ jobs:
       Set-Content -Value $batchcontent -Path $batchPath
       Get-ChildItem -Path $batchDir
       Get-ChildItem -Path ($batchDir + '\..')
-    condition: contains(variables['PYTHON_VERSION'], '2.7')
-    displayName: Patch vs2008 (if needed)
+    displayName: Patch vs2008
 
   - powershell: |
       Write-Host "##vso[task.prependpath]$ENV:UserProfile\Miniconda3;$ENV:UserProfile\Miniconda3\Scripts;$ENV:UserProfile\Miniconda3\Library\bin"
