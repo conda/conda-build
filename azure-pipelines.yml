@@ -175,7 +175,6 @@ jobs:
 
   - script: |
       conda remove -y conda-verify
-      # unset other language env vars - we only want to test if conda-build sets them itself
       set PERL=
       set LUA=
       set R=
