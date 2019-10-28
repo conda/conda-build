@@ -372,7 +372,6 @@ def check_recipe(path_list):
             )
 
 
-
 def output_action(recipe, config):
     with LoggingContext(logging.CRITICAL + 1):
         config.verbose = False
