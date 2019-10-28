@@ -498,25 +498,27 @@ def mk_relative_linux(f, prefix, rpaths=('lib',), method='LIEF'):
                 elf, method))
             method = 'LIEF'
         else:
-            if have_lief:
-                if existing != [existing_pe]:
-                    print('ERROR :: get_rpaths_raw()={} and patchelf={} disagree for {} :: '.format(
-                        existing, [existing_pe], elf))
-                # Use LIEF if method is LIEF to get the initial value?
-                existing = existing_pe.split(os.pathsep)
+            existing_pe = existing_pe.split(os.pathsep)
+    if have_lief:
+        existing2, _, _ = get_rpaths_raw(elf)
+        if [existing_pe] != existing2:
+            print('ERROR :: get_rpaths_raw()={} and patchelf={} disagree for {} :: '.format(
+                      existing2, [existing_pe], elf))
+        # Use LIEF if method is LIEF to get the initial value?
+        existing = existing_pe.split(os.pathsep)
     new = []
     for old in existing:
         if old.startswith('$ORIGIN'):
             new.append(old)
         elif old.startswith('/'):
             # Test if this absolute path is outside of prefix. That is fatal.
-            relpath = os.path.relpath(old, prefix)
-            if relpath.startswith('..' + os.sep):
+            rp = relpath(old, prefix)
+            if rp.startswith('..' + os.sep):
                 print('Warning: rpath {0} is outside prefix {1} (removing it)'.format(old, prefix))
             else:
-                relpath = '$ORIGIN/' + os.path.relpath(old, origin)
-                if relpath not in new:
-                    new.append(relpath)
+                rp = '$ORIGIN/' + relpath(old, origin)
+                if rp not in new:
+                    new.append(rp)
     # Ensure that the asked-for paths are also in new.
     for rpath in rpaths:
         if rpath != '':
@@ -543,7 +545,8 @@ def mk_relative_linux(f, prefix, rpaths=('lib',), method='LIEF'):
 
 
 def assert_relative_osx(path, host_prefix, build_prefix):
-    for name in macho.get_dylibs(path, build_prefix):
+    tools_prefix = build_prefix if os.path.exists(build_prefix) else host_prefix
+    for name in macho.get_dylibs(path, tools_prefix):
         for prefix in (host_prefix, build_prefix):
             if prefix and name.startswith(prefix):
                 raise RuntimeError("library at %s appears to have an absolute path embedded" % path)
@@ -1106,11 +1109,11 @@ def post_process_shared_lib(m, f, files, host_prefix=None):
     if not codefile_t or path.endswith('.debug'):
         return
     rpaths = m.get_value('build/rpaths', ['lib'])
-    if sys.platform.startswith('linux') and codefile_t == 'elffile':
+    if codefile_t == 'elffile':
         mk_relative_linux(f, m.config.host_prefix, rpaths=rpaths,
                           method=m.get_value('build/rpaths_patcher', 'patchelf'))
-    elif sys.platform == 'darwin' and codefile_t == 'machofile':
-        mk_relative_osx(path, m.config.host_prefix, m.config.build_prefix, files=files, rpaths=rpaths)
+    elif codefile_t == 'machofile':
+        mk_relative_osx(path, host_prefix, m.config.build_prefix, files=files, rpaths=rpaths)
 
 
 def fix_permissions(files, prefix):
