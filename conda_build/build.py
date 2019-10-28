@@ -768,12 +768,20 @@ def is_no_link(no_link, short_path):
         return True
 
 
+def get_inode(file):
+    return os.lstat(file).st_ino
+
+
 def get_inode_paths(files, target_short_path, prefix):
     utils.ensure_list(files)
-    target_short_path_inode = os.lstat(join(prefix, target_short_path)).st_ino
+    target_short_path_inode = get_inode(join(prefix, target_short_path))
     hardlinked_files = [sp for sp in files
                         if os.lstat(join(prefix, sp)).st_ino == target_short_path_inode]
     return sorted(hardlinked_files)
+
+
+def get_inodes(files, prefix):
+    return [os.lstat(join(prefix, sp)).st_ino for sp in files]
 
 
 def path_type(path):
@@ -783,6 +791,7 @@ def path_type(path):
 def build_info_files_json_v1(m, prefix, files, files_with_prefix):
     no_link_files = m.get_value('build/no_link')
     files_json = []
+    files_inodes = get_inodes(files, prefix)
     for fi in sorted(files):
         prefix_placeholder, file_mode = has_prefix(fi, files_with_prefix)
         path = os.path.join(prefix, fi)
@@ -802,8 +811,9 @@ def build_info_files_json_v1(m, prefix, files, files_with_prefix):
             file_info["prefix_placeholder"] = prefix_placeholder
             file_info["file_mode"] = file_mode
         if file_info.get("path_type") == PathType.hardlink and CrossPlatformStLink.st_nlink(
-                join(prefix, fi)) > 1:
-            inode_paths = get_inode_paths(files, fi, prefix)
+                path) > 1:
+            target_short_path_inode = get_inode(path)
+            inode_paths = [files[index] for index, ino in enumerate(files_inodes) if ino == target_short_path_inode]
             file_info["inode_paths"] = inode_paths
         files_json.append(file_info)
     return files_json
