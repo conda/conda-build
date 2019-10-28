@@ -680,3 +680,18 @@ def test_long_test_prefix(additional_args, is_long_test_prefix):
     parser, args = main_build.parse_args(args)
     config = Config(**args.__dict__)
     assert config.long_test_prefix is is_long_test_prefix
+
+
+def test_user_warning(tmpdir, recwarn):
+    dir_recipe_path = tmpdir.mkdir("recipe-path")
+    recipe = dir_recipe_path.join("meta.yaml")
+    recipe.write("")
+
+    main_build.parse_args([str(recipe)])
+    assert "RECIPE_PATH received is a file. File: {}\n" \
+           "It should be a path to a folder. \n" \
+           "Forcing conda-build to use the recipe file.".format(str(recipe))\
+           == str(recwarn.pop(UserWarning).message)
+
+    main_build.parse_args([str(dir_recipe_path)])
+    assert not recwarn.list

@@ -7,6 +7,7 @@
 from __future__ import absolute_import, division, print_function
 
 import argparse
+import warnings
 
 from glob2 import glob
 import logging
@@ -347,9 +348,29 @@ different sets of packages."""
                    help=("Do not display value of environment variables specified in build.script_env."), )
 
     add_parser_channels(p)
-
     args = p.parse_args(args)
+
+    check_recipe(args.recipe)
+
     return p, args
+
+
+def check_recipe(path_list):
+    """Verify if the list of recipes received contain a path to a directory,
+    if a path to a recipe is found it will give an warning.
+
+    :param path_list: list of paths to recipes
+    """
+    for recipe in path_list:
+        if os.path.isfile(recipe) \
+                and os.path.basename(recipe) in ["meta.yaml", "conda.yaml"]:
+            warnings.warn(
+                "RECIPE_PATH received is a file. File: {}\n"
+                "It should be a path to a folder. \n"
+                "Forcing conda-build to use the recipe file.".format(recipe),
+                UserWarning
+            )
+
 
 
 def output_action(recipe, config):
