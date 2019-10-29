@@ -124,9 +124,7 @@ jobs:
       Set-Content -Value $batchcontent -Path $batchPath
       Get-ChildItem -Path $batchDir
       Get-ChildItem -Path ($batchDir + '\..')
-      copy "C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\bin\vcvars64.bat" "C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\bin\amd64\vcvarsamd64.bat"
-      dir C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\WinSDK\Lib\x64
-      dir C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC\Lib\amd64
+      set LIB
     displayName: Patch vs2008
 
   - powershell: |
@@ -156,9 +154,6 @@ jobs:
       python -c "import struct; print(struct.calcsize('P') * 8)"
       pip install --no-deps .
       conda build --version
-      call ci\appveyor\setup_x64.bat
-      dir "C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\bin"
-      copy "C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\bin\vcvars64.bat" "C:\Program Files (x86)\Microsoft Visual Studio 9.0\VC\bin\amd64\vcvarsamd64.bat"
       pushd .. && git clone https://github.com/conda/conda_build_test_recipe  && popd
       mkdir %UserProfile%\cbtmp_serial
       mkdir %UserProfile%\cbtmp
@@ -184,4 +179,7 @@ jobs:
       set LUA=
       set R=
       py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp %UserProfile%\cbtmp -n auto -m "not serial" --test-run-title="Win-ParallelTests-%CONDA_VERSION%-Python%PYTHON_VERSION%"
+    env:
+      VS90COMNTOOLS: "C:\\Program Files (x86)\\Common Files\\Microsoft\\Visual C++ for Python\\9.0\\VC\\bin"
+      LIB:
     displayName: 'Parallel Tests'
