@@ -338,18 +338,3 @@ def test_get_lock(testing_workdir):
     # ...even when not normalized
     lock1_unnormalized = utils.get_lock(os.path.join(testing_workdir, 'foo', '..', 'lock1'))
     assert lock1.lock_file == lock1_unnormalized.lock_file
-
-
-def test_recipe_path_meta(tmpdir, recwarn):
-    dir_recipe_path = tmpdir.mkdir("recipe-path")
-    recipe_path = dir_recipe_path.join("meta.yaml")
-    recipe_path.write("")
-
-    assert find_recipe(str(recipe_path)) == str(dir_recipe_path)
-    assert "RECIPE_PATH received is a file. File: {}\n" \
-           "It should be a path to a folder. \n" \
-           "Forcing conda-build to use the recipe file.".format(str(recipe_path)) \
-           == str(recwarn.pop(UserWarning).message)
-
-    assert find_recipe(str(dir_recipe_path)) == str(recipe_path)
-    assert not recwarn.list

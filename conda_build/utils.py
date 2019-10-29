@@ -1,6 +1,5 @@
 from __future__ import absolute_import, division, print_function
 
-import warnings
 from collections import OrderedDict, defaultdict
 import contextlib
 import fnmatch
@@ -1202,12 +1201,6 @@ def find_recipe(path):
 
     If we have a base level meta.yaml and other supplemental ones, use that first"""
     if os.path.isfile(path) and os.path.basename(path) in ["meta.yaml", "conda.yaml"]:
-        warnings.warn(
-            "RECIPE_PATH received is a file. File: {}\n"
-            "It should be a path to a folder. \n"
-            "Forcing conda-build to use the recipe file.".format(path),
-            UserWarning
-        )
         return os.path.dirname(path)
     results = rec_glob(path, ["meta.yaml", "conda.yaml"])
     if len(results) > 1:
