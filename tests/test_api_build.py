@@ -328,8 +328,8 @@ def test_build_msvc_compiler(msvc_ver, monkeypatch):
     monkeypatch.setenv('CL_EXE_VERSION', str(cl_versions[msvc_ver]))
 
     try:
-        # Always build Python 3.6 - but set MSVC version manually via Jinja template
-        api.build(os.path.join(metadata_dir, '_build_msvc_compiler'), python="3.6")
+        # Always build Python 2.7 - but set MSVC version manually via Jinja template
+        api.build(os.path.join(metadata_dir, '_build_msvc_compiler'), python="2.7")
     except:
         raise
     finally:
