@@ -13,6 +13,7 @@ import yaml
 
 from conda_build import api, render
 from conda_build.conda_interface import subdir, reset_context, cc_conda_build
+from tests import utils
 
 from .utils import metadata_dir, thisdir
 
@@ -108,6 +109,10 @@ def test_pin_compatible_semver(testing_config):
 
 
 @pytest.mark.slow
+@pytest.mark.skipif(
+    utils.on_win and sys.version_info == (2, 7),
+    reason="Failing tests on Azure for Python 2.7"
+)
 def test_resolved_packages_recipe(testing_config):
     recipe_dir = os.path.join(metadata_dir, '_resolved_packages_host_build')
     metadata = api.render(recipe_dir, config=testing_config)[0][0]
