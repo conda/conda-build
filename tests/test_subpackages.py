@@ -346,6 +346,10 @@ def test_loops_do_not_remove_earlier_packages(testing_config):
 
 
 # regression test for https://github.com/conda/conda-build/issues/3248
+@pytest.mark.skipif(
+    utils.on_win and sys.version_info <= (3, 4),
+    reason="Skipping it on windows and vc<14"
+)
 def test_build_string_does_not_incorrectly_add_hash(testing_config):
     recipe = os.path.join(subpackage_dir, '_build_string_with_variant')
     output_files = api.get_output_file_paths(recipe, config=testing_config)
