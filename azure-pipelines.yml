@@ -103,6 +103,7 @@ jobs:
     displayName: Install vcpython27.msi 
 
   - script: |
+      rmdir C:\Strawberry /s /q
       choco install wget
       wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe
       start /wait "" Miniconda3-latest-Windows-x86_64.exe /InstallationType=JustMe /S /D=%UserProfile%\Miniconda3
@@ -174,6 +175,7 @@ jobs:
     displayName: 'Serial Tests'
 
   - script: |
+      source activate base
       conda remove -y conda-verify
       set PERL=
       set LUA=

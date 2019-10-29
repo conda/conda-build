@@ -1081,9 +1081,9 @@ def test_extract_tarball_with_unicode_filename(testing_config):
     api.build(recipe, config=testing_config)
 
 
-# @pytest.mark.xfail(
-#     utils.on_win, reason="permission error on win leaves lock in place"
-# )
+@pytest.mark.xfail(
+    utils.on_win, reason="permission error on win leaves lock in place"
+)
 def test_failed_recipe_leaves_folders(testing_config, testing_workdir):
     recipe = os.path.join(fail_dir, 'recursive-build')
     m = api.render(recipe, config=testing_config)[0][0]
