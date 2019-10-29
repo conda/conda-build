@@ -307,8 +307,8 @@ def test_checkout_tool_as_dependency(testing_workdir, testing_config, monkeypatc
 platforms = ["64" if sys.maxsize > 2**32 else "32"]
 if sys.platform == "win32":
     platforms = sorted(list(set(["32", ] + platforms)))
-    compilers = ["3.7", pytest.param("2.7", marks=pytest.mark.skip("Failing for Python 2.7"))]
-    msvc_vers = ["17.0"]
+    compilers = ["3.6", "3.7", pytest.param("2.7", marks=pytest.mark.skip("Failing for Python 2.7"))]
+    msvc_vers = ['9.0', '14.0']
 else:
     msvc_vers = []
     compilers = [".".join([str(sys.version_info.major), str(sys.version_info.minor)])]
@@ -328,8 +328,8 @@ def test_build_msvc_compiler(msvc_ver, monkeypatch):
     monkeypatch.setenv('CL_EXE_VERSION', str(cl_versions[msvc_ver]))
 
     try:
-        # Always build Python 2.7 - but set MSVC version manually via Jinja template
-        api.build(os.path.join(metadata_dir, '_build_msvc_compiler'), python="2.7")
+        # Always build Python 3.6 - but set MSVC version manually via Jinja template
+        api.build(os.path.join(metadata_dir, '_build_msvc_compiler'), python="3.6")
     except:
         raise
     finally:
