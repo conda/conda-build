@@ -69,7 +69,7 @@ jobs:
       conda create -n blarg3 -yq python=3.7
       conda create -n blarg4 -yq python nomkl numpy pandas svn
       source /usr/share/miniconda/bin/activate
-      /usr/share/miniconda/bin/py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --test-run-title="Linux-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION"
+      py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --test-run-title="Linux-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION"
     displayName: 'Parallel Tests'
 
 
