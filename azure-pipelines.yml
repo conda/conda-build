@@ -124,6 +124,8 @@ jobs:
       Set-Content -Value $batchcontent -Path $batchPath
       Get-ChildItem -Path $batchDir
       Get-ChildItem -Path ($batchDir + '\..')
+      dir C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC\Lib\amd64
+      dir C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\WinSDK\Lib\x64
     displayName: Patch vs2008
 
   - powershell: |
@@ -131,7 +133,7 @@ jobs:
     displayName: Add conda to PATH
 
   - script: |
-      set PATH=%UserProfile%\Miniconda3;%UserProfile%\Miniconda3\Scripts;%UserProfile%\Miniconda3\Library\bin;%PATH%
+      set PATH
       conda --help
       conda --version
       conda install python="%PYTHON_VERSION%" -y
@@ -161,13 +163,17 @@ jobs:
       mkdir %UserProfile%\cbtmp
       for /d %%F in (%UserProfile%\cbtmp_serial\*) do rd /s /q "%%F"
       for /d %%F in (%UserProfile%\cbtmp\*) do rd /s /q "%%F"
-      conda create -n blarg -yq --download-only python=2.7
-      conda create -n blarg -yq --download-only python=3.7
-      conda create -n blarg -yq --download-only python cmake
+      conda create -n blarg1 -yq --download-only python=2.7
+      conda create -n blarg3 -yq --download-only python=3.7
+      conda create -n blarg4 -yq --download-only python cmake
     displayName: 'Configuration'
 
   - script: |
+      set PATH
       conda install -y conda-verify
+      set PERL=
+      set LUA=
+      set R=
       py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp %UserProfile%\cbtmp_serial -n 0 -m "serial" --test-run-title="Win-SerialTests-%CONDA_VERSION%-Python%PYTHON_VERSION%"
     displayName: 'Serial Tests'
 
@@ -176,5 +182,5 @@ jobs:
       set PERL=
       set LUA=
       set R=
-      py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp %UserProfile%\cbtmp -n auto -m "not serial %SLOW_MARK% and not sanity" --test-run-title="Win-ParallelTests-%CONDA_VERSION%-Python%PYTHON_VERSION%"
+      py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp %UserProfile%\cbtmp -n auto -m "not serial" --test-run-title="Win-ParallelTests-%CONDA_VERSION%-Python%PYTHON_VERSION%"
     displayName: 'Parallel Tests'
