@@ -1,6 +1,6 @@
-'''
+"""
 Module to store conda build settings.
-'''
+"""
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import copy
@@ -19,7 +19,7 @@ from .conda_interface import cc_platform, cc_conda_build, subdir, url_path
 
 from .utils import get_build_folders, rm_rf, get_logger, get_conda_operation_locks
 
-on_win = (sys.platform == 'win32')
+on_win = sys.platform == "win32"
 
 # Don't "save" an attribute of this module for later, like build_prefix =
 # conda_build.config.config.build_prefix, as that won't reflect any mutated
@@ -30,7 +30,9 @@ conda_build = "conda-build"
 
 # Python2 silliness:
 def python2_fs_encode(strin):
-    return strin.decode(sys.getfilesystemencoding()) if hasattr(strin, 'decode') else strin
+    return (
+        strin.decode(sys.getfilesystemencoding()) if hasattr(strin, "decode") else strin
+    )
 
 
 def _ensure_dir(path):
@@ -49,13 +51,13 @@ DEFAULT_PREFIX_LENGTH = 255
 
 # translate our internal more meaningful subdirs to the ones that conda understands
 SUBDIR_ALIASES = {
-    'linux-cos5-x86_64': 'linux-64',
-    'linux-cos6-x86_64': 'linux-64',
-    'linux-cos5-x86': 'linux-32',
-    'linux-cos6-x86': 'linux-32',
-    'osx-109-x86_64': 'osx-64',
-    'win-x86_64': 'win-64',
-    'win-x86': 'win-32',
+    "linux-cos5-x86_64": "linux-64",
+    "linux-cos6-x86_64": "linux-64",
+    "linux-cos5-x86": "linux-32",
+    "linux-cos6-x86": "linux-32",
+    "osx-109-x86_64": "osx-64",
+    "win-x86_64": "win-64",
+    "win-x86": "win-32",
 }
 
 
@@ -63,148 +65,147 @@ Setting = namedtuple("ConfigSetting", "name, default")
 
 
 def _get_default_settings():
-    return [Setting('activate', True),
-            Setting('anaconda_upload', binstar_upload),
-            Setting('force_upload', True),
-            Setting('channel_urls', []),
-            Setting('dirty', False),
-            Setting('include_recipe', True),
-            Setting('no_download_source', False),
-            Setting('override_channels', False),
-            Setting('skip_existing', False),
-            Setting('token', None),
-            Setting('user', None),
-            Setting('labels', []),
-            Setting('verbose', True),
-
-            Setting('debug', False),
-            Setting('timeout', 900),
-            Setting('set_build_id', True),
-            Setting('disable_pip', False),
-            Setting('_output_folder', None),
-            Setting('prefix_length_fallback', True),
-            Setting('_prefix_length', DEFAULT_PREFIX_LENGTH),
-            Setting('long_test_prefix', True),
-            Setting('locking', True),
-            Setting('max_env_retry', 3),
-            Setting('remove_work_dir', True),
-            Setting('_host_platform', None),
-            Setting('_host_arch', None),
-            Setting('filename_hashing', cc_conda_build.get('filename_hashing',
-                                                           'true').lower() == 'true'),
-            Setting('keep_old_work', False),
-            Setting('_src_cache_root', abspath(expanduser(expandvars(
-                cc_conda_build.get('cache_dir')))) if cc_conda_build.get('cache_dir') else None),
-            Setting('copy_test_source_files', True),
-
-            # should rendering cut out any skipped metadata?
-            Setting('trim_skip', True),
-
-            # Use channeldata.json for run_export information during rendering.
-            # Falls back to downloading packages if False or channeldata does
-            # not exist for the channel.
-            Setting('use_channeldata', False),
-
-            # Disable the overlinking test for this package. This test checks that transitive DSOs
-            # are not referenced by DSOs in the package being built. When this happens something
-            # has gone wrong with:
-            # 1. Linker flags not being passed, or not working correctly:
-            #    (GNU ld: -as-needed, Apple ld64: -dead_strip_dylibs -no_implicit_dylibs)
-            # 2. A missing package in reqs/run (maybe that package is missing run_exports?)
-            # 3. A missing (or broken) CDT package in reqs/build or (on systems without CDTs)
-            # 4. .. a missing value in the hard-coded but metadata-augmentable library whitelist
-            # It is important that packages do not suffer from 2 because uninstalling that missing
-            # package leads to an inability to run this package.
-            #
-            # default to not erroring with overlinking for now.  We have specified in
-            #    cli/main_build.py that this default will switch in conda-build 4.0.
-            Setting('error_overlinking', cc_conda_build.get('error_overlinking',
-                                                           'false').lower() == 'true'),
-            Setting('enable_static', cc_conda_build.get('enable_static',
-                                                           'false').lower() == 'true'),
-            Setting('error_overdepending', cc_conda_build.get('error_overdepending',
-                                                              'false').lower() == 'true'),
-
-            Setting('no_rewrite_stdout_env', cc_conda_build.get('no_rewrite_stdout_env',
-                                                              'false').lower() == 'true'),
-
-            Setting('index', None),
-            # support legacy recipes where only build is specified and expected to be the
-            #    folder that packaging is done on
-            Setting('build_is_host', False),
-
-            # these are primarily for testing.  They override the native build platform/arch,
-            #     which is useful in tests, but makes little sense on actual systems.
-            Setting('_platform', None),
-            Setting('_arch', None),
-            Setting('_target_subdir', None),
-
-            # variants
-            Setting('variant_config_files', []),
-            # these files preclude usage of any system-wide or cwd config files.
-            #    Config files in recipes are still respected, and they override this file.
-            Setting('exclusive_config_files', []),
-            Setting('ignore_system_variants', False),
-            Setting('hash_length', 7),
-
-            # append/clobber metadata section data (for global usage.  Can also add files to
-            #    recipe.)
-            Setting('append_sections_file', None),
-            Setting('clobber_sections_file', None),
-            Setting('bootstrap', None),
-
-            # source provisioning.
-            Setting('git_commits_since_tag', 0),
-
-            # pypi upload settings (twine)
-            Setting('password', None),
-            Setting('sign', False),
-            Setting('sign_with', 'gpg'),
-            Setting('identity', None),
-            Setting('config_file', None),
-            Setting('repository', 'pypitest'),
-
-            Setting('verify', True),
-            Setting('ignore_verify_codes',
-                    cc_conda_build.get('ignore_verify_codes', [])),
-            Setting('exit_on_verify_error',
-                    cc_conda_build.get('exit_on_verify_error', False)),
-
-            # Recipes that have no host section, only build, should bypass the build/host line.
-            # This is to make older recipes still work with cross-compiling.  True cross-compiling
-            # involving compilers (not just python) will still require recipe modification to have
-            # distinct host and build sections, but simple python stuff should work without.
-            Setting('merge_build_host', False),
-            # this one is the state that can be set elsewhere, which affects how
-            #    the "build_prefix" works.  The one above is a setting.
-            Setting('_merge_build_host', False),
-
-            # path to output build statistics to
-            Setting('stats_file', None),
-
-            # extra deps to add to test env creation
-            Setting('extra_deps', []),
-
-            # customize this so pip doesn't look in places we don't want.  Per-build path by default.
-            Setting('_pip_cache_dir', None),
-
-            # set up compression algorithm used in new-style packages
-            Setting('compression_tuple', ('.tar.zst', 'zstd', 'zstd:compression-level=22')),
-
-            # this can be set to different values (currently only 2 means anything) to use package formats
-            Setting('conda_pkg_format', cc_conda_build.get('pkg_format', None)),
-
-            Setting('suppress_variables', False),
-            ]
+    return [
+        Setting("activate", True),
+        Setting("anaconda_upload", binstar_upload),
+        Setting("force_upload", True),
+        Setting("channel_urls", []),
+        Setting("dirty", False),
+        Setting("include_recipe", True),
+        Setting("no_download_source", False),
+        Setting("override_channels", False),
+        Setting("skip_existing", False),
+        Setting("token", None),
+        Setting("user", None),
+        Setting("labels", []),
+        Setting("verbose", True),
+        Setting("debug", False),
+        Setting("timeout", 900),
+        Setting("set_build_id", True),
+        Setting("disable_pip", False),
+        Setting("_output_folder", None),
+        Setting("prefix_length_fallback", True),
+        Setting("_prefix_length", DEFAULT_PREFIX_LENGTH),
+        Setting("long_test_prefix", True),
+        Setting("locking", True),
+        Setting("max_env_retry", 3),
+        Setting("remove_work_dir", True),
+        Setting("_host_platform", None),
+        Setting("_host_arch", None),
+        Setting(
+            "filename_hashing",
+            cc_conda_build.get("filename_hashing", "true").lower() == "true",
+        ),
+        Setting("keep_old_work", False),
+        Setting(
+            "_src_cache_root",
+            abspath(expanduser(expandvars(cc_conda_build.get("cache_dir"))))
+            if cc_conda_build.get("cache_dir")
+            else None,
+        ),
+        Setting("copy_test_source_files", True),
+        # should rendering cut out any skipped metadata?
+        Setting("trim_skip", True),
+        # Use channeldata.json for run_export information during rendering.
+        # Falls back to downloading packages if False or channeldata does
+        # not exist for the channel.
+        Setting("use_channeldata", False),
+        # Disable the overlinking test for this package. This test checks that transitive DSOs
+        # are not referenced by DSOs in the package being built. When this happens something
+        # has gone wrong with:
+        # 1. Linker flags not being passed, or not working correctly:
+        #    (GNU ld: -as-needed, Apple ld64: -dead_strip_dylibs -no_implicit_dylibs)
+        # 2. A missing package in reqs/run (maybe that package is missing run_exports?)
+        # 3. A missing (or broken) CDT package in reqs/build or (on systems without CDTs)
+        # 4. .. a missing value in the hard-coded but metadata-augmentable library whitelist
+        # It is important that packages do not suffer from 2 because uninstalling that missing
+        # package leads to an inability to run this package.
+        #
+        # default to not erroring with overlinking for now.  We have specified in
+        #    cli/main_build.py that this default will switch in conda-build 4.0.
+        Setting(
+            "error_overlinking",
+            cc_conda_build.get("error_overlinking", "false").lower() == "true",
+        ),
+        Setting(
+            "enable_static",
+            cc_conda_build.get("enable_static", "false").lower() == "true",
+        ),
+        Setting(
+            "error_overdepending",
+            cc_conda_build.get("error_overdepending", "false").lower() == "true",
+        ),
+        Setting(
+            "no_rewrite_stdout_env",
+            cc_conda_build.get("no_rewrite_stdout_env", "false").lower() == "true",
+        ),
+        Setting("index", None),
+        # support legacy recipes where only build is specified and expected to be the
+        #    folder that packaging is done on
+        Setting("build_is_host", False),
+        # these are primarily for testing.  They override the native build platform/arch,
+        #     which is useful in tests, but makes little sense on actual systems.
+        Setting("_platform", None),
+        Setting("_arch", None),
+        Setting("_target_subdir", None),
+        # variants
+        Setting("variant_config_files", []),
+        # these files preclude usage of any system-wide or cwd config files.
+        #    Config files in recipes are still respected, and they override this file.
+        Setting("exclusive_config_files", []),
+        Setting("ignore_system_variants", False),
+        Setting("hash_length", 7),
+        # append/clobber metadata section data (for global usage.  Can also add files to
+        #    recipe.)
+        Setting("append_sections_file", None),
+        Setting("clobber_sections_file", None),
+        Setting("bootstrap", None),
+        # source provisioning.
+        Setting("git_commits_since_tag", 0),
+        # pypi upload settings (twine)
+        Setting("password", None),
+        Setting("sign", False),
+        Setting("sign_with", "gpg"),
+        Setting("identity", None),
+        Setting("config_file", None),
+        Setting("repository", "pypitest"),
+        Setting("verify", True),
+        Setting("ignore_verify_codes", cc_conda_build.get("ignore_verify_codes", [])),
+        Setting(
+            "exit_on_verify_error", cc_conda_build.get("exit_on_verify_error", False)
+        ),
+        # Recipes that have no host section, only build, should bypass the build/host line.
+        # This is to make older recipes still work with cross-compiling.  True cross-compiling
+        # involving compilers (not just python) will still require recipe modification to have
+        # distinct host and build sections, but simple python stuff should work without.
+        Setting("merge_build_host", False),
+        # this one is the state that can be set elsewhere, which affects how
+        #    the "build_prefix" works.  The one above is a setting.
+        Setting("_merge_build_host", False),
+        # path to output build statistics to
+        Setting("stats_file", None),
+        # extra deps to add to test env creation
+        Setting("extra_deps", []),
+        # customize this so pip doesn't look in places we don't want.  Per-build path by default.
+        Setting("_pip_cache_dir", None),
+        # set up compression algorithm used in new-style packages
+        Setting("compression_tuple", (".tar.zst", "zstd", "zstd:compression-level=22")),
+        # this can be set to different values (currently only 2 means anything) to use package formats
+        Setting("conda_pkg_format", cc_conda_build.get("pkg_format", None)),
+        Setting("suppress_variables", False),
+    ]
 
 
 def print_function_deprecation_warning(func):
     def func_wrapper(*args, **kw):
         log = get_logger(__name__)
-        log.warn("WARNING: attribute {} is deprecated and will be removed in conda-build 4.0.  "
-                "Please update your code - file issues on the conda-build issue tracker "
-                 "if you need help.".format(func.__name__))
+        log.warn(
+            "WARNING: attribute {} is deprecated and will be removed in conda-build 4.0.  "
+            "Please update your code - file issues on the conda-build issue tracker "
+            "if you need help.".format(func.__name__)
+        )
         return func(*args, **kw)
+
     return func_wrapper
 
 
@@ -222,7 +223,9 @@ class Config(object):
             self._src_cache_root = os.path.expanduser(self._src_cache_root)
 
     def _set_attribute_from_kwargs(self, kwargs, attr, default):
-        value = kwargs.get(attr, getattr(self, attr) if hasattr(self, attr) else default)
+        value = kwargs.get(
+            attr, getattr(self, attr) if hasattr(self, attr) else default
+        )
         setattr(self, attr, value)
         if attr in kwargs:
             del kwargs[attr]
@@ -232,13 +235,13 @@ class Config(object):
             version = kwargs.pop(lang, None)
             if not version:
                 # Hooray for corner cases.
-                if lang == 'python':
-                    lang = 'py'
-                elif lang == 'numpy':
-                    lang = 'npy'
-                elif lang == 'r_base':
-                    lang = 'r'
-                var = 'CONDA_' + lang.upper()
+                if lang == "python":
+                    lang = "py"
+                elif lang == "numpy":
+                    lang = "npy"
+                elif lang == "r_base":
+                    lang = "r"
+                var = "CONDA_" + lang.upper()
                 version = os.getenv(var) if os.getenv(var) else default
             elif isinstance(version, list) and len(version) == 1:
                 version = version[0]
@@ -247,27 +250,28 @@ class Config(object):
         def set_lang(variant, lang):
             value = env(lang, self.variant.get(lang))
             if value:
-                if '.' not in str(value):
-                    value = '.'.join((value[0], value[1:]))
+                if "." not in str(value):
+                    value = ".".join((value[0], value[1:]))
                 variant[lang] = value
 
         # this is where we override any variant config files with the legacy CONDA_* vars
         #     or CLI params
-        for lang in ('perl', 'lua', 'python', 'numpy', 'r_base'):
+        for lang in ("perl", "lua", "python", "numpy", "r_base"):
             set_lang(self.variant, lang)
 
-        self._build_id = kwargs.pop('build_id', getattr(self, '_build_id', ""))
-        source_cache = kwargs.pop('cache_dir', None)
-        croot = kwargs.pop('croot', None)
+        self._build_id = kwargs.pop("build_id", getattr(self, "_build_id", ""))
+        source_cache = kwargs.pop("cache_dir", None)
+        croot = kwargs.pop("croot", None)
 
         if source_cache:
-            self._src_cache_root = os.path.abspath(os.path.normpath(
-                os.path.expanduser(source_cache)))
+            self._src_cache_root = os.path.abspath(
+                os.path.normpath(os.path.expanduser(source_cache))
+            )
         if croot:
             self._croot = os.path.abspath(os.path.normpath(os.path.expanduser(croot)))
         else:
             # set default value (not actually None)
-            self._croot = getattr(self, '_croot', None)
+            self._croot = getattr(self, "_croot", None)
 
         # handle known values better than unknown (allow defaults)
         for value in _get_default_settings():
@@ -281,43 +285,51 @@ class Config(object):
     def arch(self):
         """Always the native (build system) arch, except when pretending to be some
         other platform"""
-        return self._arch or subdir.rsplit('-', 1)[1]
+        return self._arch or subdir.rsplit("-", 1)[1]
 
     @arch.setter
     def arch(self, value):
         log = get_logger(__name__)
-        log.warn("Setting build arch. This is only useful when pretending to be on another "
-                 "arch, such as for rendering necessary dependencies on a non-native arch. "
-                 "I trust that you know what you're doing.")
+        log.warn(
+            "Setting build arch. This is only useful when pretending to be on another "
+            "arch, such as for rendering necessary dependencies on a non-native arch. "
+            "I trust that you know what you're doing."
+        )
         self._arch = str(value)
 
     @property
     def platform(self):
         """Always the native (build system) OS, except when pretending to be some
         other platform"""
-        return self._platform or subdir.rsplit('-', 1)[0]
+        return self._platform or subdir.rsplit("-", 1)[0]
 
     @platform.setter
     def platform(self, value):
         log = get_logger(__name__)
-        log.warn("Setting build platform. This is only useful when "
-                 "pretending to be on another platform, such as "
-                 "for rendering necessary dependencies on a non-native "
-                 "platform. I trust that you know what you're doing.")
-        if value == 'noarch':
-            raise ValueError("config platform should never be noarch.  Set host_platform instead.")
+        log.warn(
+            "Setting build platform. This is only useful when "
+            "pretending to be on another platform, such as "
+            "for rendering necessary dependencies on a non-native "
+            "platform. I trust that you know what you're doing."
+        )
+        if value == "noarch":
+            raise ValueError(
+                "config platform should never be noarch.  Set host_platform instead."
+            )
         self._platform = value
 
     @property
     def build_subdir(self):
         """Determines channel to download build env packages from.
         Should generally be the native platform.  Does not preclude packages from noarch."""
-        return '-'.join((self.platform, self.arch))
+        return "-".join((self.platform, self.arch))
 
     @property
     def host_arch(self):
         try:
-            variant_arch = self.variant.get('target_platform', self.build_subdir).split('-', 1)[1]
+            variant_arch = self.variant.get("target_platform", self.build_subdir).split(
+                "-", 1
+            )[1]
         except IndexError:
             variant_arch = 64
         return self._host_arch or variant_arch
@@ -328,7 +340,7 @@ class Config(object):
 
     @property
     def noarch(self):
-        return self.host_platform == 'noarch'
+        return self.host_platform == "noarch"
 
     def reset_platform(self):
         if not self.platform == cc_platform:
@@ -340,8 +352,10 @@ class Config(object):
 
     @property
     def host_platform(self):
-        return (self._host_platform or
-                self.variant.get('target_platform', self.build_subdir).split('-', 1)[0])
+        return (
+            self._host_platform
+            or self.variant.get("target_platform", self.build_subdir).split("-", 1)[0]
+        )
 
     @host_platform.setter
     def host_platform(self, value):
@@ -349,8 +363,8 @@ class Config(object):
 
     @property
     def host_subdir(self):
-        subdir = self.variant.get('target_platform', self.build_subdir)
-        if self.host_platform == 'noarch':
+        subdir = self.variant.get("target_platform", self.build_subdir)
+        if self.host_platform == "noarch":
             subdir = self.host_platform
         elif subdir != "-".join([self.host_platform, str(self.host_arch)]):
             subdir = "-".join([self.host_platform, str(self.host_arch)])
@@ -359,7 +373,7 @@ class Config(object):
     @host_subdir.setter
     def host_subdir(self, value):
         value = SUBDIR_ALIASES.get(value, value)
-        values = value.rsplit('-', 1)
+        values = value.rsplit("-", 1)
         self.host_platform = values[0]
         if len(values) > 1:
             self.host_arch = values[1]
@@ -382,8 +396,9 @@ class Config(object):
     def exclusive_config_file(self, value):
         if len(self.exclusive_config_files) > 1:
             raise ValueError(
-                'Cannot set singular exclusive_config_file '
-                'if multiple exclusive_config_files are present.')
+                "Cannot set singular exclusive_config_file "
+                "if multiple exclusive_config_files are present."
+            )
         if value is None:
             self.exclusive_config_files = []
         else:
@@ -401,16 +416,16 @@ class Config(object):
     def croot(self):
         """This is where source caches and work folders live"""
         if not self._croot:
-            _bld_root_env = os.getenv('CONDA_BLD_PATH')
-            _bld_root_rc = cc_conda_build.get('root-dir')
+            _bld_root_env = os.getenv("CONDA_BLD_PATH")
+            _bld_root_rc = cc_conda_build.get("root-dir")
             if _bld_root_env:
                 self._croot = abspath(expanduser(_bld_root_env))
             elif _bld_root_rc:
                 self._croot = abspath(expanduser(expandvars(_bld_root_rc)))
             elif root_writable:
-                self._croot = join(root_dir, 'conda-bld')
+                self._croot = join(root_dir, "conda-bld")
             else:
-                self._croot = abspath(expanduser('~/conda-bld'))
+                self._croot = abspath(expanduser("~/conda-bld"))
         return python2_fs_encode(self._croot)
 
     @croot.setter
@@ -436,112 +451,125 @@ class Config(object):
     @property
     @print_function_deprecation_warning
     def CONDA_LUA(self):
-        return self.variant.get('lua', get_default_variant(self)['lua'])
+        return self.variant.get("lua", get_default_variant(self)["lua"])
 
     @CONDA_LUA.setter
     @print_function_deprecation_warning
     def CONDA_LUA(self, value):
-        self.variant['lua'] = value
+        self.variant["lua"] = value
 
     @property
     @print_function_deprecation_warning
     def CONDA_PY(self):
-        value = self.variant.get('python', get_default_variant(self)['python'])
-        return int(''.join(value.split('.')))
+        value = self.variant.get("python", get_default_variant(self)["python"])
+        return int("".join(value.split(".")))
 
     @CONDA_PY.setter
     @print_function_deprecation_warning
     def CONDA_PY(self, value):
         value = str(value)
-        self.variant['python'] = '.'.join((value[0], value[1:]))
+        self.variant["python"] = ".".join((value[0], value[1:]))
 
     @property
     @print_function_deprecation_warning
     def CONDA_NPY(self):
-        value = self.variant.get('numpy', get_default_variant(self)['numpy'])
-        return int(''.join(value.split('.')))
+        value = self.variant.get("numpy", get_default_variant(self)["numpy"])
+        return int("".join(value.split(".")))
 
     @CONDA_NPY.setter
     @print_function_deprecation_warning
     def CONDA_NPY(self, value):
         value = str(value)
-        self.variant['numpy'] = '.'.join((value[0], value[1:]))
+        self.variant["numpy"] = ".".join((value[0], value[1:]))
 
     @property
     @print_function_deprecation_warning
     def CONDA_PERL(self):
-        return self.variant.get('perl', get_default_variant(self)['perl'])
+        return self.variant.get("perl", get_default_variant(self)["perl"])
 
     @CONDA_PERL.setter
     @print_function_deprecation_warning
     def CONDA_PERL(self, value):
-        self.variant['perl'] = value
+        self.variant["perl"] = value
 
     @property
     @print_function_deprecation_warning
     def CONDA_R(self):
 
-        return self.variant.get('r_base', get_default_variant(self)['r_base'])
+        return self.variant.get("r_base", get_default_variant(self)["r_base"])
 
     @CONDA_R.setter
     @print_function_deprecation_warning
     def CONDA_R(self, value):
-        self.variant['r_base'] = value
+        self.variant["r_base"] = value
 
     def _get_python(self, prefix, platform):
-        if platform.startswith('win') or (platform == "noarch" and sys.platform == "win32"):
-            if os.path.isfile(os.path.join(prefix, 'python_d.exe')):
-                res = join(prefix, 'python_d.exe')
+        if platform.startswith("win") or (
+            platform == "noarch" and sys.platform == "win32"
+        ):
+            if os.path.isfile(os.path.join(prefix, "python_d.exe")):
+                res = join(prefix, "python_d.exe")
             else:
-                res = join(prefix, 'python.exe')
+                res = join(prefix, "python.exe")
         else:
-            res = join(prefix, 'bin/python')
+            res = join(prefix, "bin/python")
         return res
 
     def _get_perl(self, prefix, platform):
-        if platform.startswith('win'):
-            res = join(prefix, 'Library', 'bin', 'perl.exe')
+        if platform.startswith("win"):
+            res = join(prefix, "Library", "bin", "perl.exe")
         else:
-            res = join(prefix, 'bin/perl')
+            res = join(prefix, "bin/perl")
         return res
 
     # TODO: This is probably broken on Windows, but no one has a lua package on windows to test.
     def _get_lua(self, prefix, platform):
-        lua_ver = self.variant.get('lua', get_default_variant(self)['lua'])
+        lua_ver = self.variant.get("lua", get_default_variant(self)["lua"])
         binary_name = "luajit" if (lua_ver and lua_ver[0] == "2") else "lua"
-        if platform.startswith('win'):
-            res = join(prefix, 'Library', 'bin', '{}.exe'.format(binary_name))
+        if platform.startswith("win"):
+            res = join(prefix, "Library", "bin", "{}.exe".format(binary_name))
         else:
-            res = join(prefix, 'bin/{}'.format(binary_name))
+            res = join(prefix, "bin/{}".format(binary_name))
         return res
 
     def _get_r(self, prefix, platform):
-        if platform.startswith('win') or (platform == "noarch" and sys.platform == 'win32'):
-            res = join(prefix, 'Scripts', 'R.exe')
+        if platform.startswith("win") or (
+            platform == "noarch" and sys.platform == "win32"
+        ):
+            res = join(prefix, "Scripts", "R.exe")
             # MRO test:
             if not os.path.exists(res):
-                res = join(prefix, 'bin', 'R.exe')
+                res = join(prefix, "bin", "R.exe")
         else:
-            res = join(prefix, 'bin', 'R')
+            res = join(prefix, "bin", "R")
         return res
 
     def _get_rscript(self, prefix, platform):
-        if platform.startswith('win'):
-            res = join(prefix, 'Scripts', 'Rscript.exe')
+        if platform.startswith("win"):
+            res = join(prefix, "Scripts", "Rscript.exe")
             # MRO test:
             if not os.path.exists(res):
-                res = join(prefix, 'bin', 'Rscript.exe')
+                res = join(prefix, "bin", "Rscript.exe")
         else:
-            res = join(prefix, 'bin', 'Rscript')
+            res = join(prefix, "bin", "Rscript")
         return res
 
     def compute_build_id(self, package_name, reset=False):
         if self.set_build_id and (not self._build_id or reset):
-            assert not os.path.isabs(package_name), ("package name should not be a absolute path, "
-                                                     "to preserve croot during path joins")
-            folder_basenames = [os.path.basename(fldr) for fldr in get_build_folders(self.croot)]
-            build_folders = sorted([build_folder for build_folder in folder_basenames
-                            if build_folder[:build_folder.rfind('_')] == package_name])
+            assert not os.path.isabs(package_name), (
+                "package name should not be a absolute path, "
+                "to preserve croot during path joins"
+            )
+            folder_basenames = [
+                os.path.basename(fldr) for fldr in get_build_folders(self.croot)
+            ]
+            build_folders = sorted(
+                [
+                    build_folder
+                    for build_folder in folder_basenames
+                    if build_folder[: build_folder.rfind("_")] == package_name
+                ]
+            )
             if self.dirty and build_folders:
                 # Use the most recent build with matching recipe name
                 self._build_id = build_folders[-1]
@@ -565,8 +593,10 @@ class Config(object):
     @build_id.setter
     def build_id(self, _build_id):
         _build_id = _build_id.rstrip("/").rstrip("\\")
-        assert not os.path.isabs(_build_id), ("build_id should not be an absolute path, "
-                                              "to preserve croot during path joins")
+        assert not os.path.isabs(_build_id), (
+            "build_id should not be an absolute path, "
+            "to preserve croot during path joins"
+        )
         self._build_id = python2_fs_encode(_build_id)
 
     @property
@@ -579,14 +609,16 @@ class Config(object):
 
     @property
     def _short_host_prefix(self):
-        return join(self.build_folder, '_h_env')
+        return join(self.build_folder, "_h_env")
 
     @property
     def _long_host_prefix(self):
         placeholder_length = self.prefix_length - len(self._short_host_prefix)
-        placeholder = '_placehold'
+        placeholder = "_placehold"
         repeats = int(math.ceil(placeholder_length / len(placeholder)) + 1)
-        placeholder = (self._short_host_prefix + repeats * placeholder)[:self.prefix_length]
+        placeholder = (self._short_host_prefix + repeats * placeholder)[
+            : self.prefix_length
+        ]
         return max(self._short_host_prefix, placeholder)
 
     @property
@@ -597,7 +629,7 @@ class Config(object):
         if self._merge_build_host:
             prefix = self.host_prefix
         else:
-            prefix = join(self.build_folder, '_build_env')
+            prefix = join(self.build_folder, "_build_env")
         return prefix
 
     @property
@@ -610,13 +642,13 @@ class Config(object):
 
     @property
     def _short_test_prefix(self):
-        return join(self.build_folder, '_test_env')
+        return join(self.build_folder, "_test_env")
 
     def _long_prefix(self, base_prefix):
         placeholder_length = self.prefix_length - len(base_prefix)
-        placeholder = '_placehold'
+        placeholder = "_placehold"
         repeats = int(math.ceil(placeholder_length / len(placeholder)) + 1)
-        placeholder = (base_prefix + repeats * placeholder)[:self.prefix_length]
+        placeholder = (base_prefix + repeats * placeholder)[: self.prefix_length]
         return max(base_prefix, placeholder)
 
     @property
@@ -658,7 +690,7 @@ class Config(object):
     @property
     def info_dir(self):
         """Path to the info dir in the build prefix, where recipe metadata is stored"""
-        path = join(self.host_prefix, 'info')
+        path = join(self.host_prefix, "info")
         _ensure_dir(path)
         return path
 
@@ -666,7 +698,7 @@ class Config(object):
     def meta_dir(self):
         """Path to the conda-meta dir in the build prefix, where package index json files are
         stored"""
-        path = join(self.host_prefix, 'conda-meta')
+        path = join(self.host_prefix, "conda-meta")
         _ensure_dir(path)
         return path
 
@@ -689,41 +721,44 @@ class Config(object):
         """ Dirs where previous build packages might be. """
         # The first two *might* be the same, but might not, depending on if this is a cross-compile.
         #     subdir should be the native platform, while self.subdir would be the host platform.
-        return {join(self.croot, self.host_subdir), join(self.croot, subdir),
-                join(self.croot, "noarch"), }
+        return {
+            join(self.croot, self.host_subdir),
+            join(self.croot, subdir),
+            join(self.croot, "noarch"),
+        }
 
     @property
     def src_cache(self):
         """Where tarballs and zip files are downloaded and stored"""
-        path = join(self.src_cache_root, 'src_cache')
+        path = join(self.src_cache_root, "src_cache")
         _ensure_dir(path)
         return path
 
     @property
     def git_cache(self):
         """Where local clones of git sources are stored"""
-        path = join(self.src_cache_root, 'git_cache')
+        path = join(self.src_cache_root, "git_cache")
         _ensure_dir(path)
         return path
 
     @property
     def hg_cache(self):
         """Where local clones of hg sources are stored"""
-        path = join(self.src_cache_root, 'hg_cache')
+        path = join(self.src_cache_root, "hg_cache")
         _ensure_dir(path)
         return path
 
     @property
     def svn_cache(self):
         """Where local checkouts of svn sources are stored"""
-        path = join(self.src_cache_root, 'svn_cache')
+        path = join(self.src_cache_root, "svn_cache")
         _ensure_dir(path)
         return path
 
     @property
     def work_dir(self):
         """Where the source for the build is extracted/copied to."""
-        path = join(self.build_folder, 'work')
+        path = join(self.build_folder, "work")
         _ensure_dir(path)
         # if os.path.isdir(path):
         #     lst = [fn for fn in os.listdir(path) if not fn.startswith('.')]
@@ -735,7 +770,7 @@ class Config(object):
 
     @property
     def pip_cache_dir(self):
-        path = self._pip_cache_dir or join(self.build_folder, 'pip_cache')
+        path = self._pip_cache_dir or join(self.build_folder, "pip_cache")
         _ensure_dir(path)
         return path
 
@@ -746,7 +781,7 @@ class Config(object):
     @property
     def test_dir(self):
         """The temporary folder where test files are copied to, and where tests start execution"""
-        path = join(self.build_folder, 'test_tmp')
+        path = join(self.build_folder, "test_tmp")
         _ensure_dir(path)
         return path
 
@@ -757,24 +792,33 @@ class Config(object):
     def clean(self, remove_folders=True):
         # build folder is the whole burrito containing envs and source folders
         #   It will only exist if we download source, or create a build or test environment
-        if remove_folders and not getattr(self, 'dirty'):
+        if remove_folders and not getattr(self, "dirty"):
             if self.build_id:
                 if os.path.isdir(self.build_folder):
                     rm_rf(self.build_folder)
             else:
-                for path in [self.work_dir, self.test_dir, self.build_prefix, self.test_prefix]:
+                for path in [
+                    self.work_dir,
+                    self.test_dir,
+                    self.build_prefix,
+                    self.test_prefix,
+                ]:
                     if os.path.isdir(path):
                         rm_rf(path)
-            if os.path.isfile(os.path.join(self.build_folder, 'prefix_files')):
-                rm_rf(os.path.join(self.build_folder, 'prefix_files'))
+            if os.path.isfile(os.path.join(self.build_folder, "prefix_files")):
+                rm_rf(os.path.join(self.build_folder, "prefix_files"))
         else:
-            print("\nLeaving build/test directories:"
-                  "\n  Work:\n", self.work_dir,
-                  "\n  Test:\n", self.test_dir,
-                  "\nLeaving build/test environments:"
-                  "\n  Test:\nsource activate ", self.test_prefix,
-                  "\n  Build:\nsource activate ", self.build_prefix,
-                  "\n\n")
+            print(
+                "\nLeaving build/test directories:" "\n  Work:\n",
+                self.work_dir,
+                "\n  Test:\n",
+                self.test_dir,
+                "\nLeaving build/test environments:" "\n  Test:\nsource activate ",
+                self.test_prefix,
+                "\n  Build:\nsource activate ",
+                self.build_prefix,
+                "\n\n",
+            )
 
         for lock in get_conda_operation_locks(self.locking, self.bldpkgs_dirs):
             if os.path.isfile(lock.lock_file):
@@ -787,7 +831,7 @@ class Config(object):
     def copy(self):
         new = copy.copy(self)
         new.variant = copy.deepcopy(self.variant)
-        if hasattr(self, 'variants'):
+        if hasattr(self, "variants"):
             new.variants = copy.deepcopy(self.variants)
         return new
 
@@ -796,9 +840,15 @@ class Config(object):
         pass
 
     def __exit__(self, e_type, e_value, traceback):
-        if not getattr(self, 'dirty') and e_type is None and not getattr(self, 'keep_old_work'):
-            get_logger(__name__).info("--dirty flag and --keep-old-work not specified. "
-                                        "Removing build/test folder after successful build/test.\n")
+        if (
+            not getattr(self, "dirty")
+            and e_type is None
+            and not getattr(self, "keep_old_work")
+        ):
+            get_logger(__name__).info(
+                "--dirty flag and --keep-old-work not specified. "
+                "Removing build/test folder after successful build/test.\n"
+            )
             self.clean()
         else:
             self.clean(remove_folders=False)
@@ -820,7 +870,7 @@ def get_or_merge_config(config, variant=None, **kwargs):
 
 
 def get_channel_urls(args):
-    channel_urls = args.get('channel') or args.get('channels') or ()
+    channel_urls = args.get("channel") or args.get("channels") or ()
     final_channel_urls = []
 
     for url in channel_urls:

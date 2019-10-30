@@ -3,8 +3,13 @@ import sys
 import logging
 
 
-def load_setup_py_data(setup_file, from_recipe_dir=False, recipe_dir=None, work_dir=None,
-                       permit_undefined_jinja=True):
+def load_setup_py_data(
+    setup_file,
+    from_recipe_dir=False,
+    recipe_dir=None,
+    work_dir=None,
+    permit_undefined_jinja=True,
+):
     _setuptools_data = {}
     log = logging.getLogger(__name__)
 
@@ -37,8 +42,10 @@ def load_setup_py_data(setup_file, from_recipe_dir=False, recipe_dir=None, work_
         if not os.path.isabs(setup_file):
             setup_file = os.path.join(work_dir, setup_file)
     else:
-        message = ("Did not find setup.py file in manually specified location, and source "
-                  "not downloaded yet.")
+        message = (
+            "Did not find setup.py file in manually specified location, and source "
+            "not downloaded yet."
+        )
         if permit_undefined_jinja:
             log.debug(message)
             return {}
@@ -51,7 +58,7 @@ def load_setup_py_data(setup_file, from_recipe_dir=False, recipe_dir=None, work_
     except ImportError:
         pass  # setuptools <30.3.0 cannot read metadata / options from 'setup.cfg'
     else:
-        setup_cfg = os.path.join(os.path.dirname(setup_file), 'setup.cfg')
+        setup_cfg = os.path.join(os.path.dirname(setup_file), "setup.cfg")
         if os.path.isfile(setup_cfg):
             # read_configuration returns a dict of dicts. Each dict (keys: 'metadata',
             # 'options'), if present, provides keyword arguments for the setup function.
@@ -70,32 +77,29 @@ def load_setup_py_data(setup_file, from_recipe_dir=False, recipe_dir=None, work_
     numpy_setup = None
 
     versioneer = None
-    if 'versioneer' in sys.modules:
-        versioneer = sys.modules['versioneer']
-        del sys.modules['versioneer']
+    if "versioneer" in sys.modules:
+        versioneer = sys.modules["versioneer"]
+        del sys.modules["versioneer"]
 
     try:
         import numpy.distutils.core
+
         numpy_setup = numpy.distutils.core.setup
         numpy.distutils.core.setup = setup
     except ImportError:
         log.debug("Failed to import numpy for setup patch.  Is numpy installed?")
 
     setuptools.setup = distutils.core.setup = setup
-    ns = {
-        '__name__': '__main__',
-        '__doc__': None,
-        '__file__': setup_file,
-    }
+    ns = {"__name__": "__main__", "__doc__": None, "__file__": setup_file}
     if os.path.isfile(setup_file):
         with open(setup_file) as f:
-            code = compile(f.read(), setup_file, 'exec', dont_inherit=1)
+            code = compile(f.read(), setup_file, "exec", dont_inherit=1)
             exec(code, ns, ns)
     else:
         if not permit_undefined_jinja:
-            raise TypeError('{} is not a file that can be read'.format(setup_file))
+            raise TypeError("{} is not a file that can be read".format(setup_file))
 
-    sys.modules['versioneer'] = versioneer
+    sys.modules["versioneer"] = versioneer
 
     distutils.core.setup = distutils_setup
     setuptools.setup = setuptools_setup
@@ -109,26 +113,42 @@ def load_setup_py_data(setup_file, from_recipe_dir=False, recipe_dir=None, work_
     return _setuptools_data
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import json
     import argparse
-    parser = argparse.ArgumentParser(description='run setup.py file to obtain metadata')
-    parser.add_argument('work_dir', help=('path to work dir, where we\'ll write the output data '
-                                    'json, and potentially also where setup.py should be found'))
-    parser.add_argument('setup_file', help='path or filename of setup.py file')
-    parser.add_argument('--from-recipe-dir', help=('look for setup.py file in recipe '
-                                                   'dir (as opposed to work dir)'),
-                        default=False, action="store_true")
-    parser.add_argument('--recipe-dir', help=('(optional) path to recipe dir, where '
-                                            'setup.py should be found'))
 
-    parser.add_argument('--permit-undefined-jinja', help=('look for setup.py file in recipe '
-                                                   'dir (as opposed to work dir)'),
-                        default=False, action="store_true")
+    parser = argparse.ArgumentParser(description="run setup.py file to obtain metadata")
+    parser.add_argument(
+        "work_dir",
+        help=(
+            "path to work dir, where we'll write the output data "
+            "json, and potentially also where setup.py should be found"
+        ),
+    )
+    parser.add_argument("setup_file", help="path or filename of setup.py file")
+    parser.add_argument(
+        "--from-recipe-dir",
+        help=("look for setup.py file in recipe " "dir (as opposed to work dir)"),
+        default=False,
+        action="store_true",
+    )
+    parser.add_argument(
+        "--recipe-dir",
+        help=("(optional) path to recipe dir, where " "setup.py should be found"),
+    )
+
+    parser.add_argument(
+        "--permit-undefined-jinja",
+        help=("look for setup.py file in recipe " "dir (as opposed to work dir)"),
+        default=False,
+        action="store_true",
+    )
     args = parser.parse_args()
     # we get back a dict of the setup data
     data = load_setup_py_data(**args.__dict__)
-    with open(os.path.join(args.work_dir, 'conda_build_loaded_setup_py.json'), 'w') as f:
+    with open(
+        os.path.join(args.work_dir, "conda_build_loaded_setup_py.json"), "w"
+    ) as f:
         # this is lossy.  Anything that can't be serialized is either forced to None or
         #     removed completely.
         json.dump(data, f, skipkeys=True, default=lambda x: None)

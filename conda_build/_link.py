@@ -17,22 +17,24 @@ if False:
 
 THIS_DIR = dirname(__file__)
 PREFIX = normpath(sys.prefix)
-if sys.platform == 'win32':
-    BIN_DIR = join(PREFIX, 'Scripts')
-    SITE_PACKAGES = 'Lib/site-packages'
+if sys.platform == "win32":
+    BIN_DIR = join(PREFIX, "Scripts")
+    SITE_PACKAGES = "Lib/site-packages"
 else:
-    BIN_DIR = join(PREFIX, 'bin')
-    SITE_PACKAGES = 'lib/python%s/site-packages' % sys.version[:3]
+    BIN_DIR = join(PREFIX, "bin")
+    SITE_PACKAGES = "lib/python%s/site-packages" % sys.version[:3]
 
 # the list of these files is going to be store in info/_files
 FILES = []
 
 # three capture groups: whole_shebang, executable, options
-SHEBANG_REGEX = (br'^(#!'  # pretty much the whole match string
-                 br'(?:[ ]*)'  # allow spaces between #! and beginning of the executable path
-                 br'(/(?:\\ |[^ \n\r\t])*)'  # the executable is the next text block without an escaped space or non-space whitespace character  # NOQA
-                 br'(.*)'  # the rest of the line can contain option flags
-                 br')$')  # end whole_shebang group
+SHEBANG_REGEX = (
+    br"^(#!"  # pretty much the whole match string
+    br"(?:[ ]*)"  # allow spaces between #! and beginning of the executable path
+    br"(/(?:\\ |[^ \n\r\t])*)"  # the executable is the next text block without an escaped space or non-space whitespace character  # NOQA
+    br"(.*)"  # the rest of the line can contain option flags
+    br")$"
+)  # end whole_shebang group
 
 
 def _link(src, dst):
@@ -52,10 +54,14 @@ def _unlink(path):
 
 def pyc_f(f, version_info=sys.version_info):
     if version_info[0] == 2:
-        return f + 'c'
-    dn, fn = f.rsplit('/', 1)
-    return '%s/__pycache__/%s.cpython-%d%d.pyc' % (
-              dn, fn[:-3], version_info[0], version_info[1])
+        return f + "c"
+    dn, fn = f.rsplit("/", 1)
+    return "%s/__pycache__/%s.cpython-%d%d.pyc" % (
+        dn,
+        fn[:-3],
+        version_info[0],
+        version_info[1],
+    )
 
 
 def link_files(src_root, dst_root, files):
@@ -68,48 +74,51 @@ def link_files(src_root, dst_root, files):
         if exists(dst):
             _unlink(dst)
         _link(src, dst)
-        f = '%s/%s' % (dst_root, f)
+        f = "%s/%s" % (dst_root, f)
         FILES.append(f)
-        if f.endswith('.py'):
+        if f.endswith(".py"):
             FILES.append(pyc_f(f))
 
 
 # yanked from conda
 def replace_long_shebang(data):
     # this function only changes a shebang line if it exists and is greater than 127 characters
-    if hasattr(data, 'encode'):
+    if hasattr(data, "encode"):
         data = data.encode()
     shebang_match = re.match(SHEBANG_REGEX, data, re.MULTILINE)
     if shebang_match:
         whole_shebang, executable, options = shebang_match.groups()
         if len(whole_shebang) > 127:
-            executable_name = executable.decode('utf-8').split('/')[-1]
-            new_shebang = '#!/usr/bin/env %s%s' % (executable_name, options.decode('utf-8'))
-            data = data.replace(whole_shebang, new_shebang.encode('utf-8'))
-    if hasattr(data, 'decode'):
+            executable_name = executable.decode("utf-8").split("/")[-1]
+            new_shebang = "#!/usr/bin/env %s%s" % (
+                executable_name,
+                options.decode("utf-8"),
+            )
+            data = data.replace(whole_shebang, new_shebang.encode("utf-8"))
+    if hasattr(data, "decode"):
         data = data.decode()
     return data
 
 
 def create_script(fn):
-    src = join(THIS_DIR, 'python-scripts', fn)
+    src = join(THIS_DIR, "python-scripts", fn)
     dst = join(BIN_DIR, fn)
-    if sys.platform == 'win32':
-        shutil.copy2(src, dst + '-script.py')
-        FILES.append('Scripts/%s-script.py' % fn)
-        shutil.copy2(join(THIS_DIR,
-                          'cli-%d.exe' % (8 * tuple.__itemsize__)),
-                     dst + '.exe')
-        FILES.append('Scripts/%s.exe' % fn)
+    if sys.platform == "win32":
+        shutil.copy2(src, dst + "-script.py")
+        FILES.append("Scripts/%s-script.py" % fn)
+        shutil.copy2(
+            join(THIS_DIR, "cli-%d.exe" % (8 * tuple.__itemsize__)), dst + ".exe"
+        )
+        FILES.append("Scripts/%s.exe" % fn)
     else:
         with open(src) as fi:
             data = fi.read()
-        with open(dst, 'w') as fo:
-            shebang = replace_long_shebang('#!%s\n' % normpath(sys.executable))
+        with open(dst, "w") as fo:
+            shebang = replace_long_shebang("#!%s\n" % normpath(sys.executable))
             fo.write(shebang)
             fo.write(data)
         os.chmod(dst, 0o775)
-        FILES.append('bin/%s' % fn)
+        FILES.append("bin/%s" % fn)
 
 
 def create_scripts(files):
@@ -122,15 +131,14 @@ def create_scripts(files):
 
 
 def main():
-    create_scripts(DATA['python-scripts'])
-    link_files('site-packages', SITE_PACKAGES, DATA['site-packages'])
-    link_files('Examples', 'Examples', DATA['Examples'])
+    create_scripts(DATA["python-scripts"])
+    link_files("site-packages", SITE_PACKAGES, DATA["site-packages"])
+    link_files("Examples", "Examples", DATA["Examples"])
 
-    with open(join(PREFIX, 'conda-meta',
-                   '%s.files' % DATA['dist']), 'w') as fo:
+    with open(join(PREFIX, "conda-meta", "%s.files" % DATA["dist"]), "w") as fo:
         for f in FILES:
-            fo.write('%s\n' % f)
+            fo.write("%s\n" % f)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

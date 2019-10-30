@@ -11,84 +11,95 @@ from itertools import islice
 from conda_build.os_utils.external import find_preferably_prefixed_executable
 
 NO_EXT = (
-    '.py', '.pyc', '.pyo', '.h', '.a', '.c', '.txt', '.html',
-    '.xml', '.png', '.jpg', '.gif', '.class',
+    ".py",
+    ".pyc",
+    ".pyo",
+    ".h",
+    ".a",
+    ".c",
+    ".txt",
+    ".html",
+    ".xml",
+    ".png",
+    ".jpg",
+    ".gif",
+    ".class",
 )
 
 MAGIC = {
-    b'\xca\xfe\xba\xbe': 'MachO-universal',
-    b'\xce\xfa\xed\xfe': 'MachO-i386',
-    b'\xcf\xfa\xed\xfe': 'MachO-x86_64',
-    b'\xfe\xed\xfa\xce': 'MachO-ppc',
-    b'\xfe\xed\xfa\xcf': 'MachO-ppc64',
+    b"\xca\xfe\xba\xbe": "MachO-universal",
+    b"\xce\xfa\xed\xfe": "MachO-i386",
+    b"\xcf\xfa\xed\xfe": "MachO-x86_64",
+    b"\xfe\xed\xfa\xce": "MachO-ppc",
+    b"\xfe\xed\xfa\xcf": "MachO-ppc64",
 }
 
 FILETYPE = {
-    1: 'MH_OBJECT',
-    2: 'MH_EXECUTE',
-    3: 'MH_FVMLIB',
-    4: 'MH_CORE',
-    5: 'MH_PRELOAD',
-    6: 'MH_DYLIB',
-    7: 'MH_DYLINKER',
-    8: 'MH_BUNDLE',
-    9: 'MH_DYLIB_STUB',
-    10: 'MH_DSYM',
-    11: 'MH_KEXT_BUNDLE',
+    1: "MH_OBJECT",
+    2: "MH_EXECUTE",
+    3: "MH_FVMLIB",
+    4: "MH_CORE",
+    5: "MH_PRELOAD",
+    6: "MH_DYLIB",
+    7: "MH_DYLINKER",
+    8: "MH_BUNDLE",
+    9: "MH_DYLIB_STUB",
+    10: "MH_DSYM",
+    11: "MH_KEXT_BUNDLE",
 }
 
 
 def is_macho(path):
     if path.endswith(NO_EXT) or os.path.islink(path) or not os.path.isfile(path):
         return False
-    with open(path, 'rb') as fi:
+    with open(path, "rb") as fi:
         head = fi.read(4)
     return bool(head in MAGIC)
 
 
 def is_dylib(path):
-    return human_filetype(path) == 'DYLIB'
+    return human_filetype(path) == "DYLIB"
 
 
 def human_filetype(path):
-    ot = find_preferably_prefixed_executable('otool')
-    output = check_output((ot, '-h', path)).decode('utf-8')
+    ot = find_preferably_prefixed_executable("otool")
+    output = check_output((ot, "-h", path)).decode("utf-8")
     lines = output.splitlines()
-    if not lines[0].startswith((path, 'Mach header')):
+    if not lines[0].startswith((path, "Mach header")):
         raise ValueError(
-            'Expected `otool -h` output to start with'
-            ' Mach header or {0}, got:\n{1}'.format(path, output)
+            "Expected `otool -h` output to start with"
+            " Mach header or {0}, got:\n{1}".format(path, output)
         )
-    assert lines[0].startswith((path, 'Mach header')), path
+    assert lines[0].startswith((path, "Mach header")), path
 
     for line in lines:
-        if line.strip().startswith('0x'):
+        if line.strip().startswith("0x"):
             header = line.split()
             filetype = int(header[4])
             return FILETYPE[filetype][3:]
 
 
 def is_dylib_info(lines):
-    dylib_info = ('LC_ID_DYLIB', 'LC_LOAD_DYLIB')
+    dylib_info = ("LC_ID_DYLIB", "LC_LOAD_DYLIB")
     if len(lines) > 1 and lines[1].split()[1] in dylib_info:
         return True
     return False
 
 
 def is_id_dylib(lines):
-    if len(lines) > 1 and lines[1].split()[1] == 'LC_ID_DYLIB':
+    if len(lines) > 1 and lines[1].split()[1] == "LC_ID_DYLIB":
         return True
     return False
 
 
 def is_load_dylib(lines):
-    if len(lines) > 1 and lines[1].split()[1] == 'LC_LOAD_DYLIB':
+    if len(lines) > 1 and lines[1].split()[1] == "LC_LOAD_DYLIB":
         return True
     return False
 
 
 def is_rpath(lines):
-    if len(lines) > 1 and lines[1].split()[1] == 'LC_RPATH':
+    if len(lines) > 1 and lines[1].split()[1] == "LC_RPATH":
         return True
     return False
 
@@ -122,20 +133,20 @@ def _get_matching_load_commands(lines, cb_filter):
                 # is fairly simple so let's just hardcode it for speed.
                 if len(listy) == 2:
                     key, value = listy
-                elif listy[0] == 'name' or listy[0] == 'path':
+                elif listy[0] == "name" or listy[0] == "path":
                     # Create an entry for 'name offset' if there is one
                     # as that can be useful if we need to know if there
                     # is space to patch it for relocation purposes.
-                    if listy[2] == '(offset':
-                        key = listy[0] + ' offset'
+                    if listy[2] == "(offset":
+                        key = listy[0] + " offset"
                         value = int(listy[3][:-1])
                         lcdict[key] = value
                     key, value = listy[0:2]
-                elif listy[0] == 'time':
-                    key = ' '.join(listy[0:3])
-                    value = ' '.join(listy[3:])
-                elif listy[0] in ('current', 'compatibility'):
-                    key = ' '.join(listy[0:2])
+                elif listy[0] == "time":
+                    key = " ".join(listy[0:3])
+                    value = " ".join(listy[3:])
+                elif listy[0] in ("current", "compatibility"):
+                    key = " ".join(listy[0:2])
                     value = listy[2]
                 try:
                     value = int(value)
@@ -163,14 +174,19 @@ def otool(path, build_prefix=None, cb_filter=is_dylib_info):
     Any key values that can be converted to integers are converted
     to integers, the rest are strings.
     """
-    lines = check_output([find_preferably_prefixed_executable('otool', build_prefix), '-l', path],
-                          stderr=STDOUT).decode('utf-8')
+    lines = check_output(
+        [find_preferably_prefixed_executable("otool", build_prefix), "-l", path],
+        stderr=STDOUT,
+    ).decode("utf-8")
     # llvm-objdump returns 0 for some things that are anything but successful completion.
     lines_split = lines.splitlines()
     # 'invalid', 'expected' and 'unexpected' are too generic
     # here so also check that we do not get 'useful' output.
-    if len(lines_split) < 10 and (re.match('.*(is not a Mach-O|invalid|expected|unexpected).*',
-                                           lines, re.MULTILINE)):
+    if len(lines_split) < 10 and (
+        re.match(
+            ".*(is not a Mach-O|invalid|expected|unexpected).*", lines, re.MULTILINE
+        )
+    ):
         raise CalledProcessError
     return _get_matching_load_commands(lines_split, cb_filter)
 
@@ -178,16 +194,16 @@ def otool(path, build_prefix=None, cb_filter=is_dylib_info):
 def get_dylibs(path, build_prefix=None):
     """Return a list of the loaded dylib pathnames"""
     dylib_loads = otool(path, build_prefix, is_load_dylib)
-    return [dylib_load['name'] for dylib_load in dylib_loads]
+    return [dylib_load["name"] for dylib_load in dylib_loads]
 
 
 def get_id(path, build_prefix=None):
     """Returns the id name of the Mach-O file `path` or an empty string"""
     dylib_loads = otool(path, build_prefix, is_id_dylib)
     try:
-        return [dylib_load['name'] for dylib_load in dylib_loads][0]
+        return [dylib_load["name"] for dylib_load in dylib_loads][0]
     except:
-        return ''
+        return ""
 
 
 def get_rpaths(path):
@@ -205,18 +221,18 @@ def _chmod(filename, mode):
 
 
 def install_name_tool(args, build_prefix=None, verbose=False):
-    args_full = [find_preferably_prefixed_executable('install_name_tool', build_prefix)]
+    args_full = [find_preferably_prefixed_executable("install_name_tool", build_prefix)]
     args_full.extend(args)
     if verbose:
-        print(' '.join(args_full))
+        print(" ".join(args_full))
     old_mode = stat.S_IMODE(os.stat(args[-1]).st_mode)
     new_mode = old_mode | stat.S_IWUSR
     if old_mode != new_mode:
         _chmod(args[-1], new_mode)
     subproc = Popen(args_full, stdout=PIPE, stderr=PIPE)
     out, err = subproc.communicate()
-    out = out.decode('utf-8')
-    err = err.decode('utf-8')
+    out = out.decode("utf-8")
+    err = err.decode("utf-8")
     if old_mode != new_mode:
         _chmod(args[-1], old_mode)
     return subproc.returncode, out, err
@@ -224,7 +240,7 @@ def install_name_tool(args, build_prefix=None, verbose=False):
 
 def add_rpath(path, rpath, build_prefix=None, verbose=False):
     """Add an `rpath` to the Mach-O file at `path`"""
-    args = ['-add_rpath', rpath, path]
+    args = ["-add_rpath", rpath, path]
     code, _, stderr = install_name_tool(args, build_prefix)
     if "Mach-O dynamic shared library stub file" in stderr:
         print("Skipping Mach-O dynamic shared library stub file %s\n" % path)
@@ -235,13 +251,12 @@ def add_rpath(path, rpath, build_prefix=None, verbose=False):
     else:
         print(stderr, file=sys.stderr)
         if code:
-            raise RuntimeError("install_name_tool failed with exit status %d"
-        % code)
+            raise RuntimeError("install_name_tool failed with exit status %d" % code)
 
 
 def delete_rpath(path, rpath, verbose=False):
     """Delete an `rpath` from the Mach-O file at `path`"""
-    args = ['-delete_rpath', rpath, path]
+    args = ["-delete_rpath", rpath, path]
     code, _, stderr = install_name_tool(args)
     if "Mach-O dynamic shared library stub file" in stderr:
         print("Skipping Mach-O dynamic shared library stub file %s\n" % path)
@@ -252,8 +267,7 @@ def delete_rpath(path, rpath, verbose=False):
     else:
         print(stderr, file=sys.stderr)
         if code:
-            raise RuntimeError("install_name_tool failed with exit status %d"
-        % code)
+            raise RuntimeError("install_name_tool failed with exit status %d" % code)
 
 
 def install_name_change(path, build_prefix, cb_func, dylibs, verbose=False):
@@ -276,10 +290,10 @@ def install_name_change(path, build_prefix, cb_func, dylibs, verbose=False):
     ret = True
     for index, new_name in changes:
         args = []
-        if dylibs[index]['cmd'] == 'LC_ID_DYLIB':
-            args.extend(('-id', new_name, path))
+        if dylibs[index]["cmd"] == "LC_ID_DYLIB":
+            args.extend(("-id", new_name, path))
         else:
-            args.extend(('-change', dylibs[index]['name'], new_name, path))
+            args.extend(("-change", dylibs[index]["name"], new_name, path))
         code, _, stderr = install_name_tool(args, build_prefix)
         if "Mach-O dynamic shared library stub file" in stderr:
             print("Skipping Mach-O dynamic shared library stub file %s" % path)
@@ -288,12 +302,14 @@ def install_name_change(path, build_prefix, cb_func, dylibs, verbose=False):
         else:
             print(stderr, file=sys.stderr)
         if code:
-            raise RuntimeError("install_name_tool failed with exit status %d, stderr of:\n%s"
-                % (code, stderr))
+            raise RuntimeError(
+                "install_name_tool failed with exit status %d, stderr of:\n%s"
+                % (code, stderr)
+            )
     return ret
 
 
-if __name__ == '__main__':
-    if sys.platform == 'darwin':
-        for path in '/bin/ls', '/etc/locate.rc':
+if __name__ == "__main__":
+    if sys.platform == "darwin":
+        for path in "/bin/ls", "/etc/locate.rc":
             print(path, is_macho(path))

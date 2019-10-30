@@ -55,7 +55,7 @@ def test_debug_recipe_default_path(testing_config):
     activation_string = api.debug(recipe_path, config=testing_config)
     assert activation_string and "debug_1" in activation_string
     _, work_dir, _, src_command, env_activation_script = activation_string.split()
-    _shell_cmd = shell_cmd + [' '.join((src_command, env_activation_script))]
+    _shell_cmd = shell_cmd + [" ".join((src_command, env_activation_script))]
     subprocess.check_call(_shell_cmd, cwd=work_dir)
     check_build_files_present(work_dir, True)
     check_test_files_present(work_dir, False)
@@ -63,13 +63,12 @@ def test_debug_recipe_default_path(testing_config):
 
 
 @pytest.mark.skipif(
-    utils.on_win and sys.version_info <= (3, 4),
-    reason="Skipping on windows and vc<14"
+    utils.on_win and sys.version_info <= (3, 4), reason="Skipping on windows and vc<14"
 )
 def test_debug_package_default_path(testing_config):
     activation_string = api.debug(tarball_path, config=testing_config)
     _, work_dir, _, src_command, env_activation_script = activation_string.split()
-    _shell_cmd = shell_cmd + [' '.join((src_command, env_activation_script))]
+    _shell_cmd = shell_cmd + [" ".join((src_command, env_activation_script))]
     subprocess.check_call(_shell_cmd, cwd=work_dir)
     check_build_files_present(work_dir, False)
     check_test_files_present(work_dir, True)
@@ -81,7 +80,7 @@ def test_debug_recipe_custom_path(testing_workdir):
     activation_string = api.debug(recipe_path, path=testing_workdir)
     assert activation_string and "debug_1" not in activation_string
     _, work_dir, _, src_command, env_activation_script = activation_string.split()
-    _shell_cmd = shell_cmd + [' '.join((src_command, env_activation_script))]
+    _shell_cmd = shell_cmd + [" ".join((src_command, env_activation_script))]
     subprocess.check_call(_shell_cmd, cwd=work_dir)
     check_build_files_present(work_dir, True)
     check_test_files_present(work_dir, False)
@@ -91,7 +90,7 @@ def test_debug_recipe_custom_path(testing_workdir):
 def test_debug_package_custom_path(testing_workdir):
     activation_string = api.debug(tarball_path, path=testing_workdir)
     _, work_dir, _, src_command, env_activation_script = activation_string.split()
-    _shell_cmd = shell_cmd + [' '.join((src_command, env_activation_script))]
+    _shell_cmd = shell_cmd + [" ".join((src_command, env_activation_script))]
     subprocess.check_call(_shell_cmd, cwd=work_dir)
     check_build_files_present(work_dir, False)
     check_test_files_present(work_dir, True)
@@ -101,7 +100,7 @@ def test_debug_package_custom_path(testing_workdir):
 def test_specific_output():
     activation_string = api.debug(ambiguous_recipe_path, output_id="output1*")
     _, work_dir, _, src_command, env_activation_script = activation_string.split()
-    _shell_cmd = shell_cmd + [' '.join((src_command, env_activation_script))]
+    _shell_cmd = shell_cmd + [" ".join((src_command, env_activation_script))]
     subprocess.check_call(_shell_cmd, cwd=work_dir)
     check_build_files_present(work_dir, True)
     check_test_files_present(work_dir, False)

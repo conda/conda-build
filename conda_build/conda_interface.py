@@ -14,7 +14,7 @@ from conda import __version__ as CONDA_VERSION
 def try_exports(module, attr):
     # this assumes conda.exports exists, so only use for conda 4.3 onward
     try:
-        return getattr(import_module('conda.exports'), attr)
+        return getattr(import_module("conda.exports"), attr)
     except AttributeError:
         return getattr(import_module(module), attr)
 
@@ -23,6 +23,7 @@ try:
     # This monkey patch is addressed at #1825. The ensure_use_local is an outdated vestige
     #   and no longer has any relevant effect.
     import conda.cli.common
+
     conda.cli.common.ensure_use_local = lambda x: None
 except ImportError:
     # no need to patch if it doesn't exist
@@ -36,11 +37,25 @@ conda_47 = parse_version(CONDA_VERSION) >= parse_version("4.7.0a0")
 conda_48 = parse_version(CONDA_VERSION) >= parse_version("4.8.0a0")
 
 if conda_44:
-    from conda.exports import display_actions, execute_actions, execute_plan, install_actions
+    from conda.exports import (
+        display_actions,
+        execute_actions,
+        execute_plan,
+        install_actions,
+    )
 else:
-    from conda.plan import display_actions, execute_actions, execute_plan, install_actions
+    from conda.plan import (
+        display_actions,
+        execute_actions,
+        execute_plan,
+        install_actions,
+    )
 
-display_actions, execute_actions, execute_plan = display_actions, execute_actions, execute_plan
+display_actions, execute_actions, execute_plan = (
+    display_actions,
+    execute_actions,
+    execute_plan,
+)
 install_actions = install_actions
 
 try:
@@ -52,32 +67,96 @@ _toposort = _toposort
 
 from conda.exports import TmpDownload, download, handle_proxy_407  # NOQA
 from conda.exports import untracked, walk_prefix  # NOQA
-from conda.exports import MatchSpec, NoPackagesFound, Resolve, Unsatisfiable, normalized_version  # NOQA
-from conda.exports import human_bytes, hashsum_file, md5_file, memoized, unix_path_to_win, win_path_to_unix, url_path  # NOQA
+from conda.exports import (
+    MatchSpec,
+    NoPackagesFound,
+    Resolve,
+    Unsatisfiable,
+    normalized_version,
+)  # NOQA
+from conda.exports import (
+    human_bytes,
+    hashsum_file,
+    md5_file,
+    memoized,
+    unix_path_to_win,
+    win_path_to_unix,
+    url_path,
+)  # NOQA
 from conda.exports import get_index  # NOQA
-from conda.exports import (Completer, InstalledPackages, add_parser_channels,
-                           add_parser_prefix,  # NOQA
-                           specs_from_args, spec_from_line, specs_from_url)  # NOQA
+from conda.exports import (
+    Completer,
+    InstalledPackages,
+    add_parser_channels,
+    add_parser_prefix,  # NOQA
+    specs_from_args,
+    spec_from_line,
+    specs_from_url,
+)  # NOQA
 from conda.exports import ArgumentParser  # NOQA
-from conda.exports import (is_linked, linked, linked_data, prefix_placeholder,  # NOQA
-                           rm_rf, symlink_conda, package_cache)  # NOQA
+from conda.exports import (
+    is_linked,
+    linked,
+    linked_data,
+    prefix_placeholder,  # NOQA
+    rm_rf,
+    symlink_conda,
+    package_cache,
+)  # NOQA
 from conda.exports import CondaSession  # NOQA
-from conda.exports import (PY3,  StringIO, input, iteritems, lchmod, string_types,  # NOQA
-                          text_type, TemporaryDirectory)  # NOQA
+from conda.exports import (
+    PY3,
+    StringIO,
+    input,
+    iteritems,
+    lchmod,
+    string_types,  # NOQA
+    text_type,
+    TemporaryDirectory,
+)  # NOQA
 from conda.exports import VersionOrder  # NOQA
 
 
 TmpDownload = TmpDownload
-download, handle_proxy_407, untracked, walk_prefix = download, handle_proxy_407, untracked, walk_prefix  # NOQA
+download, handle_proxy_407, untracked, walk_prefix = (
+    download,
+    handle_proxy_407,
+    untracked,
+    walk_prefix,
+)  # NOQA
 MatchSpec, Resolve, normalized_version = MatchSpec, Resolve, normalized_version
-human_bytes, hashsum_file, md5_file, memoized = human_bytes, hashsum_file, md5_file, memoized
-unix_path_to_win, win_path_to_unix, url_path = unix_path_to_win, win_path_to_unix, url_path
+human_bytes, hashsum_file, md5_file, memoized = (
+    human_bytes,
+    hashsum_file,
+    md5_file,
+    memoized,
+)
+unix_path_to_win, win_path_to_unix, url_path = (
+    unix_path_to_win,
+    win_path_to_unix,
+    url_path,
+)
 get_index, Completer, InstalledPackages = get_index, Completer, InstalledPackages
 add_parser_channels, add_parser_prefix = add_parser_channels, add_parser_prefix
-specs_from_args, spec_from_line, specs_from_url = specs_from_args, spec_from_line, specs_from_url
-is_linked, linked, linked_data, prefix_placeholder = is_linked, linked, linked_data, prefix_placeholder # NOQA
+specs_from_args, spec_from_line, specs_from_url = (
+    specs_from_args,
+    spec_from_line,
+    specs_from_url,
+)
+is_linked, linked, linked_data, prefix_placeholder = (
+    is_linked,
+    linked,
+    linked_data,
+    prefix_placeholder,
+)  # NOQA
 rm_rf, symlink_conda, package_cache = rm_rf, symlink_conda, package_cache
-PY3, input, iteritems, lchmod, string_types = PY3, input, iteritems, lchmod, string_types
+PY3, input, iteritems, lchmod, string_types = (
+    PY3,
+    input,
+    iteritems,
+    lchmod,
+    string_types,
+)
 text_type, TemporaryDirectory = text_type, TemporaryDirectory
 ArgumentParser, CondaSession, VersionOrder = ArgumentParser, CondaSession, VersionOrder
 
@@ -96,6 +175,7 @@ configparser = configparser
 
 
 from conda.exports import FileMode, PathType  # NOQA
+
 FileMode, PathType = FileMode, PathType
 from conda.exports import EntityEncoder  # NOQA
 
@@ -114,7 +194,9 @@ non_x86_linux_machines = try_exports("conda.base.context", "non_x86_linux_machin
 context = try_exports("conda.base.context", "context")
 context_get_prefix = try_exports("conda.base.context", "get_prefix")
 reset_context = try_exports("conda.base.context", "reset_context")
-get_conda_build_local_url = try_exports("conda.models.channel", "get_conda_build_local_url")
+get_conda_build_local_url = try_exports(
+    "conda.models.channel", "get_conda_build_local_url"
+)
 
 binstar_upload = context.binstar_upload
 bits = context.bits
@@ -130,7 +212,7 @@ create_default_packages = context.create_default_packages
 
 get_rc_urls = lambda: list(context.channels)
 get_prefix = partial(context_get_prefix, context)
-cc_conda_build = context.conda_build if hasattr(context, 'conda_build') else {}
+cc_conda_build = context.conda_build if hasattr(context, "conda_build") else {}
 
 try:
     from conda.exports import Channel
@@ -139,15 +221,24 @@ except:
 get_conda_channel = Channel.from_value
 
 # disallow softlinks.  This avoids a lot of dumb issues, at the potential cost of disk space.
-os.environ[str('CONDA_ALLOW_SOFTLINKS')] = str('false')
+os.environ[str("CONDA_ALLOW_SOFTLINKS")] = str("false")
 reset_context()
 
 get_local_urls = lambda: list(get_conda_build_local_url()) or []
 arch_name = context.arch_name
 
 
-CondaError, CondaHTTPError, get_prefix, LinkError = CondaError, CondaHTTPError, get_prefix, LinkError  # NOQA
-LockError, non_x86_linux_machines, NoPackagesFoundError = LockError, non_x86_linux_machines, NoPackagesFoundError  # NOQA
+CondaError, CondaHTTPError, get_prefix, LinkError = (
+    CondaError,
+    CondaHTTPError,
+    get_prefix,
+    LinkError,
+)  # NOQA
+LockError, non_x86_linux_machines, NoPackagesFoundError = (
+    LockError,
+    non_x86_linux_machines,
+    NoPackagesFoundError,
+)  # NOQA
 PaddingError, UnsatisfiableError = PaddingError, UnsatisfiableError
 
 
@@ -182,23 +273,27 @@ class CrossPlatformStLink(object):
             GENERIC_READ = 0x80000000
             FILE_SHARE_READ = 0x00000001
             OPEN_EXISTING = 3
-            hfile = cls.CreateFile(path, GENERIC_READ, FILE_SHARE_READ, None,
-                                   OPEN_EXISTING, 0, None)
+            hfile = cls.CreateFile(
+                path, GENERIC_READ, FILE_SHARE_READ, None, OPEN_EXISTING, 0, None
+            )
             if hfile is None:
                 from ctypes import WinError
+
                 raise WinError(
-                    "Could not determine determine number of hardlinks for %s" % path)
+                    "Could not determine determine number of hardlinks for %s" % path
+                )
             info = cls.BY_HANDLE_FILE_INFORMATION()
             rv = cls.GetFileInformationByHandle(hfile, info)
             cls.CloseHandle(hfile)
             if rv == 0:
                 from ctypes import WinError
+
                 raise WinError("Could not determine file information for %s" % path)
             return info.nNumberOfLinks
 
     @classmethod
     def _initialize(cls):
-        if os.name != 'nt':
+        if os.name != "nt":
             cls._st_nlink = cls._standard_st_nlink
         else:
             # http://msdn.microsoft.com/en-us/library/windows/desktop/aa363858
@@ -207,8 +302,15 @@ class CrossPlatformStLink(object):
             from ctypes.wintypes import DWORD, HANDLE, BOOL
 
             cls.CreateFile = ctypes.windll.kernel32.CreateFileW
-            cls.CreateFile.argtypes = [ctypes.c_wchar_p, DWORD, DWORD, ctypes.c_void_p,
-                                       DWORD, DWORD, HANDLE]
+            cls.CreateFile.argtypes = [
+                ctypes.c_wchar_p,
+                DWORD,
+                DWORD,
+                ctypes.c_void_p,
+                DWORD,
+                DWORD,
+                HANDLE,
+            ]
             cls.CreateFile.restype = HANDLE
 
             # http://msdn.microsoft.com/en-us/library/windows/desktop/ms724211
@@ -217,27 +319,32 @@ class CrossPlatformStLink(object):
             cls.CloseHandle.restype = BOOL
 
             class FILETIME(ctypes.Structure):
-                _fields_ = [("dwLowDateTime", DWORD),
-                            ("dwHighDateTime", DWORD)]
+                _fields_ = [("dwLowDateTime", DWORD), ("dwHighDateTime", DWORD)]
 
             class BY_HANDLE_FILE_INFORMATION(ctypes.Structure):
-                _fields_ = [("dwFileAttributes", DWORD),
-                            ("ftCreationTime", FILETIME),
-                            ("ftLastAccessTime", FILETIME),
-                            ("ftLastWriteTime", FILETIME),
-                            ("dwVolumeSerialNumber", DWORD),
-                            ("nFileSizeHigh", DWORD),
-                            ("nFileSizeLow", DWORD),
-                            ("nNumberOfLinks", DWORD),
-                            ("nFileIndexHigh", DWORD),
-                            ("nFileIndexLow", DWORD)]
+                _fields_ = [
+                    ("dwFileAttributes", DWORD),
+                    ("ftCreationTime", FILETIME),
+                    ("ftLastAccessTime", FILETIME),
+                    ("ftLastWriteTime", FILETIME),
+                    ("dwVolumeSerialNumber", DWORD),
+                    ("nFileSizeHigh", DWORD),
+                    ("nFileSizeLow", DWORD),
+                    ("nNumberOfLinks", DWORD),
+                    ("nFileIndexHigh", DWORD),
+                    ("nFileIndexLow", DWORD),
+                ]
 
             cls.BY_HANDLE_FILE_INFORMATION = BY_HANDLE_FILE_INFORMATION
 
             # http://msdn.microsoft.com/en-us/library/windows/desktop/aa364952
-            cls.GetFileInformationByHandle = ctypes.windll.kernel32.GetFileInformationByHandle
-            cls.GetFileInformationByHandle.argtypes = [HANDLE,
-                                                       POINTER(BY_HANDLE_FILE_INFORMATION)]
+            cls.GetFileInformationByHandle = (
+                ctypes.windll.kernel32.GetFileInformationByHandle
+            )
+            cls.GetFileInformationByHandle.argtypes = [
+                HANDLE,
+                POINTER(BY_HANDLE_FILE_INFORMATION),
+            ]
             cls.GetFileInformationByHandle.restype = BOOL
 
             cls._st_nlink = cls._windows_st_nlink
@@ -254,13 +361,14 @@ def which_package(path):
     only one package.
     """
     from os.path import abspath, join
+
     path = abspath(path)
     prefix = which_prefix(path)
     if prefix is None:
         raise RuntimeError("could not determine conda prefix from: %s" % path)
     for dist in linked(prefix):
         meta = is_linked(prefix, dist)
-        if any(abspath(join(prefix, f)) == path for f in meta['files']):
+        if any(abspath(join(prefix, f)) == path for f in meta["files"]):
             yield dist
 
 
@@ -270,10 +378,11 @@ def which_prefix(path):
     environment prefix in which the file in located
     """
     from os.path import abspath, join, isdir, dirname
+
     prefix = abspath(path)
     iteration = 0
     while iteration < 20:
-        if isdir(join(prefix, 'conda-meta')):
+        if isdir(join(prefix, "conda-meta")):
             # we found the it, so let's return it
             break
         if prefix == dirname(prefix):
@@ -289,16 +398,20 @@ def get_installed_version(prefix, pkgs):
     """Primarily used by conda-forge, but may be useful in general for checking when a package
     needs to be updated"""
     from conda_build.utils import ensure_list
+
     pkgs = ensure_list(pkgs)
     linked_pkgs = linked(prefix)
     versions = {}
     for pkg in pkgs:
-        vers_inst = [dist.split('::', 1)[-1].rsplit('-', 2)[1] for dist in linked_pkgs
-            if dist.split('::', 1)[-1].rsplit('-', 2)[0] == pkg]
+        vers_inst = [
+            dist.split("::", 1)[-1].rsplit("-", 2)[1]
+            for dist in linked_pkgs
+            if dist.split("::", 1)[-1].rsplit("-", 2)[0] == pkg
+        ]
         versions[pkg] = vers_inst[0] if len(vers_inst) == 1 else None
     return versions
 
 
 # when deactivating envs (e.g. switching from root to build/test) this env var is used,
 # except the PR that removed this has been reverted (for now) and Windows doesnt need it.
-env_path_backup_var_exists = os.environ.get('CONDA_PATH_BACKUP', None)
+env_path_backup_var_exists = os.environ.get("CONDA_PATH_BACKUP", None)

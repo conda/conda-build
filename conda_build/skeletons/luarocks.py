@@ -13,7 +13,7 @@ from glob import glob
 import json
 from sys import platform as _platform
 
-INDENT = '\n    - '
+INDENT = "\n    - "
 
 rockspec_parser = """
 local ok,cjson = pcall(require, "cjson")
@@ -142,23 +142,19 @@ def add_parser(repos):
         """,
     )
     luarocks.add_argument(
-        "packages",
-        nargs='+',
-        help="luarocks packages to create recipe skeletons for.",
+        "packages", nargs="+", help="luarocks packages to create recipe skeletons for."
     )
     luarocks.add_argument(
         "--output-dir",
         help="Directory to write recipes to (default: %(default)s).",
         default=".",
     )
-    luarocks.add_argument(
-        "--version",
-        help="Version to use. Applies to all packages.",
-    )
+    luarocks.add_argument("--version", help="Version to use. Applies to all packages.")
     luarocks.add_argument(
         "--recursive",
-        action='store_true',
-        help='Create recipes for dependencies if they do not already exist.')
+        action="store_true",
+        help="Create recipes for dependencies if they do not already exist.",
+    )
 
 
 def package_exists(package_name):
@@ -243,33 +239,37 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False):
     while packages:
         package = packages.pop()
 
-        packagename = "lua-%s" % package.lower() if package[:4] != "lua-" else package.lower()
-        d = package_dicts.setdefault(package,
+        packagename = (
+            "lua-%s" % package.lower() if package[:4] != "lua-" else package.lower()
+        )
+        d = package_dicts.setdefault(
+            package,
             {
-                'packagename': packagename,
-                'version': "0.0",
-                'filename': "",
-                'url': "",
-                'md5': "",
-                'usemd5': "# ",
-                'usefile': "# ",
-                'usegit': "# ",
-                'usegittag': "# ",
-                'usegitrev': "# ",
-                'gittag': "",
-                'gitrev': "",
-                'noarch_python_comment': "# ",
-                'build_depends': "",
-                'run_depends': "",
-                'test_comment': "",
-                'entry_comment': "",
-                'test_commands': "",
-                'home_comment': "# ",
-                'homeurl': "",
-                'license': "Unknown",
-                'summary_comment': "# ",
-                'summary': "",
-            })
+                "packagename": packagename,
+                "version": "0.0",
+                "filename": "",
+                "url": "",
+                "md5": "",
+                "usemd5": "# ",
+                "usefile": "# ",
+                "usegit": "# ",
+                "usegittag": "# ",
+                "usegitrev": "# ",
+                "gittag": "",
+                "gitrev": "",
+                "noarch_python_comment": "# ",
+                "build_depends": "",
+                "run_depends": "",
+                "test_comment": "",
+                "entry_comment": "",
+                "test_commands": "",
+                "home_comment": "# ",
+                "homeurl": "",
+                "license": "Unknown",
+                "summary_comment": "# ",
+                "summary": "",
+            },
+        )
 
         # Download rockspec
         o = subprocess.call(["luarocks", "download", package, "--rockspec"])
@@ -280,67 +280,68 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False):
         fs = glob(package + "*.rockspec")
         if len(fs) != 1:
             raise Exception("Failed to download rockspec")
-        d['rockspec_file'] = fs[0]
+        d["rockspec_file"] = fs[0]
 
         # Parse the rockspec into a dictionary
-        p = subprocess.Popen(["lua", "-e", rockspec_parser % d['rockspec_file']],
-                             stdout=subprocess.PIPE)
+        p = subprocess.Popen(
+            ["lua", "-e", rockspec_parser % d["rockspec_file"]], stdout=subprocess.PIPE
+        )
         out, err = p.communicate()
         if "ERROR" in out:
             raise Exception(out.replace("ERROR: ", ""))
         spec = json.loads(out)
 
         # Gather the basic details
-        d['rockname'] = getval(spec, "package")
-        d['version'] = getval(spec, "version")
-        d['version'] = "".join([c for c in d['version'] if c.isalnum()])
+        d["rockname"] = getval(spec, "package")
+        d["version"] = getval(spec, "version")
+        d["version"] = "".join([c for c in d["version"] if c.isalnum()])
         source = getval(spec, "source")
 
         # Figure out how to download the package, and from where
-        d['url'] = getval(source, "url")
-        ext = os.path.splitext(d['url'])[-1]
+        d["url"] = getval(source, "url")
+        ext = os.path.splitext(d["url"])[-1]
         if ext in [".zip", ".tar", ".tar.bz2", ".tar.xz", ".tar.gz"]:
-            d['usefile'] = ""
-            d['filename'] = os.path.split(d['url'])[-1]
+            d["usefile"] = ""
+            d["filename"] = os.path.split(d["url"])[-1]
             if "md5" in source:
                 md5 = getval(source, "md5")
                 if len(md5):
-                    d['md5'] = md5
-                    d['usemd5'] = ""
-        elif ext in [".git"] or d['url'][:4] == "git:":
-            d['usegit'] = ""
+                    d["md5"] = md5
+                    d["usemd5"] = ""
+        elif ext in [".git"] or d["url"][:4] == "git:":
+            d["usegit"] = ""
             # Check if we're using a tag or a commit
             if "tag" in source:
-                d['usegittag'] = ""
-                d['gittag'] = getval(source, "tag")
+                d["usegittag"] = ""
+                d["gittag"] = getval(source, "tag")
             elif "branch" in source:
-                d['usegittag'] = ""
-                d['gittag'] = getval(source, "branch")
-                warn_against_branches(d['gittag'])
+                d["usegittag"] = ""
+                d["gittag"] = getval(source, "branch")
+                warn_against_branches(d["gittag"])
             else:
-                d['usegittag'] = ""
-                d['gittag'] = "master"
-                warn_against_branches(d['gittag'])
+                d["usegittag"] = ""
+                d["gittag"] = "master"
+                warn_against_branches(d["gittag"])
 
         # Gather the description
         if "description" in spec:
             desc = getval(spec, "description")
             if "homepage" in desc:
-                d['homeurl'] = desc['homepage']
-                d['home_comment'] = ""
+                d["homeurl"] = desc["homepage"]
+                d["home_comment"] = ""
             if "summary" in desc:
-                d['summary'] = desc['summary']
-                d['summary_comment'] = ""
+                d["summary"] = desc["summary"]
+                d["summary_comment"] = ""
             if "license" in desc:
-                d['license'] = desc['license']
+                d["license"] = desc["license"]
 
         # Gather the dependencies
         if "dependencies" in spec:
             deps = getval(spec, "dependencies")
             if len(deps):
                 deps = ensure_base_deps([format_dep(dep) for dep in deps])
-                d['build_depends'] = INDENT.join([''] + deps)
-                d['run_depends'] = d['build_depends']
+                d["build_depends"] = INDENT.join([""] + deps)
+                d["run_depends"] = d["build_depends"]
 
     # Build some entry-point tests.
     if "build" in spec:
@@ -350,33 +351,38 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False):
             our_plat = "unix"
 
         modules = None
-        if "modules" in spec['build']:
-            modules = spec['build']["modules"]
-        elif "platforms" in spec['build']:
-            if our_plat in spec['build']['platforms']:
-                if "modules" in spec['build']['platforms'][our_plat]:
-                    modules = spec['build']['platforms'][our_plat]["modules"]
+        if "modules" in spec["build"]:
+            modules = spec["build"]["modules"]
+        elif "platforms" in spec["build"]:
+            if our_plat in spec["build"]["platforms"]:
+                if "modules" in spec["build"]["platforms"][our_plat]:
+                    modules = spec["build"]["platforms"][our_plat]["modules"]
         if modules:
-            d['test_commands'] = INDENT.join([''] +
-                            ["""lua -e "require '%s'\"""" % r
-                            for r in modules.keys()])
+            d["test_commands"] = INDENT.join(
+                [""] + ["""lua -e "require '%s'\"""" % r for r in modules.keys()]
+            )
 
     # If we didn't find any modules to import, import the base name
-    if d['test_commands'] == "":
-        d['test_commands'] = INDENT.join([''] + ["""lua -e "require '%s'" """ % d['rockname']])
+    if d["test_commands"] == "":
+        d["test_commands"] = INDENT.join(
+            [""] + ["""lua -e "require '%s'" """ % d["rockname"]]
+        )
 
     # Build the luarocks skeleton
     os.chdir(cwd)
     for package in package_dicts:
         d = package_dicts[package]
-        name = d['packagename']
+        name = d["packagename"]
         os.makedirs(os.path.join(output_dir, name))
-        print("Writing recipe for %s to %s" % (package.lower(), os.path.join(output_dir, name)))
-        with open(os.path.join(output_dir, name, 'meta.yaml'), 'w') as f:
+        print(
+            "Writing recipe for %s to %s"
+            % (package.lower(), os.path.join(output_dir, name))
+        )
+        with open(os.path.join(output_dir, name, "meta.yaml"), "w") as f:
             f.write(LUAROCKS_META.format(**d))
-        with open(os.path.join(output_dir, name, 'build.sh'), 'w') as f:
+        with open(os.path.join(output_dir, name, "build.sh"), "w") as f:
             f.write(LUAROCKS_BUILD_SH.format(**d))
-        with open(os.path.join(output_dir, name, 'post-link.sh'), 'w') as f:
+        with open(os.path.join(output_dir, name, "post-link.sh"), "w") as f:
             f.write(LUAROCKS_POSTLINK_SH)
-        with open(os.path.join(output_dir, name, 'pre-unlink.sh'), 'w') as f:
+        with open(os.path.join(output_dir, name, "pre-unlink.sh"), "w") as f:
             f.write(LUAROCKS_PREUNLINK_SH.format(**d))

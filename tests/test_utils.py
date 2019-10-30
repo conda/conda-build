@@ -17,16 +17,18 @@ def makefile(name, contents=""):
     if not os.path.exists(path):
         os.makedirs(path)
 
-    with open(name, 'w') as f:
+    with open(name, "w") as f:
         f.write(contents)
 
 
-@pytest.mark.skipif(utils.on_win, reason="only unix has python version in site-packages path")
+@pytest.mark.skipif(
+    utils.on_win, reason="only unix has python version in site-packages path"
+)
 def test_get_site_packages():
     # https://github.com/conda/conda-build/issues/1055#issuecomment-250961576
     # crazy unreal python version that should show up in a second
-    crazy_path = os.path.join('/dummy', 'lib', 'python8.2', 'site-packages')
-    site_packages = utils.get_site_packages('/dummy', '8.2')
+    crazy_path = os.path.join("/dummy", "lib", "python8.2", "site-packages")
+    site_packages = utils.get_site_packages("/dummy", "8.2")
     assert site_packages == crazy_path
 
 
@@ -38,211 +40,249 @@ def test_prepend_sys_path():
 
 
 def test_copy_source_tree(namespace_setup):
-    dst = os.path.join(namespace_setup, 'dest')
-    utils.copy_into(os.path.join(namespace_setup, 'namespace'), dst)
-    assert os.path.isfile(os.path.join(dst, 'package', 'module.py'))
+    dst = os.path.join(namespace_setup, "dest")
+    utils.copy_into(os.path.join(namespace_setup, "namespace"), dst)
+    assert os.path.isfile(os.path.join(dst, "package", "module.py"))
 
 
 def test_merge_namespace_trees(namespace_setup):
-    dep = os.path.join(namespace_setup, 'other_tree', 'namespace', 'package', 'dependency.py')
+    dep = os.path.join(
+        namespace_setup, "other_tree", "namespace", "package", "dependency.py"
+    )
     makefile(dep)
 
-    utils.copy_into(os.path.join(namespace_setup, 'other_tree'), namespace_setup)
-    assert os.path.isfile(os.path.join(namespace_setup, 'namespace', 'package',
-                                                'module.py'))
+    utils.copy_into(os.path.join(namespace_setup, "other_tree"), namespace_setup)
+    assert os.path.isfile(
+        os.path.join(namespace_setup, "namespace", "package", "module.py")
+    )
     assert os.path.isfile(dep)
 
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope="function")
 def namespace_setup(testing_workdir, request):
-    namespace = os.path.join(testing_workdir, 'namespace')
-    package = os.path.join(namespace, 'package')
+    namespace = os.path.join(testing_workdir, "namespace")
+    package = os.path.join(namespace, "package")
     makefile(os.path.join(package, "module.py"))
     return testing_workdir
 
 
 @pytest.mark.sanity
 def test_disallow_merge_conflicts(namespace_setup, testing_config):
-    duplicate = os.path.join(namespace_setup, 'dupe', 'namespace', 'package', 'module.py')
+    duplicate = os.path.join(
+        namespace_setup, "dupe", "namespace", "package", "module.py"
+    )
     makefile(duplicate)
     with pytest.raises(IOError):
-        utils.merge_tree(os.path.dirname(duplicate), os.path.join(namespace_setup, 'namespace',
-                                                 'package'))
+        utils.merge_tree(
+            os.path.dirname(duplicate),
+            os.path.join(namespace_setup, "namespace", "package"),
+        )
 
 
 @pytest.mark.sanity
 def test_disallow_in_tree_merge(testing_workdir):
-    with open('testfile', 'w') as f:
+    with open("testfile", "w") as f:
         f.write("test")
     with pytest.raises(AssertionError):
-        utils.merge_tree(testing_workdir, os.path.join(testing_workdir, 'subdir'))
+        utils.merge_tree(testing_workdir, os.path.join(testing_workdir, "subdir"))
 
 
 def test_relative_default():
     for f, r in [
-            ('bin/python', '../lib'),
-            ('lib/libhdf5.so', '.'),
-            ('lib/python2.6/foobar.so', '..'),
-            ('lib/python2.6/lib-dynload/zlib.so', '../..'),
-            ('lib/python2.6/site-packages/pyodbc.so', '../..'),
-            ('lib/python2.6/site-packages/bsdiff4/core.so', '../../..'),
-            ('xyz', './lib'),
-            ('bin/somedir/cmd', '../../lib'),
+        ("bin/python", "../lib"),
+        ("lib/libhdf5.so", "."),
+        ("lib/python2.6/foobar.so", ".."),
+        ("lib/python2.6/lib-dynload/zlib.so", "../.."),
+        ("lib/python2.6/site-packages/pyodbc.so", "../.."),
+        ("lib/python2.6/site-packages/bsdiff4/core.so", "../../.."),
+        ("xyz", "./lib"),
+        ("bin/somedir/cmd", "../../lib"),
     ]:
         assert utils.relative(f) == r
 
 
 def test_relative_lib():
     for f, r in [
-            ('bin/python', '../lib'),
-            ('lib/libhdf5.so', '.'),
-            ('lib/python2.6/foobar.so', '..'),
-            ('lib/python2.6/lib-dynload/zlib.so', '../..'),
-            ('lib/python2.6/site-packages/pyodbc.so', '../..'),
-            ('lib/python2.6/site-packages/bsdiff3/core.so', '../../..'),
-            ('xyz', './lib'),
-            ('bin/somedir/cmd', '../../lib'),
-            ('bin/somedir/somedir2/cmd', '../../../lib'),
+        ("bin/python", "../lib"),
+        ("lib/libhdf5.so", "."),
+        ("lib/python2.6/foobar.so", ".."),
+        ("lib/python2.6/lib-dynload/zlib.so", "../.."),
+        ("lib/python2.6/site-packages/pyodbc.so", "../.."),
+        ("lib/python2.6/site-packages/bsdiff3/core.so", "../../.."),
+        ("xyz", "./lib"),
+        ("bin/somedir/cmd", "../../lib"),
+        ("bin/somedir/somedir2/cmd", "../../../lib"),
     ]:
-        assert utils.relative(f, 'lib') == r
+        assert utils.relative(f, "lib") == r
 
 
 def test_relative_subdir():
     for f, r in [
-            ('lib/libhdf5.so', './sub'),
-            ('lib/sub/libhdf5.so', '.'),
-            ('bin/python', '../lib/sub'),
-            ('bin/somedir/cmd', '../../lib/sub'),
+        ("lib/libhdf5.so", "./sub"),
+        ("lib/sub/libhdf5.so", "."),
+        ("bin/python", "../lib/sub"),
+        ("bin/somedir/cmd", "../../lib/sub"),
     ]:
-        assert utils.relative(f, 'lib/sub') == r
+        assert utils.relative(f, "lib/sub") == r
 
 
 def test_relative_prefix():
     for f, r in [
-            ('xyz', '.'),
-            ('a/xyz', '..'),
-            ('a/b/xyz', '../..'),
-            ('a/b/c/xyz', '../../..'),
-            ('a/b/c/d/xyz', '../../../..'),
+        ("xyz", "."),
+        ("a/xyz", ".."),
+        ("a/b/xyz", "../.."),
+        ("a/b/c/xyz", "../../.."),
+        ("a/b/c/d/xyz", "../../../.."),
     ]:
-        assert utils.relative(f, '.') == r
+        assert utils.relative(f, ".") == r
 
 
 def test_relative_2():
     for f, r in [
-            ('a/b/c/d/libhdf5.so', '../..'),
-            ('a/b/c/libhdf5.so', '..'),
-            ('a/b/libhdf5.so', '.'),
-            ('a/libhdf5.so', './b'),
-            ('x/x/libhdf5.so', '../../a/b'),
-            ('x/b/libhdf5.so', '../../a/b'),
-            ('x/libhdf5.so', '../a/b'),
-            ('libhdf5.so', './a/b'),
+        ("a/b/c/d/libhdf5.so", "../.."),
+        ("a/b/c/libhdf5.so", ".."),
+        ("a/b/libhdf5.so", "."),
+        ("a/libhdf5.so", "./b"),
+        ("x/x/libhdf5.so", "../../a/b"),
+        ("x/b/libhdf5.so", "../../a/b"),
+        ("x/libhdf5.so", "../a/b"),
+        ("libhdf5.so", "./a/b"),
     ]:
-        assert utils.relative(f, 'a/b') == r
+        assert utils.relative(f, "a/b") == r
 
 
 def test_relative_3():
     for f, r in [
-            ('a/b/c/d/libhdf5.so', '..'),
-            ('a/b/c/libhdf5.so', '.'),
-            ('a/b/libhdf5.so', './c'),
-            ('a/libhdf5.so', './b/c'),
-            ('libhdf5.so', './a/b/c'),
-            ('a/b/x/libhdf5.so', '../c'),
-            ('a/x/x/libhdf5.so', '../../b/c'),
-            ('x/x/x/libhdf5.so', '../../../a/b/c'),
-            ('x/x/libhdf5.so', '../../a/b/c'),
-            ('x/libhdf5.so', '../a/b/c'),
+        ("a/b/c/d/libhdf5.so", ".."),
+        ("a/b/c/libhdf5.so", "."),
+        ("a/b/libhdf5.so", "./c"),
+        ("a/libhdf5.so", "./b/c"),
+        ("libhdf5.so", "./a/b/c"),
+        ("a/b/x/libhdf5.so", "../c"),
+        ("a/x/x/libhdf5.so", "../../b/c"),
+        ("x/x/x/libhdf5.so", "../../../a/b/c"),
+        ("x/x/libhdf5.so", "../../a/b/c"),
+        ("x/libhdf5.so", "../a/b/c"),
     ]:
-        assert utils.relative(f, 'a/b/c') == r
+        assert utils.relative(f, "a/b/c") == r
 
 
 def test_relative_4():
     for f, r in [
-            ('a/b/c/d/libhdf5.so', '.'),
-            ('a/b/c/x/libhdf5.so', '../d'),
-            ('a/b/x/x/libhdf5.so', '../../c/d'),
-            ('a/x/x/x/libhdf5.so', '../../../b/c/d'),
-            ('x/x/x/x/libhdf5.so', '../../../../a/b/c/d'),
+        ("a/b/c/d/libhdf5.so", "."),
+        ("a/b/c/x/libhdf5.so", "../d"),
+        ("a/b/x/x/libhdf5.so", "../../c/d"),
+        ("a/x/x/x/libhdf5.so", "../../../b/c/d"),
+        ("x/x/x/x/libhdf5.so", "../../../../a/b/c/d"),
     ]:
-        assert utils.relative(f, 'a/b/c/d') == r
+        assert utils.relative(f, "a/b/c/d") == r
 
 
 def test_expand_globs(testing_workdir):
-    sub_dir = os.path.join(testing_workdir, 'sub1')
+    sub_dir = os.path.join(testing_workdir, "sub1")
     os.mkdir(sub_dir)
-    ssub_dir = os.path.join(sub_dir, 'ssub1')
+    ssub_dir = os.path.join(sub_dir, "ssub1")
     os.mkdir(ssub_dir)
-    files = ['abc', 'acb',
-             os.path.join(sub_dir, 'def'),
-             os.path.join(sub_dir, 'abc'),
-             os.path.join(ssub_dir, 'ghi'),
-             os.path.join(ssub_dir, 'abc')]
+    files = [
+        "abc",
+        "acb",
+        os.path.join(sub_dir, "def"),
+        os.path.join(sub_dir, "abc"),
+        os.path.join(ssub_dir, "ghi"),
+        os.path.join(ssub_dir, "abc"),
+    ]
     for f in files:
-        with open(f, 'w') as _f:
-            _f.write('weee')
+        with open(f, "w") as _f:
+            _f.write("weee")
 
     # Test dirs
-    exp = utils.expand_globs([os.path.join('sub1', 'ssub1')], testing_workdir)
-    assert sorted(exp) == sorted([os.path.sep.join(('sub1', 'ssub1', 'ghi')),
-                                  os.path.sep.join(('sub1', 'ssub1', 'abc'))])
+    exp = utils.expand_globs([os.path.join("sub1", "ssub1")], testing_workdir)
+    assert sorted(exp) == sorted(
+        [
+            os.path.sep.join(("sub1", "ssub1", "ghi")),
+            os.path.sep.join(("sub1", "ssub1", "abc")),
+        ]
+    )
 
     # Test files
-    exp = sorted(utils.expand_globs(['abc', files[2]], testing_workdir))
-    assert exp == sorted(['abc', os.path.sep.join(('sub1', 'def'))])
+    exp = sorted(utils.expand_globs(["abc", files[2]], testing_workdir))
+    assert exp == sorted(["abc", os.path.sep.join(("sub1", "def"))])
 
     # Test globs
-    exp = sorted(utils.expand_globs(['a*', '*/*f', '**/*i'], testing_workdir))
-    assert exp == sorted(['abc', 'acb', os.path.sep.join(('sub1', 'def')),
-                          os.path.sep.join(('sub1', 'ssub1', 'ghi'))])
+    exp = sorted(utils.expand_globs(["a*", "*/*f", "**/*i"], testing_workdir))
+    assert exp == sorted(
+        [
+            "abc",
+            "acb",
+            os.path.sep.join(("sub1", "def")),
+            os.path.sep.join(("sub1", "ssub1", "ghi")),
+        ]
+    )
 
 
 def test_filter_files():
     # Files that should be filtered out.
-    files_list = ['.git/a', 'something/.git/a', '.git\\a', 'something\\.git\\a',
-                  'file.la', 'something/file.la', 'python.exe.conda_trash', 
-                  'bla.dll.conda_trash_1', 'bla.dll.conda_trash.conda_trash']
-    assert not utils.filter_files(files_list, '')
+    files_list = [
+        ".git/a",
+        "something/.git/a",
+        ".git\\a",
+        "something\\.git\\a",
+        "file.la",
+        "something/file.la",
+        "python.exe.conda_trash",
+        "bla.dll.conda_trash_1",
+        "bla.dll.conda_trash.conda_trash",
+    ]
+    assert not utils.filter_files(files_list, "")
 
     # Files that should *not* be filtered out.
     # Example of valid 'x.git' directory:
     #    lib/python3.4/site-packages/craftr/stl/craftr.utils.git/Craftrfile
-    files_list = ['a', 'x.git/a', 'something/x.git/a',
-                  'x.git\\a', 'something\\x.git\\a', 'something/.gitmodules',
-                  'some/template/directory/.gitignore', 'another.lab',
-                  'miniconda_trashcan.py', 'conda_trash_avoider.py']
-    assert len(utils.filter_files(files_list, '')) == len(files_list)
+    files_list = [
+        "a",
+        "x.git/a",
+        "something/x.git/a",
+        "x.git\\a",
+        "something\\x.git\\a",
+        "something/.gitmodules",
+        "some/template/directory/.gitignore",
+        "another.lab",
+        "miniconda_trashcan.py",
+        "conda_trash_avoider.py",
+    ]
+    assert len(utils.filter_files(files_list, "")) == len(files_list)
 
 
 @pytest.mark.serial
 def test_logger_filtering(caplog, capfd):
     import logging
+
     log = utils.get_logger(__name__, level=logging.DEBUG)
-    log.debug('test debug message')
-    log.info('test info message')
-    log.info('test duplicate message')
-    log.info('test duplicate message')
-    log.warn('test warn message')
-    log.error('test error message')
+    log.debug("test debug message")
+    log.info("test info message")
+    log.info("test duplicate message")
+    log.info("test duplicate message")
+    log.warn("test warn message")
+    log.error("test error message")
     out, err = capfd.readouterr()
-    assert 'test debug message' in out
-    assert 'test info message' in out
-    assert 'test warn message' not in out
-    assert 'test error message' not in out
-    assert 'test debug message' not in err
-    assert 'test info message' not in err
-    assert 'test warn message' in err
-    assert 'test error message' in err
-    assert caplog.text.count('duplicate') == 1
+    assert "test debug message" in out
+    assert "test info message" in out
+    assert "test warn message" not in out
+    assert "test error message" not in out
+    assert "test debug message" not in err
+    assert "test info message" not in err
+    assert "test warn message" in err
+    assert "test error message" in err
+    assert caplog.text.count("duplicate") == 1
     log.removeHandler(logging.StreamHandler(sys.stdout))
     log.removeHandler(logging.StreamHandler(sys.stderr))
 
 
 def test_logger_config_from_file(testing_workdir, caplog, capfd, mocker):
-    test_file = os.path.join(testing_workdir, 'build_log_config.yaml')
-    with open(test_file, 'w') as f:
-        f.write("""
+    test_file = os.path.join(testing_workdir, "build_log_config.yaml")
+    with open(test_file, "w") as f:
+        f.write(
+            """
 version: 1
 formatters:
   simple:
@@ -261,80 +301,91 @@ loggers:
 root:
   level: DEBUG
   handlers: [console]
-""".format(__name__))
-    cc_conda_build = mocker.patch.object(utils, 'cc_conda_build')
+""".format(
+                __name__
+            )
+        )
+    cc_conda_build = mocker.patch.object(utils, "cc_conda_build")
     cc_conda_build.get.return_value = test_file
     log = utils.get_logger(__name__)
     # default log level is INFO, but our config file should set level to DEBUG
-    log.warn('test message')
+    log.warn("test message")
     # output should have gone to stdout according to config above.
     out, err = capfd.readouterr()
-    assert 'test message' in out
+    assert "test message" in out
     # make sure that it is not in stderr - this is testing override of defaults.
-    assert 'test message' not in err
+    assert "test message" not in err
 
 
 def test_ensure_valid_spec():
-    assert utils.ensure_valid_spec('python') == 'python'
-    assert utils.ensure_valid_spec('python 2.7') == 'python 2.7.*'
-    assert utils.ensure_valid_spec('python 2.7.2') == 'python 2.7.2.*'
-    assert utils.ensure_valid_spec('python 2.7.12 0') == 'python 2.7.12 0'
-    assert utils.ensure_valid_spec('python >=2.7,<2.8') == 'python >=2.7,<2.8'
-    assert utils.ensure_valid_spec('numpy x.x') == 'numpy x.x'
-    assert utils.ensure_valid_spec(utils.MatchSpec('numpy x.x')) == utils.MatchSpec('numpy x.x')
+    assert utils.ensure_valid_spec("python") == "python"
+    assert utils.ensure_valid_spec("python 2.7") == "python 2.7.*"
+    assert utils.ensure_valid_spec("python 2.7.2") == "python 2.7.2.*"
+    assert utils.ensure_valid_spec("python 2.7.12 0") == "python 2.7.12 0"
+    assert utils.ensure_valid_spec("python >=2.7,<2.8") == "python >=2.7,<2.8"
+    assert utils.ensure_valid_spec("numpy x.x") == "numpy x.x"
+    assert utils.ensure_valid_spec(utils.MatchSpec("numpy x.x")) == utils.MatchSpec(
+        "numpy x.x"
+    )
 
 
 def test_insert_variant_versions(testing_metadata):
-    testing_metadata.meta['requirements']['build'] = ['python', 'numpy 1.13']
-    testing_metadata.config.variant = {'python': '2.7', 'numpy': '1.11'}
-    utils.insert_variant_versions(testing_metadata.meta.get('requirements', {}),
-                                  testing_metadata.config.variant, 'build')
+    testing_metadata.meta["requirements"]["build"] = ["python", "numpy 1.13"]
+    testing_metadata.config.variant = {"python": "2.7", "numpy": "1.11"}
+    utils.insert_variant_versions(
+        testing_metadata.meta.get("requirements", {}),
+        testing_metadata.config.variant,
+        "build",
+    )
     # this one gets inserted
-    assert 'python 2.7.*' in testing_metadata.meta['requirements']['build']
+    assert "python 2.7.*" in testing_metadata.meta["requirements"]["build"]
     # this one should not be altered
-    assert 'numpy 1.13' in testing_metadata.meta['requirements']['build']
+    assert "numpy 1.13" in testing_metadata.meta["requirements"]["build"]
     # the overall length does not change
-    assert len(testing_metadata.meta['requirements']['build']) == 2
+    assert len(testing_metadata.meta["requirements"]["build"]) == 2
 
 
 def test_subprocess_stats_call(testing_workdir):
     stats = {}
-    utils.check_call_env(['hostname'], stats=stats, cwd=testing_workdir)
+    utils.check_call_env(["hostname"], stats=stats, cwd=testing_workdir)
     assert stats
     stats = {}
-    out = utils.check_output_env(['hostname'], stats=stats, cwd=testing_workdir)
+    out = utils.check_output_env(["hostname"], stats=stats, cwd=testing_workdir)
     assert out
     assert stats
     with pytest.raises(subprocess.CalledProcessError):
-        utils.check_call_env(['bash', '-c', 'exit 1'], cwd=testing_workdir)
+        utils.check_call_env(["bash", "-c", "exit 1"], cwd=testing_workdir)
 
 
 def test_try_acquire_locks(testing_workdir):
     # Acquiring two unlocked locks should succeed.
-    lock1 = filelock.FileLock(os.path.join(testing_workdir, 'lock1'))
-    lock2 = filelock.FileLock(os.path.join(testing_workdir, 'lock2'))
+    lock1 = filelock.FileLock(os.path.join(testing_workdir, "lock1"))
+    lock2 = filelock.FileLock(os.path.join(testing_workdir, "lock2"))
     with utils.try_acquire_locks([lock1, lock2], timeout=1):
         pass
 
     # Acquiring the same lock twice should fail.
-    lock1_copy = filelock.FileLock(os.path.join(testing_workdir, 'lock1'))
+    lock1_copy = filelock.FileLock(os.path.join(testing_workdir, "lock1"))
     # Also verify that the error message contains the word "lock", since we rely
     # on this elsewhere.
-    with pytest.raises(BuildLockError, match='Failed to acquire all locks'):
+    with pytest.raises(BuildLockError, match="Failed to acquire all locks"):
         with utils.try_acquire_locks([lock1, lock1_copy], timeout=1):
             pass
 
+
 def test_get_lock(testing_workdir):
-    lock1 = utils.get_lock(os.path.join(testing_workdir, 'lock1'))
-    lock2 = utils.get_lock(os.path.join(testing_workdir, 'lock2'))
+    lock1 = utils.get_lock(os.path.join(testing_workdir, "lock1"))
+    lock2 = utils.get_lock(os.path.join(testing_workdir, "lock2"))
 
     # Different folders should get different lock files.
     assert lock1.lock_file != lock2.lock_file
 
     # Same folder should get the same lock file.
-    lock1_copy = utils.get_lock(os.path.join(testing_workdir, 'lock1'))
+    lock1_copy = utils.get_lock(os.path.join(testing_workdir, "lock1"))
     assert lock1.lock_file == lock1_copy.lock_file
 
     # ...even when not normalized
-    lock1_unnormalized = utils.get_lock(os.path.join(testing_workdir, 'foo', '..', 'lock1'))
+    lock1_unnormalized = utils.get_lock(
+        os.path.join(testing_workdir, "foo", "..", "lock1")
+    )
     assert lock1.lock_file == lock1_unnormalized.lock_file

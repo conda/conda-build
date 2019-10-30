@@ -17,11 +17,12 @@ def test_set_build_id(config):
     build_id = "test123"
     config.build_id = build_id
     # windows always uses the short prefix due to its limitation of 260 char paths
-    if sys.platform == 'win32':
+    if sys.platform == "win32":
         assert config.host_prefix == os.path.join(config.croot, build_id, "_h_env")
     else:
-        long_prefix = os.path.join(config.croot, build_id,
-                                   "_h_env" + "_placehold" * 25)[:config.prefix_length]
+        long_prefix = os.path.join(
+            config.croot, build_id, "_h_env" + "_placehold" * 25
+        )[: config.prefix_length]
         assert config.host_prefix == long_prefix
 
 
@@ -38,7 +39,7 @@ def test_long_build_prefix_length(config):
 def test_long_test_prefix_length(config):
     # defaults to True in conda-build 3.0+
     assert config.long_test_prefix
-    assert '_plac' in config.test_prefix
+    assert "_plac" in config.test_prefix
     config.long_test_prefix = True
     # The length of the testing prefix is reduced by 2 characters to check if the null
     # byte padding causes issues
@@ -49,38 +50,38 @@ def test_long_test_prefix_length(config):
 
 
 def test_build_id_at_end_of_long_build_prefix(config):
-    build_id = 'test123'
+    build_id = "test123"
     config.build_id = build_id
     assert build_id in config.host_prefix
 
 
 def test_create_config_with_subdir():
-    config = Config(host_subdir='steve-128')
-    assert config.host_platform == 'steve'
-    assert config.host_subdir == 'steve-128'
+    config = Config(host_subdir="steve-128")
+    assert config.host_platform == "steve"
+    assert config.host_subdir == "steve-128"
 
 
 def test_set_platform(config):
-    config.host_platform = 'steve'
+    config.host_platform = "steve"
     arch = config.arch
-    assert config.host_subdir == 'steve-' + str(arch)
+    assert config.host_subdir == "steve-" + str(arch)
 
 
 def test_set_subdir(config):
-    config.host_subdir = 'steve'
+    config.host_subdir = "steve"
     arch = config.arch
-    assert config.host_subdir == 'steve-' + str(arch)
-    assert config.host_platform == 'steve'
+    assert config.host_subdir == "steve-" + str(arch)
+    assert config.host_platform == "steve"
 
-    config.host_subdir = 'steve-128'
-    assert config.host_subdir == 'steve-128'
-    assert config.host_platform == 'steve'
-    assert config.host_arch == '128'
+    config.host_subdir = "steve-128"
+    assert config.host_subdir == "steve-128"
+    assert config.host_platform == "steve"
+    assert config.host_arch == "128"
 
 
 def test_set_bits(config):
     config.host_arch = 128
-    assert config.host_subdir == config.platform + '-' + str(128)
+    assert config.host_subdir == config.platform + "-" + str(128)
     assert config.host_arch == 128
 
 

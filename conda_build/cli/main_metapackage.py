@@ -20,7 +20,7 @@ logging.basicConfig(level=logging.INFO)
 
 def parse_args(args):
     p = ArgumentParser(
-        description='''
+        description="""
 Tool for building conda metapackages.  A metapackage is a package with no
 files, only metadata.  They are typically used to collect several packages
 together into a single package via dependencies.
@@ -28,43 +28,36 @@ together into a single package via dependencies.
 NOTE: Metapackages can also be created by creating a recipe with the necessary
 metadata in the meta.yaml, but a metapackage can be created entirely from the
 command line with the conda metapackage command.
-''',
+"""
     )
 
     p.add_argument(
         "--no-anaconda-upload",
         action="store_false",
         help="Do not ask to upload the package to anaconda.org.",
-        dest='anaconda_upload',
+        dest="anaconda_upload",
         default=binstar_upload,
     )
     p.add_argument(
         "--no-binstar-upload",
         action="store_false",
         help=argparse.SUPPRESS,
-        dest='anaconda_upload',
+        dest="anaconda_upload",
         default=binstar_upload,
     )
+    p.add_argument("--token", help="Token to pass through to anaconda upload")
     p.add_argument(
-        '--token',
-        help="Token to pass through to anaconda upload"
+        "--user", help="User/organization to upload packages to on anaconda.org"
     )
     p.add_argument(
-        '--user',
-        help="User/organization to upload packages to on anaconda.org"
-    )
-    p.add_argument(
-        '--label', action='append', dest='labels', default=[],
+        "--label",
+        action="append",
+        dest="labels",
+        default=[],
         help="Label argument to pass through to anaconda upload",
     )
-    p.add_argument(
-        "name",
-        help="Name of the created package.",
-    )
-    p.add_argument(
-        "version",
-        help="Version of the created package.",
-    )
+    p.add_argument("name", help="Name of the created package.")
+    p.add_argument("version", help="Version of the created package.")
     p.add_argument(
         "--build-number",
         type=int,
@@ -77,21 +70,16 @@ command line with the conda metapackage command.
         help="Build string for the package (default is automatically generated).",
     )
     p.add_argument(
-        "--dependencies", "-d",
-        nargs='*',
+        "--dependencies",
+        "-d",
+        nargs="*",
         default=(),
         help="""The dependencies of the package. To specify a version restriction for a
         dependency, wrap the dependency in quotes, like 'package >=2.0'.""",
     )
+    p.add_argument("--home", help="The homepage for the metapackage.")
     p.add_argument(
-        "--home",
-        help="The homepage for the metapackage.",
-
-    )
-    p.add_argument(
-        "--license",
-        help="The license of the metapackage.",
-        dest='license_name'
+        "--license", help="The license of the metapackage.", dest="license_name"
     )
     p.add_argument(
         "--summary",
@@ -102,7 +90,7 @@ command line with the conda metapackage command.
     )
     p.add_argument(
         "--entry-points",
-        nargs='*',
+        nargs="*",
         default=(),
         help="""Python entry points to create automatically. They should use the same
         syntax as in the meta.yaml of a recipe, e.g., --entry-points
@@ -117,7 +105,7 @@ command line with the conda metapackage command.
 
 def execute(args):
     _, args = parse_args(args)
-    channel_urls = args.__dict__.get('channel') or args.__dict__.get('channels') or ()
+    channel_urls = args.__dict__.get("channel") or args.__dict__.get("channels") or ()
     api.create_metapackage(channel_urls=channel_urls, **args.__dict__)
 
 

@@ -4,7 +4,7 @@ import distutils.command.bdist_conda
 
 setup(
     name="conda-build-test-project",
-    version='1.0',
+    version="1.0",
     distclass=distutils.command.bdist_conda.CondaDistribution,
     conda_buildnum=1,
     conda_features=[],
@@ -22,8 +22,6 @@ setup(
         "Programming Language :: Python :: 3.4",
     ],
     description="test package for testing conda-build",
-    packages=['conda_build_test'],
-    scripts=[
-        'bin/test-script-setup.py',
-    ],
+    packages=["conda_build_test"],
+    scripts=["bin/test-script-setup.py"],
 )

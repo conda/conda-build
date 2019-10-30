@@ -19,15 +19,18 @@ import filelock
 import conda_build.api as api
 import conda_build.build as build
 import conda_build.utils as utils
-from conda_build.conda_interface import (add_parser_channels, binstar_upload,
-                                         cc_conda_build)
+from conda_build.conda_interface import (
+    add_parser_channels,
+    binstar_upload,
+    cc_conda_build,
+)
 from conda_build.cli.main_render import get_render_parser
 import conda_build.source as source
 from conda_build.utils import LoggingContext
 from conda_build.config import Config, get_channel_urls
 from os.path import abspath, expanduser, expandvars
 
-on_win = (sys.platform == 'win32')
+on_win = sys.platform == "win32"
 
 logging.basicConfig(level=logging.INFO)
 
@@ -41,311 +44,393 @@ other components. conda keeps track of dependencies between packages and
 platform specifics, making it simple to create working environments from
 different sets of packages."""
     p.add_argument(
-        "--check",
-        action="store_true",
-        help="Only check (validate) the recipe.",
+        "--check", action="store_true", help="Only check (validate) the recipe."
     )
     p.add_argument(
         "--no-anaconda-upload",
         action="store_false",
         help="Do not ask to upload the package to anaconda.org.",
-        dest='anaconda_upload',
+        dest="anaconda_upload",
         default=binstar_upload,
     )
     p.add_argument(
         "--no-binstar-upload",
         action="store_false",
         help=argparse.SUPPRESS,
-        dest='anaconda_upload',
+        dest="anaconda_upload",
         default=binstar_upload,
     )
     p.add_argument(
         "--no-include-recipe",
         action="store_false",
         help="Don't include the recipe inside the built package.",
-        dest='include_recipe',
-        default=cc_conda_build.get('include_recipe', 'true').lower() == 'true',
+        dest="include_recipe",
+        default=cc_conda_build.get("include_recipe", "true").lower() == "true",
     )
     p.add_argument(
-        '-s', "--source",
+        "-s",
+        "--source",
         action="store_true",
         help="Only obtain the source (but don't build).",
     )
     p.add_argument(
-        '-t', "--test",
+        "-t",
+        "--test",
         action="store_true",
         help="Test package (assumes package is already built).  RECIPE_DIR argument must be a "
         "path to built package .tar.bz2 file.",
     )
     p.add_argument(
-        '--no-test',
-        action='store_true',
-        dest='notest',
-        help="Do not test the package.",
+        "--no-test", action="store_true", dest="notest", help="Do not test the package."
     )
     p.add_argument(
-        '-b', '--build-only',
+        "-b",
+        "--build-only",
         action="store_true",
         help="""Only run the build, without any post processing or
         testing. Implies --no-test and --no-anaconda-upload.""",
     )
     p.add_argument(
-        '-p', '--post',
+        "-p",
+        "--post",
         action="store_true",
         help="Run the post-build logic. Implies --no-test and --no-anaconda-upload.",
     )
     p.add_argument(
-        'recipe',
-        metavar='RECIPE_PATH',
-        nargs='+',
+        "recipe",
+        metavar="RECIPE_PATH",
+        nargs="+",
         help="Path to recipe directory.  Pass 'purge' here to clean the "
         "work and test intermediates. Pass 'purge-all' to also remove "
         "previously built packages.",
     )
     p.add_argument(
-        '--skip-existing',
-        action='store_true',
-        help=("Skip recipes for which there already exists an existing build "
-              "(locally or in the channels)."),
-        default=cc_conda_build.get('skip_existing', 'false').lower() == 'true',
+        "--skip-existing",
+        action="store_true",
+        help=(
+            "Skip recipes for which there already exists an existing build "
+            "(locally or in the channels)."
+        ),
+        default=cc_conda_build.get("skip_existing", "false").lower() == "true",
     )
     p.add_argument(
-        '--keep-old-work',
-        action='store_true',
-        dest='keep_old_work',
+        "--keep-old-work",
+        action="store_true",
+        dest="keep_old_work",
         help="Do not remove anything from environment, even after successful "
-             "build and test."
+        "build and test.",
     )
     p.add_argument(
-        '--dirty',
-        action='store_true',
-        help='Do not remove work directory or _build environment, '
-        'to speed up debugging.  Does not apply patches or download source.'
+        "--dirty",
+        action="store_true",
+        help="Do not remove work directory or _build environment, "
+        "to speed up debugging.  Does not apply patches or download source.",
     )
     p.add_argument(
-        '-q', "--quiet",
+        "-q",
+        "--quiet",
         action="store_true",
         help="do not display progress bar",
-        default=cc_conda_build.get('quiet', 'false').lower() == 'true',
+        default=cc_conda_build.get("quiet", "false").lower() == "true",
     )
     p.add_argument(
-        '--debug',
+        "--debug",
         action="store_true",
         help="Show debug output from source checkouts and conda",
     )
     p.add_argument(
-        '--token',
+        "--token",
         help="Token to pass through to anaconda upload",
-        default=cc_conda_build.get('anaconda_token'),
+        default=cc_conda_build.get("anaconda_token"),
     )
     p.add_argument(
-        '--user',
+        "--user",
         help="User/organization to upload packages to on anaconda.org or pypi",
-        default=cc_conda_build.get('user'),
+        default=cc_conda_build.get("user"),
     )
     p.add_argument(
-        '--label', action='append', dest='labels', default=[],
+        "--label",
+        action="append",
+        dest="labels",
+        default=[],
         help="Label argument to pass through to anaconda upload",
     )
     p.add_argument(
-        '--no-force-upload',
+        "--no-force-upload",
         help="Disable force upload to anaconda.org, preventing overwriting any existing packages",
-        dest='force_upload',
+        dest="force_upload",
         default=True,
-        action='store_false',
+        action="store_false",
     )
     pypi_grp = p.add_argument_group("PyPI upload parameters (twine)")
     pypi_grp.add_argument(
-        '--password',
-        help="password to use when uploading packages to pypi",
+        "--password", help="password to use when uploading packages to pypi"
     )
     pypi_grp.add_argument(
-        '--sign', default=False,
-        help="sign files when uploading to pypi"
+        "--sign", default=False, help="sign files when uploading to pypi"
     )
     pypi_grp.add_argument(
-        '--sign-with', default='gpg', dest='sign_with',
-        help="program to use to sign files when uploading to pypi"
+        "--sign-with",
+        default="gpg",
+        dest="sign_with",
+        help="program to use to sign files when uploading to pypi",
     )
     pypi_grp.add_argument(
-        '--identity',
-        help="GPG identity to use to sign files when uploading to pypi"
+        "--identity", help="GPG identity to use to sign files when uploading to pypi"
     )
     pypi_grp.add_argument(
-        '--config-file',
+        "--config-file",
         help="path to .pypirc file to use when uploading to pypi",
-        default=(abspath(expanduser(expandvars(cc_conda_build.get('pypirc'))))
-                 if cc_conda_build.get('pypirc')
-                 else cc_conda_build.get('pypirc')),
+        default=(
+            abspath(expanduser(expandvars(cc_conda_build.get("pypirc"))))
+            if cc_conda_build.get("pypirc")
+            else cc_conda_build.get("pypirc")
+        ),
     )
     pypi_grp.add_argument(
-        '--repository', '-r', help="PyPI repository to upload to",
-        default=cc_conda_build.get('pypi_repository', 'pypitest'),
+        "--repository",
+        "-r",
+        help="PyPI repository to upload to",
+        default=cc_conda_build.get("pypi_repository", "pypitest"),
     )
     p.add_argument(
         "--no-activate",
         action="store_false",
         help="do not activate the build and test envs; just prepend to PATH",
-        dest='activate',
-        default=cc_conda_build.get('activate', 'true').lower() == 'true',
+        dest="activate",
+        default=cc_conda_build.get("activate", "true").lower() == "true",
     )
     p.add_argument(
         "--no-build-id",
         action="store_false",
-        help=("do not generate unique build folder names.  Use if having issues with "
-              "paths being too long."),
-        dest='set_build_id',
+        help=(
+            "do not generate unique build folder names.  Use if having issues with "
+            "paths being too long."
+        ),
+        dest="set_build_id",
         # note: inverted - dest stores positive logic
-        default=cc_conda_build.get('set_build_id', 'true').lower() == 'true',
+        default=cc_conda_build.get("set_build_id", "true").lower() == "true",
     )
     p.add_argument(
         "--croot",
-        help=("Build root folder.  Equivalent to CONDA_BLD_PATH, but applies only "
-              "to this call of conda-build.")
+        help=(
+            "Build root folder.  Equivalent to CONDA_BLD_PATH, but applies only "
+            "to this call of conda-build."
+        ),
     )
     p.add_argument(
         "--verify",
         action="store_true",
         help="run verification on recipes or packages when building",
-        default=cc_conda_build.get('verify', 'true').lower() == 'true',
+        default=cc_conda_build.get("verify", "true").lower() == "true",
     )
     p.add_argument(
         "--no-verify",
         action="store_false",
         dest="verify",
         help="do not run verification on recipes or packages when building",
-        default=cc_conda_build.get('verify', 'true').lower() == 'true',
+        default=cc_conda_build.get("verify", "true").lower() == "true",
     )
     p.add_argument(
         "--strict-verify",
         action="store_true",
         dest="exit_on_verify_error",
         help="Exit if any conda-verify check fail, instead of only printing them",
-        default=cc_conda_build.get('exit_on_verify_error', 'false').lower() == 'true',
+        default=cc_conda_build.get("exit_on_verify_error", "false").lower() == "true",
     )
     p.add_argument(
         "--output-folder",
-        help=("folder to dump output package to.  Package are moved here if build or test succeeds."
-              "  Destination folder must exist prior to using this."),
-        default=cc_conda_build.get('output_folder')
+        help=(
+            "folder to dump output package to.  Package are moved here if build or test succeeds."
+            "  Destination folder must exist prior to using this."
+        ),
+        default=cc_conda_build.get("output_folder"),
     )
     p.add_argument(
-        "--no-prefix-length-fallback", dest='prefix_length_fallback',
+        "--no-prefix-length-fallback",
+        dest="prefix_length_fallback",
         action="store_false",
-        help=("Disable fallback to older 80 character prefix length if environment creation"
-              " fails due to insufficient prefix length in dependency packages"),
+        help=(
+            "Disable fallback to older 80 character prefix length if environment creation"
+            " fails due to insufficient prefix length in dependency packages"
+        ),
         default=True,
     )
     p.add_argument(
-        "--prefix-length-fallback", dest='prefix_length_fallback',
+        "--prefix-length-fallback",
+        dest="prefix_length_fallback",
         action="store_true",
-        help=("Disable fallback to older 80 character prefix length if environment creation"
-              " fails due to insufficient prefix length in dependency packages"),
+        help=(
+            "Disable fallback to older 80 character prefix length if environment creation"
+            " fails due to insufficient prefix length in dependency packages"
+        ),
         # this default will change to false in the future, when we deem that the community has
         #     had enough time to build long-prefix length packages.
         default=True,
     )
     p.add_argument(
-        "--prefix-length", dest='_prefix_length',
-        help=("length of build prefix.  For packages with binaries that embed the path, this is"
-              " critical to ensuring that your package can run as many places as possible.  Note"
-              "that this value can be altered by the OS below conda-build (e.g. encrypted "
-              "filesystems on Linux), and you should prefer to set --croot to a non-encrypted "
-              "location instead, so that you maintain a known prefix length."),
+        "--prefix-length",
+        dest="_prefix_length",
+        help=(
+            "length of build prefix.  For packages with binaries that embed the path, this is"
+            " critical to ensuring that your package can run as many places as possible.  Note"
+            "that this value can be altered by the OS below conda-build (e.g. encrypted "
+            "filesystems on Linux), and you should prefer to set --croot to a non-encrypted "
+            "location instead, so that you maintain a known prefix length."
+        ),
         # this default will change to false in the future, when we deem that the community has
         #     had enough time to build long-prefix length packages.
-        default=255, type=int,
+        default=255,
+        type=int,
     )
     p.add_argument(
-        "--no-locking", dest='locking', default=True, action="store_false",
-        help=("Disable locking, to avoid unresolved race condition issues.  Unsafe to run multiple "
-              "builds at once on one system with this set.")
+        "--no-locking",
+        dest="locking",
+        default=True,
+        action="store_false",
+        help=(
+            "Disable locking, to avoid unresolved race condition issues.  Unsafe to run multiple "
+            "builds at once on one system with this set."
+        ),
     )
     p.add_argument(
-        "--no-remove-work-dir", dest='remove_work_dir', default=True, action="store_false",
-        help=("Disable removal of the work dir before testing.  Be careful using this option, as"
-              " you package may depend on files that are not included in the package, and may pass "
-              "tests, but ultimately fail on installed systems.")
+        "--no-remove-work-dir",
+        dest="remove_work_dir",
+        default=True,
+        action="store_false",
+        help=(
+            "Disable removal of the work dir before testing.  Be careful using this option, as"
+            " you package may depend on files that are not included in the package, and may pass "
+            "tests, but ultimately fail on installed systems."
+        ),
     )
     p.add_argument(
-        "--error-overlinking", dest='error_overlinking', action="store_true",
-        help=("Enable error when shared libraries from transitive dependencies are directly "
-              "linked to any executables or shared libraries in built packages.  This is disabled "
-              "by default, but will be enabled by default in conda-build 4.0."),
-        default=cc_conda_build.get('error_overlinking', 'false').lower() == 'true',
+        "--error-overlinking",
+        dest="error_overlinking",
+        action="store_true",
+        help=(
+            "Enable error when shared libraries from transitive dependencies are directly "
+            "linked to any executables or shared libraries in built packages.  This is disabled "
+            "by default, but will be enabled by default in conda-build 4.0."
+        ),
+        default=cc_conda_build.get("error_overlinking", "false").lower() == "true",
     )
     p.add_argument(
-        "--no-error-overlinking", dest='error_overlinking', action="store_false",
-        help=("Disable error when shared libraries from transitive dependencies are directly "
-              "linked to any executables or shared libraries in built packages.  This is currently "
-              "the default behavior, but will change in conda-build 4.0."),
-        default=cc_conda_build.get('error_overlinking', 'false').lower() == 'true',
+        "--no-error-overlinking",
+        dest="error_overlinking",
+        action="store_false",
+        help=(
+            "Disable error when shared libraries from transitive dependencies are directly "
+            "linked to any executables or shared libraries in built packages.  This is currently "
+            "the default behavior, but will change in conda-build 4.0."
+        ),
+        default=cc_conda_build.get("error_overlinking", "false").lower() == "true",
     )
     p.add_argument(
-        "--error-overdepending", dest='error_overdepending', action="store_true",
-        help=("Enable error when packages with names beginning `lib` or which have "
-              "`run_exports` are not auto-loaded by the OSes DSO loading mechanism by "
-              "any of the files in this package."),
-        default=cc_conda_build.get('error_overdepending', 'false').lower() == 'true',
+        "--error-overdepending",
+        dest="error_overdepending",
+        action="store_true",
+        help=(
+            "Enable error when packages with names beginning `lib` or which have "
+            "`run_exports` are not auto-loaded by the OSes DSO loading mechanism by "
+            "any of the files in this package."
+        ),
+        default=cc_conda_build.get("error_overdepending", "false").lower() == "true",
     )
     p.add_argument(
-        "--no-error-overdepending", dest='error_overdepending', action="store_false",
-        help=("Disable error when packages with names beginning `lib` or which have "
-              "`run_exports` are not auto-loaded by the OSes DSO loading mechanism by "
-              "any of the files in this package."),
-        default=cc_conda_build.get('error_overdepending', 'false').lower() == 'true',
+        "--no-error-overdepending",
+        dest="error_overdepending",
+        action="store_false",
+        help=(
+            "Disable error when packages with names beginning `lib` or which have "
+            "`run_exports` are not auto-loaded by the OSes DSO loading mechanism by "
+            "any of the files in this package."
+        ),
+        default=cc_conda_build.get("error_overdepending", "false").lower() == "true",
     )
     p.add_argument(
-        "--long-test-prefix", action="store_true",
-        help=("Use a long prefix for the test prefix, as well as the build prefix.  Affects only "
-              "Linux and Mac.  Prefix length matches the --prefix-length flag.  This is on by "
-              "default in conda-build 3.0+"),
-        default=cc_conda_build.get('long_test_prefix', 'true').lower() == 'true',
+        "--long-test-prefix",
+        action="store_true",
+        help=(
+            "Use a long prefix for the test prefix, as well as the build prefix.  Affects only "
+            "Linux and Mac.  Prefix length matches the --prefix-length flag.  This is on by "
+            "default in conda-build 3.0+"
+        ),
+        default=cc_conda_build.get("long_test_prefix", "true").lower() == "true",
     )
     p.add_argument(
-        "--no-long-test-prefix", dest="long_test_prefix", action="store_false",
-        help=("Do not use a long prefix for the test prefix, as well as the build prefix."
-              "  Affects only Linux and Mac.  Prefix length matches the --prefix-length flag.  "),
-        default=cc_conda_build.get('long_test_prefix', 'true').lower() == 'true',
+        "--no-long-test-prefix",
+        dest="long_test_prefix",
+        action="store_false",
+        help=(
+            "Do not use a long prefix for the test prefix, as well as the build prefix."
+            "  Affects only Linux and Mac.  Prefix length matches the --prefix-length flag.  "
+        ),
+        default=cc_conda_build.get("long_test_prefix", "true").lower() == "true",
     )
     p.add_argument(
-        '--keep-going', '-k', action='store_true',
-        help=("When running tests, keep going after each failure.  Default is to stop on the first "
-              "failure.")
+        "--keep-going",
+        "-k",
+        action="store_true",
+        help=(
+            "When running tests, keep going after each failure.  Default is to stop on the first "
+            "failure."
+        ),
     )
     p.add_argument(
-        '--cache-dir',
-        help=('Path to store the source files (archives, git clones, etc.) during the build.'),
-        default=(abspath(expanduser(expandvars(cc_conda_build.get('cache_dir'))))
-                 if cc_conda_build.get('cache_dir')
-                 else cc_conda_build.get('cache_dir')),
+        "--cache-dir",
+        help=(
+            "Path to store the source files (archives, git clones, etc.) during the build."
+        ),
+        default=(
+            abspath(expanduser(expandvars(cc_conda_build.get("cache_dir"))))
+            if cc_conda_build.get("cache_dir")
+            else cc_conda_build.get("cache_dir")
+        ),
     )
     p.add_argument(
-        "--no-copy-test-source-files", dest="copy_test_source_files", action="store_false",
-        default=cc_conda_build.get('copy_test_source_files', 'true').lower() == 'true',
-        help=("Disables copying the files necessary for testing the package into "
-              "the info/test folder.  Passing this argument means it may not be possible "
-              "to test the package without internet access.  There is also a danger that "
-              "the source archive(s) containing the files could become unavailable sometime "
-              "in the future.")
+        "--no-copy-test-source-files",
+        dest="copy_test_source_files",
+        action="store_false",
+        default=cc_conda_build.get("copy_test_source_files", "true").lower() == "true",
+        help=(
+            "Disables copying the files necessary for testing the package into "
+            "the info/test folder.  Passing this argument means it may not be possible "
+            "to test the package without internet access.  There is also a danger that "
+            "the source archive(s) containing the files could become unavailable sometime "
+            "in the future."
+        ),
     )
     p.add_argument(
-        '--merge-build-host', action="store_true",
-        help=('Merge the build and host directories, even when host section or compiler '
-              'jinja2 is present'),
-        default=cc_conda_build.get('merge_build_host', 'false').lower() == 'true',
+        "--merge-build-host",
+        action="store_true",
+        help=(
+            "Merge the build and host directories, even when host section or compiler "
+            "jinja2 is present"
+        ),
+        default=cc_conda_build.get("merge_build_host", "false").lower() == "true",
     )
-    p.add_argument('--stats-file', help=('File path to save build statistics to.  Stats are '
-                                         'in JSON format'), )
-    p.add_argument('--extra-deps',
-                   nargs='+',
-                   help=('Extra dependencies to add to all environment creation steps.  This '
-                         'is only enabled for testing with the -t or --test flag.  Change '
-                         'meta.yaml or use templates otherwise.'), )
+    p.add_argument(
+        "--stats-file",
+        help=("File path to save build statistics to.  Stats are " "in JSON format"),
+    )
+    p.add_argument(
+        "--extra-deps",
+        nargs="+",
+        help=(
+            "Extra dependencies to add to all environment creation steps.  This "
+            "is only enabled for testing with the -t or --test flag.  Change "
+            "meta.yaml or use templates otherwise."
+        ),
+    )
 
-    p.add_argument('--suppress-variables',
-                   action='store_true',
-                   help=("Do not display value of environment variables specified in build.script_env."), )
+    p.add_argument(
+        "--suppress-variables",
+        action="store_true",
+        help=(
+            "Do not display value of environment variables specified in build.script_env."
+        ),
+    )
 
     add_parser_channels(p)
     args = p.parse_args(args)
@@ -362,13 +447,15 @@ def check_recipe(path_list):
     :param path_list: list of paths to recipes
     """
     for recipe in path_list:
-        if os.path.isfile(recipe) \
-                and os.path.basename(recipe) in ["meta.yaml", "conda.yaml"]:
+        if os.path.isfile(recipe) and os.path.basename(recipe) in [
+            "meta.yaml",
+            "conda.yaml",
+        ]:
             warnings.warn(
                 "RECIPE_PATH received is a file. File: {}\n"
                 "It should be a path to a folder. \n"
                 "Forcing conda-build to use the recipe file.".format(recipe),
-                UserWarning
+                UserWarning,
             )
 
 
@@ -377,13 +464,13 @@ def output_action(recipe, config):
         config.verbose = False
         config.debug = False
         paths = api.get_output_file_paths(recipe, config=config)
-        print('\n'.join(sorted(paths)))
+        print("\n".join(sorted(paths)))
 
 
 def source_action(recipe, config):
     metadata = api.render(recipe, config=config)[0][0]
     source.provide(metadata)
-    print('Source tree in:', metadata.config.work_dir)
+    print("Source tree in:", metadata.config.work_dir)
 
 
 def test_action(recipe, config):
@@ -405,11 +492,11 @@ def execute(args):
     config.override_channels = args.override_channels
     config.verbose = not args.quiet or args.debug
 
-    if 'purge' in args.recipe:
+    if "purge" in args.recipe:
         build.clean_build(config)
         return
 
-    if 'purge-all' in args.recipe:
+    if "purge-all" in args.recipe:
         build.clean_build(config)
         config.clean_pkgs()
         return
@@ -430,10 +517,14 @@ def execute(args):
 
     if action == test_action:
         failed_recipes = []
-        recipes = [item for sublist in
-                   [glob(os.path.abspath(recipe)) if '*' in recipe
-                                                  else [recipe] for recipe in args.recipe]
-                   for item in sublist]
+        recipes = [
+            item
+            for sublist in [
+                glob(os.path.abspath(recipe)) if "*" in recipe else [recipe]
+                for recipe in args.recipe
+            ]
+            for item in sublist
+        ]
         for recipe in recipes:
             try:
                 action(recipe, config)
@@ -455,9 +546,16 @@ def execute(args):
     elif action:
         outputs = [action(recipe, config) for recipe in args.recipe]
     else:
-        outputs = api.build(args.recipe, post=args.post, build_only=args.build_only,
-                            notest=args.notest, already_built=None, config=config,
-                            verify=args.verify, variants=args.variants)
+        outputs = api.build(
+            args.recipe,
+            post=args.post,
+            build_only=args.build_only,
+            notest=args.notest,
+            already_built=None,
+            config=config,
+            verify=args.verify,
+            variants=args.variants,
+        )
 
     if not args.output and len(utils.get_build_folders(config.croot)) > 0:
         build.print_build_intermediate_warning(config)
@@ -471,7 +569,9 @@ def main():
         print(str(e))
         sys.exit(1)
     except filelock.Timeout as e:
-        print("File lock on {0} could not be obtained.  You might need to try fewer builds at once."
-              "  Otherwise, run conda clean --lock".format(e.lock_file))
+        print(
+            "File lock on {0} could not be obtained.  You might need to try fewer builds at once."
+            "  Otherwise, run conda clean --lock".format(e.lock_file)
+        )
         sys.exit(1)
     return

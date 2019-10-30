@@ -8,14 +8,13 @@ from conda_build.conda_interface import PathType, EntityEncoder, CrossPlatformSt
 
 
 def test_pyc_f_2():
-    assert _link.pyc_f('sp/utils.py', (2, 7, 9)) == 'sp/utils.pyc'
+    assert _link.pyc_f("sp/utils.py", (2, 7, 9)) == "sp/utils.pyc"
+
 
 def test_pyc_f_3():
     for f, r in [
-            ('sp/utils.py',
-             'sp/__pycache__/utils.cpython-34.pyc'),
-            ('sp/foo/utils.py',
-             'sp/foo/__pycache__/utils.cpython-34.pyc'),
+        ("sp/utils.py", "sp/__pycache__/utils.cpython-34.pyc"),
+        ("sp/foo/utils.py", "sp/foo/__pycache__/utils.cpython-34.pyc"),
     ]:
         assert _link.pyc_f(f, (3, 4, 2)) == r
 
@@ -23,7 +22,7 @@ def test_pyc_f_3():
 def test_pathtype():
     hardlink = PathType("hardlink")
     assert str(hardlink) == "hardlink"
-    assert hardlink.__json__() == 'hardlink'
+    assert hardlink.__json__() == "hardlink"
 
     softlink = PathType("softlink")
     assert str(softlink) == "softlink"
@@ -44,6 +43,7 @@ def test_entity_encoder(tmpdir):
 @pytest.mark.skipif(on_win, reason="link not available on win/py2.7")
 def test_crossplatform_st_link(tmpdir):
     from os import link
+
     test_file = join(str(tmpdir), "test-file")
     test_file_linked = join(str(tmpdir), "test-file-linked")
     test_file_link = join(str(tmpdir), "test-file-link")
@@ -61,4 +61,3 @@ def test_crossplatform_st_link_on_win(tmpdir):
     test_file = join(str(tmpdir), "test-file")
     open(test_file, "a").close()
     assert 1 == CrossPlatformStLink.st_nlink(test_file)
-

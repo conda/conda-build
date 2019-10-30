@@ -1,5 +1,6 @@
 import sys
 from setuptools import setup
+
 # from distutils.core import setup
 
 # test with an old version of Python that we'll never normally use
@@ -9,7 +10,7 @@ if sys.version_info[:2] == (3, 5):
 
 setup(
     name="conda-build-test-project",
-    version='1.0',
+    version="1.0",
     author="Continuum Analytics, Inc.",
     url="https://github.com/conda/conda-build",
     license="BSD",
@@ -27,8 +28,6 @@ setup(
         "Programming Language :: Python :: 3.7",
     ],
     description="test package for testing conda-build",
-    packages=['conda_build_test'],
-    scripts=[
-        'bin/test-script-setup.py',
-    ],
+    packages=["conda_build_test"],
+    scripts=["bin/test-script-setup.py"],
 )
