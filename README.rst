@@ -2,22 +2,11 @@
 conda-build
 ===========
 
-.. image:: https://travis-ci.org/conda/conda-build.svg?branch=master
-               :target: https://travis-ci.org/conda/conda-build
-
-.. image:: https://ci.appveyor.com/api/projects/status/07r1m8fy55jee9th?svg=true
-               :target: https://ci.appveyor.com/project/ContinuumAnalyticsFOSS/conda-build
+.. image:: https://dev.azure.com/anaconda-conda/conda-build/_apis/build/status/conda.conda-build?branchName=master
+  :target: https://dev.azure.com/anaconda-conda/conda-build/_build/latest?definitionId=1&branchName=master
 
 .. image:: https://codecov.io/gh/conda/conda-build/branch/master/graph/badge.svg
   :target: https://codecov.io/gh/conda/conda-build
-
-.. image:: https://landscape.io/github/conda/conda-build/master/landscape.svg?style=flat
-   :target: https://landscape.io/github/conda/conda-build/master
-   :alt: Code Health
-
-.. image:: http://img.shields.io/badge/benchmarked%20by-asv-green.svg?style=flat
-   :target: https://github.com/airspeed-velocity/asv
-   :alt: Benchmarked by Airspeed Velocity
 
 
 Installation
