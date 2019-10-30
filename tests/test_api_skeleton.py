@@ -1,4 +1,6 @@
+import fnmatch
 import os
+import subprocess
 import sys
 
 from pkg_resources import parse_version
@@ -20,6 +22,7 @@ except ImportError:
 
 from conda_build import api
 from conda_build.exceptions import DependencyNeedsBuildingError
+import conda_build.os_utils.external as external
 from conda_build.utils import on_win, ensure_list
 
 thisdir = os.path.dirname(os.path.realpath(__file__))
@@ -468,6 +471,7 @@ def test_cran_license(package, license_id, license_family, license_files, testin
     for m_license_file in m_license_files:
         assert os.path.basename(m_license_file) in license_files
 
+
 # CRAN packages to test skip entry.
 # (package, skip_text)
 cran_os_type_pkgs = [('bigReg', 'skip: True  # [not unix]'),
@@ -481,3 +485,33 @@ def test_cran_os_type(package, skip_text, testing_workdir, testing_config):
     fpath = os.path.join(testing_workdir, 'r-' + package.lower(), 'meta.yaml') 
     with open(fpath) as f:
         assert skip_text in f.read()
+
+
+@pytest.mark.slow
+@pytest.mark.skipif(not external.find_executable("shellcheck"), reason="requires shellcheck >=0.7.0")
+@pytest.mark.parametrize(
+    "package, repo", [("r-usethis", "cran"), ("Perl::Lint", "cpan"), ("screen", "rpm")]
+)
+def test_build_sh_shellcheck_clean(package, repo, testing_workdir, testing_config):
+    api.skeletonize(packages=package, repo=repo, output_dir=testing_workdir, config=testing_config)
+
+    matches = []
+    for root, dirnames, filenames in os.walk(testing_workdir):
+        for filename in fnmatch.filter(filenames, "build.sh"):
+            matches.append(os.path.join(root, filename))
+
+    build_sh = matches[0]
+    cmd = [
+        "shellcheck",
+        "--enable=all",
+        # SC2154: var is referenced but not assigned,
+        #         see https://github.com/koalaman/shellcheck/wiki/SC2154
+        "--exclude=SC2154",
+        build_sh,
+    ]
+
+    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    sc_stdout, _ = p.communicate()
+    findings = sc_stdout.decode(sys.stdout.encoding).replace("\r\n", "\n").splitlines()
+    assert findings == []
+    assert p.returncode == 0

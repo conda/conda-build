@@ -103,8 +103,10 @@ about:
 LUAROCKS_BUILD_SH = """\
 #!/bin/bash
 
+set -o errexit -o pipefail
+
 # Make sure luarocks can see all local dependencies
-$PREFIX/bin/luarocks-admin make_manifest --local-tree
+"${{PREFIX}}"/bin/luarocks-admin make_manifest --local-tree
 
 # Install
 # Rocks aren't located in a standard location, although
@@ -112,7 +114,7 @@ $PREFIX/bin/luarocks-admin make_manifest --local-tree
 # NOTE: we're just picking the first rock we find. If there's
 # more than one, specify it manually.
 ROCK=$(find . -name "*.rockspec" | sort -n -r | head -n 1)
-$PREFIX/bin/luarocks install "$ROCK" --local-tree
+"${{PREFIX}}"/bin/luarocks install "${{ROCK}}" --local-tree
 
 # Add more build steps here, if they are necessary.
 

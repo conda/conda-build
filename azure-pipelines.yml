@@ -46,7 +46,7 @@ jobs:
       if [[ "$PYTHON_VERSION" == "2.7" ]]; then
         conda install -q futures scandir;
       fi
-      conda install -q pytest-azurepipelines anaconda-client git requests filelock contextlib2 jinja2 patchelf ripgrep pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz tqdm conda-package-handling py-lief python-libarchive-c
+      conda install -q pytest-azurepipelines anaconda-client git requests filelock contextlib2 jinja2 patchelf ripgrep pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz tqdm conda-package-handling py-lief python-libarchive-c conda-forge::shellcheck
       pip install pkginfo
       conda install -c c3i_test -q perl;
       conda install -q pytest pip pytest-cov pytest-forked pytest-xdist nomkl numpy mock pytest-mock;
@@ -68,7 +68,8 @@ jobs:
       conda create -n blarg1 -yq python=2.7
       conda create -n blarg3 -yq python=3.7
       conda create -n blarg4 -yq python nomkl numpy pandas svn
-      /usr/share/miniconda/bin/py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --test-run-title="Linux-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION"
+      source /usr/share/miniconda/bin/activate
+      py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --test-run-title="Linux-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION"
     displayName: 'Parallel Tests'
 
 
