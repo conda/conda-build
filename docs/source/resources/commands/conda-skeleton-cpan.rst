@@ -2,7 +2,7 @@
 .. _skeleton cpan_ref:
 
 conda skeleton cpan
-=======================
+===================
 
 .. raw:: html
 

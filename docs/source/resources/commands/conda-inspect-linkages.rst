@@ -2,7 +2,7 @@
 .. _inspect linkages_ref:
 
 conda inspect linkages
-=======================
+======================
 
 .. raw:: html
 

@@ -2,7 +2,7 @@
 .. _convert_ref:
 
 conda convert
-=======================
+=============
 
 .. raw:: html
 

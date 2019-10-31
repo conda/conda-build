@@ -9,7 +9,7 @@ Tutorial template
 .. _documentation@anaconda.com: documentation@anaconda.com
 
 *This document describes the steps for creating*
-*a tutorial for conda build*.
+*a tutorial for conda-build*.
 
 * *Copy the template*: https://github.com/conda/conda-build/tree/master/docs/source/resources/tutorial-template.rst.
 * *Replace the italicized text with your tutorial content, following the* :doc:`writing style guide <style-guide>`.

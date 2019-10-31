@@ -2,7 +2,7 @@
 .. _index_ref:
 
 conda index
-=======================
+===========
 
 .. raw:: html
 

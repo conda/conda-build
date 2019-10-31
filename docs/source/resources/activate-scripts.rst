@@ -11,7 +11,7 @@ environments the expected way and these packages may then misbehave.
 When using them in a recipe, feel free to name them activate.bat,
 activate.sh, deactivate.bat, and deactivate.sh in the recipe.
 The installed scripts are recommended to be prefixed by the package
-name and a separating -. 
+name and a separating -.
 
 Below is some sample code for Unix and
 Windows that will make this install process easier. 

@@ -3,7 +3,7 @@ Adding Windows Start menu items
 ===============================
 
 When a package is installed, it can add a shortcut to the Windows
-**Start** menu. Conda and conda build handle this with the
+**Start** menu. Conda and conda-build handle this with the
 package `menuinst <https://github.com/ContinuumIO/menuinst>`_,
 which currently supports only Windows. For instructions on using
 ``menuinst``, see
