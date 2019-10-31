@@ -2,7 +2,7 @@
 .. _skeleton cran_ref:
 
 conda skeleton cran
-=======================
+===================
 
 .. raw:: html
 

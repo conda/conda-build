@@ -2,7 +2,7 @@
 User guide
 **********
 
-Welcome to the conda build user guide. Here you can find
+Welcome to the conda-build user guide. Here you can find
 tutorials and recipes as well as information about environment
 variables and wheel files.
 
@@ -26,7 +26,7 @@ scratch, or building R packages using skeleton CRAN.
 
 **Recipes**
 
-Conda build uses :doc:`recipes <../user-guide/recipes/index>` to create conda packages.
+Conda-build uses :doc:`recipes <../user-guide/recipes/index>` to create conda packages.
 We have guides on debugging conda recipes, sample recipes for you to use, and 
 how to build a package without a recipe.
 

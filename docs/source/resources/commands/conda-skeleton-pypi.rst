@@ -2,7 +2,7 @@
 .. _skeleton pypi_ref:
 
 conda skeleton pypi
-=======================
+===================
 
 .. raw:: html
 

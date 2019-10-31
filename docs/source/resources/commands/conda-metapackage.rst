@@ -2,7 +2,7 @@
 .. _metapackage_ref:
 
 conda metapackage
-=======================
+=================
 
 .. raw:: html
 

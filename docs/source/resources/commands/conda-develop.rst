@@ -2,7 +2,7 @@
 .. _develop_ref:
 
 conda develop
-=======================
+=============
 
 .. raw:: html
 

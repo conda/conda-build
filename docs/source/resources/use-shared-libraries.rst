@@ -76,7 +76,7 @@ Relative links require a special variable in the link itself:
     approach, where libraries know where they live relative to
     their calling application.
 
-Conda build uses @loader_path on macOS and $ORIGIN on Linux
+Conda-build uses @loader_path on macOS and $ORIGIN on Linux
 because we install into a common root directory and can assume
 that other libraries are also installed into that root. The use
 of the variables allows you to build relocatable binaries that

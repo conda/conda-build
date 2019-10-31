@@ -9,7 +9,7 @@ Defining metadata (meta.yaml)
    :depth: 1
 
 
-All the metadata in the conda build recipe is specified in the
+All the metadata in the conda-build recipe is specified in the
 ``meta.yaml`` file. See the example below:
 
 .. code-block:: Python
@@ -142,7 +142,7 @@ specific commit, then you won't have that tag when you go to reference
 it in ``git_rev`` (for example). If your ``git_depth`` is insufficient
 to capture the tag in ``git_rev``, you'll encounter an error. So in the
 example above, unless the 1.1.4 is the very head commit and the one
-that you're going to grab, you may encounter an error.
+that you're going to grab, you may encounter an error. 
 
 
 Source from hg
@@ -200,7 +200,7 @@ Patches may optionally be applied to the source.
      patches:
        - my.patch # the patch file is expected to be found in the recipe
 
-Conda build automatically determines the patch strip level.
+Conda-build automatically determines the patch strip level.
 
 Destination path
 ----------------
@@ -285,7 +285,7 @@ Build number and string
 
 The build number should be incremented for new builds of the same
 version. The number defaults to ``0``. The build string cannot
-contain "-". The string defaults to the default conda build
+contain "-". The string defaults to the default conda-build
 string plus the build number.
 
 .. code-block:: yaml
@@ -386,7 +386,7 @@ Some packages ship ``.py`` files that cannot be compiled, such
 as those that contain templates. Some packages also ship ``.py``
 files that should not be compiled yet, because the Python
 interpreter that will be used is not known at build time. In
-these cases, conda build can skip attempting to compile these
+these cases, conda-build can skip attempting to compile these
 files. The patterns used in this section do not need the \*\* to
 handle recursive paths.
 
@@ -518,7 +518,7 @@ rules <https://msdn.microsoft.com/en-us/library/7d83bc18.aspx>`_
 or more natively supports relocatability using relative paths.
 Because of this, conda ignores most prefixes. However, pip
 creates executables for Python entry points that do use embedded
-paths on Windows. Conda build thus detects prefixes in all files
+paths on Windows. Conda-build thus detects prefixes in all files
 and records them by default. If you are getting errors about
 path length on Windows, you should try to disable
 detect_binary_files_with_prefix. Newer versions of Conda,
@@ -532,7 +532,7 @@ to apply any binary prefix replacement.
 Binary has prefix files
 -----------------------
 
-By default, conda build tries to detect prefixes in all files.
+By default, conda-build tries to detect prefixes in all files.
 You may also elect to specify files with binary prefixes
 individually. This allows you to specify the type of file as
 binary, when it may be incorrectly detected as text for some
@@ -594,7 +594,7 @@ This setting is independent of RPATH replacement. Use the
 Skipping builds
 ---------------
 
-Specifies whether conda build should skip the build of this
+Specifies whether conda-build should skip the build of this
 recipe. Particularly useful for defining recipes that are
 platform specific. The default is ``False``.
 
@@ -648,7 +648,7 @@ conda >=4.3 to install.
 Include build recipe
 --------------------
 
-The full conda build recipe and rendered ``meta.yaml`` file is
+The full conda-build recipe and rendered ``meta.yaml`` file is
 included in the :ref:`package_metadata` by default. You can
 disable this with:
 
@@ -675,7 +675,7 @@ should be passed through to the build script:
        - ANOTHER_VAR
 
 If a listed environment variable is missing from the environment
-seen by the conda build process itself, a UserWarning is
+seen by the conda-build process itself, a UserWarning is
 emitted during the build process and the variable remains
 undefined.
 
@@ -696,21 +696,12 @@ undefined.
 Export runtime requirements
 ---------------------------
 
-Some build or host :ref:`requirements <requirements>` will impose a
-runtime requirement. You may want to review our :ref:`requirements`
-covering the host and run sections. These exports are describing
-oneself for downstream consumers. Note that only dynamic and shared
-libraries need ``run_exports`` - static libraries do not.
-
-The runtime requirement is most commonly true for shared libraries
-(e.g. libpng), which are required for linking at build time
-and for resolving the link at run time.
-
-With ``run_exports`` (new in conda-build 3), such a runtime requirement can be
-implicitly added by host requirements (e.g. libpng exports libpng).
-Less commonly, a runtime requirement can be implicitly added with
+Some build or host :ref:`requirements` will impose a runtime requirement.
+Most commonly this is true for shared libraries (e.g. libpng), which are
+required for linking at build time, and for resolving the link at run time.
+With ``run_exports`` (new in conda-build 3) such a runtime requirement can be
+implicitly added by host requirements (e.g. libpng exports libpng), and with
 ``run_exports/strong`` even by build requirements (e.g. gcc exports libgcc).
-
 
 .. code-block:: yaml
 
@@ -719,10 +710,10 @@ Less commonly, a runtime requirement can be implicitly added with
      run_exports:
        - libpng
 
-Here, because no specific kind of ``run_exports`` is specified, libpng's ``run_exports``
+Here, because no specific kind of run_exports is specified, libpng's run_exports
 are considered "weak." This means they will only apply when libpng is in the
-host section, when they will add their export to the run section. If libpng were
-listed in the build section, the ``run_exports`` would not apply to the run section.
+host section, when they will add their export to the run section.  If libpng were
+listed in the build section, the run_exports would not apply to the run section.
 
 .. code-block:: yaml
 
@@ -732,10 +723,10 @@ listed in the build section, the ``run_exports`` would not apply to the run sect
        strong:
          - libgcc
 
-Strong ``run_exports`` are used for things like runtimes, where the same runtime
+Strong run_exports are used for things like runtimes, where the same runtime
 needs to be present in the host and the run environment, and exactly which
 runtime that should be is determined by what's present in the build section.
-This mechanism is how we line up appropriate software on Windows, where we must
+This mechanism is how we line up appropriate software on windows, where we must
 match MSVC versions used across all of the shared libraries in an environment.
 
 .. code-block:: yaml
@@ -766,25 +757,24 @@ pinning relative to versions present at build time:
 With this example, if libpng were version 1.6.34, this pinning expression would
 evaluate to ``>=1.6.34,<1.7``.
 
-Note that ``run_exports`` can be specified both in the build section and on
+Note that ``run_exports`` can be specified both in the build section, and on
 a per-output basis for split packages.
 
 ``run_exports`` only affects directly named dependencies. For example, if you
 have a metapackage that includes a compiler that lists ``run_exports``, you also
 need to define ``run_exports`` in the metapackage so that it takes effect
-when people install your metapackage. This is important, because if
+when people install your metapackage.  This is important, because if
 ``run_exports`` affected transitive dependencies, you would see many added
 dependencies to shared libraries where they are not actually direct
 dependencies. For example, Python uses bzip2, which can use ``run_exports`` to
 make sure that people use a compatible build of bzip2. If people list python as
-a build time dependency, bzip2 should only be imposed for Python itself, and
+a build time dependency, bzip2 should only be imposed for python itself, and
 should not be automatically imposed as a runtime dependency for the thing using
-Python. ``run_exports`` are derived into each dependency of a dependency
-with the ``ignore_run_exports`` counter measure discussed below.
+python.
 
 The potential downside of this feature is that it takes some control over
 constraints away from downstream users. If an upstream package has a problematic
-``run_exports`` constraint, you can ignore it in your recipe by listing the upstream
+run_exports constraint, you can ignore it in your recipe by listing the upstream
 package name in the ``build/ignore_run_exports`` section:
 
 .. code-block:: yaml
@@ -805,7 +795,7 @@ There are two possible behaviors:
 
  build:
    pin_depends: record
-
+ 
 With a value of ``record``, conda-build will record all
 requirements exactly as they would be installed in a file
 called info/requires. These pins will not
@@ -817,7 +807,7 @@ package. It is only adding in this new file.
 
  build:
    pin_depends: strict
-
+  
 With a value of ``strict``, conda-build applies the pins
 to the actual metadata. This does affect the output of
 ``conda render`` and also affects the end result
@@ -863,22 +853,13 @@ Host
 
 This section was added in conda-build 3.0. It represents packages that need to
 be specific to the target platform when the target platform is not necessarily
-the same as the native build platform. Library dependencies (both shared and
-static) go exclusively in the host section.
-
-For example, in order for a recipe to be
-"cross-capable", library (both static and/or shared) requirements must be
-listed in the host section, rather than the build section. This is so that
-the shared libraries that get linked are ones for the target platform,
-rather than the native build platform. Static libraries also go into the
-host section and must be fitting for the target architecture. Note that
-binary Python import modules are always shared libraries at this point.
-
-
-You should also include the base
-interpreter for packages that need one. In other words, a Python package
-would list ``python`` here and an R package would list ``mro-base`` or
-``r-base``.
+the same as the native build platform. For example, in order for a recipe to
+"cross-capable", shared libraries requirements must be listed in the host
+section, rather than the build section, so that the shared libraries that get
+linked are ones for the target platform, rather than the native build platform.
+You should also include the base interpreter for packages that need one. In other
+words, a Python package would list ``python`` here and an R package would list
+``mro-base`` or ``r-base``.
 
 .. code-block:: yaml
 
@@ -906,13 +887,13 @@ both are defined, or when ``{{ compiler() }}`` jinja2 functions are used. The
 only time that build and host are merged is when the host section is absent, and
 no ``{{ compiler() }}`` jinja2 functions are used in meta.yaml. Because these
 are separate, you may see some build failures when migrating your recipes. For
-example, let's say you have a recipe to build a Python extension. If you add the
-compiler jinja2 functions to the build section, but you do not move your Python
+example, let's say you have a recipe to build a python extension. If you add the
+compiler jinja2 functions to the build section, but you do not move your python
 dependency from the build section to the host section, your recipe will fail. It
 will fail because the host environment is where new files are detected, but
-because you have Python only in the build environment, your extension will be
+because you have python only in the build environment, your extension will be
 installed into the build environment. No files will be detected. Also, variables
-such as PYTHON will not be defined when Python is not installed into the host
+such as PYTHON will not be defined when python is not installed into the host
 environment.
 
 On Linux, using the compiler packages provided by Anaconda Inc. in the ``defaults``
@@ -928,7 +909,7 @@ packages for X11. Conda-forge chose to provide X11 and GL packages.
 On macOS, you can also use ``{{ compiler() }}`` to get compiler packages
 provided by Anaconda Inc. in the ``defaults`` meta-channel. The
 environment variables ``MACOSX_DEPLOYMENT_TARGET`` and ``CONDA_BUILD_SYSROOT``
-will be set appropriately by conda-build. See :ref:`env-vars`.
+will be set appropriately by conda-build. (See :ref:`env-vars`.)
 ``CONDA_BUILD_SYSROOT`` will specify a folder containing a macOS SDK. These
 settings achieve backwards compatibility while still providing access to C++14
 and C++17. Note that conda-build will set ``CONDA_BUILD_SYSROOT`` by parsing the
@@ -936,10 +917,10 @@ and C++17. Note that conda-build will set ``CONDA_BUILD_SYSROOT`` by parsing the
 
 **TL;DR**: If you use the new ``{{ compiler() }}`` jinja2 to utilize our new
 compilers, you also must move anything that is not strictly a build tool into
-your host dependencies. This includes Python, Python libraries, and any shared
+your host dependencies. This includes python, python libraries, and any shared
 libraries that you need to link against in your build. Examples of build tools
 include any {{ compiler() }}, make, autoconf, perl (for running scripts, not
-installing perl software), and Python (for running scripts, not for installing
+installing perl software), python (for running scripts, not for installing
 software).
 
 Run
@@ -1033,7 +1014,7 @@ the temporary test directory and are needed during testing.
        - some/directory
        - some/directory/pattern*.sh
 
-This capability was added in conda build 2.0.
+This capability was added in conda-build 2.0.
 
 
 Test requirements
@@ -1147,7 +1128,7 @@ Explicitly specifies packaging steps. This section supports
 multiple outputs, as well as different package output types. The
 format is a list of mappings. Build strings for subpackages are
 determined by their runtime dependencies. This support was added
-in conda build 2.1.0.
+in conda-build 2.1.0.
 
 .. code-block:: yaml
 
@@ -1160,7 +1141,7 @@ in conda build 2.1.0.
 
 .. note::
    If any output is specified in the outputs section, the
-   default packaging behavior of conda build is bypassed. In other
+   default packaging behavior of conda-build is bypassed. In other
    words, if any subpackage is specified, then you do not get the
    normal top-level build for this recipe without explicitly
    defining a subpackage for it. This is an alternative to the
@@ -1297,7 +1278,7 @@ When viewing the top-level package as a collection of smaller
 subpackages, it may be convenient to define the top-level
 package as a composition of several subpackages. If you do this
 and you do not define a subpackage name that matches the
-top-level package/name, conda build creates a metapackage for
+top-level package/name, conda-build creates a metapackage for
 you. This metapackage has runtime requirements drawn from its
 dependency subpackages, for the sake of accurate build strings.
 
@@ -1359,9 +1340,10 @@ explicitly in the script section:
          script: run_test.py
 
 
-Test requirements for subpackages can be specified using the optional test/requires
-section of subpackage tests. Subpackage tests install their runtime requirements
-during testing as well.
+Test requirements for subpackages are not supported. Instead,
+subpackage tests install their runtime requirements---but not the
+run requirements for the top-level package---and the test-time
+requirements of the top-level package.
 
 EXAMPLE: In this example, the test for ``subpackage-name``
 installs ``some-test-dep`` and ``subpackage-run-req``, but not
@@ -1373,14 +1355,16 @@ installs ``some-test-dep`` and ``subpackage-run-req``, but not
      run:
        - some-top-level-run-req
 
+   test:
+     requires:
+       - some-test-dep
+
    outputs:
      - name: subpackage-name
        requirements:
          - subpackage-run-req
        test:
          script: run_test.py
-       requires:
-         - some-test-dep
 
 
 Output type
@@ -1416,9 +1400,9 @@ to the package/name field for the top-level recipe.
    outputs:
      - type: wheel
 
-Conda build currently knows how to test only conda packages.
-Conda build does support using Twine to upload packages to PyPI.
-See the conda build help output for the list of arguments
+conda-build currently knows how to test only conda packages.
+Conda-build does support using Twine to upload packages to PyPI.
+See the conda-build help output for the list of arguments
 accepted that will be passed through to Twine.
 
 .. note::
@@ -1530,7 +1514,7 @@ EXAMPLE: To store recipe maintainer information:
 Templating with Jinja
 =====================
 
-Conda build supports Jinja templating in the ``meta.yaml`` file.
+Conda-build supports Jinja templating in the ``meta.yaml`` file.
 
 EXAMPLE: The following ``meta.yaml`` would work with the GIT
 values defined for git repositores. The recipe is included at the
@@ -1553,7 +1537,7 @@ base directory of the git repository, so the git_url is ``../``:
        git_url: ../
 
 
-Conda build checks if the jinja2 variables that you use are
+Conda-build checks if the jinja2 variables that you use are
 defined and produces a clear error if it is not.
 
 You can also use a different syntax for these environment
@@ -1603,8 +1587,8 @@ variables such as git and mercurial.
 
 Extending this arbitrarily to other functions requires that
 functions be predefined before jinja processing, which in
-practice means changing the conda build source code. See the
-`conda build issue tracker
+practice means changing the conda-build source code. See the
+`conda-build issue tracker
 <https://github.com/conda/conda-build/issues>`_.
 
 For more information, see the `Jinja2 template

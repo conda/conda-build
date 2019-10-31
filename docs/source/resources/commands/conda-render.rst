@@ -2,7 +2,7 @@
 .. _render_ref:
 
 conda render
-=======================
+============
 
 .. raw:: html
 

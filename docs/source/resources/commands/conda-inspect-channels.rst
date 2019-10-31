@@ -2,7 +2,7 @@
 .. _inspect channels_ref:
 
 conda inspect channels
-=======================
+======================
 
 .. raw:: html
 

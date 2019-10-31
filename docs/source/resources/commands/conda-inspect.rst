@@ -2,7 +2,7 @@
 .. _inspect_ref:
 
 conda inspect
-=======================
+=============
 
 .. raw:: html
 

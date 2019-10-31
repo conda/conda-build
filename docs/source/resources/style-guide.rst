@@ -3,7 +3,7 @@ Writing style guide
 ===================
 
 Follow these guidelines for submitting
-or editing conda build documentation.
+or editing conda-build documentation.
 
 Audience
 ========

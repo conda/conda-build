@@ -1,8 +1,8 @@
 
 .. _build_ref:
 
-conda build
-=======================
+conda-build
+===========
 
 .. raw:: html
 

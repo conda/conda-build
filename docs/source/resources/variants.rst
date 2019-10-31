@@ -191,7 +191,7 @@ map for the content below.
 
    By referring to subpackages this way, you don't need to worry about what the
    end version of my_awesome_subpackage will be. Update it independently and
-   just let conda build figure it out and keep things consistent. There's more
+   just let conda-build figure it out and keep things consistent. There's more
    information below in the `Referencing subpackages`_ section.
 
 

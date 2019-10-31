@@ -2,7 +2,7 @@
 .. _skeleton_ref:
 
 conda skeleton
-=======================
+==============
 
 .. raw:: html
 

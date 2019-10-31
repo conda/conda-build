@@ -15,7 +15,7 @@ Dynamic behavior based on state of build process
 
 There are times when you may want to process a single file in
 different ways at more than one step in the render-build-test
-flow of conda build. Conda build sets the CONDA_BUILD_STATE
+flow of conda-build. Conda-build sets the CONDA_BUILD_STATE
 environment variable during each of these phases. The possible
 values are:
 
@@ -262,7 +262,7 @@ Inherited environment variables
 ==================================
 
 Other than those mentioned above, no variables are inherited from
-the environment in which you invoke conda build. You can choose
+the environment in which you invoke conda-build. You can choose
 to inherit additional environment variables by adding them to
 ``meta.yaml``:
 
@@ -315,7 +315,7 @@ Environment variables to set build features
 ============================================
 
 The environment variables listed in the following table are
-inherited from the process running conda build. These variables
+inherited from the process running conda-build. These variables
 control :ref:`features<concepts_features>`.
 
 .. list-table::
