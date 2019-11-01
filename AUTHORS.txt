@@ -9,10 +9,10 @@ Authors are sorted by number of commits.
 * Kale Franz
 * sophia
 * Rachel
+* Marcelo Duarte Trevisani
 * John Kirkham
 * Jonathan J. Helmus
 * Stuart Berg
-* Marcelo Duarte Trevisani
 * Ryan Grout
 * Darren Dale
 * Travis Swicegood
@@ -32,9 +32,9 @@ Authors are sorted by number of commits.
 * Jasmine Sandhu
 * Matthias Gabriel
 * Alex Wiltschko
+* soapy1
 * Michael C. Grant
 * Min RK
-* soapy1
 * Ullrich Koethe
 * Phil Elson
 * Jillian Rowe
@@ -68,6 +68,7 @@ Authors are sorted by number of commits.
 * Chris Hogan
 * Kai Tietz
 * Christopher Burr
+* Daniel Bast
 * Heather Kelly
 * Geir Ove Myhr
 * Matt Rendina
@@ -84,7 +85,6 @@ Authors are sorted by number of commits.
 * Yu Feng
 * Julien Schueller
 * Toon Verstraelen
-* Daniel Bast
 * Matty G
 * Robert T. McGibbon
 * chapmanb
@@ -96,6 +96,7 @@ Authors are sorted by number of commits.
 * Eric Dill
 * Derek Ludwig
 * Vlad Frolov
+* Duncan Macleod
 * todd.m.tomashek
 * Michael Cormier
 * Siu Kwan Lam
@@ -125,8 +126,8 @@ Authors are sorted by number of commits.
 * Alex Kovner
 * Zane Dufour
 * Harun Reşit Zafer
-* Duncan Macleod
 * Daniel Damiani
+* Matthew R Becker
 * Joseph Crail
 * Andres Guzman-Ballen
 * Riccardo Vianello
@@ -191,5 +192,7 @@ Authors are sorted by number of commits.
 * Chris Osborn
 * Oleksandr Pavlyk
 * Bruno P. Kinoshita
-
-
+* seanyen
+* AndrewAnnex
+* Amir Mohammadi
+* Jinzhe Zeng

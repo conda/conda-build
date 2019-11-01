@@ -5,7 +5,7 @@
   - msarahan@continuum.io
   aliases:
   - Mike Sarahan
-  num_commits: 144
+  num_commits: 145
   first_commit: 2015-09-04 21:31:08
 - name: Jonathan J. Helmus
   email: jjhelmus@gmail.com
@@ -744,7 +744,7 @@
   github: gqmelo
 - name: soapy1
   email: scastellarin@anaconda.com
-  num_commits: 14
+  num_commits: 17
   first_commit: 2018-10-22 16:40:33
   github: soapy1
 - name: Yu Feng
@@ -892,12 +892,12 @@
   first_commit: 2019-01-26 13:17:33
 - name: Rachel
   email: rrigdon@anaconda.com
-  num_commits: 73
+  num_commits: 77
   first_commit: 2019-01-24 14:12:19
   github: rrigdon
 - name: Rachel Rigdon
   email: 45607889+rrigdon@users.noreply.github.com
-  num_commits: 34
+  num_commits: 35
   first_commit: 2019-01-24 15:12:09
   github: rrigdon
 - name: Zane Dufour
@@ -980,12 +980,12 @@
   github: jakirkham
 - name: Daniel Bast
   email: 2790401+dbast@users.noreply.github.com
-  num_commits: 4
+  num_commits: 5
   first_commit: 2019-06-07 02:44:13
   github: dbast
 - name: Duncan Macleod
   email: duncan.macleod@ligo.org
-  num_commits: 2
+  num_commits: 3
   first_commit: 2019-06-13 08:07:25
   github: duncanmmacleod
 - name: Chris Osborn
@@ -1005,7 +1005,7 @@
   github: ddamiani
 - name: Marcelo Duarte Trevisani
   email: marceloduartetrevisani@gmail.com
-  num_commits: 46
+  num_commits: 62
   first_commit: 2019-07-19 10:00:00
   github: marcelotrevisani
   alternate_emails:
@@ -1019,3 +1019,25 @@
   num_commits: 10
   first_commit: 2019-09-20 19:35:25
   github: asford
+- name: seanyen
+  email: seanyen@microsoft.com
+  num_commits: 1
+  first_commit: 2019-10-15 20:24:20
+  github: seanyen
+- name: AndrewAnnex
+  email: ama6fy@virginia.edu
+  num_commits: 1
+  first_commit: 2019-10-15 16:14:54
+- name: Amir Mohammadi
+  email: 5738695+183amir@users.noreply.github.com
+  num_commits: 1
+  first_commit: 2019-10-28 10:43:48
+- name: Matthew R Becker
+  email: becker.mr@gmail.com
+  num_commits: 2
+  first_commit: 2019-10-17 23:05:16
+  github: beckermr
+- name: Jinzhe Zeng
+  email: jinzhe.zeng@rutgers.edu
+  num_commits: 1
+  first_commit: 2019-10-19 00:36:16
