@@ -39,6 +39,7 @@ requirements:
     - py-lief       # [not win]
     - python
     - pyyaml
+    - requests
     - scandir       # [py<34]
     - setuptools
     - six
