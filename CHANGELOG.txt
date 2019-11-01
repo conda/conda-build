@@ -1,4 +1,24 @@
 # current developments
+2019-11-01 3.18.11:
+------------------
+
+Contributors:
+-------------
+
+* @msarahan
+* @rrigdon
+* @marcelotrevisani
+* @rrigdon
+* @soapy1
+* @dbast
+* @duncanmmacleod
+* @beckermr
+* @seanyen
+* @AndrewAnnex
+* @183amir
+* @njzjz
+
+
 2019-10-14 3.18.10:
 ------------------
 
