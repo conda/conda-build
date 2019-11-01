@@ -154,6 +154,16 @@ def create_post_scripts(m):
             os.chmod(dst, 0o775)
 
 
+def prefix_replacement_excluded(path):
+    if path.endswith(('.pyc', '.pyo')) or not isfile(path):
+        return True
+    if sys.platform != 'darwin' and islink(path):
+        # OSX does not allow hard-linking symbolic links, so we cannot
+        # skip symbolic links (as we can on Linux)
+        return True
+    return False
+
+
 def have_prefix_files(files, prefix):
     '''
     Yields files that contain the current prefix in them, and modifies them
@@ -214,14 +224,8 @@ def have_prefix_files(files, prefix):
             f = f[prefix_len:]
         if rg_matches and f not in rg_matches:
             continue
-        if f.endswith(('.pyc', '.pyo')):
-            continue
-        path = join(prefix, f)
-        if not isfile(path):
-            continue
-        if sys.platform != 'darwin' and islink(path):
-            # OSX does not allow hard-linking symbolic links, so we cannot
-            # skip symbolic links (as we can on Linux)
+        path = os.path.join(prefix, f)
+        if prefix_replacement_excluded(path):
             continue
 
         # dont try to mmap an empty file, and no point checking files that are smaller
@@ -260,6 +264,300 @@ def have_prefix_files(files, prefix):
         fi.close()
 
 
+# It may be that when using the list form of passing args to subprocess
+# what matters is the number of arguments rather than the accumulated
+# string length. In that case, len(l[i]) should become 1, and we should
+# pass this in instead. It could also depend on the platform. We should
+# test this!
+def chunks(l, n):
+    # For item i in a range that is a length of l,
+    size = 0
+    start = 0
+    for i in range(0, len(l)):
+        # + 3 incase a shell is used: 1 space and 2 quotes.
+        size = size + len(l[i]) + 3
+        if i == len(l) - 1:
+            yield l[start:i + 1]
+        elif size > n:
+            yield l[start:i + 1]
+            start = i
+            size = 0
+
+
+def get_bytes_or_text_as_bytes(parent):
+    if 'bytes' in parent:
+        return parent['bytes']
+    return parent['text'].encode('utf-8')
+
+
+def regex_files_rg(files, prefix, tag, rg, regex_rg, replacement_re,
+                   also_binaries=False, debug_this=False, match_records=OrderedDict()):
+    # If we run out of space for args (could happen) we'll need to either:
+    # 1. Batching the calls.
+    # 2. Call for all (text?) files by passing just 'prefix' then filter out ones we don't care about (slow).
+    # 3. Use a shell prefixed with `cd prefix && ` (could still hit size limits, just later).
+    # I have gone for batching!
+    args_base = [rg.encode('utf-8'),
+                 b'--unrestricted',
+                 b'--no-heading',
+                 b'--with-filename'] + \
+                 ([b'--text'] if also_binaries else []) + \
+                 [b'--json',
+                 regex_rg]
+    pu = prefix.encode('utf-8')
+    prefix_files = [os.path.join(pu, f.replace('/', os.sep).encode('utf-8')) for f in files]
+    args_len = len(b' '.join(args_base))
+    file_lists = list(chunks(prefix_files, 131071 - args_len))
+    for file_list in file_lists:
+        args = args_base[:] + file_list
+        # This will not work now our args are binary strings:
+        # from conda.utils import quote_for_shell
+        # print(quote_for_shell(args))
+        try:
+            if utils.on_win:
+                args = [a.decode('utf-8') for a in args]
+                print(' '.join(args))
+            else:
+                print(b' '.join(args))
+            matches = subprocess.check_output(args, shell=False).rstrip(b'\n').split(b'\n')
+            matches = b'[' + b','.join(matches) + b']\n'
+            matches = json.loads(matches)
+        except subprocess.CalledProcessError as _:  # noqa
+            # Just means rg returned 1 as no matches were found.
+            continue
+        except Exception as e:
+            raise e
+        if matches:
+            stage = 'pre-begin'
+            for match in matches:
+                new_stage = match['type']
+                if new_stage == 'begin':
+                    stage = new_stage
+                    match_filename_begin = match['data']['path']['text'][len(prefix) + 1:]
+                    match_filename_type = 'unknown'
+                    # TODO :: Speed this up, and generalise it, the python version does similar.
+                    with open(os.path.join(prefix, match_filename_begin), 'rb') as fh:
+                        data = mmap_or_read(fh)
+                        match_filename_type = 'binary' if data.find(b'\x00') != -1 else 'text'
+                    assert match_filename_type != 'unknown'
+                elif new_stage == 'match':
+                    old_stage = stage
+                    assert stage == 'begin' or stage == 'match' or stage == 'end'
+                    stage = new_stage
+                    match_filename = match['data']['path']['text'][len(prefix) + 1:]
+                    # Get stuff from the 'line' (to be consistent with the python version we ignore this).
+                    # match_line = get_bytes_or_text_as_bytes(match['data']['lines'])
+                    # match_line_number = match['data']['line_number']
+                    # match_absolute_offset = match['data']['absolute_offset']
+                    if old_stage == 'begin':
+                        assert match_filename_begin == match_filename, '{} != \n {}'\
+                            .format(match_filename_begin, match_filename)
+                    if match_filename not in match_records:
+                        if debug_this:
+                            # We could add: #'line': match_line, 'line_number': match_line_number but it would
+                            # break our ability to compare against the python code.
+                            match_records[match_filename] = {'type': match_filename_type,
+                                                             'submatches': []}
+                        else:
+                            match_records[match_filename] = {'type': match_filename_type,
+                                                             'submatches': []}
+                    for submatch in match['data']['submatches']:
+                        submatch_match_text = get_bytes_or_text_as_bytes(submatch['match'])
+                        submatch_start = submatch['start'] + match['data']['absolute_offset']
+                        submatch_end = submatch['end'] + match['data']['absolute_offset']
+                        # print("{}({}) :: {}..{} = {}".format(
+                        #       match_filename, match_line_number,
+                        #       submatch_start, submatch_end, submatch_match_text))
+                        submatch_record = {'tag': tag,
+                                           'text': submatch_match_text,
+                                           'start': submatch_start,
+                                           'end': submatch_end,
+                                           'regex_re': regex_rg,
+                                           'replacement_re': replacement_re}
+                        if submatch_record not in match_records[match_filename]['submatches']:
+                            match_records[match_filename]['submatches'].append(submatch_record)
+                elif new_stage == 'end':
+                    assert stage == 'match'
+                    stage = new_stage
+                elif new_stage == 'elpased_total':
+                    assert stage == 'end'
+                    stage = new_stage
+                    print('ELAPSED TOTAL')
+    return sort_matches(match_records)
+
+
+def mmap_or_read(fh):
+    try:
+        mm = utils.mmap_mmap(fh.fileno(), 0, tagname=None, flags=utils.mmap_MAP_PRIVATE)
+    except OSError:
+        mm = fh.read()
+    return mm
+
+
+def regex_files_py(files, prefix, tag, regex_re, replacement_re,
+                   also_binaries=False, match_records=OrderedDict()):
+    import re
+    re_re = re.compile(regex_re)
+    for file in files:
+        with open(join(prefix, file), 'rb+') as f:
+            if os.fstat(f.fileno()).st_size == 0:
+                continue
+            data = mmap_or_read(f)
+            type = 'binary' if data.find(b'\x00') != -1 else 'text'
+            if not also_binaries and type == 'binary':
+                continue
+            # data2 = f.read()
+            for match in re.finditer(re_re, data):
+                if match:
+                    # absolute_offset = match.pos
+                    if file not in match_records:
+                        # Could add 'absolute_offset': absolute_offset,
+                        match_records[file] = {'type': type,
+                                               'submatches': []}
+                    # else:
+                    #     if match_records[file]['absolute_offset'] != absolute_offset:
+                    #         print("Dropping match.pos() of {}, neq {}".format(absolute_offset, match_records[file]['absolute_offset']))
+                    g_index = len(match.groups())
+                    if g_index == 0:
+                        # Complete match.
+                        submatch_match_text = match.group()
+                        submatch_start = match.start()
+                        submatch_end = match.end()
+                    else:
+                        submatch_match_text = match.groups(g_index)[0]
+                        submatch_start = match.start(g_index)
+                        submatch_end = match.end(g_index)
+                    # print("found {} ({}..{})".format(submatch_match_text, submatch_start, submatch_end))
+                    match_records[file]['submatches'].append({'tag': tag,
+                                                              'text': submatch_match_text,
+                                                              'start': submatch_start,
+                                                              'end': submatch_end,
+                                                              'regex_re': regex_re,
+                                                              'replacement_re': replacement_re})
+                    # assert data2[match.start(g_index):match.end(g_index)] == match_text
+                    # print(data2[match.start(g_index):match.end(g_index)])
+    return sort_matches(match_records)
+
+
+def regex_matches_tighten_re(match_records, regex_re, tag=None):
+    # Do we need to shrink the matches?
+    if match_records:
+        import re
+        re_re = re.compile(regex_re)
+        for filename, match in match_records.items():
+            for submatch in match['submatches']:
+                if tag and submatch['tag'] != tag:
+                    continue
+                match_re = re.match(re_re, submatch['text'])
+                if match_re:
+                    groups = match_re.groups()
+                    if groups:
+                        match_tigher = match_re.group(len(groups))
+                    else:
+                        match_tigher = str(match_re)
+                    if match_tigher != submatch['text']:
+                        # Assert we can find submatches correctly at their start and end in the line.
+                        if 'line' in match:
+                            assert (match['line'][submatch['start'] -
+                                    match['absolute_offset']:submatch['end'] -
+                                    match['absolute_offset']] == submatch['text'])
+                        index = submatch['text'].find(match_tigher)
+                        assert index != -1
+                        submatch['start'] += index
+                        submatch['end'] = submatch['start'] + len(match_tigher)
+                        # print("from {} to {} (index={})".format(submatch['text'], match_tigher, index))
+                        submatch['text'] = match_tigher
+                        # Assert we can still find submatches correctly at their start and end in the line.
+                        if 'line' in match:
+                            assert (match['line'][submatch['start'] -
+                                    match['absolute_offset']:submatch['end'] -
+                                    match['absolute_offset']] == submatch['text'])
+                    # Even if the match was not tighter we overwrite the regex.
+                    submatch['regex_re'] = regex_re
+                else:
+                    print("ERROR :: Tighter regex_re does not match")
+    return sort_matches(match_records)
+
+
+# Sorts matches by filename and also submatches by start position.
+def sort_matches(match_records):
+    match_records_o = OrderedDict(sorted(match_records.items()))
+    for file, match in match_records_o.items():
+        match['submatches'] = sorted(match['submatches'], key=lambda x: x['start'])
+    return match_records_o
+
+
+def check_matches(prefix, match_records):
+    print("::CHECKING MATCHES::")
+    for file, match in match_records.items():
+        data = None
+        with open(join(prefix, file), 'rb+') as f:
+            data = f.read()
+        if data:
+            for submatch in match['submatches']:
+                file_content = data[submatch['start']:submatch['end']]
+                if file_content != submatch['text']:
+                    print("ERROR :: file_content {} != submatch {}".format(file_content, submatch['text']))
+                print("{} :: ({}..{}) = {}".format(file, submatch['start'], submatch['end'], submatch['text']))
+
+
+def have_regex_files(files, prefix, tag, regex_re, replacement_re,
+                     also_binaries=False, match_records={}, regex_rg=None, debug=False):
+    '''
+    :param files: Filenames to check for instances of regex_re
+    :param prefix: Prefix in which to search for these files
+    :param regex_re: The regex to use
+    :param replacement_re: The replacement regex to use
+    :param also_binaries: Search and replace in binaries too
+    :param regex_rg: rg does not support all pcre2 nor python re features. You can use this to provide a
+                     more compatible but also more broad, fast regex (it must capture everything regex_re
+                     would capture, but can capture more) as a pre-filter. Then python re will be used to
+                     reduce the matches. There are also some minor syntax differences between rg and re.
+                     The last group is taken as the matching portion, though I am not sure about that
+                     decision.
+    :param match_records: A dictionary of previous results should you wish to augment it
+    :return: input match_records augmented with matches
+    '''
+    if not len(files):
+        return match_records
+    import copy
+    match_records_rg, match_records_re = copy.deepcopy(match_records), copy.deepcopy(match_records)
+    if not isinstance(regex_re, (bytes, bytearray)):
+        regex_re = regex_re.encode('utf-8')
+    if regex_rg and not isinstance(regex_rg, (bytes, bytearray)):
+        regex_rg = regex_rg.encode('utf-8')
+    rg = external.find_executable('rg')
+    if rg:
+        match_records_rg = regex_files_rg(files, prefix, tag,
+                                          rg,
+                                          regex_rg if regex_rg else regex_re,
+                                          replacement_re,
+                                          also_binaries=also_binaries,
+                                          debug_this=debug,
+                                          match_records=match_records_rg)
+        if regex_rg and regex_re:
+            match_records_rg = regex_matches_tighten_re(match_records_rg, regex_re, tag)
+    if not rg or debug:
+        match_records_re = regex_files_py(files, prefix, tag,
+                                          regex_re if regex_re else regex_rg,
+                                          replacement_re,
+                                          also_binaries=also_binaries,
+                                          match_records=match_records_re)
+        if debug:
+            check_matches(prefix, match_records_rg)
+            check_matches(prefix, match_records_re)
+            if match_records_rg != match_records_re:
+                for (k, v), (k2, v2) in zip(match_records_rg.items(), match_records_re.items()):
+                    if k != k2:
+                        print("File Mismatch:\n{}\n{}".format(k, k2))
+                    elif v != v2:
+                        print("Match Mismatch ({}):\n{}\n{}".format(v, v2, k))
+                        for submatch, submatch2 in zip(v['submatches'], v2['submatches']):
+                            if submatch != submatch2:
+                                print("Submatch Mismatch ({}):\n{}\n{}".format(submatch, submatch2, k))
+    return match_records_rg if rg else match_records_re
+
+
 def rewrite_file_with_new_prefix(path, data, old_prefix, new_prefix):
     # Old and new prefix should be bytes
 
@@ -270,6 +568,57 @@ def rewrite_file_with_new_prefix(path, data, old_prefix, new_prefix):
         fo.write(data)
     os.chmod(path, stat.S_IMODE(st.st_mode) | stat.S_IWUSR)  # chmod u+w
     return data
+
+
+def perform_replacements(matches, prefix, verbose=False):
+    for file, match in matches.items():
+        filename = os.path.join(prefix, file)
+        filename_tmp = filename + '.cbpatch.tmp'
+        if os.path.exists(filename_tmp):
+            os.unlink()
+        shutil.copy2(filename, filename_tmp)
+        if verbose:
+            print("Patching: {} in {} {}".format(filename,
+                                                 (match['submatches']),
+                                                 'places' if len(match['submatches']) > 1 else 'place'))
+        with open(filename_tmp, 'wb+') as file_tmp:
+            file_tmp.truncate()
+            with open(filename, 'rb') as file:
+                last_index = 0
+                for submatch in match['submatches']:
+                    length = submatch['start'] - last_index
+                    data = file.read(length)
+                    assert len(data) == length
+                    file_tmp.write(data)
+                    original = submatch['text']
+                    # Ideally you wouldn't pass to this function any submatches with replacement_re of None,
+                    # Still, it's easily handled.
+                    if submatch['replacement_re']:
+                        new_string = re.sub(submatch['regex_re'], submatch['replacement_re'], original)
+                    else:
+                        new_string = original
+                    if match['type'] == 'binary':
+                        if len(original) < len(new_string):
+                            print("ERROR :: Cannot replace {} with {} in binary file {}".format(original,
+                                                                                                new_string,
+                                                                                                filename))
+                        new_string = new_string.ljust(len(original), b'\0')
+                        assert len(new_string) == len(original)
+                    file_tmp.write(new_string)
+                    # discarded (but also verified)
+                    actual_original = file.read(len(original))
+                    if match['type'] == 'binary':
+                        assert actual_original == original
+                    last_index += length + len(original)
+                    if submatch == match['submatches'][len(match['submatches']) - 1]:
+                        # Write the remainder.
+                        data = file.read()
+                        file_tmp.write(data)
+        # Could assert the lengths of binaries are the same here for extra safety.
+        if os.path.exists(filename_tmp):
+            if os.path.exists(filename):
+                os.unlink(filename)
+            shutil.move(filename_tmp, filename)
 
 
 def _copy_top_level_recipe(path, config, dest_dir, destination_subdir=None):
@@ -475,8 +824,97 @@ def write_hash_input(m):
         json.dump(recipe_input, f, indent=2)
 
 
-def get_files_with_prefix(m, files, prefix):
-    files_with_prefix = sorted(have_prefix_files(files, prefix))
+def get_files_with_prefix(m, files_in, prefix):
+    import time
+    start = time.time()
+    # It is nonsensical to replace anything in a symlink.
+    files = [f for f in files_in if not os.path.islink(os.path.join(prefix, f))]
+    ignore_files = m.ignore_prefix_files()
+    ignore_types = set()
+    if not hasattr(ignore_files, "__iter__"):
+        if ignore_files is True:
+            ignore_types.update((FileMode.text.name, FileMode.binary.name))
+        ignore_files = []
+    if (not m.get_value('build/detect_binary_files_with_prefix', True) and
+       not m.get_value('build/binary_has_prefix_files', None)):
+        ignore_types.update((FileMode.binary.name,))
+    files_with_prefix = [(None, FileMode.binary.name if
+                         open(os.path.join(prefix, f), 'rb+').read().find(b'\x00') != -1 else
+                             FileMode.text.name, f) for f in files]
+    ignore_files.extend(
+        f[2] for f in files_with_prefix if (f[1] in ignore_types and
+        f[2] not in ignore_files) or prefix_replacement_excluded(os.path.join(prefix, f[2])))
+    files_with_prefix = [f for f in files_with_prefix if f[2] not in ignore_files]
+
+    prefix_u = prefix.replace('\\', '/') if utils.on_win else prefix
+    # If we've cross compiled on Windows to unix, chances are many files will refer to Windows
+    # paths.
+    if utils.on_win or m.config.subdir.startswith('win'):
+        # TODO :: Should we also handle MSYS2 paths (/c/blah) here? Probably!
+        variants = (prefix,
+                    prefix_u,
+                    prefix_placeholder.replace('\\', '\''),
+                    prefix_placeholder.replace('/', '\\'))
+    else:
+        variants = (prefix, prefix_placeholder)
+    re_test = b'(' + b'|'.join(v.encode('utf-8').replace(b'\\', b'\\\\') for v in variants) + b')'
+    pfx_matches = have_regex_files([f[2] for f in files_with_prefix], prefix=prefix,
+                                   tag='prefix',
+                                   regex_re=re_test,
+                                   # We definitely do not want this as a replacement_re as it'd replace
+                                   # /opt/anaconda1anaconda2anaconda3 with the prefix. As it happens we
+                                   # do not do any replacement at all here.
+                                   # replacement_re=prefix.encode('utf-8').replace(b'\\', b'\\\\'),
+                                   replacement_re=None,
+                                   also_binaries=True,
+                                   match_records={},
+                                   debug=m.config.debug)
+    prefixes_for_file = {}
+    # This is for Windows mainly, though we may want to allow multiple searches at once in a file on
+    # all OSes some-day. It  is harmless to do this on all systems anyway.
+    for filename, match in pfx_matches.items():
+        prefixes_for_file[filename] = set([sm['text'] for sm in match['submatches']])
+    files_with_prefix_new = []
+    for (_, mode, filename) in files_with_prefix:
+        if filename in prefixes_for_file:
+            for pfx in prefixes_for_file[filename]:
+                files_with_prefix_new.append((pfx.decode('utf-8'), mode, filename))
+    files_with_prefix = files_with_prefix_new
+    all_matches = {}
+    '''
+    # Enable this once we define CONDA_BUILD_SYSROOT_S
+    ext = '.pc'
+    all_matches = have_regex_files(files=[f for f in files if f.endswith(ext)], prefix=prefix,
+                                   tag='pkg-config build metadata',
+                                   regex_re=r'(?:-L|-I)?\"?([^;\s]+\/sysroot\/)',
+                                   replacement_re=b'$(CONDA_BUILD_SYSROOT_S)',
+                                   match_records=all_matches,
+                                   regex_rg=r'([^;\s"]+/sysroot/)',
+                                   debug=m.config.debug)
+    '''
+    ext = '.cmake'
+    all_matches = have_regex_files(files=[f for f in files if f.endswith(ext)], prefix=prefix,
+                                   tag='CMake build metadata',
+                                   regex_re=r'([^;\s"]+/sysroot)',
+                                   replacement_re=r'$ENV{CONDA_BUILD_SYSROOT}',
+                                   match_records=all_matches,
+                                   debug=m.config.debug)
+    ext = ('.pri', '.prl')
+    all_matches = have_regex_files(files=[f for f in files if f.endswith(ext)], prefix=prefix,
+                                   tag='qmake build metadata',
+                                   regex_re=r'(?:-L|-I)?\"?([^;\s]+\/sysroot)',
+                                   replacement_re=r'$(CONDA_BUILD_SYSROOT)',
+                                   match_records=all_matches,
+                                   regex_rg=r'([^;\s"]+/sysroot)',
+                                   debug=m.config.debug)
+    perform_replacements(all_matches, prefix)
+    end = time.time()
+    print("INFO :: Time taken to do replacements (prefix pkg-config, CMake, qmake) was: {}".format(end - start))
+    '''
+    # Keeping this around just for a while.
+    files_with_prefix2 = sorted(have_prefix_files(files_in, prefix))
+    end = time.time()
+    print("INFO :: Time taken to do replacements (prefix only) was: {}".format(end - start))
 
     ignore_files = m.ignore_prefix_files()
     ignore_types = set()
@@ -484,18 +922,28 @@ def get_files_with_prefix(m, files, prefix):
         if ignore_files is True:
             ignore_types.update((FileMode.text.name, FileMode.binary.name))
         ignore_files = []
-    if not m.get_value('build/detect_binary_files_with_prefix', True):
+    if (not m.get_value('build/detect_binary_files_with_prefix', True) and
+        not m.get_value('build/binary_has_prefix_files', None)):
         ignore_types.update((FileMode.binary.name,))
     # files_with_prefix is a list of tuples containing (prefix_placeholder, file_type, file_path)
     ignore_files.extend(
         f[2] for f in files_with_prefix if f[1] in ignore_types and f[2] not in ignore_files)
     files_with_prefix = [f for f in files_with_prefix if f[2] not in ignore_files]
+    '''
     return files_with_prefix
 
 
 def record_prefix_files(m, files_with_prefix):
-    binary_has_prefix_files = m.binary_has_prefix_files()
-    text_has_prefix_files = m.has_prefix_files()
+
+    if not files_with_prefix:
+        return
+
+    # Copies are made to ease debugging. Sorry.
+    binary_has_prefix_files = m.binary_has_prefix_files()[:]
+    text_has_prefix_files = m.has_prefix_files()[:]
+    # We need to cache these as otherwise the fact we remove from this in a for loop later
+    # that also checks it has elements.
+    len_binary_has_prefix_files = len(binary_has_prefix_files)
 
     if files_with_prefix and not m.noarch:
         if utils.on_win:
@@ -509,22 +957,40 @@ def record_prefix_files(m, files_with_prefix):
             # versions of conda don't support quotes in has_prefix
             fmt_str = '%s %s %s\n'
 
+        print("Files containing CONDA_PREFIX")
+        print("-----------------------------")
         with open(join(m.config.info_dir, 'has_prefix'), 'w') as fo:
             for pfix, mode, fn in files_with_prefix:
-
-                if fn in binary_has_prefix_files:
-                    if mode != 'binary':
-                        print("Forcing %s to be treated as binary instead of %s" % (fn, mode))
-                        mode = 'binary'
-                    binary_has_prefix_files.remove(fn)
-                elif fn in text_has_prefix_files:
+                print('{} :: {} :: {}'.format(pfix, mode, fn))
+                ignored_because = None
+                if (fn in binary_has_prefix_files or (not len_binary_has_prefix_files or
+                   m.get_value('build/detect_binary_files_with_prefix', False) and mode == 'binary')):
+                    if fn in binary_has_prefix_files:
+                        if mode != 'binary':
+                            mode = 'binary'
+                        elif fn in binary_has_prefix_files:
+                            print("File {} force-identified as 'binary', "
+                                  "But it is 'binary' anyway, suggest removing it from "
+                                  "`build/binary_has_prefix_files`".format(fn))
+                    if fn in binary_has_prefix_files:
+                        binary_has_prefix_files.remove(fn)
+                elif fn in text_has_prefix_files or mode == 'text':
                     if mode != 'text':
-                        print("Forcing %s to be treated as text instead of %s" % (fn, mode))
                         mode = 'text'
-                    text_has_prefix_files.remove(fn)
+                    elif fn in text_has_prefix_files:
+                        print("File {} force-identified as 'text', "
+                              "But it is 'text' anyway, suggest removing it from "
+                              "`build/has_prefix_files`".format(fn))
+                    if fn in text_has_prefix_files:
+                        text_has_prefix_files.remove(fn)
+                else:
+                    ignored_because = " :: Not in build/%s_has_prefix_files" % (mode)
 
-                print("Detected hard-coded path in %s file %s" % (mode, fn))
-                fo.write(fmt_str % (pfix, mode, fn))
+                print("{fn} ({mode}): {action}{reason}".format(fn=fn, mode=mode,
+                                                               action="Ignoring" if ignored_because else "Patching",
+                                                               reason=ignored_because if ignored_because else ""))
+                if ignored_because is None:
+                    fo.write(fmt_str % (pfix, mode, fn))
 
     # make sure we found all of the files expected
     errstr = ""
