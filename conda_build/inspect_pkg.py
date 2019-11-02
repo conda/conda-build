@@ -7,9 +7,10 @@
 from __future__ import absolute_import, division, print_function
 
 from collections import defaultdict
+import fnmatch
 import json
 from operator import itemgetter
-from os.path import abspath, join, dirname, exists, basename, normcase
+from os.path import abspath, join, dirname, exists, basename
 import os
 import re
 import sys
@@ -39,10 +40,11 @@ def which_package(in_prefix_path, prefix):
     the conda packages the file came from.  Usually the iteration yields
     only one package.
     """
-    norm_ipp = normcase(in_prefix_path.replace(os.sep, '/'))
+    norm_ipp = in_prefix_path.replace(os.sep, '/')
+    match = re.compile(fnmatch.translate(norm_ipp)).match
     for dist in linked(prefix):
         dfiles = dist_files(prefix, dist)
-        if any(norm_ipp == normcase(w) for w in dfiles):
+        if any(map(match, dfiles)):
             yield dist
 
 
