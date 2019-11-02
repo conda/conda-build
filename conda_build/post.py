@@ -7,6 +7,7 @@ import io
 import locale
 import re
 import os
+from os.path import normpath
 import shutil
 import stat
 from subprocess import call, check_output, CalledProcessError
@@ -187,9 +188,10 @@ def rm_py_along_so(prefix):
     files = list(scandir(prefix))
     for fn in files:
         if fn.is_file() and fn.name.endswith(('.so', '.pyd')):
-            name, _ = os.path.splitext(fn.path)
             for ext in '.py', '.pyc', '.pyo':
-                if any(fnmatch(name + ext, w) for w in files):
+                name, _ = os.path.splitext(fn.path)
+                name = normpath(name + ext)
+                if any(name == normpath(f) for f in files):
                     os.unlink(name + ext)
 
 
@@ -306,7 +308,7 @@ def post_process(name, version, files, prefix, config, preserve_egg_dir=False, n
 def find_lib(link, prefix, files, path=None):
     if link.startswith(prefix):
         link = os.path.normpath(link[len(prefix) + 1:])
-        if not any(fnmatch(link, w) for w in files):
+        if not any(link == normpath(w) for w in files):
             sys.exit("Error: Could not find %s" % link)
         return link
     if link.startswith('/'):  # but doesn't start with the build prefix
@@ -717,15 +719,15 @@ def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_v
                     # Looking at all the files is very slow.
                     if not dynamic_lib and not static_lib:
                         continue
-                    rp = os.path.relpath(fp, prefix)
-                    if dynamic_lib and not any(fnmatch(rp, w) for w in all_needed_dsos):
+                    rp = normpath(os.path.relpath(fp, prefix))
+                    if dynamic_lib and not any(rp == normpath(w) for w in all_needed_dsos):
                         continue
-                    if any(fnmatch(rp, w) for w in all_lib_exports):
+                    if any(rp == normpath(w) for w in all_lib_exports):
                         continue
                     owners = prefix_owners[rp] if rp in prefix_owners else []
                     # Self-vendoring, not such a big deal but may as well report it?
                     if not len(owners):
-                        if any(fnmatch(rp, w) for w in files):
+                        if any(rp == normpath(w) for w in files):
                             owners.append(pkg_vendored_dist)
                     new_pkgs = list(which_package(rp, prefix))
                     # Cannot filter here as this means the DSO (eg libomp.dylib) will not be found in any package
@@ -837,7 +839,7 @@ def _lookup_in_system_whitelists(errors, whitelist, needed_dso, sysroots_files, 
 
 def _lookup_in_prefix_packages(errors, needed_dso, files, run_prefix, whitelist, info_prelude, msg_prelude,
                                warn_prelude, verbose, requirements_run, lib_packages, lib_packages_used):
-    in_prefix_dso = needed_dso
+    in_prefix_dso = normpath(needed_dso)
     n_dso_p = "Needed DSO {}".format(in_prefix_dso)
     and_also = " (and also in this package)" if in_prefix_dso in files else ""
     pkgs = list(which_package(in_prefix_dso, run_prefix))
@@ -870,7 +872,7 @@ def _lookup_in_prefix_packages(errors, needed_dso, files, run_prefix, whitelist,
                                     in_pkgs_in_run_reqs,
                                     and_also), verbose=verbose)
     else:
-        if not any(fnmatch(in_prefix_dso, w) for w in files):
+        if not any(in_prefix_dso == normpath(w) for w in files):
             _print_msg(errors, '{}: {} not found in any packages'.format(msg_prelude,
                                                                         in_prefix_dso), verbose=verbose)
         elif verbose:
