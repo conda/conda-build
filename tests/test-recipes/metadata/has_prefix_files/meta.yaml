@@ -7,3 +7,4 @@ build:
     - binary-has-prefix
   has_prefix_files:
     - has-prefix
+    - both-slash-prefix  # [win]

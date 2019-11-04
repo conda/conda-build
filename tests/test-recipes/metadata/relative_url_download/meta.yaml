@@ -4,3 +4,4 @@ package:
 
 source:
   url: ./test.tar.gz
+  sha256: a904c0efb2b8a6a7837369eb1cdce63d7f34beda851ba00f55c3e724ce5df422
