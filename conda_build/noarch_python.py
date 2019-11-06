@@ -26,7 +26,11 @@ def rewrite_script(fn, prefix):
 
     # Load and check the source file for not being a binary
     src = join(prefix, 'Scripts' if ISWIN else 'bin', fn)
-    with io.open(src, encoding=locale.getpreferredencoding()) as fi:
+    encoding = locale.getpreferredencoding()
+    # if default locale is ascii, allow UTF-8 (a reasonably modern ASCII extension)
+    if encoding == "ANSI_X3.4-1968":
+        encoding = "UTF-8"
+    with io.open(src, encoding=encoding) as fi:
         try:
             data = fi.read()
         except UnicodeDecodeError:  # file is binary
