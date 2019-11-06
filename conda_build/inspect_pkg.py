@@ -313,7 +313,7 @@ def inspect_objects(packages, prefix=sys.prefix, groupby='package'):
             path = join(prefix, f)
             filetype = codefile_type(path)
             if filetype == 'machofile':
-                f_info['filetype'] = human_filetype(path)
+                f_info['filetype'] = human_filetype(path, None)
                 f_info['rpath'] = ':'.join(get_rpaths(path))
                 f_info['filename'] = f
                 info.append(f_info)
