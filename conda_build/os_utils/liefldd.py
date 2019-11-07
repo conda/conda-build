@@ -854,7 +854,7 @@ def get_relocations(filename, arch='native'):
     return []
 
 
-def get_symbols(file, defined=True, undefined=True, notexported=False, arch='native'):
+def get_symbols(file, direction='both', defined=True, undefined=True):
     binary = ensure_binary(file)
 
     first_undefined_symbol = 0
@@ -867,44 +867,47 @@ def get_symbols(file, defined=True, undefined=True, notexported=False, arch='nat
         except:
             pass
     res = []
-    if len(binary.exported_functions):
-        syms = binary.exported_functions
-    elif len(binary.symbols):
-        syms = binary.symbols
-    elif len(binary.static_symbols):
-        syms = binary.static_symbols
-    else:
-        syms = []
-    for index, s in enumerate(syms):
-        if debug_static_archives > 1:
-            print(s)
-#        if s.type&16:
-#            continue
-        is_notexported = True
-        is_undefined = index >= first_undefined_symbol and index <= last_undefined_symbol
-        if binary.__class__ != lief.MachO.Binary:
-            if isinstance(s, str):
-                s_name = '%s' % s
+    from collections import OrderedDict
+    sym_lists = OrderedDict()
+    if direction == 'exported' or direction == 'both':
+        if hasattr(binary, 'exported_symbols'):
+            sym_lists['exported'] = binary.exported_symbols
+        else:
+            sym_lists['exported'] = binary.symbols
+    if direction == 'imported' or direction == 'both':
+       if hasattr(binary, 'imported_symbols'):
+            sym_lists['imported'] = binary.imported_symbols
+       elif direction != 'both':  # When both, this will have been added just above
+            sym_lists['exported'] = binary.symbols
+
+    for type, syms in sym_lists.items():
+        for index, s in enumerate(syms):
+            is_notexported = True
+            is_undefined = type == 'exported' and index >= first_undefined_symbol and index <= last_undefined_symbol
+            s_version = str(s.symbol_version) if hasattr(s, 'has_version') and s.has_version else None
+            if binary.__class__ != lief.MachO.Binary:
+                if isinstance(s, str):
+                    s_name = '%s' % s
+                else:
+                    s_name = '%s' % s.name
+                    if s.exported and s.imported:
+                        print("Weird, symbol {} is both imported and exported".format(s.name))
+                    if s.exported:
+                        is_undefined = True
+                        is_notexported = False
+                    elif s.imported:
+                        is_undefined = False
             else:
                 s_name = '%s' % s.name
-                if s.exported and s.imported:
-                    print("Weird, symbol {} is both imported and exported".format(s.name))
-                if s.exported:
-                    is_undefined = True
-                    is_notexported = False
-                elif s.imported:
-                    is_undefined = False
-        else:
-            s_name = '%s' % s.name
-            is_notexported = False if s.type & 1 else True
+                is_notexported = False if s.type & 1 else True
 
-        # print("{:32s} : s.type 0b{:020b}, s.value 0b{:020b}".format(s.name, s.type, s.value))
-        # print("s.value 0b{:020b} :: s.type 0b{:020b}, {:32s}".format(s.value, s.type, s.name))
-        if notexported is True or is_notexported is False:
-            if is_undefined and undefined:
-                res.append('%s' % s_name)
-            elif not is_undefined and defined:
-                res.append('%s' % s_name)
+            # print("{:32s} : s.type 0b{:020b}, s.value 0b{:020b}".format(s.name, s.type, s.value))
+            # print("s.value 0b{:020b} :: s.type 0b{:020b}, {:32s}".format(s.value, s.type, s.name))
+            if is_notexported is False or direction != 'imported':
+                if is_undefined and undefined:
+                    res.append({'name': s_name, 'type': type, 'version': s_version})
+                elif not is_undefined and defined:
+                    res.append({'name': s_name, 'type': type, 'version': s_version})
     return res
 
 
@@ -1056,9 +1059,17 @@ def lief_parse_internal(filename, path_replacements={}):
         filetype = None
         try:
             entrypoint = binary.entrypoint
-            for function in [f for f in binary.symbols if f.is_function]:
-                addr = binary.get_function_address(function.name)
-                print('function {} at addr {}'.format(function, addr))
+            for function in [f for f in binary.symbols if f.is_function and not f.imported]:
+                name = function.name
+                try:
+                    name_d = function.demangled_name
+                except:
+                    name_d = None
+                try:
+                    addr = binary.get_function_address(name_d or name)
+                    print('function {} at addr {}'.format(function, addr))
+                except:
+                    print('WARNING :: Failed to get address for {}'.format(function.name))
         except Exception as e:
             print("no entrypoint for {}".format(filename))
             raise e
@@ -1080,6 +1091,7 @@ def lief_parse_internal(filename, path_replacements={}):
                        'rpaths': rpaths,
                        'runpaths': runpaths,
                        'exports': get_exports(binary),
+                       'symbols': get_symbols(binary),
                        'key': get_uniqueness_key(binary),
                        'default_paths': default_paths,
                        'libraries': {'original': libs_original}}
@@ -1104,6 +1116,7 @@ def lief_parse_internal(filename, path_replacements={}):
                             'rpaths': cf.get_rpaths_transitive(),
                             'runpaths': cf.get_runpaths(),
                             'exports': None,
+                            'symbols': None,
                             'key': key,
                             'libraries': {'original': libs_original,
                                           'resolved': libs_resolved}}
@@ -1121,3 +1134,32 @@ def lief_parse(filename, path_replacements={}):
     result = copy.deepcopy(lief_parse_internal(filename, path_replacements))
     result['fullpath'] = os.path.normpath(filename)
     return result
+
+
+'''
+def parse_glibc_version_from_sym(version):
+    versions = version.replace('GLIBC_', '').replace('(', '.').replace(')','').split('.')
+    if len(versions) > 3:
+        return {'major': versions[0], 'minor': versions[1], 'patch': versions[2], 'abi_level': versions[3]}
+    else:
+        return {'major': versions[0], 'minor': versions[1], 'patch': None, 'abi_level': versions[2]}
+
+
+def parse_glibcxx_version_from_sym(version):
+    versions = version.replace('GLIBCXX_', '').replace('(', '.').replace(')','').split('.')
+    if len(versions) > 3:
+        return {'major': versions[0], 'minor': versions[1], 'patch': versions[2], 'abi_level': versions[3]}
+    else:
+        return {'major': versions[0], 'minor': versions[1], 'patch': None, 'abi_level': versions[2]}
+
+
+if __name__ == '__main__':
+    file_info = lief_parse('/opt/b/qt-feedstock/_test_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_pla/lib/libQt5WebEngineCore.so.5.12')
+    for sym in file_info['symbols']:
+        if sym['version'].startswith('GLIBC_'):
+            parse_glibc_version_from_sym(sym['version'])
+        elif sym['version'].startswith('GLIBCXX_'):
+            parse_glibcxx_version_from_sym(sym['version'])
+    glibcs = [sym['name']+'@'+sym['version'] for sym in file_info['symbols'] if 'GLIBC_' in sym['version']]
+    print(glibcs)
+'''
