@@ -41,7 +41,7 @@ def testing_workdir(tmpdir, request):
 @pytest.fixture(scope='function')
 def testing_config(testing_workdir):
     return Config(croot=testing_workdir, anaconda_upload=False, verbose=True,
-                  activate=False, debug=False, variant=None)
+                  activate=False, debug=False, variant=None, test_run_post=False)
 
 
 @pytest.fixture(scope='function')

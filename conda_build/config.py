@@ -90,6 +90,7 @@ def _get_default_settings():
             Setting('remove_work_dir', True),
             Setting('_host_platform', None),
             Setting('_host_arch', None),
+            Setting('test_run_post', False),
             Setting('filename_hashing', cc_conda_build.get('filename_hashing',
                                                            'true').lower() == 'true'),
             Setting('keep_old_work', False),

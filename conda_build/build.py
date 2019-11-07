@@ -2651,6 +2651,12 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
         if env_path_backup_var_exists:
             env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
+    if config.test_run_post:
+        from conda_build.utils import get_installed_packages
+        installed = get_installed_packages(metadata.config.test_prefix)
+        files = installed[metadata.meta['package']['name']]['files']
+        post_build(metadata, files, None, metadata.config.test_prefix, True)
+
     # when workdir is removed, the source files are unavailable.  There's the test/source_files
     #    entry that lets people keep these files around.  The files are copied into test_dir for
     #    intuitive relative path behavior, though, not work_dir, so we need to adjust where
