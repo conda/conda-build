@@ -316,9 +316,6 @@ def regex_files_rg(files, prefix, tag, rg, regex_rg, replacement_re,
         try:
             if utils.on_win:
                 args = [a.decode('utf-8') for a in args]
-                print(' '.join(args))
-            else:
-                print(b' '.join(args))
             matches = subprocess.check_output(args, shell=False).rstrip(b'\n').split(b'\n')
             matches = b'[' + b','.join(matches) + b']\n'
             matches = json.loads(matches)
@@ -570,17 +567,17 @@ def rewrite_file_with_new_prefix(path, data, old_prefix, new_prefix):
     return data
 
 
-def perform_replacements(matches, prefix, verbose=False):
+def perform_replacements(matches, prefix, verbose=False, diff=None):
     for file, match in matches.items():
         filename = os.path.join(prefix, file)
         filename_tmp = filename + '.cbpatch.tmp'
         if os.path.exists(filename_tmp):
             os.unlink()
         shutil.copy2(filename, filename_tmp)
-        if verbose:
-            print("Patching: {} in {} {}".format(filename,
-                                                 (match['submatches']),
-                                                 'places' if len(match['submatches']) > 1 else 'place'))
+        filename_short = filename.replace(prefix + os.sep, '')
+        print("Patching: {} in {} {}".format(filename_short,
+                                             (match['submatches']),
+                                             'places' if len(match['submatches']) > 1 else 'place'))
         with open(filename_tmp, 'wb+') as file_tmp:
             file_tmp.truncate()
             with open(filename, 'rb') as file:
@@ -594,7 +591,10 @@ def perform_replacements(matches, prefix, verbose=False):
                     # Ideally you wouldn't pass to this function any submatches with replacement_re of None,
                     # Still, it's easily handled.
                     if submatch['replacement_re']:
-                        new_string = re.sub(submatch['regex_re'], submatch['replacement_re'], original)
+                        replacement_re = submatch['replacement_re']
+                        if not isinstance(replacement_re, (bytes, bytearray)):
+                            replacement_re = replacement_re.encode('utf-8')
+                        new_string = re.sub(submatch['regex_re'], replacement_re, original)
                     else:
                         new_string = original
                     if match['type'] == 'binary':
@@ -616,6 +616,15 @@ def perform_replacements(matches, prefix, verbose=False):
                         file_tmp.write(data)
         # Could assert the lengths of binaries are the same here for extra safety.
         if os.path.exists(filename_tmp):
+            if diff and match['type'] == 'text':
+                diffo = "Diff returned no difference after patching {}".format(filename_short)
+                # Always expect an exception.
+                try:
+                    diffo = subprocess.check_output([diff, '-urN', filename, filename_tmp], stderr=subprocess.PIPE)
+                    print('WARNING :: Non-deferred patching of "{}" did not change it'.format(filename))
+                except subprocess.CalledProcessError as e:
+                    diffo = e.output
+                print(diffo.decode('utf-8'))
             if os.path.exists(filename):
                 os.unlink(filename)
             shutil.move(filename_tmp, filename)
@@ -851,13 +860,13 @@ def get_files_with_prefix(m, files_in, prefix):
     # paths.
     if utils.on_win or m.config.subdir.startswith('win'):
         # TODO :: Should we also handle MSYS2 paths (/c/blah) here? Probably!
-        variants = (prefix,
-                    prefix_u,
-                    prefix_placeholder.replace('\\', '\''),
-                    prefix_placeholder.replace('/', '\\'))
+        pfx_variants = (prefix,
+                        prefix_u,
+                        prefix_placeholder.replace('\\', '\''),
+                        prefix_placeholder.replace('/', '\\'))
     else:
-        variants = (prefix, prefix_placeholder)
-    re_test = b'(' + b'|'.join(v.encode('utf-8').replace(b'\\', b'\\\\') for v in variants) + b')'
+        pfx_variants = (prefix, prefix_placeholder)
+    re_test = b'(' + b'|'.join(v.encode('utf-8').replace(b'\\', b'\\\\') for v in pfx_variants) + b')'
     pfx_matches = have_regex_files([f[2] for f in files_with_prefix], prefix=prefix,
                                    tag='prefix',
                                    regex_re=re_test,
@@ -876,7 +885,7 @@ def get_files_with_prefix(m, files_in, prefix):
         prefixes_for_file[filename] = set([sm['text'] for sm in match['submatches']])
     files_with_prefix_new = []
     for (_, mode, filename) in files_with_prefix:
-        if filename in prefixes_for_file:
+        if filename in prefixes_for_file and filename in pfx_matches:
             for pfx in prefixes_for_file[filename]:
                 files_with_prefix_new.append((pfx.decode('utf-8'), mode, filename))
     files_with_prefix = files_with_prefix_new
@@ -927,8 +936,13 @@ def get_files_with_prefix(m, files_in, prefix):
         ignore_types.update((FileMode.binary.name,))
     # files_with_prefix is a list of tuples containing (prefix_placeholder, file_type, file_path)
     ignore_files.extend(
-        f[2] for f in files_with_prefix if f[1] in ignore_types and f[2] not in ignore_files)
-    files_with_prefix = [f for f in files_with_prefix if f[2] not in ignore_files]
+        f[2] for f in files_with_prefix2 if f[1] in ignore_types and f[2] not in ignore_files)
+    files_with_prefix2 = [f for f in files_with_prefix2 if f[2] not in ignore_files]
+    end2 = time.time()
+    print("INFO :: Time taken to do replacements (prefix only) was: {}".format(end2 - start2))
+    files1 = set([f for _, _, f in files_with_prefix])
+    files2 = set([f for _, _, f in files_with_prefix2])
+    assert not (files2 - files1), "New ripgrep prefix search missed the following files:\n{}\n".format(files2 - files1)
     '''
     return files_with_prefix
 
