@@ -1,14 +1,15 @@
 from __future__ import absolute_import, division, print_function
 
-from collections import defaultdict, OrderedDict
+from collections import defaultdict, Mapping, OrderedDict
 from functools import partial
 from fnmatch import fnmatch, translate, filter as fnmatch_filter
+from os.path import (basename, commonprefix, dirname, exists, isabs, isdir, isfile,
+                     islink, join, normpath, realpath, relpath, splitext)
+from pathlib import Path, PurePath
 import io
 import locale
 import re
 import os
-from os.path import (isfile, islink, join, normpath, realpath, relpath,
-                     splitext)
 import shutil
 import stat
 from subprocess import call, check_output, CalledProcessError
@@ -691,16 +692,30 @@ DEFAULT_WIN_WHITELIST = ['/System32/ADVAPI32.dll',
 
 def _resolve_needed_dsos(sysroots_files, libs_info, run_prefix,
                          sysroot_substitution, build_prefix, build_prefix_substitution):
-    sysroot = ''
-    if sysroots_files:
-        sysroot = list(sysroots_files.keys())[0]
+    '''
+    :param ld_search_path: An ordered list of directories to search for. This is modified and stored
+                           with each DSO we process according to its RPATH entries. Recursion is not
+                           needed for any of this.
+    :param sysroots_files: A dict of sysroots and their files.
+    :param libs_info: The raw input information pertaining to each DSO as returned by LIEF (or pyldd).
+    :param run_prefix:
+    :param sysroot_substitution:
+    :param build_prefix:
+    :param build_prefix_substitution:
+    :return:
+    '''
+
+    ld_library_path = [run_prefix, '/usr/local/bin', '/usr/bin', '/bin', '/usr/sbin', '/sbin']
     for f, lib_info in libs_info.items():
+        if 'dylib' in f:
+            print('debug')
         if 'filetype' not in lib_info or 'original' not in lib_info['libraries']:
             continue
         build_prefix = build_prefix.replace(os.sep, '/')
         run_prefix = run_prefix.replace(os.sep, '/')
         needed = lib_info['libraries']['original']
         if sysroot:
+            # /usr/lib/libSystem.B.dylib is in MacOSX10.9.sdk but after that there are only .tbd files.
             needed = [n.replace(sysroot, sysroot_substitution) if n.startswith(sysroot)
                       else n for n in needed]
         # We do not want to do this substitution when merging build and host prefixes.
@@ -969,7 +984,8 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                            run_prefix, build_prefix,
                            missing_dso_whitelist, runpath_whitelist,
                            error_overlinking, error_overdepending, verbose,
-                           exception_on_error, files, bldpkgs_dirs, output_folder, channel_urls):
+                           exception_on_error, files, bldpkgs_dirs, output_folder, channel_urls,
+                           sysroot):
     verbose = True
     errors = []
 
@@ -1007,13 +1023,24 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     # ignore_for_statics = ['gcc_impl_linux*', 'compiler-rt*', 'llvm-openmp*', 'gfortran_osx*']
     # sysroots and whitelists are similar, but the subtle distinctions are important.
     sysroot_prefix = build_prefix
-    sysroots = [sysroot + os.sep for sysroot in utils.glob(join(sysroot_prefix, '**', 'sysroot'))]
+    if sysroot:
+        sysroots = [sysroot]
+    else:
+        sysroots = [sysroot + os.sep for sysroot in utils.glob(join(sysroot_prefix, '**', 'sysroot'))]
     whitelist = []
     vendoring_record = dict()
     # When build_is_host is True we perform file existence checks for files in the sysroot (e.g. C:\Windows)
     # When build_is_host is False we must skip things that match the whitelist from the prefix_owners (we could
     #   create some packages for the Windows System DLLs as an alternative?)
     build_is_host = False
+    if subdir == 'osx-64':
+        whitelist = DEFAULT_MAC_WHITELIST
+        build_is_host = True if sys.platform == 'darwin' else False
+    elif subdir.startswith('win'):
+        whitelist = DEFAULT_WIN_WHITELIST
+        # What about win-32 vs win-64 here?
+        build_is_host = True if sys.platform == 'win-32' else False
+    # Defaults. Eventually this should be passed in on all systems.
     if not len(sysroots):
         if subdir == 'osx-64':
             # This is a bit confused! A sysroot shouldn't contain /usr/lib (it's the bit before that)
@@ -1023,12 +1050,8 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
             # Here we mean that we have a sysroot at '/' (could be a tokenized value like '$SYSROOT'?)
             # .. and in that sysroot there are 3 suddirs in which we may search for DSOs.
             sysroots = ['/opt/MacOSX10.9.sdk']
-            whitelist = DEFAULT_MAC_WHITELIST
-            build_is_host = True if sys.platform == 'darwin' else False
         elif subdir.startswith('win'):
             sysroots = [os.environ['windir'].replace('\\', '/')] if sys.platform == 'win32' else ['C:/Windows']
-            whitelist = DEFAULT_WIN_WHITELIST
-            build_is_host = True if sys.platform == 'win-32' else False
 
     sysroots_files = dict()
     for sysroot in sysroots:
@@ -1053,7 +1076,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
 
     def lief_parse_this(filename, path_replacements):
         path_replacements_this = path_replacements.copy()
-        path_replacements_this['exedirname'] = {join(run_prefix, f).replace('\\', '/'): exedirname_sub}
+        path_replacements_this['exedirname'] = {join(run_prefix, dirname(f)).replace('\\', '/'): exedirname_sub}
         return lief_parse(filename, path_replacements_this)
 
     parallel = True
@@ -1084,6 +1107,15 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     else:
         file_info = file_info_parallel
 
+    # Resolving DSO concerns:
+    # 1. Different exes could provide different RPATHs from each other which could affect where the
+    #    needed DSOs (which are only filenames at this point) are found. This can lead to the same
+    #    dso being found in multiple locations .... so .... we will have file_info for all versions
+    #    of the same DSO. Should they happen to be the same binary our caching will *not* collapse
+    #    them to a single file_info, instead they are deep copied and the copy augmented with the
+    #    'fullpath' to each copy of that file.
+    # 2. So we need to only resolve DSOs used by executables, we will not resolve DSO references in
+    #    other DSOs into any kind of a record that we report or generate errors based upon.
     _resolve_needed_dsos(sysroots_files, file_info, run_prefix, sysroot_sub, build_prefix, buildprefix_sub)
 
     for prefix in (run_prefix, build_prefix):
@@ -1201,7 +1233,10 @@ def check_overlinking(m, files, host_prefix=None):
                                   files,
                                   m.config.bldpkgs_dir,
                                   m.config.output_folder,
-                                  m.config.channel_urls)
+                                  m.config.channel_urls,
+                                  m.config.variant['CONDA_BUILD_SYSROOT'] if (
+                                          'CONDA_BUILD_SYSROOT' in m.config.variant and m.config.target_subdir == 'osx-64'
+                                  ) else None)
 
 
 def post_process_shared_lib(m, f, files, host_prefix=None):
