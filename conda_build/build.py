@@ -2655,6 +2655,7 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
         from conda_build.utils import get_installed_packages
         installed = get_installed_packages(metadata.config.test_prefix)
         files = installed[metadata.meta['package']['name']]['files']
+        create_info_files(metadata, files, metadata.config.test_prefix)
         post_build(metadata, files, None, metadata.config.test_prefix, True)
 
     # when workdir is removed, the source files are unavailable.  There's the test/source_files
