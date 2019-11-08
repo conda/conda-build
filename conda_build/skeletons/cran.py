@@ -914,7 +914,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     print('ERROR: Version %s of package %s is archived, but --no-archive was selected' % (version, package))
                     sys.exit(1)
             elif not cran_version:
-                sys.exit("Package %s is archived; to build, an explicit version must be specified")
+                sys.exit("Package %s is archived; to build, an explicit version must be specified" % package)
             else:
                 version = cran_version
             cran_package = None
