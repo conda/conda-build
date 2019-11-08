@@ -2121,13 +2121,18 @@ class MetaData(object):
         global used_vars_cache
         recipe_dir = self.path
 
+        # `HashableDict` does not handle lists of other dictionaries correctly. Also it
+        # is constructed inplace, taking references to sub-elements of the input dict
+        # and thus corrupting it. Also, this was being called in 3 places in this function
+        # so caching it is probably a good thing.
+        hashed_variants = HashableDict(copy.deepcopy(self.config.variant))
         if hasattr(self.config, 'used_vars'):
             used_vars = self.config.used_vars
         elif (self.name(), recipe_dir, force_top_level, force_global, self.config.subdir,
-              HashableDict(self.config.variant)) in used_vars_cache:
+              hashed_variants) in used_vars_cache:
             used_vars = used_vars_cache[(self.name(), recipe_dir,
                                          force_top_level, force_global, self.config.subdir,
-                                         HashableDict(self.config.variant))]
+                                         hashed_variants)]
         else:
             meta_yaml_reqs = self._get_used_vars_meta_yaml(force_top_level=force_top_level,
                                                            force_global=force_global)
@@ -2149,7 +2154,7 @@ class MetaData(object):
                 used_vars = (used_vars - set(self.force_ignore_keys)) | set(self.force_use_keys)
 
             used_vars_cache[(self.name(), recipe_dir, force_top_level, force_global,
-                             self.config.subdir, HashableDict(self.config.variant))] = used_vars
+                             self.config.subdir, hashed_variants)] = used_vars
         return used_vars
 
     def _get_used_vars_meta_yaml_helper(self, force_top_level=False, force_global=False,
