@@ -1064,7 +1064,9 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
         return dict()
 
 
-def check_overlinking(m, files):
+def check_overlinking(m, files, host_prefix=None):
+    if not host_prefix:
+        host_prefix = m.config.host_prefix
     return check_overlinking_impl(m.get_value('package/name'),
                                   m.get_value('package/version'),
                                   m.get_value('build/string'),
@@ -1074,7 +1076,7 @@ def check_overlinking(m, files):
                                   [req.split(' ')[0] for req in m.meta.get('requirements', {}).get('run', [])],
                                   [req.split(' ')[0] for req in m.meta.get('requirements', {}).get('build', [])],
                                   [req.split(' ')[0] for req in m.meta.get('requirements', {}).get('host', [])],
-                                  m.config.host_prefix,
+                                  host_prefix,
                                   m.config.build_prefix,
                                   m.meta.get('build', {}).get('missing_dso_whitelist', []),
                                   m.meta.get('build', {}).get('runpath_whitelist', []),
@@ -1089,8 +1091,10 @@ def check_overlinking(m, files):
                                   m.config.enable_static)
 
 
-def post_process_shared_lib(m, f, files):
-    path = os.path.join(m.config.host_prefix, f)
+def post_process_shared_lib(m, f, files, host_prefix=None):
+    if not host_prefix:
+        host_prefix = m.config.host_prefix
+    path = os.path.join(host_prefix, f)
     codefile_t = codefile_type(path)
     if not codefile_t:
         return
@@ -1126,12 +1130,15 @@ def fix_permissions(files, prefix):
                 log.warn(str(e))
 
 
-def post_build(m, files, build_python):
+def post_build(m, files, build_python, host_prefix=None, is_already_linked=False):
     print('number of files:', len(files))
 
-    host_prefix = m.config.host_prefix
-    for f in files:
-        make_hardlink_copy(f, host_prefix)
+    if not host_prefix:
+        host_prefix = m.config.host_prefix
+
+    if not is_already_linked:
+        for f in files:
+            make_hardlink_copy(f, host_prefix)
 
     if not m.config.target_subdir.startswith('win'):
         binary_relocation = m.binary_relocation()
@@ -1148,8 +1155,8 @@ def post_build(m, files, build_python):
                             osx_is_app=osx_is_app)
             if binary_relocation is True or (isinstance(binary_relocation, list) and
                                              f in binary_relocation):
-                post_process_shared_lib(m, f, prefix_files)
-    check_overlinking(m, files)
+                post_process_shared_lib(m, f, prefix_files, host_prefix)
+    check_overlinking(m, files, host_prefix)
 
 
 def check_symlinks(files, prefix, croot):

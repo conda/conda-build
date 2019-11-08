@@ -92,7 +92,12 @@ different sets of packages."""
     p.add_argument(
         '-p', '--post',
         action="store_true",
-        help="Run the post-build logic. Implies --no-test and --no-anaconda-upload.",
+        help="Run the post-build logic. Implies --no-anaconda-upload.",
+    )
+    p.add_argument(
+        '-p', '--test-run-post',
+        action="store_true",
+        help="Run the post-build logic during testing.",
     )
     p.add_argument(
         'recipe',
@@ -455,8 +460,8 @@ def execute(args):
     elif action:
         outputs = [action(recipe, config) for recipe in args.recipe]
     else:
-        outputs = api.build(args.recipe, post=args.post, build_only=args.build_only,
-                            notest=args.notest, already_built=None, config=config,
+        outputs = api.build(args.recipe, post=args.post, test_run_post=args.test_run_post,
+                            build_only=args.build_only, notest=args.notest, already_built=None, config=config,
                             verify=args.verify, variants=args.variants)
 
     if not args.output and len(utils.get_build_folders(config.croot)) > 0:

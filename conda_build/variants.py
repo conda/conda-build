@@ -406,7 +406,7 @@ def dict_of_lists_to_list_of_dicts(dict_of_lists, extend_keys=None):
     dicts = []
     if not extend_keys:
         extend_keys = set(ensure_list(dict_of_lists.get('extend_keys')))
-    pass_through_keys = set(['extend_keys', 'zip_keys', 'pin_run_as_build'] +
+    pass_through_keys = set(['extend_keys', 'zip_keys', 'pin_run_as_build', 'replacements'] +
                             list(ensure_list(extend_keys)) +
                             list(_get_zip_key_set(dict_of_lists)))
     dimensions = {k: v for k, v in dict_of_lists.items() if k not in pass_through_keys}
@@ -423,7 +423,10 @@ def dict_of_lists_to_list_of_dicts(dict_of_lists, extend_keys=None):
         for col in pass_through_keys:
             v = dict_of_lists.get(col)
             if v or v == '':
-                remapped[col] = v
+                if isinstance(v, (OrderedDict, dict)):
+                    remapped[col] = v.copy()
+                else:
+                    remapped[col] = v
         # split out zipped keys
         to_del = set()
         for k, v in remapped.items():
@@ -431,7 +434,9 @@ def dict_of_lists_to_list_of_dicts(dict_of_lists, extend_keys=None):
                 keys = _split_str(k, '#')
                 values = _split_str(v, '#')
                 for (_k, _v) in zip(keys, values):
-                    remapped[_k] = _v
+                    # I am unclear if I should be doing something else here!
+                    if not isinstance(remapped[_k], (OrderedDict, dict)):
+                        remapped[_k] = _v
                 if '#' in k:
                     to_del.add(k)
         for key in to_del:

@@ -1,0 +1,18 @@
+package:
+  # an explicit usage
+  name: test_variant_subkeys_{{ some_package }}
+  version: 1.0
+
+requirements:
+  build:
+    # an implicit usage
+    #   python is a special case.  It is ignored if it is only a build-time dep.
+    #   We do that because we consider it a build tool whose version does not affect the outcome
+    - python
+    # an implicit usage other than python
+    - zlib
+    # an implicit usage containing a dash
+    - pthread-stubs
+  run:
+    # python is only "used" if it's used in build and run - see above
+    - python
