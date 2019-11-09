@@ -926,13 +926,13 @@ def _show_linking_messages(files, errors, file_info, build_prefix, run_prefix, p
         err_prelude = "  ERROR ({},{})".format(pkg_name, f)
         info_prelude = "   INFO ({},{})".format(pkg_name, f)
         msg_prelude = err_prelude if error_overlinking else warn_prelude
-        runpaths = file_info[f]['runpaths']
+        runpaths = file_info[f]['runpaths'] if 'runpaths' in file_info[f] else None  # TODO :: Check why these aren't getting set.
         if runpaths and not (runpath_whitelist or
                              any(fnmatch(f, w) for w in runpath_whitelist)):
             _print_msg(errors, '{}: runpaths {} found in {}'.format(msg_prelude,
                                                                     runpaths,
                                                                     path), verbose=verbose)
-        needed = file_info[f]['libraries']['resolved']
+        needed = file_info[f]['libraries']['resolved'] if 'resolved' in file_info[f]['libraries'] else []  # TODO :: Check why these aren't getting set.
         for needed_dso in needed:
             needed_dso = needed_dso.replace('/', os.sep)
             if not needed_dso.startswith(os.sep) and not needed_dso.startswith('$'):
