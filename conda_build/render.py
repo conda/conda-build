@@ -803,8 +803,13 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
     if m.final:
         if not hasattr(m.config, 'variants') or not m.config.variant:
             m.config.ignore_system_variants = True
-            if os.path.isfile(os.path.join(m.path, 'conda_build_config.yaml')):
-                m.config.variant_config_files = [os.path.join(m.path, 'conda_build_config.yaml')]
+            # We allow tests to pass their own configs.
+            if m.config.variant_config_files:
+                m.config.exclusive_config_files = m.config.variant_config_files
+                m.config.variant_config_files = []
+            else:
+                if os.path.isfile(os.path.join(m.path, 'conda_build_config.yaml')):
+                    m.config.variant_config_files = [os.path.join(m.path, 'conda_build_config.yaml')]
             m.config.variants = get_package_variants(m, variants=variants)
             m.config.variant = m.config.variants[0]
         rendered_metadata = [(m, False, False), ]

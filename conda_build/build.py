@@ -2243,6 +2243,8 @@ def _construct_metadata_for_test_from_package(package, config):
     else:
         config.filename_hashing = False
         hash_input = {}
+    config.filename_hashing = False
+    hash_input = {}
     # not actually used as a variant, since metadata will have been finalized.
     #    This is still necessary for computing the hash correctly though
     config.variant = hash_input

@@ -161,12 +161,13 @@ def find_config_files(metadata_or_path, additional_files=None, ignore_system_con
         if os.path.isfile(cwd):
             files.append(cwd)
 
-    if hasattr(metadata_or_path, 'path'):
-        recipe_config = os.path.join(metadata_or_path.path, "conda_build_config.yaml")
-    else:
-        recipe_config = os.path.join(metadata_or_path, "conda_build_config.yaml")
-    if os.path.isfile(recipe_config):
-        files.append(recipe_config)
+    if not exclusive_config_files:
+        if hasattr(metadata_or_path, 'path'):
+            recipe_config = os.path.join(metadata_or_path.path, "conda_build_config.yaml")
+        else:
+            recipe_config = os.path.join(metadata_or_path, "conda_build_config.yaml")
+        if os.path.isfile(recipe_config):
+            files.append(recipe_config)
 
     if additional_files:
         files.extend([os.path.expanduser(additional_file) for additional_file in additional_files])
