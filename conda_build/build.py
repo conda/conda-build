@@ -575,8 +575,8 @@ def perform_replacements(matches, prefix, verbose=False, diff=None):
             os.unlink()
         shutil.copy2(filename, filename_tmp)
         filename_short = filename.replace(prefix + os.sep, '')
-        print("Patching: {} in {} {}".format(filename_short,
-                                             (match['submatches']),
+        print("Patching '{}' in {} {}".format(filename_short,
+                                             len(match['submatches']),
                                              'places' if len(match['submatches']) > 1 else 'place'))
         with open(filename_tmp, 'wb+') as file_tmp:
             file_tmp.truncate()
@@ -890,32 +890,21 @@ def get_files_with_prefix(m, files_in, prefix):
                 files_with_prefix_new.append((pfx.decode('utf-8'), mode, filename))
     files_with_prefix = files_with_prefix_new
     all_matches = {}
-    '''
-    # Enable this once we define CONDA_BUILD_SYSROOT_S
-    ext = '.pc'
-    all_matches = have_regex_files(files=[f for f in files if f.endswith(ext)], prefix=prefix,
-                                   tag='pkg-config build metadata',
-                                   regex_re=r'(?:-L|-I)?\"?([^;\s]+\/sysroot\/)',
-                                   replacement_re=b'$(CONDA_BUILD_SYSROOT_S)',
-                                   match_records=all_matches,
-                                   regex_rg=r'([^;\s"]+/sysroot/)',
-                                   debug=m.config.debug)
-    '''
-    ext = '.cmake'
-    all_matches = have_regex_files(files=[f for f in files if f.endswith(ext)], prefix=prefix,
-                                   tag='CMake build metadata',
-                                   regex_re=r'([^;\s"]+/sysroot)',
-                                   replacement_re=r'$ENV{CONDA_BUILD_SYSROOT}',
-                                   match_records=all_matches,
-                                   debug=m.config.debug)
-    ext = ('.pri', '.prl')
-    all_matches = have_regex_files(files=[f for f in files if f.endswith(ext)], prefix=prefix,
-                                   tag='qmake build metadata',
-                                   regex_re=r'(?:-L|-I)?\"?([^;\s]+\/sysroot)',
-                                   replacement_re=r'$(CONDA_BUILD_SYSROOT)',
-                                   match_records=all_matches,
-                                   regex_rg=r'([^;\s"]+/sysroot)',
-                                   debug=m.config.debug)
+
+    variant = m.config.variant
+    if 'replacements' in variant:
+        replacements = variant['replacements']
+        for replacement in replacements['all_replacements']:
+            import glob2
+            all_matches = have_regex_files(files=[f for f in files if any(
+                                                  glob2.fnmatch.fnmatch(f, r) for r in replacement['glob_patterns'])],
+                                           prefix=prefix,
+                                           tag=replacement['tag'],
+                                           regex_re=replacement['regex_re'],
+                                           replacement_re=replacement['replacement_re'],
+                                           match_records=all_matches,
+                                           regex_rg=replacement['regex_rg'] if 'regex_rg' in replacement else None,
+                                           debug=m.config.debug)
     perform_replacements(all_matches, prefix)
     end = time.time()
     print("INFO :: Time taken to do replacements (prefix pkg-config, CMake, qmake) was: {}".format(end - start))
@@ -2655,6 +2644,7 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
         from conda_build.utils import get_installed_packages
         installed = get_installed_packages(metadata.config.test_prefix)
         files = installed[metadata.meta['package']['name']]['files']
+        create_info_files(metadata, files, metadata.config.test_prefix)
         post_build(metadata, files, None, metadata.config.test_prefix, True)
 
     # when workdir is removed, the source files are unavailable.  There's the test/source_files

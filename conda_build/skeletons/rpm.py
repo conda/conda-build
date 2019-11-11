@@ -37,12 +37,13 @@ package:
 source:
   - url: {rpmurl}
     {checksum_name}: {checksum}
+    no_hoist: true
     folder: binary
   - url: {srcrpmurl}
     folder: source
 
 build:
-  number: 0
+  number: 2
   noarch: generic
   missing_dso_whitelist:
     - '*'
@@ -64,6 +65,16 @@ BUILDSH = """\
 set -o errexit -o pipefail
 
 mkdir -p "${PREFIX}"/{hostmachine}/sysroot
+if [[ -d usr/lib ]]; then
+  if [[ ! -d lib ]]; then
+    ln -s usr/lib lib
+  fi
+fi
+if [[ -d usr/lib64 ]]; then
+  if [[ ! -d lib64 ]]; then
+    ln -s usr/lib64 lib64
+  fi
+fi
 pushd "${PREFIX}"/{hostmachine}/sysroot > /dev/null 2>&1
 cp -Rf "${SRC_DIR}"/binary/* .
 """
@@ -511,8 +522,9 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
         dependsstr_part = '\n'.join(['    - {}'.format(depends_spec)
                                      for depends_spec in depends_specs])
         dependsstr_build = '  build:\n' + dependsstr_part + '\n'
+        dependsstr_host = '  host:\n' + dependsstr_part + '\n'
         dependsstr_run = '  run:\n' + dependsstr_part
-        dependsstr = 'requirements:\n' + dependsstr_build + dependsstr_run
+        dependsstr = 'requirements:\n' + dependsstr_build + dependsstr_host + dependsstr_run
 
     package_l = package.lower().replace('+', 'x')
     package_cdt_name = package_l + '-' + sn

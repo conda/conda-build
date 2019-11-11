@@ -1,20 +1,20 @@
 replacements:
   all_replacements:
     - tag: 'pkg-config build metadata'
-      extensions:
-        - '.pc'
+      glob_patterns:
+        - '*.pc'
       regex_re: '(?:-L|-I)?\"?([^;\s]+\/sysroot\/)'
       replacement_re: '$(CONDA_BUILD_SYSROOT_S)'
       regex_rg: '([^;\s"]+/sysroot/)'
     - tag: 'CMake build metadata'
-      extensions:
-        - '.cmake'
+      glob_patterns:
+        - '*.cmake'
       regex_re: '([^;\s"]+/sysroot)'
       replacement_re: '$ENV{CONDA_BUILD_SYSROOT}'
     - tag: 'qmake build metadata'
-      extensions:
-        - '.pri'
-        - '.prl'
+      glob_patterns:
+        - '*.pri'
+        - '*.prl'
       regex_re: '(?:-L|-I)?\"?([^;\s]+\/sysroot)'
       replacement_re: '$(CONDA_BUILD_SYSROOT)'
       regex_rg: '([^;\s"]+/sysroot)'
