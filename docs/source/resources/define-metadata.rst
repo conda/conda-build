@@ -825,7 +825,7 @@ examining linkage information.
 
 During the post-build phase, the shared libraries in the newly created
 package are examined for linkages which are not provided by the
-package's requirements or a predefined list of libraries. If such
+package's requirements or a predefined list of system libraries. If such
 libraries are detected, either a warning ``--no-error-overlinking``
 or error ``--error-overlinking`` will result.
 
