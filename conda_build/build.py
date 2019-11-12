@@ -307,7 +307,7 @@ def regex_files_rg(files, prefix, tag, rg, regex_rg, replacement_re,
     pu = prefix.encode('utf-8')
     prefix_files = [os.path.join(pu, f.replace('/', os.sep).encode('utf-8')) for f in files]
     args_len = len(b' '.join(args_base))
-    file_lists = list(chunks(prefix_files, 131071 - args_len))
+    file_lists = list(chunks(prefix_files, (32760 if utils.on_win else 131071) - args_len))
     for file_list in file_lists:
         args = args_base[:] + file_list
         # This will not work now our args are binary strings:
@@ -907,7 +907,10 @@ def get_files_with_prefix(m, files_in, prefix):
                                            debug=m.config.debug)
     perform_replacements(all_matches, prefix)
     end = time.time()
-    print("INFO :: Time taken to do replacements (prefix pkg-config, CMake, qmake) was: {}".format(end - start))
+    total_replacements = sum(map(lambda i: len(i['submatches']), all_matches))
+    print("INFO :: Time taken to mark (prefix) and mark+peform (pkg-config, CMake, qmake)\n"
+          "        {} replacements in {} files was {} seconds".format(
+        total_replacements, len(all_matches), end - start))
     '''
     # Keeping this around just for a while.
     files_with_prefix2 = sorted(have_prefix_files(files_in, prefix))
