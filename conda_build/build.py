@@ -1411,6 +1411,11 @@ def bundle_conda(output, metadata, env, stats, **kw):
             if not interpreter_and_args[0]:
                 log.error("Did not find an interpreter to run {}, looked for {}".format(
                     output['script'], interpreter_and_args[0]))
+            if 'system32' in interpreter_and_args[0] and 'bash' in interpreter_and_args[0]:
+                print("ERROR :: WSL bash.exe detected, this will not work (PRs welcome!). Please\n"
+                      "         use MSYS2 packages. Add `m2-base` and more (depending on what your"
+                      "         script needs) to `requirements/build` instead.")
+                sys.exit(1)
         else:
             interpreter_and_args = interpreter.split(' ')
 
