@@ -479,13 +479,13 @@ def check_binary_patchers(elf, prefix, rpath):
 '''
 
 
-def mk_relative_linux(f, prefix, rpaths=('lib',), method='LIEF'):
+def mk_relative_linux(f, prefix, rpaths=('lib',), method=None):
     'Respects the original values and converts abs to $ORIGIN-relative'
 
     elf = os.path.join(prefix, f)
     origin = os.path.dirname(elf)
 
-    existing, _, _ = get_rpaths_raw(elf)
+    existing_pe = None
     patchelf = external.find_executable('patchelf', prefix)
     if not patchelf:
         print("ERROR :: You should install patchelf, will proceed with LIEF for {} (was {})".format(elf, method))
@@ -494,29 +494,35 @@ def mk_relative_linux(f, prefix, rpaths=('lib',), method='LIEF'):
         try:
             existing_pe = check_output([patchelf, '--print-rpath', elf]).decode('utf-8').splitlines()[0]
         except CalledProcessError:
-            print("ERROR :: `patchelf --print-rpath` failed for {}, will proceed with LIEF (was {})".format(
-                elf, method))
+            if method == 'patchelf':
+                print("ERROR :: `patchelf --print-rpath` failed for {}, but patchelf was specified".format(
+                    elf))
+            elif method != 'LIEF':
+                print("WARNING :: `patchelf --print-rpath` failed for {}, will proceed with LIEF (was {})".format(
+                      elf, method))
             method = 'LIEF'
         else:
             existing_pe = existing_pe.split(os.pathsep)
+    existing = existing_pe
     if have_lief:
         existing2, _, _ = get_rpaths_raw(elf)
-        if [existing_pe] != existing2:
-            print('ERROR :: get_rpaths_raw()={} and patchelf={} disagree for {} :: '.format(
+        if existing_pe and [existing_pe] != existing2:
+            print('WARNING :: get_rpaths_raw()={} and patchelf={} disagree for {} :: '.format(
                       existing2, [existing_pe], elf))
         # Use LIEF if method is LIEF to get the initial value?
-        existing = existing_pe.split(os.pathsep)
+        if method == 'LIEF':
+            existing = existing2
     new = []
     for old in existing:
         if old.startswith('$ORIGIN'):
             new.append(old)
         elif old.startswith('/'):
             # Test if this absolute path is outside of prefix. That is fatal.
-            rp = relpath(old, prefix)
+            rp = os.path.relpath(old, prefix)
             if rp.startswith('..' + os.sep):
                 print('Warning: rpath {0} is outside prefix {1} (removing it)'.format(old, prefix))
             else:
-                rp = '$ORIGIN/' + relpath(old, origin)
+                rp = '$ORIGIN/' + os.path.relpath(old, origin)
                 if rp not in new:
                     new.append(rp)
     # Ensure that the asked-for paths are also in new.
@@ -537,8 +543,7 @@ def mk_relative_linux(f, prefix, rpaths=('lib',), method='LIEF'):
     rpath = ':'.join(new)
 
     # check_binary_patchers(elf, prefix, rpath)
-
-    if method.upper() == 'LIEF' or not patchelf:
+    if not method or not patchelf or method.upper() == 'LIEF':
         set_rpath(old_matching='*', new_rpath=rpath, file=elf)
     else:
         call([patchelf, '--force-rpath', '--set-rpath', rpath, elf])
@@ -1111,7 +1116,7 @@ def post_process_shared_lib(m, f, files, host_prefix=None):
     rpaths = m.get_value('build/rpaths', ['lib'])
     if codefile_t == 'elffile':
         mk_relative_linux(f, m.config.host_prefix, rpaths=rpaths,
-                          method=m.get_value('build/rpaths_patcher', 'patchelf'))
+                          method=m.get_value('build/rpaths_patcher', None))
     elif codefile_t == 'machofile':
         mk_relative_osx(path, host_prefix, m.config.build_prefix, files=files, rpaths=rpaths)
 
