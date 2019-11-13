@@ -1059,6 +1059,8 @@ def lief_parse_internal(filename, path_replacements={}):
 
         default_paths = None
         filetype = None
+        entrypoint = None
+        entrypoint_addr = None
         try:
             entrypoint = binary.entrypoint
             for function in [f for f in binary.symbols if (
@@ -1070,13 +1072,12 @@ def lief_parse_internal(filename, path_replacements={}):
                 except:
                     name_d = None
                 try:
-                    addr = binary.get_function_address(name_d or name)
-                    print('function {} at addr {}'.format(function, addr))
+                    entrypoint_addr = binary.get_function_address(name_d or name)
+                    print('function {} at addr {}'.format(function, entrypoint_addr))
                 except:
                     print('WARNING :: Failed to get address for {}'.format(function.name))
         except Exception as e:
             print("no entrypoint for {}".format(filename))
-            raise e
         else:
             print("entrypoint for {} is {}".format(filename, entrypoint))
         if binary.format == lief.EXE_FORMATS.ELF:
@@ -1092,6 +1093,8 @@ def lief_parse_internal(filename, path_replacements={}):
             filetype = 'pecoff'
 
         result_lief = {'filetype': filetype,
+                       'entrypoint': entrypoint,
+                       'entrypoint_addr': entrypoint_addr,
                        'rpaths': rpaths,
                        'runpaths': runpaths,
                        'exports': get_exports(binary),
