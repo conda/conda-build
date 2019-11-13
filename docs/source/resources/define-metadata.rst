@@ -816,6 +816,38 @@ pinned down to the build string level. This will
 supersede any dynamic or compatible pinning that
 conda-build may otherwise be doing.
 
+Whitelisting shared libraries
+-----------------------------
+
+The ``missing_dso_whitelist`` build key is a list of globs for
+dynamic shared object (DSO) files that should be ignored when
+examining linkage information.
+
+During the post-build phase, the shared libraries in the newly created
+package are examined for linkages which are not provided by the
+package's requirements or a predefined list of system libraries. If such
+libraries are detected, either a warning ``--no-error-overlinking``
+or error ``--error-overlinking`` will result.
+
+.. code-block:: yaml
+
+ build:
+   missing_dso_whitelist:
+
+
+These keys allow adds to the list of allowed libraries.
+
+The ``runpath_whitelist`` build key is a list of globs for paths
+which are allowed to appear as runpaths in the package's shared
+libraries. All other runpaths will cause a warning message to be
+printed during the build.
+
+.. code-block:: yaml
+
+ build:
+   runpath_whitelist:
+
+
 .. _requirements:
 
 Requirements section
