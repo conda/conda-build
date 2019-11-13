@@ -890,12 +890,14 @@ def get_symbols(file, direction='both', defined=True, undefined=True):
                     s_name = '%s' % s
                 else:
                     s_name = '%s' % s.name
-                    if s.exported and s.imported:
-                        print("Weird, symbol {} is both imported and exported".format(s.name))
-                    if s.exported:
+                    exported = s.exported if hasattr(s, 'exported') else type == 'exported'
+                    imported = s.imported if hasattr(s, 'imported') else type == 'imported'
+                    if exported and imported:
+                        print("Weird, symbol {} is b,mkoth imported and exported".format(s.name))
+                    if exported:
                         is_undefined = True
                         is_notexported = False
-                    elif s.imported:
+                    elif imported:
                         is_undefined = False
             else:
                 s_name = '%s' % s.name
@@ -1059,7 +1061,9 @@ def lief_parse_internal(filename, path_replacements={}):
         filetype = None
         try:
             entrypoint = binary.entrypoint
-            for function in [f for f in binary.symbols if f.is_function and not f.imported]:
+            for function in [f for f in binary.symbols if (
+                    (hasattr(f, 'is_function') and f.is_function) and
+                    (not hasattr(f, 'imported') or not f.imported))]:
                 name = function.name
                 try:
                     name_d = function.demangled_name

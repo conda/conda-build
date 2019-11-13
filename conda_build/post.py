@@ -714,10 +714,10 @@ def _resolve_needed_dsos(sysroots_files, libs_info, run_prefix,
         build_prefix = build_prefix.replace(os.sep, '/')
         run_prefix = run_prefix.replace(os.sep, '/')
         needed = lib_info['libraries']['original']
-        if sysroot:
-            # /usr/lib/libSystem.B.dylib is in MacOSX10.9.sdk but after that there are only .tbd files.
-            needed = [n.replace(sysroot, sysroot_substitution) if n.startswith(sysroot)
-                      else n for n in needed]
+        #if sysroot:
+        #    # /usr/lib/libSystem.B.dylib is in MacOSX10.9.sdk but after that there are only .tbd files.
+        #    needed = [n.replace(sysroot, sysroot_substitution) if n.startswith(sysroot)
+        #              else n for n in needed]
         # We do not want to do this substitution when merging build and host prefixes.
         if build_prefix != run_prefix:
             needed = [n.replace(build_prefix, build_prefix_substitution) if n.startswith(build_prefix)
