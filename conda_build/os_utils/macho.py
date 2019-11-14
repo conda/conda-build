@@ -46,13 +46,13 @@ def is_macho(path):
     return bool(head in MAGIC)
 
 
-def is_dylib(path):
+def is_dylib(path, build_prefix):
     return human_filetype(path) == 'DYLIB'
 
 
-def human_filetype(path):
-    ot = find_preferably_prefixed_executable('otool')
-    output = check_output((ot, '-h', path)).decode('utf-8')
+def human_filetype(path, build_prefix):
+    otool = find_apple_cctools_executable('otool', build_prefix)
+    output = check_output((otool, '-h', path)).decode('utf-8')
     lines = output.splitlines()
     if not lines[0].startswith((path, 'Mach header')):
         raise ValueError(
@@ -146,6 +146,24 @@ def _get_matching_load_commands(lines, cb_filter):
     return result
 
 
+def find_apple_cctools_executable(name, build_prefix, nofail=False):
+    tool = find_preferably_prefixed_executable(name, build_prefix)
+    try:
+        if '/usr/bin' in tool:
+            with open(tool, 'rb') as f:
+                s = f.read()
+            if s.find(b'usr/lib/libxcselect.dylib') != -1:
+                print("WARNING :: Found `{}` but is is an Apple Xcode stub executable.".format(tool))
+                # This is not the real tool, but Apple's irritating GUI dialog launcher.
+                raise
+    except Exception as _:  # noqa
+        print("ERROR :: Failed to run `{}`.  Please use `conda` to install `cctools` into your base environment.\n"
+              "         An alternative option for users of macOS is to install `Xcode` or `Command Line Tools for Xcode`."
+              .format(tool))
+        sys.exit(1)
+    return tool
+
+
 def otool(path, build_prefix=None, cb_filter=is_dylib_info):
     """A wrapper around otool -l
 
@@ -163,7 +181,8 @@ def otool(path, build_prefix=None, cb_filter=is_dylib_info):
     Any key values that can be converted to integers are converted
     to integers, the rest are strings.
     """
-    lines = check_output([find_preferably_prefixed_executable('otool', build_prefix), '-l', path],
+    otool = find_apple_cctools_executable('otool', build_prefix)
+    lines = check_output([otool, '-l', path],
                           stderr=STDOUT).decode('utf-8')
     # llvm-objdump returns 0 for some things that are anything but successful completion.
     lines_split = lines.splitlines()
@@ -205,7 +224,7 @@ def _chmod(filename, mode):
 
 
 def install_name_tool(args, build_prefix=None, verbose=False):
-    args_full = [find_preferably_prefixed_executable('install_name_tool', build_prefix)]
+    args_full = [find_apple_cctools_executable('install_name_tool', build_prefix)]
     args_full.extend(args)
     if verbose:
         print(' '.join(args_full))

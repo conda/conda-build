@@ -307,7 +307,7 @@ def regex_files_rg(files, prefix, tag, rg, regex_rg, replacement_re,
     pu = prefix.encode('utf-8')
     prefix_files = [os.path.join(pu, f.replace('/', os.sep).encode('utf-8')) for f in files]
     args_len = len(b' '.join(args_base))
-    file_lists = list(chunks(prefix_files, 131071 - args_len))
+    file_lists = list(chunks(prefix_files, (32760 if utils.on_win else 131071) - args_len))
     for file_list in file_lists:
         args = args_base[:] + file_list
         # This will not work now our args are binary strings:
@@ -907,7 +907,10 @@ def get_files_with_prefix(m, files_in, prefix):
                                            debug=m.config.debug)
     perform_replacements(all_matches, prefix)
     end = time.time()
-    print("INFO :: Time taken to do replacements (prefix pkg-config, CMake, qmake) was: {}".format(end - start))
+    total_replacements = sum(map(lambda i: len(i['submatches']), all_matches))
+    print("INFO :: Time taken to mark (prefix) and mark+peform (pkg-config, CMake, qmake)\n"
+          "        {} replacements in {} files was {} seconds".format(
+        total_replacements, len(all_matches), end - start))
     '''
     # Keeping this around just for a while.
     files_with_prefix2 = sorted(have_prefix_files(files_in, prefix))
@@ -1408,6 +1411,11 @@ def bundle_conda(output, metadata, env, stats, **kw):
             if not interpreter_and_args[0]:
                 log.error("Did not find an interpreter to run {}, looked for {}".format(
                     output['script'], interpreter_and_args[0]))
+            if 'system32' in interpreter_and_args[0] and 'bash' in interpreter_and_args[0]:
+                print("ERROR :: WSL bash.exe detected, this will not work (PRs welcome!). Please\n"
+                      "         use MSYS2 packages. Add `m2-base` and more (depending on what your"
+                      "         script needs) to `requirements/build` instead.")
+                sys.exit(1)
         else:
             interpreter_and_args = interpreter.split(' ')
 
@@ -1417,6 +1425,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
         env_output['TOP_PKG_VERSION'] = env['PKG_VERSION']
         env_output['PKG_VERSION'] = metadata.version()
         env_output['PKG_NAME'] = metadata.get_value('package/name')
+        env_output['RECIPE_DIR'] = metadata.path
         env_output['MSYS2_PATH_TYPE'] = 'inherit'
         env_output['CHERE_INVOKING'] = '1'
         for var in utils.ensure_list(metadata.get_value('build/script_env')):
@@ -2054,6 +2063,8 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                     if not (m.is_output or
                             (os.path.isdir(m.config.host_prefix) and
                              len(os.listdir(m.config.host_prefix)) <= 1)):
+                        # This log message contradicts both the not (m.is_output or ..) check above
+                        # and also the comment "For more than one output, ..."
                         log.debug('Not creating new env for output - already exists from top-level')
                     else:
                         m.config._merge_build_host = m.build_is_host
@@ -2105,6 +2116,9 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                         if f.startswith('conda-meta'):
                             to_remove.add(f)
 
+                    # This is wrong, files has not been expanded at this time and could contain
+                    # wildcards.  Also well, I just do not understand this, because when this
+                    # does contain wildcards, the files in to_remove will slip back in.
                     if 'files' in output_d:
                         output_d['files'] = set(output_d['files']) - to_remove
 

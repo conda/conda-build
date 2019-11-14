@@ -396,9 +396,9 @@ def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
 
 def mk_relative_osx(path, host_prefix, build_prefix, files, rpaths=('lib',)):
     assert sys.platform == 'darwin'
-
-    names = macho.otool(path, build_prefix)
-    s = macho.install_name_change(path, build_prefix,
+    prefix = build_prefix if os.path.exists(build_prefix) else host_prefix
+    names = macho.otool(path, prefix)
+    s = macho.install_name_change(path, prefix,
                                   partial(osx_ch_link,
                                           host_prefix=host_prefix,
                                           build_prefix=build_prefix,
@@ -415,7 +415,7 @@ def mk_relative_osx(path, host_prefix, build_prefix, files, rpaths=('lib',)):
             rpath_new = os.path.join('@loader_path',
                                      os.path.relpath(os.path.join(host_prefix, rpath), os.path.dirname(path)),
                                      '').replace('/./', '/')
-            macho.add_rpath(path, rpath_new, build_prefix=build_prefix, verbose=True)
+            macho.add_rpath(path, rpath_new, build_prefix=prefix, verbose=True)
     if s:
         # Skip for stub files, which have to use binary_has_prefix_files to be
         # made relocatable.
@@ -479,37 +479,52 @@ def check_binary_patchers(elf, prefix, rpath):
 '''
 
 
-def mk_relative_linux(f, prefix, rpaths=('lib',), method='LIEF'):
+def mk_relative_linux(f, prefix, rpaths=('lib',), method=None):
     'Respects the original values and converts abs to $ORIGIN-relative'
 
     elf = os.path.join(prefix, f)
     origin = os.path.dirname(elf)
 
+    existing_pe = None
     patchelf = external.find_executable('patchelf', prefix)
-    try:
-        existing = check_output([patchelf, '--print-rpath', elf]).decode('utf-8').splitlines()[0]
-    except CalledProcessError:
-        print('patchelf: --print-rpath failed for %s\n' % (elf))
-        return
+    if not patchelf:
+        print("ERROR :: You should install patchelf, will proceed with LIEF for {} (was {})".format(elf, method))
+        method = 'LIEF'
+    else:
+        try:
+            existing_pe = check_output([patchelf, '--print-rpath', elf]).decode('utf-8').splitlines()[0]
+        except CalledProcessError:
+            if method == 'patchelf':
+                print("ERROR :: `patchelf --print-rpath` failed for {}, but patchelf was specified".format(
+                    elf))
+            elif method != 'LIEF':
+                print("WARNING :: `patchelf --print-rpath` failed for {}, will proceed with LIEF (was {})".format(
+                      elf, method))
+            method = 'LIEF'
+        else:
+            existing_pe = existing_pe.split(os.pathsep)
+    existing = existing_pe
     if have_lief:
         existing2, _, _ = get_rpaths_raw(elf)
-        if [existing] != existing2:
-            print('ERROR :: get_rpaths_raw()={} and patchelf={} disagree for {} :: '.format(
-                existing2, [existing], elf))
-    existing = existing.split(os.pathsep)
+        if existing_pe and [existing_pe] != existing2:
+            print('WARNING :: get_rpaths_raw()={} and patchelf={} disagree for {} :: '.format(
+                      existing2, [existing_pe], elf))
+        # Use LIEF if method is LIEF to get the initial value?
+        if method == 'LIEF':
+            existing = existing2
     new = []
     for old in existing:
         if old.startswith('$ORIGIN'):
             new.append(old)
         elif old.startswith('/'):
             # Test if this absolute path is outside of prefix. That is fatal.
-            relpath = os.path.relpath(old, prefix)
-            if relpath.startswith('..' + os.sep):
+            rp = os.path.relpath(old, prefix)
+            if rp.startswith('..' + os.sep):
                 print('Warning: rpath {0} is outside prefix {1} (removing it)'.format(old, prefix))
             else:
-                relpath = '$ORIGIN/' + os.path.relpath(old, origin)
-                if relpath not in new:
-                    new.append(relpath)
+                rp = '$ORIGIN/' + os.path.relpath(old, origin)
+                if rp not in new:
+                    new.append(rp)
     # Ensure that the asked-for paths are also in new.
     for rpath in rpaths:
         if rpath != '':
@@ -528,15 +543,15 @@ def mk_relative_linux(f, prefix, rpaths=('lib',), method='LIEF'):
     rpath = ':'.join(new)
 
     # check_binary_patchers(elf, prefix, rpath)
-
-    if method == 'LIEF' or not patchelf:
+    if not method or not patchelf or method.upper() == 'LIEF':
         set_rpath(old_matching='*', new_rpath=rpath, file=elf)
     else:
         call([patchelf, '--force-rpath', '--set-rpath', rpath, elf])
 
 
 def assert_relative_osx(path, host_prefix, build_prefix):
-    for name in macho.get_dylibs(path, build_prefix):
+    tools_prefix = build_prefix if os.path.exists(build_prefix) else host_prefix
+    for name in macho.get_dylibs(path, tools_prefix):
         for prefix in (host_prefix, build_prefix):
             if prefix and name.startswith(prefix):
                 raise RuntimeError("library at %s appears to have an absolute path embedded" % path)
@@ -1096,14 +1111,14 @@ def post_process_shared_lib(m, f, files, host_prefix=None):
         host_prefix = m.config.host_prefix
     path = os.path.join(host_prefix, f)
     codefile_t = codefile_type(path)
-    if not codefile_t:
+    if not codefile_t or path.endswith('.debug'):
         return
     rpaths = m.get_value('build/rpaths', ['lib'])
-    if sys.platform.startswith('linux') and codefile_t == 'elffile':
+    if codefile_t == 'elffile':
         mk_relative_linux(f, m.config.host_prefix, rpaths=rpaths,
-                          method=m.get_value('build/rpaths_patcher', 'patchelf'))
-    elif sys.platform == 'darwin' and codefile_t == 'machofile':
-        mk_relative_osx(path, m.config.host_prefix, m.config.build_prefix, files=files, rpaths=rpaths)
+                          method=m.get_value('build/rpaths_patcher', None))
+    elif codefile_t == 'machofile':
+        mk_relative_osx(path, host_prefix, m.config.build_prefix, files=files, rpaths=rpaths)
 
 
 def fix_permissions(files, prefix):

@@ -56,5 +56,7 @@ def find_executable(executable, prefix=None):
 def find_preferably_prefixed_executable(executable, build_prefix=None):
     found = find_executable('*' + executable, build_prefix)
     if not found:
-        found = find_executable(executable, build_prefix)
+        # It is possible to force non-prefixed exes by passing os.sep as the
+        # first character in executable. basename makes this work.
+        found = find_executable(os.path.basename(executable), build_prefix)
     return found
