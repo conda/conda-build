@@ -147,21 +147,26 @@ def _get_matching_load_commands(lines, cb_filter):
 
 
 def find_apple_cctools_executable(name, build_prefix, nofail=False):
-    tool = find_preferably_prefixed_executable(name, build_prefix)
-    try:
-        if '/usr/bin' in tool:
-            with open(tool, 'rb') as f:
-                s = f.read()
-            if s.find(b'usr/lib/libxcselect.dylib') != -1:
-                print("WARNING :: Found `{}` but is is an Apple Xcode stub executable.".format(tool))
-                # This is not the real tool, but Apple's irritating GUI dialog launcher.
-                raise
-    except Exception as _:  # noqa
-        print("ERROR :: Failed to run `{}`.  Please use `conda` to install `cctools` into your base environment.\n"
-              "         An alternative option for users of macOS is to install `Xcode` or `Command Line Tools for Xcode`."
-              .format(tool))
-        sys.exit(1)
-    return tool
+    tools = find_preferably_prefixed_executable(name, build_prefix, all_matches=True)
+    for tool in tools:
+        try:
+            if '/usr/bin' in tool:
+                with open(tool, 'rb') as f:
+                    s = f.read()
+                if s.find(b'usr/lib/libxcselect.dylib') != -1:
+                    # We ask xcrun.
+                    tool_xcr = check_output(['xcrun', '-find', name], stderr=STDOUT).decode('utf-8').splitlines()[0]
+                    # print("WARNING :: Found `{}` but is is an Apple Xcode stub executable.".format(tool))
+                    # This is not the real tool, but Apple's irritating GUI dialog launcher.
+                    tool = tool_xcr
+                    if os.path.exists(tool):
+                        return tool
+        except Exception as _:  # noqa
+            print("ERROR :: Failed to run `{}`.  Please use `conda` to install `cctools` into your base environment.\n"
+                  "         An alternative option for users of macOS is to install `Xcode` or `Command Line Tools for Xcode`."
+                  .format(tool))
+            sys.exit(1)
+        return tool
 
 
 def otool(path, build_prefix=None, cb_filter=is_dylib_info):
