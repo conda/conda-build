@@ -26,13 +26,13 @@ jobs:
   - script: |
       sudo apt update
       sudo apt install attr -y
+      source ci/azurepipelines/activate_conda "/usr/share/miniconda/bin/python"
       conda info
       ps -ef | grep $$
       conda install python=$PYTHON_VERSION -y
       mkdir -p /usr/share/miniconda/locks
       mkdir -p /usr/share/miniconda/bin
       chmod -w /usr/share/miniconda/locks
-      source /usr/share/miniconda/bin/activate
       if [ "$CONDA_VERSION" = "release" ]; then
         conda update -y conda;
       else
@@ -42,14 +42,15 @@ jobs:
       conda config --set auto_update_conda False
       conda info
       # avoids a python 3.7 problem
-      conda install -q cytoolz
+      conda install -y cytoolz
       if [[ "$PYTHON_VERSION" == "2.7" ]]; then
-        conda install -q futures scandir;
+        conda install -q futures scandir
       fi
-      conda install -q pytest-azurepipelines anaconda-client git requests filelock contextlib2 jinja2 patchelf ripgrep pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz tqdm conda-package-handling py-lief python-libarchive-c conda-forge::shellcheck
+      conda install -q pytest-azurepipelines anaconda-client git requests filelock contextlib2 jinja2 patchelf  \
+                       ripgrep pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz tqdm  \
+                       conda-package-handling py-lief python-libarchive-c perl conda-forge::shellcheck
+      conda install -q pytest pip pytest-cov pytest-forked pytest-xdist nomkl numpy mock pytest-mock
       pip install pkginfo
-      conda install -c c3i_test -q perl;
-      conda install -q pytest pip pytest-cov pytest-forked pytest-xdist nomkl numpy mock pytest-mock;
       pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd;
       pip install --no-deps .
       conda info -a
@@ -68,8 +69,118 @@ jobs:
       conda create -n blarg1 -yq python=2.7
       conda create -n blarg3 -yq python=3.7
       conda create -n blarg4 -yq python nomkl numpy pandas svn
-      source /usr/share/miniconda/bin/activate
+      source ci/azurepipelines/activate_conda "/usr/share/miniconda/bin/python"
       py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --test-run-title="Linux-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION"
+    displayName: 'Parallel Tests'
+
+- job: 'macOS'
+  pool:
+    vmImage: 'macOS-10.13'
+  strategy:
+    maxParallel: 10
+    matrix:
+      # Some tests are done with Xcode others without.
+      py27-release-xcode:
+        PYTHON_VERSION: '2.7'
+        CONDA_VERSION: 'release'
+        INSTALL_XCODE: '1'
+      py27-canary:
+        PYTHON_VERSION: '2.7'
+        CONDA_VERSION: 'canary'
+        INSTALL_XCODE: '0'
+      py37-canary-xcode:
+        PYTHON_VERSION: '3.7'
+        CONDA_VERSION: 'release'
+        INSTALL_XCODE: '1'
+      py37-release:
+        PYTHON_VERSION: '3.7'
+        CONDA_VERSION: 'canary'
+        INSTALL_XCODE: '0'
+  timeoutInMinutes: 480
+  steps:
+  # TODO: Fast finish on azure pipelines?
+  - script: |
+      echo "Fast Finish"
+  - script: |
+      echo "Removing homebrew from Azure to avoid conflicts."
+      curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/uninstall > ~/uninstall_homebrew
+      chmod +x ~/uninstall_homebrew
+      ~/uninstall_homebrew -fq
+      rm ~/uninstall_homebrew
+    displayName: Remove homebrew
+  - script: |
+      echo "Installing Miniconda"
+      set -x -e
+      curl -o $(Build.StagingDirectory)/miniconda.sh https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
+      chmod +x $(Build.StagingDirectory)/miniconda.sh
+      $(Build.StagingDirectory)/miniconda.sh -b -p $(Build.StagingDirectory)/miniconda
+      unset CONDA_SHLVL
+      eval "$($(Build.StagingDirectory)/miniconda/bin/python -m conda shell.bash hook)"
+      conda activate base
+      echo "Setting up Conda environment"
+    displayName: 'Install miniconda'
+  - script: |
+      echo "Setup CF macOS bits and select Xcode"
+      set -x -e
+      unset CONDA_SHLVL
+      eval "$($(Build.StagingDirectory)/miniconda/bin/python -m conda shell.bash hook)"
+      conda activate base
+      echo "PWD is $PWD"
+      find $PWD
+      source ci/azurepipelines/run_conda_forge_build_setup_osx
+    displayName: 'Setup CF macOS bits and select Xcode'
+  - script: |
+      source ci/azurepipelines/activate_conda "$(Build.StagingDirectory)/miniconda/bin/python"
+      conda info
+      conda install python=$PYTHON_VERSION -y
+      mkdir -p $(Build.StagingDirectory)/miniconda/locks
+      mkdir -p $(Build.StagingDirectory)/miniconda/bin
+      chmod -w $(Build.StagingDirectory)/miniconda/locks
+      if [ "$CONDA_VERSION" = "release" ]; then
+        conda update -y conda;
+      else
+        conda install -y -c conda-canary conda;
+      fi
+      conda config --set always_yes yes
+      conda config --set auto_update_conda False
+      conda info
+      # avoids a python 3.7 problem
+      conda install -q cytoolz
+      if [[ "$PYTHON_VERSION" == "2.7" ]]; then
+        conda install -y futures scandir
+      fi
+      conda install -q pytest-azurepipelines anaconda-client git requests filelock contextlib2 jinja2 ripgrep  \
+                       pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz tqdm conda-package-handling  \
+                       py-lief python-libarchive-c perl conda-forge::shellcheck
+      conda install -q pytest pip pytest-cov pytest-forked pytest-xdist nomkl numpy mock pytest-mock
+      # We should build this, it is easy.
+      # conda install -y patchelf
+      pip install pkginfo
+      conda install -y perl
+      pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd
+      pip install --no-deps .
+      conda info -a
+      conda list --show-channel-urls
+    displayName: Preparing test environment
+
+  - script: |
+      unset CONDA_SHLVL
+      eval "$($(Build.StagingDirectory)/miniconda/bin/python -m conda shell.bash hook)"
+      conda activate base
+      conda install conda-verify -y
+      py.test --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="macOS-SerialTests-$CONDA_VERSION-Python$PYTHON_VERSION"
+    displayName: 'Serial Tests'
+
+  - script: |
+      source ci/azurepipelines/activate_conda "$(Build.StagingDirectory)/miniconda/bin/python"
+      # conda remove conda-verify -y
+      echo "safety_checks: disabled" >> ~/.condarc
+      echo "local_repodata_ttl: 1800" >> ~/.condarc
+      mkdir -p ~/.conda
+      conda create -n blarg1 -yq python=2.7
+      conda create -n blarg3 -yq python=3.7
+      conda create -n blarg4 -yq python nomkl numpy pandas svn
+      py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" -k test_recipe_builds tests --test-run-title="macOS-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION"
     displayName: 'Parallel Tests'
 
 
@@ -101,7 +212,7 @@ jobs:
 
   - script: |
       choco install vcpython27 -fdv -y --debug
-    displayName: Install vcpython27.msi 
+    displayName: Install vcpython27.msi
 
   - script: |
       rmdir C:\Strawberry /s /q
