@@ -892,9 +892,10 @@ def get_files_with_prefix(m, files_in, prefix):
     all_matches = {}
 
     variant = m.config.variant
+    replacement_tags = ''
     if 'replacements' in variant:
         replacements = variant['replacements']
-        for replacement in replacements['all_replacements']:
+        for index, replacement in enumerate(replacements['all_replacements']):
             import glob2
             all_matches = have_regex_files(files=[f for f in files if any(
                                                   glob2.fnmatch.fnmatch(f, r) for r in replacement['glob_patterns'])],
@@ -905,12 +906,13 @@ def get_files_with_prefix(m, files_in, prefix):
                                            match_records=all_matches,
                                            regex_rg=replacement['regex_rg'] if 'regex_rg' in replacement else None,
                                            debug=m.config.debug)
+            replacement_tags += '"' + replacement['tag'] + '", ' if index == len(replacements)-1 else '"'
     perform_replacements(all_matches, prefix)
     end = time.time()
     total_replacements = sum(map(lambda i: len(i['submatches']), all_matches))
-    print("INFO :: Time taken to mark (prefix) and mark+peform (pkg-config, CMake, qmake)\n"
+    print("INFO :: Time taken to mark (prefix) and mark+peform ({})\n"
           "        {} replacements in {} files was {} seconds".format(
-        total_replacements, len(all_matches), end - start))
+        total_replacements, replacement_tags, len(all_matches), end - start))
     '''
     # Keeping this around just for a while.
     files_with_prefix2 = sorted(have_prefix_files(files_in, prefix))
