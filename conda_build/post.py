@@ -28,9 +28,8 @@ from conda_build.conda_interface import TemporaryDirectory
 from conda_build.conda_interface import md5_file
 
 from conda_build import utils
-from conda_build.os_utils.liefldd import (get_exports_memoized, get_linkages_memoized,
-                                          get_linkages_memoized, get_rpaths_raw,
-                                          get_rpaths_raw, get_runpaths_raw, set_rpath,
+from conda_build.os_utils.liefldd import (have_lief, get_exports_memoized,
+                                          get_rpaths_raw, set_rpath,
                                           lief_parse)
 from conda_build.os_utils.pyldd import codefile_type
 from conda_build.os_utils.ldd import get_package_obj_files
@@ -511,10 +510,10 @@ def mk_relative_linux(f, prefix, rpaths=('lib',), method=None):
         existing2, _, _ = get_rpaths_raw(elf)
         if existing_pe and [existing_pe] != existing2:
             print('WARNING :: get_rpaths_raw()={} and patchelf={} disagree for {} :: '.format(
-                existing2, [existing], elf))
+                      existing2, [existing_pe], elf))
         # Use LIEF if method is LIEF to get the initial value?
         if method == 'LIEF':
-        existing = existing_pe.split(os.pathsep)
+            existing = existing2
     new = []
     for old in existing:
         if old.startswith('$ORIGIN'):
