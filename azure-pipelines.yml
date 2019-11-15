@@ -317,7 +317,7 @@ jobs:
       set LUA=
       set R=
       set PYTEST_REPLAY_OPTION="--replay-record-dir=$(Build.ArtifactStagingDirectory)"
-      if "%PYTHON_VERSION%" NEQ "2.7" set PYTEST_REPLAY_OPTION="%PYTEST_REPLAY_OPTION% Win-SerialTests-%CONDA_VERSION%-Python%PYTHON_VERSION%"
+      if "%PYTHON_VERSION%" NEQ "2.7" set PYTEST_REPLAY_OPTION="--replay-record-dir=$(Build.ArtifactStagingDirectory) Win-SerialTests-%CONDA_VERSION%-Python%PYTHON_VERSION%"
       py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp %UserProfile%\cbtmp_serial -n 0 -m "serial" --test-run-title="Win-SerialTests-%CONDA_VERSION%-Python%PYTHON_VERSION%" %PYTEST_REPLAY_OPTION%
     displayName: 'Serial Tests'
 
@@ -329,7 +329,7 @@ jobs:
       set R=
       mkdir -p pytest-replay
       set PYTEST_REPLAY_OPTION="--replay-record-dir=pytest-replay"
-      if "%PYTHON_VERSION%" NEQ "2.7" set PYTEST_REPLAY_OPTION="%PYTEST_REPLAY_OPTION% --replay-base-name=Win-ParallelTests-%CONDA_VERSION%-Python%PYTHON_VERSION%"
+      if "%PYTHON_VERSION%" NEQ "2.7" set PYTEST_REPLAY_OPTION="--replay-record-dir=$(Build.ArtifactStagingDirectory) --replay-base-name=Win-ParallelTests-%CONDA_VERSION%-Python%PYTHON_VERSION%"
       py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp %UserProfile%\cbtmp -n auto -m "not serial" --test-run-title="Win-ParallelTests-%CONDA_VERSION%-Python%PYTHON_VERSION%" %PYTEST_REPLAY_OPTION%
       copy pytest-replay\* $(Build.ArtifactStagingDirectory)
     env:
