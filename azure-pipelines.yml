@@ -87,7 +87,7 @@ jobs:
   - task: PublishBuildArtifacts@1
     inputs:
       pathToPublish: $(Build.ArtifactStagingDirectory)
-      artifactName: Linux-$CONDA_VERSION-Py$PYTHON_VERSION
+      artifactName: 'Linux-$(CONDA_VERSION)-Py$(PYTHON_VERSION)'
 
 
 - job: 'macOS'
@@ -212,7 +212,7 @@ jobs:
   - task: PublishBuildArtifacts@1
     inputs:
       pathToPublish: $(Build.ArtifactStagingDirectory)
-      artifactName: macOS-$CONDA_VERSION-Py$PYTHON_VERSION
+      artifactName: 'macOS-$(CONDA_VERSION)-Py$(PYTHON_VERSION)'
 
 
 - job: 'Windows'
@@ -315,7 +315,7 @@ jobs:
       set LUA=
       set R=
       set PYTEST_REPLAY_OPTION="--replay-record-dir=$(Build.ArtifactStagingDirectory)"
-      if "%PYTHON_VERSION%" != "2.7" set PYTEST_REPLAY_OPTION="%PYTEST_REPLAY_OPTION% Win-SerialTests-%CONDA_VERSION%-Python%PYTHON_VERSION%"
+      if "%PYTHON_VERSION%" NEQ "2.7" set PYTEST_REPLAY_OPTION="%PYTEST_REPLAY_OPTION% Win-SerialTests-%CONDA_VERSION%-Python%PYTHON_VERSION%"
       py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp %UserProfile%\cbtmp_serial -n 0 -m "serial" --test-run-title="Win-SerialTests-%CONDA_VERSION%-Python%PYTHON_VERSION%" %PYTEST_REPLAY_OPTION%
     displayName: 'Serial Tests'
 
@@ -326,7 +326,7 @@ jobs:
       set LUA=
       set R=
       set PYTEST_REPLAY_OPTION="--replay-record-dir=$(Build.ArtifactStagingDirectory)"
-      if "%PYTHON_VERSION%" != "2.7" set PYTEST_REPLAY_OPTION="%PYTEST_REPLAY_OPTION% --replay-base-name=Win-ParallelTests-%CONDA_VERSION%-Python%PYTHON_VERSION%"
+      if "%PYTHON_VERSION%" NEQ "2.7" set PYTEST_REPLAY_OPTION="%PYTEST_REPLAY_OPTION% --replay-base-name=Win-ParallelTests-%CONDA_VERSION%-Python%PYTHON_VERSION%"
       py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp %UserProfile%\cbtmp -n auto -m "not serial" --test-run-title="Win-ParallelTests-%CONDA_VERSION%-Python%PYTHON_VERSION%" %PYTEST_REPLAY_OPTION%
     env:
       VS90COMNTOOLS: "C:\\Program Files (x86)\\Common Files\\Microsoft\\Visual C++ for Python\\9.0\\VC\\bin"
@@ -336,5 +336,5 @@ jobs:
   - task: PublishBuildArtifacts@1
     inputs:
       pathToPublish: $(Build.ArtifactStagingDirectory)
-      artifactName: Win-%CONDA_VERSION%-Python%PYTHON_VERSION%
+      artifactName: 'Win-$(CONDA_VERSION)-Python$(PYTHON_VERSION)'
 
