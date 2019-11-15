@@ -89,8 +89,8 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
 
         if m:
             python_pattern = (re.compile(br'\/python[w]?(?:$|\s|\Z)', re.M) if bytes_ else
-                            re.compile(r'\/python[w]?(:$|\s|\z)', re.M))
-            if not python_pattern.search(m.group()):
+                            re.compile(r'\/python[w]?(:$|\s|\Z)', re.M))
+            if not re.search(python_pattern, m.group()):
                 return
         else:
             return
