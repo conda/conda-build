@@ -909,7 +909,7 @@ def get_files_with_prefix(m, files_in, prefix):
             replacement_tags += '"' + replacement['tag'] + '", ' if index == len(replacements)-1 else '"'
     perform_replacements(all_matches, prefix)
     end = time.time()
-    total_replacements = sum(map(lambda i: len(i['submatches']), all_matches))
+    total_replacements = sum(map(lambda i: len(all_matches[i]['submatches']), all_matches))
     print("INFO :: Time taken to mark (prefix) and mark+peform ({})\n"
           "        {} replacements in {} files was {} seconds".format(
         total_replacements, replacement_tags, len(all_matches), end - start))
