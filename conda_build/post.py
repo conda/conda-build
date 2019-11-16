@@ -1536,14 +1536,13 @@ def bake_sys_platform_sysroot_path_list(sysroot=None):
             f.write("except:\n")
             f.write("    from pathlib import PurePath\n")
             f.write("{} = (".format(baked_name))
-            f.write(',\n'.join("{spacing}PurePath('{as_posix}')  # noqa".format(
+            f.write(''.join("{spacing}PurePath('{as_posix}'),  # noqa\n".format(
                     as_posix=m.as_posix(),
                     spacing=' ' * (len(baked_name) + 4) if m != matches[0] else '')
                     for m in matches))
-            f.write(")")
+            f.write(")\n")
 
 
-'''
 if __name__ == 'conda_build.post' or __name__ == '__main__':
     bake_sys_platform_sysroot_path_list()
     # matches = make_sysroot_path_list('C:/Windows', 'win-64', DEFAULT_WIN_WHITELIST)
@@ -1552,4 +1551,3 @@ if __name__ == 'conda_build.post' or __name__ == '__main__':
     # bake_sys_platform_sysroot_path_list()
     sysroot_files = sysroot_path_list('win-64', 'C:/Windows/System32', None)
     print(sysroot_files)
-'''

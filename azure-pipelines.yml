@@ -46,13 +46,12 @@ jobs:
       if [[ "$PYTHON_VERSION" == "2.7" ]]; then
         conda install -q futures scandir pathlib2
       fi
-      conda install -q pytest-azurepipelines anaconda-client git requests filelock contextlib2 jinja2 patchelf  \
+      conda install -q pytest pytest-azurepipelines pytest-cov pytest-forked pytest-xdist anaconda-client  \
+                       git requests filelock contextlib2 jinja2 patchelf  \
                        ripgrep pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz tqdm  \
-                       conda-package-handling py-lief python-libarchive-c perl conda-forge::shellcheck
-      conda install -q pytest pip pytest-cov pytest-forked pytest-xdist nomkl numpy mock pytest-mock
-      conda install -q pytest-replay pytest-rerunfailures -c conda-forge
-      pip install pkginfo
-      pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd;
+                       conda-package-handling py-lief python-libarchive-c perl conda-forge::shellcheck  \
+                       pip nomkl numpy mock pytest-mock pkginfo
+      pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd
       pip install --no-deps .
       conda info -a
       mkdir $BUILD_ARTIFACTSTAGINGDIRECTORY/pytest-replay

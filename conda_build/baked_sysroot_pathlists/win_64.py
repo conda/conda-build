@@ -2,7 +2,6 @@ try:
     from pathlib2 import PurePath
 except:
     from pathlib import PurePath
-
 DEFAULT_WIN_WHITELIST_BAKED = (PurePath('/System32/advapi32.dll'),  # noqa
                                PurePath('/System32/bcrypt.dll'),  # noqa
                                PurePath('/System32/comctl32.dll'),  # noqa
@@ -134,4 +133,5 @@ DEFAULT_WIN_WHITELIST_BAKED = (PurePath('/System32/advapi32.dll'),  # noqa
                                PurePath('/System32/downlevel/api-ms-win-service-private-l1-1-0.dll'),  # noqa
                                PurePath('/System32/downlevel/api-ms-win-service-private-l1-1-1.dll'),  # noqa
                                PurePath('/System32/downlevel/api-ms-win-service-winsvc-l1-1-0.dll'),  # noqa
-                               PurePath('/System32/downlevel/api-ms-win-shcore-stream-l1-1-0.dll'))  # noqa
+                               PurePath('/System32/downlevel/api-ms-win-shcore-stream-l1-1-0.dll'),  # noqa
+)
