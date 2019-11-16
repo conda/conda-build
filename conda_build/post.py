@@ -11,8 +11,9 @@ except:
     from pathlib import Path, PurePath
 import io
 import locale
-import re
+from multiprocessing import cpu_count
 import os
+import re
 import shutil
 import stat
 from subprocess import call, check_output, CalledProcessError
@@ -32,7 +33,7 @@ from conda_build.conda_interface import md5_file
 
 from conda_build import utils
 from conda_build.os_utils.liefldd import (have_lief, get_exports_memoized,
-                                          get_rpaths_raw, set_rpath,
+                                          _get_path_dirs, get_rpaths_raw, set_rpath,
                                           lief_parse)
 from conda_build.os_utils.pyldd import codefile_type
 from conda_build.os_utils.ldd import get_package_obj_files
@@ -693,10 +694,10 @@ DEFAULT_WIN_WHITELIST = ['/System32/ADVAPI32.dll',
                          '/System32/**/api-ms-win*.dll']
 
 
-def _resolve_needed_dsos(sysroots_files, libs_info, run_prefix,
+def _resolve_needed_dsos(ld_library_path, sysroots_files, libs_info, run_prefix,
                          sysroot_substitution, build_prefix, build_prefix_substitution):
     '''
-    :param ld_search_path: An ordered list of directories to search for. This is modified and stored
+    :param ld_library_path: An ordered list of directories to search for. This is modified and stored
                            with each DSO we process according to its RPATH entries. Recursion is not
                            needed for any of this.
     :param sysroots_files: A dict of sysroots and their files.
@@ -708,7 +709,6 @@ def _resolve_needed_dsos(sysroots_files, libs_info, run_prefix,
     :return:
     '''
 
-    ld_library_path = [run_prefix, '/usr/local/bin', '/usr/bin', '/bin', '/usr/sbin', '/sbin']
     for f, lib_info in libs_info.items():
         if 'dylib' in f:
             print('debug')
@@ -1093,7 +1093,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     if parallel:
         file_info_parallel = dict()
         results = {}
-        with ThreadPoolExecutor(min(os.cpu_count(), max(1, len(program_files)))) as executor:
+        with ThreadPoolExecutor(min(cpu_count(), max(1, len(program_files)))) as executor:
             for f in program_files:
                 results[f] = executor.submit(lief_parse_this, join(run_prefix, f), path_replacements)
 
@@ -1119,8 +1119,26 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     #    'fullpath' to each copy of that file.
     # 2. So we need to only resolve DSOs used by executables, we will not resolve DSO references in
     #    other DSOs into any kind of a record that we report or generate errors based upon.
-    _resolve_needed_dsos(sysroots_files, file_info, run_prefix, sysroot_sub, build_prefix, buildprefix_sub)
 
+    # The end, OS specific bit of this should come from the sysroot files .py if they exist,
+    # or else we should allow explicit specification of them in conda_build_config.yaml
+    ld_library_path = list(_get_path_dirs(run_prefix, subdir)) + [
+        '/usr/local/bin',
+        '/usr/bin',
+        '/bin',
+        '/usr/sbin',
+        '/sbin'] if not subdir.startswith('win') else [
+        '{SystemRoot}/system32',
+        '{SystemRoot}',
+        '{SystemRoot}/System32/Wbem',
+        '{SystemRoot}/System32/WindowsPowerShell/v1.0']
+    _resolve_needed_dsos(ld_library_path,
+                         sysroots_files,
+                         file_info,
+                         run_prefix,
+                         sysroot_sub,
+                         build_prefix,
+                         buildprefix_sub)
     for prefix in (run_prefix, build_prefix):
         for subdir2, _, filez in os.walk(prefix):
             for file in filez:

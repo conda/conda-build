@@ -211,7 +211,7 @@ def get_rpaths(file, path_replacements):
             rpaths.append(next(iter(path_replacements['windowsroot'])))
         if 'runprefix' in path_replacements:
             # and not lief.PE.HEADER_CHARACTERISTICS.DLL in binary.header.characteristics_list:
-            rpaths.extend(list(_get_path_dirs(next(iter(path_replacements['runprefix'])))))
+            rpaths.extend(list(_get_path_dirs(next(iter(path_replacements['runprefix'])), "win-64")))
     elif binary_format == lief.EXE_FORMATS.MACHO:
         rpaths = [rpath.rstrip('/') for rpath in rpaths]
     elif binary_format == lief.EXE_FORMATS.ELF:
@@ -282,13 +282,16 @@ def from_os_varnames(binary_format, binary_type, input_):
 
 
 # TODO :: Use conda's version of this (or move the constant strings into constants.py)
-def _get_path_dirs(prefix):
-    yield '/'.join((prefix,))
-    yield '/'.join((prefix, 'Library', 'mingw-w64', 'bin'))
-    yield '/'.join((prefix, 'Library', 'usr', 'bin'))
-    yield '/'.join((prefix, 'Library', 'bin'))
-    yield '/'.join((prefix, 'Scripts'))
-    yield '/'.join((prefix, 'bin'))
+def _get_path_dirs(prefix, subdir):
+    if subdir.startswith('win'):
+        yield '/'.join((prefix,))
+        yield '/'.join((prefix, 'Library', 'mingw-w64', 'bin'))
+        yield '/'.join((prefix, 'Library', 'usr', 'bin'))
+        yield '/'.join((prefix, 'Library', 'bin'))
+        yield '/'.join((prefix, 'Scripts'))
+        yield '/'.join((prefix, 'bin'))
+    else:
+        yield '/'.join((prefix, 'bin'))
 
 
 def get_uniqueness_key(file):
