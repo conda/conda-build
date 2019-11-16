@@ -1311,7 +1311,7 @@ def post_build(m, files, build_python, host_prefix=None, is_already_linked=False
 
     binary_relocation = m.binary_relocation()
     # If you have explicitly listed files for binary relocation and you are on Windows then
-	# it should be presumed that you really need it to happen.
+    # it should be presumed that you really need it to happen.
     if not m.config.target_subdir.startswith('win') or isinstance(binary_relocation, list):
         binary_relocation = m.binary_relocation()
         if not binary_relocation:
@@ -1536,7 +1536,7 @@ def bake_sys_platform_sysroot_path_list(sysroot=None):
             f.write("except:\n")
             f.write("    from pathlib import PurePath\n")
             f.write("{} = (".format(baked_name))
-            f.write(',\n'.join("{spacing}PurePath('{as_posix}')".format(
+            f.write(',\n'.join("{spacing}PurePath('{as_posix}')  # [noqa]".format(
                     as_posix=m.as_posix(),
                     spacing=' ' * (len(baked_name) + 4) if m != matches[0] else '')
                     for m in matches))

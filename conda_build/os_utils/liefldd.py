@@ -1082,9 +1082,9 @@ def lief_parse_internal(filename, path_replacements={}):
                 except:
                     if debug_it:
                         print('WARNING :: Failed to get address for {}'.format(function.name))
-        except Exception as _:  # [noqa]
+        except Exception as e:
             if debug_it:
-                print("no entrypoint for {}".format(filename))
+                print("no entrypoint for {}, exception {}".format(filename, e))
         else:
             if debug_it:
                 print("entrypoint for {} is {}".format(filename, entrypoint))
