@@ -1543,6 +1543,7 @@ def bake_sys_platform_sysroot_path_list(sysroot=None):
             f.write(")\n")
 
 
+'''
 if __name__ == 'conda_build.post' or __name__ == '__main__':
     bake_sys_platform_sysroot_path_list()
     # matches = make_sysroot_path_list('C:/Windows', 'win-64', DEFAULT_WIN_WHITELIST)
@@ -1551,3 +1552,4 @@ if __name__ == 'conda_build.post' or __name__ == '__main__':
     # bake_sys_platform_sysroot_path_list()
     sysroot_files = sysroot_path_list('win-64', 'C:/Windows/System32', None)
     print(sysroot_files)
+'''

@@ -2,7 +2,6 @@ try:
     from pathlib2 import PurePath
 except:
     from pathlib import PurePath
-
 DEFAULT_MAC_WHITELIST_BAKED = (PurePath('/usr/lib/libSystem.B.dylib'),  # noqa
                                PurePath('/usr/lib/libobjc.A.dylib'),  # noqa
                                PurePath('/usr/lib/libcrypto.0.9.8.dylib'),  # noqa
@@ -68,4 +67,5 @@ DEFAULT_MAC_WHITELIST_BAKED = (PurePath('/usr/lib/libSystem.B.dylib'),  # noqa
                                PurePath('/System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libvDSP.dylib'),  # noqa
                                PurePath('/System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libvMisc.dylib'),  # noqa
                                PurePath('/System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libLAPACK.dylib'),  # noqa
-                               PurePath('/System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libBLAS.dylib'))  # noqa
+                               PurePath('/System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libBLAS.dylib'),  # noqa
+)
