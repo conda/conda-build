@@ -18,6 +18,7 @@ import threading
 from .pyldd import inspect_linkages as inspect_linkages_pyldd
 # lief cannot handle files it doesn't know about gracefully
 from .pyldd import codefile_type as codefile_type_pyldd
+from .pyldd import _trim_sysroot
 from .external import find_executable
 
 codefile_type = codefile_type_pyldd
@@ -403,9 +404,9 @@ def inspect_linkages_lief(dsos_info, filename, resolve_filenames=True, recurse=T
 
     default_paths = []
     if dso_info['filetype'] == 'elf64':
-            default_paths = ['$SYSROOT/lib64', '$SYSROOT/usr/lib64', '$SYSROOT/lib', '$SYSROOT/usr/lib']
+        default_paths = ['$SYSROOT/lib64', '$SYSROOT/usr/lib64', '$SYSROOT/lib', '$SYSROOT/usr/lib']
     elif dso_info['filetype'] == 'elf':
-            default_paths = ['$SYSROOT/lib', '$SYSROOT/usr/lib']
+        default_paths = ['$SYSROOT/lib', '$SYSROOT/usr/lib']
     elif dso_info['filetype'] == 'macho':
         default_paths = ['$SYSROOT/usr/lib']
     elif dso_info['filetype'] == 'pecoff':
@@ -491,7 +492,7 @@ def get_linkages(dsos_info, filename, resolve_filenames=True, recurse=True,
         return result_pyldd
 
     result_lief = inspect_linkages_lief(dsos_info, filename, resolve_filenames=resolve_filenames, recurse=recurse,
-                                        sysroot=sysroot, envroot=envroot, arch=arch, binary=None) # binary=dso_info['binary'])
+                                        sysroot=sysroot, envroot=envroot, arch=arch, binary=None)  # binary=dso_info['binary'])
     if result_pyldd and set(result_lief) != set(result_pyldd):
         print("WARNING: Disagreement in get_linkages(filename={}, resolve_filenames={}, recurse={}, sysroot={}, envroot={}, arch={}):\n lief: {}\npyldd: {}\n  (using lief)".
               format(filename, resolve_filenames, recurse, sysroot, envroot, arch, result_lief, result_pyldd))
@@ -878,9 +879,9 @@ def get_symbols(file, direction='both', defined=True, undefined=True):
         else:
             sym_lists['exported'] = binary.symbols
     if direction == 'imported' or direction == 'both':
-       if hasattr(binary, 'imported_symbols'):
+        if hasattr(binary, 'imported_symbols'):
             sym_lists['imported'] = binary.imported_symbols
-       elif direction != 'both':  # When both, this will have been added just above
+        elif direction != 'both':  # When both, this will have been added just above
             sym_lists['exported'] = binary.symbols
 
     for type, syms in sym_lists.items():
@@ -989,13 +990,13 @@ def get_linkages_memoized(filename, resolve_filenames, recurse,
                         recurse=recurse, sysroot=sysroot, envroot=envroot, arch=arch)
 
 
-#original_lief_parse = lief.parse
-#@memoized_by_arg0_filehash
-#def lief_parse_wrapper(file):
-#    if is_string(file):
-#        print("called on lief_parse_wrapper({})".format(os.path.basename(file)))
-#    return original_lief_parse(file)
-#lief.parse = lief_parse_wrapper
+# original_lief_parse = lief.parse
+# @memoized_by_arg0_filehash
+# def lief_parse_wrapper(file):
+#     if is_string(file):
+#         print("called on lief_parse_wrapper({})".format(os.path.basename(file)))
+#     return original_lief_parse(file)
+# lief.parse = lief_parse_wrapper
 
 
 def lief_parse_wrapper(file):
@@ -1005,7 +1006,6 @@ def lief_parse_wrapper(file):
         print("Seen {} already".format(file))
     lief_parse_wrapper.seen[file] = 1
     return lief.parse(file)
-
 
 
 # TODO :: Maybe remove. It's for fat binaries really but .. well ..
@@ -1049,7 +1049,7 @@ def lief_parse_internal(filename, path_replacements={}):
                 'libraries': {}}
 
     for k, v in path_replacements.items():
-        assert not '\\' in v
+        assert '\\' not in v
 
     if have_lief:
         runpaths, runpaths_type, _, _ = get_runpaths_or_rpaths_raw(binary)
@@ -1082,7 +1082,7 @@ def lief_parse_internal(filename, path_replacements={}):
                 except:
                     if debug_it:
                         print('WARNING :: Failed to get address for {}'.format(function.name))
-        except Exception as e:
+        except Exception as _:  # [noqa]
             if debug_it:
                 print("no entrypoint for {}".format(filename))
         else:
@@ -1112,7 +1112,7 @@ def lief_parse_internal(filename, path_replacements={}):
                        'libraries': {'original': libs_original}}
 
     if check_pyldd or not have_lief:
-        from .pyldd import _inspect_linkages_this, get_runpaths, codefile
+        from .pyldd import _inspect_linkages_this, codefile
 
         with open(filename, 'rb') as f:
             cf = codefile(f, 'any', ['/lib', '/usr/lib'])
@@ -1169,7 +1169,7 @@ def parse_glibcxx_version_from_sym(version):
 
 
 if __name__ == '__main__':
-    file_info = lief_parse('/opt/b/qt-feedstock/_test_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_pla/lib/libQt5WebEngineCore.so.5.12')
+    file_info = lief_parse('/opt/b/qt-feedstock/_test_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_pla/lib/libQt5WebEngineCore.so.5.12')  # [noqa]
     for sym in file_info['symbols']:
         if sym['version'].startswith('GLIBC_'):
             parse_glibc_version_from_sym(sym['version'])

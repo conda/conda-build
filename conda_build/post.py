@@ -4,7 +4,7 @@ from collections import defaultdict, Mapping, OrderedDict
 from functools import partial
 from fnmatch import fnmatch, translate, filter as fnmatch_filter
 from os.path import (basename, commonprefix, dirname, exists, isabs, isdir, isfile,
-                     islink, join, normpath, realpath, relpath, splitext)
+                     islink, join, normpath, realpath, relpath)
 try:
     from pathlib2 import Path, PurePath
 except:
@@ -717,10 +717,10 @@ def _resolve_needed_dsos(ld_library_path, sysroots_files, libs_info, run_prefix,
         build_prefix = build_prefix.replace(os.sep, '/')
         run_prefix = run_prefix.replace(os.sep, '/')
         needed = lib_info['libraries']['original']
-        #if sysroot:
-        #    # /usr/lib/libSystem.B.dylib is in MacOSX10.9.sdk but after that there are only .tbd files.
-        #    needed = [n.replace(sysroot, sysroot_substitution) if n.startswith(sysroot)
-        #              else n for n in needed]
+        # if sysroot:
+        #     # /usr/lib/libSystem.B.dylib is in MacOSX10.9.sdk but after that there are only .tbd files.
+        #     needed = [n.replace(sysroot, sysroot_substitution) if n.startswith(sysroot)
+        #               else n for n in needed]
         # We do not want to do this substitution when merging build and host prefixes.
         if build_prefix != run_prefix:
             needed = [n.replace(build_prefix, build_prefix_substitution) if n.startswith(build_prefix)
@@ -1310,7 +1310,7 @@ def post_build(m, files, build_python, host_prefix=None, is_already_linked=False
             make_hardlink_copy(f, host_prefix)
 
     binary_relocation = m.binary_relocation()
-	# If you have explicitly listed files for binary relocation and you are on Windows then
+    # If you have explicitly listed files for binary relocation and you are on Windows then
 	# it should be presumed that you really need it to happen.
     if not m.config.target_subdir.startswith('win') or isinstance(binary_relocation, list):
         binary_relocation = m.binary_relocation()
@@ -1535,10 +1535,10 @@ def bake_sys_platform_sysroot_path_list(sysroot=None):
             f.write("    from pathlib2 import PurePath\n")
             f.write("except:\n")
             f.write("    from pathlib import PurePath\n")
-            f.write("{}=(".format(baked_name))
+            f.write("{} = (".format(baked_name))
             f.write(',\n'.join("{spacing}PurePath('{as_posix}')".format(
                     as_posix=m.as_posix(),
-                    spacing=' ' * (len(baked_name) + 2) if m != matches[0] else '')
+                    spacing=' ' * (len(baked_name) + 4) if m != matches[0] else '')
                     for m in matches))
             f.write(")")
 
