@@ -44,7 +44,7 @@ jobs:
       # avoids a python 3.7 problem
       conda install -y cytoolz
       if [[ "$PYTHON_VERSION" == "2.7" ]]; then
-        conda install -q futures scandir
+        conda install -q futures scandir pathlib2
       fi
       conda install -q pytest-azurepipelines anaconda-client git requests filelock contextlib2 jinja2 patchelf  \
                        ripgrep pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz tqdm  \
@@ -160,7 +160,7 @@ jobs:
       # avoids a python 3.7 problem
       conda install -q cytoolz
       if [[ "$PYTHON_VERSION" == "2.7" ]]; then
-        conda install -y futures scandir
+        conda install -q futures scandir pathlib2
       fi
       conda install -q pytest-azurepipelines anaconda-client git requests filelock contextlib2 jinja2 ripgrep  \
                        pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz tqdm conda-package-handling  \
@@ -285,7 +285,7 @@ jobs:
       conda install -c conda-forge pytest-replay pytest-rerunfailures -y
       echo "safety_checks: disabled" >> ~/.condarc
       echo "local_repodata_ttl: 1800" >> ~/.condarc
-      if "%PYTHON_VERSION%" == "2.7" conda install -q scandir
+      if "%PYTHON_VERSION%" == "2.7" conda install -q scandir pathlib2
       if "%PYTHON_VERSION%" == "3.7" conda install -q py-lief
       python --version
       python -c "import struct; print(struct.calcsize('P') * 8)"

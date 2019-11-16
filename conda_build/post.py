@@ -5,7 +5,10 @@ from functools import partial
 from fnmatch import fnmatch, translate, filter as fnmatch_filter
 from os.path import (basename, commonprefix, dirname, exists, isabs, isdir, isfile,
                      islink, join, normpath, realpath, relpath, splitext)
-from pathlib import Path, PurePath
+try:
+    from pathlib2 import Path, PurePath
+except:
+    from pathlib import Path, PurePath
 import io
 import locale
 import re
@@ -1510,7 +1513,10 @@ def bake_sys_platform_sysroot_path_list(sysroot=None):
         except:
             pass
         with open(filename, "w") as f:
-            f.write("from pathlib import PurePath\n\n")
+            f.write("try:\n")
+            f.write("    from pathlib2 import PurePath\n")
+            f.write("except:\n")
+            f.write("    from pathlib import PurePath\n")
             f.write("{}=(".format(baked_name))
             f.write(',\n'.join("{spacing}PurePath('{as_posix}')".format(
                     as_posix=m.as_posix(),

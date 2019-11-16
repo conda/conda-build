@@ -1,4 +1,7 @@
-from pathlib import PurePath
+try:
+    from pathlib2 import PurePath
+except:
+    from pathlib import PurePath
 
 DEFAULT_MAC_WHITELIST_BAKED=(PurePath('/usr/lib/libSystem.B.dylib'),
                              PurePath('/usr/lib/libobjc.A.dylib'),

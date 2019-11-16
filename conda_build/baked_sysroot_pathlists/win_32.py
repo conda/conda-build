@@ -1,4 +1,7 @@
-from pathlib import PurePath
+try:
+    from pathlib2 import PurePath
+except:
+    from pathlib import PurePath
 
 DEFAULT_WIN_WHITELIST_BAKED=(PurePath('/System32/advapi32.dll'),
                              PurePath('/System32/bcrypt.dll'),
