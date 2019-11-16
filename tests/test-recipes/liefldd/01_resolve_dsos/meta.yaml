@@ -1,0 +1,22 @@
+package:
+  name: resolve_dsos
+  version: 1.0
+
+source:
+  path: ./src
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+
+outputs:
+  - name: {{ PKG_NAME }}
+    target: {{ target_platform }}
+
+build:
+  number: 0
+
+test:
+  commands:
+    - foo_exe | grep foo
+    - bar_exe | grep bar

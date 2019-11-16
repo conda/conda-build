@@ -20,6 +20,7 @@ def get_root_dir():
 thisdir = os.path.join(get_root_dir(), "tests")
 metadata_dir = os.path.join(thisdir, "test-recipes", "metadata")
 subpackage_dir = os.path.join(thisdir, "test-recipes", "split-packages")
+liefldd_dir = os.path.join(thisdir, "test-recipes", "liefldd")
 fail_dir = os.path.join(thisdir, "test-recipes", "fail")
 archive_dir = os.path.join(thisdir, "archives")
 
