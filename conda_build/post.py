@@ -1536,7 +1536,7 @@ def bake_sys_platform_sysroot_path_list(sysroot=None):
             f.write("except:\n")
             f.write("    from pathlib import PurePath\n")
             f.write("{} = (".format(baked_name))
-            f.write(',\n'.join("{spacing}PurePath('{as_posix}')  # [noqa]".format(
+            f.write(',\n'.join("{spacing}PurePath('{as_posix}')  # noqa".format(
                     as_posix=m.as_posix(),
                     spacing=' ' * (len(baked_name) + 4) if m != matches[0] else '')
                     for m in matches))

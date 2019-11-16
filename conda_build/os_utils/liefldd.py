@@ -1169,7 +1169,7 @@ def parse_glibcxx_version_from_sym(version):
 
 
 if __name__ == '__main__':
-    file_info = lief_parse('/opt/b/qt-feedstock/_test_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_pla/lib/libQt5WebEngineCore.so.5.12')  # [noqa]
+    file_info = lief_parse('/opt/b/qt-feedstock/_test_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_pla/lib/libQt5WebEngineCore.so.5.12')  # noqa
     for sym in file_info['symbols']:
         if sym['version'].startswith('GLIBC_'):
             parse_glibc_version_from_sym(sym['version'])
