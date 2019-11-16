@@ -5,6 +5,7 @@ from __future__ import absolute_import, division, print_function
 
 from collections import deque, OrderedDict
 import fnmatch
+import glob2
 import io
 import json
 import os
@@ -895,8 +896,8 @@ def get_files_with_prefix(m, files_in, prefix):
     replacement_tags = ''
     if 'replacements' in variant:
         replacements = variant['replacements']
+        last = len(replacements['all_replacements']) - 1
         for index, replacement in enumerate(replacements['all_replacements']):
-            import glob2
             all_matches = have_regex_files(files=[f for f in files if any(
                                                   glob2.fnmatch.fnmatch(f, r) for r in replacement['glob_patterns'])],
                                            prefix=prefix,
@@ -906,7 +907,8 @@ def get_files_with_prefix(m, files_in, prefix):
                                            match_records=all_matches,
                                            regex_rg=replacement['regex_rg'] if 'regex_rg' in replacement else None,
                                            debug=m.config.debug)
-            replacement_tags += '"' + replacement['tag'] + '", ' if index == len(replacements)-1 else '"'
+            replacement_tags = replacement_tags + '"' + replacement['tag'] + ('"' if
+                                                         index == last else '", ')
     perform_replacements(all_matches, prefix)
     end = time.time()
     total_replacements = sum(map(lambda i: len(all_matches[i]['submatches']), all_matches))
@@ -969,7 +971,7 @@ def record_prefix_files(m, files_with_prefix):
         print("-----------------------------")
         with open(join(m.config.info_dir, 'has_prefix'), 'w') as fo:
             for pfix, mode, fn in files_with_prefix:
-                print('{} :: {} :: {}'.format(pfix, mode, fn))
+                # print('{} :: {} :: {}'.format(pfix, mode, fn))
                 ignored_because = None
                 if (fn in binary_has_prefix_files or (not len_binary_has_prefix_files or
                    m.get_value('build/detect_binary_files_with_prefix', False) and mode == 'binary')):

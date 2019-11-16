@@ -1033,8 +1033,9 @@ def lief_parse_internal(filename, path_replacements={}):
     check_pyldd = False
 
     fullpath = os.path.normpath(filename)
+    debug_it = False
     if filename.endswith(('.a', '.lib')):
-        debug_it = 1
+        debug_it = True
     binary = lief.parse(fullpath) if have_lief else None
     if not binary:
         # Static libs here. Remove this.
@@ -1073,13 +1074,17 @@ def lief_parse_internal(filename, path_replacements={}):
                     name_d = None
                 try:
                     entrypoint_addr = binary.get_function_address(name_d or name)
-                    print('function {} at addr {}'.format(function, entrypoint_addr))
+                    if debug_it:
+                        print('function {} at addr {}'.format(function, entrypoint_addr))
                 except:
-                    print('WARNING :: Failed to get address for {}'.format(function.name))
+                    if debug_it:
+                        print('WARNING :: Failed to get address for {}'.format(function.name))
         except Exception as e:
-            print("no entrypoint for {}".format(filename))
+            if debug_it:
+                print("no entrypoint for {}".format(filename))
         else:
-            print("entrypoint for {} is {}".format(filename, entrypoint))
+            if debug_it:
+                print("entrypoint for {} is {}".format(filename, entrypoint))
         if binary.format == lief.EXE_FORMATS.ELF:
             if binary.type == lief.ELF.ELF_CLASS.CLASS64:
                 default_paths = ['$SYSROOT/lib64', '$SYSROOT/usr/lib64', '$SYSROOT/lib', '$SYSROOT/usr/lib']

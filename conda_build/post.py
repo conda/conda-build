@@ -495,6 +495,7 @@ def mk_relative_linux(f, prefix, rpaths=('lib',), method=None):
     else:
         try:
             existing_pe = check_output([patchelf, '--print-rpath', elf]).decode('utf-8').splitlines()[0]
+            existing_pe = existing_pe.split(':')
         except CalledProcessError:
             if method == 'patchelf':
                 print("ERROR :: `patchelf --print-rpath` failed for {}, but patchelf was specified".format(
@@ -503,14 +504,14 @@ def mk_relative_linux(f, prefix, rpaths=('lib',), method=None):
                 print("WARNING :: `patchelf --print-rpath` failed for {}, will proceed with LIEF (was {})".format(
                       elf, method))
             method = 'LIEF'
-        else:
-            existing_pe = existing_pe.split(os.pathsep)
     existing = existing_pe
     if have_lief:
         existing2, _, _ = get_rpaths_raw(elf)
-        if existing_pe and [existing_pe] != existing2:
+        # Flatten and resplit
+        existing2 = ':'.join(existing2).split(':')
+        if existing_pe and existing_pe != existing2:
             print('WARNING :: get_rpaths_raw()={} and patchelf={} disagree for {} :: '.format(
-                      existing2, [existing_pe], elf))
+                      existing2, existing_pe, elf))
         # Use LIEF if method is LIEF to get the initial value?
         if method == 'LIEF':
             existing = existing2
