@@ -121,27 +121,26 @@ jobs:
       ~/uninstall_homebrew -fq
       rm ~/uninstall_homebrew
     displayName: Remove homebrew
+
   - script: |
       echo "Installing Miniconda"
       set -x -e
       curl -o $(Build.StagingDirectory)/miniconda.sh https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
       chmod +x $(Build.StagingDirectory)/miniconda.sh
       $(Build.StagingDirectory)/miniconda.sh -b -p $(Build.StagingDirectory)/miniconda
-      unset CONDA_SHLVL
-      eval "$($(Build.StagingDirectory)/miniconda/bin/python -m conda shell.bash hook)"
-      conda activate base
+      source ci/azurepipelines/activate_conda "$(Build.StagingDirectory)/miniconda/bin/python"
       echo "Setting up Conda environment"
     displayName: 'Install miniconda'
+
   - script: |
       echo "Setup CF macOS bits and select Xcode"
       set -x -e
-      unset CONDA_SHLVL
-      eval "$($(Build.StagingDirectory)/miniconda/bin/python -m conda shell.bash hook)"
-      conda activate base
+      source ci/azurepipelines/activate_conda "$(Build.StagingDirectory)/miniconda/bin/python"
       echo "PWD is $PWD"
       find $PWD
       source ci/azurepipelines/run_conda_forge_build_setup_osx
     displayName: 'Setup CF macOS bits and select Xcode'
+
   - script: |
       source ci/azurepipelines/activate_conda "$(Build.StagingDirectory)/miniconda/bin/python"
       conda info
