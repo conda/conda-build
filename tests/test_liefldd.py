@@ -20,4 +20,6 @@ def recipe(request):
 
 @pytest.mark.slow
 def test_liefldd_recipes(recipe, testing_config):
+    testing_config.activate = True
+    testing_config.error_overlinking = True
     api.build(recipe, config=testing_config)
