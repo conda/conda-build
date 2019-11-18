@@ -22,4 +22,5 @@ def recipe(request):
 def test_liefldd_recipes(recipe, testing_config):
     testing_config.activate = True
     testing_config.error_overlinking = True
+    testing_config.prefix_length = 40
     api.build(recipe, config=testing_config)

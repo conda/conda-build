@@ -12,6 +12,7 @@ except:
 import io
 import locale
 from multiprocessing import cpu_count
+import json
 import os
 import re
 import shutil
@@ -716,17 +717,29 @@ def _resolve_needed_dsos(ld_library_path, sysroots_files, libs_info, run_prefix,
             continue
         build_prefix = build_prefix.replace(os.sep, '/')
         run_prefix = run_prefix.replace(os.sep, '/')
-        needed = lib_info['libraries']['original']
-        # if sysroot:
-        #     # /usr/lib/libSystem.B.dylib is in MacOSX10.9.sdk but after that there are only .tbd files.
-        #     needed = [n.replace(sysroot, sysroot_substitution) if n.startswith(sysroot)
-        #               else n for n in needed]
-        # We do not want to do this substitution when merging build and host prefixes.
-        if build_prefix != run_prefix:
-            needed = [n.replace(build_prefix, build_prefix_substitution) if n.startswith(build_prefix)
-                      else n for n in needed]
-        needed = [relpath(n, run_prefix).replace(os.sep, '/') if n.startswith(run_prefix)
-                else n for n in needed]
+
+        res = {}
+
+        # runpaths take precedence (but we have other checks for those, still if they are disabled
+        # for some reason we should respect that. runpaths are not transitive though and that is not
+        # handled here.
+        selfdir = os.path.dirname(lib_info['fullpath'])
+        rpaths = lib_info['runpaths']
+        if not rpaths:
+            rpaths = lib_info['rpaths']
+        res[f] = {'ld_library_path': rpaths + ld_library_path,
+                  'resolved': []}
+        libraries_original = lib_info['libraries']['original']
+        for lib in libraries_original:
+            for path in res[f]['ld_library_path']:
+                path = path.replace('$SELFDIR', selfdir)
+                fullpath = join(path, lib)
+                if os.path.exists(fullpath):
+                    res[f]['resolved'].append(fullpath)
+                    break
+            else:
+                print("ERROR :: Didn't find {} for {}".format(lib, f))
+
         # Only the pyldd version of lief_parse (yeah, I know, the name, right?) sets 'libraries/resolved'.
         # .. may as well check it gets the same result as doing it here (chances are high it does not =>
         # also note, we have not called our liefldd resolver at all yet. It is in
@@ -986,10 +999,9 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                            requirements_run, requirements_build, requirements_host,
                            run_prefix, build_prefix,
                            missing_dso_whitelist, runpath_whitelist,
-                           error_overlinking, error_overdepending, verbose,
+                           error_overlinking, error_overdepending, verbose,\
                            exception_on_error, files, bldpkgs_dirs, output_folder, channel_urls,
                            sysroot):
-    verbose = True
     errors = []
 
     sysroot_sub = '$SYSROOT'
@@ -1100,15 +1112,16 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
         for f in program_files:
             file_info_parallel[f] = results[f].result()
 
-    if serial:
-        print(file_info_serial)
-    if parallel:
-        print(file_info_parallel)
+    if serial and parallel:
+        assert file_info_serial == file_info_parallel
 
-    if serial:
-        file_info = file_info_serial
-    else:
+    if parallel:
         file_info = file_info_parallel
+    else:
+        file_info = file_info_serial
+
+    if verbose:
+        print('\n'.join(f + " : \n" + json.dumps(v, indent=4) for f, v in file_info.items()))
 
     # Resolving DSO concerns:
     # 1. Different exes could provide different RPATHs from each other which could affect where the
@@ -1122,12 +1135,14 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
 
     # The end, OS specific bit of this should come from the sysroot files .py if they exist,
     # or else we should allow explicit specification of them in conda_build_config.yaml
+    if subdir == 'linux-64':
+        def_libdirs = ['lib64', 'lib']
+    else:
+        def_libdirs = ['lib']
     ld_library_path = list(_get_path_dirs(run_prefix, subdir)) + [
-        '/usr/local/bin',
-        '/usr/bin',
-        '/bin',
-        '/usr/sbin',
-        '/sbin'] if not subdir.startswith('win') else [
+        '{sysroot}usr/{lib}'.format(sysroot=sysroots[0],
+                                    lib=def_libdir) for def_libdir in def_libdirs] \
+                          if subdir.startswith('linux') else [
         '{SystemRoot}/system32',
         '{SystemRoot}',
         '{SystemRoot}/System32/Wbem',
