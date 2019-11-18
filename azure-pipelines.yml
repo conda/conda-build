@@ -81,10 +81,9 @@ jobs:
       py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --test-run-title="Linux-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION" $(PYTEST_REPLAY_OPTIONS)
     displayName: 'Parallel Tests'
 
-  - task: PublishBuildArtifacts@1
-    inputs:
-      pathToPublish: $(Build.ArtifactStagingDirectory)/pytest-replay
-      artifactName: 'Linux-$(CONDA_VERSION)-Py$(PYTHON_VERSION)'
+  - publish: $(Build.ArtifactStagingDirectory)/pytest-replay
+    artifact: 'Linux-$(CONDA_VERSION)-Py$(PYTHON_VERSION)'
+    condition: always()
 
 
 - job: 'macOS'
@@ -204,10 +203,9 @@ jobs:
       py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" -k test_recipe_builds tests --test-run-title="macOS-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION" $(PYTEST_REPLAY_OPTIONS)
     displayName: 'Parallel Tests'
 
-  - task: PublishBuildArtifacts@1
-    inputs:
-      pathToPublish: $(Build.ArtifactStagingDirectory)/pytest-replay
-      artifactName: 'macOS-$(CONDA_VERSION)-Py$(PYTHON_VERSION)'
+  - publish: $(Build.ArtifactStagingDirectory)/pytest-replay
+    artifact: 'macOS-$(CONDA_VERSION)-Py$(PYTHON_VERSION)'
+    condition: always()
 
 
 - job: 'Windows'
@@ -328,8 +326,7 @@ jobs:
       LIB:
     displayName: 'Parallel Tests'
 
-  - task: PublishBuildArtifacts@1
-    inputs:
-      pathToPublish: $(Build.ArtifactStagingDirectory)\\pytest-replay
-      artifactName: 'Win-$(CONDA_VERSION)-Python$(PYTHON_VERSION)'
+  - publish: $(Build.ArtifactStagingDirectory)/pytest-replay
+    artifact: 'Win-$(CONDA_VERSION)-Python$(PYTHON_VERSION)'
+    condition: always()
 
