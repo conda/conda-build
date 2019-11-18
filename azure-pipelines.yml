@@ -55,7 +55,8 @@ jobs:
       pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd;
       pip install --no-deps .
       conda info -a
-      export PYTEST_REPLAY_OPTIONS="--replay-record-dir=$(Build.ArtifactStagingDirectory)"
+      mkdir $(Build.ArtifactStagingDirectory)/pytest-replay
+      export PYTEST_REPLAY_OPTIONS="--replay-record-dir=$(Build.ArtifactStagingDirectory)/pytest-replay"
       if [[ "$PYTHON_VERSION" != "2.7" ]]; then
         PYTEST_REPLAY_OPTIONS+=" --replay-base-name=Linux-serial-$CONDA_VERSION-Py$PYTHON_VERSION"
       fi
@@ -82,7 +83,7 @@ jobs:
 
   - task: PublishBuildArtifacts@1
     inputs:
-      pathToPublish: $(Build.ArtifactStagingDirectory)
+      pathToPublish: $(Build.ArtifactStagingDirectory)/pytest-replay
       artifactName: 'Linux-$(CONDA_VERSION)-Py$(PYTHON_VERSION)'
 
 
@@ -175,7 +176,8 @@ jobs:
       pip install --no-deps .
       conda info -a
       conda list --show-channel-urls
-      export PYTEST_REPLAY_OPTIONS="--replay-record-dir=$(Build.ArtifactStagingDirectory)"
+      mkdir $(Build.ArtifactStagingDirectory)/pytest-replay
+      export PYTEST_REPLAY_OPTIONS="--replay-record-dir=$(Build.ArtifactStagingDirectory)/pytest-replay"
       if [[ "$PYTHON_VERSION" != "2.7" ]]; then
         PYTEST_REPLAY_OPTIONS+=" --replay-base-name=macOS-SerialTests-$CONDA_VERSION-Py$PYTHON_VERSION"
       fi
@@ -204,7 +206,7 @@ jobs:
 
   - task: PublishBuildArtifacts@1
     inputs:
-      pathToPublish: $(Build.ArtifactStagingDirectory)
+      pathToPublish: $(Build.ArtifactStagingDirectory)/pytest-replay
       artifactName: 'macOS-$(CONDA_VERSION)-Py$(PYTHON_VERSION)'
 
 
@@ -299,8 +301,9 @@ jobs:
       conda create -n blarg -yq --download-only python=2.7
       conda create -n blarg -yq --download-only python=3.7
       conda create -n blarg -yq --download-only python cmake
-      set PYTEST_REPLAY_OPTION="--replay-record-dir=$(Build.ArtifactStagingDirectory)"
-      if "%PYTHON_VERSION%" NEQ "2.7" set PYTEST_REPLAY_OPTION="--replay-record-dir=$(Build.ArtifactStagingDirectory) --replay-base-name=Win-SerialTests-%CONDA_VERSION%-Py%PYTHON_VERSION%"
+      mkdir $(Build.ArtifactStagingDirectory)/pytest-replay
+      set PYTEST_REPLAY_OPTION="--replay-record-dir=$(Build.ArtifactStagingDirectory)/pytest-replay"
+      if "%PYTHON_VERSION%" NEQ "2.7" set PYTEST_REPLAY_OPTION="--replay-record-dir=$(Build.ArtifactStagingDirectory)/pytest-replay --replay-base-name=Win-SerialTests-%CONDA_VERSION%-Py%PYTHON_VERSION%"
     displayName: 'Configuration'
 
   - script: |
@@ -309,7 +312,6 @@ jobs:
       set PERL=
       set LUA=
       set R=
-      mkdir -p pytest-replay
       py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp %UserProfile%\cbtmp_serial -n 0 -m "serial" --test-run-title="Win-SerialTests-%CONDA_VERSION%-Python%PYTHON_VERSION%" %PYTEST_REPLAY_OPTION%
     displayName: 'Serial Tests'
 
@@ -327,6 +329,6 @@ jobs:
 
   - task: PublishBuildArtifacts@1
     inputs:
-      pathToPublish: $(Build.ArtifactStagingDirectory)
+      pathToPublish: $(Build.ArtifactStagingDirectory)/pytest-replay
       artifactName: 'Win-$(CONDA_VERSION)-Python$(PYTHON_VERSION)'
 
