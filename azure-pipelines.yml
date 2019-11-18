@@ -56,7 +56,8 @@ jobs:
       pip install --no-deps .
       conda info -a
       mkdir $BUILD_ARTIFACTSTAGINGDIRECTORY/pytest-replay
-      export PYTEST_REPLAY_OPTIONS="--replay-record-dir=$BUILD_ARTIFACTSTAGINGDIRECTORY/pytest-replay"
+      echo "##vso[task.setvariable variable=PYTEST_REPLAY_OPTIONS]"
+      PYTEST_REPLAY_OPTIONS="--replay-record-dir=$BUILD_ARTIFACTSTAGINGDIRECTORY/pytest-replay"
       if [[ "$PYTHON_VERSION" != "2.7" ]]; then
         PYTEST_REPLAY_OPTIONS+=" --replay-base-name=Linux-serial-$CONDA_VERSION-Py$PYTHON_VERSION"
       fi
@@ -177,7 +178,8 @@ jobs:
       conda info -a
       conda list --show-channel-urls
       mkdir $BUILD_ARTIFACTSTAGINGDIRECTORY/pytest-replay
-      export PYTEST_REPLAY_OPTIONS="--replay-record-dir=$BUILD_ARTIFACTSTAGINGDIRECTORY/pytest-replay"
+      echo "##vso[task.setvariable variable=PYTEST_REPLAY_OPTIONS]"
+      PYTEST_REPLAY_OPTIONS="--replay-record-dir=$BUILD_ARTIFACTSTAGINGDIRECTORY/pytest-replay"
       if [[ "$PYTHON_VERSION" != "2.7" ]]; then
         PYTEST_REPLAY_OPTIONS+=" --replay-base-name=macOS-SerialTests-$CONDA_VERSION-Py$PYTHON_VERSION"
       fi
@@ -306,6 +308,7 @@ jobs:
       conda create -n blarg -yq --download-only python=3.7
       conda create -n blarg -yq --download-only python cmake
       mkdir %BUILD_ARTIFACTSTAGINGDIRECTORY%/pytest-replay
+      echo "##vso[task.setvariable variable=PYTEST_REPLAY_OPTIONS]"
       set PYTEST_REPLAY_OPTION="--replay-record-dir=%BUILD_ARTIFACTSTAGINGDIRECTORY%/pytest-replay"
       if "%PYTHON_VERSION%" NEQ "2.7" set PYTEST_REPLAY_OPTION="--replay-record-dir=$(Build.ArtifactStagingDirectory)/pytest-replay --replay-base-name=Win-SerialTests-%CONDA_VERSION%-Py%PYTHON_VERSION%"
     displayName: 'Configuration'
