@@ -55,8 +55,8 @@ jobs:
       pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd;
       pip install --no-deps .
       conda info -a
-      mkdir $(Build.ArtifactStagingDirectory)/pytest-replay
-      export PYTEST_REPLAY_OPTIONS="--replay-record-dir=$(Build.ArtifactStagingDirectory)/pytest-replay"
+      mkdir $BUILD_ARTIFACTSTAGINGDIRECTORY/pytest-replay
+      export PYTEST_REPLAY_OPTIONS="--replay-record-dir=$BUILD_ARTIFACTSTAGINGDIRECTORY/pytest-replay"
       if [[ "$PYTHON_VERSION" != "2.7" ]]; then
         PYTEST_REPLAY_OPTIONS+=" --replay-base-name=Linux-serial-$CONDA_VERSION-Py$PYTHON_VERSION"
       fi
@@ -176,11 +176,12 @@ jobs:
       pip install --no-deps .
       conda info -a
       conda list --show-channel-urls
-      mkdir $(Build.ArtifactStagingDirectory)/pytest-replay
-      export PYTEST_REPLAY_OPTIONS="--replay-record-dir=$(Build.ArtifactStagingDirectory)/pytest-replay"
+      mkdir $BUILD_ARTIFACTSTAGINGDIRECTORY/pytest-replay
+      export PYTEST_REPLAY_OPTIONS="--replay-record-dir=$BUILD_ARTIFACTSTAGINGDIRECTORY/pytest-replay"
       if [[ "$PYTHON_VERSION" != "2.7" ]]; then
         PYTEST_REPLAY_OPTIONS+=" --replay-base-name=macOS-SerialTests-$CONDA_VERSION-Py$PYTHON_VERSION"
       fi
+      echo $PYTEST_REPLAY_OPTIONS
     displayName: Preparing test environment
 
   - script: |
@@ -188,8 +189,9 @@ jobs:
       eval "$($(Build.StagingDirectory)/miniconda/bin/python -m conda shell.bash hook)"
       conda activate base
       conda install conda-verify -y
-      mkdir -p /tmp/pytest-replay
+      echo "Pytest replay: ${PYTEST_REPLAY_OPTIONS}"
       py.test --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="macOS-SerialTests-$CONDA_VERSION-Python$PYTHON_VERSION" $PYTEST_REPLAY_OPTIONS
+      ls BUILD_ARTIFACTSTAGINGDIRECTORY/pytest-replay
     displayName: 'Serial Tests'
 
   - script: |
@@ -201,7 +203,9 @@ jobs:
       conda create -n blarg1 -yq python=2.7
       conda create -n blarg3 -yq python=3.7
       conda create -n blarg4 -yq python nomkl numpy pandas svn
+      echo "Pytest replay: ${PYTEST_REPLAY_OPTIONS}"
       py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" -k test_recipe_builds tests --test-run-title="macOS-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION" $PYTEST_REPLAY_OPTIONS
+      ls $BUILD_ARTIFACTSTAGINGDIRECTORY/pytest-replay
     displayName: 'Parallel Tests'
 
   - task: PublishBuildArtifacts@1
@@ -301,8 +305,8 @@ jobs:
       conda create -n blarg -yq --download-only python=2.7
       conda create -n blarg -yq --download-only python=3.7
       conda create -n blarg -yq --download-only python cmake
-      mkdir $(Build.ArtifactStagingDirectory)/pytest-replay
-      set PYTEST_REPLAY_OPTION="--replay-record-dir=$(Build.ArtifactStagingDirectory)/pytest-replay"
+      mkdir %BUILD_ARTIFACTSTAGINGDIRECTORY%/pytest-replay
+      set PYTEST_REPLAY_OPTION="--replay-record-dir=%BUILD_ARTIFACTSTAGINGDIRECTORY%/pytest-replay"
       if "%PYTHON_VERSION%" NEQ "2.7" set PYTEST_REPLAY_OPTION="--replay-record-dir=$(Build.ArtifactStagingDirectory)/pytest-replay --replay-base-name=Win-SerialTests-%CONDA_VERSION%-Py%PYTHON_VERSION%"
     displayName: 'Configuration'
 
@@ -312,7 +316,9 @@ jobs:
       set PERL=
       set LUA=
       set R=
+      echo "Pytest replay: %PYTEST_REPLAY_OPTION%"
       py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp %UserProfile%\cbtmp_serial -n 0 -m "serial" --test-run-title="Win-SerialTests-%CONDA_VERSION%-Python%PYTHON_VERSION%" %PYTEST_REPLAY_OPTION%
+      dir $(Build.ArtifactStagingDirectory)/pytest-replay
     displayName: 'Serial Tests'
 
   - script: |
@@ -321,7 +327,9 @@ jobs:
       set PERL=
       set LUA=
       set R=
+      echo "Pytest replay: %PYTEST_REPLAY_OPTION%"
       py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp %UserProfile%\cbtmp -n auto -m "not serial" --test-run-title="Win-ParallelTests-%CONDA_VERSION%-Python%PYTHON_VERSION%" %PYTEST_REPLAY_OPTION%
+      dir $(Build.ArtifactStagingDirectory)/pytest-replay
     env:
       VS90COMNTOOLS: "C:\\Program Files (x86)\\Common Files\\Microsoft\\Visual C++ for Python\\9.0\\VC\\bin"
       LIB:
