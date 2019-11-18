@@ -304,9 +304,9 @@ jobs:
       conda create -n blarg -yq --download-only python=2.7
       conda create -n blarg -yq --download-only python=3.7
       conda create -n blarg -yq --download-only python cmake
-      mkdir %BUILD_ARTIFACTSTAGINGDIRECTORY%\\pytest-replay
-      set PYTEST_REPLAY_OPTIONS="--replay-record-dir=%BUILD_ARTIFACTSTAGINGDIRECTORY%\\pytest-replay"
-      if "%PYTHON_VERSION%" NEQ "2.7" set PYTEST_REPLAY_OPTIONS="--replay-record-dir=$(Build.ArtifactStagingDirectory)\\pytest-replay --replay-base-name=Win-%CONDA_VERSION%-Py%PYTHON_VERSION%"
+      mkdir $(Build.ArtifactStagingDirectory)\pytest-replay
+      set PYTEST_REPLAY_OPTIONS="--replay-record-dir=$(Build.ArtifactStagingDirectory)\pytest-replay"
+      if "%PYTHON_VERSION%" NEQ "2.7" set PYTEST_REPLAY_OPTIONS="--replay-record-dir=$(Build.ArtifactStagingDirectory)\pytest-replay --replay-base-name=Win-%CONDA_VERSION%-Py%PYTHON_VERSION%"
       echo "##vso[task.setvariable variable=PYTEST_REPLAY_OPTIONS]%PYTEST_REPLAY_OPTIONS%"
     displayName: 'Configuration'
 
@@ -326,9 +326,8 @@ jobs:
       set PERL=
       set LUA=
       set R=
-      echo "Pytest replay: %PYTEST_REPLAY_OPTIONS%"
+      echo "Pytest replay: %PYTEST_REPLAY_OPTION%"
       py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp %UserProfile%\cbtmp -n auto -m "not serial" --test-run-title="Win-ParallelTests-%CONDA_VERSION%-Python%PYTHON_VERSION%" $(PYTEST_REPLAY_OPTIONS)
-      dir $(Build.ArtifactStagingDirectory)/pytest-replay
     env:
       VS90COMNTOOLS: "C:\\Program Files (x86)\\Common Files\\Microsoft\\Visual C++ for Python\\9.0\\VC\\bin"
       LIB:
@@ -336,6 +335,6 @@ jobs:
 
   - task: PublishBuildArtifacts@1
     inputs:
-      pathToPublish: $(Build.ArtifactStagingDirectory)/pytest-replay
+      pathToPublish: $(Build.ArtifactStagingDirectory)\pytest-replay
       artifactName: 'Win-$(CONDA_VERSION)-Python$(PYTHON_VERSION)'
 
