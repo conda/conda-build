@@ -40,6 +40,7 @@ def test_build():
     main_build.execute(args)
 
 
+@pytest.mark.serial
 def test_build_add_channel():
     """This recipe requires the conda_build_test_requirement package, which is
     only on the conda_build_test channel. This verifies that the -c argument
