@@ -1039,6 +1039,7 @@ def lief_parse_internal(filename, path_replacements={}):
     debug_it = False
     if filename.endswith(('.a', '.lib')):
         debug_it = True
+
     binary = lief.parse(fullpath) if have_lief else None
     if not binary:
         # Static libs here. Remove this.

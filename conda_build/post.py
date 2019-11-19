@@ -694,6 +694,11 @@ DEFAULT_WIN_WHITELIST = ['/System32/ADVAPI32.dll',
                          '/System32/msvcrt.dll',
                          '/System32/**/api-ms-win*.dll']
 
+def _get_rpaths(lib_info, selfdir):
+    rpaths = [f.replace('$SELFDIR', selfdir) for f in \
+              (lib_info['runpaths'] if len(lib_info['runpaths']) else lib_info['rpaths'])]
+    return rpaths
+
 
 def _resolve_needed_dsos(ld_library_path, sysroots_files, libs_info, run_prefix,
                          sysroot_substitution, build_prefix, build_prefix_substitution):
@@ -710,44 +715,61 @@ def _resolve_needed_dsos(ld_library_path, sysroots_files, libs_info, run_prefix,
     :return:
     '''
 
+    res = {}
+
     for f, lib_info in libs_info.items():
+
+        # We must clear this out before each DSO is checked as the same SONAME could
+        # be reached from different search paths.
+        res = {}
+
         if 'dylib' in f:
             print('debug')
         if 'filetype' not in lib_info or 'original' not in lib_info['libraries']:
+            print("Skipping {}".format(f))
             continue
         build_prefix = build_prefix.replace(os.sep, '/')
         run_prefix = run_prefix.replace(os.sep, '/')
 
-        res = {}
-
         # runpaths take precedence (but we have other checks for those, still if they are disabled
-        # for some reason we should respect that. runpaths are not transitive though and that is not
-        # handled here.
+        # for some reason we should respect that). runpaths are not transitive though and that is
+        # not handled here.
         selfdir = os.path.dirname(lib_info['fullpath'])
-        rpaths = lib_info['runpaths']
-        if not rpaths:
-            rpaths = lib_info['rpaths']
-        res[f] = {'ld_library_path': rpaths + ld_library_path,
-                  'resolved': []}
+        if 'bar_exe' in f:
+            print("debug")
+        rpaths = _get_rpaths(lib_info, selfdir)
+        res[lib_info['key']] = {'ld_library_path': rpaths + ld_library_path,
+                                # Resolved is a list of the same record type!
+                                'resolved': []}
+        # This is only a single level of resolution.
         libraries_original = lib_info['libraries']['original']
         for lib in libraries_original:
-            for path in res[f]['ld_library_path']:
-                path = path.replace('$SELFDIR', selfdir)
+            parent_rpaths = res[lib_info['key']]['ld_library_path']
+            for path in parent_rpaths:
                 fullpath = join(path, lib)
                 if os.path.exists(fullpath):
+                    rp = os.path.relpath(fullpath, run_prefix)
+                    lib_info2 = libs_info[rp]
+                    selfdir2 = os.path.dirname(lib_info2['fullpath'])
+                    rpaths = _get_rpaths(lib_info2, selfdir2)
+                    res[lib_info2['key']] = {'ld_library_path': rpaths + parent_rpaths,
+                                             # Resolved is a list of the same record type!
+                                             'resolved': []}
                     res[f]['resolved'].append(fullpath)
                     break
             else:
                 print("ERROR :: Didn't find {} for {}".format(lib, f))
+        if f in res and 'resolved' in res[f]:
+            lib_info['libraries']['resolved'] = res[f]['resolved']
 
         # Only the pyldd version of lief_parse (yeah, I know, the name, right?) sets 'libraries/resolved'.
         # .. may as well check it gets the same result as doing it here (chances are high it does not =>
         # also note, we have not called our liefldd resolver at all yet. It is in
-        if 'resolved' in lib_info['libraries']:
-            assert lib_info['libraries']['resolved'] == needed, "pyldd's resolver disagrees"
-        if lib_info['libraries']['original'] != needed:
-            print("Yes, _resolve_needed_dsos did change\n{} .. to ..\n{}".format(lib_info['libraries']['original'], needed))
-        lib_info['libraries']['resolved'] = needed
+        # if 'resolved' in lib_info['libraries']:
+        #     assert lib_info['libraries']['resolved'] == needed, "pyldd's resolver disagrees"
+        # if lib_info['libraries']['original'] != needed:
+        #     print("Yes, _resolve_needed_dsos did change\n{} .. to ..\n{}".format(lib_info['libraries']['original'], needed))
+        # lib_info['libraries']['resolved'] = needed
 
 
 def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_vendored_dist, ignore_list_syms, sysroot_substitution, enable_static):
