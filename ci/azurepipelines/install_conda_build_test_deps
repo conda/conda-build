@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-function install_conda_build_test_deps_fn() {
+function install_conda_build_test_deps_fn()
+{
   # avoids a python 3.7 problem
   local -a _PKGS=(cytoolz)
   if [[ "$PYTHON_VERSION" == "2.7" ]]; then
@@ -14,7 +15,7 @@ function install_conda_build_test_deps_fn() {
   if [[ $(uname) =~ .*inux.* ]]; then
     _PKGS+=(patchelf)
   fi
-  conda install -y ${_PKGS[@]}
+  conda install -y --show-channel-urls ${_PKGS[@]}
   if [[ ! -d ../conda_build_test_recipe ]]; then
     pushd ..
       git clone https://github.com/conda/conda_build_test_recipe
