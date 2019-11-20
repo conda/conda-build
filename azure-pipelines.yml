@@ -41,17 +41,9 @@ jobs:
       conda config --set always_yes yes
       conda config --set auto_update_conda False
       conda info
-      # avoids a python 3.7 problem
-      conda install -y cytoolz
-      if [[ "$PYTHON_VERSION" == "2.7" ]]; then
-        conda install -q futures scandir pathlib2
-      fi
-      conda install -q pytest pytest-azurepipelines pytest-cov pytest-forked pytest-xdist anaconda-client  \
-                       git requests filelock contextlib2 jinja2 patchelf  \
-                       ripgrep pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz tqdm  \
-                       conda-package-handling py-lief python-libarchive-c perl conda-forge::shellcheck  \
-                       pip nomkl numpy mock pytest-mock pkginfo
-      pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd
+
+      source ci/azurepipelines/install_conda_build_test_deps
+
       pip install --no-deps .
       conda info -a
       mkdir $BUILD_ARTIFACTSTAGINGDIRECTORY/pytest-replay
@@ -156,21 +148,10 @@ jobs:
       conda config --set always_yes yes
       conda config --set auto_update_conda False
       conda info
-      # avoids a python 3.7 problem
-      conda install -q cytoolz
-      if [[ "$PYTHON_VERSION" == "2.7" ]]; then
-        conda install -q futures scandir pathlib2
-      fi
-      conda install -q pytest-azurepipelines anaconda-client git requests filelock contextlib2 jinja2 ripgrep  \
-                       pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz tqdm conda-package-handling  \
-                       py-lief python-libarchive-c perl conda-forge::shellcheck
-      conda install -q pytest pip pytest-cov pytest-forked pytest-xdist nomkl numpy mock pytest-mock
+
+      source ci/azurepipelines/install_conda_build_test_deps
+
       conda install -q pytest-replay pytest-rerunfailures -c conda-forge
-      # We should build this, it is easy.
-      # conda install -y patchelf
-      pip install pkginfo
-      conda install -y perl
-      pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd
       pip install --no-deps .
       conda info -a
       conda list --show-channel-urls
