@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
-from collections import defaultdict, Mapping, OrderedDict
+from collections.abc import Mapping
+from collections import defaultdict, OrderedDict
 from functools import partial
 from fnmatch import fnmatch, translate, filter as fnmatch_filter
 from os.path import (basename, commonprefix, dirname, exists, isabs, isdir, isfile,
