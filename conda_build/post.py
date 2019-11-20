@@ -702,7 +702,7 @@ def _get_rpaths(lib_info, selfdir):
 
 
 def _resolve_needed_dsos(ld_library_path, sysroots_files, libs_info, run_prefix,
-                         sysroot_substitution, build_prefix, build_prefix_substitution):
+                         path_replacements):  # sysroot_substitution, build_prefix, build_prefix_substitution)
     '''
     :param ld_library_path: An ordered list of directories to search for. This is modified and stored
                            with each DSO we process according to its RPATH entries. Recursion is not
@@ -729,34 +729,42 @@ def _resolve_needed_dsos(ld_library_path, sysroots_files, libs_info, run_prefix,
         if 'filetype' not in lib_info or 'original' not in lib_info['libraries']:
             print("Skipping {}".format(f))
             continue
-        build_prefix = build_prefix.replace(os.sep, '/')
-        run_prefix = run_prefix.replace(os.sep, '/')
 
         # runpaths take precedence (but we have other checks for those, still if they are disabled
         # for some reason we should respect that). runpaths are not transitive though and that is
         # not handled here.
+        default_paths = []
+        for sysroot in path_replacements['sysroots']:
+            for sr_loc, sr_index in sysroot.items():
+                t = [dp.replace('$SYSROOT', os.path.normpath(sr_loc)) for dp in lib_info['default_paths']]
+                default_paths.extend(t)
         selfdir = os.path.dirname(lib_info['fullpath'])
         if 'bar_exe' in f:
             print("debug")
         rpaths = _get_rpaths(lib_info, selfdir)
-        res[lib_info['key']] = {'ld_library_path': rpaths + ld_library_path,
+        print(ld_library_path)
+        res[lib_info['key']] = {'ld_library_path': rpaths,
                                 # Resolved is a list of the same record type!
                                 'resolved': []}
         # This is only a single level of resolution.
         libraries_original = lib_info['libraries']['original']
         for lib in libraries_original:
             parent_rpaths = res[lib_info['key']]['ld_library_path']
-            for path in parent_rpaths:
+            for path in parent_rpaths + default_paths:
                 fullpath = join(path, lib)
                 if os.path.exists(fullpath):
-                    rp = os.path.relpath(fullpath, run_prefix)
-                    lib_info2 = libs_info[rp]
-                    selfdir2 = os.path.dirname(lib_info2['fullpath'])
-                    rpaths = _get_rpaths(lib_info2, selfdir2)
-                    res[lib_info2['key']] = {'ld_library_path': rpaths + parent_rpaths,
-                                             # Resolved is a list of the same record type!
-                                             'resolved': []}
-                    res[f]['resolved'].append(fullpath)
+                    if fullpath in sysroots_files:
+                        # Do we want to stop at the first sysroot lib we hit? Optionally?
+                        print('{} in sysroot'.format(fullpath))
+                    else:
+                        rp = os.path.relpath(fullpath, run_prefix)
+                        lib_info2 = libs_info[rp]
+                        selfdir2 = os.path.dirname(lib_info2['fullpath'])
+                        rpaths = _get_rpaths(lib_info2, selfdir2)
+                        res[lib_info2['key']] = {'ld_library_path': rpaths + parent_rpaths,
+                                                 # Resolved is a list of the same record type!
+                                                 'resolved': []}
+                        res[f]['resolved'].append(fullpath)
                     break
             else:
                 print("ERROR :: Didn't find {} for {}".format(lib, f))
@@ -1096,8 +1104,9 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
         from conda_build.utils import prefix_files
         sysroots_files[sysroot] = prefix_files(sysroot)
     sysroots_files = OrderedDict(sorted(sysroots_files.items(), key=lambda x: -len(x[1])))
+    path_replacements['sysroots'] = list()
     for index, sysroot in enumerate(sysroots_files):
-        path_replacements['sysroot' + str(index)] = {sysroot: sysroot_sub[:0] + str(index)}
+        path_replacements['sysroots'].append({sysroot: sysroot_sub[:0] + str(index)})
         if 'Windows' in sysroot and len(sysroots_files):
             path_replacements['windowsroot'] = {sysroot: sysroot_sub[:0] + str(index)}
 
@@ -1174,9 +1183,10 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                          sysroots_files,
                          file_info,
                          run_prefix,
-                         sysroot_sub,
-                         build_prefix,
-                         buildprefix_sub)
+                         path_replacements)
+#                         sysroot_sub,
+#                         build_prefix,
+#                         buildprefix_sub)
     for prefix in (run_prefix, build_prefix):
         for subdir2, _, filez in os.walk(prefix):
             for file in filez:
