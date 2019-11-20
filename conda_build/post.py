@@ -720,6 +720,9 @@ def _resolve_needed_dsos(ld_library_path, sysroots_files, libs_info, run_prefix,
 
     for f, lib_info in libs_info.items():
 
+        if 'libjpeg.so.9.2.0' in f:
+            print('debug')
+
         # We must clear this out before each DSO is checked as the same SONAME could
         # be reached from different search paths.
         res = {}
@@ -753,10 +756,24 @@ def _resolve_needed_dsos(ld_library_path, sysroots_files, libs_info, run_prefix,
             for path in parent_rpaths + default_paths:
                 fullpath = join(path, lib)
                 if os.path.exists(fullpath):
-                    if fullpath in sysroots_files:
-                        # Do we want to stop at the first sysroot lib we hit? Optionally?
-                        print('{} in sysroot'.format(fullpath))
-                    else:
+                    while os.path.islink(fullpath):
+                        fullpath = os.readlink(fullpath)
+                    rp = os.path.relpath(fullpath, run_prefix)
+                    if rp.startswith('..'):
+                        print('debug')
+                    for sysroot, sysroot_files in sysroots_files.items():
+                        if fullpath in sysroot_files:
+                            # Do we want to stop at the first sysroot lib we hit? Optionally?
+                            print('{} in sysroot'.format(fullpath))
+                            found_in_sysroot = True
+                            if fullpath in libs_info:
+                                print("fullpath is in libs_info")
+                            else:
+                                print("no it isn't, we do not parse this")
+                                res[f] = {'ld_library_path': rpaths + parent_rpaths,
+                                          'resolved': []}
+                            break
+                    if not found_in_sysroot:
                         rp = os.path.relpath(fullpath, run_prefix)
                         lib_info2 = libs_info[rp]
                         selfdir2 = os.path.dirname(lib_info2['fullpath'])
@@ -768,8 +785,11 @@ def _resolve_needed_dsos(ld_library_path, sysroots_files, libs_info, run_prefix,
                     break
             else:
                 print("ERROR :: Didn't find {} for {}".format(lib, f))
+
         if f in res and 'resolved' in res[f]:
             lib_info['libraries']['resolved'] = res[f]['resolved']
+        else:
+            printf("Resolve failed for {}".format(f))
 
         # Only the pyldd version of lief_parse (yeah, I know, the name, right?) sets 'libraries/resolved'.
         # .. may as well check it gets the same result as doing it here (chances are high it does not =>
@@ -1113,9 +1133,9 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     # file_info collects any and all information about the files present.
     # Process only the packaged files.
     file_info = dict()
-    program_files = [f for f in files if (codefile_type(join(run_prefix, f)) or
+    program_files = [f for f in files if not os.path.islink(f) and ((codefile_type(join(run_prefix, f)) or
                      codefile_type(join(run_prefix, f)) in filetypes_for_platform[subdir.split('-')[0]]) or
-                     f.endswith(('.a', '.lib'))]
+                     f.endswith(('.a', '.lib')))]
 
     # We care only for created program binaries (exes and DSOs) and static libs
     program_files = [p for p in program_files if not p.endswith('.debug')]
