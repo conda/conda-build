@@ -1171,14 +1171,16 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
         def_libdirs = ['lib64', 'lib']
     else:
         def_libdirs = ['lib']
-    ld_library_path = list(_get_path_dirs(run_prefix, subdir)) + [
-        '{sysroot}usr/{lib}'.format(sysroot=sysroots[0],
-                                    lib=def_libdir) for def_libdir in def_libdirs] \
-                          if subdir.startswith('linux') else [
-        '{SystemRoot}/system32',
-        '{SystemRoot}',
-        '{SystemRoot}/System32/Wbem',
-        '{SystemRoot}/System32/WindowsPowerShell/v1.0']
+    ld_library_path = list(_get_path_dirs(run_prefix, subdir))
+    if sysroots:
+        if subdir.startswith('linux'):
+            ld_library_path += ['{sysroot}usr/{lib}'.format(sysroot=sysroots[0], lib=def_libdir)
+                                for def_libdir in def_libdirs]
+        elif subdir.startswith('win'):
+            ld_library_path += ['{SystemRoot}/system32',
+                                '{SystemRoot}',
+                                '{SystemRoot}/System32/Wbem',
+                                '{SystemRoot}/System32/WindowsPowerShell/v1.0']
     _resolve_needed_dsos(ld_library_path,
                          sysroots_files,
                          file_info,
