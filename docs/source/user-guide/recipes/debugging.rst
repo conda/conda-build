@@ -34,7 +34,7 @@ leaves the build-time scripts in the work folder for you.  When complete, conda-
     ################################################################################
     Build and/or host environments created for debugging.  To enter a debugging environment:
 
-    cd /Users/msarahan/miniconda3/conda-bld/debug_1542385789430/work && source /Users/msarahan/miniconda3/conda-bld/debug_1542385789430/work/build_env_setup.sh
+    cd /Users/username/miniconda3/conda-bld/debug_1542385789430/work && source /Users/username/miniconda3/conda-bld/debug_1542385789430/work/build_env_setup.sh
 
     To run your build, you might want to start with running the conda_build.sh file.
     ################################################################################
@@ -47,7 +47,7 @@ environment. It prepares any test files that the recipe specified.  When complet
     ################################################################################
     Test environment created for debugging.  To enter a debugging environment:
 
-    cd /Users/msarahan/miniconda3/conda-bld/conda-build_1542302975704/work && source /Users/msarahan/miniconda3/conda-bld/conda-build_1542302975704/work/build_env_setup.sh
+    cd /Users/username/miniconda3/conda-bld/conda-build_1542302975704/work && source /Users/username/miniconda3/conda-bld/conda-build_1542302975704/work/build_env_setup.sh
 
     To run your tests, you might want to start with running the conda_test_runner.sh file.
     ################################################################################
@@ -60,7 +60,7 @@ Given the output above, you can now enter an environment to start debugging.  Co
 
 .. code-block:: bash
 
-   cd /Users/msarahan/miniconda3/conda-bld/debug_1542385789430/work && source /Users/msarahan/miniconda3/conda-bld/debug_1542385789430/work/build_env_setup.sh
+   cd /Users/username/miniconda3/conda-bld/debug_1542385789430/work && source /Users/username/miniconda3/conda-bld/debug_1542385789430/work/build_env_setup.sh
 
 This is where you'll hopefully know what build commands you want to run to help
 you debug. Every build is different, so we can't give you instructions. However,
@@ -99,17 +99,14 @@ If you have a matrix build, you may need to be more specific:
 
 .. code-block:: bash
 
-    Specified --output-id matches more than one output (['/Users/msarahan/miniconda3/conda-bld/debug_1542387301945/osx-64/numpy-base-1.14.6-py27h1a60bec_4.tar.bz2', '/Users/msarahan/miniconda3/conda-bld/debug_1542387301945/osx-64/numpy-base-1.14.6-py27h8a80b8c_4.tar.bz2', '/Users/msarahan/miniconda3/conda-bld/debug_1542387301945/osx-64/numpy-base-1.14.6-py36h1a60bec_4.tar.bz2', '/Users/msarahan/miniconda3/conda-bld/debug_1542387301945/osx-64/numpy-base-1.14.6-py36h8a80b8c_4.tar.bz2', '/Users/msarahan/miniconda3/conda-bld/debug_1542387301945/osx-64/numpy-base-1.14.6-py37h1a60bec_4.tar.bz2', '/Users/msarahan/miniconda3/conda-bld/debug_1542387301945/osx-64/numpy-base-1.14.6-py37h8a80b8c_4.tar.bz2']).  Please refine your output id so that only a single output is found.
+    Specified --output-id matches more than one output (['/Users/username/miniconda3/conda-bld/debug_1542387301945/osx-64/numpy-base-1.14.6-py27h1a60bec_4.tar.bz2', '/Users/username/miniconda3/conda-bld/debug_1542387301945/osx-64/numpy-base-1.14.6-py27h8a80b8c_4.tar.bz2', '/Users/username/miniconda3/conda-bld/debug_1542387301945/osx-64/numpy-base-1.14.6-py36h1a60bec_4.tar.bz2', '/Users/username/miniconda3/conda-bld/debug_1542387301945/osx-64/numpy-base-1.14.6-py36h8a80b8c_4.tar.bz2', '/Users/username/miniconda3/conda-bld/debug_1542387301945/osx-64/numpy-base-1.14.6-py37h1a60bec_4.tar.bz2', '/Users/username/miniconda3/conda-bld/debug_1542387301945/osx-64/numpy-base-1.14.6-py37h8a80b8c_4.tar.bz2']).  Please refine your output id so that only a single output is found.
 
 You could either reduce your matrix by changing your conda_build_config.yaml, or making a simpler one and passing it on the CLI, or by using the CLI to reduce it.
 
 .. code-block:: bash
 
    conda debug numpy-feedstock --output-id="numpy-base*" --python=3.6 --variants="{blas_impl: openblas}"
-
-.. code-block:: bash
-
-Specified --output-id matches more than one output (['/Users/msarahan/miniconda3/conda-bld/debug_1542387443190/osx-64/numpy-base-1.14.6-py36h28eea48_4.tar.bz2', '/Users/msarahan/miniconda3/conda-bld/debug_1542387443190/osx-64/numpy-base-1.14.6-py36ha711998_4.tar.bz2']).  Please refine your output id so that only a single output is found.
+   Specified --output-id matches more than one output (['/Users/username/miniconda3/conda-bld/debug_1542387443190/osx-64/numpy-base-1.14.6-py36h28eea48_4.tar.bz2', '/Users/username/miniconda3/conda-bld/debug_1542387443190/osx-64/numpy-base-1.14.6-py36ha711998_4.tar.bz2']).  Please refine your output id so that only a single output is found.
 
 Still not enough - our matrix includes two blas implementations, mkl and openblas.  Further reduction:
 

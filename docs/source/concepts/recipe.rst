@@ -145,6 +145,30 @@ Conda-build will use this information to identify dependencies to
 link to and identify the run requirements for the package. This allows
 conda-build to understand what is needed to install the package.
 
+
+Source/no_hoist
+---------------
+
+When conda-build unpacks a source archive, if checks to see
+if that archive contains a single folder in its top-level
+directory structure. If so, as a convenience to recipe scripts,
+this top-level folder is discarded and its contents are hoisted
+into the top-level unpack folder. Technically this is destructive
+of information (the top-level folder name), which can cause problems,
+particularly when repackaging other projects. In the case of
+``conda skeleton rpm``, some packages suffered hoisting (e.g. single-level /lib64 folder) while others did not (a /lib64 and a /share
+folder), making them mutually incompatible.
+
+.. code-block:: python
+
+   # Hoisting is destructive of information, in CDT packages, a single top level
+   # folder of /usr64 must not be discarded.
+   if len(flist) == 1 and os.path.isdir(folder) and 'no_hoist' not in source_dict:
+       hoist_single_extracted_folder(folder)
+
+You can specify ``source/no_hoist`` and conda-build will not perform this
+check, unpacking this source entry literally.
+
 Building
 --------
 
@@ -159,11 +183,65 @@ build.sh or a bld.bat file to be run.
 
 Prefix replacement
 ------------------
+
 When the build environment is created, it is in a placeholder prefix.
 When the package is all bundled up, the prefix is set to a dummy prefix.
 When conda is ready to install the package, it rewrites the dummy
 prefix with the correct one.
 
+
+Regex replacement
+-----------------
+
+We often need to, after building a recipe but prior to packaging it,
+replace some strings in some generated files. On Linux and macOS,
+we often find the build prefix or the sysroot getting baked into
+files, which causes problems because those folders are temporary.
+
+Instead, in general, we want to replace those baked-in files with a
+token or environment variable.
+
+You can add keys to your conda_build_config.yaml called ``replacements/all_replacements``.
+This is a list of replacement instructions for conda-build to perform during its post-build
+phase. For example:
+
+.. code-block::
+   
+   replacements:
+   all_replacements:
+     - tag: 'pkg-config build metadata'
+       glob_patterns:
+         - '*.pc'
+       regex_re: '(?:-L|-I)?\"?([^;\s]+\/sysroot\/)'
+       replacement_re: '$(CONDA_BUILD_SYSROOT_S)'
+       regex_rg: '([^;\s"]+/sysroot/)'
+     - tag: 'CMake build metadata'
+       glob_patterns:
+         - '*.cmake'
+       regex_re: '([^;\s"]+/sysroot)'
+       replacement_re: '$ENV{CONDA_BUILD_SYSROOT}'
+     - tag: 'qmake build metadata'
+       glob_patterns:
+         - '*.pri'
+         - '*.prl'
+       regex_re: '(?:-L|-I)?\"?([^;\s]+\/sysroot)'
+       replacement_re: '$(CONDA_BUILD_SYSROOT)'
+       regex_rg: '([^;\s"]+/sysroot)'
+
+* ``regex_re`` is in ``PCRE2`` format and is strictly as tight or
+  tighter matching that ``regex_rg (rg==ripgrep)``. ``regex_rg`` is
+  optional. If only ``regex_re`` is provided then it must be compatible
+  with both ``PCRE2`` and ``ripgrep`` regex formats. If your regex is
+  not compatible with both, then you must design a simpler, possibly
+  looser one for ``regex_rg``.
+
+* ``tag`` is informational. Conda-build will print this out.
+
+* ``replacement_re`` is a ``PRCE2`` regex and can contain references
+  to groups mentioned in ``regex_re`` to allow more complex substitutions.
+
+* ``glob_patterns`` is a list of glob wildcards to consider for this
+  prefix replacement.
 
 Testing
 -------
