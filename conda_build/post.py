@@ -36,7 +36,7 @@ from conda_build.conda_interface import md5_file
 from conda_build import utils
 from conda_build.os_utils.liefldd import (have_lief, get_exports_memoized,
                                           _get_path_dirs, get_rpaths_raw, set_rpath,
-                                          lief_parse)
+                                          lief_parse, get_linkages_memoized)
 from conda_build.os_utils.pyldd import codefile_type
 from conda_build.os_utils.ldd import get_package_obj_files
 from conda_build.index import get_build_index
@@ -757,7 +757,7 @@ def _resolve_needed_dsos(ld_library_path, sysroots_files, libs_info, run_prefix,
                 fullpath = join(path, lib)
                 if os.path.exists(fullpath):
                     while os.path.islink(fullpath):
-                        fullpath = os.readlink(fullpath)
+                        fullpath = os.path.realpath(fullpath)
                     rp = os.path.relpath(fullpath, run_prefix)
                     if rp.startswith('..'):
                         print('debug')
@@ -769,9 +769,10 @@ def _resolve_needed_dsos(ld_library_path, sysroots_files, libs_info, run_prefix,
                             if fullpath in libs_info:
                                 print("fullpath is in libs_info")
                             else:
-                                print("no it isn't, we do not parse this")
-                                res[f] = {'ld_library_path': rpaths + parent_rpaths,
-                                          'resolved': []}
+                                if fullpath not in res:
+                                    print("no it isn't, we do not parse this")
+                                    res[fullpath] = {'ld_library_path': rpaths + parent_rpaths,
+                                              'resolved': []}
                             break
                     if not found_in_sysroot:
                         rp = os.path.relpath(fullpath, run_prefix)
@@ -786,8 +787,8 @@ def _resolve_needed_dsos(ld_library_path, sysroots_files, libs_info, run_prefix,
             else:
                 print("ERROR :: Didn't find {} for {}".format(lib, f))
 
-        if f in res and 'resolved' in res[f]:
-            lib_info['libraries']['resolved'] = res[f]['resolved']
+        if lib_info['key'] in res and 'resolved' in res[lib_info['key']]:
+            lib_info['libraries']['resolved'] = res[lib_info['key']]['resolved']
         else:
             printf("Resolve failed for {}".format(f))
 
@@ -801,58 +802,76 @@ def _resolve_needed_dsos(ld_library_path, sysroots_files, libs_info, run_prefix,
         # lib_info['libraries']['resolved'] = needed
 
 
-def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_vendored_dist, ignore_list_syms, sysroot_substitution, enable_static):
+# This is old.
+def _collect_needed_dsos(sysroots_files, files, run_prefix, sysroot_substitution, build_prefix, build_prefix_substitution):
+    all_needed_dsos = set()
+    needed_dsos_for_file = dict()
+    sysroot = ''
+    if sysroots_files:
+        sysroot = list(sysroots_files.keys())[0]
+    for f in files:
+        path = os.path.join(run_prefix, f)
+        if not codefile_type(path):
+            continue
+        build_prefix = build_prefix.replace(os.sep, '/')
+        run_prefix = run_prefix.replace(os.sep, '/')
+        needed = get_linkages_memoized(path, resolve_filenames=True, recurse=False,
+                                    sysroot=sysroot,
+                                    envroot=run_prefix)
+        if sysroot:
+            needed = [n.replace(sysroot, sysroot_substitution) if n.startswith(sysroot)
+                    else n for n in needed]
+        # We do not want to do this substitution when merging build and host prefixes.
+        if build_prefix != run_prefix:
+            needed = [n.replace(build_prefix, build_prefix_substitution) if n.startswith(build_prefix)
+                    else n for n in needed]
+        needed = [os.path.relpath(n, run_prefix).replace(os.sep, '/') if n.startswith(run_prefix)
+                else n for n in needed]
+        needed_dsos_for_file[f] = needed
+        all_needed_dsos = all_needed_dsos.union(needed)
+        all_needed_dsos.add(f)
+    return all_needed_dsos, needed_dsos_for_file
+
+
+def _map_file_to_package(files, run_prefix, build_prefix, pkg_vendored_dist, enable_static):
     # Form a mapping of file => package
     prefix_owners = {}
     contains_dsos = {}
     contains_static_libs = {}
-    # Used for both dsos and static_libs
-    all_lib_exports = {}
-    if all_needed_dsos:
-        for prefix in (run_prefix, build_prefix):
-            for subdir2, _, filez in os.walk(prefix):
-                for file in filez:
-                    fp = join(subdir2, file)
-                    dynamic_lib = any(fnmatch(fp, ext) for ext in ('*.so.*', '*.dylib.*', '*.dll')) and \
-                                codefile_type(fp, skip_symlinks=False) is not None
-                    static_lib = any(fnmatch(fp, ext) for ext in ('*.a', '*.lib'))
-                    static_lib = False
-                    # Looking at all the files is very slow.
-                    if not dynamic_lib and not static_lib:
-                        continue
-                    rp = normpath(os.path.relpath(fp, prefix))
-                    if dynamic_lib and not any(rp == normpath(w) for w in all_needed_dsos):
-                        continue
-                    if any(rp == normpath(w) for w in all_lib_exports):
-                        continue
-                    owners = prefix_owners[rp] if rp in prefix_owners else []
-                    # Self-vendoring, not such a big deal but may as well report it?
-                    if not len(owners):
-                        if any(rp == normpath(w) for w in files):
-                            owners.append(pkg_vendored_dist)
-                    new_pkgs = list(which_package(rp, prefix))
-                    # Cannot filter here as this means the DSO (eg libomp.dylib) will not be found in any package
-                    # [owners.append(new_pkg) for new_pkg in new_pkgs if new_pkg not in owners
-                    #  and not any([fnmatch(new_pkg.name, i) for i in ignore_for_statics])]
-                    for new_pkg in new_pkgs:
-                        if new_pkg not in owners:
-                            owners.append(new_pkg)
-                    prefix_owners[rp] = owners
-                    if len(prefix_owners[rp]):
-                        exports = set(e for e in get_exports_memoized(fp, enable_static=enable_static) if not
-                                    any(fnmatch(e, pattern) for pattern in ignore_list_syms))
-                        all_lib_exports[rp] = exports
-                        # Check codefile_type to filter out linker scripts.
-                        if dynamic_lib:
-                            contains_dsos[prefix_owners[rp][0]] = True
-                        elif static_lib:
-                            if sysroot_substitution in fp:
-                                if (prefix_owners[rp][0].name.startswith('gcc_impl_linux') or
-                                prefix_owners[rp][0].name == 'llvm'):
-                                    continue
-                                print("sysroot in {}, owner is {}".format(fp, prefix_owners[rp][0]))
-                            contains_static_libs[prefix_owners[rp][0]] = True
-    return prefix_owners, contains_dsos, contains_static_libs, all_lib_exports
+    for file in files:
+        print(file)
+        if not os.path.isabs(file):
+            file = os.path.join(run_prefix, file)
+        fp = file
+        dynamic_lib = any(fnmatch(fp, ext) for ext in ('*.so.*', '*.dylib.*', '*.dll')) and \
+                    codefile_type(fp, skip_symlinks=False) is not None
+        static_lib = any(fnmatch(fp, ext) for ext in ('*.a', '*.lib')) if enable_static else False
+        # Looking at all the files is very slow.
+        if not dynamic_lib and not static_lib:
+            continue
+        if fp.startswith(run_prefix):
+            prefix = run_prefix
+        elif fp.startswith(build_prefix):
+            prefix = build_prefix
+        rp = normpath(os.path.relpath(fp, prefix))
+        # if dynamic_lib and not any(rp == normpath(w) for w in all_needed_dsos):
+        #     continue
+        # if any(rp == normpath(w) for w in all_lib_exports):
+        #     continue
+        owners = prefix_owners[rp] if rp in prefix_owners else []
+        # Self-vendoring, not such a big deal but may as well report it?
+        if not len(owners):
+            if any(rp == normpath(w) for w in files):
+                owners.append(pkg_vendored_dist)
+        new_pkgs = list(which_package(rp, prefix))
+        # Cannot filter here as this means the DSO (eg libomp.dylib) will not be found in any package
+        # [owners.append(new_pkg) for new_pkg in new_pkgs if new_pkg not in owners
+        #  and not any([fnmatch(new_pkg.name, i) for i in ignore_for_statics])]
+        for new_pkg in new_pkgs:
+            if new_pkg not in owners:
+                owners.append(new_pkg)
+        prefix_owners[rp] = owners
+    return prefix_owners
 
 
 def _get_fake_pkg_dist(pkg_name, pkg_version, build_str, build_number):
@@ -1085,7 +1104,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
 
     pkg_vendored_dist, pkg_vendoring_key = _get_fake_pkg_dist(pkg_name, pkg_version, build_str, build_number)
 
-    # ignore_list_syms = ['main', '_main', '*get_pc_thunk*', '___clang_call_terminate', '_timeout']
+    ignore_list_syms = ['main', '_main', '*get_pc_thunk*', '___clang_call_terminate', '_timeout']
     # ignore_for_statics = ['gcc_impl_linux*', 'compiler-rt*', 'llvm-openmp*', 'gfortran_osx*']
     # sysroots and whitelists are similar, but the subtle distinctions are important.
     sysroot_prefix = build_prefix
@@ -1129,6 +1148,26 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
         path_replacements['sysroots'].append({sysroot: sysroot_sub[:0] + str(index)})
         if 'Windows' in sysroot and len(sysroots_files):
             path_replacements['windowsroot'] = {sysroot: sysroot_sub[:0] + str(index)}
+
+    srf = set()
+    for k, sysroot_files in sysroots_files.items():
+        srf.union(sysroot_files)
+    prefix_owners = _map_file_to_package(files + list(srf),
+                                         run_prefix, build_prefix,
+                                         pkg_vendored_dist, False)
+
+
+    # This is old and slow. Need something faster and to store which package each file
+    # comes from early enough to disambiguate build prefix installed things vs host
+    # prefix installed things.
+    sysroot_substitution = '$SYSROOT'
+    build_prefix_substitution = '$PATH'
+    all_needed_dsos, needed_dsos_for_file = _collect_needed_dsos(sysroots_files, files, run_prefix,
+                                                                 sysroot_substitution,
+                                                                 build_prefix, build_prefix_substitution)
+    prefix_owners, _, _, all_lib_exports = _map_file_to_package(
+        files, run_prefix, build_prefix, all_needed_dsos, pkg_vendored_dist, ignore_list_syms,
+        sysroot_substitution, enable_static)
 
     # file_info collects any and all information about the files present.
     # Process only the packaged files.
@@ -1201,6 +1240,8 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                                 '{SystemRoot}',
                                 '{SystemRoot}/System32/Wbem',
                                 '{SystemRoot}/System32/WindowsPowerShell/v1.0']
+    # When we merge we can still disambiguate between files in the run_prefix_file_info and the
+    # build_prefix_file_info.
     _resolve_needed_dsos(ld_library_path,
                          sysroots_files,
                          file_info,
