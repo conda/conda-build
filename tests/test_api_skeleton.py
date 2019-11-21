@@ -458,6 +458,7 @@ cran_packages = [('r-usethis', 'GPL-3', 'GPL3', 'GPL-3'),  # cran: 'GPL-3'
 
 @pytest.mark.slow
 @pytest.mark.parametrize("package, license_id, license_family, license_files", cran_packages)
+@pytest.mark.flaky(reruns=5, reruns_delay=1)
 def test_cran_license(package, license_id, license_family, license_files, testing_workdir, testing_config):
     api.skeletonize(packages=package, repo='cran', output_dir=testing_workdir,
                     config=testing_config)

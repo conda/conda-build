@@ -50,7 +50,7 @@ jobs:
                        ripgrep pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz tqdm  \
                        conda-package-handling py-lief python-libarchive-c perl conda-forge::shellcheck
       conda install -q pytest pip pytest-cov pytest-forked pytest-xdist nomkl numpy mock pytest-mock
-      conda install -q pytest-replay -c conda-forge
+      conda install -q pytest-replay pytest-rerunfailures -c conda-forge
       pip install pkginfo
       pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd;
       pip install --no-deps .
@@ -166,7 +166,7 @@ jobs:
                        pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz tqdm conda-package-handling  \
                        py-lief python-libarchive-c perl conda-forge::shellcheck
       conda install -q pytest pip pytest-cov pytest-forked pytest-xdist nomkl numpy mock pytest-mock
-      conda install -q pytest-replay -c conda-forge
+      conda install -q pytest-replay pytest-rerunfailures -c conda-forge
       # We should build this, it is easy.
       # conda install -y patchelf
       pip install pkginfo
@@ -282,7 +282,7 @@ jobs:
       python -c "import sys; print(sys.prefix)"
       conda update -q --all
       conda install -q pip python-libarchive-c pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling pytest-azurepipelines
-      conda install -c conda-forge pytest-replay -y
+      conda install -c conda-forge pytest-replay pytest-rerunfailures -y
       echo "safety_checks: disabled" >> ~/.condarc
       echo "local_repodata_ttl: 1800" >> ~/.condarc
       if "%PYTHON_VERSION%" == "2.7" conda install -q scandir
