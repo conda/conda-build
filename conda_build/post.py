@@ -572,7 +572,7 @@ def determine_package_nature(pkg, prefix, subdir, bldpkgs_dir, output_folder, ch
     lib_prefix = pkg.name.startswith('lib')
     codefiles = get_package_obj_files(pkg, prefix)
     # get_package_obj_files already filters by extension and I'm not sure we need two.
-    dsos = [f for f in codefiles for ext in ('.dylib', '.so', '.dll', '.pyd') if ext in f]
+    dsos = codefiles
     # we don't care about the actual run_exports value, just whether or not run_exports are present.
     # We can use channeldata and it'll be a more reliable source (no disk race condition nonsense)
     _, _, channeldata = get_build_index(subdir=subdir,
@@ -585,6 +585,7 @@ def determine_package_nature(pkg, prefix, subdir, bldpkgs_dir, output_folder, ch
     channel_used = pkg.channel
     channeldata = channeldata.get(channel_used)
 
+    # Should this be our more comprehensive dso info instead?
     if channeldata and pkg.name in channeldata['packages']:
         run_exports = channeldata['packages'][pkg.name].get('run_exports', {})
     return (dsos, run_exports, lib_prefix)
@@ -595,6 +596,8 @@ def library_nature(pkg, prefix, subdir, bldpkgs_dirs, output_folder, channel_url
     Result :: "non-library", "plugin library", "dso library", "run-exports library"
     .. in that order, i.e. if have both dsos and run_exports, it's a run_exports_library.
     '''
+    if pkg.name.startswith('libgcc-ng') or pkg.name.startswith('libstdcxx-ng') or pkg.name.startswith('libcxx'):
+        return "compiler-runtime library"
     dsos, run_exports, _ = determine_package_nature(pkg, prefix, subdir, bldpkgs_dirs, output_folder, channel_urls)
     if run_exports:
         return "run-exports library"
@@ -623,6 +626,7 @@ def dists_from_names(names, prefix):
 class FakeDist:
     def __init__(self, name, version, build_number, build_str):
         self.name = name
+        self.channel = 'local'
         self.quad = [name]
         self.version = version
         self.build_number = build_number
@@ -753,6 +757,7 @@ def _resolve_needed_dsos(ld_library_path, sysroots_files, libs_info, run_prefix,
         libraries_original = lib_info['libraries']['original']
         for lib in libraries_original:
             parent_rpaths = res[lib_info['key']]['ld_library_path']
+            found_in_sysroot = False
             for path in parent_rpaths + default_paths:
                 fullpath = join(path, lib)
                 if os.path.exists(fullpath):
@@ -839,7 +844,6 @@ def _map_file_to_package(files, run_prefix, build_prefix, pkg_vendored_dist, ena
     contains_dsos = {}
     contains_static_libs = {}
     for file in files:
-        print(file)
         if not os.path.isabs(file):
             file = os.path.join(run_prefix, file)
         fp = file
@@ -1074,44 +1078,51 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                            sysroot):
     errors = []
 
+    pkg_vendored_dist, pkg_vendoring_key = _get_fake_pkg_dist(pkg_name, pkg_version, build_str, build_number)
+
     sysroot_sub = '$SYSROOT'
     buildprefix_sub = '$BUILDPREFIX'
     runprefix_sub = '$RUNPREFIX'
     exedirname_sub = '$EXEDIRNAME'
 
-    path_replacements = {"runprefix": {run_prefix: runprefix_sub}}
-
-    if build_prefix != run_prefix:
-        path_replacements["buildprefix"] = {build_prefix: buildprefix_sub}
-
-    # Used to detect overlinking (finally)
-    requirements_run = [req.split(' ')[0] for req in requirements_run]
-    packages = dists_from_names(requirements_run, run_prefix)
-    ignore_list = utils.ensure_list(ignore_run_exports)
-    if subdir.startswith('linux'):
-        ignore_list.append('libgcc-ng')
-    package_nature = {package: library_nature(package, run_prefix, subdir, bldpkgs_dirs, output_folder, channel_urls)
-                      for package in packages}
-    lib_packages = set([package for package in packages
-                        if package.quad[0] not in ignore_list and
-                        package_nature[package] != 'non-library'])
-    # The last package of requirements_run is this package itself, add it as being used
-    # in case it qualifies as a library package.
-    if len(packages) and packages[-1] in lib_packages:
-        lib_packages_used = set((packages[-1],))
-    else:
-        lib_packages_used = set()
-
-    pkg_vendored_dist, pkg_vendoring_key = _get_fake_pkg_dist(pkg_name, pkg_version, build_str, build_number)
+    path_groups = {"run_prefix": files}
 
     ignore_list_syms = ['main', '_main', '*get_pc_thunk*', '___clang_call_terminate', '_timeout']
     # ignore_for_statics = ['gcc_impl_linux*', 'compiler-rt*', 'llvm-openmp*', 'gfortran_osx*']
     # sysroots and whitelists are similar, but the subtle distinctions are important.
+
     sysroot_prefix = build_prefix
-    if sysroot:
-        sysroots = [sysroot]
+    if not sysroot:
+        if subdir.startswith('win'):
+            sysroots = ['C:/Windows/System32']
+        else:
+            sysroots = [sysroot + os.sep for sysroot in utils.glob(join(sysroot_prefix, '**', 'sysroot'))]
+    for sr in sysroots:
+        sysroot_files = sysroot_path_list(subdir, sr, None)
+        path_groups['sysroot'] = sysroot_files
+
+    # We should do full scans via lief at this point. We would like to avoid looking at DSOs
+    # that are not used, such as ones for a different architecture than the stuff being built.
+    # Think of the worst case here and ways to make it fast without making the code a mess.
+    packages_run = dists_from_names([req.split(' ')[0] for req in requirements_run], run_prefix) + [pkg_vendored_dist]
+    packages_build = dists_from_names([req.split(' ')[0] for req in requirements_build], build_prefix)
+    packages_all = packages_run + packages_build
+
+    # TODO :: Put everything in build_prefix that isn't in sysroot into 'build_prefix'
+    # for path_group in path_groups:
+
+    # Used to detect overlinking (finally)
+    package_nature = {package: library_nature(package, run_prefix, subdir, bldpkgs_dirs, output_folder, channel_urls)
+                      for package in packages_all}
+    lib_packages = set([package for package in packages_all
+                        if package_nature[package] != 'non-library'])
+    # The last package of packages_run is this package itself, add it as being used
+    # in case it qualifies as a library package.
+    if len(packages_run) and packages_run[-1] in lib_packages:
+        lib_packages_used = set((packages_run[-1],))
     else:
-        sysroots = [sysroot + os.sep for sysroot in utils.glob(join(sysroot_prefix, '**', 'sysroot'))]
+        lib_packages_used = set()
+
     whitelist = []
     vendoring_record = dict()
     # When build_is_host is True we perform file existence checks for files in the sysroot (e.g. C:\Windows)
@@ -1143,20 +1154,30 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
         from conda_build.utils import prefix_files
         sysroots_files[sysroot] = prefix_files(sysroot)
     sysroots_files = OrderedDict(sorted(sysroots_files.items(), key=lambda x: -len(x[1])))
-    path_replacements['sysroots'] = list()
+    path_groups['sysroots'] = list()
     for index, sysroot in enumerate(sysroots_files):
-        path_replacements['sysroots'].append({sysroot: sysroot_sub[:0] + str(index)})
+        path_groups['sysroots'].append({sysroot: sysroot_sub[:0] + str(index)})
         if 'Windows' in sysroot and len(sysroots_files):
-            path_replacements['windowsroot'] = {sysroot: sysroot_sub[:0] + str(index)}
+            path_groups['windowsroot'] = {sysroot: sysroot_sub[:0] + str(index)}
 
     srf = set()
     for k, sysroot_files in sysroots_files.items():
-        srf.union(sysroot_files)
+        srf = srf.union(sysroot_files)
+    # file_info collects any and all information about the files present.
+    # Process only the packaged files.
+    file_info = dict()
+    program_files = [f for f in files if not os.path.islink(f) and ((codefile_type(join(run_prefix, f)) or
+                     codefile_type(join(run_prefix, f)) in filetypes_for_platform[subdir.split('-')[0]]) or
+                     f.endswith(('.a', '.lib')))]
+
+    # We care only for created program binaries (exes and DSOs) and static libs
+    program_files = [p for p in program_files if not p.endswith('.debug')]
+
     prefix_owners = _map_file_to_package(files + list(srf),
                                          run_prefix, build_prefix,
                                          pkg_vendored_dist, False)
 
-
+    '''
     # This is old and slow. Need something faster and to store which package each file
     # comes from early enough to disambiguate build prefix installed things vs host
     # prefix installed things.
@@ -1168,16 +1189,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     prefix_owners, _, _, all_lib_exports = _map_file_to_package(
         files, run_prefix, build_prefix, all_needed_dsos, pkg_vendored_dist, ignore_list_syms,
         sysroot_substitution, enable_static)
-
-    # file_info collects any and all information about the files present.
-    # Process only the packaged files.
-    file_info = dict()
-    program_files = [f for f in files if not os.path.islink(f) and ((codefile_type(join(run_prefix, f)) or
-                     codefile_type(join(run_prefix, f)) in filetypes_for_platform[subdir.split('-')[0]]) or
-                     f.endswith(('.a', '.lib')))]
-
-    # We care only for created program binaries (exes and DSOs) and static libs
-    program_files = [p for p in program_files if not p.endswith('.debug')]
+    '''
     from concurrent.futures import ThreadPoolExecutor
 
     def lief_parse_this(filename, path_replacements):
@@ -1191,14 +1203,14 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     if serial:
         file_info_serial = dict()
         for f in program_files:
-            file_info_serial[f] = lief_parse_this(join(run_prefix, f), path_replacements)
+            file_info_serial[f] = lief_parse_this(join(run_prefix, f), path_groups)
 
     if parallel:
         file_info_parallel = dict()
         results = {}
         with ThreadPoolExecutor(min(cpu_count(), max(1, len(program_files)))) as executor:
             for f in program_files:
-                results[f] = executor.submit(lief_parse_this, join(run_prefix, f), path_replacements)
+                results[f] = executor.submit(lief_parse_this, join(run_prefix, f), path_groups)
 
         for f in program_files:
             file_info_parallel[f] = results[f].result()
@@ -1246,7 +1258,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                          sysroots_files,
                          file_info,
                          run_prefix,
-                         path_replacements)
+                         path_groups)
 #                         sysroot_sub,
 #                         build_prefix,
 #                         buildprefix_sub)
@@ -1537,6 +1549,8 @@ def make_sysroot_path_list(sysroot, subdir, whitelist):
                  'win-64': '*.dll',
                  'osx-64': '*.dylib*'}
 
+    sysroot = os.path.normpath(sysroot)
+
     if subdir in glob_exts:
         glob_ext = glob_exts[subdir]
     else:
@@ -1576,6 +1590,8 @@ def sysroot_path_list(subdir, sysroot=None, whitelist_forcing_rescan=None):
     Does the 'best thing' to get a sysroot path list given the sys.platform and
     subdir. When subdir is "linux-*", sysroot will always point to a proper sysroot
     (should it be multiple?)
+
+    What about static libraries?
     '''
     matches = None
     if (subdir.startswith('linux') or
