@@ -858,6 +858,7 @@ def _map_file_to_package(files, run_prefix, build_prefix, pkg_vendored_dist, ena
         elif fp.startswith(build_prefix):
             prefix = build_prefix
         rp = normpath(os.path.relpath(fp, prefix))
+        print(rp)
         # if dynamic_lib and not any(rp == normpath(w) for w in all_needed_dsos):
         #     continue
         # if any(rp == normpath(w) for w in all_lib_exports):
@@ -874,6 +875,7 @@ def _map_file_to_package(files, run_prefix, build_prefix, pkg_vendored_dist, ena
         for new_pkg in new_pkgs:
             if new_pkg not in owners:
                 owners.append(new_pkg)
+        print("prefix_owners[rp={}] = {}".format(rp, owners))
         prefix_owners[rp] = owners
     return prefix_owners
 
@@ -1068,7 +1070,16 @@ class FrozenDict(Mapping):
         return self._hash
 
 
-def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdir,
+def liefify(path_groups):
+    for prefix_type, files in path_groups.items():
+        for f in files:
+            if f.endswith('.debug') or os.path.islink(f):
+                continue
+            lief_parse(f)
+
+
+def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
+                           build_subdir, target_subdir,
                            ignore_run_exports,
                            requirements_run, requirements_build, requirements_host,
                            run_prefix, build_prefix,
@@ -1093,14 +1104,15 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
 
     sysroot_prefix = build_prefix
     if not sysroot:
-        if subdir.startswith('win'):
-            sysroots = ['C:/Windows/System32']
-        else:
+        if target_subdir.startswith('linux'):
             sysroots = [sysroot + os.sep for sysroot in utils.glob(join(sysroot_prefix, '**', 'sysroot'))]
+        elif target_subdir.startswith('win'):
+            sysroots = ['C:/Windows/System32']
     for sr in sysroots:
-        sysroot_files = sysroot_path_list(subdir, sr, None)
+        sysroot_files = sysroot_path_list(target_subdir, sr, None)
         path_groups['sysroot'] = sysroot_files
 
+    liefify(path_groups)
     # We should do full scans via lief at this point. We would like to avoid looking at DSOs
     # that are not used, such as ones for a different architecture than the stuff being built.
     # Think of the worst case here and ways to make it fast without making the code a mess.
@@ -1112,8 +1124,11 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     # for path_group in path_groups:
 
     # Used to detect overlinking (finally)
-    package_nature = {package: library_nature(package, run_prefix, subdir, bldpkgs_dirs, output_folder, channel_urls)
-                      for package in packages_all}
+    package_nature_run = {package: library_nature(package, run_prefix, target_subdir, bldpkgs_dirs, output_folder, channel_urls)
+                      for package in packages_run}
+    package_nature_build = {package: library_nature(package, build_prefix, build_subdir, bldpkgs_dirs, output_folder, channel_urls)
+                      for package in packages_build}
+    package_nature = {**package_nature_run, **package_nature_build}
     lib_packages = set([package for package in packages_all
                         if package_nature[package] != 'non-library'])
     # The last package of packages_run is this package itself, add it as being used
@@ -1129,16 +1144,16 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     # When build_is_host is False we must skip things that match the whitelist from the prefix_owners (we could
     #   create some packages for the Windows System DLLs as an alternative?)
     build_is_host = False
-    if subdir == 'osx-64':
+    if target_subdir == 'osx-64':
         whitelist = DEFAULT_MAC_WHITELIST
         build_is_host = True if sys.platform == 'darwin' else False
-    elif subdir.startswith('win'):
+    elif target_subdir.startswith('win'):
         whitelist = DEFAULT_WIN_WHITELIST
         # What about win-32 vs win-64 here?
         build_is_host = True if sys.platform == 'win-32' else False
     # Defaults. Eventually this should be passed in on all systems.
     if not len(sysroots):
-        if subdir == 'osx-64':
+        if target_subdir == 'osx-64':
             # This is a bit confused! A sysroot shouldn't contain /usr/lib (it's the bit before that)
             # what we are really specifying here are subtrees of sysroots to search in and it may be
             # better to store each element of this as a tuple with a string and a nested tuple, e.g.
@@ -1146,7 +1161,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
             # Here we mean that we have a sysroot at '/' (could be a tokenized value like '$SYSROOT'?)
             # .. and in that sysroot there are 3 suddirs in which we may search for DSOs.
             sysroots = ['/opt/MacOSX10.9.sdk']
-        elif subdir.startswith('win'):
+        elif target_subdir.startswith('win'):
             sysroots = [os.environ['windir'].replace('\\', '/')] if sys.platform == 'win32' else ['C:/Windows']
 
     sysroots_files = dict()
@@ -1361,6 +1376,7 @@ def check_overlinking(m, files, host_prefix=None):
                                   m.get_value('package/version'),
                                   m.get_value('build/string'),
                                   m.get_value('build/number'),
+                                  m.config.build_subdir,
                                   m.config.target_subdir,
                                   m.get_value('build/ignore_run_exports'),
                                   [req.split(' ')[0] for req in m.meta.get('requirements', {}).get('run', [])],
