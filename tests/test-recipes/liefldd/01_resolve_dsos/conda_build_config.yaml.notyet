@@ -1,0 +1,6 @@
+c_compiler:
+  - gcc
+  - clang
+target_platform:
+  - linux-64
+  - osx-64

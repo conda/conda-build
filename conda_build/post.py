@@ -1071,11 +1071,46 @@ class FrozenDict(Mapping):
 
 
 def liefify(path_groups):
-    for prefix_type, files in path_groups.items():
-        for f in files:
-            if f.endswith('.debug') or os.path.islink(f):
+    from concurrent.futures import ThreadPoolExecutor
+
+    program_files = []
+
+    for prefix_type, prefix_and_files in path_groups.items():
+        for f in prefix_and_files['files']:
+            fullpath = os.path.join(prefix_and_files['prefix'], str(f).lstrip('/'))
+            if fullpath.endswith('.debug') or os.path.islink(fullpath):
                 continue
-            lief_parse(f)
+            program_files.append(fullpath)
+
+    def lief_parse_this(filename):
+        return lief_parse(filename)
+
+    parallel = True
+    serial = False
+
+    if serial:
+        file_info_serial = dict()
+        for f in program_files:
+            file_info_serial[f] = lief_parse_this(f)
+
+    if parallel:
+        file_info_parallel = dict()
+        results = {}
+        with ThreadPoolExecutor(min(cpu_count(), max(1, len(program_files)))) as executor:
+            for f in program_files:
+                results[f] = executor.submit(lief_parse_this, join(f))
+
+        for f in program_files:
+            file_info_parallel[f] = results[f].result()
+
+    if serial and parallel:
+        assert file_info_serial == file_info_parallel
+
+    if parallel:
+        file_info = file_info_parallel
+    else:
+        file_info = file_info_serial
+    return file_info
 
 
 def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
@@ -1084,46 +1119,16 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
                            requirements_run, requirements_build, requirements_host,
                            run_prefix, build_prefix,
                            missing_dso_whitelist, runpath_whitelist,
-                           error_overlinking, error_overdepending, verbose,\
+                           error_overlinking, error_overdepending, verbose,
                            exception_on_error, files, bldpkgs_dirs, output_folder, channel_urls,
                            sysroot):
     errors = []
 
     pkg_vendored_dist, pkg_vendoring_key = _get_fake_pkg_dist(pkg_name, pkg_version, build_str, build_number)
-
-    sysroot_sub = '$SYSROOT'
-    buildprefix_sub = '$BUILDPREFIX'
-    runprefix_sub = '$RUNPREFIX'
-    exedirname_sub = '$EXEDIRNAME'
-
-    path_groups = {"run_prefix": files}
-
-    ignore_list_syms = ['main', '_main', '*get_pc_thunk*', '___clang_call_terminate', '_timeout']
-    # ignore_for_statics = ['gcc_impl_linux*', 'compiler-rt*', 'llvm-openmp*', 'gfortran_osx*']
-    # sysroots and whitelists are similar, but the subtle distinctions are important.
-
-    sysroot_prefix = build_prefix
-    if not sysroot:
-        if target_subdir.startswith('linux'):
-            sysroots = [sysroot + os.sep for sysroot in utils.glob(join(sysroot_prefix, '**', 'sysroot'))]
-        elif target_subdir.startswith('win'):
-            sysroots = ['C:/Windows/System32']
-    for sr in sysroots:
-        sysroot_files = sysroot_path_list(target_subdir, sr, None)
-        path_groups['sysroot'] = sysroot_files
-
-    liefify(path_groups)
-    # We should do full scans via lief at this point. We would like to avoid looking at DSOs
-    # that are not used, such as ones for a different architecture than the stuff being built.
-    # Think of the worst case here and ways to make it fast without making the code a mess.
+    # Used to detect overlinking (finally)
     packages_run = dists_from_names([req.split(' ')[0] for req in requirements_run], run_prefix) + [pkg_vendored_dist]
     packages_build = dists_from_names([req.split(' ')[0] for req in requirements_build], build_prefix)
     packages_all = packages_run + packages_build
-
-    # TODO :: Put everything in build_prefix that isn't in sysroot into 'build_prefix'
-    # for path_group in path_groups:
-
-    # Used to detect overlinking (finally)
     package_nature_run = {package: library_nature(package, run_prefix, target_subdir, bldpkgs_dirs, output_folder, channel_urls)
                       for package in packages_run}
     package_nature_build = {package: library_nature(package, build_prefix, build_subdir, bldpkgs_dirs, output_folder, channel_urls)
@@ -1138,145 +1143,65 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
     else:
         lib_packages_used = set()
 
-    whitelist = []
-    vendoring_record = dict()
-    # When build_is_host is True we perform file existence checks for files in the sysroot (e.g. C:\Windows)
-    # When build_is_host is False we must skip things that match the whitelist from the prefix_owners (we could
-    #   create some packages for the Windows System DLLs as an alternative?)
-    build_is_host = False
-    if target_subdir == 'osx-64':
-        whitelist = DEFAULT_MAC_WHITELIST
-        build_is_host = True if sys.platform == 'darwin' else False
-    elif target_subdir.startswith('win'):
-        whitelist = DEFAULT_WIN_WHITELIST
-        # What about win-32 vs win-64 here?
-        build_is_host = True if sys.platform == 'win-32' else False
-    # Defaults. Eventually this should be passed in on all systems.
-    if not len(sysroots):
-        if target_subdir == 'osx-64':
-            # This is a bit confused! A sysroot shouldn't contain /usr/lib (it's the bit before that)
-            # what we are really specifying here are subtrees of sysroots to search in and it may be
-            # better to store each element of this as a tuple with a string and a nested tuple, e.g.
-            # [('/', ('/usr/lib', '/opt/X11', '/System/Library/Frameworks'))]
-            # Here we mean that we have a sysroot at '/' (could be a tokenized value like '$SYSROOT'?)
-            # .. and in that sysroot there are 3 suddirs in which we may search for DSOs.
-            sysroots = ['/opt/MacOSX10.9.sdk']
+    sysroot_sub = '$SYSROOT'
+    buildprefix_sub = '$BUILDPREFIX'
+    runprefix_sub = '$RUNPREFIX'
+    exedirname_sub = '$EXEDIRNAME'
+
+    path_groups = {"run_prefix": {"prefix": run_prefix, "files": files}}
+    path_groups["whitelist"] = {"prefix": "", "files": missing_dso_whitelist}
+
+    ignore_list_syms = ['main', '_main', '*get_pc_thunk*', '___clang_call_terminate', '_timeout']
+    # ignore_for_statics = ['gcc_impl_linux*', 'compiler-rt*', 'llvm-openmp*', 'gfortran_osx*']
+    # sysroots and whitelists are similar, but the subtle distinctions are important.
+
+    if target_subdir == 'linux-64':
+        def_libdirs = ['lib64', 'lib']
+    else:
+        def_libdirs = ['lib']
+    sysroot_prefix = build_prefix
+    if not sysroot:
+        if target_subdir.startswith('linux'):
+            sysroots = [sysroot + os.sep for sysroot in utils.glob(join(sysroot_prefix, '**', 'sysroot'))]
         elif target_subdir.startswith('win'):
-            sysroots = [os.environ['windir'].replace('\\', '/')] if sys.platform == 'win32' else ['C:/Windows']
-
-    sysroots_files = dict()
-    for sysroot in sysroots:
-        from conda_build.utils import prefix_files
-        sysroots_files[sysroot] = prefix_files(sysroot)
-    sysroots_files = OrderedDict(sorted(sysroots_files.items(), key=lambda x: -len(x[1])))
-    path_groups['sysroots'] = list()
-    for index, sysroot in enumerate(sysroots_files):
-        path_groups['sysroots'].append({sysroot: sysroot_sub[:0] + str(index)})
-        if 'Windows' in sysroot and len(sysroots_files):
-            path_groups['windowsroot'] = {sysroot: sysroot_sub[:0] + str(index)}
-
+            sysroots = ['C:/Windows/System32']
     srf = set()
-    for k, sysroot_files in sysroots_files.items():
-        srf = srf.union(sysroot_files)
-    # file_info collects any and all information about the files present.
-    # Process only the packaged files.
-    file_info = dict()
-    program_files = [f for f in files if not os.path.islink(f) and ((codefile_type(join(run_prefix, f)) or
-                     codefile_type(join(run_prefix, f)) in filetypes_for_platform[subdir.split('-')[0]]) or
-                     f.endswith(('.a', '.lib')))]
-
-    # We care only for created program binaries (exes and DSOs) and static libs
-    program_files = [p for p in program_files if not p.endswith('.debug')]
+    for sr in sysroots:
+        sysroot_files = sysroot_path_list(target_subdir, sr, None)
+        srf = srf.union(set([os.path.join(sysroot_files['prefix'], f) for f in sysroot_files['files']]))
+        path_groups['sysroot'] = sysroot_files
+    # TODO :: Put everything in build_prefix that isn't in sysroot into 'build_prefix'
+    ld_library_path = list(_get_path_dirs(run_prefix, target_subdir))
+    for prefix_type, prefix_and_files in path_groups.items():
+        if prefix_type == 'sysroot':
+            ld_library_path.append(prefix_and_files['prefix'])
+    if target_subdir.startswith('linux'):
+        ld_library_path += ['{sysroot}usr/{lib}'.format(sysroot=sysroots[0], lib=def_libdir)
+                            for def_libdir in def_libdirs]
+    elif target_subdir.startswith('win'):
+        ld_library_path += ['{SystemRoot}/system32',
+                            '{SystemRoot}',
+                            '{SystemRoot}/System32/Wbem',
+                            '{SystemRoot}/System32/WindowsPowerShell/v1.0']
 
     prefix_owners = _map_file_to_package(files + list(srf),
                                          run_prefix, build_prefix,
                                          pkg_vendored_dist, False)
 
-    '''
-    # This is old and slow. Need something faster and to store which package each file
-    # comes from early enough to disambiguate build prefix installed things vs host
-    # prefix installed things.
-    sysroot_substitution = '$SYSROOT'
-    build_prefix_substitution = '$PATH'
-    all_needed_dsos, needed_dsos_for_file = _collect_needed_dsos(sysroots_files, files, run_prefix,
-                                                                 sysroot_substitution,
-                                                                 build_prefix, build_prefix_substitution)
-    prefix_owners, _, _, all_lib_exports = _map_file_to_package(
-        files, run_prefix, build_prefix, all_needed_dsos, pkg_vendored_dist, ignore_list_syms,
-        sysroot_substitution, enable_static)
-    '''
-    from concurrent.futures import ThreadPoolExecutor
+    # We should do full scans via lief at this point. We would like to avoid looking at DSOs
+    # that are not used, such as ones for a different architecture than the stuff being built.
+    # Think of the worst case here and ways to make it fast without making the code a mess.
 
-    def lief_parse_this(filename, path_replacements):
-        path_replacements_this = path_replacements.copy()
-        path_replacements_this['exedirname'] = {join(run_prefix, dirname(f)).replace('\\', '/'): exedirname_sub}
-        return lief_parse(filename, path_replacements_this)
-
-    parallel = True
-    serial = False
-
-    if serial:
-        file_info_serial = dict()
-        for f in program_files:
-            file_info_serial[f] = lief_parse_this(join(run_prefix, f), path_groups)
-
-    if parallel:
-        file_info_parallel = dict()
-        results = {}
-        with ThreadPoolExecutor(min(cpu_count(), max(1, len(program_files)))) as executor:
-            for f in program_files:
-                results[f] = executor.submit(lief_parse_this, join(run_prefix, f), path_groups)
-
-        for f in program_files:
-            file_info_parallel[f] = results[f].result()
-
-    if serial and parallel:
-        assert file_info_serial == file_info_parallel
-
-    if parallel:
-        file_info = file_info_parallel
-    else:
-        file_info = file_info_serial
-
+    file_info = liefify(path_groups)
     if verbose:
-        print('\n'.join(f + " : \n" + json.dumps(v, indent=4) for f, v in file_info.items()))
+        print('\n'.join(f + " : \n" + json.dumps(v, indent=2) for f, v in file_info.items()))
 
-    # Resolving DSO concerns:
-    # 1. Different exes could provide different RPATHs from each other which could affect where the
-    #    needed DSOs (which are only filenames at this point) are found. This can lead to the same
-    #    dso being found in multiple locations .... so .... we will have file_info for all versions
-    #    of the same DSO. Should they happen to be the same binary our caching will *not* collapse
-    #    them to a single file_info, instead they are deep copied and the copy augmented with the
-    #    'fullpath' to each copy of that file.
-    # 2. So we need to only resolve DSOs used by executables, we will not resolve DSO references in
-    #    other DSOs into any kind of a record that we report or generate errors based upon.
-
-    # The end, OS specific bit of this should come from the sysroot files .py if they exist,
-    # or else we should allow explicit specification of them in conda_build_config.yaml
-    if subdir == 'linux-64':
-        def_libdirs = ['lib64', 'lib']
-    else:
-        def_libdirs = ['lib']
-    ld_library_path = list(_get_path_dirs(run_prefix, subdir))
-    if sysroots:
-        if subdir.startswith('linux'):
-            ld_library_path += ['{sysroot}usr/{lib}'.format(sysroot=sysroots[0], lib=def_libdir)
-                                for def_libdir in def_libdirs]
-        elif subdir.startswith('win'):
-            ld_library_path += ['{SystemRoot}/system32',
-                                '{SystemRoot}',
-                                '{SystemRoot}/System32/Wbem',
-                                '{SystemRoot}/System32/WindowsPowerShell/v1.0']
-    # When we merge we can still disambiguate between files in the run_prefix_file_info and the
-    # build_prefix_file_info.
     _resolve_needed_dsos(ld_library_path,
-                         sysroots_files,
+                         srf,
                          file_info,
                          run_prefix,
                          path_groups)
-#                         sysroot_sub,
-#                         build_prefix,
-#                         buildprefix_sub)
+
     for prefix in (run_prefix, build_prefix):
         for subdir2, _, filez in os.walk(prefix):
             for file in filez:
@@ -1583,7 +1508,7 @@ def make_sysroot_path_list(sysroot, subdir, whitelist):
                 continue
             rela = subp.relative_to(root).as_posix()
             if re.match(dsos_re, '/' + rela):
-                matches.append(PurePath('/' + rela))
+                matches.append(PurePath(rela))
     # It might be sensible at this point to try to 'unbake' the result back to the glob that created it, or
     # do we just want a big old superset of all the DLLs we've ever seen that grows and grows?
     return tuple(matches)
@@ -1607,9 +1532,12 @@ def sysroot_path_list(subdir, sysroot=None, whitelist_forcing_rescan=None):
     subdir. When subdir is "linux-*", sysroot will always point to a proper sysroot
     (should it be multiple?)
 
+    Sysroot paths are always relative.
+
     What about static libraries?
     '''
     matches = None
+    baked = None
     if (subdir.startswith('linux') or
             (_native_subdir() == subdir and whitelist_forcing_rescan)):
         if subdir.startswith('linux') and not whitelist_forcing_rescan:
@@ -1619,31 +1547,28 @@ def sysroot_path_list(subdir, sysroot=None, whitelist_forcing_rescan=None):
     module_name = 'conda_build.post.baked_sysroot_pathlists'
     module_path = join(dirname(__file__), 'baked_sysroot_pathlists', subdir.replace('-', '_') + '.py')
 
-    if not exists(module_path):
-        return matches
+    if exists(module_path):
+        try:
+            # Python 3
+            import importlib.util
+            spec = importlib.util.spec_from_file_location(module_name, module_path)
+            baked_sysroot_pathlists = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(baked_sysroot_pathlists)
+        except:
+            # Python 2
+            from imp import load_source
+            baked_sysroot_pathlists = load_source(module_name, module_path)
 
-    try:
-        # Python 3
-        import importlib.util
-        spec = importlib.util.spec_from_file_location(module_name, module_path)
-        baked_sysroot_pathlists = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(baked_sysroot_pathlists)
-    except:
-        # Python 2
-        from imp import load_source
-        baked_sysroot_pathlists = load_source(module_name, module_path)
+        # TODO :: Consider allowing multiple WHITELISTs per module?
+        for entry in dir(baked_sysroot_pathlists):
+            if 'WHITELIST' in entry:
+                baked = getattr(baked_sysroot_pathlists, entry)
+                break
 
-    # TODO :: Consider allowing multiple WHITELISTs per module?
-    for entry in dir(baked_sysroot_pathlists):
-        if 'WHITELIST' in entry:
-            baked = getattr(baked_sysroot_pathlists, entry)
-            break
+    if matches and baked and matches != baked:
+        print("WARNING :: Mismatch between sysroot files\nbaked: {}, found: {}".format(baked, matches))
 
-    if matches:
-        if matches != baked:
-            print("WARNING :: Mismatch between sysroot files\nbaked: {}, found: {}".format(baked, matches))
-
-    return baked if baked else matches
+    return {"prefix": os.path.normpath(sysroot) if sysroot else "", "files": baked if baked else matches}
 
 
 def bake_sys_platform_sysroot_path_list(sysroot=None):
@@ -1667,7 +1592,7 @@ def bake_sys_platform_sysroot_path_list(sysroot=None):
         print("Baking a sysroot path list for sys.platform={} is meaningless.".format(sys.platform))
         sys.exit(1)
     matches = make_sysroot_path_list(sysroot, subdir, whitelist)
-    if len(matches):
+    if len(matches['files']):
         filename = Path(dirname(__file__)) / Path('baked_sysroot_pathlists') / Path(subdir.replace('-', '_') + '.py')
         try:
             os.makedirs(dirname(filename.absolute()))
