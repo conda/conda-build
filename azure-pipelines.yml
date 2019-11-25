@@ -50,18 +50,27 @@ jobs:
                        ripgrep pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz tqdm  \
                        conda-package-handling py-lief python-libarchive-c perl conda-forge::shellcheck
       conda install -q pytest pip pytest-cov pytest-forked pytest-xdist nomkl numpy mock pytest-mock
+      conda install -q pytest-replay pytest-rerunfailures -c conda-forge
       pip install pkginfo
       pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd;
       pip install --no-deps .
       conda info -a
+      mkdir $BUILD_ARTIFACTSTAGINGDIRECTORY/pytest-replay
+      PYTEST_REPLAY_OPTIONS="--replay-record-dir=$BUILD_ARTIFACTSTAGINGDIRECTORY/pytest-replay"
+      if [[ "$PYTHON_VERSION" != "2.7" ]]; then
+        PYTEST_REPLAY_OPTIONS+=" --replay-base-name=Linux-$CONDA_VERSION-Py$PYTHON_VERSION"
+      fi
+      echo "##vso[task.setvariable variable=PYTEST_REPLAY_OPTIONS]$PYTEST_REPLAY_OPTIONS"
     displayName: Preparing test environment
 
   - script: |
+      source ci/azurepipelines/activate_conda "/usr/share/miniconda/bin/python"
       conda install conda-verify -y
-      /usr/share/miniconda/bin/py.test --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="Linux-SerialTests-$CONDA_VERSION-Python$PYTHON_VERSION"
+      py.test --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="Linux-SerialTests-$CONDA_VERSION-Py$PYTHON_VERSION" $(PYTEST_REPLAY_OPTIONS)
     displayName: 'Serial Tests'
 
   - script: |
+      source ci/azurepipelines/activate_conda "/usr/share/miniconda/bin/python"
       conda remove conda-verify -y
       echo "safety_checks: disabled" >> ~/.condarc
       echo "local_repodata_ttl: 1800" >> ~/.condarc
@@ -69,9 +78,13 @@ jobs:
       conda create -n blarg1 -yq python=2.7
       conda create -n blarg3 -yq python=3.7
       conda create -n blarg4 -yq python nomkl numpy pandas svn
-      source ci/azurepipelines/activate_conda "/usr/share/miniconda/bin/python"
-      py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --test-run-title="Linux-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION"
+      py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --test-run-title="Linux-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION" $(PYTEST_REPLAY_OPTIONS)
     displayName: 'Parallel Tests'
+
+  - publish: $(Build.ArtifactStagingDirectory)/pytest-replay
+    artifact: 'Linux-$(CONDA_VERSION)-Py$(PYTHON_VERSION)'
+    condition: always()
+
 
 - job: 'macOS'
   pool:
@@ -153,6 +166,7 @@ jobs:
                        pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz tqdm conda-package-handling  \
                        py-lief python-libarchive-c perl conda-forge::shellcheck
       conda install -q pytest pip pytest-cov pytest-forked pytest-xdist nomkl numpy mock pytest-mock
+      conda install -q pytest-replay pytest-rerunfailures -c conda-forge
       # We should build this, it is easy.
       # conda install -y patchelf
       pip install pkginfo
@@ -161,6 +175,12 @@ jobs:
       pip install --no-deps .
       conda info -a
       conda list --show-channel-urls
+      mkdir -p $BUILD_ARTIFACTSTAGINGDIRECTORY/pytest-replay
+      PYTEST_REPLAY_OPTIONS="--replay-record-dir=$BUILD_ARTIFACTSTAGINGDIRECTORY/pytest-replay"
+      if [[ "$PYTHON_VERSION" != "2.7" ]]; then
+        PYTEST_REPLAY_OPTIONS+=" --replay-base-name=macOS-$CONDA_VERSION-Py$PYTHON_VERSION"
+      fi
+      echo "##vso[task.setvariable variable=PYTEST_REPLAY_OPTIONS]$PYTEST_REPLAY_OPTIONS"
     displayName: Preparing test environment
 
   - script: |
@@ -168,7 +188,7 @@ jobs:
       eval "$($(Build.StagingDirectory)/miniconda/bin/python -m conda shell.bash hook)"
       conda activate base
       conda install conda-verify -y
-      py.test --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="macOS-SerialTests-$CONDA_VERSION-Python$PYTHON_VERSION"
+      py.test --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="macOS-SerialTests-$CONDA_VERSION-Python$PYTHON_VERSION" $(PYTEST_REPLAY_OPTIONS)
     displayName: 'Serial Tests'
 
   - script: |
@@ -180,8 +200,12 @@ jobs:
       conda create -n blarg1 -yq python=2.7
       conda create -n blarg3 -yq python=3.7
       conda create -n blarg4 -yq python nomkl numpy pandas svn
-      py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" -k test_recipe_builds tests --test-run-title="macOS-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION"
+      py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" -k test_recipe_builds tests --test-run-title="macOS-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION" $(PYTEST_REPLAY_OPTIONS)
     displayName: 'Parallel Tests'
+
+  - publish: $(Build.ArtifactStagingDirectory)/pytest-replay
+    artifact: 'macOS-$(CONDA_VERSION)-Py$(PYTHON_VERSION)'
+    condition: always()
 
 
 - job: 'Windows'
@@ -257,8 +281,8 @@ jobs:
       python -c "import sys; print(sys.executable)"
       python -c "import sys; print(sys.prefix)"
       conda update -q --all
-      conda install -q pip python-libarchive-c pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling
-      conda install -c conda-forge pytest-azurepipelines -y
+      conda install -q pip python-libarchive-c pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling pytest-azurepipelines
+      conda install -c conda-forge pytest-replay pytest-rerunfailures -y
       echo "safety_checks: disabled" >> ~/.condarc
       echo "local_repodata_ttl: 1800" >> ~/.condarc
       if "%PYTHON_VERSION%" == "2.7" conda install -q scandir
@@ -275,6 +299,10 @@ jobs:
       conda create -n blarg -yq --download-only python=2.7
       conda create -n blarg -yq --download-only python=3.7
       conda create -n blarg -yq --download-only python cmake
+      mkdir $(Build.ArtifactStagingDirectory)\\pytest-replay
+      set "PYTEST_REPLAY_OPTIONS=--replay-record-dir=$(Build.ArtifactStagingDirectory)\\pytest-replay"
+      if "%PYTHON_VERSION%" NEQ "2.7" set "PYTEST_REPLAY_OPTIONS=--replay-record-dir=$(Build.ArtifactStagingDirectory)\\pytest-replay --replay-base-name=Win-%CONDA_VERSION%-Py%PYTHON_VERSION%"
+      echo "##vso[task.setvariable variable=PYTEST_REPLAY_OPTIONS]%PYTEST_REPLAY_OPTIONS%"
     displayName: 'Configuration'
 
   - script: |
@@ -283,7 +311,7 @@ jobs:
       set PERL=
       set LUA=
       set R=
-      py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp %UserProfile%\cbtmp_serial -n 0 -m "serial" --test-run-title="Win-SerialTests-%CONDA_VERSION%-Python%PYTHON_VERSION%"
+      py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp %UserProfile%\cbtmp_serial -n 0 -m "serial" --test-run-title="Win-SerialTests-%CONDA_VERSION%-Python%PYTHON_VERSION%" $(PYTEST_REPLAY_OPTIONS)
     displayName: 'Serial Tests'
 
   - script: |
@@ -292,8 +320,13 @@ jobs:
       set PERL=
       set LUA=
       set R=
-      py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp %UserProfile%\cbtmp -n auto -m "not serial" --test-run-title="Win-ParallelTests-%CONDA_VERSION%-Python%PYTHON_VERSION%"
+      py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp %UserProfile%\cbtmp -n auto -m "not serial" --test-run-title="Win-ParallelTests-%CONDA_VERSION%-Python%PYTHON_VERSION%" $(PYTEST_REPLAY_OPTIONS)
     env:
       VS90COMNTOOLS: "C:\\Program Files (x86)\\Common Files\\Microsoft\\Visual C++ for Python\\9.0\\VC\\bin"
       LIB:
     displayName: 'Parallel Tests'
+
+  - publish: $(Build.ArtifactStagingDirectory)/pytest-replay
+    artifact: 'Win-$(CONDA_VERSION)-Python$(PYTHON_VERSION)'
+    condition: always()
+
