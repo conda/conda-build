@@ -705,8 +705,7 @@ def _get_rpaths(lib_info, selfdir):
     return rpaths
 
 
-def _resolve_needed_dsos(ld_library_path, sysroots_files, libs_info, run_prefix,
-                         path_replacements):  # sysroot_substitution, build_prefix, build_prefix_substitution)
+def _resolve_needed_dsos(libs_info, ld_library_path, path_groups):
     '''
     :param ld_library_path: An ordered list of directories to search for. This is modified and stored
                            with each DSO we process according to its RPATH entries. Recursion is not
@@ -722,6 +721,9 @@ def _resolve_needed_dsos(ld_library_path, sysroots_files, libs_info, run_prefix,
 
     res = {}
 
+    run_prefix = path_groups['run_prefix']['prefix']
+    sysroot = path_groups['sysroot']['prefix']
+
     for f, lib_info in libs_info.items():
 
         if 'libjpeg.so.9.2.0' in f:
@@ -730,6 +732,7 @@ def _resolve_needed_dsos(ld_library_path, sysroots_files, libs_info, run_prefix,
         # We must clear this out before each DSO is checked as the same SONAME could
         # be reached from different search paths.
         res = {}
+        lib_info['libraries']['resolved'] = []
 
         if 'dylib' in f:
             print('debug')
@@ -740,11 +743,8 @@ def _resolve_needed_dsos(ld_library_path, sysroots_files, libs_info, run_prefix,
         # runpaths take precedence (but we have other checks for those, still if they are disabled
         # for some reason we should respect that). runpaths are not transitive though and that is
         # not handled here.
-        default_paths = []
-        for sysroot in path_replacements['sysroots']:
-            for sr_loc, sr_index in sysroot.items():
-                t = [dp.replace('$SYSROOT', os.path.normpath(sr_loc)) for dp in lib_info['default_paths']]
-                default_paths.extend(t)
+        default_paths = [dp.replace('$SYSROOT', sysroot)
+                         for dp in lib_info['default_paths']]
         selfdir = os.path.dirname(lib_info['fullpath'])
         if 'bar_exe' in f:
             print("debug")
@@ -763,32 +763,22 @@ def _resolve_needed_dsos(ld_library_path, sysroots_files, libs_info, run_prefix,
                 if os.path.exists(fullpath):
                     while os.path.islink(fullpath):
                         fullpath = os.path.realpath(fullpath)
-                    rp = os.path.relpath(fullpath, run_prefix)
-                    if rp.startswith('..'):
-                        print('debug')
-                    for sysroot, sysroot_files in sysroots_files.items():
-                        if fullpath in sysroot_files:
-                            # Do we want to stop at the first sysroot lib we hit? Optionally?
-                            print('{} in sysroot'.format(fullpath))
-                            found_in_sysroot = True
-                            if fullpath in libs_info:
-                                print("fullpath is in libs_info")
-                            else:
-                                if fullpath not in res:
-                                    print("no it isn't, we do not parse this")
-                                    res[fullpath] = {'ld_library_path': rpaths + parent_rpaths,
-                                              'resolved': []}
+                    rp = None
+                    for prefix_type, prefix_and_files in path_groups.items():
+                        if fullpath.startswith(prefix_and_files['prefix']):
+                            rp = os.path.relpath(fullpath, prefix_and_files['prefix'])
                             break
-                    if not found_in_sysroot:
-                        rp = os.path.relpath(fullpath, run_prefix)
-                        lib_info2 = libs_info[rp]
+                    if rp:
+                        lib_info2 = libs_info[fullpath]
                         selfdir2 = os.path.dirname(lib_info2['fullpath'])
                         rpaths = _get_rpaths(lib_info2, selfdir2)
                         res[lib_info2['key']] = {'ld_library_path': rpaths + parent_rpaths,
                                                  # Resolved is a list of the same record type!
                                                  'resolved': []}
-                        res[f]['resolved'].append(fullpath)
-                    break
+                        lib_info['libraries']['resolved'].append(fullpath)
+                        break
+                    else:
+                        print("ERROR :: Didn't find {} for {}".format(lib, f))
             else:
                 print("ERROR :: Didn't find {} for {}".format(lib, f))
 
@@ -1195,13 +1185,11 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
     # Think of the worst case here and ways to make it fast without making the code a mess.
 
     file_info = liefify(path_groups)
-    if verbose:
-        print('\n'.join(f + " : \n" + json.dumps(v, indent=2) for f, v in file_info.items()))
+    # if verbose:
+    #     print('\n'.join(f + " : \n" + json.dumps(v, indent=2) for f, v in file_info.items()))
 
-    _resolve_needed_dsos(ld_library_path,
-                         srf,
-                         file_info,
-                         run_prefix,
+    _resolve_needed_dsos(file_info,
+                         ld_library_path,
                          path_groups)
 
     for prefix in (run_prefix, build_prefix):
