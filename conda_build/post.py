@@ -1100,6 +1100,8 @@ def liefify(path_groups):
             for f in program_files:
                 results[f] = executor.submit(lief_parse_this, join(f))
 
+        # We could defer some things for speed reasons, though once stable, we should
+        # cache file_info in the packages themselves (compressed again?) for speed.
         for f in program_files:
             file_info_parallel[f] = results[f].result()
 
