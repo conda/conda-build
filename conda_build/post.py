@@ -1178,6 +1178,8 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
         if target_subdir.startswith('linux'):
             sysroots = [sysroot + os.sep for sysroot in utils.glob(join(sysroot_prefix, '**', 'sysroot'))]
             sysroots = [os.path.relpath(s, sysroot_prefix) for s in sysroots]
+            if not sysroots:
+                sysroots = ['']
         elif target_subdir.startswith('win'):
             sysroots = ['C:/Windows/System32']
     srf = set()
