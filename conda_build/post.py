@@ -722,79 +722,76 @@ def _resolve_needed_dsos(libs_info, ld_library_path, path_groups):
     res = {}
 
     run_prefix = path_groups['run_prefix']['prefix']
-    sysroot = path_groups['sysroot']['prefix']
+    sysroot = os.path.join(path_groups['sysroot']['prefix'], path_groups['sysroot']['sysroot_base'])
 
-    for f, lib_info in libs_info.items():
-
-        if 'libjpeg.so.9.2.0' in f:
-            print('debug')
+    for f, lib_info_root in libs_info.items():
+        if 'filetype' not in lib_info_root or 'original' not in lib_info_root['libraries']:
+            print("Skipping {}".format(f))
+            continue
 
         # We must clear this out before each DSO is checked as the same SONAME could
         # be reached from different search paths.
         res = {}
-        lib_info['libraries']['resolved'] = []
+        already_seen = set()
 
-        if 'dylib' in f:
-            print('debug')
-        if 'filetype' not in lib_info or 'original' not in lib_info['libraries']:
-            print("Skipping {}".format(f))
-            continue
+        todo = [lib_info_root]
+        while todo:
+            for lib_info in todo:
+                todo.pop(0)
+            key = lib_info['key']
+            if key in already_seen:
+                continue
+            lib_info['libraries']['resolved'] = []
 
-        # runpaths take precedence (but we have other checks for those, still if they are disabled
-        # for some reason we should respect that). runpaths are not transitive though and that is
-        # not handled here.
-        default_paths = [dp.replace('$SYSROOT', sysroot)
-                         for dp in lib_info['default_paths']]
-        selfdir = os.path.dirname(lib_info['fullpath'])
-        if 'bar_exe' in f:
-            print("debug")
-        rpaths = _get_rpaths(lib_info, selfdir)
-        print(ld_library_path)
-        res[lib_info['key']] = {'ld_library_path': rpaths,
-                                # Resolved is a list of the same record type!
-                                'resolved': []}
-        # This is only a single level of resolution.
-        libraries_original = lib_info['libraries']['original']
-        for lib in libraries_original:
-            parent_rpaths = res[lib_info['key']]['ld_library_path']
-            found_in_sysroot = False
-            for path in parent_rpaths + default_paths:
-                fullpath = join(path, lib)
-                if os.path.exists(fullpath):
-                    while os.path.islink(fullpath):
-                        fullpath = os.path.realpath(fullpath)
-                    rp = None
-                    for prefix_type, prefix_and_files in path_groups.items():
-                        if fullpath.startswith(prefix_and_files['prefix']):
-                            rp = os.path.relpath(fullpath, prefix_and_files['prefix'])
+            # runpaths take precedence (but we have other checks for those, still if they are disabled
+            # for some reason we should respect that). runpaths are not transitive though and that is
+            # not handled here.
+            default_paths = [dp.replace('$SYSROOT', sysroot)
+                             for dp in lib_info['default_paths']]
+            selfdir = os.path.dirname(lib_info['fullpath'])
+            if 'bar/libmain.so' in f:
+                print("debug")
+            rpaths = _get_rpaths(lib_info, selfdir)
+            print(ld_library_path)
+            res[key] = {'ld_library_path': rpaths,
+                        # Resolved is a list of the same record type!
+                        'resolved': []}
+            # This is only a single level of resolution.
+            libraries_original = lib_info['libraries']['original']
+            for lib in libraries_original:
+                parent_rpaths = res[key]['ld_library_path']
+                found_in_sysroot = False
+                for path in parent_rpaths + default_paths:
+                    fullpath = join(path, lib)
+                    if os.path.exists(fullpath):
+                        while os.path.islink(fullpath):
+                            fullpath = os.path.realpath(fullpath)
+                        rp = None
+                        for prefix_type, prefix_and_files in path_groups.items():
+                            if fullpath.startswith(prefix_and_files['prefix']):
+                                rp = os.path.relpath(fullpath, prefix_and_files['prefix'])
+                                break
+                        if rp:
+                            lib_info2 = libs_info[fullpath]
+                            selfdir2 = os.path.dirname(lib_info2['fullpath'])
+                            rpaths = _get_rpaths(lib_info2, selfdir2)
+                            res[lib_info2['key']] = {'ld_library_path': rpaths + parent_rpaths,
+                                                     # Resolved is a list of the same record type!
+                                                     'resolved': []}
+                            lib_info['libraries']['resolved'].append(fullpath)
+                            todo.append(lib_info2)
+                            already_seen.add(key)
                             break
-                    if rp:
-                        lib_info2 = libs_info[fullpath]
-                        selfdir2 = os.path.dirname(lib_info2['fullpath'])
-                        rpaths = _get_rpaths(lib_info2, selfdir2)
-                        res[lib_info2['key']] = {'ld_library_path': rpaths + parent_rpaths,
-                                                 # Resolved is a list of the same record type!
-                                                 'resolved': []}
-                        lib_info['libraries']['resolved'].append(fullpath)
-                        break
-                    else:
-                        print("ERROR :: Didn't find {} for {}".format(lib, f))
-            else:
-                print("ERROR :: Didn't find {} for {}".format(lib, f))
+                        else:
+                            print("ERROR :: Didn't find {} for {}".format(lib, f))
+                else:
+                    print("ERROR :: Didn't find {} for {}".format(lib, f))
 
-        if lib_info['key'] in res and 'resolved' in res[lib_info['key']]:
-            lib_info['libraries']['resolved'] = res[lib_info['key']]['resolved']
-        else:
-            printf("Resolve failed for {}".format(f))
+        if lib_info['key'] not in res or 'resolved' not in res[lib_info['key']]:
+            print("Resolve failed for {}".format(f))
 
-        # Only the pyldd version of lief_parse (yeah, I know, the name, right?) sets 'libraries/resolved'.
-        # .. may as well check it gets the same result as doing it here (chances are high it does not =>
-        # also note, we have not called our liefldd resolver at all yet. It is in
-        # if 'resolved' in lib_info['libraries']:
-        #     assert lib_info['libraries']['resolved'] == needed, "pyldd's resolver disagrees"
-        # if lib_info['libraries']['original'] != needed:
-        #     print("Yes, _resolve_needed_dsos did change\n{} .. to ..\n{}".format(lib_info['libraries']['original'], needed))
-        # lib_info['libraries']['resolved'] = needed
+        # Copy lib_info back into to the path_groups so we can opt to pass
+        # that around instead.
 
 
 # This is old.
@@ -996,6 +993,23 @@ def _lookup_in_prefix_packages(errors, needed_dso, files, run_prefix, whitelist,
                                                                      in_prefix_dso), verbose=verbose)
 
 
+def _show_linking_messages_2(file_info, pkg_name, path_groups):
+
+    for f, v in file_info.items():
+        f = os.path.relpath(f, path_groups['run_prefix']['prefix'])
+        for prefix_type, prefix_and_files in path_groups.items():
+            if f in prefix_and_files['files']:
+                break
+        if f not in prefix_and_files['files']:
+            print("ERROR :: {} not in path_groups".format(f))
+        print(f)
+        print(v)
+        warn_prelude = "WARNING ({},{})".format(pkg_name, f)
+        err_prelude = "  ERROR ({},{})".format(pkg_name, f)
+        info_prelude = "   INFO ({},{})".format(pkg_name, f)
+
+
+
 def _show_linking_messages(files, errors, file_info, build_prefix, run_prefix, pkg_name,
                            error_overlinking, runpath_whitelist, verbose, requirements_run, lib_packages,
                            lib_packages_used, whitelist, sysroots, sysroot_prefix, sysroot_substitution, subdir):
@@ -1060,6 +1074,12 @@ class FrozenDict(Mapping):
         return self._hash
 
 
+def fullpath_for_prefix_and_files(prefix_and_files, file):
+    return os.path.join(prefix_and_files['prefix'],
+                        prefix_and_files['sysroot_base'] if 'sysroot_base' in prefix_and_files else '',
+                        str(file).lstrip('/'))
+
+
 def liefify(path_groups):
     from concurrent.futures import ThreadPoolExecutor
 
@@ -1067,7 +1087,7 @@ def liefify(path_groups):
 
     for prefix_type, prefix_and_files in path_groups.items():
         for f in prefix_and_files['files']:
-            fullpath = os.path.join(prefix_and_files['prefix'], str(f).lstrip('/'))
+            fullpath = fullpath_for_prefix_and_files(prefix_and_files, f)
             if fullpath.endswith('.debug') or os.path.islink(fullpath):
                 continue
             program_files.append(fullpath)
@@ -1126,6 +1146,8 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
     package_nature_build = {package: library_nature(package, build_prefix, build_subdir, bldpkgs_dirs, output_folder, channel_urls)
                       for package in packages_build}
     package_nature = {**package_nature_run, **package_nature_build}
+    lib_packages_run = set([package for package in packages_run
+                          if package_nature[package] != 'non-library'])
     lib_packages = set([package for package in packages_all
                         if package_nature[package] != 'non-library'])
     # The last package of packages_run is this package itself, add it as being used
@@ -1155,11 +1177,12 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
     if not sysroot:
         if target_subdir.startswith('linux'):
             sysroots = [sysroot + os.sep for sysroot in utils.glob(join(sysroot_prefix, '**', 'sysroot'))]
+            sysroots = [os.path.relpath(s, sysroot_prefix) for s in sysroots]
         elif target_subdir.startswith('win'):
             sysroots = ['C:/Windows/System32']
     srf = set()
     for sr in sysroots:
-        sysroot_files = sysroot_path_list(target_subdir, sr, None)
+        sysroot_files = sysroot_path_list(target_subdir, sysroot_prefix, sr, None)
         srf = srf.union(set([os.path.join(sysroot_files['prefix'], f) for f in sysroot_files['files']]))
         path_groups['sysroot'] = sysroot_files
     # TODO :: Put everything in build_prefix that isn't in sysroot into 'build_prefix'
@@ -1192,63 +1215,38 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
                          ld_library_path,
                          path_groups)
 
-    for prefix in (run_prefix, build_prefix):
-        for subdir2, _, filez in os.walk(prefix):
-            for file in filez:
-                if file.endswith('libterm-bd8f21e3bdd6cbdc.so'):
-                    print("Why does this not make it?")
-                fullpath = join(subdir2, file)
-                rp = relpath(fullpath, prefix)
-                if rp in file_info:
-                    if prefix is run_prefix:
-                        file_info[rp]['package'] = pkg_vendored_dist
-                        assert file_info[rp]['fullpath'] == fullpath
-                elif rp in files:
-                    file_info[rp] = {'package': pkg_vendored_dist,
-                                     'fullpath': fullpath}
+    for prefix_type, prefix_and_files in path_groups.items():
+        prefix = prefix_and_files['prefix']
+        for f in prefix_and_files['files']:
+            fullpath = fullpath_for_prefix_and_files(prefix_and_files, f)
+            if fullpath in file_info:
+                if prefix_type == 'run_prefix':
+                    file_info[fullpath]['package'] = pkg_vendored_dist
                 else:
-                    file_info[rp] = {'package': which_package(rp, prefix),
-                                     'fullpath': fullpath}
+                    if 'ld-2.12' in str(f):
+                        print('debug')
+                    rp = os.path.relpath(fullpath, prefix)
+                    owners = list(which_package(rp, prefix))
+                    if len(owners) == 0:
+                        print("WARNING :: File {} not owned by any packages".format(rp))
+                    else:
+                        if len(owners) != 1:
+                            print("WARNING :: File {} owned by multiple packages:\n{}".format(rp, owners))
+                        else:
+                            file_info[fullpath]['package'] = owners[0]
 
     prefix_owners = {}
     for k, v in file_info.items():
         prefix_owners[k] = v['package']
 
-    for f in program_files:
-        fi = file_info[f]
-        if 'filetype' not in fi:
-            continue
-        filetype = fi['filetype']
-        # path = join(run_prefix, f)
-        # filetype = codefile_type(path)
-        # if not filetype or filetype not in filetypes_for_platform[subdir.split('-')[0]]:
-        #     continue
-        if not filetype or filetype not in filetypes_for_platform[subdir.split('-')[0]]:
-            continue
-        needed = fi['libraries']['resolved']
-        for needed_dso in needed:
-            if (error_overlinking and
-               not needed_dso.startswith('/') and
-               not needed_dso.startswith(sysroot_sub) and
-               not needed_dso.startswith(buildprefix_sub) and
-               needed_dso not in prefix_owners and
-               needed_dso not in files):
-                in_whitelist = False
-                if not build_is_host:
-                    in_whitelist = any([fnmatch(needed_dso, w) for w in whitelist])
-                if not in_whitelist:
-                    print("  ERROR :: {} not in prefix_owners".format(needed_dso))
-
     # Should the whitelist be expanded before the 'not in prefix_owners' check?
     # i.e. Do we want to be able to use the whitelist to allow missing files in general? If so move this up to
     # the line before 'for needed_dso in needed'
+    whitelist = []
     whitelist += missing_dso_whitelist or []
+    _show_linking_messages_2(file_info, pkg_name, path_groups)
 
-    _show_linking_messages(files, errors, file_info, build_prefix, run_prefix, pkg_name,
-                           error_overlinking, runpath_whitelist, verbose, requirements_run, lib_packages,
-                           lib_packages_used, whitelist, sysroots_files, sysroot_prefix, sysroot_sub, subdir)
-
-    if lib_packages_used != lib_packages:
+    if lib_packages_used != lib_packages_run:
         info_prelude = "   INFO ({})".format(pkg_name)
         warn_prelude = "WARNING ({})".format(pkg_name)
         err_prelude = "  ERROR ({})".format(pkg_name)
@@ -1516,7 +1514,7 @@ def _native_subdir():
     return subdir
 
 
-def sysroot_path_list(subdir, sysroot=None, whitelist_forcing_rescan=None):
+def sysroot_path_list(subdir, sysroot=None, sysroot_base=None, whitelist_forcing_rescan=None):
     '''
     Does the 'best thing' to get a sysroot path list given the sys.platform and
     subdir. When subdir is "linux-*", sysroot will always point to a proper sysroot
@@ -1532,7 +1530,7 @@ def sysroot_path_list(subdir, sysroot=None, whitelist_forcing_rescan=None):
             (_native_subdir() == subdir and whitelist_forcing_rescan)):
         if subdir.startswith('linux') and not whitelist_forcing_rescan:
             whitelist_forcing_rescan = ['**/*.so*']
-        matches = make_sysroot_path_list(sysroot, subdir, whitelist_forcing_rescan)
+        matches = make_sysroot_path_list(os.path.join(sysroot, sysroot_base), subdir, whitelist_forcing_rescan)
 
     module_name = 'conda_build.post.baked_sysroot_pathlists'
     module_path = join(dirname(__file__), 'baked_sysroot_pathlists', subdir.replace('-', '_') + '.py')
@@ -1558,7 +1556,9 @@ def sysroot_path_list(subdir, sysroot=None, whitelist_forcing_rescan=None):
     if matches and baked and matches != baked:
         print("WARNING :: Mismatch between sysroot files\nbaked: {}, found: {}".format(baked, matches))
 
-    return {"prefix": os.path.normpath(sysroot) if sysroot else "", "files": baked if baked else matches}
+    return {"prefix": os.path.normpath(sysroot) if sysroot else "",
+            "sysroot_base": sysroot_base,
+            "files": baked if baked else matches}
 
 
 def bake_sys_platform_sysroot_path_list(sysroot=None):
