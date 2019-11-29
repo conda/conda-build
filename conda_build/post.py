@@ -993,21 +993,27 @@ def _lookup_in_prefix_packages(errors, needed_dso, files, run_prefix, whitelist,
                                                                      in_prefix_dso), verbose=verbose)
 
 
-def _show_linking_messages_2(file_info, pkg_name, path_groups):
+def _show_linking_messages_2(file_info, pkg_name, path_groups, whitelist, verbose=True):
 
-    for f, v in file_info.items():
+    for f, fi in file_info.items():
         f = os.path.relpath(f, path_groups['run_prefix']['prefix'])
         for prefix_type, prefix_and_files in path_groups.items():
             if f in prefix_and_files['files']:
                 break
+        if 'libraries' in fi:
+            for resolved in fi['libraries']['resolved']:
+                print("{} Needs {}".format(f, resolved))
+        in_whitelist = any([fnmatch(resolved, w) for w in whitelist])
+        if in_whitelist:
+            n_dso_p = "Needed DSO {}".format(resolved)
+            _print_msg(errors, '{}: {} found in the whitelist'.
+                       format(info_prelude, n_dso_p), verbose=verbose)
+
         if f not in prefix_and_files['files']:
             print("ERROR :: {} not in path_groups".format(f))
-        print(f)
-        print(v)
         warn_prelude = "WARNING ({},{})".format(pkg_name, f)
         err_prelude = "  ERROR ({},{})".format(pkg_name, f)
         info_prelude = "   INFO ({},{})".format(pkg_name, f)
-
 
 
 def _show_linking_messages(files, errors, file_info, build_prefix, run_prefix, pkg_name,
@@ -1162,8 +1168,10 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
     runprefix_sub = '$RUNPREFIX'
     exedirname_sub = '$EXEDIRNAME'
 
-    path_groups = {"run_prefix": {"prefix": run_prefix, "files": files}}
-    path_groups["whitelist"] = {"prefix": "", "files": missing_dso_whitelist}
+    # We distinguish between files from this package and files from dependencies.
+    files_prefix = utils.prefix_files(prefix=run_prefix)
+    path_groups = {"run_prefix": {"prefix": run_prefix, "files": files},
+                   "run_prefix_deps": {"prefix": run_prefix, "files": list(set(files_prefix)-set(files))}}
 
     ignore_list_syms = ['main', '_main', '*get_pc_thunk*', '___clang_call_terminate', '_timeout']
     # ignore_for_statics = ['gcc_impl_linux*', 'compiler-rt*', 'llvm-openmp*', 'gfortran_osx*']
@@ -1210,8 +1218,8 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
     # Think of the worst case here and ways to make it fast without making the code a mess.
 
     file_info = liefify(path_groups)
-    # if verbose:
-    #     print('\n'.join(f + " : \n" + json.dumps(v, indent=2) for f, v in file_info.items()))
+    if verbose:
+        print('\n'.join(f + " : \n" + json.dumps(v, indent=2) for f, v in file_info.items()))
 
     _resolve_needed_dsos(file_info,
                          ld_library_path,
@@ -1244,9 +1252,8 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
     # Should the whitelist be expanded before the 'not in prefix_owners' check?
     # i.e. Do we want to be able to use the whitelist to allow missing files in general? If so move this up to
     # the line before 'for needed_dso in needed'
-    whitelist = []
-    whitelist += missing_dso_whitelist or []
-    _show_linking_messages_2(file_info, pkg_name, path_groups)
+    whitelist = missing_dso_whitelist or []
+    _show_linking_messages_2(file_info, pkg_name, path_groups, whitelist, verbose=verbose)
 
     if lib_packages_used != lib_packages_run:
         info_prelude = "   INFO ({})".format(pkg_name)
