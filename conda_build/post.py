@@ -705,7 +705,7 @@ def _get_rpaths(lib_info, selfdir):
     return rpaths
 
 
-def _resolve_needed_dsos(libs_info, ld_library_path, path_groups):
+def _resolve_needed_dsos(libs_info, ld_library_path, path_groups, verbose):
     '''
     :param ld_library_path: An ordered list of directories to search for. This is modified and stored
                            with each DSO we process according to its RPATH entries. Recursion is not
@@ -728,6 +728,12 @@ def _resolve_needed_dsos(libs_info, ld_library_path, path_groups):
         if 'filetype' not in lib_info_root or 'original' not in lib_info_root['libraries']:
             print("Skipping {}".format(f))
             continue
+
+        f_is_in_run_prefix = False
+        if f.startswith(run_prefix) and \
+                os.path.relpath(f, run_prefix) in path_groups['run_prefix']['files']:
+            f_is_in_run_prefix = True
+            rp = os.path.relpath(f, run_prefix)
 
         # We must clear this out before each DSO is checked as the same SONAME could
         # be reached from different search paths.
@@ -760,7 +766,6 @@ def _resolve_needed_dsos(libs_info, ld_library_path, path_groups):
             libraries_original = lib_info['libraries']['original']
             for lib in libraries_original:
                 parent_rpaths = res[key]['ld_library_path']
-                found_in_sysroot = False
                 for path in parent_rpaths + default_paths:
                     fullpath = join(path, lib)
                     if os.path.exists(fullpath):
@@ -772,15 +777,21 @@ def _resolve_needed_dsos(libs_info, ld_library_path, path_groups):
                                 rp = os.path.relpath(fullpath, prefix_and_files['prefix'])
                                 break
                         if rp:
-                            lib_info2 = libs_info[fullpath]
-                            selfdir2 = os.path.dirname(lib_info2['fullpath'])
-                            rpaths = _get_rpaths(lib_info2, selfdir2)
-                            res[lib_info2['key']] = {'ld_library_path': rpaths + parent_rpaths,
-                                                     # Resolved is a list of the same record type!
-                                                     'resolved': []}
-                            lib_info['libraries']['resolved'].append(fullpath)
-                            todo.append(lib_info2)
-                            already_seen.add(key)
+                            if fullpath not in libs_info:
+                                if f_is_in_run_prefix:
+                                    print("ERROR :: Could not resolve {}, have not liefify'ed {}".format(lib, fullpath))
+                                elif verbose:
+                                    print("WARNING :: Could not resolve {}, have not liefify'ed {}".format(lib, fullpath))
+                            else:
+                                lib_info2 = libs_info[fullpath]
+                                selfdir2 = os.path.dirname(lib_info2['fullpath'])
+                                rpaths = _get_rpaths(lib_info2, selfdir2)
+                                res[lib_info2['key']] = {'ld_library_path': rpaths + parent_rpaths,
+                                                         # Resolved is a list of the same record type!
+                                                         'resolved': []}
+                                lib_info['libraries']['resolved'].append(fullpath)
+                                todo.append(lib_info2)
+                                already_seen.add(key)
                             break
                         else:
                             print("ERROR :: Didn't find {} for {}".format(lib, f))
@@ -993,28 +1004,56 @@ def _lookup_in_prefix_packages(errors, needed_dso, files, run_prefix, whitelist,
                                                                      in_prefix_dso), verbose=verbose)
 
 
-def _show_linking_messages_2(file_info, pkg_name, path_groups, whitelist, verbose=True):
-
+def calculate_packages_used(file_info, pkg_name, path_groups, whitelist, verbose=True):
+    packages_used = set()
+    prefix_for_file = dict()
     for f, fi in file_info.items():
-        f = os.path.relpath(f, path_groups['run_prefix']['prefix'])
+        if 'libc-2.12.2.so' in f:
+            print('debug')
         for prefix_type, prefix_and_files in path_groups.items():
-            if f in prefix_and_files['files']:
+            pfx = os.path.join(prefix_and_files['prefix'],
+                               prefix_and_files['sysroot_base'] if 'sysroot_base' in prefix_and_files else '')
+            rp = os.path.relpath(f, pfx)
+            if rp in [str(pf) for pf in prefix_and_files['files']]:
+                # TODO :: Maybe check for multiple existence and warn? Though these
+                #         are priority ordered anyway.
+                prefix_for_file[f] = {'prefix_type': prefix_type, 'relpath': rp}
                 break
-        if 'libraries' in fi:
-            for resolved in fi['libraries']['resolved']:
-                print("{} Needs {}".format(f, resolved))
-        in_whitelist = any([fnmatch(resolved, w) for w in whitelist])
-        if in_whitelist:
-            n_dso_p = "Needed DSO {}".format(resolved)
-            _print_msg(errors, '{}: {} found in the whitelist'.
-                       format(info_prelude, n_dso_p), verbose=verbose)
 
-        if f not in prefix_and_files['files']:
-            print("ERROR :: {} not in path_groups".format(f))
+    for f, prefix_type_relpath in prefix_for_file.items():
+        prefix_type = prefix_type_relpath['prefix_type']
+        path_group = path_groups[prefix_type]
+        rp = prefix_type_relpath['relpath']
+        if f in file_info:
+            fi = file_info[f]
+            if 'libraries' not in fi or 'resolved' not in fi['libraries']:
+                continue
+            for resolved in fi['libraries']['resolved']:
+                if resolved in file_info:
+                    # Do I need to figure out which path_group it is in? Yes.
+                    print("Found {} in file_info".format(resolved))
+                if resolved in prefix_for_file:
+                    r_prefix_type_relpath = prefix_for_file[resolved]
+                    r_prefix_type = r_prefix_type_relpath['prefix_type']
+                    r_rp = r_prefix_type_relpath['relpath']
+                    pkg = file_info[resolved]['package']
+                    print(pkg)
+                    packages_used.add(pkg)
+                    print("{} uses {} from {}".format(rp, r_rp, r_prefix_type))
+                print("{} Needs {}".format(f, resolved))
+            # This is nonsense! Should run a loop per resolved library instead.
+            in_whitelist = any([fnmatch(resolved, w) for w in whitelist])
+            if in_whitelist:
+                n_dso_p = "Needed DSO {}".format(resolved)
+                _print_msg(errors, '{}: {} found in the whitelist'.
+                           format(info_prelude, n_dso_p), verbose=verbose)
+        else:
+            print("FRAK!")
+
         warn_prelude = "WARNING ({},{})".format(pkg_name, f)
         err_prelude = "  ERROR ({},{})".format(pkg_name, f)
         info_prelude = "   INFO ({},{})".format(pkg_name, f)
-
+    return packages_used
 
 def _show_linking_messages(files, errors, file_info, build_prefix, run_prefix, pkg_name,
                            error_overlinking, runpath_whitelist, verbose, requirements_run, lib_packages,
@@ -1153,7 +1192,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
                       for package in packages_build}
     package_nature = {**package_nature_run, **package_nature_build}
     lib_packages_run = set([package for package in packages_run
-                          if package_nature[package] != 'non-library'])
+                          if package_nature[package] != 'non-library' or isinstance(package, FakeDist)])
     lib_packages = set([package for package in packages_all
                         if package_nature[package] != 'non-library'])
     # The last package of packages_run is this package itself, add it as being used
@@ -1170,6 +1209,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
 
     # We distinguish between files from this package and files from dependencies.
     files_prefix = utils.prefix_files(prefix=run_prefix)
+    files_prefix = [f for f in files_prefix if not f.startswith('conda-meta' + os.sep)]
     path_groups = {"run_prefix": {"prefix": run_prefix, "files": files},
                    "run_prefix_deps": {"prefix": run_prefix, "files": list(set(files_prefix)-set(files))}}
 
@@ -1223,7 +1263,8 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
 
     _resolve_needed_dsos(file_info,
                          ld_library_path,
-                         path_groups)
+                         path_groups,
+                         verbose)
 
     for prefix_type, prefix_and_files in path_groups.items():
         prefix = prefix_and_files['prefix']
@@ -1253,9 +1294,9 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
     # i.e. Do we want to be able to use the whitelist to allow missing files in general? If so move this up to
     # the line before 'for needed_dso in needed'
     whitelist = missing_dso_whitelist or []
-    _show_linking_messages_2(file_info, pkg_name, path_groups, whitelist, verbose=verbose)
+    packages_used = calculate_packages_used(file_info, pkg_name, path_groups, whitelist, verbose=verbose)
 
-    if lib_packages_used != lib_packages_run:
+    if packages_used != lib_packages_run:
         info_prelude = "   INFO ({})".format(pkg_name)
         warn_prelude = "WARNING ({})".format(pkg_name)
         err_prelude = "  ERROR ({})".format(pkg_name)
