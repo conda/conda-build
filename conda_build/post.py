@@ -1197,10 +1197,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
                         if package_nature[package] != 'non-library'])
     # The last package of packages_run is this package itself, add it as being used
     # in case it qualifies as a library package.
-    if len(packages_run) and packages_run[-1] in lib_packages:
-        lib_packages_used = set((packages_run[-1],))
-    else:
-        lib_packages_used = set()
+    lib_packages_used = set((packages_run[-1],))
 
     sysroot_sub = '$SYSROOT'
     buildprefix_sub = '$BUILDPREFIX'
@@ -1239,16 +1236,16 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
     ld_library_path = list(_get_path_dirs(run_prefix, target_subdir))
     for prefix_type, prefix_and_files in path_groups.items():
         if prefix_type == 'sysroot':
-            ld_library_path.append(prefix_and_files['prefix'])
-    if target_subdir.startswith('linux'):
-        ld_library_path += ['{sysroot}usr/{lib}'.format(sysroot=sysroots[0], lib=def_libdir)
-                            for def_libdir in def_libdirs]
-    elif target_subdir.startswith('win'):
-        ld_library_path += ['{SystemRoot}/system32',
-                            '{SystemRoot}',
-                            '{SystemRoot}/System32/Wbem',
-                            '{SystemRoot}/System32/WindowsPowerShell/v1.0']
-
+            pfx = os.path.join(prefix_and_files['prefix'],
+                               prefix_and_files['sysroot_base'] if 'sysroot_base' in prefix_and_files else '')
+            if target_subdir.startswith('linux'):
+                ld_library_path += ['{sysroot}/usr/{lib}'.format(sysroot=pfx, lib=def_libdir)
+                                    for def_libdir in def_libdirs]
+            elif target_subdir.startswith('win'):
+                ld_library_path += ['{SystemRoot}/system32',
+                                    '{SystemRoot}',
+                                    '{SystemRoot}/System32/Wbem',
+                                    '{SystemRoot}/System32/WindowsPowerShell/v1.0']
     prefix_owners = _map_file_to_package(files + list(srf),
                                          run_prefix, build_prefix,
                                          pkg_vendored_dist, False)
