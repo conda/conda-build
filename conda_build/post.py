@@ -677,29 +677,29 @@ DEFAULT_MAC_WHITELIST = ['/opt/X11/',
                          '/System/Library/Frameworks/SystemConfiguration.framework/*',
                          '/System/Library/Frameworks/WebKit.framework/*']
 
-# These are relative to os.environ['windir'] (generally C:/Windows).
-DEFAULT_WIN_WHITELIST = ['/System32/ADVAPI32.dll',
-                         '/System32/bcrypt.dll',
-                         '/System32/COMCTL32.dll',
-                         '/System32/COMDLG32.dll',
-                         '/System32/CRYPT32.dll',
-                         '/System32/dbghelp.dll',
-                         '/System32/GDI32.dll',
-                         '/System32/IMM32.dll',
-                         '/System32/KERNEL32.dll',
-                         '/System32/NETAPI32.dll',
-                         '/System32/ole32.dll',
-                         '/System32/OLEAUT32.dll',
-                         '/System32/PSAPI.DLL',
-                         '/System32/RPCRT4.dll',
-                         '/System32/SHELL32.dll',
-                         '/System32/USER32.dll',
-                         '/System32/USERENV.dll',
-                         '/System32/WINHTTP.dll',
-                         '/System32/WS2_32.dll',
-                         '/System32/ntdll.dll',
-                         '/System32/msvcrt.dll',
-                         '/System32/**/api-ms-win*.dll']
+# These are relative to os.environ['windir']/System32 (generally C:/Windows/System32).
+DEFAULT_WIN_WHITELIST = ['/ADVAPI32.dll',
+                         '/bcrypt.dll',
+                         '/COMCTL32.dll',
+                         '/COMDLG32.dll',
+                         '/CRYPT32.dll',
+                         '/dbghelp.dll',
+                         '/GDI32.dll',
+                         '/IMM32.dll',
+                         '/KERNEL32.dll',
+                         '/NETAPI32.dll',
+                         '/ole32.dll',
+                         '/OLEAUT32.dll',
+                         '/PSAPI.DLL',
+                         '/RPCRT4.dll',
+                         '/SHELL32.dll',
+                         '/USER32.dll',
+                         '/USERENV.dll',
+                         '/WINHTTP.dll',
+                         '/WS2_32.dll',
+                         '/ntdll.dll',
+                         '/msvcrt.dll',
+                         '/**/api-ms-win*.dll']
 
 def _get_rpaths(lib_info, selfdir):
     rpaths = [f.replace('$SELFDIR', selfdir) for f in \
@@ -857,6 +857,9 @@ def _map_file_to_package(files, run_prefix, build_prefix, pkg_vendored_dist, ena
             prefix = run_prefix
         elif fp.startswith(build_prefix):
             prefix = build_prefix
+        else:
+            # A case of sysroot-outside-build-prefix (valid on Windows and macOS).
+            continue
         rp = normpath(os.path.relpath(fp, prefix))
         print(rp)
         # if dynamic_lib and not any(rp == normpath(w) for w in all_needed_dsos):
@@ -1242,9 +1245,12 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
                 sysroots = ['']
         elif target_subdir.startswith('win'):
             sysroots = ['C:/Windows/System32']
+            sysroot_prefix = ''
+        elif target_subdir.startswith('osx-64'):
+            sysroot_prefix = ''
     srf = set()
     for sr in sysroots:
-        sysroot_files = sysroot_path_list(target_subdir, sysroot_prefix, sr, None)
+        sysroot_files = sysroot_path_list(target_subdir, sysroot_prefix, sr)
         srf = srf.union(set([os.path.join(sysroot_files['prefix'], f) for f in sysroot_files['files']]))
         path_groups['sysroot'] = sysroot_files
     # TODO :: Put everything in build_prefix that isn't in sysroot into 'build_prefix'
@@ -1569,7 +1575,7 @@ def make_sysroot_path_list(sysroot, subdir, whitelist):
                 matches.append(PurePath(rela))
     # It might be sensible at this point to try to 'unbake' the result back to the glob that created it, or
     # do we just want a big old superset of all the DLLs we've ever seen that grows and grows?
-    return tuple(matches)
+    return {'files': matches}
 
 
 def _native_subdir():
@@ -1584,7 +1590,7 @@ def _native_subdir():
     return subdir
 
 
-def sysroot_path_list(subdir, sysroot=None, sysroot_base=None, whitelist_forcing_rescan=None):
+def sysroot_path_list(subdir, sysroot=None, sysroot_base='', whitelist_forcing_rescan=None):
     '''
     Does the 'best thing' to get a sysroot path list given the sys.platform and
     subdir. When subdir is "linux-*", sysroot will always point to a proper sysroot
@@ -1635,7 +1641,7 @@ def bake_sys_platform_sysroot_path_list(sysroot=None):
     subdir = _native_subdir()
     if subdir.startswith('win'):
         if not sysroot:
-            sysroot = os.environ['windir']
+            sysroot = os.path.join(os.environ['windir'], 'System32')
         whitelist = DEFAULT_WIN_WHITELIST
         baked_name = 'DEFAULT_WIN_WHITELIST_BAKED'
     elif subdir == 'osx-64':
@@ -1666,18 +1672,18 @@ def bake_sys_platform_sysroot_path_list(sysroot=None):
             f.write("{} = (".format(baked_name))
             f.write(''.join("{spacing}PurePath('{as_posix}'),  # noqa\n".format(
                     as_posix=m.as_posix(),
-                    spacing=' ' * (len(baked_name) + 4) if m != matches[0] else '')
-                    for m in matches))
+                    spacing=' ' * (len(baked_name) + 4) if m != matches['files'][0] else '')
+                    for m in matches['files']))
             f.write(")\n")
 
 
 '''
 if __name__ == 'conda_build.post' or __name__ == '__main__':
     bake_sys_platform_sysroot_path_list()
-    # matches = make_sysroot_path_list('C:/Windows', 'win-64', DEFAULT_WIN_WHITELIST)
-    # print(len(matches))
+    # matches = make_sysroot_path_list('C:/Windows/System32', 'win-64', DEFAULT_WIN_WHITELIST)
+    # print(len(matches))5
     # print(matches)
     # bake_sys_platform_sysroot_path_list()
-    sysroot_files = sysroot_path_list('win-64', 'C:/Windows/System32', None)
+    sysroot_files = sysroot_path_list('win-64', 'C:/Windows/System32')
     print(sysroot_files)
 '''
