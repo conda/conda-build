@@ -1180,6 +1180,7 @@ def lief_parse(filename, pickle_cache):
     if reparse:
         result = copy.deepcopy(lief_parse_internal(filename))
         pickle.dump(result, open(pickled, 'wb'))
+    result['fullpath'] = filename
     return result
 
 

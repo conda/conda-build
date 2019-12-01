@@ -1325,7 +1325,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
         info_prelude = "   INFO ({})".format(pkg_name)
         warn_prelude = "WARNING ({})".format(pkg_name)
         err_prelude = "  ERROR ({})".format(pkg_name)
-        for lib in lib_packages - lib_packages_used:
+        for lib in lib_packages_run - packages_used:
             if package_nature[lib] == 'compiler-runtime library' and lib.name.startswith('libgcc-ng'):
                 # We link this in all the time but rarely do we need to.
                 msg_prelude = warn_prelude
