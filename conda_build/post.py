@@ -1140,18 +1140,28 @@ def liefify(path_groups):
     def lief_parse_this(filename):
         return lief_parse(filename)
 
-    parallel = True
-    serial = False
+    timings = False
+    # Parallel is a lot slower, 192 seconds vs 95 seconds!
+    if timings:
+        parallel = True
+        serial = True
+    else:
+        parallel = False
+        serial = True
 
+    import time
+    start = time.time()
     if serial:
         file_info_serial = dict()
         for f in program_files:
             file_info_serial[f] = lief_parse_this(f)
+    ends = time.time()
 
     if parallel:
         file_info_parallel = dict()
         results = {}
-        with ThreadPoolExecutor(min(cpu_count(), max(1, len(program_files)))) as executor:
+        ncpus = min(cpu_count(), max(1, len(program_files)))
+        with ThreadPoolExecutor(ncpus) as executor:
             for f in program_files:
                 results[f] = executor.submit(lief_parse_this, join(f))
 
@@ -1159,6 +1169,9 @@ def liefify(path_groups):
         # cache file_info in the packages themselves (compressed again?) for speed.
         for f in program_files:
             file_info_parallel[f] = results[f].result()
+    endp = time.time()
+    if timings:
+        print("Time serial: {}  Time parallel: {}".format(ends-start, endp-ends))
 
     if serial and parallel:
         assert file_info_serial == file_info_parallel
