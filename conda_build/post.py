@@ -596,6 +596,8 @@ def library_nature(pkg, prefix, subdir, bldpkgs_dirs, output_folder, channel_url
     Result :: "non-library", "plugin library", "dso library", "run-exports library"
     .. in that order, i.e. if have both dsos and run_exports, it's a run_exports_library.
     '''
+    if pkg.name.startswith('gcc_impl'):
+        return "glibc-providing library"
     if pkg.name.startswith('libgcc-ng') or pkg.name.startswith('libstdcxx-ng') or pkg.name.startswith('libcxx'):
         return "compiler-runtime library"
     dsos, run_exports, _ = determine_package_nature(pkg, prefix, subdir, bldpkgs_dirs, output_folder, channel_urls)
@@ -1306,12 +1308,19 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
     whitelist = missing_dso_whitelist or []
     packages_used = calculate_packages_used(file_info, pkg_name, path_groups, whitelist, verbose=verbose)
 
+    # glibc is special. It is in gcc, but at runtime its always loaded from the system, so we remove it.
+    packages_used = set([package for package in packages_used
+                        if (package_nature[package] != 'glibc-providing library')])
+
     if packages_used != lib_packages_run:
         info_prelude = "   INFO ({})".format(pkg_name)
         warn_prelude = "WARNING ({})".format(pkg_name)
         err_prelude = "  ERROR ({})".format(pkg_name)
         for lib in lib_packages - lib_packages_used:
-            if package_nature[lib] == 'run-exports library':
+            if package_nature[lib] == 'compiler-runtime library' and lib.name.startswith('libgcc-ng'):
+                # We link this in all the time but rarely do we need to.
+                msg_prelude = warn_prelude
+            elif package_nature[lib] == 'run-exports library':
                 msg_prelude = err_prelude if error_overdepending else warn_prelude
             elif package_nature[lib] == 'plugin library':
                 msg_prelude = info_prelude
@@ -1335,11 +1344,12 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
         else:
             sys.exit(1)
 
-    if pkg_vendoring_key in vendoring_record:
-        imports = vendoring_record[pkg_vendoring_key]
-        return imports
-    else:
-        return dict()
+    # Make a record of some sort to store with this package so we do not recalculate it all the time:
+    for f, fi in file_info.items():
+        if prefix_owners[f] == pkg_vendored_dist:
+            print(fi)
+
+    return dict()
 
 
 def check_overlinking(m, files, host_prefix=None):
