@@ -724,6 +724,13 @@ class Config(object):
         return path
 
     @property
+    def pickle_cache(self):
+        """Where cached LIEF files are stored"""
+        path = join(self.src_cache_root, 'picke_cache')
+        _ensure_dir(path)
+        return path
+
+    @property
     def work_dir(self):
         """Where the source for the build is extracted/copied to."""
         path = join(self.build_folder, 'work')

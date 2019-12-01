@@ -8,6 +8,7 @@ import glob2
 import hashlib
 import json
 import os
+import pickle
 from subprocess import Popen, PIPE
 import struct
 import sys
@@ -29,6 +30,8 @@ try:
 except:
     pass
 
+# TODO :: Make this a hash of this file itself (or a split-off file with just the low-level LIEF + pickling code)
+lief_pickle_version = 1
 
 def is_string(s):
     try:
@@ -1101,7 +1104,8 @@ def lief_parse_internal(filename, path_replacements={}):
         elif binary.format == lief.EXE_FORMATS.PE:
             filetype = 'pecoff'
 
-        result_lief = {'filetype': filetype,
+        result_lief = {'version': lief_pickle_version,
+                       'filetype': filetype,
                        'entrypoint': entrypoint,
                        'entrypoint_addr': entrypoint_addr,
                        'rpaths': rpaths,
@@ -1128,7 +1132,8 @@ def lief_parse_internal(filename, path_replacements={}):
                 assert False, "I did not know this could happen!"
                 libs_original = tuple(f for f in libs_original if f != filename)
 
-            result_pyldd = {'filetype': filetype,
+            result_pyldd = {'version': lief_pickle_version,
+                            'filetype': filetype,
                             'rpaths': cf.get_rpaths_transitive(),
                             'runpaths': cf.get_runpaths(),
                             'exports': None,
@@ -1146,9 +1151,32 @@ def lief_parse_internal(filename, path_replacements={}):
     return result_pyldd
 
 
-def lief_parse(filename, path_replacements={}):
-    result = copy.deepcopy(lief_parse_internal(filename, path_replacements))
-    result['fullpath'] = os.path.normpath(filename)
+def sha1_of(filename):
+    sha1 = hashlib.sha1()
+    with open(filename, 'rb') as f:
+        while True:
+            data = f.read(65536)
+            if not data:
+                break
+            sha1.update(data)
+    return sha1.hexdigest()
+
+
+def lief_parse(filename, pickle_cache):
+    pickled = os.path.join(pickle_cache,
+                           (os.path.basename(filename) +
+                            '_' +
+                            sha1_of(filename) +
+                            str(lief_pickle_version) +
+                            '.lief.pickled'))
+    reparse = True
+    if os.path.exists(pickled):
+        result = pickle.load(open(pickled, 'rb'))
+        if result['version'] == lief_pickle_version:
+            reparse = False
+    if reparse:
+        result = copy.deepcopy(lief_parse_internal(filename))
+        pickle.dump(result, open(pickled, 'wb'))
     return result
 
 

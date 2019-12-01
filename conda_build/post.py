@@ -1130,7 +1130,7 @@ def fullpath_for_prefix_and_files(prefix_and_files, file):
                         str(file).lstrip('/'))
 
 
-def liefify(path_groups):
+def liefify(path_groups, pickle_cache):
     from concurrent.futures import ThreadPoolExecutor
 
     program_files = []
@@ -1142,8 +1142,8 @@ def liefify(path_groups):
                 continue
             program_files.append(fullpath)
 
-    def lief_parse_this(filename):
-        return lief_parse(filename)
+    def lief_parse_this(filename, pickle_cache):
+        return lief_parse(filename, pickle_cache)
 
     timings = False
     # Parallel is a lot slower, 192 seconds vs 95 seconds!
@@ -1159,7 +1159,7 @@ def liefify(path_groups):
     if serial:
         file_info_serial = dict()
         for f in program_files:
-            file_info_serial[f] = lief_parse_this(f)
+            file_info_serial[f] = lief_parse_this(f, pickle_cache)
     ends = time.time()
 
     if parallel:
@@ -1185,6 +1185,8 @@ def liefify(path_groups):
         file_info = file_info_parallel
     else:
         file_info = file_info_serial
+
+    # Need to be more package focussed here .. and I also need to implement caching.
     return file_info
 
 
@@ -1196,7 +1198,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
                            missing_dso_whitelist, runpath_whitelist,
                            error_overlinking, error_overdepending, verbose,
                            exception_on_error, files, bldpkgs_dirs, output_folder, channel_urls,
-                           sysroot):
+                           sysroot, pickle_cache):
     errors = []
 
     pkg_vendored_dist, pkg_vendoring_key = _get_fake_pkg_dist(pkg_name, pkg_version, build_str, build_number)
@@ -1240,17 +1242,18 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
     if not sysroot:
         if target_subdir.startswith('linux'):
             sysroots = [sysroot + os.sep for sysroot in utils.glob(join(sysroot_prefix, '**', 'sysroot'))]
-            sysroots = [os.path.relpath(s, sysroot_prefix) for s in sysroots]
-            if not sysroots:
-                sysroots = ['']
+            sysroot_bases = [os.path.relpath(s, sysroot_prefix) for s in sysroots]
+            if not sysroot_bases:
+                sysroot_bases = ['']
+            sysroots = [sysroot_prefix for _ in sysroot_bases]
         elif target_subdir.startswith('win'):
             sysroots = ['C:/Windows/System32']
-            sysroot_prefix = ''
+            sysroot_bases = ['']
         elif target_subdir.startswith('osx-64'):
-            sysroot_prefix = ''
+            sysroot_bases = ['']
     srf = set()
-    for sr in sysroots:
-        sysroot_files = sysroot_path_list(target_subdir, sysroot_prefix, sr)
+    for sysroot_prefix, sysroot_base in zip(sysroots, sysroot_bases):
+        sysroot_files = sysroot_path_list(target_subdir, sysroot_prefix, sysroot_base)
         srf = srf.union(set([os.path.join(sysroot_files['prefix'], f) for f in sysroot_files['files']]))
         path_groups['sysroot'] = sysroot_files
     # TODO :: Put everything in build_prefix that isn't in sysroot into 'build_prefix'
@@ -1263,10 +1266,10 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
                 ld_library_path += ['{sysroot}/usr/{lib}'.format(sysroot=pfx, lib=def_libdir)
                                     for def_libdir in def_libdirs]
             elif target_subdir.startswith('win'):
-                ld_library_path += ['{SystemRoot}/system32',
-                                    '{SystemRoot}',
-                                    '{SystemRoot}/System32/Wbem',
-                                    '{SystemRoot}/System32/WindowsPowerShell/v1.0']
+                ld_library_path += [os.path.normpath(pfx),
+                                    os.path.dirname(pfx),
+                                    os.path.join(pfx, 'Wbem'),
+                                    os.path.join(pfx, 'WindowsPowerShell', 'v1.0')]
     prefix_owners = _map_file_to_package(files + list(srf),
                                          run_prefix, build_prefix,
                                          pkg_vendored_dist, False)
@@ -1275,7 +1278,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
     # that are not used, such as ones for a different architecture than the stuff being built.
     # Think of the worst case here and ways to make it fast without making the code a mess.
 
-    file_info = liefify(path_groups)
+    file_info = liefify(path_groups, pickle_cache)
     if verbose:
         print('\n'.join(f + " : \n" + json.dumps(v, indent=2) for f, v in file_info.items()))
 
@@ -1385,7 +1388,8 @@ def check_overlinking(m, files, host_prefix=None):
                                   m.config.channel_urls,
                                   m.config.variant['CONDA_BUILD_SYSROOT'] if (
                                           'CONDA_BUILD_SYSROOT' in m.config.variant and m.config.target_subdir == 'osx-64'
-                                  ) else None)
+                                  ) else None,
+                                  m.config.pickle_cache)
 
 
 def post_process_shared_lib(m, f, files, host_prefix=None):
@@ -1606,7 +1610,7 @@ def sysroot_path_list(subdir, sysroot=None, sysroot_base='', whitelist_forcing_r
             (_native_subdir() == subdir and whitelist_forcing_rescan)):
         if subdir.startswith('linux') and not whitelist_forcing_rescan:
             whitelist_forcing_rescan = ['**/*.so*']
-        matches = make_sysroot_path_list(os.path.join(sysroot, sysroot_base), subdir, whitelist_forcing_rescan)
+        matches = make_sysroot_path_list(os.path.join(sysroot, sysroot_base), subdir, whitelist_forcing_rescan)['files']
 
     module_name = 'conda_build.post.baked_sysroot_pathlists'
     module_path = join(dirname(__file__), 'baked_sysroot_pathlists', subdir.replace('-', '_') + '.py')
