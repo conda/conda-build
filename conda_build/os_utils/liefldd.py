@@ -1172,8 +1172,11 @@ def lief_parse(filename, pickle_cache):
     reparse = True
     if os.path.exists(pickled):
         result = pickle.load(open(pickled, 'rb'))
-        if result['version'] == lief_pickle_version:
-            reparse = False
+        try:
+            if result['version'] == lief_pickle_version:
+                reparse = False
+        except:
+            os.unlink(pickled)
     if reparse:
         result = copy.deepcopy(lief_parse_internal(filename))
         pickle.dump(result, open(pickled, 'wb'))
