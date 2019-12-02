@@ -1226,7 +1226,8 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
 
     # We distinguish between files from this package and files from dependencies.
     files_prefix = utils.prefix_files(prefix=run_prefix)
-    files_prefix = [f for f in files_prefix if not f.startswith('conda-meta' + os.sep)]
+    files_prefix = [f for f in files_prefix if (not f.startswith('conda-meta' + os.sep) and
+                                                not f.startswith('top_level.txt'))]
     path_groups = {"run_prefix": {"prefix": run_prefix, "files": files},
                    "run_prefix_deps": {"prefix": run_prefix, "files": list(set(files_prefix)-set(files))}}
 
