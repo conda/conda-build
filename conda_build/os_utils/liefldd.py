@@ -944,7 +944,7 @@ class memoized_by_arg0_filehash(object):
                         if not data:
                             break
                         sha1.update(data)
-                arg = sha1.hexdigest()
+                newargs.append(sha1.hexdigest())
             elif isinstance(arg, list):
                 newargs.append(tuple(arg))
             elif isinstance(arg, set):
