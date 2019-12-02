@@ -31,7 +31,7 @@ except:
     pass
 
 # TODO :: Make this a hash of this file itself (or a split-off file with just the low-level LIEF + pickling code)
-lief_pickle_version = 1
+lief_pickle_version = 3
 
 def is_string(s):
     try:
@@ -1065,7 +1065,7 @@ def lief_parse_internal(filename, path_replacements={}):
             assert False, "I did not know this could happen!"
             libs_original.remove(filename)
 
-        default_paths = None
+        default_paths = []
         filetype = None
         entrypoint = None
         entrypoint_addr = None
