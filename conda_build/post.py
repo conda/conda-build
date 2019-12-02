@@ -1280,8 +1280,8 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
     # Think of the worst case here and ways to make it fast without making the code a mess.
 
     file_info = liefify(path_groups, pickle_cache)
-    if verbose:
-        print('\n'.join(f + " : \n" + json.dumps(v, indent=2) for f, v in file_info.items()))
+    # if verbose:
+    #     print('\n'.join(f + " : \n" + json.dumps(v, indent=2) for f, v in file_info.items()))
 
     _resolve_needed_dsos(file_info,
                          ld_library_path,
