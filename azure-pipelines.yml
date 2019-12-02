@@ -45,19 +45,17 @@ jobs:
       source ci/azurepipelines/install_conda_build_test_deps
 
       pip install --no-deps .
+
       conda info -a
-      mkdir $BUILD_ARTIFACTSTAGINGDIRECTORY/pytest-replay
-      PYTEST_REPLAY_OPTIONS="--replay-record-dir=$BUILD_ARTIFACTSTAGINGDIRECTORY/pytest-replay"
-      if [[ "$PYTHON_VERSION" != "2.7" ]]; then
-        PYTEST_REPLAY_OPTIONS+=" --replay-base-name=Linux-$CONDA_VERSION-Py$PYTHON_VERSION"
-      fi
-      echo "##vso[task.setvariable variable=PYTEST_REPLAY_OPTIONS]$PYTEST_REPLAY_OPTIONS"
+
+      source ci/azurepipelines/setup_pytest_replay
+
     displayName: Preparing test environment
 
   - script: |
       source ci/azurepipelines/activate_conda "/usr/share/miniconda/bin/python"
       conda install conda-verify -y
-      py.test --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="Linux-SerialTests-$CONDA_VERSION-Py$PYTHON_VERSION" $(PYTEST_REPLAY_OPTIONS)
+      py.test --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="Linux-SerialTests-$CONDA_VERSION-Py$PYTHON_VERSION" "${PYTEST_REPLAY_OPTIONS[@]}"
     displayName: 'Serial Tests'
 
   - script: |
@@ -70,7 +68,7 @@ jobs:
       conda create -n blarg3 -yq python=3.7
       conda create -n blarg4 -yq python nomkl numpy pandas svn
       source ci/azurepipelines/activate_conda "/usr/share/miniconda/bin/python"
-      py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --test-run-title="Linux-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION" $(PYTEST_REPLAY_OPTIONS)
+      py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --test-run-title="Linux-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION" "${PYTEST_REPLAY_OPTIONS[@]}"
     displayName: 'Parallel Tests'
 
   - publish: $(Build.ArtifactStagingDirectory)/pytest-replay
@@ -151,16 +149,14 @@ jobs:
 
       source ci/azurepipelines/install_conda_build_test_deps
 
-      conda install -q pytest-replay pytest-rerunfailures -c conda-forge
       pip install --no-deps .
+
       conda info -a
+
       conda list --show-channel-urls
-      mkdir -p $BUILD_ARTIFACTSTAGINGDIRECTORY/pytest-replay
-      PYTEST_REPLAY_OPTIONS="--replay-record-dir=$BUILD_ARTIFACTSTAGINGDIRECTORY/pytest-replay"
-      if [[ "$PYTHON_VERSION" != "2.7" ]]; then
-        PYTEST_REPLAY_OPTIONS+=" --replay-base-name=macOS-$CONDA_VERSION-Py$PYTHON_VERSION"
-      fi
-      echo "##vso[task.setvariable variable=PYTEST_REPLAY_OPTIONS]$PYTEST_REPLAY_OPTIONS"
+
+      source ci/azurepipelines/setup_pytest_replay
+
     displayName: Preparing test environment
 
   - script: |
@@ -168,7 +164,7 @@ jobs:
       eval "$($(Build.StagingDirectory)/miniconda/bin/python -m conda shell.bash hook)"
       conda activate base
       conda install conda-verify -y
-      py.test --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="macOS-SerialTests-$CONDA_VERSION-Python$PYTHON_VERSION" $(PYTEST_REPLAY_OPTIONS)
+      py.test --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="macOS-SerialTests-$CONDA_VERSION-Python$PYTHON_VERSION" "${PYTEST_REPLAY_OPTIONS[@]}"
     displayName: 'Serial Tests'
 
   - script: |
@@ -180,7 +176,7 @@ jobs:
       conda create -n blarg1 -yq python=2.7
       conda create -n blarg3 -yq python=3.7
       conda create -n blarg4 -yq python nomkl numpy pandas svn
-      py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" -k test_recipe_builds tests --test-run-title="macOS-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION" $(PYTEST_REPLAY_OPTIONS)
+      py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" -k test_recipe_builds tests --test-run-title="macOS-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION" "${PYTEST_REPLAY_OPTIONS[@]}"
     displayName: 'Parallel Tests'
 
   - publish: $(Build.ArtifactStagingDirectory)/pytest-replay
@@ -291,7 +287,7 @@ jobs:
       set PERL=
       set LUA=
       set R=
-      py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp %UserProfile%\cbtmp_serial -n 0 -m "serial" --test-run-title="Win-SerialTests-%CONDA_VERSION%-Python%PYTHON_VERSION%" $(PYTEST_REPLAY_OPTIONS)
+      py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp %UserProfile%\cbtmp_serial -n 0 -m "serial" --test-run-title="Win-SerialTests-%CONDA_VERSION%-Python%PYTHON_VERSION%" "${PYTEST_REPLAY_OPTIONS[@]}"
     displayName: 'Serial Tests'
 
   - script: |
@@ -300,7 +296,7 @@ jobs:
       set PERL=
       set LUA=
       set R=
-      py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp %UserProfile%\cbtmp -n auto -m "not serial" --test-run-title="Win-ParallelTests-%CONDA_VERSION%-Python%PYTHON_VERSION%" $(PYTEST_REPLAY_OPTIONS)
+      py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp %UserProfile%\cbtmp -n auto -m "not serial" --test-run-title="Win-ParallelTests-%CONDA_VERSION%-Python%PYTHON_VERSION%" "${PYTEST_REPLAY_OPTIONS[@]}"
     env:
       VS90COMNTOOLS: "C:\\Program Files (x86)\\Common Files\\Microsoft\\Visual C++ for Python\\9.0\\VC\\bin"
       LIB:
