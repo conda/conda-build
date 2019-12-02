@@ -620,6 +620,7 @@ def dists_from_names(names, prefix):
     pkgs = linked_data(prefix)
     for name in names:
         for pkg in pkgs:
+
             if pkg.quad[0] == name:
                 results.append(pkg)
     return results
@@ -726,6 +727,12 @@ def _resolve_needed_dsos(libs_info, ld_library_path, path_groups, verbose):
     run_prefix = path_groups['run_prefix']['prefix']
     sysroot = os.path.join(path_groups['sysroot']['prefix'], path_groups['sysroot']['sysroot_base'])
 
+    for f, fi in libs_info.items():
+        if not os.path.basename(fi['fullpath']).startswith(fi['key']):
+            print("OOPS")
+        if f != fi['fullpath']:
+            print("OOPS2")
+
     for f, lib_info_root in libs_info.items():
         if 'filetype' not in lib_info_root or 'original' not in lib_info_root['libraries']:
             print("Skipping {}".format(f))
@@ -747,6 +754,13 @@ def _resolve_needed_dsos(libs_info, ld_library_path, path_groups, verbose):
             for lib_info in todo:
                 todo.pop(0)
             key = lib_info['key']
+            for f, fi in libs_info.items():
+                if not os.path.basename(fi['fullpath']).startswith(fi['key']):
+                    print("OOPS")
+                if f != fi['fullpath']:
+                    print("OOPS2")
+            if 'libbrotli' in key:
+                print("debug key {}, fullpath {}".format(key, lib_info['fullpath']))
             if key in already_seen:
                 continue
             lib_info['libraries']['resolved'] = []
@@ -768,6 +782,9 @@ def _resolve_needed_dsos(libs_info, ld_library_path, path_groups, verbose):
             libraries_original = lib_info['libraries']['original']
             for lib in libraries_original:
                 parent_rpaths = res[key]['ld_library_path']
+#                if 'libbrotlicommon.so.1' in lib:
+                if 'libbrotli' in lib:
+                    print("debug")
                 for path in parent_rpaths + default_paths:
                     fullpath = join(path, lib)
                     if os.path.exists(fullpath):
@@ -787,18 +804,29 @@ def _resolve_needed_dsos(libs_info, ld_library_path, path_groups, verbose):
                             else:
                                 lib_info2 = libs_info[fullpath]
                                 selfdir2 = os.path.dirname(lib_info2['fullpath'])
-                                rpaths = _get_rpaths(lib_info2, selfdir2)
-                                res[lib_info2['key']] = {'ld_library_path': rpaths + parent_rpaths,
+                                rpaths2 = _get_rpaths(lib_info2, selfdir2)
+                                for f, fi in libs_info.items():
+                                    if not os.path.basename(fi['fullpath']).startswith(fi['key']):
+                                        print("OOPS")
+                                    if f != fi['fullpath']:
+                                        print("OOPS2")
+
+                                res[lib_info2['key']] = {'ld_library_path': rpaths2 + parent_rpaths,
                                                          # Resolved is a list of the same record type!
                                                          'resolved': []}
+                                for f, fi in libs_info.items():
+                                    if not os.path.basename(fi['fullpath']).startswith(fi['key']):
+                                        print("OOPS")
+                                    if f != fi['fullpath']:
+                                        print("OOPS2")
                                 lib_info['libraries']['resolved'].append(fullpath)
                                 todo.append(lib_info2)
                                 already_seen.add(key)
                             break
                         else:
-                            print("ERROR :: Didn't find {} for {}".format(lib, f))
+                            print("ERROR1 :: Didn't find {} for {}".format(lib, f))
                 else:
-                    print("ERROR :: Didn't find {} for {}".format(lib, f))
+                    print("ERROR2 :: Didn't find {} for {}".format(lib, f))
 
         if lib_info['key'] not in res or 'resolved' not in res[lib_info['key']]:
             print("Resolve failed for {}".format(f))
@@ -1140,6 +1168,10 @@ def liefify(path_groups, pickle_cache):
             fullpath = fullpath_for_prefix_and_files(prefix_and_files, f)
             if fullpath.endswith('.debug') or os.path.islink(fullpath):
                 continue
+            if 'libbrotlienc.so.1' in fullpath:
+                print("debug")
+            if not codefile_type(fullpath):
+                continue
             program_files.append(fullpath)
 
     def lief_parse_this(filename, pickle_cache):
@@ -1159,6 +1191,8 @@ def liefify(path_groups, pickle_cache):
     if serial:
         file_info_serial = dict()
         for f in program_files:
+            if f in file_info_serial:
+                print("WTF")
             file_info_serial[f] = lief_parse_this(f, pickle_cache)
     ends = time.time()
 
@@ -1282,11 +1316,23 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
     file_info = liefify(path_groups, pickle_cache)
     # if verbose:
     #     print('\n'.join(f + " : \n" + json.dumps(v, indent=2) for f, v in file_info.items()))
+    for f, fi in file_info.items():
+        if not os.path.basename(fi['fullpath']).startswith(fi['key']):
+            print("OOPS")
+        if f != fi['fullpath']:
+            print("OOPS2")
 
     _resolve_needed_dsos(file_info,
                          ld_library_path,
                          path_groups,
                          verbose)
+
+    for f, fi in file_info.items():
+        if not os.path.basename(fi['fullpath']).startswith(fi['key']):
+            print("OOPS")
+        if f != fi['fullpath']:
+            print("OOPS2")
+
 
     for prefix_type, prefix_and_files in path_groups.items():
         prefix = prefix_and_files['prefix']

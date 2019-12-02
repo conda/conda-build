@@ -1163,12 +1163,16 @@ def sha1_of(filename):
 
 
 def lief_parse(filename, pickle_cache):
+    if '/opt/b/brotli-feedstock/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_plac/lib/libbrotlienc.so.1.0.7' in filename:
+        print("WTF")
+    if 'libbrotlienc.so.1' in filename:
+        print("debug")
     pickled = os.path.join(pickle_cache,
                            (os.path.basename(filename) +
                             '_' +
                             sha1_of(filename) +
                             str(lief_pickle_version) +
-                            '.lief.pickled'))
+                            '.lief.pickle'))
     reparse = True
     if os.path.exists(pickled):
         result = pickle.load(open(pickled, 'rb'))
@@ -1177,9 +1181,13 @@ def lief_parse(filename, pickle_cache):
                 reparse = False
         except:
             os.unlink(pickled)
+    if '/opt/b/brotli-feedstock/_h_env_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_placehold_plac/lib/libbrotlienc.so.1.0.7' in filename:
+        reparse = True
     if reparse:
-        result = copy.deepcopy(lief_parse_internal(filename))
+        result = lief_parse_internal(filename)
         pickle.dump(result, open(pickled, 'wb'))
+        result2 = pickle.load(open(pickled, 'rb'))
+    result = copy.deepcopy(result)
     result['fullpath'] = filename
     return result
 
