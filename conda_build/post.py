@@ -728,10 +728,7 @@ def _resolve_needed_dsos(libs_info, ld_library_path, path_groups, verbose):
     sysroot = os.path.join(path_groups['sysroot']['prefix'], path_groups['sysroot']['sysroot_base'])
 
     for f, fi in libs_info.items():
-        if not os.path.basename(fi['fullpath']).startswith(fi['key']):
-            print("OOPS")
-        if f != fi['fullpath']:
-            print("OOPS2")
+        _check_file_info(f, fi)
 
     for f, lib_info_root in libs_info.items():
         if 'filetype' not in lib_info_root or 'original' not in lib_info_root['libraries']:
@@ -755,10 +752,7 @@ def _resolve_needed_dsos(libs_info, ld_library_path, path_groups, verbose):
                 todo.pop(0)
             key = lib_info['key']
             for f, fi in libs_info.items():
-                if not os.path.basename(fi['fullpath']).startswith(fi['key']):
-                    print("OOPS")
-                if f != fi['fullpath']:
-                    print("OOPS2")
+                _check_file_info(f, fi)
             if 'libbrotli' in key:
                 print("debug key {}, fullpath {}".format(key, lib_info['fullpath']))
             if key in already_seen:
@@ -771,8 +765,6 @@ def _resolve_needed_dsos(libs_info, ld_library_path, path_groups, verbose):
             default_paths = [dp.replace('$SYSROOT', sysroot)
                              for dp in lib_info['default_paths']]
             selfdir = os.path.dirname(lib_info['fullpath'])
-            if 'bar/libmain.so' in f:
-                print("debug")
             rpaths = _get_rpaths(lib_info, selfdir)
             print(ld_library_path)
             res[key] = {'ld_library_path': rpaths,
@@ -782,9 +774,6 @@ def _resolve_needed_dsos(libs_info, ld_library_path, path_groups, verbose):
             libraries_original = lib_info['libraries']['original']
             for lib in libraries_original:
                 parent_rpaths = res[key]['ld_library_path']
-#                if 'libbrotlicommon.so.1' in lib:
-                if 'libbrotli' in lib:
-                    print("debug")
                 for path in parent_rpaths + default_paths:
                     fullpath = join(path, lib)
                     if os.path.exists(fullpath):
@@ -806,19 +795,13 @@ def _resolve_needed_dsos(libs_info, ld_library_path, path_groups, verbose):
                                 selfdir2 = os.path.dirname(lib_info2['fullpath'])
                                 rpaths2 = _get_rpaths(lib_info2, selfdir2)
                                 for f, fi in libs_info.items():
-                                    if not os.path.basename(fi['fullpath']).startswith(fi['key']):
-                                        print("OOPS")
-                                    if f != fi['fullpath']:
-                                        print("OOPS2")
+                                    _check_file_info(f, fi)
 
                                 res[lib_info2['key']] = {'ld_library_path': rpaths2 + parent_rpaths,
                                                          # Resolved is a list of the same record type!
                                                          'resolved': []}
                                 for f, fi in libs_info.items():
-                                    if not os.path.basename(fi['fullpath']).startswith(fi['key']):
-                                        print("OOPS")
-                                    if f != fi['fullpath']:
-                                        print("OOPS2")
+                                    _check_file_info(f, fi)
                                 lib_info['libraries']['resolved'].append(fullpath)
                                 todo.append(lib_info2)
                                 already_seen.add(key)
@@ -1168,8 +1151,6 @@ def liefify(path_groups, pickle_cache):
             fullpath = fullpath_for_prefix_and_files(prefix_and_files, f)
             if fullpath.endswith('.debug') or os.path.islink(fullpath):
                 continue
-            if 'libbrotlienc.so.1' in fullpath:
-                print("debug")
             if not codefile_type(fullpath):
                 continue
             program_files.append(fullpath)
@@ -1191,8 +1172,6 @@ def liefify(path_groups, pickle_cache):
     if serial:
         file_info_serial = dict()
         for f in program_files:
-            if f in file_info_serial:
-                print("WTF")
             file_info_serial[f] = lief_parse_this(f, pickle_cache)
     ends = time.time()
 
@@ -1222,6 +1201,18 @@ def liefify(path_groups, pickle_cache):
 
     # Need to be more package focussed here .. and I also need to implement caching.
     return file_info
+
+
+def _check_file_info(f, file_info):
+    return
+    if file_info['fullpath'].startswith('ld-'):
+        return
+    if (not file_info['key'].startswith(os.path.basename(file_info['fullpath'])) and
+        not os.path.basename(file_info['fullpath']).startswith(file_info['key'])):
+        print("OOPS file_info['key'] = {} does not startwith {} (or vice-versa)".format(
+            file_info['key'], os.path.basename(file_info['fullpath'])))
+    if f != file_info['fullpath']:
+        print("OOPS2 {} != file_info['fullpath'] = {}".format(f, file_info['fullpath']))
 
 
 def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
@@ -1317,10 +1308,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
     # if verbose:
     #     print('\n'.join(f + " : \n" + json.dumps(v, indent=2) for f, v in file_info.items()))
     for f, fi in file_info.items():
-        if not os.path.basename(fi['fullpath']).startswith(fi['key']):
-            print("OOPS")
-        if f != fi['fullpath']:
-            print("OOPS2")
+        _check_file_info(f, fi)
 
     _resolve_needed_dsos(file_info,
                          ld_library_path,
@@ -1328,11 +1316,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
                          verbose)
 
     for f, fi in file_info.items():
-        if not os.path.basename(fi['fullpath']).startswith(fi['key']):
-            print("OOPS")
-        if f != fi['fullpath']:
-            print("OOPS2")
-
+        _check_file_info(f, fi)
 
     for prefix_type, prefix_and_files in path_groups.items():
         prefix = prefix_and_files['prefix']
