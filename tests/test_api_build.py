@@ -100,7 +100,6 @@ def test_recipe_builds(recipe, testing_config, testing_workdir, monkeypatch):
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
     testing_config.activate = True
-    testing_config.prefix_length = 40
     monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
     monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
     if 'unicode_all_over' in recipe and sys.version_info[0] == 2:

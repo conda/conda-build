@@ -5,3 +5,11 @@ package:
 build:
   binary_has_prefix_files:
     - binary-has-prefix
+
+requirements:
+  build:
+    - python
+
+test:
+  requires:
+    - python

@@ -1022,7 +1022,6 @@ def _get_arch_if_native(arch):
     return arch
 
 
-@memoized_by_arg0_filehash
 def lief_parse_internal(filename, path_replacements={}):
     '''
     Parses DSOs using LIEF (or pyldd) into the same structure.
