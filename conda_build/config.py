@@ -554,7 +554,9 @@ class Config(object):
                 # important: this is recomputing prefixes and determines where work folders are.
                 self._build_id = build_id
                 if old_dir:
-                    shutil.move(old_dir, self.work_dir)
+                    work_dir = self.work_dir
+                    rm_rf(work_dir)
+                    shutil.move(old_dir, work_dir)
 
     @property
     def build_id(self):

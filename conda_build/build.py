@@ -307,7 +307,7 @@ def regex_files_rg(files, prefix, tag, rg, regex_rg, replacement_re,
     pu = prefix.encode('utf-8')
     prefix_files = [os.path.join(pu, f.replace('/', os.sep).encode('utf-8')) for f in files]
     args_len = len(b' '.join(args_base))
-    file_lists = list(chunks(prefix_files, 131071 - args_len))
+    file_lists = list(chunks(prefix_files, (32760 if utils.on_win else 131071) - args_len))
     for file_list in file_lists:
         args = args_base[:] + file_list
         # This will not work now our args are binary strings:
@@ -575,8 +575,8 @@ def perform_replacements(matches, prefix, verbose=False, diff=None):
             os.unlink()
         shutil.copy2(filename, filename_tmp)
         filename_short = filename.replace(prefix + os.sep, '')
-        print("Patching: {} in {} {}".format(filename_short,
-                                             (match['submatches']),
+        print("Patching '{}' in {} {}".format(filename_short,
+                                             len(match['submatches']),
                                              'places' if len(match['submatches']) > 1 else 'place'))
         with open(filename_tmp, 'wb+') as file_tmp:
             file_tmp.truncate()
@@ -890,35 +890,27 @@ def get_files_with_prefix(m, files_in, prefix):
                 files_with_prefix_new.append((pfx.decode('utf-8'), mode, filename))
     files_with_prefix = files_with_prefix_new
     all_matches = {}
-    '''
-    # Enable this once we define CONDA_BUILD_SYSROOT_S
-    ext = '.pc'
-    all_matches = have_regex_files(files=[f for f in files if f.endswith(ext)], prefix=prefix,
-                                   tag='pkg-config build metadata',
-                                   regex_re=r'(?:-L|-I)?\"?([^;\s]+\/sysroot\/)',
-                                   replacement_re=b'$(CONDA_BUILD_SYSROOT_S)',
-                                   match_records=all_matches,
-                                   regex_rg=r'([^;\s"]+/sysroot/)',
-                                   debug=m.config.debug)
-    '''
-    ext = '.cmake'
-    all_matches = have_regex_files(files=[f for f in files if f.endswith(ext)], prefix=prefix,
-                                   tag='CMake build metadata',
-                                   regex_re=r'([^;\s"]+/sysroot)',
-                                   replacement_re=r'$ENV{CONDA_BUILD_SYSROOT}',
-                                   match_records=all_matches,
-                                   debug=m.config.debug)
-    ext = ('.pri', '.prl')
-    all_matches = have_regex_files(files=[f for f in files if f.endswith(ext)], prefix=prefix,
-                                   tag='qmake build metadata',
-                                   regex_re=r'(?:-L|-I)?\"?([^;\s]+\/sysroot)',
-                                   replacement_re=r'$(CONDA_BUILD_SYSROOT)',
-                                   match_records=all_matches,
-                                   regex_rg=r'([^;\s"]+/sysroot)',
-                                   debug=m.config.debug)
+
+    variant = m.config.variant
+    if 'replacements' in variant:
+        replacements = variant['replacements']
+        for replacement in replacements['all_replacements']:
+            import glob2
+            all_matches = have_regex_files(files=[f for f in files if any(
+                                                  glob2.fnmatch.fnmatch(f, r) for r in replacement['glob_patterns'])],
+                                           prefix=prefix,
+                                           tag=replacement['tag'],
+                                           regex_re=replacement['regex_re'],
+                                           replacement_re=replacement['replacement_re'],
+                                           match_records=all_matches,
+                                           regex_rg=replacement['regex_rg'] if 'regex_rg' in replacement else None,
+                                           debug=m.config.debug)
     perform_replacements(all_matches, prefix)
     end = time.time()
-    print("INFO :: Time taken to do replacements (prefix pkg-config, CMake, qmake) was: {}".format(end - start))
+    total_replacements = sum(map(lambda i: len(i['submatches']), all_matches))
+    print("INFO :: Time taken to mark (prefix) and mark+peform (pkg-config, CMake, qmake)\n"
+          "        {} replacements in {} files was {} seconds".format(
+        total_replacements, len(all_matches), end - start))
     '''
     # Keeping this around just for a while.
     files_with_prefix2 = sorted(have_prefix_files(files_in, prefix))
@@ -1419,6 +1411,11 @@ def bundle_conda(output, metadata, env, stats, **kw):
             if not interpreter_and_args[0]:
                 log.error("Did not find an interpreter to run {}, looked for {}".format(
                     output['script'], interpreter_and_args[0]))
+            if 'system32' in interpreter_and_args[0] and 'bash' in interpreter_and_args[0]:
+                print("ERROR :: WSL bash.exe detected, this will not work (PRs welcome!). Please\n"
+                      "         use MSYS2 packages. Add `m2-base` and more (depending on what your"
+                      "         script needs) to `requirements/build` instead.")
+                sys.exit(1)
         else:
             interpreter_and_args = interpreter.split(' ')
 
@@ -1428,6 +1425,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
         env_output['TOP_PKG_VERSION'] = env['PKG_VERSION']
         env_output['PKG_VERSION'] = metadata.version()
         env_output['PKG_NAME'] = metadata.get_value('package/name')
+        env_output['RECIPE_DIR'] = metadata.path
         env_output['MSYS2_PATH_TYPE'] = 'inherit'
         env_output['CHERE_INVOKING'] = '1'
         for var in utils.ensure_list(metadata.get_value('build/script_env')):
@@ -2065,6 +2063,8 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                     if not (m.is_output or
                             (os.path.isdir(m.config.host_prefix) and
                              len(os.listdir(m.config.host_prefix)) <= 1)):
+                        # This log message contradicts both the not (m.is_output or ..) check above
+                        # and also the comment "For more than one output, ..."
                         log.debug('Not creating new env for output - already exists from top-level')
                     else:
                         m.config._merge_build_host = m.build_is_host
@@ -2116,6 +2116,9 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                         if f.startswith('conda-meta'):
                             to_remove.add(f)
 
+                    # This is wrong, files has not been expanded at this time and could contain
+                    # wildcards.  Also well, I just do not understand this, because when this
+                    # does contain wildcards, the files in to_remove will slip back in.
                     if 'files' in output_d:
                         output_d['files'] = set(output_d['files']) - to_remove
 
@@ -2655,6 +2658,7 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
         from conda_build.utils import get_installed_packages
         installed = get_installed_packages(metadata.config.test_prefix)
         files = installed[metadata.meta['package']['name']]['files']
+        create_info_files(metadata, files, metadata.config.test_prefix)
         post_build(metadata, files, None, metadata.config.test_prefix, True)
 
     # when workdir is removed, the source files are unavailable.  There's the test/source_files
@@ -2692,7 +2696,7 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
             if os.path.exists(join(metadata.config.test_dir, 'TEST_FAILED')):
                 raise subprocess.CalledProcessError(-1, '')
             print("TEST END:", test_package_name)
-    except subprocess.CalledProcessError:
+    except subprocess.CalledProcessError as _:  # noqa
         tests_failed(metadata, move_broken=move_broken, broken_dir=metadata.config.broken_dir,
                         config=metadata.config)
         raise

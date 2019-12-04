@@ -5,6 +5,41 @@ Release notes
 This information is drawn from the GitHub conda-build project
 changelog: https://github.com/conda/conda-build/blob/master/CHANGELOG.txt
 
+3.18.11 (2019-11-01)
+--------------------
+
+Enhancements
+^^^^^^^^^^^^
+
+* Updated build.sh files of skeletons to be shellcheck clean, including test to
+  lint future updates. Also added ``set -o errexit -o pipefail`` to build.sh
+  files to make those settings transparent for better linting, while ``errexit`` was
+  already the default used the call the build script.
+* Corrected documentation on subpackage test requirements.
+* Do not move work dir to work/work/
+* Fixed a missing .lower() on two tar_xf related util functions
+* Fixed ``has_prefix detection`` for Windows.
+* ``conda_build.inspect_pkg``: optimise use of fnmatch
+* Do not consider .ignore files when searching with ripgrep
+* Remove N*N os.lstat calls in ``build_info_files_json_v1``
+
+Contributors
+^^^^^^^^^^^^
+
+* @msarahan
+* @rrigdon
+* @marcelotrevisani
+* @rrigdon
+* @soapy1
+* @dbast
+* @duncanmmacleod
+* @beckermr
+* @seanyen
+* @AndrewAnnex
+* @183amir
+* @njzjz
+
+
 3.18.10 (2019-10-14)
 --------------------
 
