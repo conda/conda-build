@@ -50,7 +50,7 @@ setup(
     description="tools for building conda packages",
     long_description=open('README.rst').read(),
     packages=['conda_build', 'conda_build.cli',
-              'conda_build.skeletons', 'conda_build.os_utils'],
+              'conda_build.skeletons', 'conda_build.os_utils', "conda_build.grayskull"],
     entry_points={
         'console_scripts': ['conda-build = conda_build.cli.main_build:main',
                             'conda-convert = conda_build.cli.main_convert:main',
@@ -60,6 +60,7 @@ setup(
                             'conda-metapackage = conda_build.cli.main_metapackage:main',
                             'conda-render = conda_build.cli.main_render:main',
                             'conda-skeleton = conda_build.cli.main_skeleton:main',
+                            "conda-grayskull = conda_build.cli.main_grayskull:main",
                             'conda-debug = conda_build.cli.main_debug:main',
                             ]},
     install_requires=deps,

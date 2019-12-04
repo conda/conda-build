@@ -19,4 +19,5 @@ sub_commands = [
     'metapackage',
     'render'
     'skeleton',
+    "grayskull",
 ]

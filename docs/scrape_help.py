@@ -237,6 +237,7 @@ def main():
         'skeleton cran',
         'skeleton luarocks',
         'skeleton pypi',
+        "grayskull pypi",
     ]
 
     commands = sys.argv[1:] or core_commands + build_commands
