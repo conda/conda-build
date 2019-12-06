@@ -9,7 +9,6 @@ Concepts
    generating-index
    recipe
    package-naming-conv
-   features
    
 What is a “package”?
 --------------------
