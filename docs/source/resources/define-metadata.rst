@@ -338,27 +338,17 @@ Python in macOS. The default is ``False``.
      osx_is_app: True
 
 
-Features
---------
-
-Defines what features a package has. For more information, see
-:ref:`features<concepts_features>`.
-
-.. code-block:: yaml
-
-   build:
-     features:
-       - feature1
-
-
 Track features
 --------------
 
-To enable a feature, install a package that tracks that feature.
-A package can have a feature, track that feature, or both, or
-neither. Usually it is best for the package that tracks a
-feature to be a metapackage that does not have the feature. For
-more information, see :ref:`features<concepts_features>`.
+Adding track_features to one or more
+of the options will cause conda to de-prioritize it or “weigh it down.”
+The lowest priority package is the one that would cause the most
+track_features to be activated in the environment. The default package
+among many variants is the one that would cause the least track_features
+to be activated.
+
+No two packages in a given subdir should ever have the same track_feature.
 
 .. code-block:: yaml
 
