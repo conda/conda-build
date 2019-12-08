@@ -1494,7 +1494,7 @@ def post_build(m, files, build_python, host_prefix=None, is_already_linked=False
             if binary_relocation is True or (isinstance(binary_relocation, list) and
                                              f in binary_relocation):
                 post_process_shared_lib(m, f, prefix_files, host_prefix)
-    check_overlinking(m, files, host_prefix)
+    # check_overlinking(m, files, host_prefix)
 
 
 def check_symlinks(files, prefix, croot):
