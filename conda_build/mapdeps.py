@@ -17,62 +17,24 @@ def load(fn):
     return rslt
 
 def get_sysreqs(deps, sysreqs):
-    rslt = []
     strs = []
+    v = deps.get("systemreq", [])
     for d in sysreqs:
-      try:
-        v = deps['systemreq']
         for i in v:
-           try:
-             name = i['dep'].lower()
-             if name in d.lower():
-               cran_name = 'SR_' + i['as']
-               if not cran_name in strs:
-                  strs.append(cran_name)
-           except:
-             pass
-      except:
-        pass
-
-    try:
-      v = deps['dependencies']
-      for i in v:
-        try:
-          fn = i['for_cran']
-          for fcn in fn:
-            if fcn in strs:
-              rslt.append(i)
-              break
-        except:
-          pass
-    except:
-      pass
-    return rslt
+             if i.get("dep", '').lower() in d.lower():
+               cran_name = i.get("as", '')
+               if cran_name and cran_name not in strs:
+                  strs.append('SR_' + cran_name)
+    return [i for i in deps.get("dependencies", [])
+            for fcn in i.get('for_cran', []) if fcn and fcn in strs]
 
 def get_for_cran(deps, crandep):
-    rslt = []
-    try:
-      v = deps['dependencies']
-      for i in v:
-        try:
-          fc = i['for_cran']
-          if crandep in fc:
-              rslt.append(i)
-              #ln = get_dep_name(i)
-              #print('{}'.format(ln))
-        except:
-          pass
-    except:
-      pass
-    return rslt
+    return [i for i in deps.get("dependencies", [])
+            if crandep and crandep in i.get("for_cran", [])]
 
 def get_dep_name(dep):
    name = dep['dep']
-   ver = ''
-   try:
-     ver = dep['version']
-   except:
-     pass
+   ver = dep.get("version", '')
    if ver != '':
      name += ' >=' + ver
    for_os = get_oslimit(dep)
@@ -81,27 +43,12 @@ def get_dep_name(dep):
    return name
 
 def get_oslimit(dep):
-   rslt = ''
-   try:
-     rslt = dep['oslimit']
-   except:
-     pass
-   return rslt
+   return dep.get("oslimit", '')
 
 def get_isskip(dep):
-  rslt = ''
-  try:
-    rslt = dep['skip']
-  except:
-    pass
-  return rslt
+  return dep.get("skip", '')
 
 def get_addto(dep):
-  rslt = []
-  try:
-    rslt = dep['addto']
-  except:
-    pass
-  return rslt 
+  return dep.get("addto", [])
 
 #end 
