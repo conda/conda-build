@@ -1325,18 +1325,10 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                # print('seek {} in for_cran'.format(name))
                i = conda_build.mapdeps.get_for_cran(glb_mapdeps, name)
                for it in i:
-                   addto = conda_build.mapdeps.get_addto(it)
-                   if dep_type in addto:
-                     dstr = '{indent}{name}'.format(name = conda_build.mapdeps.get_dep_name(it), indent=INDENT)
-                     if not dstr in deps:
-                        deps.append(dstr)
+                   add_for_cran_deps(it, dep_type, deps)
             # add system requirements
             for it in sysreqs:
-                 addto = conda_build.mapdeps.get_addto(it)
-                 if dep_type in addto:
-                   dstr = '{indent}{name}'.format(name = conda_build.mapdeps.get_dep_name(it), indent=INDENT)
-                   if not dstr in deps:
-                      deps.append(dstr)
+                 add_for_cran_deps(it, dep_type, deps)
             d['%s_depends' % dep_type] = ''.join(deps)
 
     for package in package_dicts:
@@ -1469,6 +1461,15 @@ def get_for_cran_skip(glbs, name, skips):
                 skips += ' or '
             skips += di
     return skips
+
+def add_for_cran_deps(item, dep_type, deps):
+   addto = conda_build.mapdeps.get_addto(item)
+   if dep_type not in addto:
+       return
+   dstr = '{indent}{name}'.format(name = conda_build.mapdeps.get_dep_name(item), indent=INDENT)
+   if dstr not in deps:
+       deps.append(dstr)
+   return
 
 def get_license_info(license_text, allowed_license_families):
     """
