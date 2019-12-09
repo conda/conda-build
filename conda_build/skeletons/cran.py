@@ -1193,22 +1193,9 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             d['skip_os'] = '# no skip'
         skips = ''
         # print("seek for {} in blg_mapdeps".format(package))
-        i = conda_build.mapdeps.get_for_cran(glb_mapdeps, package)
-        for it in i:
-            # print(it)
-            di = conda_build.mapdeps.get_isskip(it)
-            if di != '' and (not di in skips):
-                if skips != '':
-                    skips += ' or '
-                skips += di
+        skips = get_for_cran_skip(glb_mapdeps, package, '')
         for n in dep_dict:
-            i = conda_build.mapdeps.get_for_cran(glb_mapdeps, n)
-            for it in i:
-                di = conda_build.mapdeps.get_isskip(it)
-                if di != '' and (not di in skips):
-                    if skips != '':
-                        skips += ' or '
-                    skips +=  di
+            skips = get_for_cran_skip(glb_mapdeps, n, skips)
         if skips != '':
             skips.strip()
             if skips != '':
@@ -1473,6 +1460,15 @@ def up_to_date(cran_metadata, package):
 
     return True
 
+def get_for_cran_skip(glbs, name, skips):
+    i = conda_build.mapdeps.get_for_cran(glbs, name)
+    for it in i:
+        di = conda_build.mapdeps.get_isskip(it)
+        if di != '' and (di not in skips):
+            if skips != '':
+                skips += ' or '
+            skips += di
+    return skips
 
 def get_license_info(license_text, allowed_license_families):
     """
