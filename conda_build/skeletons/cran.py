@@ -19,7 +19,7 @@ import requests
 import tarfile
 import unicodedata
 import yaml
-import mapdeps
+import conda_build.mapdeps
 
 # try to import C dumper
 try:
@@ -767,9 +767,9 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         sys.exit(1)
     output_dir = realpath(output_dir)
     config = get_or_merge_config(config, variant_config_files=variant_config_files)
-    print(*map_deps)
-    for fn in map_deps:
-      print(mapdefs.mapdeps_load(fn))
+    glb_mapdeps = []
+    if map_deps != '':
+      glb_mapdeps = conda_build.mapdeps.load(map_deps)
 
     if not cran_url:
         with TemporaryDirectory() as t:
@@ -1146,8 +1146,12 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             '').split(',') if s.strip()]
         links = [s.strip() for s in cran_package.get("LinkingTo",
             '').split(',') if s.strip()]
-
+        sysreqs = [s.strip() for s in cran_package.get("SystemRequirements",
+            '').split(',;') if s.strip()]
         dep_dict = {}
+        sysreqs = conda_build.mapdeps.get_sysreqs(glb_mapdeps, sysreqs)
+        # print("sysreqs:")
+        # print(sysreqs)
 
         seen = set()
         for s in list(chain(imports, depends, links)):
@@ -1187,6 +1191,29 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             d["noarch_generic"] = ""
         if os_type == '':
             d['skip_os'] = '# no skip'
+        skips = ''
+        # print("seek for {} in blg_mapdeps".format(package))
+        i = conda_build.mapdeps.get_for_cran(glb_mapdeps, package)
+        for it in i:
+            # print(it)
+            di = conda_build.mapdeps.get_isskip(it)
+            if di != '' and (not di in skips):
+                if skips != '':
+                    skips += ' or '
+                skips += di
+        for n in dep_dict:
+            i = conda_build.mapdeps.get_for_cran(glb_mapdeps, n)
+            for it in i:
+                di = conda_build.mapdeps.get_isskip(it)
+                if di != '' and (not di in skips):
+                    if skips != '':
+                        skips += ' or '
+                    skips +=  di
+        if skips != '':
+            skips.strip()
+            if skips != '':
+               skips = '  # [' + skips + ']'
+            d['skip_os'] = 'skip: True' + skips
 
         need_git = is_github_url
         if cran_package.get("NeedsCompilation", 'no') == 'yes':
@@ -1307,6 +1334,22 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                                 package_dicts.update({lower_name: {'inputs': inputs_dict}})
                                 package_list.append(lower_name)
 
+            for name in dep_dict:
+               # print('seek {} in for_cran'.format(name))
+               i = conda_build.mapdeps.get_for_cran(glb_mapdeps, name)
+               for it in i:
+                   addto = conda_build.mapdeps.get_addto(it)
+                   if dep_type in addto:
+                     dstr = '{indent}{name}'.format(name = conda_build.mapdeps.get_dep_name(it), indent=INDENT)
+                     if not dstr in deps:
+                        deps.append(dstr)
+            # add sysrem requirements
+            for it in sysreqs:
+                 addto = conda_build.mapdeps.get_addto(it)
+                 if dep_type in addto:
+                   dstr = '{indent}{name}'.format(name = conda_build.mapdeps.get_dep_name(it), indent=INDENT)
+                   if not dstr in deps:
+                      deps.append(dstr)
             d['%s_depends' % dep_type] = ''.join(deps)
 
     for package in package_dicts:
