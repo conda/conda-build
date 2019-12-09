@@ -1343,7 +1343,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                      dstr = '{indent}{name}'.format(name = conda_build.mapdeps.get_dep_name(it), indent=INDENT)
                      if not dstr in deps:
                         deps.append(dstr)
-            # add sysrem requirements
+            # add system requirements
             for it in sysreqs:
                  addto = conda_build.mapdeps.get_addto(it)
                  if dep_type in addto:
