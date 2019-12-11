@@ -1178,17 +1178,18 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             dep_dict['R'] = ''
 
         os_type = cran_package.get("OS_type", '')
-        if os_type != 'unix' and os_type != 'windows' and os_type != '':
-            print("Unknown OS_type: {} in CRAN package".format(os_type))
-            os_type = ''
         if os_type == 'unix':
             d['skip_os'] = 'skip: True  # [not unix]'
             d["noarch_generic"] = ""
-        if os_type == 'windows':
+        elif os_type == 'windows':
             d['skip_os'] = 'skip: True  # [not win]'
             d["noarch_generic"] = ""
-        if os_type == '':
+        elif os_type == '':
             d['skip_os'] = '# no skip'
+        else:
+            log.warn("Unknown OS_type: {} in CRAN package".format(os_type))
+            d['skip_os'] = '# no skip'
+            os_type = ''
         skips = ''
         skips = get_for_cran_skip(glb_mapdeps, package, '')
         for n in dep_dict:
