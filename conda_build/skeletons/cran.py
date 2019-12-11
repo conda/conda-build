@@ -1150,8 +1150,6 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             '').split(',;') if s.strip()]
         dep_dict = {}
         sysreqs = conda_build.mapdeps.get_sysreqs(glb_mapdeps, sysreqs)
-        # print("sysreqs:")
-        # print(sysreqs)
 
         seen = set()
         for s in list(chain(imports, depends, links)):
@@ -1192,13 +1190,11 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         if os_type == '':
             d['skip_os'] = '# no skip'
         skips = ''
-        # print("seek for {} in blg_mapdeps".format(package))
         skips = get_for_cran_skip(glb_mapdeps, package, '')
         for n in dep_dict:
             skips = get_for_cran_skip(glb_mapdeps, n, skips)
         if skips != '':
-            skips.strip()
-            if skips != '':
+            if skips.strip() != '':
                skips = '  # [' + skips + ']'
             d['skip_os'] = 'skip: True' + skips
 
@@ -1322,7 +1318,6 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                                 package_list.append(lower_name)
 
             for name in dep_dict:
-               # print('seek {} in for_cran'.format(name))
                i = conda_build.mapdeps.get_for_cran(glb_mapdeps, name)
                for it in i:
                    add_for_cran_deps(it, dep_type, deps)
