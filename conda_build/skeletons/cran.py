@@ -1192,6 +1192,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             os_type = ''
         skips = ''
         skips = get_for_cran_skip(glb_mapdeps, package, '')
+        skips = get_sysreqs_skip(sysreqs, skips)
         for n in dep_dict:
             skips = get_for_cran_skip(glb_mapdeps, n, skips)
         if skips != '':
@@ -1457,6 +1458,16 @@ def get_for_cran_skip(glbs, name, skips):
                 skips += ' or '
             skips += di
     return skips
+
+def get_sysreqs_skip(sysreqs, skips):
+    for it in sysreqs:
+        di = conda_build.mapdeps.get_isskip(it)
+        if di != '' and (di not in skips):
+            if skips != '':
+                skips += ' or '
+            skips += di
+    return skips
+
 
 def add_for_cran_deps(item, dep_type, deps):
    addto = conda_build.mapdeps.get_addto(item)
