@@ -20,6 +20,9 @@ optional procedures describe how to build packages for other
 Python versions and other architectures, as well as how to upload
 packages to your Anaconda.org account.
 
+.. note::
+   You may consider using `Docker <https://www.docker.com/>`_ to run the tutorial.
+
 
 Who is this for?
 ================
