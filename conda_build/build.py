@@ -2607,6 +2607,7 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
         env = dict(os.environ.copy())
         env.update(environ.get_dict(m=metadata, prefix=config.test_prefix))
         env["CONDA_BUILD_STATE"] = "TEST"
+        env["CONDA_BUILD"] = "1"
         if env_path_backup_var_exists:
             env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
