@@ -914,7 +914,7 @@ def get_files_with_prefix(m, files_in, prefix):
     total_replacements = sum(map(lambda i: len(all_matches[i]['submatches']), all_matches))
     print("INFO :: Time taken to mark (prefix) and mark+peform ({})\n"
           "        {} replacements in {} files was {} seconds".format(
-        total_replacements, replacement_tags, len(all_matches), end - start))
+          replacement_tags, total_replacements, len(all_matches), end - start))
     '''
     # Keeping this around just for a while.
     files_with_prefix2 = sorted(have_prefix_files(files_in, prefix))
