@@ -411,7 +411,11 @@ def r_vars(metadata, prefix, escape_backslash):
 def meta_vars(meta, skip_build_id=False):
     d = {}
     for var_name in ensure_list(meta.get_value('build/script_env', [])):
-        value = os.getenv(var_name)
+        if '=' in var_name:
+            var_name = value.split('=')[0]
+            value = value.split('=')[-1]
+        else:
+            value = os.getenv(var_name)
         if value is None:
             warnings.warn(
                 "The environment variable '%s' is undefined." % var_name,
