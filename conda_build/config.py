@@ -62,6 +62,17 @@ SUBDIR_ALIASES = {
 Setting = namedtuple("ConfigSetting", "name, default")
 
 
+def cc_conda_build_get_host_dir(name, default=None):
+    result = cc_conda_build.get(name) if cc_conda_build.get(name) else default
+    if result:
+        # This is a consideration for people running WSL, sharing a condarc between systems.
+        if not sys.platform.startswith('win') and result[1] == ':' and 'A' <= result[0] <= 'z':
+                import subprocess
+                result = subprocess.check_output(['wslpath', '-u', result]).decode('utf-8').splitlines()[0]
+        result = abspath(expanduser(expandvars(result)))
+    return result
+
+
 def _get_default_settings():
     return [Setting('activate', True),
             Setting('anaconda_upload', binstar_upload),
@@ -94,8 +105,7 @@ def _get_default_settings():
             Setting('filename_hashing', cc_conda_build.get('filename_hashing',
                                                            'true').lower() == 'true'),
             Setting('keep_old_work', False),
-            Setting('_src_cache_root', abspath(expanduser(expandvars(
-                cc_conda_build.get('cache_dir')))) if cc_conda_build.get('cache_dir') else None),
+            Setting('_src_cache_root', cc_conda_build_get_host_dir('cache_dir')),
             Setting('copy_test_source_files', True),
 
             # should rendering cut out any skipped metadata?

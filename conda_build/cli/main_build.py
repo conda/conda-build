@@ -24,7 +24,7 @@ from conda_build.conda_interface import (add_parser_channels, binstar_upload,
 from conda_build.cli.main_render import get_render_parser
 import conda_build.source as source
 from conda_build.utils import LoggingContext
-from conda_build.config import Config, get_channel_urls
+from conda_build.config import Config, get_channel_urls, cc_conda_build_get_host_dir
 from os.path import abspath, expanduser, expandvars
 
 on_win = (sys.platform == 'win32')
@@ -321,7 +321,7 @@ different sets of packages."""
     p.add_argument(
         '--cache-dir',
         help=('Path to store the source files (archives, git clones, etc.) during the build.'),
-        default=(abspath(expanduser(expandvars(cc_conda_build.get('cache_dir'))))
+        default=(cc_conda_build_get_host_dir('cache_dir')
                  if cc_conda_build.get('cache_dir')
                  else cc_conda_build.get('cache_dir')),
     )
