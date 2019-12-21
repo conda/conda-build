@@ -354,6 +354,11 @@ def add_parser(repos):
         help="Declare R interpreter package",
     )
     cran.add_argument(
+        "--r-interp-build",
+        default=None,
+        help="Declare R interpreter package for the build step only. Defaults to the same as --r-interp",
+    )
+    cran.add_argument(
         "--use-binaries-ver",
         help=("Repackage binaries from version provided by argument instead of building "
               "from source."),
@@ -784,7 +789,7 @@ def get_available_binaries(cran_url, details):
 
 def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=None, version=None,
                 git_tag=None, cran_url=None, recursive=False, archive=True,
-                version_compare=False, update_policy='', r_interp='r-base', use_binaries_ver=None,
+                version_compare=False, update_policy='', r_interp='r-base', r_interp_build=None, use_binaries_ver=None,
                 use_noarch_generic=False, use_when_no_binary='src', use_rtools_win=False, config=None,
                 variant_config_files=None):
 
@@ -1322,7 +1327,8 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                         # that are in the recommended group.
                         # We don't include any R version restrictions because
                         # conda-build always pins r-base and mro-base version.
-                        deps.insert(0, '{indent}{r_name}'.format(indent=INDENT, r_name=r_interp))
+                        r_int = r_interp_build if dep_type == 'host' and r_interp_build else r_interp
+                        deps.insert(0, '{indent}{r_name}'.format(indent=INDENT, r_name=r_int))
                     else:
                         conda_name = 'r-' + name.lower()
 
