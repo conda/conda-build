@@ -49,6 +49,28 @@ BINARY_META = """\
 VERSION_META = """\
 {{% set version = '{cran_version}' %}}{sel}"""
 
+TEST_META_NO_UNIT = """\
+ commands:
+    # You can put additional test commands to be run here.
+    - $R -e "library('{cran_packagename}')"           # [not win]
+    - "\\"%R%\\" -e \\"library('{cran_packagename}')\\""  # [win]
+
+  # You can also put a file called run_test.py, run_test.sh, or run_test.bat
+  # in the recipe that will be run at test time.
+
+  # requires:
+    # Put any additional test requirements here.
+"""
+
+TEST_META_WITH_UNIT = """\
+  commands:
+    - cp -r tests $PREFIX/lib/R/library/{cran_packagename}/  # [not win]
+    - $R -e "tools::testInstalledPackage('{cran_packagename}')"  # [not win]
+    - "\\"%R%\\" -e \\"tools::testInstalledPackage('{cran_packagename}')\\""  # [win]
+  {test_source}
+  {test_depends}
+"""
+
 CRAN_META = """\
 {version_source}
 {version_binary1}
@@ -87,16 +109,7 @@ requirements:
   run:{run_depends}
 
 test:
-  commands:
-    # You can put additional test commands to be run here.
-    - $R -e "library('{cran_packagename}')"           # [not win]
-    - "\\"%R%\\" -e \\"library('{cran_packagename}')\\""  # [win]
-
-  # You can also put a file called run_test.py, run_test.sh, or run_test.bat
-  # in the recipe that will be run at test time.
-
-  # requires:
-    # Put any additional test requirements here.
+{test_section}
 
 about:
   {home_comment}home:{homeurl}
@@ -352,6 +365,11 @@ def add_parser(repos):
         "--r-interp",
         default='r-base',
         help="Declare R interpreter package",
+    )
+    cran.add_argument(
+        "--include-tests",
+        action='store_true',
+        help="Include unit testing in the recipe."
     )
     cran.add_argument(
         "--use-binaries-ver",
@@ -783,7 +801,7 @@ def get_available_binaries(cran_url, details):
 
 
 def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=None, version=None,
-                git_tag=None, cran_url=None, recursive=False, archive=True,
+                git_tag=None, cran_url=None, recursive=False, archive=True, include_tests=None,
                 version_compare=False, update_policy='', r_interp='r-base', use_binaries_ver=None,
                 use_noarch_generic=False, use_when_no_binary='src', use_rtools_win=False, config=None,
                 variant_config_files=None):
@@ -935,6 +953,8 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 'build_depends': '',
                 'host_depends': '',
                 'run_depends': '',
+                'test_depends': '',
+                'test_source': '',
                 # CRAN doesn't seem to have this metadata :(
                 'home_comment': '#',
                 'homeurl': '',
@@ -1183,31 +1203,36 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             '').split(',') if s.strip()]
         links = [s.strip() for s in cran_package.get("LinkingTo",
             '').split(',') if s.strip()]
+        testd = [s.strip() for s in cran_package.get("Suggests",
+            '').split(',') if s.strip()]
 
         dep_dict = {}
+        test_dict = {}
 
         seen = set()
-        for s in list(chain(imports, depends, links)):
-            match = VERSION_DEPENDENCY_REGEX.match(s)
-            if not match:
-                sys.exit("Could not parse version from dependency of %s: %s" %
-                    (package, s))
-            name = match.group('name')
-            if name in seen:
-                continue
-            seen.add(name)
-            archs = match.group('archs')
-            relop = match.group('relop') or ''
-            ver = match.group('version') or ''
-            ver = ver.replace('-', '_')
-            # If there is a relop there should be a version
-            assert not relop or ver
+        for slist in (imports, depends, links, testd):
+            for s in slist:
+                match = VERSION_DEPENDENCY_REGEX.match(s)
+                if not match:
+                    sys.exit("Could not parse version from dependency of %s: %s" %
+                        (package, s))
+                name = match.group('name')
+                if name in seen:
+                    continue
+                seen.add(name)
+                archs = match.group('archs')
+                relop = match.group('relop') or ''
+                ver = match.group('version') or ''
+                ver = ver.replace('-', '_')
+                # If there is a relop there should be a version
+                assert not relop or ver
 
-            if archs:
-                sys.exit("Don't know how to handle archs from dependency of "
-                "package %s: %s" % (package, s))
+                if archs:
+                    sys.exit("Don't know how to handle archs from dependency of "
+                    "package %s: %s" % (package, s))
 
-            dep_dict[name] = '{relop}{version}'.format(relop=relop, version=ver)
+                ddict = (test_dict if slist is testd else dep_dict)
+                ddict[name] = '{relop}{version}'.format(relop=relop, version=ver)
 
         if 'R' not in dep_dict:
             dep_dict['R'] = ''
@@ -1226,28 +1251,31 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             d['skip_os'] = '# no skip'
 
         need_git = is_github_url
-        if cran_package.get("NeedsCompilation", 'no') == 'yes':
-            with tarfile.open(available['source']['cached_path']) as tf:
-                need_f = any([f.name.lower().endswith(('.f', '.f90', '.f77', '.f95', '.f03')) for f in tf])
-                # Fortran builds use CC to perform the link (they do not call the linker directly).
-                need_c = True if need_f else \
-                    any([f.name.lower().endswith('.c') for f in tf])
-                need_cxx = any([f.name.lower().endswith(('.cxx', '.cpp', '.cc', '.c++'))
-                                         for f in tf])
-                need_autotools = any([f.name.lower().endswith('/configure') for f in tf])
-                need_make = True if any((need_autotools, need_f, need_cxx, need_c)) else \
-                    any([f.name.lower().endswith(('/makefile', '/makevars'))
-                        for f in tf])
-        else:
-            need_c = need_cxx = need_f = need_autotools = need_make = False
-
+        test_path = '{}/tests/'.format(package.lower())
+        has_tests = need_c = need_cxx = need_f = need_autotools = need_make = False
         if 'Rcpp' in dep_dict or 'RcppArmadillo' in dep_dict:
             need_cxx = True
+        with tarfile.open(available['source']['cached_path']) as tf:
+            for f in tf:
+                fname = f.name.lower()
+                if fname.endswith(('.f', '.f90', '.f77', '.f95', '.f03')):
+                    need_f = True
+                if fname.endswith('.c'):
+                    need_c = True
+                if fname.endswith(('.cxx', '.cpp', '.cc', 'c++')):
+                    need_cxx = True
+                if fname.endswith('/configure'):
+                    need_autotools = True
+                if fname.endswith(('/makefile', '/makevars')):
+                    need_make = True
+                if fname.startswith(test_path):
+                    has_tests = True
+        need_c = need_c or need_f or need_cxx
+        need_make = need_make or need_autotools or need_f or need_cxx or need_c
+        if has_tests:
+            d['test_source'] = 'source_files:{}tests'.format(INDENT)
 
-        if need_cxx:
-            need_c = True
-
-        for dep_type in ['build', 'host', 'run']:
+        for dep_type in ['build', 'host', 'run', 'test']:
 
             deps = []
             # Put non-R dependencies first.
@@ -1308,8 +1336,9 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     deps.append("{indent}{{{{native}}}}gcc-libs       {sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
 
-            if dep_type == 'host' or dep_type == 'run':
-                for name in sorted(dep_dict):
+            if dep_type in ('host', 'run', 'test'):
+                ddict = test_dict if dep_type == 'test' else dep_dict
+                for name in sorted(ddict):
                     if name in R_BASE_PACKAGE_NAMES:
                         continue
                     if name == 'R':
@@ -1326,7 +1355,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     else:
                         conda_name = 'r-' + name.lower()
 
-                        if dep_dict[name]:
+                        if ddict[name]:
                             deps.append('{indent}{name} {version}'.format(name=conda_name,
                                 version=dep_dict[name], indent=INDENT))
                         else:
@@ -1373,6 +1402,12 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         except:
             pass
         print("Writing recipe for %s" % package.lower())
+        if include_tests:
+            if d.get('test_depends'):
+                d['test_depends'] = 'requires:' + d['test_depends']
+            d['test_section'] = TEST_META_WITH_UNIT.format(**d)
+        else:
+            d['test_section'] = TEST_META_NO_UNIT.format(**d)
         with open(join(dir_path, 'meta.yaml'), 'w') as f:
             f.write(clear_whitespace(CRAN_META.format(**d)))
         if not exists(join(dir_path, 'build.sh')) or update_policy == 'overwrite':
