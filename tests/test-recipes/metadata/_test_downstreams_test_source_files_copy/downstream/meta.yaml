@@ -1,0 +1,21 @@
+package:
+  name: test_downstream_with_tests_source_files
+  version: 1.0
+
+test:
+  requires:
+    - pytest
+  source_files:
+    - test_files_folder
+    - tests/files
+  files:
+    recipe_file
+
+  commands:
+    - pytest -h
+    - test -e test_files_folder/text.txt   # [unix]
+    - test -e recipe_file     # [unix]
+    - test -e tests/files/text2.txt   # [unix]
+    - if not exist test_files_folder\text.txt exit 1  # [win]
+    - if not exist tests\files\text2.txt exit 1  # [win]
+    - if not exist recipe_file exit 1    # [win]
