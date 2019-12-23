@@ -62,11 +62,15 @@ TEST_META_NO_UNIT = """\
     # Put any additional test requirements here.
 """
 
-TEST_META_WITH_UNIT = """\
-  commands:
+
+TEST_META_FILES = """
     - cp -r tests $PREFIX/lib/R/library/{cran_packagename}/  # [not win]
+    - xcopy /E tests %PREFIX%\\lib\\R\\library\\{cran_packagename}\\tests\\  # [win]"""
+
+
+TEST_META_WITH_UNIT = """\
+  commands:{test_copy_files}
     - $R -e "tools::testInstalledPackage('{cran_packagename}')"  # [not win]
-    - xcopy /E tests %PREFIX%\\lib\\R\\library\\{cran_packagename}\\tests\\  # [win]
     - "\\"%R%\\" -e \\"tools::testInstalledPackage('{cran_packagename}')\\""  # [win]
   {test_source}
   {test_depends}
@@ -956,6 +960,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 'run_depends': '',
                 'test_depends': '',
                 'test_source': '',
+                'test_copy_files': '',
                 # CRAN doesn't seem to have this metadata :(
                 'home_comment': '#',
                 'homeurl': '',
@@ -1404,6 +1409,8 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             pass
         print("Writing recipe for %s" % package.lower())
         if include_tests:
+            if has_tests:
+                d['test_copy_files'] = TEST_META_FILES.format(**d)
             if d.get('test_depends'):
                 d['test_depends'] = 'requires:' + d['test_depends']
             d['test_section'] = TEST_META_WITH_UNIT.format(**d)
