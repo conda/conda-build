@@ -1363,7 +1363,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
 
                         if ddict[name]:
                             deps.append('{indent}{name} {version}'.format(name=conda_name,
-                                version=dep_dict[name], indent=INDENT))
+                                version=ddict[name], indent=INDENT))
                         else:
                             deps.append('{indent}{name}'.format(name=conda_name,
                                 indent=INDENT))
