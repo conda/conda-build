@@ -66,6 +66,7 @@ TEST_META_WITH_UNIT = """\
   commands:
     - cp -r tests $PREFIX/lib/R/library/{cran_packagename}/  # [not win]
     - $R -e "tools::testInstalledPackage('{cran_packagename}')"  # [not win]
+    - xcopy /E tests %PREFIX%\\lib\\R\\library\\{cran_packagename}\\tests\\  # [win]
     - "\\"%R%\\" -e \\"tools::testInstalledPackage('{cran_packagename}')\\""  # [win]
   {test_source}
   {test_depends}
