@@ -400,6 +400,12 @@ def add_parser(repos):
         help="Don't include an Archive download url.",
     )
     cran.add_argument(
+        '--allow-archived',
+        action='store_true',
+        dest='allow_archived',
+        help="If the package has been archived, download the latest version.",
+    )
+    cran.add_argument(
         "--version-compare",
         action='store_true',
         help="""Compare the package version of the recipe with the one available
@@ -628,11 +634,11 @@ def get_cran_archive_versions(cran_url, session, package, verbose=True):
             return []
         raise
     versions = []
-    for p in re.findall(r'<td><a href="([^"]+)">\1</a></td>', r.text):
+    for p, dt in re.findall(r'<td><a href="([^"]+)">\1</a></td>\s*<td[^>]*>([^<]*)</td>', r.text):
         if p.endswith('.tar.gz') and '_' in p:
             name, version = p.rsplit('.', 2)[0].split('_', 1)
-            versions.append(version)
-    return versions
+            versions.append((dt.strip(), version))
+    return [v for dt, v in sorted(versions, reverse=True)]
 
 
 def get_cran_index(cran_url, session, verbose=True):
@@ -786,7 +792,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 git_tag=None, cran_url=None, recursive=False, archive=True,
                 version_compare=False, update_policy='', r_interp='r-base', use_binaries_ver=None,
                 use_noarch_generic=False, use_when_no_binary='src', use_rtools_win=False, config=None,
-                variant_config_files=None):
+                variant_config_files=None, allow_archived=False):
 
     if use_when_no_binary != 'error' and \
        use_when_no_binary != 'src' and \
@@ -796,6 +802,10 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         sys.exit(1)
     output_dir = realpath(output_dir)
     config = get_or_merge_config(config, variant_config_files=variant_config_files)
+
+    if allow_archived and not archive:
+        print("ERROR: --no-archive and --allow-archived conflict")
+        sys.exit(1)
 
     if not cran_url:
         with TemporaryDirectory() as t:
@@ -902,21 +912,25 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             if pkg_name.lower() not in cran_index:
                 sys.exit("Package %s not found" % pkg_name)
             package, cran_version = cran_index[pkg_name.lower()]
-            if version and version != cran_version:
+            if cran_version and (not version or version == cran_version):
+                version = cran_version
+            elif version and not archive:
+                print('ERROR: Version %s of package %s is archived, but --no-archive was selected' % (version, package))
+                sys.exit(1)
+            elif not version and not cran_version and not allow_archived:
+                print("ERROR: Package %s is archived; to build, use --allow-archived or a --version value" % pkg_name)
+                sys.exit(1)
+            else:
                 is_archive = True
                 all_versions = get_cran_archive_versions(cran_url, session, package)
-                if version not in all_versions:
-                    versions = [cran_version] + sorted(all_versions, reverse=True)
+                if cran_version:
+                    all_versions = [cran_version] + all_versions
+                if not version:
+                    version = all_versions[0]
+                elif version not in all_versions:
                     msg = 'ERROR: Version %s of package %s not found.\n  Available versions: ' % (version, package)
-                    print(msg + ', '.join(versions))
+                    print(msg + ', '.join(all_versions))
                     sys.exit(1)
-                elif not archive:
-                    print('ERROR: Version %s of package %s is archived, but --no-archive was selected' % (version, package))
-                    sys.exit(1)
-            elif not cran_version:
-                sys.exit("Package %s is archived; to build, an explicit version must be specified" % pkg_name)
-            else:
-                version = cran_version
             cran_package = None
 
         if cran_package is not None:
