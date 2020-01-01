@@ -847,7 +847,7 @@ Specifies the build and runtime requirements. Dependencies of
 these requirements are included automatically.
 
 Versions for requirements must follow the conda match
-specification. See `Package match specifications <https://conda.io/projects/conda/en/latest/user-guide/concepts.html#package-match-specifications>`_.
+specification. See :ref:`build-version-spec`.
 
 
 
