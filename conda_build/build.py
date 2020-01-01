@@ -1273,9 +1273,12 @@ def build_info_files_json_v1(m, prefix, files, files_with_prefix):
         file_info = {
             "_path": short_path,
             "sha256": utils.sha256_checksum(path),
-            "size_in_bytes": os.path.getsize(path),
             "path_type": path_type(path),
         }
+        if file_info["path_type"] == PathType.hardlink:
+            file_info["size_in_bytes"] = os.stat(path).st_size
+        else:
+            file_info["size_in_bytes"] = os.lstat(path).st_size
         no_link = is_no_link(no_link_files, fi)
         if no_link:
             file_info["no_link"] = no_link
