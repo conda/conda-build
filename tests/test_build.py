@@ -184,7 +184,6 @@ def test_create_info_files_json_no_inodes(testing_workdir, testing_metadata):
         "paths_version": 1}
     with open(files_json_path, "r") as files_json:
         output = json.load(files_json)
-        print(output)
         assert output == expected_output
 
 
