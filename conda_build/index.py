@@ -14,7 +14,6 @@ import os
 from os.path import abspath, basename, getmtime, getsize, isdir, isfile, join, splitext, dirname
 import subprocess
 import sys
-from tempfile import gettempdir
 import time
 from uuid import uuid4
 
@@ -419,7 +418,9 @@ def _get_jinja2_environment():
 
 
 def _maybe_write(path, content, write_newline_end=False, content_is_binary=False):
-    temp_path = join(gettempdir(), str(uuid4()))
+    # Create the temp file next "path" so that we can use an atomic move, see
+    # https://github.com/conda/conda-build/issues/3833
+    temp_path = '%s.%s' % (path, uuid4())
 
     if not content_is_binary:
         content = ensure_binary(content)
