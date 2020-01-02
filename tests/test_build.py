@@ -99,6 +99,40 @@ def test_create_info_files_json(testing_workdir, testing_metadata):
     os.mkdir(info_dir)
     path_one = os.path.join(testing_workdir, "one")
     path_two = os.path.join(testing_workdir, "two")
+    path_foo = os.path.join(testing_workdir, "foo")
+    open(path_one, "a").close()
+    open(path_two, "a").close()
+    open(path_foo, "a").close()
+    files_with_prefix = [("prefix/path", "text", "foo")]
+    files = ["one", "two", "foo"]
+
+    build.create_info_files_json_v1(testing_metadata, info_dir, testing_workdir, files,
+                                    files_with_prefix)
+    files_json_path = os.path.join(info_dir, "paths.json")
+    expected_output = {
+        "paths": [{"file_mode": "text", "path_type": "hardlink", "_path": "foo",
+                   "prefix_placeholder": "prefix/path",
+                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                   "size_in_bytes": 0},
+                  {"path_type": "hardlink", "_path": "one",
+                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                   "size_in_bytes": 0},
+                  {"path_type": "hardlink", "_path": "two",
+                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                   "size_in_bytes": 0}],
+        "paths_version": 1}
+    with open(files_json_path, "r") as files_json:
+        output = json.load(files_json)
+        assert output == expected_output
+
+
+@pytest.mark.skipif(on_win and sys.version[:3] == "2.7",
+                    reason="os.symlink is not available so can't setup test")
+def test_create_info_files_json_symlinks(testing_workdir, testing_metadata):
+    info_dir = os.path.join(testing_workdir, "info")
+    os.mkdir(info_dir)
+    path_one = os.path.join(testing_workdir, "one")
+    path_two = os.path.join(testing_workdir, "two")
     path_three = os.path.join(testing_workdir, "three")  # do not make this one
     path_foo = os.path.join(testing_workdir, "foo")
     path_two_symlink = os.path.join(testing_workdir, "two_sl")
