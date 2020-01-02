@@ -5,7 +5,6 @@ and is more unit-test oriented.
 
 import json
 import os
-import subprocess
 import sys
 
 import pytest
@@ -13,7 +12,7 @@ import pytest
 from conda_build import build, api
 from conda_build.utils import on_win
 
-from .utils import metadata_dir, put_bad_conda_on_path, get_noarch_python_meta
+from .utils import metadata_dir, get_noarch_python_meta
 
 prefix_tests = {"normal": os.path.sep}
 if sys.platform == "win32":
@@ -100,12 +99,17 @@ def test_create_info_files_json(testing_workdir, testing_metadata):
     os.mkdir(info_dir)
     path_one = os.path.join(testing_workdir, "one")
     path_two = os.path.join(testing_workdir, "two")
+    path_three = os.path.join(testing_workdir, "three")  # do not make this one
     path_foo = os.path.join(testing_workdir, "foo")
+    path_two_symlink = os.path.join(testing_workdir, "two_sl")
+    symlink_to_nowhere = os.path.join(testing_workdir, "nowhere_sl")
     open(path_one, "a").close()
     open(path_two, "a").close()
     open(path_foo, "a").close()
+    os.symlink(path_two, path_two_symlink)
+    os.symlink(path_three, symlink_to_nowhere)
     files_with_prefix = [("prefix/path", "text", "foo")]
-    files = ["one", "two", "foo"]
+    files = ["one", "two", "foo", "two_sl", "nowhere_sl"]
 
     build.create_info_files_json_v1(testing_metadata, info_dir, testing_workdir, files,
                                     files_with_prefix)
@@ -115,10 +119,16 @@ def test_create_info_files_json(testing_workdir, testing_metadata):
                    "prefix_placeholder": "prefix/path",
                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                    "size_in_bytes": 0},
+                  {"path_type": "softlink", "_path": "nowhere_sl",
+                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                   "size_in_bytes": 0},
                   {"path_type": "hardlink", "_path": "one",
                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                    "size_in_bytes": 0},
                   {"path_type": "hardlink", "_path": "two",
+                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                   "size_in_bytes": 0},
+                  {"path_type": "softlink", "_path": "two_sl",
                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                    "size_in_bytes": 0}],
         "paths_version": 1}
@@ -134,14 +144,19 @@ def test_create_info_files_json_no_inodes(testing_workdir, testing_metadata):
     os.mkdir(info_dir)
     path_one = os.path.join(testing_workdir, "one")
     path_two = os.path.join(testing_workdir, "two")
+    path_three = os.path.join(testing_workdir, "three")  # do not make this one
     path_foo = os.path.join(testing_workdir, "foo")
     path_one_hardlink = os.path.join(testing_workdir, "one_hl")
+    path_two_symlink = os.path.join(testing_workdir, "two_sl")
+    symlink_to_nowhere = os.path.join(testing_workdir, "nowhere_sl")
     open(path_one, "a").close()
     open(path_two, "a").close()
     open(path_foo, "a").close()
     os.link(path_one, path_one_hardlink)
+    os.symlink(path_two, path_two_symlink)
+    os.symlink(path_three, symlink_to_nowhere)
     files_with_prefix = [("prefix/path", "text", "foo")]
-    files = ["one", "two", "one_hl", "foo"]
+    files = ["one", "two", "two_sl", "one_hl", "foo", "nowhere_sl"]
 
     build.create_info_files_json_v1(testing_metadata, info_dir, testing_workdir, files,
                                     files_with_prefix)
@@ -149,6 +164,9 @@ def test_create_info_files_json_no_inodes(testing_workdir, testing_metadata):
     expected_output = {
         "paths": [{"file_mode": "text", "path_type": "hardlink", "_path": "foo",
                    "prefix_placeholder": "prefix/path",
+                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                   "size_in_bytes": 0},
+                  {"path_type": "softlink", "_path": "nowhere_sl",
                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                    "size_in_bytes": 0},
                   {"path_type": "hardlink", "_path": "one", "inode_paths": ["one", "one_hl"],
@@ -159,10 +177,14 @@ def test_create_info_files_json_no_inodes(testing_workdir, testing_metadata):
                    "size_in_bytes": 0},
                   {"path_type": "hardlink", "_path": "two",
                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                   "size_in_bytes": 0},
+                  {"path_type": "softlink", "_path": "two_sl",
+                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                    "size_in_bytes": 0}],
         "paths_version": 1}
     with open(files_json_path, "r") as files_json:
         output = json.load(files_json)
+        print(output)
         assert output == expected_output
 
 

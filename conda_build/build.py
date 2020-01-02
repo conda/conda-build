@@ -1277,8 +1277,12 @@ def build_info_files_json_v1(m, prefix, files, files_with_prefix):
         }
         if file_info["path_type"] == PathType.hardlink:
             file_info["size_in_bytes"] = os.stat(path).st_size
+        elif not isfile(path):
+            # this is a softlink that points to nowhere, so is zero bytes
+            file_info["size_in_bytes"] = 0
         else:
-            file_info["size_in_bytes"] = os.lstat(path).st_size
+            # softlink that points somewhere
+            file_info["size_in_bytes"] = os.stat(path).st_size
         no_link = is_no_link(no_link_files, fi)
         if no_link:
             file_info["no_link"] = no_link
