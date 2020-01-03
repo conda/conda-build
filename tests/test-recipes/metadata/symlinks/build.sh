@@ -8,3 +8,6 @@ ln -s $PREFIX/test/weee $PREFIX/bin/weee
 
 # link to folder itself
 ln -s $PREFIX/test $PREFIX/test_link
+
+# a symlink pointing to nothing
+ln -s $PREFIX/does_not_exist $PREFIX/symlink_to_nowhere
