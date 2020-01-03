@@ -657,7 +657,7 @@ def get_cran_index(cran_url, session, verbose=True):
             records[package.lower()] = (package, line.rstrip().split(' ', 1)[1])
             package = None
     r = session.get(cran_url + "/src/contrib/Archive/")
-    if r.status_code == 403:
+    if r.status_code in (403, 404):
         if verbose:
             print("Cannot fetch an archive index from %s" % cran_url)
         return records
