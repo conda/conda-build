@@ -1261,7 +1261,8 @@ def path_type(path):
 
 
 def build_info_files_json_v1(m, prefix, files, files_with_prefix):
-    no_link_files = m.get_value('build/no_link')
+    log = utils.get_logger(__name__)
+
     files_json = []
     files_inodes = get_inodes(files, prefix)
     for fi in sorted(files):
@@ -1280,6 +1281,7 @@ def build_info_files_json_v1(m, prefix, files, files_with_prefix):
         elif not isfile(path):
             # this is a softlink that points to nowhere, so is zero bytes
             file_info["size_in_bytes"] = 0
+            log.warn('file %s is a symlink with no target', path)
         else:
             # softlink that points somewhere
             file_info["size_in_bytes"] = os.stat(path).st_size
