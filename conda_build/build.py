@@ -8,6 +8,7 @@ import fnmatch
 import io
 import json
 import os
+import warnings
 from os.path import isdir, isfile, islink, join, dirname
 import random
 import re
@@ -1280,6 +1281,7 @@ def build_info_files_json_v1(m, prefix, files, files_with_prefix):
         elif not isfile(path):
             # this is a softlink that points to nowhere, so is zero bytes
             file_info["size_in_bytes"] = 0
+            warnings.warn('file %s is a symlink with no target' % path, UserWarning)
         else:
             # softlink that points somewhere
             file_info["size_in_bytes"] = os.stat(path).st_size
