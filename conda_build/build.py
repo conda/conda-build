@@ -1263,6 +1263,7 @@ def path_type(path):
 def build_info_files_json_v1(m, prefix, files, files_with_prefix):
     log = utils.get_logger(__name__)
 
+    no_link_files = m.get_value('build/no_link')
     files_json = []
     files_inodes = get_inodes(files, prefix)
     for fi in sorted(files):
