@@ -912,9 +912,10 @@ def get_files_with_prefix(m, files_in, prefix):
     perform_replacements(all_matches, prefix)
     end = time.time()
     total_replacements = sum(map(lambda i: len(all_matches[i]['submatches']), all_matches))
-    print("INFO :: Time taken to mark (prefix) and mark+peform ({})\n"
+    print("INFO :: Time taken to mark (prefix){}\n"
           "        {} replacements in {} files was {} seconds".format(
-          replacement_tags, total_replacements, len(all_matches), end - start))
+          " and mark+peform ({})".format(replacement_tags) if replacement_tags else '',
+        total_replacements, len(all_matches), end - start))
     '''
     # Keeping this around just for a while.
     files_with_prefix2 = sorted(have_prefix_files(files_in, prefix))
@@ -2424,7 +2425,8 @@ def _write_test_run_script(metadata, test_run_script, test_env_script, py_files,
             # use pythonw for import tests when osx_is_app is set
             if metadata.get_value('build/osx_is_app') and sys.platform == 'darwin':
                 test_python = test_python + 'w'
-            tf.write('"{python}" -s "{test_file}"\n'.format(
+            tf.write('"{python}" {debug} -s "{test_file}"\n'.format(
+                debug = '-v' if metadata.config.debug else '',
                 python=test_python,
                 test_file=join(metadata.config.test_dir, 'run_test.py')))
             if utils.on_win:

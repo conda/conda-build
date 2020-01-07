@@ -250,8 +250,9 @@ def _combine_spec_dictionaries(specs, extend_keys=None, filter_keys=None, zip_ke
 
                                     raise ValueError("variant config in {} is ambiguous because it "
                                         "does not fully implement all zipped keys, or specifies "
-                                        "a subspace that is not fully implemented.".format(
-                                            spec_source))
+                                        "a subspace that is not fully implemented:\n{}.".format(
+                                            spec_source, list(subvalue not in values[k]
+                                                    for subvalue in ensure_list(v))))
 
     return values
 
