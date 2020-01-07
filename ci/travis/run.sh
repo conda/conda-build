@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # flake8 and bdist_conda test together
 set -ev
 if [[ "$FLAKE8" == "true" ]]; then
@@ -28,7 +29,6 @@ else
       conda create -n blarg1 -yq python=2.7
       conda create -n blarg3 -yq python=3.6
       conda create -n blarg4 -yq python nomkl numpy pandas svn
-
       SLOW_MARK="and not slow"
       if [[ $SLOW_TESTS == "true" ]]; then
           SLOW_MARK="and slow"

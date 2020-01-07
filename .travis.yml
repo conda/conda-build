@@ -8,6 +8,18 @@ matrix:
         - CONDA_VERSION=release
       dist: xenial
     - python: 3.7
+      arch: arm64
+      env:
+        - FLAKE8=true
+        - CONDA_VERSION=release
+      dist: xenial
+    - python: 3.7
+      env:
+        - DOCS=true
+        - CONDA_VERSION=release
+      dist: xenial
+    - python: 3.7
+      arch: arm64
       env:
         - DOCS=true
         - CONDA_VERSION=release
@@ -22,7 +34,12 @@ addons:
 install:
   # show which shell we are running
   - ps -ef | grep $$
-  - wget http://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+  - if [ `uname -m` == 'aarch64' ]; then
+      wget -q "https://github.com/conda-forge/miniforge/releases/download/4.8.2-1/Miniforge3-4.8.2-1-Linux-aarch64.sh" -O miniconda.sh;
+      chmod +x miniconda.sh;
+    else
+      wget http://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+    fi
   - bash miniconda.sh -b -p /opt/conda
   - source /opt/conda/bin/activate
   - conda update -y conda;
@@ -34,7 +51,7 @@ install:
   - conda install -q anaconda-client requests filelock contextlib2 jinja2 patchelf ripgrep pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz tqdm conda-package-handling py-lief python-libarchive-c
   - pip install pkginfo
   - if [[ "$FLAKE8" == "true" ]]; then
-      conda install -q flake8;
+      conda install -q flake8==3.7.9; 
     else
       pip install -r requirements-docs.txt;
     fi
