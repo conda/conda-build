@@ -977,9 +977,18 @@ def get_stdlib_dir(prefix, py_ver):
         lib_dir = os.path.join(prefix, 'Lib')
     else:
         lib_dir = os.path.join(prefix, 'lib')
-        python_folder = glob(os.path.join(lib_dir, 'python?.*'))
-        if python_folder:
-            lib_dir = os.path.join(lib_dir, python_folder[0])
+        python_folders = glob(os.path.join(lib_dir, 'python?.*'))
+        if python_folders:
+            if len(python_folders) > 1:
+                log = get_logger(__name__)
+                log.warn("Found multiple stdlib directories: {}"
+                         .format(python_folders))
+            for python_folder in python_folders:
+                if py_ver in python_folder:
+                    lib_dir = os.path.join(lib_dir, python_folder)
+                    break
+            else:
+                lib_dir = os.path.join(lib_dir, python_folders[0])
         else:
             lib_dir = os.path.join(lib_dir, 'python{}'.format(py_ver))
     return lib_dir

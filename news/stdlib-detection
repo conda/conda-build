@@ -1,0 +1,4 @@
+Bug fixes:
+----------
+
+* Try to ensure the correct Python stdlib directory is detected (#3822)
