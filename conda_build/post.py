@@ -776,6 +776,9 @@ def _resolve_needed_dsos(libs_info, ld_library_path, path_groups, verbose):
                 parent_rpaths = res[key]['ld_library_path']
                 for path in parent_rpaths + default_paths:
                     fullpath = join(path, lib)
+                    # if 'MSVCP140.dll' in fullpath:
+                    if 'KERNEL32.dll' in fullpath:
+                        print('debug')
                     if os.path.exists(fullpath):
                         while os.path.islink(fullpath):
                             fullpath = os.path.realpath(fullpath)
@@ -1250,7 +1253,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
     exedirname_sub = '$EXEDIRNAME'
 
     # We distinguish between files from this package and files from dependencies.
-    files_prefix = utils.prefix_files(prefix=run_prefix)
+    files_prefix = sorted(utils.prefix_files(prefix=run_prefix))
     files_prefix = [f for f in files_prefix if (not f.startswith('conda-meta' + os.sep) and
                                                 not f.startswith('top_level.txt'))]
     path_groups = {"run_prefix": {"prefix": run_prefix, "files": files},
@@ -1340,7 +1343,10 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
 
     prefix_owners = {}
     for k, v in file_info.items():
-        prefix_owners[k] = v['package']
+        if 'package' in v:
+            prefix_owners[k] = v['package']
+        else:
+            print("file {} has no package".format(k))
 
     # Should the whitelist be expanded before the 'not in prefix_owners' check?
     # i.e. Do we want to be able to use the whitelist to allow missing files in general? If so move this up to
@@ -1386,7 +1392,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
 
     # Make a record of some sort to store with this package so we do not recalculate it all the time:
     for f, fi in file_info.items():
-        if prefix_owners[f] == pkg_vendored_dist:
+        if f in prefix_owners and prefix_owners[f] == pkg_vendored_dist:
             print(fi)
 
     return dict()
@@ -1494,7 +1500,7 @@ def post_build(m, files, build_python, host_prefix=None, is_already_linked=False
             if binary_relocation is True or (isinstance(binary_relocation, list) and
                                              f in binary_relocation):
                 post_process_shared_lib(m, f, prefix_files, host_prefix)
-    # check_overlinking(m, files, host_prefix)
+    check_overlinking(m, files, host_prefix)
 
 
 def check_symlinks(files, prefix, croot):
