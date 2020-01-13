@@ -427,7 +427,7 @@ def cdt(package_name, config, permit_undefined_jinja=False):
 
     cdt_name = 'cos6'
     arch = config.host_arch or config.arch
-    if arch == 'ppc64le' or arch == 'aarch64':
+    if arch == 'ppc64le' or arch == 'aarch64' or arch == 'ppc64':
         cdt_name = 'cos7'
         cdt_arch = arch
     else:
