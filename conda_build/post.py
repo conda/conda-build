@@ -1147,7 +1147,7 @@ def fullpath_for_prefix_and_files(prefix_and_files, file):
 def liefify(path_groups, pickle_cache):
     from concurrent.futures import ThreadPoolExecutor
 
-    program_files = []
+    program_files = {}
 
     for prefix_type, prefix_and_files in path_groups.items():
         for f in prefix_and_files['files']:
@@ -1156,8 +1156,11 @@ def liefify(path_groups, pickle_cache):
                 continue
             if not codefile_type(fullpath):
                 continue
-            program_files.append(fullpath)
-
+            if 'sysroot_base' in prefix_and_files and not prefix_and_files['sysroot_base']:
+                do_not_recurse_into = True
+            else:
+                do_not_recurse_into = False
+            program_files[fullpath] = {'do_not_recurse_into': do_not_recurse_into}
     def lief_parse_this(filename, pickle_cache):
         return lief_parse(filename, pickle_cache)
 
@@ -1174,7 +1177,7 @@ def liefify(path_groups, pickle_cache):
     start = time.time()
     if serial:
         file_info_serial = dict()
-        for f in program_files:
+        for f, props in program_files.items():
             file_info_serial[f] = lief_parse_this(f, pickle_cache)
     ends = time.time()
 
@@ -1283,7 +1286,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number,
     srf = set()
     for sysroot_prefix, sysroot_base in zip(sysroots, sysroot_bases):
         sysroot_files = sysroot_path_list(target_subdir, sysroot_prefix, sysroot_base)
-        srf = srf.union(set([os.path.join(sysroot_files['prefix'], f) for f in sysroot_files['files']]))
+        srf = srf.union(set([os.path.join(sysroot_prefix.replace('/', os.sep), f) for f in sysroot_files['files']]))
         path_groups['sysroot'] = sysroot_files
     # TODO :: Put everything in build_prefix that isn't in sysroot into 'build_prefix'
     ld_library_path = list(_get_path_dirs(run_prefix, target_subdir))
