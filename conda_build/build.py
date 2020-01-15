@@ -970,16 +970,16 @@ def record_prefix_files(m, files_with_prefix):
 
         print("Files containing CONDA_PREFIX")
         print("-----------------------------")
+        detect_binary_files_with_prefix = m.get_value('build/detect_binary_files_with_prefix', False)
         with open(join(m.config.info_dir, 'has_prefix'), 'w') as fo:
             for pfix, mode, fn in files_with_prefix:
-                # print('{} :: {} :: {}'.format(pfix, mode, fn))
                 ignored_because = None
                 if (fn in binary_has_prefix_files or (not len_binary_has_prefix_files or
-                   m.get_value('build/detect_binary_files_with_prefix', False) and mode == 'binary')):
+                   detect_binary_files_with_prefix and mode == 'binary')):
                     if fn in binary_has_prefix_files:
                         if mode != 'binary':
                             mode = 'binary'
-                        elif fn in binary_has_prefix_files:
+                        elif fn in binary_has_prefix_files and detect_binary_files_with_prefix:
                             print("File {} force-identified as 'binary', "
                                   "But it is 'binary' anyway, suggest removing it from "
                                   "`build/binary_has_prefix_files`".format(fn))
