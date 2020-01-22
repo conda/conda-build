@@ -11,10 +11,10 @@ Environment variables
 .. _build-state:
 
 Dynamic behavior based on state of build process
-=================================================
+================================================
 
 There are times when you may want to process a single file in
-different ways at more than one step in the render-build-test
+different ways at more than 1 step in the render-build-test
 flow of conda-build. Conda-build sets the CONDA_BUILD_STATE
 environment variable during each of these phases. The possible
 values are:
@@ -33,7 +33,7 @@ of these locations.
 
 
 Environment variables set during the build process
-===================================================
+==================================================
 
 During the build process, the following environment variables
 are set, on Windows with ``bld.bat`` and on macOS and Linux with
@@ -200,7 +200,7 @@ defined only on Linux.
 .. _git-env:
 
 Git environment variables
-==========================
+=========================
 
 The environment variables listed in the following table are
 defined when the source is a git repository, specifying the
@@ -231,7 +231,7 @@ state of the git repository.
 .. _mercurial-env-vars:
 
 Mercurial environment variables
-=================================
+===============================
 
 The environment variables listed in the following table are
 defined when the source is a mercurial repository.
@@ -259,7 +259,7 @@ defined when the source is a mercurial repository.
 .. _inherited-env-vars:
 
 Inherited environment variables
-==================================
+===============================
 
 Other than those mentioned above, no variables are inherited from
 the environment in which you invoke conda-build. You can choose
@@ -278,30 +278,32 @@ If an inherited variable is missing from your shell environment,
 it remains unassigned, but a warning is issued noting that it has
 no value assigned.
 
-NOTE: Inheriting environment variables can make it difficult for
-others to reproduce binaries from source with your recipe. Use
-this feature with caution or avoid it.
+.. warning::
+   Inheriting environment variables can make it difficult for
+   others to reproduce binaries from source with your recipe. Use
+   this feature with caution or avoid it.
 
-NOTE: If you split your build and test phases with ``--no-test`` and ``--test``,
-you need to ensure that the environment variables present at build time and test
-time match. If you do not, the package hashes may use different values, and your
-package may not be testable, because the hashes will differ.
+.. note::
+   If you split your build and test phases with ``--no-test`` and ``--test``,
+   you need to ensure that the environment variables present at build time and test
+   time match. If you do not, the package hashes may use different values and your
+   package may not be testable because the hashes will differ.
 
 
 .. _build-envs:
 
 Environment variables that affect the build process
-=====================================================
+===================================================
 
 .. list-table::
    :widths: 20 80
 
    * - CONDA_PY
      - The Python version used to build the package. Should
-       be ``27``, ``34``, ``35``, ``36`` or ``37``.
+       be ``27``, ``34``, ``35``, ``36``, or ``37``.
    * - CONDA_NPY
      - The NumPy version used to build the package, such as
-       ``19``, ``110`` or ``111``.
+       ``19``, ``110``, or ``111``.
    * - CONDA_PREFIX
      - The path to the conda environment used to build the
        package, such as ``/path/to/conda/env``. Useful to pass as
@@ -312,11 +314,10 @@ Environment variables that affect the build process
 .. _build-features:
 
 Environment variables to set build features
-============================================
+===========================================
 
 The environment variables listed in the following table are
-inherited from the process running conda-build. These variables
-control :ref:`features<concepts_features>`.
+inherited from the process running conda-build. 
 
 .. list-table::
    :widths: 15 43 42
@@ -335,7 +336,7 @@ control :ref:`features<concepts_features>`.
 .. _test-envs:
 
 Environment variables that affect the test process
-====================================================
+==================================================
 
 All of the above environment variables are also set during the
 test process, using the test prefix instead of the build
