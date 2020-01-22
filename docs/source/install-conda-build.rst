@@ -34,5 +34,5 @@ To update conda and conda-build, in your terminal window or an Anaconda Prompt, 
   conda update conda
   conda update conda-build
 
-For release notes, see the `conda-build Github
+For release notes, see the `conda-build GitHub
 page <https://github.com/conda/conda-build/releases>`_.
