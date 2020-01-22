@@ -3,7 +3,7 @@ Tutorials
 *********
 
 Before starting the tutorials, review the
-:doc:`getting started <../getting-started>` guide.
+:doc:`Getting started <../getting-started>` guide.
 
 .. toctree::
    :maxdepth: 1
