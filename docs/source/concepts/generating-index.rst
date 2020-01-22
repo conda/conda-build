@@ -29,19 +29,18 @@ Channel layout
 Parts of a channel
 ------------------
 
-* Channeldata.json contains metadata about the channel including
+* Channeldata.json contains metadata about the channel, including:
 
-  * what subdirs the channel contains
-
-  * what packages exist in the channel and what subdirs they are in
+    - What subdirs the channel contains.
+    - What packages exist in the channel and what subdirs they are in.
 
 * Subdirs are associated with platforms. For example, the linux-64 subdir contains
-  packages for linux 64 systems
+  packages for linux-64 systems.
 
 * Repodata.json contains an index of the packages in a subdir. Each subdir will
-  have it's own repodata
+  have it's own repodata.
 
-* Packages as tarballs under corresponding subdirs
+* Channels have packages as tarballs under corresponding subdirs.
 
 channeldata.json
 ----------------
@@ -103,50 +102,50 @@ repodata.json
 How an index is generated
 -------------------------
 
-* For each subdir
+For each subdir:
 
-  * Look at all the packages that exist in the subdir
+* Look at all the packages that exist in the subdir.
 
-  * Generate a list of packages to add/update/remove
+* Generate a list of packages to add/update/remove.
 
-  * Remove all packages that need to be removed
+* Remove all packages that need to be removed.
 
-  * For all packages that need to be added/updated
+For all packages that need to be added/updated:
 
-    * Extract the package to access metadata including full package name,
-      mtime, size, index.json
+  * Extract the package to access metadata including full package name,
+    mtime, size, and index.json.
 
-    * Add package to repodata
+  * Add package to repodata.
 
-EXAMPLE: Building a channel
+Example: Building a channel
 ---------------------------
 
-* Lets try to build a local channel and put a package in it
+To build a local channel and put a package in it, follow the directions below.
 
-* Make the channel structure
+#. Make the channel structure.
 
-.. code-block:: bash
+    .. code-block:: bash
 
-  $ mkdir local-channel
-  $ cd local-channel
-  $ mkdir linux-64 osx-64
+      $ mkdir local-channel
+      $ cd local-channel
+      $ mkdir linux-64 osx-64
 
-* Put your favorite package in the channel
+#. Put your favorite package in the channel.
 
-.. code-block:: bash
+    .. code-block:: bash
 
-  $ wget https://anaconda.org/anaconda/scipy/1.1.0/download/linux-64/scipy-1.1.0-py37hfa4b5c9_1.tar.bz2 -P linux-64
-  $ wget https://anaconda.org/anaconda/scipy/1.1.0/download/osx-64/scipy-1.1.0-py37hf5b7bf4_0.tar.bz2 -P osx-64
+      $ wget https://anaconda.org/anaconda/scipy/1.1.0/download/linux-64/scipy-1.1.0-py37hfa4b5c9_1.tar.bz2 -P linux-64
+      $ wget https://anaconda.org/anaconda/scipy/1.1.0/download/osx-64/scipy-1.1.0-py37hf5b7bf4_0.tar.bz2 -P osx-64
 
-* Run a conda index. This will generate both channeldata.json for the channel and
-  repodata.json for the linux-64 and osx-64 subdirs, along with some other files
+#. Run a conda index. This will generate both channeldata.json for the channel and
+   repodata.json for the linux-64 and osx-64 subdirs, along with some other files.
 
-.. code-block:: bash
+    .. code-block:: bash
 
-  $ conda index .
+      $ conda index .
 
-* Check your work by searching the channel
+#. Check your work by searching the channel.
 
-.. code-block:: bash
+    .. code-block:: bash
 
-  $ conda search -c file:/<path to>/local-channel scipy | grep local-channel
+      $ conda search -c file:/<path to>/local-channel scipy | grep local-channel
