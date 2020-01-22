@@ -7,16 +7,17 @@ Building a package without a recipe (bdist_conda)
    :depth: 2
 
 
-You can use conda build to build packages for Python to install
-rather than conda, by using ``setup.py bdist_conda``. This is a
+You can use conda-build to build packages for Python to install
+rather than conda by using ``setup.py bdist_conda``. This is a
 quick way to build packages without using a recipe, but it has
 limitations. The script is limited to the Python version used in
-the build, and it is not as reproducible as using a recipe. We
-recommend using a recipe with conda build.
+the build and it is not as reproducible as using a recipe. We
+recommend using a recipe with conda-build.
 
-NOTE: If you use Setuptools, you must first import Setuptools and
-then import ``distutils.command.bdist_conda``, because Setuptools
-monkeypatches ``distutils.dist.Distribution``.
+.. note::
+   If you use Setuptools, you must first import Setuptools and
+   then import ``distutils.command.bdist_conda``, because Setuptools
+   monkey patches ``distutils.dist.Distribution``.
 
 EXAMPLE: A minimal ``setup.py`` file using the setup options
 ``name`` and ``version``:
@@ -42,7 +43,7 @@ You can pass the following options to ``setup()``. You must
 include ``distclass=distutils.command.bdist_conda.CondaDistribution)``.
 
 Build number
---------------
+------------
 
 The number of the build. Can be overridden on the command line
 with the ``--buildnum`` flag. Defaults to ``0``.
@@ -53,7 +54,7 @@ with the ``--buildnum`` flag. Defaults to ``0``.
 
 
 Build string
--------------
+------------
 
 The build string. Default is generated automatically from the
 Python version, NumPy version---if relevant---and the build
@@ -65,7 +66,7 @@ number, such as ``py34_0``.
 
 
 Import tests
--------------
+------------
 
 Whether to automatically run import tests. The default is
 ``True``, which runs import tests for all the modules in
@@ -78,7 +79,7 @@ a list of module names to be tested on import.
 
 
 Command line tests
--------------------
+------------------
 
 Command line tests to run. Default is ``True``, which runs
 ``command --help`` for each command in the console_scripts and
@@ -101,11 +102,11 @@ install_name_tool on macOS or patchelf on Linux. The default is
 
    conda_binary_relocation=False
 
-For more information, see :ref:`make-relocatable <make-relocatable>`.
+For more information, see :ref:`Making packages relocatable <make-relocatable>`.
 
 
 Preserve egg directory
------------------------
+----------------------
 
 Whether to preserve the egg directory as installed by Setuptools.
 The default is ``True`` if the package depends on Setuptools or
@@ -118,7 +119,7 @@ gui_scripts.
 
 
 Features
--------------
+--------
 
 A list of features for the package.
 
@@ -126,9 +127,9 @@ A list of features for the package.
 
    conda_features=['mkl']
 
-NOTE: Replace ``mkl`` with the features that you want to list.
+.. note::
+   Replace ``mkl`` with the features that you want to list.
 
-For more information, see :ref:`features<concepts_features>`.
 
 
 Track features
@@ -141,14 +142,11 @@ installed.
 
    conda_track_features=['mkl']
 
-For more information, see :ref:`features<concepts_features>`.
-
-
 Command line options
 ====================
 
 Build number
--------------
+------------
 
 Set the build number. Defaults to the conda_buildnum passed
 to ``setup()`` or ``0``. Overrides any conda_buildnum passed to
