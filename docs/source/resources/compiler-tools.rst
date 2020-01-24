@@ -275,7 +275,7 @@ With that warning in mind, let's look at good ways to customize Clang.
        find . -name "*activate*.sh.bak" -exec rm "{}" \;
 
 4. With those changes to the activate scripts in place, it's time to move on to
-   installing things. Look back at the Clang folder's ``meta.yaml``. Here's
+   installing things. Look back at the ``clang`` folder's ``meta.yaml``. Here's
    where we change the package name. Notice what comes before the
    ``{{ target_platform }}``.
 
