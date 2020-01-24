@@ -293,7 +293,7 @@ With that warning in mind, let's look at good ways to customize Clang.
 
    Note that we make the package ``clang`` in the main material agree in version
    with our output version. This is implicitly the same as the top-level
-   recipe. The ``Clang`` package sets no environment variables at all, so it
+   recipe. The ``clang`` package sets no environment variables at all, so it
    may be difficult to use directly.
 
 5. Let's examine the script ``install-clang.sh``::
