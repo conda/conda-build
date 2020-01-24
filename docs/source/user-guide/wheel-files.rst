@@ -3,7 +3,7 @@ Using wheel files with conda
 ============================
 
 If you have software in a `Python wheel file <https://pythonwheels.com/>`_ and
-want to use it with conda or install it in a conda environment, there are three
+want to use it with conda or install it in a conda environment, there are 3
 ways.
 
 The best way is to obtain the source code for the software and build a conda
@@ -17,7 +17,7 @@ Building a conda package from the wheel file also has the advantage that any
 clobbering is more likely to happen at build time and not runtime.
 
 The third way is to use pip to install a wheel file into a conda environment.
-Some conda users have used this option safely. The first two ways are still the
+Some conda users have used this option safely. The first 2 ways are still the
 safest and most reliable.
 
 
@@ -38,8 +38,9 @@ with the URL of a .whl file. The
 `meta.yaml <https://github.com/conda/conda-recipes/blob/a796713805ac8eceed191c0cb475b51f4d00718c/python/tensorflow/meta.yaml>`_
 file does not download or list the .whl file.
 
-NOTE: It is important to ``pip install`` only the one desired package. Whenever
-possible, install dependencies with conda and not pip.
+.. note::
+   It is important to ``pip install`` only the one desired package. Whenever
+   possible, install dependencies with conda and not pip.
 
 We strongly recommend using the ``--no-deps`` option in the ``pip install``
 command.

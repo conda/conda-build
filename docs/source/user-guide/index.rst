@@ -27,8 +27,8 @@ scratch, or building R packages using skeleton CRAN.
 **Recipes**
 
 Conda-build uses :doc:`recipes <../user-guide/recipes/index>` to create conda packages.
-We have guides on debugging conda recipes, sample recipes for you to use, and 
-how to build a package without a recipe.
+We have guides on debugging conda recipes, sample recipes for you to use, and
+information on how to build a package without a recipe.
 
 **Environment variables**
 

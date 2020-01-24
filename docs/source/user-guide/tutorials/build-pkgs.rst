@@ -11,14 +11,14 @@ Overview
 ========
 
 This tutorial describes how to build a conda package for
-Click by writing the required files in the conda build recipe.
+Click by writing the required files in the conda-build recipe.
 
 Who is this for?
 ================
 
 This tutorial is for Windows, macOS, and Linux users who wish to
 generate a conda package by writing the necessary files.
-Prior knowledge of conda build and conda recipes is helpful.
+Prior knowledge of conda-build and conda recipes is helpful.
 
 
 .. _before-you-start2:
@@ -163,10 +163,10 @@ Building and installing
 ========================
 
 Now that you have your 3 new build files ready, you are ready to
-create your new package with conda build and install the package
+create your new package with conda-build and install the package
 on your local computer.
 
-#. Run conda build:
+#. Run conda-build:
 
    .. code-block:: bash
 
@@ -176,7 +176,7 @@ on your local computer.
 
 
 
-   When conda build is finished, it displays the package filename
+   When conda-build is finished, it displays the package filename
    and location. In this case the file is saved to:
 
    .. code-block:: bash
@@ -208,7 +208,7 @@ Converting a package for use on all platforms
 =============================================
 
 Now that you have built a package for your current platform with
-conda build, you can convert it for use on other platforms by
+conda-build, you can convert it for use on other platforms by
 using the 2 build files, ``build.sh`` and ``bld.bat``.
 
 Use the ``conda convert`` command with a platform specifier from
@@ -239,7 +239,7 @@ Optional---Using PyPI as the source instead of GitHub
 ======================================================
 
 You can use PyPI or another repository instead of GitHub. There
-is little difference to conda build between building from Git
+is little difference to conda-build between building from Git
 versus building from a tarball on a repository like PyPI. Because
 the same source is hosted on PyPI and GitHub, you can easily find
 a script on PyPI instead of GitHub.

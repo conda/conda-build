@@ -63,15 +63,15 @@ First, in your user home directory, run the conda skeleton command:
 The two arguments to ``conda skeleton`` are the type of hosting location,
 in this case ``cran``, and the name of the package.
 
-This creates a directory named ``r-fansi`` and creates one
+This creates a directory named ``r-fansi`` and creates 1
 skeleton file in that directory: ``meta.yaml``. Many other files
 can be added there as necessary, such as ``build.sh`` and ``bld.bat``,
 test scripts, or anything else you need to build your software.
 Use the ``ls`` command to verify that this file has been created.
-The meta.yaml file has been populated with information from the
+The ``meta.yaml`` file has been populated with information from the
 CRAN metadata and in many cases will not need to be edited.
 
-Files in the folder with meta.yaml are collectively referred to
+Files in the folder with ``meta.yaml`` are collectively referred to
 as the "conda-build recipe":
 
 * ``meta.yaml``---Contains all the metadata in the recipe. The package name and package version sections are required---everything else is optional.
@@ -158,7 +158,7 @@ creates one skeleton file in that directory: ``meta.yaml``.
 Many other files can be added there as necessary, such
 as ``build.sh`` and ``bld.bat``, test scripts, or anything else
 you need to build your software. Use the ``ls`` command
-to verify that this file has been created. The meta.yaml
+to verify that this file has been created. The ``meta.yaml``
 file has been populated with information from the CRAN
 metadata and in many cases will not need to be edited.
 
@@ -216,7 +216,7 @@ Optional---Building for a different R version
 
 By default, conda-build creates packages for the version
 of R installed in the root environment. To build packages
-for other versions of R, you use the `--R` flag followed by
+for other versions of R, you use the ``--R`` flag followed by
 a version.
 
 For example, to explicitly build a version of the fansi package

@@ -14,21 +14,21 @@ Compiler packages
 
 Before Anaconda 5.0, compilers were installed using system tools such as XCode
 or ``yum install gcc``. Now there are conda packages for Linux and macOS
-compilers. Unlike the previous gcc 4.8.5 packages that included gcc, g++ and
-gfortran all in the same package, these conda packages are split into separate
+compilers. Unlike the previous GCC 4.8.5 packages that included GCC, g++, and
+GFortran all in the same package, these conda packages are split into separate
 compilers:
-
-Linux:
-
-* gcc_linux-64
-* gxx_linux-64
-* gfortran_linux-64
 
 macOS:
 
-* clang_osx-64
-* clangxx_osx-64
-* gfortran_osx-64
+* clang_osx-64.
+* clangxx_osx-64.
+* gfortran_osx-64.
+
+Linux:
+
+* gcc_linux-64.
+* gxx_linux-64.
+* gfortran_linux-64.
 
 A compiler's "build platform" is the platform where the compiler runs and
 builds the code.
@@ -68,7 +68,7 @@ macOS SDK
 =========
 
 The macOS compilers require the macOS 10.9 SDK. The SDK license prevents it
-from being bundled in the conda package. We know of two current sources for the
+from being bundled in the conda package. We know of 2 current sources for the
 macOS 10.9 SDK:
 
 - https://github.com/devernay/xcodelegacy
@@ -80,15 +80,15 @@ anywhere. Edit your ``conda_build_config.yaml`` file to point to it, like this::
     CONDA_BUILD_SYSROOT:
       - /opt/MacOSX10.9.sdk        # [osx]
 
-At Anaconda we have this configuration setting in a centralized
+At Anaconda, we have this configuration setting in a centralized
 ``conda_build_config.yaml`` at the root of our recipe repository. Since we run
 build commands from that location, the file and the setting are used for all
 recipes. The ``conda_build_config.yaml`` search order is described further at
 :ref:`conda-build-variant-config-files`.
 
-Build scripts for OSX should make use of the variables
+Build scripts for macOS should make use of the variables
 ``MACOSX_DEPLOYMENT_TARGET`` and ``CONDA_BUILD_SYSROOT``, which are set by
-conda-build, see :ref:`env-vars`. These variables should be translated into
+conda-build (see :ref:`env-vars`). These variables should be translated into
 correct compiler arguments, e.g. for Clang this would be::
 
     clang .. -isysroot ${CONDA_BUILD_SYSROOT} -mmacosx-version-min=${MACOSX_DEPLOYMENT_TARGET} ..
@@ -111,8 +111,8 @@ Backward compatibility
 Some users want to use the latest Anaconda packages but do not yet want to use
 the Anaconda compilers. To enable this, the latest Python package builds have
 a default ``_sysconfigdata`` file. This file sets the compilers provided by the
-system, such as ``gcc`` and ``g++``, as the default compilers. This way legacy
-recipes will keep working.
+system, such as ``gcc`` and ``g++``, as the default compilers. This way allows legacy
+recipes to keep working.
 
 Python packages also include an alternative ``_sysconfigdata`` file that sets
 the Anaconda compilers as the default compilers. The Anaconda Python executable
@@ -138,7 +138,7 @@ The Anaconda 5.0 compilers and conda-build 3 are designed to work together.
 
 Conda-build 3 defines a special jinja2 function, ``compiler()``, to make it
 easy to specify compiler packages dynamically on many platforms. The
-``compiler`` function takes at least one argument, the language of the compiler
+``compiler`` function takes at least 1 argument, the language of the compiler
 to use::
 
     requirements:
@@ -147,7 +147,7 @@ to use::
 
 "Cross-capable" recipes can be used to make packages with a host platform
 different than the build platform where conda-build runs. To write
-cross-capable recipes you may also need to use the "host" section in the
+cross-capable recipes, you may also need to use the "host" section in the
 requirements section. In this example we set "host" to "zlib" to tell
 conda-build to use the zlib in the conda environment and not the system
 zlib. This makes sure conda-build uses the zlib for the host platform
@@ -161,7 +161,7 @@ and not the zlib for the build platform.
       host:
         - zlib
 
-Generally the build section should include compilers and other build tools, and
+Generally, the build section should include compilers and other build tools and
 the host section should include everything else, including shared libraries,
 Python, and Python libraries.
 
@@ -211,16 +211,16 @@ This design is intended to make it easy for you to customize your own compiler
 packages by copying these recipes and changing the flags. You can then edit the
 ``conda_build_config.yaml`` file to specify your own packages.
 
-We have been careful to select good, general purpose, secure and fast flags.
+We have been careful to select good, general purpose, secure, and fast flags.
 We have also used them for all packages in Anaconda Distribution 5.0.0, except
 for some minor customizations in a few recipes. When changing these flags,
-remember that choosing the wrong flags can reduce security, reduce performance
+remember that choosing the wrong flags can reduce security, reduce performance,
 and cause incompatibilities.
 
-With that warning in mind, let's look at good ways to customize clang.
+With that warning in mind, let's look at good ways to customize Clang.
 
-1. Download or fork the code from https://github.com/anacondarecipes/aggregate .
-   The clang package recipe is in the clang folder. The main material is in the
+1. Download or fork the code from https://github.com/anacondarecipes/aggregate.
+   The Clang package recipe is in the ``clang`` folder. The main material is in the
    llvm-compilers-feedstock folder.
 
 2. Edit ``clang/recipe/meta.yaml``::
@@ -275,7 +275,7 @@ With that warning in mind, let's look at good ways to customize clang.
        find . -name "*activate*.sh.bak" -exec rm "{}" \;
 
 4. With those changes to the activate scripts in place, it's time to move on to
-   installing things. Look back at the clang folder's ``meta.yaml``. Here's
+   installing things. Look back at the ``clang`` folder's ``meta.yaml``. Here's
    where we change the package name. Notice what comes before the
    ``{{ target_platform }}``.
 
@@ -288,7 +288,7 @@ With that warning in mind, let's look at good ways to customize clang.
              - clang {{ version }}
 
    The script reference here is another place you might add customization.
-   You'll either change the contents of those install scripts, or change the
+   You'll either change the contents of those install scripts or change the
    scripts that those install scripts are installing.
 
    Note that we make the package ``clang`` in the main material agree in version
@@ -317,7 +317,7 @@ With that warning in mind, let's look at good ways to customize clang.
    Activate scripts are named according to our package name so they won't
    conflict with other activate scripts.
 
-   The symlink for clang is a clang implementation detail that sets the host
+   The symlink for Clang is a Clang implementation detail that sets the host
    platform.
 
    We define ``macos_machine`` in aggregate's ``conda_build_config.yaml``:
@@ -364,7 +364,7 @@ you're cross-compiling.
 
 If you ever needed a different compiler key for the same language, remember
 that the language key is arbitrary. For example, we might want different
-compilers for Python and for R within one ecosystem. On Windows the Python
+compilers for Python and for R within one ecosystem. On Windows, the Python
 ecosystem uses the Microsoft Visual C compilers, while the R ecosystem uses the
 Mingw compilers.
 
@@ -392,13 +392,13 @@ In R recipes, you'd have::
 This example is a little contrived, because the ``m2w64-gcc_win-64`` package is
 not available. You'd need to create a metapackage ``m2w64-gcc_win-64`` to
 point at the ``m2w64-gcc`` package, which does exist on the msys2 channel on
-`repo.anaconda.com <https://repo.anaconda.com/>`_ .
+`repo.anaconda.com <https://repo.anaconda.com/>`_.
 
 Anaconda compilers implicitly add RPATH pointing to the conda environment
 =========================================================================
 
 You might want to use the Anaconda compilers outside of ``conda-build``
-so that you use the same versions, flags and configuration, for maximum
+so that you use the same versions, flags, and configuration, for maximum
 compatibility with Anaconda packages (but in a case where you want simple
 tarballs, for example). In this case, there is a gotcha.
 
