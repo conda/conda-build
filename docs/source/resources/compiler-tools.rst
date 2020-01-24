@@ -220,7 +220,7 @@ and cause incompatibilities.
 With that warning in mind, let's look at good ways to customize Clang.
 
 1. Download or fork the code from https://github.com/anacondarecipes/aggregate.
-   The Clang package recipe is in the Clang folder. The main material is in the
+   The Clang package recipe is in the ``clang`` folder. The main material is in the
    llvm-compilers-feedstock folder.
 
 2. Edit ``clang/recipe/meta.yaml``::
