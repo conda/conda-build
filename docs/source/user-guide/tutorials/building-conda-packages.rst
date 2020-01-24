@@ -475,7 +475,6 @@ Or explicitly set the location of the conda build variant matrix
 
 ``conda build gdal-feedstock --variant-config-file conda_build_config.yaml``
 
-If you want to know more about build variants and conda_build_config.yaml,
+If you want to know more about build variants and ``conda_build_config.yaml``,
 including how to specify a config file and what can go into it, take a look
-at :ref:`conda-build-variant-config-files`.
 at :ref:`conda-build-variant-config-files`.
