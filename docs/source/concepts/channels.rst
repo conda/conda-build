@@ -20,7 +20,7 @@ Identical channel and package name problem
 
 If the channel and package name are identical, it's possible to encounter a build problem if the short channel name is used.
 
-Let's say your Anaconda username or an organization name is ``example``. And suppose you created a package ``example``, whose files' layout is similar to:
+Let's say your Anaconda.org username or an organization name is ``example``. And suppose you created a package ``example``, whose files' layout is similar to:
 
 .. code-block:: bash
 
