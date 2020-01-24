@@ -757,7 +757,7 @@ when people install your metapackage.  This is important, because if
 ``run_exports`` affected transitive dependencies, you would see many added
 dependencies to shared libraries where they are not actually direct
 dependencies. For example, Python uses bzip2, which can use ``run_exports`` to
-make sure that people use a compatible build of bzip2. If people list Python as
+make sure that people use a compatible build of bzip2. If people list python as
 a build time dependency, bzip2 should only be imposed for Python itself and
 should not be automatically imposed as a runtime dependency for the thing using
 Python.
