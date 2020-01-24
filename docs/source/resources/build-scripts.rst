@@ -25,7 +25,7 @@ As of conda-build 2.1, you can also define multiple output packages. Each
 package has its own script or list of files to include. The rules for these
 outputs are documented at :ref:`package-outputs`. When any output is defined,
 this overrides the default behavior of bundling anything in ``$PREFIX``. So
-to out put multiple packages from a single recipe, remove any installation
+to output multiple packages from a single recipe, remove any installation
 steps from ``build.sh`` or ``bld.bat`` and do them instead in your install
 script(s) for each output.
 
