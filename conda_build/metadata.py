@@ -1675,7 +1675,8 @@ class MetaData(object):
             r'(\s*source:.*?)(?=^build:|^requirements:|^test:|^extra:|^about:|^outputs:|\Z)')
 
     def extract_package_and_build_text(self):
-        return self.get_recipe_text(r'(^.*?)(?=^requirements:|^test:|^extra:|^about:|^outputs:|\Z)')
+        return self.get_recipe_text(r'(^.*?)(?=^requirements:|^test:|^extra:|^about:|^outputs:|\Z)',
+                                   force_top_level=True)
 
     def extract_single_output_text(self, output_name, output_type, apply_selectors=True):
         # first, need to figure out which index in our list of outputs the name matches.
