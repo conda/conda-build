@@ -234,7 +234,7 @@ def write_build_scripts(m, env, bld_bat):
             data = fi.read()
         with codecs.getwriter('utf-8')(open(work_script, 'wb')) as fo:
             fo.write('IF "%CONDA_BUILD%" == "" (\n')
-            fo.write("    call {}\n".format(env_script))
+            fo.write('    call "{}"\n'.format(env_script))
             fo.write(')\n')
             fo.write("REM ===== end generated header =====\n")
             fo.write(data)
