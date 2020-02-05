@@ -352,7 +352,11 @@ def get_upstream_pins(m, actions, env):
     linked_packages = actions.get('LINK', [])
     linked_packages = [pkg for pkg in linked_packages if pkg.name in explicit_specs]
 
-    ignore_list = utils.ensure_list(m.get_value('build/ignore_run_exports'))
+    default_ignore_exports = []
+    if m.noarch or m.noarch_python:
+        default_ignore_exports = ['python']
+
+    ignore_list = utils.ensure_list(m.get_value('build/ignore_run_exports', default_ignore_exports))
     additional_specs = {}
     for pkg in linked_packages:
         run_exports = None
