@@ -95,7 +95,7 @@ def ns_cfg(config):
     # there are times when python comes in as a tuple
     if not hasattr(py, 'split'):
         py = py[0]
-    py = int("".join(py.split('.')[:2]))
+    py = int("".join(py.split(' ')[0].split('.')[:2]))
 
     d.update(dict(py=py,
                     py3k=bool(30 <= py < 40),
