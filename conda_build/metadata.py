@@ -95,6 +95,8 @@ def ns_cfg(config):
     # there are times when python comes in as a tuple
     if not hasattr(py, 'split'):
         py = py[0]
+    # go from "3.6 *_cython" -> "36"
+    # or from "3.6.9" -> "36"
     py = int("".join(py.split(' ')[0].split('.')[:2]))
 
     d.update(dict(py=py,
