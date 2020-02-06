@@ -1016,11 +1016,14 @@ def test_run_exports_noarch_python(testing_metadata, testing_config):
     api.build(os.path.join(metadata_dir, '_run_exports_noarch'), config=testing_config,
               notest=True)
     # customize our fixture metadata with our desired changes
-    testing_metadata.meta['requirements']['host'] = ['python 3.6 with_run_exports']
-    testing_metadata.meta['requirements']['run'] = ['python 3.6']
+    testing_metadata.meta['requirements']['host'] = ['python']
+    testing_metadata.meta['requirements']['run'] = ['python']
     testing_metadata.meta['build']['noarch'] = 'python'
     testing_metadata.config.index = None
+    testing_metadata.config.variant["python"] = "3.6 with_run_exports"
+
     m = finalize_metadata(testing_metadata)
+    assert 'python 3.6 with_run_exports' in m.meta['requirements'].get('host', [])
     assert 'python 3.6 with_run_exports' not in m.meta['requirements'].get('run', [])
 
 
