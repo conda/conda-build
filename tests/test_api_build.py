@@ -1011,6 +1011,19 @@ def test_ignore_run_exports(testing_metadata, testing_config):
     assert 'downstream_pinned_package 1.0' not in m.meta['requirements'].get('run', [])
 
 
+def test_run_exports_noarch_python(testing_metadata, testing_config):
+    # build the package with run exports for ensuring that we ignore it
+    api.build(os.path.join(metadata_dir, '_run_exports_noarch'), config=testing_config,
+              notest=True)
+    # customize our fixture metadata with our desired changes
+    testing_metadata.meta['requirements']['host'] = ['python 3.6 with_run_exports']
+    testing_metadata.meta['requirements']['run'] = ['python 3.6']
+    testing_metadata.meta['build']['noarch'] = 'python'
+    testing_metadata.config.index = None
+    m = finalize_metadata(testing_metadata)
+    assert 'python 3.6 with_run_exports' not in m.meta['requirements'].get('run', [])
+
+
 def test_pin_subpackage_exact(testing_config):
     recipe = os.path.join(metadata_dir, '_pin_subpackage_exact')
     ms = api.render(recipe, config=testing_config)
