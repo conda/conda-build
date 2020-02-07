@@ -313,7 +313,9 @@ def ensure_matching_hashes(output_metadata):
             if m != om:
                 run_exports = om.meta.get('build', {}).get('run_exports', [])
                 if hasattr(run_exports, 'keys'):
-                    run_exports = run_exports.get('strong', []) + run_exports.get('weak', [])
+                    run_exports = []
+                    for export_type in utils.RUN_EXPORTS_TYPES:
+                        run_exports = run_exports + run_exports.get(export_type, [])
                 deps = _get_all_dependencies(om, envs) + run_exports
                 for dep in deps:
                     if (dep.startswith(m.name() + ' ') and len(dep.split(' ')) == 3 and

@@ -6,4 +6,7 @@ build:
   number: 0
   string: with_run_exports
   run_exports:
-    - python 3.6 with_run_exports
+    noarch:
+      - python
+    weak:
+      - python 3.6 run_exports
