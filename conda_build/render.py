@@ -420,7 +420,12 @@ def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
         host_deps = []
         host_unsat = []
         if m.noarch or m.noarch_python:
-            extra_run_specs = set(extra_run_specs_from_host.get('noarch', []))
+            if m.build_is_host:
+                extra_run_specs = set(extra_run_specs_from_build.get('noarch', []))
+                build_deps = set(build_deps or []).update(extra_run_specs_from_build.get('noarch', []))
+            else:
+                extra_run_specs = set([])
+                build_deps = set(build_deps or [])
         else:
             extra_run_specs = set(extra_run_specs_from_build.get('strong', []))
             if m.build_is_host:
