@@ -313,9 +313,10 @@ def ensure_matching_hashes(output_metadata):
             if m != om:
                 run_exports = om.meta.get('build', {}).get('run_exports', [])
                 if hasattr(run_exports, 'keys'):
-                    run_exports = []
+                    run_exports_list = []
                     for export_type in utils.RUN_EXPORTS_TYPES:
-                        run_exports = run_exports + run_exports.get(export_type, [])
+                        run_exports_list = run_exports_list + run_exports.get(export_type, [])
+                    run_exports = run_exports_list
                 deps = _get_all_dependencies(om, envs) + run_exports
                 for dep in deps:
                     if (dep.startswith(m.name() + ' ') and len(dep.split(' ')) == 3 and
