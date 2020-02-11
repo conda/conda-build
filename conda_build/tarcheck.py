@@ -58,7 +58,7 @@ class TarCheck(object):
             if info[varname] != getattr(self, varname):
                 raise Exception('%s: %r != %r' % (varname, info[varname],
                                                   getattr(self, varname)))
-        assert isinstance(info['build_number'], int)
+        assert isinstance(info['build_number'], int) or isinstance(info['build_number'], long)
 
     def prefix_length(self):
         prefix_length = None
