@@ -940,7 +940,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                            missing_dso_whitelist, runpath_whitelist,
                            error_overlinking, error_overdepending, verbose,
                            exception_on_error, files, bldpkgs_dirs, output_folder, channel_urls,
-                           enable_static=False):
+                           enable_static=False, augment_fn=None):
     verbose = True
     errors = []
 
@@ -978,6 +978,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
 
     ignore_list_syms = ['main', '_main', '*get_pc_thunk*', '___clang_call_terminate', '_timeout']
     # ignore_for_statics = ['gcc_impl_linux*', 'compiler-rt*', 'llvm-openmp*', 'gfortran_osx*']
+    ignore_for_statics = []
     # sysroots and whitelists are similar, but the subtle distinctions are important.
     sysroot_prefix = build_prefix
     sysroots = [sysroot + os.sep for sysroot in utils.glob(os.path.join(sysroot_prefix, '**', 'sysroot'))]
@@ -1033,6 +1034,10 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                     in_whitelist = any([fnmatch(needed_dso, w) for w in whitelist])
                 if not in_whitelist:
                     print("  ERROR :: {} not in prefix_owners".format(needed_dso))
+        if augment_fn:
+            vendoring_record.update(augment_fn(f, all_lib_exports, run_prefix, prefix_owners,
+                                          pkg_vendoring_key=pkg_vendoring_key, needed_dsos=needed,
+                                          ignore_for_statics=ignore_for_statics, verbose=verbose))
 
     # Should the whitelist be expanded before the 'not in prefix_owners' check?
     # i.e. Do we want to be able to use the whitelist to allow missing files in general? If so move this up to
