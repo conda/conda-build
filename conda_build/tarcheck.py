@@ -3,7 +3,7 @@ from __future__ import absolute_import, division, print_function
 import json
 from os.path import basename, normpath
 import tarfile
-import sys
+import numbers
 
 from conda_build.utils import codec, filter_info_files
 
@@ -59,7 +59,7 @@ class TarCheck(object):
             if info[varname] != getattr(self, varname):
                 raise Exception('%s: %r != %r' % (varname, info[varname],
                                                   getattr(self, varname)))
-        assert isinstance(info['build_number'], int) or (sys.version_info[0] == 2 and isinstance(info['build_number'], long))
+        assert isinstance(info['build_number'], numbers.Integral)
 
     def prefix_length(self):
         prefix_length = None
