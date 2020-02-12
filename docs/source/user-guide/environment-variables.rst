@@ -311,28 +311,6 @@ Environment variables that affect the build process
        usually labeled ``-p`` or ``--prefix``.
 
 
-.. _build-features:
-
-Environment variables to set build features
-===========================================
-
-The environment variables listed in the following table are
-inherited from the process running conda-build. 
-
-.. list-table::
-   :widths: 15 43 42
-
-   * - FEATURE_NOMKL
-     - Adds the ``nomkl`` feature to the built package.
-     - Accepts ``0`` for off and ``1`` for on.
-   * - FEATURE_DEBUG
-     - Adds the ``debug`` feature to the built package.
-     - Accepts ``0`` for off and ``1`` for on.
-   * - FEATURE_OPT
-     - Adds the ``opt`` feature to the built package.
-     - Accepts ``0`` for off and ``1`` for on.
-
-
 .. _test-envs:
 
 Environment variables that affect the test process

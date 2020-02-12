@@ -66,14 +66,6 @@ class CondaDistribution(Distribution):
       setuptools or has a setuptools entry_points other than console_scripts
       and gui_scripts.
 
-    - conda_features: List of features for the package. See the features
-      section of the conda build documentation for more information about
-      features in conda.
-
-    - conda_track_features: List of features that this package should track
-      (enable when installed).  See the features section of the conda build
-      documentation for more information about features in conda.
-
     Command line options:
 
     --buildnum: Set the build number. Defaults to the conda_buildnum passed to

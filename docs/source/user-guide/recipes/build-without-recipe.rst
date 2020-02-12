@@ -32,7 +32,6 @@ EXAMPLE: A minimal ``setup.py`` file using the setup options
       version="1.0",
       distclass=distutils.command.bdist_conda.CondaDistribution,
       conda_buildnum=1,
-      conda_features=['mkl'],
   )
 
 
@@ -117,30 +116,6 @@ gui_scripts.
 
    conda_preserve_egg_dir=False
 
-
-Features
---------
-
-A list of features for the package.
-
-.. code::
-
-   conda_features=['mkl']
-
-.. note::
-   Replace ``mkl`` with the features that you want to list.
-
-
-
-Track features
------------------
-
-List of features that this package should track---enable---when
-installed.
-
-.. code::
-
-   conda_track_features=['mkl']
 
 Command line options
 ====================
