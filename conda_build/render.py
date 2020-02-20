@@ -410,18 +410,29 @@ def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
 
         host_deps, host_unsat, extra_run_specs_from_host = _read_upstream_pin_files(m, 'host',
                                                     permit_unsatisfiable_variants, exclude_pattern)
-        extra_run_specs = set(extra_run_specs_from_host.get('strong', []) +
-                              extra_run_specs_from_host.get('weak', []) +
-                              extra_run_specs_from_build.get('strong', []))
+        if m.noarch or m.noarch_python:
+            extra_run_specs = set(extra_run_specs_from_host.get('noarch', []))
+        else:
+            extra_run_specs = set(extra_run_specs_from_host.get('strong', []) +
+                                  extra_run_specs_from_host.get('weak', []) +
+                                  extra_run_specs_from_build.get('strong', []))
     else:
         host_deps = []
         host_unsat = []
-        extra_run_specs = set(extra_run_specs_from_build.get('strong', []))
-        if m.build_is_host:
-            extra_run_specs.update(extra_run_specs_from_build.get('weak', []))
-            build_deps = set(build_deps or []).update(extra_run_specs_from_build.get('weak', []))
+        if m.noarch or m.noarch_python:
+            if m.build_is_host:
+                extra_run_specs = set(extra_run_specs_from_build.get('noarch', []))
+                build_deps = set(build_deps or []).update(extra_run_specs_from_build.get('noarch', []))
+            else:
+                extra_run_specs = set([])
+                build_deps = set(build_deps or [])
         else:
-            host_deps = set(extra_run_specs_from_build.get('strong', []))
+            extra_run_specs = set(extra_run_specs_from_build.get('strong', []))
+            if m.build_is_host:
+                extra_run_specs.update(extra_run_specs_from_build.get('weak', []))
+                build_deps = set(build_deps or []).update(extra_run_specs_from_build.get('weak', []))
+            else:
+                host_deps = set(extra_run_specs_from_build.get('strong', []))
 
     run_deps = extra_run_specs | set(utils.ensure_list(requirements.get('run')))
 

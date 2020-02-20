@@ -108,6 +108,12 @@ DEFAULT_SUBDIRS = {
     "noarch",
 }
 
+RUN_EXPORTS_TYPES = {
+    "weak",
+    "strong",
+    "noarch",
+}
+
 PY_TMPL = """
 # -*- coding: utf-8 -*-
 import re

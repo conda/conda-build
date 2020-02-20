@@ -1151,7 +1151,7 @@ def write_run_exports(m):
         with open(os.path.join(m.config.info_dir, 'run_exports.json'), 'w') as f:
             if not hasattr(run_exports, 'keys'):
                 run_exports = {'weak': run_exports}
-            for k in ('weak', 'strong'):
+            for k in utils.RUN_EXPORTS_TYPES:
                 if k in run_exports:
                     run_exports[k] = utils.ensure_list(run_exports[k])
             json.dump(run_exports, f)

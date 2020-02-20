@@ -95,7 +95,9 @@ def ns_cfg(config):
     # there are times when python comes in as a tuple
     if not hasattr(py, 'split'):
         py = py[0]
-    py = int("".join(py.split('.')[:2]))
+    # go from "3.6 *_cython" -> "36"
+    # or from "3.6.9" -> "36"
+    py = int("".join(py.split(' ')[0].split('.')[:2]))
 
     d.update(dict(py=py,
                     py3k=bool(30 <= py < 40),
@@ -311,7 +313,10 @@ def ensure_matching_hashes(output_metadata):
             if m != om:
                 run_exports = om.meta.get('build', {}).get('run_exports', [])
                 if hasattr(run_exports, 'keys'):
-                    run_exports = run_exports.get('strong', []) + run_exports.get('weak', [])
+                    run_exports_list = []
+                    for export_type in utils.RUN_EXPORTS_TYPES:
+                        run_exports_list = run_exports_list + run_exports.get(export_type, [])
+                    run_exports = run_exports_list
                 deps = _get_all_dependencies(om, envs) + run_exports
                 for dep in deps:
                     if (dep.startswith(m.name() + ' ') and len(dep.split(' ')) == 3 and
