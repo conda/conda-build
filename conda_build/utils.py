@@ -1891,6 +1891,51 @@ def write_bat_activation_text(file_handle, m):
         file_handle.write('call "{conda_root}\\activate.bat" "{prefix}"\n'.format(
             conda_root=root_script_dir,
             prefix=m.config.build_prefix))
+    from conda_build.os_utils.external import find_executable
+    ccache = find_executable('ccache', m.config.build_prefix, False)
+    if ccache:
+        if isinstance(ccache, list):
+            ccache = ccache[0]
+        ccache_methods = {}
+        ccache_methods['env_vars'] = False
+        ccache_methods['mklink'] = False
+        ccache_methods['native'] = False
+        if hasattr(m.config, 'ccache_method'):
+            ccache_methods[m.config.ccache_method] = True
+        for method, value in ccache_methods.items():
+            if value:
+                if method == 'env_vars':
+                    file_handle.write('set "CC={ccache} %CC%"\n'.format(ccache=ccache))
+                    file_handle.write('set "CXX={ccache} %CXX%"\n'.format(ccache=ccache))
+                elif method == 'mklink':
+                    dirname_ccache_ln_bin = join(m.config.build_prefix, 'ccache-ln-bin')
+                    file_handle.write('mkdir {}\n'.format(dirname_ccache_ln_bin))
+                    file_handle.write('pushd {}\n'.format(dirname_ccache_ln_bin))
+                    # If you use mklink.exe instead of mklink here it breaks as it's a builtin.
+                    for ext in ('.exe',''):
+                        # MSVC
+                        file_handle.write('mklink cl{ext} {ccache}\n'.format(ext = ext, ccache = ccache))
+                        file_handle.write('mklink link{ext} {ccache}\n'.format(ext = ext, ccache = ccache))
+                        # GCC
+                        file_handle.write('mklink gcc{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
+                        file_handle.write('mklink g++{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
+                        file_handle.write('mklink cc{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
+                        file_handle.write('mklink c++{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
+                        file_handle.write('mklink as{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
+                        file_handle.write('mklink ar{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
+                        file_handle.write('mklink nm{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
+                        file_handle.write('mklink ranlib{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
+                        file_handle.write('mklink gcc-ar{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
+                        file_handle.write('mklink gcc-nm{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
+                        file_handle.write('mklink gcc-ranlib{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
+                    file_handle.write('popd\n')
+                    file_handle.write('set PATH={dirname_ccache_ln};{dirname_ccache};%PATH%\n'.format(
+                        dirname_ccache_ln = dirname_ccache_ln_bin,
+                        dirname_ccache = os.path.dirname(ccache)))
+                elif method == 'native':
+                    pass
+                else:
+                    print("ccache method {} not implemented")
 
 
 channeldata_cache = {}

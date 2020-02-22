@@ -378,6 +378,12 @@ def compiler(language, config, permit_undefined_jinja=False):
     return compiler
 
 
+def ccache(method, config, permit_undefined_jinja=False):
+    config.ccache_method = method
+    return 'ccache'
+
+
+
 def cdt(package_name, config, permit_undefined_jinja=False):
     """Support configuration of Core Dependency Trees.
     We should define CDTs in a single location. The current
@@ -523,6 +529,7 @@ def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jin
                                skip_build_id=skip_build_id),
         compiler=partial(compiler, config=config, permit_undefined_jinja=permit_undefined_jinja),
         cdt=partial(cdt, config=config, permit_undefined_jinja=permit_undefined_jinja),
+        ccache=partial(ccache, config=config, permit_undefined_jinja=permit_undefined_jinja),
         resolved_packages=partial(resolved_packages, initial_metadata,
                              permit_undefined_jinja=permit_undefined_jinja,
                              bypass_env_check=bypass_env_check),
