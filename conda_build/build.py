@@ -1743,6 +1743,31 @@ def _write_sh_activation_text(file_handle, m):
     else:
         file_handle.write('source "{0}" "{1}"\n'.format(activate_path, build_prefix_path))
 
+    from conda_build.os_utils.external import find_executable
+    ccache = find_executable('ccache', m.config.build_prefix, False)
+    if ccache:
+        ccache_method_env_vars = False
+        ccache_method_mklink = True
+        file_handle.write('export CCACHE_SLOPPINESS="pch_defines,time_macros${CCACHE_SLOPPINESS+,$CCACHE_SLOPPINESS}"')
+        file_handle.write('export CCACHE_CPP2=true')
+        if ccache_method_mklink:
+            dirname_ccache_ln_bin = join(m.config.build_prefix, 'ccache-ln-bin')
+            file_handle.write('mkdir {}\n'.format(dirname_ccache_ln_bin))
+            file_handle.write('pushd {}\n'.format(dirname_ccache_ln_bin))
+            file_handle.write('if [ -n "$CC" ]; then\n')
+            file_handle.write('  [ -f {ccache} ] || ln -s {ccache} $(whereis $CC) || true\n'.format(ccache=ccache))
+            file_handle.write('fi\n')
+            file_handle.write('if [ -n "$CXX" ]; then\n')
+            file_handle.write('  [ -f {ccache} ] || ln -s {ccache} $(whereis $CXX) || true\n'.format(ccache=ccache))
+            file_handle.write('fi\n')
+            file_handle.write('popd\n')
+            # We really don't want to be doing this.
+            file_handle.write('export "PATH={}:$PATH"\n'.format(dirname_ccache_ln_bin))
+        if ccache_method_env_vars:
+            file_handle.write('export CC="{ccache} $CC"\n'.format(ccache=ccache))
+            file_handle.write('export CXX="{ccache} $CXX"\n'.format(ccache=ccache))
+            file_handle.write('export LD="{ccache} $LD"\n'.format(ccache=ccache))
+
     # conda 4.4 requires a conda-meta/history file for a valid conda prefix
     history_file = join(m.config.build_prefix, 'conda-meta', 'history')
     if not isfile(history_file):
