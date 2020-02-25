@@ -41,26 +41,15 @@ jobs:
       conda config --set always_yes yes
       conda config --set auto_update_conda False
       conda info
-      # avoids a python 3.7 problem
-      conda install -y cytoolz
-      if [[ "$PYTHON_VERSION" == "2.7" ]]; then
-        conda install -q futures scandir
-      fi
-      conda install -q pytest-azurepipelines anaconda-client git requests filelock contextlib2 jinja2 patchelf  \
-                       ripgrep pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz tqdm  \
-                       conda-package-handling py-lief python-libarchive-c perl conda-forge::shellcheck
-      conda install -q pytest pip pytest-cov pytest-forked pytest-xdist nomkl numpy mock pytest-mock
-      conda install -q pytest-replay pytest-rerunfailures -c conda-forge
-      pip install pkginfo
-      pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd;
+
+      source ci/azurepipelines/install_conda_build_test_deps
+
       pip install --no-deps .
+
       conda info -a
-      mkdir $BUILD_ARTIFACTSTAGINGDIRECTORY/pytest-replay
-      PYTEST_REPLAY_OPTIONS="--replay-record-dir=$BUILD_ARTIFACTSTAGINGDIRECTORY/pytest-replay"
-      if [[ "$PYTHON_VERSION" != "2.7" ]]; then
-        PYTEST_REPLAY_OPTIONS+=" --replay-base-name=Linux-$CONDA_VERSION-Py$PYTHON_VERSION"
-      fi
-      echo "##vso[task.setvariable variable=PYTEST_REPLAY_OPTIONS]$PYTEST_REPLAY_OPTIONS"
+
+      source ci/azurepipelines/setup_pytest_replay
+
     displayName: Preparing test environment
 
   - script: |
@@ -78,7 +67,8 @@ jobs:
       conda create -n blarg1 -yq python=2.7
       conda create -n blarg3 -yq python=3.7
       conda create -n blarg4 -yq python nomkl numpy pandas svn
-      py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --test-run-title="Linux-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION" $(PYTEST_REPLAY_OPTIONS)
+      source ci/azurepipelines/activate_conda "/usr/share/miniconda/bin/python"
+      py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --test-run-title="Linux-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION" "${PYTEST_REPLAY_OPTIONS[@]}"
     displayName: 'Parallel Tests'
 
   - publish: $(Build.ArtifactStagingDirectory)/pytest-replay
@@ -121,27 +111,26 @@ jobs:
       ~/uninstall_homebrew -fq
       rm ~/uninstall_homebrew
     displayName: Remove homebrew
+
   - script: |
       echo "Installing Miniconda"
       set -x -e
       curl -o $(Build.StagingDirectory)/miniconda.sh https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
       chmod +x $(Build.StagingDirectory)/miniconda.sh
       $(Build.StagingDirectory)/miniconda.sh -b -p $(Build.StagingDirectory)/miniconda
-      unset CONDA_SHLVL
-      eval "$($(Build.StagingDirectory)/miniconda/bin/python -m conda shell.bash hook)"
-      conda activate base
+      source ci/azurepipelines/activate_conda "$(Build.StagingDirectory)/miniconda/bin/python"
       echo "Setting up Conda environment"
     displayName: 'Install miniconda'
+
   - script: |
       echo "Setup CF macOS bits and select Xcode"
       set -x -e
-      unset CONDA_SHLVL
-      eval "$($(Build.StagingDirectory)/miniconda/bin/python -m conda shell.bash hook)"
-      conda activate base
+      source ci/azurepipelines/activate_conda "$(Build.StagingDirectory)/miniconda/bin/python"
       echo "PWD is $PWD"
       find $PWD
       source ci/azurepipelines/run_conda_forge_build_setup_osx
     displayName: 'Setup CF macOS bits and select Xcode'
+
   - script: |
       source ci/azurepipelines/activate_conda "$(Build.StagingDirectory)/miniconda/bin/python"
       conda info
@@ -157,30 +146,17 @@ jobs:
       conda config --set always_yes yes
       conda config --set auto_update_conda False
       conda info
-      # avoids a python 3.7 problem
-      conda install -q cytoolz
-      if [[ "$PYTHON_VERSION" == "2.7" ]]; then
-        conda install -y futures scandir
-      fi
-      conda install -q pytest-azurepipelines anaconda-client git requests filelock contextlib2 jinja2 ripgrep  \
-                       pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz tqdm conda-package-handling  \
-                       py-lief python-libarchive-c perl conda-forge::shellcheck
-      conda install -q pytest pip pytest-cov pytest-forked pytest-xdist nomkl numpy mock pytest-mock
-      conda install -q pytest-replay pytest-rerunfailures -c conda-forge
-      # We should build this, it is easy.
-      # conda install -y patchelf
-      pip install pkginfo
-      conda install -y perl
-      pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd
+
+      source ci/azurepipelines/install_conda_build_test_deps
+
       pip install --no-deps .
+
       conda info -a
+
       conda list --show-channel-urls
-      mkdir -p $BUILD_ARTIFACTSTAGINGDIRECTORY/pytest-replay
-      PYTEST_REPLAY_OPTIONS="--replay-record-dir=$BUILD_ARTIFACTSTAGINGDIRECTORY/pytest-replay"
-      if [[ "$PYTHON_VERSION" != "2.7" ]]; then
-        PYTEST_REPLAY_OPTIONS+=" --replay-base-name=macOS-$CONDA_VERSION-Py$PYTHON_VERSION"
-      fi
-      echo "##vso[task.setvariable variable=PYTEST_REPLAY_OPTIONS]$PYTEST_REPLAY_OPTIONS"
+
+      source ci/azurepipelines/setup_pytest_replay
+
     displayName: Preparing test environment
 
   - script: |
@@ -188,7 +164,7 @@ jobs:
       eval "$($(Build.StagingDirectory)/miniconda/bin/python -m conda shell.bash hook)"
       conda activate base
       conda install conda-verify -y
-      py.test --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="macOS-SerialTests-$CONDA_VERSION-Python$PYTHON_VERSION" $(PYTEST_REPLAY_OPTIONS)
+      py.test --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="macOS-SerialTests-$CONDA_VERSION-Python$PYTHON_VERSION" "${PYTEST_REPLAY_OPTIONS[@]}"
     displayName: 'Serial Tests'
 
   - script: |
@@ -200,7 +176,7 @@ jobs:
       conda create -n blarg1 -yq python=2.7
       conda create -n blarg3 -yq python=3.7
       conda create -n blarg4 -yq python nomkl numpy pandas svn
-      py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" -k test_recipe_builds tests --test-run-title="macOS-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION" $(PYTEST_REPLAY_OPTIONS)
+      py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" -k test_recipe_builds tests --test-run-title="macOS-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION" "${PYTEST_REPLAY_OPTIONS[@]}"
     displayName: 'Parallel Tests'
 
   - publish: $(Build.ArtifactStagingDirectory)/pytest-replay
@@ -285,7 +261,7 @@ jobs:
       conda install -c conda-forge pytest-replay pytest-rerunfailures -y
       echo "safety_checks: disabled" >> ~/.condarc
       echo "local_repodata_ttl: 1800" >> ~/.condarc
-      if "%PYTHON_VERSION%" == "2.7" conda install -q scandir
+      if "%PYTHON_VERSION%" == "2.7" conda install -q scandir pathlib2
       if "%PYTHON_VERSION%" == "3.7" conda install -q py-lief
       python --version
       python -c "import struct; print(struct.calcsize('P') * 8)"
@@ -311,16 +287,16 @@ jobs:
       set PERL=
       set LUA=
       set R=
-      py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp %UserProfile%\cbtmp_serial -n 0 -m "serial" --test-run-title="Win-SerialTests-%CONDA_VERSION%-Python%PYTHON_VERSION%" $(PYTEST_REPLAY_OPTIONS)
+      py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp %UserProfile%\cbtmp_serial -n 0 -m "serial" --test-run-title="Win-SerialTests-%CONDA_VERSION%-Python%PYTHON_VERSION%" %PYTEST_REPLAY_OPTIONS%
     displayName: 'Serial Tests'
 
   - script: |
-      source activate base
+      conda activate base
       conda remove -y conda-verify
       set PERL=
       set LUA=
       set R=
-      py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp %UserProfile%\cbtmp -n auto -m "not serial" --test-run-title="Win-ParallelTests-%CONDA_VERSION%-Python%PYTHON_VERSION%" $(PYTEST_REPLAY_OPTIONS)
+      py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp %UserProfile%\cbtmp -n auto -m "not serial" --test-run-title="Win-ParallelTests-%CONDA_VERSION%-Python%PYTHON_VERSION%" "${PYTEST_REPLAY_OPTIONS[@]}"
     env:
       VS90COMNTOOLS: "C:\\Program Files (x86)\\Common Files\\Microsoft\\Visual C++ for Python\\9.0\\VC\\bin"
       LIB:
