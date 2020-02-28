@@ -111,7 +111,7 @@ CDTs = dict({'centos5': {'dirname': 'centos5',
              'centos7': {'dirname': 'centos7',
                          'short_name': 'cos7',
                          'base_url': 'http://mirror.centos.org/altarch/7/os/{base_architecture}/CentOS/',  # noqa
-                         'sbase_url': 'http://vault.centos.org/7.6.1810/os/Source/SPackages/',
+                         'sbase_url': 'http://vault.centos.org/7.7.1908/os/Source/SPackages/',
                          'repomd_url': 'http://mirror.centos.org/altarch/7/os/{base_architecture}/repodata/repomd.xml',  # noqa
                          'host_machine': '{gnu_architecture}-conda_cos7-linux-gnu',
                          'host_subdir': 'linux-ppc64le',
