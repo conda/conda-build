@@ -450,7 +450,6 @@ cran_packages = [('r-usethis', 'GPL-3', 'GPL3', 'GPL-3'),  # cran: 'GPL-3'
                  ('r-udpipe', 'MPL-2.0', 'OTHER', ''),  # cran: 'MPL-2.0'
                  ('r-broom', 'MIT', 'MIT', ['MIT', 'LICENSE']),  # cran: 'MIT + file LICENSE'
                  ('r-meanr', 'BSD_2_clause', 'BSD', ['BSD_2_clause', 'LICENSE']),  # cran: 'BSD 2-clause License + file LICENSE'
-                 ('r-rsed', 'BSD_3_clause', 'BSD', ['BSD_3_clause', 'LICENSE']),  # cran: 'BSD_3_clause + file LICENSE'
                  ('r-zoo', 'GPL-2 | GPL-3', 'GPL3', ['GPL-2', 'GPL-3']),  # cran: 'GPL-2 | GPL-3'
                  ('r-magree', 'GPL-3 | GPL-2', 'GPL3', ['GPL-3', 'GPL-2']),  # cran: 'GPL-3 | GPL-2'
                  ('r-mglm', 'GPL-2', 'GPL2', 'GPL-2'),  # cran: 'GPL (>= 2)'
@@ -458,7 +457,7 @@ cran_packages = [('r-usethis', 'GPL-3', 'GPL3', 'GPL-3'),  # cran: 'GPL-3'
 
 @pytest.mark.slow
 @pytest.mark.parametrize("package, license_id, license_family, license_files", cran_packages)
-@pytest.mark.flaky(reruns=5, reruns_delay=1)
+@pytest.mark.flaky(max_runs=5)
 def test_cran_license(package, license_id, license_family, license_files, testing_workdir, testing_config):
     api.skeletonize(packages=package, repo='cran', output_dir=testing_workdir,
                     config=testing_config)
