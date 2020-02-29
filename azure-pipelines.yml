@@ -55,7 +55,7 @@ jobs:
   - script: |
       source ci/azurepipelines/activate_conda "/usr/share/miniconda/bin/python"
       conda install conda-verify -y
-      py.test --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="Linux-SerialTests-$CONDA_VERSION-Py$PYTHON_VERSION" $(PYTEST_REPLAY_OPTIONS)
+      py.test --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="Linux-SerialTests-$CONDA_VERSION-Py$PYTHON_VERSION" "${PYTEST_REPLAY_OPTIONS[@]}"
     displayName: 'Serial Tests'
 
   - script: |
@@ -308,7 +308,7 @@ jobs:
       set PERL=
       set LUA=
       set R=
-      py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp %UserProfile%\cbtmp -n auto -m "not serial" --test-run-title="Win-ParallelTests-%CONDA_VERSION%-Python%PYTHON_VERSION%" "${PYTEST_REPLAY_OPTIONS[@]}"
+      py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp %UserProfile%\cbtmp -n auto -m "not serial" --test-run-title="Win-ParallelTests-%CONDA_VERSION%-Python%PYTHON_VERSION%" %PYTEST_REPLAY_OPTIONS%
     env:
       VS90COMNTOOLS: "C:\\Program Files (x86)\\Common Files\\Microsoft\\Visual C++ for Python\\9.0\\VC\\bin"
       LIB:
