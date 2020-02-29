@@ -219,7 +219,7 @@ jobs:
       choco install wget
       wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe
       start /wait "" Miniconda3-latest-Windows-x86_64.exe /InstallationType=JustMe /S /D=%UserProfile%\Miniconda3
-      set PATH=%UserProfile%\Miniconda3;%UserProfile%\Miniconda3\Scripts;%UserProfile%\Miniconda3\Library\bin;%PATH%
+      "%UserProfile%\Miniconda3\condabin\conda.bat" init
       conda info -a
     displayName: Install miniconda
 
@@ -240,41 +240,47 @@ jobs:
       set LIB
     displayName: Patch vs2008
 
-  - powershell: |
-      Write-Host "##vso[task.prependpath]$ENV:UserProfile\Miniconda3;$ENV:UserProfile\Miniconda3\Scripts;$ENV:UserProfile\Miniconda3\Library\bin"
-    displayName: Add conda to PATH
+  - script: |
+      echo on
+      set PATH
+      doskey conda="call %UserProfile%\Miniconda3\condabin\conda.bat" $*
+      doskey /macros
+      call "%UserProfile%\Miniconda3\condabin\conda.bat" init
+      set PATH
+    displayName: conda init
 
   - script: |
+      echo on
       set PATH
-      conda --help
-      conda --version
-      conda install python="%PYTHON_VERSION%" -y
-      if "%CONDA_VERSION%" == "canary" (conda update -c conda-canary conda) else (conda update -q conda)
-      conda config --set always_yes yes
-      conda config --set auto_update_conda no
-      conda info
+      call %UserProfile%\Miniconda3\condabin\activate.bat base
+      set PATH
+      call conda install python="%PYTHON_VERSION%" -y
+      if "%CONDA_VERSION%" == "canary" (call conda update -c conda-canary conda) else (call conda update -q conda)
+      call conda config --set always_yes yes
+      call conda config --set auto_update_conda no
+      call conda info
       python -c "import sys; print(sys.version)"
       python -c "import sys; print(sys.executable)"
       python -c "import sys; print(sys.prefix)"
-      conda update -q --all
-      conda install -q pip python-libarchive-c pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling pytest-azurepipelines
-      conda install -c conda-forge pytest-replay pytest-rerunfailures -y
-      echo "safety_checks: disabled" >> ~/.condarc
-      echo "local_repodata_ttl: 1800" >> ~/.condarc
-      if "%PYTHON_VERSION%" == "2.7" conda install -q scandir pathlib2
-      if "%PYTHON_VERSION%" == "3.7" conda install -q py-lief
+      call conda update -q --all
+      call conda install -q pip python-libarchive-c pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling pytest-azurepipelines
+      call conda install -c conda-forge pytest-replay pytest-rerunfailures -y
+      echo safety_checks: disabled >> %UserProfile%\.condarc
+      echo local_repodata_ttl: 1800 >> %UserProfile%\.condarc
+      if "%PYTHON_VERSION%" == "2.7" call conda install -q scandir pathlib2
+      if "%PYTHON_VERSION%" == "3.7" call conda install -q py-lief
       python --version
       python -c "import struct; print(struct.calcsize('P') * 8)"
       pip install --no-deps .
-      conda build --version
+      conda-build --version
       pushd .. && git clone https://github.com/conda/conda_build_test_recipe  && popd
       mkdir %UserProfile%\cbtmp_serial
       mkdir %UserProfile%\cbtmp
       for /d %%F in (%UserProfile%\cbtmp_serial\*) do rd /s /q "%%F"
       for /d %%F in (%UserProfile%\cbtmp\*) do rd /s /q "%%F"
-      conda create -n blarg -yq --download-only python=2.7
-      conda create -n blarg -yq --download-only python=3.7
-      conda create -n blarg -yq --download-only python cmake
+      call conda create -n blarg -yq --download-only python=2.7
+      call conda create -n blarg -yq --download-only python=3.7
+      call conda create -n blarg -yq --download-only python cmake
       mkdir $(Build.ArtifactStagingDirectory)\\pytest-replay
       set "PYTEST_REPLAY_OPTIONS=--replay-record-dir=$(Build.ArtifactStagingDirectory)\\pytest-replay"
       if "%PYTHON_VERSION%" NEQ "2.7" set "PYTEST_REPLAY_OPTIONS=--replay-record-dir=$(Build.ArtifactStagingDirectory)\\pytest-replay --replay-base-name=Win-%CONDA_VERSION%-Py%PYTHON_VERSION%"
@@ -282,8 +288,11 @@ jobs:
     displayName: 'Configuration'
 
   - script: |
+      echo on
       set PATH
-      conda install -y conda-verify
+      call %UserProfile%\Miniconda3\condabin\activate.bat base
+      set PATH
+      call conda install -y conda-verify
       set PERL=
       set LUA=
       set R=
@@ -291,8 +300,11 @@ jobs:
     displayName: 'Serial Tests'
 
   - script: |
-      conda activate base
-      conda remove -y conda-verify
+      echo on
+      set PATH
+      call %UserProfile%\Miniconda3\condabin\activate.bat base
+      set PATH
+      call conda remove -y conda-verify
       set PERL=
       set LUA=
       set R=
