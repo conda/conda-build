@@ -5,6 +5,7 @@ from __future__ import absolute_import, division, print_function
 
 from collections import deque, OrderedDict
 import fnmatch
+import glob2
 import io
 import json
 import os
@@ -893,10 +894,11 @@ def get_files_with_prefix(m, files_in, prefix):
     all_matches = {}
 
     variant = m.config.variant
+    replacement_tags = ''
     if 'replacements' in variant:
         replacements = variant['replacements']
-        for replacement in replacements['all_replacements']:
-            import glob2
+        last = len(replacements['all_replacements']) - 1
+        for index, replacement in enumerate(replacements['all_replacements']):
             all_matches = have_regex_files(files=[f for f in files if any(
                                                   glob2.fnmatch.fnmatch(f, r) for r in replacement['glob_patterns'])],
                                            prefix=prefix,
@@ -906,11 +908,14 @@ def get_files_with_prefix(m, files_in, prefix):
                                            match_records=all_matches,
                                            regex_rg=replacement['regex_rg'] if 'regex_rg' in replacement else None,
                                            debug=m.config.debug)
+            replacement_tags = replacement_tags + '"' + replacement['tag'] + ('"' if
+                                                         index == last else '", ')
     perform_replacements(all_matches, prefix)
     end = time.time()
-    total_replacements = sum(map(lambda i: len(i['submatches']), all_matches))
-    print("INFO :: Time taken to mark (prefix) and mark+peform (pkg-config, CMake, qmake)\n"
-          "        {} replacements in {} files was {} seconds".format(
+    total_replacements = sum(map(lambda i: len(all_matches[i]['submatches']), all_matches))
+    print("INFO :: Time taken to mark (prefix){}\n"
+          "        {} replacements in {} files was {:.2f} seconds".format(
+          " and mark+peform ({})".format(replacement_tags) if replacement_tags else '',
         total_replacements, len(all_matches), end - start))
     '''
     # Keeping this around just for a while.
@@ -937,7 +942,7 @@ def get_files_with_prefix(m, files_in, prefix):
     files2 = set([f for _, _, f in files_with_prefix2])
     assert not (files2 - files1), "New ripgrep prefix search missed the following files:\n{}\n".format(files2 - files1)
     '''
-    return files_with_prefix
+    return sorted(files_with_prefix)
 
 
 def record_prefix_files(m, files_with_prefix):
@@ -2566,7 +2571,7 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
     # this is also copying tests/source_files from work_dir to testing workdir
 
     _, pl_files, py_files, r_files, lua_files, shell_files = create_all_test_files(metadata)
-    if not any([py_files, shell_files, pl_files, lua_files, r_files]):
+    if not any([py_files, shell_files, pl_files, lua_files, r_files]) and not metadata.config.test_run_post:
         print("Nothing to test for:", test_package_name)
         return True
 
@@ -2581,6 +2586,8 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
                                       getattr(metadata.config, '%s_subdir' % name))))
                 # Needs to come after create_files in case there's test/source_files
                 print("Renaming %s prefix directory, " % name, prefix, " to ", dest)
+                if os.path.exists(dest):
+                    utils.rm_rf(dest)
                 shutil.move(prefix, dest)
 
         # nested if so that there's no warning when we just leave the empty workdir in place
@@ -2590,6 +2597,8 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
                                           metadata.config.host_subdir)))
             # Needs to come after create_files in case there's test/source_files
             print("Renaming work directory, ", metadata.config.work_dir, " to ", dest)
+            if os.path.exists(dest):
+                utils.rm_rf(dest)
             shutil.move(config.work_dir, dest)
     else:
         log.warn("Not moving work directory after build.  Your package may depend on files "
@@ -2603,6 +2612,7 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
         env = dict(os.environ.copy())
         env.update(environ.get_dict(m=metadata, prefix=config.test_prefix))
         env["CONDA_BUILD_STATE"] = "TEST"
+        env["CONDA_BUILD"] = "1"
         if env_path_backup_var_exists:
             env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
