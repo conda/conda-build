@@ -27,7 +27,7 @@ def create_files(m, test_dir=None):
 
     for pattern in ensure_list(m.get_value('test/files', [])):
         has_files = True
-        files = glob(join(m.path, pattern))
+        files = glob(join(m.path, pattern.replace('/', os.sep)))
         for f in files:
             copy_into(f, f.replace(m.path, test_dir), m.config.timeout, locking=False,
                     clobber=True)
