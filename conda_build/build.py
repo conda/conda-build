@@ -5,6 +5,7 @@ from __future__ import absolute_import, division, print_function
 
 from collections import deque, OrderedDict
 import fnmatch
+import glob2
 import io
 import json
 import os
