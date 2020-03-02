@@ -941,7 +941,7 @@ def get_files_with_prefix(m, files_in, prefix):
     files2 = set([f for _, _, f in files_with_prefix2])
     assert not (files2 - files1), "New ripgrep prefix search missed the following files:\n{}\n".format(files2 - files1)
     '''
-    return files_with_prefix
+    return sorted(files_with_prefix)
 
 
 def record_prefix_files(m, files_with_prefix):
