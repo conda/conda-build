@@ -2585,6 +2585,8 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
                                       getattr(metadata.config, '%s_subdir' % name))))
                 # Needs to come after create_files in case there's test/source_files
                 print("Renaming %s prefix directory, " % name, prefix, " to ", dest)
+                if os.path.exists(dest):
+                    utils.rm_rf(dest)
                 shutil.move(prefix, dest)
 
         # nested if so that there's no warning when we just leave the empty workdir in place
@@ -2594,6 +2596,8 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
                                           metadata.config.host_subdir)))
             # Needs to come after create_files in case there's test/source_files
             print("Renaming work directory, ", metadata.config.work_dir, " to ", dest)
+            if os.path.exists(dest):
+                utils.rm_rf(dest)
             shutil.move(config.work_dir, dest)
     else:
         log.warn("Not moving work directory after build.  Your package may depend on files "
