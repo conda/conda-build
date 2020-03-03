@@ -1,6 +1,15 @@
-# current developments
 2019-11-01 3.18.11:
 ------------------
+
+* Update build.sh files of skeletons to be shellcheck clean including test to lint future updates. 
+* Corrected documentation on subpackage test requirements.
+* Do not move work dir to work/work/
+* fixed a missing .lower() on two tar_xf related util functions
+* Fix has_prefix detection for Windows.
+* conda_build.inspect_pkg: optimise use of fnmatch
+* Do not consider .ignore files when searching with ripgrep
+* Remove N*N os.lstat calls in build_info_files_json_v1
+
 
 Contributors:
 -------------
