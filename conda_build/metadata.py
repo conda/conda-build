@@ -1261,7 +1261,8 @@ class MetaData(object):
         if build_string_excludes:
             exclude_pattern = re.compile('|'.join('{}[\s$]?.*'.format(exc)
                                                   for exc in build_string_excludes))
-            dependencies = [req for req in dependencies if not exclude_pattern.match(req)]
+            dependencies = [req for req in dependencies if not exclude_pattern.match(req) and
+                                ' ' not in self.config.variant[req]]
 
         # retrieve values - this dictionary is what makes up the hash.
         return {key: self.config.variant[key] for key in dependencies}
