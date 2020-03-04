@@ -1582,7 +1582,15 @@ def bundle_conda(output, metadata, env, stats, **kw):
     # clean out host prefix so that this output's files don't interfere with other outputs
     #   We have a backup of how things were before any output scripts ran.  That's
     #   restored elsewhere.
-    utils.rm_rf(metadata.config.host_prefix)
+
+    prefix = metadata.config.host_prefix
+    dest = os.path.join(os.path.dirname(prefix),
+                        '_'.join(('_h_env_moved', metadata.dist(),
+                                  metadata.config.host_subdir)))
+    print("Renaming host env directory, ", prefix, " to ", dest)
+    if os.path.exists(dest):
+        utils.rm_rf(dest)
+    shutil.move(prefix, dest)
 
     return final_outputs
 
@@ -1716,7 +1724,7 @@ def _write_activation_text(script_path, m):
         if os.path.splitext(script_path)[1].lower() == ".bat":
             if m.config.build_subdir.startswith('win'):
                 from conda_build.utils import write_bat_activation_text
-            write_bat_activation_text(fh, m)
+            write_bat_activation_text(fh, script_path, m)
         elif os.path.splitext(script_path)[1].lower() == ".sh":
             _write_sh_activation_text(fh, m)
         else:
@@ -2285,7 +2293,7 @@ def _construct_metadata_for_test_from_package(package, config):
                  "what a valid channel is at "
                  "https://conda.io/docs/user-guide/tasks/create-custom-channels.html")
 
-        local_dir = os.path.join(config.croot, config.host_subdir)
+        local_dir = config.bldpkgs_dir
         try:
             os.makedirs(local_dir)
         except:
@@ -2523,6 +2531,9 @@ def write_test_scripts(metadata, env_vars, py_files, pl_files, lua_files, r_file
                     test_env=metadata.config.test_prefix))
             if utils.on_win:
                 tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+        # In-case people source this, it's essential errors are not fatal in an interactive shell.
+        if not utils.on_win:
+            tf.write('set +e\n')
 
     _write_test_run_script(metadata, test_run_script, test_env_script, py_files, pl_files,
                            lua_files, r_files, shell_files, trace)
@@ -2818,7 +2829,7 @@ def build_tree(recipe_list, config, stats, build_only=False, post=False, notest=
                 # this code is duplicated below because we need to be sure that the build id is set
                 #    before downloading happens - or else we lose where downloads are
                 if config.set_build_id and metadata.name() not in config.build_id:
-                    config.compute_build_id(metadata.name(), reset=True)
+                    config.compute_build_id(metadata.name(), metadata.version(), reset=True)
                 recipe_parent_dir = os.path.dirname(metadata.path)
                 to_build_recursive.append(metadata.name())
 
@@ -2858,7 +2869,7 @@ def build_tree(recipe_list, config, stats, build_only=False, post=False, notest=
                     utils.rm_rf(metadata.config.build_prefix)
                     utils.rm_rf(metadata.config.test_prefix)
                 if metadata.name() not in metadata.config.build_folder:
-                    metadata.config.compute_build_id(metadata.name(), reset=True)
+                    metadata.config.compute_build_id(metadata.name(), metadata.version(), reset=True)
 
                 packages_from_this = build(metadata, stats,
                                            post=post,

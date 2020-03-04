@@ -36,9 +36,9 @@ def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variant
     from conda_build.render import render_recipe, finalize_metadata
     from conda_build.exceptions import DependencyNeedsBuildingError
     from conda_build.conda_interface import NoPackagesFoundError
+    from conda_build.config import set_invocation_time
     from collections import OrderedDict
     config = get_or_merge_config(config, **kwargs)
-
     metadata_tuples = render_recipe(recipe_path, bypass_env_check=bypass_env_check,
                                     no_download_source=config.no_download_source,
                                     config=config, variants=variants,
