@@ -973,7 +973,7 @@ def record_prefix_files(m, files_with_prefix):
 
         print("Files containing CONDA_PREFIX")
         print("-----------------------------")
-        detect_binary_files_with_prefix = m.get_value('build/detect_binary_files_with_prefix', False)
+        detect_binary_files_with_prefix = m.get_value('build/detect_binary_files_with_prefix', True)
         with open(join(m.config.info_dir, 'has_prefix'), 'w') as fo:
             for pfix, mode, fn in files_with_prefix:
                 ignored_because = None
