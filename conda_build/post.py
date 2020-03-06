@@ -544,7 +544,7 @@ def mk_relative_linux(f, prefix, rpaths=('lib',), method=None):
     rpath = ':'.join(new)
 
     # check_binary_patchers(elf, prefix, rpath)
-    if not method or not patchelf or method.upper() == 'LIEF':
+    if not patchelf or (method and method.upper() == 'LIEF'):
         set_rpath(old_matching='*', new_rpath=rpath, file=elf)
     else:
         call([patchelf, '--force-rpath', '--set-rpath', rpath, elf])
