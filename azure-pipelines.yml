@@ -215,7 +215,7 @@ jobs:
   - script: |
       rmdir C:\Strawberry /s /q
       choco install wget
-      wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe
+      call ci\azurepipelines\install_conda_and_build_test_deps.bat %UserProfile%\Miniconda3
       start /wait "" Miniconda3-latest-Windows-x86_64.exe /InstallationType=JustMe /S /D=%UserProfile%\Miniconda3
       "%UserProfile%\Miniconda3\condabin\conda.bat" init
       conda info -a
