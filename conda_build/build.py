@@ -1743,7 +1743,7 @@ def _write_activation_text(script_path, m):
         if os.path.splitext(script_path)[1].lower() == ".bat":
             if m.config.build_subdir.startswith('win'):
                 from conda_build.utils import write_bat_activation_text
-            write_bat_activation_text(fh, m)
+            write_bat_activation_text(fh, script_path, m)
         elif os.path.splitext(script_path)[1].lower() == ".sh":
             _write_sh_activation_text(fh, m)
         else:
