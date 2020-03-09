@@ -42,7 +42,10 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
     if verbose:
         log.info('Source cache directory is: %s' % cache_folder)
     if not isdir(cache_folder) and not os.path.islink(cache_folder):
-        os.makedirs(cache_folder)
+        try:
+            os.makedirs(cache_folder)
+        except:
+            log.error("Failed to create cache_folder {}".format(cache_folder))
 
     source_urls = source_dict['url']
     if not isinstance(source_urls, list):
