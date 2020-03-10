@@ -1,0 +1,27 @@
+Enhancements:
+-------------
+
+* Keep python pinning in hashing if there is a space #3895
+* ci launcher supporting python d shebangs on Windows #3894
+* Allow build/binary_has_prefix_files to specify a list of files #3893
+
+Bug fixes:
+----------
+
+* Use patchelf to set RPATH by default #3897
+
+Deprecations:
+-------------
+
+* <news item>
+
+Docs:
+-----
+
+* <news item>
+
+Other:
+------
+
+* <news item>
+
