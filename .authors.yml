@@ -1048,19 +1048,24 @@
   email: bdice@bradleydice.com
   num_commits: 1
   first_commit: 2020-01-01 17:19:32
+  github: bdice
 - name: Matthew R. Becker
   email: beckermr@users.noreply.github.com
   num_commits: 2
   first_commit: 2020-01-03 08:58:23
+  github: beckermr
 - name: Sophian Guidara
   email: sophian@gmail.com
   num_commits: 2
   first_commit: 2019-11-08 09:27:17
+  github: guidara
 - name: Stefan Scherfke
   email: stefan@sofa-rockers.org
   num_commits: 1
   first_commit: 2020-01-02 05:44:09
+  github: sscherfke
 - name: Sergio Oller
   email: sergioller@gmail.com
   num_commits: 1
   first_commit: 2019-11-06 06:32:50
+  github: zeehio
