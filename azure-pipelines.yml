@@ -40,9 +40,8 @@ jobs:
       rmdir C:\Strawberry /s /q
       choco install wget
       echo CD is %CD%
-      dir /s /q
       dir ci\azurepipelines\install_conda_and_build_test_deps.bat
-      call ci\azurepipelines\install_conda_and_build_test_deps.bat %UserProfile%\Miniconda3
+      call %CD%\ci\azurepipelines\install_conda_and_build_test_deps.bat %UserProfile%\Miniconda3
       start /wait "" Miniconda3-latest-Windows-x86_64.exe /InstallationType=JustMe /S /D=%UserProfile%\Miniconda3
       "%UserProfile%\Miniconda3\condabin\conda.bat" init
       conda info -a
