@@ -839,7 +839,7 @@ def get_files_with_prefix(m, files_in, prefix):
     import time
     start = time.time()
     # It is nonsensical to replace anything in a symlink.
-    files = [f for f in files_in if not os.path.islink(os.path.join(prefix, f))]
+    files = sorted([f for f in files_in if not os.path.islink(os.path.join(prefix, f))])
     ignore_files = m.ignore_prefix_files()
     ignore_types = set()
     if not hasattr(ignore_files, "__iter__"):
@@ -887,8 +887,9 @@ def get_files_with_prefix(m, files_in, prefix):
         prefixes_for_file[filename] = set([sm['text'] for sm in match['submatches']])
     files_with_prefix_new = []
     for (_, mode, filename) in files_with_prefix:
-        if filename in prefixes_for_file and filename in pfx_matches:
-            for pfx in prefixes_for_file[filename]:
+        np = filename.replace('/', '\\') if utils.on_win else filename
+        if np in prefixes_for_file and np in pfx_matches:
+            for pfx in prefixes_for_file[np]:
                 files_with_prefix_new.append((pfx.decode('utf-8'), mode, filename))
     files_with_prefix = files_with_prefix_new
     all_matches = {}
