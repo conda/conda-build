@@ -1,5 +1,8 @@
-trigger:
-- master
+pr:
+  autoCancel: true
+  branches:
+    include:
+    - master
 
 jobs:
 
@@ -315,4 +318,3 @@ jobs:
   - publish: $(Build.ArtifactStagingDirectory)/pytest-replay
     artifact: 'Win-$(CONDA_VERSION)-Python$(PYTHON_VERSION)'
     condition: always()
-
