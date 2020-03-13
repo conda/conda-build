@@ -37,9 +37,9 @@ jobs:
       mkdir -p /usr/share/miniconda/bin
       chmod -w /usr/share/miniconda/locks
       if [ "$CONDA_VERSION" = "release" ]; then
-        conda update -y conda;
+        conda update -y conda
       else
-        conda install -y -c conda-canary conda;
+        conda install -y -c conda-canary conda
       fi
       conda config --set always_yes yes
       conda config --set auto_update_conda False
