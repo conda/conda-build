@@ -315,4 +315,3 @@ jobs:
   - publish: $(Build.ArtifactStagingDirectory)/pytest-replay
     artifact: 'Win-$(CONDA_VERSION)-Python$(PYTHON_VERSION)'
     condition: always()
-
