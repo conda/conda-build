@@ -11,7 +11,7 @@
   email: jjhelmus@gmail.com
   aliases:
   - Jonathan Helmus
-  num_commits: 58
+  num_commits: 61
   first_commit: 2014-06-09 17:25:05
   github: jjhelmus
 - name: Isuru Fernando
@@ -414,7 +414,7 @@
 - name: Ray Donnelly
   email: mingw.android@gmail.com
   github: mingwandroid
-  num_commits: 455
+  num_commits: 457
   first_commit: 2016-03-06 18:52:51
 - name: Paul Madden
   email: maddenp@colorado.edu
@@ -1005,7 +1005,7 @@
   github: ddamiani
 - name: Marcelo Duarte Trevisani
   email: marceloduartetrevisani@gmail.com
-  num_commits: 84
+  num_commits: 86
   first_commit: 2019-07-19 10:00:00
   github: marcelotrevisani
   alternate_emails:
