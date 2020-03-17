@@ -1,3 +1,48 @@
+2020-03-17 3.19.1:
+------------------
+
+Bug fixes:
+----------
+
+* Fix issues with PREFIX detection in Windows #3899
+
+Other:
+------
+
+* Change the CI trigger #3904
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @marcelotrevisani
+* @jjhelmus
+
+
+2020-03-10 3.19.0:
+------------------
+
+Enhancements:
+-------------
+
+* Keep python pinning in hashing if there is a space #3895
+* ci launcher supporting python d shebangs on Windows #3894
+* Allow build/binary_has_prefix_files to specify a list of files #3893
+
+Bug fixes:
+----------
+
+* Use patchelf to set RPATH by default #3897
+
+Contributors:
+-------------
+
+* @isuruf
+* @jjhelmus
+* @mingwandroid
+
+
+
 2020-03-02 3.18.12:
 ------------------
 
