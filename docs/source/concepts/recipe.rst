@@ -69,7 +69,7 @@ Conda-build performs the following steps:
 
 #. Tests the new conda package if the recipe includes tests:
 
-   #. Deletes the build environment.
+   #. Deletes the build environment and source directory to ensure that the new conda package does not inadvertantly depend on artifacts not included in the package.
 
    #. Creates a test environment with the package and its
       dependencies.
