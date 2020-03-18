@@ -1582,7 +1582,18 @@ def bundle_conda(output, metadata, env, stats, **kw):
     # clean out host prefix so that this output's files don't interfere with other outputs
     #   We have a backup of how things were before any output scripts ran.  That's
     #   restored elsewhere.
-    utils.rm_rf(metadata.config.host_prefix)
+
+    if metadata.config.keep_old_work:
+        prefix = metadata.config.host_prefix
+        dest = os.path.join(os.path.dirname(prefix),
+                            '_'.join(('_h_env_moved', metadata.dist(),
+                                      metadata.config.host_subdir)))
+        print("Renaming host env directory, ", prefix, " to ", dest)
+        if os.path.exists(dest):
+            utils.rm_rf(dest)
+        shutil.move(prefix, dest)
+    else:
+        utils.rm_rf(metadata.config.host_prefix)
 
     return final_outputs
 
