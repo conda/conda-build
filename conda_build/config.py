@@ -760,7 +760,7 @@ class Config(object):
     def clean(self, remove_folders=True):
         # build folder is the whole burrito containing envs and source folders
         #   It will only exist if we download source, or create a build or test environment
-        if remove_folders and not getattr(self, 'dirty'):
+        if remove_folders and not getattr(self, 'dirty') and not getattr(self, 'keep_old_work'):
             if self.build_id:
                 if os.path.isdir(self.build_folder):
                     rm_rf(self.build_folder)
