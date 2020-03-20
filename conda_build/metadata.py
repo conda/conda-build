@@ -414,6 +414,7 @@ default_structs = {
     'source/git_rev': text_type,
     'source/path': text_type,
     'source/git_url': text_type,
+    'source/git_recursive': bool,
     'app/own_environment': bool,
     'about/identifiers': list,
     'about/keywords': list,
@@ -490,7 +491,7 @@ def _str_version(package_meta):
 FIELDS = {
     'package': {'name', 'version'},
     'source': {'fn', 'url', 'md5', 'sha1', 'sha256', 'path', 'path_via_symlink',
-               'git_url', 'git_tag', 'git_branch', 'git_rev', 'git_depth',
+               'git_url', 'git_tag', 'git_branch', 'git_rev', 'git_depth', 'git_recursive',
                'hg_url', 'hg_tag',
                'svn_url', 'svn_rev', 'svn_ignore_externals',
                'folder', 'no_hoist',
