@@ -287,11 +287,12 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_ca
                                               git_depth=git_depth, is_top_level=False,
                                               verbose=verbose)
 
-    if is_top_level and git_recursive:
+    if is_top_level:
         # Now that all relative-URL-specified submodules are locally mirrored to
         # relatively the same place we can go ahead and checkout the submodules.
-        check_call_env([git, 'submodule', 'update', '--init',
-                    '--recursive'], cwd=checkout_dir, stdout=stdout, stderr=stderr)
+        if git_recursive:
+            check_call_env([git, 'submodule', 'update', '--init',
+                            '--recursive'], cwd=checkout_dir, stdout=stdout, stderr=stderr)
         git_info(checkout_dir, verbose=verbose)
     if not verbose:
         FNULL.close()
