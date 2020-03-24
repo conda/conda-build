@@ -416,11 +416,11 @@ section:
 
   patches:
     # BUILT_AS_DYNAMIC_LIB.
-    - 0001-windowshdf5.patch
+    - 0001-windowshdf5.patch # [win]
     # Use multiple cores on Windows.
-    - 0002-multiprocessor.patch
+    - 0002-multiprocessor.patch # [win]
     # disable 12 bit jpeg on Windows as we aren't using internal jpeg
-    - 0003-disable_jpeg12.patch
+    - 0003-disable_jpeg12.patch # [win]
 
 This section says that when this package is being built on a Windows
 platform, apply the following patch files. Notice that the patch files
