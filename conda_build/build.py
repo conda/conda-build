@@ -948,9 +948,8 @@ def get_files_with_prefix(m, files_in, prefix):
 
 def record_prefix_files(m, files_with_prefix):
 
-    filtered = []
     if not files_with_prefix:
-        return filtered
+        return
 
     # Copies are made to ease debugging. Sorry.
     binary_has_prefix_files = m.binary_has_prefix_files()[:]
@@ -973,16 +972,16 @@ def record_prefix_files(m, files_with_prefix):
 
         print("Files containing CONDA_PREFIX")
         print("-----------------------------")
-        detect_binary_files_with_prefix = m.get_value('build/detect_binary_files_with_prefix', False)
         with open(join(m.config.info_dir, 'has_prefix'), 'w') as fo:
             for pfix, mode, fn in files_with_prefix:
+                print('{} :: {} :: {}'.format(pfix, mode, fn))
                 ignored_because = None
                 if (fn in binary_has_prefix_files or (not len_binary_has_prefix_files or
-                   detect_binary_files_with_prefix and mode == 'binary')):
+                   m.get_value('build/detect_binary_files_with_prefix', False) and mode == 'binary')):
                     if fn in binary_has_prefix_files:
                         if mode != 'binary':
                             mode = 'binary'
-                        elif fn in binary_has_prefix_files and detect_binary_files_with_prefix:
+                        elif fn in binary_has_prefix_files:
                             print("File {} force-identified as 'binary', "
                                   "But it is 'binary' anyway, suggest removing it from "
                                   "`build/binary_has_prefix_files`".format(fn))
@@ -1005,7 +1004,6 @@ def record_prefix_files(m, files_with_prefix):
                                                                reason=ignored_because if ignored_because else ""))
                 if ignored_because is None:
                     fo.write(fmt_str % (pfix, mode, fn))
-                    filtered.append((pfix, mode, fn))
 
     # make sure we found all of the files expected
     errstr = ""
@@ -1015,8 +1013,6 @@ def record_prefix_files(m, files_with_prefix):
         errstr += "Did not detect hard-coded path in %s from binary_has_prefix_files\n" % f
     if errstr:
         raise RuntimeError(errstr)
-
-    return filtered
 
 
 def sanitize_channel(channel):
@@ -1199,9 +1195,9 @@ def create_info_files(m, files, prefix):
     write_info_files_file(m, files)
 
     files_with_prefix = get_files_with_prefix(m, files, prefix)
-    files_with_prefix = record_prefix_files(m, files_with_prefix)
     checksums = create_info_files_json_v1(m, m.config.info_dir, prefix, files, files_with_prefix)
 
+    record_prefix_files(m, files_with_prefix)
     write_no_link(m, files)
 
     sources = m.get_section('source')
