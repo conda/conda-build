@@ -856,7 +856,9 @@ def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, 
         # if os.path.isdir(prefix):
         #     utils.rm_rf(prefix)
 
-        if specs_or_actions:  # Don't waste time if there is nothing to do
+        # Don't waste time if there is nothing to do (in fact we fail "assert PREFIX in actions")
+        # if passed empty specs. However we do not get a correct conda environment.
+        if specs_or_actions:
             log.debug("Creating environment in %s", prefix)
             log.debug(str(specs_or_actions))
 
