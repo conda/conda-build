@@ -2481,7 +2481,7 @@ def _construct_metadata_for_test_from_package(package, config):
                  "what a valid channel is at "
                  "https://conda.io/docs/user-guide/tasks/create-custom-channels.html")
 
-        local_dir = os.path.join(config.croot, config.host_subdir)
+        local_dir = config.bldpkgs_dir
         try:
             os.makedirs(local_dir)
         except:
@@ -3062,7 +3062,7 @@ def build_tree(recipe_list, config, stats, build_only=False, post=None, notest=F
                     utils.rm_rf(metadata.config.build_prefix)
                     utils.rm_rf(metadata.config.test_prefix)
                 if metadata.name() not in metadata.config.build_folder:
-                    metadata.config.compute_build_id(metadata.name(), reset=True)
+                    metadata.config.compute_build_id(metadata.name(), metadata.version(), reset=True)
 
                 packages_from_this = build(metadata, stats,
                                            post=post,

@@ -198,10 +198,17 @@ different sets of packages."""
         "--no-build-id",
         action="store_false",
         help=("do not generate unique build folder names.  Use if having issues with "
-              "paths being too long."),
+              "paths being too long.  Deprecated, please use --build-id-pat='' instead"),
         dest='set_build_id',
         # note: inverted - dest stores positive logic
         default=cc_conda_build.get('set_build_id', 'true').lower() == 'true',
+    )
+    p.add_argument(
+        "--build-id-pat",
+        help=("specify a templated pattern to use as build folder names.  Use if having issues with "
+              "paths being too long."),
+        dest='build_id_pat',
+        default=cc_conda_build.get('build_id_pat', '{n}_{t}'),
     )
     p.add_argument(
         "--croot",
