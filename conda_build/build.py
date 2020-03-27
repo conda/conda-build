@@ -2346,7 +2346,7 @@ def _construct_metadata_for_test_from_package(package, config):
                  "what a valid channel is at "
                  "https://conda.io/docs/user-guide/tasks/create-custom-channels.html")
 
-        local_dir = os.path.join(config.croot, config.host_subdir)
+        local_dir = config.bldpkgs_dir
         try:
             os.makedirs(local_dir)
         except:
@@ -2884,7 +2884,7 @@ def build_tree(recipe_list, config, stats, build_only=False, post=False, notest=
                 # this code is duplicated below because we need to be sure that the build id is set
                 #    before downloading happens - or else we lose where downloads are
                 if config.set_build_id and metadata.name() not in config.build_id:
-                    config.compute_build_id(metadata.name(), reset=True)
+                    config.compute_build_id(metadata.name(), metadata.version(), reset=True)
                 recipe_parent_dir = os.path.dirname(metadata.path)
                 to_build_recursive.append(metadata.name())
 
@@ -2924,7 +2924,7 @@ def build_tree(recipe_list, config, stats, build_only=False, post=False, notest=
                     utils.rm_rf(metadata.config.build_prefix)
                     utils.rm_rf(metadata.config.test_prefix)
                 if metadata.name() not in metadata.config.build_folder:
-                    metadata.config.compute_build_id(metadata.name(), reset=True)
+                    metadata.config.compute_build_id(metadata.name(), metadata.version(), reset=True)
 
                 packages_from_this = build(metadata, stats,
                                            post=post,
