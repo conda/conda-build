@@ -8,6 +8,7 @@ from collections import namedtuple
 import math
 import os
 from os.path import abspath, expanduser, join, expandvars
+import re
 import shutil
 import sys
 import time
@@ -21,6 +22,11 @@ from .utils import get_build_folders, rm_rf, get_logger, get_conda_operation_loc
 
 
 on_win = (sys.platform == 'win32')
+invocation_time = ''
+def set_invocation_time():
+    global invocation_time
+    invocation_time = str(int(time.time() * 1000))
+set_invocation_time()
 
 
 # Don't "save" an attribute of this module for later, like build_prefix =
@@ -210,6 +216,10 @@ def _get_default_settings():
             Setting('conda_pkg_format', cc_conda_build.get('pkg_format', conda_pkg_format_default)),
 
             Setting('suppress_variables', False),
+
+            Setting('build_id_pat', cc_conda_build.get('build_id_pat',
+                                                            '{n}_{t}')),
+
             ]
 
 
@@ -550,27 +560,51 @@ class Config(object):
             res = join(prefix, 'bin', 'Rscript')
         return res
 
-    def compute_build_id(self, package_name, reset=False):
+    def compute_build_id(self, package_name, package_version='0', reset=False):
+        time_re = r'([_-])([0-9]{13})'
+        pat_dict = {'n': package_name,
+                    'v': str(package_version),
+                    't': '{t}'}
+        # Use the most recent build with matching recipe name, or else the recipe name.
+        build_folders = []
+        if not self.dirty:
+            if reset:
+                set_invocation_time()
+        else:
+            old_build_id_t = self.build_id_pat if self.build_id_pat else '{n}-{v}_{t}'
+            old_build_id_t = old_build_id_t.format(**pat_dict)
+            build_folders_all = get_build_folders(self.croot)
+            for folder_full in build_folders_all:
+                folder = os.path.basename(folder_full)
+                untimed_folder = re.sub(time_re, '\g<1>{t}', folder, flags = re.UNICODE)
+                if untimed_folder == old_build_id_t:
+                    build_folders.append(folder_full)
+            prev_build_id = None
+        if build_folders:
+            # Use the most recent build with matching recipe name
+            prev_build_id = os.path.basename(build_folders[-1])
+            old_dir = os.path.join(build_folders[-1], 'work')
+        else:
+            # Maybe call set_invocation_time() here?
+            pat_dict['t'] = invocation_time
+            test_old_dir = join(self.croot, package_name, 'work')
+            old_dir = test_old_dir if os.path.exists(test_old_dir) else None
+
         if self.set_build_id and (not self._build_id or reset):
             assert not os.path.isabs(package_name), ("package name should not be a absolute path, "
                                                      "to preserve croot during path joins")
-            folder_basenames = [os.path.basename(fldr) for fldr in get_build_folders(self.croot)]
-            build_folders = sorted([build_folder for build_folder in folder_basenames
-                            if build_folder[:build_folder.rfind('_')] == package_name])
-            if self.dirty and build_folders:
-                # Use the most recent build with matching recipe name
-                self._build_id = build_folders[-1]
+            if self.dirty and prev_build_id:
+                old_dir = self.work_dir if len(os.listdir(self.work_dir)) > 0 else None
+                self._build_id = prev_build_id
             else:
-                old_dir = self.work_dir if len(os.listdir(self.work_dir)) > 0 else ""
-                # here we uniquely name folders, so that more than one build can happen concurrently
-                #    keep 6 decimal places so that prefix < 80 chars
-                build_id = package_name + "_" + str(int(time.time() * 1000))
                 # important: this is recomputing prefixes and determines where work folders are.
-                self._build_id = build_id
+                build_id = self.build_id_pat if self.build_id_pat else '{n}-{v}_{t}'
+                self._build_id = build_id.format(**pat_dict)
                 if old_dir:
                     work_dir = self.work_dir
-                    rm_rf(work_dir)
-                    shutil.move(old_dir, work_dir)
+                    if old_dir != work_dir:
+                        rm_rf(work_dir)
+                        shutil.move(old_dir, work_dir)
 
     @property
     def build_id(self):
