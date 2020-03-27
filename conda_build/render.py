@@ -804,7 +804,7 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
     # important: set build id *before* downloading source.  Otherwise source goes into a different
     #    build folder.
     if config.set_build_id:
-        m.config.compute_build_id(m.name(), reset=reset_build_id)
+        m.config.compute_build_id(m.name(), m.version(), reset=reset_build_id)
 
     # this source may go into a folder that doesn't match the eventual build folder.
     #   There's no way around it AFAICT.  We must download the source to be able to render
