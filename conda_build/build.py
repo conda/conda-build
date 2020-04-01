@@ -2768,8 +2768,7 @@ Error:
 """ % (os.pathsep.join(external.dir_paths)))
 
 
-def build_tree(recipe_list, config, stats, build_only=False, post=False, notest=False,
-               need_source_download=True, need_reparse_in_env=False, variants=None):
+def build_tree(recipe_list, config, stats, build_only=False, post=None, notest=False, variants=None):
 
     to_build_recursive = []
     recipe_list = deque(recipe_list)

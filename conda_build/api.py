@@ -205,8 +205,8 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
 
     if not absolute_recipes:
         raise ValueError('No valid recipes found for input: {}'.format(recipe_paths_or_metadata))
-    return build_tree(absolute_recipes, config, stats, build_only=build_only, post=post,
-                      notest=notest, need_source_download=need_source_download, variants=variants)
+    return build_tree(sorted(absolute_recipes), config, stats, build_only=build_only, post=post,
+                      notest=notest, variants=variants)
 
 
 def test(recipedir_or_package_or_metadata, move_broken=True, config=None, stats=None, **kwargs):

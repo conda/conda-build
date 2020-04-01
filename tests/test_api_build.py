@@ -301,6 +301,7 @@ def test_checkout_tool_as_dependency(testing_workdir, testing_config, monkeypatc
     FNULL.close()
     env = os.environ.copy()
     env["PATH"] = os.pathsep.join([testing_workdir, env["PATH"]])
+    testing_config.activate = True
     api.build(os.path.join(metadata_dir, '_checkout_tool_as_dependency'), config=testing_config)
 
 
@@ -861,12 +862,13 @@ def test_build_expands_wildcards(mocker, testing_workdir):
             fh.write('\n')
     api.build(["a*"], config=config)
     output = sorted([os.path.join(os.getcwd(), path, 'meta.yaml') for path in files])
+
     build_tree.assert_called_once_with(output,
                                        mocker.ANY,  # config
                                        mocker.ANY,  # stats
                                        build_only=False,
-                                       need_source_download=True, notest=False,
-                                       post=None, variants=None)
+                                       post=None, notest=False,
+                                       variants=None)
 
 
 @pytest.mark.parametrize('set_build_id', [True, False])

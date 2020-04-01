@@ -47,13 +47,22 @@ def testing_homedir(tmpdir, request):
     """
 
     saved_path = os.getcwd()
-    new_dir = os.path.join(os.path.expanduser('~'), 'pytest.conda-build', os.path.basename(tmpdir))
-    if not os.path.exists(new_dir):
+    d1 = os.path.basename(tmpdir)
+    d2 = os.path.basename(os.path.dirname(tmpdir))
+    d3 = os.path.basename(os.path.dirname(os.path.dirname(tmpdir)))
+    new_dir = os.path.join(os.path.expanduser('~'), d1, d2, d3, 'pytest.conda-build')
+    # While pytest will make sure a folder in unique
+    if os.path.exists(new_dir):
+        import shutil
         try:
-            os.makedirs(new_dir)
+            shutil.rmtree(new_dir)
         except:
-            print("Failed to create {}".format(new_dir))
-            return None
+            pass
+    try:
+        os.makedirs(new_dir)
+    except:
+        print("Failed to create {}".format(new_dir))
+        return None
     os.chdir(new_dir)
 
     def return_to_saved_path():
