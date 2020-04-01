@@ -1038,13 +1038,24 @@ def test_pin_subpackage_exact(testing_config):
 @pytest.mark.sanity
 @pytest.mark.serial
 @pytest.mark.skipif(sys.platform != 'linux', reason="xattr code written here is specific to linux")
-def test_copy_read_only_file_with_xattr(testing_config, testing_workdir):
+def test_copy_read_only_file_with_xattr(testing_config, testing_homedir):
+    if not testing_homedir:
+        return pytest.xfail("could not create a temporary folder in {} (tmpfs inappropriate for xattrs)".
+            format('${HOME}' if sys.platform != 'win32' else '%UserProfile%'))
     src_recipe = os.path.join(metadata_dir, '_xattr_copy')
-    recipe = os.path.join(testing_workdir, '_xattr_copy')
+    recipe = os.path.join(testing_homedir, '_xattr_copy')
     copy_into(src_recipe, recipe)
     # file is r/w for owner, but we change it to 400 after setting the attribute
     ro_file = os.path.join(recipe, 'mode_400_file')
-    subprocess.check_call('setfattr -n user.attrib -v somevalue {}'.format(ro_file), shell=True)
+    # tmpfs on modern Linux does not support xattr in general.
+    # https://stackoverflow.com/a/46598063
+    # tmpfs can support extended attributes if you enable CONFIG_TMPFS_XATTR in Kernel config.
+    # But Currently this enables support for the trusted.* and security.* namespaces
+    try:
+        subprocess.check_call('setfattr -n user.attrib -v somevalue {}'.format(ro_file), shell=True)
+    except:
+        return pytest.xfail("setfattr not possible in {}, see https://stackoverflow.com/a/46598063".format(
+            testing_workdir))
     subprocess.check_call('chmod 400 {}'.format(ro_file), shell=True)
     api.build(recipe, config=testing_config)
 
