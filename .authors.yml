@@ -11,7 +11,7 @@
   email: jjhelmus@gmail.com
   aliases:
   - Jonathan Helmus
-  num_commits: 61
+  num_commits: 67
   first_commit: 2014-06-09 17:25:05
   github: jjhelmus
 - name: Isuru Fernando
@@ -423,7 +423,7 @@
   github: maddenp
 - name: Tim Snyder
   email: snyder.tim@gmail.com
-  num_commits: 9
+  num_commits: 11
   first_commit: 2017-04-28 11:08:14
   github: timsnyder
 - name: dlovell
@@ -956,7 +956,7 @@
   github: scw
 - name: Christopher Burr
   email: christopher.burr@cern.ch
-  num_commits: 6
+  num_commits: 8
   first_commit: 2019-02-10 12:42:33
   github: chrisburr
   aliases:

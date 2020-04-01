@@ -37,6 +37,7 @@ Authors are sorted by number of commits.
 * Min RK
 * John Kirkham
 * Ullrich Koethe
+* Tim Snyder
 * Phil Elson
 * Jillian Rowe
 * Almar Klein
@@ -44,10 +45,10 @@ Authors are sorted by number of commits.
 * Alex Ford
 * Teake Nutma
 * John Blischak
-* Tim Snyder
 * Scheah
 * Alexander Sturm
 * neok-m4700
+* Christopher Burr
 * Richard Frank
 * Filipe Fernandes
 * Matthieu Dartiailh
@@ -58,7 +59,6 @@ Authors are sorted by number of commits.
 * Patrick Sodré
 * Bruno Oliveira
 * Bryan W. Weber
-* Christopher Burr
 * Thomas A Caswell
 * Mario Juric
 * Ivan Kalev
