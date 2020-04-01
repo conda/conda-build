@@ -1,3 +1,25 @@
+2020-04-01 3.19.2:
+------------------
+
+Bug fixes:
+----------
+
+* Show a warning instead of failing if a Mach-O file is prouduced by a build running on a platform other than macOS (#3912)
+* Revert #3893, restores behavior of build/binary_has_prefix_files to that found in 3.18.12 (#3916)
+
+Docs:
+-----
+
+* clarified 'deletes the build environment' in concepts/recipe.rst (#3901)
+
+Contributors:
+-------------
+
+* @jjhelmus
+* @timsnyder
+* @chrisburr
+
+
 2020-03-17 3.19.1:
 ------------------
 
