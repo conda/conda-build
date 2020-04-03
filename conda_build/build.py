@@ -736,6 +736,30 @@ def copy_readme(m):
                   "as README.md and README.rst", file=sys.stderr)
 
 
+def jsonify_info_yamls(m):
+    iyd = "info_yaml.d"
+    ijd = "info_json.d"
+    src = join(dirname(m.meta_path), iyd)
+    res = []
+    if os.path.exists(src) and isdir(src):
+        for root, dirs, files in os.walk(src):
+            for file in files:
+                file = join(root, file)
+                bn, ext = os.path.splitext(os.path.basename(file))
+                if ext == '.yaml':
+                    dst = join(m.config.info_dir, ijd, bn+'.json')
+                    try:
+                        os.makedirs(os.path.dirname(dst))
+                    except:
+                        pass
+                    with open(file, 'r') as i, open(dst, 'w') as o:
+                        import yaml
+                        yaml = yaml.full_load(i)
+                        json.dump(yaml, o, sort_keys=True, indent=2, separators=(',', ': '))
+                        res.append(join(os.path.basename(m.config.info_dir), ijd, bn+'.json'))
+    return res
+
+
 def copy_license(m):
     license_files = utils.ensure_list(m.get_value('about/license_file', []))
     if not license_files:
@@ -1187,6 +1211,7 @@ def create_info_files(m, files, prefix):
     copy_readme(m)
     copy_license(m)
     copy_recipe_log(m)
+    files.extend(jsonify_info_yamls(m))
 
     create_all_test_files(m, test_dir=join(m.config.info_dir, 'test'))
     if m.config.copy_test_source_files:
