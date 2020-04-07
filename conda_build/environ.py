@@ -165,6 +165,7 @@ def get_git_info(git_exe, repo, debug):
       GIT_DESCRIBE_HASH
       GIT_FULL_HASH
       GIT_BUILD_STR
+      GIT_COMMIT_TIME
     from the output of git describe.
     :return:
     """
@@ -210,6 +211,25 @@ def get_git_info(git_exe, repo, debug):
         d['GIT_FULL_HASH'] = output
     except subprocess.CalledProcessError as error:
         log.debug("Error obtaining git commit information.  Error was: ")
+        log.debug(str(error))
+
+    try:
+        # get the timestamp
+        output = utils.check_output_env(
+            [git_exe, "show", "-s", "--format=%ci", "HEAD"],
+            env=env, cwd=os.path.dirname(repo),
+            stderr=stderr
+        ).splitlines()[0]
+        output = output.decode('utf-8').strip()
+
+        # git is almost iso 8601 exc except the T bits and the extra spaces
+        if ' ' in output:
+            output = output.split(' ')
+            output = output[0] + 'T' + output[1] + output[2]
+
+        d['GIT_COMMIT_TIME'] = output
+    except subprocess.CalledProcessError as error:
+        log.debug("Error obtaining git commit time.  Error was: ")
         log.debug(str(error))
 
     # set up the build string
