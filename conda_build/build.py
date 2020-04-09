@@ -1454,6 +1454,9 @@ def bundle_conda(output, metadata, env, stats, **kw):
             env_output[var] = os.environ[var]
         dest_file = os.path.join(metadata.config.work_dir, output['script'])
         utils.copy_into(os.path.join(metadata.path, output['script']), dest_file)
+        from os import stat
+        st = stat(dest_file)
+        os.chmod(dest_file, st.st_mode | 0o200)
         if activate_script:
             _write_activation_text(dest_file, metadata)
 
