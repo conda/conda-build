@@ -15,7 +15,8 @@ published_examples = os.path.join(os.path.dirname(metadata_dir), 'published_code
 def test_skeleton_pypi(testing_workdir):
     """published in docs at http://conda.pydata.org/docs/build_tutorials/pkgs.html"""
     conda_path = os.path.join(sys.prefix, 'Scripts' if sys.platform == 'win32' else 'bin', 'conda')
-    cmd = conda_path + ' skeleton pypi Click'
+    # Note, if you use Click here instead it will fail.
+    cmd = conda_path + ' skeleton pypi Flask'
     check_call_env(cmd.split())
     cmd = conda_path + ' build click'
     check_call_env(cmd.split())
