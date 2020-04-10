@@ -64,6 +64,7 @@ ABOUT_ORDER = ['home', 'license', 'license_family', 'license_file', 'summary',
                'doc_url', 'dev_url']
 
 PYPI_META_HEADER = """{{% set name = "{packagename}" %}}
+{{% set namel = name.lower() %}}
 {{% set version = "{version}" %}}
 
 """
@@ -74,11 +75,11 @@ PYPI_META_HEADER = """{{% set name = "{packagename}" %}}
 # etc. is determined by EXPECTED_SECTION_ORDER.
 PYPI_META_STATIC = {
     'package': OrderedDict([
-        ('name', '{{ name|lower }}'),
+        ('name', '{{ namel }}'),
         ('version', '{{ version }}'),
     ]),
     'source': OrderedDict([
-        ('url', '/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz'),  # NOQA
+        ('url', '/packages/source/{{ namel[0] }}/{{ namel }}/{{ namel }}-{{ version }}.tar.gz'),  # NOQA
     ]),
     'build': OrderedDict([
         ('number', 0),
