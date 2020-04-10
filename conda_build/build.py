@@ -302,9 +302,8 @@ def regex_files_rg(files, prefix, tag, rg, regex_rg, replacement_re,
     args_base = [rg.encode('utf-8'),
                  b'--unrestricted',
                  b'--no-heading',
-                 b'--with-filename'] + \
-                 ([b'--text'] if also_binaries else []) + \
-                 [b'--json',
+                 b'--with-filename',
+                 b'--json',
                  regex_rg]
     pu = prefix.encode('utf-8')
     prefix_files = [os.path.join(pu, f.replace('/', os.sep).encode('utf-8')) for f in files]
@@ -332,7 +331,7 @@ def regex_files_rg(files, prefix, tag, rg, regex_rg, replacement_re,
                 new_stage = match['type']
                 if new_stage == 'begin':
                     stage = new_stage
-                    match_filename_begin = match['data']['path']['text'][len(prefix) + 1:]
+                    match_filename_begin = match['data']['path']['text'][len(prefix) + 1:].replace(os.sep, '/')
                     match_filename_type = 'unknown'
                     # TODO :: Speed this up, and generalise it, the python version does similar.
                     with open(os.path.join(prefix, match_filename_begin), 'rb') as fh:
@@ -343,7 +342,7 @@ def regex_files_rg(files, prefix, tag, rg, regex_rg, replacement_re,
                     old_stage = stage
                     assert stage == 'begin' or stage == 'match' or stage == 'end'
                     stage = new_stage
-                    match_filename = match['data']['path']['text'][len(prefix) + 1:]
+                    match_filename = match['data']['path']['text'][len(prefix) + 1:].replace(os.sep, '/')
                     # Get stuff from the 'line' (to be consistent with the python version we ignore this).
                     # match_line = get_bytes_or_text_as_bytes(match['data']['lines'])
                     # match_line_number = match['data']['line_number']
@@ -846,7 +845,7 @@ def get_files_with_prefix(m, files_in, prefix):
         if ignore_files is True:
             ignore_types.update((FileMode.text.name, FileMode.binary.name))
         ignore_files = []
-    if (not m.get_value('build/detect_binary_files_with_prefix', True) and
+    if (not m.get_value('build/detect_binary_files_with_prefix', True if not utils.on_win else False) and
        not m.get_value('build/binary_has_prefix_files', None)):
         ignore_types.update((FileMode.binary.name,))
     files_with_prefix = [(None, FileMode.binary.name if
@@ -862,7 +861,8 @@ def get_files_with_prefix(m, files_in, prefix):
     # paths.
     if utils.on_win or m.config.subdir.startswith('win'):
         # TODO :: Should we also handle MSYS2 paths (/c/blah) here? Probably!
-        pfx_variants = (prefix,
+        pfx_variants = (prefix[0].upper() + prefix[1:],
+                        prefix[0].lower() + prefix[1:],
                         prefix_u,
                         prefix_placeholder.replace('\\', '\''),
                         prefix_placeholder.replace('/', '\\'))
@@ -887,7 +887,7 @@ def get_files_with_prefix(m, files_in, prefix):
         prefixes_for_file[filename] = set([sm['text'] for sm in match['submatches']])
     files_with_prefix_new = []
     for (_, mode, filename) in files_with_prefix:
-        np = filename.replace('/', '\\') if utils.on_win else filename
+        np = filename
         if np in prefixes_for_file and np in pfx_matches:
             for pfx in prefixes_for_file[np]:
                 files_with_prefix_new.append((pfx.decode('utf-8'), mode, filename))
@@ -948,8 +948,9 @@ def get_files_with_prefix(m, files_in, prefix):
 
 def record_prefix_files(m, files_with_prefix):
 
+    filtered = []
     if not files_with_prefix:
-        return
+        return filtered
 
     # Copies are made to ease debugging. Sorry.
     binary_has_prefix_files = m.binary_has_prefix_files()[:]
@@ -972,16 +973,16 @@ def record_prefix_files(m, files_with_prefix):
 
         print("Files containing CONDA_PREFIX")
         print("-----------------------------")
+        detect_binary_files_with_prefix = m.get_value('build/detect_binary_files_with_prefix', False)
         with open(join(m.config.info_dir, 'has_prefix'), 'w') as fo:
             for pfix, mode, fn in files_with_prefix:
-                print('{} :: {} :: {}'.format(pfix, mode, fn))
                 ignored_because = None
                 if (fn in binary_has_prefix_files or (not len_binary_has_prefix_files or
-                   m.get_value('build/detect_binary_files_with_prefix', False) and mode == 'binary')):
+                   detect_binary_files_with_prefix and mode == 'binary')):
                     if fn in binary_has_prefix_files:
                         if mode != 'binary':
                             mode = 'binary'
-                        elif fn in binary_has_prefix_files:
+                        elif fn in binary_has_prefix_files and detect_binary_files_with_prefix:
                             print("File {} force-identified as 'binary', "
                                   "But it is 'binary' anyway, suggest removing it from "
                                   "`build/binary_has_prefix_files`".format(fn))
@@ -1004,6 +1005,7 @@ def record_prefix_files(m, files_with_prefix):
                                                                reason=ignored_because if ignored_because else ""))
                 if ignored_because is None:
                     fo.write(fmt_str % (pfix, mode, fn))
+                    filtered.append((pfix, mode, fn))
 
     # make sure we found all of the files expected
     errstr = ""
@@ -1013,6 +1015,8 @@ def record_prefix_files(m, files_with_prefix):
         errstr += "Did not detect hard-coded path in %s from binary_has_prefix_files\n" % f
     if errstr:
         raise RuntimeError(errstr)
+
+    return filtered
 
 
 def sanitize_channel(channel):
@@ -1195,9 +1199,9 @@ def create_info_files(m, files, prefix):
     write_info_files_file(m, files)
 
     files_with_prefix = get_files_with_prefix(m, files, prefix)
+    files_with_prefix = record_prefix_files(m, files_with_prefix)
     checksums = create_info_files_json_v1(m, m.config.info_dir, prefix, files, files_with_prefix)
 
-    record_prefix_files(m, files_with_prefix)
     write_no_link(m, files)
 
     sources = m.get_section('source')
@@ -1450,6 +1454,9 @@ def bundle_conda(output, metadata, env, stats, **kw):
             env_output[var] = os.environ[var]
         dest_file = os.path.join(metadata.config.work_dir, output['script'])
         utils.copy_into(os.path.join(metadata.path, output['script']), dest_file)
+        from os import stat
+        st = stat(dest_file)
+        os.chmod(dest_file, st.st_mode | 0o200)
         if activate_script:
             _write_activation_text(dest_file, metadata)
 
@@ -2768,8 +2775,7 @@ Error:
 """ % (os.pathsep.join(external.dir_paths)))
 
 
-def build_tree(recipe_list, config, stats, build_only=False, post=False, notest=False,
-               need_source_download=True, need_reparse_in_env=False, variants=None):
+def build_tree(recipe_list, config, stats, build_only=False, post=None, notest=False, variants=None):
 
     to_build_recursive = []
     recipe_list = deque(recipe_list)

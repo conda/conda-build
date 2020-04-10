@@ -39,6 +39,41 @@ def testing_workdir(tmpdir, request):
 
 
 @pytest.fixture(scope='function')
+def testing_homedir(tmpdir, request):
+    """ Create a homedir in the users home directory; cd into dir above before test, cd out after
+
+    :param tmpdir: py.test fixture, will be injected
+    :param request: py.test fixture-related, will be injected (see pytest docs)
+    """
+
+    saved_path = os.getcwd()
+    d1 = os.path.basename(tmpdir)
+    d2 = os.path.basename(os.path.dirname(tmpdir))
+    d3 = os.path.basename(os.path.dirname(os.path.dirname(tmpdir)))
+    new_dir = os.path.join(os.path.expanduser('~'), d1, d2, d3, 'pytest.conda-build')
+    # While pytest will make sure a folder in unique
+    if os.path.exists(new_dir):
+        import shutil
+        try:
+            shutil.rmtree(new_dir)
+        except:
+            pass
+    try:
+        os.makedirs(new_dir)
+    except:
+        print("Failed to create {}".format(new_dir))
+        return None
+    os.chdir(new_dir)
+
+    def return_to_saved_path():
+        os.chdir(saved_path)
+
+    request.addfinalizer(return_to_saved_path)
+
+    return str(new_dir)
+
+
+@pytest.fixture(scope='function')
 def testing_config(testing_workdir):
     return Config(croot=testing_workdir, anaconda_upload=False, verbose=True,
                   activate=False, debug=False, variant=None, test_run_post=False)
