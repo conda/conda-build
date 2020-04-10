@@ -18,7 +18,7 @@ def test_skeleton_pypi(testing_workdir):
     # Note, if you use Click here instead it will fail.
     cmd = conda_path + ' skeleton pypi Flask'
     check_call_env(cmd.split())
-    cmd = conda_path + ' build click'
+    cmd = conda_path + ' build flask'
     check_call_env(cmd.split())
 
 
