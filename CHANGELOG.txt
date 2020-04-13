@@ -1,4 +1,30 @@
 # current developments
+2020-04-13 3.19.3:
+------------------
+
+Bug fixes:
+----------
+
+* load log prior to calling warn method (#3925)
+* test suite fixes and prefix replacement fixes (#3932)
+
+Other:
+------
+
+* Enable ppc64 support (#3921)
+
+Docs:
+-----
+
+* Update cli help information for conda index (#3931)
+
+Contributors:
+-------------
+
+* @beenje
+* @jjhelmus
+* @mingwandroid
+
 
 2020-04-01 3.19.2:
 ------------------
