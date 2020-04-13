@@ -97,6 +97,7 @@ mmap_PROT_WRITE = 0 if on_win else mmap.PROT_WRITE
 DEFAULT_SUBDIRS = {
     "linux-64",
     "linux-32",
+    "linux-ppc64",
     "linux-ppc64le",
     "linux-armv6l",
     "linux-armv7l",
