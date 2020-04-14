@@ -1,0 +1,36 @@
+{% set name = "entry_points_have_prefix_noarch_has_prefix_files" %}
+{% set version = "0.0.1" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  path: .
+
+build:
+  number: 0
+  noarch: python
+  script:
+    - {{ PYTHON }} -m pip install . --no-deps --ignore-installed --no-cache-dir -vvv
+    # We use 'somewhere' instead of 'bin' here because conda-build is quite broken in what it considers
+    # and entry point script when you use noarch: python, involving finding files in 'bin' that contain
+    # prefix and making assumptions about that (we could check for python in the shebang at least, but
+    # even that doesn't indicate it is definitely an entry_point script!).
+    - mkdir -p ${PREFIX}/somewhere
+    - echo ${PREFIX} > ${PREFIX}/somewhere/explicitly-listed-text-file-containing-prefix
+    - echo ${PREFIX} > ${PREFIX}/somewhere/explicitly-not-listed-text-file-containing-prefix
+  has_prefix_files:
+    - somewhere/explicitly-listed-text-file-containing-prefix
+
+requirements:
+  host:
+    - python
+    - pip
+    - setuptools
+  run:
+    - python
+
+test:
+  requires:
+     - ripgrep
