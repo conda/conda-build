@@ -957,8 +957,9 @@ def record_prefix_files(m, files_with_prefix):
     # We need to cache these as otherwise the fact we remove from this in a for loop later
     # that also checks it has elements.
     len_binary_has_prefix_files = len(binary_has_prefix_files)
+    len_text_has_prefix_files = len(text_has_prefix_files)
 
-    if files_with_prefix and not m.noarch:
+    if files_with_prefix:
         if utils.on_win:
             # Paths on Windows can contain spaces, so we need to quote the
             # paths. Fortunately they can't contain quotes, so we don't have
@@ -976,8 +977,8 @@ def record_prefix_files(m, files_with_prefix):
         with open(join(m.config.info_dir, 'has_prefix'), 'w') as fo:
             for pfix, mode, fn in files_with_prefix:
                 ignored_because = None
-                if (fn in binary_has_prefix_files or (not len_binary_has_prefix_files or
-                   detect_binary_files_with_prefix and mode == 'binary')):
+                if (fn in binary_has_prefix_files or ((not len_binary_has_prefix_files or
+                   detect_binary_files_with_prefix) and mode == 'binary')):
                     if fn in binary_has_prefix_files:
                         if mode != 'binary':
                             mode = 'binary'
@@ -987,10 +988,11 @@ def record_prefix_files(m, files_with_prefix):
                                   "`build/binary_has_prefix_files`".format(fn))
                     if fn in binary_has_prefix_files:
                         binary_has_prefix_files.remove(fn)
-                elif fn in text_has_prefix_files or mode == 'text':
+                elif (fn in text_has_prefix_files or (not len_text_has_prefix_files and mode == 'text') or
+                      os.path.dirname(fn) == 'python-scripts'):
                     if mode != 'text':
                         mode = 'text'
-                    elif fn in text_has_prefix_files:
+                    elif fn in text_has_prefix_files and not len_text_has_prefix_files:
                         print("File {} force-identified as 'text', "
                               "But it is 'text' anyway, suggest removing it from "
                               "`build/has_prefix_files`".format(fn))
