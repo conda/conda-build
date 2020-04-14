@@ -958,7 +958,7 @@ def record_prefix_files(m, files_with_prefix):
     # that also checks it has elements.
     len_binary_has_prefix_files = len(binary_has_prefix_files)
 
-    if files_with_prefix and not m.noarch:
+    if files_with_prefix:
         if utils.on_win:
             # Paths on Windows can contain spaces, so we need to quote the
             # paths. Fortunately they can't contain quotes, so we don't have
