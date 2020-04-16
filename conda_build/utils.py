@@ -1908,8 +1908,8 @@ def write_bat_activation_text(file_handle, file_name, m, debug_PATH=False):
         file_handle.write('call "{conda_root}\\activate.bat" "{prefix}"\n'.format(
             conda_root=root_script_dir,
             prefix=m.config.build_prefix))
-    from conda_build.os_utils.external import find_preferably_prefixed_executable
-    ccache = find_preferably_prefixed_executable('ccache', m.config.build_prefix, True)
+    from conda_build.os_utils.external import find_executable
+    ccache = find_executable('ccache', m.config.build_prefix, False)
     if ccache:
         if isinstance(ccache, list):
             ccache = ccache[0]
