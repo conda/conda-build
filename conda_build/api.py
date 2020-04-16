@@ -24,7 +24,7 @@ from conda_build.config import (Config, get_or_merge_config, get_channel_urls,
 from conda_build.utils import ensure_list as _ensure_list
 from conda_build.utils import expand_globs as _expand_globs
 from conda_build.utils import get_logger as _get_logger
-from os.path import expanduser
+from os.path import dirname, expanduser, join
 
 
 def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variants=True,
@@ -241,7 +241,7 @@ def list_skeletons():
 
     The returned list is generally the names of supported repositories (pypi, cran, etc.)"""
     import pkgutil
-    modules = pkgutil.iter_modules(['conda_build/skeletons'])
+    modules = pkgutil.iter_modules([join(dirname(__file__), 'skeletons')])
     files = []
     for _, name, _ in modules:
         if not name.startswith("_"):

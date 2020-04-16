@@ -302,9 +302,8 @@ def regex_files_rg(files, prefix, tag, rg, regex_rg, replacement_re,
     args_base = [rg.encode('utf-8'),
                  b'--unrestricted',
                  b'--no-heading',
-                 b'--with-filename'] + \
-                 ([b'--text'] if also_binaries else []) + \
-                 [b'--json',
+                 b'--with-filename',
+                 b'--json',
                  regex_rg]
     pu = prefix.encode('utf-8')
     prefix_files = [os.path.join(pu, f.replace('/', os.sep).encode('utf-8')) for f in files]
@@ -332,7 +331,7 @@ def regex_files_rg(files, prefix, tag, rg, regex_rg, replacement_re,
                 new_stage = match['type']
                 if new_stage == 'begin':
                     stage = new_stage
-                    match_filename_begin = match['data']['path']['text'][len(prefix) + 1:]
+                    match_filename_begin = match['data']['path']['text'][len(prefix) + 1:].replace(os.sep, '/')
                     match_filename_type = 'unknown'
                     # TODO :: Speed this up, and generalise it, the python version does similar.
                     with open(os.path.join(prefix, match_filename_begin), 'rb') as fh:
@@ -343,7 +342,7 @@ def regex_files_rg(files, prefix, tag, rg, regex_rg, replacement_re,
                     old_stage = stage
                     assert stage == 'begin' or stage == 'match' or stage == 'end'
                     stage = new_stage
-                    match_filename = match['data']['path']['text'][len(prefix) + 1:]
+                    match_filename = match['data']['path']['text'][len(prefix) + 1:].replace(os.sep, '/')
                     # Get stuff from the 'line' (to be consistent with the python version we ignore this).
                     # match_line = get_bytes_or_text_as_bytes(match['data']['lines'])
                     # match_line_number = match['data']['line_number']
@@ -839,14 +838,14 @@ def get_files_with_prefix(m, files_in, prefix):
     import time
     start = time.time()
     # It is nonsensical to replace anything in a symlink.
-    files = [f for f in files_in if not os.path.islink(os.path.join(prefix, f))]
+    files = sorted([f for f in files_in if not os.path.islink(os.path.join(prefix, f))])
     ignore_files = m.ignore_prefix_files()
     ignore_types = set()
     if not hasattr(ignore_files, "__iter__"):
         if ignore_files is True:
             ignore_types.update((FileMode.text.name, FileMode.binary.name))
         ignore_files = []
-    if (not m.get_value('build/detect_binary_files_with_prefix', True) and
+    if (not m.get_value('build/detect_binary_files_with_prefix', True if not utils.on_win else False) and
        not m.get_value('build/binary_has_prefix_files', None)):
         ignore_types.update((FileMode.binary.name,))
     files_with_prefix = [(None, FileMode.binary.name if
@@ -862,7 +861,8 @@ def get_files_with_prefix(m, files_in, prefix):
     # paths.
     if utils.on_win or m.config.subdir.startswith('win'):
         # TODO :: Should we also handle MSYS2 paths (/c/blah) here? Probably!
-        pfx_variants = (prefix,
+        pfx_variants = (prefix[0].upper() + prefix[1:],
+                        prefix[0].lower() + prefix[1:],
                         prefix_u,
                         prefix_placeholder.replace('\\', '\''),
                         prefix_placeholder.replace('/', '\\'))
@@ -1935,7 +1935,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
         output_yaml(m, os.path.join(m.config.work_dir, 'metadata_conda_debug.yaml'))
 
         # get_dir here might be just work, or it might be one level deeper,
-        #    dependening on the source.
+        #    depending on the source.
         src_dir = m.config.work_dir
         if isdir(src_dir):
             if m.config.verbose:
