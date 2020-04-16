@@ -553,6 +553,17 @@ def _get_patch_file_details(path):
     return (files, is_git_format)
 
 
+def patch_or_reverse(patch, patch_args, cwd, stdout, stderr):
+    try:
+        check_call_env([patch] + patch_args, cwd=cwd, stdout=stdout, stderr=stderr)
+    except Exception as e:
+        try:
+            check_call_env([patch] + ['-R'] + patch_args, cwd=cwd, stdout=stdout, stderr=stderr)
+        except:
+            pass
+        raise e
+
+
 def apply_patch(src_dir, path, config, git=None):
     if not isfile(path):
         sys.exit('Error: no such patch: %s' % path)
