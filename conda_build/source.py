@@ -553,18 +553,64 @@ def _get_patch_file_details(path):
     return (files, is_git_format)
 
 
-def patch_or_reverse(patch, patch_args, cwd, stdout, stderr):
-    try:
-        check_call_env([patch] + patch_args, cwd=cwd, stdout=stdout, stderr=stderr)
-    except Exception as e:
-        try:
-            check_call_env([patch] + ['-R'] + patch_args, cwd=cwd, stdout=stdout, stderr=stderr)
-        except:
-            pass
-        raise e
-
-
 def apply_patch(src_dir, path, config, git=None):
+    def patch_or_reverse(patch, patch_args, cwd, stdout, stderr):
+        # An old reference: https://unix.stackexchange.com/a/243748/34459
+        #
+        # I am worried that '--ignore-whitespace' may be destructive. If so we should
+        # avoid passing it, particularly in the initial (most likely to succeed) calls.
+        #
+        # From here-in I define a 'native' patch as one which has:
+        # 1. LF for the patch block metadata.
+        # 2. CRLF or LF for the actual patched lines matching those of the source lines.
+        #
+        # Calls to a raw 'patch' are destructive in various ways:
+        # 1. It leaves behind .rej and .orig files
+        # 2. If you pass it a patch with incorrect CRLF changes and do not pass --binary and
+        #    if any of those blocks *can* be applied, then the whole file gets written out with
+        #    LF.  This cannot be reversed either; the text changes will be reversed but not
+        #    line-feed changes (since all line-endings get changed, not just those of the of
+        #    patched lines)
+        # 3. If patching fails, the bits that succeeded remain, so patching is not at all
+        #    atomic.
+        #
+        # Still, we do our best to mitigate all of this as follows:
+        # 1. We disable .orig and .rej that for GNU patch via a temp file *
+        # 2 (1). We check for native application of a native patch (--binary, without --ignore-whitespace)
+        # 2 (2). We defer destructive calls to this until after the non-destructive ones.
+        # 3. When patch indicates failure, we call it with -R to reverse the damage.
+        #
+        # * Some may bemoan the loss of these, but they it is fairly random which patch and patch
+        #   attempt they apply to so their informational value is low, besides that, they are ugly.
+        #   (and destructive to the future patchability of the source tree).
+        #
+        import tempfile
+        temp_name = os.path.join(tempfile.gettempdir(), next(tempfile._get_candidate_names()))
+        patch_args.append('-r')
+        patch_args.append(temp_name)
+        patch_args = ['--no-backup-if-mismatch', '--batch'] + patch_args
+        log = get_logger(__name__)
+        try:
+            log.debug("Applying with\n{} {}".format(patch, patch_args))
+            check_call_env([patch] + patch_args, cwd=cwd, stdout=stdout, stderr=stderr)
+            # You can use this to pretend the patch failed so as to test reversal!
+            # raise CalledProcessError(-1, ' '.join([patch] + patch_args))
+        except Exception as e:
+            try:
+                if '--ignore-whitespace' in patch_args:
+                    patch_args.remove('--ignore-whitespace')
+                patch_args.insert(0, '-R')
+                patch_args.append('--binary')
+                patch_args.append('--force')
+                log.debug("Reversing with\n{} {}".format(patch, patch_args))
+                check_call_env([patch] + patch_args, cwd=cwd, stdout=stdout, stderr=stderr)
+            except:
+                pass
+            raise e
+        finally:
+            if os.path.exists(temp_name):
+                os.unlink(temp_name)
+
     if not isfile(path):
         sys.exit('Error: no such patch: %s' % path)
 
@@ -601,44 +647,57 @@ def apply_patch(src_dir, path, config, git=None):
             or conda, m2-patch (Windows),
         """ % (os.pathsep.join(external.dir_paths)))
         patch_strip_level = _guess_patch_strip_level(files, src_dir)
-        patch_args = ['-p%d' % patch_strip_level, '--ignore-whitespace', '-i', path]
-
-        # line endings are a pain.
-        # https://unix.stackexchange.com/a/243748/34459
+        path_args = ['-i', path]
+        patch_args = ['-p%d' % patch_strip_level]
 
         try:
             log = get_logger(__name__)
-            if config.verbose:
-                log.info("Trying to apply patch as-is")
-            check_call_env([patch] + patch_args, cwd=src_dir, stdout=stdout, stderr=stderr)
+            # This is the case we check first of all as it is the case that allows a properly line-ended
+            # patch to apply correctly to a properly line-ended source tree, modifying it following the
+            # patch chunks exactly.
+            patch_or_reverse(patch, patch_args + ['--binary'] + path_args,
+                             cwd=src_dir, stdout=stdout, stderr=stderr)
         except CalledProcessError:
-            if sys.platform == 'win32':
-                unix_ending_file = _ensure_unix_line_endings(path)
-                patch_args[-1] = unix_ending_file
-                try:
-                    if config.verbose:
-                        log.info("Applying unmodified patch failed.  "
-                                "Convert to unix line endings and trying again.")
-                    check_call_env([patch] + patch_args, cwd=src_dir, stdout=stdout, stderr=stderr)
-                except:
-                    if config.verbose:
-                        log.info("Applying unix patch failed.  "
-                                "Convert to CRLF line endings and trying again with --binary.")
-                    patch_args.insert(0, '--binary')
-                    win_ending_file = _ensure_win_line_endings(path)
-                    patch_args[-1] = win_ending_file
+            if config.verbose:
+                log.info("Applying patch natively failed.  "
+                         "Trying to apply patch non-binary with --ignore-whitespace")
+            try:
+                patch_or_reverse(patch, patch_args + ['--ignore-whitespace'] + path_args,
+                                 cwd=src_dir, stdout=stdout, stderr=stderr)
+            except CalledProcessError:
+                if sys.platform == 'win32':
+                    unix_ending_file = _ensure_unix_line_endings(path)
+                    path_args[-1] = unix_ending_file
                     try:
-                        check_call_env([patch] + patch_args, cwd=src_dir, stdout=stdout, stderr=stderr)
-                    except:
-                        raise
+                        if config.verbose:
+                            log.info("Applying natively *and* non-binary failed!  "
+                                    "Converting to unix line endings and trying again.  "
+                                    "WARNING :: This is destructive to the source file line-endings.")
+                        # If this succeeds, it will change the source files' CRLFs to LFs. This can
+                        # mess things up both for subsequent attempts (this line-ending change is not
+                        # reversible) but worse, for subsequent, correctly crafted (I'm calling these
+                        # "native" from now on) patches.
+                        patch_or_reverse(patch, patch_args + ['--ignore-whitespace'] + path_args,
+                                         cwd=src_dir, stdout=stdout, stderr=stderr)
+                    except CalledProcessError:
+                        if config.verbose:
+                            log.info("Applying natively, non-binary *and* unix attempts all failed!?  "
+                                    "Converting to CRLF line endings and trying again with  "
+                                     "--ignore-whitespace and --binary. "
+                                    "WARNING :: More destruction to those source file line-endings.")
+                        win_ending_file = _ensure_win_line_endings(path)
+                        path_args[-1] = win_ending_file
+                        try:
+                            patch_or_reverse(patch, patch_args + ['--ignore-whitespace', '--binary'] + path_args,
+                                             cwd=src_dir, stdout=stdout, stderr=stderr)
+                        except:
+                            raise
+                        finally:
+                            if os.path.exists(win_ending_file):
+                                os.remove(win_ending_file)  # clean up .patch_unix file
                     finally:
-                        if os.path.exists(win_ending_file):
-                            os.remove(win_ending_file)  # clean up .patch_win file
-                finally:
-                    if os.path.exists(unix_ending_file):
-                        os.remove(unix_ending_file)  # clean up .patch_unix file
-            else:
-                raise
+                        if os.path.exists(unix_ending_file):
+                            os.remove(unix_ending_file)
 
 
 def provide(metadata):
