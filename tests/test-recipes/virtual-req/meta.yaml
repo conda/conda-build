@@ -1,0 +1,14 @@
+package:
+  name: virtual-req
+  version: 1.0.0
+
+build:
+  number: 0
+
+requirements:
+  run:
+    - __osx >=10.9    # [osx]
+
+about:
+    summary: A Tool with a virtual requirement
+
