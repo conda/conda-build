@@ -54,7 +54,7 @@ from .conda_interface import MatchSpec, VersionOrder, human_bytes, context, md5_
 from .conda_interface import CondaError, CondaHTTPError, get_index, url_path
 from .conda_interface import TemporaryDirectory
 from .conda_interface import Resolve
-from .utils import glob, get_logger, FileNotFoundError, JSONDecodeError, sha256_checksum, rm_rf
+from .utils import get_logger, FileNotFoundError, JSONDecodeError, sha256_checksum, rm_rf
 
 # try:
 #     from conda.base.constants import CONDA_TARBALL_EXTENSIONS
@@ -738,7 +738,6 @@ def _build_current_repodata(subdir, repodata, pins):
     return new_repodata
 
 
-
 def timestamp_to_dt(timestamp):
     return datetime.fromtimestamp(_make_seconds(timestamp), UTC)
 
@@ -1118,9 +1117,7 @@ class ChannelIndex(object):
         # add_set: filenames that aren't in the current/old repodata, but exist in the subdir
         add_set = fns_in_subdir - old_repodata_fns
         remove_set = old_repodata_fns - fns_in_subdir
-        all_removed =  (old_repodata_fns | set(old_repodata.get('removed', ()))) - fns_in_subdir
-        # ignore_set = set(old_repodata.get('removed', []))
-        # add_set -= ignore_set  # this seems wrong
+        all_removed = (old_repodata_fns | set(old_repodata.get('removed', ()))) - fns_in_subdir
 
         # update_set: Filenames that are in both old repodata and new repodata,
         #     and whose contents have changed based on file size or mtime. We're
@@ -1132,7 +1129,6 @@ class ChannelIndex(object):
         )
         # unchanged_set: packages in old repodata whose information can carry straight
         #     across to new repodata
-        # unchanged_set = sorted(old_repodata_fns - update_set - remove_set - ignore_set)
         unchanged_set = candidate_fns - update_set
 
         log.debug(
@@ -1152,7 +1148,7 @@ class ChannelIndex(object):
         extract_fns = sorted(concatv(add_set, update_set))
         num_extract_fns = len(extract_fns)
         for q, fn in enumerate(tqdm(extract_fns)):
-            log.debug("extracting metadata [%s/%s] %s/%s", q+1, num_extract_fns, subdir, fn)
+            log.debug("extracting metadata [%s/%s] %s/%s", q + 1, num_extract_fns, subdir, fn)
             repodata_record = self._extract_to_cache2(self.channel_root, subdir, fn)
             if repodata_record is None:
                 # extraction error
