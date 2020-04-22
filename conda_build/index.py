@@ -27,17 +27,11 @@ except ImportError:
 import pytz
 from jinja2 import Environment, PackageLoader
 from tqdm import tqdm
-# import yaml
-# from yaml.constructor import ConstructorError
-# from yaml.parser import ParserError
-# from yaml.scanner import ScannerError
-# from yaml.reader import ReaderError
-
-from ruamel_yaml import safe_load as yaml_safe_load
-from ruamel_yaml.constructor import ConstructorError
-from ruamel_yaml.parser import ParserError
-from ruamel_yaml.scanner import ScannerError
-from ruamel_yaml.reader import ReaderError
+from yaml import safe_load as yaml_safe_load
+from yaml.constructor import ConstructorError
+from yaml.parser import ParserError
+from yaml.scanner import ScannerError
+from yaml.reader import ReaderError
 
 from cytoolz.itertoolz import concat, concatv, groupby
 
@@ -58,7 +52,7 @@ from .conda_interface import MatchSpec, VersionOrder, human_bytes, context, md5_
 from .conda_interface import CondaError, CondaHTTPError, get_index, url_path
 from .conda_interface import TemporaryDirectory
 from .conda_interface import Resolve
-from .utils import get_logger, FileNotFoundError, JSONDecodeError, sha256_checksum, rm_rf
+from .utils import get_logger, JSONDecodeError, sha256_checksum, rm_rf
 
 # try:
 #     from conda.base.constants import CONDA_TARBALL_EXTENSIONS
