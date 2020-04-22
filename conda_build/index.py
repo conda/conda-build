@@ -847,7 +847,7 @@ class ChannelIndex(object):
         try:
             with open(join(metadata_dir_path, "info", "index.json")) as fh:
                 repodata_record = json.load(fh)
-        except FileNotFoundError:
+        except EnvironmentError:
             log.error("Corrupt package at %s", package_path)
             return None
 
