@@ -243,8 +243,8 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
 
 def _ensure_valid_channel(local_folder, subdir):
     for folder in {subdir, 'noarch'}:
-        path = os.path.join(local_folder, folder)
-        if not os.path.isdir(path):
+        path = join(local_folder, folder)
+        if not isdir(path):
             os.makedirs(path)
 
 
@@ -560,7 +560,8 @@ def _shard_newest_packages(subdir, r, pins=None):
 def _build_current_repodata(subdir, repodata, pins):
     r = _get_resolve_object(subdir, repodata=repodata)
     keep_pkgs = _shard_newest_packages(subdir, r, pins)
-    new_repodata = {k: repodata[k] for k in set(repodata.keys()) - set(['packages', 'packages.conda'])}
+    keys = set(repodata.keys()) - {'packages', 'packages.conda'}
+    new_repodata = {k: repodata[k] for k in keys}
     packages = {}
     conda_packages = {}
     for keep_pkg in keep_pkgs:
@@ -593,7 +594,11 @@ class ChannelIndex(object):
 
     def __init__(self, channel_root, channel_name, subdirs=None, threads=MAX_THREADS_DEFAULT,
                  deep_integrity_check=False, debug=False):
-        self.channel_root = abspath(channel_root)
+        self.packages_channel_root_path = abspath(channel_root)
+        self.metadata_root_path = self.packages_channel_root_path
+        # breaking out metadata_root_path allows writing metadata to a location different from where
+        # packages reside
+
         self.channel_name = channel_name or basename(channel_root.rstrip('/'))
         self._subdirs = subdirs
         self.thread_executor = (DummyExecutor()
@@ -610,15 +615,16 @@ class ChannelIndex(object):
 
         with utils.LoggingContext(level, loggers=[__name__]):
             if not self._subdirs:
-                detected_subdirs = set(subdir for subdir in os.listdir(self.channel_root)
-                                    if subdir in utils.DEFAULT_SUBDIRS and isdir(join(self.channel_root, subdir)))
+                detected_subdirs = set(subdir for subdir in os.listdir(self.packages_channel_root_path)
+                                    if subdir in utils.DEFAULT_SUBDIRS and isdir(join(self.packages_channel_root_path, subdir)))
                 log.debug("found subdirs %s" % detected_subdirs)
                 self.subdirs = subdirs = sorted(detected_subdirs | {'noarch'})
             else:
                 self.subdirs = subdirs = sorted(set(self._subdirs) | {'noarch'})
 
             # Step 1. Lock local channel.
-            with utils.try_acquire_locks([utils.get_lock(self.channel_root)], timeout=900):
+            lock_paths = {self.packages_channel_root_path, self.metadata_root_path}
+            with utils.try_acquire_locks([utils.get_lock(p) for p in lock_paths], timeout=900):
                 # Step 2. Collect repodata from packages, save to pkg_repodata.json file
                 repodatas = {}
                 with tqdm(total=len(subdirs), disable=(verbose or not progress), leave=False) as t:
@@ -628,7 +634,7 @@ class ChannelIndex(object):
                         with tqdm(total=8, disable=(verbose or not progress), leave=False) as t2:
                             t2.set_description("Gathering repodata")
                             t2.update()
-                            _ensure_valid_channel(self.channel_root, subdir)
+                            _ensure_valid_channel(self.metadata_root_path, subdir)
                             repodata_from_packages = self.index_subdir(
                                 subdir, verbose=verbose, progress=progress
                             )
@@ -676,15 +682,15 @@ class ChannelIndex(object):
                 self._write_channeldata(channeldata)
 
     def index_subdir(self, subdir, verbose=False, progress=False, deep_integrity_check=False):
-        subdir_path = join(self.channel_root, subdir)
-        repodata_from_packages_path = join(subdir_path, REPODATA_FROM_PKGS_JSON_FN)
+        packages_subdir_path = join(self.packages_channel_root_path, subdir)
+        repodata_from_packages_path = join(self.metadata_root_path, subdir, REPODATA_FROM_PKGS_JSON_FN)
 
         if verbose:
-            log.info("Building repodata for %s" % subdir_path)
+            log.info("Building repodata for %s" % packages_subdir_path)
 
         # gather conda package filenames in subdir
         # we'll process these first, because reading their metadata is much faster
-        groups = groupby(lambda fn: fn[-6:], (entry.name for entry in scandir(subdir_path)))
+        groups = groupby(lambda fn: fn[-6:], (entry.name for entry in scandir(packages_subdir_path)))
         conda_fns = set(groups.get(".conda", ()))
         tar_bz2_fns = set(groups.get("ar.bz2", ()))
         fns_in_subdir = conda_fns | tar_bz2_fns
@@ -697,12 +703,12 @@ class ChannelIndex(object):
         # for q, fn_base in enumerate(tqdm(sorted(make_conda_fns), desc=desc, disable=verbose or not progress)):
         #     # TODO: add fine-grained lock
         #     fn = fn_base + ".tar.bz2"
-        #     log.debug("transmuting [%s/%s] %s/%s ", q+1, num_make_conda_fns, subdir_path, fn)
+        #     log.debug("transmuting [%s/%s] %s/%s ", q+1, num_make_conda_fns, packages_subdir_path, fn)
         #     try:
-        #         conda_package_handling.api.transmute(fn, ".conda", out_folder=subdir_path)
+        #         conda_package_handling.api.transmute(fn, ".conda", out_folder=packages_subdir_path)
         #     except:  # bare exception intentially used;
         #         log.exception("something happened")
-        #         package_path = join(subdir_path, fn_base) + ".conda"
+        #         package_path = join(packages_subdir_path, fn_base) + ".conda"
         #         if lexists(package_path):
         #             os.unlink(package_path)
         #         raise
@@ -732,7 +738,7 @@ class ChannelIndex(object):
         #     use the --deep-integrity-check flag / self.deep_integrity_check option.
         candidate_fns = fns_in_subdir & old_repodata_fns
         update_set = self._calculate_update_set(
-            self.channel_root, subdir, candidate_fns, old_repodata,
+            self.packages_channel_root_path, subdir, candidate_fns, old_repodata,
         )
         # unchanged_set: packages in old repodata whose information can carry straight
         #     across to new repodata
@@ -756,7 +762,9 @@ class ChannelIndex(object):
         num_extract_fns = len(extract_fns)
         for q, fn in enumerate(tqdm(extract_fns, desc="extracting metadata", disable=verbose or not progress)):
             log.debug("extracting metadata [%s/%s] %s/%s", q + 1, num_extract_fns, subdir, fn)
-            repodata_record = self.extract_metadata(self.channel_root, subdir, fn, deep_integrity_check)
+            repodata_record = self.extract_metadata(
+                self.packages_channel_root_path, self.metadata_root_path, subdir, fn, deep_integrity_check
+            )
             if repodata_record is None:
                 # extraction error
                 pass
@@ -797,10 +805,9 @@ class ChannelIndex(object):
         return update_set
 
     @classmethod
-    def extract_metadata(cls, channel_root, subdir, fn, deep_integrity_check=False):
-        subdir_path = join(channel_root, subdir)
-        package_path = join(subdir_path, fn)
-        metadata_dir_path = join(subdir_path, ".cache", fn) + ".metadata"
+    def extract_metadata(cls, channel_root, metadata_root_path, subdir, fn, deep_integrity_check=False):
+        package_path = join(channel_root, subdir, fn)
+        metadata_dir_path = join(metadata_root_path, subdir, ".cache", fn) + ".metadata"
         repodata_record_file = join(metadata_dir_path, "repodata_record.json")
         ext = ".conda" if fn[-6:] == ".conda" else ".tar.bz2"
         st = lstat(package_path)
@@ -897,7 +904,7 @@ class ChannelIndex(object):
         try:
             conda_package_handling.api.extract(package_path, dest_dir=metadata_dir_path, components="info")
             return True
-        except InvalidArchiveError as e:
+        except (InvalidArchiveError, EnvironmentError) as e:
             log.exception(e)
             return False
 
@@ -1013,15 +1020,14 @@ class ChannelIndex(object):
         return about_obj
 
     @staticmethod
-    def load_all_metadata_from_cache(channel_root, subdir, fn):
-        subdir_path = join(channel_root, subdir)
-        metadata_dir_path = join(subdir_path, ".cache", fn) + ".metadata"
-        all_metadata_path = join(metadata_dir_path, "all_metadata.json")
+    def load_all_metadata_from_cache(metadata_root_path, subdir, fn):
+        all_metadata_path = join(metadata_root_path, subdir, ".cache", fn + ".metadata", "all_metadata.json")
         with open(all_metadata_path) as fh:
             return json.load(fh)
 
     def _write_repodata(self, subdir, repodata, json_filename):
-        repodata_json_path = join(self.channel_root, subdir, json_filename)
+        metadata_root_path = self.metadata_root_path
+        repodata_json_path = join(metadata_root_path, subdir, json_filename)
         new_repodata_binary = json_dumps_compact(repodata).encode("utf-8")
         write_result = _maybe_write(repodata_json_path, new_repodata_binary, write_newline_end=True)
         if write_result:
@@ -1031,11 +1037,11 @@ class ChannelIndex(object):
         return write_result
 
     def _write_subdir_index_html(self, subdir, repodata):
+        metadata_root_path = self.metadata_root_path
         repodata_packages = repodata["packages"]
-        subdir_path = join(self.channel_root, subdir)
 
         def _add_extra_path(extra_paths, path):
-            if isfile(join(self.channel_root, path)):
+            if isfile(join(metadata_root_path, path)):
                 extra_paths[basename(path)] = {
                     'size': getsize(path),
                     'timestamp': int(getmtime(path)),
@@ -1044,23 +1050,24 @@ class ChannelIndex(object):
                 }
 
         extra_paths = OrderedDict()
-        _add_extra_path(extra_paths, join(subdir_path, REPODATA_JSON_FN))
-        _add_extra_path(extra_paths, join(subdir_path, REPODATA_JSON_FN + '.bz2'))
-        _add_extra_path(extra_paths, join(subdir_path, REPODATA_FROM_PKGS_JSON_FN))
-        _add_extra_path(extra_paths, join(subdir_path, REPODATA_FROM_PKGS_JSON_FN + '.bz2'))
-        # _add_extra_path(extra_paths, join(subdir_path, "repodata2.json"))
-        _add_extra_path(extra_paths, join(subdir_path, "patch_instructions.json"))
+        _add_extra_path(extra_paths, join(metadata_root_path, subdir, REPODATA_JSON_FN))
+        _add_extra_path(extra_paths, join(metadata_root_path, subdir, REPODATA_JSON_FN + '.bz2'))
+        _add_extra_path(extra_paths, join(metadata_root_path, subdir, REPODATA_FROM_PKGS_JSON_FN))
+        _add_extra_path(extra_paths, join(metadata_root_path, subdir, REPODATA_FROM_PKGS_JSON_FN + '.bz2'))
+        # _add_extra_path(extra_paths, join(metadata_root_path, subdir, "repodata2.json"))
+        _add_extra_path(extra_paths, join(metadata_root_path, subdir, "patch_instructions.json"))
         rendered_html = _make_subdir_index_html(
-            self.channel_name, subdir, repodata_packages, extra_paths
+            metadata_root_path, subdir, repodata_packages, extra_paths
         )
-        index_path = join(subdir_path, 'index.html')
+        index_path = join(metadata_root_path, subdir, 'index.html')
         return _maybe_write(index_path, rendered_html)
 
     def _write_channeldata_index_html(self, channeldata):
+        metadata_root_path = self.metadata_root_path
+        index_path = join(metadata_root_path, 'index.html')
         rendered_html = _make_channeldata_index_html(
             self.channel_name, channeldata
         )
-        index_path = join(self.channel_root, 'index.html')
         _maybe_write(index_path, rendered_html)
 
     @staticmethod
@@ -1082,11 +1089,12 @@ class ChannelIndex(object):
         return reference_packages
 
     def _build_channeldata(self, subdirs, reference_packages):
+        metadata_root_path = self.metadata_root_path
         _CHANNELDATA_FIELDS = CHANNELDATA_FIELDS
         package_data = {}
         for ref_pkg_rec in reference_packages:
             subdir, fn = ref_pkg_rec["subdir"], ref_pkg_rec["fn"]
-            all_metadata = self.load_all_metadata_from_cache(self.channel_root, subdir, fn)
+            all_metadata = self.load_all_metadata_from_cache(metadata_root_path, subdir, fn)
             all_metadata.update(ref_pkg_rec)
             fields = set(all_metadata) & _CHANNELDATA_FIELDS
             package_data[ref_pkg_rec["name"]] = {k: all_metadata[k] for k in fields}
@@ -1099,11 +1107,12 @@ class ChannelIndex(object):
         return channeldata
 
     def _write_channeldata(self, channeldata):
+        metadata_root_path = self.metadata_root_path
         # trim out commits, as they can take up a ton of space.  They're really only for the RSS feed.
         for _pkg, pkg_dict in channeldata.get('packages', {}).items():
             if "commits" in pkg_dict:
                 del pkg_dict['commits']
-        channeldata_path = join(self.channel_root, 'channeldata.json')
+        channeldata_path = join(metadata_root_path, 'channeldata.json')
         content = json_dumps_compact(channeldata)
         _maybe_write(channeldata_path, content, True)
 
@@ -1118,7 +1127,7 @@ class ChannelIndex(object):
         return instructions
 
     def _create_patch_instructions(self, subdir, repodata, patch_generator=None):
-        gen_patch_path = patch_generator or join(self.channel_root, 'gen_patch.py')
+        gen_patch_path = patch_generator or join(self.packages_channel_root_path, 'gen_patch.py')
         if isfile(gen_patch_path):
             log.debug("using patch generator %s for %s" % (gen_patch_path, subdir))
 
@@ -1148,12 +1157,13 @@ class ChannelIndex(object):
             return {}
 
     def _write_patch_instructions(self, subdir, instructions):
+        metadata_root_path = self.metadata_root_path
+        patch_instructions_path = join(metadata_root_path, subdir, 'patch_instructions.json')
         new_patch = json_dumps_compact(instructions)
-        patch_instructions_path = join(self.channel_root, subdir, 'patch_instructions.json')
         _maybe_write(patch_instructions_path, new_patch, True)
 
     def _load_instructions(self, subdir):
-        patch_instructions_path = join(self.channel_root, subdir, 'patch_instructions.json')
+        patch_instructions_path = join(self.packages_channel_root_path, subdir, 'patch_instructions.json')
         if isfile(patch_instructions_path):
             log.debug("using patch instructions %s" % patch_instructions_path)
             with open(patch_instructions_path) as fh:
