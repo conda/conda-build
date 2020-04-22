@@ -270,12 +270,12 @@ def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=N
                             threads=threads, verbose=verbose, progress=progress,
                             hotfix_source_repo=hotfix_source_repo,
                             current_index_versions=current_index_versions)
-    return ChannelIndex(dir_path, channel_name, subdirs=subdirs, threads=threads,
-                        deep_integrity_check=check_md5, debug=debug).index(
-                            patch_generator=patch_generator, verbose=verbose,
-                            progress=progress,
-                            hotfix_source_repo=hotfix_source_repo,
-                            current_index_versions=current_index_versions)
+    return ChannelIndex(
+        dir_path, channel_name, subdirs=subdirs, threads=threads, deep_integrity_check=check_md5, debug=debug
+    ).index(
+        patch_generator=patch_generator, verbose=verbose, progress=progress,
+        hotfix_source_repo=hotfix_source_repo, current_index_versions=current_index_versions
+    )
 
 
 def _determine_namespace(info):
@@ -935,12 +935,14 @@ def _extract_info_directory(channel_root, subdir, fn, check_hash=False):
     timestamp = _make_seconds(repodata_record.get("timestamp", st.st_mtime))
     sha256 = sha256 or sha256_checksum(package_path)
     md5 = md5_file(package_path)
-    subdir = repodata_record.get("subdir", subdir)
 
     derived_fn = "{0}-{1}-{2}{3}".format(
         repodata_record["name"], repodata_record["version"], repodata_record["build"], ext
     )
     assert derived_fn == fn, (derived_fn, fn)
+    derived_subdir = repodata_record.get("subdir")
+    if derived_subdir and derived_subdir != subdir:
+        log.warning("subdir mismatch in info/index.json (%s != %s) for %s", derived_subdir, subdir, package_path)
     repodata_record.update({
         "fn": fn,
         "md5": md5,
