@@ -7,7 +7,7 @@ from base64 import urlsafe_b64encode
 import bz2
 from collections import OrderedDict
 import copy
-from datetime import datetime, timezone
+from datetime import datetime
 import json
 from numbers import Number
 import os
@@ -65,7 +65,7 @@ from .utils import glob, get_logger, FileNotFoundError, JSONDecodeError, sha256_
 
 # TODO: better to define this in conda; doing it here because we're implementing it in conda-build first
 CONDA_TARBALL_EXTENSIONS = ('.conda', '.tar.bz2')
-
+UTC = pytz.timezone("UTC")
 
 log = get_logger(__name__)
 
@@ -397,7 +397,7 @@ def _get_jinja2_environment():
         if isinstance(dt, Number):
             if dt > 253402300799:  # 9999-12-31
                 dt //= 1000  # convert milliseconds to seconds; see #1988
-            dt = datetime.utcfromtimestamp(dt).replace(tzinfo=pytz.timezone("UTC"))
+            dt = datetime.utcfromtimestamp(dt).replace(tzinfo=UTC)
         return dt.strftime(dt_format)
 
     def _filter_add_href(text, link, **kwargs):
@@ -579,7 +579,7 @@ def _make_subdir_index_html(channel_name, subdir, repodata_packages, extra_paths
     rendered_html = template.render(
         title="%s/%s" % (channel_name or '', subdir),
         packages=repodata_packages,
-        current_time=datetime.utcnow().replace(tzinfo=pytz.timezone("UTC")),
+        current_time=datetime.utcnow().replace(tzinfo=UTC),
         extra_paths=extra_paths,
     )
     return rendered_html
@@ -592,7 +592,7 @@ def _make_channeldata_index_html(channel_name, channeldata):
         title=channel_name,
         packages=channeldata['packages'],
         subdirs=channeldata['subdirs'],
-        current_time=datetime.utcnow().replace(tzinfo=pytz.timezone("UTC")),
+        current_time=datetime.utcnow().replace(tzinfo=UTC),
     )
     return rendered_html
 
@@ -743,7 +743,7 @@ def _build_current_repodata(subdir, repodata, pins):
 
 
 def timestamp_to_dt(timestamp):
-    return datetime.fromtimestamp(_make_seconds(timestamp), timezone.utc)
+    return datetime.fromtimestamp(_make_seconds(timestamp), UTC)
 
 
 def dt_to_timestamp(dt):
