@@ -29,6 +29,7 @@ requirements:
     - conda  >=4.5
     # - conda-verify  >=3.0.2  # optional as of CB 3.12.0
     - contextlib2   # [py<34]
+    - cytoolz
     - enum34        # [py<34]
     - pathlib2      # [py<3]
     - filelock

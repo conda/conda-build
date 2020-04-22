@@ -8,17 +8,21 @@ import bz2
 from collections import OrderedDict
 import copy
 from datetime import datetime
+from functools import partial
 import json
+import logging
 from numbers import Number
 import os
-from os import scandir, lstat, utime
+from os import lstat, utime
 from os.path import abspath, basename, getmtime, getsize, isdir, isfile, join, dirname, lexists
 import sys
 import time
 from uuid import uuid4
 
-# Lots of conda internals here.  Should refactor to use exports.
-from conda.common.compat import ensure_binary
+try:
+    from os import scandir
+except ImportError:
+    from scandir import scandir
 
 import pytz
 from jinja2 import Environment, PackageLoader
@@ -37,8 +41,6 @@ from ruamel_yaml.reader import ReaderError
 
 from cytoolz.itertoolz import concat, concatv, groupby
 
-from functools import partial
-import logging
 import conda_package_handling.api
 from conda_package_handling.api import InvalidArchiveError
 
@@ -46,6 +48,8 @@ from concurrent.futures import ProcessPoolExecutor
 from concurrent.futures import Executor
 
 #  BAD BAD BAD - conda internals
+# Lots of conda internals here.  Should refactor to use exports.
+from conda.common.compat import ensure_binary
 from conda.core.subdir_data import SubdirData
 from conda.models.channel import Channel
 
@@ -1012,7 +1016,6 @@ class ChannelIndex(object):
                 #         channel_data = json.load(f)
                 # Step 2. Collect repodata from packages, save to pkg_repodata.json file
                 repodatas = {}
-                # TODO: add cytoolz and scandir to conda-build requirements
                 with tqdm(total=len(subdirs), disable=(verbose or not progress), leave=False) as t:
                     for subdir in subdirs:
                         t.set_description("Subdir: %s" % subdir)
