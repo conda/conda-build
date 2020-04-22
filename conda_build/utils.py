@@ -1218,7 +1218,10 @@ def find_recipe(path):
                                       "will be used.")
             results = [base_recipe]
         else:
-            raise IOError("More than one meta.yaml files found in %s" % path)
+            # filter out any .cache directories
+            results = [p for p in rec_glob(path, ["meta.yaml", "conda.yaml"]) if ".cache" not in p.split(os.sep)]
+            if len(results) > 1:
+                raise IOError("More than one meta.yaml files found in %s" % path)
     elif not results:
         raise IOError("No meta.yaml or conda.yaml files found in %s" % path)
     return results[0]
