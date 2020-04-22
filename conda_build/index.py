@@ -582,7 +582,7 @@ def _build_current_repodata(subdir, repodata, pins):
 def json_dumps_compact(obj):
     return json.dumps(
         obj,
-        ensure_ascii=False,
+        ensure_ascii=True,
         indent=None,
         sort_keys=True,
         separators=(",", ":"),
