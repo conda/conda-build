@@ -1152,7 +1152,7 @@ class ChannelIndex(object):
         # Extract and cache update_set and add_set, then add to new_repodata_packages.
         extract_fns = sorted(concatv(add_set, update_set))
         num_extract_fns = len(extract_fns)
-        for q, fn in enumerate(tqdm(extract_fns)):
+        for q, fn in enumerate(tqdm(extract_fns, desc="extracting metadata", disable=verbose or not progress)):
             log.debug("extracting metadata [%s/%s] %s/%s", q + 1, num_extract_fns, subdir, fn)
             repodata_record = self._extract_to_cache2(self.channel_root, subdir, fn)
             if repodata_record is None:
