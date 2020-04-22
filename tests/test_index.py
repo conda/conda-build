@@ -10,7 +10,6 @@ import shutil
 import tarfile
 
 import pytest
-import mock
 import conda_package_handling.api
 
 from conda_build import api
@@ -67,13 +66,14 @@ def test_index_on_single_subdir_1(testing_workdir):
                 "depends": [
                     "python >=2.7,<2.8.0a0"
                 ],
+                "fn": "conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2",
                 "license": "BSD",
                 "md5": "37861df8111170f5eed4bff27868df59",
                 "name": "conda-index-pkg-a",
                 "sha256": "459f3e9b2178fa33bdc4e6267326405329d1c1ab982273d9a1c0a5084a1ddc30",
                 "size": 8733,
                 "subdir": "osx-64",
-                "timestamp": 1508520039632,
+                "timestamp": 1508520039,
                 "version": "1.0",
             },
         },
@@ -91,7 +91,8 @@ def test_index_on_single_subdir_1(testing_workdir):
     with open(join(testing_workdir, 'channeldata.json')) as fh:
         actual_channeldata_json = json.loads(fh.read())
     expected_channeldata_json = {
-        "channeldata_version": 1,
+        "$schema": "https://schemas.conda.io/channeldata-1.schema.json",
+        "schema_version": 1,
         "packages": {
             "conda-index-pkg-a": {
                 "description": "Description field for conda-index-pkg-a. Actually, this is just the python description. "
@@ -106,27 +107,13 @@ def test_index_on_single_subdir_1(testing_workdir):
                 "doc_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a",
                 "home": "https://anaconda.org/conda-test/conda-index-pkg-a",
                 "license": "BSD",
+                "reference_package": "osx-64/conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2",
                 "source_git_url": "https://github.com/kalefranz/conda-test-packages.git",
                 "subdirs": [
                     "osx-64",
                 ],
                 "summary": "Summary field for conda-index-pkg-a",
                 "version": "1.0",
-                "activate.d": False,
-                "deactivate.d": False,
-                "post_link": True,
-                "pre_link": False,
-                "pre_unlink": False,
-                "binary_prefix": False,
-                "text_prefix": True,
-                "run_exports": {},
-                'icon_hash': None,
-                'icon_url': None,
-                'identifiers': None,
-                'keywords': None,
-                'recipe_origin': None,
-                'source_url': None,
-                'tags': None,
                 'timestamp': 1508520039,
             }
         },
@@ -180,6 +167,7 @@ def test_index_noarch_osx64_1(testing_workdir):
                 "depends": [
                     "python"
                 ],
+                "fn": "conda-index-pkg-a-1.0-pyhed9eced_1.tar.bz2",
                 "license": "BSD",
                 "md5": "56b5f6b7fb5583bccfc4489e7c657484",
                 "name": "conda-index-pkg-a",
@@ -187,7 +175,7 @@ def test_index_noarch_osx64_1(testing_workdir):
                 "sha256": "7430743bffd4ac63aa063ae8518e668eac269c783374b589d8078bee5ed4cbc6",
                 "size": 7882,
                 "subdir": "noarch",
-                "timestamp": 1508520204768,
+                "timestamp": 1508520204,
                 "version": "1.0",
             },
         },
@@ -205,7 +193,8 @@ def test_index_noarch_osx64_1(testing_workdir):
     with open(join(testing_workdir, 'channeldata.json')) as fh:
         actual_channeldata_json = json.loads(fh.read())
     expected_channeldata_json = {
-        "channeldata_version": 1,
+        "$schema": "https://schemas.conda.io/channeldata-1.schema.json",
+        "schema_version": 1,
         "packages": {
             "conda-index-pkg-a": {
                 "description": "Description field for conda-index-pkg-a. Actually, this is just the python description. "
@@ -220,29 +209,15 @@ def test_index_noarch_osx64_1(testing_workdir):
                 "doc_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a",
                 "home": "https://anaconda.org/conda-test/conda-index-pkg-a",
                 "license": "BSD",
+                "reference_package": "noarch/conda-index-pkg-a-1.0-pyhed9eced_1.tar.bz2",
                 "source_git_url": "https://github.com/kalefranz/conda-test-packages.git",
-                'source_url': None,
                 "subdirs": [
                     "noarch",
                     "osx-64",
                 ],
                 "summary": "Summary field for conda-index-pkg-a. This is the python noarch version.",  # <- tests that the higher noarch build number is the data collected
                 "version": "1.0",
-                "activate.d": False,
-                "deactivate.d": False,
-                "post_link": True,
-                "pre_link": False,
-                "pre_unlink": False,
-                "binary_prefix": False,
-                "text_prefix": True,
-                "run_exports": {},
-                'icon_hash': None,
-                'icon_url': None,
-                'identifiers': None,
-                'tags': None,
-                'timestamp': 1508520039,
-                'keywords': None,
-                'recipe_origin': None,
+                'timestamp': 1508520204,
             }
         },
         "subdirs": [
@@ -521,6 +496,8 @@ def test_patch_instructions_with_missing_subdir(testing_workdir):
 
 
 def test_stat_cache_used(testing_workdir, mocker):
+    # There is no longer a stat cache, but this test remains unchanged.
+    # The important part of this test is the last line: `cph_extract.assert_not_called()`
     test_package_path = join(testing_workdir, 'osx-64', 'conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2')
     test_package_url = 'https://conda.anaconda.org/conda-test/osx-64/conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2'
     download(test_package_url, test_package_path)
@@ -541,8 +518,13 @@ def test_new_pkg_format_preferred(testing_workdir, mocker):
     #     with the .tar.bz2, because the .conda should be preferred
     cph_extract = mocker.spy(conda_package_handling.api, 'extract')
     conda_build.index.update_index(testing_workdir, channel_name='test-channel', debug=True)
-    # extract should get called once by default.  Within a channel, we assume that a .tar.bz2 and .conda have the same contents.
-    cph_extract.assert_called_once_with(test_package_path + '.conda', mock.ANY, 'info')
+    # Both .tar.bz2 and .conda packages exist, so .extract() should be called twice, but both times for the .conda
+    # package. Within a channel, we assume that a .tar.bz2 and .conda have the same contents.
+    assert cph_extract.call_count == 2
+    assert cph_extract.call_args_list[0][0][0].endswith("conda-index-pkg-a-1.0-py27h5e241af_0.conda")
+    assert cph_extract.call_args_list[0][1]["dest_dir"].endswith("conda-index-pkg-a-1.0-py27h5e241af_0.conda.metadata")
+    assert cph_extract.call_args_list[1][0][0].endswith("conda-index-pkg-a-1.0-py27h5e241af_0.conda")
+    assert cph_extract.call_args_list[1][1]["dest_dir"].endswith("conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2.metadata")
 
     with open(join(testing_workdir, 'osx-64', 'repodata.json')) as fh:
         actual_repodata_json = json.loads(fh.read())
@@ -558,13 +540,14 @@ def test_new_pkg_format_preferred(testing_workdir, mocker):
                 "depends": [
                     "python >=2.7,<2.8.0a0"
                 ],
+                "fn": "conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2",
                 "license": "BSD",
                 "md5": "37861df8111170f5eed4bff27868df59",
                 "name": "conda-index-pkg-a",
                 "sha256": "459f3e9b2178fa33bdc4e6267326405329d1c1ab982273d9a1c0a5084a1ddc30",
                 "size": 8733,
                 "subdir": "osx-64",
-                "timestamp": 1508520039632,
+                "timestamp": 1508520039,
                 "version": "1.0",
             },
         },
@@ -575,13 +558,14 @@ def test_new_pkg_format_preferred(testing_workdir, mocker):
                 "depends": [
                     "python >=2.7,<2.8.0a0"
                 ],
+                "fn": "conda-index-pkg-a-1.0-py27h5e241af_0.conda",
                 "license": "BSD",
                 "md5": "4ed4b435f400dac1aabdc1fff06f78ff",
                 "name": "conda-index-pkg-a",
                 "sha256": "67b07b644105439515cc5c8c22c86939514cacf30c8c574cd70f5f1267a40f19",
                 "size": 9296,
                 "subdir": "osx-64",
-                "timestamp": 1508520039632,
+                "timestamp": 1508520039,
                 "version": "1.0",
             },
         },
@@ -590,12 +574,10 @@ def test_new_pkg_format_preferred(testing_workdir, mocker):
     }
     assert actual_repodata_json == expected_repodata_json
 
-    # if we clear the stat cache, we force a re-examination.  This re-examination will load files
-    #     from the cache.  This has been a source of bugs in the past, where the wrong cached file
-    #     being loaded resulted in incorrect hashes/sizes for either the .tar.bz2 or .conda, depending
-    #     on which of those 2 existed in the cache.
-    rm_rf(os.path.join(testing_workdir, 'osx-64', 'stat.json'))
+    # Calling update_index() again should load all files from the cache.
+    cph_extract.reset_mock()
     conda_build.index.update_index(testing_workdir, channel_name='test-channel', debug=True)
+    cph_extract.assert_not_called()
 
     with open(join(testing_workdir, 'osx-64', 'repodata.json')) as fh:
         actual_repodata_json = json.loads(fh.read())
@@ -604,19 +586,17 @@ def test_new_pkg_format_preferred(testing_workdir, mocker):
 
 
 def test_new_pkg_format_stat_cache_used(testing_workdir, mocker):
+    cph_extract = mocker.spy(conda_package_handling.api, 'extract')
+
     # if we have old .tar.bz2 index cache stuff, assert that we pick up correct md5, sha26 and size for .conda
     test_package_path = join(testing_workdir, 'osx-64', 'conda-index-pkg-a-1.0-py27h5e241af_0')
     copy_into(os.path.join(archive_dir, 'conda-index-pkg-a-1.0-py27h5e241af_0' + '.tar.bz2'), test_package_path + '.tar.bz2')
     conda_build.index.update_index(testing_workdir, channel_name='test-channel')
+    assert cph_extract.call_count == 1  # if there's no .conda file, we have to extract the .tar.bz2
 
-    # mock the extract function, so that we can assert that it is not called, because the stat cache should exist
-    #    if this doesn't work, something about the stat cache is confused.  It's a little convoluted, because
-    #    the index has keys for .tar.bz2's, but the stat cache comes from .conda files when they are available
-    #    because extracting them is much, much faster.
     copy_into(os.path.join(archive_dir, 'conda-index-pkg-a-1.0-py27h5e241af_0' + '.conda'), test_package_path + '.conda')
-    cph_extract = mocker.spy(conda_package_handling.api, 'extract')
     conda_build.index.update_index(testing_workdir, channel_name='test-channel', debug=True)
-    cph_extract.assert_not_called()
+    assert cph_extract.call_count == 2
 
     with open(join(testing_workdir, 'osx-64', 'repodata.json')) as fh:
         actual_repodata_json = json.loads(fh.read())
@@ -632,13 +612,14 @@ def test_new_pkg_format_stat_cache_used(testing_workdir, mocker):
                 "depends": [
                     "python >=2.7,<2.8.0a0"
                 ],
+                "fn": "conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2",
                 "license": "BSD",
                 "md5": "37861df8111170f5eed4bff27868df59",
                 "name": "conda-index-pkg-a",
                 "sha256": "459f3e9b2178fa33bdc4e6267326405329d1c1ab982273d9a1c0a5084a1ddc30",
                 "size": 8733,
                 "subdir": "osx-64",
-                "timestamp": 1508520039632,
+                "timestamp": 1508520039,
                 "version": "1.0",
             },
         },
@@ -649,13 +630,14 @@ def test_new_pkg_format_stat_cache_used(testing_workdir, mocker):
                 "depends": [
                     "python >=2.7,<2.8.0a0"
                 ],
+                "fn": "conda-index-pkg-a-1.0-py27h5e241af_0.conda",
                 "license": "BSD",
                 "md5": "4ed4b435f400dac1aabdc1fff06f78ff",
                 "name": "conda-index-pkg-a",
                 "sha256": "67b07b644105439515cc5c8c22c86939514cacf30c8c574cd70f5f1267a40f19",
                 "size": 9296,
                 "subdir": "osx-64",
-                "timestamp": 1508520039632,
+                "timestamp": 1508520039,
                 "version": "1.0",
             },
         },
@@ -721,17 +703,6 @@ def test_current_index_version_keys_keep_older_packages(testing_workdir):
     with open(os.path.join(pkg_dir, 'osx-64', 'current_repodata.json')) as f:
         repodata = json.load(f)
     assert list(repodata['packages'].values())[0]['version'] == "1.0"
-
-
-def test_channeldata_picks_up_all_versions_of_run_exports():
-    pkg_dir = os.path.join(os.path.dirname(__file__), 'index_data', 'packages')
-    api.update_index(pkg_dir)
-    with open(os.path.join(pkg_dir, 'channeldata.json')) as f:
-        repodata = json.load(f)
-    run_exports = repodata['packages']['run_exports_versions']['run_exports']
-    assert len(run_exports) == 2
-    assert "1.0" in run_exports
-    assert "2.0" in run_exports
 
 
 def test_index_invalid_packages():

@@ -12,9 +12,8 @@ import json
 from numbers import Number
 import os
 from os import scandir, lstat, utime
-from os.path import abspath, basename, getmtime, getsize, isdir, isfile, join, splitext, dirname, lexists
+from os.path import abspath, basename, getmtime, getsize, isdir, isfile, join, dirname, lexists
 import sys
-import tarfile
 import time
 from uuid import uuid4
 
@@ -325,8 +324,6 @@ CHANNELDATA_FIELDS = frozenset((
     "reference_package",
     "source_url",
     "source_git_url",
-    "source_git_tag",
-    "source_git_rev",
     "summary",
     "version",
     "timestamp",
@@ -772,14 +769,12 @@ def _extract_info_directory(channel_root, subdir, fn, check_hash=False):
             return {}
 
     def _run_extraction(package_path, metadata_dir_path):
-        if package_path[-6:] == ".conda":
+        try:
             conda_package_handling.api.extract(package_path, dest_dir=metadata_dir_path, components="info")
-        else:
-            with tarfile.open(package_path, "r:bz2") as tf:
-                subdir_and_files = (
-                    tarinfo for tarinfo in tf.getmembers() if tarinfo.name.startswith("info/")
-                )
-                tf.extractall(members=subdir_and_files, path=metadata_dir_path)
+            return True
+        except InvalidArchiveError as e:
+            log.exception(e)
+            return False
 
     def _cache_conda_recipe(metadata_dir_path):
         recipe_path_search_order = (
@@ -918,13 +913,21 @@ def _extract_info_directory(channel_root, subdir, fn, check_hash=False):
     if ext == ".tar.bz2":
         conda_package_path = package_path[:-8] + ".conda"
         if lexists(conda_package_path):
-            _run_extraction(conda_package_path, metadata_dir_path)
+            extracted = _run_extraction(conda_package_path, metadata_dir_path)
         else:
-            _run_extraction(package_path, metadata_dir_path)
+            extracted = _run_extraction(package_path, metadata_dir_path)
     else:
-        _run_extraction(package_path, metadata_dir_path)
-    with open(join(metadata_dir_path, "info", "index.json")) as fh:
-        repodata_record = json.load(fh)
+        extracted = _run_extraction(package_path, metadata_dir_path)
+    if not extracted:
+        # returning None means we had an extraction error
+        return None
+
+    try:
+        with open(join(metadata_dir_path, "info", "index.json")) as fh:
+            repodata_record = json.load(fh)
+    except FileNotFoundError:
+        log.error("Corrupt package at %s", package_path)
+        return None
 
     timestamp = _make_seconds(repodata_record.get("timestamp", st.st_mtime))
     sha256 = sha256 or sha256_checksum(package_path)
@@ -1068,7 +1071,6 @@ class ChannelIndex(object):
     def index_subdir(self, subdir, verbose=False, progress=False):
         subdir_path = join(self.channel_root, subdir)
         repodata_from_packages_path = join(subdir_path, REPODATA_FROM_PKGS_JSON_FN)
-        stat_cache_path = join(subdir_path, '.cache', 'stat.json')
 
         if verbose:
             log.info("Building repodata for %s" % subdir_path)
@@ -1112,133 +1114,94 @@ class ChannelIndex(object):
         old_repodata_conda_packages = old_repodata.get("packages.conda", {})
         old_repodata_fns = set(old_repodata_packages) | set(old_repodata_conda_packages)
 
-        # TODO: no longer need stat_cache
+        # calculate all the paths and figure out what we're going to do with them
+        # add_set: filenames that aren't in the current/old repodata, but exist in the subdir
+        add_set = fns_in_subdir - old_repodata_fns
+        remove_set = old_repodata_fns - fns_in_subdir
+        all_removed =  (old_repodata_fns | set(old_repodata.get('removed', ()))) - fns_in_subdir
+        # ignore_set = set(old_repodata.get('removed', []))
+        # add_set -= ignore_set  # this seems wrong
 
-        # load stat cache
-        try:
-            # # has the form
-            #   {
-            #     "numpy-1.14.5-py36hcd700cb_1.conda": {
-            #       "mtime": 1558694689,
-            #       "size": 90752
-            #     },
-            #   }
-            with open(stat_cache_path) as fh:
-                stat_cache = json.load(fh) or {}
-        except:
-            stat_cache = {}
-        stat_cache_original = stat_cache.copy()
+        # update_set: Filenames that are in both old repodata and new repodata,
+        #     and whose contents have changed based on file size or mtime. We're
+        #     not using md5 here because it takes too long. If needing to do full md5 checks,
+        #     use the --deep-integrity-check flag / self.deep_integrity_check option.
+        candidate_fns = fns_in_subdir & old_repodata_fns
+        update_set = self._calculate_update_set(
+            self.channel_root, subdir, candidate_fns, old_repodata,
+        )
+        # unchanged_set: packages in old repodata whose information can carry straight
+        #     across to new repodata
+        # unchanged_set = sorted(old_repodata_fns - update_set - remove_set - ignore_set)
+        unchanged_set = candidate_fns - update_set
 
-        try:
-            # calculate all the paths and figure out what we're going to do with them
-            # add_set: filenames that aren't in the current/old repodata, but exist in the subdir
-            add_set = fns_in_subdir - old_repodata_fns
-            remove_set = old_repodata_fns - fns_in_subdir
-            all_removed =  old_repodata_fns | set(old_repodata.get('removed', ())) - fns_in_subdir
-            # ignore_set = set(old_repodata.get('removed', []))
-            # add_set -= ignore_set  # this seems wrong
+        log.debug(
+            "found %s additions, %s updates, %s unchanged, %s removed",
+            len(add_set), len(update_set), len(unchanged_set), len(remove_set)
+        )
 
-            # update_set: Filenames that are in both old repodata and new repodata,
-            #     and whose contents have changed based on file size or mtime. We're
-            #     not using md5 here because it takes too long. If needing to do full md5 checks,
-            #     use the --deep-integrity-check flag / self.deep_integrity_check option.
-            candidate_fns = fns_in_subdir & old_repodata_fns
-            update_set = self._calculate_update_set(
-                self.channel_root, subdir, candidate_fns, old_repodata,
-            )
-            # unchanged_set: packages in old repodata whose information can carry straight
-            #     across to new repodata
-            # unchanged_set = sorted(old_repodata_fns - update_set - remove_set - ignore_set)
-            unchanged_set = candidate_fns - update_set
+        new_repodata_packages = {
+            k: v for k, v in old_repodata.get('packages', {}).items() if k in unchanged_set
+        }
+        new_repodata_conda_packages = {
+            k: v for k, v in old_repodata.get('packages.conda', {}).items() if k in unchanged_set
+        }
 
-            log.debug(
-                "found %s additions, %s updates, %s unchanged, %s removed",
-                len(add_set), len(update_set), len(unchanged_set), len(remove_set)
-            )
+        # Invalidate cached files for update_set.
+        # Extract and cache update_set and add_set, then add to new_repodata_packages.
+        extract_fns = sorted(concatv(add_set, update_set))
+        num_extract_fns = len(extract_fns)
+        for q, fn in enumerate(tqdm(extract_fns)):
+            log.debug("extracting metadata [%s/%s] %s/%s", q+1, num_extract_fns, subdir, fn)
+            repodata_record = self._extract_to_cache2(self.channel_root, subdir, fn)
+            if repodata_record is None:
+                # extraction error
+                pass
+            elif fn[-6:] == ".conda":
+                new_repodata_conda_packages[fn] = repodata_record
+            elif fn[-8:] == ".tar.bz2":
+                new_repodata_packages[fn] = repodata_record
+            else:
+                raise NotImplementedError("This should never happen.")
 
-            # # clean up removed files
-            # removed_set = (old_repodata_fns - fns_in_subdir)
-            # for fn in removed_set:
-            #     if fn in stat_cache:
-            #         del stat_cache[fn]
+        # # Sorting here prioritizes .conda files ('c') over .tar.bz2 files ('b')
+        # hash_extract_set = tuple(concatv(add_set, update_set))
+        #
+        # extract_func = functools.partial(ChannelIndex._extract_to_cache,
+        #                                     self.channel_root, subdir)
+        # # split up the set by .conda packages first, then .tar.bz2.  This avoids race conditions
+        # #    with execution in parallel that would end up in the same place.
+        # for conda_format in tqdm(CONDA_TARBALL_EXTENSIONS, desc="File format",
+        #                          disable=(verbose or not progress), leave=False):
+        #     for fn, mtime, size, index_json in tqdm(
+        #             self.thread_executor.map(
+        #                 extract_func,
+        #                 (fn for fn in hash_extract_set if fn.endswith(conda_format))),
+        #             desc="hash & extract packages for %s" % subdir,
+        #             disable=(verbose or not progress), leave=False):
+        #
+        #         # fn can be None if the file was corrupt or no longer there
+        #         if fn and mtime:
+        #             stat_cache[fn] = {'mtime': int(mtime), 'size': size}
+        #             if index_json:
+        #                 if fn.endswith(".conda"):
+        #                     new_repodata_conda_packages[fn] = index_json
+        #                 else:
+        #                     new_repodata_packages[fn] = index_json
+        #             else:
+        #                 log.error("Package at %s did not contain valid index.json data.  Please"
+        #                           " check the file and remove/redownload if necessary to obtain "
+        #                           "a valid package." % os.path.join(subdir_path, fn))
 
-            new_repodata_packages = {
-                k: v for k, v in old_repodata.get('packages', {}).items() if k in unchanged_set
-            }
-            new_repodata_conda_packages = {
-                k: v for k, v in old_repodata.get('packages.conda', {}).items() if k in unchanged_set
-            }
-
-            # for k in unchanged_set:
-            #     if not (k in new_repodata_packages or k in new_repodata_conda_packages):
-            #         fn, rec = ChannelIndex._load_index_from_cache(self.channel_root, subdir, fn, stat_cache)
-            #         # this is how we pass an exception through.  When fn == rec, there's been a problem,
-            #         #    and we need to reload this file
-            #         if fn == rec:
-            #             update_set.add(fn)
-            #         else:
-            #             if fn.endswith('.tar.bz2'):
-            #                 new_repodata_packages[fn] = rec
-            #             else:
-            #                 new_repodata_conda_packages[fn] = rec
-
-            # Invalidate cached files for update_set.
-            # Extract and cache update_set and add_set, then add to new_repodata_packages.
-            # This is also where we update the contents of the stat_cache for successfully
-            #   extracted packages.
-            extract_fns = sorted(concatv(add_set, update_set))
-            num_extract_fns = len(extract_fns)
-            for q, fn in enumerate(tqdm(extract_fns)):
-                log.debug("extracting metadata [%s/%s] %s/%s", q+1, num_extract_fns, subdir, fn)
-                repodata_record = self._extract_to_cache2(self.channel_root, subdir, fn)
-                if fn[-6:] == ".conda":
-                    new_repodata_conda_packages[fn] = repodata_record
-                else:
-                    new_repodata_packages[fn] = repodata_record
-
-            # # Sorting here prioritizes .conda files ('c') over .tar.bz2 files ('b')
-            # hash_extract_set = tuple(concatv(add_set, update_set))
-            #
-            # extract_func = functools.partial(ChannelIndex._extract_to_cache,
-            #                                     self.channel_root, subdir)
-            # # split up the set by .conda packages first, then .tar.bz2.  This avoids race conditions
-            # #    with execution in parallel that would end up in the same place.
-            # for conda_format in tqdm(CONDA_TARBALL_EXTENSIONS, desc="File format",
-            #                          disable=(verbose or not progress), leave=False):
-            #     for fn, mtime, size, index_json in tqdm(
-            #             self.thread_executor.map(
-            #                 extract_func,
-            #                 (fn for fn in hash_extract_set if fn.endswith(conda_format))),
-            #             desc="hash & extract packages for %s" % subdir,
-            #             disable=(verbose or not progress), leave=False):
-            #
-            #         # fn can be None if the file was corrupt or no longer there
-            #         if fn and mtime:
-            #             stat_cache[fn] = {'mtime': int(mtime), 'size': size}
-            #             if index_json:
-            #                 if fn.endswith(".conda"):
-            #                     new_repodata_conda_packages[fn] = index_json
-            #                 else:
-            #                     new_repodata_packages[fn] = index_json
-            #             else:
-            #                 log.error("Package at %s did not contain valid index.json data.  Please"
-            #                           " check the file and remove/redownload if necessary to obtain "
-            #                           "a valid package." % os.path.join(subdir_path, fn))
-
-            new_repodata = {
-                'packages': new_repodata_packages,
-                'packages.conda': new_repodata_conda_packages,
-                'info': {
-                    'subdir': subdir,
-                },
-                'repodata_version': REPODATA_VERSION,
-                'removed': sorted(all_removed)
-            }
-        finally:
-            if stat_cache != stat_cache_original:
-                # log.info("writing stat cache to %s", stat_cache_path)
-                with open(stat_cache_path, 'w') as fh:
-                    json.dump(stat_cache, fh)
+        new_repodata = {
+            'packages': new_repodata_packages,
+            'packages.conda': new_repodata_conda_packages,
+            'info': {
+                'subdir': subdir,
+            },
+            'repodata_version': REPODATA_VERSION,
+            'removed': sorted(all_removed)
+        }
         return new_repodata
 
     # def _ensure_dirs(self, subdir):
