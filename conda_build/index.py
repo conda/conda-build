@@ -1081,8 +1081,7 @@ class ChannelIndex(object):
 
         # gather conda package filenames in subdir
         # we'll process these first, because reading their metadata is much faster
-        with scandir(subdir_path) as sd_it:
-            groups = groupby(lambda fn: fn[-6:], (entry.name for entry in sd_it))
+        groups = groupby(lambda fn: fn[-6:], (entry.name for entry in scandir(subdir_path)))
         conda_fns = set(groups.get(".conda", ()))
         tar_bz2_fns = set(groups.get("ar.bz2", ()))
         fns_in_subdir = conda_fns | tar_bz2_fns
@@ -1195,13 +1194,14 @@ class ChannelIndex(object):
         #                           "a valid package." % os.path.join(subdir_path, fn))
 
         new_repodata = {
-            'packages': new_repodata_packages,
-            'packages.conda': new_repodata_conda_packages,
-            'info': {
-                'subdir': subdir,
+            "$schema": "https://schemas.conda.io/repodata-1.schema.json",
+            "repodata_version": REPODATA_VERSION,
+            "info": {
+                "subdir": subdir,
             },
-            'repodata_version': REPODATA_VERSION,
-            'removed': sorted(all_removed)
+            "packages": new_repodata_packages,
+            "packages.conda": new_repodata_conda_packages,
+            "removed": sorted(all_removed)
         }
         return new_repodata
 

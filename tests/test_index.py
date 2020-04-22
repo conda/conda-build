@@ -56,6 +56,7 @@ def test_index_on_single_subdir_1(testing_workdir):
     with open(join(testing_workdir, 'osx-64', 'repodata_from_packages.json')) as fh:
         actual_pkg_repodata_json = json.loads(fh.read())
     expected_repodata_json = {
+        "$schema": "https://schemas.conda.io/repodata-1.schema.json",
         "info": {
             'subdir': 'osx-64',
         },
@@ -157,6 +158,7 @@ def test_index_noarch_osx64_1(testing_workdir):
     with open(join(testing_workdir, 'noarch', 'repodata_from_packages.json')) as fh:
         actual_pkg_repodata_json = json.loads(fh.read())
     expected_repodata_json = {
+        "$schema": "https://schemas.conda.io/repodata-1.schema.json",
         "info": {
             'subdir': 'noarch',
         },
@@ -530,6 +532,7 @@ def test_new_pkg_format_preferred(testing_workdir, mocker):
         actual_repodata_json = json.loads(fh.read())
 
     expected_repodata_json = {
+        "$schema": "https://schemas.conda.io/repodata-1.schema.json",
         "info": {
             'subdir': 'osx-64',
         },
@@ -602,6 +605,7 @@ def test_new_pkg_format_stat_cache_used(testing_workdir, mocker):
         actual_repodata_json = json.loads(fh.read())
 
     expected_repodata_json = {
+        "$schema": "https://schemas.conda.io/repodata-1.schema.json",
         "info": {
             'subdir': 'osx-64',
         },
