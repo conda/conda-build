@@ -1210,6 +1210,7 @@ def find_recipe(path):
     if os.path.isfile(path) and os.path.basename(path) in ["meta.yaml", "conda.yaml"]:
         return os.path.dirname(path)
     results = rec_glob(path, ["meta.yaml", "conda.yaml"])
+    results = [r for r in results if not os.sep+'.AppleDouble'+os.sep in r]
     if len(results) > 1:
         base_recipe = os.path.join(path, "meta.yaml")
         if base_recipe in results:
