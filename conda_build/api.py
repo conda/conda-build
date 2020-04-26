@@ -15,7 +15,6 @@ but only use those kwargs in config.  Config must change to support new features
 
 # imports are done locally to keep the api clean and limited strictly
 #    to conda-build's functionality.
-from itertools import zip_longest
 import sys as _sys
 
 # make the Config class available in the api namespace
@@ -24,7 +23,6 @@ from conda_build.config import (Config, get_or_merge_config, get_channel_urls,
 from conda_build.utils import ensure_list as _ensure_list
 from conda_build.utils import expand_globs as _expand_globs
 from conda_build.utils import get_logger as _get_logger
-from os.path import dirname, expanduser, join
 
 
 def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variants=True,
@@ -241,6 +239,7 @@ def list_skeletons():
 
     The returned list is generally the names of supported repositories (pypi, cran, etc.)"""
     import pkgutil
+    from os.path import dirname, join
     modules = pkgutil.iter_modules([join(dirname(__file__), 'skeletons')])
     files = []
     for _, name, _ in modules:
@@ -253,7 +252,7 @@ def skeletonize(packages, repo, output_dir=".", version=None, recursive=False,
                 config=None, **kwargs):
     """Generate a conda recipe from an external repo.  Translates metadata from external
     sources into expected conda recipe format."""
-
+    from os.path import expanduser
     version = getattr(config, "version", version)
     if version:
         kwargs.update({'version': version})
@@ -381,6 +380,10 @@ def update_index(dir_paths, config=None, force=False, check_md5=False, remove=Fa
                  hotfix_source_repo=None, current_index_versions=None, metadata_paths=(), **kwargs):
     import yaml
     from locale import getpreferredencoding
+    try:
+        from itertools import zip_longest
+    except ImportError:
+        from itertools import izip_longest as zip_longest
     import os
     from .conda_interface import PY3, string_types
     from conda_build.index import update_index as _update_index

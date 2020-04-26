@@ -5,6 +5,9 @@ import json
 from logging import getLogger
 import os
 from os.path import dirname, isdir, join, isfile
+import time
+
+from conda.utils import md5_file
 import requests
 import shutil
 import tarfile
@@ -717,3 +720,98 @@ def test_index_invalid_packages():
     with open(os.path.join(pkg_dir, 'channeldata.json')) as f:
         repodata = json.load(f)
     assert len(repodata['packages']) == 0
+
+
+def test_icon_index(testing_workdir):
+    test_package_path = join(testing_workdir, 'osx-64', 'glueviz-0.15.2-0.conda')
+    test_package_url = 'https://repo.anaconda.com/pkgs/main/osx-64/glueviz-0.15.2-0.conda'
+    download(test_package_url, test_package_path)
+
+    conda_build.index.update_index(testing_workdir, channel_name='test-channel')
+
+    assert isfile(join(testing_workdir, 'osx-64', 'repodata.json'))
+    with open(join(testing_workdir, 'osx-64', 'repodata.json')) as fh:
+        actual_repodata_json = json.loads(fh.read())
+    expected_repodata_json = {
+        "$schema": "https://schemas.conda.io/repodata-1.schema.json",
+        "info": {
+            "subdir": "osx-64"
+        },
+        "packages": {},
+        "packages.conda": {
+            "glueviz-0.15.2-0.conda": {
+                "app_entry": "glue",
+                "app_type": "desk",
+                "build": "0",
+                "build_number": 0,
+                "depends": [
+                    "glue-core >=0.15.3",
+                    "glue-vispy-viewers >=0.12.2"
+                ],
+                "fn": "glueviz-0.15.2-0.conda",
+                "icon": "c124cb3a3bf9bb32f258a6e6f9b5c187.png",
+                "license": "BSD 3-Clause",
+                "md5": "bf28e8cbd35ee7cea6a3672038dbc00f",
+                "name": "glueviz",
+                "sha256": "ec8ec900a30c579f451ac8d9e0573aa1f4b7149e779dcfbd0794fb640e843b54",
+                "size": 23684,
+                "subdir": "osx-64",
+                "summary": "Multi-dimensional linked data exploration",
+                "timestamp": 1568318496,
+                "type": "app",
+                "version": "0.15.2"
+            }
+        },
+        "removed": [],
+        "repodata_version": 1
+    }
+    assert actual_repodata_json == expected_repodata_json
+
+    with open(join(testing_workdir, 'channeldata.json')) as fh:
+        actual_channeldata_json = json.loads(fh.read())
+    expected_channeldata_json = {
+        "$schema": "https://schemas.conda.io/channeldata-1.schema.json",
+        "packages": {
+            "glueviz": {
+                "home": "http://glueviz.org",
+                "icon_hash": "md5:c124cb3a3bf9bb32f258a6e6f9b5c187:10229",
+                "icon_url": "icons/glueviz.png",
+                "license": "BSD 3-Clause",
+                "reference_package": "osx-64/glueviz-0.15.2-0.conda",
+                "source_url": "https://pypi.io/packages/source/g/glueviz/glueviz-0.15.2.tar.gz",
+                "subdirs":[
+                    "osx-64"
+                ],
+                "summary": "Multi-dimensional linked data exploration",
+                "timestamp": 1568318496,
+                "version": "0.15.2"
+            }
+        },
+        "schema_version": 1,
+        "subdirs": [
+            "noarch",
+            "osx-64"
+        ]
+    }
+    assert actual_channeldata_json == expected_channeldata_json
+
+    channel_icon_path = join(testing_workdir, 'icons', 'glueviz.png')
+    ico_st = os.stat(channel_icon_path)
+    assert isfile(channel_icon_path)
+    icon_hash = expected_channeldata_json["packages"]["glueviz"]["icon_hash"]
+    assert md5_file(channel_icon_path) == icon_hash.split(":")[1]
+
+    # make sure we don't replace icons/glueviz.png
+    time.sleep(1)
+    test_package_path = join(testing_workdir, 'linux-64', 'glueviz-0.15.2-0.conda')
+    test_package_url = 'https://repo.anaconda.com/pkgs/main/linux-64/glueviz-0.15.2-0.conda'
+    download(test_package_url, test_package_path)
+    conda_build.index.update_index(testing_workdir, channel_name='test-channel')
+
+    with open(join(testing_workdir, 'channeldata.json')) as fh:
+        actual_channeldata_json = json.loads(fh.read())
+    expected_channeldata_json["subdirs"] = ["linux-64", "noarch", "osx-64"]
+    expected_channeldata_json["packages"]["glueviz"]["subdirs"] = ["linux-64", "osx-64"]
+    assert actual_channeldata_json == expected_channeldata_json
+
+    assert ico_st.st_mtime == os.stat(channel_icon_path).st_mtime

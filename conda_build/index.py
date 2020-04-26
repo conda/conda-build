@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Proprietary
 from __future__ import absolute_import, division, print_function, unicode_literals
 
-from base64 import urlsafe_b64encode
+from base64 import urlsafe_b64decode, urlsafe_b64encode
 import bz2
 from collections import OrderedDict
 from copy import deepcopy
@@ -27,7 +27,6 @@ except ImportError:
 
 import pytz
 from jinja2 import Environment, PackageLoader
-from tqdm import tqdm
 from yaml import safe_load as yaml_safe_load
 from yaml.constructor import ConstructorError
 from yaml.parser import ParserError
@@ -951,7 +950,6 @@ class ChannelIndex(object):
                 log.exception(e)
                 return False
 
-
     @staticmethod
     def _cache_conda_recipe(metadata_dir_path):
         recipe_path_search_order = (
@@ -1010,7 +1008,7 @@ class ChannelIndex(object):
         icon_json = {}
         if icon_path:
             icon_ext = icon_path.rsplit('.', 1)[-1]  # app_icon_path can be something other than .png
-            channel_icon_fn = repodata_record["name"] + icon_ext
+            channel_icon_fn = repodata_record["name"] + "." + icon_ext
             icon_cache_path = join(metadata_dir_path, channel_icon_fn)
             with open(icon_path, "rb") as fh:
                 icon_binary = fh.read()
@@ -1067,7 +1065,23 @@ class ChannelIndex(object):
     def load_all_metadata_from_cache(metadata_root_path, subdir, fn):
         all_metadata_path = join(metadata_root_path, subdir, ".cache", fn + ".metadata", "all_metadata.json")
         with open(all_metadata_path) as fh:
-            return json.load(fh)
+            all_metadata = json.load(fh)
+        if "icon_url" in all_metadata:
+            icon_channel_path = join(metadata_root_path, all_metadata["icon_url"])
+            icon_md5 = all_metadata["icon_hash"].split(":")[1]
+            copy_from_cache = True
+            if lexists(icon_channel_path) and md5_file(icon_channel_path) == icon_md5:
+                copy_from_cache = False
+            if copy_from_cache:
+                log.debug("writing icon to %s", icon_channel_path)
+                icon_binary = urlsafe_b64decode(all_metadata["icon"]["icon_base64"])
+                try:
+                    os.makedirs(dirname(icon_channel_path))
+                except EnvironmentError:
+                    pass  # directory exists
+                with open(icon_channel_path, "wb") as fd:
+                    fd.write(icon_binary)
+        return all_metadata
 
     @staticmethod
     def _write_repodata(metadata_root_path, subdir, repodata, json_filename, create_bz2=False):
