@@ -48,8 +48,8 @@ def test_index_on_single_subdir_1(testing_workdir):
     # tests for osx-64 subdir
     # #######################################
     assert isfile(join(testing_workdir, 'osx-64', 'index.html'))
-    assert isfile(join(testing_workdir, 'osx-64', 'repodata.json.bz2'))
-    assert isfile(join(testing_workdir, 'osx-64', 'repodata_from_packages.json.bz2'))
+    assert isfile(join(testing_workdir, 'osx-64', 'repodata.json'))
+    assert isfile(join(testing_workdir, 'osx-64', 'repodata_from_packages.json'))
 
     with open(join(testing_workdir, 'osx-64', 'repodata.json')) as fh:
         actual_repodata_json = json.loads(fh.read())
@@ -83,6 +83,8 @@ def test_index_on_single_subdir_1(testing_workdir):
         "repodata_version": 1,
     }
     assert actual_repodata_json == expected_repodata_json
+    any(rec.pop("mtime", None) for rec in actual_pkg_repodata_json["packages"].values())
+    any(rec.pop("mtime", None) for rec in actual_pkg_repodata_json["packages.conda"].values())
     assert actual_pkg_repodata_json == expected_repodata_json
 
     # #######################################
@@ -142,16 +144,14 @@ def test_index_noarch_osx64_1(testing_workdir):
     # #######################################
     assert isfile(join(testing_workdir, 'osx-64', 'index.html'))
     assert isfile(join(testing_workdir, 'osx-64', 'repodata.json'))  # repodata is tested in test_index_on_single_subdir_1
-    assert isfile(join(testing_workdir, 'osx-64', 'repodata.json.bz2'))
     assert isfile(join(testing_workdir, 'osx-64', 'repodata_from_packages.json'))
-    assert isfile(join(testing_workdir, 'osx-64', 'repodata_from_packages.json.bz2'))
 
     # #######################################
     # tests for noarch subdir
     # #######################################
     assert isfile(join(testing_workdir, 'noarch', 'index.html'))
-    assert isfile(join(testing_workdir, 'noarch', 'repodata.json.bz2'))
-    assert isfile(join(testing_workdir, 'noarch', 'repodata_from_packages.json.bz2'))
+    assert isfile(join(testing_workdir, 'noarch', 'repodata.json'))
+    assert isfile(join(testing_workdir, 'noarch', 'repodata_from_packages.json'))
 
     with open(join(testing_workdir, 'noarch', 'repodata.json')) as fh:
         actual_repodata_json = json.loads(fh.read())
@@ -186,6 +186,8 @@ def test_index_noarch_osx64_1(testing_workdir):
         "repodata_version": 1,
     }
     assert actual_repodata_json == expected_repodata_json
+    any(rec.pop("mtime", None) for rec in actual_pkg_repodata_json["packages"].values())
+    any(rec.pop("mtime", None) for rec in actual_pkg_repodata_json["packages.conda"].values())
     assert actual_pkg_repodata_json == expected_repodata_json
 
     # #######################################
@@ -595,11 +597,11 @@ def test_new_pkg_format_stat_cache_used(testing_workdir, mocker):
     test_package_path = join(testing_workdir, 'osx-64', 'conda-index-pkg-a-1.0-py27h5e241af_0')
     copy_into(os.path.join(archive_dir, 'conda-index-pkg-a-1.0-py27h5e241af_0' + '.tar.bz2'), test_package_path + '.tar.bz2')
     conda_build.index.update_index(testing_workdir, channel_name='test-channel')
-    assert cph_extract.call_count == 1  # if there's no .conda file, we have to extract the .tar.bz2
+    assert cph_extract.call_count == 0  # if there's no .conda file, we have to extract the .tar.bz2
 
     copy_into(os.path.join(archive_dir, 'conda-index-pkg-a-1.0-py27h5e241af_0' + '.conda'), test_package_path + '.conda')
     conda_build.index.update_index(testing_workdir, channel_name='test-channel', debug=True)
-    assert cph_extract.call_count == 2
+    assert cph_extract.call_count == 1
 
     with open(join(testing_workdir, 'osx-64', 'repodata.json')) as fh:
         actual_repodata_json = json.loads(fh.read())

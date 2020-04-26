@@ -1565,6 +1565,10 @@ def get_logger(name, level=logging.INFO, dedupe=True, add_stdout_stderr_handlers
     log = logging.getLogger(name)
     log.setLevel(level)
     if dedupe:
+        # This is a really bad idea. The implementation messes up proper use of python log invocations
+        # with parameter interpolation.
+        #   e.g.  log.debug("extracting metadata [%s/%s] %s/%s", q + 1, num_extract_fns, subdir, fn)
+        # in a loop will only output the first iteration of the loop.
         log.addFilter(dedupe_filter)
 
     # these are defaults.  They can be overridden by configuring a log config yaml file.
