@@ -1291,31 +1291,31 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     # deps.append("{indent}{{{{native}}}}extsoft     {sel}".format(
                     #     indent=INDENT, sel=sel_src_and_win))
                 if need_autotools or need_make or need_git:
-                    deps.append("{indent}{{{{posix}}}}filesystem      {sel}".format(
+                    deps.append("{indent}{{{{ posix }}}}filesystem      {sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
                 if need_git:
-                    deps.append("{indent}{{{{posix}}}}git".format(indent=INDENT))
+                    deps.append("{indent}{{{{ posix }}}}git".format(indent=INDENT))
                 if need_autotools:
-                    deps.append("{indent}{{{{posix}}}}sed             {sel}".format(
+                    deps.append("{indent}{{{{ posix }}}}sed             {sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
-                    deps.append("{indent}{{{{posix}}}}grep            {sel}".format(
+                    deps.append("{indent}{{{{ posix }}}}grep            {sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
-                    deps.append("{indent}{{{{posix}}}}autoconf        {sel}".format(
+                    deps.append("{indent}{{{{ posix }}}}autoconf        {sel}".format(
                         indent=INDENT, sel=sel_src))
-                    deps.append("{indent}{{{{posix}}}}automake        {sel}".format(
+                    deps.append("{indent}{{{{ posix }}}}automake        {sel}".format(
                         indent=INDENT, sel=sel_src_not_win))
-                    deps.append("{indent}{{{{posix}}}}automake-wrapper{sel}".format(
+                    deps.append("{indent}{{{{ posix }}}}automake-wrapper{sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
-                    deps.append("{indent}{{{{posix}}}}pkg-config".format(indent=INDENT))
+                    deps.append("{indent}{{{{ posix }}}}pkg-config".format(indent=INDENT))
                 if need_make:
-                    deps.append("{indent}{{{{posix}}}}make            {sel}".format(
+                    deps.append("{indent}{{{{ posix }}}}make            {sel}".format(
                         indent=INDENT, sel=sel_src))
                     if not need_autotools:
-                        deps.append("{indent}{{{{posix}}}}sed             {sel}".format(
+                        deps.append("{indent}{{{{ posix }}}}sed             {sel}".format(
                             indent=INDENT, sel=sel_src_and_win))
-                    deps.append("{indent}{{{{posix}}}}coreutils       {sel}".format(
+                    deps.append("{indent}{{{{ posix }}}}coreutils       {sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
-                deps.append("{indent}{{{{posix}}}}zip             {sel}".format(
+                deps.append("{indent}{{{{ posix }}}}zip             {sel}".format(
                     indent=INDENT, sel=sel_src_and_win))
             elif dep_type == 'run':
                 if need_c or need_cxx or need_f:
