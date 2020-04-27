@@ -1074,7 +1074,7 @@ class ChannelIndex(object):
                 copy_from_cache = False
             if copy_from_cache:
                 log.debug("writing icon to %s", icon_channel_path)
-                icon_binary = urlsafe_b64decode(all_metadata["icon"]["icon_base64"])
+                icon_binary = urlsafe_b64decode(all_metadata["icon"]["icon_base64"].encode("utf-8"))
                 try:
                     os.makedirs(dirname(icon_channel_path))
                 except EnvironmentError:
