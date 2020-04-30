@@ -576,6 +576,11 @@ def determine_package_nature(pkg, prefix, subdir, bldpkgs_dir, output_folder, ch
                                         clear_cache=False)
     channel_used = pkg.channel
     channeldata = channeldata.get(channel_used)
+    # If the Dists end up coming from a multichannel such as 'defaults'
+    # instead of a real channel such as 'pkgs/main' then this assert
+    # can fire. To prevent that we use our own linked_data_no_multichannels()
+    # instead of conda's linked_data()
+    assert channeldata and pkg.name in channeldata['packages']
 
     if channeldata and pkg.name in channeldata['packages']:
         run_exports = channeldata['packages'][pkg.name].get('run_exports', {})
@@ -602,9 +607,22 @@ def library_nature(pkg, prefix, subdir, bldpkgs_dirs, output_folder, channel_url
     return "non-library"
 
 
+def linked_data_no_multichannels(prefix):
+    """
+    Return a dictionary of the linked packages in prefix, with correct channels, hopefully.
+    cc @kalefranz.
+    """
+    from conda.core.prefix_data import PrefixData
+    from conda.models.dist import Dist
+    pd = PrefixData(prefix)
+    from conda.common.compat import itervalues
+    return {Dist.from_string(prefix_record.fn, channel_override=prefix_record.channel.name):
+                prefix_record for prefix_record in itervalues(pd._prefix_records)}
+
+
 def dists_from_names(names, prefix):
     results = []
-    pkgs = linked_data(prefix)
+    pkgs = linked_data_no_multichannels(prefix)
     for name in names:
         for pkg in pkgs:
             if pkg.quad[0] == name:
