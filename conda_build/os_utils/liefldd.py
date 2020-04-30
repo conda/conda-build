@@ -413,7 +413,7 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
         # We do not include C:\Windows nor C:\Windows\System32 in this list. They are added in
         # get_rpaths() instead since we need to carefully control the order.
         default_paths = ['$SYSROOT/System32/Wbem', '$SYSROOT/System32/WindowsPowerShell/v1.0']
-    results = set()
+    results = {}
     rpaths_by_binary = dict()
     parents_by_filename = dict({filename: None})
     while todo:
@@ -451,7 +451,7 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
                 these_orig = [('$RPATH/' + lib if not lib.startswith('/') and not lib.startswith('$') and  # noqa
                                binary.format != lief.EXE_FORMATS.MACHO else lib)
                               for lib in libraries]
-                for orig in these_orig:
+                for lib, orig in zip(libraries, these_orig):
                     resolved = _get_resolved_location(binary,
                                                       orig,
                                                       exedir,
@@ -460,10 +460,11 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
                                                       default_paths=default_paths,
                                                       sysroot=sysroot)
                     if resolve_filenames:
-                        results.add(resolved[0])
-                        parents_by_filename[resolved[0]] = filename2
+                        rec = {'orig': orig, 'resolved': os.path.normpath(resolved[0]), 'rpaths': rpaths_transitive}
                     else:
-                        results.add(orig)
+                        rec = {'orig': orig, 'rpaths': rpaths_transitive}
+                    results[lib] = rec
+                    parents_by_filename[resolved[0]] = filename2
                     if recurse:
                         if os.path.exists(resolved[0]):
                             todo.append([resolved[0], lief.parse(resolved[0])])
