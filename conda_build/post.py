@@ -986,14 +986,10 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     lib_packages = set([package for package in packages
                         if package.quad[0] not in ignore_list and
                         package_nature[package] != 'non-library'])
-    # The last package of requirements_run is this package itself, add it as being used
-    # incase it qualifies as a library package.
-    if len(packages) and packages[-1] in lib_packages:
-        lib_packages_used = set((packages[-1],))
-    else:
-        lib_packages_used = set()
 
     pkg_vendored_dist, pkg_vendoring_key = _get_fake_pkg_dist(pkg_name, pkg_version, build_str, build_number)
+
+    lib_packages_used = set((pkg_vendored_dist,))
 
     ignore_list_syms = ['main', '_main', '*get_pc_thunk*', '___clang_call_terminate', '_timeout']
     # ignore_for_statics = ['gcc_impl_linux*', 'compiler-rt*', 'llvm-openmp*', 'gfortran_osx*']
@@ -1067,7 +1063,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
         warn_prelude = "WARNING ({})".format(pkg_name)
         err_prelude = "  ERROR ({})".format(pkg_name)
         for lib in lib_packages - lib_packages_used:
-            if package_nature[lib] == 'run-exports library':
+            if package_nature[lib] in ('run-exports library', 'dso library'):
                 msg_prelude = err_prelude if error_overdepending else warn_prelude
             elif package_nature[lib] == 'plugin library':
                 msg_prelude = info_prelude
