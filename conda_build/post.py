@@ -747,7 +747,7 @@ def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_v
             for subdir2, _, filez in os.walk(prefix):
                 for file in filez:
                     fp = join(subdir2, file)
-                    dynamic_lib = any(fnmatch(fp, ext) for ext in ('*.so.*', '*.dylib.*', '*.dll')) and \
+                    dynamic_lib = any(fnmatch(fp, ext) for ext in ('*.so*', '*.dylib*', '*.dll')) and \
                                 codefile_type(fp, skip_symlinks=False) is not None
                     static_lib = any(fnmatch(fp, ext) for ext in ('*.a', '*.lib'))
                     # Looking at all the files is very slow.
