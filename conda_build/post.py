@@ -623,21 +623,9 @@ def library_nature(pkg, prefix, subdir, bldpkgs_dirs, output_folder, channel_url
     return "non-library"
 
 
-def linked_data_no_multichannels(prefix):
-    """
-    Return a dictionary of the linked packages in prefix, with correct channels, hopefully.
-    cc @kalefranz.
-    """
-    from conda.core.prefix_data import PrefixData
-    from conda.models.dist import Dist
-    pd = PrefixData(prefix)
-    from conda.common.compat import itervalues
-    return {Dist.from_string(prefix_record.fn, channel_override=prefix_record.channel.name):
-                prefix_record for prefix_record in itervalues(pd._prefix_records)}
-
-
 def dists_from_names(names, prefix):
     results = []
+    from conda_build.utils import linked_data_no_multichannels
     pkgs = linked_data_no_multichannels(prefix)
     for name in names:
         for pkg in pkgs:
@@ -785,7 +773,7 @@ def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_v
                     if not len(owners):
                         if any(rp == normpath(w) for w in files):
                             owners.append(pkg_vendored_dist)
-                    new_pkgs = list(which_package(rp, prefix))
+                    new_pkgs = list(which_package(rp, prefix, avoid_canonical_channel_name=True))
                     # Cannot filter here as this means the DSO (eg libomp.dylib) will not be found in any package
                     # [owners.append(new_pkg) for new_pkg in new_pkgs if new_pkg not in owners
                     #  and not any([fnmatch(new_pkg.name, i) for i in ignore_for_statics])]
@@ -900,7 +888,7 @@ def _lookup_in_prefix_packages(errors, needed_dso, files, run_prefix, whitelist,
     in_prefix_dso = normpath(needed_dso)
     n_dso_p = "Needed DSO {}".format(in_prefix_dso)
     and_also = " (and also in this package)" if in_prefix_dso in files else ""
-    pkgs = list(which_package(in_prefix_dso, run_prefix))
+    pkgs = list(which_package(in_prefix_dso, run_prefix, avoid_canonical_channel_name=True))
     in_pkgs_in_run_reqs = [pkg for pkg in pkgs if pkg.quad[0] in requirements_run]
     # TODO :: metadata build/inherit_child_run_exports (for vc, mro-base-impl).
     for pkg in in_pkgs_in_run_reqs:
@@ -1013,7 +1001,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                       for package in packages}
     lib_packages = set([package for package in packages
                         if package.quad[0] not in ignore_list and
-                        package_nature[package] != 'non-library'])
+                        [package] != 'non-library'])
 
 
     lib_packages_used = set((pkg_vendored_dist,))

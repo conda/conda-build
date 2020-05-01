@@ -85,13 +85,14 @@ def get_linkages(obj_files, prefix, sysroot):
     return res
 
 
+from conda_build.utils import linked_data_no_multichannels
 @memoized
 def get_package_obj_files(dist, prefix):
     files = []
     if hasattr(dist, 'get'):
         files = dist.get('files')
     else:
-        data = linked_data(prefix).get(dist)
+        data = linked_data_no_multichannels(prefix).get(dist)
         if data:
             files = data.get('files', [])
 
