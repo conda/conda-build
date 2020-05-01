@@ -87,14 +87,19 @@ def get_linkages(obj_files, prefix, sysroot):
 
 @memoized
 def get_package_obj_files(dist, prefix):
-    data = linked_data(prefix).get(dist)
+    files = []
+    if hasattr(dist, 'get'):
+        files = dist.get('files')
+    else:
+        data = linked_data(prefix).get(dist)
+        if data:
+            files = data.get('files', [])
 
     res = []
-    if data:
-        for f in data.get('files', []):
-            path = join(prefix, f)
-            if is_codefile(path):
-                res.append(f)
+    for f in files:
+        path = join(prefix, f)
+        if is_codefile(path):
+            res.append(f)
 
     return res
 

@@ -580,7 +580,9 @@ def determine_package_nature(pkg, prefix, subdir, bldpkgs_dir, output_folder, ch
     # instead of a real channel such as 'pkgs/main' then this assert
     # can fire. To prevent that we use our own linked_data_no_multichannels()
     # instead of conda's linked_data()
-    assert channeldata and pkg.name in channeldata['packages']
+    # The and pkg.name in channeldata['packages'] fails for the package currently being built.
+    # may need to special case that even more.
+    assert channeldata # and pkg.name in channeldata['packages']
 
     if channeldata and pkg.name in channeldata['packages']:
         run_exports = channeldata['packages'][pkg.name].get('run_exports', {})
@@ -589,21 +591,35 @@ def determine_package_nature(pkg, prefix, subdir, bldpkgs_dir, output_folder, ch
 
 def library_nature(pkg, prefix, subdir, bldpkgs_dirs, output_folder, channel_urls):
     '''
-    Result :: "non-library", "plugin library", "dso library", "run-exports library"
+    Result :: "non-library",
+              "plugin library (Python|R|Python,R)",
+              "dso library",
+              "run-exports library",
+              "interpreter (R)"
+              "interpreter (Python)"
     .. in that order, i.e. if have both dsos and run_exports, it's a run_exports_library.
     '''
     dsos, run_exports, _ = determine_package_nature(pkg, prefix, subdir, bldpkgs_dirs, output_folder, channel_urls)
+    if pkg.name == 'python':
+        return "interpreter (Python)"
+    elif pkg.name == 'r-base':
+        return "interpreter (R)"
     if run_exports:
         return "run-exports library"
     elif len(dsos):
         # If all DSOs are under site-packages or R/lib/
-        dsos_without_plugins = [dso for dso in dsos
-                                if not any(part for part in ('lib/R/library', 'site-packages')
-                                           if part in dso)]
+        python_dsos = [dso for dso in dsos if 'site-packages' in dso]
+        r_dsos = [dso for dso in dsos if 'lib/R/library' in dso]
+        dsos_without_plugins = [dso for dso in dsos if not dso in r_dsos + python_dsos]
         if len(dsos_without_plugins):
             return "dso library"
         else:
-            return "plugin library"
+            if python_dsos and r_dsos:
+                return "plugin library (Python,R)"
+            elif python_dsos:
+                return "plugin library (Python)"
+            elif r_dsos:
+                return "plugin library (R)"
     return "non-library"
 
 
@@ -631,12 +647,18 @@ def dists_from_names(names, prefix):
 
 
 class FakeDist:
-    def __init__(self, name, version, build_number, build_str):
+    def __init__(self, name, version, build_number, build_str, channel, files):
         self.name = name
         self.quad = [name]
         self.version = version
         self.build_number = build_number
         self.build_string = build_str
+        self.channel = channel
+        self.files = files
+
+    def get(self, name):
+        if name == 'files':
+            return self.files
 
 
 DEFAULT_MAC_WHITELIST = ['/opt/X11/',
@@ -788,7 +810,7 @@ def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_v
     return prefix_owners, contains_dsos, contains_static_libs, all_lib_exports
 
 
-def _get_fake_pkg_dist(pkg_name, pkg_version, build_str, build_number):
+def _get_fake_pkg_dist(pkg_name, pkg_version, build_str, build_number, channel, files):
     pkg_vendoring_name = pkg_name
     pkg_vendoring_version = str(pkg_version)
     pkg_vendoring_build_str = build_str
@@ -800,7 +822,9 @@ def _get_fake_pkg_dist(pkg_name, pkg_version, build_str, build_number):
     return FakeDist(pkg_vendoring_name,
                     pkg_vendoring_version,
                     pkg_vendoring_build_number,
-                    pkg_vendoring_build_str), pkg_vendoring_key
+                    pkg_vendoring_build_str,
+                    channel,
+                    files), pkg_vendoring_key
 
 
 def _print_msg(errors, text, verbose):
@@ -978,16 +1002,19 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     # Used to detect overlinking (finally)
     requirements_run = [req.split(' ')[0] for req in requirements_run]
     packages = dists_from_names(requirements_run, run_prefix)
+    pkg_vendored_dist, pkg_vendoring_key = _get_fake_pkg_dist(pkg_name, pkg_version, build_str, build_number,
+                                                              'opt/conda/conda-bld', files)
+    packages.append(pkg_vendored_dist)
     ignore_list = utils.ensure_list(ignore_run_exports)
     if subdir.startswith('linux'):
         ignore_list.append('libgcc-ng')
+
     package_nature = {package: library_nature(package, run_prefix, subdir, bldpkgs_dirs, output_folder, channel_urls)
                       for package in packages}
     lib_packages = set([package for package in packages
                         if package.quad[0] not in ignore_list and
                         package_nature[package] != 'non-library'])
 
-    pkg_vendored_dist, pkg_vendoring_key = _get_fake_pkg_dist(pkg_name, pkg_version, build_str, build_number)
 
     lib_packages_used = set((pkg_vendored_dist,))
 
