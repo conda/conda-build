@@ -640,7 +640,7 @@ def apply_patch(src_dir, path, config, git=None):
         if config.verbose:
             print('Applying patch: %r' % path)
         patch = external.find_executable('patch', config.build_prefix)
-        if patch is None:
+        if patch is None or len(patch) == 0:
             sys.exit("""\
         Error:
             Cannot use 'git' (not a git repo and/or patch) and did not find 'patch' in: %s

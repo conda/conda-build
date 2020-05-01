@@ -567,7 +567,7 @@ def determine_package_nature(pkg, prefix, subdir, bldpkgs_dir, output_folder, ch
     dsos = [f for f in codefiles for ext in ('.dylib', '.so', '.dll', '.pyd') if ext in f]
     # we don't care about the actual run_exports value, just whether or not run_exports are present.
     # We can use channeldata and it'll be a more reliable source (no disk race condition nonsense)
-    _, _, channeldata = get_build_index(subdir=subdir,
+    _, _, channeldata1 = get_build_index(subdir=subdir,
                                         bldpkgs_dir=bldpkgs_dir,
                                         output_folder=output_folder,
                                         channel_urls=channel_urls,
@@ -575,14 +575,13 @@ def determine_package_nature(pkg, prefix, subdir, bldpkgs_dir, output_folder, ch
                                         verbose=False,
                                         clear_cache=False)
     channel_used = pkg.channel
-    channeldata = channeldata.get(channel_used)
+    channeldata = channeldata1.get(channel_used)
     # If the Dists end up coming from a multichannel such as 'defaults'
     # instead of a real channel such as 'pkgs/main' then this assert
     # can fire. To prevent that we use our own linked_data_no_multichannels()
     # instead of conda's linked_data()
-    # The and pkg.name in channeldata['packages'] fails for the package currently being built.
-    # may need to special case that even more.
-    assert channeldata # and pkg.name in channeldata['packages']
+    # The `or isinstance(pkg, FakeDist)` covers the case of an empty local channel.
+    assert channeldata or isinstance(pkg, FakeDist)
 
     if channeldata and pkg.name in channeldata['packages']:
         run_exports = channeldata['packages'][pkg.name].get('run_exports', {})
@@ -623,21 +622,9 @@ def library_nature(pkg, prefix, subdir, bldpkgs_dirs, output_folder, channel_url
     return "non-library"
 
 
-def linked_data_no_multichannels(prefix):
-    """
-    Return a dictionary of the linked packages in prefix, with correct channels, hopefully.
-    cc @kalefranz.
-    """
-    from conda.core.prefix_data import PrefixData
-    from conda.models.dist import Dist
-    pd = PrefixData(prefix)
-    from conda.common.compat import itervalues
-    return {Dist.from_string(prefix_record.fn, channel_override=prefix_record.channel.name):
-                prefix_record for prefix_record in itervalues(pd._prefix_records)}
-
-
 def dists_from_names(names, prefix):
     results = []
+    from conda_build.utils import linked_data_no_multichannels
     pkgs = linked_data_no_multichannels(prefix)
     for name in names:
         for pkg in pkgs:
@@ -785,7 +772,7 @@ def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_v
                     if not len(owners):
                         if any(rp == normpath(w) for w in files):
                             owners.append(pkg_vendored_dist)
-                    new_pkgs = list(which_package(rp, prefix))
+                    new_pkgs = list(which_package(rp, prefix, avoid_canonical_channel_name=True))
                     # Cannot filter here as this means the DSO (eg libomp.dylib) will not be found in any package
                     # [owners.append(new_pkg) for new_pkg in new_pkgs if new_pkg not in owners
                     #  and not any([fnmatch(new_pkg.name, i) for i in ignore_for_statics])]
@@ -900,7 +887,7 @@ def _lookup_in_prefix_packages(errors, needed_dso, files, run_prefix, whitelist,
     in_prefix_dso = normpath(needed_dso)
     n_dso_p = "Needed DSO {}".format(in_prefix_dso)
     and_also = " (and also in this package)" if in_prefix_dso in files else ""
-    pkgs = list(which_package(in_prefix_dso, run_prefix))
+    pkgs = list(which_package(in_prefix_dso, run_prefix, avoid_canonical_channel_name=True))
     in_pkgs_in_run_reqs = [pkg for pkg in pkgs if pkg.quad[0] in requirements_run]
     # TODO :: metadata build/inherit_child_run_exports (for vc, mro-base-impl).
     for pkg in in_pkgs_in_run_reqs:
@@ -1002,8 +989,13 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     # Used to detect overlinking (finally)
     requirements_run = [req.split(' ')[0] for req in requirements_run]
     packages = dists_from_names(requirements_run, run_prefix)
+    # Not sure which to use between:
+    local_channel = output_folder.replace('\\', '/') if utils.on_win else output_folder[1:]
+    # and:
+    local_channel = dirname(bldpkgs_dirs).replace('\\', '/') if utils.on_win else dirname(bldpkgs_dirs)[1:]
+
     pkg_vendored_dist, pkg_vendoring_key = _get_fake_pkg_dist(pkg_name, pkg_version, build_str, build_number,
-                                                              'opt/conda/conda-bld', files)
+                                                              local_channel, files)
     packages.append(pkg_vendored_dist)
     ignore_list = utils.ensure_list(ignore_run_exports)
     if subdir.startswith('linux'):
@@ -1013,7 +1005,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                       for package in packages}
     lib_packages = set([package for package in packages
                         if package.quad[0] not in ignore_list and
-                        package_nature[package] != 'non-library'])
+                        [package] != 'non-library'])
 
 
     lib_packages_used = set((pkg_vendored_dist,))
@@ -1144,7 +1136,7 @@ def check_overlinking(m, files, host_prefix=None):
                                   files,
                                   m.config.bldpkgs_dir,
                                   m.config.output_folder,
-                                  m.config.channel_urls,
+                                  utils.ensure_list(m.config.channel_urls) + ['local'],
                                   m.config.enable_static)
 
 
