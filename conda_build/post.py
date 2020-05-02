@@ -582,7 +582,8 @@ def determine_package_nature(pkg, prefix, subdir, bldpkgs_dir, output_folder, ch
     # instead of conda's linked_data()
     # The and pkg.name in channeldata['packages'] fails for the package currently being built.
     # may need to special case that even more.
-    assert channeldata # and pkg.name in channeldata['packages']
+    # The endswith is a bit of a hack but I can't see that it can create a false positive.
+    assert channeldata or output_folder.endswith(channel_used) # and pkg.name in channeldata['packages']
 
     if channeldata and pkg.name in channeldata['packages']:
         run_exports = channeldata['packages'][pkg.name].get('run_exports', {})
@@ -991,9 +992,9 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     requirements_run = [req.split(' ')[0] for req in requirements_run]
     packages = dists_from_names(requirements_run, run_prefix)
     # Not sure which to use between:
-    local_channel = output_folder.replace('\\','/') if utils.on_win else output_folder[:1]
+    local_channel = output_folder.replace('\\', '/') if utils.on_win else output_folder[1:]
     # and:
-    local_channel = dirname(bldpkgs_dirs).replace('\\','/') if utils.on_win else dirname(bldpkgs_dirs)[:1]
+    local_channel = dirname(bldpkgs_dirs).replace('\\', '/') if utils.on_win else dirname(bldpkgs_dirs)[1:]
 
     pkg_vendored_dist, pkg_vendoring_key = _get_fake_pkg_dist(pkg_name, pkg_version, build_str, build_number,
                                                               local_channel, files)
