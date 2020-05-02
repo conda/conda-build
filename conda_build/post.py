@@ -567,7 +567,7 @@ def determine_package_nature(pkg, prefix, subdir, bldpkgs_dir, output_folder, ch
     dsos = [f for f in codefiles for ext in ('.dylib', '.so', '.dll', '.pyd') if ext in f]
     # we don't care about the actual run_exports value, just whether or not run_exports are present.
     # We can use channeldata and it'll be a more reliable source (no disk race condition nonsense)
-    _, _, channeldata = get_build_index(subdir=subdir,
+    _, _, channeldata1 = get_build_index(subdir=subdir,
                                         bldpkgs_dir=bldpkgs_dir,
                                         output_folder=output_folder,
                                         channel_urls=channel_urls,
@@ -575,7 +575,7 @@ def determine_package_nature(pkg, prefix, subdir, bldpkgs_dir, output_folder, ch
                                         verbose=False,
                                         clear_cache=False)
     channel_used = pkg.channel
-    channeldata = channeldata.get(channel_used)
+    channeldata = channeldata1.get(channel_used)
     # If the Dists end up coming from a multichannel such as 'defaults'
     # instead of a real channel such as 'pkgs/main' then this assert
     # can fire. To prevent that we use our own linked_data_no_multichannels()
@@ -990,8 +990,13 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     # Used to detect overlinking (finally)
     requirements_run = [req.split(' ')[0] for req in requirements_run]
     packages = dists_from_names(requirements_run, run_prefix)
+    # Not sure which to use between:
+    local_channel = output_folder.replace('\\','/') if utils.on_win else output_folder[:1]
+    # and:
+    local_channel = dirname(bldpkgs_dirs).replace('\\','/') if utils.on_win else dirname(bldpkgs_dirs)[:1]
+
     pkg_vendored_dist, pkg_vendoring_key = _get_fake_pkg_dist(pkg_name, pkg_version, build_str, build_number,
-                                                              'opt/conda/conda-bld', files)
+                                                              local_channel, files)
     packages.append(pkg_vendored_dist)
     ignore_list = utils.ensure_list(ignore_run_exports)
     if subdir.startswith('linux'):
