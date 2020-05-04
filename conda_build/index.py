@@ -98,6 +98,7 @@ except ImportError:
 local_index_timestamp = 0
 cached_index = None
 local_subdir = ""
+local_output_folder = ""
 cached_channels = []
 channel_data = {}
 
@@ -126,6 +127,7 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
                     **kwargs):
     global local_index_timestamp
     global local_subdir
+    global local_output_folder
     global cached_index
     global cached_channels
     global channel_data
@@ -144,6 +146,7 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
     if (clear_cache or
             not os.path.isfile(index_file) or
             local_subdir != subdir or
+            local_output_folder != output_folder or
             mtime > local_index_timestamp or
             cached_channels != channel_urls):
 
@@ -232,6 +235,7 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
             channel_data['defaults'] = superchannel
         local_index_timestamp = os.path.getmtime(index_file)
         local_subdir = subdir
+        local_output_folder = output_folder
         cached_channels = channel_urls
     return cached_index, local_index_timestamp, channel_data
 

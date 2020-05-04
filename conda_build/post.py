@@ -580,10 +580,8 @@ def determine_package_nature(pkg, prefix, subdir, bldpkgs_dir, output_folder, ch
     # instead of a real channel such as 'pkgs/main' then this assert
     # can fire. To prevent that we use our own linked_data_no_multichannels()
     # instead of conda's linked_data()
-    # The and pkg.name in channeldata['packages'] fails for the package currently being built.
-    # may need to special case that even more.
-    # The endswith is a bit of a hack but I can't see that it can create a false positive.
-    assert channeldata or output_folder.endswith(channel_used) # and pkg.name in channeldata['packages']
+    # The `or isinstance(pkg, FakeDist)` covers the case of an empty local channel.
+    assert channeldata or isinstance(pkg, FakeDist)
 
     if channeldata and pkg.name in channeldata['packages']:
         run_exports = channeldata['packages'][pkg.name].get('run_exports', {})
@@ -1138,7 +1136,7 @@ def check_overlinking(m, files, host_prefix=None):
                                   files,
                                   m.config.bldpkgs_dir,
                                   m.config.output_folder,
-                                  m.config.channel_urls,
+                                  m.config.channel_urls + ['local'],
                                   m.config.enable_static)
 
 
