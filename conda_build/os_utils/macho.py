@@ -195,7 +195,7 @@ def otool(path, build_prefix=None, cb_filter=is_dylib_info):
     # here so also check that we do not get 'useful' output.
     if len(lines_split) < 10 and (re.match('.*(is not a Mach-O|invalid|expected|unexpected).*',
                                            lines, re.MULTILINE)):
-        raise CalledProcessError
+        raise CalledProcessError(-1, otool)
     return _get_matching_load_commands(lines_split, cb_filter)
 
 
