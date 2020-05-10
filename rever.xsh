@@ -4,7 +4,6 @@ $ACTIVITIES = [
     "tag",
     "push_tag",
     "ghrelease",
-    "conda_forge"
     ]
 
 #

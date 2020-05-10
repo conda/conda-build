@@ -155,15 +155,19 @@ def find_apple_cctools_executable(name, build_prefix, nofail=False):
                     s = f.read()
                 if s.find(b'usr/lib/libxcselect.dylib') != -1:
                     # We ask xcrun.
-                    tool_xcr = check_output(['xcrun', '-find', name], stderr=STDOUT).decode('utf-8').splitlines()[0]
-                    # print("WARNING :: Found `{}` but is is an Apple Xcode stub executable.".format(tool))
-                    # This is not the real tool, but Apple's irritating GUI dialog launcher.
+                    try:
+                        tool_xcr = check_output(['xcrun', '-find', name], stderr=STDOUT).decode('utf-8').splitlines()[0]
+                    except Exception as e:
+                        log = utils.get_logger(__name__)
+                        log.error("ERROR :: Found `{}` but is is an Apple Xcode stub executable\n"
+                                  "and it returned an error:\n{}".format(tool, e.output))
+                        raise e
                     tool = tool_xcr
                     if os.path.exists(tool):
                         return tool
         except Exception as _:  # noqa
             print("ERROR :: Failed to run `{}`.  Please use `conda` to install `cctools` into your base environment.\n"
-                  "         An alternative option for users of macOS is to install `Xcode` or `Command Line Tools for Xcode`."
+                  "         An option on macOS is to install `Xcode` or `Command Line Tools for Xcode`."
                   .format(tool))
             sys.exit(1)
         return tool

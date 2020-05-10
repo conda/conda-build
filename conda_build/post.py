@@ -396,7 +396,10 @@ def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
 
 
 def mk_relative_osx(path, host_prefix, build_prefix, files, rpaths=('lib',)):
-    assert sys.platform == 'darwin'
+    if sys.platform != 'darwin':
+        log = utils.get_logger(__name__)
+        log.warn("Found Mach-O file but patching is only supported on macOS, skipping: %s", path)
+        return
     prefix = build_prefix if exists(build_prefix) else host_prefix
     names = macho.otool(path, prefix)
     s = macho.install_name_change(path, prefix,

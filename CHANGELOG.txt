@@ -1,3 +1,53 @@
+# current developments
+2020-04-13 3.19.3:
+------------------
+
+Bug fixes:
+----------
+
+* load log prior to calling warn method (#3925)
+* test suite fixes and prefix replacement fixes (#3932)
+
+Other:
+------
+
+* Enable ppc64 support (#3921)
+
+Docs:
+-----
+
+* Update cli help information for conda index (#3931)
+
+Contributors:
+-------------
+
+* @beenje
+* @jjhelmus
+* @mingwandroid
+
+
+2020-04-01 3.19.2:
+------------------
+
+Bug fixes:
+----------
+
+* Show a warning instead of failing if a Mach-O file is prouduced by a build running on a platform other than macOS (#3912)
+* Revert #3893, restores behavior of build/binary_has_prefix_files to that found in 3.18.12 (#3916)
+
+Docs:
+-----
+
+* clarified 'deletes the build environment' in concepts/recipe.rst (#3901)
+
+Contributors:
+-------------
+
+* @jjhelmus
+* @timsnyder
+* @chrisburr
+
+
 2020-03-17 3.19.1:
 ------------------
 
@@ -42,7 +92,6 @@ Contributors:
 * @mingwandroid
 
 
-
 2020-03-02 3.18.12:
 ------------------
 
@@ -50,18 +99,6 @@ Contributors:
 * ci launcher supporting python d shebangs on Windows #3894	
 * Allow build/binary_has_prefix_files to specify a list of files #3893	
 * Use patchelf to set RPATH by default #3897
-
-Contributors:
--------------
-
-* @isuruf
-* @jjhelmus
-* @mingwandroid
-
-
-2020-03-02 3.18.12:
-------------------
-
 * Prevent non-atomic writes to repodata JSON files #3833
 * Audited and updated all docs with formatting, grammar, and accuracy errors.
 * Docs: Removed deprecated page on features
@@ -77,6 +114,7 @@ Contributors:
 * @guidara
 * @isuruf
 * @jakirkham
+* @jjhelmus
 * @marcelotrevisani
 * @mcg1969
 * @mingwandroid

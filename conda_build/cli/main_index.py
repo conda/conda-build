@@ -48,11 +48,13 @@ def parse_args(args):
     )
     p.add_argument(
         "-p", "--patch-generator",
-        help="Path to Python file that outputs metadata patch instructions"
+        help='Path to Python file that outputs metadata patch instructions from its '
+             '_patch_repodata function or a .tar.bz2/.conda file which contains a '
+             'patch_instructions.json file for each subdir'
     )
     p.add_argument(
         "--hotfix-source-repo",
-        help="URL of git repo that hosts your metadata patch instructions"
+        help="Deprecated, will be removed in a future version of conda build"
     )
     p.add_argument(
         "--verbose", help="show extra debugging info", action="store_true"
