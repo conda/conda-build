@@ -70,10 +70,24 @@ numpy_compatible_re = re.compile(r"pin_\w+\([\'\"]numpy[\'\"]")
 used_vars_cache = {}
 
 
+class _ns_cfg(dict):
+    def __missing__(self, key):
+        if key == 'np':
+            config = self._config
+            defaults = variants.get_default_variant(config)
+            np = defaults['numpy']
+            if self._config.verbose:
+                utils.get_logger(__name__).warn(
+                    "No numpy version specified in conda_build_config.yaml.  "
+                    "Falling back to default numpy value of {}".
+                    format(defaults['numpy']))
+        return self.setdefault('np', int("".join(np.split('.')[:2])))
+
+
 def ns_cfg(config):
     # Remember to update the docs of any of this changes
     plat = config.host_subdir
-    d = dict(
+    d = _ns_cfg(
         linux=plat.startswith('linux-'),
         linux32=bool(plat == 'linux-32'),
         linux64=bool(plat == 'linux-64'),
@@ -89,6 +103,7 @@ def ns_cfg(config):
         environ=os.environ,
         nomkl=bool(int(os.environ.get('FEATURE_NOMKL', False)))
     )
+    d._config = config
 
     defaults = variants.get_default_variant(config)
     py = config.variant.get('python', defaults['python'])
@@ -110,12 +125,8 @@ def ns_cfg(config):
                     py36=bool(py == 36),))
 
     np = config.variant.get('numpy')
-    if not np:
-        np = defaults['numpy']
-        if config.verbose:
-            utils.get_logger(__name__).warn("No numpy version specified in conda_build_config.yaml.  "
-                                            "Falling back to default numpy value of {}".format(defaults['numpy']))
-    d['np'] = int("".join(np.split('.')[:2]))
+    if np:
+        d['np'] = int("".join(np.split('.')[:2]))
 
     pl = config.variant.get('perl', defaults['perl'])
     d['pl'] = pl
