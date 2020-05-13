@@ -1742,8 +1742,10 @@ def _write_sh_activation_text(file_handle, m):
     from conda_build.os_utils.external import find_executable
     ccache = find_executable('ccache', m.config.build_prefix, False)
     if ccache:
-        ccache_method_env_vars = True
+        ccache_method_env_vars = False
         ccache_method_mklink = True
+        file_handle.write('export CCACHE_SLOPPINESS="pch_defines,time_macros${CCACHE_SLOPPINESS+,$CCACHE_SLOPPINESS}"')
+        file_handle.write('export CCACHE_CPP2=true')
         if ccache_method_mklink:
             dirname_ccache_ln_bin = join(m.config.build_prefix, 'ccache-ln-bin')
             file_handle.write('mkdir {}\n'.format(dirname_ccache_ln_bin))
