@@ -1022,11 +1022,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     # Used to detect overlinking (finally)
     requirements_run = [req.split(' ')[0] for req in requirements_run]
     packages = dists_from_names(requirements_run, run_prefix)
-    # Not sure which to use between:
-    local_channel = output_folder.replace('\\', '/') if utils.on_win else output_folder[1:]
-    # and:
     local_channel = dirname(bldpkgs_dirs).replace('\\', '/') if utils.on_win else dirname(bldpkgs_dirs)[1:]
-
     pkg_vendored_dist, pkg_vendoring_key = _get_fake_pkg_dist(pkg_name, pkg_version, build_str, build_number,
                                                               local_channel, files)
     packages.append(pkg_vendored_dist)
