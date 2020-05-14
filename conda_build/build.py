@@ -1755,10 +1755,10 @@ def _write_sh_activation_text(file_handle, m):
             file_handle.write('mkdir {}\n'.format(dirname_ccache_ln_bin))
             file_handle.write('pushd {}\n'.format(dirname_ccache_ln_bin))
             file_handle.write('if [ -n "$CC" ]; then\n')
-            file_handle.write('  [ -f {ccache} ] || ln -s {ccache} $(whereis $CC) || true\n'.format(ccache=ccache))
+            file_handle.write('  [ -f {ccache} ] && [ ! -f $(basename $CC) ] && ln -s {ccache} $(basename $CC) || true\n'.format(ccache=ccache))
             file_handle.write('fi\n')
             file_handle.write('if [ -n "$CXX" ]; then\n')
-            file_handle.write('  [ -f {ccache} ] || ln -s {ccache} $(whereis $CXX) || true\n'.format(ccache=ccache))
+            file_handle.write('  [ -f {ccache} ] && [ ! -f $(basename $CXX) ] && ln -s {ccache} $(basename $CXX) || true\n'.format(ccache=ccache))
             file_handle.write('fi\n')
             file_handle.write('popd\n')
             # We really don't want to be doing this.
