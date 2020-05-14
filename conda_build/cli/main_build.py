@@ -480,3 +480,6 @@ def main():
               "  Otherwise, run conda clean --lock".format(e.lock_file))
         sys.exit(1)
     return
+
+if __name__ == '__main__':
+    main()

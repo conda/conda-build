@@ -477,17 +477,17 @@ def get_linkages(filename, resolve_filenames=True, recurse=True,
     # When we switch to lief, want to ensure these results do not change.
     # We do not support Windows yet with pyldd.
     result_pyldd = []
-    if codefile_type(filename) not in ('DLLfile', 'EXEfile'):
-        result_pyldd = inspect_linkages_pyldd(filename, resolve_filenames=resolve_filenames, recurse=recurse,
-                                              sysroot=sysroot, arch=arch)
-        if not have_lief:
+    debug = False
+    if not have_lief or debug:
+        if codefile_type(filename) not in ('DLLfile', 'EXEfile'):
+            result_pyldd = inspect_linkages_pyldd(filename, resolve_filenames=resolve_filenames, recurse=recurse,
+                                                  sysroot=sysroot, arch=arch)
+            if not have_lief:
+                return result_pyldd
             return result_pyldd
-    if not have_lief:
-        return result_pyldd
-
     result_lief = inspect_linkages_lief(filename, resolve_filenames=resolve_filenames, recurse=recurse,
                                         sysroot=sysroot, envroot=envroot, arch=arch)
-    if result_pyldd and set(result_lief) != set(result_pyldd):
+    if debug and result_pyldd and set(result_lief) != set(result_pyldd):
         print("WARNING: Disagreement in get_linkages(filename={}, resolve_filenames={}, recurse={}, sysroot={}, envroot={}, arch={}):\n lief: {}\npyldd: {}\n  (using lief)".
               format(filename, resolve_filenames, recurse, sysroot, envroot, arch, result_lief, result_pyldd))
     return result_lief

@@ -346,9 +346,9 @@ def find_lib(link, prefix, files, path=None):
 
 def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
     link = link_dict['name']
-    print("Fixing linking of %s in %s" % (link, path))
     if build_prefix != host_prefix and link.startswith(build_prefix):
         link = link.replace(build_prefix, host_prefix)
+        print("Fixing linking of %s in %s" % (link, path))
         print(".. seems to be linking to a compiler runtime, replacing build prefix with "
               "host prefix and")
         if not codefile_type(link):
@@ -358,10 +358,12 @@ def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
             print(".. fixing linking of %s in %s instead" % (link, path))
 
     link_loc = find_lib(link, host_prefix, files, path)
-    print("New link location is %s" % (link_loc))
 
     if not link_loc:
         return
+
+    print("Fixing linking of %s in %s" % (link, path))
+    print("New link location is %s" % (link_loc))
 
     lib_to_link = relpath(dirname(link_loc), 'lib')
     # path_to_lib = utils.relative(path[len(prefix) + 1:])

@@ -1025,7 +1025,7 @@ def record_prefix_files(m, files_with_prefix):
                     if fn in text_has_prefix_files:
                         text_has_prefix_files.remove(fn)
                 else:
-                    ignored_because = " :: Not in build/%s_has_prefix_files" % (mode)
+                    ignored_because = " (not in build/%s_has_prefix_files)" % (mode)
 
                 print("{fn} ({mode}): {action}{reason}".format(fn=fn, mode=mode,
                                                                action="Ignoring" if ignored_because else "Patching",
