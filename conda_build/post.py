@@ -21,7 +21,6 @@ except ImportError:
 from conda_build.os_utils import external
 from conda_build.conda_interface import PY3
 from conda_build.conda_interface import lchmod
-from conda_build.conda_interface import linked_data
 from conda_build.conda_interface import walk_prefix
 from conda_build.conda_interface import TemporaryDirectory
 from conda_build.conda_interface import md5_file
@@ -614,7 +613,7 @@ def library_nature(pkg, prefix, subdir, bldpkgs_dirs, output_folder, channel_url
         # If all DSOs are under site-packages or R/lib/
         python_dsos = [dso for dso in dsos if 'site-packages' in dso]
         r_dsos = [dso for dso in dsos if 'lib/R/library' in dso]
-        dsos_without_plugins = [dso for dso in dsos if not dso in r_dsos + python_dsos]
+        dsos_without_plugins = [dso for dso in dsos if dso not in r_dsos + python_dsos]
         if len(dsos_without_plugins):
             return "dso library"
         else:
@@ -846,7 +845,7 @@ def _print_msg(errors, text, verbose):
 
 
 def caseless_sepless_fnmatch(paths, pat):
-    match = re.compile("(?i)"+fnmatch_translate(pat.replace('\\', '/'))).match
+    match = re.compile("(?i)" + fnmatch_translate(pat.replace('\\', '/'))).match
     matches = [path for path in paths if match(pat.replace('\\', '/'), re.IGNORECASE)]
     return matches
 

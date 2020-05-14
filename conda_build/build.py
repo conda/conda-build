@@ -746,7 +746,7 @@ def jsonify_info_yamls(m):
                 file = join(root, file)
                 bn, ext = os.path.splitext(os.path.basename(file))
                 if ext == '.yaml':
-                    dst = join(m.config.info_dir, ijd, bn+'.json')
+                    dst = join(m.config.info_dir, ijd, bn + '.json')
                     try:
                         os.makedirs(os.path.dirname(dst))
                     except:
@@ -755,7 +755,7 @@ def jsonify_info_yamls(m):
                         import yaml
                         yaml = yaml.full_load(i)
                         json.dump(yaml, o, sort_keys=True, indent=2, separators=(',', ': '))
-                        res.append(join(os.path.basename(m.config.info_dir), ijd, bn+'.json'))
+                        res.append(join(os.path.basename(m.config.info_dir), ijd, bn + '.json'))
     return res
 
 

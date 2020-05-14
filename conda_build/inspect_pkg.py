@@ -21,8 +21,7 @@ from conda_build.os_utils.macho import get_rpaths, human_filetype
 from conda_build.utils import (groupby, getter, comma_join, rm_rf, package_has_file, get_logger,
                                ensure_list)
 
-from conda_build.conda_interface import (iteritems, specs_from_args, is_linked, linked_data, linked,
-                                         get_index)
+from conda_build.conda_interface import (iteritems, specs_from_args, is_linked, linked_data, get_index)
 from conda_build.conda_interface import display_actions, install_actions
 from conda_build.conda_interface import memoized
 
@@ -33,7 +32,7 @@ def dist_files(prefix, dist):
     return set(meta['files']) if meta else set()
 
 
-def which_package(in_prefix_path, prefix, avoid_canonical_channel_name = False):
+def which_package(in_prefix_path, prefix, avoid_canonical_channel_name=False):
     """
     given the path of a conda installed file iterate over
     the conda packages the file came from.  Usually the iteration yields

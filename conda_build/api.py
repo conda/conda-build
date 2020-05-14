@@ -182,7 +182,7 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
     paths = _expand_globs(string_paths, os.getcwd())
     recipes = []
     for recipe in paths:
-        if not os.sep+'.AppleDouble' in recipe:
+        if os.sep + '.AppleDouble' not in recipe:
             if (os.path.isdir(recipe) or
                     (os.path.isfile(recipe) and
                      os.path.basename(recipe) in ('meta.yaml', 'conda.yaml'))):

@@ -7,10 +7,11 @@ from os.path import join, basename
 
 from conda_build.conda_interface import memoized
 from conda_build.conda_interface import untracked
-from conda_build.conda_interface import linked_data
 
 from conda_build.os_utils.macho import otool
 from conda_build.os_utils.pyldd import codefile_class, inspect_linkages, machofile, is_codefile
+
+from conda_build.utils import linked_data_no_multichannels
 
 
 LDD_RE = re.compile(r'\s*(.*?)\s*=>\s*(.*?)\s*\(.*\)')
@@ -85,7 +86,6 @@ def get_linkages(obj_files, prefix, sysroot):
     return res
 
 
-from conda_build.utils import linked_data_no_multichannels
 @memoized
 def get_package_files(dist, prefix):
     files = []
@@ -96,6 +96,7 @@ def get_package_files(dist, prefix):
         if data:
             files = data.get('files', [])
     return files
+
 
 @memoized
 def get_package_obj_files(dist, prefix):

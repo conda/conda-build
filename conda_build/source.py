@@ -664,7 +664,7 @@ def apply_patch(src_dir, path, config, git=None):
             try:
                 patch_or_reverse(patch, patch_args + ['--ignore-whitespace'] + path_args,
                                  cwd=src_dir, stdout=stdout, stderr=stderr)
-            except CalledProcessError as e:
+            except CalledProcessError as e:  # [noqa]
                 unix_ending_file = _ensure_unix_line_endings(path)
                 path_args[-1] = unix_ending_file
                 try:
