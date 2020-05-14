@@ -774,8 +774,6 @@ def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_v
             prefix_owners[prefix] = {}
             for subdir2, _, filez in os.walk(prefix):
                 for file in filez:
-                    if 'libz.so.1' in file:
-                        print("Debug this {}".format(file))
                     fp = join(subdir2, file)
                     dynamic_lib = any(fnmatch(fp, ext) for ext in ('*.so*', '*.dylib*', '*.dll')) and \
                                 codefile_type(fp, skip_symlinks=False) is not None
