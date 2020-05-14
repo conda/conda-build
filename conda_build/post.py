@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 from collections import defaultdict, OrderedDict
 from functools import partial
-from fnmatch import fnmatch, filter as fnmatch_filter
+from fnmatch import fnmatch, filter as fnmatch_filter, translate as fnmatch_translate
 from os.path import (basename, commonprefix, dirname, exists, isabs, isdir, isfile,
                      islink, join, normpath, realpath, relpath, sep, splitext)
 import io
@@ -565,7 +565,6 @@ def assert_relative_osx(path, host_prefix, build_prefix):
 
 
 def determine_package_nature(pkg, prefix, subdir, bldpkgs_dir, output_folder, channel_urls):
-    dsos = []
     run_exports = None
     lib_prefix = pkg.name.startswith('lib')
     codefiles = get_package_obj_files(pkg, prefix)
@@ -587,7 +586,7 @@ def determine_package_nature(pkg, prefix, subdir, bldpkgs_dir, output_folder, ch
     # can fire. To prevent that we use our own linked_data_no_multichannels()
     # instead of conda's linked_data()
     # The `or isinstance(pkg, FakeDist)` covers the case of an empty local channel.
-    assert channeldata or isinstance(pkg, FakeDist)
+    assert isinstance(channeldata, dict) or isinstance(pkg, FakeDist)
 
     if channeldata and pkg.name in channeldata['packages']:
         run_exports = channeldata['packages'][pkg.name].get('run_exports', {})
@@ -731,6 +730,42 @@ DEFAULT_WIN_WHITELIST = ['**/ADVAPI32.dll',
                          '**/msvcrt.dll',
                          '**/api-ms-win*.dll']
 
+class CaseInsensitively(object):
+    def __init__(self, s):
+        self.__s = s.lower()
+    def __hash__(self):
+        return hash(self.__s)
+    def __eq__(self, other):
+        # ensure proper comparison between instances of this class
+        try:
+           other = other.__s
+        except (TypeError, AttributeError):
+          try:
+             other = other.lower()
+          except:
+             pass
+        return self.__s == other
+    def lower(self):
+        return self.__s.lower()
+
+
+import collections
+
+class CaseInsensitiveDict(collections.Mapping):
+    def __init__(self, d):
+        self._d = d
+        self._s = dict((k.lower(), k) for k in d)
+    def __contains__(self, k):
+        return k.lower() in self._s
+    def __len__(self):
+        return len(self._s)
+    def __iter__(self):
+        return iter(self._s)
+    def __getitem__(self, k):
+        return self._d[self._s[k.lower()]]
+    def actual_key_case(self, k):
+        return self._s.get(k.lower())
+
 
 def _collect_needed_dsos(sysroots_files, files, run_prefix, sysroot_substitution, build_prefix, build_prefix_substitution):
     all_needed_dsos = set()
@@ -823,6 +858,11 @@ def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_v
     return prefix_owners, contains_dsos, contains_static_libs, all_lib_exports
 
 
+#                            ci_libs_info = CaseInsensitiveDict(libs_info) if win_target else libs_info
+#                            ci_fullpath = CaseInsensitively(fullpath) if win_target else fullpath
+#                            if ci_fullpath not in ci_libs_info:
+
+
 def _get_fake_pkg_dist(pkg_name, pkg_version, build_str, build_number, channel, files):
     pkg_vendoring_name = pkg_name
     pkg_vendoring_version = str(pkg_version)
@@ -847,6 +887,12 @@ def _print_msg(errors, text, verbose):
         print(text)
 
 
+def caseless_sepless_fnmatch(paths, pat):
+    match = re.compile("(?i)"+fnmatch_translate(pat.replace('\\', '/'))).match
+    matches = [path for path in paths if match(pat.replace('\\', '/'), re.IGNORECASE)]
+    return matches
+
+
 def _lookup_in_system_whitelists(errors, whitelist, needed_dso, sysroots_files, msg_prelude, info_prelude,
                                  sysroot_prefix, sysroot_substitution, verbose):
     # A system or ignored dependency. We should be able to find it in one of the CDT or
@@ -857,10 +903,11 @@ def _lookup_in_system_whitelists(errors, whitelist, needed_dso, sysroots_files, 
     else:
         replacements = [needed_dso]
     in_whitelist = False
-    # It takes a very long time to glob in C:/Windows so cache it.
+    # It takes a very long time to glob in C:/Windows so we do not do that.
     for replacement in replacements:
         needed_dso_w = needed_dso.replace(sysroot_substitution, replacement)
-        in_whitelist = any([fnmatch(needed_dso_w, w) for w in whitelist])
+        # We should pass in multiple paths at once to this, but the code isn't structured for that.
+        in_whitelist = [caseless_sepless_fnmatch([needed_dso_w], w) for w in whitelist]
         if in_whitelist:
             n_dso_p = "Needed DSO {}".format(needed_dso_w)
             _print_msg(errors, '{}: {} found in the whitelist'.
@@ -911,7 +958,7 @@ def _lookup_in_system_whitelists(errors, whitelist, needed_dso, sysroots_files, 
 def _lookup_in_prefix_packages(errors, needed_dso, files, run_prefix, whitelist, info_prelude, msg_prelude,
                                warn_prelude, verbose, requirements_run, lib_packages, lib_packages_used):
     in_prefix_dso = normpath(needed_dso)
-    n_dso_p = "Needed DSO {}".format(in_prefix_dso)
+    n_dso_p = "Needed DSO {}".format(in_prefix_dso.replace('\\', '/'))
     and_also = " (and also in this package)" if in_prefix_dso in files else ""
     pkgs = list(which_package(in_prefix_dso, run_prefix, avoid_canonical_channel_name=True))
     in_pkgs_in_run_reqs = [pkg for pkg in pkgs if pkg.quad[0] in requirements_run]
