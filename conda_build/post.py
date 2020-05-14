@@ -862,7 +862,7 @@ def _lookup_in_system_whitelists(errors, whitelist, needed_dso, sysroots_files, 
     for replacement in replacements:
         needed_dso_w = needed_dso.replace(sysroot_substitution, replacement)
         # We should pass in multiple paths at once to this, but the code isn't structured for that.
-        in_whitelist = [caseless_sepless_fnmatch([needed_dso_w], w) for w in whitelist]
+        in_whitelist = any([caseless_sepless_fnmatch([needed_dso_w], w) for w in whitelist])
         if in_whitelist:
             n_dso_p = "Needed DSO {}".format(needed_dso_w)
             _print_msg(errors, '{}: {} found in the whitelist'.
