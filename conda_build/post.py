@@ -1233,7 +1233,7 @@ def check_overlinking(m, files, host_prefix=None):
                                   files,
                                   m.config.bldpkgs_dir,
                                   m.config.output_folder,
-                                  utils.ensure_list(m.config.channel_urls) + ['local'],
+                                  list(m.config.channel_urls) + ['local'],
                                   m.config.enable_static)
 
 
