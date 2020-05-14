@@ -7,12 +7,10 @@ from os.path import join, basename
 
 from conda_build.conda_interface import memoized
 from conda_build.conda_interface import untracked
+from conda_build.conda_interface import linked_data
 
 from conda_build.os_utils.macho import otool
 from conda_build.os_utils.pyldd import codefile_class, inspect_linkages, machofile, is_codefile
-
-from conda_build.utils import linked_data_no_multichannels
-
 
 LDD_RE = re.compile(r'\s*(.*?)\s*=>\s*(.*?)\s*\(.*\)')
 LDD_NOT_FOUND_RE = re.compile(r'\s*(.*?)\s*=>\s*not found')
@@ -92,7 +90,7 @@ def get_package_files(dist, prefix):
     if hasattr(dist, 'get'):
         files = dist.get('files')
     else:
-        data = linked_data_no_multichannels(prefix).get(dist)
+        data = linked_data(prefix).get(dist)
         if data:
             files = data.get('files', [])
     return files
