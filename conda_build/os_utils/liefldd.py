@@ -413,7 +413,7 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
         # We do not include C:\Windows nor C:\Windows\System32 in this list. They are added in
         # get_rpaths() instead since we need to carefully control the order.
         default_paths = ['$SYSROOT/System32/Wbem', '$SYSROOT/System32/WindowsPowerShell/v1.0']
-    results = set()
+    results = {}
     rpaths_by_binary = dict()
     parents_by_filename = dict({filename: None})
     while todo:
@@ -451,7 +451,7 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
                 these_orig = [('$RPATH/' + lib if not lib.startswith('/') and not lib.startswith('$') and  # noqa
                                binary.format != lief.EXE_FORMATS.MACHO else lib)
                               for lib in libraries]
-                for orig in these_orig:
+                for lib, orig in zip(libraries, these_orig):
                     resolved = _get_resolved_location(binary,
                                                       orig,
                                                       exedir,
@@ -459,11 +459,26 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
                                                       rpaths_transitive=rpaths_transitive,
                                                       default_paths=default_paths,
                                                       sysroot=sysroot)
+                    path_fixed = os.path.normpath(resolved[0])
+                    # Test, randomise case. We only allow for the filename part to be random, and we allow that
+                    # only for Windows DLLs. We may need a special case for Lib (from Python) vs lib (from R)
+                    # too, but in general we want to enforce case checking as much as we can since even Windowws
+                    # can be run case-sensitively if the user wishes.
+                    #
+                    # if binary.format == lief.EXE_FORMATS.PE:
+                    #     import random
+                    #     path_fixed = os.path.dirname(path_fixed) + os.sep +  \
+                    #                  ''.join(random.choice((str.upper, str.lower))(c) for c in os.path.basename(path_fixed))
+                    #     if random.getrandbits(1):
+                    #         path_fixed = path_fixed.replace(os.sep + 'lib' + os.sep, os.sep + 'Lib' + os.sep)
+                    #     else:
+                    #         path_fixed = path_fixed.replace(os.sep + 'Lib' + os.sep, os.sep + 'lib' + os.sep)
                     if resolve_filenames:
-                        results.add(resolved[0])
-                        parents_by_filename[resolved[0]] = filename2
+                        rec = {'orig': orig, 'resolved': path_fixed, 'rpaths': rpaths_transitive}
                     else:
-                        results.add(orig)
+                        rec = {'orig': orig, 'rpaths': rpaths_transitive}
+                    results[lib] = rec
+                    parents_by_filename[resolved[0]] = filename2
                     if recurse:
                         if os.path.exists(resolved[0]):
                             todo.append([resolved[0], lief.parse(resolved[0])])
@@ -476,17 +491,17 @@ def get_linkages(filename, resolve_filenames=True, recurse=True,
     # When we switch to lief, want to ensure these results do not change.
     # We do not support Windows yet with pyldd.
     result_pyldd = []
-    if codefile_type(filename) not in ('DLLfile', 'EXEfile'):
-        result_pyldd = inspect_linkages_pyldd(filename, resolve_filenames=resolve_filenames, recurse=recurse,
-                                              sysroot=sysroot, arch=arch)
-        if not have_lief:
+    debug = False
+    if not have_lief or debug:
+        if codefile_type(filename) not in ('DLLfile', 'EXEfile'):
+            result_pyldd = inspect_linkages_pyldd(filename, resolve_filenames=resolve_filenames, recurse=recurse,
+                                                  sysroot=sysroot, arch=arch)
+            if not have_lief:
+                return result_pyldd
             return result_pyldd
-    if not have_lief:
-        return result_pyldd
-
     result_lief = inspect_linkages_lief(filename, resolve_filenames=resolve_filenames, recurse=recurse,
                                         sysroot=sysroot, envroot=envroot, arch=arch)
-    if result_pyldd and set(result_lief) != set(result_pyldd):
+    if debug and result_pyldd and set(result_lief) != set(result_pyldd):
         print("WARNING: Disagreement in get_linkages(filename={}, resolve_filenames={}, recurse={}, sysroot={}, envroot={}, arch={}):\n lief: {}\npyldd: {}\n  (using lief)".
               format(filename, resolve_filenames, recurse, sysroot, envroot, arch, result_lief, result_pyldd))
     return result_lief

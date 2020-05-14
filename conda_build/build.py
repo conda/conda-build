@@ -735,6 +735,30 @@ def copy_readme(m):
                   "as README.md and README.rst", file=sys.stderr)
 
 
+def jsonify_info_yamls(m):
+    iyd = "info_yaml.d"
+    ijd = "info_json.d"
+    src = join(dirname(m.meta_path), iyd)
+    res = []
+    if os.path.exists(src) and isdir(src):
+        for root, dirs, files in os.walk(src):
+            for file in files:
+                file = join(root, file)
+                bn, ext = os.path.splitext(os.path.basename(file))
+                if ext == '.yaml':
+                    dst = join(m.config.info_dir, ijd, bn + '.json')
+                    try:
+                        os.makedirs(os.path.dirname(dst))
+                    except:
+                        pass
+                    with open(file, 'r') as i, open(dst, 'w') as o:
+                        import yaml
+                        yaml = yaml.full_load(i)
+                        json.dump(yaml, o, sort_keys=True, indent=2, separators=(',', ': '))
+                        res.append(join(os.path.basename(m.config.info_dir), ijd, bn + '.json'))
+    return res
+
+
 def copy_license(m):
     license_files = utils.ensure_list(m.get_value('about/license_file', []))
     if not license_files:
@@ -958,8 +982,9 @@ def record_prefix_files(m, files_with_prefix):
     # We need to cache these as otherwise the fact we remove from this in a for loop later
     # that also checks it has elements.
     len_binary_has_prefix_files = len(binary_has_prefix_files)
+    len_text_has_prefix_files = len(text_has_prefix_files)
 
-    if files_with_prefix and not m.noarch:
+    if files_with_prefix:
         if utils.on_win:
             # Paths on Windows can contain spaces, so we need to quote the
             # paths. Fortunately they can't contain quotes, so we don't have
@@ -973,12 +998,13 @@ def record_prefix_files(m, files_with_prefix):
 
         print("Files containing CONDA_PREFIX")
         print("-----------------------------")
-        detect_binary_files_with_prefix = m.get_value('build/detect_binary_files_with_prefix', False)
+        detect_binary_files_with_prefix = m.get_value('build/detect_binary_files_with_prefix',
+                                                      not len_binary_has_prefix_files and not utils.on_win)
         with open(join(m.config.info_dir, 'has_prefix'), 'w') as fo:
             for pfix, mode, fn in files_with_prefix:
                 ignored_because = None
-                if (fn in binary_has_prefix_files or (not len_binary_has_prefix_files or
-                   detect_binary_files_with_prefix and mode == 'binary')):
+                if (fn in binary_has_prefix_files or ((not len_binary_has_prefix_files or
+                   detect_binary_files_with_prefix) and mode == 'binary')):
                     if fn in binary_has_prefix_files:
                         if mode != 'binary':
                             mode = 'binary'
@@ -988,17 +1014,18 @@ def record_prefix_files(m, files_with_prefix):
                                   "`build/binary_has_prefix_files`".format(fn))
                     if fn in binary_has_prefix_files:
                         binary_has_prefix_files.remove(fn)
-                elif fn in text_has_prefix_files or mode == 'text':
+                elif (fn in text_has_prefix_files or (not len_text_has_prefix_files and mode == 'text') or
+                      os.path.dirname(fn) == 'python-scripts'):
                     if mode != 'text':
                         mode = 'text'
-                    elif fn in text_has_prefix_files:
+                    elif fn in text_has_prefix_files and not len_text_has_prefix_files:
                         print("File {} force-identified as 'text', "
                               "But it is 'text' anyway, suggest removing it from "
                               "`build/has_prefix_files`".format(fn))
                     if fn in text_has_prefix_files:
                         text_has_prefix_files.remove(fn)
                 else:
-                    ignored_because = " :: Not in build/%s_has_prefix_files" % (mode)
+                    ignored_because = " (not in build/%s_has_prefix_files)" % (mode)
 
                 print("{fn} ({mode}): {action}{reason}".format(fn=fn, mode=mode,
                                                                action="Ignoring" if ignored_because else "Patching",
@@ -1191,6 +1218,7 @@ def create_info_files(m, files, prefix):
     copy_readme(m)
     copy_license(m)
     copy_recipe_log(m)
+    files.extend(jsonify_info_yamls(m))
 
     create_all_test_files(m, test_dir=join(m.config.info_dir, 'test'))
     if m.config.copy_test_source_files:
@@ -1585,7 +1613,18 @@ def bundle_conda(output, metadata, env, stats, **kw):
     # clean out host prefix so that this output's files don't interfere with other outputs
     #   We have a backup of how things were before any output scripts ran.  That's
     #   restored elsewhere.
-    utils.rm_rf(metadata.config.host_prefix)
+
+    if metadata.config.keep_old_work:
+        prefix = metadata.config.host_prefix
+        dest = os.path.join(os.path.dirname(prefix),
+                            '_'.join(('_h_env_moved', metadata.dist(),
+                                      metadata.config.host_subdir)))
+        print("Renaming host env directory, ", prefix, " to ", dest)
+        if os.path.exists(dest):
+            utils.rm_rf(dest)
+        shutil.move(prefix, dest)
+    else:
+        utils.rm_rf(metadata.config.host_prefix)
 
     return final_outputs
 
@@ -2435,6 +2474,8 @@ def _write_test_run_script(metadata, test_run_script, test_env_script, py_files,
             test_env_script=test_env_script))
         if utils.on_win:
             tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+        else:
+            tf.write('set {trace}-e\n'.format(trace=trace))
         if py_files:
             test_python = metadata.config.test_python
             # use pythonw for import tests when osx_is_app is set
@@ -2526,6 +2567,9 @@ def write_test_scripts(metadata, env_vars, py_files, pl_files, lua_files, r_file
                     test_env=metadata.config.test_prefix))
             if utils.on_win:
                 tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+        # In-case people source this, it's essential errors are not fatal in an interactive shell.
+        if not utils.on_win:
+            tf.write('set +e\n')
 
     _write_test_run_script(metadata, test_run_script, test_env_script, py_files, pl_files,
                            lua_files, r_files, shell_files, trace)

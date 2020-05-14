@@ -1210,6 +1210,7 @@ def find_recipe(path):
     if os.path.isfile(path) and os.path.basename(path) in ["meta.yaml", "conda.yaml"]:
         return os.path.dirname(path)
     results = rec_glob(path, ["meta.yaml", "conda.yaml"])
+    results = [r for r in results if os.sep + '.AppleDouble' + os.sep not in r]
     if len(results) > 1:
         base_recipe = os.path.join(path, "meta.yaml")
         if base_recipe in results:
@@ -1913,3 +1914,16 @@ def download_channeldata(channel_url):
     else:
         data = channeldata_cache[channel_url]
     return data
+
+
+def linked_data_no_multichannels(prefix):
+    """
+    Return a dictionary of the linked packages in prefix, with correct channels, hopefully.
+    cc @kalefranz.
+    """
+    from conda.core.prefix_data import PrefixData
+    from conda.models.dist import Dist
+    pd = PrefixData(prefix)
+    from conda.common.compat import itervalues
+    return {Dist.from_string(prefix_record.fn, channel_override=prefix_record.channel.name):
+                prefix_record for prefix_record in itervalues(pd._prefix_records)}
