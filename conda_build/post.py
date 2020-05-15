@@ -1003,7 +1003,8 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                            missing_dso_whitelist, runpath_whitelist,
                            error_overlinking, error_overdepending, verbose,
                            exception_on_error, files, bldpkgs_dirs, output_folder, channel_urls,
-                           enable_static=False):
+                           enable_static=False,
+                           variants={}):
     verbose = True
     errors = []
 
@@ -1040,8 +1041,15 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     ignore_list_syms = ['main', '_main', '*get_pc_thunk*', '___clang_call_terminate', '_timeout']
     # ignore_for_statics = ['gcc_impl_linux*', 'compiler-rt*', 'llvm-openmp*', 'gfortran_osx*']
     # sysroots and whitelists are similar, but the subtle distinctions are important.
-    sysroot_prefix = build_prefix
-    sysroots = [sysroot + os.sep for sysroot in utils.glob(join(sysroot_prefix, '**', 'sysroot'))]
+    if variants.get('CONDA_BUILD_SYSROOT', None):
+        # When on macOS and CBS not set, sysroots should probably be '/'
+        # is everything in the sysroot allowed? I suppose so!
+        sysroot_prefix = ''
+        sysroots = [variants.get('CONDA_BUILD_SYSROOT', None)]
+    else:
+        # This is a case'better than nothing'
+        sysroot_prefix = build_prefix
+        sysroots = [sysroot + os.sep for sysroot in utils.glob(join(sysroot_prefix, '**', 'sysroot'))]
     whitelist = []
     vendoring_record = dict()
     # When build_is_host is True we perform file existence checks for files in the sysroot (e.g. C:\Windows)
@@ -1185,7 +1193,8 @@ def check_overlinking(m, files, host_prefix=None):
                                   m.config.bldpkgs_dir,
                                   m.config.output_folder,
                                   list(m.config.channel_urls) + ['local'],
-                                  m.config.enable_static)
+                                  m.config.enable_static,
+                                  m.config.variants[0])
 
 
 def post_process_shared_lib(m, f, files, host_prefix=None):
