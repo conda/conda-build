@@ -1135,7 +1135,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
             if found_interpreted_and_interpreter:
                 _print_msg(errors, "{}: Interpreted package '{}' is interpreted by '{}'".format(
                     info_prelude, pkg_vendored_dist.name, lib.name), verbose=verbose)
-            else:
+            elif package_nature[lib] != 'non-library':
                 _print_msg(errors, "{}: {} package {} in requirements/run but it is not used "
                                    "(i.e. it is overdepending or perhaps statically linked? "
                                    "If that is what you want then add it to `build/ignore_run_exports`)"
