@@ -663,10 +663,12 @@ class FakeDist:
             return self.files
 
 
+# This is really just a small, fixed sysroot and it is rooted at ''. `libcrypto.0.9.8.dylib` should not be in it IMHO.
 DEFAULT_MAC_WHITELIST = ['/opt/X11/',
                          '/usr/lib/libSystem.B.dylib',
                          '/usr/lib/libcrypto.0.9.8.dylib',
                          '/usr/lib/libobjc.A.dylib',
+"""
                          '/System/Library/Frameworks/Accelerate.framework/*',
                          '/System/Library/Frameworks/AGL.framework/*',
                          '/System/Library/Frameworks/AppKit.framework/*',
@@ -703,7 +705,9 @@ DEFAULT_MAC_WHITELIST = ['/opt/X11/',
                          '/System/Library/Frameworks/Security.framework/*',
                          '/System/Library/Frameworks/StoreKit.framework/*',
                          '/System/Library/Frameworks/SystemConfiguration.framework/*',
-                         '/System/Library/Frameworks/WebKit.framework/*']
+                         '/System/Library/Frameworks/WebKit.framework/*'
+"""
+                         ]
 
 DEFAULT_WIN_WHITELIST = ['**/ADVAPI32.dll',
                          '**/bcrypt.dll',
@@ -745,8 +749,13 @@ def _collect_needed_dsos(sysroots_files, files, run_prefix, sysroot_substitution
                                        sysroot=sysroot, envroot=run_prefix)
         for lib, res in needed.items():
             resolved = res['resolved'].replace(os.sep, '/')
-            if sysroot and resolved.startswith(sysroot):
-                resolved = resolved.replace(sysroot, sysroot_substitution)
+            for sysroot, sysroot_files in sysroots_files.items():
+                if resolved.startswith(sysroot):
+                    resolved = resolved.replace(sysroot, sysroot_substitution)
+                elif resolved[1:] in sysroot_files:
+                    # TODO :: Pretend .tbd files are .dylibs (at what level?) - test on SDK 10.10
+                    resolved = sysroot_substitution + resolved[1:]
+
             # We do not want to do this substitution when merging build and host prefixes.
             if build_prefix != run_prefix and resolved.startswith(build_prefix):
                 resolved = resolved.replace(build_prefix, build_prefix_substitution)
@@ -849,10 +858,14 @@ def caseless_sepless_fnmatch(paths, pat):
 
 
 def _lookup_in_system_whitelists(errors, whitelist, needed_dso, sysroots_files, msg_prelude, info_prelude,
-                                 sysroot_prefix, sysroot_substitution, verbose):
+                                 sysroot_prefix, sysroot_substitution, subdir, verbose):
     # A system or ignored dependency. We should be able to find it in one of the CDT or
     # compiler packages on linux or in a sysroot folder on other OSes. These usually
     # start with '$RPATH/' which indicates pyldd did not find them, so remove that now.
+    if len(sysroots_files):
+        for sysroot, files in sysroots_files.items():
+            _print_msg(errors, "{}: sysroot: '{}' files: '{}'".format(info_prelude, sysroot, sorted(list(files))[1:5]),
+                       verbose=verbose)
     if needed_dso.startswith(sysroot_substitution):
         replacements = [sysroot_substitution] + [sysroot for sysroot, _ in sysroots_files.items()]
     else:
@@ -869,11 +882,11 @@ def _lookup_in_system_whitelists(errors, whitelist, needed_dso, sysroots_files, 
                        format(info_prelude, n_dso_p), verbose=verbose)
             break
     if not in_whitelist and len(sysroots_files):
-        # Check if we have a CDT package.
+        # Check if we have a CDT package or a file in a sysroot
         dso_fname = basename(needed_dso)
         sysroot_files = []
         for sysroot, files in sysroots_files.items():
-            sysroot_os = sysroot.replace('/', os.sep)
+            sysroot_os = sysroot.replace('\\', os.sep)
             wild = join('**', dso_fname)
             if needed_dso.startswith(sysroot_substitution):
                 # Do we want to do this replace?
@@ -882,25 +895,32 @@ def _lookup_in_system_whitelists(errors, whitelist, needed_dso, sysroots_files, 
                 found = [file for file in files if fnmatch(file, wild)]
                 sysroot_files.extend(found)
         if len(sysroot_files):
-            # Removing sysroot_prefix is only *really* for Linux, though we could
-            # use CONDA_BUILD_SYSROOT for macOS. We should figure out what to do about
-            # /opt/X11 too.
-            # Find the longest suffix match.
-            rev_needed_dso = needed_dso[::-1]
-            match_lens = [len(commonprefix([s[::-1], rev_needed_dso]))
-                            for s in sysroot_files]
-            idx = max(range(len(match_lens)), key=match_lens.__getitem__)
-            in_prefix_dso = normpath(sysroot_files[idx].replace(
-                sysroot_prefix + os.sep, ''))
-            n_dso_p = "Needed DSO {}".format(in_prefix_dso)
-            pkgs = list(which_package(in_prefix_dso, sysroot_prefix))
-            if len(pkgs):
-                _print_msg(errors, '{}: {} found in CDT/compiler package {}'.
-                                    format(info_prelude, n_dso_p, pkgs[0]), verbose=verbose)
+            if 'osx-64' in subdir or 'win' in subdir:
+                in_prefix_dso = sysroot_files[0]
+                n_dso_p = "Needed DSO {}".format(in_prefix_dso)
+                _print_msg(errors, '{}: {} found in $SYSROOT'.
+                           format(info_prelude, n_dso_p), verbose=verbose)
             else:
-                _print_msg(errors, '{}: {} not found in any CDT/compiler package,'
-                                    ' nor the whitelist?!'.
-                                format(msg_prelude, n_dso_p), verbose=verbose)
+                # Removing sysroot_prefix is only for Linux, though we could
+                # use CONDA_BUILD_SYSROOT for macOS. We should figure out what to do about
+                # /opt/X11 too.
+                # Find the longest suffix match.
+                rev_needed_dso = needed_dso[::-1]
+                match_lens = [len(commonprefix([s[::-1], rev_needed_dso]))
+                                for s in sysroot_files]
+                idx = max(range(len(match_lens)), key=match_lens.__getitem__)
+                # in_prefix_dso = normpath(sysroot_files[idx].replace(
+                #     sysroot_prefix + os.sep, ''))
+                in_prefix_dso = sysroot_files[idx][len(sysroot_prefix) + 1:]
+                n_dso_p = "Needed DSO {}".format(in_prefix_dso)
+                pkgs = list(which_package(in_prefix_dso, sysroot_prefix))
+                if len(pkgs):
+                    _print_msg(errors, '{}: {} found in CDT/compiler package {}'.
+                                        format(info_prelude, n_dso_p, pkgs[0]), verbose=verbose)
+                else:
+                    _print_msg(errors, '{}: {} not found in any CDT/compiler package,'
+                                        ' nor the whitelist?!'.
+                                    format(msg_prelude, n_dso_p), verbose=verbose)
         else:
             _print_msg(errors, "{}: {} not found in packages nor in sysroot, is this binary repackaging?"
                                 " .. do you need to use install_name_tool/patchelf?".
@@ -993,7 +1013,7 @@ def _show_linking_messages(files, errors, needed_dsos_for_file, build_prefix, ru
                            err_prelude, needed_dso), verbose=verbose)
             else:
                 _lookup_in_system_whitelists(errors, whitelist, needed_dso, sysroots, msg_prelude,
-                                             info_prelude, sysroot_prefix, sysroot_substitution, verbose)
+                                             info_prelude, sysroot_prefix, sysroot_substitution, subdir, verbose)
 
 
 def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdir,
@@ -1041,13 +1061,14 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     ignore_list_syms = ['main', '_main', '*get_pc_thunk*', '___clang_call_terminate', '_timeout']
     # ignore_for_statics = ['gcc_impl_linux*', 'compiler-rt*', 'llvm-openmp*', 'gfortran_osx*']
     # sysroots and whitelists are similar, but the subtle distinctions are important.
-    if variants.get('CONDA_BUILD_SYSROOT', None):
+    CONDA_BUILD_SYSROOT = variants.get('CONDA_BUILD_SYSROOT', None)
+    if CONDA_BUILD_SYSROOT and os.path.exists(CONDA_BUILD_SYSROOT):
         # When on macOS and CBS not set, sysroots should probably be '/'
         # is everything in the sysroot allowed? I suppose so!
         sysroot_prefix = ''
-        sysroots = [variants.get('CONDA_BUILD_SYSROOT', None)]
+        sysroots = [CONDA_BUILD_SYSROOT]
     else:
-        # This is a case'better than nothing'
+        # The linux case.
         sysroot_prefix = build_prefix
         sysroots = [sysroot + os.sep for sysroot in utils.glob(join(sysroot_prefix, '**', 'sysroot'))]
     whitelist = []
@@ -1077,7 +1098,8 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     sysroots_files = dict()
     for sysroot in sysroots:
         from conda_build.utils import prefix_files
-        sysroots_files[sysroot] = prefix_files(sysroot)
+        srs = sysroot if sysroot.endswith(os.sep) else sysroot + os.sep
+        sysroots_files[srs] = prefix_files(sysroot)
     sysroots_files = OrderedDict(sorted(sysroots_files.items(), key=lambda x: -len(x[1])))
 
     all_needed_dsos, needed_dsos_for_file = _collect_needed_dsos(sysroots_files, files, run_prefix,
