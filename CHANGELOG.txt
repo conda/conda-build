@@ -1,4 +1,36 @@
 # current developments
+2020-05-15 3.19.4:
+------------------
+
+Bug fixes:
+----------
+* fix metadata.FIELDS.build.error_over,{linking,depending} ()
+* raise valid CalledProcessException in macho.otool ()
+
+
+Other:
+------
+
+* allow manual specification of which binary files to prefix replace ()
+* re-work a lot of the DSO post-processing ()
+  ** no more 'not in prefix_owners' ()
+  ** interpreter packages and usage detected and reported
+  ** case-insensitive filename comparison for PE
+  ** better, more uniform error and warning messages.
+* re-wrote apply_patch() so that it: ()
+  ** assumes good-faith on the part of the patch author and source cloner
+     and first tries to apply them as binary.
+  ** handles files with mixed CRLF that also create files correctly.
+  ** keeps the source tree clean from .orig and .rej files.
+  ** attempts to reverse any partially applied bits of failed patches.
+* filter out '.AppleDouble' folders from recipe searches ()
+* convert info.d/*.yaml to info/*.json ()
+* move old host env instead of deleting it when `--keep-old-work` ()
+* make life easier (less shell exit-y) for those who source test scripts ()
+* cache local_output_folder too for get_build_index ()
+* which_package can be passed avoid_canonical_channel_name ()
+
+
 2020-04-13 3.19.3:
 ------------------
 
