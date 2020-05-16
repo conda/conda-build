@@ -1110,7 +1110,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
             log.warning("Pretending some '.tbd' files in sysroot: '{}' are '.dylib' files!\n"
                         "Adding support to 'conda-build' for parsing these in 'liefldd.py' would be easy and useful:\n"
                         "{} ..."
-                        .format(sysroot, diffs[1:3]))
+                        .format(sysroot, list(diffs)[1:3]))
         sysroots_files[srs] = sysroot_files
     sysroots_files = OrderedDict(sorted(sysroots_files.items(), key=lambda x: -len(x[1])))
 
