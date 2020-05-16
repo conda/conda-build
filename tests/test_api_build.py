@@ -1357,9 +1357,6 @@ def test_provides_features_metadata(testing_config):
     assert index['provides_features'] == {'test2': 'also_ok'}
 
 
-@pytest.mark.sanity
-@pytest.mark.skipif(sys.platform == "win32",
-                    reason="not supported on Windows yet")
 def test_overlinking_detection(testing_config):
     testing_config.activate = True
     testing_config.error_overlinking = True
@@ -1374,8 +1371,6 @@ def test_overlinking_detection(testing_config):
     rm_rf(dest_file)
 
 
-@pytest.mark.sanity
-@pytest.mark.xfail(reason="Need to discuss with Ray")
 def test_overdepending_detection(testing_config):
     testing_config.activate = True
     testing_config.error_overlinking = True
@@ -1384,6 +1379,17 @@ def test_overdepending_detection(testing_config):
     recipe = os.path.join(metadata_dir, '_overdepending_detection')
     with pytest.raises(OverDependingError):
         api.build(recipe, config=testing_config)
+
+
+@pytest.mark.skipif(sys.platform != "darwin",
+                    reason="macOS-only test (at present)")
+def test_macos_tbd_handling(testing_config):
+    testing_config.activate = True
+    testing_config.error_overlinking = True
+    testing_config.error_overdepending = True
+    testing_config.verify = False
+    recipe = os.path.join(metadata_dir, '_macos_tbd_handling')
+    api.build(recipe, config=testing_config)
 
 
 @pytest.mark.sanity

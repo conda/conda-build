@@ -862,10 +862,6 @@ def _lookup_in_system_whitelists(errors, whitelist, needed_dso, sysroots_files, 
     # A system or ignored dependency. We should be able to find it in one of the CDT or
     # compiler packages on linux or in a sysroot folder on other OSes. These usually
     # start with '$RPATH/' which indicates pyldd did not find them, so remove that now.
-    if len(sysroots_files):
-        for sysroot, files in sysroots_files.items():
-            _print_msg(errors, "{}: sysroot: '{}' files: '{}'".format(info_prelude, sysroot, sorted(list(files))[1:5]),
-                       verbose=verbose)
     if needed_dso.startswith(sysroot_substitution):
         replacements = [sysroot_substitution] + [sysroot for sysroot, _ in sysroots_files.items()]
     else:
@@ -976,6 +972,11 @@ def _lookup_in_prefix_packages(errors, needed_dso, files, run_prefix, whitelist,
 def _show_linking_messages(files, errors, needed_dsos_for_file, build_prefix, run_prefix, pkg_name,
                            error_overlinking, runpath_whitelist, verbose, requirements_run, lib_packages,
                            lib_packages_used, whitelist, sysroots, sysroot_prefix, sysroot_substitution, subdir):
+    if len(sysroots):
+        for sysroot, sr_files in sysroots.items():
+            _print_msg(errors, "   INFO: sysroot: '{}' files: '{}'".format(sysroot,
+                                                                           sorted(list(sr_files), reverse=True)[1:5]),
+                       verbose=verbose)
     for f in files:
         path = join(run_prefix, f)
         filetype = codefile_type(path)
@@ -1099,7 +1100,18 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     for sysroot in sysroots:
         from conda_build.utils import prefix_files
         srs = sysroot if sysroot.endswith(os.sep) else sysroot + os.sep
-        sysroots_files[srs] = prefix_files(sysroot)
+        # macOS hack. Pretend, in the ugliest way I can that any .tbd files
+        # we found were actually .dylib files.
+        orig_sysroot_files = prefix_files(sysroot)
+        sysroot_files = [osf.replace('.tbd', '.dylib') if osf.endswith('.tbd') else osf for osf in orig_sysroot_files]
+        diffs = set(orig_sysroot_files) - set(sysroot_files)
+        if diffs:
+            log = utils.get_logger(__name__)
+            log.warning("Pretending some '.tbd' files in sysroot: '{}' are '.dylib' files!\n"
+                        "Adding support to 'conda-build' for parsing these in 'liefldd.py' would be easy and useful:\n"
+                        "{} ..."
+                        .format(sysroot, diffs[1:3]))
+        sysroots_files[srs] = sysroot_files
     sysroots_files = OrderedDict(sorted(sysroots_files.items(), key=lambda x: -len(x[1])))
 
     all_needed_dsos, needed_dsos_for_file = _collect_needed_dsos(sysroots_files, files, run_prefix,
@@ -1216,7 +1228,7 @@ def check_overlinking(m, files, host_prefix=None):
                                   m.config.output_folder,
                                   list(m.config.channel_urls) + ['local'],
                                   m.config.enable_static,
-                                  m.config.variants[0])
+                                  m.config.variant)
 
 
 def post_process_shared_lib(m, f, files, host_prefix=None):
