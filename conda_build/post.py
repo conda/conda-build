@@ -1108,16 +1108,19 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
         srs = sysroot if sysroot.endswith(os.sep) else sysroot + os.sep
         # macOS hack. Pretend, in the ugliest way I can that any .tbd files
         # we found were actually .dylib files.
-        orig_sysroot_files = prefix_files(sysroot)
-        sysroot_files = [osf.replace('.tbd', '.dylib') if osf.endswith('.tbd') else osf for osf in orig_sysroot_files]
-        diffs = set(orig_sysroot_files) - set(sysroot_files)
-        if diffs:
-            log = utils.get_logger(__name__)
-            log.warning("Pretending some '.tbd' files in sysroot: '{}' are '.dylib' files!\n"
-                        "Adding support to 'conda-build' for parsing these in 'liefldd.py' would be easy and useful:\n"
-                        "{} ..."
-                        .format(sysroot, list(diffs)[1:3]))
-        sysroots_files[srs] = sysroot_files
+        sysroot_files = prefix_files(sysroot)
+		sysroot_files = [p.replace('\\', '/') for p in sysroot_files
+        if subdir == 'osx-64':
+            orig_sysroot_files = sysroot_files
+            sysroot_files = [osf.replace('.tbd', '.dylib') if osf.endswith('.tbd') else osf for osf in orig_sysroot_files]
+            diffs = set(orig_sysroot_files) - set(sysroot_files)
+            if diffs:
+                log = utils.get_logger(__name__)
+                log.warning("Pretending some '.tbd' files in sysroot: '{}' are '.dylib' files!\n"
+                            "Adding support to 'conda-build' for parsing these in 'liefldd.py' would be easy and useful:\n"
+                            "{} ..."
+                            .format(sysroot, list(diffs)[1:3]))
+                sysroots_files[srs] = sysroot_files
     sysroots_files = OrderedDict(sorted(sysroots_files.items(), key=lambda x: -len(x[1])))
 
     all_needed_dsos, needed_dsos_for_file = _collect_needed_dsos(sysroots_files, files, run_prefix,
