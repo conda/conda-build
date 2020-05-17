@@ -452,7 +452,6 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
                                binary.format != lief.EXE_FORMATS.MACHO else lib)
                               for lib in libraries]
                 for lib, orig in zip(libraries, these_orig):
-                    path_fixed = os.path.normpath(resolved[0])
                     resolved = _get_resolved_location(binary,
                                                       orig,
                                                       exedir,
@@ -460,6 +459,7 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
                                                       rpaths_transitive=rpaths_transitive,
                                                       default_paths=default_paths,
                                                       sysroot=sysroot)
+                    path_fixed = os.path.normpath(resolved[0])
                     # Test, randomise case. We only allow for the filename part to be random, and we allow that
                     # only for Windows DLLs. We may need a special case for Lib (from Python) vs lib (from R)
                     # too, but in general we want to enforce case checking as much as we can since even Windowws
