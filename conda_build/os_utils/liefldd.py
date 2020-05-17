@@ -452,6 +452,7 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
                                binary.format != lief.EXE_FORMATS.MACHO else lib)
                               for lib in libraries]
                 for lib, orig in zip(libraries, these_orig):
+                    path_fixed = os.path.normpath(resolved[0])
                     resolved = _get_resolved_location(binary,
                                                       orig,
                                                       exedir,
@@ -465,7 +466,6 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
                     # can be run case-sensitively if the user wishes.
                     #
                     '''
-                    path_fixed = os.path.normpath(resolved[0])
                     if binary.format == lief.EXE_FORMATS.PE:
                         import random
                         path_fixed = os.path.dirname(path_fixed) + os.sep +  \
