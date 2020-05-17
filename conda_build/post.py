@@ -754,7 +754,6 @@ def _collect_needed_dsos(sysroots_files, files, run_prefix, sysroot_substitution
                 if resolved.startswith(sysroot):
                     resolved = resolved.replace(sysroot, sysroot_substitution)
                 elif resolved[1:] in sysroot_files:
-                    # TODO :: Pretend .tbd files are .dylibs (at what level?) - test on SDK 10.10
                     resolved = sysroot_substitution + resolved[1:]
 
             # We do not want to do this substitution when merging build and host prefixes.
@@ -777,6 +776,7 @@ def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_v
     contains_static_libs = {}
     # Used for both dsos and static_libs
     all_lib_exports = {}
+    all_needed_dsos_lower = [w.lower() for w in all_needed_dsos]
 
     if all_needed_dsos:
         for prefix in (run_prefix, build_prefix):
@@ -792,7 +792,7 @@ def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_v
                     if not dynamic_lib and not static_lib:
                         continue
                     rp = normpath(relpath(fp, prefix))
-                    if dynamic_lib and not any(rp == normpath(w) for w in all_needed_dsos):
+                    if dynamic_lib and not any(rp.lower() == w for w in all_needed_dsos_lower):
                         continue
                     if any(rp == normpath(w) for w in all_lib_exports[prefix]):
                         continue
@@ -1105,11 +1105,12 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     sysroots_files = dict()
     for sysroot in sysroots:
         from conda_build.utils import prefix_files
-        srs = sysroot if sysroot.endswith(os.sep) else sysroot + os.sep
+        srs = sysroot if sysroot.endswith('/') else sysroot + '/'
         # macOS hack. Pretend, in the ugliest way I can that any .tbd files
         # we found were actually .dylib files.
         sysroot_files = prefix_files(sysroot)
         sysroot_files = [p.replace('\\', '/') for p in sysroot_files]
+        sysroots_files[srs] = sysroot_files
         if subdir == 'osx-64':
             orig_sysroot_files = sysroot_files
             sysroot_files = [osf.replace('.tbd', '.dylib') if osf.endswith('.tbd') else osf for osf in orig_sysroot_files]
