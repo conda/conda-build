@@ -1109,7 +1109,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
         # macOS hack. Pretend, in the ugliest way I can that any .tbd files
         # we found were actually .dylib files.
         sysroot_files = prefix_files(sysroot)
-		sysroot_files = [p.replace('\\', '/') for p in sysroot_files
+		sysroot_files = [p.replace('\\', '/') for p in sysroot_files]
         if subdir == 'osx-64':
             orig_sysroot_files = sysroot_files
             sysroot_files = [osf.replace('.tbd', '.dylib') if osf.endswith('.tbd') else osf for osf in orig_sysroot_files]
