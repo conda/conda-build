@@ -709,6 +709,8 @@ DEFAULT_MAC_WHITELIST = ['/opt/X11/',
 """
                          ]
 
+# Should contain the System32/SysWOW64 DLLs present on a clean installation of the
+# oldest version of Windows that we support (or are currently) building packages for.
 DEFAULT_WIN_WHITELIST = ['**/ADVAPI32.dll',
                          '**/bcrypt.dll',
                          '**/COMCTL32.dll',
@@ -729,8 +731,7 @@ DEFAULT_WIN_WHITELIST = ['**/ADVAPI32.dll',
                          '**/WINHTTP.dll',
                          '**/WS2_32.dll',
                          '**/ntdll.dll',
-                         '**/msvcrt.dll',
-                         '**/api-ms-win*.dll']
+                         '**/msvcrt.dll']
 
 
 def _collect_needed_dsos(sysroots_files, files, run_prefix, sysroot_substitution, build_prefix, build_prefix_substitution):
@@ -795,7 +796,8 @@ def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_v
                         continue
                     if any(rp == normpath(w) for w in all_lib_exports[prefix]):
                         continue
-                    owners = prefix_owners[prefix][rp] if rp in prefix_owners[prefix] else []
+                    rp_po = rp.replace('\\', '/')
+                    owners = prefix_owners[prefix][rp_po] if rp_po in prefix_owners[prefix] else []
                     # Self-vendoring, not such a big deal but may as well report it?
                     if not len(owners):
                         if any(rp == normpath(w) for w in files):
@@ -807,22 +809,22 @@ def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_v
                     for new_pkg in new_pkgs:
                         if new_pkg not in owners:
                             owners.append(new_pkg)
-                    prefix_owners[prefix][rp] = owners
-                    if len(prefix_owners[prefix][rp]):
+                    prefix_owners[prefix][rp_po] = owners
+                    if len(prefix_owners[prefix][rp_po]):
                         exports = set(e for e in get_exports_memoized(fp, enable_static=enable_static) if not
                                     any(fnmatch(e, pattern) for pattern in ignore_list_syms))
-                        all_lib_exports[prefix][rp] = exports
+                        all_lib_exports[prefix][rp_po] = exports
                         # Check codefile_type to filter out linker scripts.
                         if dynamic_lib:
-                            contains_dsos[prefix_owners[prefix][rp][0]] = True
+                            contains_dsos[prefix_owners[prefix][rp_po][0]] = True
                         elif static_lib:
                             if sysroot_substitution in fp:
-                                if (prefix_owners[prefix][rp][0].name.startswith('gcc_impl_linux') or
-                                prefix_owners[prefix][rp][0].name == 'llvm'):
+                                if (prefix_owners[prefix][rp_po][0].name.startswith('gcc_impl_linux') or
+                                prefix_owners[prefix][rp_po][0].name == 'llvm'):
                                     continue
-                                print("sysroot in {}, owner is {}".format(fp, prefix_owners[prefix][rp][0]))
+                                print("sysroot in {}, owner is {}".format(fp, prefix_owners[prefix][rp_po][0]))
                             # Hmm, not right, muddies the prefixes again.
-                            contains_static_libs[prefix_owners[prefix][rp][0]] = True
+                            contains_static_libs[prefix_owners[prefix][rp_po][0]] = True
 
     return prefix_owners, contains_dsos, contains_static_libs, all_lib_exports
 
@@ -867,18 +869,10 @@ def _lookup_in_system_whitelists(errors, whitelist, needed_dso, sysroots_files, 
     else:
         replacements = [needed_dso]
     in_whitelist = False
-    # It takes a very long time to glob in C:/Windows so we do not do that.
-    for replacement in replacements:
-        needed_dso_w = needed_dso.replace(sysroot_substitution, replacement)
-        # We should pass in multiple paths at once to this, but the code isn't structured for that.
-        in_whitelist = any([caseless_sepless_fnmatch([needed_dso_w], w) for w in whitelist])
-        if in_whitelist:
-            n_dso_p = "Needed DSO {}".format(needed_dso_w)
-            _print_msg(errors, '{}: {} found in the whitelist'.
-                       format(info_prelude, n_dso_p), verbose=verbose)
-            break
-    if not in_whitelist and len(sysroots_files):
-        # Check if we have a CDT package or a file in a sysroot
+    in_sysroots = False
+    if len(sysroots_files):
+        # Check if we have a CDT package or a file in a sysroot.
+        # TODO :: We should not be discarding folder information here beyond the sysroot.
         dso_fname = basename(needed_dso)
         sysroot_files = []
         for sysroot, files in sysroots_files.items():
@@ -891,6 +885,7 @@ def _lookup_in_system_whitelists(errors, whitelist, needed_dso, sysroots_files, 
                 found = [file for file in files if fnmatch(file, wild)]
                 sysroot_files.extend(found)
         if len(sysroot_files):
+            in_sysroots = True
             if 'osx-64' in subdir or 'win' in subdir:
                 in_prefix_dso = sysroot_files[0]
                 n_dso_p = "Needed DSO {}".format(in_prefix_dso)
@@ -921,9 +916,20 @@ def _lookup_in_system_whitelists(errors, whitelist, needed_dso, sysroots_files, 
             _print_msg(errors, "{}: {} not found in packages nor in sysroot, is this binary repackaging?"
                                 " .. do you need to use install_name_tool/patchelf?".
                                 format(msg_prelude, needed_dso), verbose=verbose)
-    elif not in_whitelist:
+    else:
+        # It takes a very long time to glob in C:/Windows so we do not do that.
+        for replacement in replacements:
+            needed_dso_w = needed_dso.replace(sysroot_substitution, replacement + '/')
+            # We should pass in multiple paths at once to this, but the code isn't structured for that.
+            in_whitelist = any([caseless_sepless_fnmatch([needed_dso_w], w) for w in whitelist])
+            if in_whitelist:
+                n_dso_p = "Needed DSO {}".format(needed_dso_w)
+                _print_msg(errors, '{}: {} found in the whitelist'.
+                           format(info_prelude, n_dso_p), verbose=verbose)
+                break
+    if not in_whitelist and not in_sysroots:
         _print_msg(errors, "{}: did not find - or even know where to look for: {}".
-                            format(msg_prelude, needed_dso), verbose=verbose)
+                        format(msg_prelude, needed_dso), verbose=verbose)
 
 
 def _lookup_in_prefix_packages(errors, needed_dso, files, run_prefix, whitelist, info_prelude, msg_prelude,
@@ -1132,7 +1138,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                not resolved.startswith('/') and
                not resolved.startswith(sysroot_substitution) and
                not resolved.startswith(build_prefix_substitution) and
-               resolved not in prefix_owners[run_prefix] and
+               resolved.lower() not in [o.lower() for o in prefix_owners[run_prefix]] and
                resolved not in files):
                 in_whitelist = False
                 if not build_is_host:
