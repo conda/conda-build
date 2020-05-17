@@ -459,12 +459,12 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
                                                       rpaths_transitive=rpaths_transitive,
                                                       default_paths=default_paths,
                                                       sysroot=sysroot)
-                    # '''
                     # Test, randomise case. We only allow for the filename part to be random, and we allow that
                     # only for Windows DLLs. We may need a special case for Lib (from Python) vs lib (from R)
                     # too, but in general we want to enforce case checking as much as we can since even Windowws
                     # can be run case-sensitively if the user wishes.
                     #
+                    '''
                     path_fixed = os.path.normpath(resolved[0])
                     if binary.format == lief.EXE_FORMATS.PE:
                         import random
@@ -474,7 +474,7 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
                             path_fixed = path_fixed.replace(os.sep + 'lib' + os.sep, os.sep + 'Lib' + os.sep)
                         else:
                             path_fixed = path_fixed.replace(os.sep + 'Lib' + os.sep, os.sep + 'lib' + os.sep)
-                    # '''
+                    '''
                     if resolve_filenames:
                         rec = {'orig': orig, 'resolved': path_fixed, 'rpaths': rpaths_transitive}
                     else:
