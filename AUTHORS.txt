@@ -202,3 +202,4 @@ Authors are sorted by number of commits.
 * Bradley Dice
 * Stefan Scherfke
 * Sergio Oller
+* James Lamb
