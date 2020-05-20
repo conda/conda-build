@@ -877,7 +877,6 @@ def _lookup_in_system_whitelists(errors, whitelist, needed_dso, sysroots_files, 
         sysroot_files = []
         for sysroot, files in sysroots_files.items():
             sysroot_os = sysroot.replace('\\', os.sep)
-            wild = join('**', dso_fname)
             if needed_dso.startswith(sysroot_substitution):
                 # Do we want to do this replace?
                 sysroot_files.append(needed_dso.replace(sysroot_substitution, sysroot_os))
