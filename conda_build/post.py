@@ -855,7 +855,7 @@ def _print_msg(errors, text, verbose):
 
 def caseless_sepless_fnmatch(paths, pat):
     match = re.compile("(?i)" + fnmatch_translate(pat.replace('\\', '/'))).match
-    matches = [path for path in paths if match(pat.replace('\\', '/'), re.IGNORECASE)]
+    matches = [path for path in paths if (path == pat) or match(pat.replace('\\', '/'), re.IGNORECASE)]
     return matches
 
 
@@ -882,7 +882,7 @@ def _lookup_in_system_whitelists(errors, whitelist, needed_dso, sysroots_files, 
                 # Do we want to do this replace?
                 sysroot_files.append(needed_dso.replace(sysroot_substitution, sysroot_os))
             else:
-                found = [file for file in files if fnmatch(file, wild)]
+                found = caseless_sepless_fnmatch(files, needed_dso[1:])
                 sysroot_files.extend(found)
         if len(sysroot_files):
             in_sysroots = True
@@ -1112,12 +1112,24 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
         sysroot_files = [p.replace('\\', '/') for p in sysroot_files]
         sysroots_files[srs] = sysroot_files
         if subdir == 'osx-64':
-            orig_sysroot_files = sysroot_files
-            sysroot_files = [osf.replace('.tbd', '.dylib') if osf.endswith('.tbd') else osf for osf in orig_sysroot_files]
+            orig_sysroot_files = sysroot_files.copy()
+            sysroot_files = []
+            for f in orig_sysroot_files:
+                replaced = f
+                if f.endswith('.tbd'):
+                    # For now, look up the line containing:
+                    # install-name:    /System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation
+                    with open(os.path.join(sysroot, f), 'rb') as tbd_fh:
+                        lines = [l for l in tbd_fh.read().decode('utf-8').splitlines() if l.startswith('install-name:')]
+                    if lines:
+                        install_names = [re.match('^install-name:\s+(.*)$', l) for l in lines]
+                        install_names = [insname.groups(1)[0] for insname in install_names]
+                        replaced = install_names[0][1:]
+                sysroot_files.append(replaced)
             diffs = set(orig_sysroot_files) - set(sysroot_files)
             if diffs:
                 log = utils.get_logger(__name__)
-                log.warning("Pretending some '.tbd' files in sysroot: '{}' are '.dylib' files!\n"
+                log.warning("Partially parsed some '.tbd' files in sysroot, pretending .tbds are their install-names\n"
                             "Adding support to 'conda-build' for parsing these in 'liefldd.py' would be easy and useful:\n"
                             "{} ..."
                             .format(sysroot, list(diffs)[1:3]))
