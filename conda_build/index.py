@@ -715,7 +715,11 @@ def _shard_newest_packages(subdir, r, pins=None):
             for pin_value in pins[g_name]:
                 version = r.find_matches(MatchSpec('%s=%s' % (g_name, pin_value)))[0].version
                 matches.update(r.find_matches(MatchSpec('%s=%s' % (g_name, version))))
-        groups[g_name] = matches
+        groups[g_name] = set(
+            m 
+            for m in matches 
+            if m.get("track_features") is None and m.get("features") is None
+        )
     new_r = _get_resolve_object(subdir, precs=[pkg for group in groups.values() for pkg in group])
     return set(_add_missing_deps(new_r, r))
 
