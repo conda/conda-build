@@ -873,8 +873,6 @@ def _lookup_in_system_whitelists(errors, whitelist, needed_dso, sysroots_files, 
     in_sysroots = False
     if len(sysroots_files):
         # Check if we have a CDT package or a file in a sysroot.
-        # TODO :: We should not be discarding folder information here beyond the sysroot.
-        dso_fname = basename(needed_dso)
         sysroot_files = []
         for sysroot, files in sysroots_files.items():
             sysroot_os = sysroot.replace('\\', os.sep)
