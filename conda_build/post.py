@@ -1,5 +1,6 @@
 from __future__ import absolute_import, division, print_function
 
+from copy import copy
 from collections import defaultdict, OrderedDict
 from functools import partial
 from fnmatch import fnmatch, filter as fnmatch_filter, translate as fnmatch_translate
@@ -1110,7 +1111,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
         sysroot_files = [p.replace('\\', '/') for p in sysroot_files]
         sysroots_files[srs] = sysroot_files
         if subdir == 'osx-64':
-            orig_sysroot_files = sysroot_files.copy()
+            orig_sysroot_files = copy(sysroot_files)
             sysroot_files = []
             for f in orig_sysroot_files:
                 replaced = f
