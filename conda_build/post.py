@@ -854,8 +854,9 @@ def _print_msg(errors, text, verbose):
 
 
 def caseless_sepless_fnmatch(paths, pat):
-    match = re.compile("(?i)" + fnmatch_translate(pat.replace('\\', '/'))).match
-    matches = [path for path in paths if (path == pat) or match(pat.replace('\\', '/'), re.IGNORECASE)]
+    pat = pat.replace('\\', '/')
+    match = re.compile("(?i)" + fnmatch_translate(pat)).match
+    matches = [path for path in paths if (path.replace('\\', '/') == pat) or match(path.replace('\\', '/'))]
     return matches
 
 
