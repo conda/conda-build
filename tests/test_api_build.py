@@ -1362,13 +1362,17 @@ def test_overlinking_detection(testing_config):
     testing_config.error_overlinking = True
     testing_config.verify = False
     recipe = os.path.join(metadata_dir, '_overlinking_detection')
-    dest_file = os.path.join(recipe, 'build.sh')
-    copy_into(os.path.join(recipe, 'build_scripts', 'default.sh'), dest_file, clobber=True)
+    dest_sh = os.path.join(recipe, 'build.sh')
+    dest_bat = os.path.join(recipe, 'bld.bat')
+    copy_into(os.path.join(recipe, 'build_scripts', 'default.sh'), dest_sh, clobber=True)
+    copy_into(os.path.join(recipe, 'build_scripts', 'default.bat'), dest_bat, clobber=True)
     api.build(recipe, config=testing_config)
-    copy_into(os.path.join(recipe, 'build_scripts', 'no_as_needed.sh'), dest_file, clobber=True)
+    copy_into(os.path.join(recipe, 'build_scripts', 'no_as_needed.sh'), dest_sh, clobber=True)
+    copy_into(os.path.join(recipe, 'build_scripts', 'with_bzip2.bat'), dest_bat, clobber=True)
     with pytest.raises(OverLinkingError):
         api.build(recipe, config=testing_config)
-    rm_rf(dest_file)
+    rm_rf(dest_sh)
+    rm_rf(dest_bat)
 
 
 def test_overdepending_detection(testing_config):
