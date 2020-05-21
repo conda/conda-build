@@ -1099,14 +1099,14 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
             whitelist = DEFAULT_WIN_WHITELIST
             build_is_host = True if sys.platform == 'win-32' else False
 
+    whitelist += missing_dso_whitelist or []
+
     # Sort the sysroots by the number of files in them so things can assume that
     # the first sysroot is more important than others.
     sysroots_files = dict()
     for sysroot in sysroots:
         from conda_build.utils import prefix_files
         srs = sysroot if sysroot.endswith('/') else sysroot + '/'
-        # macOS hack. Pretend, in the ugliest way I can that any .tbd files
-        # we found were actually .dylib files.
         sysroot_files = prefix_files(sysroot)
         sysroot_files = [p.replace('\\', '/') for p in sysroot_files]
         sysroots_files[srs] = sysroot_files
@@ -1157,7 +1157,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                resolved not in files):
                 in_whitelist = False
                 if not build_is_host:
-                    in_whitelist = any([fnmatch(orig, w) for w in whitelist])
+                    in_whitelist = any([caseless_sepless_fnmatch([orig], w) for w in whitelist])
                 if not in_whitelist:
                     if resolved in prefix_owners[build_prefix]:
                         print("  ERROR :: {} in prefix_owners[build_prefix]".format(needed_dso))
@@ -1171,11 +1171,6 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                         print("WARNING :: For consumer: '{}' with rpaths: '{}'\n"
                               "WARNING :: .. the package containing '{}' could not be found in the run prefix".format(
                             f, rpaths, needed_dso))
-
-    # Should the whitelist be expanded before the 'not in prefix_owners' check?
-    # i.e. Do we want to be able to use the whitelist to allow missing files in general? If so move this up to
-    # the line before 'for needed_dso in needed'
-    whitelist += missing_dso_whitelist or []
 
     _show_linking_messages(files, errors, needed_dsos_for_file, build_prefix, run_prefix, pkg_name,
                            error_overlinking, runpath_whitelist, verbose, requirements_run, lib_packages,
