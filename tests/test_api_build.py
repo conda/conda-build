@@ -713,7 +713,7 @@ def test_noarch_python_with_tests(testing_config):
 @pytest.mark.sanity
 def test_noarch_python_1(testing_config):
     output = api.build(os.path.join(metadata_dir, "_noarch_python"), config=testing_config)[0]
-    assert package_has_file(output, 'info/files') is not ''
+    assert package_has_file(output, 'info/files') != ''
     extra = json.loads(package_has_file(output, 'info/link.json'))
     assert 'noarch' in extra
     assert 'entry_points' in extra['noarch']
