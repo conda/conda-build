@@ -23,7 +23,7 @@ function install_conda_build_test_deps_fn()
   conda install -y --show-channel-urls "${_PKGS[@]}"
   if [[ ! -d ../conda_build_test_recipe ]]; then
     pushd ..
-      git clone https://github.com/conda/conda_build_test_recipe
+      git clone "https://github.com/conda/conda_build_test_recipe"
     popd
   fi
 }
