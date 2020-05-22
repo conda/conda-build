@@ -140,7 +140,7 @@ def msvc_env_cmd(bits, config, override=None):
     msvc_env_lines.append('set "VS_VERSION={}"'.format(version))
     msvc_env_lines.append('set "VS_MAJOR={}"'.format(vs_major))
     msvc_env_lines.append('set "VS_YEAR={}"'.format(VS_VERSION_STRING[version][-4:]))
-    if vs_major >= 16:
+    if int(vs_major) >= 16:
         # No Win64 for VS 2019.
         msvc_env_lines.append('set "CMAKE_GENERATOR={}"'.format(VS_VERSION_STRING[version]))
     else:
