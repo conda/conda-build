@@ -9,3 +9,8 @@ build:
     - has-prefix
     - both-slash-prefix  # [win]
     - forward-slash-prefix  # [win]
+
+requirements:
+  build:
+    - python
+  host:

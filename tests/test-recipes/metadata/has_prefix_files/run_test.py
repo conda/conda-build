@@ -4,6 +4,7 @@ from os.path import join
 
 
 def main():
+    # Even on Windows, forward-slashes are how we replace the prefix
     prefix = os.environ['PREFIX'].replace("\\", "/")
 
     with open(join(prefix, 'unlisted-text-prefix')) as f:
@@ -21,13 +22,25 @@ def main():
     assert prefix in data, prefix + " not found in has-prefix" + data
 
     if sys.platform == 'win32':
+        # Given the above comment, this is unnecessary.
         forward_slash_prefix = prefix.replace('\\', '/')
         with open(join(prefix, 'forward-slash-prefix')) as f:
             data = f.read()
 
         print('forward-slash-prefix')
         print(data)
-        assert forward_slash_prefix in data, prefix + " not found in " + data
+        assert forward_slash_prefix in data, forward_slash_prefix + " not found in " + data
+
+        with open(join(prefix, 'both-slash-prefix')) as f:
+            data = f.read()
+
+        print('both-slash-prefix')
+        print(data)
+        assert forward_slash_prefix in data, forward_slash_prefix + " not found in " + data
+        assert prefix in data, prefix + " not found in " + data
+        # .. Mixed slash prefixes? What to do? Normalizing to backslashes is probably best.
+        # TODO :: Add this mixed test.
+
     else:
         with open(join(prefix, 'binary-has-prefix'), 'rb') as f:
             data = f.read()
