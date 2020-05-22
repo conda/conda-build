@@ -762,6 +762,8 @@ def _collect_needed_dsos(sysroots_files, files, run_prefix, sysroot_substitution
                 resolved = resolved.replace(build_prefix, build_prefix_substitution)
             if resolved.startswith(run_prefix):
                 resolved = relpath(resolved, run_prefix).replace(os.sep, '/')
+            # If resolved still starts with '$RPATH' then that means we will either find it in
+            # the whitelist or it will present as an error later.
             res['resolved'] = resolved
         needed_dsos_for_file[f] = needed
         all_needed_dsos = all_needed_dsos.union(set(info['resolved'] for f, info in needed.items()))
@@ -861,8 +863,8 @@ def caseless_sepless_fnmatch(paths, pat):
     return matches
 
 
-def _lookup_in_system_whitelists(errors, whitelist, needed_dso, sysroots_files, msg_prelude, info_prelude,
-                                 sysroot_prefix, sysroot_substitution, subdir, verbose):
+def _lookup_in_sysroots_and_whitelist(errors, whitelist, needed_dso, sysroots_files, msg_prelude, info_prelude,
+                                      sysroot_prefix, sysroot_substitution, subdir, verbose):
     # A system or ignored dependency. We should be able to find it in one of the CDT or
     # compiler packages on linux or in a sysroot folder on other OSes. These usually
     # start with '$RPATH/' which indicates pyldd did not find them, so remove that now.
@@ -911,11 +913,7 @@ def _lookup_in_system_whitelists(errors, whitelist, needed_dso, sysroots_files, 
                     _print_msg(errors, '{}: {} not found in any CDT/compiler package,'
                                         ' nor the whitelist?!'.
                                     format(msg_prelude, n_dso_p), verbose=verbose)
-        else:
-            _print_msg(errors, "{}: {} not found in packages nor in sysroot, is this binary repackaging?"
-                                " .. do you need to use install_name_tool/patchelf?".
-                                format(msg_prelude, needed_dso), verbose=verbose)
-    else:
+    if not in_sysroots:
         # It takes a very long time to glob in C:/Windows so we do not do that.
         for replacement in replacements:
             needed_dso_w = needed_dso.replace(sysroot_substitution, replacement + '/')
@@ -927,8 +925,9 @@ def _lookup_in_system_whitelists(errors, whitelist, needed_dso, sysroots_files, 
                            format(info_prelude, n_dso_p), verbose=verbose)
                 break
     if not in_whitelist and not in_sysroots:
-        _print_msg(errors, "{}: did not find - or even know where to look for: {}".
-                        format(msg_prelude, needed_dso), verbose=verbose)
+        _print_msg(errors, "{}: {} not found in packages, sysroot(s) nor the missing_dso_whietlist.\n"
+                           ".. is this binary repackaging?".
+                   format(msg_prelude, needed_dso), verbose=verbose)
 
 
 def _lookup_in_prefix_packages(errors, needed_dso, files, run_prefix, whitelist, info_prelude, msg_prelude,
@@ -1018,8 +1017,9 @@ def _show_linking_messages(files, errors, needed_dsos_for_file, build_prefix, ru
                 _print_msg(errors, "{}: {} found in build prefix; should never happen".format(
                            err_prelude, needed_dso), verbose=verbose)
             else:
-                _lookup_in_system_whitelists(errors, whitelist, needed_dso, sysroots, msg_prelude,
-                                             info_prelude, sysroot_prefix, sysroot_substitution, subdir, verbose)
+                _lookup_in_sysroots_and_whitelist(errors, whitelist, needed_dso, sysroots, msg_prelude,
+                                                  info_prelude, sysroot_prefix, sysroot_substitution,
+                                                  subdir, verbose)
 
 
 def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdir,

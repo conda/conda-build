@@ -212,6 +212,7 @@ def get_rpaths(file, exe_dirname, envroot, windows_root=''):
             rpaths.append(exe_dirname.replace('\\', '/'))
         if windows_root:
             rpaths.append('/'.join((windows_root, "System32")))
+            rpaths.append('/'.join((windows_root, "System32", "downlevel")))
             rpaths.append(windows_root)
         if envroot:
             # and not lief.PE.HEADER_CHARACTERISTICS.DLL in binary.header.characteristics_list:
