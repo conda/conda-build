@@ -8,10 +8,13 @@ function install_conda_build_test_deps_fn()
     _PKGS+=(futures scandir pathlib2)
   fi
   _PKGS+=(pytest pytest-azurepipelines pytest-cov pytest-forked pytest-xdist)
-  _PKGS+=(pytest-replay pytest-rerunfailures pytest-mock)
-  _PKGS+=(anaconda-client git requests filelock contextlib2 jinja2)
+  if [[ "$PYTHON_VERSION" != "2.7" ]]; then
+    _PKGS+=(pytest-replay pytest-rerunfailures pytest-mock)
+    _PKGS+=(py-lief)
+  fi
+  _PKGS+=(anaconda-client git requests filelock contextlib2 jinja2 flaky)
   _PKGS+=(ripgrep pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz tqdm)
-  _PKGS+=(conda-package-handling py-lief python-libarchive-c perl)
+  _PKGS+=(conda-package-handling perl python-libarchive-c)
   _PKGS+=(pip numpy mock pkginfo)
   if [[ $(uname) =~ .*inux.* ]]; then
     _PKGS+=(patchelf)

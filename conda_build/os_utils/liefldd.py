@@ -170,10 +170,10 @@ if have_lief:
     get_rpaths_raw = partial(get_rpathy_thing_raw_partial, elf_attribute='rpath', elf_dyn_tag=lief.ELF.DYNAMIC_TAGS.RPATH)
 else:
     def get_runpaths_raw(file):
-        return []
+        return [], None, None
 
     def get_rpaths_raw(file):
-        return []
+        return [], None, None
 
 
 def get_runpaths_or_rpaths_raw(file):
@@ -496,7 +496,7 @@ def get_linkages(filename, resolve_filenames=True, recurse=True,
     result_pyldd = []
     debug = False
     if not have_lief or debug:
-        if codefile_type(filename) not in ('DLLfile', 'EXEfile'):
+        if codefile_type(filename) in ('DLLfile', 'EXEfile'):
             result_pyldd = inspect_linkages_pyldd(filename, resolve_filenames=resolve_filenames, recurse=recurse,
                                                   sysroot=sysroot, arch=arch)
             if not have_lief:
