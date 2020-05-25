@@ -8,7 +8,7 @@ function install_conda_build_test_deps_fn()
     _PKGS+=(futures scandir pathlib2)
   fi
   _PKGS+=(pytest pytest-azurepipelines pytest-cov pytest-forked pytest-xdist)
-  if [[ "$PYTHON_VERSION" != "2.7" ]] && [[ ! ${uname) =~ M* ]]; then
+  if [[ "$PYTHON_VERSION" != "2.7" ]] || [[ ! $(uname) =~ M* ]]; then
     _PKGS+=(pytest-replay pytest-rerunfailures pytest-mock)
     _PKGS+=(py-lief)
   fi
