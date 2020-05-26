@@ -687,7 +687,7 @@ def _add_missing_deps(new_r, original_r):
                 ms = MatchSpec(dep_spec)
                 if not new_r.find_matches(ms):
                     matches = original_r.find_matches(ms)
-                    if matches:
+                    if matches and not any(m.features or m.track_features for m in matches):
                         version = matches[0].version
                         expanded_groups[ms.name] = (
                             set(expanded_groups.get(ms.name, [])) |
@@ -720,6 +720,9 @@ def _shard_newest_packages(subdir, r, pins=None):
             for m in matches
             if not (m.track_features or m.features)
         )
+        for m in matches:
+            print(m, m.track_features, m.features, m in groups[g_name])
+
     new_r = _get_resolve_object(subdir, precs=[pkg for group in groups.values() for pkg in group])
     return set(_add_missing_deps(new_r, r))
 
@@ -727,6 +730,7 @@ def _shard_newest_packages(subdir, r, pins=None):
 def _build_current_repodata(subdir, repodata, pins):
     r = _get_resolve_object(subdir, repodata=repodata)
     keep_pkgs = _shard_newest_packages(subdir, r, pins)
+    print([k.name for k in keep_pkgs])
     new_repodata = {k: repodata[k] for k in set(repodata.keys()) - set(['packages', 'packages.conda'])}
     packages = {}
     conda_packages = {}
