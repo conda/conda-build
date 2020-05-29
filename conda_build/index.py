@@ -696,7 +696,7 @@ def _add_missing_deps(new_r, original_r):
     return [pkg for group in expanded_groups.values() for pkg in group]
 
 
-def _add_prev_ver_for_fratures(new_r, orig_r):
+def _add_prev_ver_for_features(new_r, orig_r):
     expanded_groups = copy.deepcopy(new_r.groups)
     for g_name in new_r.groups:
         if not any(m.track_features or m.features for m in new_r.groups[g_name]):
@@ -750,7 +750,7 @@ def _shard_newest_packages(subdir, r, pins=None):
 
     # now for any pkg with features, add at least one previous version
     # also return
-    return set(_add_prev_ver_for_fratures(new_r, r))
+    return set(_add_prev_ver_for_features(new_r, r))
 
 
 def _build_current_repodata(subdir, repodata, pins):
