@@ -718,7 +718,7 @@ def _add_prev_ver_for_features(new_r, orig_r):
                     keep_m = _m
                     break
             if keep_m is not None:
-                expanded_groups[g_name].add(keep_m)
+                expanded_groups[g_name] = set([keep_m]) | set(expanded_groups.get(g_name, []))
 
     return [pkg for group in expanded_groups.values() for pkg in group]
 
