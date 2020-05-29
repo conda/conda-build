@@ -704,7 +704,7 @@ def _add_prev_ver_for_features(new_r, orig_r):
             continue
 
         # versions are sorted here so this is the latest
-        latest_version = VersionOrder("%s" % new_r.groups[g_name][0].version)
+        latest_version = VersionOrder(str(new_r.groups[g_name][0].version))
         if g_name in orig_r.groups:
             # now we iterate through the list to find the next to latest
             # without a feature
@@ -712,7 +712,7 @@ def _add_prev_ver_for_features(new_r, orig_r):
             for i in range(len(orig_r.groups[g_name])):
                 _m = orig_r.groups[g_name][i]
                 if (
-                    VersionOrder(_m.version) <= latest_version and
+                    VersionOrder(str(_m.version)) <= latest_version and
                     not (_m.track_features or _m.features)
                 ):
                     keep_m = _m
