@@ -687,12 +687,39 @@ def _add_missing_deps(new_r, original_r):
                 ms = MatchSpec(dep_spec)
                 if not new_r.find_matches(ms):
                     matches = original_r.find_matches(ms)
-                    if matches and not any(m.features or m.track_features for m in matches):
+                    if matches:
                         version = matches[0].version
                         expanded_groups[ms.name] = (
                             set(expanded_groups.get(ms.name, [])) |
                             set(original_r.find_matches(MatchSpec('%s=%s' % (ms.name, version)))))
                 seen_specs.add(dep_spec)
+    return [pkg for group in expanded_groups.values() for pkg in group]
+
+
+def _add_prev_ver_for_fratures(new_r, orig_r):
+    expanded_groups = copy.deepcopy(new_r.groups)
+    for g_name in new_r.groups:
+        if not any(m.track_features or m.features for m in new_r.groups[g_name]):
+            # no features so skip
+            continue
+
+        # versions are sorted here so this is the latest
+        latest_version = VersionOrder("%s" % new_r.groups[g_name][0].version)
+        if g_name in orig_r.grouos:
+            # now we iterate through the list to find the next to latest
+            # without a feature
+            keep_m = None
+            for i in range(len(orig_r.groups[g_name])):
+                _m = orig_r.grouos[g_name][i]
+                if (
+                    VersionOrder(_m.version) < latest_version and
+                    not (_m.track_features or _m.features)
+                ):
+                    keep_m = _m
+                    break
+            if keep_m is not None:
+                expanded_groups[g_name].add(keep_m)
+
     return [pkg for group in expanded_groups.values() for pkg in group]
 
 
@@ -715,14 +742,15 @@ def _shard_newest_packages(subdir, r, pins=None):
             for pin_value in pins[g_name]:
                 version = r.find_matches(MatchSpec('%s=%s' % (g_name, pin_value)))[0].version
                 matches.update(r.find_matches(MatchSpec('%s=%s' % (g_name, version))))
-        groups[g_name] = set(
-            m
-            for m in matches
-            if not (m.track_features or m.features)
-        )
+        groups[g_name] = set(m for m in matches)
 
+    # add the deps of the stuff in the index
     new_r = _get_resolve_object(subdir, precs=[pkg for group in groups.values() for pkg in group])
-    return set(_add_missing_deps(new_r, r))
+    new_r = _get_resolve_object(subdir, precs=_add_missing_deps(new_r, r))
+
+    # now for any pkg with features, add at least one previous version
+    # also return
+    return set(_add_prev_ver_for_fratures(new_r, r))
 
 
 def _build_current_repodata(subdir, repodata, pins):
