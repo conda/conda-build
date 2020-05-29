@@ -705,12 +705,12 @@ def _add_prev_ver_for_fratures(new_r, orig_r):
 
         # versions are sorted here so this is the latest
         latest_version = VersionOrder("%s" % new_r.groups[g_name][0].version)
-        if g_name in orig_r.grouos:
+        if g_name in orig_r.groups:
             # now we iterate through the list to find the next to latest
             # without a feature
             keep_m = None
             for i in range(len(orig_r.groups[g_name])):
-                _m = orig_r.grouos[g_name][i]
+                _m = orig_r.groups[g_name][i]
                 if (
                     VersionOrder(_m.version) < latest_version and
                     not (_m.track_features or _m.features)
