@@ -279,7 +279,7 @@ class PopenWrapper(object):
                      "get CPU time and memory usage statistics.")
 
         # The polling interval (in seconds)
-        time_int = kwargs.pop('time_int', 2)
+        time_float = float(kwargs.pop('time_int', 2))
 
         disk_usage_dir = kwargs.get('cwd', sys.prefix)
 
@@ -318,7 +318,8 @@ class PopenWrapper(object):
                         # process already died.  Just ignore it.
                         continue
                     processes += 1
-
+                ps_time_end = time.time()
+                duration = ps_time_end - start_time
                 # Sum the memory usage of all the children together (2D columnwise sum)
                 self.rss = max(rss, self.rss)
                 self.vms = max(vms, self.vms)
@@ -327,9 +328,22 @@ class PopenWrapper(object):
                 self.processes = max(processes, self.processes)
 
                 # Get disk usage
+                ds_time_start = time.time()
                 self.disk = max(directory_size(disk_usage_dir), self.disk)
+                ds_time_end = time.time()
 
-                time.sleep(time_int)
+                duration = (ds_time_end - start_time)
+
+                if time_float / 10.0 <= duration:
+                    time.sleep(time_float)
+                else:
+                    log = get_logger(__name__)
+                    log.warning("stats gathering takes ages (>1/10th the sleep period of %1.1fs):\n"
+                                "(Processes: %02.2fs, Disk Space: %02.2fs). This will\n"
+                                "affect the speed of your build and computer badly.\n"
+                                "sleeping for 10x the previous duration of %02.2fs instead" %
+                                (time_float, ps_time_end - start_time, ds_time_end - ds_time_start, duration * 3.0))
+                    time.sleep(duration * 10.0)
                 self.elapsed = time.time() - start_time
                 self.returncode = _popen.poll()
 
