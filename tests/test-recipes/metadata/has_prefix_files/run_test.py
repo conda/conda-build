@@ -31,10 +31,10 @@ def main():
         print(data)
         assert forward_slash_prefix in data, forward_slash_prefix + " not found in " + data
 
-        with open(join(prefix, 'both-slash-prefix')) as f:
+        with open(join(prefix, 'mixed-slash-prefix')) as f:
             data = f.read()
 
-        print('both-slash-prefix')
+        print('mixed-slash-prefix')
         print(data)
         assert forward_slash_prefix in data, forward_slash_prefix + " not found in " + data
         assert prefix in data, prefix + " not found in " + data
