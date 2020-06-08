@@ -470,20 +470,10 @@ def test_top_level_finalized(testing_config):
 def test_variant_subkeys_retained(testing_config):
     m = api.render(os.path.join(recipe_dir, '31_variant_subkeys'), finalize=False, bypass_env_check=True)[0][0]
     found_replacements = False
+    from conda_build.build import get_all_replacements
     for variant in m.config.variants:
-        if 'replacements' in variant:
-            found_replacements = True
-            replacements = variant['replacements']
-            assert isinstance(replacements, (dict, OrderedDict)), "Found `replacements` {},"  \
-                                                                  "but it is not a dict".format(
-                replacements)
-            assert 'all_replacements' in replacements, "Found `replacements` {}, but it"  \
-                                                       "doesn't contain `all_replacements`".format(replacements)
-            assert isinstance(replacements['all_replacements'], list), "Found `all_replacements` {},"  \
-                                                                       "but it is not a list".format(
-                replacements)
-            for index, replacement in enumerate(replacements['all_replacements']):
-                assert 'tag' in replacement, "Found `all_replacements[{}]` {}," \
-                                                                   "but it has no `tag` key.".format(
-                    replacements[index, 'all_replacements'][index])
-    assert found_replacements, "Did not find replacements"
+        found_replacements = get_all_replacements(variant)
+    assert len(found_replacements), "Did not find replacements"
+    m.final = False
+    outputs = m.get_output_metadata_set(permit_unsatisfiable_variants=False)
+    get_all_replacements(outputs[0][1].config.variant)

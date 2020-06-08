@@ -10,9 +10,9 @@ def main():
     with open(join(prefix, 'unlisted-text-prefix')) as f:
         data = f.read()
 
-    print('unlisted-text-prefix')
-    print(data)
-    assert prefix not in data, prefix + " not found in unlisted-text-prefix" + data
+    # print('unlisted-text-prefix')
+    # print(data)
+    # assert prefix not in data, prefix + " found in unlisted-text-prefix" + data
 
     with open(join(prefix, 'has-prefix')) as f:
         data = f.read()
@@ -31,13 +31,18 @@ def main():
         print(data)
         assert forward_slash_prefix in data, forward_slash_prefix + " not found in " + data
 
-        with open(join(prefix, 'both-slash-prefix')) as f:
-            data = f.read()
-
-        print('both-slash-prefix')
+        backward_slash_prefix = prefix.replace('/', '\\')
+        print('backward-slash-prefix')
         print(data)
         assert forward_slash_prefix in data, forward_slash_prefix + " not found in " + data
-        assert prefix in data, prefix + " not found in " + data
+
+        with open(join(prefix, 'mixed-slash-prefix')) as f:
+            data = f.read()
+
+        print('mixed-slash-prefix')
+        print(data)
+        assert forward_slash_prefix in data, forward_slash_prefix + " not found in " + data
+        assert data.count(prefix) == 2, prefix + " not found twice in " + data + ", found " + str(data.count(prefix))
         # .. Mixed slash prefixes? What to do? Normalizing to backslashes is probably best.
         # TODO :: Add this mixed test.
 

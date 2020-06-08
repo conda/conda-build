@@ -694,6 +694,8 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
     top_loop = metadata.get_reduced_variant_set(used_variables)
 
     for variant in top_loop:
+        from conda_build.build import get_all_replacements
+        get_all_replacements(variant)
         mv = metadata.copy()
         mv.config.variant = variant
 
@@ -712,7 +714,7 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
             mv.config.variants = (filter_by_key_value(mv.config.variants, key, values,
                                                       'distribute_variants_reduction') or
                                   mv.config.variants)
-
+        get_all_replacements(mv.config.variants)
         pin_run_as_build = variant.get('pin_run_as_build', {})
         if mv.numpy_xx and 'numpy' not in pin_run_as_build:
             pin_run_as_build['numpy'] = {'min_pin': 'x.x', 'max_pin': 'x.x'}
@@ -742,7 +744,7 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
                            mv.config.variant.get('target_platform', mv.config.subdir),
                            tuple((var, mv.config.variant.get(var))
                                  for var in mv.get_used_vars()))] = \
-                                    (mv, need_source_download, None)
+                                     (mv, need_source_download, None)
     # list of tuples.
     # each tuple item is a tuple of 3 items:
     #    metadata, need_download, need_reparse_in_env
@@ -754,7 +756,11 @@ def expand_outputs(metadata_tuples):
     expanded_outputs = OrderedDict()
 
     for (_m, download, reparse) in metadata_tuples:
-        for (output_dict, m) in _m.copy().get_output_metadata_set(permit_unsatisfiable_variants=False):
+        from conda_build.build import get_all_replacements
+        replacements = get_all_replacements(_m.config)
+        from copy import deepcopy
+        for (output_dict, m) in deepcopy(_m).get_output_metadata_set(permit_unsatisfiable_variants=False):
+            get_all_replacements(m.config)
             expanded_outputs[m.dist()] = (output_dict, m)
     return list(expanded_outputs.values())
 

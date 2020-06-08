@@ -858,7 +858,56 @@ def write_hash_input(m):
         json.dump(recipe_input, f, indent=2)
 
 
-def get_files_with_prefix(m, files_in, prefix):
+from conda_build.config import Config
+def get_all_replacements(config_or_variant):
+    # This function tests that our various
+    '''
+    if (not isinstance(config_or_variant, Config) and
+            'replacements' in config_or_variant or
+            not hasattr(config_or_variant, 'variant')):
+        print('get_all_replacements(): passed a variant directly')
+        variant = config_or_variant
+    else:
+        if 'replacements' in config_or_variant.variant:
+            print('found in variant')
+            variant = config_or_variant.variant
+        if 'replacements' in config_or_variant.variants:
+            variant = config_or_variant.variants
+            print('found in variants')
+    '''
+    if isinstance(config_or_variant, Config):
+        # print('get_all_replacements(): passed a Config')
+        variant = None
+        if 'replacements' in config_or_variant.variant:
+            # print('found in variant')
+            variant = config_or_variant.variant
+        if not variant:
+            return []
+    else:
+        # print('get_all_replacements(): passed a variant directly')
+        variant = config_or_variant
+
+    if 'replacements' in variant:
+        replacements = variant['replacements']
+        assert isinstance(replacements, (dict, OrderedDict)), "Found `replacements` {}," \
+                                                              "but it is not a dict".format(
+            replacements)
+        assert 'all_replacements' in replacements, "Found `replacements` {}, but it" \
+                                                   "doesn't contain `all_replacements`".format(replacements)
+        assert isinstance(replacements['all_replacements'], list), "Found `all_replacements` {}," \
+                                                                   "but it is not a list".format(
+            replacements)
+        assert isinstance(replacements['all_replacements'][0], (dict, OrderedDict)), "Found `all_replacements[0]` {}," \
+                                                                             "but it is not a dict".format(
+            replacements)
+        if len(replacements['all_replacements']):
+            assert isinstance(replacements['all_replacements'][0], (OrderedDict, dict)), \
+                "Found `all_replacements[0]` {} but it is not a dict".format(replacements)
+            return replacements['all_replacements']
+    return []
+
+
+def get_files_with_prefix(m, replacements, files_in, prefix):
     import time
     start = time.time()
     # It is nonsensical to replace anything in a symlink.
@@ -918,12 +967,11 @@ def get_files_with_prefix(m, files_in, prefix):
     files_with_prefix = files_with_prefix_new
     all_matches = {}
 
-    variant = m.config.variant
+    # variant = m.config.variant if 'replacements' in m.config.variant else m.config.variants
     replacement_tags = ''
-    if 'replacements' in variant:
-        replacements = variant['replacements']
-        last = len(replacements['all_replacements']) - 1
-        for index, replacement in enumerate(replacements['all_replacements']):
+    if len(replacements):
+        last = len(replacements) - 1
+        for index, replacement in enumerate(replacements):
             all_matches = have_regex_files(files=[f for f in files if any(
                                                   glob2.fnmatch.fnmatch(f, r) for r in replacement['glob_patterns'])],
                                            prefix=prefix,
@@ -1194,7 +1242,7 @@ def write_run_exports(m):
             json.dump(run_exports, f)
 
 
-def create_info_files(m, files, prefix):
+def create_info_files(m, replacements, files, prefix):
     '''
     Creates the metadata files that will be stored in the built package.
 
@@ -1226,7 +1274,7 @@ def create_info_files(m, files, prefix):
 
     write_info_files_file(m, files)
 
-    files_with_prefix = get_files_with_prefix(m, files, prefix)
+    files_with_prefix = get_files_with_prefix(m, replacements, files, prefix)
     files_with_prefix = record_prefix_files(m, files_with_prefix)
     checksums = create_info_files_json_v1(m, m.config.info_dir, prefix, files, files_with_prefix)
 
@@ -1428,7 +1476,7 @@ can lead to packages that include their dependencies.""" % meta_files))
 def bundle_conda(output, metadata, env, stats, **kw):
     log = utils.get_logger(__name__)
     log.info('Packaging %s', metadata.dist())
-
+    get_all_replacements(metadata.config)
     files = output.get('files', [])
 
     # this is because without any requirements at all, we still need to have the host prefix exist
@@ -1443,7 +1491,12 @@ def bundle_conda(output, metadata, env, stats, **kw):
     # need to treat top-level stuff specially.  build/script in top-level stuff should not be
     #     re-run for an output with a similar name to the top-level recipe
     is_output = 'package:' not in metadata.get_recipe_text()
+
+    # metadata.get_top_level_recipe_without_outputs is destructive to replacements.
+
+    replacements = get_all_replacements(metadata.config)
     top_build = metadata.get_top_level_recipe_without_outputs().get('build', {}) or {}
+
     activate_script = metadata.activate_build_script
     if (script and not output.get('script')) and (is_output or not top_build.get('script')):
         # do add in activation, but only if it's not disabled
@@ -1560,7 +1613,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
     utils.rm_rf(os.path.join(metadata.config.info_dir, 'test'))
 
     with tmp_chdir(metadata.config.host_prefix):
-        output['checksums'] = create_info_files(metadata, files, prefix=metadata.config.host_prefix)
+        output['checksums'] = create_info_files(metadata, replacements, files, prefix=metadata.config.host_prefix)
 
     # here we add the info files into the prefix, so we want to re-collect the files list
     prefix_files = set(utils.prefix_files(metadata.config.host_prefix))
@@ -1932,8 +1985,11 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
         try_download(m, no_download_source=False)
 
     if post in [False, None]:
+        get_all_replacements(m.config.variants)
+        get_all_replacements(m.config.variant)
         output_metas = expand_outputs([(m, need_source_download, need_reparse_in_env)])
-
+        if len(output_metas):
+            get_all_replacements(output_metas[0][1].config)
         skipped = []
         package_locations = []
         # TODO: should we check both host and build envs?  These are the same, except when
@@ -2162,6 +2218,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
     new_pkgs = {}
     if not provision_only and post in [True, None]:
         outputs = output_metas or m.get_output_metadata_set(permit_unsatisfiable_variants=False)
+        get_all_replacements(outputs[0][1].config)
         top_level_meta = m
 
         # this is the old, default behavior: conda package, with difference between start
@@ -2190,6 +2247,8 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
             # is distributing the matrix of used variables.
 
             for (output_d, m) in outputs:
+                get_all_replacements(m.config.variants)
+                get_all_replacements(m.config.variant)
                 if m.skip():
                     print(utils.get_skip_message(m))
                     continue
@@ -2549,6 +2608,10 @@ def write_build_scripts(m, script, build_file):
 
     if m.noarch == "python":
         env["PYTHONDONTWRITEBYTECODE"] = True
+
+    # The stuff in replacements is not parsable in a shell script (or we need to escape it)
+    if "replacements" in env:
+        del env["replacements"]
 
     work_file = join(m.config.work_dir, 'conda_build.sh')
     env_file = join(m.config.work_dir, 'build_env_setup.sh')
@@ -3007,6 +3070,7 @@ def build_tree(recipe_list, config, stats, build_only=False, post=None, notest=F
             # recipe are looped over here.
 
             for (metadata, need_source_download, need_reparse_in_env) in metadata_tuples:
+                get_all_replacements(metadata.config.variant)
                 if post is None:
                     utils.rm_rf(metadata.config.host_prefix)
                     utils.rm_rf(metadata.config.build_prefix)
