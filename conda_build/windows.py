@@ -231,7 +231,7 @@ def write_build_scripts(m, env, bld_bat):
         fo.write('set "INCLUDE={};%INCLUDE%"\n'.format(env["LIBRARY_INC"]))
         fo.write('set "LIB={};%LIB%"\n'.format(env["LIBRARY_LIB"]))
         if m.config.activate and m.name() != 'conda':
-            write_bat_activation_text(fo, env_script, m)
+            write_bat_activation_text(fo, m)
     # bld_bat may have been generated elsewhere with contents of build/script
     work_script = join(m.config.work_dir, 'conda_build.bat')
     if os.path.isfile(bld_bat):
