@@ -4,4 +4,8 @@ package:
 
 build:
   binary_has_prefix_files:
-    - binary-has-prefix
+    - binary-has-prefix-utf-8
+    - binary-has-prefix-utf-16-le
+    - binary-has-prefix-utf-16-be
+    - binary-has-prefix-utf-32-le
+    - binary-has-prefix-utf-32-be
