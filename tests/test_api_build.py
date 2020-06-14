@@ -237,6 +237,14 @@ def test_binary_has_prefix_files(testing_workdir, testing_config):
     api.build(os.path.join(metadata_dir, '_binary_has_prefix_files'), config=testing_config)
 
 
+# @pytest.mark.xfail
+@pytest.mark.sanity
+@pytest.mark.skipif(sys.platform == "win32",
+                    reason="no binary prefix manipulation done on windows.")
+def test_binary_has_prefix_files_non_utf8(testing_workdir, testing_config):
+    api.build(os.path.join(metadata_dir, '_binary_has_utf_non_8'), config=testing_config)
+
+
 def test_relative_path_git_versioning(testing_workdir, testing_config):
     # conda_build_test_recipe is a manual step.  Clone it at the same level as
     #    your conda-build source.
