@@ -9,11 +9,12 @@ supported_encodings = [
 ]
 
 prefix = os.environ['PREFIX']
-fn = os.path.join(prefix, 'binary-has-prefix')
 
 if not os.path.isdir(prefix):
     os.makedirs(prefix)
 
-with open(fn, 'wb') as f:
-    for encoding in supported_encodings:
+for encoding in supported_encodings:
+    fn = os.path.join(
+        prefix, 'binary-has-prefix-{encoding}'.format(encoding=encoding)
+    with open(fn, 'wb') as f:
         f.write(prefix.encode(encoding) + b'\x00\x00\x00\x00')
