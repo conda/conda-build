@@ -237,7 +237,7 @@ def test_binary_has_prefix_files(testing_workdir, testing_config):
     api.build(os.path.join(metadata_dir, '_binary_has_prefix_files'), config=testing_config)
 
 
-# @pytest.mark.xfail
+@pytest.mark.xfail
 @pytest.mark.sanity
 @pytest.mark.skipif(sys.platform == "win32",
                     reason="no binary prefix manipulation done on windows.")
