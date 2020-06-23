@@ -16,7 +16,7 @@ Installation
     # Display information about current conda install
     conda info
 
-    # Install conda-build in the current env
+    # Install conda-build in the current 'root' env
     conda install -n root conda-build
 
 
