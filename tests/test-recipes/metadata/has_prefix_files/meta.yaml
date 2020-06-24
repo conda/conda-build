@@ -8,3 +8,9 @@ build:
   has_prefix_files:
     - has-prefix
     - both-slash-prefix  # [win]
+    - forward-slash-prefix  # [win]
+
+requirements:
+  build:
+    - python
+  host:

@@ -136,11 +136,16 @@ def msvc_env_cmd(bits, config, override=None):
         # Default argument `arch_selector` is defined above
         return 'call "{cmd}" {arch}'.format(cmd=cmd, arch=arch)
 
+    vs_major = version.split('.')[0]
     msvc_env_lines.append('set "VS_VERSION={}"'.format(version))
-    msvc_env_lines.append('set "VS_MAJOR={}"'.format(version.split('.')[0]))
+    msvc_env_lines.append('set "VS_MAJOR={}"'.format(vs_major))
     msvc_env_lines.append('set "VS_YEAR={}"'.format(VS_VERSION_STRING[version][-4:]))
-    msvc_env_lines.append('set "CMAKE_GENERATOR={}"'.format(VS_VERSION_STRING[version] +
-                                                            {'64': ' Win64', '32': ''}[bits]))
+    if int(vs_major) >= 16:
+        # No Win64 for VS 2019.
+        msvc_env_lines.append('set "CMAKE_GENERATOR={}"'.format(VS_VERSION_STRING[version]))
+    else:
+        msvc_env_lines.append('set "CMAKE_GENERATOR={}"'.format(VS_VERSION_STRING[version] +
+                                                                {'64': ' Win64', '32': ''}[bits]))
     # tell msys2 to ignore path conversions for issue-causing windows-style flags in build
     #   See https://github.com/conda-forge/icu-feedstock/pull/5
     msvc_env_lines.append('set "MSYS2_ARG_CONV_EXCL=/AI;/AL;/OUT;/out"')
