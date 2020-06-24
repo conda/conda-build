@@ -170,10 +170,10 @@ if have_lief:
     get_rpaths_raw = partial(get_rpathy_thing_raw_partial, elf_attribute='rpath', elf_dyn_tag=lief.ELF.DYNAMIC_TAGS.RPATH)
 else:
     def get_runpaths_raw(file):
-        return []
+        return [], None, None
 
     def get_rpaths_raw(file):
-        return []
+        return [], None, None
 
 
 def get_runpaths_or_rpaths_raw(file):
@@ -212,6 +212,7 @@ def get_rpaths(file, exe_dirname, envroot, windows_root=''):
             rpaths.append(exe_dirname.replace('\\', '/'))
         if windows_root:
             rpaths.append('/'.join((windows_root, "System32")))
+            rpaths.append('/'.join((windows_root, "System32", "downlevel")))
             rpaths.append(windows_root)
         if envroot:
             # and not lief.PE.HEADER_CHARACTERISTICS.DLL in binary.header.characteristics_list:
@@ -462,17 +463,19 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
                     path_fixed = os.path.normpath(resolved[0])
                     # Test, randomise case. We only allow for the filename part to be random, and we allow that
                     # only for Windows DLLs. We may need a special case for Lib (from Python) vs lib (from R)
-                    # too, but in general we want to enforce case checking as much as we can since even Windowws
+                    # too, but in general we want to enforce case checking as much as we can since even Windows
                     # can be run case-sensitively if the user wishes.
                     #
-                    # if binary.format == lief.EXE_FORMATS.PE:
-                    #     import random
-                    #     path_fixed = os.path.dirname(path_fixed) + os.sep +  \
-                    #                  ''.join(random.choice((str.upper, str.lower))(c) for c in os.path.basename(path_fixed))
-                    #     if random.getrandbits(1):
-                    #         path_fixed = path_fixed.replace(os.sep + 'lib' + os.sep, os.sep + 'Lib' + os.sep)
-                    #     else:
-                    #         path_fixed = path_fixed.replace(os.sep + 'Lib' + os.sep, os.sep + 'lib' + os.sep)
+                    '''
+                    if binary.format == lief.EXE_FORMATS.PE:
+                        import random
+                        path_fixed = os.path.dirname(path_fixed) + os.sep +  \
+                                     ''.join(random.choice((str.upper, str.lower))(c) for c in os.path.basename(path_fixed))
+                        if random.getrandbits(1):
+                            path_fixed = path_fixed.replace(os.sep + 'lib' + os.sep, os.sep + 'Lib' + os.sep)
+                        else:
+                            path_fixed = path_fixed.replace(os.sep + 'Lib' + os.sep, os.sep + 'lib' + os.sep)
+                    '''
                     if resolve_filenames:
                         rec = {'orig': orig, 'resolved': path_fixed, 'rpaths': rpaths_transitive}
                     else:
@@ -493,12 +496,13 @@ def get_linkages(filename, resolve_filenames=True, recurse=True,
     result_pyldd = []
     debug = False
     if not have_lief or debug:
-        if codefile_type(filename) not in ('DLLfile', 'EXEfile'):
+        if codefile_type(filename) in ('DLLfile', 'EXEfile'):
             result_pyldd = inspect_linkages_pyldd(filename, resolve_filenames=resolve_filenames, recurse=recurse,
                                                   sysroot=sysroot, arch=arch)
             if not have_lief:
                 return result_pyldd
-            return result_pyldd
+    if not have_lief:
+        assert False, "failed to get_linkages, codefile_type('{}')={}".format(filename, codefile_type(filename))
     result_lief = inspect_linkages_lief(filename, resolve_filenames=resolve_filenames, recurse=recurse,
                                         sysroot=sysroot, envroot=envroot, arch=arch)
     if debug and result_pyldd and set(result_lief) != set(result_pyldd):

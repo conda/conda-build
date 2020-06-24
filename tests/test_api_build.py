@@ -237,6 +237,14 @@ def test_binary_has_prefix_files(testing_workdir, testing_config):
     api.build(os.path.join(metadata_dir, '_binary_has_prefix_files'), config=testing_config)
 
 
+@pytest.mark.xfail
+@pytest.mark.sanity
+@pytest.mark.skipif(sys.platform == "win32",
+                    reason="no binary prefix manipulation done on windows.")
+def test_binary_has_prefix_files_non_utf8(testing_workdir, testing_config):
+    api.build(os.path.join(metadata_dir, '_binary_has_utf_non_8'), config=testing_config)
+
+
 def test_relative_path_git_versioning(testing_workdir, testing_config):
     # conda_build_test_recipe is a manual step.  Clone it at the same level as
     #    your conda-build source.
@@ -713,7 +721,7 @@ def test_noarch_python_with_tests(testing_config):
 @pytest.mark.sanity
 def test_noarch_python_1(testing_config):
     output = api.build(os.path.join(metadata_dir, "_noarch_python"), config=testing_config)[0]
-    assert package_has_file(output, 'info/files') is not ''
+    assert package_has_file(output, 'info/files') != ''
     extra = json.loads(package_has_file(output, 'info/link.json'))
     assert 'noarch' in extra
     assert 'entry_points' in extra['noarch']
@@ -1357,25 +1365,24 @@ def test_provides_features_metadata(testing_config):
     assert index['provides_features'] == {'test2': 'also_ok'}
 
 
-@pytest.mark.sanity
-@pytest.mark.skipif(sys.platform == "win32",
-                    reason="not supported on Windows yet")
 def test_overlinking_detection(testing_config):
     testing_config.activate = True
     testing_config.error_overlinking = True
     testing_config.verify = False
     recipe = os.path.join(metadata_dir, '_overlinking_detection')
-    dest_file = os.path.join(recipe, 'build.sh')
-    copy_into(os.path.join(recipe, 'build_scripts', 'default.sh'), dest_file, clobber=True)
+    dest_sh = os.path.join(recipe, 'build.sh')
+    dest_bat = os.path.join(recipe, 'bld.bat')
+    copy_into(os.path.join(recipe, 'build_scripts', 'default.sh'), dest_sh, clobber=True)
+    copy_into(os.path.join(recipe, 'build_scripts', 'default.bat'), dest_bat, clobber=True)
     api.build(recipe, config=testing_config)
-    copy_into(os.path.join(recipe, 'build_scripts', 'no_as_needed.sh'), dest_file, clobber=True)
+    copy_into(os.path.join(recipe, 'build_scripts', 'no_as_needed.sh'), dest_sh, clobber=True)
+    copy_into(os.path.join(recipe, 'build_scripts', 'with_bzip2.bat'), dest_bat, clobber=True)
     with pytest.raises(OverLinkingError):
         api.build(recipe, config=testing_config)
-    rm_rf(dest_file)
+    rm_rf(dest_sh)
+    rm_rf(dest_bat)
 
 
-@pytest.mark.sanity
-@pytest.mark.xfail(reason="Need to discuss with Ray")
 def test_overdepending_detection(testing_config):
     testing_config.activate = True
     testing_config.error_overlinking = True
@@ -1384,6 +1391,17 @@ def test_overdepending_detection(testing_config):
     recipe = os.path.join(metadata_dir, '_overdepending_detection')
     with pytest.raises(OverDependingError):
         api.build(recipe, config=testing_config)
+
+
+@pytest.mark.skipif(sys.platform != "darwin",
+                    reason="macOS-only test (at present)")
+def test_macos_tbd_handling(testing_config):
+    testing_config.activate = True
+    testing_config.error_overlinking = True
+    testing_config.error_overdepending = True
+    testing_config.verify = False
+    recipe = os.path.join(metadata_dir, '_macos_tbd_handling')
+    api.build(recipe, config=testing_config)
 
 
 @pytest.mark.sanity

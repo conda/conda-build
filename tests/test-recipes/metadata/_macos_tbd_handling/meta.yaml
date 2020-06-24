@@ -1,0 +1,22 @@
+# MacOSX10.10.sdk and above come with .tbd files instead of .dylibs. This test ensures that
+# we parse and process them correctly (in liefldd.py).
+package:
+  name: macos_tbd
+  version: 0
+
+source:
+  path: ./hello-world.c
+
+build:
+  number: 0
+  # .. this does not work ..
+  # string: {{ CONDA_BUILD_SYSROOT | replace('/', '_') | replace('.', '_') | lower() }}
+  # .. conda-build needs this as a hint, it does not detect the above CONDA_BUILD_SYSROOT | replace ..
+  # as jinja2-variant-fodder (I think).
+  string: {{ CONDA_BUILD_SYSROOT_NAME }}
+  error_overlinking: True
+  error_ocerdepending: True
+
+requirements:
+  build:
+    - {{ compiler('c') }}

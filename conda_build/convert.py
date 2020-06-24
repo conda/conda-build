@@ -177,7 +177,8 @@ def update_index_file(temp_dir, target_platform, dependencies, verbose):
         index = json.load(file)
 
     platform, architecture = target_platform.split('-')
-    other_platforms = ['linux-ppc64', 'linux-ppc64le', 'linux-armv6l', 'linux-armv7l', 'linux-aarch64']
+    other_platforms = ['linux-ppc64', 'linux-ppc64le', 'linux-s390x',
+                       'linux-armv6l', 'linux-armv7l', 'linux-aarch64']
 
     if target_platform in other_platforms:
         source_architecture = architecture
@@ -763,8 +764,8 @@ def conda_convert(file_path, output_dir=".", show_imports=False, platforms=None,
     source_platform_architecture = '{}-{}' .format(source_platform, architecture)
 
     if 'all' in platforms:
-        platforms = ['osx-64', 'linux-32', 'linux-64', 'linux-ppc64',
-                     'linux-ppc64le', 'linux-armv6l', 'linux-armv7l', 'linux-aarch64',
+        platforms = ['osx-64', 'linux-32', 'linux-64', 'linux-ppc64', 'linux-ppc64le',
+                     'linux-s390x', 'linux-armv6l', 'linux-armv7l', 'linux-aarch64',
                      'win-32', 'win-64']
 
     for platform in platforms:
