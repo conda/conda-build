@@ -446,7 +446,8 @@ def dict_of_lists_to_list_of_dicts(dict_of_lists, extend_keys=None):
 
 
 def list_of_dicts_to_dict_of_lists(list_of_dicts):
-    """Opposite of dict_of_lists_to_list_of_dicts function.
+    r"""
+    Inverse of `dict_of_lists_to_list_of_dicts`.
 
     Take broken out collection of variants, and squish it into a dict, where each value is a list.
     Only squishes string/int values; does "update" for dict keys
@@ -475,18 +476,14 @@ def list_of_dicts_to_dict_of_lists(list_of_dicts):
                 existing_value = squished.get(k, OrderedDict())
                 existing_value.update(v)
                 squished[k] = existing_value
-            elif isinstance(v, list):
-                squished[k] = set(squished.get(k, set())) | set(v)
             else:
-                squished[k] = list(squished.get(k, [])) + ensure_list(v)
+                squished[k] = squished.get(k, []) + ensure_list(v)
                 if k not in all_zip_keys:
-                    squished[k] = list(set(squished[k]))
+                    squished[k] = list(OrderedDict.fromkeys(squished[k]))
     # reduce the combinatoric space of the zipped keys, too:
     if groups:
         for group in groups:
-            values = list(zip(*set(zip(*(squished[key] for key in group)))))
-            for idx, key in enumerate(group):
-                squished[key] = values[idx]
+            squished.update({key: value for (key, value) in zip(group, zip(*OrderedDict.fromkeys(zip(*[squished[key] for key in group]))))})
     squished['zip_keys'] = zip_key_groups
     return squished
 

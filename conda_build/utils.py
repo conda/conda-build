@@ -1161,12 +1161,16 @@ def package_has_file(package_path, file_path, refresh=False):
 
 
 def ensure_list(arg):
-    if (isinstance(arg, string_types) or not hasattr(arg, '__iter__')):
-        if arg is not None:
-            arg = [arg]
-        else:
-            arg = []
-    return arg
+    if arg is None:
+        return []
+
+    if isinstance(arg, string_types):
+        return [arg]
+
+    if not hasattr(arg, '__iter__'):
+        return [arg]
+
+    return list(arg)
 
 
 @contextlib.contextmanager
