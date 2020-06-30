@@ -896,16 +896,16 @@ def _lookup_in_sysroots_and_whitelist(errors, whitelist, needed_dso, sysroots_fi
                 # Removing sysroot_prefix is only for Linux, though we could
                 # use CONDA_BUILD_SYSROOT for macOS. We should figure out what to do about
                 # /opt/X11 too.
-                # Find the longest suffix match.
-                rev_needed_dso = needed_dso[::-1]
-                match_lens = [len(commonprefix([s[::-1], rev_needed_dso]))
-                                for s in sysroot_files]
-                idx = max(range(len(match_lens)), key=match_lens.__getitem__)
-                # in_prefix_dso = normpath(sysroot_files[idx].replace(
-                #     sysroot_prefix + os.sep, ''))
-                in_prefix_dso = sysroot_files[idx][len(sysroot_prefix) + 1:]
-                n_dso_p = "Needed DSO {}".format(in_prefix_dso)
-                pkgs = list(which_package(in_prefix_dso, sysroot_prefix))
+                pkgs = []
+                for idx in range(len(sysroot_files)):
+                    # in_prefix_dso = normpath(sysroot_files[idx].replace(
+                    #     sysroot_prefix + os.sep, ''))
+                    in_prefix_dso = sysroot_files[idx][len(sysroot_prefix) + 1:]
+                    n_dso_p = "Needed DSO {}".format(in_prefix_dso)
+                    _pkgs = list(which_package(in_prefix_dso, sysroot_prefix))
+                    if len(_pkgs) > 0:
+                        pkgs.extend(_pkgs)
+                        break
                 if len(pkgs):
                     _print_msg(errors, '{}: {} found in CDT/compiler package {}'.
                                         format(info_prelude, n_dso_p, pkgs[0]), verbose=verbose)
