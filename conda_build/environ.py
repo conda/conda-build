@@ -200,6 +200,23 @@ def get_git_info(git_exe, repo, debug):
         )
         log.debug(msg)
 
+    # If there was no tag reachable from HEAD, the above failed and the short hash is not set.
+    # Try to get the short hash from describing with all refs (not just the tags).
+    if "GIT_DESCRIBE_HASH" not in d:
+        try:
+            output = utils.check_output_env([git_exe, "describe", "--all", "--long", "HEAD"],
+                                            env=env, cwd=os.path.dirname(repo),
+                                            stderr=stderr).splitlines()[0]
+            output = output.decode('utf-8')
+            parts = output.rsplit('-', 2)
+            if len(parts) == 3:
+                # Don't save GIT_DESCRIBE_TAG and GIT_DESCRIBE_NUMBER because git (probably)
+                # described a branch. We just want to save the short hash.
+                d['GIT_DESCRIBE_HASH'] = parts[-1]
+        except subprocess.CalledProcessError as error:
+            log.debug("Error obtaining git commit information.  Error was: ")
+            log.debug(str(error))
+
     try:
         # get the _full_ hash of the current HEAD
         output = utils.check_output_env([git_exe, "rev-parse", "HEAD"],
