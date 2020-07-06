@@ -922,6 +922,20 @@ def get_files_with_prefix(m, files_in, prefix):
     replacement_tags = ''
     if 'replacements' in variant:
         replacements = variant['replacements']
+        assert isinstance(replacements, (dict, OrderedDict)), "Found `replacements` {},"  \
+                                                              "but it is not a dict".format(
+            replacements)
+        assert 'all_replacements' in replacements, "Found `replacements` {}, but it"  \
+                                                   "doesn't contain `all_replacements`".format(replacements)
+        assert isinstance(replacements['all_replacements'], list), "Found `all_replacements` {},"  \
+                                                                   "but it is not a list".format(
+            replacements)
+        assert isinstance(replacements['all_replacements'][0], OrderedDict), "Found `all_replacements[0]` {},"  \
+                                                                   "but it is not a dict".format(
+            replacements)
+        if len(replacements['all_replacements']):
+            assert isinstance(replacements['all_replacements'][0], (OrderedDict, dict)), \
+                "Found `all_replacements[0]` {} but it is not a dict".format(replacements)
         last = len(replacements['all_replacements']) - 1
         for index, replacement in enumerate(replacements['all_replacements']):
             all_matches = have_regex_files(files=[f for f in files if any(
