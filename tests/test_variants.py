@@ -482,6 +482,9 @@ def test_variant_subkeys_retained(testing_config):
             assert isinstance(replacements['all_replacements'], list), "Found `all_replacements` {},"  \
                                                                        "but it is not a list".format(
                 replacements)
+            if len(replacements['all_replacements']):
+                assert isinstance(replacements['all_replacements'][0], (OrderedDict, dict)), \
+                    "Found `all_replacements[0]` {} but it is not a dict".format(replacements)
             for index, replacement in enumerate(replacements['all_replacements']):
                 assert 'tag' in replacement, "Found `all_replacements[{}]` {}," \
                                                                    "but it has no `tag` key.".format(
