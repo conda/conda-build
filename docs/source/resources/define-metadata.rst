@@ -1781,3 +1781,14 @@ logic is possible:
      md5: 30fbf531409a18a48b1be249052e242a  # [win]
      url: http://path/to/unix/source        # [unix]
      md5: 88510902197cba0d1ab4791e0f41a66e  # [unix]
+
+.. note:: 
+   To select multiple operating system use the ``or`` statement. While it intuitive
+   to use ``skip: True  # [win and osx]``, this will only work if the platform is both
+   windows and osx simultaneously (i.e. never). 
+   
+.. code-block:: yaml
+
+   build:
+      skip: True  # [win or osx]
+ 
