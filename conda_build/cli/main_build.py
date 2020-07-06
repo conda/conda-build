@@ -462,7 +462,7 @@ def execute(args):
     else:
         outputs = api.build(args.recipe, post=args.post, test_run_post=args.test_run_post,
                             build_only=args.build_only, notest=args.notest, already_built=None, config=config,
-                            verify=args.verify, variants=args.variants)
+                            verify=args.verify, variants=args.variants, cache_dir=args.cache_dir)
 
     if not args.output and len(utils.get_build_folders(config.croot)) > 0:
         build.print_build_intermediate_warning(config)
