@@ -42,7 +42,7 @@ from concurrent.futures import Executor
 from conda.core.subdir_data import SubdirData
 from conda.models.channel import Channel
 
-from . import conda_interface, utils
+from conda_build import conda_interface, utils
 from .conda_interface import MatchSpec, VersionOrder, human_bytes, context
 from .conda_interface import CondaError, CondaHTTPError, get_index, url_path
 from .conda_interface import TemporaryDirectory
