@@ -858,6 +858,28 @@ def write_hash_input(m):
         json.dump(recipe_input, f, indent=2)
 
 
+def get_all_replacements(variant):
+    # This function tests that our various
+    if 'replacements' in variant:
+        replacements = variant['replacements']
+        assert isinstance(replacements, (dict, OrderedDict)), "Found `replacements` {}," \
+                                                              "but it is not a dict".format(
+            replacements)
+        assert 'all_replacements' in replacements, "Found `replacements` {}, but it" \
+                                                   "doesn't contain `all_replacements`".format(replacements)
+        assert isinstance(replacements['all_replacements'], list), "Found `all_replacements` {}," \
+                                                                   "but it is not a list".format(
+            replacements)
+        assert isinstance(replacements['all_replacements'][0], (dict, OrderedDict)), "Found `all_replacements[0]` {}," \
+                                                                             "but it is not a dict".format(
+            replacements)
+        if len(replacements['all_replacements']):
+            assert isinstance(replacements['all_replacements'][0], (OrderedDict, dict)), \
+                "Found `all_replacements[0]` {} but it is not a dict".format(replacements)
+            return replacements['all_replacements']
+    return []
+
+
 def get_files_with_prefix(m, files_in, prefix):
     import time
     start = time.time()
@@ -921,23 +943,9 @@ def get_files_with_prefix(m, files_in, prefix):
     variant = m.config.variant
     replacement_tags = ''
     if 'replacements' in variant:
-        replacements = variant['replacements']
-        assert isinstance(replacements, (dict, OrderedDict)), "Found `replacements` {},"  \
-                                                              "but it is not a dict".format(
-            replacements)
-        assert 'all_replacements' in replacements, "Found `replacements` {}, but it"  \
-                                                   "doesn't contain `all_replacements`".format(replacements)
-        assert isinstance(replacements['all_replacements'], list), "Found `all_replacements` {},"  \
-                                                                   "but it is not a list".format(
-            replacements)
-        assert isinstance(replacements['all_replacements'][0], OrderedDict), "Found `all_replacements[0]` {},"  \
-                                                                   "but it is not a dict".format(
-            replacements)
-        if len(replacements['all_replacements']):
-            assert isinstance(replacements['all_replacements'][0], (OrderedDict, dict)), \
-                "Found `all_replacements[0]` {} but it is not a dict".format(replacements)
-        last = len(replacements['all_replacements']) - 1
-        for index, replacement in enumerate(replacements['all_replacements']):
+        replacements = get_all_replacements(variant)
+        last = len(replacements) - 1
+        for index, replacement in enumerate(replacements):
             all_matches = have_regex_files(files=[f for f in files if any(
                                                   glob2.fnmatch.fnmatch(f, r) for r in replacement['glob_patterns'])],
                                            prefix=prefix,
@@ -2188,6 +2196,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
             # is distributing the matrix of used variables.
 
             for (output_d, m) in outputs:
+                get_all_replacements(m.config.variant)
                 if m.skip():
                     print(utils.get_skip_message(m))
                     continue
@@ -2299,7 +2308,9 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                     with utils.path_prepended(m.config.build_prefix):
                         env = environ.get_dict(m=m)
                     pkg_type = 'conda' if not hasattr(m, 'type') else m.type
+                    get_all_replacements(m.config.variant)
                     newly_built_packages = bundlers[pkg_type](output_d, m, env, stats)
+                    get_all_replacements(m.config.variant)
                     # warn about overlapping files.
                     if 'checksums' in output_d:
                         for file, csum in output_d['checksums'].items():
@@ -2547,6 +2558,10 @@ def write_build_scripts(m, script, build_file):
 
     if m.noarch == "python":
         env["PYTHONDONTWRITEBYTECODE"] = True
+
+    # The stuff in replacements is not parsable in a shell script (or we need to escape it)
+    if "replacements" in env:
+        del env["replacements"]
 
     work_file = join(m.config.work_dir, 'conda_build.sh')
     env_file = join(m.config.work_dir, 'build_env_setup.sh')
@@ -3005,6 +3020,7 @@ def build_tree(recipe_list, config, stats, build_only=False, post=None, notest=F
             # recipe are looped over here.
 
             for (metadata, need_source_download, need_reparse_in_env) in metadata_tuples:
+                get_all_replacements(metadata.config.variant)
                 if post is None:
                     utils.rm_rf(metadata.config.host_prefix)
                     utils.rm_rf(metadata.config.build_prefix)
