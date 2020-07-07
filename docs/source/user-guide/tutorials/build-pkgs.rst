@@ -201,6 +201,13 @@ on your local computer.
    If there are no error messages, Click installed
    successfully.
 
+   .. note::
+      Explicitly installing a local package bypasses the dependency
+      resolver, as such the package's ``run`` dependencies will not
+      be evaluated. See `conda install --help` or the `install command reference
+      page <https://docs.conda.io/projects/conda/en/latest/commands/install.html>`_
+      for more info.
+
 
 .. _convert:
 
