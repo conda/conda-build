@@ -474,3 +474,6 @@ def test_variant_subkeys_retained(testing_config):
     for variant in m.config.variants:
         found_replacements = get_all_replacements(variant)
     assert len(found_replacements), "Did not find replacements"
+    m.final = False
+    outputs = m.get_output_metadata_set(permit_unsatisfiable_variants=False)
+    get_all_replacements(outputs[0][1].config.variant)

@@ -1966,6 +1966,7 @@ class MetaData(object):
                                 permit_unsatisfiable_variants=False,
                                 bypass_env_check=False):
         from conda_build.source import provide
+        from conda_build.build import get_all_replacements
         out_metadata_map = {}
         if self.final:
             outputs = get_output_dicts_from_metadata(self)[0]
@@ -1988,7 +1989,9 @@ class MetaData(object):
                     ref_metadata.parse_until_resolved(allow_no_other_outputs=True, bypass_env_check=True)
                 except SystemExit:
                     pass
+                get_all_replacements(ref_metadata.config)
                 outputs = get_output_dicts_from_metadata(ref_metadata)
+                get_all_replacements(outputs[0])
 
                 try:
                     for out in outputs:
@@ -1999,6 +2002,7 @@ class MetaData(object):
                                 insert_variant_versions(requirements, variant, env)
                             out['requirements'] = requirements
                         out_metadata = ref_metadata.get_output_metadata(out)
+                        get_all_replacements(out_metadata.config)
 
                         # keeping track of other outputs is necessary for correct functioning of the
                         #    pin_subpackage jinja2 function.  It's important that we store all of
@@ -2025,6 +2029,7 @@ class MetaData(object):
             non_conda_packages = []
 
             for output_d, m in render_order.items():
+                get_all_replacements(m.config)
                 if not output_d.get('type') or output_d['type'] in ('conda', 'conda_v2'):
                     conda_packages[m.name(), HashableDict({k: m.config.variant[k]
                                                   for k in m.get_used_vars()})] = (output_d, m)
@@ -2052,9 +2057,11 @@ class MetaData(object):
                 conda_packages = finalize_outputs_pass(ref_metadata, conda_packages, pass_no=0,
                                         permit_unsatisfiable_variants=permit_unsatisfiable_variants,
                                         bypass_env_check=bypass_env_check)
+                get_all_replacements(list(conda_packages)[0][1])
 
                 # Sanity check: if any exact pins of any subpackages, make sure that they match
                 ensure_matching_hashes(conda_packages)
+                get_all_replacements(list(conda_packages)[0][1])
             final_conda_packages = []
             for (out_d, m) in conda_packages.values():
                 # We arbitrarily mark all output metadata as final, regardless

@@ -858,8 +858,39 @@ def write_hash_input(m):
         json.dump(recipe_input, f, indent=2)
 
 
-def get_all_replacements(variant):
+from conda_build.config import Config
+def get_all_replacements(config_or_variant):
     # This function tests that our various
+    '''
+    if (not isinstance(config_or_variant, Config) and
+            'replacements' in config_or_variant or
+            not hasattr(config_or_variant, 'variant')):
+        print('get_all_replacements(): passed a variant directly')
+        variant = config_or_variant
+    else:
+        if 'replacements' in config_or_variant.variant:
+            print('found in variant')
+            variant = config_or_variant.variant
+        if 'replacements' in config_or_variant.variants:
+            variant = config_or_variant.variants
+            print('found in variants')
+    '''
+    if isinstance(config_or_variant, Config):
+        print('get_all_replacements(): passed a Config')
+        variant = None
+        if 'replacements' in config_or_variant.variant:
+            print('found in variant')
+            variant = config_or_variant.variant
+        if 'replacements' in config_or_variant.variants:
+            variant = config_or_variant.variants
+            print('found in variants')
+        if not variant:
+            return
+    else:
+        print('get_all_replacements(): passed a variant directly')
+        variant = config_or_variant
+
+
     if 'replacements' in variant:
         replacements = variant['replacements']
         assert isinstance(replacements, (dict, OrderedDict)), "Found `replacements` {}," \
@@ -940,10 +971,10 @@ def get_files_with_prefix(m, files_in, prefix):
     files_with_prefix = files_with_prefix_new
     all_matches = {}
 
-    variant = m.config.variant
+    # variant = m.config.variant if 'replacements' in m.config.variant else m.config.variants
     replacement_tags = ''
-    if 'replacements' in variant:
-        replacements = get_all_replacements(variant)
+    replacements = get_all_replacements(m.config)
+    if len(replacements):
         last = len(replacements) - 1
         for index, replacement in enumerate(replacements):
             all_matches = have_regex_files(files=[f for f in files if any(
@@ -1938,8 +1969,11 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
         try_download(m, no_download_source=False)
 
     if post in [False, None]:
+        get_all_replacements(m.config.variants)
+        get_all_replacements(m.config.variant)
         output_metas = expand_outputs([(m, need_source_download, need_reparse_in_env)])
-
+        if len(output_metas):
+            get_all_replacements(output_metas[0][1].config)
         skipped = []
         package_locations = []
         # TODO: should we check both host and build envs?  These are the same, except when
@@ -2168,6 +2202,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
     new_pkgs = {}
     if not provision_only and post in [True, None]:
         outputs = output_metas or m.get_output_metadata_set(permit_unsatisfiable_variants=False)
+        get_all_replacements(outputs[0][1].config)
         top_level_meta = m
 
         # this is the old, default behavior: conda package, with difference between start
@@ -2196,6 +2231,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
             # is distributing the matrix of used variables.
 
             for (output_d, m) in outputs:
+                get_all_replacements(m.config.variants)
                 get_all_replacements(m.config.variant)
                 if m.skip():
                     print(utils.get_skip_message(m))
@@ -2308,9 +2344,9 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                     with utils.path_prepended(m.config.build_prefix):
                         env = environ.get_dict(m=m)
                     pkg_type = 'conda' if not hasattr(m, 'type') else m.type
-                    get_all_replacements(m.config.variant)
+                    get_all_replacements(m.config)
                     newly_built_packages = bundlers[pkg_type](output_d, m, env, stats)
-                    get_all_replacements(m.config.variant)
+                    get_all_replacements(m.config)
                     # warn about overlapping files.
                     if 'checksums' in output_d:
                         for file, csum in output_d['checksums'].items():
