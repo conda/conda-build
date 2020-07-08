@@ -745,7 +745,6 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
                            tuple((var, mv.config.variant.get(var))
                                  for var in mv.get_used_vars()))] = \
                                      (mv, need_source_download, None)
-        get_all_replacements(mv.config.variant)
     # list of tuples.
     # each tuple item is a tuple of 3 items:
     #    metadata, need_download, need_reparse_in_env
