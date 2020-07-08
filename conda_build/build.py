@@ -876,20 +876,16 @@ def get_all_replacements(config_or_variant):
             print('found in variants')
     '''
     if isinstance(config_or_variant, Config):
-        print('get_all_replacements(): passed a Config')
+        # print('get_all_replacements(): passed a Config')
         variant = None
         if 'replacements' in config_or_variant.variant:
-            print('found in variant')
+            # print('found in variant')
             variant = config_or_variant.variant
-        if 'replacements' in config_or_variant.variants:
-            variant = config_or_variant.variants
-            print('found in variants')
         if not variant:
             return
     else:
-        print('get_all_replacements(): passed a variant directly')
+        # print('get_all_replacements(): passed a variant directly')
         variant = config_or_variant
-
 
     if 'replacements' in variant:
         replacements = variant['replacements']
@@ -911,7 +907,7 @@ def get_all_replacements(config_or_variant):
     return []
 
 
-def get_files_with_prefix(m, files_in, prefix):
+def get_files_with_prefix(m, replacements, files_in, prefix):
     import time
     start = time.time()
     # It is nonsensical to replace anything in a symlink.
@@ -973,7 +969,6 @@ def get_files_with_prefix(m, files_in, prefix):
 
     # variant = m.config.variant if 'replacements' in m.config.variant else m.config.variants
     replacement_tags = ''
-    replacements = get_all_replacements(m.config)
     if len(replacements):
         last = len(replacements) - 1
         for index, replacement in enumerate(replacements):
@@ -1247,7 +1242,7 @@ def write_run_exports(m):
             json.dump(run_exports, f)
 
 
-def create_info_files(m, files, prefix):
+def create_info_files(m, replacements, files, prefix):
     '''
     Creates the metadata files that will be stored in the built package.
 
@@ -1279,7 +1274,7 @@ def create_info_files(m, files, prefix):
 
     write_info_files_file(m, files)
 
-    files_with_prefix = get_files_with_prefix(m, files, prefix)
+    files_with_prefix = get_files_with_prefix(m, replacements, files, prefix)
     files_with_prefix = record_prefix_files(m, files_with_prefix)
     checksums = create_info_files_json_v1(m, m.config.info_dir, prefix, files, files_with_prefix)
 
@@ -1481,7 +1476,7 @@ can lead to packages that include their dependencies.""" % meta_files))
 def bundle_conda(output, metadata, env, stats, **kw):
     log = utils.get_logger(__name__)
     log.info('Packaging %s', metadata.dist())
-
+    get_all_replacements(metadata.config)
     files = output.get('files', [])
 
     # this is because without any requirements at all, we still need to have the host prefix exist
@@ -1496,7 +1491,12 @@ def bundle_conda(output, metadata, env, stats, **kw):
     # need to treat top-level stuff specially.  build/script in top-level stuff should not be
     #     re-run for an output with a similar name to the top-level recipe
     is_output = 'package:' not in metadata.get_recipe_text()
+
+    # metadata.get_top_level_recipe_without_outputs is destructive to replacements.
+
+    replacements = get_all_replacements(metadata.config)
     top_build = metadata.get_top_level_recipe_without_outputs().get('build', {}) or {}
+
     activate_script = metadata.activate_build_script
     if (script and not output.get('script')) and (is_output or not top_build.get('script')):
         # do add in activation, but only if it's not disabled
@@ -1613,7 +1613,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
     utils.rm_rf(os.path.join(metadata.config.info_dir, 'test'))
 
     with tmp_chdir(metadata.config.host_prefix):
-        output['checksums'] = create_info_files(metadata, files, prefix=metadata.config.host_prefix)
+        output['checksums'] = create_info_files(metadata, replacements, files, prefix=metadata.config.host_prefix)
 
     # here we add the info files into the prefix, so we want to re-collect the files list
     prefix_files = set(utils.prefix_files(metadata.config.host_prefix))
@@ -2344,9 +2344,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                     with utils.path_prepended(m.config.build_prefix):
                         env = environ.get_dict(m=m)
                     pkg_type = 'conda' if not hasattr(m, 'type') else m.type
-                    get_all_replacements(m.config)
                     newly_built_packages = bundlers[pkg_type](output_d, m, env, stats)
-                    get_all_replacements(m.config)
                     # warn about overlapping files.
                     if 'checksums' in output_d:
                         for file, csum in output_d['checksums'].items():
