@@ -721,14 +721,21 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
             output_d = om.get_rendered_output(metadata.name()) or {'name': metadata.name()}
 
             om = om.get_output_metadata(output_d)
+            replacements = None
+            if 'replacements' in parent_metadata.config.variant:
+                replacements = parent_metadata.config.variant['replacements']
+                del parent_metadata.config.variant['replacements']
             parent_metadata.parse_until_resolved()
+            if replacements:
+                parent_metadata.config.variant['replacements'] = replacements
+
             if not bypass_env_check:
                 fm = finalize_metadata(om, parent_metadata=parent_metadata,
                                        permit_unsatisfiable_variants=permit_unsatisfiable_variants)
             else:
                 fm = om
             if not output_d.get('type') or output_d.get('type').startswith('conda'):
-                outputs[(fm.name(), HashableDict({k: fm.config.variant[k]
+                outputs[(fm.name(), HashableDict({k: copy.deepcopy(fm.config.variant[k])
                                                   for k in fm.get_used_vars()}))] = (output_d, fm)
         except exceptions.DependencyNeedsBuildingError as e:
             if not permit_unsatisfiable_variants:
@@ -737,7 +744,7 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
                 log = utils.get_logger(__name__)
                 log.warn("Could not finalize metadata due to missing dependencies: "
                             "{}".format(e.packages))
-                outputs[(metadata.name(), HashableDict({k: metadata.config.variant[k]
+                outputs[(metadata.name(), HashableDict({k: copy.deepcopy(metadata.config.variant[k])
                                                         for k in metadata.get_used_vars()}))] = (
                     output_d, metadata)
     # in-place modification
@@ -745,7 +752,7 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
     base_metadata.final = False
     final_outputs = OrderedDict()
     for k, (out_d, m) in outputs.items():
-        final_outputs[(m.name(), HashableDict({k: m.config.variant[k]
+        final_outputs[(m.name(), HashableDict({k: copy.deepcopy(m.config.variant[k])
                                                for k in m.get_used_vars()}))] = out_d, m
     return final_outputs
 
@@ -1967,6 +1974,7 @@ class MetaData(object):
                                 bypass_env_check=False):
         from conda_build.source import provide
         from conda_build.build import get_all_replacements
+        get_all_replacements(self.config)
         out_metadata_map = {}
         if self.final:
             outputs = get_output_dicts_from_metadata(self)[0]
@@ -2010,7 +2018,7 @@ class MetaData(object):
                         #    also refine this collection as each output metadata object is
                         #    finalized - see the finalize_outputs_pass function
                         all_output_metadata[(out_metadata.name(),
-                                             HashableDict({k: out_metadata.config.variant[k]
+                                             HashableDict({k: copy.deepcopy(out_metadata.config.variant[k])
                                     for k in out_metadata.get_used_vars()}))] = out, out_metadata
                         out_metadata_map[HashableDict(out)] = out_metadata
                         ref_metadata.other_outputs = out_metadata.other_outputs = all_output_metadata
@@ -2029,9 +2037,9 @@ class MetaData(object):
             non_conda_packages = []
 
             for output_d, m in render_order.items():
-                get_all_replacements(m.config)
+                replacements = get_all_replacements(m.config)
                 if not output_d.get('type') or output_d['type'] in ('conda', 'conda_v2'):
-                    conda_packages[m.name(), HashableDict({k: m.config.variant[k]
+                    conda_packages[m.name(), HashableDict({k: copy.deepcopy(m.config.variant[k])
                                                   for k in m.get_used_vars()})] = (output_d, m)
                 elif output_d.get('type') == 'wheel':
                     if (not output_d.get('requirements', {}).get('build') or

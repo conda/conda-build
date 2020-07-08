@@ -758,8 +758,9 @@ def expand_outputs(metadata_tuples):
 
     for (_m, download, reparse) in metadata_tuples:
         from conda_build.build import get_all_replacements
-        get_all_replacements(_m.config)
-        for (output_dict, m) in _m.copy().get_output_metadata_set(permit_unsatisfiable_variants=False):
+        replacements = get_all_replacements(_m.config)
+        from copy import deepcopy
+        for (output_dict, m) in deepcopy(_m).get_output_metadata_set(permit_unsatisfiable_variants=False):
             get_all_replacements(m.config)
             expanded_outputs[m.dist()] = (output_dict, m)
     return list(expanded_outputs.values())
