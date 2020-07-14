@@ -882,7 +882,7 @@ def get_all_replacements(config_or_variant):
             # print('found in variant')
             variant = config_or_variant.variant
         if not variant:
-            return
+            return []
     else:
         # print('get_all_replacements(): passed a variant directly')
         variant = config_or_variant
