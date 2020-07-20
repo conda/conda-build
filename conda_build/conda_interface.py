@@ -55,7 +55,7 @@ from conda.exports import untracked, walk_prefix  # NOQA
 from conda.exports import MatchSpec, NoPackagesFound, Resolve, Unsatisfiable, normalized_version  # NOQA
 from conda.exports import human_bytes, hashsum_file, md5_file, memoized, unix_path_to_win, win_path_to_unix, url_path  # NOQA
 from conda.exports import get_index  # NOQA
-from conda.exports import (Completer, InstalledPackages, add_parser_channels,
+from conda.exports import (Completer, InstalledPackages, add_parser_channels,  # NOQA
                            add_parser_prefix,  # NOQA
                            specs_from_args, spec_from_line, specs_from_url)  # NOQA
 from conda.exports import ArgumentParser  # NOQA

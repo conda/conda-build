@@ -538,14 +538,14 @@ def _get_patch_file_details(path):
         files = []
         first_line = True
         is_git_format = True
-        for l in f.readlines():
-            if first_line and not re.match(r'From [0-9a-f]{40}', l):
+        for line in f.readlines():
+            if first_line and not re.match(r'From [0-9a-f]{40}', line):
                 is_git_format = False
             first_line = False
-            m = re_files.search(l)
+            m = re_files.search(line)
             if m and m.group(1) != '/dev/null':
                 files.append(m.group(1))
-            elif is_git_format and l.startswith('git') and not l.startswith('git --diff'):
+            elif is_git_format and line.startswith('git') and not line.startswith('git --diff'):
                 is_git_format = False
     return (files, is_git_format)
 

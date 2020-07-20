@@ -271,17 +271,17 @@ def have_prefix_files(files, prefix):
 # string length. In that case, len(l[i]) should become 1, and we should
 # pass this in instead. It could also depend on the platform. We should
 # test this!
-def chunks(l, n):
+def chunks(line, n):
     # For item i in a range that is a length of l,
     size = 0
     start = 0
-    for i in range(0, len(l)):
+    for i in range(0, len(line)):
         # + 3 incase a shell is used: 1 space and 2 quotes.
-        size = size + len(l[i]) + 3
-        if i == len(l) - 1:
-            yield l[start:i + 1]
+        size = size + len(line[i]) + 3
+        if i == len(line) - 1:
+            yield line[start:i + 1]
         elif size > n:
-            yield l[start:i + 1]
+            yield line[start:i + 1]
             start = i
             size = 0
 

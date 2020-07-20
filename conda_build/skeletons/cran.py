@@ -1140,8 +1140,8 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         # Extract the DESCRIPTION data from the source
         if cran_package is None:
             cran_package = get_archive_metadata(description_path)
-        d['cran_metadata'] = '\n'.join(['# %s' % l for l in
-            cran_package['orig_lines'] if l])
+        d['cran_metadata'] = '\n'.join(['# %s' % line for line in
+            cran_package['orig_lines'] if line])
 
         # Render the source and binaryN keys
         binary_id = 1

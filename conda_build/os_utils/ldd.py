@@ -61,7 +61,7 @@ def get_linkages(obj_files, prefix, sysroot):
                 res[f] = ldd(path)
             elif sys.platform.startswith('darwin'):
                 links = otool(path)
-                res[f] = [(basename(l['name']), l['name']) for l in links]
+                res[f] = [(basename(line['name']), line['name']) for line in links]
         except:
             ldd_failed = True
         finally:
