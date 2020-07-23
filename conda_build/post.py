@@ -398,10 +398,6 @@ def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
 
 
 def mk_relative_osx(path, host_prefix, build_prefix, files, rpaths=('lib',)):
-    if sys.platform != 'darwin':
-        log = utils.get_logger(__name__)
-        log.warn("Found Mach-O file but patching is only supported on macOS, skipping: %s", path)
-        return
     prefix = build_prefix if exists(build_prefix) else host_prefix
     names = macho.otool(path, prefix)
     s = macho.install_name_change(path, prefix,
@@ -1259,6 +1255,10 @@ def post_process_shared_lib(m, f, files, host_prefix=None):
         mk_relative_linux(f, m.config.host_prefix, rpaths=rpaths,
                           method=m.get_value('build/rpaths_patcher', None))
     elif codefile_t == 'machofile':
+        if m.config.host_platform != 'osx':
+            log = utils.get_logger(__name__)
+            log.warn("Found Mach-O file but patching is only supported on macOS, skipping: %s", path)
+            return
         mk_relative_osx(path, host_prefix, m.config.build_prefix, files=files, rpaths=rpaths)
 
 
