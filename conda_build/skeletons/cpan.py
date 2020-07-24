@@ -46,6 +46,9 @@ package:
 # number. If you do not include this key, it defaults to 0.
 build:
   number: 0
+  run_exports:
+    weak:
+      - {{{{ name }}}} ={{{{ version }}}}
 
 requirements:
   # Run exports are used now
