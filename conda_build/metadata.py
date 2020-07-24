@@ -556,7 +556,7 @@ def build_string_from_metadata(metadata):
         # TODO: this is the bit that puts in strings like py27np111 in the filename.  It would be
         #    nice to get rid of this, since the hash supercedes that functionally, but not clear
         #    whether anyone's tools depend on this file naming right now.
-        for s, names, places in (('np', 'numpy', 2), ('py', 'python', 2), ('pl', 'perl', 2),
+        for s, names, places in (('np', 'numpy', 2), ('py', 'python', 2), ('pl', 'perl', 3),
                                  ('lua', 'lua', 2), ('r', ('r', 'r-base'), 2),
                                  ('mro', 'mro-base', 3), ('mro', 'mro-base_impl', 3)):
 
