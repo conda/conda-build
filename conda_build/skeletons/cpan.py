@@ -219,7 +219,7 @@ def package_exists(package_name):
 
 # meta_cpan_url="http://api.metacpan.org",
 def skeletonize(packages, output_dir=".", version=None,
-                meta_cpan_url="http://fastapi.metacpan.org/v1",
+                meta_cpan_url="https://fastapi.metacpan.org/v1",
                 recursive=False, force=False, config=None, write_core=False):
     '''
     Loops over packages, outputting conda recipes converted from CPAN metata.
