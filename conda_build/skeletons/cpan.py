@@ -603,6 +603,17 @@ def deps_for_package(package, release_data, output_dir, cache_dir,
     deps = {'build': {'core': set(), 'noncore': set()},
             'test': {'core': set(), 'noncore': set()},
             'run': {'core': set(), 'noncore': set()}}
+    phase_to_dep_type = {'build': 'build',
+                         'configure': 'build',
+                         'test': 'test',
+                         'runtime': 'run',
+                         # TODO :: Check this, I am unsure about it ..
+                         #         These (sometimes?) reference sub-components of modules
+                         #         e.g. inc::MMPackageStash instead of inc which does not
+                         #         get found on metacpan fastapi. We may need to chop the
+                         #         suffix off an try again (and repeat until we find it).
+                         'x_Dist_Zilla': None,
+                         'develop': None}
     packages_to_append = set()
 
     print('Processing dependencies for %s...' % package, end='')
@@ -628,6 +639,8 @@ def deps_for_package(package, release_data, output_dir, cache_dir,
         # Only care about requirements
         try:
             if dep_dict['relationship'] == 'requires':
+                if not phase_to_dep_type[dep_dict['phase']]:
+                    continue
                 if 'module' in dep_dict and dep_dict['module'] == 'common::sense':
                     print('debug common::sense version mismatch')
                 print('.', end='')
@@ -700,13 +713,6 @@ def deps_for_package(package, release_data, output_dir, cache_dir,
                 # Add to appropriate dependency list
                 core = metacpan_api_is_core_version(
                     meta_cpan_url, dep_dict['module'])
-
-                phase_to_dep_type = {       'build': 'build',
-                                        'configure': 'build',
-                                             'test': 'test',
-                                          'runtime': 'run',
-                                     'x_Dist_Zilla': 'run',
-                                          'develop': None}
 
                 cb_phase = phase_to_dep_type[dep_dict['phase']]
                 if cb_phase:
