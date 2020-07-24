@@ -666,6 +666,7 @@ def deps_for_package(package, release_data, output_dir, cache_dir,
 
                 # If recursive, check if we have a recipe for this dependency
                 if recursive:
+                    packages_to_append_old = packages_to_append.copy()
                     # If dependency entry is versioned, make sure this is too
                     if ' ' in dep_entry:
                         if not exists(join(output_dir, dep_entry.replace('::',
@@ -674,6 +675,7 @@ def deps_for_package(package, release_data, output_dir, cache_dir,
                                                              dep_dict['version'])))
                     elif not glob(join(output_dir, (dep_entry + '-[v1-9][0-9.]*'))):
                         packages_to_append.add(orig_dist)
+                    print('module {} adds {}'.format(package, packages_to_append - packages_to_append_old))
 
                 # Add to appropriate dependency list
                 core = metacpan_api_is_core_version(
