@@ -38,7 +38,6 @@ package:
   version: {{{{ version }}}}
 
 {source_comment}source:
-  {useurl}fn: {filename}
   {useurl}url: {cpanurl}
   {usesha256}sha256: {{{{ sha256 }}}}
 
@@ -446,7 +445,7 @@ def add_parser(repos):
         help="Version to use. Applies to all packages.",)
     cpan.add_argument(
         "--meta-cpan-url",
-        default='http://fastapi.metacpan.org/v1',
+        default='https://fastapi.metacpan.org/v1',
         help="URL to use for MetaCPAN API. It must include a version, such as v1",)
     cpan.add_argument(
         "--recursive",
