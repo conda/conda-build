@@ -161,7 +161,7 @@ class PerlTmpDownload(TmpDownload):
             else:
                 filename = basename(self.url)
 
-            filename.replace('::', '-')
+            filename = filename.replace('::', '-')
 
             self.tmp_dir = tempfile.mkdtemp()
 
@@ -174,7 +174,7 @@ class PerlTmpDownload(TmpDownload):
 
             if not exists(base_dir):
                 makedirs(base_dir)
-            dst = get_pickle_file_path(cache_dir=base_dir, filename_prefix=filename)
+            dst = get_pickle_file_path(cache_dir=base_dir, filename_prefix=filename, other_hashed=(self.url,))
             if not exists(os.path.dirname(dst)):
                 makedirs(os.path.dirname(dst))
             if not exists(dst):
@@ -221,7 +221,7 @@ def package_exists(package_name):
 
 
 import hashlib
-def md5d(filename):
+def md5d_file_and_other(filename, other_hashed):
     sha1 = hashlib.md5()
     with open(filename, 'rb') as f:
         while True:
@@ -229,21 +229,25 @@ def md5d(filename):
             if not data:
                 break
             sha1.update(data)
+    for other in other_hashed:
+        sha1.update(other.encode('utf-8') if hasattr(other, 'encode') else other)
     return sha1.hexdigest()
 
 
 import pickle
-def get_pickle_file_path(cache_dir, filename_prefix):
+def get_pickle_file_path(cache_dir, filename_prefix, other_hashed=()):
     from hashlib import md5
-    h = 'h' + md5d(__file__)[2:10]
-    return os.path.join(cache_dir, filename_prefix + '.' + h + '.p')
+    h = 'h' + md5d_file_and_other(__file__, other_hashed)[2:10]
+    return os.path.join(cache_dir, filename_prefix.replace('::', '-') + '.' + h + '.p')
 
 
 def load_or_pickle(filename_prefix, base_folder, data_partial, key):
     # It might be nice to hash the entire code tree of data_partial
     # along with all the args to it via hashlib instead but that's
     # difficult.
-    pickled = get_pickle_file_path(cache_dir=base_folder, filename_prefix=filename_prefix)
+    pickled = get_pickle_file_path(cache_dir=base_folder, filename_prefix=filename_prefix + key)
+    # if exists(pickled):
+    #     os.unlink(pickled)
     if exists(pickled):
         with open(pickled, 'rb') as f:
             key_stored = pickle.load(f)
@@ -268,22 +272,23 @@ def install_perl_get_core_modules(version):
         config = Config()
 
         if sys.platform.startswith('win'):
-            subdir = 'win-64'
+            subdirs = ('win-64', 'Library', 'bin', 'perl.exe')
         elif sys.platform.startswith('linux'):
-            subdir = 'linux-64'
+            subdirs = ('linux-64', 'bin', 'perl')
         else:
-            subdir = 'osx-64'
+            subdirs = ('osx-64', 'bin', 'perl')
         # Return one of the dist things instead?
         with TemporaryDirectory() as tmpdir:
-            environ.create_env(tmpdir, ['perl={}'.format(version)], env='host', config=config, subdir=subdir)
-            args = ['{}/perl'.format(join(tmpdir, 'bin')), '-e',
+            environ.create_env(tmpdir, ['perl={}'.format(version)], env='host', config=config, subdir=subdirs[0])
+            args = ['{}'.format(join(tmpdir, *subdirs[1:])), '-e',
                     'use Module::CoreList; print join "\n", Module::CoreList->find_modules(qr/.*/);']
             from subprocess import check_output
-            all_core_modules = check_output(args).decode('utf-8').split('\n')
+            all_core_modules = check_output(args, shell=False).decode('utf-8').replace('\r\n', '\n').split('\n')
             return all_core_modules
-    except:
+    except Exception as e:
         print("Failed to query perl={} for core modules list, attempted command was:\n{}".format(version,
                                                                                                  ' '.join(args)))
+        print(e.message)
 
     return []
 
@@ -316,8 +321,20 @@ def skeletonize(packages, output_dir=".", version=None,
     indent_core = '\n    #- '
     processed_packages = set()
     orig_version = version
+    new_packages = []
+    for package in packages:
+        # TODO :: Determine whether the user asked for a module or a package here.
+        #      :: if a package, then the 2nd element is None, if a module then the
+        #      :: 2nd element gives the name of that module.
+        #      :: I also need to take care about the differences between package
+        #      :: versions and module versions.
+        # module = package
+        # module = dist_for_module(meta_cpan_url, cache_dir, core_modules, package)
+        module = None
+        new_packages.append((package, module))
+    packages = new_packages
     while packages:
-        package = packages.pop()
+        package, module = packages.pop()
         # If we're passed version in the same format as `PACKAGE=VERSION`
         # update version
         if '=' in package:
@@ -336,7 +353,7 @@ def skeletonize(packages, output_dir=".", version=None,
         # distribution name, urls. The lot. Instead we mess about with other API end-points
         # getting a load of nonsense.
         orig_package = package
-        package = dist_for_module(meta_cpan_url, cache_dir, core_modules, package)
+        package = dist_for_module(meta_cpan_url, cache_dir, core_modules, module if module else package)
         if package == 'perl':
             print(("WARNING: {0} is a Perl core module that is not developed " +
                    "outside of Perl, so we are skipping creating a recipe " +
@@ -349,7 +366,8 @@ def skeletonize(packages, output_dir=".", version=None,
                                                             package)
             )
 
-        latest_release_data = get_release_info(meta_cpan_url, cache_dir, core_modules, orig_package, version)
+        latest_release_data = get_release_info(meta_cpan_url, cache_dir, core_modules,
+                                               module if module else orig_package, version)
         packagename = perl_to_conda(package)
 
         # Skip duplicates
@@ -411,7 +429,11 @@ def skeletonize(packages, output_dir=".", version=None,
             d['run_depends'] += indent.join([''] + list(deps['run']['noncore']))
             d['run_depends'] += indent_core.join([''] + list(deps['run']['core']))
             # Make sure we append any packages before continuing
-            packages.extend(packages_to_append)
+            for pkg in packages_to_append:
+                if pkg not in packages:
+                    packages.append(pkg)
+                else:
+                    print("INFO :: Already building package {} (module {})".format(*pkg))
             empty_recipe = False
 
         # If we are recursively getting packages for a particular version
@@ -606,9 +628,8 @@ def deps_for_package(package, release_data, output_dir, cache_dir,
         # Only care about requirements
         try:
             if dep_dict['relationship'] == 'requires':
-                if 'module' in dep_dict and dep_dict['module'] == 'Test::More':
-                    print('debug Expo'
-                          'rter verison mismatch')
+                if 'module' in dep_dict and dep_dict['module'] == 'common::sense':
+                    print('debug common::sense version mismatch')
                 print('.', end='')
                 sys.stdout.flush()
                 # Format dependency string (with Perl trailing dist comment)
@@ -666,16 +687,15 @@ def deps_for_package(package, release_data, output_dir, cache_dir,
 
                 # If recursive, check if we have a recipe for this dependency
                 if recursive:
-                    packages_to_append_old = packages_to_append.copy()
                     # If dependency entry is versioned, make sure this is too
                     if ' ' in dep_entry:
                         if not exists(join(output_dir, dep_entry.replace('::',
                                                                          '-'))):
-                            packages_to_append.add('='.join((orig_dist,
-                                                             dep_dict['version'])))
+                            packages_to_append.add(('='.join((orig_dist,
+                                                             dep_dict['version']))),
+                                                   dep_dict['module'])
                     elif not glob(join(output_dir, (dep_entry + '-[v1-9][0-9.]*'))):
-                        packages_to_append.add(orig_dist)
-                    print('module {} adds {}'.format(package, packages_to_append - packages_to_append_old))
+                        packages_to_append.add((orig_dist, dep_dict['module']))
 
                 # Add to appropriate dependency list
                 core = metacpan_api_is_core_version(
@@ -702,6 +722,8 @@ def deps_for_package(package, release_data, output_dir, cache_dir,
         # See https://github.com/conda/conda-build/issues/1675
         except (CondaError, CondaHTTPError):
             continue
+
+    print('module {} adds {}'.format(package, packages_to_append))
 
     return deps, packages_to_append
 
@@ -745,21 +767,34 @@ def release_module_dict_direct(cpan_url, cache_dir, module):
         print("debug {}".format(module))
 
     try:
-        rel_dict = get_cpan_api_url(
-            '{0}/module/{1}'.format(cpan_url, module), colons=True)
+        url_module = '{0}/module/{1}'.format(cpan_url, module)
+        print('INFO :: url_module {}'.format(url_module))
+        rel_dict = get_cpan_api_url(url_module, colons=True)
     except RuntimeError:
         rel_dict = None
     except CondaHTTPError:
         rel_dict = None
-    return rel_dict
-
-    try:
-        rel_dict = get_cpan_api_url(
-            '{0}/release/{1}'.format(cpan_url, module), colons=False)
-    except RuntimeError:
-        rel_dict = None
-    except CondaHTTPError:
-        rel_dict = None
+    if not rel_dict:
+        print("WARNING :: Did not find rel_dict for module {}".format(module))
+    distribution = module.replace('::', '-')
+    if not rel_dict or 'dependency' not in rel_dict:
+        if rel_dict and 'distribution' in rel_dict:
+            distribution = rel_dict['distribution']
+        else:
+            print("WARNING :: 'distribution' was not in {}'s module info, making it up".format(module))
+        try:
+            url_release = '{0}/release/{1}'.format(cpan_url, distribution)
+            rel_dict2 = get_cpan_api_url(url_release, colons=False)
+            rel_dict = rel_dict2
+        except RuntimeError:
+            rel_dict = None
+        except CondaHTTPError:
+            rel_dict = None
+    else:
+        print("INFO :: OK, found 'dependency' in module {}".format(module))
+    if not rel_dict or not 'dependency' in rel_dict:
+        print("WARNING :: No dependencies found for module {} in distribution {}\n"
+              "WARNING :: Please check {} and {}".format(module, distribution, url_module, url_release))
     return rel_dict
 
 
