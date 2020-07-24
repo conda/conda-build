@@ -38,7 +38,6 @@ package:
   version: {{{{ version }}}}
 
 {source_comment}source:
-  {useurl}fn: {filename}
   {useurl}url: {cpanurl}
   {usesha256}sha256: {{{{ sha256 }}}}
 
@@ -220,7 +219,7 @@ def package_exists(package_name):
 
 # meta_cpan_url="http://api.metacpan.org",
 def skeletonize(packages, output_dir=".", version=None,
-                meta_cpan_url="http://fastapi.metacpan.org/v1",
+                meta_cpan_url="https://fastapi.metacpan.org/v1",
                 recursive=False, force=False, config=None, write_core=False):
     '''
     Loops over packages, outputting conda recipes converted from CPAN metata.
@@ -446,7 +445,7 @@ def add_parser(repos):
         help="Version to use. Applies to all packages.",)
     cpan.add_argument(
         "--meta-cpan-url",
-        default='http://fastapi.metacpan.org/v1',
+        default='https://fastapi.metacpan.org/v1',
         help="URL to use for MetaCPAN API. It must include a version, such as v1",)
     cpan.add_argument(
         "--recursive",
