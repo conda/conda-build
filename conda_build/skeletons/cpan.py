@@ -186,6 +186,35 @@ class PerlTmpDownload(TmpDownload):
             return dst
 
 
+def get_build_dependencies_from_src_archive(package_url, sha256, src_cache):
+    import tarfile
+    from conda_build import source
+    cached_path, _ = source.download_to_cache(src_cache, '',
+                                              {'url': package_url,
+                                               'sha256': sha256})
+    result = []
+    with tarfile.open(cached_path) as tf:
+        need_f = any([f.name.lower().endswith(('.f', '.f90', '.f77', '.f95', '.f03')) for f in tf])
+        # Fortran builds use CC to perform the link (they do not call the linker directly).
+        need_c = True if need_f else \
+            any([f.name.lower().endswith('.c') for f in tf])
+        need_cxx = any([f.name.lower().endswith(('.cxx', '.cpp', '.cc', '.c++'))
+                        for f in tf])
+        need_autotools = any([f.name.lower().endswith('/configure') for f in tf])
+        need_make = True if any((need_autotools, need_f, need_cxx, need_c)) else \
+            any([f.name.lower().endswith(('/makefile', '/makevars'))
+                 for f in tf])
+        if need_c or need_cxx:
+            result.append("{{ compiler('c') }}")
+        if need_cxx:
+            result.append("{{ compiler('cxx') }}")
+        if need_autotools:
+            result.append("autotools")
+        if need_make:
+            result.append("make")
+    return result
+
+
 def loose_version(ver):
     return str(parse_version(str(ver)))
 
@@ -422,9 +451,23 @@ def skeletonize(packages, output_dir=".", version=None,
                                  output_dir=output_dir, cache_dir=cache_dir,
                                  meta_cpan_url=meta_cpan_url, recursive=recursive, core_modules=core_modules)
 
-            # Get which deps are in perl_core
+            # If this is something we're downloading, get MD5
+            d['cpanurl'] = ''
+            d['sha256'] = ''
+            if release_data.get('download_url'):
+                d['cpanurl'] = release_data['download_url']
+                d['sha256'], size = get_checksum_and_size(release_data['download_url'])
+                print("Using url %s (%s) for %s." % (d['cpanurl'], size, package))
+                src_build_depends = get_build_dependencies_from_src_archive(release_data['download_url'],
+                                                                            d['sha256'], config.src_cache)
+            else:
+                src_build_depends = []
+                d['useurl'] = '#'
+                d['usesha256'] = '#'
+                d['source_comment'] = '#'
 
-            d['build_depends'] += indent.join([''] + list(deps['build']['noncore'] |
+            d['build_depends'] += indent.join([''] + list(src_build_depends |
+                                                          deps['build']['noncore'] |
                                                           deps['run']['noncore']))
             d['build_depends'] += indent_core.join([''] + list(deps['build']['core'] |
                                                                deps['run']['core']))
@@ -448,19 +491,6 @@ def skeletonize(packages, output_dir=".", version=None,
             continue
         elif exists(dir_path) and force:
             print('Directory %s already exists, but forcing recipe creation' % dir_path)
-
-        # If this is something we're downloading, get MD5
-        d['cpanurl'] = ''
-        d['sha256'] = ''
-        if release_data.get('download_url'):
-            d['cpanurl'] = release_data['download_url']
-            d['sha256'], size = get_checksum_and_size(
-                release_data['download_url'])
-            print("Using url %s (%s) for %s." % (d['cpanurl'], size, package))
-        else:
-            d['useurl'] = '#'
-            d['usesha256'] = '#'
-            d['source_comment'] = '#'
 
         try:
             d['homeurl'] = release_data['resources']['homepage']
