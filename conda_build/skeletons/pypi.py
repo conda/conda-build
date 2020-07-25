@@ -752,7 +752,6 @@ def get_package_metadata(package, metadata, data, output_dir, python_version, al
 
     if not metadata.get("summary"):
         metadata["summary"] = get_summary(pkginfo)
-        metadata["summary"] = get_summary(pkginfo)
 
     license_name = get_license_name(package, pkginfo, no_prompt, data)
     metadata["license"] = clean_license_name(license_name)
