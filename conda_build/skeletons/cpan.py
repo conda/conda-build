@@ -204,7 +204,7 @@ def get_build_dependencies_from_src_archive(package_url, sha256, src_cache):
         need_make = True if any((need_autotools, need_f, need_cxx, need_c)) else \
             any([f.name.lower().endswith(('/makefile', '/makevars'))
                  for f in tf])
-        if need_c or need_cxx or need_fortran:
+        if need_c or need_cxx or need_f:
             result.append("{{ compiler('c') }}")
         if need_cxx:
             result.append("{{ compiler('cxx') }}")
