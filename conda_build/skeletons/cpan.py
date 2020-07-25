@@ -466,9 +466,9 @@ def skeletonize(packages, output_dir=".", version=None,
                 d['usesha256'] = '#'
                 d['source_comment'] = '#'
 
-            d['build_depends'] += indent.join([''] + list(src_build_depends |
-                                                          deps['build']['noncore'] |
-                                                          deps['run']['noncore']))
+            d['build_depends'] += indent.join([''] + (src_build_depends +
+                                              list(deps['build']['noncore'] |
+                                                   deps['run']['noncore'])))
             d['build_depends'] += indent_core.join([''] + list(deps['build']['core'] |
                                                                deps['run']['core']))
 
