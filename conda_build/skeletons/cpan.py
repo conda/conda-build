@@ -204,14 +204,19 @@ def get_build_dependencies_from_src_archive(package_url, sha256, src_cache):
         need_make = True if any((need_autotools, need_f, need_cxx, need_c)) else \
             any([f.name.lower().endswith(('/makefile', '/makevars'))
                  for f in tf])
-        if need_c or need_cxx:
+        if need_c or need_cxx or need_fortran:
             result.append("{{ compiler('c') }}")
         if need_cxx:
             result.append("{{ compiler('cxx') }}")
+        if need_f:
+            result.append("{{ compiler('fortran') }}")
         if need_autotools:
-            result.append("autotools")
+            # TODO :: Correct this for Windows
+            result.append("autoconf")
+            result.append("automake")
         if need_make:
             result.append("make")
+    print("INFO :: For {}, we need the following build tools:\n{}".format(os.path.basename(package_url), result))
     return result
 
 
