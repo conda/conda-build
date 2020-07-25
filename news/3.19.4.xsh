@@ -32,5 +32,5 @@ Docs:
 Other:
 ------
 
-* <news item>
+* drop duplicate get_summary call
 
