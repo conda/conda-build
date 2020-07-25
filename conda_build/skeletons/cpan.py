@@ -51,9 +51,14 @@ build:
       - {{{{ name }}}} ={{{{ version }}}}
 
 requirements:
+  build:{build_depends}
+
   # Run exports are used now
   host:
-    - perl{build_depends}
+    - perl{host_depends}
+
+  run:
+    - perl{run_depends}
 
 {import_comment}test:
   # Perl 'use' tests
@@ -417,8 +422,9 @@ def skeletonize(packages, output_dir=".", version=None,
             continue
 
         d = package_dicts.setdefault(package, {'packagename': packagename,
-                                               'run_depends': '',
                                                'build_depends': '',
+                                               'host_depends': '',
+                                               'run_depends': '',
                                                'build_comment': '# ',
                                                'test_commands': '',
                                                'usesha256': '',
@@ -473,14 +479,19 @@ def skeletonize(packages, output_dir=".", version=None,
                 d['usesha256'] = '#'
                 d['source_comment'] = '#'
 
-            d['build_depends'] += indent.join([''] + (src_build_depends +
-                                              list(deps['build']['noncore'] |
-                                                   deps['run']['noncore'])))
-            d['build_depends'] += indent_core.join([''] + list(deps['build']['core'] |
-                                                               deps['run']['core']))
+            d['build_depends'] += indent.join([''] + src_build_depends)
 
-            d['run_depends'] += indent.join([''] + list(deps['run']['noncore']))
-            d['run_depends'] += indent_core.join([''] + list(deps['run']['core']))
+#            d['build_depends'] += indent_core.join([''] + list(deps['build']['core'] |
+#                                                               deps['run']['core']))
+
+            d['host_depends'] += indent.join([''] + list(deps['build']['noncore'] |
+                                                         deps['run']['noncore']))
+
+            # run_exports will set these, but:
+            # TODO :: Add ignore_run_exports for things in deps['build'] that are not also
+            #         in deps['run']
+            d['run_depends'] += indent_core.join([''] + list(deps['run']['noncore']))
+
             # Make sure we append any packages before continuing
             for pkg in packages_to_append:
                 if pkg not in packages:
