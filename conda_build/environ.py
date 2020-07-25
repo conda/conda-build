@@ -651,9 +651,9 @@ def system_vars(env_dict, m, prefix):
     else:
         unix_vars(m, get_default, prefix)
 
-    if sys.platform == 'darwin':
+    if m.config.host_platform == "osx":
         osx_vars(m, get_default, prefix)
-    elif sys.platform.startswith('linux'):
+    elif m.config.host_platform == "linux":
         linux_vars(m, get_default, prefix)
 
     return d
