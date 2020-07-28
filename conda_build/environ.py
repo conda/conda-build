@@ -603,10 +603,13 @@ def linux_vars(m, get_default, prefix):
     # the GNU triplet is powerpc, not ppc. This matters.
     if build_arch.startswith('ppc'):
         build_arch = build_arch.replace('ppc', 'powerpc')
+    
     if build_arch.startswith('powerpc') or build_arch.startswith('aarch64'):
-        build_distro = 'cos7'
+        build_distro = 'conda_cos7'
     else:
-        build_distro = 'cos6'
+        build_distro = 'conda_cos6'            
+    build_distro = os.environ.get("CONDA_BUILD_DISTRO", build_distro)
+    
     # There is also QEMU_SET_ENV, but that needs to be
     # filtered so it only contains the result of `linux_vars`
     # which, before this change was empty, and after it only
@@ -619,7 +622,7 @@ def linux_vars(m, get_default, prefix):
     get_default('DEJAGNU')
     get_default('DISPLAY')
     get_default('LD_RUN_PATH', prefix + '/lib')
-    get_default('BUILD', build_arch + '-conda_' + build_distro + '-linux-gnu')
+    get_default('BUILD', build_arch + '-' + build_distro + '-linux-gnu')
 
 
 def set_from_os_or_variant(out_dict, key, variant, default):
