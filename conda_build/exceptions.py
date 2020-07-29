@@ -67,7 +67,7 @@ class DependencyNeedsBuildingError(CondaBuildException):
         else:
             self.packages = packages or []
             for line in str(conda_exception).splitlines():
-                if not line.startswith('  - '):
+                if not line.startswith('  - ') and (':' in line or ' -> ' not in line):
                     continue
                 pkg = line.lstrip('  - ').split(' -> ')[-1]
                 self.matchspecs.append(pkg)
