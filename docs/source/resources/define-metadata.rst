@@ -1722,6 +1722,9 @@ variables are booleans.
    * - armv7l
      - True if the platform is Linux and the Python architecture
        is armv7l.
+   * - aarch64
+     - True if the platform is Linux and the Python architecture
+       is aarch64.
    * - ppc64le
      - True if the platform is Linux and the Python architecture
        is ppc64le.
