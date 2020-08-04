@@ -106,6 +106,7 @@ DEFAULT_SUBDIRS = {
     "win-64",
     "win-32",
     "osx-64",
+    "osx-arm64",
     "zos-z",
     "noarch",
 }

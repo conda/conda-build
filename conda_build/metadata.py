@@ -125,7 +125,7 @@ def ns_cfg(config):
     d['luajit'] = bool(lua[0] == "2")
 
     for machine in non_x86_linux_machines:
-        d[machine] = bool(plat == 'linux-%s' % machine)
+        d[machine] = bool(plat.endswith('-%s' % machine))
 
     for feature, value in feature_list:
         d[feature] = value
