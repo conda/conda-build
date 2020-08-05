@@ -764,7 +764,8 @@ def conda_convert(file_path, output_dir=".", show_imports=False, platforms=None,
     source_platform_architecture = '{}-{}' .format(source_platform, architecture)
 
     if 'all' in platforms:
-        platforms = ['osx-64', 'linux-32', 'linux-64', 'linux-ppc64', 'linux-ppc64le',
+        platforms = ['osx-64', 'osx-arm64',
+                     'linux-32', 'linux-64', 'linux-ppc64', 'linux-ppc64le',
                      'linux-s390x', 'linux-armv6l', 'linux-armv7l', 'linux-aarch64',
                      'win-32', 'win-64']
 
