@@ -1809,27 +1809,43 @@ def _write_sh_activation_text(file_handle, m):
     from conda_build.os_utils.external import find_executable
     ccache = find_executable('ccache', m.config.build_prefix, False)
     if ccache:
-        ccache_method_env_vars = False
-        ccache_method_mklink = True
-        file_handle.write('export CCACHE_SLOPPINESS="pch_defines,time_macros${CCACHE_SLOPPINESS+,$CCACHE_SLOPPINESS}"\n')
-        file_handle.write('export CCACHE_CPP2=true\n')
-        if ccache_method_mklink:
-            dirname_ccache_ln_bin = join(m.config.build_prefix, 'ccache-ln-bin')
-            file_handle.write('mkdir {}\n'.format(dirname_ccache_ln_bin))
-            file_handle.write('pushd {}\n'.format(dirname_ccache_ln_bin))
-            file_handle.write('if [ -n "$CC" ]; then\n')
-            file_handle.write('  [ -f {ccache} ] && [ ! -f $(basename $CC) ] && ln -s {ccache} $(basename $CC) || true\n'.format(ccache=ccache))
-            file_handle.write('fi\n')
-            file_handle.write('if [ -n "$CXX" ]; then\n')
-            file_handle.write('  [ -f {ccache} ] && [ ! -f $(basename $CXX) ] && ln -s {ccache} $(basename $CXX) || true\n'.format(ccache=ccache))
-            file_handle.write('fi\n')
-            file_handle.write('popd\n')
-            # We really don't want to be doing this.
-            file_handle.write('export "PATH={}:$PATH"\n'.format(dirname_ccache_ln_bin))
-        if ccache_method_env_vars:
-            file_handle.write('export CC="{ccache} $CC"\n'.format(ccache=ccache))
-            file_handle.write('export CXX="{ccache} $CXX"\n'.format(ccache=ccache))
-            file_handle.write('export LD="{ccache} $LD"\n'.format(ccache=ccache))
+        if isinstance(ccache, list):
+            ccache = ccache[0]
+        ccache_methods = {}
+        ccache_methods['env_vars'] = False
+        ccache_methods['mklink'] = False
+        ccache_methods['native'] = False
+        if hasattr(m.config, 'ccache_method'):
+            ccache_methods[m.config.ccache_method] = True
+        done_necessary_env = False
+        for method, value in ccache_methods.items():
+            if value:
+                if not done_necessary_env:
+                    # file_handle.write(
+                    #     'export CCACHE_SLOPPINESS="pch_defines,time_macros${CCACHE_SLOPPINESS+,$CCACHE_SLOPPINESS}"\n')
+                    # file_handle.write('export CCACHE_CPP2=true\n')
+                    done_necessary_env = True
+                if method == 'mklink':
+                    dirname_ccache_ln_bin = join(m.config.build_prefix, 'ccache-ln-bin')
+                    file_handle.write('mkdir {}\n'.format(dirname_ccache_ln_bin))
+                    file_handle.write('pushd {}\n'.format(dirname_ccache_ln_bin))
+                    file_handle.write('if [ -n "$CC" ]; then\n')
+                    file_handle.write('  [ -f {ccache} ] && [ ! -f $(basename $CC) ] && ln -s {ccache} $(basename $CC) || true\n'.format(ccache=ccache))
+                    file_handle.write('fi\n')
+                    file_handle.write('if [ -n "$CXX" ]; then\n')
+                    file_handle.write('  [ -f {ccache} ] && [ ! -f $(basename $CXX) ] && ln -s {ccache} $(basename $CXX) || true\n'.format(ccache=ccache))
+                    file_handle.write('fi\n')
+                    file_handle.write('popd\n')
+                    # We really don't want to be doing this.
+                    file_handle.write('export "PATH={}:$PATH"\n'.format(dirname_ccache_ln_bin))
+                elif method == 'env_vars':
+                    file_handle.write('export CC="{ccache} $CC"\n'.format(ccache=ccache))
+                    file_handle.write('export CXX="{ccache} $CXX"\n'.format(ccache=ccache))
+                    file_handle.write('export LD="{ccache} $LD"\n'.format(ccache=ccache))
+                elif method == 'native':
+                    pass
+                else:
+                    print("ccache method {} not implemented")
 
     # conda 4.4 requires a conda-meta/history file for a valid conda prefix
     history_file = join(m.config.build_prefix, 'conda-meta', 'history')

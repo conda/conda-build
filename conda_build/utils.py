@@ -1912,7 +1912,10 @@ def write_bat_activation_text(file_handle, m):
             ccache = ccache[0]
         ccache_methods = {}
         ccache_methods['env_vars'] = False
-        ccache_methods['mklink'] = True
+        ccache_methods['mklink'] = False
+        ccache_methods['native'] = False
+        if hasattr(m.config, 'ccache_method'):
+            ccache_methods[m.config.ccache_method] = True
         for method, value in ccache_methods.items():
             if value:
                 if method == 'env_vars':
@@ -1943,6 +1946,8 @@ def write_bat_activation_text(file_handle, m):
                     file_handle.write('set PATH={dirname_ccache_ln};{dirname_ccache};%PATH%\n'.format(
                         dirname_ccache_ln = dirname_ccache_ln_bin,
                         dirname_ccache = os.path.dirname(ccache)))
+                elif method == 'native':
+                    pass
                 else:
                     print("ccache method {} not implemented")
 
