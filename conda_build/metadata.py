@@ -99,6 +99,8 @@ def ns_cfg(config):
     # or from "3.6.9" -> "36"
     py = int("".join(py.split(' ')[0].split('.')[:2]))
 
+    d["build_platform"] = config.build_subdir
+
     d.update(dict(py=py,
                     py3k=bool(30 <= py < 40),
                     py2k=bool(20 <= py < 30),
