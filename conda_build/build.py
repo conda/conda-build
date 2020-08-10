@@ -1673,9 +1673,24 @@ def bundle_conda(output, metadata, env, stats, **kw):
                             '_'.join(('_h_env_moved', metadata.dist(),
                                       metadata.config.host_subdir)))
         print("Renaming host env directory, ", prefix, " to ", dest)
-        if os.path.exists(dest):
-            utils.rm_rf(dest)
-        shutil.move(prefix, dest)
+        attempts_left = 5
+        while attempts_left != 0:
+            if os.path.exists(dest):
+                utils.rm_rf(dest)
+            try:
+                log.info("shutil.move(prefix={}, dest={})".format(prefix, dest))
+                shutil.move(prefix, dest)
+                if attempts_left != 5:
+                    log.warning("shutil.move(prefix={}, dest={}) succeeded on attempt number {}".format(prefix, dest, 6 - attempts_left))
+                attempts_left = 0
+            except:
+                attempts_left = attempts_left - 1
+            if attempts_left:
+                log.warning("Failed to rename host env directory, check with strace, struss or procmon. Will sleep for 3 seconds and try again!")
+                import time
+                time.sleep(3)
+            else:
+                log.error("Failed to rename host env directory despite sleeping and retrying. This is some Windows file locking mis-bahaviour.")
     else:
         utils.rm_rf(metadata.config.host_prefix)
 
