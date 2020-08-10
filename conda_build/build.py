@@ -1539,6 +1539,8 @@ def bundle_conda(output, metadata, env, stats, **kw):
         env_output['MSYS2_PATH_TYPE'] = 'inherit'
         env_output['CHERE_INVOKING'] = '1'
         for var in utils.ensure_list(metadata.get_value('build/script_env')):
+            if '=' in var:
+                var = var.split('=')[0]
             if var not in os.environ:
                 raise ValueError("env var '{}' specified in script_env, but is not set."
                                     .format(var))
