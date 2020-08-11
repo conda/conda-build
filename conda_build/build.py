@@ -2594,7 +2594,7 @@ def _write_test_run_script(metadata, test_run_script, test_env_script, py_files,
             source="call" if utils.on_win else "source",
             test_env_script=test_env_script))
         if utils.on_win:
-            tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+            tf.write("IF %ERRORLEVEL% NEQ 0 exit /B 1\n")
         else:
             tf.write('set {trace}-e\n'.format(trace=trace))
         if py_files:
@@ -2606,34 +2606,34 @@ def _write_test_run_script(metadata, test_run_script, test_env_script, py_files,
                 python=test_python,
                 test_file=join(metadata.config.test_dir, 'run_test.py')))
             if utils.on_win:
-                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+                tf.write("IF %ERRORLEVEL% NEQ 0 exit /B 1\n")
         if pl_files:
             tf.write('"{perl}" "{test_file}"\n'.format(
                 perl=metadata.config.perl_bin(metadata.config.test_prefix,
                                               metadata.config.host_platform),
                 test_file=join(metadata.config.test_dir, 'run_test.pl')))
             if utils.on_win:
-                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+                tf.write("IF %ERRORLEVEL% NEQ 0 exit /B 1\n")
         if lua_files:
             tf.write('"{lua}" "{test_file}"\n'.format(
                 lua=metadata.config.lua_bin(metadata.config.test_prefix,
                                             metadata.config.host_platform),
                 test_file=join(metadata.config.test_dir, 'run_test.lua')))
             if utils.on_win:
-                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+                tf.write("IF %ERRORLEVEL% NEQ 0 exit /B 1\n")
         if r_files:
             tf.write('"{r}" "{test_file}"\n'.format(
                 r=metadata.config.rscript_bin(metadata.config.test_prefix,
                                               metadata.config.host_platform),
                 test_file=join(metadata.config.test_dir, 'run_test.r')))
             if utils.on_win:
-                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+                tf.write("IF %ERRORLEVEL% NEQ 0 exit /B 1\n")
         if shell_files:
             for shell_file in shell_files:
                 if utils.on_win:
                     if os.path.splitext(shell_file)[1] == ".bat":
                         tf.write('call "{test_file}"\n'.format(test_file=shell_file))
-                        tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+                        tf.write("IF %ERRORLEVEL% NEQ 0 exit /B 1\n")
                     else:
                         log.warn("Found sh test file on windows.  Ignoring this for now (PRs welcome)")
                 elif os.path.splitext(shell_file)[1] == ".sh":
@@ -2687,7 +2687,7 @@ def write_test_scripts(metadata, env_vars, py_files, pl_files, lua_files, r_file
                     ext=ext,
                     test_env=metadata.config.test_prefix))
             if utils.on_win:
-                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+                tf.write("IF %ERRORLEVEL% NEQ 0 exit /B 1\n")
         # In-case people source this, it's essential errors are not fatal in an interactive shell.
         if not utils.on_win:
             tf.write('set +e\n')
