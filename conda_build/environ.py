@@ -499,13 +499,13 @@ def get_cpu_count():
             return "1"
 
 
-def get_shlib_ext():
+def get_shlib_ext(host_platform):
     # Return the shared library extension.
-    if sys.platform == 'win32':
+    if host_platform == 'win':
         return '.dll'
-    elif sys.platform == 'darwin':
+    elif host_platform == 'osx':
         return '.dylib'
-    elif sys.platform.startswith('linux'):
+    elif host_platform == 'linux':
         return '.so'
     else:
         raise NotImplementedError(sys.platform)
@@ -640,7 +640,7 @@ def system_vars(env_dict, m, prefix):
     get_default('LANG')
     get_default('LC_ALL')
     get_default('MAKEFLAGS')
-    d['SHLIB_EXT'] = get_shlib_ext()
+    d['SHLIB_EXT'] = get_shlib_ext(m.config.host_platform)
     d['PATH'] = os.environ.copy()['PATH']
 
     if not m.config.activate:
