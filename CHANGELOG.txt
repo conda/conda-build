@@ -12,6 +12,7 @@ Other:
 ------
 
 * Enable ppc64 support (#3921)
+* Allow python=3.8 for pypi skeletons
 
 Docs:
 -----
