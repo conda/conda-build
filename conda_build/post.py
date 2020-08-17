@@ -883,7 +883,7 @@ def _lookup_in_sysroots_and_whitelist(errors, whitelist, needed_dso, sysroots_fi
                 sysroot_files.extend(found)
         if len(sysroot_files):
             in_sysroots = True
-            if 'osx-64' in subdir or 'win' in subdir:
+            if subdir.startswith('osx-') or 'win' in subdir:
                 in_prefix_dso = sysroot_files[0]
                 n_dso_p = "Needed DSO {}".format(in_prefix_dso)
                 _print_msg(errors, '{}: {} found in $SYSROOT'.
@@ -1080,7 +1080,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     #   create some packages for the Windows System DLLs as an alternative?)
     build_is_host = False
     if not len(sysroots):
-        if subdir == 'osx-64':
+        if subdir.startswith('osx-'):
             # This is a bit confused! A sysroot shouldn't contain /usr/lib (it's the bit before that)
             # what we are really specifying here are subtrees of sysroots to search in and it may be
             # better to store each element of this as a tuple with a string and a nested tuple, e.g.
@@ -1106,7 +1106,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
         sysroot_files = prefix_files(sysroot)
         sysroot_files = [p.replace('\\', '/') for p in sysroot_files]
         sysroots_files[srs] = sysroot_files
-        if subdir == 'osx-64':
+        if subdir.startswith('osx-'):
             orig_sysroot_files = copy(sysroot_files)
             sysroot_files = []
             for f in orig_sysroot_files:
@@ -1300,7 +1300,7 @@ def post_build(m, files, build_python, host_prefix=None, is_already_linked=False
         binary_relocation = m.binary_relocation()
         if not binary_relocation:
             print("Skipping binary relocation logic")
-        osx_is_app = (m.config.target_subdir == 'osx-64' and
+        osx_is_app = (m.config.target_subdir.startswith('osx-') and
                       bool(m.get_value('build/osx_is_app', False)))
         check_symlinks(files, host_prefix, m.config.croot)
         prefix_files = utils.prefix_files(host_prefix)
