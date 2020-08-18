@@ -300,6 +300,7 @@ def conda_build_vars(prefix, config):
         'SYS_PREFIX': sys.prefix,
         'SYS_PYTHON': sys.executable,
         'SUBDIR': config.host_subdir,
+        'build_platform': config.build_subdir,
         'SRC_DIR': src_dir,
         'HTTPS_PROXY': os.getenv('HTTPS_PROXY', ''),
         'HTTP_PROXY': os.getenv('HTTP_PROXY', ''),
