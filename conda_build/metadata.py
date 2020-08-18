@@ -1198,7 +1198,8 @@ class MetaData(object):
             except (AttributeError, ValueError) as e:
                 raise RuntimeError("Received dictionary as spec.  Note that pip requirements are "
                                    "not supported in conda-build meta.yaml.  Error message: " + str(e))
-            if ms.name == self.name():
+            if ms.name == self.name() and not \
+                    (typ == 'build' and self.config.host_subdir != self.config.build_subdir):
                 raise RuntimeError("%s cannot depend on itself" % self.name())
             for name, ver in name_ver_list:
                 if ms.name == name:
