@@ -1065,7 +1065,7 @@ def test_copy_read_only_file_with_xattr(testing_config, testing_homedir):
         subprocess.check_call('setfattr -n user.attrib -v somevalue {}'.format(ro_file), shell=True)
     except:
         return pytest.xfail("setfattr not possible in {}, see https://stackoverflow.com/a/46598063".format(
-            testing_workdir))
+            testing_homedir))
     subprocess.check_call('chmod 400 {}'.format(ro_file), shell=True)
     api.build(recipe, config=testing_config)
 
