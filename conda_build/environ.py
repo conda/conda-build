@@ -507,8 +507,12 @@ def get_shlib_ext(host_platform):
         return '.dylib'
     elif host_platform == 'linux':
         return '.so'
+    elif host_platform == 'noarch':
+        # noarch packages should not contain shared libraries, use the system
+        # platform if this is requested
+        return get_shlib_ext(sys.platform)
     else:
-        raise NotImplementedError(sys.platform)
+        raise NotImplementedError(host_platform)
 
 
 def windows_vars(m, get_default, prefix):
