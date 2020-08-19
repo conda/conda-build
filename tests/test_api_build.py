@@ -483,13 +483,13 @@ def test_numpy_setup_py_data(testing_config):
     #    - cython
     subprocess.call('conda remove -y cython'.split())
     with pytest.raises(CondaBuildException) as exc_info:
-        api.render(recipe_path, config=testing_config, numpy="1.11")[0][0]
+        api.render(recipe_path, config=testing_config, numpy="1.16")[0][0]
     assert exc_info.match("Cython")
     subprocess.check_call(["conda", "install", "-y", "cython"])
-    m = api.render(recipe_path, config=testing_config, numpy="1.11")[0][0]
+    m = api.render(recipe_path, config=testing_config, numpy="1.16")[0][0]
     _hash = m.hash_dependencies()
     assert os.path.basename(api.get_output_file_path(m)[0]) == \
-                            "load_setup_py_test-0.1.0-np111py{0}{1}{2}_0.tar.bz2".format(
+                            "load_setup_py_test-0.1.0-np116py{0}{1}{2}_0.tar.bz2".format(
                                 sys.version_info.major, sys.version_info.minor, _hash)
 
 
