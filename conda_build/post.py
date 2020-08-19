@@ -4,7 +4,7 @@ from copy import copy
 from collections import defaultdict, OrderedDict
 from functools import partial
 from fnmatch import fnmatch, filter as fnmatch_filter, translate as fnmatch_translate
-from os.path import (basename, commonprefix, dirname, exists, isabs, isdir, isfile,
+from os.path import (basename, dirname, exists, isabs, isdir, isfile,
                      islink, join, normpath, realpath, relpath, sep, splitext)
 import io
 import locale
@@ -1115,16 +1115,16 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                     # For now, look up the line containing:
                     # install-name:    /System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation
                     with open(os.path.join(sysroot, f), 'rb') as tbd_fh:
-                        lines = [l for l in tbd_fh.read().decode('utf-8').splitlines() if l.startswith('install-name:')]
+                        lines = [line for line in tbd_fh.read().decode('utf-8').splitlines() if line.startswith('install-name:')]
                     if lines:
-                        install_names = [re.match('^install-name:\s+(.*)$', l) for l in lines]
+                        install_names = [re.match('^install-name:\s+(.*)$', line) for line in lines]
                         install_names = [insname.groups(1)[0] for insname in install_names]
                         replaced = install_names[0][1:]
                 sysroot_files.append(replaced)
             diffs = set(orig_sysroot_files) - set(sysroot_files)
             if diffs:
                 log = utils.get_logger(__name__)
-                log.warning("Partially parsed some '.tbd' files in sysroot, pretending .tbds are their install-names\n"
+                log.warning("Partially parsed some '.tbd' files in sysroot {}, pretending .tbds are their install-names\n"
                             "Adding support to 'conda-build' for parsing these in 'liefldd.py' would be easy and useful:\n"
                             "{} ..."
                             .format(sysroot, list(diffs)[1:3]))

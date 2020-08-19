@@ -41,23 +41,23 @@ except Exception:
     CONDA_PACKAGE_EXTENSIONS = (CONDA_TARBALL_EXTENSION,)
 CONDA_TARBALL_EXTENSIONS = CONDA_PACKAGE_EXTENSIONS # noqa: shim for previous interface
 
-from conda.api import PackageCacheData
+from conda.api import PackageCacheData # noqa
 
-from .conda_interface import hashsum_file, md5_file, unix_path_to_win, win_path_to_unix
-from .conda_interface import PY3, iteritems
-from .conda_interface import root_dir, pkgs_dirs
-from .conda_interface import string_types
-from .conda_interface import memoized
-from .conda_interface import StringIO
-from .conda_interface import VersionOrder, MatchSpec
-from .conda_interface import cc_conda_build
-from .conda_interface import conda_43, conda_46, Dist
-from .conda_interface import context
-from .conda_interface import download, TemporaryDirectory, get_conda_channel, CondaHTTPError
+from .conda_interface import hashsum_file, md5_file, unix_path_to_win, win_path_to_unix # noqa
+from .conda_interface import PY3, iteritems # noqa
+from .conda_interface import root_dir, pkgs_dirs # noqa
+from .conda_interface import string_types # noqa
+from .conda_interface import memoized # noqa
+from .conda_interface import StringIO # noqa
+from .conda_interface import VersionOrder, MatchSpec # noqa
+from .conda_interface import cc_conda_build # noqa
+from .conda_interface import conda_43, conda_46, Dist # noqa
+from .conda_interface import context # noqa
+from .conda_interface import download, TemporaryDirectory, get_conda_channel, CondaHTTPError # noqa
 # NOQA because it is not used in this file.
-from conda_build.conda_interface import rm_rf as _rm_rf # NOQA
-from conda_build.exceptions import BuildLockError
-from conda_build.os_utils import external
+from conda_build.conda_interface import rm_rf as _rm_rf # noqa
+from conda_build.exceptions import BuildLockError # noqa
+from conda_build.os_utils import external # noqa
 
 if PY3:
     from glob import glob as glob_glob
