@@ -127,6 +127,8 @@ inherited from the shell environment in which you invoke
        source file.
    * - STDLIB_DIR
      - Python standard library location.
+   * - build_platform
+     - The native subdir of the conda executable
 
 Unix-style packages on Windows, which are usually statically
 linked to executables, are built in a special ``Library``
