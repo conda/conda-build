@@ -504,7 +504,7 @@ def get_shlib_ext(host_platform):
     # Return the shared library extension.
     if host_platform.startswith('win'):
         return '.dll'
-    elif host_platform.startswith('osx'):
+    elif host_platform in ['osx', 'darwin']:
         return '.dylib'
     elif host_platform.startswith('linux'):
         return '.so'
