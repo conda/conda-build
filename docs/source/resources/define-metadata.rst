@@ -1730,6 +1730,9 @@ variables are booleans.
        is ppc64le.
    * - osx
      - True if the platform is macOS.
+   * - arm64
+     - True if the platform is macOS and the Python architecture
+       is arm64.
    * - unix
      - True if the platform is either macOS or Linux.
    * - win
@@ -1758,6 +1761,8 @@ variables are booleans.
    * - np
      - The NumPy version as an integer such as ``111``. See the
        CONDA_NPY :ref:`environment variable <build-envs>`.
+   * - build_platform
+     - The native subdir of the conda executable
 
 The use of the Python version selectors, `py27`, `py34`, etc. is discouraged in
 favor of the more general comparison operators.  Additional selectors in this
