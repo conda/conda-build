@@ -496,7 +496,7 @@ def get_linkages(filename, resolve_filenames=True, recurse=True,
     result_pyldd = []
     debug = False
     if not have_lief or debug:
-        if codefile_type(filename) in ('DLLfile', 'EXEfile'):
+        if codefile_type(filename) not in ('DLLfile', 'EXEfile'):
             result_pyldd = inspect_linkages_pyldd(filename, resolve_filenames=resolve_filenames, recurse=recurse,
                                                   sysroot=sysroot, arch=arch)
             if not have_lief:
