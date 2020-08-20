@@ -1000,6 +1000,23 @@ Package names should follow the `package match specifications <https://conda.io/
        - optional-subpackage =={{ version }}
 
 
+For example, let's say we have an environment that has package "a" installed at
+version 1.0. If we install package "b" that has a run_constrained entry of
+"a>1.0", then conda would need to upgrade "a" in the environment in order to
+install "b".
+
+This is especially useful in the context of virtual packages, where the
+`run_constrained` dependency is not a package that conda manages, but rather a
+`virtual package
+<https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-virtual.html>`_
+that represents a system property that conda can't change. For example, a
+package on linux may impose a `run_constrained` dependency on `__glibc>=2.12`.
+This is the version bound consistent with CentOS 6. Software built against glibc
+2.12 will be compatible with CentOS 6. This `run_constrained` dependency helps
+conda tell the user that a given package can't be installed if their system
+glibc version is too old.
+
+
 .. _meta-test:
 
 Test section
