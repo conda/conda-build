@@ -36,8 +36,7 @@ from conda_build.index import get_build_index
 from conda_build.inspect_pkg import which_package
 from conda_build.exceptions import (OverLinkingError, OverDependingError, RunPathError)
 
-if sys.platform == 'darwin':
-    from conda_build.os_utils import macho
+from conda_build.os_utils import macho
 
 if PY3:
     scandir = os.scandir
