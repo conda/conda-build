@@ -52,7 +52,7 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
     for hash_type in ('md5', 'sha1', 'sha256'):
         if hash_type in source_dict:
             if source_dict[hash_type] in (None, ""):
-                raise ValueError('Empty %s hash provided for %s'.format(hash_type, fn))
+                raise ValueError('Empty {} hash provided for {}'.format(hash_type, fn))
             fn = append_hash_to_fn(fn, source_dict[hash_type])
             hash_added = True
             break
