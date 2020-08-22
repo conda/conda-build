@@ -15,18 +15,18 @@ jobs:
       py27-release:
         PYTHON_VERSION: '2.7'
         CONDA_VERSION: 'release'
-      py27-canary:
-        PYTHON_VERSION: '2.7'
-        CONDA_VERSION: 'canary'
-      py37-canary:
-        PYTHON_VERSION: '3.7'
-        CONDA_VERSION: 'release'
+     #py27-canary:
+     #  PYTHON_VERSION: '2.7'
+     #  CONDA_VERSION: 'canary'
+     #py37-canary:
+     #  PYTHON_VERSION: '3.7'
+     #  CONDA_VERSION: 'release'
       py37-release:
         PYTHON_VERSION: '3.7'
         CONDA_VERSION: 'canary'
-      py38-canary:
-        PYTHON_VERSION: '3.8'
-        CONDA_VERSION: 'release'
+     #py38-canary:
+     #  PYTHON_VERSION: '3.8'
+     #  CONDA_VERSION: 'release'
       py38-release:
         PYTHON_VERSION: '3.8'
         CONDA_VERSION: 'canary'
@@ -96,14 +96,14 @@ jobs:
         PYTHON_VERSION: '2.7'
         CONDA_VERSION: 'release'
         INSTALL_XCODE: '1'
-      py27-canary:
-        PYTHON_VERSION: '2.7'
-        CONDA_VERSION: 'canary'
-        INSTALL_XCODE: '0'
-      py37-canary-xcode:
-        PYTHON_VERSION: '3.7'
-        CONDA_VERSION: 'release'
-        INSTALL_XCODE: '1'
+     #py27-canary:
+     #  PYTHON_VERSION: '2.7'
+     #  CONDA_VERSION: 'canary'
+     #  INSTALL_XCODE: '0'
+     #py37-canary-xcode:
+     #  PYTHON_VERSION: '3.7'
+     #  CONDA_VERSION: 'release'
+     #  INSTALL_XCODE: '1'
       py37-release:
         PYTHON_VERSION: '3.7'
         CONDA_VERSION: 'canary'
@@ -208,21 +208,21 @@ jobs:
       py27-release:
         PYTHON_VERSION: '2.7'
         CONDA_VERSION: 'release'
-      py27-canary:
-        PYTHON_VERSION: '2.7'
-        CONDA_VERSION: 'canary'
+     #py27-canary:
+     #  PYTHON_VERSION: '2.7'
+     #  CONDA_VERSION: 'canary'
       py37-canary:
         PYTHON_VERSION: '3.7'
         CONDA_VERSION: 'release'
-      py37-release:
-        PYTHON_VERSION: '3.7'
-        CONDA_VERSION: 'canary'
+     #py37-release:
+     #  PYTHON_VERSION: '3.7'
+     #  CONDA_VERSION: 'canary'
       py38-canary:
         PYTHON_VERSION: '3.8'
         CONDA_VERSION: 'release'
-      py38-release:
-        PYTHON_VERSION: '3.8'
-        CONDA_VERSION: 'canary'
+     #py38-release:
+     #  PYTHON_VERSION: '3.8'
+     #  CONDA_VERSION: 'canary'
   timeoutInMinutes: 480
   steps:
   - checkout: self
