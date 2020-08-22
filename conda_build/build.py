@@ -55,6 +55,7 @@ from .conda_interface import pkgs_dirs
 from .utils import env_var, glob, tmp_chdir, CONDA_TARBALL_EXTENSIONS
 
 from conda_build import environ, source, tarcheck, utils
+from conda_build.config import Config
 from conda_build.index import get_build_index, update_index
 from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse, distribute_variants,
                                 expand_outputs, try_download, execute_download_actions,
@@ -858,7 +859,6 @@ def write_hash_input(m):
         json.dump(recipe_input, f, indent=2)
 
 
-from conda_build.config import Config
 def get_all_replacements(config_or_variant):
     # This function tests that our various
     '''

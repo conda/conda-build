@@ -383,7 +383,6 @@ def ccache(method, config, permit_undefined_jinja=False):
     return 'ccache'
 
 
-
 def cdt(package_name, config, permit_undefined_jinja=False):
     """Support configuration of Core Dependency Trees.
     We should define CDTs in a single location. The current

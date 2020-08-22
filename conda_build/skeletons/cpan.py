@@ -5,6 +5,7 @@ Tools for converting CPAN packages to conda recipes.
 from __future__ import absolute_import, division, print_function
 
 import codecs
+import hashlib
 from pkg_resources import parse_version
 from glob import glob
 import gzip
@@ -15,6 +16,8 @@ from os.path import basename, dirname, join, exists
 import subprocess
 import sys
 import tempfile
+import pickle
+from functools import partial
 
 from conda_build.conda_interface import get_index
 from conda_build.conda_interface import TmpDownload, download
@@ -209,7 +212,7 @@ def get_build_dependencies_from_src_archive(package_url, sha256, src_cache):
         need_make = True if any((need_autotools, need_f, need_cxx, need_c)) else \
             any([f.name.lower().endswith(('/makefile', '/makevars'))
                  for f in tf])
-        if need_c or need_cxx or need_f :
+        if need_c or need_cxx or need_f:
             result.append("{{ compiler('c') }}")
         if need_cxx:
             result.append("{{ compiler('cxx') }}")
@@ -264,7 +267,6 @@ def package_exists(package_name):
     return in_repo
 
 
-import hashlib
 def md5d_file_and_other(filename, other_hashed):
     sha1 = hashlib.md5()
     with open(filename, 'rb') as f:
@@ -278,9 +280,7 @@ def md5d_file_and_other(filename, other_hashed):
     return sha1.hexdigest()
 
 
-import pickle
 def get_pickle_file_path(cache_dir, filename_prefix, other_hashed=()):
-    from hashlib import md5
     h = 'h' + md5d_file_and_other(__file__, other_hashed)[2:10]
     return os.path.join(cache_dir, filename_prefix.replace('::', '-') + '.' + h + '.p')
 
@@ -336,7 +336,7 @@ def install_perl_get_core_modules(version):
 
     return []
 
-from functools import partial
+
 def get_core_modules_for_this_perl_version(version, cache_dir):
     return load_or_pickle('perl-core-modules',
                           base_folder=cache_dir,
@@ -848,7 +848,7 @@ def release_module_dict_direct(cpan_url, cache_dir, module):
             rel_dict = None
     else:
         print("INFO :: OK, found 'dependency' in module {}".format(module))
-    if not rel_dict or not 'dependency' in rel_dict:
+    if not rel_dict or 'dependency' not in rel_dict:
         print("WARNING :: No dependencies found for module {} in distribution {}\n"
               "WARNING :: Please check {} and {}".format(module, distribution, url_module, url_release))
     return rel_dict
@@ -861,7 +861,7 @@ def release_module_dict(cpan_url, cache_dir, module):
     if not rel_dict:
         # In this case, the module may be a submodule of another dist, let's try something else.
         # An example of this is Dist::Zilla::Plugin::Git::Check.
-        pickled = get_pickle_file_path(cache_dir, module+'.dl_url')
+        pickled = get_pickle_file_path(cache_dir, module + '.dl_url')
         url = '{0}/download_url/{1}'.format(cpan_url, module)
         try:
             os.makedirs(os.path.dirname(pickled))
@@ -876,7 +876,7 @@ def release_module_dict(cpan_url, cache_dir, module):
         if dl_url_dict['release'].endswith(dl_url_dict['version']):
             # Easy case.
             print("Up to date: {}".format(module))
-            dist = dl_url_dict['release'].replace('-'+dl_url_dict['version'], '')
+            dist = dl_url_dict['release'].replace('-' + dl_url_dict['version'], '')
         else:
             # Difficult case.
             print("Not up to date: {}".format(module))
@@ -901,7 +901,6 @@ def release_module_dict(cpan_url, cache_dir, module):
             rel_dict = release_module_dict_direct(cpan_url, cache_dir, dist)
 
     return rel_dict
-
 
 
 def core_module_dict_old(cpan_url, module):
