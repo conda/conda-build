@@ -55,6 +55,7 @@ from .conda_interface import pkgs_dirs
 from .utils import env_var, glob, tmp_chdir, CONDA_TARBALL_EXTENSIONS
 
 from conda_build import environ, source, tarcheck, utils
+from conda_build.config import Config
 from conda_build.index import get_build_index, update_index
 from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse, distribute_variants,
                                 expand_outputs, try_download, execute_download_actions,
@@ -858,7 +859,55 @@ def write_hash_input(m):
         json.dump(recipe_input, f, indent=2)
 
 
-def get_files_with_prefix(m, files_in, prefix):
+def get_all_replacements(config_or_variant):
+    # This function tests that our various
+    '''
+    if (not isinstance(config_or_variant, Config) and
+            'replacements' in config_or_variant or
+            not hasattr(config_or_variant, 'variant')):
+        print('get_all_replacements(): passed a variant directly')
+        variant = config_or_variant
+    else:
+        if 'replacements' in config_or_variant.variant:
+            print('found in variant')
+            variant = config_or_variant.variant
+        if 'replacements' in config_or_variant.variants:
+            variant = config_or_variant.variants
+            print('found in variants')
+    '''
+    if isinstance(config_or_variant, Config):
+        # print('get_all_replacements(): passed a Config')
+        variant = None
+        if 'replacements' in config_or_variant.variant:
+            # print('found in variant')
+            variant = config_or_variant.variant
+        if not variant:
+            return []
+    else:
+        # print('get_all_replacements(): passed a variant directly')
+        variant = config_or_variant
+
+    if 'replacements' in variant:
+        replacements = variant['replacements']
+        assert isinstance(replacements, (dict, OrderedDict)), "Found `replacements` {}," \
+                                                              "but it is not a dict".format(
+            replacements)
+        assert 'all_replacements' in replacements, "Found `replacements` {}, but it" \
+                                                   "doesn't contain `all_replacements`".format(replacements)
+        assert isinstance(replacements['all_replacements'], list), "Found `all_replacements` {}," \
+                                                                   "but it is not a list".format(
+            replacements)
+        assert isinstance(replacements['all_replacements'][0], (dict, OrderedDict)), "Found `all_replacements[0]` {}," \
+                                                                             "but it is not a dict".format(
+            replacements)
+        if len(replacements['all_replacements']):
+            assert isinstance(replacements['all_replacements'][0], (OrderedDict, dict)), \
+                "Found `all_replacements[0]` {} but it is not a dict".format(replacements)
+            return replacements['all_replacements']
+    return []
+
+
+def get_files_with_prefix(m, replacements, files_in, prefix):
     import time
     start = time.time()
     # It is nonsensical to replace anything in a symlink.
@@ -918,12 +967,11 @@ def get_files_with_prefix(m, files_in, prefix):
     files_with_prefix = files_with_prefix_new
     all_matches = {}
 
-    variant = m.config.variant
+    # variant = m.config.variant if 'replacements' in m.config.variant else m.config.variants
     replacement_tags = ''
-    if 'replacements' in variant:
-        replacements = variant['replacements']
-        last = len(replacements['all_replacements']) - 1
-        for index, replacement in enumerate(replacements['all_replacements']):
+    if len(replacements):
+        last = len(replacements) - 1
+        for index, replacement in enumerate(replacements):
             all_matches = have_regex_files(files=[f for f in files if any(
                                                   glob2.fnmatch.fnmatch(f, r) for r in replacement['glob_patterns'])],
                                            prefix=prefix,
@@ -1194,7 +1242,7 @@ def write_run_exports(m):
             json.dump(run_exports, f)
 
 
-def create_info_files(m, files, prefix):
+def create_info_files(m, replacements, files, prefix):
     '''
     Creates the metadata files that will be stored in the built package.
 
@@ -1226,7 +1274,7 @@ def create_info_files(m, files, prefix):
 
     write_info_files_file(m, files)
 
-    files_with_prefix = get_files_with_prefix(m, files, prefix)
+    files_with_prefix = get_files_with_prefix(m, replacements, files, prefix)
     files_with_prefix = record_prefix_files(m, files_with_prefix)
     checksums = create_info_files_json_v1(m, m.config.info_dir, prefix, files, files_with_prefix)
 
@@ -1418,7 +1466,7 @@ can lead to packages that include their dependencies.""" % meta_files))
 def bundle_conda(output, metadata, env, stats, **kw):
     log = utils.get_logger(__name__)
     log.info('Packaging %s', metadata.dist())
-
+    get_all_replacements(metadata.config)
     files = output.get('files', [])
 
     # this is because without any requirements at all, we still need to have the host prefix exist
@@ -1433,7 +1481,12 @@ def bundle_conda(output, metadata, env, stats, **kw):
     # need to treat top-level stuff specially.  build/script in top-level stuff should not be
     #     re-run for an output with a similar name to the top-level recipe
     is_output = 'package:' not in metadata.get_recipe_text()
+
+    # metadata.get_top_level_recipe_without_outputs is destructive to replacements.
+
+    replacements = get_all_replacements(metadata.config)
     top_build = metadata.get_top_level_recipe_without_outputs().get('build', {}) or {}
+
     activate_script = metadata.activate_build_script
     if (script and not output.get('script')) and (is_output or not top_build.get('script')):
         # do add in activation, but only if it's not disabled
@@ -1476,6 +1529,8 @@ def bundle_conda(output, metadata, env, stats, **kw):
         env_output['MSYS2_PATH_TYPE'] = 'inherit'
         env_output['CHERE_INVOKING'] = '1'
         for var in utils.ensure_list(metadata.get_value('build/script_env')):
+            if '=' in var:
+                var = var.split('=')[0]
             if var not in os.environ:
                 raise ValueError("env var '{}' specified in script_env, but is not set."
                                     .format(var))
@@ -1550,7 +1605,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
     utils.rm_rf(os.path.join(metadata.config.info_dir, 'test'))
 
     with tmp_chdir(metadata.config.host_prefix):
-        output['checksums'] = create_info_files(metadata, files, prefix=metadata.config.host_prefix)
+        output['checksums'] = create_info_files(metadata, replacements, files, prefix=metadata.config.host_prefix)
 
     # here we add the info files into the prefix, so we want to re-collect the files list
     prefix_files = set(utils.prefix_files(metadata.config.host_prefix))
@@ -1620,9 +1675,24 @@ def bundle_conda(output, metadata, env, stats, **kw):
                             '_'.join(('_h_env_moved', metadata.dist(),
                                       metadata.config.host_subdir)))
         print("Renaming host env directory, ", prefix, " to ", dest)
-        if os.path.exists(dest):
-            utils.rm_rf(dest)
-        shutil.move(prefix, dest)
+        attempts_left = 5
+        while attempts_left != 0:
+            if os.path.exists(dest):
+                utils.rm_rf(dest)
+            try:
+                log.info("shutil.move(prefix={}, dest={})".format(prefix, dest))
+                shutil.move(prefix, dest)
+                if attempts_left != 5:
+                    log.warning("shutil.move(prefix={}, dest={}) succeeded on attempt number {}".format(prefix, dest, 6 - attempts_left))
+                attempts_left = 0
+            except:
+                attempts_left = attempts_left - 1
+            if attempts_left:
+                log.warning("Failed to rename host env directory, check with strace, struss or procmon. Will sleep for 3 seconds and try again!")
+                import time
+                time.sleep(3)
+            else:
+                log.error("Failed to rename host env directory despite sleeping and retrying. This is some Windows file locking mis-bahaviour.")
     else:
         utils.rm_rf(metadata.config.host_prefix)
 
@@ -1742,6 +1812,47 @@ def _write_sh_activation_text(file_handle, m):
         file_handle.write("conda activate {0} \"{1}\"\n".format(stack, build_prefix_path))
     else:
         file_handle.write('source "{0}" "{1}"\n'.format(activate_path, build_prefix_path))
+
+    from conda_build.os_utils.external import find_executable
+    ccache = find_executable('ccache', m.config.build_prefix, False)
+    if ccache:
+        if isinstance(ccache, list):
+            ccache = ccache[0]
+        ccache_methods = {}
+        ccache_methods['env_vars'] = False
+        ccache_methods['mklink'] = False
+        ccache_methods['native'] = False
+        if hasattr(m.config, 'ccache_method'):
+            ccache_methods[m.config.ccache_method] = True
+        done_necessary_env = False
+        for method, value in ccache_methods.items():
+            if value:
+                if not done_necessary_env:
+                    # file_handle.write(
+                    #     'export CCACHE_SLOPPINESS="pch_defines,time_macros${CCACHE_SLOPPINESS+,$CCACHE_SLOPPINESS}"\n')
+                    # file_handle.write('export CCACHE_CPP2=true\n')
+                    done_necessary_env = True
+                if method == 'mklink':
+                    dirname_ccache_ln_bin = join(m.config.build_prefix, 'ccache-ln-bin')
+                    file_handle.write('mkdir {}\n'.format(dirname_ccache_ln_bin))
+                    file_handle.write('pushd {}\n'.format(dirname_ccache_ln_bin))
+                    file_handle.write('if [ -n "$CC" ]; then\n')
+                    file_handle.write('  [ -f {ccache} ] && [ ! -f $(basename $CC) ] && ln -s {ccache} $(basename $CC) || true\n'.format(ccache=ccache))
+                    file_handle.write('fi\n')
+                    file_handle.write('if [ -n "$CXX" ]; then\n')
+                    file_handle.write('  [ -f {ccache} ] && [ ! -f $(basename $CXX) ] && ln -s {ccache} $(basename $CXX) || true\n'.format(ccache=ccache))
+                    file_handle.write('fi\n')
+                    file_handle.write('popd\n')
+                    # We really don't want to be doing this.
+                    file_handle.write('export "PATH={}:$PATH"\n'.format(dirname_ccache_ln_bin))
+                elif method == 'env_vars':
+                    file_handle.write('export CC="{ccache} $CC"\n'.format(ccache=ccache))
+                    file_handle.write('export CXX="{ccache} $CXX"\n'.format(ccache=ccache))
+                    file_handle.write('export LD="{ccache} $LD"\n'.format(ccache=ccache))
+                elif method == 'native':
+                    pass
+                else:
+                    print("ccache method {} not implemented")
 
     # conda 4.4 requires a conda-meta/history file for a valid conda prefix
     history_file = join(m.config.build_prefix, 'conda-meta', 'history')
@@ -1881,8 +1992,11 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
         try_download(m, no_download_source=False)
 
     if post in [False, None]:
+        get_all_replacements(m.config.variants)
+        get_all_replacements(m.config.variant)
         output_metas = expand_outputs([(m, need_source_download, need_reparse_in_env)])
-
+        if len(output_metas):
+            get_all_replacements(output_metas[0][1].config)
         skipped = []
         package_locations = []
         # TODO: should we check both host and build envs?  These are the same, except when
@@ -2055,6 +2169,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
     new_pkgs = default_return
     if not provision_only and post in [True, None]:
         outputs = output_metas or m.get_output_metadata_set(permit_unsatisfiable_variants=False)
+        get_all_replacements(outputs[0][1].config)
         top_level_meta = m
 
         # this is the old, default behavior: conda package, with difference between start
@@ -2083,6 +2198,8 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
             # is distributing the matrix of used variables.
 
             for (output_d, m) in outputs:
+                get_all_replacements(m.config.variants)
+                get_all_replacements(m.config.variant)
                 if m.skip():
                     print(utils.get_skip_message(m))
                     continue
@@ -2442,6 +2559,10 @@ def write_build_scripts(m, script, build_file):
     if m.noarch == "python":
         env["PYTHONDONTWRITEBYTECODE"] = True
 
+    # The stuff in replacements is not parsable in a shell script (or we need to escape it)
+    if "replacements" in env:
+        del env["replacements"]
+
     work_file = join(m.config.work_dir, 'conda_build.sh')
     env_file = join(m.config.work_dir, 'build_env_setup.sh')
     with open(env_file, 'w') as bf:
@@ -2473,7 +2594,7 @@ def _write_test_run_script(metadata, test_run_script, test_env_script, py_files,
             source="call" if utils.on_win else "source",
             test_env_script=test_env_script))
         if utils.on_win:
-            tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+            tf.write("IF %ERRORLEVEL% NEQ 0 exit /B 1\n")
         else:
             tf.write('set {trace}-e\n'.format(trace=trace))
         if py_files:
@@ -2485,34 +2606,34 @@ def _write_test_run_script(metadata, test_run_script, test_env_script, py_files,
                 python=test_python,
                 test_file=join(metadata.config.test_dir, 'run_test.py')))
             if utils.on_win:
-                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+                tf.write("IF %ERRORLEVEL% NEQ 0 exit /B 1\n")
         if pl_files:
             tf.write('"{perl}" "{test_file}"\n'.format(
                 perl=metadata.config.perl_bin(metadata.config.test_prefix,
                                               metadata.config.host_platform),
                 test_file=join(metadata.config.test_dir, 'run_test.pl')))
             if utils.on_win:
-                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+                tf.write("IF %ERRORLEVEL% NEQ 0 exit /B 1\n")
         if lua_files:
             tf.write('"{lua}" "{test_file}"\n'.format(
                 lua=metadata.config.lua_bin(metadata.config.test_prefix,
                                             metadata.config.host_platform),
                 test_file=join(metadata.config.test_dir, 'run_test.lua')))
             if utils.on_win:
-                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+                tf.write("IF %ERRORLEVEL% NEQ 0 exit /B 1\n")
         if r_files:
             tf.write('"{r}" "{test_file}"\n'.format(
                 r=metadata.config.rscript_bin(metadata.config.test_prefix,
                                               metadata.config.host_platform),
                 test_file=join(metadata.config.test_dir, 'run_test.r')))
             if utils.on_win:
-                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+                tf.write("IF %ERRORLEVEL% NEQ 0 exit /B 1\n")
         if shell_files:
             for shell_file in shell_files:
                 if utils.on_win:
                     if os.path.splitext(shell_file)[1] == ".bat":
                         tf.write('call "{test_file}"\n'.format(test_file=shell_file))
-                        tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+                        tf.write("IF %ERRORLEVEL% NEQ 0 exit /B 1\n")
                     else:
                         log.warn("Found sh test file on windows.  Ignoring this for now (PRs welcome)")
                 elif os.path.splitext(shell_file)[1] == ".sh":
@@ -2566,7 +2687,7 @@ def write_test_scripts(metadata, env_vars, py_files, pl_files, lua_files, r_file
                     ext=ext,
                     test_env=metadata.config.test_prefix))
             if utils.on_win:
-                tf.write("IF %ERRORLEVEL% NEQ 0 exit 1\n")
+                tf.write("IF %ERRORLEVEL% NEQ 0 exit /B 1\n")
         # In-case people source this, it's essential errors are not fatal in an interactive shell.
         if not utils.on_win:
             tf.write('set +e\n')
@@ -2899,6 +3020,7 @@ def build_tree(recipe_list, config, stats, build_only=False, post=None, notest=F
             # recipe are looped over here.
 
             for (metadata, need_source_download, need_reparse_in_env) in metadata_tuples:
+                get_all_replacements(metadata.config.variant)
                 if post is None:
                     utils.rm_rf(metadata.config.host_prefix)
                     utils.rm_rf(metadata.config.build_prefix)

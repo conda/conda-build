@@ -183,6 +183,8 @@ def execute(args, print_results=True):
     config = get_or_merge_config(None, **args.__dict__)
 
     variants = get_package_variants(args.recipe, config, variants=args.variants)
+    from conda_build.build import get_all_replacements
+    get_all_replacements(variants)
     set_language_env_vars(variants)
 
     config.channel_urls = get_channel_urls(args.__dict__)

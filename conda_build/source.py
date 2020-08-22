@@ -52,7 +52,7 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
     for hash_type in ('md5', 'sha1', 'sha256'):
         if hash_type in source_dict:
             if source_dict[hash_type] in (None, ""):
-                raise ValueError('Empty %s hash provided for %s'.format(hash_type, fn))
+                raise ValueError('Empty {} hash provided for {}'.format(hash_type, fn))
             fn = append_hash_to_fn(fn, source_dict[hash_type])
             hash_added = True
             break
@@ -632,7 +632,7 @@ def apply_patch(src_dir, path, config, git=None):
         git_env = os.environ
         git_env['GIT_COMMITTER_NAME'] = 'conda-build'
         git_env['GIT_COMMITTER_EMAIL'] = 'conda@conda-build.org'
-        check_call_env([git, 'am', '--committer-date-is-author-date', path],
+        check_call_env([git, 'am', '-3', '--committer-date-is-author-date', path],
                        cwd=src_dir, stdout=stdout, stderr=stderr, env=git_env)
         config.git_commits_since_tag += 1
     else:
