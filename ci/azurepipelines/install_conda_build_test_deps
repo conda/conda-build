@@ -21,7 +21,7 @@ function install_conda_build_test_deps_fn()
   fi
   if [[ ! $(uname) =~ .*inux.* ]] || [[ $(uname -m) != aarch64 ]]; then
     _PKGS+=(nomkl)
-    # _PKGS+=(conda-forge::shellcheck)
+    _PKGS+=(conda-forge::shellcheck)
   fi
   conda install -y --show-channel-urls "${_PKGS[@]}"
   if [[ ! -d ../conda_build_test_recipe ]]; then
