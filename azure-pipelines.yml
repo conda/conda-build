@@ -290,7 +290,7 @@ jobs:
       echo safety_checks: disabled >> %UserProfile%\.condarc
       echo local_repodata_ttl: 1800 >> %UserProfile%\.condarc
       if "%PYTHON_VERSION%" == "2.7" call conda install -q scandir pathlib2
-      if "%PYTHON_VERSION%" == "3.7" call conda install -q py-lief
+      if "%PYTHON_VERSION%" NEQ "2.7" call conda install -q py-lief
       python --version
       python -c "import struct; print(struct.calcsize('P') * 8)"
       pip install --no-deps .
