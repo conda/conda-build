@@ -1820,7 +1820,7 @@ def _write_sh_activation_text(file_handle, m):
             ccache = ccache[0]
         ccache_methods = {}
         ccache_methods['env_vars'] = False
-        ccache_methods['mklink'] = False
+        ccache_methods['symlinks'] = False
         ccache_methods['native'] = False
         if hasattr(m.config, 'ccache_method'):
             ccache_methods[m.config.ccache_method] = True
@@ -1832,7 +1832,7 @@ def _write_sh_activation_text(file_handle, m):
                     #     'export CCACHE_SLOPPINESS="pch_defines,time_macros${CCACHE_SLOPPINESS+,$CCACHE_SLOPPINESS}"\n')
                     # file_handle.write('export CCACHE_CPP2=true\n')
                     done_necessary_env = True
-                if method == 'mklink':
+                if method == 'symlinks':
                     dirname_ccache_ln_bin = join(m.config.build_prefix, 'ccache-ln-bin')
                     file_handle.write('mkdir {}\n'.format(dirname_ccache_ln_bin))
                     file_handle.write('pushd {}\n'.format(dirname_ccache_ln_bin))
