@@ -1912,7 +1912,7 @@ def write_bat_activation_text(file_handle, m):
             ccache = ccache[0]
         ccache_methods = {}
         ccache_methods['env_vars'] = False
-        ccache_methods['mklink'] = False
+        ccache_methods['symlinks'] = False
         ccache_methods['native'] = False
         if hasattr(m.config, 'ccache_method'):
             ccache_methods[m.config.ccache_method] = True
@@ -1921,12 +1921,12 @@ def write_bat_activation_text(file_handle, m):
                 if method == 'env_vars':
                     file_handle.write('set "CC={ccache} %CC%"\n'.format(ccache=ccache))
                     file_handle.write('set "CXX={ccache} %CXX%"\n'.format(ccache=ccache))
-                elif method == 'mklink':
+                elif method == 'symlinks':
                     dirname_ccache_ln_bin = join(m.config.build_prefix, 'ccache-ln-bin')
                     file_handle.write('mkdir {}\n'.format(dirname_ccache_ln_bin))
                     file_handle.write('pushd {}\n'.format(dirname_ccache_ln_bin))
                     # If you use mklink.exe instead of mklink here it breaks as it's a builtin.
-                    for ext in ('.exe',''):
+                    for ext in ('.exe', ''):
                         # MSVC
                         file_handle.write('mklink cl{ext} {ccache}\n'.format(ext = ext, ccache = ccache))
                         file_handle.write('mklink link{ext} {ccache}\n'.format(ext = ext, ccache = ccache))
