@@ -100,19 +100,19 @@ jobs:
      #  PYTHON_VERSION: '2.7'
      #  CONDA_VERSION: 'canary'
      #  INSTALL_XCODE: '0'
-     #py37-canary-xcode:
-     #  PYTHON_VERSION: '3.7'
-     #  CONDA_VERSION: 'release'
-     #  INSTALL_XCODE: '1'
-      py37-release:
+      py37-release-xcode:
         PYTHON_VERSION: '3.7'
-        CONDA_VERSION: 'canary'
-        INSTALL_XCODE: '0'
-      py38-canary-xcode:
+        CONDA_VERSION: 'release'
+        INSTALL_XCODE: '1'
+     #py37-canary:
+     #  PYTHON_VERSION: '3.7'
+     #  CONDA_VERSION: 'canary'
+     #  INSTALL_XCODE: '0'
+      py38-release-xcode:
         PYTHON_VERSION: '3.8'
         CONDA_VERSION: 'release'
         INSTALL_XCODE: '1'
-      py38-release:
+      py38-canary:
         PYTHON_VERSION: '3.8'
         CONDA_VERSION: 'canary'
         INSTALL_XCODE: '0'
@@ -211,16 +211,16 @@ jobs:
      #py27-canary:
      #  PYTHON_VERSION: '2.7'
      #  CONDA_VERSION: 'canary'
-      py37-canary:
+      py37-release:
         PYTHON_VERSION: '3.7'
         CONDA_VERSION: 'release'
-     #py37-release:
+     #py37-canary:
      #  PYTHON_VERSION: '3.7'
      #  CONDA_VERSION: 'canary'
-      py38-canary:
+      py38-release:
         PYTHON_VERSION: '3.8'
         CONDA_VERSION: 'release'
-     #py38-release:
+     #py38-canary:
      #  PYTHON_VERSION: '3.8'
      #  CONDA_VERSION: 'canary'
   timeoutInMinutes: 480
