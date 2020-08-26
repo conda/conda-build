@@ -82,7 +82,7 @@ jobs:
 
   - publish: $(Build.ArtifactStagingDirectory)/pytest-replay
     artifact: 'Linux-$(CONDA_VERSION)-Py$(PYTHON_VERSION)'
-    condition: always()
+    condition: and(always(), ne(variables['PYTHON_VERSION'], '2.7'))
 
 
 - job: 'macOS'
@@ -196,7 +196,7 @@ jobs:
 
   - publish: $(Build.ArtifactStagingDirectory)/pytest-replay
     artifact: 'macOS-$(CONDA_VERSION)-Py$(PYTHON_VERSION)'
-    condition: always()
+    condition: and(always(), ne(variables['PYTHON_VERSION'], '2.7'))
 
 
 - job: 'Windows'
