@@ -18,9 +18,8 @@ function install_conda_build_test_deps_fn()
   _PKGS+=(pip numpy mock pkginfo)
   if [[ $(uname) =~ .*inux.* ]]; then
     _PKGS+=(patchelf)
-  fi
-  if [[ ! $(uname) =~ .*inux.* ]] || [[ $(uname -m) != aarch64 ]]; then
-    _PKGS+=(nomkl)
+    _PKGS+=(shellcheck)
+  else
     _PKGS+=(conda-forge::shellcheck)
   fi
   conda install -y --show-channel-urls "${_PKGS[@]}"
