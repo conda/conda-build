@@ -603,7 +603,8 @@ def linux_vars(m, get_default, prefix):
     # the GNU triplet is powerpc, not ppc. This matters.
     if build_arch.startswith('ppc'):
         build_arch = build_arch.replace('ppc', 'powerpc')
-    if build_arch.startswith('powerpc') or build_arch.startswith('aarch64'):
+    if build_arch.startswith('powerpc') or build_arch.startswith('aarch64') \
+       or build_arch.startswith('s390x'):
         build_distro = 'cos7'
     else:
         build_distro = 'cos6'
