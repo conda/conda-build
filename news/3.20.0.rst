@@ -1,0 +1,70 @@
+Enhancements:
+-------------
+
+* enable Python 3.8 on Azure Pipelines (#3841)
+* which_package can be passed avoid_canonical_channel_name (#3952)
+* make life easier (less shell exit-y) for those who source test scripts (#3952)
+* move old host env instead of deleting it when `--keep-old-work` (#3952)
+* convert info.d/*.yaml to info/*.json (#3952)
+* allow manual specification of which binary files to prefix replace (#3952)
+* filter out '.AppleDouble' folders from recipe searches (#3952)
+* re-wrote apply_patch() to be more robust (#3952)
+* many fixes for DSO post-processing (#3952, #3953)
+* add support for (limited) tbd parsing (#3953)
+* Make sure packages in current repo data w/ features have versions without features (#3957)
+* Check all sysroot locations for DSOs (#3969)
+* More helpful error message if an empty string is passed as the hash ('md5', 'sha1' or 'sha256' fields) (#3971)
+* the ``GIT_DESCRIBE_HASH`` variable will be available regardless of whether the sources of the recipe have a git tag or not (#3982)
+* add apple silicon support (#4004, #4015)
+* set build_platform for aid in cross compiling (#4005)
+* import macho on non apple system for cross compiling (#4025)
+* Add ccache as a jinja 2 function (#4026)
+* Improve cpan skeleton (#4026)
+* Retry moving host prefix due to Windows file locking (#4026)
+* Rename ccache method from mklink to sylinks (#4028)
+
+
+Bug fixes:
+----------
+
+* conda_build.metadata: fixed typos in FIELDS (#3866)
+* add spaces in CRAN templates (fixes #3943) (#3944)
+* raise valid CalledProcessException in macho.otool (#3952)
+* cache local_output_folder too for get_build_index (#3952)
+* fix relocations when cross compiling (#3995)
+* use host_platform instead of sys.platform to facilitate cross compiling (#3997)
+* Fix parsing UnsatisfiableError from conda>=4.7.8 (#4001)
+* allow packages to depend on themselves when cross compiling (#4011)
+* set the correct SHLIB_EXT when cross compiling (#4013, #4021)
+* inspect linkages with pyldd when not DLL/EXE files (#4019)
+* Respect no_rewrite_stdout_env on Windows (#4026)
+* Prefix replacement fixes (#4026)
+* Use git am -3 when applying patches (#4026)
+* Fix env_var=val assertion (#4026)
+* Use exit /B from patch files (#4026)
+
+Deprecations:
+-------------
+
+* <news item>
+
+Docs:
+-----
+
+* extend docs o generating the index (#3877)
+* add details to documentation of run_constrained (#3878)
+* remove documentation on bdist_conda and environment variables (#3879)
+* update cli help information for conda index (#3931)
+* Clarify how to install conda-build (#3976)
+* Add note for local package install deps (#3980)
+* Clarify multiple OS selection (#3984)
+* add aarch64 selector to the docs (#4003)
+* add docs on build_platform and arm64 (#4020)
+
+Other:
+------
+
+* Enable s390x support (#3949, #4030)
+* Add xfail test for non-utf-8 charsets (#3972)
+* Improve testing on CI (#3987, #4017, #4027)
+* Allow python=3.8 for pypi skeletons (#4014)
