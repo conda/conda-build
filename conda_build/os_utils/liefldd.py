@@ -501,8 +501,9 @@ def get_linkages(filename, resolve_filenames=True, recurse=True,
                                                   sysroot=sysroot, arch=arch)
             if not have_lief:
                 return result_pyldd
-    if not have_lief:
-        assert False, "failed to get_linkages, codefile_type('{}')={}".format(filename, codefile_type(filename))
+        else:
+            print("WARNING: failed to get_linkages, codefile_type('{}')={}".format(filename, codefile_type(filename)))
+            return {}
     result_lief = inspect_linkages_lief(filename, resolve_filenames=resolve_filenames, recurse=recurse,
                                         sysroot=sysroot, envroot=envroot, arch=arch)
     if debug and result_pyldd and set(result_lief) != set(result_pyldd):
