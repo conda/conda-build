@@ -12,12 +12,6 @@ jobs:
   strategy:
     maxParallel: 10
     matrix:
-      py27-release:
-        PYTHON_VERSION: '2.7'
-        CONDA_VERSION: 'release'
-     #py27-canary:
-     #  PYTHON_VERSION: '2.7'
-     #  CONDA_VERSION: 'canary'
      #py37-canary:
      #  PYTHON_VERSION: '3.7'
      #  CONDA_VERSION: 'release'
@@ -82,7 +76,7 @@ jobs:
 
   - publish: $(Build.ArtifactStagingDirectory)/pytest-replay
     artifact: 'Linux-$(CONDA_VERSION)-Py$(PYTHON_VERSION)'
-    condition: and(always(), ne(variables['PYTHON_VERSION'], '2.7'))
+    condition: always()
 
 
 - job: 'macOS'
@@ -91,15 +85,6 @@ jobs:
   strategy:
     maxParallel: 10
     matrix:
-      # Some tests are done with Xcode others without.
-      py27-release-xcode:
-        PYTHON_VERSION: '2.7'
-        CONDA_VERSION: 'release'
-        INSTALL_XCODE: '1'
-     #py27-canary:
-     #  PYTHON_VERSION: '2.7'
-     #  CONDA_VERSION: 'canary'
-     #  INSTALL_XCODE: '0'
       py37-release-xcode:
         PYTHON_VERSION: '3.7'
         CONDA_VERSION: 'release'
@@ -196,7 +181,7 @@ jobs:
 
   - publish: $(Build.ArtifactStagingDirectory)/pytest-replay
     artifact: 'macOS-$(CONDA_VERSION)-Py$(PYTHON_VERSION)'
-    condition: and(always(), ne(variables['PYTHON_VERSION'], '2.7'))
+    condition: always()
 
 
 - job: 'Windows'
@@ -205,12 +190,6 @@ jobs:
   strategy:
     maxParallel: 10
     matrix:
-      py27-release:
-        PYTHON_VERSION: '2.7'
-        CONDA_VERSION: 'release'
-     #py27-canary:
-     #  PYTHON_VERSION: '2.7'
-     #  CONDA_VERSION: 'canary'
       py37-release:
         PYTHON_VERSION: '3.7'
         CONDA_VERSION: 'release'
@@ -285,12 +264,10 @@ jobs:
       python -c "import sys; print(sys.prefix)"
       call conda update -q --all
       call conda install -q pip python-libarchive-c pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling pytest-azurepipelines
-      if "%PYTHON_VERSION%" == "2.7" call conda install -c defaults -c conda-forge pytest-replay pytest-rerunfailures -y
-      if "%PYTHON_VERSION%" NEQ "2.7" call conda install pytest-replay pytest-rerunfailures -y
+      call conda install -q pytest-replay pytest-rerunfailures -y
       echo safety_checks: disabled >> %UserProfile%\.condarc
       echo local_repodata_ttl: 1800 >> %UserProfile%\.condarc
-      if "%PYTHON_VERSION%" == "2.7" call conda install -q scandir pathlib2
-      if "%PYTHON_VERSION%" NEQ "2.7" call conda install -q py-lief
+      call conda install -q py-lief
       python --version
       python -c "import struct; print(struct.calcsize('P') * 8)"
       pip install --no-deps .
@@ -304,8 +281,7 @@ jobs:
       call conda create -n blarg -yq --download-only python=3.7
       call conda create -n blarg -yq --download-only python cmake
       mkdir $(Build.ArtifactStagingDirectory)\\pytest-replay
-      set "PYTEST_REPLAY_OPTIONS=--replay-record-dir=$(Build.ArtifactStagingDirectory)\\pytest-replay"
-      if "%PYTHON_VERSION%" NEQ "2.7" set "PYTEST_REPLAY_OPTIONS=--replay-record-dir=$(Build.ArtifactStagingDirectory)\\pytest-replay --replay-base-name=Win-%CONDA_VERSION%-Py%PYTHON_VERSION%"
+      set "PYTEST_REPLAY_OPTIONS=--replay-record-dir=$(Build.ArtifactStagingDirectory)\\pytest-replay --replay-base-name=Win-%CONDA_VERSION%-Py%PYTHON_VERSION%"
       echo "##vso[task.setvariable variable=PYTEST_REPLAY_OPTIONS]%PYTEST_REPLAY_OPTIONS%"
     displayName: 'Configuration'
 
