@@ -14,31 +14,31 @@ Ray Donnelly <mingw.android@gmail.com>
 Ilan Schnell <ilan@continuum.io> Ilan Schnell <ilan@hq-dhcp-20-84.20.10.10.in-addr.arpa>
 Ilan Schnell <ilan@continuum.io> Ilan Schnell <ilanschnell@gmail.com>
 Michael Sarahan <msarahan@gmail.com> Mike Sarahan <msarahan@continuum.io>
+Jonathan J. Helmus <jjhelmus@gmail.com> Jonathan Helmus <jjhelmus@gmail.com>
 Dan Blanchard <dan.blanchard@gmail.com> Daniel Blanchard <dblanchard@ets.org>
 Dan Blanchard <dan.blanchard@gmail.com> Daniel Blanchard <dan@parsely.com>
 Kale Franz <kfranz@continuum.io> Kale Franz <kalefranz@users.noreply.github.com>
 Rachel <rrigdon@anaconda.com>
 Marcelo Duarte Trevisani <marceloduartetrevisani@gmail.com> Marcelo Duarte Trevisani <marcelotrevisani@users.noreply.github.com>
 sophia <scastellarin95@gmail.com>
-Jonathan J. Helmus <jjhelmus@gmail.com> Jonathan Helmus <jjhelmus@gmail.com>
 John Kirkham <kirkhamj@janelia.hhmi.org>
 Stuart Berg <bergs@janelia.hhmi.org>
+Isuru Fernando <isuruf@gmail.com> Isuru Fernando <isuru.11@cse.mrt.ac.lk>
 Ryan Grout <ryan@ryangrout.org> Ryan Grout <rgrout@continuum.io>
 Ryan Grout <ryan@ryangrout.org> Ryan Grout <groutr@users.noreply.github.com>
 Rachel Rigdon <45607889+rrigdon@users.noreply.github.com>
 Darren Dale <dsdale24@gmail.com>
 Travis Swicegood <travis@domain51.com> Travis Swicegood <development@domain51.com>
-Isuru Fernando <isuruf@gmail.com> Isuru Fernando <isuru.11@cse.mrt.ac.lk>
 Nehal J Wani <nehaljw.kkd1@gmail.com>
 Matt Craig <mattwcraig@gmail.com> Matthew Craig <mattwcraig@gmail.com>
 Anthony Scopatz <scopatz@gmail.com>
 Johannes Köster <johannes.koester@tu-dortmund.de>
 James Sexton <TwistedLadder@gmail.com>
+Marcel Bargull <marcel.bargull@udo.edu>
 Mandeep Bhutani <mbhutani@continuum.io> mandeep <mandeep@users.noreply.github.com>
 Patrick Snape <patricksnape@gmail.com> Patrick Snape <patrick.snape08@imperial.ac.uk>
 Sean <srossross@gmail.com> srossross <srossross@gmail.com>
 Travis Oliphant <teoliphant@gmail.com> Travis E. Oliphant <teoliphant@gmail.com>
-Marcel Bargull <marcel.bargull@udo.edu>
 Harsh Gupta <gupta.harsh96@gmail.com>
 Jasmine Sandhu <jsandhu@continuum.io>
 Matthias Gabriel <matthias.gabriel@etit.tu-chemnitz.de>
@@ -47,14 +47,15 @@ soapy1 <scastellarin@anaconda.com>
 Michael C. Grant <mcg@cvxr.com> Michael C. Grant <mgrant@anaconda.com>
 Min RK <benjaminrk@gmail.com> MinRK <benjaminrk@gmail.com>
 John Kirkham <jakirkham@gmail.com>
+Teake Nutma <teake.nutma@gmail.com> Teake Nutma <t.a.nutma@rug.nl>
 Ullrich Koethe <ullrich.koethe@iwr.uni-heidelberg.de>
 Tim Snyder <snyder.tim@gmail.com>
+Matthew R Becker <becker.mr@gmail.com>
 Phil Elson <pelson.pub@gmail.com> pelson <pelson.pub@gmail.com>
 Jillian Rowe <jillian.e.rowe@gmail.com> jerowe <jillian.e.rowe@gmail.com>
 Almar Klein <almar.klein@gmail.com>
 Julian Rüth <julian.rueth@fsfe.org>
 Alex Ford <a.sewall.ford@gmail.com>
-Teake Nutma <teake.nutma@gmail.com> Teake Nutma <t.a.nutma@rug.nl>
 John Blischak <jdblischak@gmail.com>
 Scheah <scheah@zendesk.com>
 Alexander Sturm <13468347+alexandersturm@users.noreply.github.com>
@@ -80,6 +81,8 @@ Amir MOHAMMADI <amir.mohammadi@idiap.ch>
 Chris Hogan <c096h800@gmail.com>
 Kai Tietz <ktietz@anaconda.com> Kai Tietz <47363620+katietz@users.noreply.github.com>
 Daniel Bast <2790401+dbast@users.noreply.github.com>
+Matthew R. Becker <beckermr@users.noreply.github.com>
+Pradipta Ghosh <pradghos@in.ibm.com>
 Heather Kelly <heather999@users.noreply.github.com> heather999 <heather999@users.noreply.github.com>
 Geir Ove Myhr <Geir.Ove.Myhr@lr.org>
 Matt Rendina <mrendina@stsci.edu>
@@ -96,6 +99,7 @@ Guilherme Quentel Melo <gqmelo@gmail.com>
 Yu Feng <rainwoodman@gmail.com>
 Julien Schueller <schueller@phimeca.com>
 Toon Verstraelen <Toon.Verstraelen@UGent.be>
+Duncan Macleod <duncan.macleod@ligo.org>
 Matty G <meawoppl@gmail.com> meawoppl <meawoppl@gmail.com>
 Robert T. McGibbon <rmcgibbo@gmail.com> Robert McGibbon <rmcgibbo@gmail.com>
 chapmanb <chapmanb@50mail.com>
@@ -107,7 +111,6 @@ Martin Bergtholdt <martin.bergtholdt@philips.com>
 Eric Dill <edill@bnl.gov>
 Derek Ludwig <dludwig@continuum.io>
 Vlad Frolov <frolvlad@gmail.com>
-Duncan Macleod <duncan.macleod@ligo.org>
 todd.m.tomashek <todd.m.tomashek@intel.com> tomashek <todd.m.tomashek@intel.com>
 Michael Cormier <u1138933@kingspeak23.wasatch.peaks>
 Siu Kwan Lam <michael.lam.sk@gmail.com>
@@ -139,10 +142,9 @@ Alex Kovner <dev@alexkovner.com>
 Zane Dufour <zane.dufour@gmail.com> zdog234 <zane.dufour@gmail.com>
 Harun Reşit Zafer <harunzafer@gmail.com>
 Daniel Damiani <ddamiani@slac.stanford.edu>
-Matthew R Becker <becker.mr@gmail.com>
-Matthew R. Becker <beckermr@users.noreply.github.com>
 Sophian Guidara <sophian@gmail.com>
 Benjamin Bertrand <beenje@gmail.com>
+Mark Harfouche <mark.harfouche@gmail.com>
 Joseph Crail <jbcrail@gmail.com>
 Andres Guzman-Ballen <andres.guzman-ballen@intel.com>
 Riccardo Vianello <riccardo.vianello@gmail.com>
@@ -213,3 +215,10 @@ Jinzhe Zeng <jinzhe.zeng@rutgers.edu>
 Bradley Dice <bdice@bradleydice.com>
 Stefan Scherfke <stefan@sofa-rockers.org>
 Sergio Oller <sergioller@gmail.com>
+Ruben Vorderman <r.h.p.vorderman@lumc.nl>
+James Lamb <jaylamb20@gmail.com>
+Oleg Alexandrov <oleg.alexandrov@gmail.com>
+John Omotani <john.omotani@ukaea.uk>
+Tom Pollard <tom_pollard@hotmail.co.uk>
+Phil Reinhold <pcreinhold@gmail.com>
+Cheng H. Lee <chenghlee@users.noreply.github.com>

@@ -11,14 +11,14 @@
   email: jjhelmus@gmail.com
   aliases:
   - Jonathan Helmus
-  num_commits: 78
+  num_commits: 107
   first_commit: 2014-06-09 17:25:05
   github: jjhelmus
 - name: Isuru Fernando
   email: isuruf@gmail.com
   alternate_emails:
   - isuru.11@cse.mrt.ac.lk
-  num_commits: 32
+  num_commits: 44
   first_commit: 2017-06-16 15:14:34
   github: isuruf
 - name: Dan Blanchard
@@ -41,7 +41,7 @@
   email: teake.nutma@gmail.com
   alternate_emails:
   - t.a.nutma@rug.nl
-  num_commits: 9
+  num_commits: 11
   first_commit: 2018-08-16 10:53:19
   github: teake
 - name: Phil Elson
@@ -414,7 +414,7 @@
 - name: Ray Donnelly
   email: mingw.android@gmail.com
   github: mingwandroid
-  num_commits: 471
+  num_commits: 551
   first_commit: 2016-03-06 18:52:51
 - name: Paul Madden
   email: maddenp@colorado.edu
@@ -565,7 +565,7 @@
   first_commit: 2015-08-30 06:44:37
 - name: Marcel Bargull
   email: marcel.bargull@udo.edu
-  num_commits: 21
+  num_commits: 23
   first_commit: 2016-09-26 11:45:54
   github: mbargull
 - name: Philip R. Kensche
@@ -985,7 +985,7 @@
   github: dbast
 - name: Duncan Macleod
   email: duncan.macleod@ligo.org
-  num_commits: 3
+  num_commits: 4
   first_commit: 2019-06-13 08:07:25
   github: duncanmmacleod
 - name: Chris Osborn
@@ -1005,7 +1005,7 @@
   github: ddamiani
 - name: Marcelo Duarte Trevisani
   email: marceloduartetrevisani@gmail.com
-  num_commits: 86
+  num_commits: 87
   first_commit: 2019-07-19 10:00:00
   github: marcelotrevisani
   alternate_emails:
@@ -1036,7 +1036,7 @@
   github: 183amir
 - name: Matthew R Becker
   email: becker.mr@gmail.com
-  num_commits: 2
+  num_commits: 11
   first_commit: 2019-10-17 23:05:16
   github: beckermr
 - name: Jinzhe Zeng
@@ -1051,7 +1051,7 @@
   github: bdice
 - name: Matthew R. Becker
   email: beckermr@users.noreply.github.com
-  num_commits: 2
+  num_commits: 5
   first_commit: 2020-01-03 08:58:23
   github: beckermr
 - name: Sophian Guidara
@@ -1074,3 +1074,44 @@
   num_commits: 2
   first_commit: 2020-01-13 08:46:59
   github: beenje
+- name: Ruben Vorderman
+  email: r.h.p.vorderman@lumc.nl
+  num_commits: 1
+  first_commit: 2020-07-06 02:34:48
+  github: rhpvorderman
+- name: Mark Harfouche
+  email: mark.harfouche@gmail.com
+  num_commits: 2
+  first_commit: 2020-06-14 06:09:36
+  github: hmaarrfk
+- name: Pradipta Ghosh
+  email: pradghos@in.ibm.com
+  num_commits: 5
+  first_commit: 2020-05-11 04:51:33
+  github: pradghos
+- name: James Lamb
+  email: jaylamb20@gmail.com
+  num_commits: 1
+  first_commit: 2020-04-26 13:41:22
+  github: jameslamb
+- name: Oleg Alexandrov
+  email: oleg.alexandrov@gmail.com
+  num_commits: 1
+  first_commit: 2020-06-23 12:38:53
+- name: John Omotani
+  email: john.omotani@ukaea.uk
+  num_commits: 1
+  first_commit: 2020-06-09 17:00:52
+  github: johnomotani
+- name: Tom Pollard
+  email: tom_pollard@hotmail.co.uk
+  num_commits: 1
+  first_commit: 2020-06-30 10:40:21
+- name: Phil Reinhold
+  email: pcreinhold@gmail.com
+  num_commits: 1
+  first_commit: 2020-08-14 09:38:15
+- name: Cheng H. Lee
+  email: chenghlee@users.noreply.github.com
+  num_commits: 0
+  first_commit: 2020-06-24 10:55:13
