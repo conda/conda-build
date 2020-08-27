@@ -7,10 +7,10 @@ function install_conda_build_test_deps_fn()
   if [[ "$PYTHON_VERSION" == "2.7" ]]; then
     _PKGS+=(futures scandir pathlib2)
   fi
-  _PKGS+=(pytest pytest-azurepipelines pytest-cov pytest-forked pytest-xdist)
+  _PKGS+=("pytest<6" pytest-azurepipelines pytest-cov pytest-forked pytest-xdist)
+  _PKGS+=(py-lief pytest-mock)
   if [[ "$PYTHON_VERSION" != "2.7" ]] || [[ ! $(uname) =~ M* ]]; then
-    _PKGS+=(pytest-replay pytest-rerunfailures pytest-mock)
-    _PKGS+=(py-lief)
+    _PKGS+=(pytest-replay pytest-rerunfailures)
   fi
   _PKGS+=(anaconda-client git requests filelock contextlib2 jinja2 flaky)
   _PKGS+=(ripgrep pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz tqdm)
@@ -18,10 +18,9 @@ function install_conda_build_test_deps_fn()
   _PKGS+=(pip numpy mock pkginfo)
   if [[ $(uname) =~ .*inux.* ]]; then
     _PKGS+=(patchelf)
-  fi
-  if [[ ! $(uname) =~ .*inux.* ]] || [[ $(uname -m) != aarch64 ]]; then
-    _PKGS+=(nomkl)
-    # _PKGS+=(conda-forge::shellcheck)
+    _PKGS+=(shellcheck)
+  else
+    _PKGS+=(conda-forge::shellcheck)
   fi
   conda install -y --show-channel-urls "${_PKGS[@]}"
   if [[ ! -d ../conda_build_test_recipe ]]; then

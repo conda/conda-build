@@ -15,18 +15,18 @@ jobs:
       py27-release:
         PYTHON_VERSION: '2.7'
         CONDA_VERSION: 'release'
-      py27-canary:
-        PYTHON_VERSION: '2.7'
-        CONDA_VERSION: 'canary'
-      py37-canary:
-        PYTHON_VERSION: '3.7'
-        CONDA_VERSION: 'release'
+     #py27-canary:
+     #  PYTHON_VERSION: '2.7'
+     #  CONDA_VERSION: 'canary'
+     #py37-canary:
+     #  PYTHON_VERSION: '3.7'
+     #  CONDA_VERSION: 'release'
       py37-release:
         PYTHON_VERSION: '3.7'
         CONDA_VERSION: 'canary'
-      py38-canary:
-        PYTHON_VERSION: '3.8'
-        CONDA_VERSION: 'release'
+     #py38-canary:
+     #  PYTHON_VERSION: '3.8'
+     #  CONDA_VERSION: 'release'
       py38-release:
         PYTHON_VERSION: '3.8'
         CONDA_VERSION: 'canary'
@@ -82,7 +82,7 @@ jobs:
 
   - publish: $(Build.ArtifactStagingDirectory)/pytest-replay
     artifact: 'Linux-$(CONDA_VERSION)-Py$(PYTHON_VERSION)'
-    condition: always()
+    condition: and(always(), ne(variables['PYTHON_VERSION'], '2.7'))
 
 
 - job: 'macOS'
@@ -96,23 +96,23 @@ jobs:
         PYTHON_VERSION: '2.7'
         CONDA_VERSION: 'release'
         INSTALL_XCODE: '1'
-      py27-canary:
-        PYTHON_VERSION: '2.7'
-        CONDA_VERSION: 'canary'
-        INSTALL_XCODE: '0'
-      py37-canary-xcode:
+     #py27-canary:
+     #  PYTHON_VERSION: '2.7'
+     #  CONDA_VERSION: 'canary'
+     #  INSTALL_XCODE: '0'
+      py37-release-xcode:
         PYTHON_VERSION: '3.7'
         CONDA_VERSION: 'release'
         INSTALL_XCODE: '1'
-      py37-release:
-        PYTHON_VERSION: '3.7'
-        CONDA_VERSION: 'canary'
-        INSTALL_XCODE: '0'
-      py38-canary-xcode:
+     #py37-canary:
+     #  PYTHON_VERSION: '3.7'
+     #  CONDA_VERSION: 'canary'
+     #  INSTALL_XCODE: '0'
+      py38-release-xcode:
         PYTHON_VERSION: '3.8'
         CONDA_VERSION: 'release'
         INSTALL_XCODE: '1'
-      py38-release:
+      py38-canary:
         PYTHON_VERSION: '3.8'
         CONDA_VERSION: 'canary'
         INSTALL_XCODE: '0'
@@ -191,12 +191,12 @@ jobs:
       conda create -n blarg1 -yq python=2.7
       conda create -n blarg3 -yq python=3.7
       conda create -n blarg4 -yq python nomkl numpy pandas svn
-      py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --test-run-title="Linux-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION" "${PYTEST_REPLAY_OPTIONS[@]}"
+      py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --test-run-title="macOS-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION" "${PYTEST_REPLAY_OPTIONS[@]}"
     displayName: 'Parallel Tests'
 
   - publish: $(Build.ArtifactStagingDirectory)/pytest-replay
     artifact: 'macOS-$(CONDA_VERSION)-Py$(PYTHON_VERSION)'
-    condition: always()
+    condition: and(always(), ne(variables['PYTHON_VERSION'], '2.7'))
 
 
 - job: 'Windows'
@@ -208,21 +208,21 @@ jobs:
       py27-release:
         PYTHON_VERSION: '2.7'
         CONDA_VERSION: 'release'
-      py27-canary:
-        PYTHON_VERSION: '2.7'
-        CONDA_VERSION: 'canary'
-      py37-canary:
-        PYTHON_VERSION: '3.7'
-        CONDA_VERSION: 'release'
+     #py27-canary:
+     #  PYTHON_VERSION: '2.7'
+     #  CONDA_VERSION: 'canary'
       py37-release:
         PYTHON_VERSION: '3.7'
-        CONDA_VERSION: 'canary'
-      py38-canary:
-        PYTHON_VERSION: '3.8'
         CONDA_VERSION: 'release'
+     #py37-canary:
+     #  PYTHON_VERSION: '3.7'
+     #  CONDA_VERSION: 'canary'
       py38-release:
         PYTHON_VERSION: '3.8'
-        CONDA_VERSION: 'canary'
+        CONDA_VERSION: 'release'
+     #py38-canary:
+     #  PYTHON_VERSION: '3.8'
+     #  CONDA_VERSION: 'canary'
   timeoutInMinutes: 480
   steps:
   - checkout: self
@@ -285,11 +285,12 @@ jobs:
       python -c "import sys; print(sys.prefix)"
       call conda update -q --all
       call conda install -q pip python-libarchive-c pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling pytest-azurepipelines
-      call conda install -c pytest-replay pytest-rerunfailures -y
+      if "%PYTHON_VERSION%" == "2.7" call conda install -c defaults -c conda-forge pytest-replay pytest-rerunfailures -y
+      if "%PYTHON_VERSION%" NEQ "2.7" call conda install pytest-replay pytest-rerunfailures -y
       echo safety_checks: disabled >> %UserProfile%\.condarc
       echo local_repodata_ttl: 1800 >> %UserProfile%\.condarc
       if "%PYTHON_VERSION%" == "2.7" call conda install -q scandir pathlib2
-      if "%PYTHON_VERSION%" == "3.7" call conda install -q py-lief
+      if "%PYTHON_VERSION%" NEQ "2.7" call conda install -q py-lief
       python --version
       python -c "import struct; print(struct.calcsize('P') * 8)"
       pip install --no-deps .

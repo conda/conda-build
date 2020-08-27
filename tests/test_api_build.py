@@ -1073,11 +1073,11 @@ def test_copy_read_only_file_with_xattr(testing_config, testing_homedir):
 @pytest.mark.sanity
 def test_env_creation_fail_exits_build(testing_config):
     recipe = os.path.join(metadata_dir, '_post_link_exits_after_retry')
-    with pytest.raises((RuntimeError, LinkError, CondaError)):
+    with pytest.raises((RuntimeError, LinkError, CondaError, KeyError)):
         api.build(recipe, config=testing_config)
 
     recipe = os.path.join(metadata_dir, '_post_link_exits_tests')
-    with pytest.raises((RuntimeError, LinkError, CondaError)):
+    with pytest.raises((RuntimeError, LinkError, CondaError, KeyError)):
         api.build(recipe, config=testing_config)
 
 
@@ -1365,6 +1365,8 @@ def test_provides_features_metadata(testing_config):
     assert index['provides_features'] == {'test2': 'also_ok'}
 
 
+@pytest.mark.skipif(on_win and sys.version[:3] == "2.7",
+                    reason="py-lief not available on win for Python 2.7")
 def test_overlinking_detection(testing_config):
     testing_config.activate = True
     testing_config.error_overlinking = True
