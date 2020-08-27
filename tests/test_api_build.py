@@ -1365,6 +1365,8 @@ def test_provides_features_metadata(testing_config):
     assert index['provides_features'] == {'test2': 'also_ok'}
 
 
+@pytest.mark.skipif(on_win and sys.version[:3] == "2.7",
+                    reason="py-lief not available on win for Python 2.7")
 def test_overlinking_detection(testing_config):
     testing_config.activate = True
     testing_config.error_overlinking = True
