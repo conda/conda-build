@@ -737,8 +737,14 @@ def _collect_needed_dsos(sysroots_files, files, run_prefix, sysroot_substitution
     sysroot = ''
     if sysroots_files:
         sysroot = list(sysroots_files.keys())[0]
+    log = utils.get_logger(__name__)
     for f in files:
+        if 'libLLVM-10' in f:
+            print('debug why libz.1.dylib is not getting resolved')
         path = join(run_prefix, f)
+        import time
+        start_t = time.time()
+        log.warning("{} ...".format(path))
         if not codefile_type(path):
             continue
         log.warning("{} ...".format(path))
@@ -764,6 +770,9 @@ def _collect_needed_dsos(sysroots_files, files, run_prefix, sysroot_substitution
             res['resolved'] = resolved
         needed_dsos_for_file[f] = needed
         all_needed_dsos = all_needed_dsos.union(set(info['resolved'] for f, info in needed.items()))
+        end_t = time.time()
+        delta_t = end_t - start_t
+        log.warning("{} took {} seconds, finding {}".format(path, delta_t, needed))
     return all_needed_dsos, needed_dsos_for_file
 
 
