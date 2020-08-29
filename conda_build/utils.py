@@ -462,8 +462,13 @@ def get_recipe_abspath(recipe):
     # Don't use byte literals for paths in Python 2
     if not PY3:
         recipe = recipe.decode(getpreferredencoding() or 'utf-8')
+<<<<<<< HEAD
     if isfile(recipe):
         if recipe.lower().endswith(decompressible_exts) or recipe.lower().endswith(CONDA_PACKAGE_EXTENSIONS):
+=======
+    if isfile(recipe) and not '.yaml' in recipe:
+        if recipe.lower().endswith(decompressible_exts) or recipe.lower().endswith(CONDA_TARBALL_EXTENSIONS):
+>>>>>>> Consider any file containing .yaml in its name as maybe a recipe file
             recipe_dir = tempfile.mkdtemp()
             if recipe.lower().endswith(CONDA_PACKAGE_EXTENSIONS):
                 import conda_package_handling.api
@@ -476,8 +481,11 @@ def get_recipe_abspath(recipe):
                 tar_xf(recipe_tarfile, os.path.join(recipe_dir, 'info'))
             need_cleanup = True
         else:
-            print("Ignoring non-recipe: %s" % recipe)
+            print("Ignoring non-recipe file: %s" % recipe)
             return (None, None)
+    elif '.yaml' in recipe:
+        recipe_dir = os.path.dirname(recipe)
+        need_cleanup = False
     else:
         recipe_dir = abspath(os.path.join(os.getcwd(), recipe))
         need_cleanup = False
