@@ -396,7 +396,14 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
     # rules and its appropriateness on macOS is TBD!
     already_seen = set()
     exedir = os.path.dirname(filename)
+    import time
+    start_t = time.time()
     binary = lief.parse(filename)
+    end_t = time.time()
+    import logging
+    log = logging.getLogger(__name__)
+    log.warning("time for lief.parse( {} ) = {}".format(os.path.basename(filename), end_t - start_t))
+    print("time for lief.parse( {} ) = {}".format(os.path.basename(filename), end_t - start_t))
     todo = [[filename, binary]]
     sysroot = _trim_sysroot(sysroot)
 
