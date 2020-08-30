@@ -1392,26 +1392,36 @@ def create_info_files_json_v1(m, info_dir, prefix, files, files_with_prefix):
 
 
 def post_process_files(m, initial_prefix_files):
+    package_name = m.get_value('package/name')
+    host_prefix = m.config.host_prefix
+    missing = []
+    for f in initial_prefix_files:
+        if not os.path.exists(os.path.join(host_prefix, f)):
+            missing.append(f)
+    if len(missing):
+        log = utils.get_logger(__name__)
+        log.warning("The install/build script(s) for {} deleted the following"
+                    "files (from dependencies) from the prefix:\n{}".format(package_name, missing))
     get_build_metadata(m)
     create_post_scripts(m)
 
     # this is new-style noarch, with a value of 'python'
     if m.noarch != 'python':
         utils.create_entry_points(m.get_value('build/entry_points'), config=m.config)
-    current_prefix_files = utils.prefix_files(prefix=m.config.host_prefix)
+    current_prefix_files = utils.prefix_files(prefix=host_prefix)
 
     python = (m.config.build_python if os.path.isfile(m.config.build_python) else
               m.config.host_python)
-    post_process(m.get_value('package/name'), m.get_value('package/version'),
+    post_process(package_name, m.get_value('package/version'),
                  sorted(current_prefix_files - initial_prefix_files),
-                 prefix=m.config.host_prefix,
+                 prefix=host_prefix,
                  config=m.config,
                  preserve_egg_dir=bool(m.get_value('build/preserve_egg_dir')),
                  noarch=m.get_value('build/noarch'),
                  skip_compile_pyc=m.get_value('build/skip_compile_pyc'))
 
     # The post processing may have deleted some files (like easy-install.pth)
-    current_prefix_files = utils.prefix_files(prefix=m.config.host_prefix)
+    current_prefix_files = utils.prefix_files(prefix=host_prefix)
     new_files = sorted(current_prefix_files - initial_prefix_files)
     '''
     if m.noarch == 'python' and m.config.subdir == 'win-32':
@@ -1423,13 +1433,11 @@ def post_process_files(m, initial_prefix_files):
             os.unlink(os.path.join(m.config.host_prefix, ff))
             new_files.remove(ff)
     '''
-    new_files = utils.filter_files(new_files, prefix=m.config.host_prefix)
-
-    host_prefix = m.config.host_prefix
+    new_files = utils.filter_files(new_files, prefix=host_prefix)
     meta_dir = m.config.meta_dir
     if any(meta_dir in join(host_prefix, f) for f in new_files):
         meta_files = (tuple(f for f in new_files if m.config.meta_dir in
-                join(m.config.host_prefix, f)),)
+                join(host_prefix, f)),)
         sys.exit(
             "Error: Untracked file(s) {} found in conda-meta directory. This error usually comes "
             "from using conda in the build script. Avoid doing this, as it can lead to packages "
@@ -1447,14 +1455,14 @@ def post_process_files(m, initial_prefix_files):
 
     # the legacy noarch
     if m.get_value('build/noarch_python'):
-        noarch_python.transform(m, new_files, m.config.host_prefix)
+        noarch_python.transform(m, new_files, host_prefix)
     # new way: build/noarch: python
     elif m.noarch == 'python':
-        noarch_python.populate_files(m, pkg_files, m.config.host_prefix, entry_point_script_names)
+        noarch_python.populate_files(m, pkg_files, host_prefix, entry_point_script_names)
 
-    current_prefix_files = utils.prefix_files(prefix=m.config.host_prefix)
+    current_prefix_files = utils.prefix_files(prefix=host_prefix)
     new_files = current_prefix_files - initial_prefix_files
-    fix_permissions(new_files, m.config.host_prefix)
+    fix_permissions(new_files, host_prefix)
 
     return new_files
 
