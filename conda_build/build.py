@@ -2353,7 +2353,7 @@ def guess_interpreter(script_filename):
     # Since the MSYS2 installation is probably a set of conda packages we do not
     # need to worry about system environmental pollution here. For that reason I
     # do not pass -l on other OSes.
-    extensions_to_run_commands = {'.sh': ['bash.exe', '-l'] if utils.on_win else ['bash'],
+    extensions_to_run_commands = {'.sh': ['bash.exe', '-el'] if utils.on_win else ['bash', '-e'],
                                   '.bat': [os.environ.get('COMSPEC', 'cmd.exe'), '/d', '/c'],
                                   '.ps1': ['powershell', '-executionpolicy', 'bypass', '-File'],
                                   '.py': ['python']}
