@@ -3226,28 +3226,37 @@ def handle_anaconda_upload(paths, config):
     else:
         upload = True
 
-    no_upload_message = (
-        "# If you want to upload package(s) to anaconda.org later, type:\n"
-        "\n"
-    )
-    for package in paths:
-        no_upload_message += "anaconda upload {}\n".format(package)
-    no_upload_message += (
-        "\n"
-        "# To have conda build upload to anaconda.org automatically, use\n"
-        "# $ conda config --set anaconda_upload yes"
-    )
+    anaconda = find_executable('anaconda')
+
+    no_upload_message = ''
+    if not utils.on_win or 'MSYSTEM' in os.environ:
+        joiner = " \\\n    "
+        prompter = ''
+    else:
+        joiner = " ^\n    "
+        prompter = '$ '
+    if not upload or anaconda is None:
+        no_upload_message = (
+            "# If you want to upload package(s) to anaconda.org later, type:\n"
+            "\n"
+        )
+        no_upload_message += (
+            "\n"
+            "# To have conda build upload to anaconda.org automatically, use\n"
+            "# {}conda config --set anaconda_upload yes\n".format(prompter)
+        )
+        no_upload_message += "anaconda upload{}".format(joiner) + joiner.join(paths)
+
     if not upload:
         print(no_upload_message)
         return
 
-    anaconda = find_executable('anaconda')
     if anaconda is None:
         print(no_upload_message)
         sys.exit(
             "Error: cannot locate anaconda command (required for upload)\n"
             "# Try:\n"
-            "# $ conda install anaconda-client"
+            "# {}conda install anaconda-client".format(prompter)
         )
     cmd = [anaconda, ]
 
