@@ -512,7 +512,7 @@ FIELDS = {
               'error_overdepending', 'error_overlinking',
               },
     'outputs': {'name', 'version', 'number', 'script', 'script_interpreter', 'build',
-                'requirements', 'test', 'about', 'extra', 'files', 'type', 'run_exports'},
+                'requirements', 'test', 'about', 'extra', 'files', 'type', 'run_exports', 'target'},
     'requirements': {'build', 'host', 'run', 'conflicts', 'run_constrained'},
     'app': {'entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'},
