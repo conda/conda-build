@@ -33,7 +33,6 @@ DEFAULT_VARIANTS = {
     'ignore_build_only_deps': ['python', 'numpy'],
     'extend_keys': ['pin_run_as_build', 'ignore_version', 'ignore_build_only_deps', 'extend_keys'],
     'cran_mirror': "https://cran.r-project.org",
-    'CONDA_BUILD_SYSROOT': '/opt/MacOSX10.10.sdk',
 }
 
 # set this outside the initialization because of the dash in the key
