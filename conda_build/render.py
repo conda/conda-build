@@ -861,6 +861,12 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
     else:
         # merge any passed-in variants with any files found
         variants = get_package_variants(m, variants=variants)
+        import json
+        from conda_build.utils import get_logger
+        log = get_logger(__name__)
+        log.debug("non-final variants is:")
+        dbg = json.dumps(variants, indent=2)
+        log.debug(dbg)
 
         # when building, we don't want to fully expand all outputs into metadata, only expand
         #    whatever variants we have (i.e. expand top-level variants, not output-only variants)
