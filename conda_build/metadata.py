@@ -308,27 +308,33 @@ def _variants_equal(metadata, output_metadata):
 
 
 def ensure_matching_hashes(output_metadata):
-    envs = 'build', 'host', 'run'
+    # envs = 'build', 'host', 'run'
+    envs = 'host', 'run'
     problemos = []
-    for (_, m) in output_metadata.values():
-        for (_, om) in output_metadata.values():
-            if m != om:
-                run_exports = om.meta.get('build', {}).get('run_exports', [])
-                if hasattr(run_exports, 'keys'):
-                    run_exports_list = []
-                    for export_type in utils.RUN_EXPORTS_TYPES:
-                        run_exports_list = run_exports_list + run_exports.get(export_type, [])
-                    run_exports = run_exports_list
-                deps = _get_all_dependencies(om, envs) + run_exports
-                for dep in deps:
-                    if (dep.startswith(m.name() + ' ') and len(dep.split(' ')) == 3 and
-                            dep.split(' ')[-1] != m.build_id() and _variants_equal(m, om)):
-                        problemos.append((m.name(), m.build_id(), dep, om.name()))
-
+    for env in envs:
+        problemos_env = []
+        for (_, m) in output_metadata.values():
+            for (_, om) in output_metadata.values():
+                if m != om:
+                    if env == 'run':
+                        run_exports = om.meta.get('build', {}).get('run_exports', [])
+                    else:
+                        run_exports = []
+                    if hasattr(run_exports, 'keys'):
+                        run_exports_list = []
+                        for export_type in utils.RUN_EXPORTS_TYPES:
+                            run_exports_list = run_exports_list + run_exports.get(export_type, [])
+                        run_exports = run_exports_list
+                    deps = _get_all_dependencies(om, (env,)) + run_exports
+                    for dep in deps:
+                        if (dep.startswith(m.name() + ' ') and len(dep.split(' ')) == 3 and
+                                dep.split(' ')[-1] != m.build_id() and _variants_equal(m, om)):
+                            problemos_env.append((env, m.name(), m.build_id(), dep, om.name()))
+        problemos.extend(problemos_env)
     if problemos:
         error = ""
         for prob in problemos:
-            error += "Mismatching package: {} (id {}); dep: {}; consumer package: {}\n".format(*prob)
+            error += "Mismatching package in {} env: {} (id {}); dep: {}; consumer package: {}\n".format(*prob)
         raise exceptions.RecipeError("Mismatching hashes in recipe. Exact pins in dependencies "
                                      "that contribute to the hash often cause this. Can you "
                                      "change one or more exact pins to version bound constraints?\n"
