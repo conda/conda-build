@@ -321,6 +321,11 @@ def combine_specs(specs, log_output=True):
                                           log_output=log_output).get('zip_keys', [])
     values = _combine_spec_dictionaries(specs, extend_keys=extend_keys, zip_keys=zip_keys,
                                         log_output=log_output)
+    import json
+    log = get_logger(__name__)
+    log.debug("Variants are:")
+    dbg = json.dumps(values, indent=2)
+    log.debug(dbg)
     return values
 
 
@@ -594,6 +599,12 @@ def get_package_combined_spec(recipedir_or_metadata, config=None, variants=None)
     # this merges each of the specs, providing a debug message when a given setting is overridden
     #      by a later spec
     combined_spec = combine_specs(specs, log_output=config.verbose)
+    import json
+    log = get_logger(__name__)
+    log.debug("Combined specs is:")
+    dbg = json.dumps(combined_spec, indent=2)
+    log.debug(dbg)
+
     return combined_spec, specs
 
 
