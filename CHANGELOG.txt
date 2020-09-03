@@ -1,4 +1,51 @@
 # current developments
+2020-09-04 3.20.1:
+------------------
+
+Enhancements:
+-------------
+
+
+
+
+
+Bug fixes:
+----------
+
+* Run bash with -e in outputs too #4033
+* Add target to recognized fields in `outputs` #4034
+* Various overlinking fixes for Windows #4036
+* variants: remove hard-coded default path for CONDA_BUILD_SYSROOT
+
+Deprecations:
+-------------
+
+
+
+
+
+Docs:
+-----
+
+
+
+
+
+Other:
+------
+
+
+
+
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @isuruf
+* @mbargull
+
+
 2020-08-27 3.20.0:
 ------------------
 
