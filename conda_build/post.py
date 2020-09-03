@@ -1164,9 +1164,10 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                         # e.g. an elf will have a DT_NEEDED of just 'zlib.so.1' and to standardize
                         # processing across platforms I prefixed them all with $RPATH. That should be
                         # un-done so that this error message is more clearly related to the consumer..
-                        print("WARNING :: For consumer: '{}' with rpaths: '{}'\n"
-                              "WARNING :: .. the package containing '{}' could not be found in the run prefix".format(
-                            f, rpaths, needed_dso))
+                        # print("WARNING :: For consumer: '{}' with rpaths: '{}'\n"
+                        #       "WARNING :: .. the package containing '{}' could not be found in the run prefix".format(
+                        #     f, rpaths, needed_dso))
+                        pass
 
     _show_linking_messages(files, errors, needed_dsos_for_file, build_prefix, run_prefix, pkg_name,
                            error_overlinking, runpath_whitelist, verbose, requirements_run, lib_packages,
