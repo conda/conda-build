@@ -1145,12 +1145,11 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
         for needed_dso, needed_dso_info in needed.items():
             orig = needed_dso
             resolved = needed_dso_info['resolved']
-            rpaths = needed_dso_info['rpaths']
             if (not resolved.startswith('/') and
-                not resolved.startswith(sysroot_substitution) and
-                not resolved.startswith(build_prefix_substitution) and
-                resolved.lower() not in [o.lower() for o in prefix_owners[run_prefix]] and
-                resolved not in filesu):
+               not resolved.startswith(sysroot_substitution) and
+               not resolved.startswith(build_prefix_substitution) and
+               resolved.lower() not in [o.lower() for o in prefix_owners[run_prefix]] and
+               resolved not in filesu):
                 in_whitelist = False
                 if not build_is_host:
                     in_whitelist = any([caseless_sepless_fnmatch([orig], w) for w in whitelist])
