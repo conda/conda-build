@@ -789,7 +789,7 @@ def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_v
                     # Looking at all the files is very slow.
                     if not dynamic_lib and not static_lib:
                         continue
-                    rp = normpath(relpath(fp, prefix))
+                    rp = normpath(relpath(fp, prefix)).replace('\\', '/')
                     if dynamic_lib and not any(rp.lower() == w for w in all_needed_dsos_lower):
                         continue
                     if any(rp == normpath(w) for w in all_lib_exports[prefix]):
