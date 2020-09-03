@@ -1,0 +1,17 @@
+Enhancements:
+-------------
+
+Bug fixes:
+----------
+
+* Run bash with -e in outputs too #4033
+
+Deprecations:
+-------------
+
+Docs:
+-----
+
+Other:
+------
+

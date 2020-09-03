@@ -1,0 +1,17 @@
+Enhancements:
+-------------
+
+Bug fixes:
+----------
+
+* Add target to recognized fields in `outputs` #4034
+
+Deprecations:
+-------------
+
+Docs:
+-----
+
+Other:
+------
+
