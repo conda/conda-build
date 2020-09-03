@@ -1030,11 +1030,13 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     errors = []
 
     files_to_inspect = []
+    filesu = []
     for f in files:
         path = join(run_prefix, f)
         filetype = codefile_type(path)
         if filetype and filetype in filetypes_for_platform[subdir.split('-')[0]]:
             files_to_inspect.append(f)
+        filesu.append(f.replace('\\', '/'))
 
     if not files_to_inspect:
         return dict()
