@@ -2371,6 +2371,32 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                                     log.warn("{} overlap between {} in packages {} and {}"
                                              .format(nature, file, output_d['name'],
                                                      prev_output_d['name']))
+                        # Now check for potentially missed symlink opportunities between packages
+                        # TODO :: Add details about whether a dependency needs to be added or not.
+                        checksums = {}
+                        for file, csum in output_d['checksums'].items():
+                            if csum in checksums:
+                                checksums[csum].append([{'file': file, 'package': output_d['name']}])
+                            else:
+                                checksums[csum] = [{'file': file, 'package': output_d['name']}]
+                        for _, prev_om in new_pkgs.items():
+                            prev_output_d, _ = prev_om
+                            prev_checksums = {}
+                            for file, csum in prev_output_d['checksums'].items():
+                                if csum in prev_checksums:
+                                    prev_checksums[csum].append([{'file': file, 'package': prev_output_d['name']}])
+                                else:
+                                    prev_checksums[csum] = [{'file': file, 'package': output_d['name']}]
+                            inters = {x: checksums[x] + prev_checksums[x]
+                                      for x in checksums if x in prev_checksums}
+                            if len(inters):
+                                for csum, dupes in inters.items():
+                                    st = os.stat(os.path.join(m.config.host_prefix, dupes[0]['file']))
+                                    if st.st_size > 1024:
+                                        log.warning("A symlink opportunity ({} bytes) was missed:".format(st.st_size))
+                                        for f in dupes:
+                                            log.warning(".. package: {}, file: {}".format(f['package'], f['file']))
+                                print(inters)
                     for built_package in newly_built_packages:
                         new_pkgs[built_package] = (output_d, m)
 
