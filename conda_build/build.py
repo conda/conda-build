@@ -1681,19 +1681,6 @@ def bundle_conda(output, metadata, env, stats, **kw):
             final_outputs.append(final_output)
     update_index(os.path.dirname(output_folder), verbose=metadata.config.debug, threads=1)
 
-    # clean out host prefix so that this output's files don't interfere with other outputs
-    #   We have a backup of how things were before any output scripts ran.  That's
-    #   restored elsewhere.
-
-    if metadata.config.keep_old_work:
-        prefix = metadata.config.host_prefix
-        dest = os.path.join(os.path.dirname(prefix),
-                            '_'.join(('_h_env_moved', metadata.dist(),
-                                      metadata.config.host_subdir)))
-        shutil_move_more_retrying(prefix, dest, "host env")
-    else:
-        utils.rm_rf(metadata.config.host_prefix)
-
     return final_outputs
 
 
@@ -2198,6 +2185,8 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
             # objects here are created by the m.get_output_metadata_set, which
             # is distributing the matrix of used variables.
 
+            insignificantly_small = 1024
+            big_file_checksums = {}
             for (output_d, m) in outputs:
                 get_all_replacements(m.config.variants)
                 get_all_replacements(m.config.variant)
@@ -2318,12 +2307,51 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                         for file, csum in output_d['checksums'].items():
                             for _, prev_om in new_pkgs.items():
                                 prev_output_d, _ = prev_om
-                                if file in prev_output_d.get('checksums', {}):
-                                    prev_csum = prev_output_d['checksums'][file]
-                                    nature = 'Exact' if csum == prev_csum else 'Inexact'
-                                    log.warning("{} overlap between {} in packages {} and {}"
-                                             .format(nature, file, output_d['name'],
-                                                     prev_output_d['name']))
+                                if output_d['name'] != prev_output_d['name']:
+                                    if file in prev_output_d.get('checksums', {}):
+                                        prev_csum = prev_output_d['checksums'][file]
+                                        nature = 'Exact' if csum == prev_csum else 'Inexact'
+                                        log.warning("{} overlap between {} in packages {} and {}"
+                                                 .format(nature, file, output_d['name'],
+                                                         prev_output_d['name']))
+
+                        # Now check for potentially missed symlink opportunities between packages
+                        # TODO :: Add details about whether a dependency needs to be added or not.
+                        package = output_d['name']
+                        for file, csum in output_d['checksums'].items():
+                            fp = os.path.join(m.config.host_prefix, file)
+                            if os.path.isfile(fp) and not os.path.islink(fp):
+                                st = os.stat(fp)
+                                if st.st_size >= insignificantly_small:
+                                    if csum in big_file_checksums:
+                                        # Really we should only point out symlink opportunities if the dependencies
+                                        # are setup so that they would work correctly, but this is a good enough
+                                        # proxy for that (for now).
+                                        files_same = any(b['file'] == file for b in big_file_checksums[csum])
+                                        package_same = any(b['package'] == package for b in big_file_checksums[csum])
+                                        if package_same and files_same:
+                                            continue
+                                        big_file_checksums[csum].append({'file': file,
+                                                                         'package': package,
+                                                                         'size': st.st_size})
+                                    else:
+                                        big_file_checksums[csum] = [{'file': file,
+                                                                     'package': package,
+                                                                     'size': st.st_size}]
+
+                    # clean out host prefix so that this output's files don't interfere with other outputs
+                    #   We have a backup of how things were before any output scripts ran.  That's
+                    #   restored elsewhere.
+                    if m.config.keep_old_work:
+                        prefix = m.config.host_prefix
+                        dest = os.path.join(os.path.dirname(prefix),
+                                            '_'.join(('_h_env_moved', m.dist(),
+                                                      m.config.host_subdir)))
+                        shutil_move_more_retrying(prefix, dest, "host env")
+                    else:
+                        utils.rm_rf(m.config.host_prefix)
+
+
                     for built_package in newly_built_packages:
                         new_pkgs[built_package] = (output_d, m)
 
@@ -2341,6 +2369,14 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                                     output_folder=m.config.output_folder, channel_urls=m.config.channel_urls,
                                     debug=m.config.debug, verbose=m.config.verbose, locking=m.config.locking,
                                     timeout=m.config.timeout, clear_cache=True)
+
+            for csum, dupes in big_file_checksums.items():
+                if len(dupes) > 1:
+                    msg = "A symlink opportunity ({} KB * {}) might have been missed (..{}):\n".format(
+                        dupes[0]['size'] // insignificantly_small, len(dupes), csum[-8:])
+                    for dupe in dupes:
+                        msg += " .. package: {}, file: {}\n".format(dupe['package'], dupe['file'])
+                    log.warning(msg)
     else:
         if not provision_only:
             print("STOPPING BUILD BEFORE POST:", m.dist())

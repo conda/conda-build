@@ -741,6 +741,7 @@ def _collect_needed_dsos(sysroots_files, files, run_prefix, sysroot_substitution
         path = join(run_prefix, f)
         if not codefile_type(path):
             continue
+        log.warning("{} ...".format(path))
         build_prefix = build_prefix.replace(os.sep, '/')
         run_prefix = run_prefix.replace(os.sep, '/')
         needed = get_linkages_memoized(path, resolve_filenames=True, recurse=False,
