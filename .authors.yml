@@ -11,14 +11,14 @@
   email: jjhelmus@gmail.com
   aliases:
   - Jonathan Helmus
-  num_commits: 107
+  num_commits: 109
   first_commit: 2014-06-09 17:25:05
   github: jjhelmus
 - name: Isuru Fernando
   email: isuruf@gmail.com
   alternate_emails:
   - isuru.11@cse.mrt.ac.lk
-  num_commits: 44
+  num_commits: 46
   first_commit: 2017-06-16 15:14:34
   github: isuruf
 - name: Dan Blanchard
@@ -414,7 +414,7 @@
 - name: Ray Donnelly
   email: mingw.android@gmail.com
   github: mingwandroid
-  num_commits: 551
+  num_commits: 558
   first_commit: 2016-03-06 18:52:51
 - name: Paul Madden
   email: maddenp@colorado.edu
@@ -565,7 +565,7 @@
   first_commit: 2015-08-30 06:44:37
 - name: Marcel Bargull
   email: marcel.bargull@udo.edu
-  num_commits: 23
+  num_commits: 24
   first_commit: 2016-09-26 11:45:54
   github: mbargull
 - name: Philip R. Kensche
