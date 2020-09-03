@@ -433,6 +433,9 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
                         tmp_filename = parents_by_filename[tmp_filename]
                 else:
                     parent_exe_dirname = exedir
+                # This is a hack for Python on Windows. Sorry.
+                if '.pyd' in filename2 or (os.sep + 'DLLs' + os.sep) in filename2:
+                    parent_exe_dirname = envroot.replace(os.sep, '/') + '/DLLs'
                 rpaths_by_binary[filename2] = get_rpaths(binary,
                                                          parent_exe_dirname,
                                                          envroot.replace(os.sep, '/'),
