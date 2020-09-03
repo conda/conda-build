@@ -789,7 +789,7 @@ def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_v
                     # Looking at all the files is very slow.
                     if not dynamic_lib and not static_lib:
                         continue
-                    rp = normpath(relpath(fp, prefix))
+                    rp = normpath(relpath(fp, prefix)).replace('\\', '/')
                     if dynamic_lib and not any(rp.lower() == w for w in all_needed_dsos_lower):
                         continue
                     if any(rp == normpath(w) for w in all_lib_exports[prefix]):
@@ -1030,11 +1030,13 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     errors = []
 
     files_to_inspect = []
+    filesu = []
     for f in files:
         path = join(run_prefix, f)
         filetype = codefile_type(path)
         if filetype and filetype in filetypes_for_platform[subdir.split('-')[0]]:
             files_to_inspect.append(f)
+        filesu.append(f.replace('\\', '/'))
 
     if not files_to_inspect:
         return dict()
@@ -1143,13 +1145,11 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
         for needed_dso, needed_dso_info in needed.items():
             orig = needed_dso
             resolved = needed_dso_info['resolved']
-            rpaths = needed_dso_info['rpaths']
-            if (error_overlinking and
-               not resolved.startswith('/') and
+            if (not resolved.startswith('/') and
                not resolved.startswith(sysroot_substitution) and
                not resolved.startswith(build_prefix_substitution) and
                resolved.lower() not in [o.lower() for o in prefix_owners[run_prefix]] and
-               resolved not in files):
+               resolved not in filesu):
                 in_whitelist = False
                 if not build_is_host:
                     in_whitelist = any([caseless_sepless_fnmatch([orig], w) for w in whitelist])
@@ -1163,9 +1163,10 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                         # e.g. an elf will have a DT_NEEDED of just 'zlib.so.1' and to standardize
                         # processing across platforms I prefixed them all with $RPATH. That should be
                         # un-done so that this error message is more clearly related to the consumer..
-                        print("WARNING :: For consumer: '{}' with rpaths: '{}'\n"
-                              "WARNING :: .. the package containing '{}' could not be found in the run prefix".format(
-                            f, rpaths, needed_dso))
+                        # print("WARNING :: For consumer: '{}' with rpaths: '{}'\n"
+                        #       "WARNING :: .. the package containing '{}' could not be found in the run prefix".format(
+                        #     f, rpaths, needed_dso))
+                        pass
 
     _show_linking_messages(files, errors, needed_dsos_for_file, build_prefix, run_prefix, pkg_name,
                            error_overlinking, runpath_whitelist, verbose, requirements_run, lib_packages,
