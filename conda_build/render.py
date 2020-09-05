@@ -40,7 +40,6 @@ from conda_build.exceptions import DependencyNeedsBuildingError
 from conda_build.index import get_build_index
 # from conda_build.jinja_context import pin_subpackage_against_outputs
 
-
 def odict_representer(dumper, data):
     return dumper.represent_dict(data.items())
 
@@ -780,7 +779,7 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
             t.extractall(path=recipe_dir)
             t.close()
             need_cleanup = True
-        elif arg.endswith('.yaml'):
+        elif '.yaml' in arg:
             recipe_dir = os.path.dirname(arg)
             need_cleanup = False
         else:
