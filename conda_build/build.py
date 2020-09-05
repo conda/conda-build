@@ -52,7 +52,7 @@ from .conda_interface import UnsatisfiableError
 from .conda_interface import NoPackagesFoundError
 from .conda_interface import CondaError
 from .conda_interface import pkgs_dirs
-from .utils import env_var, glob, tmp_chdir, CONDA_TARBALL_EXTENSIONS
+from .utils import env_var, glob, tmp_chdir, CONDA_TARBALL_EXTENSIONS, shutil_move_more_retrying
 
 from conda_build import environ, source, tarcheck, utils
 from conda_build.config import Config
@@ -1674,25 +1674,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
         dest = os.path.join(os.path.dirname(prefix),
                             '_'.join(('_h_env_moved', metadata.dist(),
                                       metadata.config.host_subdir)))
-        print("Renaming host env directory, ", prefix, " to ", dest)
-        attempts_left = 5
-        while attempts_left != 0:
-            if os.path.exists(dest):
-                utils.rm_rf(dest)
-            try:
-                log.info("shutil.move(prefix={}, dest={})".format(prefix, dest))
-                shutil.move(prefix, dest)
-                if attempts_left != 5:
-                    log.warning("shutil.move(prefix={}, dest={}) succeeded on attempt number {}".format(prefix, dest, 6 - attempts_left))
-                attempts_left = 0
-            except:
-                attempts_left = attempts_left - 1
-            if attempts_left:
-                log.warning("Failed to rename host env directory, check with strace, struss or procmon. Will sleep for 3 seconds and try again!")
-                import time
-                time.sleep(3)
-            else:
-                log.error("Failed to rename host env directory despite sleeping and retrying. This is some Windows file locking mis-bahaviour.")
+        shutil_move_more_retrying(prefix, dest, "host env")
     else:
         utils.rm_rf(metadata.config.host_prefix)
 
@@ -2758,10 +2740,7 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
                             '_'.join(('%s_prefix_moved' % name, metadata.dist(),
                                       getattr(metadata.config, '%s_subdir' % name))))
                 # Needs to come after create_files in case there's test/source_files
-                print("Renaming %s prefix directory, " % name, prefix, " to ", dest)
-                if os.path.exists(dest):
-                    utils.rm_rf(dest)
-                shutil.move(prefix, dest)
+                shutil_move_more_retrying(prefix, dest, "{} prefix".format(prefix))
 
         # nested if so that there's no warning when we just leave the empty workdir in place
         if metadata.source_provided:
@@ -2769,10 +2748,7 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
                                 '_'.join(('work_moved', metadata.dist(),
                                           metadata.config.host_subdir)))
             # Needs to come after create_files in case there's test/source_files
-            print("Renaming work directory, ", metadata.config.work_dir, " to ", dest)
-            if os.path.exists(dest):
-                utils.rm_rf(dest)
-            shutil.move(config.work_dir, dest)
+            shutil_move_more_retrying(config.work_dir, dest, "work")
     else:
         log.warn("Not moving work directory after build.  Your package may depend on files "
                     "in the work directory that are not included with your package")
@@ -3096,12 +3072,7 @@ def build_tree(recipe_list, config, stats, build_only=False, post=None, notest=F
                                         '_'.join(('work_moved', metadata.dist(),
                                                   metadata.config.host_subdir, "main_build_loop")))
                     # Needs to come after create_files in case there's test/source_files
-                    print("Renaming work directory, ", metadata.config.work_dir, " to ", dest)
-                    try:
-                        shutil.move(metadata.config.work_dir, dest)
-                    except shutil.Error:
-                        utils.rm_rf(dest)
-                        shutil.move(metadata.config.work_dir, dest)
+                    shutil_move_more_retrying(metadata.config.work_dir, dest, "work")
 
             # each metadata element here comes from one recipe, thus it will share one build id
             #    cleaning on the last metadata in the loop should take care of all of the stuff.
