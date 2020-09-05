@@ -1980,6 +1980,7 @@ def shutil_move_more_retrying(src, dest, debug_name):
     log = get_logger(__name__)
     log.info("Renaming {} directory '{}' to '{}'".format(debug_name, src, dest))
     attempts_left = 5
+
     while attempts_left != 0:
         if os.path.exists(dest):
             rm_rf(dest)
