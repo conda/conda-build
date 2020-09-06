@@ -1530,11 +1530,14 @@ def bundle_conda(output, metadata, env, stats, **kw):
         env_output['CHERE_INVOKING'] = '1'
         for var in utils.ensure_list(metadata.get_value('build/script_env')):
             if '=' in var:
-                var = var.split('=')[0]
-            if var not in os.environ:
+                val = var.split('=', 1)[1]
+                var = var.split('=', 1)[0]
+            elif var not in os.environ:
                 raise ValueError("env var '{}' specified in script_env, but is not set."
                                     .format(var))
-            env_output[var] = os.environ[var]
+            else:
+                val = os.environ[var]
+            env_output[var] = val
         dest_file = os.path.join(metadata.config.work_dir, output['script'])
         utils.copy_into(os.path.join(metadata.path, output['script']), dest_file)
         from os import stat
