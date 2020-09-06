@@ -12,8 +12,11 @@ from conda_build.conda_interface import linked_data
 from conda_build.os_utils.macho import otool
 from conda_build.os_utils.pyldd import codefile_class, inspect_linkages, machofile, is_codefile
 
-LDD_RE = re.compile(r'\s*(.*?)\s*=>\s*(.*?)\s*\(.*\)')
-LDD_NOT_FOUND_RE = re.compile(r'\s*(.*?)\s*=>\s*not found')
+# LDD_RE = re.compile(r'\s*(.*?)\s*=>\s*(.*?)\s*\(.*\)')
+LDD_RE = re.compile(r'\s*(\S+\s*)?=>\s*(.+\s*)?\(.*\)')
+
+# LDD_NOT_FOUND_RE = re.compile(r'\s*(.*?)\s*=>\s*not found')
+LDD_NOT_FOUND_RE = re.compile(r'\s*(\S+\s*)?=>\s*not found')
 
 
 def ldd(path):
