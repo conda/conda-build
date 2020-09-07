@@ -13,10 +13,10 @@ from conda_build.os_utils.macho import otool
 from conda_build.os_utils.pyldd import codefile_class, inspect_linkages, machofile, is_codefile
 
 # LDD_RE = re.compile(r'\s*(.*?)\s*=>\s*(.*?)\s*\(.*\)')
-LDD_RE = re.compile(r'\s*(\S+\s*)?=>\s*(.+\s*)?\(.*\)')
+LDD_RE = re.compile(r'\s*((.+?)\s*)?=>\s*((.+?)\s*)?\(.*\)')
 
 # LDD_NOT_FOUND_RE = re.compile(r'\s*(.*?)\s*=>\s*not found')
-LDD_NOT_FOUND_RE = re.compile(r'\s*(\S+\s*)?=>\s*not found')
+LDD_NOT_FOUND_RE = re.compile(r'\s*((.+?)\s*)?=>\s*not found')
 
 
 def ldd(path):
@@ -30,11 +30,13 @@ def ldd(path):
         assert line[0] == '\t', (path, line)
         m = LDD_RE.match(line)
         if m:
+            # res.append(m.groups())
+            _, group1, _, group2 = m.groups()
             res.append(m.groups())
             continue
         m = LDD_NOT_FOUND_RE.match(line)
         if m:
-            res.append((m.group(1), 'not found'))
+            res.append((m.group(2), 'not found'))
             continue
         if 'ld-linux' in line:
             continue
