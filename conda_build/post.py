@@ -1252,7 +1252,7 @@ def post_process_shared_lib(m, f, files, host_prefix=None):
         return
     rpaths = m.get_value('build/rpaths', ['lib'])
     if codefile_t == 'elffile':
-        mk_relative_linux(f, m.config.host_prefix, rpaths=rpaths,
+        mk_relative_linux(f, host_prefix, rpaths=rpaths,
                           method=m.get_value('build/rpaths_patcher', None))
     elif codefile_t == 'machofile':
         if m.config.host_platform != 'osx':
