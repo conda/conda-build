@@ -1974,3 +1974,32 @@ def linked_data_no_multichannels(prefix):
     from conda.common.compat import itervalues
     return {Dist.from_string(prefix_record.fn, channel_override=prefix_record.channel.name):
                 prefix_record for prefix_record in itervalues(pd._prefix_records)}
+
+
+def shutil_move_more_retrying(src, dest, debug_name):
+    log = get_logger(__name__)
+    log.info("Renaming {} directory '{}' to '{}'".format(debug_name, src, dest))
+    attempts_left = 5
+
+    while attempts_left != 0:
+        if os.path.exists(dest):
+            rm_rf(dest)
+        try:
+            log.info("shutil.move({})={}, dest={})".format(debug_name, src, dest))
+            shutil.move(src, dest)
+            if attempts_left != 5:
+                log.warning("shutil.move({}={}, dest={}) succeeded on attempt number {}".format(debug_name, src, dest,
+                                                                                                    6 - attempts_left))
+            attempts_left = 0
+        except:
+            attempts_left = attempts_left - 1
+        if attempts_left:
+            log.warning(
+                "Failed to rename {} directory, check with strace, struss or procmon. "
+                "Will sleep for 3 seconds and try again!".format(debug_name))
+            import time
+            time.sleep(3)
+        else:
+            log.error(
+                "Failed to rename {} directory despite sleeping and retrying. "
+                "This is some Windows file locking mis-bahaviour.".format(debug_name))
