@@ -1,4 +1,41 @@
 # current developments
+2020-09-08 3.20.2:
+------------------
+
+Enhancements:
+-------------
+
+
+
+Bug fixes:
+----------
+
+* Use the passed in host_prefix in post_process_shared_lib #4041
+* Fix script_env VAR=VAL (again, also supports VAR=VAR2=VAL) #4041
+* Add and use shutil_move_more_retrying #4041
+* Fix create_info_files and also try_download for --test-post-link #4041
+
+Deprecations:
+-------------
+
+
+
+Docs:
+-----
+
+
+
+Other:
+------
+
+
+
+Contributors:
+-------------
+
+* @mingwandroid
+
+
 2020-09-04 3.20.1:
 ------------------
 
