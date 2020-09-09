@@ -920,7 +920,7 @@ def _lookup_in_sysroots_and_whitelist(errors, whitelist, needed_dso, sysroots_fi
                            format(info_prelude, n_dso_p), verbose=verbose)
                 break
     if not in_whitelist and not in_sysroots:
-        _print_msg(errors, "{}: {} not found in packages, sysroot(s) nor the missing_dso_whietlist.\n"
+        _print_msg(errors, "{}: {} not found in packages, sysroot(s) nor the missing_dso_whitelist.\n"
                            ".. is this binary repackaging?".
                    format(msg_prelude, needed_dso), verbose=verbose)
 
