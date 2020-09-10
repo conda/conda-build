@@ -738,14 +738,12 @@ def _collect_needed_dsos(sysroots_files, files, run_prefix, sysroot_substitution
         sysroot = list(sysroots_files.keys())[0]
     log = utils.get_logger(__name__)
     for f in files:
-        if 'libLLVM-10' in f:
-            print('debug why libz.1.dylib is not getting resolved')
         path = join(run_prefix, f)
         import time
         start_t = time.time()
-        log.warning("{} ...".format(path))
         if not codefile_type(path):
             continue
+        log.warning("{} ...".format(path))
         build_prefix = build_prefix.replace(os.sep, '/')
         run_prefix = run_prefix.replace(os.sep, '/')
         needed = get_linkages_memoized(path, resolve_filenames=True, recurse=False,
