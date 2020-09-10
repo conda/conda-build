@@ -1121,6 +1121,9 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                         install_names = [re.match('^install-name:\s+(.*)$', line) for line in lines]
                         install_names = [insname.groups(1)[0] for insname in install_names]
                         replaced = install_names[0][1:]
+                        if replaced.endswith("'"):
+                            # Some SDKs have install name surrounded by single qoutes
+                            replaced = replaced[1:-1]
                 sysroot_files.append(replaced)
             diffs = set(orig_sysroot_files) - set(sysroot_files)
             if diffs:
