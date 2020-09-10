@@ -2354,27 +2354,36 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                         for file, csum in output_d['checksums'].items():
                             for _, prev_om in new_pkgs.items():
                                 prev_output_d, _ = prev_om
-                                if file in prev_output_d.get('checksums', {}):
-                                    prev_csum = prev_output_d['checksums'][file]
-                                    nature = 'Exact' if csum == prev_csum else 'Inexact'
-                                    print("WARNING :: {} overlap between {} in packages {} and {}"
-                                             .format(nature, file, output_d['name'],
-                                                     prev_output_d['name']))
+                                if output_d['name'] != prev_output_d['name']:
+                                    if file in prev_output_d.get('checksums', {}):
+                                        prev_csum = prev_output_d['checksums'][file]
+                                        nature = 'Exact' if csum == prev_csum else 'Inexact'
+                                        print("WARNING :: {} overlap between {} in packages {} and {}"
+                                                 .format(nature, file, output_d['name'],
+                                                         prev_output_d['name']))
 
                         # Now check for potentially missed symlink opportunities between packages
                         # TODO :: Add details about whether a dependency needs to be added or not.
+                        package = output_d['name']
                         for file, csum in output_d['checksums'].items():
                             fp = os.path.join(m.config.host_prefix, file)
                             if os.path.isfile(fp) and not os.path.islink(fp):
                                 st = os.stat(fp)
                                 if st.st_size >= insignificantly_small:
                                     if csum in big_file_checksums:
+                                        # Really we should only point out symlink opportunities if the dependencies
+                                        # are setup so that they would work correctly, but this is a good enough
+                                        # proxy for that (for now).
+                                        files_same = any(b['file'] == file for b in big_file_checksums[csum])
+                                        package_same = any(b['package'] == package for b in big_file_checksums[csum])
+                                        if package_same and files_same:
+                                            continue
                                         big_file_checksums[csum].append({'file': file,
-                                                                         'package': output_d['name'],
+                                                                         'package': package,
                                                                          'size': st.st_size})
                                     else:
                                         big_file_checksums[csum] = [{'file': file,
-                                                                     'package': output_d['name'],
+                                                                     'package': package,
                                                                      'size': st.st_size}]
 
                     # clean out host prefix so that this output's files don't interfere with other outputs
