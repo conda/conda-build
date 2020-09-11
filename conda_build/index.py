@@ -841,11 +841,16 @@ class ChannelIndex(object):
                             self._write_repodata(subdir, patched_repodata, REPODATA_JSON_FN)
                             t2.set_description("Building current_repodata subset")
                             t2.update()
-                            current_repodata = _build_current_repodata(subdir, patched_repodata,
-                                                                       pins=current_index_versions)
-                            t2.set_description("Writing current_repodata subset")
-                            t2.update()
-                            self._write_repodata(subdir, current_repodata, json_filename="current_repodata.json")
+                            try:
+                                current_repodata = _build_current_repodata(subdir, patched_repodata,
+                                                                        pins=current_index_versions)
+                                t2.set_description("Writing current_repodata subset")
+                                t2.update()
+                                self._write_repodata(subdir, current_repodata, json_filename="current_repodata.json")
+                            except AssertionError:
+                                log.error(
+                                    "failed to create current_repodata subset for %s" % (subdir)
+                                )
 
                             t2.set_description("Writing subdir index HTML")
                             t2.update()
