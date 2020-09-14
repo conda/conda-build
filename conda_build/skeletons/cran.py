@@ -1319,6 +1319,9 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                                 package_dicts.update({lower_name: {'inputs': inputs_dict}})
                                 package_list.append(lower_name)
 
+            i = conda_build.mapdeps.get_for_cran(glb_mapdeps, package)
+            for it in i:
+                add_for_cran_deps(it, dep_type, deps)
             for name in dep_dict:
                i = conda_build.mapdeps.get_for_cran(glb_mapdeps, name)
                for it in i:
