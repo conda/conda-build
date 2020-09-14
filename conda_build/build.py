@@ -52,8 +52,9 @@ from .conda_interface import UnsatisfiableError
 from .conda_interface import NoPackagesFoundError
 from .conda_interface import CondaError
 from .conda_interface import pkgs_dirs
-from .utils import env_var, glob, tmp_chdir, CONDA_TARBALL_EXTENSIONS, shutil_move_more_retrying
-
+from .utils import (CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2,
+                    CONDA_PACKAGE_EXTENSIONS, env_var, glob,
+                    shutil_move_more_retrying, tmp_chdir)
 from conda_build import environ, source, tarcheck, utils
 from conda_build.config import Config
 from conda_build.index import get_build_index, update_index
@@ -1617,8 +1618,11 @@ def bundle_conda(output, metadata, env, stats, **kw):
     basename = '-'.join([output['name'], metadata.version(), metadata.build_id()])
     tmp_archives = []
     final_outputs = []
-    ext = '.conda' if (output.get('type') == 'conda_v2' or
-                       metadata.config.conda_pkg_format == "2") else '.tar.bz2'
+    ext = (
+        CONDA_PACKAGE_EXTENSION_V2
+        if (output.get('type') == 'conda_v2' or metadata.config.conda_pkg_format == "2")
+        else CONDA_PACKAGE_EXTENSION_V1
+    )
     with TemporaryDirectory() as tmp:
         conda_package_handling.api.create(metadata.config.host_prefix, files,
                                           basename + ext, out_folder=tmp)
@@ -1626,7 +1630,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
 
         # we're done building, perform some checks
         for tmp_path in tmp_archives:
-            if tmp_path.endswith('.tar.bz2'):
+            if tmp_path.endswith(CONDA_PACKAGE_EXTENSION_V1):
                 tarcheck.check_all(tmp_path, metadata.config)
             output_filename = os.path.basename(tmp_path)
 
@@ -2007,7 +2011,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
             printed_fns = []
             for pkg in package_locations:
                 if (os.path.splitext(pkg)[1] and any(
-                        os.path.splitext(pkg)[1] in ext for ext in CONDA_TARBALL_EXTENSIONS)):
+                        os.path.splitext(pkg)[1] in ext for ext in CONDA_PACKAGE_EXTENSIONS)):
                     printed_fns.append(os.path.basename(pkg))
                 else:
                     printed_fns.append(pkg)
@@ -2720,7 +2724,7 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
     # I think we can remove this call to clean_pkg_cache().
     in_pkg_cache = (not hasattr(recipedir_or_package_or_metadata, 'config') and
                     os.path.isfile(recipedir_or_package_or_metadata) and
-                    recipedir_or_package_or_metadata.endswith(CONDA_TARBALL_EXTENSIONS) and
+                    recipedir_or_package_or_metadata.endswith(CONDA_PACKAGE_EXTENSIONS) and
                     os.path.dirname(recipedir_or_package_or_metadata) in pkgs_dirs[0])
     if not in_pkg_cache:
         environ.clean_pkg_cache(metadata.dist(), metadata.config)
@@ -3018,7 +3022,7 @@ def build_tree(recipe_list, config, stats, build_only=False, post=None, notest=F
                                            )
                 if not notest:
                     for pkg, dict_and_meta in packages_from_this.items():
-                        if pkg.endswith(CONDA_TARBALL_EXTENSIONS) and os.path.isfile(pkg):
+                        if pkg.endswith(CONDA_PACKAGE_EXTENSIONS) and os.path.isfile(pkg):
                             # we only know how to test conda packages
                             test(pkg, config=metadata.config.copy(), stats=stats)
                         _, meta = dict_and_meta
@@ -3150,7 +3154,7 @@ for Python 3.5 and needs to be rebuilt."""
 
     if post in [True, None]:
         # TODO: could probably use a better check for pkg type than this...
-        tarballs = [f for f in built_packages if f.endswith(CONDA_TARBALL_EXTENSIONS)]
+        tarballs = [f for f in built_packages if f.endswith(CONDA_PACKAGE_EXTENSIONS)]
         wheels = [f for f in built_packages if f.endswith('.whl')]
         handle_anaconda_upload(tarballs, config=config)
         handle_pypi_upload(wheels, config=config)

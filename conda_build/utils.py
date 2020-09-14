@@ -35,11 +35,11 @@ import filelock
 import conda_package_handling.api
 
 try:
-    from conda.base.constants import CONDA_PACKAGE_EXTENSIONS
+    from conda.base.constants import CONDA_PACKAGE_EXTENSIONS, CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2
 except Exception:
-    from conda.base.constants import CONDA_TARBALL_EXTENSION
-    CONDA_PACKAGE_EXTENSIONS = (CONDA_TARBALL_EXTENSION,)
-CONDA_TARBALL_EXTENSIONS = CONDA_PACKAGE_EXTENSIONS # noqa: shim for previous interface
+    from conda.base.constants import CONDA_TARBALL_EXTENSION as CONDA_PACKAGE_EXTENSION_V1
+    CONDA_PACKAGE_EXTENSION_V2 = ".conda"
+    CONDA_PACKAGE_EXTENSIONS = (CONDA_PACKAGE_EXTENSION_V2, CONDA_PACKAGE_EXTENSION_V1)
 
 from conda.api import PackageCacheData # noqa
 
@@ -443,9 +443,9 @@ def get_recipe_abspath(recipe):
     if not PY3:
         recipe = recipe.decode(getpreferredencoding() or 'utf-8')
     if isfile(recipe):
-        if recipe.lower().endswith(decompressible_exts) or recipe.lower().endswith(CONDA_TARBALL_EXTENSIONS):
+        if recipe.lower().endswith(decompressible_exts) or recipe.lower().endswith(CONDA_PACKAGE_EXTENSIONS):
             recipe_dir = tempfile.mkdtemp()
-            if recipe.lower().endswith(CONDA_TARBALL_EXTENSIONS):
+            if recipe.lower().endswith(CONDA_PACKAGE_EXTENSIONS):
                 import conda_package_handling.api
                 conda_package_handling.api.extract(recipe, recipe_dir)
             else:

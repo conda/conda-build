@@ -29,6 +29,7 @@ from .conda_interface import pkgs_dirs
 from .conda_interface import conda_43
 from .conda_interface import specs_from_url
 from .conda_interface import memoized
+from .utils import CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2
 
 from conda_build import exceptions, utils, environ
 from conda_build.metadata import MetaData, combine_top_level_metadata_with_output
@@ -38,12 +39,6 @@ from conda_build.variants import (get_package_variants, list_of_dicts_to_dict_of
 from conda_build.exceptions import DependencyNeedsBuildingError
 from conda_build.index import get_build_index
 # from conda_build.jinja_context import pin_subpackage_against_outputs
-
-try:
-    from conda.base.constants import CONDA_TARBALL_EXTENSIONS
-except Exception:
-    from conda.base.constants import CONDA_TARBALL_EXTENSION
-    CONDA_TARBALL_EXTENSIONS = (CONDA_TARBALL_EXTENSION,)
 
 
 def odict_representer(dumper, data):
@@ -71,9 +66,9 @@ def bldpkg_path(m):
 
     # the default case will switch over to conda_v2 at some point
     if pkg_type == "conda":
-        path = os.path.join(m.config.output_folder, subdir, '%s%s' % (m.dist(), CONDA_TARBALL_EXTENSIONS[0]))
+        path = os.path.join(m.config.output_folder, subdir, '%s%s' % (m.dist(), CONDA_PACKAGE_EXTENSION_V1))
     elif pkg_type == "conda_v2":
-        path = os.path.join(m.config.output_folder, subdir, '%s%s' % (m.dist(), '.conda'))
+        path = os.path.join(m.config.output_folder, subdir, '%s%s' % (m.dist(), CONDA_PACKAGE_EXTENSION_V2))
     else:
         path = '{} file for {} in: {}'.format(m.type, m.name(), os.path.join(m.config.output_folder, subdir))
     return path
@@ -219,7 +214,7 @@ def find_pkg_dir_or_file_in_pkgs_dirs(pkg_dist, m, files_only=False):
     pkg_loc = None
     for pkgs_dir in _pkgs_dirs:
         pkg_dir = os.path.join(pkgs_dir, pkg_dist)
-        pkg_file = os.path.join(pkgs_dir, pkg_dist + CONDA_TARBALL_EXTENSIONS[0])
+        pkg_file = os.path.join(pkgs_dir, pkg_dist + CONDA_PACKAGE_EXTENSION_V1)
         if not files_only and os.path.isdir(pkg_dir):
             pkg_loc = pkg_dir
             break
