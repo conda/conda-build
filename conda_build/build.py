@@ -3316,7 +3316,10 @@ def handle_anaconda_upload(paths, config):
     else:
         upload = True
 
-    if not upload:
+    anaconda = find_executable('anaconda')
+
+    no_upload_message = ''
+    if not upload or anaconda is None:
         no_upload_message = (
             "# If you want to upload package(s) to anaconda.org later, type:\n"
             "\n"
@@ -3331,12 +3334,11 @@ def handle_anaconda_upload(paths, config):
             "# $ conda config --set anaconda_upload yes"
         )
         no_upload_message += "anaconda upload{}".format(joiner) + joiner.join(paths)
-        no_upload_message += """\
 
+    if not upload:
         print(no_upload_message)
         return
 
-    anaconda = find_executable('anaconda')
     if anaconda is None:
         print(no_upload_message)
         sys.exit(
