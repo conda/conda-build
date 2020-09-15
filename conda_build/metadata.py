@@ -2278,7 +2278,7 @@ class MetaData(object):
     @property
     def activate_build_script(self):
         b = self.meta.get('build', {}) or {}
-        should_activate = (self.uses_new_style_compiler_activation or b.get('activate_in_script') is not False)
+        should_activate = b.get('activate_in_script') is not False
         return bool(self.config.activate and should_activate)
 
     @property
