@@ -588,11 +588,21 @@ Specifies whether conda-build should skip the build of this
 recipe. Particularly useful for defining recipes that are
 platform specific. The default is ``False``.
 
+In order to skip build on Windows and macOS platform, use:
+
+.. code-block:: yaml
+
+   build:
+     skip: True  # [win or osx]
+
+In order to skip build for all platform except for windows, use:
+
 .. code-block:: yaml
 
    build:
      skip: True  # [not win]
 
+Correct values to use within the square brackets are ``osx``, ``linux``, ``win``, ``not``, ``or``, ``and``. 
 
 Architecture independent packages
 ---------------------------------
