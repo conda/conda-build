@@ -612,7 +612,7 @@ def apply_patch(src_dir, path, config, git=None):
 
     exception = None
     if not isfile(path):
-        sys.exit('Error: no such patch: %s' % path)
+        raise RuntimeError('Error: no such patch: %s' % path)
 
     if config.verbose:
         stdout = None
