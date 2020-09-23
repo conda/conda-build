@@ -1259,7 +1259,7 @@ class MetaData(object):
         trim_build_only_deps(self, dependencies)
 
         # filter out ignored versions
-        build_string_excludes = ['python', 'r_base', 'perl', 'lua', 'target_platform']
+        build_string_excludes = ['python', 'r_base', 'perl', 'lua']
         build_string_excludes.extend(ensure_list(self.config.variant.get('ignore_version', [])))
         if 'numpy' in dependencies:
             pin_compatible, not_xx = self.uses_numpy_pin_compatible_without_xx
