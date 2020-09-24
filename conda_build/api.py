@@ -158,7 +158,6 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
 
     If recipe paths are provided, renders recipe before building.
     Tests built packages by default.  notest=True to skip test."""
-
     import os
     from conda_build.build import build_tree
     from conda_build.conda_interface import string_types
@@ -167,47 +166,34 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
     assert post in (None, True, False), ("post must be boolean or None.  Remember, you must pass "
                                          "other arguments (config) by keyword.")
 
-    config = get_or_merge_config(config, **kwargs)
-
-    # if people don't pass in an object to capture stats in, they won't get them returned.
-    #     We'll still track them, though.
-    if not stats:
-        stats = {}
-
-    recipe_paths_or_metadata = _ensure_list(recipe_paths_or_metadata)
-    for recipe in recipe_paths_or_metadata:
-        if not any((hasattr(recipe, "config"), isinstance(recipe, string_types))):
-            raise ValueError("Recipe passed was unrecognized object: {}".format(recipe))
-    string_paths = [p for p in recipe_paths_or_metadata if isinstance(p, string_types)]
-    paths = _expand_globs(string_paths, os.getcwd())
     recipes = []
-    for recipe in paths:
-        if os.sep + '.AppleDouble' not in recipe:
-            if (os.path.isdir(recipe) or
-                    (os.path.isfile(recipe) and
-                     os.path.basename(recipe) in ('meta.yaml', 'conda.yaml'))):
+    for recipe in _ensure_list(recipe_paths_or_metadata):
+        if isinstance(recipe, string_types):
+            for recipe in _expand_globs(recipe, os.getcwd()):
                 try:
-                    recipes.append(find_recipe(recipe))
+                    recipe = find_recipe(recipe)
                 except IOError:
                     continue
-    metadata = [m for m in recipe_paths_or_metadata if hasattr(m, 'config')]
-
-    recipes.extend(metadata)
-    absolute_recipes = []
-    for recipe in recipes:
-        if hasattr(recipe, "config"):
-            absolute_recipes.append(recipe)
+                recipes.append(recipe)
+        elif hasattr(recipe, "config"):
+            recipes.append(recipe)
         else:
-            if not os.path.isabs(recipe):
-                recipe = os.path.normpath(os.path.join(os.getcwd(), recipe))
-            if not os.path.exists(recipe):
-                raise ValueError("Path to recipe did not exist: {}".format(recipe))
-            absolute_recipes.append(recipe)
+            raise ValueError("Recipe passed was unrecognized object: {}".format(recipe))
 
-    if not absolute_recipes:
+    if not recipes:
         raise ValueError('No valid recipes found for input: {}'.format(recipe_paths_or_metadata))
-    return build_tree(sorted(absolute_recipes), config, stats, build_only=build_only, post=post,
-                      notest=notest, variants=variants)
+
+    return build_tree(
+        sorted(recipes),
+        config=get_or_merge_config(config, **kwargs),
+        # If people don't pass in an object to capture stats in, they won't get them returned.
+        # We'll still track them, though.
+        stats=stats or {},
+        build_only=build_only,
+        post=post,
+        notest=notest,
+        variants=variants
+    )
 
 
 def test(recipedir_or_package_or_metadata, move_broken=True, config=None, stats=None, **kwargs):

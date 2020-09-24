@@ -872,8 +872,8 @@ def test_build_expands_wildcards(mocker, testing_workdir):
     output = sorted([os.path.join(os.getcwd(), path, 'meta.yaml') for path in files])
 
     build_tree.assert_called_once_with(output,
-                                       mocker.ANY,  # config
-                                       mocker.ANY,  # stats
+                                       config=mocker.ANY,
+                                       stats=mocker.ANY,
                                        build_only=False,
                                        post=None, notest=False,
                                        variants=None)

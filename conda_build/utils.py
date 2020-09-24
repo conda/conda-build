@@ -129,6 +129,9 @@ if __name__ == '__main__':
     sys.exit(%(func)s())
 """
 
+# filenames accepted as recipe meta files
+VALID_METAS = ("meta.yaml", "meta.yml", "conda.yaml", "conda.yml")
+
 try:
     from os import scandir, walk  # NOQA
 except ImportError:
@@ -935,18 +938,28 @@ def safe_print_unicode(*args, **kwargs):
     func(line.encode(encoding, errors))
 
 
-def rec_glob(path, patterns):
-    result = []
-    for d_f in walk(path):
-        # ignore the .git folder
-        # if '.git' in d_f[0]:
-        #     continue
-        m = []
+def rec_glob(path, patterns, ignores=None):
+    """
+    Recursively searches path for filename patterns.
+
+    :param path: path within to search for files
+    :param patterns: list of filename patterns to search for
+    :param ignore: list of directory patterns to ignore in search
+    :return: list of paths in path satisfying patterns/ignore
+    """
+    patterns = ensure_list(patterns)
+    ignores = ensure_list(ignores)
+
+    for path, dirs, files in walk(path):
+        # remove directories to ignore
+        for ignore in ignores:
+            for d in fnmatch.filter(dirs, ignore):
+                dirs.remove(d)
+
+        # return filepaths that match a pattern
         for pattern in patterns:
-            m.extend(fnmatch.filter(d_f[2], pattern))
-        if m:
-            result.extend([os.path.join(d_f[0], f) for f in m])
-    return result
+            for f in fnmatch.filter(files, pattern):
+                yield os.path.join(path, f)
 
 
 def convert_unix_path_to_win(path):
@@ -1182,7 +1195,7 @@ def tmp_chdir(dest):
 
 def expand_globs(path_list, root_dir):
     files = []
-    for path in path_list:
+    for path in ensure_list(path_list):
         if not os.path.isabs(path):
             path = os.path.join(root_dir, path)
         if os.path.isfile(path):
@@ -1192,7 +1205,7 @@ def expand_globs(path_list, root_dir):
         elif os.path.isdir(path):
             files.extend(os.path.join(root, f) for root, _, fs in walk(path) for f in fs)
         else:
-            # File compared to the globs use / as separator indenpendently of the os
+            # File compared to the globs use / as separator independently of the os
             glob_files = glob(path)
             if not glob_files:
                 log = get_logger(__name__)
@@ -1204,27 +1217,40 @@ def expand_globs(path_list, root_dir):
 
 
 def find_recipe(path):
-    """recurse through a folder, locating meta.yaml.  Raises error if more than one is found.
+    """recurse through a folder, locating valid meta files (see VALID_METAS).  Raises error if more than one is found.
 
-    Returns folder containing meta.yaml, to be built.
+    Returns full path to meta file to be built.
 
-    If we have a base level meta.yaml and other supplemental ones, use that first"""
-    if os.path.isfile(path) and os.path.basename(path) in ["meta.yaml", "conda.yaml"]:
-        return os.path.dirname(path)
-    results = rec_glob(path, ["meta.yaml", "conda.yaml"])
-    results = [r for r in results if os.sep + '.AppleDouble' + os.sep not in r]
-    if len(results) > 1:
-        base_recipe = os.path.join(path, "meta.yaml")
-        if base_recipe in results:
-            get_logger(__name__).warn("Multiple meta.yaml files found. "
-                                      "The meta.yaml file in the base directory "
-                                      "will be used.")
-            results = [base_recipe]
-        else:
-            raise IOError("More than one meta.yaml files found in %s" % path)
-    elif not results:
-        raise IOError("No meta.yaml or conda.yaml files found in %s" % path)
-    return results[0]
+    If we have a base level meta file and other supplemental (nested) ones, use the base level."""
+    # if initial path is absolute then any path we find (via rec_glob)
+    # will also be absolute
+    if not os.path.isabs(path):
+        path = os.path.normpath(os.path.join(os.getcwd(), path))
+
+    if os.path.isfile(path):
+        if os.path.basename(path) in VALID_METAS:
+            return path
+        raise IOError("%s is not a valid meta file (%s)" % (path, ", ".join(VALID_METAS)))
+
+    results = list(rec_glob(path, VALID_METAS, ignores=(".AppleDouble",)))
+
+    if not results:
+        raise IOError("No meta files (%s) found in %s" % (", ".join(VALID_METAS), path))
+
+    if len(results) == 1:
+        return results[0]
+
+    # got multiple valid meta files
+    # check if a meta file is defined on the base level in which case use that one
+
+    metas = [m for m in VALID_METAS if os.path.isfile(os.path.join(path, m))]
+    if len(metas) == 1:
+        get_logger(__name__).warn("Multiple meta files found. "
+                                  "The %s file in the base directory (%s) "
+                                  "will be used." % (metas[0], path))
+        return os.path.join(path, metas[0])
+
+    raise IOError("More than one meta files (%s) found in %s" % (", ".join(VALID_METAS), path))
 
 
 class LoggingContext(object):
