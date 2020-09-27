@@ -585,27 +585,19 @@ def apply_patch(src_dir, path, config, git=None):
         #
         import tempfile
         temp_name = os.path.join(tempfile.gettempdir(), next(tempfile._get_candidate_names()))
-        patch_args.append('-r')
-        patch_args.append(temp_name)
-        patch_args = ['--no-backup-if-mismatch', '--batch'] + patch_args
+        base_patch_args = ['--no-backup-if-mismatch', '--batch'] + patch_args + ['-r', temp_name]
         log = get_logger(__name__)
         try:
-            log.debug("Applying with\n{} {}".format(patch, patch_args))
-            check_call_env([patch] + patch_args, cwd=cwd, stdout=stdout, stderr=stderr)
+            try_patch_args = base_patch_args.copy()
+            try_patch_args.append('--dry-run')
+            log.debug("dry-run applying with\n{} {}".format(patch, try_patch_args))
+            check_call_env([patch] + try_patch_args, cwd=cwd, stdout=stdout, stderr=stderr)
             # You can use this to pretend the patch failed so as to test reversal!
             # raise CalledProcessError(-1, ' '.join([patch] + patch_args))
         except Exception as e:
-            try:
-                if '--ignore-whitespace' in patch_args:
-                    patch_args.remove('--ignore-whitespace')
-                patch_args.insert(0, '-R')
-                patch_args.append('--binary')
-                patch_args.append('--force')
-                log.debug("Reversing with\n{} {}".format(patch, patch_args))
-                check_call_env([patch] + patch_args, cwd=cwd, stdout=stdout, stderr=stderr)
-            except:
-                pass
             raise e
+        else:
+            check_call_env([patch] + base_patch_args, cwd=cwd, stdout=stdout, stderr=stderr)
         finally:
             if os.path.exists(temp_name):
                 os.unlink(temp_name)
