@@ -860,52 +860,34 @@ def write_hash_input(m):
         json.dump(recipe_input, f, indent=2)
 
 
-def get_all_replacements(config_or_variant):
-    # This function tests that our various
-    '''
-    if (not isinstance(config_or_variant, Config) and
-            'replacements' in config_or_variant or
-            not hasattr(config_or_variant, 'variant')):
-        print('get_all_replacements(): passed a variant directly')
-        variant = config_or_variant
-    else:
-        if 'replacements' in config_or_variant.variant:
-            print('found in variant')
-            variant = config_or_variant.variant
-        if 'replacements' in config_or_variant.variants:
-            variant = config_or_variant.variants
-            print('found in variants')
-    '''
-    if isinstance(config_or_variant, Config):
-        # print('get_all_replacements(): passed a Config')
-        variant = None
-        if 'replacements' in config_or_variant.variant:
-            # print('found in variant')
-            variant = config_or_variant.variant
-        if not variant:
-            return []
-    else:
-        # print('get_all_replacements(): passed a variant directly')
-        variant = config_or_variant
+def get_all_replacements(variant):
+    """
+    Extract 'all_replacements' from :class:`conda_build.config.Config` or variant dict and
+    check for the correct types.
 
-    if 'replacements' in variant:
-        replacements = variant['replacements']
-        assert isinstance(replacements, (dict, OrderedDict)), "Found `replacements` {}," \
-                                                              "but it is not a dict".format(
-            replacements)
-        assert 'all_replacements' in replacements, "Found `replacements` {}, but it" \
-                                                   "doesn't contain `all_replacements`".format(replacements)
-        assert isinstance(replacements['all_replacements'], list), "Found `all_replacements` {}," \
-                                                                   "but it is not a list".format(
-            replacements)
-        assert isinstance(replacements['all_replacements'][0], (dict, OrderedDict)), "Found `all_replacements[0]` {}," \
-                                                                             "but it is not a dict".format(
-            replacements)
-        if len(replacements['all_replacements']):
-            assert isinstance(replacements['all_replacements'][0], (OrderedDict, dict)), \
-                "Found `all_replacements[0]` {} but it is not a dict".format(replacements)
-            return replacements['all_replacements']
-    return []
+    :param variant: a variant
+    :type variant: :class:`conda_build.config.Config` or dict
+    :return: 'all_replacements' value
+    :rtype: list
+    :raises AssertionError: wrong type
+    """
+    if isinstance(variant, Config):
+        variant = variant.variant
+
+    if not variant or 'replacements' not in variant:
+        # short circuit if no variant or no replacements keyword
+        return []
+
+    repl = variant['replacements']
+    assert isinstance(repl, dict), "Found 'replacements' ({}), but it is not a dict".format(repl)
+    assert 'all_replacements' in repl, "Found 'replacements' ({}), but it doesn't contain 'all_replacements'".format(repl)
+
+    repl = repl['all_replacements']
+    assert isinstance(repl, list), "Found 'all_replacements' ({}), but it is not a list".format(repl)
+    if repl:
+        assert isinstance(repl[0], dict), "Found 'all_replacements[0]' ({}), but it is not a dict".format(repl[0])
+
+    return repl
 
 
 def get_files_with_prefix(m, replacements, files_in, prefix):
