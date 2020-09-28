@@ -108,6 +108,7 @@ def test_recipe_builds(recipe, testing_config, testing_workdir, monkeypatch):
 
 
 @pytest.mark.serial
+@pytest.mark.xfail
 def test_token_upload(testing_workdir, testing_metadata):
     folder_uuid = uuid.uuid4().hex
     # generated with conda_test_account user, command:
