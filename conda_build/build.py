@@ -105,29 +105,25 @@ def stats_key(metadata, desc):
     return key
 
 
-def seconds_to_text(secs):
-    m, s = divmod(secs, 60)
-    h, m = divmod(int(m), 60)
-    return "{:d}:{:02d}:{:04.1f}".format(h, m, s)
-
-
 def log_stats(stats_dict, descriptor):
-    print("\nResource usage statistics from {}:".format(descriptor))
-    print("   Process count: {}".format(stats_dict.get('processes', 1)))
-
-    if stats_dict.get('cpu_sys'):
-        print("   CPU time: Sys={}, User={}".format(seconds_to_text(stats_dict.get('cpu_sys', 0)),
-                                                    seconds_to_text(stats_dict.get('cpu_user', 0))))
-    else:
-        print("   CPU time: unavailable")
-
-    if stats_dict.get('rss'):
-        print("   Memory: {}".format(utils.bytes2human(stats_dict.get('rss', 0))))
-    else:
-        print("   Memory: unavailable")
-
-    print("   Disk usage: {}".format(utils.bytes2human(stats_dict['disk'])))
-    print("   Time elapsed: {}\n".format(seconds_to_text(stats_dict['elapsed'])))
+    print(
+        "\n"
+        "Resource usage statistics from {descriptor}:\n"
+        "   Process count: {processes}\n"
+        "   CPU time: Sys={cpu_sys}, User={cpu_user}\n"
+        "   Memory: {memory}\n"
+        "   Disk usage: {disk}\n"
+        "   Time elapsed: {elapsed}\n"
+        "\n".format(
+            descriptor=descriptor,
+            processes=stats_dict.get('processes', 1),
+            cpu_sys=utils.seconds2human(stats_dict["cpu_sys"]) if stats_dict.get("cpu_sys") else "-",
+            cpu_user=utils.seconds2human(stats_dict["cpu_user"]) if stats_dict.get("cpu_user") else "-",
+            memory=utils.bytes2human(stats_dict["rss"]) if stats_dict.get("rss") else "-",
+            disk=utils.bytes2human(stats_dict["disk"]),
+            elapsed=utils.seconds2human(stats_dict["elapsed"]),
+        )
+    )
 
 
 def create_post_scripts(m):
@@ -3149,17 +3145,29 @@ for Python 3.5 and needs to be rebuilt."""
     total_cpu_sys = sum([step.get('cpu_sys') for step in stats.values()] or [0])
     total_cpu_user = sum([step.get('cpu_user') for step in stats.values()] or [0])
 
-    print('#' * 84)
-    print("Resource usage summary:")
-    print("\nTotal time: {}".format(seconds_to_text(total_time)))
-    print("CPU usage: sys={}, user={}".format(seconds_to_text(total_cpu_sys),
-                                              seconds_to_text(total_cpu_user)))
-    print("Maximum memory usage observed: {}".format(utils.bytes2human(max_memory_used)))
-    print("Total disk usage observed (not including envs): {}".format(
-        utils.bytes2human(total_disk)))
-    stats['total'] = {'time': total_time,
-                      'memory': max_memory_used,
-                      'disk': total_disk}
+    print(
+        "{bar}\n"
+        "Resource usage summary:\n"
+        "\n"
+        "Total time: {elapsed}\n"
+        "CPU usage: sys={cpu_sys}, user={cpu_user}\n"
+        "Maximum memory usage observed: {memory}\n"
+        "Total disk usage observed (not including envs): {disk}".format(
+            bar="#" * 84,
+            elapsed=utils.seconds2human(total_time),
+            cpu_sys=utils.seconds2human(total_cpu_sys),
+            cpu_user=utils.seconds2human(total_cpu_user),
+            memory=utils.bytes2human(max_memory_used),
+            disk=utils.bytes2human(total_disk),
+        )
+    )
+
+    stats['total'] = {
+        'time': total_time,
+        'memory': max_memory_used,
+        'disk': total_disk,
+    }
+
     if config.stats_file:
         with open(config.stats_file, 'w') as f:
             json.dump(stats, f)
