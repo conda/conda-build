@@ -588,7 +588,7 @@ def apply_patch(src_dir, path, config, git=None):
         base_patch_args = ['--no-backup-if-mismatch', '--batch'] + patch_args + ['-r', temp_name]
         log = get_logger(__name__)
         try:
-            try_patch_args = base_patch_args.copy()
+            try_patch_args = base_patch_args[:]
             try_patch_args.append('--dry-run')
             log.debug("dry-run applying with\n{} {}".format(patch, try_patch_args))
             check_call_env([patch] + try_patch_args, cwd=cwd, stdout=stdout, stderr=stderr)
