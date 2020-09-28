@@ -399,7 +399,7 @@ def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False,
     import time
     from conda_build.conda_interface import string_types
     from conda_build.build import test as run_test, build as run_build
-    from conda_build.utils import CONDA_TARBALL_EXTENSIONS, on_win, LoggingContext
+    from conda_build.utils import CONDA_PACKAGE_EXTENSIONS, on_win, LoggingContext
     is_package = False
     default_config = get_or_merge_config(config, **kwargs)
     args = {"set_build_id": False}
@@ -434,7 +434,7 @@ def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False,
                 metadata_tuples.append((metadata, False, True))
         else:
             ext = os.path.splitext(recipe_or_package_path_or_metadata_tuples)[1]
-            if not ext or not any(ext in _ for _ in CONDA_TARBALL_EXTENSIONS):
+            if not ext or not any(ext in _ for _ in CONDA_PACKAGE_EXTENSIONS):
                 metadata_tuples = render(recipe_or_package_path_or_metadata_tuples, config=config, **kwargs)
             else:
                 # this is a package, we only support testing

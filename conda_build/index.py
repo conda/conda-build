@@ -47,17 +47,9 @@ from .conda_interface import MatchSpec, VersionOrder, human_bytes, context
 from .conda_interface import CondaError, CondaHTTPError, get_index, url_path
 from .conda_interface import TemporaryDirectory
 from .conda_interface import Resolve
-from .utils import glob, get_logger, FileNotFoundError, JSONDecodeError
-
-# try:
-#     from conda.base.constants import CONDA_TARBALL_EXTENSIONS
-# except Exception:
-#     from conda.base.constants import CONDA_TARBALL_EXTENSION
-#     CONDA_TARBALL_EXTENSIONS = (CONDA_TARBALL_EXTENSION,)
-
-# TODO: better to define this in conda; doing it here because we're implementing it in conda-build first
-CONDA_TARBALL_EXTENSIONS = ('.conda', '.tar.bz2')
-
+from .utils import (CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2,
+                    CONDA_PACKAGE_EXTENSIONS, FileNotFoundError,
+                    JSONDecodeError, get_logger, glob)
 
 log = get_logger(__name__)
 
@@ -365,7 +357,10 @@ def _apply_instructions(subdir, repodata, instructions):
                                add_missing_keys=False)
     # we could have totally separate instructions for .conda than .tar.bz2, but it's easier if we assume
     #    that a similarly-named .tar.bz2 file is the same content as .conda, and shares fixes
-    new_pkg_fixes = {k.replace('.tar.bz2', '.conda'): v for k, v in instructions.get('packages', {}).items()}
+    new_pkg_fixes = {
+        k.replace(CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2): v
+        for k, v in instructions.get('packages', {}).items()
+    }
 
     utils.merge_or_update_dict(repodata.get('packages.conda', {}), new_pkg_fixes, merge=False,
                                add_missing_keys=False)
@@ -374,16 +369,16 @@ def _apply_instructions(subdir, repodata, instructions):
 
     for fn in instructions.get('revoke', ()):
         for key in ('packages', 'packages.conda'):
-            if fn.endswith('.tar.bz2') and key == 'packages.conda':
-                fn = fn.replace('.tar.bz2', '.conda')
+            if fn.endswith(CONDA_PACKAGE_EXTENSION_V1) and key == 'packages.conda':
+                fn = fn.replace(CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2)
             if fn in repodata[key]:
                 repodata[key][fn]['revoked'] = True
                 repodata[key][fn]['depends'].append('package_has_been_revoked')
 
     for fn in instructions.get('remove', ()):
         for key in ('packages', 'packages.conda'):
-            if fn.endswith('.tar.bz2') and key == 'packages.conda':
-                fn = fn.replace('.tar.bz2', '.conda')
+            if fn.endswith(CONDA_PACKAGE_EXTENSION_V1) and key == 'packages.conda':
+                fn = fn.replace(CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2)
             popped = repodata[key].pop(fn, None)
             if popped:
                 repodata["removed"].append(fn)
@@ -619,9 +614,9 @@ def _cache_info_file(tmpdir, info_fn, cache_path):
 
 def _alternate_file_extension(fn):
     cache_fn = fn
-    for ext in CONDA_TARBALL_EXTENSIONS:
+    for ext in CONDA_PACKAGE_EXTENSIONS:
         cache_fn = cache_fn.replace(ext, '')
-    other_ext = set(CONDA_TARBALL_EXTENSIONS) - set([fn.replace(cache_fn, '')])
+    other_ext = set(CONDA_PACKAGE_EXTENSIONS) - set([fn.replace(cache_fn, '')])
     return cache_fn + next(iter(other_ext))
 
 
@@ -633,9 +628,9 @@ def _get_resolve_object(subdir, file_path=None, precs=None, repodata=None):
             packages = json.load(fi)
             recs = json.load(fi)
             for k, v in recs.items():
-                if k.endswith('.tar.bz2'):
+                if k.endswith(CONDA_PACKAGE_EXTENSION_V1):
                     packages[k] = v
-                elif k.endswith('.conda'):
+                elif k.endswith(CONDA_PACKAGE_EXTENSION_V2):
                     conda_packages[k] = v
     if not repodata:
         repodata = {
@@ -760,14 +755,14 @@ def _build_current_repodata(subdir, repodata, pins):
     packages = {}
     conda_packages = {}
     for keep_pkg in keep_pkgs:
-        if keep_pkg.fn.endswith('.conda'):
+        if keep_pkg.fn.endswith(CONDA_PACKAGE_EXTENSION_V2):
             conda_packages[keep_pkg.fn] = repodata['packages.conda'][keep_pkg.fn]
             # in order to prevent package churn we consider the md5 for the .tar.bz2 that matches the .conda file
             #    This holds when .conda files contain the same files as .tar.bz2, which is an assumption we'll make
             #    until it becomes more prevalent that people provide only .conda files and just skip .tar.bz2
-            counterpart = keep_pkg.fn.replace('.conda', '.tar.bz2')
+            counterpart = keep_pkg.fn.replace(CONDA_PACKAGE_EXTENSION_V2, CONDA_PACKAGE_EXTENSION_V1)
             conda_packages[keep_pkg.fn]['legacy_bz2_md5'] = repodata['packages'].get(counterpart, {}).get('md5')
-        elif keep_pkg.fn.endswith('.tar.bz2'):
+        elif keep_pkg.fn.endswith(CONDA_PACKAGE_EXTENSION_V1):
             packages[keep_pkg.fn] = repodata['packages'][keep_pkg.fn]
     new_repodata['packages'] = packages
     new_repodata['packages.conda'] = conda_packages
@@ -869,7 +864,7 @@ class ChannelIndex(object):
 
         # gather conda package filenames in subdir
         # we'll process these first, because reading their metadata is much faster
-        fns_in_subdir = {fn for fn in os.listdir(subdir_path) if fn.endswith('.conda') or fn.endswith('.tar.bz2')}
+        fns_in_subdir = {fn for fn in os.listdir(subdir_path) if fn.endswith(CONDA_PACKAGE_EXTENSIONS)}
 
         # load current/old repodata
         try:
@@ -936,7 +931,7 @@ class ChannelIndex(object):
                     if fn == rec:
                         update_set.add(fn)
                     else:
-                        if fn.endswith('.tar.bz2'):
+                        if fn.endswith(CONDA_PACKAGE_EXTENSION_V1):
                             new_repodata_packages[fn] = rec
                         else:
                             new_repodata_conda_packages[fn] = rec
@@ -952,7 +947,7 @@ class ChannelIndex(object):
                                                 self.channel_root, subdir)
             # split up the set by .conda packages first, then .tar.bz2.  This avoids race conditions
             #    with execution in parallel that would end up in the same place.
-            for conda_format in tqdm(CONDA_TARBALL_EXTENSIONS, desc="File format",
+            for conda_format in tqdm(CONDA_PACKAGE_EXTENSIONS, desc="File format",
                                      disable=(verbose or not progress), leave=False):
                 for fn, mtime, size, index_json in tqdm(
                         self.thread_executor.map(
@@ -965,7 +960,7 @@ class ChannelIndex(object):
                     if fn and mtime:
                         stat_cache[fn] = {'mtime': int(mtime), 'size': size}
                         if index_json:
-                            if fn.endswith(".conda"):
+                            if fn.endswith(CONDA_PACKAGE_EXTENSION_V2):
                                 new_repodata_conda_packages[fn] = index_json
                             else:
                                 new_repodata_packages[fn] = index_json
@@ -1064,7 +1059,7 @@ class ChannelIndex(object):
             #    .conda readup is very fast (essentially free), but .conda files come from
             #    converting .tar.bz2 files, which can go wrong.  Forcing extraction for
             #    .conda files gives us a check on the validity of that conversion.
-            if not fn.endswith('.conda') and os.path.isfile(index_cache_path):
+            if not fn.endswith(CONDA_PACKAGE_EXTENSION_V2) and os.path.isfile(index_cache_path):
                 with open(index_cache_path) as f:
                     index_json = json.load(f)
             elif not alternate_cache and (second_try or not os.path.exists(index_cache_path)):
@@ -1251,7 +1246,7 @@ class ChannelIndex(object):
         legacy_packages = repodata["packages"]
         conda_packages = repodata["packages.conda"]
 
-        use_these_legacy_keys = set(legacy_packages.keys()) - set(k[:-6] + '.tar.bz2' for k in conda_packages.keys())
+        use_these_legacy_keys = set(legacy_packages.keys()) - set(k[:-6] + CONDA_PACKAGE_EXTENSION_V1 for k in conda_packages.keys())
         all_repodata_packages = conda_packages.copy()
         all_repodata_packages.update({k: legacy_packages[k] for k in use_these_legacy_keys})
         package_data = channel_data.get('packages', {})
@@ -1400,7 +1395,7 @@ class ChannelIndex(object):
         return {}
 
     def _patch_repodata(self, subdir, repodata, patch_generator=None):
-        if patch_generator and any(patch_generator.endswith(ext) for ext in CONDA_TARBALL_EXTENSIONS):
+        if patch_generator and any(patch_generator.endswith(ext) for ext in CONDA_PACKAGE_EXTENSIONS):
             instructions = self._load_patch_instructions_tarball(subdir, patch_generator)
         else:
             instructions = self._create_patch_instructions(subdir, repodata, patch_generator)
