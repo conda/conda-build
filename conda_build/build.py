@@ -2938,7 +2938,16 @@ def build_tree(recipe_list, config, stats, build_only=False, post=None, notest=F
     built_packages = OrderedDict()
     retried_recipes = []
     initial_time = time.time()
-    stats_file = config.stats_file
+
+    if build_only:
+        post = False
+        notest = True
+        config.anaconda_upload = False
+    elif post:
+        post = True
+        config.anaconda_upload = False
+    else:
+        post = None
 
     # this is primarily for exception handling.  It's OK that it gets clobbered by
     #     the loop below.
@@ -2946,27 +2955,18 @@ def build_tree(recipe_list, config, stats, build_only=False, post=None, notest=F
 
     while recipe_list:
         # This loop recursively builds dependencies if recipes exist
-        if build_only:
-            post = False
-            notest = True
-            config.anaconda_upload = False
-        elif post:
-            post = True
-            config.anaconda_upload = False
-        else:
-            post = None
-
         try:
             recipe = recipe_list.popleft()
             name = recipe.name() if hasattr(recipe, 'name') else recipe
             if hasattr(recipe, 'config'):
                 metadata = recipe
-                metadata.config.anaconda_upload = config.anaconda_upload
-                config = metadata.config
+                cfg = metadata.config
+                cfg.anaconda_upload = config.anaconda_upload  # copy over anaconda_upload setting
+
                 # this code is duplicated below because we need to be sure that the build id is set
                 #    before downloading happens - or else we lose where downloads are
-                if config.set_build_id and metadata.name() not in config.build_id:
-                    config.compute_build_id(metadata.name(), reset=True)
+                if cfg.set_build_id and metadata.name() not in cfg.build_id:
+                    cfg.compute_build_id(metadata.name(), reset=True)
                 recipe_parent_dir = os.path.dirname(metadata.path)
                 to_build_recursive.append(metadata.name())
 
@@ -2981,6 +2981,8 @@ def build_tree(recipe_list, config, stats, build_only=False, post=None, notest=F
                 else:
                     metadata_tuples = ((metadata, False, False), )
             else:
+                cfg = config
+
                 recipe_parent_dir = os.path.dirname(recipe)
                 recipe = recipe.rstrip("/").rstrip("\\")
                 to_build_recursive.append(os.path.basename(recipe))
@@ -2988,9 +2990,9 @@ def build_tree(recipe_list, config, stats, build_only=False, post=None, notest=F
                 # each tuple is:
                 #    metadata, need_source_download, need_reparse_in_env =
                 # We get one tuple per variant
-                metadata_tuples = render_recipe(recipe, config=config, variants=variants,
+                metadata_tuples = render_recipe(recipe, config=cfg, variants=variants,
                                                 permit_unsatisfiable_variants=False,
-                                                reset_build_id=not config.dirty,
+                                                reset_build_id=not cfg.dirty,
                                                 bypass_env_check=True)
             # restrict to building only one variant for bdist_conda.  The way it splits the build
             #    job breaks variants horribly.
@@ -3102,7 +3104,7 @@ def build_tree(recipe_list, config, stats, build_only=False, post=None, notest=F
                        metadata.get_output_metadata_set(permit_undefined_jinja=True)):
                     raise
                 if pkg in to_build_recursive:
-                    config.clean(remove_folders=False)
+                    cfg.clean(remove_folders=False)
                     raise RuntimeError("Can't build {0} due to environment creation error:\n"
                                        .format(recipe) + str(e.message) + "\n" + extra_help)
 
@@ -3136,13 +3138,13 @@ for Python 3.5 and needs to be rebuilt."""
                                     add_recipes.append(recipe_dir)
                                     available = True
                 if not available:
-                    config.clean(remove_folders=False)
+                    cfg.clean(remove_folders=False)
                     raise
             # if we failed to render due to unsatisfiable dependencies, we should only bail out
             #    if we've already retried this recipe.
             if (not metadata and retried_recipes.count(recipe) and
                     retried_recipes.count(recipe) >= len(metadata.ms_depends('build'))):
-                config.clean(remove_folders=False)
+                cfg.clean(remove_folders=False)
                 raise RuntimeError("Can't build {0} due to environment creation error:\n"
                                     .format(recipe) + str(e.message) + "\n" + extra_help)
             retried_recipes.append(os.path.basename(name))
@@ -3172,8 +3174,8 @@ for Python 3.5 and needs to be rebuilt."""
     stats['total'] = {'time': total_time,
                       'memory': max_memory_used,
                       'disk': total_disk}
-    if stats_file:
-        with open(stats_file, 'w') as f:
+    if config.stats_file:
+        with open(config.stats_file, 'w') as f:
             json.dump(stats, f)
 
     return list(built_packages.keys())
