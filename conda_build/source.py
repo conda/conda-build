@@ -553,7 +553,7 @@ def _get_patch_file_details(path):
 
 
 def apply_patch(src_dir, path, config, git=None):
-    def patch_or_reverse(patch, patch_args, cwd, stdout, stderr):
+    def try_appy_patch(patch, patch_args, cwd, stdout, stderr):
         # An old reference: https://unix.stackexchange.com/a/243748/34459
         #
         # I am worried that '--ignore-whitespace' may be destructive. If so we should
@@ -574,14 +574,12 @@ def apply_patch(src_dir, path, config, git=None):
         #    atomic.
         #
         # Still, we do our best to mitigate all of this as follows:
-        # 1. We disable .orig and .rej that for GNU patch via a temp file *
-        # 2 (1). We check for native application of a native patch (--binary, without --ignore-whitespace)
-        # 2 (2). We defer destructive calls to this until after the non-destructive ones.
-        # 3. When patch indicates failure, we call it with -R to reverse the damage.
+        # 1. We use --dry-run to test for applicability first.
+        # 2 We check for native application of a native patch (--binary, without --ignore-whitespace)
         #
-        # * Some may bemoan the loss of these, but they it is fairly random which patch and patch
-        #   attempt they apply to so their informational value is low, besides that, they are ugly.
-        #   (and destructive to the future patchability of the source tree).
+        # Some may bemoan the loss of patch failure artifacts, but it is fairly random which
+        # patch and patch attempt they apply to so their informational value is low, besides that,
+        # they are ugly.
         #
         import tempfile
         temp_name = os.path.join(tempfile.gettempdir(), next(tempfile._get_candidate_names()))
@@ -647,7 +645,7 @@ def apply_patch(src_dir, path, config, git=None):
             # This is the case we check first of all as it is the case that allows a properly line-ended
             # patch to apply correctly to a properly line-ended source tree, modifying it following the
             # patch chunks exactly.
-            patch_or_reverse(patch, patch_args + ['--binary'] + path_args,
+            try_apply_patch(patch, patch_args + ['--binary'] + path_args,
                              cwd=src_dir, stdout=stdout, stderr=stderr)
         except CalledProcessError as e:
             # Capture the first exception
@@ -656,7 +654,7 @@ def apply_patch(src_dir, path, config, git=None):
                 log.info("Applying patch natively failed.  "
                          "Trying to apply patch non-binary with --ignore-whitespace")
             try:
-                patch_or_reverse(patch, patch_args + ['--ignore-whitespace'] + path_args,
+                try_apply_patch(patch, patch_args + ['--ignore-whitespace'] + path_args,
                                  cwd=src_dir, stdout=stdout, stderr=stderr)
             except CalledProcessError as e:  # noqa
                 unix_ending_file = _ensure_unix_line_endings(path)
@@ -670,7 +668,7 @@ def apply_patch(src_dir, path, config, git=None):
                     # mess things up both for subsequent attempts (this line-ending change is not
                     # reversible) but worse, for subsequent, correctly crafted (I'm calling these
                     # "native" from now on) patches.
-                    patch_or_reverse(patch, patch_args + ['--ignore-whitespace'] + path_args,
+                    try_apply_patch(patch, patch_args + ['--ignore-whitespace'] + path_args,
                                      cwd=src_dir, stdout=stdout, stderr=stderr)
                 except CalledProcessError:
                     if config.verbose:
@@ -681,7 +679,7 @@ def apply_patch(src_dir, path, config, git=None):
                     win_ending_file = _ensure_win_line_endings(path)
                     path_args[-1] = win_ending_file
                     try:
-                        patch_or_reverse(patch, patch_args + ['--ignore-whitespace', '--binary'] + path_args,
+                        try_apply_patch(patch, patch_args + ['--ignore-whitespace', '--binary'] + path_args,
                                          cwd=src_dir, stdout=stdout, stderr=stderr)
                     except:
                         pass
