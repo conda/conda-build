@@ -553,7 +553,7 @@ def _get_patch_file_details(path):
 
 
 def apply_patch(src_dir, path, config, git=None):
-    def try_appy_patch(patch, patch_args, cwd, stdout, stderr):
+    def try_apply_patch(patch, patch_args, cwd, stdout, stderr):
         # An old reference: https://unix.stackexchange.com/a/243748/34459
         #
         # I am worried that '--ignore-whitespace' may be destructive. If so we should
