@@ -1,0 +1,4 @@
+Bug fixes:
+----------
+
+* Include target_platform in package build string hash (#4065)
