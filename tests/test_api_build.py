@@ -108,6 +108,7 @@ def test_recipe_builds(recipe, testing_config, testing_workdir, monkeypatch):
 
 
 @pytest.mark.serial
+@pytest.mark.xfail
 def test_token_upload(testing_workdir, testing_metadata):
     folder_uuid = uuid.uuid4().hex
     # generated with conda_test_account user, command:
@@ -224,6 +225,7 @@ def test_build_with_no_activate_does_not_activate():
 
 
 @pytest.mark.sanity
+@pytest.mark.serial
 @pytest.mark.xfail(on_win and len(os.getenv('PATH')) > 1024, reason="Long PATHs make activation fail with obscure messages")
 def test_build_with_activate_does_activate():
     api.build(os.path.join(metadata_dir, '_set_env_var_activate_build'), activate=True,
