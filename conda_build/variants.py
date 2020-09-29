@@ -2,6 +2,7 @@
 ending up with a configuration matrix"""
 
 from collections import OrderedDict
+from copy import copy
 from itertools import product
 import os
 from os.path import abspath, expanduser, expandvars
@@ -9,15 +10,13 @@ from pkg_resources import parse_version
 import re
 import sys
 
-import six
 import yaml
 
-from conda_build.utils import ensure_list, trim_empty_keys, get_logger
 from conda_build.conda_interface import string_types
 from conda_build.conda_interface import subdir
 from conda_build.conda_interface import cc_conda_build
 from conda_build.conda_interface import memoized
-from conda_build.utils import on_win
+from conda_build.utils import ensure_list, get_logger, islist, on_win, trim_empty_keys
 
 DEFAULT_VARIANTS = {
     'python': '{0}.{1}'.format(sys.version_info.major, sys.version_info.minor),
@@ -121,21 +120,55 @@ def parse_config_file(path, config):
     return content
 
 
-def validate_spec(spec):
+def validate_spec(src, spec):
     errors = []
-    for key in spec:
-        if '-' in key:
-            errors.append('"-" is a disallowed character in variant keys.  Key was: {}'.format(key))
-    zip_groups = _get_zip_groups(spec)
-    # each group looks like {key1#key2: [val1_1#val2_1, val1_2#val2_2]
-    for group in zip_groups:
-        for group_key in group:
-            for variant_key in group_key.split('#'):
-                if variant_key not in spec:
-                    errors.append('zip_key entry {} in group {} does not have any settings'.format(
-                        variant_key, group_key.split('#')))
+
+    # check for invalid characters
+    errors.extend(
+        "  {} key contains an invalid character '-'".format(k)
+        for k in spec
+        if "-" in k
+    )
+
+    # check for properly formatted zip_key
+    try:
+        zip_keys = _get_zip_keys(spec)
+    except ValueError as e:
+        errors.append(str(e))
+    else:
+        # check if every zip field is defined
+        errors.extend(
+            "  zip_key entry {} in group {} does not have any settings".format(k, zg)
+            for zg in zip_keys
+            for k in zg
+            # include error if key is not defined in spec
+            if k not in spec
+        )
+
+        # check for duplicate keys
+        unique = set()
+        errors.extend(
+            "  zip_key entry {} in group {} is a duplicate, keys can only occur "
+            "in one group".format(k, zg)
+            # include error if key has already been seen, otherwise add to unique keys
+            if k in unique else unique.add(k)
+            for zg in zip_keys
+            for k in zg
+        )
+
+        # check that all zip fields within a zip_group are the same length
+        errors.extend(
+            "  zip fields in zip_key group {} are not all the same length".format(zg)
+            for zg in zip_keys
+            # include error if all zip fields in a zip_group are the same size,
+            # ignore missing fields
+            if len({len(ensure_list(spec[k])) if k in spec else None for k in zg} - {None}) > 1
+        )
+
+    # filter out None values that were potentially added above
+    errors = list(filter(None, errors))
     if errors:
-        raise ValueError("Variant configuration errors: \n{}".format(errors))
+        raise ValueError("Variant configuration errors in {}:\n{}".format(src, "\n".join(errors)))
 
 
 def find_config_files(metadata_or_path, additional_files=None, ignore_system_config=False,
@@ -295,82 +328,26 @@ def set_language_env_vars(variant):
     return env
 
 
-def all_unique(_list):
-    seen = set()
-    item = None
-    unique = not any(item in seen or seen.add(item) for _set in _list for item in _set)
-    return unique or item
+def _get_zip_keys(spec):
+    """
+    Extracts zip_keys from `spec` and standardizes value into a list of zip_groups
+    (tuples of keys (string)).
 
+    :param spec:
+    :type spec: `dict`
+    :return: Standardized zip_keys value
+    :rtype: `list` of `tuple` of `str`
+    :raise ValueError: zip_keys cannot be standardized
+    """
+    zip_keys = spec.get('zip_keys')
+    if not zip_keys:
+        return []
+    elif islist(zip_keys, uniform=lambda e: isinstance(e, string_types)):
+        return [tuple(zip_keys)]
+    elif islist(zip_keys, uniform=lambda e: islist(e, uniform=lambda e: isinstance(e, string_types))):
+        return [tuple(zg) for zg in zip_keys]
 
-def _get_zip_key_type(zip_keys):
-    is_strings = all(isinstance(key, string_types) for key in zip_keys)
-    is_list_of_strings = all(hasattr(key, '__iter__') and not isinstance(key, string_types)
-                            for key in zip_keys)
-    return is_strings, is_list_of_strings
-
-
-def _get_zip_key_set(combined_variant):
-    """Used to exclude particular keys from the matrix"""
-    zip_keys = combined_variant.get('zip_keys')
-    key_set = set()
-    if zip_keys:
-        # zip keys can be either a collection of strings, or a collection of collections of strings
-        assert hasattr(zip_keys, '__iter__') and not isinstance(zip_keys, string_types), (
-                    "zip_keys must be uniformly a list of strings, or a list of lists of strings")
-        is_strings, is_list_of_strings = _get_zip_key_type(zip_keys)
-        assert is_strings or is_list_of_strings, ("zip_keys must be uniformly a list of strings, "
-                                                "or a list of lists of strings")
-        key_set = set()
-        if is_strings and len(zip_keys) > 1:
-            key_set.update(zip_keys)
-        else:
-            # make sure that each key only occurs in one set
-            _all_unique = all_unique(zip_keys)
-            if _all_unique is not True:
-                raise ValueError("All packages in zip keys must belong to only one group.  "
-                                "'{}' is in more than one group.".format(_all_unique))
-            for ks in zip_keys:
-                # sets with only a single member aren't actually zipped.  Ignore them.
-                if len(ks) > 1:
-                    key_set.update(set(ks))
-    # omit
-    key_set = {key for key in key_set if key in combined_variant}
-    return key_set
-
-
-def _get_zip_dict_of_lists(combined_variant, list_of_strings):
-    used_keys = [key for key in list_of_strings if key in combined_variant]
-    out = {}
-
-    if used_keys:
-        # The join value needs to be selected as something
-        # that will not likely appear in any key or value.
-        dict_key = "#".join(list_of_strings)
-        length = len(ensure_list(combined_variant[used_keys[0]]))
-        for key in used_keys:
-            if not len(ensure_list(combined_variant[key])) == length:
-                raise ValueError("zip field {} ({}) length does not match zip field {} ({}) "
-                                 "length.  All zip fields within a group must be the same length."
-                                 .format(used_keys[0], combined_variant[used_keys[0]],
-                                         key, combined_variant[key]))
-        values = list(zip(*[ensure_list(combined_variant[key]) for key in used_keys]))
-        values = ['#'.join(value) for value in values]
-        out = {dict_key: values}
-    return out
-
-
-def _get_zip_groups(combined_variant):
-    """returns a list of dictionaries - each one is a concatenated collection of """
-    zip_keys = combined_variant.get('zip_keys')
-    groups = []
-    if zip_keys:
-        is_strings, is_list_of_strings = _get_zip_key_type(zip_keys)
-        if is_strings:
-            groups.append(_get_zip_dict_of_lists(combined_variant, zip_keys))
-        elif is_list_of_strings:
-            for group in zip_keys:
-                groups.append(_get_zip_dict_of_lists(combined_variant, group))
-    return groups
+    raise ValueError("zip_keys expect list of string or list of lists of string")
 
 
 def filter_by_key_value(variants, key, values, source_name):
@@ -398,50 +375,78 @@ def _split_str(string, char):
     return string.split(char)
 
 
-def dict_of_lists_to_list_of_dicts(dict_of_lists, extend_keys=None):
+def expand_variants(spec, extend_keys=None):
+    """
+    Helper function to expand spec into all of the variants.
+
+    .. code-block:: python
+        >>> spec = {
+            # normal expansions
+            "foo": [2.7, 3.7, 3.8],
+            # zip_keys are the values that need to be expanded as a set
+            "zip_keys": [["bar", "baz"], ["qux", "quux", "quuz"]],
+            "bar": [1, 2, 3],
+            "baz": [2, 4, 6],
+            "qux": [4, 5],
+            "quux": [8, 10],
+            "quuz": [12, 15],
+            # extend_keys are those values which we do not expand
+            "extend_keys": ["corge"],
+            "corge": 42,
+        }
+        >>> expand_variants(spec)
+        [{
+            "foo": 2.7,
+            "bar": 1, "baz": 2,
+            "qux": 4, "quux": 8, "quuz": 12,
+            "corge": 42,
+            "zip_keys": ..., "extend_keys": ...,
+        },
+        {
+            "foo": 2.7,
+            "bar": 1, "baz": 2,
+            "qux": 5, "quux": 10, "quuz": 15,
+            "corge": 42,
+            ...,
+        }, ...]
+
+    :param spec: Specification to expand
+    :type spec: `dict`
+    :param extend_keys: keys from `spec` to carry over into expanded `spec` without modification,
+        providing this will ignore any `extend_keys` value in `spec`
+    :type extend_keys: `list` of keys (`str`)
+    :return: Expanded specification
+    :rtype: `list` of `dict`
+    """
+    zip_keys = _get_zip_keys(spec)
+
+    # key/values from spec that do not expand
+    base_keys = {'extend_keys', 'zip_keys', 'pin_run_as_build', 'replacements'}
+    base_keys.update(ensure_list(extend_keys or spec.get('extend_keys')))
+    base_keys.difference_update(*zip_keys)  # keys in zip_keys are not base values
+    base_keys.intersection_update(spec)  # only include keys defined in spec
+    base = {k: spec[k] for k in base_keys if spec[k] or spec[k] == ""}
+
+    # key/values from spec that do expand
+    matrix = {
+        tuple(ensure_list(k)): [ensure_list(v) for v in ensure_list(spec[k])]
+        for k in set(spec).difference(base_keys, *zip_keys)
+    }
+    matrix.update({zg: list(zip(*(ensure_list(spec[k]) for k in zg))) for zg in zip_keys})
+    trim_empty_keys(matrix)
+
+    # Cartesian Product of dict of lists
     # http://stackoverflow.com/a/5228294/1170370
-    # end result is a collection of dicts, like [{'python': 2.7, 'numpy': 1.11},
-    #                                            {'python': 3.5, 'numpy': 1.11}]
-    dicts = []
-    if not extend_keys:
-        extend_keys = set(ensure_list(dict_of_lists.get('extend_keys')))
-    pass_through_keys = set(['extend_keys', 'zip_keys', 'pin_run_as_build', 'replacements'] +
-                            list(ensure_list(extend_keys)) +
-                            list(_get_zip_key_set(dict_of_lists)))
-    dimensions = {k: v for k, v in dict_of_lists.items() if k not in pass_through_keys}
-    # here's where we add in the zipped dimensions.  Zipped stuff is concatenated strings, to avoid
-    #      being distributed in the product.
-    for group in _get_zip_groups(dict_of_lists):
-        dimensions.update(group)
+    # dict.keys() and dict.values() orders are the same even prior to Python 3.6
+    variants = []
+    for values in product(*matrix.values()):
+        variant = {k: copy(v) for k, v in base.items()}
+        variant.update({k: v for zg, zv in zip(matrix, values) for k, v in zip(zg, zv)})
+        variants.append(variant)
+    return variants
 
-    # in case selectors nullify any groups - or else zip reduces whole set to nil
-    trim_empty_keys(dimensions)
 
-    for x in product(*dimensions.values()):
-        remapped = dict(six.moves.zip(dimensions, x))
-        for col in pass_through_keys:
-            v = dict_of_lists.get(col)
-            if v or v == '':
-                if isinstance(v, (OrderedDict, dict)):
-                    remapped[col] = v.copy()
-                else:
-                    remapped[col] = v
-        # split out zipped keys
-        to_del = set()
-        for k, v in remapped.items():
-            if isinstance(k, string_types) and isinstance(v, string_types):
-                keys = _split_str(k, '#')
-                values = _split_str(v, '#')
-                for (_k, _v) in zip(keys, values):
-                    # I am unclear if I should be doing something else here!
-                    if not isinstance(remapped[_k], (OrderedDict, dict)):
-                        remapped[_k] = _v
-                if '#' in k:
-                    to_del.add(k)
-        for key in to_del:
-            del remapped[key]
-        dicts.append(remapped)
-    return dicts
+dict_of_lists_to_list_of_dicts = expand_variants
 
 
 def list_of_dicts_to_dict_of_lists(list_of_dicts):
@@ -515,10 +520,7 @@ def get_package_combined_spec(recipedir_or_metadata, config=None, variants=None)
         specs['argument_variants'] = variants
 
     for f, spec in specs.items():
-        try:
-            validate_spec(spec)
-        except ValueError as e:
-            raise ValueError("Error in config {}: {}".format(f, str(e)))
+        validate_spec(f, spec)
 
     # this merges each of the specs, providing a debug message when a given setting is overridden
     #      by a later spec
