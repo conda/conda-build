@@ -1,5 +1,0 @@
-Bug fixes:
-----------
-
-* Do not clobber config argument in conda_build.build.build_tree (#4066)
-

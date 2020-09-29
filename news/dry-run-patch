@@ -1,5 +1,0 @@
-Bug fixes:
-----------
-
-* Use --dry-run to test that a patch applies. Fixes bug 4054 (#4067)
-

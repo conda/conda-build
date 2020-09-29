@@ -1,4 +1,0 @@
-Enhancements:
--------------
-
-* raise runtimeerror instead of calling sys.exit (#4062)

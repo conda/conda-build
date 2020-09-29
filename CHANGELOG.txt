@@ -1,4 +1,27 @@
 # current developments
+2020-09-29 3.20.3:
+------------------
+
+Enhancements:
+-------------
+
+* Use CONDA_PACKAGE_EXTENSIONS (#4053)
+* raise runtimeerror instead of calling sys.exit (#4062)
+* Refactor conda_build.build.get_all_replacements (#4055)
+
+Bug fixes:
+----------
+
+* Do not clobber config argument in conda_build.build.build_tree (#4066)
+* Use --dry-run to test that a patch applies. Fixes bug 4054 (#4067)
+* Include target_platform in package build string hash (#4065)
+* Fix post linking for SDKs with tapi-tbd-v4 (MacOS 11.0 and upwards) (#4048)
+
+Contributors:
+-------------
+
+
+
 2020-09-04 3.20.1:
 ------------------
 
