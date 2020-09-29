@@ -1,25 +1,5 @@
-Enhancements:
--------------
-
-* <news item>
-
 Bug fixes:
 ----------
 
-* Use --dry-run to test that a patch applies. Fixes #4054
-
-Deprecations:
--------------
-
-* <news item>
-
-Docs:
------
-
-* <news item>
-
-Other:
-------
-
-* <news item>
+* Use --dry-run to test that a patch applies. Fixes bug 4054 (#4067)
 
