@@ -12,8 +12,8 @@ Authors are sorted by number of commits.
 * Marcelo Duarte Trevisani
 * sophia
 * John Kirkham
-* Stuart Berg
 * Isuru Fernando
+* Stuart Berg
 * Ryan Grout
 * Rachel Rigdon
 * Darren Dale
@@ -60,6 +60,7 @@ Authors are sorted by number of commits.
 * Patrick Sodré
 * Bruno Oliveira
 * Bryan W. Weber
+* Matthew R. Becker
 * Thomas A Caswell
 * Mario Juric
 * Ivan Kalev
@@ -70,7 +71,6 @@ Authors are sorted by number of commits.
 * Chris Hogan
 * Kai Tietz
 * Daniel Bast
-* Matthew R. Becker
 * Pradipta Ghosh
 * Heather Kelly
 * Geir Ove Myhr
@@ -89,6 +89,7 @@ Authors are sorted by number of commits.
 * Julien Schueller
 * Toon Verstraelen
 * Duncan Macleod
+* Ken Odegard
 * Matty G
 * Robert T. McGibbon
 * chapmanb
