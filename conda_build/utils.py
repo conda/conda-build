@@ -432,6 +432,12 @@ def bytes2human(n):
     return "%sB" % n
 
 
+def seconds2human(s):
+    m, s = divmod(s, 60)
+    h, m = divmod(int(m), 60)
+    return "{:d}:{:02d}:{:04.1f}".format(h, m, s)
+
+
 def get_recipe_abspath(recipe):
     """resolve recipe dir as absolute path.  If recipe is a tarball rather than a folder,
     extract it and return the extracted directory.

@@ -66,7 +66,7 @@ from conda_build.metadata import FIELDS, MetaData, default_structs
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
 
-from conda_build.exceptions import indent, DependencyNeedsBuildingError, CondaBuildException
+from conda_build.exceptions import DependencyNeedsBuildingError, CondaBuildException
 from conda_build.variants import (set_language_env_vars, dict_of_lists_to_list_of_dicts,
                                   get_package_variants)
 from conda_build.create_test import create_all_test_files
@@ -105,29 +105,25 @@ def stats_key(metadata, desc):
     return key
 
 
-def seconds_to_text(secs):
-    m, s = divmod(secs, 60)
-    h, m = divmod(int(m), 60)
-    return "{:d}:{:02d}:{:04.1f}".format(h, m, s)
-
-
 def log_stats(stats_dict, descriptor):
-    print("\nResource usage statistics from {}:".format(descriptor))
-    print("   Process count: {}".format(stats_dict.get('processes', 1)))
-
-    if stats_dict.get('cpu_sys'):
-        print("   CPU time: Sys={}, User={}".format(seconds_to_text(stats_dict.get('cpu_sys', 0)),
-                                                    seconds_to_text(stats_dict.get('cpu_user', 0))))
-    else:
-        print("   CPU time: unavailable")
-
-    if stats_dict.get('rss'):
-        print("   Memory: {}".format(utils.bytes2human(stats_dict.get('rss', 0))))
-    else:
-        print("   Memory: unavailable")
-
-    print("   Disk usage: {}".format(utils.bytes2human(stats_dict['disk'])))
-    print("   Time elapsed: {}\n".format(seconds_to_text(stats_dict['elapsed'])))
+    print(
+        "\n"
+        "Resource usage statistics from {descriptor}:\n"
+        "   Process count: {processes}\n"
+        "   CPU time: Sys={cpu_sys}, User={cpu_user}\n"
+        "   Memory: {memory}\n"
+        "   Disk usage: {disk}\n"
+        "   Time elapsed: {elapsed}\n"
+        "\n".format(
+            descriptor=descriptor,
+            processes=stats_dict.get('processes', 1),
+            cpu_sys=utils.seconds2human(stats_dict["cpu_sys"]) if stats_dict.get("cpu_sys") else "-",
+            cpu_user=utils.seconds2human(stats_dict["cpu_user"]) if stats_dict.get("cpu_user") else "-",
+            memory=utils.bytes2human(stats_dict["rss"]) if stats_dict.get("rss") else "-",
+            disk=utils.bytes2human(stats_dict["disk"]),
+            elapsed=utils.seconds2human(stats_dict["elapsed"]),
+        )
+    )
 
 
 def create_post_scripts(m):
@@ -1173,14 +1169,17 @@ def write_info_json(m):
         else:
             runtime_deps = environ.get_pinned_deps(m, 'run')
         with open(join(m.config.info_dir, 'requires'), 'w') as fo:
-            fo.write("""\
-# This file as created when building:
-#
-#     %s.tar.bz2  (on '%s')
-#
-# It can be used to create the runtime environment of this package using:
-# $ conda create --name <env> --file <this file>
-""" % (m.dist(), m.config.build_subdir))
+            fo.write(
+                "# This file as created when building:\n"
+                "#\n"
+                "#     {}.tar.bz2  (on '{}')\n"
+                "#\n"
+                "# It can be used to create the runtime environment of this package using:\n"
+                "# $ conda create --name <env> --file <this file>".format(
+                    m.dist(),
+                    m.config.build_subdir,
+                )
+            )
             for dist in sorted(runtime_deps + [' '.join(m.dist().rsplit('-', 2))]):
                 fo.write('%s\n' % '='.join(dist.split()))
 
@@ -1421,9 +1420,13 @@ def post_process_files(m, initial_prefix_files):
     if any(meta_dir in join(host_prefix, f) for f in new_files):
         meta_files = (tuple(f for f in new_files if m.config.meta_dir in
                 join(m.config.host_prefix, f)),)
-        sys.exit(indent("""Error: Untracked file(s) %s found in conda-meta directory.
-This error usually comes from using conda in the build script.  Avoid doing this, as it
-can lead to packages that include their dependencies.""" % meta_files))
+        sys.exit(
+            "Error: Untracked file(s) {} found in conda-meta directory. This error usually comes "
+            "from using conda in the build script. Avoid doing this, as it can lead to packages "
+            "that include their dependencies.".format(
+                meta_files,
+            )
+        )
     post_build(m, new_files, build_python=python)
 
     entry_point_script_names = get_entry_point_script_names(m.get_value('build/entry_points'))
@@ -2898,13 +2901,15 @@ def check_external():
     if sys.platform.startswith('linux'):
         patchelf = external.find_executable('patchelf')
         if patchelf is None:
-            sys.exit("""\
-Error:
-    Did not find 'patchelf' in: %s
-    'patchelf' is necessary for building conda packages on Linux with
-    relocatable ELF libraries.  You can install patchelf using conda install
-    patchelf.
-""" % (os.pathsep.join(external.dir_paths)))
+            sys.exit(
+                "Error:\n"
+                "    Did not find 'patchelf' in: {}\n"
+                "    'patchelf' is necessary for building conda packages on Linux with\n"
+                "    relocatable ELF libraries.  You can install patchelf using conda install\n"
+                "    patchelf.\n".format(
+                    os.pathsep.join(external.dir_paths),
+                )
+            )
 
 
 def build_tree(recipe_list, config, stats, build_only=False, post=None, notest=False, variants=None):
@@ -3096,11 +3101,13 @@ def build_tree(recipe_list, config, stats, build_only=False, post=None, notest=F
 
                 if pkg in skip_names:
                     to_build_recursive.append(pkg)
-                    extra_help = """Typically if a conflict is with the Python or R
-packages, the other package or one of its dependencies
-needs to be rebuilt (e.g., a conflict with 'python 3.5*'
-and 'x' means 'x' or one of 'x' dependencies isn't built
-for Python 3.5 and needs to be rebuilt."""
+                    extra_help = (
+                        "Typically if a conflict is with the Python or R\n"
+                        "packages, the other package or one of its dependencies\n"
+                        "needs to be rebuilt (e.g., a conflict with 'python 3.5*'\n"
+                        "and 'x' means 'x' or one of 'x' dependencies isn't built\n"
+                        "for Python 3.5 and needs to be rebuilt."
+                    )
 
                 recipe_glob = glob(os.path.join(recipe_parent_dir, pkg_name))
                 # conda-forge style.  meta.yaml lives one level deeper.
@@ -3149,17 +3156,29 @@ for Python 3.5 and needs to be rebuilt."""
     total_cpu_sys = sum([step.get('cpu_sys') for step in stats.values()] or [0])
     total_cpu_user = sum([step.get('cpu_user') for step in stats.values()] or [0])
 
-    print('#' * 84)
-    print("Resource usage summary:")
-    print("\nTotal time: {}".format(seconds_to_text(total_time)))
-    print("CPU usage: sys={}, user={}".format(seconds_to_text(total_cpu_sys),
-                                              seconds_to_text(total_cpu_user)))
-    print("Maximum memory usage observed: {}".format(utils.bytes2human(max_memory_used)))
-    print("Total disk usage observed (not including envs): {}".format(
-        utils.bytes2human(total_disk)))
-    stats['total'] = {'time': total_time,
-                      'memory': max_memory_used,
-                      'disk': total_disk}
+    print(
+        "{bar}\n"
+        "Resource usage summary:\n"
+        "\n"
+        "Total time: {elapsed}\n"
+        "CPU usage: sys={cpu_sys}, user={cpu_user}\n"
+        "Maximum memory usage observed: {memory}\n"
+        "Total disk usage observed (not including envs): {disk}".format(
+            bar="#" * 84,
+            elapsed=utils.seconds2human(total_time),
+            cpu_sys=utils.seconds2human(total_cpu_sys),
+            cpu_user=utils.seconds2human(total_cpu_user),
+            memory=utils.bytes2human(max_memory_used),
+            disk=utils.bytes2human(total_disk),
+        )
+    )
+
+    stats['total'] = {
+        'time': total_time,
+        'memory': max_memory_used,
+        'disk': total_disk,
+    }
+
     if config.stats_file:
         with open(config.stats_file, 'w') as f:
             json.dump(stats, f)
@@ -3183,18 +3202,17 @@ def handle_anaconda_upload(paths, config):
     else:
         upload = True
 
-    no_upload_message = """\
-# If you want to upload package(s) to anaconda.org later, type:
-
-"""
+    no_upload_message = (
+        "# If you want to upload package(s) to anaconda.org later, type:\n"
+        "\n"
+    )
     for package in paths:
         no_upload_message += "anaconda upload {}\n".format(package)
-
-    no_upload_message += """\
-
-# To have conda build upload to anaconda.org automatically, use
-# $ conda config --set anaconda_upload yes
-"""
+    no_upload_message += (
+        "\n"
+        "# To have conda build upload to anaconda.org automatically, use\n"
+        "# $ conda config --set anaconda_upload yes"
+    )
     if not upload:
         print(no_upload_message)
         return
@@ -3202,11 +3220,11 @@ def handle_anaconda_upload(paths, config):
     anaconda = find_executable('anaconda')
     if anaconda is None:
         print(no_upload_message)
-        sys.exit('''
-Error: cannot locate anaconda command (required for upload)
-# Try:
-# $ conda install anaconda-client
-''')
+        sys.exit(
+            "Error: cannot locate anaconda command (required for upload)\n"
+            "# Try:\n"
+            "# $ conda install anaconda-client"
+        )
     cmd = [anaconda, ]
 
     if config.token:
