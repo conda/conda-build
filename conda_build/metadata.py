@@ -975,9 +975,9 @@ class MetaData(object):
             dependencies = _get_dependencies_from_environment(self.config.bootstrap)
             self.append_metadata_sections(dependencies, merge=True)
 
-        if self.meta.get('build', {}).get('error_overlinking', False):
+        if 'error_overlinking' in self.meta.get('build', {}):
             self.config.error_overlinking = self.meta['build']['error_overlinking']
-        if self.meta.get('build', {}).get('error_overdepending', False):
+        if 'error_overdepending' in self.meta.get('build', {}):
             self.config.error_overdepending = self.meta['build']['error_overdepending']
 
         self.validate_features()
