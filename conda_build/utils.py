@@ -1186,7 +1186,7 @@ def ensure_list(arg):
     if arg is None:
         return []
     elif islist(arg):
-        return arg
+        return list(arg)
     else:
         return [arg]
 
