@@ -868,10 +868,13 @@ class ChannelIndex(object):
         # we'll process these first, because reading their metadata is much faster
         if index_file:
             with open(index_file, 'r') as fin:
-                fns_in_subdir = {line.split(f'{subdir}/')[1] for line in map(lambda line: line.rstrip('\n'), fin) if
-                        line.endswith('.conda') or
-                        line.endswith('.tar.bz2') and
-                        line.startswith(subdir)}
+                fns_in_subdir = set()
+                for line in fin:
+                    fn_subdir, fn = line.strip().split('/')
+                    if fn_subdir != subdir:
+                        continue
+                    if fn.endswith('.conda') or fn.endswith('.tar.bz2'):
+                        fns_in_subdir.add(fn)
         else:
             fns_in_subdir = {fn for fn in os.listdir(subdir_path) if fn.endswith('.conda') or fn.endswith('.tar.bz2')}
 
