@@ -241,7 +241,7 @@ def _ensure_valid_channel(local_folder, subdir):
 
 def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=None, threads=MAX_THREADS_DEFAULT,
                  verbose=False, progress=False, hotfix_source_repo=None, subdirs=None, warn=True,
-                 current_index_versions=None, debug=False):
+                 current_index_versions=None, debug=False, index_file=None):
     """
     If dir_path contains a directory named 'noarch', the path tree therein is treated
     as though it's a full channel, with a level of subdirs, each subdir having an update
@@ -266,7 +266,8 @@ def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=N
                             patch_generator=patch_generator, verbose=verbose,
                             progress=progress,
                             hotfix_source_repo=hotfix_source_repo,
-                            current_index_versions=current_index_versions)
+                            current_index_versions=current_index_versions,
+                            index_file=index_file)
 
 
 def _determine_namespace(info):
@@ -782,7 +783,7 @@ class ChannelIndex(object):
         self.deep_integrity_check = deep_integrity_check
 
     def index(self, patch_generator, hotfix_source_repo=None, verbose=False, progress=False,
-              current_index_versions=None):
+              current_index_versions=None, index_file=None):
         if verbose:
             level = logging.DEBUG
         else:
@@ -814,7 +815,8 @@ class ChannelIndex(object):
                             t2.update()
                             _ensure_valid_channel(self.channel_root, subdir)
                             repodata_from_packages = self.index_subdir(
-                                subdir, verbose=verbose, progress=progress)
+                                subdir, verbose=verbose, progress=progress,
+                                index_file=index_file)
 
                             t2.set_description("Writing pre-patch repodata")
                             t2.update()
@@ -854,7 +856,7 @@ class ChannelIndex(object):
                 self._write_channeldata_index_html(channel_data)
                 self._write_channeldata(channel_data)
 
-    def index_subdir(self, subdir, verbose=False, progress=False):
+    def index_subdir(self, subdir, index_file=None, verbose=False, progress=False):
         subdir_path = join(self.channel_root, subdir)
         self._ensure_dirs(subdir)
         repodata_json_path = join(subdir_path, REPODATA_FROM_PKGS_JSON_FN)
@@ -864,7 +866,14 @@ class ChannelIndex(object):
 
         # gather conda package filenames in subdir
         # we'll process these first, because reading their metadata is much faster
-        fns_in_subdir = {fn for fn in os.listdir(subdir_path) if fn.endswith(CONDA_PACKAGE_EXTENSIONS)}
+        if index_file:
+            with open(index_file, 'r') as fin:
+                fns_in_subdir = {line.split(f'{subdir}/')[1] for line in map(lambda line: line.rstrip('\n'), fin) if
+                        line.endswith('.conda') or
+                        line.endswith('.tar.bz2') and
+                        line.startswith(subdir)}
+        else:
+            fns_in_subdir = {fn for fn in os.listdir(subdir_path) if fn.endswith('.conda') or fn.endswith('.tar.bz2')}
 
         # load current/old repodata
         try:
