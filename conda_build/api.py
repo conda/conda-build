@@ -365,7 +365,7 @@ def create_metapackage(name, version, entry_points=(), build_string=None, build_
 
 def update_index(dir_paths, config=None, force=False, check_md5=False, remove=False, channel_name=None,
                  subdir=None, threads=None, patch_generator=None, verbose=False, progress=False,
-                 hotfix_source_repo=None, current_index_versions=None, **kwargs):
+                 hotfix_source_repo=None, current_index_versions=None, index_file=None, **kwargs):
     import yaml
     from locale import getpreferredencoding
     import os
