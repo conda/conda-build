@@ -1482,7 +1482,10 @@ def bundle_conda(output, metadata, env, stats, **kw):
         script_fn = output.get('script') or 'output_script.{}'.format(suffix)
         with open(os.path.join(metadata.config.work_dir, script_fn), 'w') as f:
             f.write('\n')
-            f.write(script)
+            if not script.startswith('.'):
+                f.write('.' + os.sep + script)
+            else:
+                f.write(script)
             f.write('\n')
         output['script'] = script_fn
 
