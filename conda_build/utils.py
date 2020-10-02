@@ -1181,12 +1181,74 @@ def package_has_file(package_path, file_path, refresh=False):
 
 
 def ensure_list(arg):
-    if (isinstance(arg, string_types) or not hasattr(arg, '__iter__')):
-        if arg is not None:
-            arg = [arg]
-        else:
-            arg = []
-    return arg
+    """
+    Ensure the object is a list. If not return it in a list.
+
+    :param arg: Object to ensure is a list
+    :type arg: any
+    :return: `arg` as a `list`
+    :rtype: `list`
+    """
+    if arg is None:
+        return []
+    elif islist(arg):
+        return list(arg)
+    else:
+        return [arg]
+
+
+def islist(arg, uniform=False):
+    """
+    Check whether `arg` is a `list`. Optionally determine whether the list elements
+    are all uniform.
+
+    When checking for generic uniformity (`uniform=True`) we check to see if all
+    elements are of the first element's type (`type(arg[0]) == type(arg[1])`). For
+    any other kinds of uniformity checks are desired provide a uniformity function:
+
+    .. code-block:: python
+        # uniformity function checking if elements are str and not empty
+        >>> truthy_str = lambda e: isinstance(e, str) and e
+        >>> islist(["foo", "bar"], uniform=truthy_str)
+        True
+        >>> islist(["", "bar"], uniform=truthy_str)
+        False
+        >>> islist([0, "bar"], uniform=truthy_str)
+        False
+
+    NOTE: Testing for uniformity will consume generators.
+
+    :param arg: Object to ensure is a `list`
+    :type arg: any
+    :param uniform: Whether to check for uniform or uniformity function
+    :type uniform: `bool` or `function`
+    :return: Whether `arg` is a `list`
+    :rtype: `bool`
+    """
+    if isinstance(arg, string_types) or not hasattr(arg, '__iter__'):
+        # str and non-iterables are not lists
+        return False
+    elif not uniform:
+        # short circuit for non-uniformity
+        return True
+
+    # NOTE: not checking for Falsy arg since arg may be a generator
+
+    if uniform is True:
+        arg = iter(arg)
+        try:
+            etype = type(next(arg))
+        except StopIteration:
+            # StopIteration: list is empty, an empty list is still uniform
+            return True
+        # check for explicit type match, do not allow the ambiguity of isinstance
+        uniform = lambda e: type(e) == etype
+
+    try:
+        return all(uniform(e) for e in arg)
+    except (ValueError, TypeError):
+        # ValueError, TypeError: uniform function failed
+        return False
 
 
 @contextlib.contextmanager
