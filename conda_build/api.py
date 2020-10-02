@@ -385,7 +385,8 @@ def update_index(dir_paths, config=None, force=False, check_md5=False, remove=Fa
         update_index(path, check_md5=check_md5, channel_name=channel_name,
                      patch_generator=patch_generator, threads=threads, verbose=verbose,
                      progress=progress, hotfix_source_repo=hotfix_source_repo,
-                     subdirs=ensure_list(subdir), current_index_versions=current_index_versions)
+                     subdirs=ensure_list(subdir), current_index_versions=current_index_versions,
+                     index_file=kwargs.get('index_file', None))
 
 
 def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False,
