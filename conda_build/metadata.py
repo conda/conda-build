@@ -28,6 +28,8 @@ from conda_build.utils import (ensure_list, find_recipe, expand_globs, get_insta
                                HashableDict, insert_variant_versions)
 from conda_build.license_family import ensure_valid_license_family
 
+timings = False
+
 try:
     import yaml
 except ImportError:
@@ -2212,13 +2214,15 @@ class MetaData(object):
         reqs_text, recipe_text = self._get_used_vars_meta_yaml_helper(
             force_top_level=force_top_level, force_global=force_global, apply_selectors=False)
 
-        import time
-        time_s = time.time()
+        if timings:
+            import time
+            time_s = time.time()
         all_used_selectors = variants.find_used_variables_in_text(variant_keys, recipe_text,
                                                                     selectors=True)
-        time_e = time.time()
-        log = utils.get_logger(__name__)
-        log.warning("time to find_used_variables_in_text is {}".format(time_e - time_s))
+        if timings:
+            time_e = time.time()
+            log = utils.get_logger(__name__)
+            log.warning("time to find_used_variables_in_text is {}".format(time_e - time_s))
 
         reqs_text, recipe_text = self._get_used_vars_meta_yaml_helper(
             force_top_level=force_top_level, force_global=force_global, apply_selectors=True)
