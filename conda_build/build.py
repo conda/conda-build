@@ -1474,9 +1474,17 @@ def bundle_conda(output, metadata, env, stats, **kw):
     top_build = metadata.get_top_level_recipe_without_outputs().get('build', {}) or {}
 
     activate_script = metadata.activate_build_script
+    script_relative = script[0]
+    if not script_relative.startswith('.'):
+        script_relative = '.' + os.sep + script_relative
+    script_file = os.path.join(metadata.path, script_relative)
     if (script and not output.get('script')) and (is_output or not top_build.get('script')):
         # do add in activation, but only if it's not disabled
         activate_script = metadata.config.activate
+        if not os.path.isfile(script_file):
+            script_file = None
+        else:
+            script[0] = script_relative
         script = '\n'.join(script)
         suffix = "bat" if utils.on_win else "sh"
         script_fn = output.get('script') or 'output_script.{}'.format(suffix)
@@ -1524,16 +1532,21 @@ def bundle_conda(output, metadata, env, stats, **kw):
             else:
                 val = os.environ[var]
             env_output[var] = val
-        dest_file = os.path.join(metadata.config.work_dir, output['script'])
-        utils.copy_into(os.path.join(metadata.path, output['script']), dest_file)
-        from os import stat
-        st = stat(dest_file)
-        os.chmod(dest_file, st.st_mode | 0o200)
+        src_files = [output['script']]
+        dest_files = [os.path.join(metadata.config.work_dir, os.path.basename(output['script']))]
+        if script_file:
+            src_files.append(script_file)
+            dest_files.append(os.path.join(os.path.join(metadata.config.work_dir, script_relative)))
+        for src, dst in zip(src_files, dest_files):
+            utils.copy_into(src, dst)
+            from os import stat
+            st = stat(dst)
+            os.chmod(dst, st.st_mode | 0o200)
         if activate_script:
-            _write_activation_text(dest_file, metadata)
+            _write_activation_text(dest_files[0], metadata)
 
         bundle_stats = {}
-        utils.check_call_env(interpreter_and_args + [dest_file],
+        utils.check_call_env(interpreter_and_args + [dest_files[0]],
                              cwd=metadata.config.work_dir, env=env_output, stats=bundle_stats)
         log_stats(bundle_stats, "bundling {}".format(metadata.name()))
         if stats is not None:
