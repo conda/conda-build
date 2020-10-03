@@ -21,7 +21,7 @@ def test_later_spec_priority(single_version, no_numpy_version):
     specs['single_ver'] = single_version
 
     combined_spec = variants.combine_specs(specs)
-    assert len(combined_spec) == 2
+    assert len(combined_spec) == 4
     assert combined_spec["python"] == ["2.7.*"]
 
     # keep keys that are not overwritten
@@ -29,8 +29,72 @@ def test_later_spec_priority(single_version, no_numpy_version):
     specs['single_ver'] = single_version
     specs['no_numpy'] = no_numpy_version
     combined_spec = variants.combine_specs(specs)
-    assert len(combined_spec) == 2
+    assert len(combined_spec) == 4
     assert len(combined_spec["python"]) == 2
+
+
+def test_bad_combine_spec():
+    specs = OrderedDict()
+    specs["base"] = {
+        "foo": ["2.7", "3.7", "3.8"],
+        "zip_keys": [["bar", "baz"], ["qux", "quux", "quuz"]],
+        "bar": ["1", "2", "3"],
+        "baz": ["2", "4", "6"],
+        "qux": ["4", "5"],
+        "quux": ["8", "10"],
+        "quuz": ["12", "15"],
+        "dict": {
+            "value1": 1,
+            "value2": 4,
+            "value3": 6,
+        },
+        "extend_keys": ["corge"],
+        "corge": "42",
+    }
+    specs["patch"] = {
+        "foo": ["3.7", "3.8"],  # clobbers, explode key - OK
+        "dict": {1: 1, 2: 2},  # clobbers, explode key - OK
+        "corge": "56",  # extends, passthru key - OK
+    }
+    variants.combine_specs(specs)
+
+    specs["patch"] = {
+        "bad-char": "value",  # clobbers, explode key, bad key - FAIL
+    }
+    with pytest.raises(ValueError) as e:
+        variants.combine_specs(specs)
+    assert "contains an invalid character" in str(e.value)
+
+    specs["patch"] = {
+        "zip_keys": "9",  # extends, zip_keys, bad zip_keys - FAIL
+    }
+    with pytest.raises(ValueError) as e:
+        variants.combine_specs(specs)
+    assert "expect list of string or list of lists of string" in str(e.value)
+
+    specs["patch"] = {
+        "zip_keys": ["more", "bar"],  # extends, zip_keys, missing key & duplicate key - FAIL
+    }
+    with pytest.raises(ValueError) as e:
+        variants.combine_specs(specs)
+    assert "defined in the combined spec" in str(e.value)
+    assert "used multiple times in zip_keys" in str(e.value)
+
+    specs["patch"] = {
+        "qux": ["4", "4", "4"],  # clobbers, explode key, bad length - FAIL
+        "quux": ["8"],  # clobbers, explode key, bad length - FAIL
+        "quuz": ["10"],  # clobbers, explode key, bad length - FAIL
+    }
+    with pytest.raises(ValueError) as e:
+        variants.combine_specs(specs)
+    assert "same number of values" in str(e.value)
+
+    specs["patch"] = {
+        "qux": ["100"],  # filtering, explode key, undefined - FAIL
+    }
+    with pytest.raises(ValueError) as e:
+        variants.combine_specs(specs)
+    assert "unimplemented subspace(s)" in str(e.value)
 
 
 def test_get_package_variants_from_file(testing_workdir, testing_config, no_numpy_version):
@@ -176,6 +240,7 @@ def test_validate_spec():
     # zip_keys' zip_group key fields have same length
     with pytest.raises(ValueError):
         variants.validate_spec("spec[duplicate_key]", spec6)
+
 
 def test_cross_compilers():
     recipe = os.path.join(recipe_dir, '09_cross')

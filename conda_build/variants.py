@@ -29,7 +29,7 @@ DEFAULT_VARIANTS = {
     'pin_run_as_build': OrderedDict(python=OrderedDict(min_pin='x.x', max_pin='x.x')),
     'ignore_version': [],
     'ignore_build_only_deps': ['python', 'numpy'],
-    'extend_keys': ['pin_run_as_build', 'ignore_version', 'ignore_build_only_deps', 'extend_keys'],
+    'extend_keys': ['pin_run_as_build', 'ignore_version', 'ignore_build_only_deps'],
     'cran_mirror': "https://cran.r-project.org",
 }
 
@@ -119,55 +119,8 @@ def parse_config_file(path, config):
     return content
 
 
-def validate_spec(src, spec):
-    errors = []
-
-    # check for invalid characters
-    errors.extend(
-        "  {} key contains an invalid character '-'".format(k)
-        for k in spec
-        if "-" in k
-    )
-
-    # check for properly formatted zip_key
-    try:
-        zip_keys = _get_zip_keys(spec)
-    except ValueError as e:
-        errors.append(str(e))
-    else:
-        # check if every zip field is defined
-        errors.extend(
-            "  zip_key entry {} in group {} does not have any settings".format(k, zg)
-            for zg in zip_keys
-            for k in zg
-            # include error if key is not defined in spec
-            if k not in spec
-        )
-
-        # check for duplicate keys
-        unique = set()
-        errors.extend(
-            "  zip_key entry {} in group {} is a duplicate, keys can only occur "
-            "in one group".format(k, zg)
-            # include error if key has already been seen, otherwise add to unique keys
-            if k in unique else unique.add(k)
-            for zg in zip_keys
-            for k in zg
-        )
-
-        # check that all zip fields within a zip_group are the same length
-        errors.extend(
-            "  zip fields in zip_key group {} are not all the same length".format(zg)
-            for zg in zip_keys
-            # include error if all zip fields in a zip_group are the same size,
-            # ignore missing fields
-            if len({len(ensure_list(spec[k])) if k in spec else None for k in zg} - {None}) > 1
-        )
-
-    # filter out None values that were potentially added above
-    errors = list(filter(None, errors))
-    if errors:
-        raise ValueError("Variant configuration errors in {}:\n{}".format(src, "\n".join(errors)))
+def validate_spec(src, spec, log_output=True):
+    return combine_specs({src: spec}, log_output)
 
 
 def find_config_files(metadata_or_path, config):
@@ -219,109 +172,167 @@ def find_config_files(metadata_or_path, config):
     return files
 
 
-def _combine_spec_dictionaries(specs, extend_keys=None, filter_keys=None, zip_keys=None,
-                               log_output=True):
-    # each spec is a dictionary.  Each subsequent spec replaces the previous one.
-    #     Only the last one with the key stays.
-    values = {}
-    keys = ensure_list(filter_keys)
-    extend_keys = ensure_list(extend_keys)
-
-    for spec_source, spec in specs.items():
-        if spec:
-            if log_output:
-                log = get_logger(__name__)
-                log.info("Adding in variants from {}".format(spec_source))
-            for k, v in spec.items():
-                if not keys or k in keys:
-                    if k in extend_keys:
-                        # update dictionaries, extend lists
-                        if hasattr(v, 'keys'):
-                            if k in values and hasattr(values[k], 'keys'):
-                                values[k].update(v)
-                            else:
-                                values[k] = v.copy()
-                        else:
-                            values[k] = ensure_list(values.get(k, []))
-                            values[k].extend(ensure_list(v))
-                            # uniquify
-                            values[k] = list(set(values[k]))
-                    elif k == 'zip_keys':
-                        v = [subval for subval in v if subval]
-                        if not isinstance(v[0], list) and not isinstance(v[0], tuple):
-                            v = [v]
-                        # should always be a list of lists, but users may specify as just a list
-                        values[k] = values.get(k, [])
-                        values[k].extend(v)
-                        values[k] = list(list(set_group) for set_group in set(tuple(group)
-                                                                        for group in values[k]))
-                    else:
-                        if hasattr(v, 'keys'):
-                            values[k] = v.copy()
-                        else:
-                            # default "group" is just this one key.  We latch onto other groups if
-                            #     they exist
-                            keys_in_group = [k]
-                            if zip_keys:
-                                for group in zip_keys:
-                                    if k in group:
-                                        keys_in_group = group
-                                        break
-                            # in order to clobber, one must replace ALL of the zipped keys.
-                            # or the length must match with the other items in the group
-                            #    Otherwise, we filter later.
-                            if all(group_item in spec for group_item in keys_in_group):
-                                for group_item in keys_in_group:
-                                    if len(ensure_list(spec[group_item])) != len(ensure_list(v)):
-                                        raise ValueError("All entries associated by a zip_key "
-                                    "field must be the same length.  In {}, {} and {} are "
-                                    "different ({} and {})".format(spec_source, k, group_item,
-                                                                len(ensure_list(v)),
-                                                                len(ensure_list(spec[group_item]))))
-                                    values[group_item] = ensure_list(spec[group_item])
-                            elif k in values:
-                                for group_item in keys_in_group:
-                                    if group_item in spec and \
-                                            len(ensure_list(spec[group_item])) != len(ensure_list(v)):
-                                        break
-                                    if group_item in values and \
-                                            len(ensure_list(values[group_item])) != len(ensure_list(v)):
-                                        break
-                                else:
-                                    values[k] = v.copy()
-                                if any(subvalue not in values[k]
-                                                    for subvalue in ensure_list(v)):
-
-                                    raise ValueError("variant config in {} is ambiguous because it "
-                                        "does not fully implement all zipped keys, or specifies "
-                                        "a subspace that is not fully implemented.".format(
-                                            spec_source))
-
-    return values
-
-
 def combine_specs(specs, log_output=True):
-    """With arbitrary sets of sources, combine into a single aggregate spec.
-
-    Later specs in the input set have priority and overwrite duplicate entries.
-
-    specs: list of dictionaries.  Keys are arbitrary, but correspond to variable
-           names used in Jinja2 templated recipes.  Values can be either single
-           values (strings or integers), or collections (lists, tuples, sets).
     """
-    extend_keys = DEFAULT_VARIANTS['extend_keys'][:]
-    extend_keys.extend([key for spec in specs.values() if spec
-                        for key in ensure_list(spec.get('extend_keys'))])
+    With arbitrary sets of sources, combine into a single aggregate spec. Later
+    specs in the input set have higher priority and overwrite duplicate entries.
 
-    # first pass gets zip_keys entries from each and merges them.  We treat these specially
-    #   below, keeping the size of related fields identical, or else the zipping makes no sense
+    A number of combination techniques are performed:
+        1. a unique set of 'zip_keys' is extracted from all specs
+        2. a unique set of 'extend_keys' is extracted from all specs
+        3. all keys defined in 'extend_keys' are extended or updated depending on
+           whether the values are lists (`list`) or mappings (`dict`)
+        4. all non-'extend_keys' are clobbered based on the order of `specs`
 
-    zip_keys = _combine_spec_dictionaries(specs, extend_keys=extend_keys,
-                                          filter_keys=['zip_keys'],
-                                          log_output=log_output).get('zip_keys', [])
-    values = _combine_spec_dictionaries(specs, extend_keys=extend_keys, zip_keys=zip_keys,
-                                        log_output=log_output)
-    return values
+    A number of checks are done in the process of combining specs:
+        1. invalid characters in keys
+        2. valid 'zip_keys' format
+        3. no duplicate keys in 'zip_keys'
+        4. 'zip_keys' are not also defined as 'extend_keys'
+        5. each key's field within a 'zip_keys' group has the same length
+        6. ensure every key in 'zip_keys' is defined
+
+    :param specs: mapping of source (e.g. command line, config file) to spec
+    :type specs: `collections.OrderedDict`
+    :param log_output: whether to enable logging, defaults to True
+    :type log_output: `bool`, optional
+    :return: the combined spec
+    :rtype: `dict`
+    :raises ValueError: one or more of the checks failed
+    """
+    if log_output:
+        logger = get_logger(__name__)
+        logshim = lambda m: logger.info(m)
+    else:
+        logshim = lambda m: None
+
+    errors = []
+    combined = {}
+
+    # check for invalid characters
+    errors.extend(
+        "  - (src:{}) {!r} key contains an invalid character '-'".format(src, k)
+        for src, spec in specs.items()
+        for k in spec
+        if "-" in k
+    )
+
+    # extract extend_keys from all specs
+    extend_keys = {}  # maps extend_keys to first source
+    extend_keys.update({
+        k: src
+        for src, spec in reversed(list(specs.items()))
+        for k in _get_extend_keys(spec, include_defaults=False)
+    })
+    extend_keys.update({k: None for k in DEFAULT_VARIANTS['extend_keys']})
+    combined["extend_keys"] = [k for k, v in extend_keys.items() if v]
+
+    # extract zip_keys from all specs
+    zip_keys = {}  # maps zip_keys group to first source
+    for src, spec in reversed(list(specs.items())):
+        try:
+            zk = _get_zip_keys(spec)
+        except ValueError as e:
+            errors.append("  - (src:{}) {}".format(src, e))
+        else:
+            zip_keys.update({zg: src for zg in zk})
+    combined["zip_keys"] = [tuple(zg) for zg in zip_keys]
+
+    # ensure that no zip_keys key is duplicated
+    keys = {}  # maps keys to their zip_keys group
+    errors.extend(
+        "  - key {!r} has been used multiple times in zip_keys, keys can only occur in one group:\n"
+        "      (src:{}) {}\n"
+        "      (src:{}) {}".format(k, zip_keys[keys[k]], tuple(keys[k]), src, tuple(zg))
+        if k in keys else keys.__setitem__(k, zg)  # remember the first zip_keys group this key was seen in
+        for zg, src in zip_keys.items()
+        for k in zg
+    )
+
+    # ensure that no zip_keys key is also an extend_keys
+    errors.extend(
+        "  - a key cannot be defined in both extend_keys and zip_keys:\n"
+        "      (src:{}) extend_keys={!r}\n"
+        "      (src:{}) zip_keys={}".format(extend_keys[k], k, src, tuple(zg))
+        for zg, src in zip_keys.items()
+        for k in zg
+        if k in extend_keys
+    )
+
+    # extend_keys: keys are updated/extended based on whether prior value was a dict/set
+    for src, spec in specs.items():
+        for key in set(spec).intersection(extend_keys) - {"zip_keys", "extend_keys"}:
+            if isinstance(spec[key], dict):
+                prior = combined.setdefault(key, {})
+                if isinstance(prior, dict):
+                    prior.update(spec[key])
+                else:
+                    logshim("(src:{}) {!r} clobbering a {} with dict".format(src, key, type(prior).__name__))
+                    combined[key] = copy(spec[key])
+            else:
+                prior = combined.setdefault(key, set())
+                if isinstance(prior, set):
+                    prior.update(ensure_list(spec[key]))
+                else:
+                    logshim("(src:{}) {!r} clobbering a {} with set".format(src, key, type(prior).__name__))
+                    combined[key] = set(ensure_list(spec[key]))
+
+    # clobber keys: keys that override prior values
+    for src, spec in specs.items():
+        logshim("(src:{}) adding variants".format(src))
+
+        for key in set(spec).difference(extend_keys) - {"zip_keys", "extend_keys"}:
+            zg = keys.get(key, {key})
+            sizes = {
+                k: len(ensure_list(spec.get(k, combined.get(k)), include_dict=False))
+                for k in zg
+                if k in spec or k in combined
+            }
+
+            # clobbering occurs if all fields are the same size, this covers two cases:
+            #   1) the new field has the same length as the old field it is clobbering
+            #   2) all fields in a zip_group are defined in this source and all have the same length
+            if len(set(sizes.values())) == 1:
+                combined[key] = ensure_list(spec[key], include_dict=False)
+                continue
+
+            # all of the fields in this zip_group are defined in this source (so clobbering was attempted)
+            # but the field lengths did not match
+            if all(k in spec for k in zg):
+                errors.append(
+                    "  - (src:{}) key fields within a zip_keys group {} must "
+                    "specify the same number of values:\n".format(src, tuple(zg)) +
+                    "\n".join("      {!r}: {}".format(k, v) for k, v in sizes.items())
+                )
+                continue
+
+            # since clobbering was not successful assume we are looking at a filter instead, ensuring
+            # that all of the values defined in our filter are valid
+
+            missing = set(ensure_list(spec[key], include_dict=False)).difference(combined.get(key, []))
+            if missing:
+                errors.append(
+                    "  - (src:{}) {}filtering for unimplemented subspace(s) {}".format(
+                        src,
+                        "did not fully implement all fields for zip_keys group {} or ".format(tuple(zg))
+                        if len(zg) > 1
+                        else "",
+                        tuple(missing),
+                    )
+                )
+
+    # check if every zip field is defined
+    errors.extend(
+        "  - (src:{}) key {!r} in zip_keys group {} is not defined in the combined spec".format(src, k, tuple(zg))
+        for zg, src in zip_keys.items()
+        for k in zg.difference(combined)
+    )
+
+    errors = "\n".join(filter(None, errors))
+    if errors:
+        raise ValueError("Variant configuration errors:\n{}".format(errors))
+
+    return combined
 
 
 def set_language_env_vars(variant):
@@ -588,13 +599,7 @@ def get_package_combined_spec(recipedir_or_metadata, config=None, variants=None)
     if variants:
         specs['argument_variants'] = variants
 
-    for f, spec in specs.items():
-        validate_spec(f, spec)
-
-    # this merges each of the specs, providing a debug message when a given setting is overridden
-    #      by a later spec
-    combined_spec = combine_specs(specs, log_output=config.verbose)
-    return combined_spec, specs
+    return combine_specs(specs, config.verbose), specs
 
 
 def filter_combined_spec_to_used_keys(combined_spec, specs):
