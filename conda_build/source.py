@@ -8,6 +8,7 @@ import re
 import shutil
 from subprocess import CalledProcessError
 import sys
+import tempfile
 import time
 
 from .conda_interface import download, TemporaryDirectory
@@ -489,7 +490,7 @@ def get_repository_info(recipe_path):
 
 def _ensure_unix_line_endings(path):
     """Replace windows line endings with Unix.  Return path to modified file."""
-    out_path = path + "_unix"
+    out_path = os.path.join(tempfile.mkdtemp(), os.path.basename(path) + "_lf")
     with open(path, "rb") as inputfile:
         with open(out_path, "wb") as outputfile:
             for line in inputfile:
@@ -499,7 +500,7 @@ def _ensure_unix_line_endings(path):
 
 def _ensure_win_line_endings(path):
     """Replace unix line endings with win.  Return path to modified file."""
-    out_path = path + "_win"
+    out_path = os.path.join(tempfile.mkdtemp(), os.path.basename(path) + "_crlf")
     with open(path, "rb") as inputfile:
         with open(out_path, "wb") as outputfile:
             for line in inputfile:
@@ -553,6 +554,9 @@ def _get_patch_file_details(path):
 
 
 def apply_patch(src_dir, path, config, git=None):
+    log = get_logger(__name__)
+    if config.verbose:
+        print('Applying patch: %r' % path)
     def try_apply_patch(patch, patch_args, cwd, stdout, stderr):
         # An old reference: https://unix.stackexchange.com/a/243748/34459
         #
@@ -583,8 +587,7 @@ def apply_patch(src_dir, path, config, git=None):
         #
         import tempfile
         temp_name = os.path.join(tempfile.gettempdir(), next(tempfile._get_candidate_names()))
-        base_patch_args = ['--no-backup-if-mismatch', '--batch'] + patch_args + ['-r', temp_name]
-        log = get_logger(__name__)
+        base_patch_args = ['--no-backup-if-mismatch', '--batch'] + patch_args
         try:
             try_patch_args = base_patch_args[:]
             try_patch_args.append('--dry-run')
@@ -626,8 +629,6 @@ def apply_patch(src_dir, path, config, git=None):
                        cwd=src_dir, stdout=stdout, stderr=stderr, env=git_env)
         config.git_commits_since_tag += 1
     else:
-        if config.verbose:
-            print('Applying patch: %r' % path)
         patch = external.find_executable('patch', config.build_prefix)
         if patch is None or len(patch) == 0:
             sys.exit("""\
@@ -640,8 +641,10 @@ def apply_patch(src_dir, path, config, git=None):
         path_args = ['-i', path]
         patch_args = ['-p%d' % patch_strip_level]
 
+        if config.verbose:
+            print('Applying patch: %r' % path)
+
         try:
-            log = get_logger(__name__)
             # This is the case we check first of all as it is the case that allows a properly line-ended
             # patch to apply correctly to a properly line-ended source tree, modifying it following the
             # patch chunks exactly.
@@ -662,8 +665,7 @@ def apply_patch(src_dir, path, config, git=None):
                 try:
                     if config.verbose:
                         log.info("Applying natively *and* non-binary failed!  "
-                                "Converting to unix line endings and trying again.  "
-                                "WARNING :: This is destructive to the source file line-endings.")
+                                "Converting to unix line endings and trying again.")
                     # If this succeeds, it will change the source files' CRLFs to LFs. This can
                     # mess things up both for subsequent attempts (this line-ending change is not
                     # reversible) but worse, for subsequent, correctly crafted (I'm calling these
@@ -674,8 +676,7 @@ def apply_patch(src_dir, path, config, git=None):
                     if config.verbose:
                         log.warning("Applying natively, non-binary *and* unix attempts all failed!?  "
                                     "Converting to CRLF line endings and trying again with "
-                                    "--ignore-whitespace and --binary. This can be destructive (even"
-                                    "with attempted reversal) to the source files' line-endings.")
+                                    "--ignore-whitespace and --binary.")
                     win_ending_file = _ensure_win_line_endings(path)
                     path_args[-1] = win_ending_file
                     try:
