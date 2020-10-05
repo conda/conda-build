@@ -18,13 +18,13 @@ def test_patch_strip_level(testing_workdir, monkeypatch):
     for file in files:
         with open(os.path.join(os.path.join(*folders), file), 'w') as f:
             f.write('hello\n')
-    assert _guess_patch_strip_level(patchfiles, os.getcwd()) == 0
+    assert _guess_patch_strip_level(patchfiles, os.getcwd()) == (0, False)
     monkeypatch.chdir(folders[0])
-    assert _guess_patch_strip_level(patchfiles, os.getcwd()) == 1
+    assert _guess_patch_strip_level(patchfiles, os.getcwd()) == (1, False)
     monkeypatch.chdir(folders[1])
-    assert _guess_patch_strip_level(patchfiles, os.getcwd()) == 2
+    assert _guess_patch_strip_level(patchfiles, os.getcwd()) == (2, False)
     monkeypatch.chdir(folders[2])
-    assert _guess_patch_strip_level(patchfiles, os.getcwd()) == 3
+    assert _guess_patch_strip_level(patchfiles, os.getcwd()) == (3, False)
     monkeypatch.chdir(testing_workdir)
 
 
