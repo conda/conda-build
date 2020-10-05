@@ -1936,6 +1936,67 @@ def create_build_envs(m, notest):
                             is_cross=m.is_cross, is_conda=m.name() == 'conda')
 
 
+def write_prefix_packages(m, log=None):
+    # Write out the packages installed in each env to enable 'frozen' CVE scanning (at the C/C++ import level).
+    # .. without this, we could end up with different symbols being exported and it could change where static
+    # symbols could get discovered whereas previously a dynamic symbol would've been determined to have been
+    # used. I need to check this. If memory serves me correctly dynamic libraries are looked in first for
+    # symbols.
+    installed = {}
+    from conda.exports import iteritems
+    # I would like to record the sha256 of the actual binary data that was unpacked, i.e.
+    # in .conda packages, the sha256 of pkg-libarchive-3.3.3-h0643e63_5.tar.zst. Hopefully
+    # any repacking we do to .conda packages will not touch that file!
+    build_time_packages = {}
+    for cenv, prefix in {'build': m.config.build_prefix,
+                         'host': m.config.host_prefix}.items():
+        # for pkg, dist in iteritems(installed_build):
+        these_pkgs = {}
+        from conda_build.conda_interface import linked_data
+        installed = linked_data(prefix)
+        for pkg in installed:
+            # Try to also get the sha256 of the actual data files, which we can
+            # do for .conda packages.
+            # sha_256 = pkg.
+            # TODO :: Figure out the best way to find the actual package (or its sha256)
+            #         and finish this.
+            determine_sha256s = False
+            if determine_sha256s:
+                # def sha256_checksum(filename, buffersize=65536):
+                from conda.models.channel import Channel
+                channel = Channel(pkg.channel)
+                from conda.core.subdir_data import Response304ContentUnchanged, cache_fn_url, read_mod_and_etag, \
+                    SubdirData, fetch_repodata_remote_request, UnavailableInvalidChannel
+
+                sd = SubdirData(channel=channel)
+                from conda_build.utils import download_channeldata
+                channeldata = utils.download_channeldata(pkg.channel)
+                # only use channeldata if requested, channeldata exists and contains
+                # a packages key, otherwise use run_exports from the packages themselves
+                if 'packages' in channeldata:
+                    pkg_data = channeldata['packages'].get(pkg.name, {})
+                    run_exports = pkg_data.get('run_exports', {}).get(pkg.version, {})
+                sha_256_pkg = 0
+                sha_256_pkg_data = 0
+
+            # pkg.fn is always .tar.bz2, maybe exclude this?
+            these_pkgs[pkg.name] = {'channel': pkg.channel,
+                                    'subdir': pkg.subdir,
+                                    'name': pkg.name,
+                                    'version': pkg.version,
+                                    'build_number': pkg.build_number,
+                                    'build_string': pkg.build_string,
+                                    'platform': pkg.platform,
+                                    'fn': pkg.fn,
+                                    'fmt': pkg.fmt, }
+        build_time_packages[cenv] = these_pkgs
+    import pprint
+    msg = "Packages installed in build and host envs at build time are:\n{}".format(
+        pprint.pformat(build_time_packages, indent=4))
+    if log:
+        log.info(msg)
+
+
 def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=False,
           built_packages=None, notest=False, provision_only=False):
     '''
@@ -2067,63 +2128,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
         # Write out metadata for `conda debug`, making it obvious that this is what it is, must be done
         # after try_download()
         output_yaml(m, os.path.join(m.config.work_dir, 'metadata_conda_debug.yaml'))
-        # Write out the packages installed in each env to enable 'frozen' CVE scanning (at the C/C++ import level).
-        # .. without this, we could end up with different symbols being exported and it could change where static
-        # symbols could get discovered whereas previously a dynamic symbol would've been determined to have been
-        # used. I need to check this. If memory serves me correctly dynamic libraries are looked in first for
-        # symbols.
-        installed = {}
-        from conda.exports import iteritems
-        # I would like to record the sha256 of the actual binary data that was unpacked, i.e.
-        # in .conda packages, the sha256 of pkg-libarchive-3.3.3-h0643e63_5.tar.zst. Hopefully
-        # any repacking we do to .conda packages will not touch that file!
-        build_time_packages = {}
-        for cenv, prefix in {'build': m.config.build_prefix,
-                            'host': m.config.host_prefix}.items():
-            # for pkg, dist in iteritems(installed_build):
-            these_pkgs = {}
-            from conda_build.conda_interface import linked_data
-            installed = linked_data(prefix)
-            for pkg in installed:
-                # Try to also get the sha256 of the actual data files, which we can
-                # do for .conda packages.
-                # sha_256 = pkg.
-                # TODO :: Figure out the best way to find the actual package (or its sha256)
-                #         and finish this.
-                determine_sha256s = False
-                if determine_sha256s:
-                    # def sha256_checksum(filename, buffersize=65536):
-                    from conda.models.channel import Channel
-                    channel = Channel(pkg.channel)
-                    from conda.core.subdir_data import Response304ContentUnchanged, cache_fn_url, read_mod_and_etag, \
-                        SubdirData, fetch_repodata_remote_request, UnavailableInvalidChannel
-
-                    sd = SubdirData(channel=channel)
-                    from conda_build.utils import download_channeldata
-                    channeldata = utils.download_channeldata(pkg.channel)
-                    # only use channeldata if requested, channeldata exists and contains
-                    # a packages key, otherwise use run_exports from the packages themselves
-                    if 'packages' in channeldata:
-                        pkg_data = channeldata['packages'].get(pkg.name, {})
-                        run_exports = pkg_data.get('run_exports', {}).get(pkg.version, {})
-                    sha_256_pkg = 0
-                    sha_256_pkg_data = 0
-
-                # pkg.fn is always .tar.bz2, maybe exclude this?
-                these_pkgs[pkg.name] = {'channel': pkg.channel,
-                                        'subdir': pkg.subdir,
-                                        'name': pkg.name,
-                                        'version': pkg.version,
-                                        'build_number': pkg.build_number,
-                                        'build_string': pkg.build_string,
-                                        'platform': pkg.platform,
-                                        'fn': pkg.fn,
-                                        'fmt': pkg.fmt,}
-            build_time_packages[cenv] = these_pkgs
-        import pprint
-        msg = "Packages installed in build and host envs at build time are:\n{}".format(
-        pprint.pformat(build_time_packages, indent=4))
-        log.info(msg)
+        write_prefix_packages(m, log)
         # get_dir here might be just work, or it might be one level deeper,
         #    depending on the source.
         src_dir = m.config.work_dir
