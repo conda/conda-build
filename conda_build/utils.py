@@ -2075,7 +2075,7 @@ def shutil_move_more_retrying(src, dest, debug_name):
     log.info("Renaming {} directory '{}' to '{}'".format(debug_name, src, dest))
     attempts_left = 5
 
-    while attempts_left != 0:
+    while attempts_left > 0:
         if os.path.exists(dest):
             rm_rf(dest)
         try:
@@ -2084,16 +2084,15 @@ def shutil_move_more_retrying(src, dest, debug_name):
             if attempts_left != 5:
                 log.warning("shutil.move({}={}, dest={}) succeeded on attempt number {}".format(debug_name, src, dest,
                                                                                                     6 - attempts_left))
-            attempts_left = 0
+            attempts_left = -1
         except:
             attempts_left = attempts_left - 1
-        if attempts_left:
+        if attempts_left > 0:
             log.warning(
                 "Failed to rename {} directory, check with strace, struss or procmon. "
                 "Will sleep for 3 seconds and try again!".format(debug_name))
             import time
             time.sleep(3)
-        else:
+        elif attempts_left != -1:
             log.error(
-                "Failed to rename {} directory despite sleeping and retrying. "
-                "This is some Windows file locking mis-bahaviour.".format(debug_name))
+                "Failed to rename {} directory despite sleeping and retrying.".format(debug_name))
