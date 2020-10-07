@@ -2009,6 +2009,8 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
         if any(out.get('type') == 'wheel' for out in m.meta.get('outputs', [])):
             specs.extend(['pip', 'wheel'])
 
+        # TODO :: This is broken. It does not respect build/script for example and also if you need git
+        #         you should add it as s build dep manually.
         vcs_source = m.uses_vcs_in_build
         if vcs_source and vcs_source not in specs:
             vcs_executable = "hg" if vcs_source == "mercurial" else vcs_source
@@ -2034,12 +2036,13 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
 
             exclude_pattern = None
             excludes = set(top_level_pkg.config.variant.get('ignore_version', []))
-            for key in top_level_pkg.config.variant.get('pin_run_as_build', {}).keys():
-                if key in excludes:
-                    excludes.remove(key)
             if excludes:
-                exclude_pattern = re.compile(r'|'.join(r'(?:^{}(?:\s|$|\Z))'.format(exc)
-                                                for exc in excludes))
+                for key in top_level_pkg.config.variant.get('pin_run_as_build', {}).keys():
+                    if key in excludes:
+                        excludes.remove(key)
+                if excludes:
+                    exclude_pattern = re.compile(r'|'.join(r'(?:^{}(?:\s|$|\Z))'.format(exc)
+                                                    for exc in excludes))
             add_upstream_pins(m, False, exclude_pattern)
 
         create_build_envs(top_level_pkg, notest)
