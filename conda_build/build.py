@@ -1995,6 +1995,7 @@ def write_prefix_packages(m, log=None):
         pprint.pformat(build_time_packages, indent=4))
     if log:
         log.info(msg)
+    return build_time_packages
 
 
 def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=False,
@@ -2128,7 +2129,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
         # Write out metadata for `conda debug`, making it obvious that this is what it is, must be done
         # after try_download()
         output_yaml(m, os.path.join(m.config.work_dir, 'metadata_conda_debug.yaml'))
-        write_prefix_packages(m, log)
+        build_time_packages = write_prefix_packages(m, log)
         # get_dir here might be just work, or it might be one level deeper,
         #    depending on the source.
         src_dir = m.config.work_dir
