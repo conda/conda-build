@@ -2076,28 +2076,27 @@ def linked_data_no_multichannels(prefix):
 
 
 def shutil_move_more_retrying(src, dest, debug_name):
+    import time
     log = get_logger(__name__)
     log.info("Renaming {} directory '{}' to '{}'".format(debug_name, src, dest))
     attempts_left = 5
 
-    while attempts_left > 0:
-        if os.path.exists(dest):
-            rm_rf(dest)
+    if os.path.exists(dest):
+        rm_rf(dest)
+
+    while attempts_left != 0:
         try:
-            log.info("shutil.move({})={}, dest={})".format(debug_name, src, dest))
             shutil.move(src, dest)
-            if attempts_left != 5:
-                log.warning("shutil.move({}={}, dest={}) succeeded on attempt number {}".format(debug_name, src, dest,
-                                                                                                    6 - attempts_left))
-            attempts_left = -1
-        except:
-            attempts_left = attempts_left - 1
-        if attempts_left > 0:
+            return
+        except Exception as e:
             log.warning(
-                "Failed to rename {} directory, check with strace, struss or procmon. "
-                "Will sleep for 3 seconds and try again!".format(debug_name))
-            import time
-            time.sleep(3)
-        elif attempts_left != -1:
-            log.error(
-                "Failed to rename {} directory despite sleeping and retrying.".format(debug_name))
+                "Failed to rename {} directory, Error: {} ".format(debug_name, e))
+            if attempts_left:
+                log.warning("Sleeping for 3s and retrying, {} attempts left".format(attempts_left))
+                time.sleep(3)
+                attempts_left -= 1
+            else:
+                log.error(
+                    "Failed to rename {} directory despite sleeping and retrying. "
+                    "This is some Windows file locking mis-bahaviour.".format(debug_name))
+                raise e
