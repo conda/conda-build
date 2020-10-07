@@ -1634,6 +1634,7 @@ class MetaData(object):
 
     @property
     def uses_vcs_in_build(self):
+        # TODO :: Re-work this. Is it even useful? We can declare any vcs in our build deps.
         build_script = "bld.bat" if on_win else "build.sh"
         build_script = os.path.join(self.path, build_script)
         for recipe_file in (build_script, self.meta_path):
