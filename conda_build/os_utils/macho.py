@@ -267,10 +267,10 @@ def add_rpath(path, rpath, build_prefix=None, verbose=False):
         % code)
 
 
-def delete_rpath(path, rpath, verbose=False):
+def delete_rpath(path, rpath, build_prefix=None, verbose=False):
     """Delete an `rpath` from the Mach-O file at `path`"""
     args = ['-delete_rpath', rpath, path]
-    code, _, stderr = install_name_tool(args)
+    code, _, stderr = install_name_tool(args, build_prefix)
     if "Mach-O dynamic shared library stub file" in stderr:
         print("Skipping Mach-O dynamic shared library stub file %s\n" % path)
         return
