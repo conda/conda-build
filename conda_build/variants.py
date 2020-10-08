@@ -330,24 +330,86 @@ def set_language_env_vars(variant):
 
 def _get_zip_keys(spec):
     """
-    Extracts zip_keys from `spec` and standardizes value into a list of zip_groups
+    Extracts 'zip_keys' from `spec` and standardizes value into a list of zip_groups
     (tuples of keys (string)).
 
-    :param spec:
-    :type spec: `dict`
-    :return: Standardized zip_keys value
-    :rtype: `list` of `tuple` of `str`
-    :raise ValueError: zip_keys cannot be standardized
+    :param spec: Variants specification
+    :type spec: dict
+    :return: Standardized 'zip_keys' value
+    :rtype: set
+    :raise ValueError: 'zip_keys' cannot be standardized
     """
     zip_keys = spec.get('zip_keys')
     if not zip_keys:
-        return []
+        return set()
     elif islist(zip_keys, uniform=lambda e: isinstance(e, string_types)):
-        return [tuple(zip_keys)]
+        return {frozenset(zip_keys)}
     elif islist(zip_keys, uniform=lambda e: islist(e, uniform=lambda e: isinstance(e, string_types))):
-        return [tuple(zg) for zg in zip_keys]
+        return {frozenset(zg) for zg in zip_keys}
 
-    raise ValueError("zip_keys expect list of string or list of lists of string")
+    raise ValueError("'zip_keys' expect list of string or list of lists of string")
+
+
+def _get_extend_keys(spec, include_defaults=True):
+    """
+    Extracts 'extend_keys' from `spec`.
+
+    :param spec: Variants specification
+    :type spec: dict
+    :param include_defaults: Whether to include default 'extend_keys'
+    :type include_defaults: bool, optional
+    :return: Standardized 'extend_keys' value
+    :rtype: set
+    """
+    extend_keys = {'zip_keys', 'extend_keys'}
+    if include_defaults:
+        extend_keys.update(DEFAULT_VARIANTS['extend_keys'])
+    return extend_keys.union(ensure_list(spec.get('extend_keys')))
+
+
+def _get_passthru_keys(spec, zip_keys=None, extend_keys=None):
+    """
+    Keys in `spec` that are not exploded and are simply carried over from the `spec`
+    into the variants without modification.
+
+    :param spec: Variants specification
+    :type spec: dict
+    :param zip_keys: Keys defined as 'zip_keys' (see :func:`_get_zip_keys`)
+    :type zip_keys: set, optional
+    :param extend_keys: Keys defined as 'extend_keys' (see :func:`_get_extend_keys`)
+    :type extend_keys: set, optional
+    :return: Passthru (not exploded) keys defined in `spec`
+    :rtype: set
+    """
+    if zip_keys is None:
+        zip_keys = _get_zip_keys(spec)
+    if extend_keys is None:
+        extend_keys = _get_extend_keys(spec)
+    passthru_keys = {'replacements', 'extend_keys', 'zip_keys'}
+    return passthru_keys.union(extend_keys).difference(*zip_keys).intersection(spec)
+
+
+def _get_explode_keys(spec, passthru_keys=None, zip_keys=None, extend_keys=None):
+    """
+    Keys in `spec` that are that are exploding into the variants.
+
+    :param spec: Variants specification
+    :type spec: dict
+    :param passthru_keys: Passthru (not exploded) keys (see :func:`_get_passthru_keys`)
+    :type passthru_keys: set, optional
+    :param zip_keys: Keys defined as 'zip_keys' (see :func:`_get_zip_keys`) and is passed
+                     to :func:`_get_passthru_keys` if `passthru_keys` is undefined
+    :type zip_keys: set, optional
+    :param extend_keys: Keys defined as 'extend_keys' (see :func:`_get_extend_keys`) and
+                        is passed to :func:`_get_passthru_keys` if `passthru_keys` is
+                        undefined
+    :type extend_keys: set, optional
+    :return: Exploded keys defined in `spec`
+    :rtype: set
+    """
+    if passthru_keys is None:
+        passthru_keys = _get_passthru_keys(spec, zip_keys, extend_keys)
+    return set(spec).difference(passthru_keys)
 
 
 def filter_by_key_value(variants, key, values, source_name):
@@ -375,26 +437,26 @@ def _split_str(string, char):
     return string.split(char)
 
 
-def expand_variants(spec, extend_keys=None):
+def explode_variants(spec):
     """
-    Helper function to expand spec into all of the variants.
+    Helper function to explode spec into all of the variants.
 
     .. code-block:: python
         >>> spec = {
             # normal expansions
             "foo": [2.7, 3.7, 3.8],
-            # zip_keys are the values that need to be expanded as a set
+            # zip_keys are the values that need to be exploded as a set
             "zip_keys": [["bar", "baz"], ["qux", "quux", "quuz"]],
             "bar": [1, 2, 3],
             "baz": [2, 4, 6],
             "qux": [4, 5],
             "quux": [8, 10],
             "quuz": [12, 15],
-            # extend_keys are those values which we do not expand
+            # extend_keys are those values which we do not explode
             "extend_keys": ["corge"],
             "corge": 42,
         }
-        >>> expand_variants(spec)
+        >>> explode_variants(spec)
         [{
             "foo": 2.7,
             "bar": 1, "baz": 2,
@@ -410,43 +472,39 @@ def expand_variants(spec, extend_keys=None):
             ...,
         }, ...]
 
-    :param spec: Specification to expand
+    :param spec: Specification to explode
     :type spec: `dict`
-    :param extend_keys: keys from `spec` to carry over into expanded `spec` without modification,
-        providing this will ignore any `extend_keys` value in `spec`
-    :type extend_keys: `list` of keys (`str`)
-    :return: Expanded specification
+    :return: Exploded specification
     :rtype: `list` of `dict`
     """
     zip_keys = _get_zip_keys(spec)
 
-    # key/values from spec that do not expand
-    base_keys = {'extend_keys', 'zip_keys', 'pin_run_as_build', 'replacements'}
-    base_keys.update(ensure_list(extend_keys or spec.get('extend_keys')))
-    base_keys.difference_update(*zip_keys)  # keys in zip_keys are not base values
-    base_keys.intersection_update(spec)  # only include keys defined in spec
-    base = {k: spec[k] for k in base_keys if spec[k] or spec[k] == ""}
+    # key/values from spec that do not explode
+    passthru_keys = _get_passthru_keys(spec, zip_keys)
+    passthru = {k: spec[k] for k in passthru_keys if spec[k] or spec[k] == ""}
 
-    # key/values from spec that do expand
-    matrix = {
-        tuple(ensure_list(k)): [ensure_list(v) for v in ensure_list(spec[k])]
-        for k in set(spec).difference(base_keys, *zip_keys)
+    # key/values from spec that do explode
+    explode_keys = _get_explode_keys(spec, passthru_keys)
+    explode = {
+        (k,): [ensure_list(v, include_dict=False) for v in ensure_list(spec[k])]
+        for k in explode_keys.difference(*zip_keys)
     }
-    matrix.update({zg: list(zip(*(ensure_list(spec[k]) for k in zg))) for zg in zip_keys})
-    trim_empty_keys(matrix)
+    explode.update({zg: list(zip(*(ensure_list(spec[k]) for k in zg))) for zg in zip_keys})
+    trim_empty_keys(explode)
 
     # Cartesian Product of dict of lists
     # http://stackoverflow.com/a/5228294/1170370
     # dict.keys() and dict.values() orders are the same even prior to Python 3.6
     variants = []
-    for values in product(*matrix.values()):
-        variant = {k: copy(v) for k, v in base.items()}
-        variant.update({k: v for zg, zv in zip(matrix, values) for k, v in zip(zg, zv)})
+    for values in product(*explode.values()):
+        variant = {k: copy(v) for k, v in passthru.items()}
+        variant.update({k: v for zg, zv in zip(explode, values) for k, v in zip(zg, zv)})
         variants.append(variant)
     return variants
 
 
-dict_of_lists_to_list_of_dicts = expand_variants
+# temporary backport for other places in cond_build
+dict_of_lists_to_list_of_dicts = explode_variants
 
 
 def list_of_dicts_to_dict_of_lists(list_of_dicts):
@@ -529,16 +587,14 @@ def get_package_combined_spec(recipedir_or_metadata, config=None, variants=None)
 
 
 def filter_combined_spec_to_used_keys(combined_spec, specs):
-
-    extend_keys = set(ensure_list(combined_spec.get('extend_keys')))
-    extend_keys.update({'zip_keys', 'extend_keys'})
+    extend_keys = _get_extend_keys(combined_spec)
 
     # delete the default specs, so that they don't unnecessarily limit the matrix
     specs = specs.copy()
     del specs['internal_defaults']
 
     # TODO: act here?
-    combined_spec = dict_of_lists_to_list_of_dicts(combined_spec, extend_keys=extend_keys)
+    combined_spec = explode_variants(combined_spec)
     for source, source_specs in reversed(specs.items()):
         for k, vs in source_specs.items():
             if k not in extend_keys:
