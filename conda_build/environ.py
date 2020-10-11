@@ -597,13 +597,26 @@ def unix_vars(m, get_default, prefix):
 
 def osx_vars(m, get_default, prefix):
     """This is setting variables on a dict that is part of the get_default function"""
-    OSX_ARCH = 'i386' if str(m.config.host_arch) == '32' else 'x86_64'
+    if str(m.config.host_arch) == '32':
+        OSX_ARCH = 'i386'
+        MACOSX_DEPLOYMENT_TARGET = 10.9
+        BUILD = 'i386-apple-darwin13.4.0'
+    elif str(m.config.host_arch) == '64':
+        OSX_ARCH = 'x86_64'
+        MACOSX_DEPLOYMENT_TARGET = 10.9
+        BUILD = 'x86_64-apple-darwin13.4.0'
+    elif str(m.config.host_arch) == 'arm64':
+        OSX_ARCH = str(m.config.host_arch)
+        MACOSX_DEPLOYMENT_TARGET = 11.0
+        BUILD = 'arm64-apple-darwin20.0.0'
+    else:
+        raise NotImplementedError(str(m.config.host_arch))
     # 10.7 install_name_tool -delete_rpath causes broken dylibs, I will revisit this ASAP.
     # rpath = ' -Wl,-rpath,%(PREFIX)s/lib' % d # SIP workaround, DYLD_* no longer works.
     # d['LDFLAGS'] = ldflags + rpath + ' -arch %(OSX_ARCH)s' % d
     get_default('OSX_ARCH', OSX_ARCH)
-    get_default('MACOSX_DEPLOYMENT_TARGET', '10.9')
-    get_default('BUILD', OSX_ARCH + '-apple-darwin13.4.0')
+    get_default('MACOSX_DEPLOYMENT_TARGET', MACOSX_DEPLOYMENT_TARGET)
+    get_default('BUILD', BUILD)
 
 
 @memoized
