@@ -183,12 +183,14 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
     if not recipes:
         raise ValueError('No valid recipes found for input: {}'.format(recipe_paths_or_metadata))
 
+    config = get_or_merge_config(config, **kwargs)
     return build_tree(
         sorted(recipes),
-        config=get_or_merge_config(config, **kwargs),
+        config=config,
         # If people don't pass in an object to capture stats in, they won't get them returned.
-        # We'll still track them, though.
-        stats=stats or {},
+        # We'll still track them, though, unless you set no_stats_tracking (which will speed up
+        # some otherwise slow builds).
+        stats=stats or (None if config.no_stats_tracking else {}),
         build_only=build_only,
         post=post,
         notest=notest,

@@ -137,14 +137,17 @@ def _get_default_settings():
             # default to not erroring with overlinking for now.  We have specified in
             #    cli/main_build.py that this default will switch in conda-build 4.0.
             Setting('error_overlinking', cc_conda_build.get('error_overlinking',
-                                                           'false').lower() == 'true'),
+                                                            'false').lower() == 'true'),
             Setting('enable_static', cc_conda_build.get('enable_static',
-                                                           'false').lower() == 'true'),
+                                                        'false').lower() == 'true'),
             Setting('error_overdepending', cc_conda_build.get('error_overdepending',
                                                               'false').lower() == 'true'),
 
             Setting('no_rewrite_stdout_env', cc_conda_build.get('no_rewrite_stdout_env',
-                                                              'false').lower() == 'true'),
+                                                                'false').lower() == 'true'),
+
+            Setting('no_stats_tracking', cc_conda_build.get('no_stats_tracking',
+                                                            'false').lower() == 'true'),
 
             Setting('index', None),
             # support legacy recipes where only build is specified and expected to be the

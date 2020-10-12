@@ -120,8 +120,8 @@ def log_stats(stats_dict, descriptor):
             cpu_sys=utils.seconds2human(stats_dict["cpu_sys"]) if stats_dict.get("cpu_sys") else "-",
             cpu_user=utils.seconds2human(stats_dict["cpu_user"]) if stats_dict.get("cpu_user") else "-",
             memory=utils.bytes2human(stats_dict["rss"]) if stats_dict.get("rss") else "-",
-            disk=utils.bytes2human(stats_dict["disk"]),
-            elapsed=utils.seconds2human(stats_dict["elapsed"]),
+            disk=utils.bytes2human(stats_dict["disk"]) if stats_dict.get("disk") else "-",
+            elapsed=utils.seconds2human(stats_dict["elapsed"]) if stats_dict.get("elapsed") else "-"
         )
     )
 
@@ -1534,7 +1534,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
 
         bundle_stats = {}
         utils.check_call_env(interpreter_and_args + [dest_file],
-                             cwd=metadata.config.work_dir, env=env_output, stats=bundle_stats)
+                             cwd=metadata.config.work_dir, env=env_output, stats=bundle_stats if stats else None)
         log_stats(bundle_stats, "bundling {}".format(metadata.name()))
         if stats is not None:
             stats[stats_key(metadata, 'bundle_{}'.format(metadata.name()))] = bundle_stats
@@ -1694,7 +1694,7 @@ def bundle_wheel(output, metadata, env, stats):
 
         bundle_stats = {}
         utils.check_call_env(interpreter_and_args + [dest_file],
-                             cwd=metadata.config.work_dir, env=env, stats=bundle_stats)
+                             cwd=metadata.config.work_dir, env=env, stats=bundle_stats if stats else None)
         log_stats(bundle_stats, "bundling wheel {}".format(metadata.name()))
         if stats is not None:
             stats[stats_key(metadata, 'bundle_wheel_{}'.format(metadata.name()))] = bundle_stats
@@ -1997,7 +1997,8 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
             for pkg in package_locations:
                 if (os.path.splitext(pkg)[1] and any(
                         os.path.splitext(pkg)[1] in ext for ext in CONDA_PACKAGE_EXTENSIONS)):
-                    printed_fns.append(os.path.basename(pkg))
+                    # Keep subdir name.
+                    printed_fns.append(os.sep.join(pkg.rsplit(os.sep, 2)[-2:]))
                 else:
                     printed_fns.append(pkg)
             print("BUILD START:", printed_fns)
@@ -3154,10 +3155,12 @@ def build_tree(recipe_list, config, stats, build_only=False, post=None, notest=F
         handle_pypi_upload(wheels, config=config)
 
     total_time = time.time() - initial_time
-    max_memory_used = max([step.get('rss') for step in stats.values()] or [0])
-    total_disk = sum([step.get('disk') for step in stats.values()] or [0])
-    total_cpu_sys = sum([step.get('cpu_sys') for step in stats.values()] or [0])
-    total_cpu_user = sum([step.get('cpu_user') for step in stats.values()] or [0])
+    max_memory_used = total_disk = total_cpu_sys = total_cpu_user = 0
+    if stats:
+        max_memory_used = max([step.get('rss') for step in stats.values()] or [0])
+        total_disk = sum([step.get('disk') for step in stats.values()] or [0])
+        total_cpu_sys = sum([step.get('cpu_sys') for step in stats.values()] or [0])
+        total_cpu_user = sum([step.get('cpu_user') for step in stats.values()] or [0])
 
     print(
         "{bar}\n"
@@ -3176,13 +3179,12 @@ def build_tree(recipe_list, config, stats, build_only=False, post=None, notest=F
         )
     )
 
-    stats['total'] = {
-        'time': total_time,
-        'memory': max_memory_used,
-        'disk': total_disk,
-    }
-
-    if config.stats_file:
+    if config.stats_file and stats:
+        stats['total'] = {
+            'time': total_time,
+            'memory': max_memory_used,
+            'disk': total_disk,
+        }
         with open(config.stats_file, 'w') as f:
             json.dump(stats, f)
 

@@ -891,7 +891,7 @@ def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, 
                                                     locking=config.locking,
                                                     timeout=config.timeout)
                     utils.trim_empty_keys(actions)
-                    display_actions(actions, index)
+                    display_actions(actions, index, show_channel_urls=True)
                     if utils.on_win:
                         for k, v in os.environ.items():
                             os.environ[k] = str(v)
