@@ -20,11 +20,16 @@ from .conda_interface import cc_platform, cc_conda_build, subdir, url_path
 
 from .utils import get_build_folders, rm_rf, get_logger, get_conda_operation_locks
 
+
 on_win = (sys.platform == 'win32')
 invocation_time = ''
+
+
 def set_invocation_time():
     global invocation_time
     invocation_time = str(int(time.time() * 1000))
+
+
 set_invocation_time()
 
 # Don't "save" an attribute of this module for later, like build_prefix =
@@ -73,8 +78,8 @@ def cc_conda_build_get_host_dir(name, default=None):
     if result:
         # This is a consideration for people running WSL, sharing a condarc between systems.
         if not sys.platform.startswith('win') and result[1] == ':' and 'A' <= result[0] <= 'z':
-                import subprocess
-                result = subprocess.check_output(['wslpath', '-u', result]).decode('utf-8').splitlines()[0]
+            import subprocess
+            result = subprocess.check_output(['wslpath', '-u', result]).decode('utf-8').splitlines()[0]
         result = abspath(expanduser(expandvars(result)))
     return result
 
@@ -576,7 +581,7 @@ class Config(object):
             build_folders_all = get_build_folders(self.croot)
             for folder_full in build_folders_all:
                 folder = os.path.basename(folder_full)
-                untimed_folder = re.sub(time_re, '\g<1>{t}', folder, flags = re.UNICODE)
+                untimed_folder = re.sub(time_re, '\g<1>{t}', folder, flags=re.UNICODE)
                 if untimed_folder == old_build_id_t:
                     build_folders.append(folder_full)
             prev_build_id = None

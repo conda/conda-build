@@ -572,7 +572,7 @@ def _patch_attributes_debug(pa, rel_path, build_prefix):
 
 
 def _patch_attributes_debug_print(attributes):
-    if len (attributes):
+    if len(attributes):
         print("Patch analysis gives:")
         print("\n".join(attributes))
         print("\nKey:\n")
