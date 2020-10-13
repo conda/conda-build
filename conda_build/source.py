@@ -646,7 +646,7 @@ def _get_patch_attributes(path, patch_exe, git, src_dir, stdout, stderr, retaine
             for fmt, _ in fmts.items():
                 new_patch = os.path.join(tmpdir, os.path.basename(path) + '.{}'.format(fmt))
                 if fmt == 'native':
-                    shutil.copy2(path, new_patch, follow_symlinks=False)
+                    shutil.copy2(path, new_patch)
                 elif fmt == 'lf':
                     _ensure_unix_line_endings(path, new_patch)
                 elif fmt == 'crlf':
@@ -668,7 +668,7 @@ def _get_patch_attributes(path, patch_exe, git, src_dir, stdout, stderr, retaine
                         pass
                     # Patches can create and delete files.
                     if os.path.exists(os.path.join(src_dir, file)):
-                        shutil.copy2(os.path.join(src_dir, file), dst, follow_symlinks=False)
+                        shutil.copy2(os.path.join(src_dir, file), dst)
 
             copy_to_be_patched_files(src_dir, tmp_src_dir, files)
             checks = OrderedDict(dry_runnable=['--dry-run'],
