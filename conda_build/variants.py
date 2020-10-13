@@ -567,13 +567,13 @@ def get_vars(variants, loop_only=False):
 
 
 @memoized
-def find_used_variables_in_text(variant, recipe_text, selectors=False):
+def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
     used_variables = set()
     recipe_lines = recipe_text.splitlines()
     for v in variant:
         all_res = []
         compiler_match = re.match(r'(.*?)_compiler(_version)?$', v)
-        if compiler_match and not selectors:
+        if compiler_match and not selectors_only:
             compiler_lang = compiler_match.group(1)
             compiler_regex = (
                 r"\{\s*compiler\([\'\"]%s[\"\'][^\{]*?\}" % re.escape(compiler_lang)
@@ -588,11 +588,11 @@ def find_used_variables_in_text(variant, recipe_text, selectors=False):
         v_req_regex = '[-_]'.join(map(re.escape, v.split('_')))
         variant_regex = r"\{\s*(?:pin_[a-z]+\(\s*?['\"])?%s[^'\"]*?\}\}" % v_regex
         selector_regex = r"^[^#\[]*?\#?\s\[[^\]]*?(?<![_\w\d])%s[=\s<>!\]]" % v_regex
-        conditional_regex = r"(?:^|[^\{])\{%\s*(?:el)?if\s*" + v_regex + r"\s*(?:[^%]*?)?%\}"
+        conditional_regex = r"(?:^|[^\{])\{%\s*(?:el)?if\s*.*" + v_regex + r"\s*(?:[^%]*?)?%\}"
         # plain req name, no version spec.  Look for end of line after name, or comment or selector
         requirement_regex = r"^\s+\-\s+%s\s*(?:\s[\[#]|$)" % v_req_regex
-        if selectors:
-            all_res.extend([selector_regex])
+        if selectors_only:
+            all_res.insert(0, selector_regex)
         else:
             all_res.extend([variant_regex, requirement_regex, conditional_regex])
         # consolidate all re's into one big one for speedup

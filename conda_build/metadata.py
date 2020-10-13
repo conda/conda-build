@@ -2208,12 +2208,12 @@ class MetaData(object):
             force_top_level=force_top_level, force_global=force_global, apply_selectors=False)
 
         all_used_selectors = variants.find_used_variables_in_text(variant_keys, recipe_text,
-                                                                    selectors=True)
+                                                                  selectors_only=True)
 
         reqs_text, recipe_text = self._get_used_vars_meta_yaml_helper(
             force_top_level=force_top_level, force_global=force_global, apply_selectors=True)
         all_used_reqs = variants.find_used_variables_in_text(variant_keys, recipe_text,
-                                                                    selectors=False)
+                                                             selectors_only=False)
 
         all_used = all_used_reqs.union(all_used_selectors)
 
