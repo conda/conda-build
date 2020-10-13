@@ -571,6 +571,8 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
     used_variables = set()
     recipe_lines = recipe_text.splitlines()
     for v in variant:
+        if 'channel_targets' in v:
+            print('debug')
         all_res = []
         compiler_match = re.match(r'(.*?)_compiler(_version)?$', v)
         if compiler_match and not selectors_only:

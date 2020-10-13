@@ -1551,6 +1551,8 @@ class MetaData(object):
         except jinja2.TemplateError as ex:
             if "'None' has not attribute" in str(ex):
                 ex = "Failed to run jinja context function"
+            import traceback
+            traceback.print_stack()
             sys.exit("Error: Failed to render jinja template in {}:\n{}"
                      .format(self.meta_path, str(ex)))
         finally:
