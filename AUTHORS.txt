@@ -50,6 +50,7 @@ Authors are sorted by number of commits.
 * Alexander Sturm
 * neok-m4700
 * Christopher Burr
+* Ken Odegard
 * Richard Frank
 * Filipe Fernandes
 * Matthieu Dartiailh
@@ -89,7 +90,7 @@ Authors are sorted by number of commits.
 * Julien Schueller
 * Toon Verstraelen
 * Duncan Macleod
-* Ken Odegard
+* Connor Martin
 * Matty G
 * Robert T. McGibbon
 * chapmanb

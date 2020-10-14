@@ -18,7 +18,7 @@
   email: isuruf@gmail.com
   alternate_emails:
   - isuru.11@cse.mrt.ac.lk
-  num_commits: 50
+  num_commits: 52
   first_commit: 2017-06-16 15:14:34
   github: isuruf
 - name: Dan Blanchard
@@ -414,7 +414,7 @@
 - name: Ray Donnelly
   email: mingw.android@gmail.com
   github: mingwandroid
-  num_commits: 576
+  num_commits: 578
   first_commit: 2016-03-06 18:52:51
 - name: Paul Madden
   email: maddenp@colorado.edu
@@ -1117,6 +1117,11 @@
   first_commit: 2020-06-24 10:55:13
 - name: Ken Odegard
   email: ken.odegard@gmail.com
-  num_commits: 4
+  num_commits: 8
   first_commit: 2020-09-08 19:53:41
   github: njalerikson
+- name: Connor Martin
+  email: connormartin7@gmail.com
+  num_commits: 4
+  first_commit: 2020-10-01 20:48:45
+  github: cjmartian
