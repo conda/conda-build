@@ -23,6 +23,7 @@ Contributors:
 * @isuruf
 * @njalerikson
 * @cjmartian
+* @mingwandroid
 
 
 2020-09-29 3.20.3:
