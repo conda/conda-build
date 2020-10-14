@@ -2,6 +2,21 @@
 2020-10-14 3.20.4:
 ------------------
 
+Enhancements:
+-------------
+
+* Make stats output more easily human-readable  (#4069)
+* Prefer meta.yaml build/error_overlinking and error_overdepending  (#4074)
+* Cleanup variant processing code  (#4075)
+* Add --file option to indexing  (#4076)
+
+Bug Fixes:
+
+* Remove old rpath when loader_path is used  (#4080)
+* Fix MACOSX_DEPLOYMENT_TARGET default for osx-arm64  (#4091)
+* Rewrite apply_patch again  (#4092)
+* Add a .* to conditional_regex  (#4092)
+
 Contributors:
 -------------
 
