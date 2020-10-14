@@ -600,14 +600,18 @@ def osx_vars(m, get_default, prefix):
     if str(m.config.host_arch) == '32':
         OSX_ARCH = 'i386'
         MACOSX_DEPLOYMENT_TARGET = 10.9
-        BUILD = 'i386-apple-darwin13.4.0'
     elif str(m.config.host_arch) == 'arm64':
         OSX_ARCH = 'arm64'
         MACOSX_DEPLOYMENT_TARGET = 11.0
-        BUILD = 'arm64-apple-darwin20.0.0'
     else:
         OSX_ARCH = 'x86_64'
         MACOSX_DEPLOYMENT_TARGET = 10.9
+        
+    if str(m.config.arch) == '32':
+        BUILD = 'i386-apple-darwin13.4.0'
+    elif str(m.config.arch) == 'arm64':
+        BUILD = 'arm64-apple-darwin20.0.0'
+    else:
         BUILD = 'x86_64-apple-darwin13.4.0'
     # 10.7 install_name_tool -delete_rpath causes broken dylibs, I will revisit this ASAP.
     # rpath = ' -Wl,-rpath,%(PREFIX)s/lib' % d # SIP workaround, DYLD_* no longer works.
