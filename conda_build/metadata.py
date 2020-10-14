@@ -1634,6 +1634,7 @@ class MetaData(object):
 
     @property
     def uses_vcs_in_build(self):
+        # TODO :: Re-work this. Is it even useful? We can declare any vcs in our build deps.
         build_script = "bld.bat" if on_win else "build.sh"
         build_script = os.path.join(self.path, build_script)
         for recipe_file in (build_script, self.meta_path):
@@ -2207,12 +2208,12 @@ class MetaData(object):
             force_top_level=force_top_level, force_global=force_global, apply_selectors=False)
 
         all_used_selectors = variants.find_used_variables_in_text(variant_keys, recipe_text,
-                                                                    selectors=True)
+                                                                  selectors_only=True)
 
         reqs_text, recipe_text = self._get_used_vars_meta_yaml_helper(
             force_top_level=force_top_level, force_global=force_global, apply_selectors=True)
         all_used_reqs = variants.find_used_variables_in_text(variant_keys, recipe_text,
-                                                                    selectors=False)
+                                                             selectors_only=False)
 
         all_used = all_used_reqs.union(all_used_selectors)
 

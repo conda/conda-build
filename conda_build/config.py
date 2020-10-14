@@ -19,7 +19,9 @@ from .conda_interface import cc_platform, cc_conda_build, subdir, url_path
 
 from .utils import get_build_folders, rm_rf, get_logger, get_conda_operation_locks
 
+
 on_win = (sys.platform == 'win32')
+
 
 # Don't "save" an attribute of this module for later, like build_prefix =
 # conda_build.config.config.build_prefix, as that won't reflect any mutated
