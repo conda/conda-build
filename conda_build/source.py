@@ -646,7 +646,10 @@ def _get_patch_attributes(path, patch_exe, git, src_dir, stdout, stderr, retaine
             for fmt, _ in fmts.items():
                 new_patch = os.path.join(tmpdir, os.path.basename(path) + '.{}'.format(fmt))
                 if fmt == 'native':
-                    shutil.copy2(path, new_patch)
+                    try:
+                        shutil.copy2(path, new_patch)
+                    except:
+                        shutil.copy(path, new_patch)
                 elif fmt == 'lf':
                     _ensure_unix_line_endings(path, new_patch)
                 elif fmt == 'crlf':
