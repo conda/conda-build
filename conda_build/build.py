@@ -1270,7 +1270,7 @@ def create_info_files(m, replacements, files, prefix):
         for src in sources:
             if src.get('git_url'):
                 source.git_info(os.path.join(m.config.work_dir, src.get('folder', '')),
-                                verbose=m.config.verbose, fo=fo)
+                                m.config.build_prefix, git=None, verbose=m.config.verbose, fo=fo)
 
     if m.get_value('app/icon'):
         utils.copy_into(join(m.path, m.get_value('app/icon')),

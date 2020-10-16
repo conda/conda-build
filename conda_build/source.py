@@ -295,7 +295,7 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_ca
         # relatively the same place we can go ahead and checkout the submodules.
         check_call_env([git, 'submodule', 'update', '--init',
                     '--recursive'], cwd=checkout_dir, stdout=stdout, stderr=stderr)
-        git_info(checkout_dir, verbose=verbose)
+        git_info(checkout_dir, None, git=git, verbose=verbose)
     if not verbose:
         FNULL.close()
 
@@ -334,11 +334,13 @@ def git_source(source_dict, git_cache, src_dir, recipe_path=None, verbose=True):
     return git
 
 
-def git_info(src_dir, verbose=True, fo=None):
+# Why not use get_git_info instead?
+def git_info(src_dir, build_prefix, git=None, verbose=True, fo=None):
     ''' Print info about a Git repo. '''
     assert isdir(src_dir)
 
-    git = external.find_executable('git')
+    if not git:
+        git = external.find_executable('git', build_prefix)
     if not git:
         log.warn("git not installed in root environment.  Skipping recording of git info.")
         return
@@ -354,12 +356,12 @@ def git_info(src_dir, verbose=True, fo=None):
     env = os.environ.copy()
     env['GIT_DIR'] = join(src_dir, '.git')
     env = {str(key): str(value) for key, value in env.items()}
-    for cmd, check_error in [
-            ('git log -n1', True),
-            ('git describe --tags --dirty', False),
-            ('git status', True)]:
+    for cmd, check_error in (
+            ((git, 'log', '-n1'), True),
+            ((git, 'describe', '--tags', '--dirty'), False),
+            ((git, 'status'), True)):
         try:
-            stdout = check_output_env(cmd.split(), stderr=stderr, cwd=src_dir, env=env)
+            stdout = check_output_env(cmd, stderr=stderr, cwd=src_dir, env=env)
         except CalledProcessError as e:
             if check_error:
                 raise Exception("git error: %s" % str(e))
@@ -370,12 +372,12 @@ def git_info(src_dir, verbose=True, fo=None):
         if hasattr(stdout, 'decode'):
             stdout = stdout.decode(encoding, 'ignore')
         if fo:
-            fo.write(u'==> %s <==\n' % cmd)
+            fo.write(u'==> {} <==\n'.format(' '.join(cmd)))
             if verbose:
                 fo.write(stdout + u'\n')
         else:
             if verbose:
-                print(u'==> %s <==\n' % cmd)
+                print(u'==> {} <==\n'.format(' '.join(cmd)))
                 safe_print_unicode(stdout + u'\n')
 
 
