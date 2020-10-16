@@ -2162,9 +2162,7 @@ class MetaData(object):
 
             used_vars = meta_yaml_reqs | script_reqs
             # force target_platform to always be included, because it determines behavior
-            if ('target_platform' in self.config.variant and
-                    any(plat != self.config.subdir for plat in
-                        self.get_variants_as_dict_of_lists()['target_platform'])):
+            if ('target_platform' in self.config.variant and not self.noarch):
                 used_vars.add('target_platform')
 
             if self.force_use_keys or self.force_ignore_keys:
