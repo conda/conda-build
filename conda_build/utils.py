@@ -1180,24 +1180,26 @@ def package_has_file(package_path, file_path, refresh=False):
     return content
 
 
-def ensure_list(arg):
+def ensure_list(arg, include_dict=True):
     """
     Ensure the object is a list. If not return it in a list.
 
     :param arg: Object to ensure is a list
     :type arg: any
+    :param include_dict: Whether to treat `dict` as a `list`
+    :type include_dict: bool, optional
     :return: `arg` as a `list`
-    :rtype: `list`
+    :rtype: list
     """
     if arg is None:
         return []
-    elif islist(arg):
+    elif islist(arg, include_dict=include_dict):
         return list(arg)
     else:
         return [arg]
 
 
-def islist(arg, uniform=False):
+def islist(arg, uniform=False, include_dict=True):
     """
     Check whether `arg` is a `list`. Optionally determine whether the list elements
     are all uniform.
@@ -1216,17 +1218,23 @@ def islist(arg, uniform=False):
         >>> islist([0, "bar"], uniform=truthy_str)
         False
 
-    NOTE: Testing for uniformity will consume generators.
+    .. note::
+        Testing for uniformity will consume generators.
 
     :param arg: Object to ensure is a `list`
     :type arg: any
     :param uniform: Whether to check for uniform or uniformity function
-    :type uniform: `bool` or `function`
+    :type uniform: bool, function, optional
+    :param include_dict: Whether to treat `dict` as a `list`
+    :type include_dict: bool, optional
     :return: Whether `arg` is a `list`
-    :rtype: `bool`
+    :rtype: bool
     """
     if isinstance(arg, string_types) or not hasattr(arg, '__iter__'):
         # str and non-iterables are not lists
+        return False
+    elif not include_dict and isinstance(arg, dict):
+        # do not treat dict as a list
         return False
     elif not uniform:
         # short circuit for non-uniformity
