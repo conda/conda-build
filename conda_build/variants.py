@@ -4,8 +4,7 @@ ending up with a configuration matrix"""
 from collections import OrderedDict
 from copy import copy
 from itertools import product
-import os
-from os.path import abspath, expanduser, expandvars
+import os.path
 from pkg_resources import parse_version
 import re
 import sys
@@ -171,37 +170,51 @@ def validate_spec(src, spec):
         raise ValueError("Variant configuration errors in {}:\n{}".format(src, "\n".join(errors)))
 
 
-def find_config_files(metadata_or_path, additional_files=None, ignore_system_config=False,
-                      exclusive_config_files=None):
-    """Find files to load variables from.  Note that order here determines clobbering.
+def find_config_files(metadata_or_path, config):
+    """
+    Find config files to load. Config files are stacked in the following order:
+        1. exclusive config files (see config.exclusive_config_files)
+        2. user config files
+           (see context.conda_build["config_file"] or ~/conda_build_config.yaml)
+        3. cwd config files (see ./conda_build_config.yaml)
+        4. recipe config files (see ${RECIPE_DIR}/conda_build_config.yaml)
+        5. additional config files (see config.variant_config_files)
 
-    Later files clobber earlier ones.  order is user-wide < cwd < recipe dir < additional files"""
-    files = [
-        os.path.abspath(os.path.expanduser(config_file))
-        for config_file in (exclusive_config_files or [])
-    ]
+    .. note::
+        Order determines clobbering with later files clobbering earlier ones.
 
-    if not ignore_system_config and not exclusive_config_files:
+    :param metadata_or_path: the metadata or path within which to find recipe config files
+    :type metadata_or_path:
+    :param config: config object specifying config file settings
+                   (see exclusive_config_files, ignore_system_variants, and variant_config_files)
+    :type config: :class:`Config`
+    :return: List of config files
+    :rtype: `list` of paths (`str`)
+    """
+    resolve = lambda p: os.path.abspath(os.path.expanduser(os.path.expandvars(p)))
+
+    # exclusive configs
+    files = [resolve(f) for f in ensure_list(config.exclusive_config_files)]
+
+    if not files and not config.ignore_system_variants:
+        # user config
         if cc_conda_build.get('config_file'):
-            system_path = abspath(expanduser(expandvars(cc_conda_build['config_file'])))
+            cfg = resolve(cc_conda_build['config_file'])
         else:
-            system_path = os.path.join(expanduser('~'), "conda_build_config.yaml")
-        if os.path.isfile(system_path):
-            files.append(system_path)
+            cfg = resolve(os.path.join('~', "conda_build_config.yaml"))
+        if os.path.isfile(cfg):
+            files.append(cfg)
 
-        cwd = os.path.join(os.getcwd(), 'conda_build_config.yaml')
-        if os.path.isfile(cwd):
-            files.append(cwd)
+        cfg = resolve('conda_build_config.yaml')
+        if os.path.isfile(cfg):
+            files.append(cfg)
 
-    if hasattr(metadata_or_path, 'path'):
-        recipe_config = os.path.join(metadata_or_path.path, "conda_build_config.yaml")
-    else:
-        recipe_config = os.path.join(metadata_or_path, "conda_build_config.yaml")
-    if os.path.isfile(recipe_config):
-        files.append(recipe_config)
+    path = getattr(metadata_or_path, "path", metadata_or_path)
+    cfg = resolve(os.path.join(path, "conda_build_config.yaml"))
+    if os.path.isfile(cfg):
+        files.append(cfg)
 
-    if additional_files:
-        files.extend([os.path.expanduser(additional_file) for additional_file in additional_files])
+    files.extend([resolve(f) for f in ensure_list(config.variant_config_files)])
 
     return files
 
@@ -562,9 +575,7 @@ def get_package_combined_spec(recipedir_or_metadata, config=None, variants=None)
     if not config:
         from conda_build.config import Config
         config = Config()
-    files = find_config_files(recipedir_or_metadata, ensure_list(config.variant_config_files),
-                              ignore_system_config=config.ignore_system_variants,
-                              exclusive_config_files=config.exclusive_config_files)
+    files = find_config_files(recipedir_or_metadata, config)
 
     specs = OrderedDict(internal_defaults=get_default_variant(config))
 
