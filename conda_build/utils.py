@@ -2092,7 +2092,7 @@ def shutil_move_more_retrying(src, dest, debug_name):
             if attempts_left != 5:
                 log.warning("shutil.move({}={}, dest={}) succeeded on attempt number {}".format(debug_name, src, dest,
                                                                                                     6 - attempts_left))
-            attempts_left = -1
+            break
         except:
             attempts_left = attempts_left - 1
         if attempts_left > 0:
