@@ -623,6 +623,8 @@ def _get_patch_attributes(path, patch_exe, git, src_dir, stdout, stderr, retaine
 
     if not patch_exe:
         log.warning("No patch program found, cannot determine patch attributes for {}".format(path))
+        if not git:
+            log.error("No git program found either. Please add a dependency for one of these.")
         return result
 
     class noop_context(object):

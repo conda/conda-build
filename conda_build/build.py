@@ -2129,7 +2129,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
 
                         # this should raise if any problems occur while building
                         utils.check_call_env(cmd, env=env, rewrite_stdout_env=rewrite_env,
-                                            cwd=src_dir, stats=build_stats)
+                                             cwd=src_dir, stats=build_stats)
                         utils.remove_pycache_from_scripts(m.config.host_prefix)
             if build_stats and not provision_only:
                 log_stats(build_stats, "building {}".format(m.name()))

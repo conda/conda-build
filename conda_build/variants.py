@@ -638,6 +638,10 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
     used_variables = set()
     recipe_lines = recipe_text.splitlines()
     for v in variant:
+        # Use force_use_keys instead?
+        if v == 'channel_targets':
+            used_variables.add(v)
+            continue
         all_res = []
         compiler_match = re.match(r'(.*?)_compiler(_version)?$', v)
         if compiler_match and not selectors_only:
@@ -666,6 +670,9 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
         all_res = r"|".join(all_res)
         if any(re.search(all_res, line) for line in variant_lines):
             used_variables.add(v)
+            if v in ('c_compiler', 'cxx_compiler'):
+                if 'CONDA_BUILD_SYSROOT' in variant:
+                    used_variables.add('CONDA_BUILD_SYSROOT')
     return used_variables
 
 
