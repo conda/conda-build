@@ -1275,7 +1275,12 @@ class MetaData(object):
                                 ' ' in self.config.variant[req]]
 
         # retrieve values - this dictionary is what makes up the hash.
-        return {key: self.config.variant[key] for key in dependencies}
+
+        # if dependencies are only 'target_platform' then ignore that.
+        if dependencies == ['target_platform']:
+            return {}
+        else:
+            return {key: self.config.variant[key] for key in dependencies}
 
     def hash_dependencies(self):
         """With arbitrary pinning, we can't depend on the build string as done in
