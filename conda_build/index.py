@@ -896,6 +896,8 @@ class ChannelIndex(object):
 
         stat_cache_original = stat_cache.copy()
 
+        remove_set = old_repodata_fns - fns_in_subdir
+        ignore_set = set(old_repodata.get('removed', []))
         try:
             # calculate all the paths and figure out what we're going to do with them
             # add_set: filenames that aren't in the current/old repodata, but exist in the subdir
@@ -908,12 +910,10 @@ class ChannelIndex(object):
                             continue
                         if fn.endswith('.conda') or fn.endswith('.tar.bz2'):
                             add_set.add(fn)
-                remove_set = ignore_set = set()
             else:
                 add_set = fns_in_subdir - old_repodata_fns
-                remove_set = old_repodata_fns - fns_in_subdir
-                ignore_set = set(old_repodata.get('removed', []))
-                add_set -= ignore_set
+
+            add_set -= ignore_set
 
             # update_set: Filenames that are in both old repodata and new repodata,
             #     and whose contents have changed based on file size or mtime. We're

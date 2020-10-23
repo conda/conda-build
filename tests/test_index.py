@@ -143,10 +143,7 @@ def test_file_index_on_single_subdir_1(testing_workdir):
     test_package_url = 'https://conda.anaconda.org/conda-test/osx-64/conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2'
     download(test_package_url, test_package_path)
 
-    p = os.path.join(testing_workdir, 'index_file')
-    with open(os.path.join(testing_workdir, 'index_file'), 'a+') as fh:
-        fh.write("osx-64/conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2\n")
-    conda_build.index.update_index(testing_workdir, channel_name='test-channel', index_file=p)
+    conda_build.index.update_index(testing_workdir, channel_name='test-channel')
 
     # #######################################
     # tests for osx-64 subdir
@@ -185,6 +182,48 @@ def test_file_index_on_single_subdir_1(testing_workdir):
         "removed": [],
         "repodata_version": 1,
     }
+    assert actual_repodata_json == expected_repodata_json
+    assert actual_pkg_repodata_json == expected_repodata_json
+
+    # download two packages here, put them both in the same subdir
+    test_package_path = join(testing_workdir, 'osx-64', 'fly-2.5.2-0.tar.bz2')
+    test_package_url = 'https://conda.anaconda.org/conda-test/osx-64/fly-2.5.2-0.tar.bz2'
+    download(test_package_url, test_package_path)
+
+    test_package_path = join(testing_workdir, 'osx-64', 'nano-2.4.1-0-tar.bz2')
+    test_package_url = 'https://conda.anaconda.org/conda-test/osx-64/nano-2.4.1-0.tar.bz2'
+    download(test_package_url, test_package_path)
+
+    # only tell index to index one of them and then assert that it was added
+    p = os.path.join(testing_workdir, 'index_file')
+    with open(os.path.join(testing_workdir, 'index_file'), 'a+') as fh:
+        fh.write("osx-64/fly-2.5.2-0.tar.bz2\n")
+
+    conda_build.index.update_index(testing_workdir, channel_name='test-channel', index_file=p)
+
+    updated_packages = expected_repodata_json.get('packages')
+    updated_packages['fly-2.5.2-0.tar.bz2'] = {
+        "build": "0",
+        "build_number": 0,
+        "depends": [],
+        "license": "Apache",
+        "md5": "2e84ee54415a5021db050bd5fa5438b2",
+        "name": "fly",
+        "sha256": "79dec46aaa827ffde1bc069f740697b0d126f485ed9cb4c3db201f720601d346",
+        "size": 5382961,
+        "subdir": "osx-64",
+        "version": "2.5.2"
+    }
+
+    expected_repodata_json['packages'] = updated_packages
+
+    with open(join(testing_workdir, 'osx-64', 'repodata.json')) as fh:
+        actual_repodata_json = json.loads(fh.read())
+        assert actual_repodata_json
+    with open(join(testing_workdir, 'osx-64', 'repodata_from_packages.json')) as fh:
+        actual_pkg_repodata_json = json.loads(fh.read())
+        assert actual_pkg_repodata_json
+
     assert actual_repodata_json == expected_repodata_json
     assert actual_pkg_repodata_json == expected_repodata_json
 
@@ -232,6 +271,36 @@ def test_file_index_on_single_subdir_1(testing_workdir):
                 'source_url': None,
                 'tags': None,
                 'timestamp': 1508520039,
+            },
+            "fly": {
+                'activate.d': False,
+                'binary_prefix': False,
+                'deactivate.d': False,
+                'description': 'A command line interface that runs a build in a container with ATC.',
+                'dev_url': None,
+                'doc_source_url': None,
+                'doc_url': None,
+                'home': 'https://github.com/concourse/fly',
+                'icon_hash': None,
+                'icon_url': None,
+                'identifiers': None,
+                'keywords': None,
+                'license': 'Apache',
+                'post_link': False,
+                'pre_link': False,
+                'pre_unlink': False,
+                'recipe_origin': None,
+                'run_exports': {},
+                'source_git_url': '/Users/scastellarin/projects/fly-package/https:/github.com/concourse/concourse.git',
+                'source_url': None,
+                'subdirs': [
+                    'osx-64'
+                ],
+                'summary': 'A command line interface that runs a build in a container with ATC.',
+                'tags': None,
+                'text_prefix': False,
+                'timestamp': 0,
+                'version': '2.5.2'
             }
         },
         "subdirs": [
@@ -239,6 +308,7 @@ def test_file_index_on_single_subdir_1(testing_workdir):
             "osx-64"
         ]
     }
+
     assert actual_channeldata_json == expected_channeldata_json
 
 
@@ -366,11 +436,7 @@ def test_file_index_noarch_osx64_1(testing_workdir):
     test_package_url = 'https://conda.anaconda.org/conda-test/noarch/conda-index-pkg-a-1.0-pyhed9eced_1.tar.bz2'
     download(test_package_url, test_package_path)
 
-    p = os.path.join(testing_workdir, 'index_file')
-    with open(os.path.join(testing_workdir, 'index_file'), 'a+') as fh:
-        fh.write('noarch/conda-index-pkg-a-1.0-pyhed9eced_1.tar.bz2\n')
-        fh.write('osx-64/conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2\n')
-    conda_build.index.update_index(testing_workdir, channel_name='test-channel', index_file=p)
+    conda_build.index.update_index(testing_workdir, channel_name='test-channel')
 
     # #######################################
     # tests for osx-64 subdir
@@ -421,6 +487,64 @@ def test_file_index_noarch_osx64_1(testing_workdir):
     assert actual_repodata_json == expected_repodata_json
     assert actual_pkg_repodata_json == expected_repodata_json
 
+    # download two packages per subdir here, put them both in the same subdir
+    test_package_path = join(testing_workdir, 'osx-64', 'fly-2.5.2-0.tar.bz2')
+    test_package_url = 'https://conda.anaconda.org/conda-test/osx-64/fly-2.5.2-0.tar.bz2'
+    download(test_package_url, test_package_path)
+
+    test_package_path = join(testing_workdir, 'osx-64', 'nano-2.4.1-0-tar.bz2')
+    test_package_url = 'https://conda.anaconda.org/conda-test/osx-64/nano-2.4.1-0.tar.bz2'
+    download(test_package_url, test_package_path)
+
+    test_package_path = join(testing_workdir, 'noarch', 'spiffy-test-app-0.5-pyh6afbcc8_0.tar.bz2')
+    test_package_url = 'https://conda.anaconda.org/conda-test/noarch/spiffy-test-app-0.5-pyh6afbcc8_0.tar.bz2'
+    download(test_package_url, test_package_path)
+
+    test_package_path = join(testing_workdir, 'noarch', 'flask-0.11.1-py_0.tar.bz2')
+    test_package_url = 'https://conda.anaconda.org/conda-test/noarch/flask-0.11.1-py_0.tar.bz2'
+    download(test_package_url, test_package_path)
+
+    # only tell index to index one of them and then assert that it was added
+    p = os.path.join(testing_workdir, 'index_file')
+    with open(os.path.join(testing_workdir, 'index_file'), 'a+') as fh:
+        fh.write("noarch/flask-0.11.1-py_0.tar.bz2\n")
+        fh.write("osx/fly-2.5.2-0.tar.bz2\n")
+
+    conda_build.index.update_index(testing_workdir, channel_name='test-channel', index_file=p)
+
+    updated_packages = expected_repodata_json.get('packages')
+    updated_packages['flask-0.11.1-py_0.tar.bz2'] = {
+        'build': 'py_0',
+        'build_number': 0,
+        'depends': [
+            'click >=2.0',
+            'itsdangerous >=0.21',
+            'jinja2 >=2.4',
+            'python',
+            'werkzeug >=0.7'
+        ],
+        'license': 'BSD',
+        'md5': '6b06127706cf0ba57c6e13258bb222e7',
+        'name': 'flask',
+        'noarch': 'python',
+        'sha256': '8353f3a4a4533ff0c6ce829b90980a01a577b3ac015ebd573fef308f2bfec5a8',
+        'size': 58062,
+        'subdir': 'noarch',
+        'version': '0.11.1'
+        }
+
+    expected_repodata_json['packages'] = updated_packages
+
+    with open(join(testing_workdir, 'noarch', 'repodata.json')) as fh:
+        actual_repodata_json = json.loads(fh.read())
+        assert actual_repodata_json
+    with open(join(testing_workdir, 'noarch', 'repodata_from_packages.json')) as fh:
+        actual_pkg_repodata_json = json.loads(fh.read())
+        assert actual_pkg_repodata_json
+
+    assert actual_repodata_json == expected_repodata_json
+    assert actual_pkg_repodata_json == expected_repodata_json
+
     # #######################################
     # tests for full channel
     # #######################################
@@ -463,9 +587,40 @@ def test_file_index_noarch_osx64_1(testing_workdir):
                 'icon_url': None,
                 'identifiers': None,
                 'tags': None,
-                'timestamp': 1508520039,
+                'timestamp': 1508520204,
                 'keywords': None,
                 'recipe_origin': None,
+            },
+            'flask': {
+                'activate.d': False,
+                'binary_prefix': False,
+                'deactivate.d': False,
+                'description': "Flask is a microframework for Python based on Werkzeug and Jinja2. "
+                               "It's intended for getting started very quickly and was developed with best intentions in mind.",
+                'dev_url': 'https://github.com/mitsuhiko/flask',
+                'doc_source_url': None,
+                'doc_url': 'http://flask.pocoo.org/docs/0.10/',
+                'home': 'http://flask.pocoo.org/',
+                'icon_hash': None,
+                'icon_url': None,
+                'identifiers': None,
+                'keywords': None,
+                'license': 'BSD',
+                'post_link': False,
+                'pre_link': False,
+                'pre_unlink': False,
+                'recipe_origin': None,
+                'run_exports': {},
+                'source_git_url': None,
+                'source_url': None,
+                'subdirs': [
+                    'noarch'
+                ],
+                'summary': 'A microframework based on Werkzeug, Jinja2 and good intentions',
+                'tags': None,
+                'text_prefix': False,
+                'timestamp': 0,
+                'version': '0.11.1'
             }
         },
         "subdirs": [
@@ -903,7 +1058,7 @@ def test_current_index_reduces_space():
                     "depends-on-older-1.2.10-h7b6447c_3.tar.bz2",
                     "ancient-package-1.2.10-h7b6447c_3.tar.bz2",
                     "one-gets-filtered-1.3.10-h7b6447c_3.tar.bz2"
-    }
+                    }
     # conda 4.7 removes .tar.bz2 files in favor of .conda files
     if conda_47:
         tar_bz2_keys.remove("one-gets-filtered-1.3.10-h7b6447c_3.tar.bz2")
