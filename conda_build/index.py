@@ -866,17 +866,7 @@ class ChannelIndex(object):
 
         # gather conda package filenames in subdir
         # we'll process these first, because reading their metadata is much faster
-        if index_file:
-            with open(index_file, 'r') as fin:
-                fns_in_subdir = set()
-                for line in fin:
-                    fn_subdir, fn = line.strip().split('/')
-                    if fn_subdir != subdir:
-                        continue
-                    if fn.endswith('.conda') or fn.endswith('.tar.bz2'):
-                        fns_in_subdir.add(fn)
-        else:
-            fns_in_subdir = {fn for fn in os.listdir(subdir_path) if fn.endswith('.conda') or fn.endswith('.tar.bz2')}
+        fns_in_subdir = {fn for fn in os.listdir(subdir_path) if fn.endswith('.conda') or fn.endswith('.tar.bz2')}
 
         # load current/old repodata
         try:
@@ -909,10 +899,21 @@ class ChannelIndex(object):
         try:
             # calculate all the paths and figure out what we're going to do with them
             # add_set: filenames that aren't in the current/old repodata, but exist in the subdir
-            add_set = fns_in_subdir - old_repodata_fns
-            remove_set = old_repodata_fns - fns_in_subdir
-            ignore_set = set(old_repodata.get('removed', []))
-            add_set -= ignore_set
+            if index_file:
+                with open(index_file, 'r') as fin:
+                    add_set = set()
+                    for line in fin:
+                        fn_subdir, fn = line.strip().split('/')
+                        if fn_subdir != subdir:
+                            continue
+                        if fn.endswith('.conda') or fn.endswith('.tar.bz2'):
+                            add_set.add(fn)
+                remove_set = ignore_set = set()
+            else:
+                add_set = fns_in_subdir - old_repodata_fns
+                remove_set = old_repodata_fns - fns_in_subdir
+                ignore_set = set(old_repodata.get('removed', []))
+                add_set -= ignore_set
 
             # update_set: Filenames that are in both old repodata and new repodata,
             #     and whose contents have changed based on file size or mtime. We're
