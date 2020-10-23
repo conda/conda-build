@@ -789,10 +789,11 @@ unxz is required to unarchive .xz source files.
     for i, member in enumerate(members, 0):
         if os.path.isabs(member.name):
             member.name = os.path.relpath(member.name, '/')
-        if not os.path.realpath(member.name).startswith(os.getcwd()):
+        cwd = os.path.realpath(os.getcwd())
+        if not os.path.realpath(member.name).startswith(cwd):
             member.name = member.name.replace("../", "")
-        if not os.path.realpath(member.name).startswith(os.getcwd()):
-            sys.exit("tarball contains unsafe path: " + member.name)
+        if not os.path.realpath(member.name).startswith(cwd):
+            sys.exit("tarball contains unsafe path: " + member.name + " cwd is: " + cwd)
         members[i] = member
 
     if not PY3:
@@ -843,7 +844,7 @@ def tar_xf(tarball, dir_path):
     if not os.path.isabs(tarball):
         tarball = os.path.join(os.getcwd(), tarball)
     try:
-        with tmp_chdir(dir_path):
+        with tmp_chdir(os.path.realpath(dir_path)):
             libarchive.extract_file(tarball, flags)
     except libarchive.exception.ArchiveError:
         # try again, maybe we are on Windows and the archive contains symlinks
