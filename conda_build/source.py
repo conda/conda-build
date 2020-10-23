@@ -540,7 +540,7 @@ def _guess_patch_strip_level(filesstr, src_dir):
 
 def _get_patch_file_details(path):
     re_files = re.compile(r'^(?:---|\+\+\+) ([^\n\t]+)')
-    files = set()
+    files = []
     with io.open(path, errors='ignore') as f:
         files = []
         first_line = True
@@ -587,7 +587,11 @@ def _patch_attributes_debug_print(attributes):
 def _get_patch_attributes(path, patch_exe, git, src_dir, stdout, stderr, retained_tmpdir=None):
     from collections import OrderedDict
 
-    files, is_git_format = _get_patch_file_details(path)
+    files_list, is_git_format = _get_patch_file_details(path)
+    files = set(files_list)
+    amalgamated = False
+    if len(files_list) != len(files):
+        amalgamated = True
     strip_level, strip_level_guessed = _guess_patch_strip_level(files, src_dir)
     if strip_level:
         files = [f.split('/', strip_level)[1] for f in files]
@@ -601,7 +605,7 @@ def _get_patch_attributes(path, patch_exe, git, src_dir, stdout, stderr, retaine
               'dry_runnable': None,
               'applicable': None,
               'reversible': None,
-              'amalgamated': None,
+              'amalgamated': amalgamated,
               'offsets': None,
               'fuzzy': None,
               'stderr': None,
