@@ -606,7 +606,7 @@ def osx_vars(m, get_default, prefix):
     else:
         OSX_ARCH = 'x86_64'
         MACOSX_DEPLOYMENT_TARGET = 10.9
-        
+
     if str(m.config.arch) == '32':
         BUILD = 'i386-apple-darwin13.4.0'
     elif str(m.config.arch) == 'arm64':
