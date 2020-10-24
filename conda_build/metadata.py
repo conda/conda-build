@@ -835,6 +835,14 @@ def trim_build_only_deps(metadata, requirements_used):
     return requirements_used - to_remove
 
 
+def _hash_dependencies(hashing_dependencies, hash_length):
+    hash_ = hashlib.sha1(json.dumps(hashing_dependencies, sort_keys=True).encode())
+    # save only the first HASH_LENGTH characters - should be more than
+    #    enough, since these only need to be unique within one version
+    # plus one is for the h - zero pad on the front, trim to match HASH_LENGTH
+    return 'h{0}'.format(hash_.hexdigest())[:hash_length + 1]
+
+
 @contextlib.contextmanager
 def stringify_numbers():
     # ensure that numbers are not interpreted as ints or floats.  That trips up versions
@@ -1295,11 +1303,7 @@ class MetaData(object):
         hash_ = ''
         hashing_dependencies = self.get_hash_contents()
         if hashing_dependencies:
-            hash_ = hashlib.sha1(json.dumps(hashing_dependencies, sort_keys=True).encode())
-            # save only the first HASH_LENGTH characters - should be more than
-            #    enough, since these only need to be unique within one version
-            # plus one is for the h - zero pad on the front, trim to match HASH_LENGTH
-            hash_ = 'h{0}'.format(hash_.hexdigest())[:self.config.hash_length + 1]
+            return _hash_dependencies(hashing_dependencies, self.config.hash_length)
         return hash_
 
     def build_id(self):

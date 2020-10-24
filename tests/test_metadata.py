@@ -8,6 +8,9 @@ from conda_build.metadata import select_lines, MetaData
 from conda_build import api, conda_interface
 from .utils import thisdir, metadata_dir
 
+from conda_build.utils import DEFAULT_SUBDIRS
+from conda_build.metadata import _hash_dependencies
+
 
 def test_uses_vcs_in_metadata(testing_workdir, testing_metadata):
     testing_metadata._meta_path = os.path.join(testing_workdir, 'meta.yaml')
@@ -193,8 +196,17 @@ def test_hash_build_id(testing_metadata):
     testing_metadata.final = True
     hash_contents = testing_metadata.get_hash_contents()
     assert hash_contents['zlib'] == '1.2'
-    assert testing_metadata.hash_dependencies() == 'hd245c95'
-    assert testing_metadata.build_id() == 'hd245c95_1'
+    hdeps = testing_metadata.hash_dependencies()
+    hash_contents_tp = hash_contents.copy()
+    found = False
+    for subdir in DEFAULT_SUBDIRS:
+        hash_contents_tp['target_platform'] = subdir
+        hdeps_tp = _hash_dependencies(hash_contents_tp, testing_metadata.config.hash_length)
+        if hdeps_tp == hdeps:
+            found = True
+            break
+    assert found, "Did not find build that matched {} when testing each of DEFAULT_SUBDIRS".format(hdeps)
+    assert testing_metadata.build_id() == hdeps + '_1'
 
 
 def test_hash_build_id_key_order(testing_metadata):
