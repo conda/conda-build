@@ -266,6 +266,13 @@ def test_skeleton_pypi(testing_workdir, testing_config):
     main_build.execute(('peppercorn',))
 
 
+@pytest.mark.sanity
+def test_skeleton_pypi_compatible_versions(testing_workdir, testing_config):
+    args = ['pypi', 'openshift']
+    main_skeleton.execute(args)
+    assert os.path.isdir('openshift')
+
+
 @pytest.mark.slow
 def test_skeleton_pypi_arguments_work(testing_workdir):
     """
