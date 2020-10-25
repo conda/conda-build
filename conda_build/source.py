@@ -170,7 +170,7 @@ def unpack(source_dict, src_dir, cache_folder, recipe_path, croot, verbose=False
 
 
 def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_cache, git_ref=None,
-                                  git_depth=-1, is_top_level=True, verbose=True):
+                                  git_depth=-1, is_top_level=True, verbose=True, git_recursive=True):
     """ Mirror (and checkout) a Git repository recursively.
 
         It's not possible to use `git submodule` on a bare
@@ -293,8 +293,9 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_ca
     if is_top_level:
         # Now that all relative-URL-specified submodules are locally mirrored to
         # relatively the same place we can go ahead and checkout the submodules.
-        check_call_env([git, 'submodule', 'update', '--init',
-                    '--recursive'], cwd=checkout_dir, stdout=stdout, stderr=stderr)
+        if git_recursive:
+            check_call_env([git, 'submodule', 'update', '--init',
+                            '--recursive'], cwd=checkout_dir, stdout=stdout, stderr=stderr)
         git_info(checkout_dir, verbose=verbose)
     if not verbose:
         FNULL.close()
@@ -311,6 +312,7 @@ def git_source(source_dict, git_cache, src_dir, recipe_path=None, verbose=True):
 
     git_depth = int(source_dict.get('git_depth', -1))
     git_ref = source_dict.get('git_rev') or 'HEAD'
+    git_recursive = bool(source_dict.get('git_recursive', True))
 
     git_url = source_dict['git_url']
     if git_url.startswith('~'):
@@ -330,7 +332,7 @@ def git_source(source_dict, git_cache, src_dir, recipe_path=None, verbose=True):
     mirror_dir = join(git_cache, git_dn)
     git_mirror_checkout_recursive(
         git, mirror_dir, src_dir, git_url, git_cache=git_cache, git_ref=git_ref,
-        git_depth=git_depth, is_top_level=True, verbose=verbose)
+        git_depth=git_depth, is_top_level=True, verbose=verbose, git_recursive=git_recursive)
     return git
 
 

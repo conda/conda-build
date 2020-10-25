@@ -89,6 +89,16 @@ def test_git_into_existing_populated_folder_raises(testing_metadata):
         source.provide(testing_metadata)
 
 
+def test_git_repo_without_submodule(testing_metadata):
+    testing_metadata.meta['source'] = [
+        {'folder': 'f1', 'git_url': 'https://github.com/Chilipp/conda_build_test_recipe'},
+        {'folder': 'f2', 'git_url': 'https://github.com/Chilipp/conda_build_test_recipe',
+         'git_recursive': False}]
+    source.provide(testing_metadata)
+    assert os.path.exists(os.path.join(testing_metadata.config.work_dir, 'f1', 'submodule', 'README.md'))
+    assert not os.path.exists(os.path.join(testing_metadata.config.work_dir, 'f2', 'submodule', 'README.md'))
+
+
 def test_git_repo_with_single_subdir_does_not_enter_subdir(testing_metadata):
     """Regression test for https://github.com/conda/conda-build/issues/1910 """
     testing_metadata.meta['source'] = {

@@ -132,6 +132,7 @@ The git_url can also be a relative path to the recipe directory.
      git_url: https://github.com/ilanschnell/bsdiff4.git
      git_rev: 1.1.4
      git_depth: 1 # (Defaults to -1/not shallow)
+     git_recursive: true
 
 The depth argument relates to the ability to perform a shallow clone.
 A shallow clone means that you only download part of the history from
@@ -144,6 +145,9 @@ to capture the tag in ``git_rev``, you'll encounter an error. So in the
 example above, unless the 1.1.4 is the very head commit and the one
 that you're going to grab, you may encounter an error.
 
+By default, all git submodules in the repository are recursively checked out.
+You can disable this behaviour by setting ``git_recursive: false``. Note that
+you have to clone the submodules manually in your build script if necessary.
 
 Source from hg
 --------------
