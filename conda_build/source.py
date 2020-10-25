@@ -295,7 +295,7 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_ca
         # relatively the same place we can go ahead and checkout the submodules.
         check_call_env([git, 'submodule', 'update', '--init',
                     '--recursive'], cwd=checkout_dir, stdout=stdout, stderr=stderr)
-        git_info(checkout_dir, verbose=verbose)
+        git_info(checkout_dir, None, git=git, verbose=verbose)
     if not verbose:
         FNULL.close()
 
@@ -334,11 +334,13 @@ def git_source(source_dict, git_cache, src_dir, recipe_path=None, verbose=True):
     return git
 
 
-def git_info(src_dir, verbose=True, fo=None):
+# Why not use get_git_info instead?
+def git_info(src_dir, build_prefix, git=None, verbose=True, fo=None):
     ''' Print info about a Git repo. '''
     assert isdir(src_dir)
 
-    git = external.find_executable('git')
+    if not git:
+        git = external.find_executable('git', build_prefix)
     if not git:
         log.warn("git not installed in root environment.  Skipping recording of git info.")
         return
@@ -354,12 +356,12 @@ def git_info(src_dir, verbose=True, fo=None):
     env = os.environ.copy()
     env['GIT_DIR'] = join(src_dir, '.git')
     env = {str(key): str(value) for key, value in env.items()}
-    for cmd, check_error in [
-            ('git log -n1', True),
-            ('git describe --tags --dirty', False),
-            ('git status', True)]:
+    for cmd, check_error in (
+            ((git, 'log', '-n1'), True),
+            ((git, 'describe', '--tags', '--dirty'), False),
+            ((git, 'status'), True)):
         try:
-            stdout = check_output_env(cmd.split(), stderr=stderr, cwd=src_dir, env=env)
+            stdout = check_output_env(cmd, stderr=stderr, cwd=src_dir, env=env)
         except CalledProcessError as e:
             if check_error:
                 raise Exception("git error: %s" % str(e))
@@ -370,12 +372,12 @@ def git_info(src_dir, verbose=True, fo=None):
         if hasattr(stdout, 'decode'):
             stdout = stdout.decode(encoding, 'ignore')
         if fo:
-            fo.write(u'==> %s <==\n' % cmd)
+            fo.write(u'==> {} <==\n'.format(' '.join(cmd)))
             if verbose:
                 fo.write(stdout + u'\n')
         else:
             if verbose:
-                print(u'==> %s <==\n' % cmd)
+                print(u'==> {} <==\n'.format(' '.join(cmd)))
                 safe_print_unicode(stdout + u'\n')
 
 
@@ -538,7 +540,7 @@ def _guess_patch_strip_level(filesstr, src_dir):
 
 def _get_patch_file_details(path):
     re_files = re.compile(r'^(?:---|\+\+\+) ([^\n\t]+)')
-    files = set()
+    files = []
     with io.open(path, errors='ignore') as f:
         files = []
         first_line = True
@@ -585,7 +587,11 @@ def _patch_attributes_debug_print(attributes):
 def _get_patch_attributes(path, patch_exe, git, src_dir, stdout, stderr, retained_tmpdir=None):
     from collections import OrderedDict
 
-    files, is_git_format = _get_patch_file_details(path)
+    files_list, is_git_format = _get_patch_file_details(path)
+    files = set(files_list)
+    amalgamated = False
+    if len(files_list) != len(files):
+        amalgamated = True
     strip_level, strip_level_guessed = _guess_patch_strip_level(files, src_dir)
     if strip_level:
         files = [f.split('/', strip_level)[1] for f in files]
@@ -599,7 +605,7 @@ def _get_patch_attributes(path, patch_exe, git, src_dir, stdout, stderr, retaine
               'dry_runnable': None,
               'applicable': None,
               'reversible': None,
-              'amalgamated': None,
+              'amalgamated': amalgamated,
               'offsets': None,
               'fuzzy': None,
               'stderr': None,
@@ -621,6 +627,8 @@ def _get_patch_attributes(path, patch_exe, git, src_dir, stdout, stderr, retaine
 
     if not patch_exe:
         log.warning("No patch program found, cannot determine patch attributes for {}".format(path))
+        if not git:
+            log.error("No git program found either. Please add a dependency for one of these.")
         return result
 
     class noop_context(object):
@@ -646,7 +654,10 @@ def _get_patch_attributes(path, patch_exe, git, src_dir, stdout, stderr, retaine
             for fmt, _ in fmts.items():
                 new_patch = os.path.join(tmpdir, os.path.basename(path) + '.{}'.format(fmt))
                 if fmt == 'native':
-                    shutil.copy2(path, new_patch)
+                    try:
+                        shutil.copy2(path, new_patch)
+                    except:
+                        shutil.copy(path, new_patch)
                 elif fmt == 'lf':
                     _ensure_unix_line_endings(path, new_patch)
                 elif fmt == 'crlf':
