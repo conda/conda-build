@@ -386,6 +386,7 @@ default_structs = {
     'build/preferred_env': text_type,
     'build/preferred_env_executable_paths': list,
     'build/ignore_run_exports': list,
+    'build/ignore_run_exports_from': list,
     'build/requires_features': dict,
     'build/provides_features': dict,
     'build/pre-link': text_type,
@@ -506,7 +507,7 @@ FIELDS = {
               'rpaths_patcher', 'script_env', 'always_include_files', 'skip',
               'msvc_compiler', 'pin_depends', 'include_recipe',  # pin_depends is experimental still
               'preferred_env', 'preferred_env_executable_paths', 'run_exports',
-              'ignore_run_exports', 'requires_features', 'provides_features',
+              'ignore_run_exports', 'ignore_run_exports_from', 'requires_features', 'provides_features',
               'force_use_keys', 'force_ignore_keys', 'merge_build_host',
               'pre-link', 'post-link', 'pre-unlink', 'missing_dso_whitelist',
               'error_overdepending', 'error_overlinking',
@@ -833,6 +834,14 @@ def trim_build_only_deps(metadata, requirements_used):
                 to_remove.add(dep)
 
     return requirements_used - to_remove
+
+
+def _hash_dependencies(hashing_dependencies, hash_length):
+    hash_ = hashlib.sha1(json.dumps(hashing_dependencies, sort_keys=True).encode())
+    # save only the first HASH_LENGTH characters - should be more than
+    #    enough, since these only need to be unique within one version
+    # plus one is for the h - zero pad on the front, trim to match HASH_LENGTH
+    return 'h{0}'.format(hash_.hexdigest())[:hash_length + 1]
 
 
 @contextlib.contextmanager
@@ -1275,7 +1284,12 @@ class MetaData(object):
                                 ' ' in self.config.variant[req]]
 
         # retrieve values - this dictionary is what makes up the hash.
-        return {key: self.config.variant[key] for key in dependencies}
+
+        # if dependencies are only 'target_platform' then ignore that.
+        if dependencies == ['target_platform']:
+            return {}
+        else:
+            return {key: self.config.variant[key] for key in dependencies}
 
     def hash_dependencies(self):
         """With arbitrary pinning, we can't depend on the build string as done in
@@ -1290,11 +1304,7 @@ class MetaData(object):
         hash_ = ''
         hashing_dependencies = self.get_hash_contents()
         if hashing_dependencies:
-            hash_ = hashlib.sha1(json.dumps(hashing_dependencies, sort_keys=True).encode())
-            # save only the first HASH_LENGTH characters - should be more than
-            #    enough, since these only need to be unique within one version
-            # plus one is for the h - zero pad on the front, trim to match HASH_LENGTH
-            hash_ = 'h{0}'.format(hash_.hexdigest())[:self.config.hash_length + 1]
+            return _hash_dependencies(hashing_dependencies, self.config.hash_length)
         return hash_
 
     def build_id(self):

@@ -298,7 +298,7 @@ def test_get_used_loop_vars(testing_config):
     #   some_package is explicitly used as a jinja2 variable
     assert m.get_used_loop_vars() == {'python', 'some_package'}
     # these are all used vars - including those with only one value (and thus not loop vars)
-    assert m.get_used_vars() == {'python', 'some_package', 'zlib', 'pthread_stubs'}
+    assert m.get_used_vars() == {'python', 'some_package', 'zlib', 'pthread_stubs', 'target_platform'}
 
 
 def test_reprovisioning_source(testing_config):

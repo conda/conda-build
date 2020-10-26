@@ -6,6 +6,7 @@ from __future__ import absolute_import, division, print_function
 
 from collections import defaultdict, OrderedDict
 import keyword
+import logging
 import os
 from os import makedirs, listdir, getcwd, chdir
 from os.path import join, isdir, exists, isfile, abspath
@@ -666,12 +667,12 @@ def convert_version(version):
     return pin_compatible
 
 
-MARKER_RE = re.compile(r"(?P<name>^[^=<>!\s]+)"
+MARKER_RE = re.compile(r"(?P<name>^[^=<>!~\s]+)"
                        r"\s*"
-                       r"(?P<constraint>[=!><]=?\s*[^\s;]+)?"
-                       r"(?:\s+;\s+)?(?P<env_mark_name>[^=<>!\s;]+)?"
+                       r"(?P<constraint>[=!><~]=?\s*[^\s;]+)?"
+                       r"(?:\s+;\s+)?(?P<env_mark_name>[^=<>!~\s;]+)?"
                        r"\s*"
-                       r"(?P<env_mark_constraint>[=<>!\s]+[^=<>!\s]+)?"
+                       r"(?P<env_mark_constraint>[=<>!\s]+[^=<>!~\s]+)?"
                        )
 
 
@@ -787,6 +788,41 @@ def get_dependencies(requires, setuptools_enabled=True):
     :param Bool setuptools_enabled: True if setuptools is enabled and False otherwise
     :return list: Return list of dependencies
     """
+
+    # START :: Copied from conda
+    # These can be removed if we want to drop support for conda <= 4.9.0
+    def _strip_comment(line):
+        return line.split('#')[0].rstrip()
+
+    def _spec_from_line(line):
+        spec_pat = re.compile(r'(?P<name>[^=<>!\s]+)'  # package name  # lgtm [py/regex/unmatchable-dollar]
+                              r'\s*'  # ignore spaces
+                              r'('
+                              r'(?P<cc>=[^=]+(=[^=]+)?)'  # conda constraint
+                              r'|'
+                              r'(?P<pc>(?:[=!]=|[><]=?|~=).+)'  # new (pip-style) constraint(s)
+                              r')?$',
+                              re.VERBOSE)  # lgtm [py/regex/unmatchable-dollar]
+        m = spec_pat.match(_strip_comment(line))
+        if m is None:
+            return None
+        name, cc, pc = (m.group('name').lower(), m.group('cc'), m.group('pc'))
+        if cc:
+            return name + cc.replace('=', ' ')
+        elif pc:
+            if pc.startswith('~= '):
+                assert pc.count('~=') == 1, \
+                    "Overly complex 'Compatible release' spec not handled {}".format(line)
+                assert pc.count('.'), "No '.' in 'Compatible release' version {}".format(line)
+                ver = pc.replace('~= ', '')
+                ver2 = '.'.join(ver.split('.')[:-1]) + '.*'
+                return name + ' >=' + ver + ',==' + ver2
+            else:
+                return name + ' ' + pc.replace(' ', '')
+        else:
+            return name
+    # END :: Copied from conda
+
     list_deps = ["setuptools"] if setuptools_enabled else []
 
     for dep_text in requires:
@@ -800,17 +836,29 @@ def get_dependencies(requires, setuptools_enabled=True):
             if not dep:
                 continue
 
-            dep, marker = parse_dep_with_env_marker(dep)
+            dep_orig = dep
+            dep, marker = parse_dep_with_env_marker(dep_orig)
+            # if '~' in dep_orig:
+            #     # dep_orig = 'kubernetes ~= 11'
+            #     version = dep_orig.split()[-1]
+            #     tilde_version = '~= {}'.format(version)
+            #     pin_compatible = convert_version(version)
+            #     spec = dep_orig.replace(tilde_version, pin_compatible)
+            #     spec2 = spec_from_line(dep)
+            #     if spec != spec2:
+            #         print("Disagreement on PEP440 'Compatible release' {} vs {}".format(spec, spec2))
             spec = spec_from_line(dep)
+            if '~=' in dep_orig:
+                spec = None
 
             if spec is None:
-                sys.exit("Error: Could not parse: %s" % dep)
-
-            if '~' in spec:
-                version = spec.split()[-1]
-                tilde_version = '~ {}'.format(version)
-                pin_compatible = convert_version(version)
-                spec = spec.replace(tilde_version, pin_compatible)
+                if '~=' in dep_orig:
+                    log = logging.getLogger(__name__)
+                    log.warning("You conda is too old to handle ~= PEP440 'Compatible versions', "
+                                "using copied implementation.")
+                    spec = _spec_from_line(dep_orig)
+                if spec is None:
+                    sys.exit("Error: Could not parse: %s" % dep)
 
             if marker:
                 spec = ' '.join((spec, marker))
