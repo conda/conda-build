@@ -779,7 +779,7 @@ using the ``build/ignore_run_exports_from`` section:
 .. code-block:: yaml
 
    build:
-     ignore_run_exports:
+     ignore_run_exports_from:
        - {{ compiler('cxx') }}
 
 
