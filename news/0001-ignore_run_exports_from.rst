@@ -2,7 +2,7 @@ Enhancements:
 -------------
 
 * A new feature ``build/ignore_run_exports_from`` which will ignore ``run_exports``
-  coming from a package listed in ``build/ignore_run_exports_from``.
+  coming from a package listed in ``build/ignore_run_exports_from``.  (#4114)
 
 Bug fixes:
 ----------
