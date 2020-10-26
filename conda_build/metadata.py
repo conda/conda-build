@@ -386,6 +386,7 @@ default_structs = {
     'build/preferred_env': text_type,
     'build/preferred_env_executable_paths': list,
     'build/ignore_run_exports': list,
+    'build/ignore_run_exports_from': list,
     'build/requires_features': dict,
     'build/provides_features': dict,
     'build/pre-link': text_type,
@@ -506,7 +507,7 @@ FIELDS = {
               'rpaths_patcher', 'script_env', 'always_include_files', 'skip',
               'msvc_compiler', 'pin_depends', 'include_recipe',  # pin_depends is experimental still
               'preferred_env', 'preferred_env_executable_paths', 'run_exports',
-              'ignore_run_exports', 'requires_features', 'provides_features',
+              'ignore_run_exports', 'ignore_run_exports_from', 'requires_features', 'provides_features',
               'force_use_keys', 'force_ignore_keys', 'merge_build_host',
               'pre-link', 'post-link', 'pre-unlink', 'missing_dso_whitelist',
               'error_overdepending', 'error_overlinking',
