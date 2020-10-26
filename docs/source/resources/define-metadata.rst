@@ -773,6 +773,16 @@ package name in the ``build/ignore_run_exports`` section:
      ignore_run_exports:
        - libstdc++
 
+You can also list the package the ``run_exports`` constraint is coming from
+using the ``build/ignore_run_exports_from`` section:
+
+.. code-block:: yaml
+
+   build:
+     ignore_run_exports:
+       - {{ compiler('cxx') }}
+
+
 Pin runtime dependencies
 ------------------------
 
