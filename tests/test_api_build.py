@@ -1023,6 +1023,19 @@ def test_ignore_run_exports(testing_metadata, testing_config):
     assert 'downstream_pinned_package 1.0' not in m.meta['requirements'].get('run', [])
 
 
+@pytest.mark.sanity
+def test_ignore_run_exports_from(testing_metadata, testing_config):
+    # build the package with run exports for ensuring that we ignore it
+    api.build(os.path.join(metadata_dir, '_run_exports'), config=testing_config,
+              notest=True)
+    # customize our fixture metadata with our desired changes
+    testing_metadata.meta['requirements']['host'] = ['test_has_run_exports']
+    testing_metadata.meta['build']['ignore_run_exports_from'] = ['test_has_run_exports']
+    testing_metadata.config.index = None
+    m = finalize_metadata(testing_metadata)
+    assert 'downstream_pinned_package 1.0' not in m.meta['requirements'].get('run', [])
+
+
 def test_run_exports_noarch_python(testing_metadata, testing_config):
     # build the package with run exports for ensuring that we ignore it
     api.build(os.path.join(metadata_dir, '_run_exports_noarch'), config=testing_config,
