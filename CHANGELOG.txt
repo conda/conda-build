@@ -1,4 +1,35 @@
 # current developments
+2020-10-26 3.20.5:
+------------------
+
+Enhancements:
+-------------
+
+* A new feature ``build/ignore_run_exports_from`` which will ignore ``run_exports``
+  coming from a package listed in ``build/ignore_run_exports_from``.  (#4114)
+
+Bug fixes:
+----------
+
+* Respect PEP440 ~= 'Compatible release clause'  (#4113)
+* Detect amalgamated patches  (#4099)
+* Handle realpath properly in unsafe patch check  (#4099)
+* Force channel_targets to be considered used  (#4099)
+* Look for git in build_prefix in git_info  (#4099)
+* Fall back to shutil.copy if shutil.copy2 fails when copying patches  (#4099)
+
+<news item>
+* Fix indexing by file  (#4111)
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @isuruf
+* @njalerikson
+* @cjmartian
+
+
 2020-10-14 3.20.4:
 ------------------
 
