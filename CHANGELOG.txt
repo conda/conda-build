@@ -6,7 +6,7 @@ Enhancements:
 -------------
 
 * A new feature ``build/ignore_run_exports_from`` which will ignore ``run_exports``
-  coming from a package listed in ``build/ignore_run_exports_from``.  (#4114)
+* coming from a package listed in ``build/ignore_run_exports_from``.  (#4114)
 
 Bug fixes:
 ----------
@@ -17,8 +17,6 @@ Bug fixes:
 * Force channel_targets to be considered used  (#4099)
 * Look for git in build_prefix in git_info  (#4099)
 * Fall back to shutil.copy if shutil.copy2 fails when copying patches  (#4099)
-
-<news item>
 * Fix indexing by file  (#4111)
 
 Contributors:
