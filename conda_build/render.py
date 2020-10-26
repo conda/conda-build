@@ -347,9 +347,12 @@ def get_upstream_pins(m, actions, env):
     linked_packages = actions.get('LINK', [])
     linked_packages = [pkg for pkg in linked_packages if pkg.name in explicit_specs]
 
+    ignore_pkgs_list = utils.ensure_list(m.get_value('build/ignore_run_exports_from'))
     ignore_list = utils.ensure_list(m.get_value('build/ignore_run_exports'))
     additional_specs = {}
     for pkg in linked_packages:
+        if any(pkg.name in req.split(' ')[0] for req in ignore_pkgs_list):
+            continue
         run_exports = None
         if m.config.use_channeldata:
             channeldata = utils.download_channeldata(pkg.channel)
