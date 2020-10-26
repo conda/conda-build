@@ -18,6 +18,9 @@ Bug fixes:
 * Look for git in build_prefix in git_info  (#4099)
 * Fall back to shutil.copy if shutil.copy2 fails when copying patches  (#4099)
 * Fix indexing by file  (#4111)
+* Helper functions to extract keys  (#4088)
+* Simplify find_config_files call  (#4086)
+* Refactor dict_of_lists_to_lists_of_dict  (#4075)
 
 Contributors:
 -------------
@@ -26,6 +29,7 @@ Contributors:
 * @isuruf
 * @njalerikson
 * @cjmartian
+* @njalerikson
 
 
 2020-10-14 3.20.4:
