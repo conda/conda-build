@@ -40,6 +40,7 @@ from conda_build.exceptions import DependencyNeedsBuildingError
 from conda_build.index import get_build_index
 # from conda_build.jinja_context import pin_subpackage_against_outputs
 
+
 def odict_representer(dumper, data):
     return dumper.represent_dict(data.items())
 

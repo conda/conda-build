@@ -448,7 +448,7 @@ def get_recipe_abspath(recipe):
     # Don't use byte literals for paths in Python 2
     if not PY3:
         recipe = recipe.decode(getpreferredencoding() or 'utf-8')
-    if isfile(recipe) and not '.yaml' in recipe:
+    if isfile(recipe) and '.yaml' not in recipe:
         if recipe.lower().endswith(decompressible_exts) or recipe.lower().endswith(CONDA_PACKAGE_EXTENSIONS):
             recipe_dir = tempfile.mkdtemp()
             if recipe.lower().endswith(CONDA_PACKAGE_EXTENSIONS):
