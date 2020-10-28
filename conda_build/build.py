@@ -1400,10 +1400,10 @@ def post_process_files(m, initial_prefix_files):
             missing.append(f)
     if len(missing):
         log = utils.get_logger(__name__)
-        log.warning("The install/build script(s) for {} deleted the following"
+        log.warning("The install/build script(s) for {} deleted the following "
                     "files (from dependencies) from the prefix:\n{}\n"
-                    "This will cause the post-link checks to mis-report. Please"
-                    "try not to delete and files (DSOs in particular) from the"
+                    "This will cause the post-link checks to mis-report. Please "
+                    "try not to delete and files (DSOs in particular) from the "
                     "prefix".format(package_name, missing))
     get_build_metadata(m)
     create_post_scripts(m)
@@ -2318,7 +2318,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                                 if file in prev_output_d.get('checksums', {}):
                                     prev_csum = prev_output_d['checksums'][file]
                                     nature = 'Exact' if csum == prev_csum else 'Inexact'
-                                    log.warn("{} overlap between {} in packages {} and {}"
+                                    log.warning("{} overlap between {} in packages {} and {}"
                                              .format(nature, file, output_d['name'],
                                                      prev_output_d['name']))
                     for built_package in newly_built_packages:
