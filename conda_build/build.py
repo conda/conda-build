@@ -3167,12 +3167,19 @@ def build_tree(recipe_list, config, stats, build_only=False, post=None, notest=F
             retried_recipes.append(os.path.basename(name))
             recipe_list.extendleft(add_recipes)
 
+    tarballs = [f for f in built_packages if f.endswith(CONDA_PACKAGE_EXTENSIONS)]
     if post in [True, None]:
         # TODO: could probably use a better check for pkg type than this...
-        tarballs = [f for f in built_packages if f.endswith(CONDA_PACKAGE_EXTENSIONS)]
         wheels = [f for f in built_packages if f.endswith('.whl')]
         handle_anaconda_upload(tarballs, config=config)
         handle_pypi_upload(wheels, config=config)
+
+    # Print the variant information for each package because it is very opaque and never printed.
+    from conda_build.inspect_pkg import get_hash_input
+    hash_inputs = get_hash_input(tarballs)
+    print("\nINFO :: The inputs making up the hashes for the built packages are as follows:")
+    print(json.dumps(hash_inputs, sort_keys=True, indent=2))
+    print("\n")
 
     total_time = time.time() - initial_time
     max_memory_used = max([step.get('rss') for step in stats.values()] or [0])
