@@ -2401,8 +2401,8 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                                         prev_csum = prev_output_d['checksums'][file]
                                         nature = 'Exact' if csum == prev_csum else 'Inexact'
                                         log.warning("{} overlap between {} in packages {} and {}"
-                                                 .format(nature, file, output_d['name'],
-                                                         prev_output_d['name']))
+                                                    .format(nature, file, output_d['name'],
+                                                            prev_output_d['name']))
 
                         # Now check for potentially missed symlink opportunities between packages
                         # TODO :: Add details about whether a dependency needs to be added or not.
