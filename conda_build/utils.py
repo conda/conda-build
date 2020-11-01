@@ -1151,7 +1151,7 @@ def get_skip_message(m):
         {k: m.config.variant[k] for k in m.get_used_vars()}))
 
 
-def package_has_file(package_path, file_path, refresh=False):
+def package_has_file(package_path, file_path, refresh_mode='modified'):
     locks = get_conda_operation_locks()
     possible_subdir = os.path.basename(os.path.dirname(package_path))
     possible_subdir = possible_subdir if possible_subdir in DEFAULT_SUBDIRS else ''
@@ -1167,11 +1167,24 @@ def package_has_file(package_path, file_path, refresh=False):
         cache_path = os.path.join(cache_path, possible_subdir) if possible_subdir else cache_path
         cache_path = os.path.join(cache_path, folder_name)
         resolved_file_path = os.path.join(cache_path, file_path)
-        if not os.path.isfile(resolved_file_path) or refresh:
-            if file_path.startswith('info'):
-                conda_package_handling.api.extract(package_path, cache_path, 'info')
-            else:
-                conda_package_handling.api.extract(package_path, cache_path)
+        refresh = False
+        if os.path.isfile(resolved_file_path):
+            if refresh_mode == 'forced':
+                refresh = True
+            elif refresh_mode == 'modified':
+                stat_old = os.stat(resolved_file_path).st_ctime
+                stat_pkg = os.stat(package_path).st_mtime
+                if stat_pkg > stat_old:
+                    refresh = True
+            if refresh:
+                if file_path.startswith('info'):
+                    conda_package_handling.api.extract(package_path, cache_path, 'info')
+                else:
+                    conda_package_handling.api.extract(package_path, cache_path)
+                stat_new = os.stat(resolved_file_path).st_ctime
+                if refresh_mode == 'modified':
+                    assert stat_new > stat_pkg
+                    assert stat_new > stat_old
         if not os.path.isfile(resolved_file_path):
             return False
         else:
