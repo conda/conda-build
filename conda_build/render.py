@@ -701,6 +701,11 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
         build_ver = versions[len(versions) - 1 - age].norm_version
         variants = filter_by_key_value(variants, 'python', build_ver,
                                        'noarch_python_reduction')
+        # also set 'target_platform' to 'noarch'
+        for variant in variants:
+            # HACK_TP_NOARCH_2 (search for HACK_TP_NOARCH_1)
+            if 'target_platform' in variant:
+                variant['target_platform'] = 'noarch'
 
     # store these for reference later
     metadata.config.variants = variants
