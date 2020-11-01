@@ -150,6 +150,7 @@ def test_about_metadata(testing_config):
         about_meta = utils.package_has_file(out, 'info/about.json')
         assert about_meta
         info = json.loads(about_meta)
+        print(info)
         if os.path.basename(out).startswith('abc'):
             assert 'summary' in info
             assert info['summary'] == 'weee'
