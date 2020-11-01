@@ -2174,6 +2174,9 @@ class MetaData(object):
             # force target_platform to always be included, because it determines behavior
             if ('target_platform' in self.config.variant and not self.noarch):
                 used_vars.add('target_platform')
+            # and channel_targets too.
+            if ('channel_targets' in self.config.variant):
+                used_vars.add('channel_targets')
 
             if self.force_use_keys or self.force_ignore_keys:
                 used_vars = (used_vars - set(self.force_ignore_keys)) | set(self.force_use_keys)
