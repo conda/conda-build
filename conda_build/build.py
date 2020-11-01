@@ -2481,9 +2481,8 @@ def _construct_metadata_for_test_from_package(package, config):
                                                 'string': package_data['build']},
                                       'requirements': {'run': package_data['depends']}
                                       }, config=config)
-    # HACK: because the recipe is fully baked, detecting "used" variables no longer works.  The set
-    #     of variables in the hash_input suffices, though.
-
+    # HACK_TP_NOARCH_1: because the recipe is fully baked, detecting "used" variables no longer works.  The set
+    #                   of variables in the hash_input suffices, though (see also HACK_TP_NOARCH_2)
     if metadata.noarch:
         metadata.config.variant['target_platform'] = "noarch"
 
