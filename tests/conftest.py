@@ -75,8 +75,12 @@ def testing_homedir(tmpdir, request):
 
 @pytest.fixture(scope='function')
 def testing_config(testing_workdir):
-    return Config(croot=testing_workdir, anaconda_upload=False, verbose=True,
-                  activate=False, debug=False, variant=None, test_run_post=False)
+    result = Config(croot=testing_workdir, anaconda_upload=False, verbose=True,
+                    activate=False, debug=False, variant=None, test_run_post=False)
+    # Tweak things that, for example, may come from ~/.condarc
+    # (Setting()'s that use cc_conda_build.get for example).
+    result.no_rewrite_stdout_env = False
+    return result
 
 
 @pytest.fixture(scope='function')
