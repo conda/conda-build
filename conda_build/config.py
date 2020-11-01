@@ -29,6 +29,17 @@ on_win = (sys.platform == 'win32')
 
 conda_build = "conda-build"
 
+filename_hashing_default = 'true'
+_src_cache_root_default = None
+error_overlinking_default = 'false'
+error_overdepending_default = 'false'
+noarch_python_build_age_default = 0
+enable_static_default = 'true'
+no_rewrite_stdout_env_default = 'false'
+ignore_verify_codes_default = []
+exit_on_verify_error_default = False
+conda_pkg_format_default = None
+
 
 # Python2 silliness:
 def python2_fs_encode(strin):
@@ -94,10 +105,10 @@ def _get_default_settings():
             Setting('_host_arch', None),
             Setting('test_run_post', False),
             Setting('filename_hashing', cc_conda_build.get('filename_hashing',
-                                                           'true').lower() == 'true'),
+                                                           filename_hashing_default).lower() == 'true'),
             Setting('keep_old_work', False),
             Setting('_src_cache_root', abspath(expanduser(expandvars(
-                cc_conda_build.get('cache_dir')))) if cc_conda_build.get('cache_dir') else None),
+                cc_conda_build.get('cache_dir')))) if cc_conda_build.get('cache_dir') else _src_cache_root_default),
             Setting('copy_test_source_files', True),
 
             # should rendering cut out any skipped metadata?
@@ -122,16 +133,15 @@ def _get_default_settings():
             # default to not erroring with overlinking for now.  We have specified in
             #    cli/main_build.py that this default will switch in conda-build 4.0.
             Setting('error_overlinking', cc_conda_build.get('error_overlinking',
-                                                           'false').lower() == 'true'),
-            Setting('noarch_python_build_age', cc_conda_build.get('noarch_python_build_age',
-                                                           0)),
-            Setting('enable_static', cc_conda_build.get('enable_static',
-                                                           'false').lower() == 'true'),
+                                                           error_overlinking_default).lower() == 'true'),
             Setting('error_overdepending', cc_conda_build.get('error_overdepending',
-                                                              'false').lower() == 'true'),
-
+                                                              error_overdepending_default).lower() == 'true'),
+            Setting('noarch_python_build_age', cc_conda_build.get('noarch_python_build_age',
+                                                           noarch_python_build_age_default)),
+            Setting('enable_static', cc_conda_build.get('enable_static',
+                                                           enable_static_default).lower() == 'true'),
             Setting('no_rewrite_stdout_env', cc_conda_build.get('no_rewrite_stdout_env',
-                                                              'false').lower() == 'true'),
+                                                              no_rewrite_stdout_env_default).lower() == 'true'),
 
             Setting('index', None),
             # support legacy recipes where only build is specified and expected to be the
@@ -171,9 +181,9 @@ def _get_default_settings():
 
             Setting('verify', True),
             Setting('ignore_verify_codes',
-                    cc_conda_build.get('ignore_verify_codes', [])),
+                    cc_conda_build.get('ignore_verify_codes', ignore_verify_codes_default)),
             Setting('exit_on_verify_error',
-                    cc_conda_build.get('exit_on_verify_error', False)),
+                    cc_conda_build.get('exit_on_verify_error', exit_on_verify_error_default)),
 
             # Recipes that have no host section, only build, should bypass the build/host line.
             # This is to make older recipes still work with cross-compiling.  True cross-compiling
@@ -197,7 +207,7 @@ def _get_default_settings():
             Setting('compression_tuple', ('.tar.zst', 'zstd', 'zstd:compression-level=22')),
 
             # this can be set to different values (currently only 2 means anything) to use package formats
-            Setting('conda_pkg_format', cc_conda_build.get('pkg_format', None)),
+            Setting('conda_pkg_format', cc_conda_build.get('pkg_format', conda_pkg_format_default)),
 
             Setting('suppress_variables', False),
             ]
