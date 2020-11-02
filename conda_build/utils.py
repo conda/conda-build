@@ -1152,49 +1152,24 @@ def get_skip_message(m):
 
 
 def package_has_file(package_path, file_path, refresh_mode='modified'):
-    locks = get_conda_operation_locks()
-    possible_subdir = os.path.basename(os.path.dirname(package_path))
-    possible_subdir = possible_subdir if possible_subdir in DEFAULT_SUBDIRS else ''
-    with try_acquire_locks(locks, timeout=900):
-        folder_name = os.path.basename(conda_package_handling.api.get_default_extracted_folder(package_path))
-        # look in conda's package cache
-        try:
-            # conda 4.7.2 added this
-            cache_path = PackageCacheData.first_writable().pkgs_dir
-        except AttributeError:
-            # fallback; assume writable first path.  Not as reliable.
-            cache_path = pkgs_dirs[0]
-        cache_path = os.path.join(cache_path, possible_subdir) if possible_subdir else cache_path
-        cache_path = os.path.join(cache_path, folder_name)
-        resolved_file_path = os.path.join(cache_path, file_path)
-        refresh = False
-        if os.path.isfile(resolved_file_path):
-            if refresh_mode == 'forced':
-                refresh = True
-            elif refresh_mode == 'modified':
-                stat_old = os.stat(resolved_file_path).st_ctime
-                stat_pkg = os.stat(package_path).st_mtime
-                if stat_pkg > stat_old:
-                    refresh = True
-            if refresh:
-                if file_path.startswith('info'):
-                    conda_package_handling.api.extract(package_path, cache_path, 'info')
-                else:
-                    conda_package_handling.api.extract(package_path, cache_path)
-                stat_new = os.stat(resolved_file_path).st_ctime
-                if refresh_mode == 'modified':
-                    assert stat_new > stat_pkg
-                    assert stat_new > stat_old
-        if not os.path.isfile(resolved_file_path):
-            return False
+    # This version does nothing to the package cache.
+    with TemporaryDirectory() as td:
+        if file_path.startswith('info'):
+            conda_package_handling.api.extract(package_path, dest_dir=td, components='info')
         else:
+            conda_package_handling.api.extract(package_path, dest_dir=td, components=file_path)
+        resolved_file_path = os.path.join(td, file_path)
+        if os.path.exists(resolved_file_path):
+            # TODO :: Remove this text-mode load. Files are binary.
             try:
                 with open(resolved_file_path) as f:
                     content = f.read()
             except UnicodeDecodeError:
                 with open(resolved_file_path, 'rb') as f:
                     content = f.read()
-    return content
+        else:
+            content = False
+        return content
 
 
 def ensure_list(arg, include_dict=True):
