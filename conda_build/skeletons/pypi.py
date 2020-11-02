@@ -854,7 +854,7 @@ def get_dependencies(requires, setuptools_enabled=True):
             if spec is None:
                 if '~=' in dep_orig:
                     log = logging.getLogger(__name__)
-                    log.warning("You conda is too old to handle ~= PEP440 'Compatible versions', "
+                    log.warning("Your conda is too old to handle ~= PEP440 'Compatible versions', "
                                 "using copied implementation.")
                     spec = _spec_from_line(dep_orig)
                 if spec is None:
