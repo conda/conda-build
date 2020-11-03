@@ -3,7 +3,7 @@
 function install_conda_build_test_deps_fn()
 {
   # avoids a python 3.7 problem
-  local -a _PKGS=(cytoolz)
+  local -a _PKGS=(cytoolz conda-verify)
   if [[ "$PYTHON_VERSION" == "2.7" ]]; then
     _PKGS+=(futures scandir pathlib2)
   fi

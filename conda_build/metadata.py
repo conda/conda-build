@@ -2174,6 +2174,9 @@ class MetaData(object):
             # force target_platform to always be included, because it determines behavior
             if ('target_platform' in self.config.variant and not self.noarch):
                 used_vars.add('target_platform')
+            # and channel_targets too.
+            if ('channel_targets' in self.config.variant):
+                used_vars.add('channel_targets')
 
             if self.force_use_keys or self.force_ignore_keys:
                 used_vars = (used_vars - set(self.force_ignore_keys)) | set(self.force_use_keys)
@@ -2278,7 +2281,7 @@ class MetaData(object):
     @property
     def activate_build_script(self):
         b = self.meta.get('build', {}) or {}
-        should_activate = (self.uses_new_style_compiler_activation or b.get('activate_in_script') is not False)
+        should_activate = b.get('activate_in_script') is not False
         return bool(self.config.activate and should_activate)
 
     @property

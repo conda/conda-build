@@ -448,7 +448,7 @@ def get_recipe_abspath(recipe):
     # Don't use byte literals for paths in Python 2
     if not PY3:
         recipe = recipe.decode(getpreferredencoding() or 'utf-8')
-    if isfile(recipe):
+    if isfile(recipe) and '.yaml' not in recipe:
         if recipe.lower().endswith(decompressible_exts) or recipe.lower().endswith(CONDA_PACKAGE_EXTENSIONS):
             recipe_dir = tempfile.mkdtemp()
             if recipe.lower().endswith(CONDA_PACKAGE_EXTENSIONS):
@@ -462,8 +462,11 @@ def get_recipe_abspath(recipe):
                 tar_xf(recipe_tarfile, os.path.join(recipe_dir, 'info'))
             need_cleanup = True
         else:
-            print("Ignoring non-recipe: %s" % recipe)
+            print("Ignoring non-recipe file: %s" % recipe)
             return (None, None)
+    elif '.yaml' in recipe:
+        recipe_dir = os.path.dirname(recipe)
+        need_cleanup = False
     else:
         recipe_dir = abspath(os.path.join(os.getcwd(), recipe))
         need_cleanup = False
@@ -1148,37 +1151,25 @@ def get_skip_message(m):
         {k: m.config.variant[k] for k in m.get_used_vars()}))
 
 
-def package_has_file(package_path, file_path, refresh=False):
-    locks = get_conda_operation_locks()
-    possible_subdir = os.path.basename(os.path.dirname(package_path))
-    possible_subdir = possible_subdir if possible_subdir in DEFAULT_SUBDIRS else ''
-    with try_acquire_locks(locks, timeout=900):
-        folder_name = os.path.basename(conda_package_handling.api.get_default_extracted_folder(package_path))
-        # look in conda's package cache
-        try:
-            # conda 4.7.2 added this
-            cache_path = PackageCacheData.first_writable().pkgs_dir
-        except AttributeError:
-            # fallback; assume writable first path.  Not as reliable.
-            cache_path = pkgs_dirs[0]
-        cache_path = os.path.join(cache_path, possible_subdir) if possible_subdir else cache_path
-        cache_path = os.path.join(cache_path, folder_name)
-        resolved_file_path = os.path.join(cache_path, file_path)
-        if not os.path.isfile(resolved_file_path) or refresh:
-            if file_path.startswith('info'):
-                conda_package_handling.api.extract(package_path, cache_path, 'info')
-            else:
-                conda_package_handling.api.extract(package_path, cache_path)
-        if not os.path.isfile(resolved_file_path):
-            return False
+def package_has_file(package_path, file_path, refresh_mode='modified'):
+    # This version does nothing to the package cache.
+    with TemporaryDirectory() as td:
+        if file_path.startswith('info'):
+            conda_package_handling.api.extract(package_path, dest_dir=td, components='info')
         else:
+            conda_package_handling.api.extract(package_path, dest_dir=td, components=file_path)
+        resolved_file_path = os.path.join(td, file_path)
+        if os.path.exists(resolved_file_path):
+            # TODO :: Remove this text-mode load. Files are binary.
             try:
                 with open(resolved_file_path) as f:
                     content = f.read()
             except UnicodeDecodeError:
                 with open(resolved_file_path, 'rb') as f:
                     content = f.read()
-    return content
+        else:
+            content = False
+        return content
 
 
 def ensure_list(arg, include_dict=True):

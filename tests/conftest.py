@@ -4,7 +4,12 @@ import sys
 
 import pytest
 
-from conda_build.config import Config
+from conda_build.config import (Config,
+                                filename_hashing_default, _src_cache_root_default, error_overlinking_default,
+                                error_overdepending_default, noarch_python_build_age_default, enable_static_default,
+                                no_rewrite_stdout_env_default, ignore_verify_codes_default, exit_on_verify_error_default,
+                                conda_pkg_format_default)
+
 from conda_build.variants import get_default_variant
 from conda_build.metadata import MetaData
 from conda_build.utils import check_call_env, prepend_bin_path, copy_into
@@ -75,8 +80,27 @@ def testing_homedir(tmpdir, request):
 
 @pytest.fixture(scope='function')
 def testing_config(testing_workdir):
-    return Config(croot=testing_workdir, anaconda_upload=False, verbose=True,
-                  activate=False, debug=False, variant=None, test_run_post=False)
+    def boolify(v):
+        return True if 'v' == 'true' else False
+    result = Config(croot=testing_workdir, anaconda_upload=False, verbose=True,
+                    activate=False, debug=False, variant=None, test_run_post=False,
+                    # These bits ensure that default values are used instead of any
+                    # present in ~/.condarc
+                    filename_hashing=filename_hashing_default,
+                    _src_cache_root=_src_cache_root_default,
+                    error_overlinking=boolify(error_overlinking_default),
+                    error_overdepending=boolify(error_overdepending_default),
+                    noarch_python_build_age=noarch_python_build_age_default,
+                    enable_static=boolify(enable_static_default),
+                    no_rewrite_stdout_env=boolify(no_rewrite_stdout_env_default),
+                    ignore_verify_codes=ignore_verify_codes_default,
+                    exit_on_verify_error=exit_on_verify_error_default,
+                    conda_pkg_format=conda_pkg_format_default)
+    assert result.no_rewrite_stdout_env == False
+    assert result._src_cache_root == None
+    assert result.src_cache_root == testing_workdir
+    assert result.noarch_python_build_age == 0
+    return result
 
 
 @pytest.fixture(scope='function')
