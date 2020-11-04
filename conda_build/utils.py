@@ -986,30 +986,32 @@ def rec_glob(path, patterns, ignores=None):
                 yield os.path.join(path, f)
 
 
-def convert_unix_path_to_win(path):
-    if external.find_executable('cygpath'):
-        cmd = "cygpath -w {0}".format(path)
+def cygpath_wrapper(path, flag, build_prefix):
+    cygpath = external.find_executable('cygpath', prefix=build_prefix)
+    if not cygpath:
+        if build_prefix:
+            log = get_logger(__name__)
+            log.warning("I think you are attempting to run bash build scripts on MSYS2.\n"
+                        "I could not find `cygpath.exe` in your `build_env`.\n"
+                        "Will try to proceed with using just `cygpath.exe`")
+        cygpath = 'cygpath'
+    try:
+        cmd = "{0} {1} {2}".format(cygpath, flag, path)
         if PY3:
             path = subprocess.getoutput(cmd)
         else:
             path = subprocess.check_output(cmd.split()).rstrip().rstrip("\\")
-
-    else:
-        path = unix_path_to_win(path)
-    return path
-
-
-def convert_win_path_to_unix(path):
-    if external.find_executable('cygpath'):
-        cmd = "cygpath -u {0}".format(path)
-        if PY3:
-            path = subprocess.getoutput(cmd)
-        else:
-            path = subprocess.check_output(cmd.split()).rstrip().rstrip("\\")
-
-    else:
+    except:
         path = win_path_to_unix(path)
     return path
+
+
+def convert_unix_path_to_win(path, build_prefix=None):
+    return cygpath_wrapper(path, '-w', build_prefix)
+
+
+def convert_win_path_to_unix(path, build_prefix=None):
+    return cygpath_wrapper(path, '-u', build_prefix)
 
 
 # Used for translating local paths into url (file://) paths
