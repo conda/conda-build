@@ -1573,6 +1573,22 @@ def bundle_conda(output, metadata, env, stats, **kw):
             _write_activation_text(dest_file, metadata)
 
         bundle_stats = {}
+
+        if interpreter_and_args[0] == 'bash' and utils.on_win:
+            from conda_build.utils import convert_win_path_to_unix
+            # It is expected that this is MSYS2 and that cygpath is in build_prefix.
+            bp = metadata.config.build_prefix
+            convert_to_posix = ('BUILD_PREFIX', 'CONDA_DEFAULT_ENV', 'CONDA_PREFIX',
+                               'LIBRARY_BIN', 'LIBRARY_INC', 'LIBRARY_LIB', 'LIBRARY_PREFIX', 'PREFIX',
+                               'RECIPE_DIR', 'SCRIPTS', 'SP_DIR', 'SRC_DIR', 'STDLIB_DIR', 'SYS_PYTHON')
+            for ev in convert_to_posix:
+                if ev in env_output:
+                    env_output[ev] = convert_win_path_to_unix(env_output[ev], bp)
+            dest_file = convert_win_path_to_unix(dest_file, bp)
+            bash_exe = external.find_executable('bash.exe', prefix=bp)
+            if bash_exe:
+                interpreter_and_args = [bash_exe, '-l'] + interpreter_and_args[1:]
+
         utils.check_call_env(interpreter_and_args + [dest_file],
                              cwd=metadata.config.work_dir, env=env_output, stats=bundle_stats)
         log_stats(bundle_stats, "bundling {}".format(metadata.name()))
