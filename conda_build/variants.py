@@ -223,7 +223,7 @@ def _combine_spec_dictionaries(specs, extend_keys=None, filter_keys=None, zip_ke
                                log_output=True):
     # each spec is a dictionary.  Each subsequent spec replaces the previous one.
     #     Only the last one with the key stays.
-    values = {}
+    values = OrderedDict()
     keys = ensure_list(filter_keys)
     extend_keys = ensure_list(extend_keys)
 

@@ -665,7 +665,8 @@ def reparse(metadata):
 
 def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
                         allow_no_other_outputs=False, bypass_env_check=False):
-    rendered_metadata = {}
+    from collections import OrderedDict
+    rendered_metadata = OrderedDict()
     need_source_download = True
 
     # don't bother distributing python if it's a noarch package, and figure out
@@ -822,8 +823,6 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
     except exceptions.YamlParsingError as e:
         sys.stderr.write(e.error_msg())
         sys.exit(1)
-
-    rendered_metadata = {}
 
     # important: set build id *before* downloading source.  Otherwise source goes into a different
     #    build folder.
