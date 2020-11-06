@@ -35,7 +35,9 @@ _src_cache_root_default = None
 error_overlinking_default = 'false'
 error_overdepending_default = 'false'
 noarch_python_build_age_default = 0
-enable_static_default = 'true'
+# There are either issues in LIEF parse or my usage of it (with raw=)
+# that cause failures when this is enabled by default.
+enable_static_default = 'false'
 no_rewrite_stdout_env_default = 'false'
 ignore_verify_codes_default = []
 exit_on_verify_error_default = False
@@ -144,15 +146,15 @@ def _get_default_settings():
             # default to not erroring with overlinking for now.  We have specified in
             #    cli/main_build.py that this default will switch in conda-build 4.0.
             Setting('error_overlinking', cc_conda_build.get('error_overlinking',
-                                                           error_overlinking_default).lower() == 'true'),
+                                                            error_overlinking_default).lower() == 'true'),
             Setting('error_overdepending', cc_conda_build.get('error_overdepending',
                                                               error_overdepending_default).lower() == 'true'),
             Setting('noarch_python_build_age', cc_conda_build.get('noarch_python_build_age',
-                                                           noarch_python_build_age_default)),
+                                                                  noarch_python_build_age_default)),
             Setting('enable_static', cc_conda_build.get('enable_static',
-                                                           enable_static_default).lower() == 'true'),
+                                                        enable_static_default).lower() == 'true'),
             Setting('no_rewrite_stdout_env', cc_conda_build.get('no_rewrite_stdout_env',
-                                                              no_rewrite_stdout_env_default).lower() == 'true'),
+                                                                no_rewrite_stdout_env_default).lower() == 'true'),
 
             Setting('index', None),
             # support legacy recipes where only build is specified and expected to be the
