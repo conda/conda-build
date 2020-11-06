@@ -2220,11 +2220,14 @@ class MetaData(object):
 
             used_vars = meta_yaml_reqs | script_reqs
             # force target_platform to always be included, because it determines behavior
-            if ('target_platform' in self.config.variant and not self.noarch):
+            if 'target_platform' in self.config.variant and not self.noarch:
                 used_vars.add('target_platform')
             # and channel_targets too.
             if 'channel_targets' in self.config.variant:
                 used_vars.add('channel_targets')
+            # .. and for good measure, CONDA_BUILD_SYSROOT (if using new compilers..)
+            if 'CONDA_BUILD_SYSROOT' in self.config.variant and self.uses_new_style_compiler_activation:
+                used_vars.add('CONDA_BUILD_SYSROOT')
 
             if self.force_use_keys or self.force_ignore_keys:
                 used_vars = (used_vars - set(self.force_ignore_keys)) | set(self.force_use_keys)
