@@ -45,8 +45,9 @@ else:
 
 filetypes_for_platform = {
     "win": ('DLLfile', 'EXEfile'),
-    "osx": ['machofile'],
-    "linux": ['elffile'],
+    "osx": ('machofile',),
+    "linux": ('elffile',),
+    "noarch": ('DLLfile', 'EXEfile', 'machofile', 'elffile')
 }
 
 
