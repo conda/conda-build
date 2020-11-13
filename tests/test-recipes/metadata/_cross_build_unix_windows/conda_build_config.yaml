@@ -1,0 +1,3 @@
+target_platform:
+  - win-64    # [not win]
+  - linux-64  # [win]

@@ -1,0 +1,5 @@
+# Empty package that gets cross-built on Unix for Windows and vice versa.
+
+package:
+  name: test_cross_unix_windows
+  version: 1.0
