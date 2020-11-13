@@ -1371,8 +1371,8 @@ class MetaData(object):
             version=self.version(),
             build=self.build_id(),
             build_number=self.build_number() if self.build_number() else 0,
-            platform=self.config.platform if (self.config.platform != 'noarch' and
-                                              arch != 'noarch') else None,
+            platform=self.config.host_platform if (self.config.host_platform != 'noarch' and
+                                                   arch != 'noarch') else None,
             arch=ARCH_MAP.get(arch, arch),
             subdir=self.config.target_subdir,
             depends=sorted(' '.join(ms.spec.split())
