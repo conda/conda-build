@@ -913,13 +913,16 @@ def get_files_with_prefix(m, replacements, files_in, prefix):
     # paths.
     if utils.on_win or m.config.subdir.startswith('win'):
         # TODO :: Should we also handle MSYS2 paths (/c/blah) here? Probably!
-        pfx_variants = (prefix[0].upper() + prefix[1:],
+        pfx_variants = [prefix[0].upper() + prefix[1:],
                         prefix[0].lower() + prefix[1:],
                         prefix_u,
                         prefix_placeholder.replace('\\', '\''),
-                        prefix_placeholder.replace('/', '\\'))
+                        prefix_placeholder.replace('/', '\\')]
+        # some python/json files store an escaped version of prefix
+        pfx_variants.extend([pfx.replace('\\', '\\\\') for pfx in pfx_variants])
     else:
         pfx_variants = (prefix, prefix_placeholder)
+    # replacing \ with \\ here is for regex escaping
     re_test = b'(' + b'|'.join(v.encode('utf-8').replace(b'\\', b'\\\\') for v in pfx_variants) + b')'
     pfx_matches = have_regex_files([f[2] for f in files_with_prefix], prefix=prefix,
                                    tag='prefix',
