@@ -32,7 +32,16 @@ def main():
         assert forward_slash_prefix in data, forward_slash_prefix + " not found in " + data
 
         backward_slash_prefix = prefix.replace('/', '\\')
+        with open(join(prefix, 'backward-slash-prefix')) as f:
+            data = f.read()
         print('backward-slash-prefix')
+        print(data)
+        assert forward_slash_prefix in data, forward_slash_prefix + " not found in " + data
+
+        escaped_backward_slash_prefix = prefix.replace('/', '\\')
+        with open(join(prefix, 'escaped-backward-slash-prefix')) as f:
+            data = f.read()
+        print('escaped-backward-slash-prefix')
         print(data)
         assert forward_slash_prefix in data, forward_slash_prefix + " not found in " + data
 

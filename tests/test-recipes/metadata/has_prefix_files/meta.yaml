@@ -10,6 +10,7 @@ build:
     - both-slash-prefix  # [win]
     - forward-slash-prefix  # [win]
     - backward-slash-prefix  # [win]
+    - escaped-backward-slash-prefix  # [win]
     - mixed-slash-prefix  # [win]
 
 requirements:
