@@ -1514,6 +1514,8 @@ def bundle_conda(output, metadata, env, stats, **kw):
     top_build = metadata.get_top_level_recipe_without_outputs().get('build', {}) or {}
 
     activate_script = metadata.activate_build_script
+    print("CARMEN 5: script: {} output.get('script'): {} is_output: {} top_build.get('script')".format(
+        script, output.get('script'), is_output, top_build.get('script')))
     if (script and not output.get('script')) and (is_output or not top_build.get('script')):
         # do add in activation, but only if it's not disabled
         activate_script = metadata.config.activate
