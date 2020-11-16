@@ -487,6 +487,8 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
             else:
                 print('WARNING: Additional dependency of {}, {} not found'.format(package,
                                                                                   missing_dep))
+
+    depends_new = []
     for depend in depends:
         dep_entry, dep_name, dep_arch = find_repo_entry_and_arch(repo_primary,
                                                                  architectures,
@@ -503,22 +505,27 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
             if 'epoch' in dep_entry['version']:
                 depend['epoch'] = dep_entry['version']['epoch']
         if recursive:
-            depend['name'] = write_conda_recipes(recursive,
-                                                 repo_primary,
-                                                 depend['name'],
-                                                 architectures,
-                                                 cdt,
-                                                 output_dir,
-                                                 override_arch,
-                                                 src_cache)
+            if depend['name'] == package or depend['name'] == 'glibc' and package == 'glibc-common':
+                print("Skipping")
+            else:
+                depend['name'] = write_conda_recipes(recursive,
+                                                     repo_primary,
+                                                     depend['name'],
+                                                     architectures,
+                                                     cdt,
+                                                     output_dir,
+                                                     override_arch,
+                                                     src_cache)
+                depends_new.append(depend)
 
     sn = cdt['short_name'] + '-' + arch
     dependsstr = ""
-    if len(depends):
-        depends_specs = ["{}-{}-{} {}{}".format(depend['name'].lower().replace('+', 'x'),
-                                                cdt['short_name'], depend['arch'],
-                                                depend['flags'], depend['ver'])
-                         for depend in depends]
+    if len(depends_new):
+        depends_specs = []
+        for depend in depends_new:
+            depends_specs.append("{}-{}-{} {}{}".format(depend['name'].lower().replace('+', 'x'),
+                                                    cdt['short_name'], depend['arch'],
+                                                    depend['flags'], depend['ver']))
         dependsstr_part = '\n'.join(['    - {}'.format(depends_spec)
                                      for depends_spec in depends_specs])
         dependsstr_build = '  build:\n' + dependsstr_part + '\n'
