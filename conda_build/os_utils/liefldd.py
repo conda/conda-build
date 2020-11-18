@@ -121,7 +121,10 @@ def _get_elf_rpathy_thing(binary, attribute, dyn_tag):
     dynamic_entries = binary.dynamic_entries
     rpaths_colons = [getattr(e, attribute)
                      for e in dynamic_entries if e.tag == dyn_tag]
-    return rpaths_colons
+    rpaths = []
+    for rpath in rpaths_colons:
+        rpaths.extend(rpath.split(':'))
+    return rpaths
 
 
 def _set_elf_rpathy_thing(binary, old_matching, new_rpath, set_rpath, set_runpath):
@@ -219,11 +222,6 @@ def get_rpaths(file, exe_dirname, envroot, windows_root=''):
             rpaths.extend(list(_get_path_dirs(envroot)))
     elif binary_format == lief.EXE_FORMATS.MACHO:
         rpaths = [rpath.rstrip('/') for rpath in rpaths]
-    elif binary_format == lief.EXE_FORMATS.ELF:
-        result = []
-        for rpath in rpaths:
-            result.extend(rpath.split(':'))
-        rpaths = result
     return [from_os_varnames(binary_format, binary_type, rpath) for rpath in rpaths]
 
 
