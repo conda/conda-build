@@ -747,6 +747,30 @@ pinning relative to versions present at build time:
 With this example, if libpng were version 1.6.34, this pinning expression would
 evaluate to ``>=1.6.34,<1.7``.
 
+If build and link dependencies need to impose constraints on the run environment
+but not necessarily pull in additional packages, then this can be done by
+altering the :ref:`Run_constrained` entries. In addtion to ``weak``/``strong``
+``run_exports`` which add to the ``run`` requirements, ``weak_constrains`` and
+``strong_constrains`` add to the ``run_constrained`` requirements.
+With these, e.g., minimum versions of compatible but not required packages (like
+optional plugins for the linked dependency, or certain system attributes) can be
+expressed:
+
+..
+   TODO: Replace example below with actual ones that use constrains run_exports.
+
+.. code-block:: yaml
+
+   requirements:
+     build:
+       - build-tool                 # has a strong run_constrained export
+     host:
+       - link-dependency            # has a weak run_constrained export
+     run:
+     run_constrained:
+       # - system-dependency >=min  <-- implicitly added by build-tool
+       # - optional-plugin >=min    <-- implicitly added by link-dependency
+
 Note that ``run_exports`` can be specified both in the build section and on
 a per-output basis for split packages.
 

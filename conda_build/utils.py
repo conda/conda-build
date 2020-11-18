@@ -115,6 +115,8 @@ RUN_EXPORTS_TYPES = {
     "weak",
     "strong",
     "noarch",
+    "weak_constrains",
+    "strong_constrains",
 }
 
 PY_TMPL = """

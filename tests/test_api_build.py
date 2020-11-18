@@ -1052,6 +1052,43 @@ def test_run_exports_noarch_python(testing_metadata, testing_config):
     assert 'python 3.6 with_run_exports' not in m.meta['requirements'].get('run', [])
 
 
+def test_run_exports_constrains(testing_metadata, testing_config, testing_workdir):
+    api.build(os.path.join(metadata_dir, '_run_exports_constrains'), config=testing_config,
+              notest=True)
+
+    testing_metadata.meta['requirements']['build'] = ['run_exports_constrains']
+    testing_metadata.meta['requirements']['host'] = []
+    api.output_yaml(testing_metadata, 'in_build/meta.yaml')
+    m = api.render(os.path.join(testing_workdir, 'in_build'), config=testing_config)[0][0]
+    reqs_set = lambda section: set(m.meta['requirements'].get(section, []))
+    assert {'strong_run_export'} == reqs_set('run')
+    assert {'strong_constrains_export'} == reqs_set('run_constrained')
+
+    testing_metadata.meta['requirements']['build'] = []
+    testing_metadata.meta['requirements']['host'] = ['run_exports_constrains']
+    api.output_yaml(testing_metadata, 'in_host/meta.yaml')
+    m = api.render(os.path.join(testing_workdir, 'in_host'), config=testing_config)[0][0]
+    reqs_set = lambda section: set(m.meta['requirements'].get(section, []))
+    assert {'strong_run_export', 'weak_run_export'} == reqs_set('run')
+    assert {'strong_constrains_export', 'weak_constrains_export'} == reqs_set('run_constrained')
+
+    testing_metadata.meta['requirements']['build'] = ['run_exports_constrains_only_weak']
+    testing_metadata.meta['requirements']['host'] = []
+    api.output_yaml(testing_metadata, 'only_weak_in_build/meta.yaml')
+    m = api.render(os.path.join(testing_workdir, 'only_weak_in_build'), config=testing_config)[0][0]
+    reqs_set = lambda section: set(m.meta['requirements'].get(section, []))
+    assert set() == reqs_set('run')
+    assert set() == reqs_set('run_constrained')
+
+    testing_metadata.meta['requirements']['build'] = []
+    testing_metadata.meta['requirements']['host'] = ['run_exports_constrains_only_weak']
+    api.output_yaml(testing_metadata, 'only_weak_in_host/meta.yaml')
+    m = api.render(os.path.join(testing_workdir, 'only_weak_in_host'), config=testing_config)[0][0]
+    reqs_set = lambda section: set(m.meta['requirements'].get(section, []))
+    assert {'weak_run_export'} == reqs_set('run')
+    assert {'weak_constrains_export'} == reqs_set('run_constrained')
+
+
 def test_pin_subpackage_exact(testing_config):
     recipe = os.path.join(metadata_dir, '_pin_subpackage_exact')
     ms = api.render(recipe, config=testing_config)

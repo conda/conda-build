@@ -410,31 +410,44 @@ def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
                                                     permit_unsatisfiable_variants, exclude_pattern)
         if m.noarch or m.noarch_python:
             extra_run_specs = set(extra_run_specs_from_host.get('noarch', []))
+            extra_run_constrained_specs = set([])
         else:
             extra_run_specs = set(extra_run_specs_from_host.get('strong', []) +
                                   extra_run_specs_from_host.get('weak', []) +
                                   extra_run_specs_from_build.get('strong', []))
+            extra_run_constrained_specs = set(
+                extra_run_specs_from_host.get('strong_constrains', []) +
+                extra_run_specs_from_host.get('weak_constrains', []) +
+                extra_run_specs_from_build.get('strong_constrains', [])
+            )
     else:
         host_deps = []
         host_unsat = []
         if m.noarch or m.noarch_python:
             if m.build_is_host:
                 extra_run_specs = set(extra_run_specs_from_build.get('noarch', []))
+                extra_run_constrained_specs = set([])
                 build_deps = set(build_deps or []).update(extra_run_specs_from_build.get('noarch', []))
             else:
                 extra_run_specs = set([])
+                extra_run_constrained_specs = set([])
                 build_deps = set(build_deps or [])
         else:
             extra_run_specs = set(extra_run_specs_from_build.get('strong', []))
+            extra_run_constrained_specs = set(extra_run_specs_from_build.get('strong_constrains', []))
             if m.build_is_host:
                 extra_run_specs.update(extra_run_specs_from_build.get('weak', []))
+                extra_run_constrained_specs.update(extra_run_specs_from_build.get('weak_constrains', []))
                 build_deps = set(build_deps or []).update(extra_run_specs_from_build.get('weak', []))
             else:
                 host_deps = set(extra_run_specs_from_build.get('strong', []))
 
     run_deps = extra_run_specs | set(utils.ensure_list(requirements.get('run')))
+    run_constrained_deps = extra_run_constrained_specs | set(utils.ensure_list(requirements.get('run_constrained')))
 
-    for section, deps in (('build', build_deps), ('host', host_deps), ('run', run_deps)):
+    for section, deps in (
+        ('build', build_deps), ('host', host_deps), ('run', run_deps), ('run_constrained', run_constrained_deps),
+    ):
         if deps:
             requirements[section] = list(deps)
 
