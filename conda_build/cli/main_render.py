@@ -177,23 +177,30 @@ def parse_args(args):
     return p, args
 
 
-def execute(args, print_results=True):
-    p, args = parse_args(args)
+def render_parsed_args_to_config_and_variants(pargs):
 
-    config = get_or_merge_config(None, **args.__dict__)
+    config = get_or_merge_config(None, **pargs.__dict__)
+    variants = get_package_variants(pargs.recipe, config, variants=pargs.variants)
 
-    variants = get_package_variants(args.recipe, config, variants=args.variants)
     from conda_build.build import get_all_replacements
     get_all_replacements(variants)
     set_language_env_vars(variants)
 
-    config.channel_urls = get_channel_urls(args.__dict__)
+    config.channel_urls = get_channel_urls(pargs.__dict__)
 
-    config.override_channels = args.override_channels
+    config.override_channels = pargs.override_channels
 
-    if args.output:
+    if pargs.output:
         config.verbose = False
         config.debug = False
+
+    return config, variants
+
+
+def execute(args, print_results=True):
+    _, args = parse_args(args)
+
+    config, variants = render_parsed_args_to_config_and_variants(args)
 
     metadata_tuples = api.render(args.recipe, config=config,
                                  no_download_source=args.no_source,

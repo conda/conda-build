@@ -788,6 +788,16 @@ class Config(object):
         return path
 
     @property
+    def persistent_cb_cache(self):
+        """Where conda-build writes versioned, cache, picked or other
+        temporary files.  To speed up operation of conda-build on CI systems
+        it is suggested to set this to a shared network drive, volume or mount."""
+        from conda_build import __version__ as conda_build_version
+        path = join(self.src_cache_root, 'cb_cache', conda_build_version)
+        _ensure_dir(path)
+        return path
+
+    @property
     def work_dir(self):
         """Where the source for the build is extracted/copied to."""
         path = join(self.build_folder, 'work')

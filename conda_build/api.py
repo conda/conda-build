@@ -17,6 +17,7 @@ but only use those kwargs in config.  Config must change to support new features
 #    to conda-build's functionality.
 
 import sys as _sys
+import os, sys, subprocess
 
 # make the Config class available in the api namespace
 from conda_build.config import (Config, get_or_merge_config, get_channel_urls,
@@ -25,7 +26,7 @@ from conda_build.utils import ensure_list as _ensure_list
 from conda_build.utils import expand_globs as _expand_globs
 from conda_build.utils import get_logger as _get_logger
 from os.path import dirname, expanduser, join
-
+from conda_build.utils import pathhash as _pathhash
 
 def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variants=True,
            finalize=True, bypass_env_check=False, **kwargs):
@@ -33,16 +34,15 @@ def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variant
        templates evaluated.
 
     Returns a list of (metadata, needs_download, needs_reparse in env) tuples"""
-    from conda_build.render import render_recipe, finalize_metadata
+    from conda_build.render import render_recipe_cached, finalize_metadata
     from conda_build.exceptions import DependencyNeedsBuildingError
     from conda_build.conda_interface import NoPackagesFoundError
     from collections import OrderedDict
     config = get_or_merge_config(config, **kwargs)
 
-    metadata_tuples = render_recipe(recipe_path, bypass_env_check=bypass_env_check,
-                                    no_download_source=config.no_download_source,
-                                    config=config, variants=variants,
-                                    permit_unsatisfiable_variants=permit_unsatisfiable_variants)
+    metadata_tuples = render_recipe_cached(recipe_path, bypass_env_check=bypass_env_check,
+                                           config=config, variants=variants,
+                                           permit_unsatisfiable_variants=permit_unsatisfiable_variants)
     output_metas = OrderedDict()
     for meta, download, render_in_env in metadata_tuples:
         if not meta.skip() or not config.trim_skip:
@@ -77,6 +77,21 @@ def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variant
 
     return list(output_metas.values())
 
+'''
+from conda_build.utils import pathhash
+@memoized_to_cached_picked_file
+def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variants=True,
+           finalize=True, bypass_env_check=False, **kwargs):
+    # Bisecting the recipe requires rendering it first to:
+    # 1. Make sure it has as many git_refs as we have elements in bisect_git_ref_starts
+    from conda_build.cli.main_render import render_parsed_args_to_config_and_variants
+    from conda_build.variants import get_package_variants
+    metadata = render_uncached(recipe_path, config=config,
+                               variants=variants, permit_unsatisfiable_variants=permit_unsatisfiable_variants,
+                               finalize=finalize, bypass_env_check=bypass_env_check,
+                               **kwargs)
+    return metadata
+'''
 
 def output_yaml(metadata, file_path=None, suppress_outputs=False):
     """Save a rendered recipe in its final form to the path given by file_path"""
@@ -94,7 +109,8 @@ def get_output_file_paths(recipe_path_or_metadata, no_download_source=False, con
     from conda_build.render import bldpkg_path
     from conda_build.conda_interface import string_types
     from conda_build.utils import get_skip_message
-    config = get_or_merge_config(config, **kwargs)
+    config = get_or_merge_config(config, no_download_source=no_download_source, **kwargs)
+    assert config.no_download_source == no_download_source
 
     if hasattr(recipe_path_or_metadata, '__iter__') and not isinstance(recipe_path_or_metadata,
                                                                        string_types):
@@ -107,8 +123,8 @@ def get_output_file_paths(recipe_path_or_metadata, no_download_source=False, con
             raise ValueError("received mixed list of metas: {}".format(recipe_path_or_metadata))
     elif isinstance(recipe_path_or_metadata, string_types):
         # first, render the parent recipe (potentially multiple outputs, depending on variants).
-        metadata = render(recipe_path_or_metadata, no_download_source=no_download_source,
-                            variants=variants, config=config, finalize=True, **kwargs)
+        metadata = render(recipe_path_or_metadata, variants=variants,
+                          config=config, finalize=True, **kwargs)
     else:
         assert hasattr(recipe_path_or_metadata, 'config'), ("Expecting metadata object - got {}"
                                                             .format(recipe_path_or_metadata))
@@ -221,6 +237,174 @@ def test(recipedir_or_package_or_metadata, move_broken=True, config=None, stats=
         test_result = test(recipedir_or_package_or_metadata, config=config, move_broken=move_broken,
                            stats=stats)
     return test_result
+
+
+def bisect(recipedir_or_package_or_metadata, move_broken=True, config=None, stats=None, **kwargs):
+    # Some checks.
+    starts = config.bisect_git_ref_starts
+    ends = config.bisect_git_ref_ends
+    if not starts:
+        raise ValueError("bisect: You must pass at least one --start git reference")
+    if not ends:
+        ends = []
+    if len(starts) != len(ends) and len(ends):
+        raise ValueError("bisect: You must pass as many --starts as --ends (or no ends at all)")
+    if config.bisect_recipe_repo:
+        pass
+    else:
+        recipe_and_cbc_hash = _pathhash(recipedir_or_package_or_metadata, if_file_use_dir=True)
+        metadata_tuples = render(recipedir_or_package_or_metadata, config=config,
+                                 no_download_source=False, variants=None,
+                                 persistent_cache=config.persistent_cb_cache,
+                                 persistent_cache_seed=recipe_and_cbc_hash,
+                                 persistent_cache_suffix='.rendered')
+
+    from conda_build.build import get_all_replacements
+    from conda_build import utils
+    try:
+        from conda.base.constants import CONDA_PACKAGE_EXTENSIONS, CONDA_PACKAGE_EXTENSION_V1, \
+            CONDA_PACKAGE_EXTENSION_V2
+    except Exception:
+        from conda.base.constants import CONDA_TARBALL_EXTENSION as CONDA_PACKAGE_EXTENSION_V1
+
+    post = True
+    built_packages = []
+    notest = False
+    for (metadata, need_source_download, need_reparse_in_env) in metadata_tuples:
+        get_all_replacements(metadata.config.variant)
+        if post is None:
+            utils.rm_rf(metadata.config.host_prefix)
+            utils.rm_rf(metadata.config.build_prefix)
+            utils.rm_rf(metadata.config.test_prefix)
+        if metadata.name() not in metadata.config.build_folder:
+            metadata.config.compute_build_id(metadata.name(), reset=True)
+        from conda_build.build import build as conda_build_build
+        packages_from_this = conda_build_build(metadata, stats=None,
+                                   post=post,
+                                   need_source_download=need_source_download,
+                                   need_reparse_in_env=need_reparse_in_env,
+                                   built_packages=built_packages,
+                                   notest=notest,
+                                   )
+        if not notest:
+            for pkg, dict_and_meta in packages_from_this.items():
+                if pkg.endswith(CONDA_PACKAGE_EXTENSIONS) and os.path.isfile(pkg):
+                    # we only know how to test conda packages
+                    test(pkg, config=metadata.config.copy(), stats=stats)
+                _, meta = dict_and_meta
+                downstreams = meta.meta.get('test', {}).get('downstreams')
+                if downstreams:
+                    channel_urls = tuple(utils.ensure_list(metadata.config.channel_urls) +
+                                         [utils.path2url(os.path.abspath(os.path.dirname(
+                                             os.path.dirname(pkg))))])
+                    log = utils.get_logger(__name__)
+                    # downstreams can be a dict, for adding capability for worker labels
+                    if hasattr(downstreams, 'keys'):
+                        downstreams = list(downstreams.keys())
+                        log.warn("Dictionary keys for downstreams are being "
+                                 "ignored right now.  Coming soon...")
+                    else:
+                        downstreams = utils.ensure_list(downstreams)
+                    for dep in downstreams:
+                        log.info("Testing downstream package: {}".format(dep))
+                        # resolve downstream packages to a known package
+
+                        r_string = ''.join(random.choice(
+                            string.ascii_uppercase + string.digits) for _ in range(10))
+                        specs = meta.ms_depends('run') + [MatchSpec(dep),
+                                                          MatchSpec(' '.join(meta.dist().rsplit('-', 2)))]
+                        specs = [utils.ensure_valid_spec(spec) for spec in specs]
+                        try:
+                            with TemporaryDirectory(prefix="_", suffix=r_string) as tmpdir:
+                                actions = environ.get_install_actions(
+                                    tmpdir, specs, env='run',
+                                    subdir=meta.config.host_subdir,
+                                    bldpkgs_dirs=meta.config.bldpkgs_dirs,
+                                    channel_urls=channel_urls)
+                        except (UnsatisfiableError, DependencyNeedsBuildingError) as e:
+                            log.warn("Skipping downstream test for spec {}; was "
+                                     "unsatisfiable.  Error was {}".format(dep, e))
+                            continue
+                        # make sure to download that package to the local cache if not there
+                        local_file = execute_download_actions(meta, actions, 'host',
+                                                              package_subset=dep,
+                                                              require_files=True)
+                        # test that package, using the local channel so that our new
+                        #    upstream dep gets used
+                        test(list(local_file.values())[0][0],
+                             config=meta.config.copy(), stats=stats)
+
+                built_packages.update({pkg: dict_and_meta})
+        else:
+            built_packages.update(packages_from_this)
+
+        for (metadata, need_source_download, need_reparse_in_env) in metadata_tuples:
+            get_all_replacements(metadata.config.variant)
+            if post is None:
+                utils.rm_rf(metadata.config.host_prefix)
+                utils.rm_rf(metadata.config.build_prefix)
+                utils.rm_rf(metadata.config.test_prefix)
+            if metadata.name() not in metadata.config.build_folder:
+                metadata.config.compute_build_id(metadata.name(), reset=True)
+
+            packages_from_this = build(metadata, stats,
+                                       post=post,
+                                       need_source_download=need_source_download,
+                                       need_reparse_in_env=need_reparse_in_env,
+                                       built_packages=built_packages,
+                                       notest=notest,
+                                       )
+            if not notest:
+                for pkg, dict_and_meta in packages_from_this.items():
+                    if pkg.endswith(CONDA_PACKAGE_EXTENSIONS) and os.path.isfile(pkg):
+                        # we only know how to test conda packages
+                        test(pkg, config=metadata.config.copy(), stats=stats)
+                    _, meta = dict_and_meta
+                    downstreams = meta.meta.get('test', {}).get('downstreams')
+                    if downstreams:
+                        channel_urls = tuple(utils.ensure_list(metadata.config.channel_urls) +
+                                             [utils.path2url(os.path.abspath(os.path.dirname(
+                                                 os.path.dirname(pkg))))])
+                        log = utils.get_logger(__name__)
+                        # downstreams can be a dict, for adding capability for worker labels
+                        if hasattr(downstreams, 'keys'):
+                            downstreams = list(downstreams.keys())
+                            log.warn("Dictionary keys for downstreams are being "
+                                     "ignored right now.  Coming soon...")
+                        else:
+                            downstreams = utils.ensure_list(downstreams)
+                        for dep in downstreams:
+                            log.info("Testing downstream package: {}".format(dep))
+                            # resolve downstream packages to a known package
+
+                            r_string = ''.join(random.choice(
+                                string.ascii_uppercase + string.digits) for _ in range(10))
+                            specs = meta.ms_depends('run') + [MatchSpec(dep),
+                                                              MatchSpec(' '.join(meta.dist().rsplit('-', 2)))]
+                            specs = [utils.ensure_valid_spec(spec) for spec in specs]
+                            try:
+                                with TemporaryDirectory(prefix="_", suffix=r_string) as tmpdir:
+                                    actions = environ.get_install_actions(
+                                        tmpdir, specs, env='run',
+                                        subdir=meta.config.host_subdir,
+                                        bldpkgs_dirs=meta.config.bldpkgs_dirs,
+                                        channel_urls=channel_urls)
+                            except (UnsatisfiableError, DependencyNeedsBuildingError) as e:
+                                log.warn("Skipping downstream test for spec {}; was "
+                                         "unsatisfiable.  Error was {}".format(dep, e))
+                                continue
+                            # make sure to download that package to the local cache if not there
+                            local_file = execute_download_actions(meta, actions, 'host',
+                                                                  package_subset=dep,
+                                                                  require_files=True)
+                            # test that package, using the local channel so that our new
+                            #    upstream dep gets used
+                            test(list(local_file.values())[0][0],
+                                 config=meta.config.copy(), stats=stats)
+
+                    built_packages.update({pkg: dict_and_meta})
+            else:
+                built_packages.update(packages_from_this)
 
 
 def list_skeletons():
