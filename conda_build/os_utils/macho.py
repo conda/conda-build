@@ -218,10 +218,10 @@ def get_id(path, build_prefix=None):
         return ''
 
 
-def get_rpaths(path):
+def get_rpaths(path, build_prefix=None):
     """Return a list of the dylib rpaths"""
-    res_pyldd = inspect_rpaths(path, resolve_dirnames=False, use_os_varnames=True)
-    return res_pyldd
+    dylib_loads = otool(path, build_prefix, is_rpath)
+    return [dylib_load['path'] for dylib_load in dylib_loads]
 
 
 def _chmod(filename, mode):
