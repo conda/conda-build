@@ -508,9 +508,9 @@ def mk_relative_linux(f, prefix, rpaths=('lib',), method=None):
     existing = existing_pe
     if have_lief:
         existing2, _, _ = get_rpaths_raw(elf)
-        if existing_pe and [existing_pe] != existing2:
+        if existing_pe and existing_pe != existing2:
             print('WARNING :: get_rpaths_raw()={} and patchelf={} disagree for {} :: '.format(
-                      existing2, [existing_pe], elf))
+                      existing2, existing_pe, elf))
         # Use LIEF if method is LIEF to get the initial value?
         if method == 'LIEF':
             existing = existing2
