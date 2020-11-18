@@ -359,6 +359,20 @@ different sets of packages."""
                    action='store_true',
                    help=("Do not display value of environment variables specified in build.script_env."), )
 
+    sp = p.add_subparsers(help='Bisect Command')
+
+    parser_a = sp.add_parser('bisect', help='Enable bisection mode for recipes using CONDA_BUILD_FROM_SOURCE_CONTROL')
+    parser_a.add_argument('--bisect-recipe-repo', action="store_true",
+                          help='Specifies that the sha1s refer to the recipe repository '
+                               'rather than those embedded in the (rendered) metadata of '
+                               'the recipe. These use-cases are quite different.')
+    parser_a.add_argument('--start', dest='bisect_git_ref_starts', action='append',
+                          help='Start git_ref(s) (expected to pass the bisect-test)')
+    parser_a.add_argument('--end',  dest='bisect_git_ref_ends', action='append',
+                          help='End git_ref(s) (expected to fail the bisect-test), default = recipe value')
+    parser_a.add_argument('--bisect-arg', action='append',
+                          help='argument(s) to use to test for success, default = builds and tests')
+
     add_parser_channels(p)
     args = p.parse_args(args)
 
@@ -406,6 +420,10 @@ def check_action(recipe, config):
     return api.check(recipe, config=config)
 
 
+def bisect_action(recipe, config):
+    return api.bisect(recipe, config=config)
+
+
 def execute(args):
     _parser, args = parse_args(args)
     config = Config(**args.__dict__)
@@ -439,6 +457,8 @@ def execute(args):
         action = source_action
     elif args.check:
         action = check_action
+    elif 'bisect_git_ref_starts' in args:
+        action = bisect_action
 
     if action == test_action:
         failed_recipes = []

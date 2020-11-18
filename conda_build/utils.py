@@ -2098,3 +2098,121 @@ def shutil_move_more_retrying(src, dest, debug_name):
         elif attempts_left != -1:
             log.error(
                 "Failed to rename {} directory despite sleeping and retrying.".format(debug_name))
+
+
+def get_stable_hash(hash_command):
+    env = os.environ.copy()
+    env['PYTHONHASHSEED'] = '0'
+    cmd_line = [sys.executable, '-c', hash_command]
+    p = subprocess.Popen(cmd_line, stdin=subprocess.PIPE,
+                         stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                         env=env)
+    out, err = p.communicate()
+    return int(out.strip())
+
+
+class frozenset_stable(frozenset):
+    def __new__(cls, *args):
+        return frozenset.__new__(cls, *args)
+
+    def __init__(self, _repr):
+        self.repr_ = tuple(_repr)
+        # print('print(hash(%s))' % repr(self.repr_))
+        frozenset.__init__(self)
+
+    def get_hash_command(self, repr_):
+        return 'str="%s"; print(hash(str))' % repr(repr_)
+
+    def __hash__(self, *args, **kwargs):
+        hash_command = self.get_hash_command(self.repr_)
+        return get_stable_hash(hash_command)
+
+
+class memoized_to_cached_picked_file(object):
+    """Decorator. Caches a function's return value each time it is called.
+    If called later with the same arguments, the cached value is returned
+    (not reevaluated).
+
+    The first argument is required to be an existing filename and it is
+    always converted to an inode number.
+    """
+
+    def __init__(self, func):
+        self.func = func
+        self.cache = {}
+        import threading
+        self.lock = threading.Lock()
+
+    def __call__(self, *args, **kw):
+        cacheable = True
+        if (not 'persistent_cache' in kw or not 'persistent_cache_suffix' in kw or not 'persistent_cache_seed' in kw):
+            cacheable = False
+        else:
+            persistent_cache = kw['persistent_cache']
+            persistent_cache_suffix = kw['persistent_cache_suffix']
+            persistent_cache_seed = kw['persistent_cache_seed']
+            for k in ('persistent_cache', 'persistent_cache_suffix', 'persistent_cache_seed'):
+                del kw[k]
+        try:
+            from collections.abc import Hashable
+        except ImportError:
+            from collections import Hashable
+        newargs = []
+        for arg in args:
+            if isinstance(arg, list):
+                newargs.append(tuple(arg))
+            elif not isinstance(arg, Hashable):
+                # uncacheable. a list, for instance.
+                # better to not cache than blow up.
+                return self.func(*args, **kw)
+            else:
+                newargs.append(arg)
+        newargs = tuple(newargs)
+        # TODO :: Remove this.
+        if 'config' in kw:
+            del kw['config']
+        print(sorted(kw.items()))
+        key = frozenset_stable(sorted(kw.items()) + list(newargs))
+        h = hex(abs(hash(key)))
+        with self.lock:
+            if key in self.cache:
+                return self.cache[key]
+            else:
+                # Even if not cacheable (on disk due to missing kwargs)
+                # we can still cache in memory.
+                if cacheable:
+                    pickled = join(persistent_cache, h + persistent_cache_suffix)
+                    from os.path import exists, isfile
+                    try:
+                        import cPickle as pickle
+                    except:
+                        import pickle as pickle
+                    if exists(pickled) and isfile(pickled): # and False:
+                        value = pickle.load(open(pickled, 'rb'))
+                    else:
+                        value = self.func(*args, **kw)
+                        pickle.dump(value, open(pickled, 'wb'))
+                else:
+                    value = self.func(*args, **kw)
+                self.cache[key] = value
+                return value
+
+
+def pathhash(path, if_file_use_dir=False):
+    if os.path.isfile(path) and if_file_use_dir:
+        path = os.path.dirname(path)
+    np = os.path.normpath(path)
+    files = rec_glob(np, "*")
+    records = {}
+    for file in files:
+        rp = file.replace(np + os.sep, '').replace('\\', '/')
+        record = {'file': rp}
+        try:
+            stat = os.stat(file)
+            stat_rec = {'modified': stat.st_mtime,
+                        'size': stat.st_size}
+        except Exception as e:
+            stat_rec = {'excepted': '{}'.format(e)}
+        record['stat'] = stat_rec
+        records[rp] = record
+    return get_stable_hash('str="%s"; print(hash(str))' % repr(records))

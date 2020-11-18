@@ -38,8 +38,10 @@ from conda_build.variants import (get_package_variants, list_of_dicts_to_dict_of
                                   filter_by_key_value)
 from conda_build.exceptions import DependencyNeedsBuildingError
 from conda_build.index import get_build_index
-# from conda_build.jinja_context import pin_subpackage_against_outputs
+from conda_build.utils import pathhash
 
+# from conda_build.jinja_context import pin_subpackage_against_outputs
+enable_render_recipe_caching = True
 
 def odict_representer(dumper, data):
     return dumper.represent_dict(data.items())
@@ -791,7 +793,8 @@ def expand_outputs(metadata_tuples):
             expanded_outputs[m.dist()] = (output_dict, m)
     return list(expanded_outputs.values())
 
-
+from conda_build.utils import memoized_to_cached_picked_file
+@memoized_to_cached_picked_file
 def render_recipe(recipe_path, config, no_download_source=False, variants=None,
                   permit_unsatisfiable_variants=True, reset_build_id=True, bypass_env_check=False):
     """Returns a list of tuples, each consisting of
@@ -859,12 +862,28 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
         # when building, we don't want to fully expand all outputs into metadata, only expand
         #    whatever variants we have (i.e. expand top-level variants, not output-only variants)
         rendered_metadata = distribute_variants(m, variants,
-                                    permit_unsatisfiable_variants=permit_unsatisfiable_variants,
-                                    allow_no_other_outputs=True, bypass_env_check=bypass_env_check)
+                                                permit_unsatisfiable_variants=permit_unsatisfiable_variants,
+                                                allow_no_other_outputs=True, bypass_env_check=bypass_env_check)
     if need_cleanup:
         utils.rm_rf(recipe_dir)
     return rendered_metadata
 
+
+def render_recipe_cached(recipe_path, config, no_download_source=False, variants=None,
+                  permit_unsatisfiable_variants=True, reset_build_id=True, bypass_env_check=False):
+    global enable_render_recipe_caching
+    if enable_render_recipe_caching:
+        recipe_and_cbc_hash = pathhash(recipe_path, if_file_use_dir=True)
+        return render_recipe(recipe_path, config, no_download_source=no_download_source, variants=variants,
+                             permit_unsatisfiable_variants=permit_unsatisfiable_variants,
+                             reset_build_id=reset_build_id, bypass_env_check=bypass_env_check,
+                             persistent_cache=config.persistent_cb_cache,
+                             persistent_cache_seed=recipe_and_cbc_hash,
+                             persistent_cache_suffix='.rendered')
+    else:
+        return render_recipe(recipe_path, config, no_download_source=no_download_source, variants=variants,
+                             permit_unsatisfiable_variants=permit_unsatisfiable_variants,
+                             reset_build_id=reset_build_id, bypass_env_check=bypass_env_check)
 
 # Keep this out of the function below so it can be imported by other modules.
 FIELDS = ["package", "source", "build", "requirements", "test", "app", "outputs", "about", "extra"]

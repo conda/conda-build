@@ -59,9 +59,9 @@ from .utils import (CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2,
 from conda_build import environ, source, tarcheck, utils
 from conda_build.config import Config
 from conda_build.index import get_build_index, update_index
-from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse, distribute_variants,
-                                expand_outputs, try_download, execute_download_actions,
-                                add_upstream_pins)
+from conda_build.render import (output_yaml, bldpkg_path, render_recipe, render_recipe_cached,
+                                reparse, distribute_variants, expand_outputs, try_download,
+                                execute_download_actions, add_upstream_pins)
 import conda_build.os_utils.external as external
 from conda_build.metadata import FIELDS, MetaData
 from conda_build.post import (post_process, post_build,
@@ -2400,11 +2400,15 @@ def warn_on_use_of_SRC_DIR(metadata):
                              "or pass the --no-remove-work-dir flag.")
 
 
+
+
+from conda_build.utils import pathhash
 def _construct_metadata_for_test_from_recipe(recipe_dir, config):
     config.need_cleanup = False
     config.recipe_dir = None
     hash_input = {}
-    metadata = expand_outputs(render_recipe(recipe_dir, config=config, reset_build_id=False))[0][1]
+    metadata = expand_outputs(
+        render_recipe_cached(recipe_dir, config=config, reset_build_id=False))[0][1]
     log = utils.get_logger(__name__)
     log.warn("Testing based on recipes is deprecated as of conda-build 3.16.0.  Please adjust "
              "your code to pass your desired conda package to test instead.")
@@ -2476,7 +2480,7 @@ def _construct_metadata_for_test_from_package(package, config):
     update_index(local_channel, verbose=config.debug, threads=1)
 
     try:
-        metadata = render_recipe(os.path.join(info_dir, 'recipe'), config=config,
+        metadata = render_recipe_cached(os.path.join(info_dir, 'recipe'), config=config,
                                         reset_build_id=False)[0][0]
 
     # no recipe in package.  Fudge metadata
@@ -3024,11 +3028,21 @@ def build_tree(recipe_list, config, stats, build_only=False, post=None, notest=F
                 # each tuple is:
                 #    metadata, need_source_download, need_reparse_in_env =
                 # We get one tuple per variant
-                metadata_tuples = render_recipe(recipe, config=cfg, variants=variants,
+                metadata_tuples = render_recipe(recipe, cfg, variants=variants,
                                                 permit_unsatisfiable_variants=False,
                                                 reset_build_id=not cfg.dirty,
                                                 bypass_env_check=True)
-            # restrict to building only one variant for bdist_conda.  The way it splits the build
+                from conda_build.api import render
+                metadata_tuples2 = render_recipe_cached(recipe, cfg, no_download_source=False,
+                                                        variants=variants,
+                                                permit_unsatisfiable_variants=False,
+                                                reset_build_id=not cfg.dirty,
+                                                bypass_env_check=True)
+                print(metadata_tuples)
+                print(metadata_tuples2)
+                assert len(metadata_tuples) == len(metadata_tuples2)
+
+                    # restrict to building only one variant for bdist_conda.  The way it splits the build
             #    job breaks variants horribly.
             if post in (True, False):
                 metadata_tuples = metadata_tuples[:1]
@@ -3164,7 +3178,7 @@ def build_tree(recipe_list, config, stats, build_only=False, post=None, notest=F
                 if recipe_glob or feedstock_glob:
                     for recipe_dir in recipe_glob + feedstock_glob:
                         if not any(path.startswith(recipe_dir) for path in built_package_paths):
-                            dep_metas = render_recipe(recipe_dir, config=metadata.config)
+                            dep_metas = render_recipe_cached(recipe_dir, config=metadata.config)
                             for dep_meta in dep_metas:
                                 if utils.match_peer_job(MatchSpec(matchspec), dep_meta[0],
                                                         metadata):
