@@ -184,7 +184,7 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
         raise ValueError('No valid recipes found for input: {}'.format(recipe_paths_or_metadata))
 
     return build_tree(
-        sorted(recipes),
+        recipes,
         config=get_or_merge_config(config, **kwargs),
         # If people don't pass in an object to capture stats in, they won't get them returned.
         # We'll still track them, though.
