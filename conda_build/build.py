@@ -3047,17 +3047,16 @@ def build_tree(recipe_list, config, stats, build_only=False, post=None, notest=F
                                                 permit_unsatisfiable_variants=False,
                                                 reset_build_id=not cfg.dirty,
                                                 bypass_env_check=True)
-                from conda_build.api import render
+                """
                 metadata_tuples2 = render_recipe_cached(recipe, cfg, no_download_source=False,
                                                         variants=variants,
-                                                permit_unsatisfiable_variants=False,
-                                                reset_build_id=not cfg.dirty,
-                                                bypass_env_check=True)
-                print(metadata_tuples)
-                print(metadata_tuples2)
+                                                        permit_unsatisfiable_variants=False,
+                                                        reset_build_id=not cfg.dirty,
+                                                        bypass_env_check=True)
                 assert len(metadata_tuples) == len(metadata_tuples2)
+                """
 
-                    # restrict to building only one variant for bdist_conda.  The way it splits the build
+            # restrict to building only one variant for bdist_conda.  The way it splits the build
             #    job breaks variants horribly.
             if post in (True, False):
                 metadata_tuples = metadata_tuples[:1]
