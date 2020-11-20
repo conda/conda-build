@@ -258,7 +258,7 @@ def bisect(recipedir_or_package_or_metadata, move_broken=True, config=None, stat
                                  persistent_cache=config.persistent_cb_cache,
                                  persistent_cache_seed=recipe_and_cbc_hash,
                                  persistent_cache_suffix='.rendered')
-
+    sys.exit(1)
     from conda_build.build import get_all_replacements
     from conda_build import utils
     try:
