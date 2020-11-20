@@ -833,7 +833,11 @@ def get_exports(filename, arch='native', enable_static=False):
                 # Sorry, LIEF does not handle COFF (only PECOFF) and object files are COFF.
                 exports2 = exports
             else:
-                exports2, flags2, exports2_all, flags2_all = get_static_lib_exports(filename)
+                try:
+                    exports2, flags2, exports2_all, flags2_all = get_static_lib_exports(filename)
+                except:
+                    print("WARNING :: Failed to get_static_lib_exports({})".format(filename))
+                    exports2 = exports2
             result = exports2
             if debug_static_archives:
                 if exports and set(exports) != set(exports2):
