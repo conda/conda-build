@@ -52,6 +52,7 @@ from .conda_interface import UnsatisfiableError
 from .conda_interface import NoPackagesFoundError
 from .conda_interface import CondaError
 from .conda_interface import pkgs_dirs
+from .conda_interface import get_conda_channel
 from .utils import (CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2,
                     CONDA_PACKAGE_EXTENSIONS, env_var, glob,
                     shutil_move_more_retrying, tmp_chdir)
@@ -1077,7 +1078,7 @@ def record_prefix_files(m, files_with_prefix):
 
 
 def sanitize_channel(channel):
-    return re.sub(r'\/t\/[a-zA-Z0-9\-]*\/', '/t/<TOKEN>/', channel)
+    return get_conda_channel(channel).urls(with_credentials=False, subdirs=[''])[0]
 
 
 def write_info_files_file(m, files):

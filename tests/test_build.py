@@ -50,7 +50,9 @@ def test_build_preserves_PATH(testing_workdir, testing_config):
 
 def test_sanitize_channel():
     test_url = 'https://conda.anaconda.org/t/ms-534991f2-4123-473a-b512-42025291b927/somechannel'
-    assert build.sanitize_channel(test_url) == 'https://conda.anaconda.org/t/<TOKEN>/somechannel'
+    assert build.sanitize_channel(test_url) == 'https://conda.anaconda.org/somechannel'
+    test_url_auth = 'https://myuser:mypass@conda.anaconda.org/somechannel'
+    assert build.sanitize_channel(test_url_auth) == 'https://conda.anaconda.org/somechannel'
 
 
 def test_get_short_path(testing_metadata):
