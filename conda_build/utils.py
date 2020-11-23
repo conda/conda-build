@@ -279,9 +279,9 @@ class PopenWrapper(object):
             psutil = None
             psutil_exceptions = (OSError, ValueError)
             log = get_logger(__name__)
-            log.warn("psutil import failed.  Error was {}".format(e))
-            log.warn("only disk usage and time statistics will be available.  Install psutil to "
-                     "get CPU time and memory usage statistics.")
+            log.warning("psutil import failed.  Error was {}".format(e))
+            log.warning("only disk usage and time statistics will be available.  Install psutil to "
+                        "get CPU time and memory usage statistics.")
 
         # The polling interval (in seconds)
         time_float = float(kwargs.pop('time_int', 2))
@@ -2160,6 +2160,8 @@ class memoized_to_cached_picked_file(object):
         self.lock = threading.Lock()
 
     def __call__(self, *args, **kw):
+        debug_caching = False
+        log = get_logger(__name__)
         cacheable = True
         if (not 'persistent_cache' in kw or not 'persistent_cache_suffix' in kw or not 'persistent_cache_seed' in kw):
             cacheable = False
@@ -2181,13 +2183,32 @@ class memoized_to_cached_picked_file(object):
                 # uncacheable. a list, for instance.
                 # better to not cache than blow up.
                 return self.func(*args, **kw)
+            elif isinstance(arg, object) and hasattr(arg, '__class__') and str(arg.__class__) == "<class \'conda_build.config.Config\'>":
+                newargs.append(arg)
+                if hasattr(arg, 'use_local'):
+                    key_ul = hash(arg.use_local)
+                else:
+                    key_ul = -1
+                key_arg = hash(frozenset_stable([arg]))
+                if debug_caching:
+                    log.warning('key_ul={}, key_arg={}'.format(hex(abs(key_ul)), hex(abs(key_arg))))
             else:
                 newargs.append(arg)
         newargs = tuple(newargs)
         # TODO :: Remove this.
-        if 'config' in kw:
-            del kw['config']
-        print(sorted(kw.items()))
+        # if 'config' in kw:
+        #     del kw['config']
+        # print(sorted(kw.items()))
+        key1 = hash(frozenset_stable(sorted(kw.items())))
+        key2 = hash(frozenset_stable(list(newargs)))
+        if hasattr(arg, 'use_local'):
+            key3 = hash(frozenset_stable([newargs[-1].use_local]))
+        else:
+            key3 = -1
+        key4 = hash(frozenset_stable((0,)))
+        if debug_caching:
+            log.warning('key1={}, key2={}, key3={}, key4={}'.format(hex(abs(key1)), hex(abs(key2)),
+                                                                    hex(abs(key3)), hex(abs(key4))))
         key = frozenset_stable(sorted(kw.items()) + list(newargs))
         h = hex(abs(hash(key)))
         with self.lock:

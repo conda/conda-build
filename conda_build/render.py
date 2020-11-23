@@ -798,8 +798,7 @@ def expand_outputs(metadata_tuples):
             expanded_outputs[m.dist()] = (output_dict, m)
     return list(expanded_outputs.values())
 
-from conda_build.utils import memoized_to_cached_picked_file
-@memoized_to_cached_picked_file
+
 def render_recipe(recipe_path, config, no_download_source=False, variants=None,
                   permit_unsatisfiable_variants=True, reset_build_id=True, bypass_env_check=False):
     """Returns a list of tuples, each consisting of
@@ -878,21 +877,57 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
     return rendered_metadata
 
 
+from conda_build.utils import memoized_to_cached_picked_file
+@memoized_to_cached_picked_file
+def render_recipe_cached_impl(recipe_path, config, no_download_source=False, variants=None,
+                  permit_unsatisfiable_variants=True, reset_build_id=True, bypass_env_check=False, **kwargs):
+    '''
+    We cannot pickle conda._vendor.auxlib._Null() so we do this dance instead ..
+    '''
+    metadata_tuples = render_recipe(recipe_path, config, no_download_source=no_download_source, variants=variants,
+                                    permit_unsatisfiable_variants=permit_unsatisfiable_variants,
+                                    reset_build_id=reset_build_id, bypass_env_check=bypass_env_check)
+    result = []
+    for metadata, _x, _y in metadata_tuples:
+        result.append((metadata.meta, _x, _y))
+    return result
+
+
 def render_recipe_cached(recipe_path, config, no_download_source=False, variants=None,
                   permit_unsatisfiable_variants=True, reset_build_id=True, bypass_env_check=False):
     global enable_render_recipe_caching
     if enable_render_recipe_caching:
         recipe_and_cbc_hash = pathhash(recipe_path, if_file_use_dir=True)
-        return render_recipe(recipe_path, config, no_download_source=no_download_source, variants=variants,
-                             permit_unsatisfiable_variants=permit_unsatisfiable_variants,
-                             reset_build_id=reset_build_id, bypass_env_check=bypass_env_check,
-                             persistent_cache=config.persistent_cb_cache,
-                             persistent_cache_seed=recipe_and_cbc_hash,
-                             persistent_cache_suffix='.rendered')
+        result = render_recipe_cached_impl(recipe_path, config, no_download_source=no_download_source, variants=variants,
+                                           permit_unsatisfiable_variants=permit_unsatisfiable_variants,
+                                           reset_build_id=reset_build_id, bypass_env_check=bypass_env_check,
+                                           persistent_cache=config.persistent_cb_cache,
+                                           persistent_cache_seed=recipe_and_cbc_hash,
+                                           persistent_cache_suffix='.rendered')
     else:
-        return render_recipe(recipe_path, config, no_download_source=no_download_source, variants=variants,
-                             permit_unsatisfiable_variants=permit_unsatisfiable_variants,
-                             reset_build_id=reset_build_id, bypass_env_check=bypass_env_check)
+        result = render_recipe_cached_impl(recipe_path, config, no_download_source=no_download_source, variants=variants,
+                                           permit_unsatisfiable_variants=permit_unsatisfiable_variants,
+                                           reset_build_id=reset_build_id, bypass_env_check=bypass_env_check)
+    metadata_tuples_result = []
+    for metadata, _x, _y in result:
+        m = MetaData.fromdict(metadata, config, variants)
+        metadata_tuples_result.append((m, _x, _y))
+    return metadata_tuples_result
+
+from conda_build.utils import memoized_to_cached_picked_file
+@memoized_to_cached_picked_file
+def render_recipe_to_meta_dict_cached(recipe_path, config, no_download_source=False, variants=None,
+                        permit_unsatisfiable_variants=True, reset_build_id=True, bypass_env_check=False):
+    """Returns a list of tuples, each consisting of
+
+    (metadata-object, needs_download, needs_render_in_env)
+
+    You get one tuple per variant.  Outputs are not factored in here (subpackages won't affect these
+    results returned here.)
+
+    This exists because I cannot pickle a conda._vendor.auxlib._Null() instance for some unknown reason.
+    I bounce the metadata.meta values
+    """
 
 # Keep this out of the function below so it can be imported by other modules.
 FIELDS = ["package", "source", "build", "requirements", "test", "app", "outputs", "about", "extra"]

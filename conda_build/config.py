@@ -880,6 +880,8 @@ class Config(object):
         else:
             self.clean(remove_folders=False)
 
+    def __repr__(self):
+        return 'conda_build.config.Config object instance (NYI)'
 
 def get_or_merge_config(config, variant=None, **kwargs):
     """Always returns a new object - never changes the config that might be passed in."""

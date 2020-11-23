@@ -3143,14 +3143,25 @@ def build_tree(recipe_list, config, stats, build_only=False, post=None, notest=F
                                                 permit_unsatisfiable_variants=False,
                                                 reset_build_id=not cfg.dirty,
                                                 bypass_env_check=True)
-                """
-                metadata_tuples2 = render_recipe_cached(recipe, cfg, no_download_source=False,
-                                                        variants=variants,
-                                                        permit_unsatisfiable_variants=False,
-                                                        reset_build_id=not cfg.dirty,
-                                                        bypass_env_check=True)
-                assert len(metadata_tuples) == len(metadata_tuples2)
-                """
+                # First, last?
+                m = metadata_tuples[-1][0]
+                from conda_build.render import enable_render_recipe_caching
+                # Sanity check.
+                if enable_render_recipe_caching == True:
+                    if 'extra' in m.meta and 'final' in m.meta['extra']:
+                        del m.meta['extra']['final']
+                    yaml = output_yaml(m)
+                    metadata_tuples2 = render_recipe_cached(recipe, cfg, no_download_source=False,
+                                                            variants=variants,
+                                                            permit_unsatisfiable_variants=False,
+                                                            reset_build_id=not cfg.dirty,
+                                                            bypass_env_check=True)
+                    assert len(metadata_tuples) == len(metadata_tuples2)
+                    m2 = metadata_tuples2[-1][0]
+                    if 'extra' in m2.meta and 'final' in m2.meta['extra']:
+                        del m2.meta['extra']['final']
+                    yaml2 = output_yaml(m2)
+                    assert yaml == yaml2
 
             # restrict to building only one variant for bdist_conda.  The way it splits the build
             #    job breaks variants horribly.
