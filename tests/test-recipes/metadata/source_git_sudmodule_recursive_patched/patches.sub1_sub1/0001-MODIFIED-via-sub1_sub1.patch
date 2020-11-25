@@ -1,0 +1,23 @@
+From 707892d453ecb8a56ccb6b007141cfa1aed557ac Mon Sep 17 00:00:00 2001
+From: Ray Donnelly <mingw.android@gmail.com>
+Date: Thu, 26 Nov 2020 02:58:40 +0100
+Subject: [PATCH] MODIFIED (via sub1_sub1)
+
+---
+ README.md | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/sub1_sub1/in/a/deeper/location/README.md b/sub1_sub1/in/a/deeper/location/README.md
+index 657c3f2..d67a0e0 100644
+--- a/sub1_sub1/in/a/deeper/location/README.md
++++ b/sub1_sub1/in/a/deeper/location/README.md
+@@ -1 +1,4 @@
+-# conda-build-test-project-wip.sub1.sub1
+\ No newline at end of file
++# conda-build-test-project-wip.sub1.sub1
++# This file was modified by the first patch to the sub1_sub1/in/a/deeper/location sudmodule repo
++# To regenerate this, please run
++# git format-patch -1 --src-prefix=a/sub1_sub1/in/a/deeper/location/ --dst-prefix=b/sub1_sub1/in/a/deeper/location/
+-- 
+2.24.3 (Apple Git-128)
+

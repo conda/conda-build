@@ -1,0 +1,17 @@
+package:
+  name: conda-build-test-source-git-submodule-recursive-patched
+  version: 1.0
+
+source:
+  git_url: https://github.com/mingwandroid/conda-build-test-project-wip.top
+  git_tag: main
+  patches:
+    # We mis-detect the patch-level of this, as zero rather than one.
+    - patches.top/0001-CREATED.patch
+    - patches.top/0002-MODIFIED.patch
+    - patches.sub1/0001-MODIFIED.patch
+    - patches.sub1_sub1/0001-MODIFIED-via-sub1_sub1.patch
+
+requirements:
+  build:
+    - git

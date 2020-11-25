@@ -1,0 +1,21 @@
+From 325f028e96f68a5a8a3b3a428890ed1ebbe648a1 Mon Sep 17 00:00:00 2001
+From: Ray Donnelly <mingw.android@gmail.com>
+Date: Thu, 26 Nov 2020 02:14:48 +0100
+Subject: [PATCH 2/2] MODIFIED
+
+---
+ README.md | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/README.md b/README.md
+index 2eb4aab..d93bd46 100644
+--- a/README.md
++++ b/README.md
+@@ -1 +1,2 @@
+-# conda-build-test-project-wip.top
+\ No newline at end of file
++# conda-build-test-project-wip.top
++# This file was modified by the second patch to the top level repo
+-- 
+2.24.3 (Apple Git-128)
+

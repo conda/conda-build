@@ -250,15 +250,55 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_ca
             check_call_env(args + [git_url, git_mirror_dir], stdout=stdout, stderr=stderr)
         assert isdir(mirror_dir)
 
+    # Our git_ref can be anything, a branch, a tag or just a commit. Try to find a reference
+    # on a tag or a branch (in that order) if we can because if we do that we can clone just
+    # that reference saving time.
+    ref_is_sha1 = False
+    try:
+        sha1 = check_output_env([git, 'show-ref',  '-s', git_ref], cwd=git_mirror_dir)
+    except:
+        # It is likely we were passed a sha1 in the first place. Find a branch or tag that
+        # sha1 is on.
+        tags = check_output_env([git, 'tag', '--contains', git_ref], cwd=git_mirror_dir).\
+            decode('utf-8').splitlines()
+        tags = [t.strip() for t in tags]
+        branches = check_output_env([git, 'branch', '--contains', git_ref], cwd=git_mirror_dir).\
+            decode('utf-8').splitlines()
+        # Not sure what the * represents.
+        branches = [b.replace('* ', ' ').strip() for b in branches]
+        if len(tags) or len(branches):
+            if is_top_level:
+                print("For {}, the git_tag {} is not a tag or a branch, found sha1 on:\nTag(s): {}\nBranch(es): {}".
+                      format(git_url, git_ref, tags, branches))
+        else:
+            log.warning("For {}, the git_tag (sha1) {} was not found on any tag or branch, will clone everything".
+                        format(git_url, git_ref))
+        if len(tags):
+            git_ref = tags[0]
+        elif len(branches):
+            git_ref = branches[0]
+        else:
+            ref_is_sha1 = True
+
     # Now clone from mirror_dir into checkout_dir. We save a lot of time by using --depth 1
-    check_call_env([git, 'clone', '--depth', '1', 'file://' + git_mirror_dir, git_checkout_dir], stdout=stdout, stderr=stderr)
+    check_call_env([git, 'clone', git_mirror_dir, git_checkout_dir] +
+                   ['--depth', '1', '--branch', git_ref] if not ref_is_sha1 else [],
+                   stdout=stdout, stderr=stderr)
+
+    # https://stackoverflow.com/a/43759576
+    # check_call_env([git, 'clone', '--depth', '1',
+    #                 'file://' + git_mirror_dir, git_checkout_dir] + ['--branch', git_ref] if git_ref else [],
+    #                stdout=stdout, stderr=stderr)
+    # check_call_env([git, 'clone', '--depth', '1',
+    #                 '-c', 'remote.origin.fetch=+refs/changes/*:refs/remotes/origin/changes/*',
+    #                'file://' + git_mirror_dir, git_checkout_dir])
     if is_top_level:
         checkout = git_ref
         if git_url.startswith('.'):
             output = check_output_env([git, "rev-parse", checkout], stdout=stdout, stderr=stderr)
             checkout = output.decode('utf-8')
         if verbose:
-            print('checkout: %r' % checkout)
+            print('git checkout: {} => {}'.format(checkout, checkout_dir))
         if checkout:
             check_call_env([git, 'checkout', checkout],
                            cwd=checkout_dir, stdout=stdout, stderr=stderr)
@@ -268,28 +308,47 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_ca
     # relative to mirror_dir, unless we do some work to make
     # it so.
     try:
-        submodules = check_output_env([git, 'config', '--file', '.gitmodules', '--get-regexp',
-                                   'url'], stderr=stdout, cwd=checkout_dir)
-        submodules = submodules.decode('utf-8').splitlines()
+        submodules_list = check_output_env([git, 'submodule', 'status'],
+                                           stderr=stdout, cwd=checkout_dir).decode('utf-8').splitlines()
+        submodules_list2 = check_output_env([git, 'config', '--file', '.gitmodules', '--get-regexp',
+                                             '.*path|.*url'], stderr=stdout, cwd=checkout_dir).decode('utf-8').splitlines()
+        # We get 2 entries per submodule in submodules_list2, path, and url.
+        assert len(submodules_list)*2 == len(submodules_list2)
     except CalledProcessError:
-        submodules = []
-    for submodule in submodules:
-        matches = git_submod_re.match(submodule)
-        if matches and matches.group(2)[0] == '.':
-            submod_name = matches.group(1)
-            submod_rel_path = matches.group(2)
-            submod_url = urljoin(git_url + '/', submod_rel_path)
-            submod_mirror_dir = os.path.normpath(
-                os.path.join(mirror_dir, submod_rel_path))
-            if verbose:
-                print('Relative submodule %s found: url is %s, submod_mirror_dir is %s' % (
-                      submod_name, submod_url, submod_mirror_dir))
-            with TemporaryDirectory() as temp_checkout_dir:
-                git_mirror_checkout_recursive(git, submod_mirror_dir, temp_checkout_dir, submod_url,
-                                              git_cache=git_cache, git_ref=git_ref,
-                                              git_depth=git_depth, is_top_level=False,
-                                              verbose=verbose)
-
+        submodules_list = []
+        submodules_list2 = []
+    submodules = {}
+    for sm in submodules_list:
+        reggie = re.compile('.([0-9a-f]*) (\S+)')
+        m = reggie.match(sm)
+        groups = m.groups()
+        submod_sha1 = groups[0]
+        submod_path = groups[1]
+        submodules[submod_path] = {}
+        sm_attrs = submodules[submod_path]
+        sm_attrs['sha1'] = submod_sha1
+        sm_attrs['path'] = submod_path
+    for sm2, sm3 in zip(submodules_list2[::2], submodules_list2[1::2]):
+        m2 = git_submod_re.match(sm2)
+        m3 = git_submod_re.match(sm3)
+        if m3 and m3.group(2)[0] == '.':
+            submod_path = m2.group(2)
+            sm_attrs = submodules[submod_path]
+            assert sm_attrs
+            sm_attrs['rel_path'] = m2.group(2)
+            sm_attrs['url'] = urljoin(git_url + '/', m3.group(2))
+            sm_attrs['mirror_dir'] = os.path.normpath(os.path.join(mirror_dir, sm_attrs['rel_path']))
+    if verbose:
+        for sm_name, sm_attrs in submodules.items():
+            import json
+            print('Relative submodule {} found:\n{}'.format(sm_name, json.dumps(sm_attrs, indent=2)))
+    for sm_name, sm_attrs in submodules.items():
+        with TemporaryDirectory() as temp_checkout_dir:
+            git_mirror_checkout_recursive(git, sm_attrs['mirror_dir'], temp_checkout_dir,
+                                          sm_attrs['url'],
+                                          git_cache=git_cache, git_ref=sm_attrs['sha1'],
+                                          git_depth=git_depth, is_top_level=False,
+                                          verbose=verbose)
     if is_top_level:
         # Now that all relative-URL-specified submodules are locally mirrored to
         # relatively the same place we can go ahead and checkout the submodules.
@@ -516,12 +575,12 @@ def _guess_patch_strip_level(filesstr, src_dir):
     maxlevel = None
     files = {filestr.encode(errors='ignore') for filestr in filesstr}
     src_dir = src_dir.encode(errors='ignore')
-    guessed = False
     for file in files:
         numslash = file.count(b'/')
         maxlevel = numslash if maxlevel is None else min(maxlevel, numslash)
     if maxlevel == 0:
         patchlevel = 0
+        guessed = False
     else:
         histo = {i: 0 for i in range(maxlevel + 1)}
         for file in files:
@@ -529,12 +588,25 @@ def _guess_patch_strip_level(filesstr, src_dir):
             for level in range(maxlevel + 1):
                 if os.path.exists(join(src_dir, *parts[-len(parts) + level:])):
                     histo[level] += 1
+                # TODO :: Detect file creation and add 1 when we do not have a file but
+                #         we wish to create one. If the file already exists we should not
+                #         add 1.
         order = sorted(histo, key=histo.get, reverse=True)
+        min_histo = 0
         if histo[order[0]] == histo[order[1]]:
-            print("Patch level ambiguous, selecting least deep")
-            guessed = True
+            if histo[order[0]] == 0:
+                # No files were detected at all. Assume patch level is 1.
+                log.warning("Unable to determine patch level as no files matched, assuming 1")
+                return 1, True
+            else:
+                log.warning("Unable to determine patch level accurately, guessing least deep above 0")
+                guessed = True
+                min_histo = 1
+                del histo[0]
+        else:
+            guessed = False
         patchlevel = min([key for key, value
-                          in histo.items() if value == histo[order[0]]])
+                          in histo.items() if value == histo[order[min_histo]]])
     return patchlevel, guessed
 
 
@@ -584,7 +656,7 @@ def _patch_attributes_debug_print(attributes):
               "V :: Patch applies without fuzz       E :: Patch applies without emitting to stderr\n")
 
 
-def _get_patch_attributes(path, patch_exe, git, src_dir, stdout, stderr, retained_tmpdir=None):
+def _get_patch_attributes(path, patch_exe, git_exe, src_dir, submodules, stdout, stderr, retained_tmpdir=None):
     from collections import OrderedDict
 
     files_list, is_git_format = _get_patch_file_details(path)
@@ -593,13 +665,63 @@ def _get_patch_attributes(path, patch_exe, git, src_dir, stdout, stderr, retaine
     if len(files_list) != len(files):
         amalgamated = True
     strip_level, strip_level_guessed = _guess_patch_strip_level(files, src_dir)
-    if strip_level:
+    submodule = None
+    reldir = ''
+    if git_exe and is_git_format:
+        patching_exe = git_exe
+        if strip_level > 0:
+            files2 = []
+            for a_file in files:
+                # For a submodule we'll have a strip level of 2. The first strip is the standard
+                # git a/ or b/ prefix proxies for the containing folder. But we could have a
+                # submodule nested in a more deep folder, e.g.:
+                # git submodule add ../submodule submodule/in/deeper/location
+                folders = a_file.split('/')
+                stripped_reldir = '/'.join(folders[0:1])
+                if stripped_reldir and a_file.startswith(stripped_reldir + '/'):
+                    files2.append(a_file[len(stripped_reldir)+1:])
+                else:
+                    files2.append(a_file)
+        else:
+            files2 = list(files)
+
+    # Even if we are not using git for patching here (this should be per-recipe configurable)
+    # we can still use it to hint our patching process.
+    # original_strip_level = strip_level
+    if len(submodules) and strip_level > 0:
+        # We allow the submodule infix (with an extra a or b) to be specified as an extr
+        # level for git patches. This may not always be correct. It could be one when we
+        # let the submodule into that patch file names. Qt5 is an example of that. The
+        # goal is that patch -p can also be used for these patches should we prefer to.
+        # We may want to add 1
+        for file in files2:
+            if reldir:
+                break
+            for sm_path, sm_attribs in submodules.items():
+                if file.startswith(sm_attribs['path']+'/'):
+                    submodule = {sm_path: sm_attribs}
+                    reldir = submodule[sm_path]['path']
+                    strip_level = (reldir.count('/') + 1) if reldir else 0
+                    break
+        # This can be used to force patch to be used instead of git. Both must always work.
+        # TODO :: User selection of this and a test that using either git or patch to do the
+        #         job succeeds.
+        # reldir = ''
+        # strip_level = original_strip_level
+        # patching_exe = patch_exe
+    else:
+        reldir = ''
+        patching_exe = patch_exe
         files = set(f.split('/', strip_level)[-1] for f in files)
+    if not patching_exe:
+        log.error("No patching program (tried patch and git).")
 
     # Defaults
     result = {'patch': path,
+              'reldir': reldir,
+              'submodule': submodule,
               'files': files,
-              'patch_exe': git if (git and is_git_format) else patch_exe,
+              'patch_exe': patching_exe,
               'format': 'git' if is_git_format else 'generic',
               # If these remain 'unknown' we had no patch program to test with.
               'dry_runnable': None,
@@ -625,11 +747,6 @@ def _get_patch_attributes(path, patch_exe, git, src_dir, stdout, stderr, retaine
                     lf = True
     result['line_endings'] = 'mixed' if (crlf and lf) else 'crlf' if crlf else 'lf'
 
-    if not patch_exe:
-        log.warning("No patch program found, cannot determine patch attributes for {}".format(path))
-        if not git:
-            log.error("No git program found either. Please add a dependency for one of these.")
-        return result
 
     class noop_context(object):
         value = None
@@ -725,11 +842,8 @@ def _get_patch_attributes(path, patch_exe, git, src_dir, stdout, stderr, retaine
     return result
 
 
-def apply_one_patch(src_dir, recipe_dir, rel_path, config, git=None):
+def apply_one_patch(src_dir, recipe_dir, rel_path, config, git_exe=None, submodules=[]):
     path = os.path.join(recipe_dir, rel_path)
-    if config.verbose:
-        print('Applying patch: {}'.format(path))
-
     def try_apply_patch(patch, patch_args, cwd, stdout, stderr):
         # An old reference: https://unix.stackexchange.com/a/243748/34459
         #
@@ -750,13 +864,13 @@ def apply_one_patch(src_dir, recipe_dir, rel_path, config, git=None):
         # 3. If patching fails, the bits that succeeded remain, so patching is not at all
         #    atomic.
         #
-        # Still, we do our best to mitigate all of this as follows:
-        # 1. We use --dry-run to test for applicability first.
-        # 2 We check for native application of a native patch (--binary, without --ignore-whitespace)
+        # We do our best to mitigate this by figuring out how to apply patches against a copy of
+        # the tree of the files that it modifies.
         #
-        # Some may bemoan the loss of patch failure artifacts, but it is fairly random which
-        # patch and patch attempt they apply to so their informational value is low, besides that,
-        # they are ugly.
+        # At the end of the day, either patch or git (if the conditions are right) can be used
+        # to finally apply the patches. Git is preferred, but these checks are done with plain
+        # old patch anyway. It would be nice not to require patch I suppose but that seems a bit
+        # like make-work.
         #
         import tempfile
         temp_name = os.path.join(tempfile.gettempdir(), next(tempfile._get_candidate_names()))
@@ -795,9 +909,14 @@ def apply_one_patch(src_dir, recipe_dir, rel_path, config, git=None):
         if not len(patch_exe):
             patch_exe = ''
     with TemporaryDirectory() as tmpdir:
-        patch_attributes = _get_patch_attributes(path, patch_exe, git, src_dir, stdout, stderr, tmpdir)
+        patch_attributes = _get_patch_attributes(path, patch_exe, git_exe, src_dir, submodules, stdout, stderr, tmpdir)
         attributes_output += _patch_attributes_debug(patch_attributes, rel_path, config.build_prefix)
-        if git and patch_attributes['format'] == 'git':
+        # sub_folder is a deliberately git-agnostic name.
+        sub_folder = os.path.join(src_dir, patch_attributes['reldir'])
+        apply_with_git = git_exe and patch_attributes['format'] == 'git' and 'git' in patch_attributes['patch_exe']
+        if config.verbose:
+            print('Applying patch: {} in {} with {}'.format(path, sub_folder, git_exe if apply_with_git else patch_exe))
+        if apply_with_git:
             # Prevents git from asking interactive questions,
             # also necessary to achieve sha1 reproducibility;
             # as is --committer-date-is-author-date. By this,
@@ -806,8 +925,9 @@ def apply_one_patch(src_dir, recipe_dir, rel_path, config, git=None):
             git_env = os.environ
             git_env['GIT_COMMITTER_NAME'] = 'conda-build'
             git_env['GIT_COMMITTER_EMAIL'] = 'conda@conda-build.org'
-            check_call_env([git, 'am', '-3', '--committer-date-is-author-date', path],
-                           cwd=src_dir, stdout=stdout, stderr=stderr, env=git_env)
+            # collect the patches on a per-submodule basis.
+            check_call_env([git_exe, 'am', '-3', '--committer-date-is-author-date', path],
+                           cwd=sub_folder, stdout=stdout, stderr=stderr, env=git_env)
             config.git_commits_since_tag += 1
         else:
             if patch_exe is None or len(patch_exe) == 0:
@@ -825,7 +945,7 @@ def apply_one_patch(src_dir, recipe_dir, rel_path, config, git=None):
 
             try:
                 try_apply_patch(patch_exe, patch_args,
-                                cwd=src_dir, stdout=stdout, stderr=stderr)
+                                cwd=sub_folder, stdout=stdout, stderr=stderr)
             except Exception as e:
                 exception = e
         if exception:
@@ -833,8 +953,8 @@ def apply_one_patch(src_dir, recipe_dir, rel_path, config, git=None):
     return attributes_output
 
 
-def apply_patch(src_dir, patch, config, git=None):
-    apply_one_patch(src_dir, os.path.dirname(patch), os.path.basename(patch), config, git)
+def apply_patch(src_dir, patch, config, git_exe=None):
+    apply_one_patch(src_dir, os.path.dirname(patch), os.path.basename(patch), config, git_exe=git_exe)
 
 
 def provide(metadata):
@@ -847,7 +967,7 @@ def provide(metadata):
     meta = metadata.get_section('source')
     if not os.path.isdir(metadata.config.build_folder):
         os.makedirs(metadata.config.build_folder)
-    git = None
+    git_exe = None
 
     if hasattr(meta, 'keys'):
         dicts = [meta]
@@ -863,8 +983,8 @@ def provide(metadata):
                     croot=metadata.config.croot, verbose=metadata.config.verbose,
                     timeout=metadata.config.timeout, locking=metadata.config.locking)
             elif 'git_url' in source_dict:
-                git = git_source(source_dict, metadata.config.git_cache, src_dir, metadata.path,
-                                verbose=metadata.config.verbose)
+                git_exe = git_source(source_dict, metadata.config.git_cache, src_dir, metadata.path,
+                                     verbose=metadata.config.verbose)
             # build to make sure we have a work directory with source in it. We
             #    want to make sure that whatever version that is does not
             #    interfere with the test we run next.
@@ -907,8 +1027,29 @@ def provide(metadata):
 
             patches = ensure_list(source_dict.get('patches', []))
             patch_attributes_output = []
+            submodules = {}
+            if git_exe:
+                submodules_list = check_output_env([git_exe, 'submodule', 'status', '--recursive'],
+                                                   cwd=src_dir).decode('utf-8').splitlines()
+                reggie = re.compile(' ([0-9a-f]*) (\S+) \((\S+)\)')
+                submodules = {}
+                for sm in submodules_list:
+                    m = reggie.match(sm)
+                    groups = m.groups()
+                    submodules[groups[1]] = {'sha1': groups[0],
+                                             'path': groups[1],
+                                             'branch': groups[2]}
+                if len(submodules):
+                    # We sort by longest checkout path so we find deepest submodule that matches first.
+                    # e.g. you could have sub1 and sub1/sub1 as infixes (a/sub1, a/sub1/sub1) and both would
+                    # match. For a patch to a file listed as a/sub1/sub1, we want that to match in the
+                    # deeper folder (sub1/sub1) and not in the less deep one (sub1).
+                    from collections import OrderedDict
+                    submodules = OrderedDict(sorted(submodules.items(), key=lambda x: -len(x[1]['path'])))
+
             for patch in patches:
-                patch_attributes_output += [apply_one_patch(src_dir, metadata.path, patch, metadata.config, git)]
+                patch_attributes_output += [apply_one_patch(src_dir, metadata.path, patch, metadata.config,
+                                                            git_exe, submodules)]
             _patch_attributes_debug_print(patch_attributes_output)
 
     except CalledProcessError:

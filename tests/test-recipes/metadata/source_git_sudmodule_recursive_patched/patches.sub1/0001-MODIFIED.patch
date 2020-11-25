@@ -1,0 +1,21 @@
+From 0440b7e84e15459f951a026811d7b54476626bb5 Mon Sep 17 00:00:00 2001
+From: Ray Donnelly <mingw.android@gmail.com>
+Date: Thu, 26 Nov 2020 02:23:34 +0100
+Subject: [PATCH] MODIFIED
+
+---
+ README.md | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git b/sub1/README.md a/sub1/README.md
+index 5c8bb5b..71e86c4 100644
+--- b/sub1/README.md
++++ a/sub1/README.md
+@@ -1 +1,2 @@
+-# conda-build-test-project-wip.sub1
+\ No newline at end of file
++# conda-build-test-project-wip.sub1
++# This file was modified by the first patch to the sub1 sudmodule repo
+-- 
+2.24.3 (Apple Git-128)
+
