@@ -1,0 +1,23 @@
+package:
+  name: test_patch_read_only
+  version: 1.0
+
+source:
+  url: ./somefile.tar
+  patches:
+    # Use different kinds of patches to trigger different code paths.
+    - 0001-Patch-with-levels-to-strip.patch
+    - 0002-Patch-without-additional-levels.patch
+
+build:
+  script: |
+    grep -qxF 123 somefile  # [not win]
+    test \! -w somefile  # [not win]
+    findstr "^123" somefile  # [win]
+    if errorlevel 1 exit 1  # [win]
+    attrib somefile | findstr "^[^:]*R[^:]*.:"  # [win]
+    if errorlevel 1 exit 1  # [win]
+
+requirements:
+  build:
+    - m2-patch  # [win]
