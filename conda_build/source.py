@@ -594,7 +594,7 @@ def _get_patch_attributes(path, patch_exe, git, src_dir, stdout, stderr, retaine
         amalgamated = True
     strip_level, strip_level_guessed = _guess_patch_strip_level(files, src_dir)
     if strip_level:
-        files = [f.split('/', strip_level)[1] for f in files]
+        files = set(f.split('/', strip_level)[-1] for f in files)
 
     # Defaults
     result = {'patch': path,
@@ -673,10 +673,12 @@ def _get_patch_attributes(path, patch_exe, git, src_dir, stdout, stderr, retaine
                     pass
                 for file in files:
                     dst = os.path.join(tmp_src_dir, file)
+                    dst_dir = os.path.dirname(dst)
                     try:
-                        os.makedirs(os.path.dirname(dst))
+                        os.makedirs(dst_dir)
                     except:
-                        pass
+                        if not os.path.exists(dst_dir):
+                            raise
                     # Patches can create and delete files.
                     if os.path.exists(os.path.join(src_dir, file)):
                         shutil.copy2(os.path.join(src_dir, file), dst)
