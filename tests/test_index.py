@@ -138,6 +138,180 @@ def test_index_on_single_subdir_1(testing_workdir):
     assert actual_channeldata_json == expected_channeldata_json
 
 
+def test_file_index_on_single_subdir_1(testing_workdir):
+    test_package_path = join(testing_workdir, 'osx-64', 'conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2')
+    test_package_url = 'https://conda.anaconda.org/conda-test/osx-64/conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2'
+    download(test_package_url, test_package_path)
+
+    conda_build.index.update_index(testing_workdir, channel_name='test-channel')
+
+    # #######################################
+    # tests for osx-64 subdir
+    # #######################################
+    assert isfile(join(testing_workdir, 'osx-64', 'index.html'))
+    assert isfile(join(testing_workdir, 'osx-64', 'repodata.json.bz2'))
+    assert isfile(join(testing_workdir, 'osx-64', 'repodata_from_packages.json.bz2'))
+
+    with open(join(testing_workdir, 'osx-64', 'repodata.json')) as fh:
+        actual_repodata_json = json.loads(fh.read())
+        assert actual_repodata_json
+    with open(join(testing_workdir, 'osx-64', 'repodata_from_packages.json')) as fh:
+        actual_pkg_repodata_json = json.loads(fh.read())
+    expected_repodata_json = {
+        "info": {
+            'subdir': 'osx-64',
+        },
+        "packages": {
+            "conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2": {
+                "build": "py27h5e241af_0",
+                "build_number": 0,
+                "depends": [
+                    "python >=2.7,<2.8.0a0"
+                ],
+                "license": "BSD",
+                "md5": "37861df8111170f5eed4bff27868df59",
+                "name": "conda-index-pkg-a",
+                "sha256": "459f3e9b2178fa33bdc4e6267326405329d1c1ab982273d9a1c0a5084a1ddc30",
+                "size": 8733,
+                "subdir": "osx-64",
+                "timestamp": 1508520039632,
+                "version": "1.0",
+            },
+        },
+        "packages.conda": {},
+        "removed": [],
+        "repodata_version": 1,
+    }
+    assert actual_repodata_json == expected_repodata_json
+    assert actual_pkg_repodata_json == expected_repodata_json
+
+    # download two packages here, put them both in the same subdir
+    test_package_path = join(testing_workdir, 'osx-64', 'fly-2.5.2-0.tar.bz2')
+    test_package_url = 'https://conda.anaconda.org/conda-test/osx-64/fly-2.5.2-0.tar.bz2'
+    download(test_package_url, test_package_path)
+
+    test_package_path = join(testing_workdir, 'osx-64', 'nano-2.4.1-0-tar.bz2')
+    test_package_url = 'https://conda.anaconda.org/conda-test/osx-64/nano-2.4.1-0.tar.bz2'
+    download(test_package_url, test_package_path)
+
+    # only tell index to index one of them and then assert that it was added
+    p = os.path.join(testing_workdir, 'index_file')
+    with open(os.path.join(testing_workdir, 'index_file'), 'a+') as fh:
+        fh.write("osx-64/fly-2.5.2-0.tar.bz2\n")
+
+    conda_build.index.update_index(testing_workdir, channel_name='test-channel', index_file=p)
+
+    updated_packages = expected_repodata_json.get('packages')
+    updated_packages['fly-2.5.2-0.tar.bz2'] = {
+        "build": "0",
+        "build_number": 0,
+        "depends": [],
+        "license": "Apache",
+        "md5": "2e84ee54415a5021db050bd5fa5438b2",
+        "name": "fly",
+        "sha256": "79dec46aaa827ffde1bc069f740697b0d126f485ed9cb4c3db201f720601d346",
+        "size": 5382961,
+        "subdir": "osx-64",
+        "version": "2.5.2"
+    }
+
+    expected_repodata_json['packages'] = updated_packages
+
+    with open(join(testing_workdir, 'osx-64', 'repodata.json')) as fh:
+        actual_repodata_json = json.loads(fh.read())
+        assert actual_repodata_json
+    with open(join(testing_workdir, 'osx-64', 'repodata_from_packages.json')) as fh:
+        actual_pkg_repodata_json = json.loads(fh.read())
+        assert actual_pkg_repodata_json
+
+    assert actual_repodata_json == expected_repodata_json
+    assert actual_pkg_repodata_json == expected_repodata_json
+
+    # #######################################
+    # tests for full channel
+    # #######################################
+
+    with open(join(testing_workdir, 'channeldata.json')) as fh:
+        actual_channeldata_json = json.loads(fh.read())
+    expected_channeldata_json = {
+        "channeldata_version": 1,
+        "packages": {
+            "conda-index-pkg-a": {
+                "description": "Description field for conda-index-pkg-a. Actually, this is just the python description. "
+                               "Python is a widely used high-level, general-purpose, interpreted, dynamic "
+                               "programming language. Its design philosophy emphasizes code "
+                               "readability, and its syntax allows programmers to express concepts in "
+                               "fewer lines of code than would be possible in languages such as C++ or "
+                               "Java. The language provides constructs intended to enable clear programs "
+                               "on both a small and large scale.",
+                "dev_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a/meta.yaml",
+                "doc_source_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a/README.md",
+                "doc_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a",
+                "home": "https://anaconda.org/conda-test/conda-index-pkg-a",
+                "license": "BSD",
+                "source_git_url": "https://github.com/kalefranz/conda-test-packages.git",
+                "subdirs": [
+                    "osx-64",
+                ],
+                "summary": "Summary field for conda-index-pkg-a",
+                "version": "1.0",
+                "activate.d": False,
+                "deactivate.d": False,
+                "post_link": True,
+                "pre_link": False,
+                "pre_unlink": False,
+                "binary_prefix": False,
+                "text_prefix": True,
+                "run_exports": {},
+                'icon_hash': None,
+                'icon_url': None,
+                'identifiers': None,
+                'keywords': None,
+                'recipe_origin': None,
+                'source_url': None,
+                'tags': None,
+                'timestamp': 1508520039,
+            },
+            "fly": {
+                'activate.d': False,
+                'binary_prefix': False,
+                'deactivate.d': False,
+                'description': 'A command line interface that runs a build in a container with ATC.',
+                'dev_url': None,
+                'doc_source_url': None,
+                'doc_url': None,
+                'home': 'https://github.com/concourse/fly',
+                'icon_hash': None,
+                'icon_url': None,
+                'identifiers': None,
+                'keywords': None,
+                'license': 'Apache',
+                'post_link': False,
+                'pre_link': False,
+                'pre_unlink': False,
+                'recipe_origin': None,
+                'run_exports': {},
+                'source_git_url': '/Users/scastellarin/projects/fly-package/https:/github.com/concourse/concourse.git',
+                'source_url': None,
+                'subdirs': [
+                    'osx-64'
+                ],
+                'summary': 'A command line interface that runs a build in a container with ATC.',
+                'tags': None,
+                'text_prefix': False,
+                'timestamp': 0,
+                'version': '2.5.2'
+            }
+        },
+        "subdirs": [
+            "noarch",
+            "osx-64"
+        ]
+    }
+
+    assert actual_channeldata_json == expected_channeldata_json
+
+
 def test_index_noarch_osx64_1(testing_workdir):
     test_package_path = join(testing_workdir, 'osx-64', 'conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2')
     test_package_url = 'https://conda.anaconda.org/conda-test/osx-64/conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2'
@@ -243,6 +417,210 @@ def test_index_noarch_osx64_1(testing_workdir):
                 'timestamp': 1508520039,
                 'keywords': None,
                 'recipe_origin': None,
+            }
+        },
+        "subdirs": [
+            "noarch",
+            "osx-64",
+        ]
+    }
+    assert actual_channeldata_json == expected_channeldata_json
+
+
+def test_file_index_noarch_osx64_1(testing_workdir):
+    test_package_path = join(testing_workdir, 'osx-64', 'conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2')
+    test_package_url = 'https://conda.anaconda.org/conda-test/osx-64/conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2'
+    download(test_package_url, test_package_path)
+
+    test_package_path = join(testing_workdir, 'noarch', 'conda-index-pkg-a-1.0-pyhed9eced_1.tar.bz2')
+    test_package_url = 'https://conda.anaconda.org/conda-test/noarch/conda-index-pkg-a-1.0-pyhed9eced_1.tar.bz2'
+    download(test_package_url, test_package_path)
+
+    conda_build.index.update_index(testing_workdir, channel_name='test-channel')
+
+    # #######################################
+    # tests for osx-64 subdir
+    # #######################################
+    assert isfile(join(testing_workdir, 'osx-64', 'index.html'))
+    assert isfile(join(testing_workdir, 'osx-64', 'repodata.json'))  # repodata is tested in test_index_on_single_subdir_1
+    assert isfile(join(testing_workdir, 'osx-64', 'repodata.json.bz2'))
+    assert isfile(join(testing_workdir, 'osx-64', 'repodata_from_packages.json'))
+    assert isfile(join(testing_workdir, 'osx-64', 'repodata_from_packages.json.bz2'))
+
+    # #######################################
+    # tests for noarch subdir
+    # #######################################
+    assert isfile(join(testing_workdir, 'noarch', 'index.html'))
+    assert isfile(join(testing_workdir, 'noarch', 'repodata.json.bz2'))
+    assert isfile(join(testing_workdir, 'noarch', 'repodata_from_packages.json.bz2'))
+
+    with open(join(testing_workdir, 'noarch', 'repodata.json')) as fh:
+        actual_repodata_json = json.loads(fh.read())
+    with open(join(testing_workdir, 'noarch', 'repodata_from_packages.json')) as fh:
+        actual_pkg_repodata_json = json.loads(fh.read())
+    expected_repodata_json = {
+        "info": {
+            'subdir': 'noarch',
+        },
+        "packages": {
+            "conda-index-pkg-a-1.0-pyhed9eced_1.tar.bz2": {
+                "build": "pyhed9eced_1",
+                "build_number": 1,
+                "depends": [
+                    "python"
+                ],
+                "license": "BSD",
+                "md5": "56b5f6b7fb5583bccfc4489e7c657484",
+                "name": "conda-index-pkg-a",
+                "noarch": "python",
+                "sha256": "7430743bffd4ac63aa063ae8518e668eac269c783374b589d8078bee5ed4cbc6",
+                "size": 7882,
+                "subdir": "noarch",
+                "timestamp": 1508520204768,
+                "version": "1.0",
+            },
+        },
+        "packages.conda": {},
+        "removed": [],
+        "repodata_version": 1,
+    }
+    assert actual_repodata_json == expected_repodata_json
+    assert actual_pkg_repodata_json == expected_repodata_json
+
+    # download two packages per subdir here, put them both in the same subdir
+    test_package_path = join(testing_workdir, 'osx-64', 'fly-2.5.2-0.tar.bz2')
+    test_package_url = 'https://conda.anaconda.org/conda-test/osx-64/fly-2.5.2-0.tar.bz2'
+    download(test_package_url, test_package_path)
+
+    test_package_path = join(testing_workdir, 'osx-64', 'nano-2.4.1-0-tar.bz2')
+    test_package_url = 'https://conda.anaconda.org/conda-test/osx-64/nano-2.4.1-0.tar.bz2'
+    download(test_package_url, test_package_path)
+
+    test_package_path = join(testing_workdir, 'noarch', 'spiffy-test-app-0.5-pyh6afbcc8_0.tar.bz2')
+    test_package_url = 'https://conda.anaconda.org/conda-test/noarch/spiffy-test-app-0.5-pyh6afbcc8_0.tar.bz2'
+    download(test_package_url, test_package_path)
+
+    test_package_path = join(testing_workdir, 'noarch', 'flask-0.11.1-py_0.tar.bz2')
+    test_package_url = 'https://conda.anaconda.org/conda-test/noarch/flask-0.11.1-py_0.tar.bz2'
+    download(test_package_url, test_package_path)
+
+    # only tell index to index one of them and then assert that it was added
+    p = os.path.join(testing_workdir, 'index_file')
+    with open(os.path.join(testing_workdir, 'index_file'), 'a+') as fh:
+        fh.write("noarch/flask-0.11.1-py_0.tar.bz2\n")
+        fh.write("osx/fly-2.5.2-0.tar.bz2\n")
+
+    conda_build.index.update_index(testing_workdir, channel_name='test-channel', index_file=p)
+
+    updated_packages = expected_repodata_json.get('packages')
+    updated_packages['flask-0.11.1-py_0.tar.bz2'] = {
+        'build': 'py_0',
+        'build_number': 0,
+        'depends': [
+            'click >=2.0',
+            'itsdangerous >=0.21',
+            'jinja2 >=2.4',
+            'python',
+            'werkzeug >=0.7'
+        ],
+        'license': 'BSD',
+        'md5': '6b06127706cf0ba57c6e13258bb222e7',
+        'name': 'flask',
+        'noarch': 'python',
+        'sha256': '8353f3a4a4533ff0c6ce829b90980a01a577b3ac015ebd573fef308f2bfec5a8',
+        'size': 58062,
+        'subdir': 'noarch',
+        'version': '0.11.1'
+        }
+
+    expected_repodata_json['packages'] = updated_packages
+
+    with open(join(testing_workdir, 'noarch', 'repodata.json')) as fh:
+        actual_repodata_json = json.loads(fh.read())
+        assert actual_repodata_json
+    with open(join(testing_workdir, 'noarch', 'repodata_from_packages.json')) as fh:
+        actual_pkg_repodata_json = json.loads(fh.read())
+        assert actual_pkg_repodata_json
+
+    assert actual_repodata_json == expected_repodata_json
+    assert actual_pkg_repodata_json == expected_repodata_json
+
+    # #######################################
+    # tests for full channel
+    # #######################################
+
+    with open(join(testing_workdir, 'channeldata.json')) as fh:
+        actual_channeldata_json = json.loads(fh.read())
+    expected_channeldata_json = {
+        "channeldata_version": 1,
+        "packages": {
+            "conda-index-pkg-a": {
+                "description": "Description field for conda-index-pkg-a. Actually, this is just the python description. "
+                               "Python is a widely used high-level, general-purpose, interpreted, dynamic "
+                               "programming language. Its design philosophy emphasizes code "
+                               "readability, and its syntax allows programmers to express concepts in "
+                               "fewer lines of code than would be possible in languages such as C++ or "
+                               "Java. The language provides constructs intended to enable clear programs "
+                               "on both a small and large scale.",
+                "dev_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a/meta.yaml",
+                "doc_source_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a/README.md",
+                "doc_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a",
+                "home": "https://anaconda.org/conda-test/conda-index-pkg-a",
+                "license": "BSD",
+                "source_git_url": "https://github.com/kalefranz/conda-test-packages.git",
+                'source_url': None,
+                "subdirs": [
+                    "noarch",
+                    "osx-64",
+                ],
+                "summary": "Summary field for conda-index-pkg-a. This is the python noarch version.",  # <- tests that the higher noarch build number is the data collected
+                "version": "1.0",
+                "activate.d": False,
+                "deactivate.d": False,
+                "post_link": True,
+                "pre_link": False,
+                "pre_unlink": False,
+                "binary_prefix": False,
+                "text_prefix": True,
+                "run_exports": {},
+                'icon_hash': None,
+                'icon_url': None,
+                'identifiers': None,
+                'tags': None,
+                'timestamp': 1508520204,
+                'keywords': None,
+                'recipe_origin': None,
+            },
+            'flask': {
+                'activate.d': False,
+                'binary_prefix': False,
+                'deactivate.d': False,
+                'description': "Flask is a microframework for Python based on Werkzeug and Jinja2. "
+                               "It's intended for getting started very quickly and was developed with best intentions in mind.",
+                'dev_url': 'https://github.com/mitsuhiko/flask',
+                'doc_source_url': None,
+                'doc_url': 'http://flask.pocoo.org/docs/0.10/',
+                'home': 'http://flask.pocoo.org/',
+                'icon_hash': None,
+                'icon_url': None,
+                'identifiers': None,
+                'keywords': None,
+                'license': 'BSD',
+                'post_link': False,
+                'pre_link': False,
+                'pre_unlink': False,
+                'recipe_origin': None,
+                'run_exports': {},
+                'source_git_url': None,
+                'source_url': None,
+                'subdirs': [
+                    'noarch'
+                ],
+                'summary': 'A microframework based on Werkzeug, Jinja2 and good intentions',
+                'tags': None,
+                'text_prefix': False,
+                'timestamp': 0,
+                'version': '0.11.1'
             }
         },
         "subdirs": [
@@ -680,7 +1058,7 @@ def test_current_index_reduces_space():
                     "depends-on-older-1.2.10-h7b6447c_3.tar.bz2",
                     "ancient-package-1.2.10-h7b6447c_3.tar.bz2",
                     "one-gets-filtered-1.3.10-h7b6447c_3.tar.bz2"
-    }
+                    }
     # conda 4.7 removes .tar.bz2 files in favor of .conda files
     if conda_47:
         tar_bz2_keys.remove("one-gets-filtered-1.3.10-h7b6447c_3.tar.bz2")

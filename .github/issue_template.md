@@ -3,6 +3,8 @@ Thanks for opening an issue! A few things to keep in mind:
 
 - This issue tracker is for issues with or enhancements for conda-build.
 
+Anaconda Community Code of Conduct: https://www.anaconda.com/community-code-of-conduct/
+
 For conda issues, you should open an issue at https://github.com/conda/conda/issues
 For Anaconda issues, you should open an issue at https://github.com/ContinuumIO/anaconda-issues/issues
 For an issue with a particular conda-forge package, you should open an issue on the 

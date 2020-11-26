@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+
+function install_conda_build_test_deps_fn()
+{
+  # avoids a python 3.7 problem
+  local -a _PKGS=(cytoolz conda-verify)
+  if [[ "$PYTHON_VERSION" == "2.7" ]]; then
+    _PKGS+=(futures scandir pathlib2)
+  fi
+  _PKGS+=("pytest<6" pytest-azurepipelines pytest-cov pytest-forked pytest-xdist)
+  _PKGS+=(py-lief pytest-mock)
+  if [[ "$PYTHON_VERSION" != "2.7" ]] || [[ ! $(uname) =~ M* ]]; then
+    _PKGS+=(pytest-replay pytest-rerunfailures)
+  fi
+  _PKGS+=(anaconda-client git requests filelock contextlib2 jinja2 flaky)
+  _PKGS+=(ripgrep pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz tqdm)
+  _PKGS+=(conda-package-handling perl python-libarchive-c)
+  _PKGS+=(pip numpy mock pkginfo)
+  if [[ $(uname) =~ .*inux.* ]]; then
+    _PKGS+=(patchelf)
+    _PKGS+=(shellcheck)
+  else
+    _PKGS+=(conda-forge::shellcheck)
+  fi
+  conda install -y --show-channel-urls "${_PKGS[@]}"
+  if [[ ! -d ../conda_build_test_recipe ]]; then
+    pushd ..
+      git clone "https://github.com/conda/conda_build_test_recipe"
+    popd
+  fi
+}
+
+install_conda_build_test_deps_fn

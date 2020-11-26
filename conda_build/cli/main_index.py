@@ -48,11 +48,13 @@ def parse_args(args):
     )
     p.add_argument(
         "-p", "--patch-generator",
-        help="Path to Python file that outputs metadata patch instructions"
+        help='Path to Python file that outputs metadata patch instructions from its '
+             '_patch_repodata function or a .tar.bz2/.conda file which contains a '
+             'patch_instructions.json file for each subdir'
     )
     p.add_argument(
         "--hotfix-source-repo",
-        help="URL of git repo that hosts your metadata patch instructions"
+        help="Deprecated, will be removed in a future version of conda build"
     )
     p.add_argument(
         "--verbose", help="show extra debugging info", action="store_true"
@@ -73,6 +75,11 @@ def parse_args(args):
         will keep python 2.7.X and 3.6.Y in the current_index.json, instead of only the very latest python version.
         """
     )
+    p.add_argument(
+        "-f", "--file",
+        help="A file that contains a new line separated list of packages to add to repodata.",
+        action="store"
+    )
 
     args = p.parse_args(args)
     return p, args
@@ -84,7 +91,7 @@ def execute(args):
     api.update_index(args.dir, check_md5=args.check_md5, channel_name=args.channel_name,
                      threads=args.threads, subdir=args.subdir, patch_generator=args.patch_generator,
                      verbose=args.verbose, progress=args.progress, hotfix_source_repo=args.hotfix_source_repo,
-                     current_index_versions=args.current_index_versions_file)
+                     current_index_versions=args.current_index_versions_file, index_file=args.file)
 
 
 def main():

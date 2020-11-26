@@ -6,7 +6,7 @@ Enhancements:
 Bug fixes:
 ----------
 
-* <news item>
+* Reduce get_rpaths_raw/patchelf disagree warnings
 
 Deprecations:
 -------------
@@ -16,7 +16,7 @@ Deprecations:
 Docs:
 -----
 
-* Removed deprecated page on features
+* <news item>
 
 Other:
 ------

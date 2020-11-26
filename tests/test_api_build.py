@@ -108,6 +108,7 @@ def test_recipe_builds(recipe, testing_config, testing_workdir, monkeypatch):
 
 
 @pytest.mark.serial
+@pytest.mark.xfail
 def test_token_upload(testing_workdir, testing_metadata):
     folder_uuid = uuid.uuid4().hex
     # generated with conda_test_account user, command:
@@ -224,6 +225,7 @@ def test_build_with_no_activate_does_not_activate():
 
 
 @pytest.mark.sanity
+@pytest.mark.serial
 @pytest.mark.xfail(on_win and len(os.getenv('PATH')) > 1024, reason="Long PATHs make activation fail with obscure messages")
 def test_build_with_activate_does_activate():
     api.build(os.path.join(metadata_dir, '_set_env_var_activate_build'), activate=True,
@@ -235,6 +237,14 @@ def test_build_with_activate_does_activate():
                     reason="no binary prefix manipulation done on windows.")
 def test_binary_has_prefix_files(testing_workdir, testing_config):
     api.build(os.path.join(metadata_dir, '_binary_has_prefix_files'), config=testing_config)
+
+
+@pytest.mark.xfail
+@pytest.mark.sanity
+@pytest.mark.skipif(sys.platform == "win32",
+                    reason="no binary prefix manipulation done on windows.")
+def test_binary_has_prefix_files_non_utf8(testing_workdir, testing_config):
+    api.build(os.path.join(metadata_dir, '_binary_has_utf_non_8'), config=testing_config)
 
 
 def test_relative_path_git_versioning(testing_workdir, testing_config):
@@ -301,6 +311,7 @@ def test_checkout_tool_as_dependency(testing_workdir, testing_config, monkeypatc
     FNULL.close()
     env = os.environ.copy()
     env["PATH"] = os.pathsep.join([testing_workdir, env["PATH"]])
+    testing_config.activate = True
     api.build(os.path.join(metadata_dir, '_checkout_tool_as_dependency'), config=testing_config)
 
 
@@ -474,13 +485,13 @@ def test_numpy_setup_py_data(testing_config):
     #    - cython
     subprocess.call('conda remove -y cython'.split())
     with pytest.raises(CondaBuildException) as exc_info:
-        api.render(recipe_path, config=testing_config, numpy="1.11")[0][0]
+        api.render(recipe_path, config=testing_config, numpy="1.16")[0][0]
     assert exc_info.match("Cython")
     subprocess.check_call(["conda", "install", "-y", "cython"])
-    m = api.render(recipe_path, config=testing_config, numpy="1.11")[0][0]
+    m = api.render(recipe_path, config=testing_config, numpy="1.16")[0][0]
     _hash = m.hash_dependencies()
     assert os.path.basename(api.get_output_file_path(m)[0]) == \
-                            "load_setup_py_test-0.1.0-np111py{0}{1}{2}_0.tar.bz2".format(
+                            "load_setup_py_test-0.1.0-np116py{0}{1}{2}_0.tar.bz2".format(
                                 sys.version_info.major, sys.version_info.minor, _hash)
 
 
@@ -712,7 +723,7 @@ def test_noarch_python_with_tests(testing_config):
 @pytest.mark.sanity
 def test_noarch_python_1(testing_config):
     output = api.build(os.path.join(metadata_dir, "_noarch_python"), config=testing_config)[0]
-    assert package_has_file(output, 'info/files') is not ''
+    assert package_has_file(output, 'info/files') != ''
     extra = json.loads(package_has_file(output, 'info/link.json'))
     assert 'noarch' in extra
     assert 'entry_points' in extra['noarch']
@@ -861,12 +872,13 @@ def test_build_expands_wildcards(mocker, testing_workdir):
             fh.write('\n')
     api.build(["a*"], config=config)
     output = sorted([os.path.join(os.getcwd(), path, 'meta.yaml') for path in files])
+
     build_tree.assert_called_once_with(output,
-                                       mocker.ANY,  # config
-                                       mocker.ANY,  # stats
+                                       config=mocker.ANY,
+                                       stats=mocker.ANY,
                                        build_only=False,
-                                       need_source_download=True, notest=False,
-                                       post=None, variants=None)
+                                       post=None, notest=False,
+                                       variants=None)
 
 
 @pytest.mark.parametrize('set_build_id', [True, False])
@@ -1011,6 +1023,72 @@ def test_ignore_run_exports(testing_metadata, testing_config):
     assert 'downstream_pinned_package 1.0' not in m.meta['requirements'].get('run', [])
 
 
+@pytest.mark.sanity
+def test_ignore_run_exports_from(testing_metadata, testing_config):
+    # build the package with run exports for ensuring that we ignore it
+    api.build(os.path.join(metadata_dir, '_run_exports'), config=testing_config,
+              notest=True)
+    # customize our fixture metadata with our desired changes
+    testing_metadata.meta['requirements']['host'] = ['test_has_run_exports']
+    testing_metadata.meta['build']['ignore_run_exports_from'] = ['test_has_run_exports']
+    testing_metadata.config.index = None
+    m = finalize_metadata(testing_metadata)
+    assert 'downstream_pinned_package 1.0' not in m.meta['requirements'].get('run', [])
+
+
+def test_run_exports_noarch_python(testing_metadata, testing_config):
+    # build the package with run exports for ensuring that we ignore it
+    api.build(os.path.join(metadata_dir, '_run_exports_noarch'), config=testing_config,
+              notest=True)
+    # customize our fixture metadata with our desired changes
+    testing_metadata.meta['requirements']['host'] = ['python']
+    testing_metadata.meta['requirements']['run'] = ['python']
+    testing_metadata.meta['build']['noarch'] = 'python'
+    testing_metadata.config.index = None
+    testing_metadata.config.variant["python"] = "3.6 with_run_exports"
+
+    m = finalize_metadata(testing_metadata)
+    assert 'python 3.6 with_run_exports' in m.meta['requirements'].get('host', [])
+    assert 'python 3.6 with_run_exports' not in m.meta['requirements'].get('run', [])
+
+
+def test_run_exports_constrains(testing_metadata, testing_config, testing_workdir):
+    api.build(os.path.join(metadata_dir, '_run_exports_constrains'), config=testing_config,
+              notest=True)
+
+    testing_metadata.meta['requirements']['build'] = ['run_exports_constrains']
+    testing_metadata.meta['requirements']['host'] = []
+    api.output_yaml(testing_metadata, 'in_build/meta.yaml')
+    m = api.render(os.path.join(testing_workdir, 'in_build'), config=testing_config)[0][0]
+    reqs_set = lambda section: set(m.meta['requirements'].get(section, []))
+    assert {'strong_run_export'} == reqs_set('run')
+    assert {'strong_constrains_export'} == reqs_set('run_constrained')
+
+    testing_metadata.meta['requirements']['build'] = []
+    testing_metadata.meta['requirements']['host'] = ['run_exports_constrains']
+    api.output_yaml(testing_metadata, 'in_host/meta.yaml')
+    m = api.render(os.path.join(testing_workdir, 'in_host'), config=testing_config)[0][0]
+    reqs_set = lambda section: set(m.meta['requirements'].get(section, []))
+    assert {'strong_run_export', 'weak_run_export'} == reqs_set('run')
+    assert {'strong_constrains_export', 'weak_constrains_export'} == reqs_set('run_constrained')
+
+    testing_metadata.meta['requirements']['build'] = ['run_exports_constrains_only_weak']
+    testing_metadata.meta['requirements']['host'] = []
+    api.output_yaml(testing_metadata, 'only_weak_in_build/meta.yaml')
+    m = api.render(os.path.join(testing_workdir, 'only_weak_in_build'), config=testing_config)[0][0]
+    reqs_set = lambda section: set(m.meta['requirements'].get(section, []))
+    assert set() == reqs_set('run')
+    assert set() == reqs_set('run_constrained')
+
+    testing_metadata.meta['requirements']['build'] = []
+    testing_metadata.meta['requirements']['host'] = ['run_exports_constrains_only_weak']
+    api.output_yaml(testing_metadata, 'only_weak_in_host/meta.yaml')
+    m = api.render(os.path.join(testing_workdir, 'only_weak_in_host'), config=testing_config)[0][0]
+    reqs_set = lambda section: set(m.meta['requirements'].get(section, []))
+    assert {'weak_run_export'} == reqs_set('run')
+    assert {'weak_constrains_export'} == reqs_set('run_constrained')
+
+
 def test_pin_subpackage_exact(testing_config):
     recipe = os.path.join(metadata_dir, '_pin_subpackage_exact')
     ms = api.render(recipe, config=testing_config)
@@ -1022,13 +1100,24 @@ def test_pin_subpackage_exact(testing_config):
 @pytest.mark.sanity
 @pytest.mark.serial
 @pytest.mark.skipif(sys.platform != 'linux', reason="xattr code written here is specific to linux")
-def test_copy_read_only_file_with_xattr(testing_config, testing_workdir):
+def test_copy_read_only_file_with_xattr(testing_config, testing_homedir):
+    if not testing_homedir:
+        return pytest.xfail("could not create a temporary folder in {} (tmpfs inappropriate for xattrs)".
+            format('${HOME}' if sys.platform != 'win32' else '%UserProfile%'))
     src_recipe = os.path.join(metadata_dir, '_xattr_copy')
-    recipe = os.path.join(testing_workdir, '_xattr_copy')
+    recipe = os.path.join(testing_homedir, '_xattr_copy')
     copy_into(src_recipe, recipe)
     # file is r/w for owner, but we change it to 400 after setting the attribute
     ro_file = os.path.join(recipe, 'mode_400_file')
-    subprocess.check_call('setfattr -n user.attrib -v somevalue {}'.format(ro_file), shell=True)
+    # tmpfs on modern Linux does not support xattr in general.
+    # https://stackoverflow.com/a/46598063
+    # tmpfs can support extended attributes if you enable CONFIG_TMPFS_XATTR in Kernel config.
+    # But Currently this enables support for the trusted.* and security.* namespaces
+    try:
+        subprocess.check_call('setfattr -n user.attrib -v somevalue {}'.format(ro_file), shell=True)
+    except:
+        return pytest.xfail("setfattr not possible in {}, see https://stackoverflow.com/a/46598063".format(
+            testing_homedir))
     subprocess.check_call('chmod 400 {}'.format(ro_file), shell=True)
     api.build(recipe, config=testing_config)
 
@@ -1036,11 +1125,11 @@ def test_copy_read_only_file_with_xattr(testing_config, testing_workdir):
 @pytest.mark.sanity
 def test_env_creation_fail_exits_build(testing_config):
     recipe = os.path.join(metadata_dir, '_post_link_exits_after_retry')
-    with pytest.raises((RuntimeError, LinkError, CondaError)):
+    with pytest.raises((RuntimeError, LinkError, CondaError, KeyError)):
         api.build(recipe, config=testing_config)
 
     recipe = os.path.join(metadata_dir, '_post_link_exits_tests')
-    with pytest.raises((RuntimeError, LinkError, CondaError)):
+    with pytest.raises((RuntimeError, LinkError, CondaError, KeyError)):
         api.build(recipe, config=testing_config)
 
 
@@ -1328,25 +1417,26 @@ def test_provides_features_metadata(testing_config):
     assert index['provides_features'] == {'test2': 'also_ok'}
 
 
-@pytest.mark.sanity
-@pytest.mark.skipif(sys.platform == "win32",
-                    reason="not supported on Windows yet")
+@pytest.mark.skipif(on_win and sys.version[:3] == "2.7",
+                    reason="py-lief not available on win for Python 2.7")
 def test_overlinking_detection(testing_config):
     testing_config.activate = True
     testing_config.error_overlinking = True
     testing_config.verify = False
     recipe = os.path.join(metadata_dir, '_overlinking_detection')
-    dest_file = os.path.join(recipe, 'build.sh')
-    copy_into(os.path.join(recipe, 'build_scripts', 'default.sh'), dest_file, clobber=True)
+    dest_sh = os.path.join(recipe, 'build.sh')
+    dest_bat = os.path.join(recipe, 'bld.bat')
+    copy_into(os.path.join(recipe, 'build_scripts', 'default.sh'), dest_sh, clobber=True)
+    copy_into(os.path.join(recipe, 'build_scripts', 'default.bat'), dest_bat, clobber=True)
     api.build(recipe, config=testing_config)
-    copy_into(os.path.join(recipe, 'build_scripts', 'no_as_needed.sh'), dest_file, clobber=True)
+    copy_into(os.path.join(recipe, 'build_scripts', 'no_as_needed.sh'), dest_sh, clobber=True)
+    copy_into(os.path.join(recipe, 'build_scripts', 'with_bzip2.bat'), dest_bat, clobber=True)
     with pytest.raises(OverLinkingError):
         api.build(recipe, config=testing_config)
-    rm_rf(dest_file)
+    rm_rf(dest_sh)
+    rm_rf(dest_bat)
 
 
-@pytest.mark.sanity
-@pytest.mark.xfail(reason="Need to discuss with Ray")
 def test_overdepending_detection(testing_config):
     testing_config.activate = True
     testing_config.error_overlinking = True
@@ -1355,6 +1445,17 @@ def test_overdepending_detection(testing_config):
     recipe = os.path.join(metadata_dir, '_overdepending_detection')
     with pytest.raises(OverDependingError):
         api.build(recipe, config=testing_config)
+
+
+@pytest.mark.skipif(sys.platform != "darwin",
+                    reason="macOS-only test (at present)")
+def test_macos_tbd_handling(testing_config):
+    testing_config.activate = True
+    testing_config.error_overlinking = True
+    testing_config.error_overdepending = True
+    testing_config.verify = False
+    recipe = os.path.join(metadata_dir, '_macos_tbd_handling')
+    api.build(recipe, config=testing_config)
 
 
 @pytest.mark.sanity

@@ -168,7 +168,7 @@ def test_slash_in_recipe_arg_keeps_build_id(testing_workdir, testing_config):
     args = [os.path.join(metadata_dir, "has_prefix_files"), '--croot', testing_config.croot,
             '--no-anaconda-upload']
     outputs = main_build.execute(args)
-    data = package_has_file(outputs[0], 'binary-has-prefix', refresh=True)
+    data = package_has_file(outputs[0], 'binary-has-prefix', refresh_mode='forced')
     assert data
     if hasattr(data, 'decode'):
         data = data.decode('UTF-8')
@@ -191,7 +191,7 @@ def test_build_no_build_id(testing_workdir, testing_config):
     args = [os.path.join(metadata_dir, "has_prefix_files"), '--no-build-id',
             '--croot', testing_config.croot, '--no-activate', '--no-anaconda-upload']
     outputs = main_build.execute(args)
-    data = package_has_file(outputs[0], 'binary-has-prefix', refresh=True)
+    data = package_has_file(outputs[0], 'binary-has-prefix', refresh_mode='forced')
     assert data
     if hasattr(data, 'decode'):
         data = data.decode('UTF-8')
@@ -264,6 +264,13 @@ def test_skeleton_pypi(testing_workdir, testing_config):
 
     # ensure that recipe generated is buildable
     main_build.execute(('peppercorn',))
+
+
+@pytest.mark.sanity
+def test_skeleton_pypi_compatible_versions(testing_workdir, testing_config):
+    args = ['pypi', 'openshift']
+    main_skeleton.execute(args)
+    assert os.path.isdir('openshift')
 
 
 @pytest.mark.slow

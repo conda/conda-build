@@ -14,9 +14,9 @@ Package name
 ============
 
 The name of a package, without any reference to a particular
-version. Conda package names are normalized, and they may contain
+version. Conda package names are normalized and they may contain
 only lowercase alpha characters, numeric digits, underscores,
-hyphens or dots. In usage documentation, these are referred to
+hyphens, or dots. In usage documentation, these are referred to
 by ``package_name``.
 
 .. _package_version:

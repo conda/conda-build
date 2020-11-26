@@ -343,7 +343,7 @@ def test_list_skeletons():
 
 
 def test_pypi_with_entry_points(testing_workdir):
-    api.skeletonize('planemo', repo='pypi', python_version="2.7")
+    api.skeletonize('planemo', repo='pypi', python_version="3.7")
     assert os.path.isdir('planemo')
 
 
@@ -412,6 +412,8 @@ def test_setuptools_test_requirements(testing_workdir):
     assert m.meta['test']['requires'] == ['nose >=1.0']
 
 
+@pytest.mark.skipif(sys.version[:3] == "2.7",
+                    reason="sympy is python 3.5 and above")
 def test_pypi_section_order_preserved(testing_workdir):
     """
     Test whether sections have been written in the correct order.
@@ -450,7 +452,6 @@ cran_packages = [('r-usethis', 'GPL-3', 'GPL3', 'GPL-3'),  # cran: 'GPL-3'
                  ('r-udpipe', 'MPL-2.0', 'OTHER', ''),  # cran: 'MPL-2.0'
                  ('r-broom', 'MIT', 'MIT', ['MIT', 'LICENSE']),  # cran: 'MIT + file LICENSE'
                  ('r-meanr', 'BSD_2_clause', 'BSD', ['BSD_2_clause', 'LICENSE']),  # cran: 'BSD 2-clause License + file LICENSE'
-                 ('r-rsed', 'BSD_3_clause', 'BSD', ['BSD_3_clause', 'LICENSE']),  # cran: 'BSD_3_clause + file LICENSE'
                  ('r-zoo', 'GPL-2 | GPL-3', 'GPL3', ['GPL-2', 'GPL-3']),  # cran: 'GPL-2 | GPL-3'
                  ('r-magree', 'GPL-3 | GPL-2', 'GPL3', ['GPL-3', 'GPL-2']),  # cran: 'GPL-3 | GPL-2'
                  ('r-mglm', 'GPL-2', 'GPL2', 'GPL-2'),  # cran: 'GPL (>= 2)'
@@ -458,7 +459,7 @@ cran_packages = [('r-usethis', 'GPL-3', 'GPL3', 'GPL-3'),  # cran: 'GPL-3'
 
 @pytest.mark.slow
 @pytest.mark.parametrize("package, license_id, license_family, license_files", cran_packages)
-@pytest.mark.flaky(reruns=5, reruns_delay=1)
+@pytest.mark.flaky(max_runs=5)
 def test_cran_license(package, license_id, license_family, license_files, testing_workdir, testing_config):
     api.skeletonize(packages=package, repo='cran', output_dir=testing_workdir,
                     config=testing_config)
@@ -483,12 +484,13 @@ cran_os_type_pkgs = [('bigReg', 'skip: True  # [not unix]'),
 def test_cran_os_type(package, skip_text, testing_workdir, testing_config):
     api.skeletonize(packages=package, repo='cran', output_dir=testing_workdir,
                     config=testing_config)
-    fpath = os.path.join(testing_workdir, 'r-' + package.lower(), 'meta.yaml') 
+    fpath = os.path.join(testing_workdir, 'r-' + package.lower(), 'meta.yaml')
     with open(fpath) as f:
         assert skip_text in f.read()
 
 
 @pytest.mark.slow
+@pytest.mark.flaky(max_runs=5)
 @pytest.mark.skipif(not external.find_executable("shellcheck"), reason="requires shellcheck >=0.7.0")
 @pytest.mark.parametrize(
     "package, repo", [("r-usethis", "cran"), ("Perl::Lint", "cpan"), ("screen", "rpm")]

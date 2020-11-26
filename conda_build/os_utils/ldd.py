@@ -12,7 +12,6 @@ from conda_build.conda_interface import linked_data
 from conda_build.os_utils.macho import otool
 from conda_build.os_utils.pyldd import codefile_class, inspect_linkages, machofile, is_codefile
 
-
 LDD_RE = re.compile(r'\s*(.*?)\s*=>\s*(.*?)\s*\(.*\)')
 LDD_NOT_FOUND_RE = re.compile(r'\s*(.*?)\s*=>\s*not found')
 
@@ -62,7 +61,7 @@ def get_linkages(obj_files, prefix, sysroot):
                 res[f] = ldd(path)
             elif sys.platform.startswith('darwin'):
                 links = otool(path)
-                res[f] = [(basename(l['name']), l['name']) for l in links]
+                res[f] = [(basename(line['name']), line['name']) for line in links]
         except:
             ldd_failed = True
         finally:
@@ -86,15 +85,25 @@ def get_linkages(obj_files, prefix, sysroot):
 
 
 @memoized
-def get_package_obj_files(dist, prefix):
-    data = linked_data(prefix).get(dist)
+def get_package_files(dist, prefix):
+    files = []
+    if hasattr(dist, 'get'):
+        files = dist.get('files')
+    else:
+        data = linked_data(prefix).get(dist)
+        if data:
+            files = data.get('files', [])
+    return files
 
+
+@memoized
+def get_package_obj_files(dist, prefix):
     res = []
-    if data:
-        for f in data.get('files', []):
-            path = join(prefix, f)
-            if is_codefile(path):
-                res.append(f)
+    files = get_package_files(dist, prefix)
+    for f in files:
+        path = join(prefix, f)
+        if is_codefile(path):
+            res.append(f)
 
     return res
 

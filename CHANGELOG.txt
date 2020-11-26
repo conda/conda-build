@@ -1,6 +1,340 @@
 # current developments
+2020-10-26 3.20.5:
+------------------
+
+Enhancements:
+-------------
+
+* A new feature ``build/ignore_run_exports_from`` which will ignore ``run_exports``
+* coming from a package listed in ``build/ignore_run_exports_from``.  (#4114)
+
+Bug fixes:
+----------
+
+* Respect PEP440 ~= 'Compatible release clause'  (#4113)
+* Detect amalgamated patches  (#4099)
+* Handle realpath properly in unsafe patch check  (#4099)
+* Force channel_targets to be considered used  (#4099)
+* Look for git in build_prefix in git_info  (#4099)
+* Fall back to shutil.copy if shutil.copy2 fails when copying patches  (#4099)
+* Fix indexing by file  (#4111)
+* Helper functions to extract keys  (#4088)
+* Simplify find_config_files call  (#4086)
+* Refactor dict_of_lists_to_lists_of_dict  (#4075)
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @isuruf
+* @njalerikson
+* @cjmartian
+* @njalerikson
+
+
+2020-10-14 3.20.4:
+------------------
+
+Enhancements:
+-------------
+
+* Make stats output more easily human-readable  (#4069)
+* Prefer meta.yaml build/error_overlinking and error_overdepending  (#4074)
+* Cleanup variant processing code  (#4075)
+* Add --file option to indexing  (#4076)
+
+Bug Fixes:
+
+* Remove old rpath when loader_path is used  (#4080)
+* Fix MACOSX_DEPLOYMENT_TARGET default for osx-arm64  (#4091)
+* Rewrite apply_patch again  (#4092)
+* Add a .* to conditional_regex  (#4092)
+
+Contributors:
+-------------
+
+* @isuruf
+* @njalerikson
+* @cjmartian
+
+
+2020-09-29 3.20.3:
+------------------
+
+Enhancements:
+-------------
+
+* Use CONDA_PACKAGE_EXTENSIONS (#4053)
+* raise runtimeerror instead of calling sys.exit (#4062)
+* Refactor conda_build.build.get_all_replacements (#4055)
+
+Bug fixes:
+----------
+
+* Do not clobber config argument in conda_build.build.build_tree (#4066)
+* Use --dry-run to test that a patch applies. Fixes bug 4054 (#4067)
+* Include target_platform in package build string hash (#4065)
+* Fix post linking for SDKs with tapi-tbd-v4 (MacOS 11.0 and upwards) (#4048)
+
+Contributors:
+-------------
+
+
+
+2020-09-04 3.20.1:
+------------------
+
+Enhancements:
+-------------
+
+
+
+
+
+Bug fixes:
+----------
+
+* Run bash with -e in outputs too #4033
+* Add target to recognized fields in `outputs` #4034
+* Various overlinking fixes for Windows #4036
+* variants: remove hard-coded default path for CONDA_BUILD_SYSROOT
+
+Deprecations:
+-------------
+
+
+
+
+
+Docs:
+-----
+
+
+
+
+
+Other:
+------
+
+
+
+
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @isuruf
+* @mbargull
+
+
+2020-08-27 3.20.0:
+------------------
+
+Enhancements:
+-------------
+
+* enable Python 3.8 on Azure Pipelines (#3841)
+* which_package can be passed avoid_canonical_channel_name (#3952)
+* make life easier (less shell exit-y) for those who source test scripts (#3952)
+* move old host env instead of deleting it when `--keep-old-work` (#3952)
+* convert info.d/*.yaml to info/*.json (#3952)
+* allow manual specification of which binary files to prefix replace (#3952)
+* filter out '.AppleDouble' folders from recipe searches (#3952)
+* re-wrote apply_patch() to be more robust (#3952)
+* many fixes for DSO post-processing (#3952, #3953)
+* add support for (limited) tbd parsing (#3953)
+* Make sure packages in current repo data w/ features have versions without features (#3957)
+* Check all sysroot locations for DSOs (#3969)
+* More helpful error message if an empty string is passed as the hash ('md5', 'sha1' or 'sha256' fields) (#3971)
+* the ``GIT_DESCRIBE_HASH`` variable will be available regardless of whether the sources of the recipe have a git tag or not (#3982)
+* add apple silicon support (#4004, #4015)
+* set build_platform for aid in cross compiling (#4005)
+* import macho on non apple system for cross compiling (#4025)
+* Add ccache as a jinja 2 function (#4026)
+* Improve cpan skeleton (#4026)
+* Retry moving host prefix due to Windows file locking (#4026)
+* Rename ccache method from mklink to sylinks (#4028)
+
+Bug fixes:
+----------
+
+* conda_build.metadata: fixed typos in FIELDS (#3866)
+* add spaces in CRAN templates (fixes #3943) (#3944)
+* raise valid CalledProcessException in macho.otool (#3952)
+* cache local_output_folder too for get_build_index (#3952)
+* fix relocations when cross compiling (#3995)
+* use host_platform instead of sys.platform to facilitate cross compiling (#3997)
+* Fix parsing UnsatisfiableError from conda>=4.7.8 (#4001)
+* allow packages to depend on themselves when cross compiling (#4011)
+* set the correct SHLIB_EXT when cross compiling (#4013, #4021)
+* inspect linkages with pyldd when not DLL/EXE files (#4019)
+* Respect no_rewrite_stdout_env on Windows (#4026)
+* Prefix replacement fixes (#4026)
+* Use git am -3 when applying patches (#4026)
+* Fix env_var=val assertion (#4026)
+* Use exit /B from patch files (#4026)
+
+Docs:
+-----
+
+* extend docs o generating the index (#3877)
+* add details to documentation of run_constrained (#3878)
+* remove documentation on bdist_conda and environment variables (#3879)
+* update cli help information for conda index (#3931)
+* Clarify how to install conda-build (#3976)
+* Add note for local package install deps (#3980)
+* Clarify multiple OS selection (#3984)
+* add aarch64 selector to the docs (#4003)
+* add docs on build_platform and arm64 (#4020)
+
+Other:
+------
+
+* Enable s390x support (#3949, #4030)
+* Add xfail test for non-utf-8 charsets (#3972)
+* Improve testing on CI (#3987, #4017, #4027)
+* Allow python=3.8 for pypi skeletons (#4014)
+
+
+2020-04-13 3.19.3:
+------------------
+
+Bug fixes:
+----------
+
+* load log prior to calling warn method (#3925)
+* test suite fixes and prefix replacement fixes (#3932)
+
+Other:
+------
+
+* Enable ppc64 support (#3921)
+
+Docs:
+-----
+
+* Update cli help information for conda index (#3931)
+
+Contributors:
+-------------
+
+* @beenje
+* @jjhelmus
+* @mingwandroid
+
+
+2020-04-01 3.19.2:
+------------------
+
+Bug fixes:
+----------
+
+* Show a warning instead of failing if a Mach-O file is prouduced by a build running on a platform other than macOS (#3912)
+* Revert #3893, restores behavior of build/binary_has_prefix_files to that found in 3.18.12 (#3916)
+
+Docs:
+-----
+
+* clarified 'deletes the build environment' in concepts/recipe.rst (#3901)
+
+Contributors:
+-------------
+
+* @jjhelmus
+* @timsnyder
+* @chrisburr
+
+
+2020-03-17 3.19.1:
+------------------
+
+Bug fixes:
+----------
+
+* Fix issues with PREFIX detection in Windows #3899
+
+Other:
+------
+
+* Change the CI trigger #3904
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @marcelotrevisani
+* @jjhelmus
+
+
+2020-03-10 3.19.0:
+------------------
+
+Enhancements:
+-------------
+
+* Keep python pinning in hashing if there is a space #3895
+* ci launcher supporting python d shebangs on Windows #3894
+* Allow build/binary_has_prefix_files to specify a list of files #3893
+
+Bug fixes:
+----------
+
+* Use patchelf to set RPATH by default #3897
+
+Contributors:
+-------------
+
+* @isuruf
+* @jjhelmus
+* @mingwandroid
+
+
+2020-03-02 3.18.12:
+------------------
+
+* Keep python pinning in hashing if there is a space #3895	
+* ci launcher supporting python d shebangs on Windows #3894	
+* Allow build/binary_has_prefix_files to specify a list of files #3893	
+* Use patchelf to set RPATH by default #3897
+* Prevent non-atomic writes to repodata JSON files #3833
+* Audited and updated all docs with formatting, grammar, and accuracy errors.
+* Docs: Removed deprecated page on features
+* Fixed issue where symlinks to files that do not exist break conda build #3840
+
+Contributors:
+-------------
+
+* @bdice
+* @beckermr
+* @chrisburr
+* @csoja
+* @guidara
+* @isuruf
+* @jakirkham
+* @jjhelmus
+* @marcelotrevisani
+* @mcg1969
+* @mingwandroid
+* @msarahan
+* @rrigdon
+* @saraedum
+* @sscherfke
+* @zeehio
+
+
 2019-11-01 3.18.11:
 ------------------
+
+* Update build.sh files of skeletons to be shellcheck clean including test to lint future updates. 
+* Corrected documentation on subpackage test requirements.
+* Do not move work dir to work/work/
+* fixed a missing .lower() on two tar_xf related util functions
+* Fix has_prefix detection for Windows.
+* conda_build.inspect_pkg: optimise use of fnmatch
+* Do not consider .ignore files when searching with ripgrep
+* Remove N*N os.lstat calls in build_info_files_json_v1
+
 
 Contributors:
 -------------

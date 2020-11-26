@@ -1,0 +1,7 @@
+diff --git a/somefile b/somefile
+index cd470e6..190a180 100444
+--- a/somefile
++++ b/somefile
+@@ -1 +1 @@
+-xyz
++123

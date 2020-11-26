@@ -77,14 +77,13 @@ This creates a directory named ``click`` and creates one
 skeleton file in that directory: ``meta.yaml``. Many other files can be added
 there as necessary, such as ``build.sh`` and ``bld.bat``, test scripts, or
 anything else you need to build your software. For simple, pure-Python recipes,
-these extra files are unnecessary and the build/script section in the meta.yaml
-is sufficient. Use the ``ls`` command on OS X or Linux or the ``dir`` command on
-Windows to verify that this file has been created. The meta.yaml file has been
+these extra files are unnecessary and the build/script section in the ``meta.yaml``
+is sufficient. Use the ``ls`` command on macOS or Linux or the ``dir`` command on
+Windows to verify that this file has been created. The ``meta.yaml`` file has been
 populated with information from the PyPI metadata and in many cases will not
 need to be edited. 
 
-Files in the folder with meta.yaml are collectively referred to as the "conda
-build recipe":
+Files in the folder with ``meta.yaml`` are collectively referred to as the "conda-build recipe":
 
 * ``meta.yaml``---Contains all the metadata in the recipe. Only
   the package name and package version sections are
@@ -94,8 +93,7 @@ build recipe":
 
 * ``build.sh``---macOS and Linux commands to build the package.
 
-Now that you have the conda-build recipe ready, you can use conda
-build to create the package:
+Now that you have the conda-build recipe ready, you can use conda-build to create the package:
 
 .. code-block:: bash
 
@@ -111,7 +109,7 @@ Windows example file path:
 
     C:\Users\jsmith\miniconda\conda-bld\win-64\click-7.0-py37_0.tar.bz2
 
-OS X example file path:
+macOS example file path:
 
 .. code-block:: text
 
@@ -188,7 +186,7 @@ Windows example file path:
 
     C:\Users\jsmith\Miniconda\conda-bld\win-64\click-7.0-py27_0.tar.bz2
 
-OS X example file path:
+macOS example file path:
 
 .. code-block:: text
 
@@ -221,12 +219,12 @@ take advantage of the fact that Python scripts are mostly
 platform independent. Conda convert accepts a platform specifier
 from this and a platform specifier from this list:
 
-* osx-64
-* linux-32
-* linux-64
-* win-32
-* win-64
-* all
+* osx-64.
+* linux-32.
+* linux-64.
+* win-32.
+* win-64.
+* all.
 
 In the output directory, 1 folder will be created for each of the
 1 or more platforms you chose and each folder will contain a
@@ -261,7 +259,7 @@ as described in the next task.
 
 If you find yourself needing to use ``conda convert``, you might
 instead prefer to change your recipe to make your package a "noarch" package.
-Noarch packages run anywhere and do not require conda convert. 
+Noarch packages run anywhere and do not require conda convert.
 Some of the ecosystem tools don't yet support noarch packages but,
 for the most part, noarch packages are a better way to go.
 
@@ -273,7 +271,7 @@ Optional---Uploading packages to Anaconda.org
 Anaconda.org is a repository for
 public or private packages. Uploading to Anaconda.org allows you
 to easily install your package in any environment with just the
-`conda install` command, rather than manually copying or moving the
+``conda install`` command, rather than manually copying or moving the
 tarball file from one location to another. You can choose to make
 your files public or private. For more information about
 Anaconda.org, see the `Anaconda.org documentation
@@ -311,7 +309,7 @@ macOS and Linux:
    system.
 
 If you created packages for multiple versions of Python or used
-`conda convert` to make packages for each supported architecture,
+``conda convert`` to make packages for each supported architecture,
 you must use the ``anaconda upload`` command to upload each one.
 It is considered best practice to create packages for Python
 versions 2.7, 3.4, and 3.5 along with all of the architectures.

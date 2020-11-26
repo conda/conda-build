@@ -5,20 +5,20 @@
   - msarahan@continuum.io
   aliases:
   - Mike Sarahan
-  num_commits: 145
+  num_commits: 147
   first_commit: 2015-09-04 21:31:08
 - name: Jonathan J. Helmus
   email: jjhelmus@gmail.com
   aliases:
   - Jonathan Helmus
-  num_commits: 52
+  num_commits: 109
   first_commit: 2014-06-09 17:25:05
   github: jjhelmus
 - name: Isuru Fernando
   email: isuruf@gmail.com
   alternate_emails:
   - isuru.11@cse.mrt.ac.lk
-  num_commits: 28
+  num_commits: 62
   first_commit: 2017-06-16 15:14:34
   github: isuruf
 - name: Dan Blanchard
@@ -41,7 +41,7 @@
   email: teake.nutma@gmail.com
   alternate_emails:
   - t.a.nutma@rug.nl
-  num_commits: 9
+  num_commits: 11
   first_commit: 2018-08-16 10:53:19
   github: teake
 - name: Phil Elson
@@ -414,7 +414,7 @@
 - name: Ray Donnelly
   email: mingw.android@gmail.com
   github: mingwandroid
-  num_commits: 415
+  num_commits: 599
   first_commit: 2016-03-06 18:52:51
 - name: Paul Madden
   email: maddenp@colorado.edu
@@ -423,7 +423,7 @@
   github: maddenp
 - name: Tim Snyder
   email: snyder.tim@gmail.com
-  num_commits: 9
+  num_commits: 11
   first_commit: 2017-04-28 11:08:14
   github: timsnyder
 - name: dlovell
@@ -565,7 +565,7 @@
   first_commit: 2015-08-30 06:44:37
 - name: Marcel Bargull
   email: marcel.bargull@udo.edu
-  num_commits: 21
+  num_commits: 24
   first_commit: 2016-09-26 11:45:54
   github: mbargull
 - name: Philip R. Kensche
@@ -653,7 +653,7 @@
   first_commit: 2016-07-05 14:53:35
 - name: Michael C. Grant
   email: mcg@cvxr.com
-  num_commits: 15
+  num_commits: 16
   first_commit: 2016-03-08 17:42:53
   github: mcg1969
   alternate_emails:
@@ -851,7 +851,7 @@
   github: alexandersturm
 - name: csoja
   email: crystal.soja@continuum.io
-  num_commits: 1
+  num_commits: 2
   first_commit: 2018-01-16 14:11:32
 - name: Vlad Frolov
   email: frolvlad@gmail.com
@@ -892,12 +892,12 @@
   first_commit: 2019-01-26 13:17:33
 - name: Rachel
   email: rrigdon@anaconda.com
-  num_commits: 77
+  num_commits: 91
   first_commit: 2019-01-24 14:12:19
   github: rrigdon
 - name: Rachel Rigdon
   email: 45607889+rrigdon@users.noreply.github.com
-  num_commits: 35
+  num_commits: 43
   first_commit: 2019-01-24 15:12:09
   github: rrigdon
 - name: Zane Dufour
@@ -919,7 +919,7 @@
   github: gabrielcnr
 - name: Julian Rüth
   email: julian.rueth@fsfe.org
-  num_commits: 8
+  num_commits: 10
   first_commit: 2019-04-26 11:13:44
   github: saraedum
 - name: satoshi
@@ -956,7 +956,7 @@
   github: scw
 - name: Christopher Burr
   email: christopher.burr@cern.ch
-  num_commits: 5
+  num_commits: 8
   first_commit: 2019-02-10 12:42:33
   github: chrisburr
   aliases:
@@ -975,7 +975,7 @@
   github: spalmrot-tic
 - name: John Kirkham
   email: jakirkham@gmail.com
-  num_commits: 9
+  num_commits: 12
   first_commit: 2019-06-06 14:26:02
   github: jakirkham
 - name: Daniel Bast
@@ -985,7 +985,7 @@
   github: dbast
 - name: Duncan Macleod
   email: duncan.macleod@ligo.org
-  num_commits: 3
+  num_commits: 4
   first_commit: 2019-06-13 08:07:25
   github: duncanmmacleod
 - name: Chris Osborn
@@ -1005,7 +1005,7 @@
   github: ddamiani
 - name: Marcelo Duarte Trevisani
   email: marceloduartetrevisani@gmail.com
-  num_commits: 62
+  num_commits: 87
   first_commit: 2019-07-19 10:00:00
   github: marcelotrevisani
   alternate_emails:
@@ -1036,7 +1036,7 @@
   github: 183amir
 - name: Matthew R Becker
   email: becker.mr@gmail.com
-  num_commits: 2
+  num_commits: 11
   first_commit: 2019-10-17 23:05:16
   github: beckermr
 - name: Jinzhe Zeng
@@ -1044,3 +1044,84 @@
   num_commits: 1
   first_commit: 2019-10-19 00:36:16
   github: njzjz
+- name: Bradley Dice
+  email: bdice@bradleydice.com
+  num_commits: 1
+  first_commit: 2020-01-01 17:19:32
+  github: bdice
+- name: Matthew R. Becker
+  email: beckermr@users.noreply.github.com
+  num_commits: 6
+  first_commit: 2020-01-03 08:58:23
+  github: beckermr
+- name: Sophian Guidara
+  email: sophian@gmail.com
+  num_commits: 2
+  first_commit: 2019-11-08 09:27:17
+  github: guidara
+- name: Stefan Scherfke
+  email: stefan@sofa-rockers.org
+  num_commits: 1
+  first_commit: 2020-01-02 05:44:09
+  github: sscherfke
+- name: Sergio Oller
+  email: sergioller@gmail.com
+  num_commits: 1
+  first_commit: 2019-11-06 06:32:50
+  github: zeehio
+- name: Benjamin Bertrand
+  email: beenje@gmail.com
+  num_commits: 2
+  first_commit: 2020-01-13 08:46:59
+  github: beenje
+- name: Ruben Vorderman
+  email: r.h.p.vorderman@lumc.nl
+  num_commits: 1
+  first_commit: 2020-07-06 02:34:48
+  github: rhpvorderman
+- name: Mark Harfouche
+  email: mark.harfouche@gmail.com
+  num_commits: 2
+  first_commit: 2020-06-14 06:09:36
+  github: hmaarrfk
+- name: Pradipta Ghosh
+  email: pradghos@in.ibm.com
+  num_commits: 5
+  first_commit: 2020-05-11 04:51:33
+  github: pradghos
+- name: James Lamb
+  email: jaylamb20@gmail.com
+  num_commits: 1
+  first_commit: 2020-04-26 13:41:22
+  github: jameslamb
+- name: Oleg Alexandrov
+  email: oleg.alexandrov@gmail.com
+  num_commits: 1
+  first_commit: 2020-06-23 12:38:53
+- name: John Omotani
+  email: john.omotani@ukaea.uk
+  num_commits: 1
+  first_commit: 2020-06-09 17:00:52
+  github: johnomotani
+- name: Tom Pollard
+  email: tom_pollard@hotmail.co.uk
+  num_commits: 1
+  first_commit: 2020-06-30 10:40:21
+- name: Phil Reinhold
+  email: pcreinhold@gmail.com
+  num_commits: 1
+  first_commit: 2020-08-14 09:38:15
+- name: Cheng H. Lee
+  email: chenghlee@users.noreply.github.com
+  num_commits: 0
+  first_commit: 2020-06-24 10:55:13
+- name: Ken Odegard
+  email: ken.odegard@gmail.com
+  num_commits: 10
+  first_commit: 2020-09-08 19:53:41
+  github: njalerikson
+- name: Connor Martin
+  email: connormartin7@gmail.com
+  num_commits: 8
+  first_commit: 2020-10-01 20:48:45
+  github: cjmartian

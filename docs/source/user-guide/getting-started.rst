@@ -3,8 +3,8 @@ Getting started
 ***************
 
 Before starting the tutorials, consider reviewing
-:doc:`how to install and update conda build <../../install-conda-build>`
-and :doc:`conda build concepts <../../concepts/index>`.
+:doc:`how to install and update conda-build <../../install-conda-build>`
+and :doc:`conda-build concepts <../../concepts/index>`.
 
 You may also find our :doc:`resources <../../resources/index>`
 collection helpful.
@@ -16,10 +16,10 @@ Prerequisites
 
 Before starting the tutorials, you will need to
 install `Miniconda or Anaconda <https://docs.anaconda.com/anaconda/install/>`_,
-conda build, and git.
+conda-build, and Git.
 
 After you've installed Miniconda or Anaconda, you can use conda
-to install conda build and git.
+to install conda-build and Git.
 
 .. _submissions:
 

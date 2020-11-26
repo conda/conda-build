@@ -2,29 +2,27 @@
 ending up with a configuration matrix"""
 
 from collections import OrderedDict
+from copy import copy
 from itertools import product
-import os
-from os.path import abspath, expanduser, expandvars
+import os.path
 from pkg_resources import parse_version
 import re
 import sys
 
-import six
 import yaml
 
-from conda_build.utils import ensure_list, trim_empty_keys, get_logger
 from conda_build.conda_interface import string_types
 from conda_build.conda_interface import subdir
 from conda_build.conda_interface import cc_conda_build
 from conda_build.conda_interface import memoized
-from conda_build.utils import on_win
+from conda_build.utils import ensure_list, get_logger, islist, on_win, trim_empty_keys
 
 DEFAULT_VARIANTS = {
     'python': '{0}.{1}'.format(sys.version_info.major, sys.version_info.minor),
     'numpy': '1.11',
     # this one actually needs to be pretty specific.  The reason is that cpan skeleton uses the
     #    version to say what's in their standard library.
-    'perl': '5.26.0',
+    'perl': '5.26.2',
     'lua': '5',
     'r_base': '3.4' if on_win else '3.5',
     'cpu_optimization_target': 'nocona',
@@ -33,7 +31,6 @@ DEFAULT_VARIANTS = {
     'ignore_build_only_deps': ['python', 'numpy'],
     'extend_keys': ['pin_run_as_build', 'ignore_version', 'ignore_build_only_deps', 'extend_keys'],
     'cran_mirror': "https://cran.r-project.org",
-    'CONDA_BUILD_SYSROOT': '/opt/MacOSX10.10.sdk',
 }
 
 # set this outside the initialization because of the dash in the key
@@ -122,54 +119,102 @@ def parse_config_file(path, config):
     return content
 
 
-def validate_spec(spec):
+def validate_spec(src, spec):
     errors = []
-    for key in spec:
-        if '-' in key:
-            errors.append('"-" is a disallowed character in variant keys.  Key was: {}'.format(key))
-    zip_groups = _get_zip_groups(spec)
-    # each group looks like {key1#key2: [val1_1#val2_1, val1_2#val2_2]
-    for group in zip_groups:
-        for group_key in group:
-            for variant_key in group_key.split('#'):
-                if variant_key not in spec:
-                    errors.append('zip_key entry {} in group {} does not have any settings'.format(
-                        variant_key, group_key.split('#')))
-    if errors:
-        raise ValueError("Variant configuration errors: \n{}".format(errors))
 
+    # check for invalid characters
+    errors.extend(
+        "  {} key contains an invalid character '-'".format(k)
+        for k in spec
+        if "-" in k
+    )
 
-def find_config_files(metadata_or_path, additional_files=None, ignore_system_config=False,
-                      exclusive_config_files=None):
-    """Find files to load variables from.  Note that order here determines clobbering.
-
-    Later files clobber earlier ones.  order is user-wide < cwd < recipe dir < additional files"""
-    files = [
-        os.path.abspath(os.path.expanduser(config_file))
-        for config_file in (exclusive_config_files or [])
-    ]
-
-    if not ignore_system_config and not exclusive_config_files:
-        if cc_conda_build.get('config_file'):
-            system_path = abspath(expanduser(expandvars(cc_conda_build['config_file'])))
-        else:
-            system_path = os.path.join(expanduser('~'), "conda_build_config.yaml")
-        if os.path.isfile(system_path):
-            files.append(system_path)
-
-        cwd = os.path.join(os.getcwd(), 'conda_build_config.yaml')
-        if os.path.isfile(cwd):
-            files.append(cwd)
-
-    if hasattr(metadata_or_path, 'path'):
-        recipe_config = os.path.join(metadata_or_path.path, "conda_build_config.yaml")
+    # check for properly formatted zip_key
+    try:
+        zip_keys = _get_zip_keys(spec)
+    except ValueError as e:
+        errors.append(str(e))
     else:
-        recipe_config = os.path.join(metadata_or_path, "conda_build_config.yaml")
-    if os.path.isfile(recipe_config):
-        files.append(recipe_config)
+        # check if every zip field is defined
+        errors.extend(
+            "  zip_key entry {} in group {} does not have any settings".format(k, zg)
+            for zg in zip_keys
+            for k in zg
+            # include error if key is not defined in spec
+            if k not in spec
+        )
 
-    if additional_files:
-        files.extend([os.path.expanduser(additional_file) for additional_file in additional_files])
+        # check for duplicate keys
+        unique = set()
+        errors.extend(
+            "  zip_key entry {} in group {} is a duplicate, keys can only occur "
+            "in one group".format(k, zg)
+            # include error if key has already been seen, otherwise add to unique keys
+            if k in unique else unique.add(k)
+            for zg in zip_keys
+            for k in zg
+        )
+
+        # check that all zip fields within a zip_group are the same length
+        errors.extend(
+            "  zip fields in zip_key group {} are not all the same length".format(zg)
+            for zg in zip_keys
+            # include error if all zip fields in a zip_group are the same size,
+            # ignore missing fields
+            if len({len(ensure_list(spec[k])) if k in spec else None for k in zg} - {None}) > 1
+        )
+
+    # filter out None values that were potentially added above
+    errors = list(filter(None, errors))
+    if errors:
+        raise ValueError("Variant configuration errors in {}:\n{}".format(src, "\n".join(errors)))
+
+
+def find_config_files(metadata_or_path, config):
+    """
+    Find config files to load. Config files are stacked in the following order:
+        1. exclusive config files (see config.exclusive_config_files)
+        2. user config files
+           (see context.conda_build["config_file"] or ~/conda_build_config.yaml)
+        3. cwd config files (see ./conda_build_config.yaml)
+        4. recipe config files (see ${RECIPE_DIR}/conda_build_config.yaml)
+        5. additional config files (see config.variant_config_files)
+
+    .. note::
+        Order determines clobbering with later files clobbering earlier ones.
+
+    :param metadata_or_path: the metadata or path within which to find recipe config files
+    :type metadata_or_path:
+    :param config: config object specifying config file settings
+                   (see exclusive_config_files, ignore_system_variants, and variant_config_files)
+    :type config: :class:`Config`
+    :return: List of config files
+    :rtype: `list` of paths (`str`)
+    """
+    resolve = lambda p: os.path.abspath(os.path.expanduser(os.path.expandvars(p)))
+
+    # exclusive configs
+    files = [resolve(f) for f in ensure_list(config.exclusive_config_files)]
+
+    if not files and not config.ignore_system_variants:
+        # user config
+        if cc_conda_build.get('config_file'):
+            cfg = resolve(cc_conda_build['config_file'])
+        else:
+            cfg = resolve(os.path.join('~', "conda_build_config.yaml"))
+        if os.path.isfile(cfg):
+            files.append(cfg)
+
+        cfg = resolve('conda_build_config.yaml')
+        if os.path.isfile(cfg):
+            files.append(cfg)
+
+    path = getattr(metadata_or_path, "path", metadata_or_path)
+    cfg = resolve(os.path.join(path, "conda_build_config.yaml"))
+    if os.path.isfile(cfg):
+        files.append(cfg)
+
+    files.extend([resolve(f) for f in ensure_list(config.variant_config_files)])
 
     return files
 
@@ -296,82 +341,88 @@ def set_language_env_vars(variant):
     return env
 
 
-def all_unique(_list):
-    seen = set()
-    item = None
-    unique = not any(item in seen or seen.add(item) for _set in _list for item in _set)
-    return unique or item
+def _get_zip_keys(spec):
+    """
+    Extracts 'zip_keys' from `spec` and standardizes value into a list of zip_groups
+    (tuples of keys (string)).
+
+    :param spec: Variants specification
+    :type spec: dict
+    :return: Standardized 'zip_keys' value
+    :rtype: set
+    :raise ValueError: 'zip_keys' cannot be standardized
+    """
+    zip_keys = spec.get('zip_keys')
+    if not zip_keys:
+        return set()
+    elif islist(zip_keys, uniform=lambda e: isinstance(e, string_types)):
+        return {frozenset(zip_keys)}
+    elif islist(zip_keys, uniform=lambda e: islist(e, uniform=lambda e: isinstance(e, string_types))):
+        return {frozenset(zg) for zg in zip_keys}
+
+    raise ValueError("'zip_keys' expect list of string or list of lists of string")
 
 
-def _get_zip_key_type(zip_keys):
-    is_strings = all(isinstance(key, string_types) for key in zip_keys)
-    is_list_of_strings = all(hasattr(key, '__iter__') and not isinstance(key, string_types)
-                            for key in zip_keys)
-    return is_strings, is_list_of_strings
+def _get_extend_keys(spec, include_defaults=True):
+    """
+    Extracts 'extend_keys' from `spec`.
+
+    :param spec: Variants specification
+    :type spec: dict
+    :param include_defaults: Whether to include default 'extend_keys'
+    :type include_defaults: bool, optional
+    :return: Standardized 'extend_keys' value
+    :rtype: set
+    """
+    extend_keys = {'zip_keys', 'extend_keys'}
+    if include_defaults:
+        extend_keys.update(DEFAULT_VARIANTS['extend_keys'])
+    return extend_keys.union(ensure_list(spec.get('extend_keys')))
 
 
-def _get_zip_key_set(combined_variant):
-    """Used to exclude particular keys from the matrix"""
-    zip_keys = combined_variant.get('zip_keys')
-    key_set = set()
-    if zip_keys:
-        # zip keys can be either a collection of strings, or a collection of collections of strings
-        assert hasattr(zip_keys, '__iter__') and not isinstance(zip_keys, string_types), (
-                    "zip_keys must be uniformly a list of strings, or a list of lists of strings")
-        is_strings, is_list_of_strings = _get_zip_key_type(zip_keys)
-        assert is_strings or is_list_of_strings, ("zip_keys must be uniformly a list of strings, "
-                                                "or a list of lists of strings")
-        key_set = set()
-        if is_strings and len(zip_keys) > 1:
-            key_set.update(zip_keys)
-        else:
-            # make sure that each key only occurs in one set
-            _all_unique = all_unique(zip_keys)
-            if _all_unique is not True:
-                raise ValueError("All packages in zip keys must belong to only one group.  "
-                                "'{}' is in more than one group.".format(_all_unique))
-            for ks in zip_keys:
-                # sets with only a single member aren't actually zipped.  Ignore them.
-                if len(ks) > 1:
-                    key_set.update(set(ks))
-    # omit
-    key_set = {key for key in key_set if key in combined_variant}
-    return key_set
+def _get_passthru_keys(spec, zip_keys=None, extend_keys=None):
+    """
+    Keys in `spec` that are not exploded and are simply carried over from the `spec`
+    into the variants without modification.
+
+    :param spec: Variants specification
+    :type spec: dict
+    :param zip_keys: Keys defined as 'zip_keys' (see :func:`_get_zip_keys`)
+    :type zip_keys: set, optional
+    :param extend_keys: Keys defined as 'extend_keys' (see :func:`_get_extend_keys`)
+    :type extend_keys: set, optional
+    :return: Passthru (not exploded) keys defined in `spec`
+    :rtype: set
+    """
+    if zip_keys is None:
+        zip_keys = _get_zip_keys(spec)
+    if extend_keys is None:
+        extend_keys = _get_extend_keys(spec)
+    passthru_keys = {'replacements', 'extend_keys', 'zip_keys'}
+    return passthru_keys.union(extend_keys).difference(*zip_keys).intersection(spec)
 
 
-def _get_zip_dict_of_lists(combined_variant, list_of_strings):
-    used_keys = [key for key in list_of_strings if key in combined_variant]
-    out = {}
+def _get_explode_keys(spec, passthru_keys=None, zip_keys=None, extend_keys=None):
+    """
+    Keys in `spec` that are that are exploding into the variants.
 
-    if used_keys:
-        # The join value needs to be selected as something
-        # that will not likely appear in any key or value.
-        dict_key = "#".join(list_of_strings)
-        length = len(ensure_list(combined_variant[used_keys[0]]))
-        for key in used_keys:
-            if not len(ensure_list(combined_variant[key])) == length:
-                raise ValueError("zip field {} ({}) length does not match zip field {} ({}) "
-                                 "length.  All zip fields within a group must be the same length."
-                                 .format(used_keys[0], combined_variant[used_keys[0]],
-                                         key, combined_variant[key]))
-        values = list(zip(*[ensure_list(combined_variant[key]) for key in used_keys]))
-        values = ['#'.join(value) for value in values]
-        out = {dict_key: values}
-    return out
-
-
-def _get_zip_groups(combined_variant):
-    """returns a list of dictionaries - each one is a concatenated collection of """
-    zip_keys = combined_variant.get('zip_keys')
-    groups = []
-    if zip_keys:
-        is_strings, is_list_of_strings = _get_zip_key_type(zip_keys)
-        if is_strings:
-            groups.append(_get_zip_dict_of_lists(combined_variant, zip_keys))
-        elif is_list_of_strings:
-            for group in zip_keys:
-                groups.append(_get_zip_dict_of_lists(combined_variant, group))
-    return groups
+    :param spec: Variants specification
+    :type spec: dict
+    :param passthru_keys: Passthru (not exploded) keys (see :func:`_get_passthru_keys`)
+    :type passthru_keys: set, optional
+    :param zip_keys: Keys defined as 'zip_keys' (see :func:`_get_zip_keys`) and is passed
+                     to :func:`_get_passthru_keys` if `passthru_keys` is undefined
+    :type zip_keys: set, optional
+    :param extend_keys: Keys defined as 'extend_keys' (see :func:`_get_extend_keys`) and
+                        is passed to :func:`_get_passthru_keys` if `passthru_keys` is
+                        undefined
+    :type extend_keys: set, optional
+    :return: Exploded keys defined in `spec`
+    :rtype: set
+    """
+    if passthru_keys is None:
+        passthru_keys = _get_passthru_keys(spec, zip_keys, extend_keys)
+    return set(spec).difference(passthru_keys)
 
 
 def filter_by_key_value(variants, key, values, source_name):
@@ -399,50 +450,74 @@ def _split_str(string, char):
     return string.split(char)
 
 
-def dict_of_lists_to_list_of_dicts(dict_of_lists, extend_keys=None):
+def explode_variants(spec):
+    """
+    Helper function to explode spec into all of the variants.
+
+    .. code-block:: python
+        >>> spec = {
+            # normal expansions
+            "foo": [2.7, 3.7, 3.8],
+            # zip_keys are the values that need to be exploded as a set
+            "zip_keys": [["bar", "baz"], ["qux", "quux", "quuz"]],
+            "bar": [1, 2, 3],
+            "baz": [2, 4, 6],
+            "qux": [4, 5],
+            "quux": [8, 10],
+            "quuz": [12, 15],
+            # extend_keys are those values which we do not explode
+            "extend_keys": ["corge"],
+            "corge": 42,
+        }
+        >>> explode_variants(spec)
+        [{
+            "foo": 2.7,
+            "bar": 1, "baz": 2,
+            "qux": 4, "quux": 8, "quuz": 12,
+            "corge": 42,
+            "zip_keys": ..., "extend_keys": ...,
+        },
+        {
+            "foo": 2.7,
+            "bar": 1, "baz": 2,
+            "qux": 5, "quux": 10, "quuz": 15,
+            "corge": 42,
+            ...,
+        }, ...]
+
+    :param spec: Specification to explode
+    :type spec: `dict`
+    :return: Exploded specification
+    :rtype: `list` of `dict`
+    """
+    zip_keys = _get_zip_keys(spec)
+
+    # key/values from spec that do not explode
+    passthru_keys = _get_passthru_keys(spec, zip_keys)
+    passthru = {k: spec[k] for k in passthru_keys if spec[k] or spec[k] == ""}
+
+    # key/values from spec that do explode
+    explode_keys = _get_explode_keys(spec, passthru_keys)
+    explode = {
+        (k,): [ensure_list(v, include_dict=False) for v in ensure_list(spec[k])]
+        for k in explode_keys.difference(*zip_keys)
+    }
+    explode.update({zg: list(zip(*(ensure_list(spec[k]) for k in zg))) for zg in zip_keys})
+    trim_empty_keys(explode)
+
+    # Cartesian Product of dict of lists
     # http://stackoverflow.com/a/5228294/1170370
-    # end result is a collection of dicts, like [{'python': 2.7, 'numpy': 1.11},
-    #                                            {'python': 3.5, 'numpy': 1.11}]
-    dicts = []
-    if not extend_keys:
-        extend_keys = set(ensure_list(dict_of_lists.get('extend_keys')))
-    pass_through_keys = set(['extend_keys', 'zip_keys', 'pin_run_as_build', 'replacements'] +
-                            list(ensure_list(extend_keys)) +
-                            list(_get_zip_key_set(dict_of_lists)))
-    dimensions = {k: v for k, v in dict_of_lists.items() if k not in pass_through_keys}
-    # here's where we add in the zipped dimensions.  Zipped stuff is concatenated strings, to avoid
-    #      being distributed in the product.
-    for group in _get_zip_groups(dict_of_lists):
-        dimensions.update(group)
+    # dict.keys() and dict.values() orders are the same even prior to Python 3.6
+    variants = []
+    for values in product(*explode.values()):
+        variant = {k: copy(v) for k, v in passthru.items()}
+        variant.update({k: v for zg, zv in zip(explode, values) for k, v in zip(zg, zv)})
+        variants.append(variant)
+    return variants
 
-    # in case selectors nullify any groups - or else zip reduces whole set to nil
-    trim_empty_keys(dimensions)
 
-    for x in product(*dimensions.values()):
-        remapped = dict(six.moves.zip(dimensions, x))
-        for col in pass_through_keys:
-            v = dict_of_lists.get(col)
-            if v or v == '':
-                if isinstance(v, (OrderedDict, dict)):
-                    remapped[col] = v.copy()
-                else:
-                    remapped[col] = v
-        # split out zipped keys
-        to_del = set()
-        for k, v in remapped.items():
-            if isinstance(k, string_types) and isinstance(v, string_types):
-                keys = _split_str(k, '#')
-                values = _split_str(v, '#')
-                for (_k, _v) in zip(keys, values):
-                    # I am unclear if I should be doing something else here!
-                    if not isinstance(remapped[_k], (OrderedDict, dict)):
-                        remapped[_k] = _v
-                if '#' in k:
-                    to_del.add(k)
-        for key in to_del:
-            del remapped[key]
-        dicts.append(remapped)
-    return dicts
+# temporary backport for other places in cond_build
+dict_of_lists_to_list_of_dicts = explode_variants
 
 
 def list_of_dicts_to_dict_of_lists(list_of_dicts):
@@ -500,9 +575,7 @@ def get_package_combined_spec(recipedir_or_metadata, config=None, variants=None)
     if not config:
         from conda_build.config import Config
         config = Config()
-    files = find_config_files(recipedir_or_metadata, ensure_list(config.variant_config_files),
-                              ignore_system_config=config.ignore_system_variants,
-                              exclusive_config_files=config.exclusive_config_files)
+    files = find_config_files(recipedir_or_metadata, config)
 
     specs = OrderedDict(internal_defaults=get_default_variant(config))
 
@@ -516,10 +589,7 @@ def get_package_combined_spec(recipedir_or_metadata, config=None, variants=None)
         specs['argument_variants'] = variants
 
     for f, spec in specs.items():
-        try:
-            validate_spec(spec)
-        except ValueError as e:
-            raise ValueError("Error in config {}: {}".format(f, str(e)))
+        validate_spec(f, spec)
 
     # this merges each of the specs, providing a debug message when a given setting is overridden
     #      by a later spec
@@ -528,16 +598,14 @@ def get_package_combined_spec(recipedir_or_metadata, config=None, variants=None)
 
 
 def filter_combined_spec_to_used_keys(combined_spec, specs):
-
-    extend_keys = set(ensure_list(combined_spec.get('extend_keys')))
-    extend_keys.update({'zip_keys', 'extend_keys'})
+    extend_keys = _get_extend_keys(combined_spec)
 
     # delete the default specs, so that they don't unnecessarily limit the matrix
     specs = specs.copy()
     del specs['internal_defaults']
 
     # TODO: act here?
-    combined_spec = dict_of_lists_to_list_of_dicts(combined_spec, extend_keys=extend_keys)
+    combined_spec = explode_variants(combined_spec)
     for source, source_specs in reversed(specs.items()):
         for k, vs in source_specs.items():
             if k not in extend_keys:
@@ -566,13 +634,13 @@ def get_vars(variants, loop_only=False):
 
 
 @memoized
-def find_used_variables_in_text(variant, recipe_text, selectors=False):
+def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
     used_variables = set()
     recipe_lines = recipe_text.splitlines()
     for v in variant:
         all_res = []
         compiler_match = re.match(r'(.*?)_compiler(_version)?$', v)
-        if compiler_match and not selectors:
+        if compiler_match and not selectors_only:
             compiler_lang = compiler_match.group(1)
             compiler_regex = (
                 r"\{\s*compiler\([\'\"]%s[\"\'][^\{]*?\}" % re.escape(compiler_lang)
@@ -587,17 +655,20 @@ def find_used_variables_in_text(variant, recipe_text, selectors=False):
         v_req_regex = '[-_]'.join(map(re.escape, v.split('_')))
         variant_regex = r"\{\s*(?:pin_[a-z]+\(\s*?['\"])?%s[^'\"]*?\}\}" % v_regex
         selector_regex = r"^[^#\[]*?\#?\s\[[^\]]*?(?<![_\w\d])%s[=\s<>!\]]" % v_regex
-        conditional_regex = r"(?:^|[^\{])\{%\s*(?:el)?if\s*" + v_regex + r"\s*(?:[^%]*?)?%\}"
+        conditional_regex = r"(?:^|[^\{])\{%\s*(?:el)?if\s*.*" + v_regex + r"\s*(?:[^%]*?)?%\}"
         # plain req name, no version spec.  Look for end of line after name, or comment or selector
         requirement_regex = r"^\s+\-\s+%s\s*(?:\s[\[#]|$)" % v_req_regex
-        if selectors:
-            all_res.extend([selector_regex])
+        if selectors_only:
+            all_res.insert(0, selector_regex)
         else:
             all_res.extend([variant_regex, requirement_regex, conditional_regex])
         # consolidate all re's into one big one for speedup
         all_res = r"|".join(all_res)
         if any(re.search(all_res, line) for line in variant_lines):
             used_variables.add(v)
+            if v in ('c_compiler', 'cxx_compiler'):
+                if 'CONDA_BUILD_SYSROOT' in variant:
+                    used_variables.add('CONDA_BUILD_SYSROOT')
     return used_variables
 
 

@@ -155,15 +155,19 @@ def find_apple_cctools_executable(name, build_prefix, nofail=False):
                     s = f.read()
                 if s.find(b'usr/lib/libxcselect.dylib') != -1:
                     # We ask xcrun.
-                    tool_xcr = check_output(['xcrun', '-find', name], stderr=STDOUT).decode('utf-8').splitlines()[0]
-                    # print("WARNING :: Found `{}` but is is an Apple Xcode stub executable.".format(tool))
-                    # This is not the real tool, but Apple's irritating GUI dialog launcher.
+                    try:
+                        tool_xcr = check_output(['xcrun', '-find', name], stderr=STDOUT).decode('utf-8').splitlines()[0]
+                    except Exception as e:
+                        log = utils.get_logger(__name__)
+                        log.error("ERROR :: Found `{}` but is is an Apple Xcode stub executable\n"
+                                  "and it returned an error:\n{}".format(tool, e.output))
+                        raise e
                     tool = tool_xcr
                     if os.path.exists(tool):
                         return tool
         except Exception as _:  # noqa
             print("ERROR :: Failed to run `{}`.  Please use `conda` to install `cctools` into your base environment.\n"
-                  "         An alternative option for users of macOS is to install `Xcode` or `Command Line Tools for Xcode`."
+                  "         An option on macOS is to install `Xcode` or `Command Line Tools for Xcode`."
                   .format(tool))
             sys.exit(1)
         return tool
@@ -195,7 +199,7 @@ def otool(path, build_prefix=None, cb_filter=is_dylib_info):
     # here so also check that we do not get 'useful' output.
     if len(lines_split) < 10 and (re.match('.*(is not a Mach-O|invalid|expected|unexpected).*',
                                            lines, re.MULTILINE)):
-        raise CalledProcessError
+        raise CalledProcessError(-1, otool)
     return _get_matching_load_commands(lines_split, cb_filter)
 
 
@@ -263,10 +267,10 @@ def add_rpath(path, rpath, build_prefix=None, verbose=False):
         % code)
 
 
-def delete_rpath(path, rpath, verbose=False):
+def delete_rpath(path, rpath, build_prefix=None, verbose=False):
     """Delete an `rpath` from the Mach-O file at `path`"""
     args = ['-delete_rpath', rpath, path]
-    code, _, stderr = install_name_tool(args)
+    code, _, stderr = install_name_tool(args, build_prefix)
     if "Mach-O dynamic shared library stub file" in stderr:
         print("Skipping Mach-O dynamic shared library stub file %s\n" % path)
         return

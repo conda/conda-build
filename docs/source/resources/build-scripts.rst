@@ -25,9 +25,9 @@ As of conda-build 2.1, you can also define multiple output packages. Each
 package has its own script or list of files to include. The rules for these
 outputs are documented at :ref:`package-outputs`. When any output is defined,
 this overrides the default behavior of bundling anything in ``$PREFIX``. So
-to output multiple packages from a single recipe, remove any installation steps
-from ``build.sh`` or ``bld.bat`` and do them instead in your install script(s)
-for each output.
+to output multiple packages from a single recipe, remove any installation
+steps from ``build.sh`` or ``bld.bat`` and do them instead in your install
+script(s) for each output.
 
 ``build.sh`` and ``bld.bat`` are optional. You can instead use the
 ``build/script`` key in your ``meta.yaml``, with each value being either a
@@ -38,4 +38,8 @@ the ``cp`` command because cmd.exe won't understand it in Windows.
 ``build.sh`` is run with ``bash`` and ``bld.bat`` is run with ``cmd.exe``.
 
 There is some development towards the ability to use bash scripts in Windows,
-but this is not currently supported.
+but this is not currently supported. You may write your script as a .sh file,
+and then call it in your bld.bat file, but there is no way to directly run
+build.sh on Windows. The conda recipe at
+https://github.com/AnacondaRecipes/conda-feedstock/tree/master/recipe is an
+example of this method.

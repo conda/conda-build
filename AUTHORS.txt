@@ -5,29 +5,29 @@ Authors are sorted by number of commits.
 * Ray Donnelly
 * Ilan Schnell
 * Michael Sarahan
+* Jonathan J. Helmus
 * Dan Blanchard
 * Kale Franz
-* sophia
 * Rachel
 * Marcelo Duarte Trevisani
+* sophia
+* Isuru Fernando
 * John Kirkham
-* Jonathan J. Helmus
 * Stuart Berg
 * Ryan Grout
+* Rachel Rigdon
 * Darren Dale
 * Travis Swicegood
-* Rachel Rigdon
 * Nehal J Wani
 * Matt Craig
-* Isuru Fernando
 * Anthony Scopatz
 * Johannes Köster
 * James Sexton
+* Marcel Bargull
 * Mandeep Bhutani
 * Patrick Snape
 * Sean
 * Travis Oliphant
-* Marcel Bargull
 * Harsh Gupta
 * Jasmine Sandhu
 * Matthias Gabriel
@@ -35,19 +35,23 @@ Authors are sorted by number of commits.
 * soapy1
 * Michael C. Grant
 * Min RK
+* John Kirkham
+* Teake Nutma
 * Ullrich Koethe
+* Tim Snyder
+* Matthew R Becker
 * Phil Elson
 * Jillian Rowe
 * Almar Klein
+* Julian Rüth
 * Alex Ford
-* Teake Nutma
+* Ken Odegard
 * John Blischak
-* Tim Snyder
 * Scheah
 * Alexander Sturm
-* John Kirkham
 * neok-m4700
-* Julian Rüth
+* Christopher Burr
+* Connor Martin
 * Richard Frank
 * Filipe Fernandes
 * Matthieu Dartiailh
@@ -58,6 +62,7 @@ Authors are sorted by number of commits.
 * Patrick Sodré
 * Bruno Oliveira
 * Bryan W. Weber
+* Matthew R. Becker
 * Thomas A Caswell
 * Mario Juric
 * Ivan Kalev
@@ -67,8 +72,8 @@ Authors are sorted by number of commits.
 * Amir MOHAMMADI
 * Chris Hogan
 * Kai Tietz
-* Christopher Burr
 * Daniel Bast
+* Pradipta Ghosh
 * Heather Kelly
 * Geir Ove Myhr
 * Matt Rendina
@@ -85,6 +90,7 @@ Authors are sorted by number of commits.
 * Yu Feng
 * Julien Schueller
 * Toon Verstraelen
+* Duncan Macleod
 * Matty G
 * Robert T. McGibbon
 * chapmanb
@@ -96,7 +102,6 @@ Authors are sorted by number of commits.
 * Eric Dill
 * Derek Ludwig
 * Vlad Frolov
-* Duncan Macleod
 * todd.m.tomashek
 * Michael Cormier
 * Siu Kwan Lam
@@ -122,12 +127,15 @@ Authors are sorted by number of commits.
 * aleksey-orekhov
 * Evan Hubinger
 * Johannes Bauer
+* csoja
 * Jan-Hendrik Prinz
 * Alex Kovner
 * Zane Dufour
 * Harun Reşit Zafer
 * Daniel Damiani
-* Matthew R Becker
+* Sophian Guidara
+* Benjamin Bertrand
+* Mark Harfouche
 * Joseph Crail
 * Andres Guzman-Ballen
 * Riccardo Vianello
@@ -181,7 +189,6 @@ Authors are sorted by number of commits.
 * Brant Faircloth
 * Mark Wiebe
 * mel
-* csoja
 * Axel Huebl
 * Gabriel Reis
 * satoshi
@@ -196,3 +203,13 @@ Authors are sorted by number of commits.
 * AndrewAnnex
 * Amir Mohammadi
 * Jinzhe Zeng
+* Bradley Dice
+* Stefan Scherfke
+* Sergio Oller
+* Ruben Vorderman
+* James Lamb
+* Oleg Alexandrov
+* John Omotani
+* Tom Pollard
+* Phil Reinhold
+* Cheng H. Lee

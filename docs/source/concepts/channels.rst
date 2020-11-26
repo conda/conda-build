@@ -10,7 +10,7 @@ Then, the defaults or channels from ``.condarc`` are searched (unless ``--overri
 
 You can use 'defaults' to get the default packages for conda, and 'system' to get the system packages, which also takes ``.condarc`` into account.
 
-You can also use any name and the ``.condarc`` ``channel_alias`` value will be prepended. The default channel_alias is http://conda.anaconda.org/.
+You can also use any name and the ``.condarc`` ``channel_alias`` value will be prepended. The default ``channel_alias`` is http://conda.anaconda.org/.
 
 The option ``--override-channels`` tells to not search default or ``.condarc`` channels. Requires the ``--channel`` or ``-c`` option.
 
@@ -20,7 +20,7 @@ Identical channel and package name problem
 
 If the channel and package name are identical, it's possible to encounter a build problem if the short channel name is used.
 
-Let's say your anaconda username or an organization name is ``example``. And suppose you created a package ``example``, whose files' layout is similar to:
+Let's say your Anaconda.org username or an organization name is ``example``. And suppose you created a package ``example``, whose files' layout is similar to:
 
 .. code-block:: bash
 
@@ -51,25 +51,25 @@ will fail with the following error message (the path will be different):
 
 This happens because ``conda-build`` will consider the directory ``./example/`` in your project as a channel. This is by design due to conda's CI servers, where the build path can be long, complicated, and not predictable prior to build.
 
-There are several ways to resolve this issue:
+There are several ways to resolve this issue.
 
-1. use the url of the desired channel:
+#. Use the url of the desired channel:
 
-.. code-block:: bash
+    .. code-block:: bash
 
-  conda-build ./conda/ -c https://conda.anaconda.org/example/
+      conda-build ./conda/ -c https://conda.anaconda.org/example/
 
-2. run the build from inside the conda recipe directory:
+#. Run the build from inside the conda recipe directory:
 
-.. code-block:: bash
+    .. code-block:: bash
 
-  cd conda
-  conda-build . -c example
+      cd conda
+      conda-build . -c example
 
-3. use the label specification workaround:
+#. Use the label specification workaround:
 
-.. code-block:: bash
+  .. code-block:: bash
 
-  conda-build ./conda/ -c example/label/main
+     conda-build ./conda/ -c example/label/main
 
-which technically is the same as ``-c example``, since ``main`` is the default label, but now it won't by mistake find a channel ``example/label/main`` on the local filesystem.
+  which technically is the same as ``-c example``, since ``main`` is the default label, but now it won't by mistake find a channel ``example/label/main`` on the local filesystem.

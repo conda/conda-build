@@ -9,9 +9,7 @@ Conda-build recipes
 To enable building `conda packages <https://conda.io/projects/conda/en/latest/user-guide/concepts/packages.html>`_, :ref:`install and update conda
 and conda-build <install-conda-build>`.
 
-Building a conda package requires a recipe. Enable building
-`conda packages <https://conda.io/projects/conda/en/latest/user-guide/concepts/packages.html>`_, :ref:`install and update conda
-and conda-build <install-conda-build>`. A conda-build recipe
+Building a conda package requires a recipe. A conda-build recipe
 is a flat directory that contains the following files:
 
 * ``meta.yaml``---A file that contains all the metadata in the
@@ -35,14 +33,14 @@ is a flat directory that contains the following files:
   readme files and build notes.
 
 .. tip::
-  When you use the `conda skeleton <skeleton_ref>` command,
+  When you use the :ref:`conda skeleton <skeleton_ref>` command,
   the first 3 files---``meta.yaml``, ``build.sh``, and
   ``bld.bat``---are automatically generated for you.
 
 Conda-build process
 ===================
 
-``conda-build`` performs the following steps:
+Conda-build performs the following steps:
 
 #. Reads the metadata.
 
@@ -71,7 +69,7 @@ Conda-build process
 
 #. Tests the new conda package if the recipe includes tests:
 
-   #. Deletes the build environment.
+   #. Deletes the build environment and source directory to ensure that the new conda package does not inadvertantly depend on artifacts not included in the package.
 
    #. Creates a test environment with the package and its
       dependencies.
@@ -88,7 +86,7 @@ contains example recipes for many conda packages.
    distributed to users. Be careful not to put sensitive information
    such as passwords into recipes where it could be made public.
 
-The `conda skeleton <skeleton_ref>` command can help to make
+The ``conda skeleton`` command can help to make
 skeleton recipes for common repositories, such as `PyPI
 <https://pypi.python.org/pypi>`_.
 
@@ -120,7 +118,7 @@ and filling it defines a matrix of 4 packages to build::
 
 After this, conda-build determines what the outputs will be.
 For example, if your ``conda build config`` indicates that you
-want two different versions of Python, conda-build will show
+want 2 different versions of Python, conda-build will show
 you the rendering for each Python version.
 
 Environments
@@ -150,8 +148,8 @@ Building
 
 Once the content is downloaded, conda-build runs the build step.
 See the :ref:`meta-build` for more information.
-The build step runs a script. It can be one that you provided. 
-See the :ref:`build-script` section for more information. 
+The build step runs a script. It can be one that you provided.
+See the :ref:`build-script` section for more information.
 
 If you do not define the script section, then you can create a
 build.sh or a bld.bat file to be run.
@@ -198,7 +196,7 @@ Running ``conda install`` causes conda to:
   * install a list of packages,
   * unpack the tarball to look at the info,
   * verify the file based on metadata in the package, and then
-  * go through each file in the package and puts it in the right location.
+  * go through each file in the package and put it in the right location.
 
 
 More information
@@ -207,8 +205,8 @@ More information
 Review :doc:`../resources/define-metadata` to see a breakdown of the
 components of a recipe, including:
 
-  * package name
-  * package version
-  * descriptive metadata
-  * where to obtain source code
-  * how to test the package
+  * Package name.
+  * Package version.
+  * Descriptive metadata.
+  * Where to obtain source code.
+  * How to test the package.

@@ -1,0 +1,7 @@
+diff --git a/tests/test-recipes/metadata/patch-read-only/somefile b/tests/test-recipes/metadata/patch-read-only/somefile
+index 8baef1b..cd470e6 100444
+--- a/tests/test-recipes/metadata/patch-read-only/somefile
++++ b/tests/test-recipes/metadata/patch-read-only/somefile
+@@ -1 +1 @@
+-abc
++xyz

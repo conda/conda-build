@@ -14,7 +14,6 @@ import os
 from os.path import abspath, basename, getmtime, getsize, isdir, isfile, join, splitext, dirname
 import subprocess
 import sys
-from tempfile import gettempdir
 import time
 from uuid import uuid4
 
@@ -43,22 +42,14 @@ from concurrent.futures import Executor
 from conda.core.subdir_data import SubdirData
 from conda.models.channel import Channel
 
-from . import conda_interface, utils
+from conda_build import conda_interface, utils
 from .conda_interface import MatchSpec, VersionOrder, human_bytes, context
 from .conda_interface import CondaError, CondaHTTPError, get_index, url_path
 from .conda_interface import TemporaryDirectory
 from .conda_interface import Resolve
-from .utils import glob, get_logger, FileNotFoundError, JSONDecodeError
-
-# try:
-#     from conda.base.constants import CONDA_TARBALL_EXTENSIONS
-# except Exception:
-#     from conda.base.constants import CONDA_TARBALL_EXTENSION
-#     CONDA_TARBALL_EXTENSIONS = (CONDA_TARBALL_EXTENSION,)
-
-# TODO: better to define this in conda; doing it here because we're implementing it in conda-build first
-CONDA_TARBALL_EXTENSIONS = ('.conda', '.tar.bz2')
-
+from .utils import (CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2,
+                    CONDA_PACKAGE_EXTENSIONS, FileNotFoundError,
+                    JSONDecodeError, get_logger, glob)
 
 log = get_logger(__name__)
 
@@ -99,6 +90,7 @@ except ImportError:
 local_index_timestamp = 0
 cached_index = None
 local_subdir = ""
+local_output_folder = ""
 cached_channels = []
 channel_data = {}
 
@@ -127,6 +119,7 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
                     **kwargs):
     global local_index_timestamp
     global local_subdir
+    global local_output_folder
     global cached_index
     global cached_channels
     global channel_data
@@ -145,6 +138,7 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
     if (clear_cache or
             not os.path.isfile(index_file) or
             local_subdir != subdir or
+            local_output_folder != output_folder or
             mtime > local_index_timestamp or
             cached_channels != channel_urls):
 
@@ -233,6 +227,7 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
             channel_data['defaults'] = superchannel
         local_index_timestamp = os.path.getmtime(index_file)
         local_subdir = subdir
+        local_output_folder = output_folder
         cached_channels = channel_urls
     return cached_index, local_index_timestamp, channel_data
 
@@ -246,7 +241,7 @@ def _ensure_valid_channel(local_folder, subdir):
 
 def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=None, threads=MAX_THREADS_DEFAULT,
                  verbose=False, progress=False, hotfix_source_repo=None, subdirs=None, warn=True,
-                 current_index_versions=None, debug=False):
+                 current_index_versions=None, debug=False, index_file=None):
     """
     If dir_path contains a directory named 'noarch', the path tree therein is treated
     as though it's a full channel, with a level of subdirs, each subdir having an update
@@ -271,7 +266,8 @@ def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=N
                             patch_generator=patch_generator, verbose=verbose,
                             progress=progress,
                             hotfix_source_repo=hotfix_source_repo,
-                            current_index_versions=current_index_versions)
+                            current_index_versions=current_index_versions,
+                            index_file=index_file)
 
 
 def _determine_namespace(info):
@@ -362,7 +358,10 @@ def _apply_instructions(subdir, repodata, instructions):
                                add_missing_keys=False)
     # we could have totally separate instructions for .conda than .tar.bz2, but it's easier if we assume
     #    that a similarly-named .tar.bz2 file is the same content as .conda, and shares fixes
-    new_pkg_fixes = {k.replace('.tar.bz2', '.conda'): v for k, v in instructions.get('packages', {}).items()}
+    new_pkg_fixes = {
+        k.replace(CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2): v
+        for k, v in instructions.get('packages', {}).items()
+    }
 
     utils.merge_or_update_dict(repodata.get('packages.conda', {}), new_pkg_fixes, merge=False,
                                add_missing_keys=False)
@@ -371,16 +370,16 @@ def _apply_instructions(subdir, repodata, instructions):
 
     for fn in instructions.get('revoke', ()):
         for key in ('packages', 'packages.conda'):
-            if fn.endswith('.tar.bz2') and key == 'packages.conda':
-                fn = fn.replace('.tar.bz2', '.conda')
+            if fn.endswith(CONDA_PACKAGE_EXTENSION_V1) and key == 'packages.conda':
+                fn = fn.replace(CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2)
             if fn in repodata[key]:
                 repodata[key][fn]['revoked'] = True
                 repodata[key][fn]['depends'].append('package_has_been_revoked')
 
     for fn in instructions.get('remove', ()):
         for key in ('packages', 'packages.conda'):
-            if fn.endswith('.tar.bz2') and key == 'packages.conda':
-                fn = fn.replace('.tar.bz2', '.conda')
+            if fn.endswith(CONDA_PACKAGE_EXTENSION_V1) and key == 'packages.conda':
+                fn = fn.replace(CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2)
             popped = repodata[key].pop(fn, None)
             if popped:
                 repodata["removed"].append(fn)
@@ -419,7 +418,9 @@ def _get_jinja2_environment():
 
 
 def _maybe_write(path, content, write_newline_end=False, content_is_binary=False):
-    temp_path = join(gettempdir(), str(uuid4()))
+    # Create the temp file next "path" so that we can use an atomic move, see
+    # https://github.com/conda/conda-build/issues/3833
+    temp_path = '%s.%s' % (path, uuid4())
 
     if not content_is_binary:
         content = ensure_binary(content)
@@ -614,9 +615,9 @@ def _cache_info_file(tmpdir, info_fn, cache_path):
 
 def _alternate_file_extension(fn):
     cache_fn = fn
-    for ext in CONDA_TARBALL_EXTENSIONS:
+    for ext in CONDA_PACKAGE_EXTENSIONS:
         cache_fn = cache_fn.replace(ext, '')
-    other_ext = set(CONDA_TARBALL_EXTENSIONS) - set([fn.replace(cache_fn, '')])
+    other_ext = set(CONDA_PACKAGE_EXTENSIONS) - set([fn.replace(cache_fn, '')])
     return cache_fn + next(iter(other_ext))
 
 
@@ -628,9 +629,9 @@ def _get_resolve_object(subdir, file_path=None, precs=None, repodata=None):
             packages = json.load(fi)
             recs = json.load(fi)
             for k, v in recs.items():
-                if k.endswith('.tar.bz2'):
+                if k.endswith(CONDA_PACKAGE_EXTENSION_V1):
                     packages[k] = v
-                elif k.endswith('.conda'):
+                elif k.endswith(CONDA_PACKAGE_EXTENSION_V2):
                     conda_packages[k] = v
     if not repodata:
         repodata = {
@@ -691,6 +692,33 @@ def _add_missing_deps(new_r, original_r):
     return [pkg for group in expanded_groups.values() for pkg in group]
 
 
+def _add_prev_ver_for_features(new_r, orig_r):
+    expanded_groups = copy.deepcopy(new_r.groups)
+    for g_name in new_r.groups:
+        if not any(m.track_features or m.features for m in new_r.groups[g_name]):
+            # no features so skip
+            continue
+
+        # versions are sorted here so this is the latest
+        latest_version = VersionOrder(str(new_r.groups[g_name][0].version))
+        if g_name in orig_r.groups:
+            # now we iterate through the list to find the next to latest
+            # without a feature
+            keep_m = None
+            for i in range(len(orig_r.groups[g_name])):
+                _m = orig_r.groups[g_name][i]
+                if (
+                    VersionOrder(str(_m.version)) <= latest_version and
+                    not (_m.track_features or _m.features)
+                ):
+                    keep_m = _m
+                    break
+            if keep_m is not None:
+                expanded_groups[g_name] = set([keep_m]) | set(expanded_groups.get(g_name, []))
+
+    return [pkg for group in expanded_groups.values() for pkg in group]
+
+
 def _shard_newest_packages(subdir, r, pins=None):
     """Captures only the newest versions of software in the resolve object.
 
@@ -711,8 +739,14 @@ def _shard_newest_packages(subdir, r, pins=None):
                 version = r.find_matches(MatchSpec('%s=%s' % (g_name, pin_value)))[0].version
                 matches.update(r.find_matches(MatchSpec('%s=%s' % (g_name, version))))
         groups[g_name] = matches
+
+    # add the deps of the stuff in the index
     new_r = _get_resolve_object(subdir, precs=[pkg for group in groups.values() for pkg in group])
-    return set(_add_missing_deps(new_r, r))
+    new_r = _get_resolve_object(subdir, precs=_add_missing_deps(new_r, r))
+
+    # now for any pkg with features, add at least one previous version
+    # also return
+    return set(_add_prev_ver_for_features(new_r, r))
 
 
 def _build_current_repodata(subdir, repodata, pins):
@@ -722,14 +756,14 @@ def _build_current_repodata(subdir, repodata, pins):
     packages = {}
     conda_packages = {}
     for keep_pkg in keep_pkgs:
-        if keep_pkg.fn.endswith('.conda'):
+        if keep_pkg.fn.endswith(CONDA_PACKAGE_EXTENSION_V2):
             conda_packages[keep_pkg.fn] = repodata['packages.conda'][keep_pkg.fn]
             # in order to prevent package churn we consider the md5 for the .tar.bz2 that matches the .conda file
             #    This holds when .conda files contain the same files as .tar.bz2, which is an assumption we'll make
             #    until it becomes more prevalent that people provide only .conda files and just skip .tar.bz2
-            counterpart = keep_pkg.fn.replace('.conda', '.tar.bz2')
+            counterpart = keep_pkg.fn.replace(CONDA_PACKAGE_EXTENSION_V2, CONDA_PACKAGE_EXTENSION_V1)
             conda_packages[keep_pkg.fn]['legacy_bz2_md5'] = repodata['packages'].get(counterpart, {}).get('md5')
-        elif keep_pkg.fn.endswith('.tar.bz2'):
+        elif keep_pkg.fn.endswith(CONDA_PACKAGE_EXTENSION_V1):
             packages[keep_pkg.fn] = repodata['packages'][keep_pkg.fn]
     new_repodata['packages'] = packages
     new_repodata['packages.conda'] = conda_packages
@@ -749,7 +783,7 @@ class ChannelIndex(object):
         self.deep_integrity_check = deep_integrity_check
 
     def index(self, patch_generator, hotfix_source_repo=None, verbose=False, progress=False,
-              current_index_versions=None):
+              current_index_versions=None, index_file=None):
         if verbose:
             level = logging.DEBUG
         else:
@@ -781,7 +815,8 @@ class ChannelIndex(object):
                             t2.update()
                             _ensure_valid_channel(self.channel_root, subdir)
                             repodata_from_packages = self.index_subdir(
-                                subdir, verbose=verbose, progress=progress)
+                                subdir, verbose=verbose, progress=progress,
+                                index_file=index_file)
 
                             t2.set_description("Writing pre-patch repodata")
                             t2.update()
@@ -821,7 +856,7 @@ class ChannelIndex(object):
                 self._write_channeldata_index_html(channel_data)
                 self._write_channeldata(channel_data)
 
-    def index_subdir(self, subdir, verbose=False, progress=False):
+    def index_subdir(self, subdir, index_file=None, verbose=False, progress=False):
         subdir_path = join(self.channel_root, subdir)
         self._ensure_dirs(subdir)
         repodata_json_path = join(subdir_path, REPODATA_FROM_PKGS_JSON_FN)
@@ -861,12 +896,23 @@ class ChannelIndex(object):
 
         stat_cache_original = stat_cache.copy()
 
+        remove_set = old_repodata_fns - fns_in_subdir
+        ignore_set = set(old_repodata.get('removed', []))
         try:
             # calculate all the paths and figure out what we're going to do with them
             # add_set: filenames that aren't in the current/old repodata, but exist in the subdir
-            add_set = fns_in_subdir - old_repodata_fns
-            remove_set = old_repodata_fns - fns_in_subdir
-            ignore_set = set(old_repodata.get('removed', []))
+            if index_file:
+                with open(index_file, 'r') as fin:
+                    add_set = set()
+                    for line in fin:
+                        fn_subdir, fn = line.strip().split('/')
+                        if fn_subdir != subdir:
+                            continue
+                        if fn.endswith('.conda') or fn.endswith('.tar.bz2'):
+                            add_set.add(fn)
+            else:
+                add_set = fns_in_subdir - old_repodata_fns
+
             add_set -= ignore_set
 
             # update_set: Filenames that are in both old repodata and new repodata,
@@ -898,7 +944,7 @@ class ChannelIndex(object):
                     if fn == rec:
                         update_set.add(fn)
                     else:
-                        if fn.endswith('.tar.bz2'):
+                        if fn.endswith(CONDA_PACKAGE_EXTENSION_V1):
                             new_repodata_packages[fn] = rec
                         else:
                             new_repodata_conda_packages[fn] = rec
@@ -914,7 +960,7 @@ class ChannelIndex(object):
                                                 self.channel_root, subdir)
             # split up the set by .conda packages first, then .tar.bz2.  This avoids race conditions
             #    with execution in parallel that would end up in the same place.
-            for conda_format in tqdm(CONDA_TARBALL_EXTENSIONS, desc="File format",
+            for conda_format in tqdm(CONDA_PACKAGE_EXTENSIONS, desc="File format",
                                      disable=(verbose or not progress), leave=False):
                 for fn, mtime, size, index_json in tqdm(
                         self.thread_executor.map(
@@ -927,7 +973,7 @@ class ChannelIndex(object):
                     if fn and mtime:
                         stat_cache[fn] = {'mtime': int(mtime), 'size': size}
                         if index_json:
-                            if fn.endswith(".conda"):
+                            if fn.endswith(CONDA_PACKAGE_EXTENSION_V2):
                                 new_repodata_conda_packages[fn] = index_json
                             else:
                                 new_repodata_packages[fn] = index_json
@@ -1026,7 +1072,7 @@ class ChannelIndex(object):
             #    .conda readup is very fast (essentially free), but .conda files come from
             #    converting .tar.bz2 files, which can go wrong.  Forcing extraction for
             #    .conda files gives us a check on the validity of that conversion.
-            if not fn.endswith('.conda') and os.path.isfile(index_cache_path):
+            if not fn.endswith(CONDA_PACKAGE_EXTENSION_V2) and os.path.isfile(index_cache_path):
                 with open(index_cache_path) as f:
                     index_json = json.load(f)
             elif not alternate_cache and (second_try or not os.path.exists(index_cache_path)):
@@ -1213,7 +1259,7 @@ class ChannelIndex(object):
         legacy_packages = repodata["packages"]
         conda_packages = repodata["packages.conda"]
 
-        use_these_legacy_keys = set(legacy_packages.keys()) - set(k[:-6] + '.tar.bz2' for k in conda_packages.keys())
+        use_these_legacy_keys = set(legacy_packages.keys()) - set(k[:-6] + CONDA_PACKAGE_EXTENSION_V1 for k in conda_packages.keys())
         all_repodata_packages = conda_packages.copy()
         all_repodata_packages.update({k: legacy_packages[k] for k in use_these_legacy_keys})
         package_data = channel_data.get('packages', {})
@@ -1362,7 +1408,7 @@ class ChannelIndex(object):
         return {}
 
     def _patch_repodata(self, subdir, repodata, patch_generator=None):
-        if patch_generator and any(patch_generator.endswith(ext) for ext in CONDA_TARBALL_EXTENSIONS):
+        if patch_generator and any(patch_generator.endswith(ext) for ext in CONDA_PACKAGE_EXTENSIONS):
             instructions = self._load_patch_instructions_tarball(subdir, patch_generator)
         else:
             instructions = self._create_patch_instructions(subdir, repodata, patch_generator)

@@ -35,29 +35,29 @@ import filelock
 import conda_package_handling.api
 
 try:
-    from conda.base.constants import CONDA_PACKAGE_EXTENSIONS
+    from conda.base.constants import CONDA_PACKAGE_EXTENSIONS, CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2
 except Exception:
-    from conda.base.constants import CONDA_TARBALL_EXTENSION
-    CONDA_PACKAGE_EXTENSIONS = (CONDA_TARBALL_EXTENSION,)
-CONDA_TARBALL_EXTENSIONS = CONDA_PACKAGE_EXTENSIONS # noqa: shim for previous interface
+    from conda.base.constants import CONDA_TARBALL_EXTENSION as CONDA_PACKAGE_EXTENSION_V1
+    CONDA_PACKAGE_EXTENSION_V2 = ".conda"
+    CONDA_PACKAGE_EXTENSIONS = (CONDA_PACKAGE_EXTENSION_V2, CONDA_PACKAGE_EXTENSION_V1)
 
-from conda.api import PackageCacheData
+from conda.api import PackageCacheData # noqa
 
-from .conda_interface import hashsum_file, md5_file, unix_path_to_win, win_path_to_unix
-from .conda_interface import PY3, iteritems
-from .conda_interface import root_dir, pkgs_dirs
-from .conda_interface import string_types
-from .conda_interface import memoized
-from .conda_interface import StringIO
-from .conda_interface import VersionOrder, MatchSpec
-from .conda_interface import cc_conda_build
-from .conda_interface import conda_43, conda_46, Dist
-from .conda_interface import context
-from .conda_interface import download, TemporaryDirectory, get_conda_channel, CondaHTTPError
+from .conda_interface import hashsum_file, md5_file, unix_path_to_win, win_path_to_unix # noqa
+from .conda_interface import PY3, iteritems # noqa
+from .conda_interface import root_dir, pkgs_dirs # noqa
+from .conda_interface import string_types # noqa
+from .conda_interface import memoized # noqa
+from .conda_interface import StringIO # noqa
+from .conda_interface import VersionOrder, MatchSpec # noqa
+from .conda_interface import cc_conda_build # noqa
+from .conda_interface import conda_43, conda_46, Dist # noqa
+from .conda_interface import context # noqa
+from .conda_interface import download, TemporaryDirectory, get_conda_channel, CondaHTTPError # noqa
 # NOQA because it is not used in this file.
-from conda_build.conda_interface import rm_rf as _rm_rf # NOQA
-from conda_build.exceptions import BuildLockError
-from conda_build.os_utils import external
+from conda_build.conda_interface import rm_rf as _rm_rf # noqa
+from conda_build.exceptions import BuildLockError # noqa
+from conda_build.os_utils import external # noqa
 
 if PY3:
     from glob import glob as glob_glob
@@ -97,6 +97,8 @@ mmap_PROT_WRITE = 0 if on_win else mmap.PROT_WRITE
 DEFAULT_SUBDIRS = {
     "linux-64",
     "linux-32",
+    "linux-s390x",
+    "linux-ppc64",
     "linux-ppc64le",
     "linux-armv6l",
     "linux-armv7l",
@@ -104,8 +106,17 @@ DEFAULT_SUBDIRS = {
     "win-64",
     "win-32",
     "osx-64",
+    "osx-arm64",
     "zos-z",
     "noarch",
+}
+
+RUN_EXPORTS_TYPES = {
+    "weak",
+    "strong",
+    "noarch",
+    "weak_constrains",
+    "strong_constrains",
 }
 
 PY_TMPL = """
@@ -119,6 +130,9 @@ if __name__ == '__main__':
     sys.argv[0] = re.sub(r'(-script\.pyw?|\.exe)?$', '', sys.argv[0])
     sys.exit(%(func)s())
 """
+
+# filenames accepted as recipe meta files
+VALID_METAS = ("meta.yaml", "meta.yml", "conda.yaml", "conda.yml")
 
 try:
     from os import scandir, walk  # NOQA
@@ -420,6 +434,12 @@ def bytes2human(n):
     return "%sB" % n
 
 
+def seconds2human(s):
+    m, s = divmod(s, 60)
+    h, m = divmod(int(m), 60)
+    return "{:d}:{:02d}:{:04.1f}".format(h, m, s)
+
+
 def get_recipe_abspath(recipe):
     """resolve recipe dir as absolute path.  If recipe is a tarball rather than a folder,
     extract it and return the extracted directory.
@@ -430,10 +450,10 @@ def get_recipe_abspath(recipe):
     # Don't use byte literals for paths in Python 2
     if not PY3:
         recipe = recipe.decode(getpreferredencoding() or 'utf-8')
-    if isfile(recipe):
-        if recipe.lower().endswith(decompressible_exts) or recipe.lower().endswith(CONDA_TARBALL_EXTENSIONS):
+    if isfile(recipe) and '.yaml' not in recipe:
+        if recipe.lower().endswith(decompressible_exts) or recipe.lower().endswith(CONDA_PACKAGE_EXTENSIONS):
             recipe_dir = tempfile.mkdtemp()
-            if recipe.lower().endswith(CONDA_TARBALL_EXTENSIONS):
+            if recipe.lower().endswith(CONDA_PACKAGE_EXTENSIONS):
                 import conda_package_handling.api
                 conda_package_handling.api.extract(recipe, recipe_dir)
             else:
@@ -444,8 +464,11 @@ def get_recipe_abspath(recipe):
                 tar_xf(recipe_tarfile, os.path.join(recipe_dir, 'info'))
             need_cleanup = True
         else:
-            print("Ignoring non-recipe: %s" % recipe)
+            print("Ignoring non-recipe file: %s" % recipe)
             return (None, None)
+    elif '.yaml' in recipe:
+        recipe_dir = os.path.dirname(recipe)
+        need_cleanup = False
     else:
         recipe_dir = abspath(os.path.join(os.getcwd(), recipe))
         need_cleanup = False
@@ -771,10 +794,11 @@ unxz is required to unarchive .xz source files.
     for i, member in enumerate(members, 0):
         if os.path.isabs(member.name):
             member.name = os.path.relpath(member.name, '/')
-        if not os.path.realpath(member.name).startswith(os.getcwd()):
+        cwd = os.path.realpath(os.getcwd())
+        if not os.path.realpath(member.name).startswith(cwd):
             member.name = member.name.replace("../", "")
-        if not os.path.realpath(member.name).startswith(os.getcwd()):
-            sys.exit("tarball contains unsafe path: " + member.name)
+        if not os.path.realpath(member.name).startswith(cwd):
+            sys.exit("tarball contains unsafe path: " + member.name + " cwd is: " + cwd)
         members[i] = member
 
     if not PY3:
@@ -825,7 +849,7 @@ def tar_xf(tarball, dir_path):
     if not os.path.isabs(tarball):
         tarball = os.path.join(os.getcwd(), tarball)
     try:
-        with tmp_chdir(dir_path):
+        with tmp_chdir(os.path.realpath(dir_path)):
             libarchive.extract_file(tarball, flags)
     except libarchive.exception.ArchiveError:
         # try again, maybe we are on Windows and the archive contains symlinks
@@ -926,18 +950,28 @@ def safe_print_unicode(*args, **kwargs):
     func(line.encode(encoding, errors))
 
 
-def rec_glob(path, patterns):
-    result = []
-    for d_f in walk(path):
-        # ignore the .git folder
-        # if '.git' in d_f[0]:
-        #     continue
-        m = []
+def rec_glob(path, patterns, ignores=None):
+    """
+    Recursively searches path for filename patterns.
+
+    :param path: path within to search for files
+    :param patterns: list of filename patterns to search for
+    :param ignore: list of directory patterns to ignore in search
+    :return: list of paths in path satisfying patterns/ignore
+    """
+    patterns = ensure_list(patterns)
+    ignores = ensure_list(ignores)
+
+    for path, dirs, files in walk(path):
+        # remove directories to ignore
+        for ignore in ignores:
+            for d in fnmatch.filter(dirs, ignore):
+                dirs.remove(d)
+
+        # return filepaths that match a pattern
         for pattern in patterns:
-            m.extend(fnmatch.filter(d_f[2], pattern))
-        if m:
-            result.extend([os.path.join(d_f[0], f) for f in m])
-    return result
+            for f in fnmatch.filter(files, pattern):
+                yield os.path.join(path, f)
 
 
 def convert_unix_path_to_win(path):
@@ -1119,46 +1153,104 @@ def get_skip_message(m):
         {k: m.config.variant[k] for k in m.get_used_vars()}))
 
 
-def package_has_file(package_path, file_path, refresh=False):
-    locks = get_conda_operation_locks()
-    possible_subdir = os.path.basename(os.path.dirname(package_path))
-    possible_subdir = possible_subdir if possible_subdir in DEFAULT_SUBDIRS else ''
-    with try_acquire_locks(locks, timeout=900):
-        folder_name = os.path.basename(conda_package_handling.api.get_default_extracted_folder(package_path))
-        # look in conda's package cache
-        try:
-            # conda 4.7.2 added this
-            cache_path = PackageCacheData.first_writable().pkgs_dir
-        except AttributeError:
-            # fallback; assume writable first path.  Not as reliable.
-            cache_path = pkgs_dirs[0]
-        cache_path = os.path.join(cache_path, possible_subdir) if possible_subdir else cache_path
-        cache_path = os.path.join(cache_path, folder_name)
-        resolved_file_path = os.path.join(cache_path, file_path)
-        if not os.path.isfile(resolved_file_path) or refresh:
-            if file_path.startswith('info'):
-                conda_package_handling.api.extract(package_path, cache_path, 'info')
-            else:
-                conda_package_handling.api.extract(package_path, cache_path)
-        if not os.path.isfile(resolved_file_path):
-            return False
+def package_has_file(package_path, file_path, refresh_mode='modified'):
+    # This version does nothing to the package cache.
+    with TemporaryDirectory() as td:
+        if file_path.startswith('info'):
+            conda_package_handling.api.extract(package_path, dest_dir=td, components='info')
         else:
+            conda_package_handling.api.extract(package_path, dest_dir=td, components=file_path)
+        resolved_file_path = os.path.join(td, file_path)
+        if os.path.exists(resolved_file_path):
+            # TODO :: Remove this text-mode load. Files are binary.
             try:
                 with open(resolved_file_path) as f:
                     content = f.read()
             except UnicodeDecodeError:
                 with open(resolved_file_path, 'rb') as f:
                     content = f.read()
-    return content
-
-
-def ensure_list(arg):
-    if (isinstance(arg, string_types) or not hasattr(arg, '__iter__')):
-        if arg is not None:
-            arg = [arg]
         else:
-            arg = []
-    return arg
+            content = False
+        return content
+
+
+def ensure_list(arg, include_dict=True):
+    """
+    Ensure the object is a list. If not return it in a list.
+
+    :param arg: Object to ensure is a list
+    :type arg: any
+    :param include_dict: Whether to treat `dict` as a `list`
+    :type include_dict: bool, optional
+    :return: `arg` as a `list`
+    :rtype: list
+    """
+    if arg is None:
+        return []
+    elif islist(arg, include_dict=include_dict):
+        return list(arg)
+    else:
+        return [arg]
+
+
+def islist(arg, uniform=False, include_dict=True):
+    """
+    Check whether `arg` is a `list`. Optionally determine whether the list elements
+    are all uniform.
+
+    When checking for generic uniformity (`uniform=True`) we check to see if all
+    elements are of the first element's type (`type(arg[0]) == type(arg[1])`). For
+    any other kinds of uniformity checks are desired provide a uniformity function:
+
+    .. code-block:: python
+        # uniformity function checking if elements are str and not empty
+        >>> truthy_str = lambda e: isinstance(e, str) and e
+        >>> islist(["foo", "bar"], uniform=truthy_str)
+        True
+        >>> islist(["", "bar"], uniform=truthy_str)
+        False
+        >>> islist([0, "bar"], uniform=truthy_str)
+        False
+
+    .. note::
+        Testing for uniformity will consume generators.
+
+    :param arg: Object to ensure is a `list`
+    :type arg: any
+    :param uniform: Whether to check for uniform or uniformity function
+    :type uniform: bool, function, optional
+    :param include_dict: Whether to treat `dict` as a `list`
+    :type include_dict: bool, optional
+    :return: Whether `arg` is a `list`
+    :rtype: bool
+    """
+    if isinstance(arg, string_types) or not hasattr(arg, '__iter__'):
+        # str and non-iterables are not lists
+        return False
+    elif not include_dict and isinstance(arg, dict):
+        # do not treat dict as a list
+        return False
+    elif not uniform:
+        # short circuit for non-uniformity
+        return True
+
+    # NOTE: not checking for Falsy arg since arg may be a generator
+
+    if uniform is True:
+        arg = iter(arg)
+        try:
+            etype = type(next(arg))
+        except StopIteration:
+            # StopIteration: list is empty, an empty list is still uniform
+            return True
+        # check for explicit type match, do not allow the ambiguity of isinstance
+        uniform = lambda e: type(e) == etype
+
+    try:
+        return all(uniform(e) for e in arg)
+    except (ValueError, TypeError):
+        # ValueError, TypeError: uniform function failed
+        return False
 
 
 @contextlib.contextmanager
@@ -1173,7 +1265,7 @@ def tmp_chdir(dest):
 
 def expand_globs(path_list, root_dir):
     files = []
-    for path in path_list:
+    for path in ensure_list(path_list):
         if not os.path.isabs(path):
             path = os.path.join(root_dir, path)
         if os.path.isfile(path):
@@ -1183,7 +1275,7 @@ def expand_globs(path_list, root_dir):
         elif os.path.isdir(path):
             files.extend(os.path.join(root, f) for root, _, fs in walk(path) for f in fs)
         else:
-            # File compared to the globs use / as separator indenpendently of the os
+            # File compared to the globs use / as separator independently of the os
             glob_files = glob(path)
             if not glob_files:
                 log = get_logger(__name__)
@@ -1195,26 +1287,40 @@ def expand_globs(path_list, root_dir):
 
 
 def find_recipe(path):
-    """recurse through a folder, locating meta.yaml.  Raises error if more than one is found.
+    """recurse through a folder, locating valid meta files (see VALID_METAS).  Raises error if more than one is found.
 
-    Returns folder containing meta.yaml, to be built.
+    Returns full path to meta file to be built.
 
-    If we have a base level meta.yaml and other supplemental ones, use that first"""
-    if os.path.isfile(path) and os.path.basename(path) in ["meta.yaml", "conda.yaml"]:
-        return os.path.dirname(path)
-    results = rec_glob(path, ["meta.yaml", "conda.yaml"])
-    if len(results) > 1:
-        base_recipe = os.path.join(path, "meta.yaml")
-        if base_recipe in results:
-            get_logger(__name__).warn("Multiple meta.yaml files found. "
-                                      "The meta.yaml file in the base directory "
-                                      "will be used.")
-            results = [base_recipe]
-        else:
-            raise IOError("More than one meta.yaml files found in %s" % path)
-    elif not results:
-        raise IOError("No meta.yaml or conda.yaml files found in %s" % path)
-    return results[0]
+    If we have a base level meta file and other supplemental (nested) ones, use the base level."""
+    # if initial path is absolute then any path we find (via rec_glob)
+    # will also be absolute
+    if not os.path.isabs(path):
+        path = os.path.normpath(os.path.join(os.getcwd(), path))
+
+    if os.path.isfile(path):
+        if os.path.basename(path) in VALID_METAS:
+            return path
+        raise IOError("%s is not a valid meta file (%s)" % (path, ", ".join(VALID_METAS)))
+
+    results = list(rec_glob(path, VALID_METAS, ignores=(".AppleDouble",)))
+
+    if not results:
+        raise IOError("No meta files (%s) found in %s" % (", ".join(VALID_METAS), path))
+
+    if len(results) == 1:
+        return results[0]
+
+    # got multiple valid meta files
+    # check if a meta file is defined on the base level in which case use that one
+
+    metas = [m for m in VALID_METAS if os.path.isfile(os.path.join(path, m))]
+    if len(metas) == 1:
+        get_logger(__name__).warn("Multiple meta files found. "
+                                  "The %s file in the base directory (%s) "
+                                  "will be used." % (metas[0], path))
+        return os.path.join(path, metas[0])
+
+    raise IOError("More than one meta files (%s) found in %s" % (", ".join(VALID_METAS), path))
 
 
 class LoggingContext(object):
@@ -1817,6 +1923,10 @@ def expand_reqs(reqs_entry):
 
 
 def sha256_checksum(filename, buffersize=65536):
+    if islink(filename) and not isfile(filename):
+        # symlink to nowhere so an empty file
+        # this is the sha256 hash of an empty file
+        return "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     if not isfile(filename):
         return None
     sha256 = hashlib.sha256()
@@ -1877,6 +1987,51 @@ def write_bat_activation_text(file_handle, m):
         file_handle.write('call "{conda_root}\\activate.bat" "{prefix}"\n'.format(
             conda_root=root_script_dir,
             prefix=m.config.build_prefix))
+    from conda_build.os_utils.external import find_executable
+    ccache = find_executable('ccache', m.config.build_prefix, False)
+    if ccache:
+        if isinstance(ccache, list):
+            ccache = ccache[0]
+        ccache_methods = {}
+        ccache_methods['env_vars'] = False
+        ccache_methods['symlinks'] = False
+        ccache_methods['native'] = False
+        if hasattr(m.config, 'ccache_method'):
+            ccache_methods[m.config.ccache_method] = True
+        for method, value in ccache_methods.items():
+            if value:
+                if method == 'env_vars':
+                    file_handle.write('set "CC={ccache} %CC%"\n'.format(ccache=ccache))
+                    file_handle.write('set "CXX={ccache} %CXX%"\n'.format(ccache=ccache))
+                elif method == 'symlinks':
+                    dirname_ccache_ln_bin = join(m.config.build_prefix, 'ccache-ln-bin')
+                    file_handle.write('mkdir {}\n'.format(dirname_ccache_ln_bin))
+                    file_handle.write('pushd {}\n'.format(dirname_ccache_ln_bin))
+                    # If you use mklink.exe instead of mklink here it breaks as it's a builtin.
+                    for ext in ('.exe', ''):
+                        # MSVC
+                        file_handle.write('mklink cl{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
+                        file_handle.write('mklink link{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
+                        # GCC
+                        file_handle.write('mklink gcc{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
+                        file_handle.write('mklink g++{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
+                        file_handle.write('mklink cc{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
+                        file_handle.write('mklink c++{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
+                        file_handle.write('mklink as{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
+                        file_handle.write('mklink ar{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
+                        file_handle.write('mklink nm{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
+                        file_handle.write('mklink ranlib{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
+                        file_handle.write('mklink gcc-ar{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
+                        file_handle.write('mklink gcc-nm{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
+                        file_handle.write('mklink gcc-ranlib{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
+                    file_handle.write('popd\n')
+                    file_handle.write('set PATH={dirname_ccache_ln};{dirname_ccache};%PATH%\n'.format(
+                        dirname_ccache_ln=dirname_ccache_ln_bin,
+                        dirname_ccache=os.path.dirname(ccache)))
+                elif method == 'native':
+                    pass
+                else:
+                    print("ccache method {} not implemented")
 
 
 channeldata_cache = {}
@@ -1902,3 +2057,44 @@ def download_channeldata(channel_url):
     else:
         data = channeldata_cache[channel_url]
     return data
+
+
+def linked_data_no_multichannels(prefix):
+    """
+    Return a dictionary of the linked packages in prefix, with correct channels, hopefully.
+    cc @kalefranz.
+    """
+    from conda.core.prefix_data import PrefixData
+    from conda.models.dist import Dist
+    pd = PrefixData(prefix)
+    from conda.common.compat import itervalues
+    return {Dist.from_string(prefix_record.fn, channel_override=prefix_record.channel.name):
+                prefix_record for prefix_record in itervalues(pd._prefix_records)}
+
+
+def shutil_move_more_retrying(src, dest, debug_name):
+    log = get_logger(__name__)
+    log.info("Renaming {} directory '{}' to '{}'".format(debug_name, src, dest))
+    attempts_left = 5
+
+    while attempts_left > 0:
+        if os.path.exists(dest):
+            rm_rf(dest)
+        try:
+            log.info("shutil.move({})={}, dest={})".format(debug_name, src, dest))
+            shutil.move(src, dest)
+            if attempts_left != 5:
+                log.warning("shutil.move({}={}, dest={}) succeeded on attempt number {}".format(debug_name, src, dest,
+                                                                                                    6 - attempts_left))
+            attempts_left = -1
+        except:
+            attempts_left = attempts_left - 1
+        if attempts_left > 0:
+            log.warning(
+                "Failed to rename {} directory, check with strace, struss or procmon. "
+                "Will sleep for 3 seconds and try again!".format(debug_name))
+            import time
+            time.sleep(3)
+        elif attempts_left != -1:
+            log.error(
+                "Failed to rename {} directory despite sleeping and retrying.".format(debug_name))

@@ -1138,16 +1138,18 @@ def inspect_linkages(filename, resolve_filenames=True, recurse=True,
     already_seen = set()
     todo = set([filename])
     done = set()
-    results = set()
+    results = {}
     while todo != done:
         filename = next(iter(todo - done))
         uniqueness_key, these_orig, these_resolved = _inspect_linkages_this(
             filename, sysroot=sysroot, arch=arch)
         if uniqueness_key not in already_seen:
-            if resolve_filenames:
-                results.update(these_resolved)
-            else:
-                results.update(these_orig)
+            for orig, resolved in zip(these_orig, these_resolved):
+                if resolve_filenames:
+                    rec = {'orig': orig, 'resolved': os.path.normpath(resolved)}
+                else:
+                    rec = {'orig': orig}
+                results[orig] = rec
             if recurse:
                 todo.update(these_resolved)
             already_seen.add(uniqueness_key)

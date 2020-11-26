@@ -11,7 +11,7 @@ import os
 import sys
 
 from conda_build import api
-from conda_build.utils import CONDA_TARBALL_EXTENSIONS, on_win
+from conda_build.utils import CONDA_PACKAGE_EXTENSIONS, on_win
 # we extend the render parser because we basically need to render the recipe before
 #       we can say what env to create.  This is not really true for debugging tests, but meh...
 from conda_build.cli.main_render import get_render_parser
@@ -61,7 +61,7 @@ def execute(args):
     test = True
 
     try:
-        if not any(os.path.splitext(_args.recipe_or_package_file_path)[1] in ext for ext in CONDA_TARBALL_EXTENSIONS):
+        if not any(os.path.splitext(_args.recipe_or_package_file_path)[1] in ext for ext in CONDA_PACKAGE_EXTENSIONS):
             # --output silences console output here
             thing_to_debug = render_execute(args, print_results=False)
             test = False

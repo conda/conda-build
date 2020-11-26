@@ -44,7 +44,7 @@ info/index.json
 This file contains basic information about the package, such as
 name, version, build string, and dependencies. The content of this
 file is stored in ``repodata.json``, which is the repository
-index file, hence the name ``index.json``. The json object is a
+index file, hence the name ``index.json``. The JSON object is a
 dictionary containing the keys shown below. The filename of the
 conda package is composed of the first 3 values, as in:
 ``<name>-<version>-<build>.tar.bz2``.
@@ -87,7 +87,7 @@ conda package is composed of the first 3 values, as in:
      - A non-negative integer representing the build number of
        the package.
 
-       Unlike the build string, the build_number is inspected by
+       Unlike the build string, the ``build_number`` is inspected by
        conda. Conda uses it to sort packages that have otherwise
        identical names and versions to determine the latest one.
        This is important because new builds that contain bug
@@ -179,8 +179,8 @@ Optional file. The software license for the package.
 info/no_link
 ------------
 
-Optional file. Lists all files that cannot be linked - either
-soft-linked or hard-linked - into environments and are copied
+Optional file. Lists all files that cannot be linked---either
+soft-linked or hard-linked---into environments and are copied
 instead.
 
 info/about.json
@@ -209,7 +209,7 @@ meta.yaml.rendered
 
 The fully rendered build recipe. See :doc:`../resources/commands/conda-render`.
 
-This directory is present only when the the include_recipe flag
+This directory is present only when the the ``include_recipe`` flag
 is ``True`` in the :ref:`meta-build`.
 
 
@@ -227,9 +227,9 @@ and unlink steps. For more information, see :doc:`link-scripts`.
 Repository structure and index
 ==============================
 
-A conda repository - or channel - is a directory tree, usually
+A conda repository---or channel---is a directory tree, usually
 served over HTTPS, which has platform subdirectories, each of
-which contain conda packages and a repository index. The index
+which contains conda packages and a repository index. The index
 file ``repodata.json`` lists all conda packages in the platform
 subdirectory. Use ``conda index`` to create such an index from
 the conda packages within a directory. It is simple mapping of
@@ -276,16 +276,16 @@ parts:
 
   * \| means OR.
 
-    EXAMPLE: ``1.0|1.2`` matches version 1.0 or 1.2
+    EXAMPLE: ``1.0|1.2`` matches version 1.0 or 1.2.
 
   * \* matches 0 or more characters in the version string. In
     terms of regular expressions, it is the same as ``r'.*'``.
 
     EXAMPLE: 1.0|1.4* matches 1.0, 1.4 and 1.4.1b2, but not 1.2.
 
-  * <, >, <=, >=, == and != are relational operators on versions,
+  * <, >, <=, >=, ==, and != are relational operators on versions,
     which are compared using
-    `PEP-440 <https://www.python.org/dev/peps/pep-0440/>`_.  For example,
+    `PEP-440 <https://www.python.org/dev/peps/pep-0440/>`_. For example,
     ``<=1.0`` matches ``0.9``, ``0.9.1``, and ``1.0``, but not ``1.0.1``.
     ``==`` and ``!=`` are exact equality.
 
@@ -297,7 +297,7 @@ parts:
   * , means AND.
 
     EXAMPLE: >=2,<3 matches all packages in the 2 series. 2.0,
-    2.1 and 2.9 all match, but 3.0 and 1.0 do not.
+    2.1, and 2.9 all match, but 3.0 and 1.0 do not.
 
   * , has higher precedence than \|, so >=1,<2|>3 means greater
     than or equal to 1 AND less than 2 or greater than 3, which

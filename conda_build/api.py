@@ -24,7 +24,7 @@ from conda_build.config import (Config, get_or_merge_config, get_channel_urls,
 from conda_build.utils import ensure_list as _ensure_list
 from conda_build.utils import expand_globs as _expand_globs
 from conda_build.utils import get_logger as _get_logger
-from os.path import expanduser
+from os.path import dirname, expanduser, join
 
 
 def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variants=True,
@@ -158,7 +158,6 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
 
     If recipe paths are provided, renders recipe before building.
     Tests built packages by default.  notest=True to skip test."""
-
     import os
     from conda_build.build import build_tree
     from conda_build.conda_interface import string_types
@@ -167,46 +166,34 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
     assert post in (None, True, False), ("post must be boolean or None.  Remember, you must pass "
                                          "other arguments (config) by keyword.")
 
-    config = get_or_merge_config(config, **kwargs)
-
-    # if people don't pass in an object to capture stats in, they won't get them returned.
-    #     We'll still track them, though.
-    if not stats:
-        stats = {}
-
-    recipe_paths_or_metadata = _ensure_list(recipe_paths_or_metadata)
-    for recipe in recipe_paths_or_metadata:
-        if not any((hasattr(recipe, "config"), isinstance(recipe, string_types))):
-            raise ValueError("Recipe passed was unrecognized object: {}".format(recipe))
-    string_paths = [p for p in recipe_paths_or_metadata if isinstance(p, string_types)]
-    paths = _expand_globs(string_paths, os.getcwd())
     recipes = []
-    for recipe in paths:
-        if (os.path.isdir(recipe) or
-                (os.path.isfile(recipe) and
-                 os.path.basename(recipe) in ('meta.yaml', 'conda.yaml'))):
-            try:
-                recipes.append(find_recipe(recipe))
-            except IOError:
-                continue
-    metadata = [m for m in recipe_paths_or_metadata if hasattr(m, 'config')]
-
-    recipes.extend(metadata)
-    absolute_recipes = []
-    for recipe in recipes:
-        if hasattr(recipe, "config"):
-            absolute_recipes.append(recipe)
+    for recipe in _ensure_list(recipe_paths_or_metadata):
+        if isinstance(recipe, string_types):
+            for recipe in _expand_globs(recipe, os.getcwd()):
+                try:
+                    recipe = find_recipe(recipe)
+                except IOError:
+                    continue
+                recipes.append(recipe)
+        elif hasattr(recipe, "config"):
+            recipes.append(recipe)
         else:
-            if not os.path.isabs(recipe):
-                recipe = os.path.normpath(os.path.join(os.getcwd(), recipe))
-            if not os.path.exists(recipe):
-                raise ValueError("Path to recipe did not exist: {}".format(recipe))
-            absolute_recipes.append(recipe)
+            raise ValueError("Recipe passed was unrecognized object: {}".format(recipe))
 
-    if not absolute_recipes:
+    if not recipes:
         raise ValueError('No valid recipes found for input: {}'.format(recipe_paths_or_metadata))
-    return build_tree(absolute_recipes, config, stats, build_only=build_only, post=post,
-                      notest=notest, need_source_download=need_source_download, variants=variants)
+
+    return build_tree(
+        sorted(recipes),
+        config=get_or_merge_config(config, **kwargs),
+        # If people don't pass in an object to capture stats in, they won't get them returned.
+        # We'll still track them, though.
+        stats=stats or {},
+        build_only=build_only,
+        post=post,
+        notest=notest,
+        variants=variants
+    )
 
 
 def test(recipedir_or_package_or_metadata, move_broken=True, config=None, stats=None, **kwargs):
@@ -241,7 +228,7 @@ def list_skeletons():
 
     The returned list is generally the names of supported repositories (pypi, cran, etc.)"""
     import pkgutil
-    modules = pkgutil.iter_modules(['conda_build/skeletons'])
+    modules = pkgutil.iter_modules([join(dirname(__file__), 'skeletons')])
     files = []
     for _, name, _ in modules:
         if not name.startswith("_"):
@@ -398,7 +385,8 @@ def update_index(dir_paths, config=None, force=False, check_md5=False, remove=Fa
         update_index(path, check_md5=check_md5, channel_name=channel_name,
                      patch_generator=patch_generator, threads=threads, verbose=verbose,
                      progress=progress, hotfix_source_repo=hotfix_source_repo,
-                     subdirs=ensure_list(subdir), current_index_versions=current_index_versions)
+                     subdirs=ensure_list(subdir), current_index_versions=current_index_versions,
+                     index_file=kwargs.get('index_file', None))
 
 
 def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False,
@@ -412,7 +400,7 @@ def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False,
     import time
     from conda_build.conda_interface import string_types
     from conda_build.build import test as run_test, build as run_build
-    from conda_build.utils import CONDA_TARBALL_EXTENSIONS, on_win, LoggingContext
+    from conda_build.utils import CONDA_PACKAGE_EXTENSIONS, on_win, LoggingContext
     is_package = False
     default_config = get_or_merge_config(config, **kwargs)
     args = {"set_build_id": False}
@@ -447,7 +435,7 @@ def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False,
                 metadata_tuples.append((metadata, False, True))
         else:
             ext = os.path.splitext(recipe_or_package_path_or_metadata_tuples)[1]
-            if not ext or not any(ext in _ for _ in CONDA_TARBALL_EXTENSIONS):
+            if not ext or not any(ext in _ for _ in CONDA_PACKAGE_EXTENSIONS):
                 metadata_tuples = render(recipe_or_package_path_or_metadata_tuples, config=config, **kwargs)
             else:
                 # this is a package, we only support testing

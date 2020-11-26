@@ -95,7 +95,11 @@ def ns_cfg(config):
     # there are times when python comes in as a tuple
     if not hasattr(py, 'split'):
         py = py[0]
-    py = int("".join(py.split('.')[:2]))
+    # go from "3.6 *_cython" -> "36"
+    # or from "3.6.9" -> "36"
+    py = int("".join(py.split(' ')[0].split('.')[:2]))
+
+    d["build_platform"] = config.build_subdir
 
     d.update(dict(py=py,
                     py3k=bool(30 <= py < 40),
@@ -123,7 +127,7 @@ def ns_cfg(config):
     d['luajit'] = bool(lua[0] == "2")
 
     for machine in non_x86_linux_machines:
-        d[machine] = bool(plat == 'linux-%s' % machine)
+        d[machine] = bool(plat.endswith('-%s' % machine))
 
     for feature, value in feature_list:
         d[feature] = value
@@ -311,7 +315,10 @@ def ensure_matching_hashes(output_metadata):
             if m != om:
                 run_exports = om.meta.get('build', {}).get('run_exports', [])
                 if hasattr(run_exports, 'keys'):
-                    run_exports = run_exports.get('strong', []) + run_exports.get('weak', [])
+                    run_exports_list = []
+                    for export_type in utils.RUN_EXPORTS_TYPES:
+                        run_exports_list = run_exports_list + run_exports.get(export_type, [])
+                    run_exports = run_exports_list
                 deps = _get_all_dependencies(om, envs) + run_exports
                 for dep in deps:
                     if (dep.startswith(m.name() + ' ') and len(dep.split(' ')) == 3 and
@@ -379,6 +386,7 @@ default_structs = {
     'build/preferred_env': text_type,
     'build/preferred_env_executable_paths': list,
     'build/ignore_run_exports': list,
+    'build/ignore_run_exports_from': list,
     'build/requires_features': dict,
     'build/provides_features': dict,
     'build/pre-link': text_type,
@@ -499,13 +507,13 @@ FIELDS = {
               'rpaths_patcher', 'script_env', 'always_include_files', 'skip',
               'msvc_compiler', 'pin_depends', 'include_recipe',  # pin_depends is experimental still
               'preferred_env', 'preferred_env_executable_paths', 'run_exports',
-              'ignore_run_exports', 'requires_features', 'provides_features',
+              'ignore_run_exports', 'ignore_run_exports_from', 'requires_features', 'provides_features',
               'force_use_keys', 'force_ignore_keys', 'merge_build_host',
               'pre-link', 'post-link', 'pre-unlink', 'missing_dso_whitelist',
-              'error-overdepending', 'error-overlinking',
+              'error_overdepending', 'error_overlinking',
               },
     'outputs': {'name', 'version', 'number', 'script', 'script_interpreter', 'build',
-                'requirements', 'test', 'about', 'extra', 'files', 'type', 'run_exports'},
+                'requirements', 'test', 'about', 'extra', 'files', 'type', 'run_exports', 'target'},
     'requirements': {'build', 'host', 'run', 'conflicts', 'run_constrained'},
     'app': {'entry', 'icon', 'summary', 'type', 'cli_opts',
             'own_environment'},
@@ -551,7 +559,7 @@ def build_string_from_metadata(metadata):
         # TODO: this is the bit that puts in strings like py27np111 in the filename.  It would be
         #    nice to get rid of this, since the hash supercedes that functionally, but not clear
         #    whether anyone's tools depend on this file naming right now.
-        for s, names, places in (('np', 'numpy', 2), ('py', 'python', 2), ('pl', 'perl', 2),
+        for s, names, places in (('np', 'numpy', 2), ('py', 'python', 2), ('pl', 'perl', 3),
                                  ('lua', 'lua', 2), ('r', ('r', 'r-base'), 2),
                                  ('mro', 'mro-base', 3), ('mro', 'mro-base_impl', 3)):
 
@@ -716,14 +724,21 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
             output_d = om.get_rendered_output(metadata.name()) or {'name': metadata.name()}
 
             om = om.get_output_metadata(output_d)
+            replacements = None
+            if 'replacements' in parent_metadata.config.variant:
+                replacements = parent_metadata.config.variant['replacements']
+                del parent_metadata.config.variant['replacements']
             parent_metadata.parse_until_resolved()
+            if replacements:
+                parent_metadata.config.variant['replacements'] = replacements
+
             if not bypass_env_check:
                 fm = finalize_metadata(om, parent_metadata=parent_metadata,
                                        permit_unsatisfiable_variants=permit_unsatisfiable_variants)
             else:
                 fm = om
             if not output_d.get('type') or output_d.get('type').startswith('conda'):
-                outputs[(fm.name(), HashableDict({k: fm.config.variant[k]
+                outputs[(fm.name(), HashableDict({k: copy.deepcopy(fm.config.variant[k])
                                                   for k in fm.get_used_vars()}))] = (output_d, fm)
         except exceptions.DependencyNeedsBuildingError as e:
             if not permit_unsatisfiable_variants:
@@ -732,7 +747,7 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
                 log = utils.get_logger(__name__)
                 log.warn("Could not finalize metadata due to missing dependencies: "
                             "{}".format(e.packages))
-                outputs[(metadata.name(), HashableDict({k: metadata.config.variant[k]
+                outputs[(metadata.name(), HashableDict({k: copy.deepcopy(metadata.config.variant[k])
                                                         for k in metadata.get_used_vars()}))] = (
                     output_d, metadata)
     # in-place modification
@@ -740,7 +755,7 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
     base_metadata.final = False
     final_outputs = OrderedDict()
     for k, (out_d, m) in outputs.items():
-        final_outputs[(m.name(), HashableDict({k: m.config.variant[k]
+        final_outputs[(m.name(), HashableDict({k: copy.deepcopy(m.config.variant[k])
                                                for k in m.get_used_vars()}))] = out_d, m
     return final_outputs
 
@@ -819,6 +834,14 @@ def trim_build_only_deps(metadata, requirements_used):
                 to_remove.add(dep)
 
     return requirements_used - to_remove
+
+
+def _hash_dependencies(hashing_dependencies, hash_length):
+    hash_ = hashlib.sha1(json.dumps(hashing_dependencies, sort_keys=True).encode())
+    # save only the first HASH_LENGTH characters - should be more than
+    #    enough, since these only need to be unique within one version
+    # plus one is for the h - zero pad on the front, trim to match HASH_LENGTH
+    return 'h{0}'.format(hash_.hexdigest())[:hash_length + 1]
 
 
 @contextlib.contextmanager
@@ -961,9 +984,9 @@ class MetaData(object):
             dependencies = _get_dependencies_from_environment(self.config.bootstrap)
             self.append_metadata_sections(dependencies, merge=True)
 
-        if self.meta.get('build', {}).get('error_overlinking', False):
+        if 'error_overlinking' in self.meta.get('build', {}):
             self.config.error_overlinking = self.meta['build']['error_overlinking']
-        if self.meta.get('build', {}).get('error_overdepending', False):
+        if 'error_overdepending' in self.meta.get('build', {}):
             self.config.error_overdepending = self.meta['build']['error_overdepending']
 
         self.validate_features()
@@ -1193,7 +1216,8 @@ class MetaData(object):
             except (AttributeError, ValueError) as e:
                 raise RuntimeError("Received dictionary as spec.  Note that pip requirements are "
                                    "not supported in conda-build meta.yaml.  Error message: " + str(e))
-            if ms.name == self.name():
+            if ms.name == self.name() and not \
+                    (typ == 'build' and self.config.host_subdir != self.config.build_subdir):
                 raise RuntimeError("%s cannot depend on itself" % self.name())
             for name, ver in name_ver_list:
                 if ms.name == name:
@@ -1244,7 +1268,7 @@ class MetaData(object):
         trim_build_only_deps(self, dependencies)
 
         # filter out ignored versions
-        build_string_excludes = ['python', 'r_base', 'perl', 'lua', 'target_platform']
+        build_string_excludes = ['python', 'r_base', 'perl', 'lua']
         build_string_excludes.extend(ensure_list(self.config.variant.get('ignore_version', [])))
         if 'numpy' in dependencies:
             pin_compatible, not_xx = self.uses_numpy_pin_compatible_without_xx
@@ -1256,10 +1280,16 @@ class MetaData(object):
         if build_string_excludes:
             exclude_pattern = re.compile('|'.join('{}[\s$]?.*'.format(exc)
                                                   for exc in build_string_excludes))
-            dependencies = [req for req in dependencies if not exclude_pattern.match(req)]
+            dependencies = [req for req in dependencies if not exclude_pattern.match(req) or
+                                ' ' in self.config.variant[req]]
 
         # retrieve values - this dictionary is what makes up the hash.
-        return {key: self.config.variant[key] for key in dependencies}
+
+        # if dependencies are only 'target_platform' then ignore that.
+        if dependencies == ['target_platform']:
+            return {}
+        else:
+            return {key: self.config.variant[key] for key in dependencies}
 
     def hash_dependencies(self):
         """With arbitrary pinning, we can't depend on the build string as done in
@@ -1274,11 +1304,7 @@ class MetaData(object):
         hash_ = ''
         hashing_dependencies = self.get_hash_contents()
         if hashing_dependencies:
-            hash_ = hashlib.sha1(json.dumps(hashing_dependencies, sort_keys=True).encode())
-            # save only the first HASH_LENGTH characters - should be more than
-            #    enough, since these only need to be unique within one version
-            # plus one is for the h - zero pad on the front, trim to match HASH_LENGTH
-            hash_ = 'h{0}'.format(hash_.hexdigest())[:self.config.hash_length + 1]
+            return _hash_dependencies(hashing_dependencies, self.config.hash_length)
         return hash_
 
     def build_id(self):
@@ -1345,8 +1371,8 @@ class MetaData(object):
             version=self.version(),
             build=self.build_id(),
             build_number=self.build_number() if self.build_number() else 0,
-            platform=self.config.platform if (self.config.platform != 'noarch' and
-                                              arch != 'noarch') else None,
+            platform=self.config.host_platform if (self.config.host_platform != 'noarch' and
+                                                   arch != 'noarch') else None,
             arch=ARCH_MAP.get(arch, arch),
             subdir=self.config.target_subdir,
             depends=sorted(' '.join(ms.spec.split())
@@ -1618,6 +1644,7 @@ class MetaData(object):
 
     @property
     def uses_vcs_in_build(self):
+        # TODO :: Re-work this. Is it even useful? We can declare any vcs in our build deps.
         build_script = "bld.bat" if on_win else "build.sh"
         build_script = os.path.join(self.path, build_script)
         for recipe_file in (build_script, self.meta_path):
@@ -2000,7 +2027,7 @@ class MetaData(object):
                         #    also refine this collection as each output metadata object is
                         #    finalized - see the finalize_outputs_pass function
                         all_output_metadata[(out_metadata.name(),
-                                             HashableDict({k: out_metadata.config.variant[k]
+                                             HashableDict({k: copy.deepcopy(out_metadata.config.variant[k])
                                     for k in out_metadata.get_used_vars()}))] = out, out_metadata
                         out_metadata_map[HashableDict(out)] = out_metadata
                         ref_metadata.other_outputs = out_metadata.other_outputs = all_output_metadata
@@ -2020,7 +2047,7 @@ class MetaData(object):
 
             for output_d, m in render_order.items():
                 if not output_d.get('type') or output_d['type'] in ('conda', 'conda_v2'):
-                    conda_packages[m.name(), HashableDict({k: m.config.variant[k]
+                    conda_packages[m.name(), HashableDict({k: copy.deepcopy(m.config.variant[k])
                                                   for k in m.get_used_vars()})] = (output_d, m)
                 elif output_d.get('type') == 'wheel':
                     if (not output_d.get('requirements', {}).get('build') or
@@ -2145,10 +2172,11 @@ class MetaData(object):
 
             used_vars = meta_yaml_reqs | script_reqs
             # force target_platform to always be included, because it determines behavior
-            if ('target_platform' in self.config.variant and
-                    any(plat != self.config.subdir for plat in
-                        self.get_variants_as_dict_of_lists()['target_platform'])):
+            if ('target_platform' in self.config.variant and not self.noarch):
                 used_vars.add('target_platform')
+            # and channel_targets too.
+            if ('channel_targets' in self.config.variant):
+                used_vars.add('channel_targets')
 
             if self.force_use_keys or self.force_ignore_keys:
                 used_vars = (used_vars - set(self.force_ignore_keys)) | set(self.force_use_keys)
@@ -2191,12 +2219,12 @@ class MetaData(object):
             force_top_level=force_top_level, force_global=force_global, apply_selectors=False)
 
         all_used_selectors = variants.find_used_variables_in_text(variant_keys, recipe_text,
-                                                                    selectors=True)
+                                                                  selectors_only=True)
 
         reqs_text, recipe_text = self._get_used_vars_meta_yaml_helper(
             force_top_level=force_top_level, force_global=force_global, apply_selectors=True)
         all_used_reqs = variants.find_used_variables_in_text(variant_keys, recipe_text,
-                                                                    selectors=False)
+                                                             selectors_only=False)
 
         all_used = all_used_reqs.union(all_used_selectors)
 
@@ -2253,8 +2281,8 @@ class MetaData(object):
     @property
     def activate_build_script(self):
         b = self.meta.get('build', {}) or {}
-        should_activate = (self.uses_new_style_compiler_activation or b.get('activate_in_script') is not False)
-        return bool(self.config.activate and should_activate) and not self.name() == 'conda'
+        should_activate = b.get('activate_in_script') is not False
+        return bool(self.config.activate and should_activate)
 
     @property
     def build_is_host(self):

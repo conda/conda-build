@@ -29,6 +29,7 @@ from .conda_interface import pkgs_dirs
 from .conda_interface import conda_43
 from .conda_interface import specs_from_url
 from .conda_interface import memoized
+from .utils import CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2
 
 from conda_build import exceptions, utils, environ
 from conda_build.metadata import MetaData, combine_top_level_metadata_with_output
@@ -38,12 +39,6 @@ from conda_build.variants import (get_package_variants, list_of_dicts_to_dict_of
 from conda_build.exceptions import DependencyNeedsBuildingError
 from conda_build.index import get_build_index
 # from conda_build.jinja_context import pin_subpackage_against_outputs
-
-try:
-    from conda.base.constants import CONDA_TARBALL_EXTENSIONS
-except Exception:
-    from conda.base.constants import CONDA_TARBALL_EXTENSION
-    CONDA_TARBALL_EXTENSIONS = (CONDA_TARBALL_EXTENSION,)
 
 
 def odict_representer(dumper, data):
@@ -71,9 +66,9 @@ def bldpkg_path(m):
 
     # the default case will switch over to conda_v2 at some point
     if pkg_type == "conda":
-        path = os.path.join(m.config.output_folder, subdir, '%s%s' % (m.dist(), CONDA_TARBALL_EXTENSIONS[0]))
+        path = os.path.join(m.config.output_folder, subdir, '%s%s' % (m.dist(), CONDA_PACKAGE_EXTENSION_V1))
     elif pkg_type == "conda_v2":
-        path = os.path.join(m.config.output_folder, subdir, '%s%s' % (m.dist(), '.conda'))
+        path = os.path.join(m.config.output_folder, subdir, '%s%s' % (m.dist(), CONDA_PACKAGE_EXTENSION_V2))
     else:
         path = '{} file for {} in: {}'.format(m.type, m.name(), os.path.join(m.config.output_folder, subdir))
     return path
@@ -219,7 +214,7 @@ def find_pkg_dir_or_file_in_pkgs_dirs(pkg_dist, m, files_only=False):
     pkg_loc = None
     for pkgs_dir in _pkgs_dirs:
         pkg_dir = os.path.join(pkgs_dir, pkg_dist)
-        pkg_file = os.path.join(pkgs_dir, pkg_dist + CONDA_TARBALL_EXTENSIONS[0])
+        pkg_file = os.path.join(pkgs_dir, pkg_dist + CONDA_PACKAGE_EXTENSION_V1)
         if not files_only and os.path.isdir(pkg_dir):
             pkg_loc = pkg_dir
             break
@@ -352,9 +347,12 @@ def get_upstream_pins(m, actions, env):
     linked_packages = actions.get('LINK', [])
     linked_packages = [pkg for pkg in linked_packages if pkg.name in explicit_specs]
 
+    ignore_pkgs_list = utils.ensure_list(m.get_value('build/ignore_run_exports_from'))
     ignore_list = utils.ensure_list(m.get_value('build/ignore_run_exports'))
     additional_specs = {}
     for pkg in linked_packages:
+        if any(pkg.name in req.split(' ')[0] for req in ignore_pkgs_list):
+            continue
         run_exports = None
         if m.config.use_channeldata:
             channeldata = utils.download_channeldata(pkg.channel)
@@ -410,22 +408,46 @@ def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
 
         host_deps, host_unsat, extra_run_specs_from_host = _read_upstream_pin_files(m, 'host',
                                                     permit_unsatisfiable_variants, exclude_pattern)
-        extra_run_specs = set(extra_run_specs_from_host.get('strong', []) +
-                              extra_run_specs_from_host.get('weak', []) +
-                              extra_run_specs_from_build.get('strong', []))
+        if m.noarch or m.noarch_python:
+            extra_run_specs = set(extra_run_specs_from_host.get('noarch', []))
+            extra_run_constrained_specs = set([])
+        else:
+            extra_run_specs = set(extra_run_specs_from_host.get('strong', []) +
+                                  extra_run_specs_from_host.get('weak', []) +
+                                  extra_run_specs_from_build.get('strong', []))
+            extra_run_constrained_specs = set(
+                extra_run_specs_from_host.get('strong_constrains', []) +
+                extra_run_specs_from_host.get('weak_constrains', []) +
+                extra_run_specs_from_build.get('strong_constrains', [])
+            )
     else:
         host_deps = []
         host_unsat = []
-        extra_run_specs = set(extra_run_specs_from_build.get('strong', []))
-        if m.build_is_host:
-            extra_run_specs.update(extra_run_specs_from_build.get('weak', []))
-            build_deps = set(build_deps or []).update(extra_run_specs_from_build.get('weak', []))
+        if m.noarch or m.noarch_python:
+            if m.build_is_host:
+                extra_run_specs = set(extra_run_specs_from_build.get('noarch', []))
+                extra_run_constrained_specs = set([])
+                build_deps = set(build_deps or []).update(extra_run_specs_from_build.get('noarch', []))
+            else:
+                extra_run_specs = set([])
+                extra_run_constrained_specs = set([])
+                build_deps = set(build_deps or [])
         else:
-            host_deps = set(extra_run_specs_from_build.get('strong', []))
+            extra_run_specs = set(extra_run_specs_from_build.get('strong', []))
+            extra_run_constrained_specs = set(extra_run_specs_from_build.get('strong_constrains', []))
+            if m.build_is_host:
+                extra_run_specs.update(extra_run_specs_from_build.get('weak', []))
+                extra_run_constrained_specs.update(extra_run_specs_from_build.get('weak_constrains', []))
+                build_deps = set(build_deps or []).update(extra_run_specs_from_build.get('weak', []))
+            else:
+                host_deps = set(extra_run_specs_from_build.get('strong', []))
 
     run_deps = extra_run_specs | set(utils.ensure_list(requirements.get('run')))
+    run_constrained_deps = extra_run_constrained_specs | set(utils.ensure_list(requirements.get('run_constrained')))
 
-    for section, deps in (('build', build_deps), ('host', host_deps), ('run', run_deps)):
+    for section, deps in (
+        ('build', build_deps), ('host', host_deps), ('run', run_deps), ('run_constrained', run_constrained_deps),
+    ):
         if deps:
             requirements[section] = list(deps)
 
@@ -659,10 +681,26 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
     rendered_metadata = {}
     need_source_download = True
 
-    # don't bother distributing python if it's a noarch package
+    # don't bother distributing python if it's a noarch package, and figure out
+    # which python version we prefer. `python_age` can use used to tweak which
+    # python gets used here.
     if metadata.noarch or metadata.noarch_python:
-        variants = filter_by_key_value(variants, 'python', variants[0]['python'],
-                                       'noarch_reduction')
+        from .conda_interface import VersionOrder
+        age = int(metadata.get_value('build/noarch_python_build_age', metadata.config.noarch_python_build_age))
+        versions = []
+        for variant in variants:
+            if 'python' in variant:
+                vo = variant['python']
+                if vo not in versions:
+                    versions.append(vo)
+        versions = sorted([VersionOrder(v) for v in versions])
+        if age < 0:
+            age = 0
+        elif age > len(versions) - 1:
+            age = len(versions) - 1
+        build_ver = versions[len(versions) - 1 - age].norm_version
+        variants = filter_by_key_value(variants, 'python', build_ver,
+                                       'noarch_python_reduction')
 
     # store these for reference later
     metadata.config.variants = variants
@@ -683,6 +721,8 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
     top_loop = metadata.get_reduced_variant_set(used_variables)
 
     for variant in top_loop:
+        from conda_build.build import get_all_replacements
+        get_all_replacements(variant)
         mv = metadata.copy()
         mv.config.variant = variant
 
@@ -701,7 +741,7 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
             mv.config.variants = (filter_by_key_value(mv.config.variants, key, values,
                                                       'distribute_variants_reduction') or
                                   mv.config.variants)
-
+        get_all_replacements(mv.config.variants)
         pin_run_as_build = variant.get('pin_run_as_build', {})
         if mv.numpy_xx and 'numpy' not in pin_run_as_build:
             pin_run_as_build['numpy'] = {'min_pin': 'x.x', 'max_pin': 'x.x'}
@@ -731,7 +771,7 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
                            mv.config.variant.get('target_platform', mv.config.subdir),
                            tuple((var, mv.config.variant.get(var))
                                  for var in mv.get_used_vars()))] = \
-                                    (mv, need_source_download, None)
+                                     (mv, need_source_download, None)
     # list of tuples.
     # each tuple item is a tuple of 3 items:
     #    metadata, need_download, need_reparse_in_env
@@ -743,7 +783,11 @@ def expand_outputs(metadata_tuples):
     expanded_outputs = OrderedDict()
 
     for (_m, download, reparse) in metadata_tuples:
-        for (output_dict, m) in _m.copy().get_output_metadata_set(permit_unsatisfiable_variants=False):
+        from conda_build.build import get_all_replacements
+        get_all_replacements(_m.config)
+        from copy import deepcopy
+        for (output_dict, m) in deepcopy(_m).get_output_metadata_set(permit_unsatisfiable_variants=False):
+            get_all_replacements(m.config)
             expanded_outputs[m.dist()] = (output_dict, m)
     return list(expanded_outputs.values())
 
@@ -768,7 +812,7 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
             t.extractall(path=recipe_dir)
             t.close()
             need_cleanup = True
-        elif arg.endswith('.yaml'):
+        elif '.yaml' in arg:
             recipe_dir = os.path.dirname(arg)
             need_cleanup = False
         else:
@@ -862,7 +906,6 @@ else:
 
 def output_yaml(metadata, filename=None, suppress_outputs=False):
     local_metadata = metadata.copy()
-    utils.trim_empty_keys(local_metadata.meta)
     if suppress_outputs and local_metadata.is_output and 'outputs' in local_metadata.meta:
         del local_metadata.meta['outputs']
     output = yaml.dump(_MetaYaml(local_metadata.meta), Dumper=_IndentDumper,

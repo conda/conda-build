@@ -163,6 +163,16 @@ def test_cross_recipe_with_only_build_section(testing_config):
     assert not metadata.build_is_host
 
 
+def test_cross_info_index_platform(testing_config):
+    recipe = os.path.join(metadata_dir, '_cross_build_unix_windows')
+    metadata = api.render(recipe, config=testing_config, bypass_env_check=True)[0][0]
+    info_index = metadata.info_index()
+    assert metadata.config.host_subdir != subdir
+    assert metadata.config.host_subdir == info_index['subdir']
+    assert metadata.config.host_platform != metadata.config.platform
+    assert metadata.config.host_platform == info_index['platform']
+
+
 def test_setting_condarc_vars_with_env_var_expansion(testing_workdir):
     os.makedirs('config')
     # python won't be used - the stuff in the recipe folder will override it
