@@ -10,7 +10,6 @@ test:
     - tests/files
   files:
     recipe_file
-
   commands:
     - pytest -h
     - test -e test_files_folder/text.txt   # [unix]

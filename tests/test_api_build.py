@@ -1385,7 +1385,7 @@ def test_downstream_test_source_files_copy(testing_config):
     upstream = os.path.join(metadata_dir, '_test_downstreams_test_source_files_copy/upstream')
     downstream = os.path.join(metadata_dir, '_test_downstreams_test_source_files_copy/downstream')
     api.build(downstream, config=testing_config, notest=False)
-    api.build(upstream, config=testing_config)
+    api.build(upstream, config=testing_config, notest=False)
 
 
 @pytest.mark.sanity
