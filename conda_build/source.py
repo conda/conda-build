@@ -250,8 +250,8 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_ca
             check_call_env(args + [git_url, git_mirror_dir], stdout=stdout, stderr=stderr)
         assert isdir(mirror_dir)
 
-    # Now clone from mirror_dir into checkout_dir.
-    check_call_env([git, 'clone', git_mirror_dir, git_checkout_dir], stdout=stdout, stderr=stderr)
+    # Now clone from mirror_dir into checkout_dir. We save a lot of time by using --depth 1
+    check_call_env([git, 'clone', '--depth', '1', 'file://' + git_mirror_dir, git_checkout_dir], stdout=stdout, stderr=stderr)
     if is_top_level:
         checkout = git_ref
         if git_url.startswith('.'):
