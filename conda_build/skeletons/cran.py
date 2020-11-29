@@ -1391,7 +1391,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             f.write(clear_whitespace(CRAN_META.format(**d)))
         if not exists(join(dir_path, 'build.sh')) or update_policy == 'overwrite':
             with open(join(dir_path, 'build.sh'), 'w') as f:
-                if from_sources == all:
+                if from_sources == _all:
                     f.write(CRAN_BUILD_SH_SOURCE.format(**d))
                 elif from_sources == []:
                     f.write(CRAN_BUILD_SH_BINARY.format(**d))
