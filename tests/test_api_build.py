@@ -1482,6 +1482,7 @@ def test_downstream_tests(testing_config):
 
 
 @pytest.mark.sanity
+@pytest.mark.xfail
 def test_downstream_test_source_files_copy(testing_config):
     upstream = os.path.join(metadata_dir, '_test_downstreams_test_source_files_copy/upstream')
     downstream = os.path.join(metadata_dir, '_test_downstreams_test_source_files_copy/downstream')
