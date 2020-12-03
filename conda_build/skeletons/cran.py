@@ -150,7 +150,7 @@ if {source_pf_bash}; then
   export DISABLE_AUTOBREW=1
   mv DESCRIPTION DESCRIPTION.old
   grep -va '^Priority: ' DESCRIPTION.old > DESCRIPTION
-  ${{R}} CMD INSTALL --build . ${R_ARGS}
+  ${{R}} CMD INSTALL --build . ${{R_ARGS}}
 else
   mkdir -p "${{PREFIX}}"/lib/R/library/{cran_packagename}
   mv ./* "${{PREFIX}}"/lib/R/library/{cran_packagename}
