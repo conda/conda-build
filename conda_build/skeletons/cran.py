@@ -132,7 +132,7 @@ export DISABLE_AUTOBREW=1
 # R refuses to build packages that mark themselves as Priority: Recommended
 mv DESCRIPTION DESCRIPTION.old
 grep -va '^Priority: ' DESCRIPTION.old > DESCRIPTION
-${{R}} CMD INSTALL --build .
+${{R}} CMD INSTALL --build . $R_ARGS
 
 # Add more build steps here, if they are necessary.
 
@@ -150,7 +150,7 @@ if {source_pf_bash}; then
   export DISABLE_AUTOBREW=1
   mv DESCRIPTION DESCRIPTION.old
   grep -va '^Priority: ' DESCRIPTION.old > DESCRIPTION
-  ${{R}} CMD INSTALL --build .
+  ${{R}} CMD INSTALL --build . $R_ARGS
 else
   mkdir -p "${{PREFIX}}"/lib/R/library/{cran_packagename}
   mv ./* "${{PREFIX}}"/lib/R/library/{cran_packagename}
@@ -195,14 +195,14 @@ mv ./* "${{PREFIX}}"/lib/R/library/{cran_packagename}
 """
 
 CRAN_BLD_BAT_SOURCE = """\
-"%R%" CMD INSTALL --build .
+"%R%" CMD INSTALL --build . %R_ARGS%
 IF %ERRORLEVEL% NEQ 0 exit /B 1
 """
 
 # We hardcode the fact that CRAN does not provide win32 binaries here.
 CRAN_BLD_BAT_MIXED = """\
 if "%target_platform%" == "win-64" goto skip_source_build
-"%R%" CMD INSTALL --build .
+"%R%" CMD INSTALL --build . %R_ARGS%
 IF %ERRORLEVEL% NEQ 0 exit /B 1
 exit 0
 :skip_source_build
