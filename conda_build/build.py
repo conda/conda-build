@@ -63,7 +63,7 @@ from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse
                                 expand_outputs, try_download, execute_download_actions,
                                 add_upstream_pins)
 import conda_build.os_utils.external as external
-from conda_build.metadata import FIELDS, MetaData, default_structs
+from conda_build.metadata import FIELDS, MetaData
 from conda_build.post import (post_process, post_build,
                               fix_permissions, get_build_metadata)
 
@@ -1139,11 +1139,11 @@ def write_link_json(m):
 def write_about_json(m):
     with open(join(m.config.info_dir, 'about.json'), 'w') as fo:
         d = {}
-        for key in FIELDS["about"]:
+        for key, default in FIELDS["about"].items():
             value = m.get_value('about/%s' % key)
             if value:
                 d[key] = value
-            if default_structs.get('about/%s' % key) == list:
+            if default is list:
                 d[key] = utils.ensure_list(value)
 
         # for sake of reproducibility, record some conda info

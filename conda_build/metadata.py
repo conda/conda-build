@@ -364,64 +364,145 @@ def parse(data, config, path=None):
     return sanitize(res)
 
 
-trues = {'y', 'on', 'true', 'yes'}
-falses = {'n', 'no', 'false', 'off'}
+TRUES = {'y', 'on', 'true', 'yes'}
+FALSES = {'n', 'no', 'false', 'off'}
 
-default_structs = {
-    'build/entry_points': list,
-    'build/features': list,
-    'source/patches': list,
-    'build/script': list,
-    'build/script_env': list,
-    'build/run_exports': list,
-    'build/track_features': list,
-    'build/osx_is_app': bool,
-    'build/preserve_egg_dir': bool,
-    'build/binary_relocation': bool,
-    'build/noarch': text_type,
-    'build/noarch_python': bool,
-    'build/detect_binary_files_with_prefix': bool,
-    'build/skip': bool,
-    'build/skip_compile_pyc': list,
-    'build/preferred_env': text_type,
-    'build/preferred_env_executable_paths': list,
-    'build/ignore_run_exports': list,
-    'build/ignore_run_exports_from': list,
-    'build/requires_features': dict,
-    'build/provides_features': dict,
-    'build/pre-link': text_type,
-    'build/post-link': text_type,
-    'build/pre-unlink': text_type,
-    'build/string': text_type,
-    'build/pin_depends': text_type,
-    'build/force_use_keys': list,
-    'build/force_ignore_keys': list,
-    'build/merge_build_host': bool,
-    'build/msvc_compiler': text_type,
-    'requirements/build': list,
-    'requirements/host': list,
-    'requirements/run': list,
-    'requirements/conflicts': list,
-    'requirements/run_constrained': list,
-    'test/requires': list,
-    'test/files': list,
-    'test/source_files': list,
-    'test/commands': list,
-    'test/imports': list,
-    'test/downstreams': list,
-    'package/version': text_type,
-    'source/svn_rev': text_type,
-    'source/git_tag': text_type,
-    'source/git_branch': text_type,
-    'source/md5': text_type,
-    'source/git_rev': text_type,
-    'source/path': text_type,
-    'source/git_url': text_type,
-    'app/own_environment': bool,
-    'about/identifiers': list,
-    'about/keywords': list,
-    'about/tags': list,
+# If you update this please update the example in
+# conda-docs/docs/source/build.rst
+FIELDS = {
+    'package': {
+        'name': None,
+        'version': text_type,
+    },
+    'source': {
+        'fn': None,
+        'url': None,
+        'md5': text_type,
+        'sha1': None,
+        'sha256': None,
+        'path': text_type,
+        'path_via_symlink': None,
+        'git_url': text_type,
+        'git_tag': text_type,
+        'git_branch': text_type,
+        'git_rev': text_type,
+        'git_depth': None,
+        'hg_url': None,
+        'hg_tag': None,
+        'svn_url': text_type,
+        'svn_rev': None,
+        'svn_ignore_externals': None,
+        'folder': None,
+        'no_hoist': None,
+        'patches': list,
+    },
+    'build': {
+        'number': None,
+        'string': text_type,
+        'entry_points': list,
+        'osx_is_app': bool,
+        'disable_pip': None,
+        'features': list,
+        'track_features': list,
+        'preserve_egg_dir': bool,
+        'no_link': None,
+        'binary_relocation': bool,
+        'script': list,
+        'noarch': text_type,
+        'noarch_python': bool,
+        'has_prefix_files': None,
+        'binary_has_prefix_files': None,
+        'ignore_prefix_files': None,
+        'detect_binary_files_with_prefix': bool,
+        'skip_compile_pyc': list,
+        'rpaths': None,
+        'rpaths_patcher': None,
+        'script_env': list,
+        'always_include_files': None,
+        'skip': bool,
+        'msvc_compiler': text_type,
+        'pin_depends': text_type,  # still experimental
+        'include_recipe': None,
+        'preferred_env': text_type,
+        'preferred_env_executable_paths': list,
+        'run_exports': list,
+        'ignore_run_exports': list,
+        'ignore_run_exports_from': list,
+        'requires_features': dict,
+        'provides_features': dict,
+        'force_use_keys': list,
+        'force_ignore_keys': list,
+        'merge_build_host': bool,
+        'pre-link': text_type,
+        'post-link': text_type,
+        'pre-unlink': text_type,
+        'missing_dso_whitelist': None,
+        'error_overdepending': None,
+        'error_overlinking': None,
+    },
+    'outputs': {
+        'name': None,
+        'version': None,
+        'number': None,
+        'script': None,
+        'script_interpreter': None,
+        'build': None,
+        'requirements': None,
+        'test': None,
+        'about': None,
+        'extra': None,
+        'files': None,
+        'type': None,
+        'run_exports': None,
+        'target': None,
+    },
+    'requirements': {
+        'build': list,
+        'host': list,
+        'run': list,
+        'conflicts': list,
+        'run_constrained': list,
+    },
+    'app': {
+        'entry': None,
+        'icon': None,
+        'summary': None,
+        'type': None,
+        'cli_opts': None,
+        'own_environment': bool,
+    },
+    'test': {
+        'requires': list,
+        'commands': list,
+        'files': list,
+        'imports': list,
+        'source_files': list,
+        'downstreams': list,
+    },
+    'about': {
+        'home': None,
+        # these are URLs
+        'dev_url': None,
+        'doc_url': None,
+        'doc_source_url': None,
+        'license_url': None,
+        # text
+        'license': None,
+        'summary': None,
+        'description': None,
+        'license_family': None,
+        # lists
+        'identifiers': list,
+        'tags': list,
+        'keywords': list,
+        # paths in source tree
+        'license_file': None,
+        'readme': None,
+    },
 }
+
+# Fields that may either be a dictionary or a list of dictionaries.
+OPTIONALLY_ITERABLE_FIELDS = ('source', 'outputs')
 
 
 def sanitize(meta):
@@ -486,47 +567,6 @@ def _str_version(package_meta):
     if 'msvc_compiler' in package_meta:
         package_meta['msvc_compiler'] = str(package_meta.get('msvc_compiler', ''))
     return package_meta
-
-
-# If you update this please update the example in
-# conda-docs/docs/source/build.rst
-FIELDS = {
-    'package': {'name', 'version'},
-    'source': {'fn', 'url', 'md5', 'sha1', 'sha256', 'path', 'path_via_symlink',
-               'git_url', 'git_tag', 'git_branch', 'git_rev', 'git_depth',
-               'hg_url', 'hg_tag',
-               'svn_url', 'svn_rev', 'svn_ignore_externals',
-               'folder', 'no_hoist',
-               'patches',
-               },
-    'build': {'number', 'string', 'entry_points', 'osx_is_app', 'disable_pip',
-              'features', 'track_features', 'preserve_egg_dir',
-              'no_link', 'binary_relocation', 'script', 'noarch', 'noarch_python',
-              'has_prefix_files', 'binary_has_prefix_files', 'ignore_prefix_files',
-              'detect_binary_files_with_prefix', 'skip_compile_pyc', 'rpaths',
-              'rpaths_patcher', 'script_env', 'always_include_files', 'skip',
-              'msvc_compiler', 'pin_depends', 'include_recipe',  # pin_depends is experimental still
-              'preferred_env', 'preferred_env_executable_paths', 'run_exports',
-              'ignore_run_exports', 'ignore_run_exports_from', 'requires_features', 'provides_features',
-              'force_use_keys', 'force_ignore_keys', 'merge_build_host',
-              'pre-link', 'post-link', 'pre-unlink', 'missing_dso_whitelist',
-              'error_overdepending', 'error_overlinking',
-              },
-    'outputs': {'name', 'version', 'number', 'script', 'script_interpreter', 'build',
-                'requirements', 'test', 'about', 'extra', 'files', 'type', 'run_exports', 'target'},
-    'requirements': {'build', 'host', 'run', 'conflicts', 'run_constrained'},
-    'app': {'entry', 'icon', 'summary', 'type', 'cli_opts',
-            'own_environment'},
-    'test': {'requires', 'commands', 'files', 'imports', 'source_files', 'downstreams'},
-    'about': {'home', 'dev_url', 'doc_url', 'doc_source_url', 'license_url',  # these are URLs
-              'license', 'summary', 'description', 'license_family',  # text
-              'identifiers', 'tags', 'keywords',   # lists
-              'license_file', 'readme',   # paths in source tree
-              },
-}
-
-# Fields that may either be a dictionary or a list of dictionaries.
-OPTIONALLY_ITERABLE_FIELDS = ('source', 'outputs')
 
 
 def check_bad_chrs(s, field):
@@ -1096,9 +1136,8 @@ class MetaData(object):
             index = int(index)
 
         # get correct default
-        field = section + '/' + key
-        if autotype and default is None and field in default_structs:
-            default = default_structs[field]()
+        if autotype and default is None and FIELDS.get(section, {}).get(key):
+            default = FIELDS[section][key]()
 
         section_data = self.get_section(section)
         if isinstance(section_data, dict):
@@ -1123,9 +1162,9 @@ class MetaData(object):
 
         # handle yaml 1.1 boolean values
         if isinstance(value, text_type):
-            if value.lower() in trues:
+            if value.lower() in TRUES:
                 value = True
-            elif value.lower() in falses:
+            elif value.lower() in FALSES:
                 value = False
 
         if value is None:
