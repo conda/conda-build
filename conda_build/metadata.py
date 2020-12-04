@@ -1173,12 +1173,15 @@ class MetaData(object):
 
     def build_number(self):
         number = self.get_value('build/number')
+
         # build number can come back as None if no setting (or jinja intermediate)
+        if not number:
+            return 0
+
         try:
-            build_int = int(number)
+            return int(number)
         except (ValueError, TypeError):
-            build_int = ""
-        return build_int
+            raise ValueError("Build number was invalid value '{}'. Must be an integer.".format(number))
 
     def get_depends_top_and_out(self, typ):
         meta_requirements = ensure_list(self.get_value('requirements/' + typ, []))[:]
