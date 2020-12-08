@@ -1908,6 +1908,7 @@ def create_build_envs(m, notest):
     host_ms_deps = [utils.ensure_valid_spec(spec) for spec in host_ms_deps]
     print("build_ms_deps:\n{}".format(build_ms_deps))
     print("host_ms_deps:\n{}".format(host_ms_deps))
+    print("m.is_cross: {} m.build_is_host: {}".format(m.is_cross, m.build_is_host))
 
     m.config._merge_build_host = m.build_is_host
 
