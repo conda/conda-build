@@ -1906,6 +1906,8 @@ def create_build_envs(m, notest):
     build_ms_deps = [utils.ensure_valid_spec(spec) for spec in build_ms_deps]
     host_ms_deps = m.ms_depends('host')
     host_ms_deps = [utils.ensure_valid_spec(spec) for spec in host_ms_deps]
+    print("build_ms_deps:\n{}".format(build_ms_deps))
+    print("host_ms_deps:\n{}".format(host_ms_deps))
 
     m.config._merge_build_host = m.build_is_host
 
