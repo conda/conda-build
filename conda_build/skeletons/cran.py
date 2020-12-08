@@ -132,6 +132,7 @@ export DISABLE_AUTOBREW=1
 # R refuses to build packages that mark themselves as Priority: Recommended
 mv DESCRIPTION DESCRIPTION.old
 grep -va '^Priority: ' DESCRIPTION.old > DESCRIPTION
+# shellcheck disable=SC2086
 ${{R}} CMD INSTALL --build . $R_ARGS
 
 # Add more build steps here, if they are necessary.
@@ -150,6 +151,7 @@ if {source_pf_bash}; then
   export DISABLE_AUTOBREW=1
   mv DESCRIPTION DESCRIPTION.old
   grep -va '^Priority: ' DESCRIPTION.old > DESCRIPTION
+  # shellcheck disable=SC2086
   ${{R}} CMD INSTALL --build . ${{R_ARGS}}
 else
   mkdir -p "${{PREFIX}}"/lib/R/library/{cran_packagename}
