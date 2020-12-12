@@ -1507,13 +1507,19 @@ License file
 Add a file containing the software license to the package
 metadata. Many licenses require the license statement to be
 distributed with the package. The filename is relative to the
-source directory. The value can be a single filename or a
-YAML list for multiple license files.
+source or recipe directory. The value can be a single filename
+or a YAML list for multiple license files. Values can also point
+to directories with license information. Directory entries must
+end with a ``/`` suffix (this is to lessen unintentional
+inclusion of non-license files; all of the directory's
+contents will be unconditionally and recursively added).
 
 .. code-block:: yaml
 
   about:
-    license_file: LICENSE
+    license_file:
+      - LICENSE
+      - vendor-licenses/
 
 
 App section
