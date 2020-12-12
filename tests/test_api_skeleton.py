@@ -447,7 +447,7 @@ def test_pypi_section_order_preserved(testing_workdir):
 
 # CRAN packages to test license_file entry.
 # (package, license_id, license_family, license_files)
-cran_packages = [('r-usethis', 'GPL-3', 'GPL3', 'GPL-3'),  # cran: 'GPL-3'
+cran_packages = [('r-rmarkdown', 'GPL-3', 'GPL3', 'GPL-3'),  # cran: 'GPL-3'
                  ('r-cortools', 'Artistic-2.0', 'OTHER', 'Artistic-2.0'),  # cran: 'Artistic License 2.0'
                  ('r-udpipe', 'MPL-2.0', 'OTHER', ''),  # cran: 'MPL-2.0'
                  ('r-broom', 'MIT', 'MIT', ['MIT', 'LICENSE']),  # cran: 'MIT + file LICENSE'
@@ -493,7 +493,7 @@ def test_cran_os_type(package, skip_text, testing_workdir, testing_config):
 @pytest.mark.flaky(max_runs=5)
 @pytest.mark.skipif(not external.find_executable("shellcheck"), reason="requires shellcheck >=0.7.0")
 @pytest.mark.parametrize(
-    "package, repo", [("r-usethis", "cran"), ("Perl::Lint", "cpan"), ("screen", "rpm")]
+    "package, repo", [("r-rmarkdown", "cran"), ("Perl::Lint", "cpan"), ("screen", "rpm")]
 )
 def test_build_sh_shellcheck_clean(package, repo, testing_workdir, testing_config):
     api.skeletonize(packages=package, repo=repo, output_dir=testing_workdir, config=testing_config)
