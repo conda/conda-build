@@ -190,7 +190,7 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_ca
         stdout = None
         stderr = None
     else:
-        FNULL = open(os.devnull, 'w')
+        FNULL = open(os.devnull, 'wb')
         stdout = FNULL
         stderr = FNULL
 
@@ -348,7 +348,7 @@ def git_info(src_dir, build_prefix, git=None, verbose=True, fo=None):
     if verbose:
         stderr = None
     else:
-        FNULL = open(os.devnull, 'w')
+        FNULL = open(os.devnull, 'wb')
         stderr = FNULL
 
     # Ensure to explicitly set GIT_DIR as some Linux machines will not
@@ -387,7 +387,7 @@ def hg_source(source_dict, src_dir, hg_cache, verbose):
         stdout = None
         stderr = None
     else:
-        FNULL = open(os.devnull, 'w')
+        FNULL = open(os.devnull, 'wb')
         stdout = FNULL
         stderr = FNULL
 
@@ -424,7 +424,7 @@ def svn_source(source_dict, src_dir, svn_cache, verbose=True, timeout=900, locki
         stdout = None
         stderr = None
     else:
-        FNULL = open(os.devnull, 'w')
+        FNULL = open(os.devnull, 'wb')
         stdout = FNULL
         stderr = FNULL
 
