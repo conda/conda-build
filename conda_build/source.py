@@ -784,7 +784,7 @@ def apply_one_patch(src_dir, recipe_dir, rel_path, config, git=None):
         stdout = None
         stderr = None
     else:
-        FNULL = open(os.devnull, 'w')
+        FNULL = open(os.devnull, 'wb')
         stdout = FNULL
         stderr = FNULL
 
