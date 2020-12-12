@@ -41,7 +41,12 @@ jobs:
       ps -ef | grep $$
       conda list
       grep '^#' "${CONDA_PREFIX}/conda-meta/history"
-      conda install python=$PYTHON_VERSION -y
+      if [ "$PYTHON_VERSION" = "2.7" ]; then
+        # No Python 2.7 builds after conda=4.8.4 available.
+        conda install python=$PYTHON_VERSION conda\<=4.8.4 -y
+      else
+        conda install python=$PYTHON_VERSION -y
+      fi
       mkdir -p /usr/share/miniconda/locks
       mkdir -p /usr/share/miniconda/bin
       chmod -w /usr/share/miniconda/locks
@@ -160,7 +165,12 @@ jobs:
       conda info
       conda list
       grep '^#' "${CONDA_PREFIX}/conda-meta/history"
-      conda install python=$PYTHON_VERSION -y
+      if [ "$PYTHON_VERSION" = "2.7" ]; then
+        # No Python 2.7 builds after conda=4.8.4 available.
+        conda install python=$PYTHON_VERSION conda\<=4.8.4 -y
+      else
+        conda install python=$PYTHON_VERSION -y
+      fi
       mkdir -p $(Build.StagingDirectory)/miniconda/locks
       mkdir -p $(Build.StagingDirectory)/miniconda/bin
       chmod -w $(Build.StagingDirectory)/miniconda/locks
