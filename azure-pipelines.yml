@@ -39,6 +39,8 @@ jobs:
       source ci/azurepipelines/activate_conda "/usr/share/miniconda/bin/python"
       conda info
       ps -ef | grep $$
+      conda list
+      grep '^#' "${CONDA_PREFIX}/conda-meta/history"
       conda install python=$PYTHON_VERSION -y
       mkdir -p /usr/share/miniconda/locks
       mkdir -p /usr/share/miniconda/bin
@@ -156,6 +158,8 @@ jobs:
       set -e -u
       source ci/azurepipelines/activate_conda "$(Build.StagingDirectory)/miniconda/bin/python"
       conda info
+      conda list
+      grep '^#' "${CONDA_PREFIX}/conda-meta/history"
       conda install python=$PYTHON_VERSION -y
       mkdir -p $(Build.StagingDirectory)/miniconda/locks
       mkdir -p $(Build.StagingDirectory)/miniconda/bin
