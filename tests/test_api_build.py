@@ -728,6 +728,31 @@ def test_about_json_content(testing_metadata):
     assert 'root_pkgs' in about and about['root_pkgs']
 
 
+def test_about_license_file(testing_workdir, testing_config):
+    base_dir = os.path.join(metadata_dir, "_about_license_file/recipes")
+
+    recipe = os.path.join(base_dir, "single")
+    outputs = api.build(recipe, config=testing_config)
+    assert package_has_file(outputs[0], "info/licenses/license-from-source.txt")
+
+    recipe = os.path.join(base_dir, "list")
+    outputs = api.build(recipe, config=testing_config)
+    assert package_has_file(outputs[0], "info/licenses/license-from-source.txt")
+    assert package_has_file(outputs[0], "info/licenses/license-from-recipe.txt")
+
+    recipe = os.path.join(base_dir, "dir")
+    outputs = api.build(recipe, config=testing_config)
+    assert package_has_file(outputs[0], "info/licenses/license-dir-from-source/first-license.txt")
+    assert package_has_file(outputs[0], "info/licenses/license-dir-from-source/second-license.txt")
+    assert package_has_file(outputs[0], "info/licenses/license-dir-from-recipe/first-license.txt")
+    assert package_has_file(outputs[0], "info/licenses/license-dir-from-recipe/second-license.txt")
+
+    recipe = os.path.join(base_dir, "dir-no-slash-suffix")
+    assert os.path.isdir(recipe)
+    with pytest.raises(ValueError, match=r"license_file.*license-dir-from-recipe.*directory"):
+        api.build(recipe, config=testing_config)
+
+
 @pytest.mark.slow
 @pytest.mark.xfail(parse_version(conda.__version__) < parse_version("4.3.14"),
                    reason="new noarch supported starting with conda 4.3.14")
