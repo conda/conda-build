@@ -136,7 +136,7 @@ jobs:
       set -e -u
       curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/uninstall > ~/uninstall_homebrew
       chmod +x ~/uninstall_homebrew
-      ~/uninstall_homebrew -fq
+      ~/uninstall_homebrew -f -q
       rm ~/uninstall_homebrew
     displayName: Remove homebrew
 
