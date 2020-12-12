@@ -768,12 +768,19 @@ def copy_license(m):
         if license_file == "":
             continue
         src_file = join(m.config.work_dir, license_file)
-        if not os.path.isfile(src_file):
+        if not os.path.isfile(src_file) and not os.path.isdir(src_file):
             src_file = os.path.join(m.path, license_file)
-        if os.path.isfile(src_file):
+        if os.path.isdir(src_file) and not src_file.endswith("/"):
+            raise ValueError(
+                "License entry in about/license_file ({}) points to a directory but does not "
+                "end with a '/'. Make sure the directory only contains license files and "
+                "append a '/' to include the folder and all of its content as license "
+                "information.".format(src_file)
+            )
+        if os.path.isfile(src_file) or os.path.isdir(src_file):
             # Rename absolute file paths or relative file paths starting with .. or .
             if os.path.isabs(license_file) or license_file.startswith("."):
-                filename = "LICENSE{}.txt".format(count)
+                filename = "LICENSE{}{}".format(count, ".txt" if os.path.isfile(src_file) else "")
                 count += 1
             else:
                 filename = license_file
