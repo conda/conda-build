@@ -33,6 +33,7 @@ jobs:
   timeoutInMinutes: 480
   steps:
   - script: |
+      set -e -u
       sudo apt update
       sudo apt install attr -y
       source ci/azurepipelines/activate_conda "/usr/share/miniconda/bin/python"
@@ -62,12 +63,14 @@ jobs:
     displayName: Preparing test environment
 
   - script: |
+      set -e -u
       source ci/azurepipelines/activate_conda "/usr/share/miniconda/bin/python"
       conda install conda-verify -y
       py.test --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="Linux-SerialTests-$CONDA_VERSION-Py$PYTHON_VERSION" "${PYTEST_REPLAY_OPTIONS[@]}"
     displayName: 'Serial Tests'
 
   - script: |
+      set -e -u
       source ci/azurepipelines/activate_conda "/usr/share/miniconda/bin/python"
       conda remove conda-verify -y
       echo "safety_checks: disabled" >> ~/.condarc
@@ -123,6 +126,7 @@ jobs:
       echo "Fast Finish"
   - script: |
       echo "Removing homebrew from Azure to avoid conflicts."
+      set -e -u
       curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/uninstall > ~/uninstall_homebrew
       chmod +x ~/uninstall_homebrew
       ~/uninstall_homebrew -fq
@@ -131,7 +135,7 @@ jobs:
 
   - script: |
       echo "Installing Miniconda"
-      set -x -e
+      set -x -e -u
       curl -o $(Build.StagingDirectory)/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
       chmod +x $(Build.StagingDirectory)/miniconda.sh
       $(Build.StagingDirectory)/miniconda.sh -b -p $(Build.StagingDirectory)/miniconda
@@ -141,7 +145,7 @@ jobs:
 
   - script: |
       echo "Setup CF macOS bits and select Xcode"
-      set -x -e
+      set -x -e -u
       source ci/azurepipelines/activate_conda "$(Build.StagingDirectory)/miniconda/bin/python"
       echo "PWD is $PWD"
       find $PWD
@@ -149,6 +153,7 @@ jobs:
     displayName: 'Setup CF macOS bits and select Xcode'
 
   - script: |
+      set -e -u
       source ci/azurepipelines/activate_conda "$(Build.StagingDirectory)/miniconda/bin/python"
       conda info
       conda install python=$PYTHON_VERSION -y
@@ -177,12 +182,14 @@ jobs:
     displayName: Preparing test environment
 
   - script: |
+      set -e -u
       source ci/azurepipelines/activate_conda "$(Build.StagingDirectory)/miniconda/bin/python"
       conda install conda-verify -y
       py.test --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="macOS-SerialTests-$CONDA_VERSION-Python$PYTHON_VERSION" "${PYTEST_REPLAY_OPTIONS[@]}"
     displayName: 'Serial Tests'
 
   - script: |
+      set -e -u
       source ci/azurepipelines/activate_conda "$(Build.StagingDirectory)/miniconda/bin/python"
       conda remove conda-verify -y
       echo "safety_checks: disabled" >> ~/.condarc
