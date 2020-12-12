@@ -49,7 +49,7 @@ jobs:
       fi
       mkdir -p /usr/share/miniconda/locks
       mkdir -p /usr/share/miniconda/bin
-      chmod -w /usr/share/miniconda/locks
+      chmod a-w /usr/share/miniconda/locks
       if [ "$CONDA_VERSION" = "release" ]; then
         conda update -y conda
       else
