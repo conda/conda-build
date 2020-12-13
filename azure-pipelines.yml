@@ -294,24 +294,24 @@ jobs:
   - script: |
       echo on
       set PATH
-      call %UserProfile%\Miniconda3\condabin\activate.bat base
+      call %UserProfile%\Miniconda3\condabin\activate.bat base||exit 1
       set PATH
-      call conda install python="%PYTHON_VERSION%" -y
-      if "%CONDA_VERSION%" == "canary" (call conda update -c conda-canary conda) else (call conda update -q conda)
+      call conda install python="%PYTHON_VERSION%" -y||exit 1
+      if "%CONDA_VERSION%" == "canary" (call conda update -c conda-canary conda||exit 1) else (call conda update -q conda||exit 1)
       call conda config --set always_yes yes
       call conda config --set auto_update_conda no
       call conda info
       python -c "import sys; print(sys.version)"
       python -c "import sys; print(sys.executable)"
       python -c "import sys; print(sys.prefix)"
-      call conda update -q --all
-      call conda install -q pip python-libarchive-c pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling pytest-azurepipelines
-      if "%PYTHON_VERSION%" == "2.7" call conda install -c defaults -c conda-forge pytest-replay pytest-rerunfailures -y
-      if "%PYTHON_VERSION%" NEQ "2.7" call conda install pytest-replay pytest-rerunfailures -y
+      call conda update -q --all||exit 1
+      call conda install -q pip python-libarchive-c pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling pytest-azurepipelines||exit 1
+      if "%PYTHON_VERSION%" == "2.7" call conda install -c defaults -c conda-forge pytest-replay pytest-rerunfailures -y||exit 1
+      if "%PYTHON_VERSION%" NEQ "2.7" call conda install pytest-replay pytest-rerunfailures -y||exit 1
       echo safety_checks: disabled >> %UserProfile%\.condarc
       echo local_repodata_ttl: 1800 >> %UserProfile%\.condarc
-      if "%PYTHON_VERSION%" == "2.7" call conda install -q scandir pathlib2
-      if "%PYTHON_VERSION%" NEQ "2.7" call conda install -q py-lief
+      if "%PYTHON_VERSION%" == "2.7" call conda install -q scandir pathlib2||exit 1
+      if "%PYTHON_VERSION%" NEQ "2.7" call conda install -q py-lief||exit 1
       python --version
       python -c "import struct; print(struct.calcsize('P') * 8)"
       pip install --no-deps .
@@ -321,9 +321,9 @@ jobs:
       mkdir %UserProfile%\cbtmp
       for /d %%F in (%UserProfile%\cbtmp_serial\*) do rd /s /q "%%F"
       for /d %%F in (%UserProfile%\cbtmp\*) do rd /s /q "%%F"
-      call conda create -n blarg -yq --download-only python=2.7
-      call conda create -n blarg -yq --download-only python=3.7
-      call conda create -n blarg -yq --download-only python cmake
+      call conda create -n blarg -yq --download-only python=2.7||exit 1
+      call conda create -n blarg -yq --download-only python=3.7||exit 1
+      call conda create -n blarg -yq --download-only python cmake||exit 1
       mkdir $(Build.ArtifactStagingDirectory)\\pytest-replay
       set "PYTEST_REPLAY_OPTIONS=--replay-record-dir=$(Build.ArtifactStagingDirectory)\\pytest-replay"
       if "%PYTHON_VERSION%" NEQ "2.7" set "PYTEST_REPLAY_OPTIONS=--replay-record-dir=$(Build.ArtifactStagingDirectory)\\pytest-replay --replay-base-name=Win-%CONDA_VERSION%-Py%PYTHON_VERSION%"
@@ -333,9 +333,9 @@ jobs:
   - script: |
       echo on
       set PATH
-      call %UserProfile%\Miniconda3\condabin\activate.bat base
+      call %UserProfile%\Miniconda3\condabin\activate.bat base||exit 1
       set PATH
-      call conda install -y conda-verify
+      call conda install -y conda-verify||exit 1
       set PERL=
       set LUA=
       set R=
@@ -345,9 +345,9 @@ jobs:
   - script: |
       echo on
       set PATH
-      call %UserProfile%\Miniconda3\condabin\activate.bat base
+      call %UserProfile%\Miniconda3\condabin\activate.bat base||exit 1
       set PATH
-      call conda remove -y conda-verify
+      call conda remove -y conda-verify||exit 1
       set PERL=
       set LUA=
       set R=
