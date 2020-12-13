@@ -745,7 +745,7 @@ def get_static_lib_exports_nm(filename):
 
 
 def get_static_lib_exports_dumpbin(filename):
-    '''
+    r'''
     > dumpbin /SYMBOLS /NOLOGO C:\msys64\mingw64\lib\libasprintf.a
     > C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.20.27508\bin\Hostx64\x64\dumpbin.exe
     > 020 00000000 UNDEF  notype ()    External     | malloc

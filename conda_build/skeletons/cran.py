@@ -177,7 +177,7 @@ else
             install_name_tool -change /usr/lib/libcurl.4.dylib "${{PREFIX}}"/lib/libcurl.4.dylib "${{SHARED_LIB}}" || true
             install_name_tool -change /usr/lib/libc++.1.dylib "${{PREFIX}}"/lib/libc++.1.dylib "${{SHARED_LIB}}" || true
             install_name_tool -change /Library/Frameworks/R.framework/Versions/3.5/Resources/lib/libc++.1.dylib "${{PREFIX}}"/lib/libc++.1.dylib "${{SHARED_LIB}}" || true
-          done <   <(find . \( -type f -iname "*.dylib" -or -iname "*.so" -or -iname "R" \) -print0)
+          done <   <(find . \\( -type f -iname "*.dylib" -or -iname "*.so" -or -iname "R" \\) -print0)
         popd
       done
     popd
@@ -206,8 +206,8 @@ if "%target_platform%" == "win-64" goto skip_source_build
 IF %ERRORLEVEL% NEQ 0 exit /B 1
 exit 0
 :skip_source_build
-mkdir %PREFIX%\lib\R\library
-robocopy /E . "%PREFIX%\lib\R\library\{cran_packagename}"
+mkdir %PREFIX%\\lib\\R\\library
+robocopy /E . "%PREFIX%\\lib\\R\\library\\{cran_packagename}"
 if %ERRORLEVEL% NEQ 1 exit /B 1
 exit 0
 """
@@ -1528,7 +1528,7 @@ def get_license_info(license_text, allowed_license_families):
     license_files = []
 
     # split license_text by "|" and "+" into parts for further matching
-    license_text_parts = [l_opt.strip() for l_opt in re.split('\||\+', license_text)]
+    license_text_parts = [l_opt.strip() for l_opt in re.split(r'\||\+', license_text)]
     for l_opt in license_text_parts:
         # the file case
         if l_opt.startswith("file "):

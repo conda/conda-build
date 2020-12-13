@@ -287,7 +287,7 @@ def dictify_pickled(xml_file, src_cache, dict_massager=None, cdt=None):
 def get_repo_dict(repomd_url, data_type, dict_massager, cdt, src_cache):
     xmlstring = urlopen(repomd_url).read()
     # Remove the default namespace definition (xmlns="http://some/namespace")
-    xmlstring = re.sub(b'\sxmlns="[^"]+"', b'', xmlstring, count=1)
+    xmlstring = re.sub(br'\sxmlns="[^"]+"', b'', xmlstring, count=1)
     repomd = ET.fromstring(xmlstring)
     for child in repomd.findall("*[@type='{}']".format(data_type)):
         open_csum = child.findall("open-checksum")[0].text

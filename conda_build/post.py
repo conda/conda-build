@@ -1119,7 +1119,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                     with open(os.path.join(sysroot, f), 'rb') as tbd_fh:
                         lines = [line for line in tbd_fh.read().decode('utf-8').splitlines() if line.startswith('install-name:')]
                     if lines:
-                        install_names = [re.match('^install-name:\s+(.*)$', line) for line in lines]
+                        install_names = [re.match(r'^install-name:\s+(.*)$', line) for line in lines]
                         install_names = [insname.groups(1)[0] for insname in install_names]
                         replaced = install_names[0][1:]
                         if replaced.endswith("'"):

@@ -1278,7 +1278,7 @@ class MetaData(object):
                 build_string_excludes.append('numpy')
         # always exclude older stuff that's always in the build string (py, np, pl, r, lua)
         if build_string_excludes:
-            exclude_pattern = re.compile('|'.join('{}[\s$]?.*'.format(exc)
+            exclude_pattern = re.compile('|'.join(r'{}[\s$]?.*'.format(exc)
                                                   for exc in build_string_excludes))
             dependencies = [req for req in dependencies if not exclude_pattern.match(req) or
                                 ' ' in self.config.variant[req]]
@@ -1315,10 +1315,10 @@ class MetaData(object):
         if not manual_build_string and not raw_recipe_text:
             raise RuntimeError("Couldn't extract raw recipe text for {} output".format(self.name()))
         raw_recipe_text = self.extract_package_and_build_text()
-        raw_manual_build_string = re.search("\s*string:", raw_recipe_text)
+        raw_manual_build_string = re.search(r"\s*string:", raw_recipe_text)
         # user setting their own build string.  Don't modify it.
         if manual_build_string and not (raw_manual_build_string and
-                                        re.findall('h\{\{\s*PKG_HASH\s*\}\}', raw_manual_build_string.string)):
+                                        re.findall(r'h\{\{\s*PKG_HASH\s*\}\}', raw_manual_build_string.string)):
             check_bad_chrs(manual_build_string, 'build/string')
             out = manual_build_string
         else:
@@ -1690,7 +1690,7 @@ class MetaData(object):
             #    (?:-\s+name:\s+%s.*?)requirements:.*?
             # terminate match of other sections
             #    (?=^\s*-\sname|^\s*test:|^\s*extra:|^\s*about:|^outputs:|\Z)
-            f = '(^requirements:.*?)(?=^test:|^extra:|^about:|^outputs:|\Z)'
+            f = r'(^requirements:.*?)(?=^test:|^extra:|^about:|^outputs:|\Z)'
         return self.get_recipe_text(f, force_top_level=force_top_level)
 
     def extract_outputs_text(self, apply_selectors=True):
@@ -1766,7 +1766,7 @@ class MetaData(object):
         if not in_reqs and self.meta_path:
             data = self.extract_requirements_text(force_top_level=True)
             if data:
-                subpackage_pin = re.search("{{\s*pin_subpackage\(.*\)\s*}}", data)
+                subpackage_pin = re.search(r"{{\s*pin_subpackage\(.*\)\s*}}", data)
         return in_reqs or bool(subpackage_pin)
 
     @property
