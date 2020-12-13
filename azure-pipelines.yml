@@ -296,7 +296,8 @@ jobs:
       set PATH
       call %UserProfile%\Miniconda3\condabin\activate.bat base||exit 1
       set PATH
-      call conda install python="%PYTHON_VERSION%" -y||exit 1
+      :: No Python 2.7 builds after conda=4.8.4 available.
+      if "%PYTHON_VERSION%" == "2.7" (call conda install python="%PYTHON_VERSION%" "conda<=4.8.4" -y||exit 1) else (call conda install python="%PYTHON_VERSION%" -y||exit 1)
       if "%CONDA_VERSION%" == "canary" (call conda update -c conda-canary conda||exit 1) else (call conda update -q conda||exit 1)
       call conda config --set always_yes yes
       call conda config --set auto_update_conda no
