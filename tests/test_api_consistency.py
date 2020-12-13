@@ -1,10 +1,15 @@
 # This file makes sure that our API has not changed.  Doing so can not be accidental.  Whenever it
 #    happens, we should bump our major build number, because we may have broken someone.
 
-from inspect import getargspec
 import sys
 
 from conda_build import api
+from conda_build.conda_interface import PY3
+
+if PY3:
+    from inspect import getfullargspec as getargspec
+else:
+    from inspect import getargspec
 
 
 def test_api_config():
