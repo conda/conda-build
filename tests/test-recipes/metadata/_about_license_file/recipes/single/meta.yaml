@@ -1,0 +1,9 @@
+package:
+  name: test_about_license_file_single
+  version: 1.0
+
+source:
+  path: ../../source
+
+about:
+  license_file: license-from-source.txt
