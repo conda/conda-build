@@ -689,7 +689,7 @@ def _get_patch_attributes(path, patch_exe, git, src_dir, stdout, stderr, retaine
                                  reversible=['-R'])
             for check_name, extra_args in checks.items():
                 for fmt, fmt_args in fmts.items():
-                    patch_args = ['-p{}'.format(result['level']),
+                    patch_args = ['-Np{}'.format(result['level']),
                                   '-i', result['patches'][fmt]] + extra_args + fmt_args
                     try:
                         env = os.environ.copy()
