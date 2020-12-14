@@ -33,15 +33,23 @@ jobs:
   timeoutInMinutes: 480
   steps:
   - script: |
+      set -e -u
       sudo apt update
       sudo apt install attr -y
       source ci/azurepipelines/activate_conda "/usr/share/miniconda/bin/python"
       conda info
       ps -ef | grep $$
-      conda install python=$PYTHON_VERSION -y
+      conda list
+      grep '^#' "${CONDA_PREFIX}/conda-meta/history"
+      if [ "$PYTHON_VERSION" = "2.7" ]; then
+        # No Python 2.7 builds after conda=4.8.4 available.
+        conda install python=$PYTHON_VERSION conda\<=4.8.4 -y
+      else
+        conda install python=$PYTHON_VERSION -y
+      fi
       mkdir -p /usr/share/miniconda/locks
       mkdir -p /usr/share/miniconda/bin
-      chmod -w /usr/share/miniconda/locks
+      chmod a-w /usr/share/miniconda/locks
       if [ "$CONDA_VERSION" = "release" ]; then
         conda update -y conda
       else
@@ -62,12 +70,14 @@ jobs:
     displayName: Preparing test environment
 
   - script: |
+      set -e -u
       source ci/azurepipelines/activate_conda "/usr/share/miniconda/bin/python"
       conda install conda-verify -y
-      py.test --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="Linux-SerialTests-$CONDA_VERSION-Py$PYTHON_VERSION" "${PYTEST_REPLAY_OPTIONS[@]}"
+      py.test --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="Linux-SerialTests-$CONDA_VERSION-Py$PYTHON_VERSION" "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
     displayName: 'Serial Tests'
 
   - script: |
+      set -e -u
       source ci/azurepipelines/activate_conda "/usr/share/miniconda/bin/python"
       conda remove conda-verify -y
       echo "safety_checks: disabled" >> ~/.condarc
@@ -77,7 +87,7 @@ jobs:
       conda create -n blarg3 -yq python=3.7
       conda create -n blarg4 -yq python nomkl numpy pandas svn
       source ci/azurepipelines/activate_conda "/usr/share/miniconda/bin/python"
-      py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --test-run-title="Linux-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION" "${PYTEST_REPLAY_OPTIONS[@]}"
+      py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --test-run-title="Linux-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION" "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
     displayName: 'Parallel Tests'
 
   - publish: $(Build.ArtifactStagingDirectory)/pytest-replay
@@ -123,15 +133,16 @@ jobs:
       echo "Fast Finish"
   - script: |
       echo "Removing homebrew from Azure to avoid conflicts."
+      set -e -u
       curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/uninstall > ~/uninstall_homebrew
       chmod +x ~/uninstall_homebrew
-      ~/uninstall_homebrew -fq
+      ~/uninstall_homebrew -f -q
       rm ~/uninstall_homebrew
     displayName: Remove homebrew
 
   - script: |
       echo "Installing Miniconda"
-      set -x -e
+      set -x -e -u
       curl -o $(Build.StagingDirectory)/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
       chmod +x $(Build.StagingDirectory)/miniconda.sh
       $(Build.StagingDirectory)/miniconda.sh -b -p $(Build.StagingDirectory)/miniconda
@@ -141,7 +152,7 @@ jobs:
 
   - script: |
       echo "Setup CF macOS bits and select Xcode"
-      set -x -e
+      set -x -e -u
       source ci/azurepipelines/activate_conda "$(Build.StagingDirectory)/miniconda/bin/python"
       echo "PWD is $PWD"
       find $PWD
@@ -149,9 +160,17 @@ jobs:
     displayName: 'Setup CF macOS bits and select Xcode'
 
   - script: |
+      set -e -u
       source ci/azurepipelines/activate_conda "$(Build.StagingDirectory)/miniconda/bin/python"
       conda info
-      conda install python=$PYTHON_VERSION -y
+      conda list
+      grep '^#' "${CONDA_PREFIX}/conda-meta/history"
+      if [ "$PYTHON_VERSION" = "2.7" ]; then
+        # No Python 2.7 builds after conda=4.8.4 available.
+        conda install python=$PYTHON_VERSION conda\<=4.8.4 -y
+      else
+        conda install python=$PYTHON_VERSION -y
+      fi
       mkdir -p $(Build.StagingDirectory)/miniconda/locks
       mkdir -p $(Build.StagingDirectory)/miniconda/bin
       chmod -w $(Build.StagingDirectory)/miniconda/locks
@@ -177,12 +196,14 @@ jobs:
     displayName: Preparing test environment
 
   - script: |
+      set -e -u
       source ci/azurepipelines/activate_conda "$(Build.StagingDirectory)/miniconda/bin/python"
       conda install conda-verify -y
-      py.test --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="macOS-SerialTests-$CONDA_VERSION-Python$PYTHON_VERSION" "${PYTEST_REPLAY_OPTIONS[@]}"
+      py.test --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="macOS-SerialTests-$CONDA_VERSION-Python$PYTHON_VERSION" "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
     displayName: 'Serial Tests'
 
   - script: |
+      set -e -u
       source ci/azurepipelines/activate_conda "$(Build.StagingDirectory)/miniconda/bin/python"
       conda remove conda-verify -y
       echo "safety_checks: disabled" >> ~/.condarc
@@ -191,7 +212,7 @@ jobs:
       conda create -n blarg1 -yq python=2.7
       conda create -n blarg3 -yq python=3.7
       conda create -n blarg4 -yq python nomkl numpy pandas svn
-      py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --test-run-title="macOS-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION" "${PYTEST_REPLAY_OPTIONS[@]}"
+      py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --test-run-title="macOS-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION" "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
     displayName: 'Parallel Tests'
 
   - publish: $(Build.ArtifactStagingDirectory)/pytest-replay
@@ -273,24 +294,25 @@ jobs:
   - script: |
       echo on
       set PATH
-      call %UserProfile%\Miniconda3\condabin\activate.bat base
+      call %UserProfile%\Miniconda3\condabin\activate.bat base||exit 1
       set PATH
-      call conda install python="%PYTHON_VERSION%" -y
-      if "%CONDA_VERSION%" == "canary" (call conda update -c conda-canary conda) else (call conda update -q conda)
+      :: No Python 2.7 builds after conda=4.8.4 available.
+      if "%PYTHON_VERSION%" == "2.7" (call conda install python="%PYTHON_VERSION%" "conda<=4.8.4" -y||exit 1) else (call conda install python="%PYTHON_VERSION%" -y||exit 1)
+      if "%CONDA_VERSION%" == "canary" (call conda update -c conda-canary conda||exit 1) else (call conda update -q conda||exit 1)
       call conda config --set always_yes yes
       call conda config --set auto_update_conda no
       call conda info
       python -c "import sys; print(sys.version)"
       python -c "import sys; print(sys.executable)"
       python -c "import sys; print(sys.prefix)"
-      call conda update -q --all
-      call conda install -q pip python-libarchive-c pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling pytest-azurepipelines
-      if "%PYTHON_VERSION%" == "2.7" call conda install -c defaults -c conda-forge pytest-replay pytest-rerunfailures -y
-      if "%PYTHON_VERSION%" NEQ "2.7" call conda install pytest-replay pytest-rerunfailures -y
+      call conda update -q --all||exit 1
+      call conda install -q pip python-libarchive-c pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling pytest-azurepipelines||exit 1
+      if "%PYTHON_VERSION%" == "2.7" call conda install -c defaults -c conda-forge pytest-replay pytest-rerunfailures -y||exit 1
+      if "%PYTHON_VERSION%" NEQ "2.7" call conda install pytest-replay pytest-rerunfailures -y||exit 1
       echo safety_checks: disabled >> %UserProfile%\.condarc
       echo local_repodata_ttl: 1800 >> %UserProfile%\.condarc
-      if "%PYTHON_VERSION%" == "2.7" call conda install -q scandir pathlib2
-      if "%PYTHON_VERSION%" NEQ "2.7" call conda install -q py-lief
+      if "%PYTHON_VERSION%" == "2.7" call conda install -q scandir pathlib2||exit 1
+      if "%PYTHON_VERSION%" NEQ "2.7" call conda install -q py-lief||exit 1
       python --version
       python -c "import struct; print(struct.calcsize('P') * 8)"
       pip install --no-deps .
@@ -300,9 +322,9 @@ jobs:
       mkdir %UserProfile%\cbtmp
       for /d %%F in (%UserProfile%\cbtmp_serial\*) do rd /s /q "%%F"
       for /d %%F in (%UserProfile%\cbtmp\*) do rd /s /q "%%F"
-      call conda create -n blarg -yq --download-only python=2.7
-      call conda create -n blarg -yq --download-only python=3.7
-      call conda create -n blarg -yq --download-only python cmake
+      call conda create -n blarg -yq --download-only python=2.7||exit 1
+      call conda create -n blarg -yq --download-only python=3.7||exit 1
+      call conda create -n blarg -yq --download-only python cmake||exit 1
       mkdir $(Build.ArtifactStagingDirectory)\\pytest-replay
       set "PYTEST_REPLAY_OPTIONS=--replay-record-dir=$(Build.ArtifactStagingDirectory)\\pytest-replay"
       if "%PYTHON_VERSION%" NEQ "2.7" set "PYTEST_REPLAY_OPTIONS=--replay-record-dir=$(Build.ArtifactStagingDirectory)\\pytest-replay --replay-base-name=Win-%CONDA_VERSION%-Py%PYTHON_VERSION%"
@@ -312,9 +334,9 @@ jobs:
   - script: |
       echo on
       set PATH
-      call %UserProfile%\Miniconda3\condabin\activate.bat base
+      call %UserProfile%\Miniconda3\condabin\activate.bat base||exit 1
       set PATH
-      call conda install -y conda-verify
+      call conda install -y conda-verify||exit 1
       set PERL=
       set LUA=
       set R=
@@ -324,9 +346,9 @@ jobs:
   - script: |
       echo on
       set PATH
-      call %UserProfile%\Miniconda3\condabin\activate.bat base
+      call %UserProfile%\Miniconda3\condabin\activate.bat base||exit 1
       set PATH
-      call conda remove -y conda-verify
+      call conda remove -y conda-verify||exit 1
       set PERL=
       set LUA=
       set R=

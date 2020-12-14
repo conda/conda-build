@@ -27,7 +27,7 @@ NONE
 gpl2_regex = re.compile('GPL[^3]*2')  # match GPL2
 gpl3_regex = re.compile('GPL[^2]*3')  # match GPL3
 gpl23_regex = re.compile('GPL[^2]*>= *2')  # match GPL >= 2
-cc_regex = re.compile('CC\w+')  # match CC
+cc_regex = re.compile(r'CC\w+')  # match CC
 punk_regex = re.compile('[%s]' % re.escape(string.punctuation))  # removes punks
 
 
@@ -49,7 +49,7 @@ def normalize(s):
 def remove_special_characters(s):
     """Remove punctuation, spaces, tabs, and line feeds"""
     s = punk_regex.sub(' ', s)
-    s = re.sub('\s+', '', s)
+    s = re.sub(r'\s+', '', s)
     return s
 
 

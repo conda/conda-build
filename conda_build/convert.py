@@ -108,7 +108,7 @@ def retrieve_python_version(file_path):
                 index = json.load(index_file)
 
         build_version_number = re.search('(.*)?(py)(\d\d)(.*)?', index['build']).group(3)
-        build_version = re.sub('\A.*py\d\d.*\Z', 'python', index['build'])
+        build_version = re.sub(r'\A.*py\d\d.*\Z', 'python', index['build'])
 
         return '{}{}.{}' .format(build_version,
             build_version_number[0], build_version_number[1])

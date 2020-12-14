@@ -188,7 +188,7 @@ def directory_size(path):
         if on_win:
             # Windows can give long output, we need only 2nd to last line
             out = out.strip().rsplit('\r\n', 2)[-2]
-            pattern = "\s([\d\W]+).+"  # Language and punctuation neutral
+            pattern = r"\s([\d\W]+).+"  # Language and punctuation neutral
             out = re.search(pattern, out.strip()).group(1).strip()
             out = out.replace(',', '').replace('.', '').replace(' ', '')
         else:
@@ -1053,7 +1053,7 @@ def sys_path_prepended(prefix):
         sys.path.insert(1, os.path.join(prefix, 'lib', 'site-packages'))
     else:
         lib_dir = os.path.join(prefix, 'lib')
-        python_dir = glob(os.path.join(lib_dir, 'python[0-9\.]*'))
+        python_dir = glob(os.path.join(lib_dir, r'python[0-9\.]*'))
         if python_dir:
             python_dir = python_dir[0]
             sys.path.insert(1, os.path.join(python_dir, 'site-packages'))
@@ -1075,7 +1075,7 @@ def path_prepended(prefix):
 
 bin_dirname = 'Scripts' if sys.platform == 'win32' else 'bin'
 
-entry_pat = re.compile('\s*([\w\-\.]+)\s*=\s*([\w.]+):([\w.]+)\s*$')
+entry_pat = re.compile(r'\s*([\w\-\.]+)\s*=\s*([\w.]+):([\w.]+)\s*$')
 
 
 def iter_entry_points(items):
@@ -1520,12 +1520,12 @@ def apply_pin_expressions(version, min_pin='x.x.x.x.x.x.x', max_pin='x'):
     return ','.join([v for v in versions if v])
 
 
-def filter_files(files_list, prefix, filter_patterns=('(.*[\\\\/])?\.git[\\\\/].*',
-                                                      '(.*[\\\\/])?\.git$',
-                                                      '(.*)?\.DS_Store.*',
-                                                      '.*\.la$',
-                                                      'conda-meta.*',
-                                                      '.*\.conda_trash(?:_\d+)*$')):
+def filter_files(files_list, prefix, filter_patterns=(r'(.*[\\/])?\.git[\\/].*',
+                                                      r'(.*[\\/])?\.git$',
+                                                      r'(.*)?\.DS_Store.*',
+                                                      r'.*\.la$',
+                                                      r'conda-meta.*',
+                                                      r'.*\.conda_trash(?:_\d+)*$')):
     """Remove things like the .git directory from the list of files to be copied"""
     for pattern in filter_patterns:
         r = re.compile(pattern)
@@ -1872,7 +1872,7 @@ def insert_variant_versions(requirements_dict, variant, env):
                         val = val[0]
                     reqs.insert(i, ensure_valid_spec(' '.join((x.group(1), val))))
 
-    xx_re = re.compile("([0-9a-zA-Z\.\-\_]+)\s+x\.x")
+    xx_re = re.compile(r"([0-9a-zA-Z\.\-\_]+)\s+x\.x")
 
     matches = [xx_re.match(pkg) for pkg in reqs]
     if any(matches):

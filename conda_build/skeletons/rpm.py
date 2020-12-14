@@ -94,9 +94,9 @@ CDTs = dict({'centos5': {'dirname': 'centos5',
                          'macros': {}},
              'centos6': {'dirname': 'centos6',
                          'short_name': 'cos6',
-                         'base_url': 'http://mirror.centos.org/centos/6.10/os/{base_architecture}/CentOS/',  # noqa
+                         'base_url': 'http://vault.centos.org/centos/6.10/os/{base_architecture}/CentOS/',  # noqa
                          'sbase_url': 'http://vault.centos.org/6.10/os/Source/SPackages/',
-                         'repomd_url': 'http://mirror.centos.org/centos/6.10/os/{base_architecture}/repodata/repomd.xml',  # noqa
+                         'repomd_url': 'http://vault.centos.org/centos/6.10/os/{base_architecture}/repodata/repomd.xml',  # noqa
                          'host_machine': '{architecture}-conda_cos6-linux-gnu',
                          'host_subdir': 'linux-{bits}',
                          'fname_architecture': '{architecture}',
@@ -110,9 +110,9 @@ CDTs = dict({'centos5': {'dirname': 'centos5',
                                     'gdk_pixbuf_base_version': '2.24.1'}},
              'centos7': {'dirname': 'centos7',
                          'short_name': 'cos7',
-                         'base_url': 'http://mirror.centos.org/altarch/7/os/{base_architecture}/CentOS/',  # noqa
+                         'base_url': 'http://vault.centos.org/altarch/7/os/{base_architecture}/CentOS/',  # noqa
                          'sbase_url': 'http://vault.centos.org/7.7.1908/os/Source/SPackages/',
-                         'repomd_url': 'http://mirror.centos.org/altarch/7/os/{base_architecture}/repodata/repomd.xml',  # noqa
+                         'repomd_url': 'http://vault.centos.org/altarch/7/os/{base_architecture}/repodata/repomd.xml',  # noqa
                          'host_machine': '{gnu_architecture}-conda_cos7-linux-gnu',
                          'host_subdir': 'linux-ppc64le',
                          'fname_architecture': '{architecture}',
@@ -287,7 +287,7 @@ def dictify_pickled(xml_file, src_cache, dict_massager=None, cdt=None):
 def get_repo_dict(repomd_url, data_type, dict_massager, cdt, src_cache):
     xmlstring = urlopen(repomd_url).read()
     # Remove the default namespace definition (xmlns="http://some/namespace")
-    xmlstring = re.sub(b'\sxmlns="[^"]+"', b'', xmlstring, count=1)
+    xmlstring = re.sub(br'\sxmlns="[^"]+"', b'', xmlstring, count=1)
     repomd = ET.fromstring(xmlstring)
     for child in repomd.findall("*[@type='{}']".format(data_type)):
         open_csum = child.findall("open-checksum")[0].text

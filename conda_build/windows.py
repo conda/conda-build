@@ -94,7 +94,7 @@ def msvc_env_cmd(bits, config, override=None):
     if override:
         log.warn("msvc_compiler key in meta.yaml is deprecated. Use the new"
         "variant-powered compiler configuration instead. Note that msvc_compiler"
-        "is incompatible with the new \{\{compiler('c')\}\} jinja scheme.")
+        "is incompatible with the new {{{{compiler('c')}}}} jinja scheme.")
     # this has been an int at times.  Make sure it's a string for consistency.
     bits = str(bits)
     arch_selector = 'x86' if bits == '32' else 'amd64'
