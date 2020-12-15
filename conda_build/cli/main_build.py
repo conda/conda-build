@@ -402,7 +402,7 @@ def check_action(recipe, config):
 def execute(args):
     _parser, args = parse_args(args)
     config = Config(**args.__dict__)
-    build.check_external()
+    build.check_external(config)
 
     # change globals in build module, see comment there as well
     config.channel_urls = get_channel_urls(args.__dict__)

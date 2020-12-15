@@ -2950,14 +2950,14 @@ def tests_failed(package_or_metadata, move_broken, broken_dir, config):
     sys.exit("TESTS FAILED: " + os.path.basename(pkg))
 
 
-def check_external():
-    if sys.platform.startswith('linux'):
+def check_external(config):
+    if config.subdir.startswith('linux'):
         patchelf = external.find_executable('patchelf')
         if patchelf is None:
             sys.exit(
                 "Error:\n"
                 "    Did not find 'patchelf' in: {}\n"
-                "    'patchelf' is necessary for building conda packages on Linux with\n"
+                "    'patchelf' is necessary for building conda packages for Linux with\n"
                 "    relocatable ELF libraries.  You can install patchelf using conda install\n"
                 "    patchelf.\n".format(
                     os.pathsep.join(external.dir_paths),

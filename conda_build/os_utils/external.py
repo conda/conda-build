@@ -57,7 +57,7 @@ def find_executable(executable, prefix=None, all_matches=False):
                     break
         if result:
             break
-    return result or all_matches_found
+    return result if result else (all_matches_found if len(all_matches_found) else None)
 
 
 def find_preferably_prefixed_executable(executable, build_prefix=None, all_matches=False):

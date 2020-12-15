@@ -17,11 +17,14 @@ function install_conda_build_test_deps_fn()
   _PKGS+=(conda-package-handling perl python-libarchive-c)
   _PKGS+=(pip numpy mock pkginfo)
   if [[ $(uname) =~ .*inux.* ]]; then
-    _PKGS+=(patchelf)
     _PKGS+=(shellcheck)
   else
     _PKGS+=(conda-forge::shellcheck)
   fi
+  if [[ $(uname) =~ .*inux.* ]] || [[ $(uname) == Darwin ]]; then
+    _PKGS+=(patchelf)
+  fi
+
   conda install -y --show-channel-urls "${_PKGS[@]}"
   if [[ ! -d ../conda_build_test_recipe ]]; then
     pushd ..
