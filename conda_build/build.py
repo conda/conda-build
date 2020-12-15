@@ -682,6 +682,11 @@ def copy_recipe(m):
         else:
             _copy_top_level_recipe(m.path, m.config, recipe_dir)
             original_recipe = m.meta_path
+        original_cbc_yaml = None
+        cbc_yaml_path = os.path.join(recipe_dir, 'conda_build_config.yaml')
+        if os.path.exists(cbc_yaml_path):
+            with open(cbc_yaml_path, 'rb') as f:
+                original_cbc_yaml = f.read()
 
         output_metadata = m.copy()
         # hard code the build string, so that tests don't get it mixed up
@@ -716,9 +721,13 @@ def copy_recipe(m):
                 utils.copy_into(original_recipe, os.path.join(recipe_dir, 'meta.yaml.template'),
                                 timeout=m.config.timeout, locking=m.config.locking, clobber=True)
 
-        # dump the full variant in use for this package to the recipe folder
-        with open(os.path.join(recipe_dir, 'conda_build_config.yaml'), 'w') as f:
-            yaml.dump(m.config.variant, f)
+        content = "# This file created by conda-build {}\n".format(conda_build_version) + yaml.dump(m.config.variant)
+        if os.path.exists(cbc_yaml_path):
+            shutil.move(cbc_yaml_path, cbc_yaml_path + '.template')
+        with open(cbc_yaml_path + '.rendered', 'w') as f:
+            f.write(content)
+        with open(cbc_yaml_path, 'w') as f:
+            f.write(content)
 
 
 def copy_readme(m):
