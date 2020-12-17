@@ -308,11 +308,10 @@ def _variants_equal(metadata, output_metadata):
 
 
 def ensure_matching_hashes(output_metadata):
-    # envs = 'build', 'host', 'run'
-    envs = 'host', 'run'
-    problemos = []
+    envs = 'build', 'host', 'run'
+    problemos = OrderedDict()
     for env in envs:
-        problemos_env = []
+        problemos[env] = []
         for (_, m) in output_metadata.values():
             for (_, om) in output_metadata.values():
                 if m != om:
@@ -329,16 +328,17 @@ def ensure_matching_hashes(output_metadata):
                     for dep in deps:
                         if (dep.startswith(m.name() + ' ') and len(dep.split(' ')) == 3 and
                                 dep.split(' ')[-1] != m.build_id() and _variants_equal(m, om)):
-                            problemos_env.append((env, m.name(), m.build_id(), dep, om.name()))
-        problemos.extend(problemos_env)
-    if problemos:
+                            problemos[env].append((env, m.name(), m.build_id(), dep, om.name()))
+    if len(problemos):
         error = ""
-        for prob in problemos:
-            error += "Mismatching package in {} env: {} (id {}); dep: {}; consumer package: {}\n".format(*prob)
-        raise exceptions.RecipeError("Mismatching hashes in recipe. Exact pins in dependencies "
-                                     "that contribute to the hash often cause this. Can you "
-                                     "change one or more exact pins to version bound constraints?\n"
-                                     "Involved packages were:\n" + error)
+        for env, problems in problemos.items():
+            if problems:
+                for prob in problems:
+                    error += "Mismatching package in {} env: {} (id {}); dep: {}; consumer package: {}\n".format(*prob)
+                raise exceptions.RecipeError("Mismatching hashes in recipe. Exact pins in dependencies "
+                                             "that contribute to the hash often cause this. Can you "
+                                             "change one or more exact pins to version bound constraints?\n"
+                                             "Involved packages were:\n" + error)
 
 
 def parse(data, config, path=None):
@@ -2295,6 +2295,8 @@ class MetaData(object):
 
     @property
     def build_is_host(self):
+        if self.config.host_subdir == 'noarch':
+            return True
         manual_overrides = self.meta.get('build', {}).get('merge_build_host') is True or self.config.build_is_host
         manually_disabled = self.meta.get('build', {}).get('merge_build_host') is False
         return manual_overrides or (self.config.subdirs_same and not manually_disabled and

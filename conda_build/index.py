@@ -793,7 +793,7 @@ class ChannelIndex(object):
             if not self._subdirs:
                 detected_subdirs = set(subdir for subdir in os.listdir(self.channel_root)
                                     if subdir in utils.DEFAULT_SUBDIRS and isdir(join(self.channel_root, subdir)))
-                log.debug("found subdirs %s" % detected_subdirs)
+                log.debug("found subdirs %s" % sorted(detected_subdirs))
                 self.subdirs = subdirs = sorted(detected_subdirs | {'noarch'})
             else:
                 self.subdirs = subdirs = sorted(set(self._subdirs) | {'noarch'})
