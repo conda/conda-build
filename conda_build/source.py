@@ -109,7 +109,7 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
             break
 
     # this is really a fallback.  If people don't provide the hash, we still need to prevent
-    #    collisions in our source cache, but the end user will get no benefirt from the cache.
+    #    collisions in our source cache, but the end user will get no benefit from the cache.
     if not hash_added:
         if not hashed:
             hashed = hashsum_file(path, 'sha256')
