@@ -558,12 +558,12 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
         makedirs(odir)
     except:
         pass
-    with open(join(odir, 'meta.yaml'), 'w') as f:
-        f.write(RPM_META.format(**d))
+    with open(join(odir, 'meta.yaml'), 'wb') as f:
+        f.write(RPM_META.format(**d).encode('utf-8'))
     buildsh = join(odir, 'build.sh')
-    with open(buildsh, 'w') as f:
+    with open(buildsh, 'wb') as f:
         chmod(buildsh, 0o755)
-        f.write(BUILDSH.format(**d))
+        f.write(BUILDSH.format(**d).encode('utf-8'))
     return package
 
 

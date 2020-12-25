@@ -547,13 +547,13 @@ def skeletonize(packages, output_dir=".", version=None,
         # Write recipe files to a directory
         # TODO def write_recipe
         print("Writing recipe for %s-%s" % (packagename, d['version']))
-        with open(join(dir_path, 'meta.yaml'), 'w') as f:
-            f.write(CPAN_META.format(**d))
-        with open(join(dir_path, 'build.sh'), 'w') as f:
+        with open(join(dir_path, 'meta.yaml'), 'wb') as f:
+            f.write(CPAN_META.format(**d).encode('utf-8'))
+        with open(join(dir_path, 'build.sh'), 'wb') as f:
             if empty_recipe:
-                f.write('#!/bin/bash\necho "Nothing to do."\n')
+                f.write(b'#!/bin/bash\necho "Nothing to do."\n')
             else:
-                f.write(CPAN_BUILD_SH.format(**d))
+                f.write(CPAN_BUILD_SH.format(**d).encode('utf-8'))
         with open(join(dir_path, 'bld.bat'), 'w') as f:
             if empty_recipe:
                 f.write('echo "Nothing to do."\n')

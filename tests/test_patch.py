@@ -55,8 +55,11 @@ def patch_files(testing_workdir):
     return patchfile
 
 
-def test_patch(patch_files, testing_config):
-    apply_patch('.', patch_files, testing_config)
+# TODO :: These should require a build env with patch (or m2-patch) in it.
+#         at present, ci/azurepipelines/install_conda_build_test_deps installs
+#         this.
+def test_patch(patch_files, testing_config_with_patch):
+    apply_patch('.', patch_files, testing_config_with_patch)
     assert not os.path.exists('file-deletion.txt')
     assert os.path.exists('file-creation.txt')
     assert os.path.exists('file-modification.txt')
@@ -78,7 +81,6 @@ def test_ensure_unix_line_endings_with_nonutf8_characters():
     os.remove(out_path)
 
 
-@pytest.mark.skipif(not on_win, reason="insanity only on Windows")
 def test_patch_unix_source_win_patch(patch_files, testing_config):
     _ensure_unix_line_endings('file-modification.txt')
     _ensure_win_line_endings(patch_files)
@@ -88,7 +90,6 @@ def test_patch_unix_source_win_patch(patch_files, testing_config):
     assert lines[0] == '43770\n'
 
 
-@pytest.mark.skipif(not on_win, reason="insanity only on Windows")
 def test_patch_win_source_unix_patch(patch_files, testing_config):
     _ensure_win_line_endings('file-modification.txt')
     _ensure_unix_line_endings(patch_files)
