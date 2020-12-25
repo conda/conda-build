@@ -6,14 +6,12 @@ build:
   number: 0
   script:
     - pushd ${RECIPE_DIR}  # [not win]
-    - mkdir $PREFIX/bin    # [not win]
-    - pushd %RECIPE_DIR%          # [win]
+    - mkdir $PREFIX/bin  # [not win]
+    - pushd %RECIPE_DIR%  # [win]
     - mkdir %LIBRARY_PREFIX%/bin  # [win]
-
     - go build hello.go
-
     - mv hello ${PREFIX}/bin/go-hello  # [not win]
-    - mv hello.exe %LIBRARY_PREFIX%/bin/go-hello.exe  # [win]
+    - copy hello.exe %LIBRARY_PREFIX%\bin\go-hello.exe  # [win]
 
 requirements:
   build:

@@ -25,6 +25,12 @@ function install_conda_build_test_deps_fn()
   else
     _PKGS+=(conda-forge::shellcheck)
   fi
+  if [[ $(uname) =~ M.* ]]; then
+    _PKGS+=(m2-patch)
+    _PKGS+=(m2-gcc-libs)
+  else
+    _pkgs+=(patch)
+  fi
   conda install -y --show-channel-urls "${_PKGS[@]}"
   if [[ ! -d ../conda_build_test_recipe ]]; then
     pushd ..

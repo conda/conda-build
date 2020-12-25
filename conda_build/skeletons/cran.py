@@ -1392,23 +1392,23 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         with open(join(dir_path, 'meta.yaml'), 'w') as f:
             f.write(clear_whitespace(CRAN_META.format(**d)))
         if not exists(join(dir_path, 'build.sh')) or update_policy == 'overwrite':
-            with open(join(dir_path, 'build.sh'), 'w') as f:
+            with open(join(dir_path, 'build.sh'), 'wb') as f:
                 if from_sources == _all:
-                    f.write(CRAN_BUILD_SH_SOURCE.format(**d))
+                    f.write(CRAN_BUILD_SH_SOURCE.format(**d).encode('utf-8'))
                 elif from_sources == []:
-                    f.write(CRAN_BUILD_SH_BINARY.format(**d))
+                    f.write(CRAN_BUILD_SH_BINARY.format(**d).encode('utf-8'))
                 else:
                     tpbt = [target_platform_bash_test_by_sel[t] for t in from_sources]
                     d['source_pf_bash'] = ' || '.join(['[[ ${target_platform} ' + s + ' ]]'
                                                   for s in tpbt])
-                    f.write(CRAN_BUILD_SH_MIXED.format(**d))
+                    f.write(CRAN_BUILD_SH_MIXED.format(**d).encode('utf-8'))
 
         if not exists(join(dir_path, 'bld.bat')) or update_policy == 'overwrite':
-            with open(join(dir_path, 'bld.bat'), 'w') as f:
+            with open(join(dir_path, 'bld.bat'), 'wb') as f:
                 if len([fs for fs in from_sources if fs.startswith('win')]) == 2:
-                    f.write(CRAN_BLD_BAT_SOURCE.format(**d))
+                    f.write(CRAN_BLD_BAT_SOURCE.format(**d).replace('\n', '\r\n').encode('utf-8'))
                 else:
-                    f.write(CRAN_BLD_BAT_MIXED.format(**d))
+                    f.write(CRAN_BLD_BAT_MIXED.format(**d).replace('\n', '\r\n').encode('utf-8'))
 
 
 def version_compare(recipe_dir, newest_conda_version):
