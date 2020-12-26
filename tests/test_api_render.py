@@ -134,7 +134,7 @@ def test_host_entries_finalized(testing_config):
     assert len(metadata) == 2
     outputs = api.get_output_file_paths(metadata)
     assert any('py27' in out for out in outputs)
-    assert any('py36' in out for out in outputs)
+    assert any('py39' in out for out in outputs)
 
 
 def test_hash_no_apply_to_custom_build_string(testing_metadata, testing_workdir):

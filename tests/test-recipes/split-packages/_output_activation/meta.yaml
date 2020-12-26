@@ -8,7 +8,7 @@ outputs:
       script:
         - mkdir %PREFIX%\etc\conda\activate.d  # [win]
         - echo set ACTIVATION_VAR=1 > %PREFIX%\etc\conda\activate.d\activate_script.bat  # [win]
-        - mkdir -p $PREFIX/etc/conda/activate.d    # [unix]
+        - mkdir -p $PREFIX/etc/conda/activate.d  # [unix]
         - echo "export ACTIVATION_VAR=1" > $PREFIX/etc/conda/activate.d/activate_script.sh  # [unix]
         - echo export ACTIVATION_VAR=1 > %PREFIX%\etc\conda\activate.d\activate_script.sh  # [win]
   - name: no_activate_explicit
@@ -18,17 +18,20 @@ outputs:
     requirements:
       build:
         - {{ pin_subpackage('activation_package') }}
+        - m2-base  # [win]
   - name: build_script_activates
     build:
       script:
-        - if [ -z "$ACTIVATION_VAR" ]; then echo "build/script not activated" && exit 1; fi   # [unix]
-        - IF "%ACTIVATION_VAR%" == "" echo "error! activation var unset!" && exit 1             # [win]
+        - if [ -z "$ACTIVATION_VAR" ]; then echo "build/script not activated" && exit 1; fi  # [unix]
+        - IF "%ACTIVATION_VAR%" == "" echo "error! activation var unset!" && exit 1  # [win]
     requirements:
       build:
         - {{ pin_subpackage('activation_package') }}
+        - m2-base  # [win]
   - name: using_compiler_jinja_activates
     requirements:
       build:
         - {{ compiler('c') }}
         - {{ pin_subpackage('activation_package') }}
+        - m2-base  # [win]
     script: install_activated.sh

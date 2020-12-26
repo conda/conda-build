@@ -12,3 +12,6 @@ outputs:
     test:
       script: test-script.sh  # [unix]
       script: test-script.bat  # [win]
+    requirements:
+      build:
+        - m2-base  # [win]
