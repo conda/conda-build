@@ -642,7 +642,7 @@ def test_render_with_python_arg_reduces_subspace(capfd):
 def test_render_with_python_arg_CLI_reduces_subspace(capfd):
     recipe = os.path.join(metadata_dir, "..", "variants", "20_subspace_selection_cli")
     # build the package
-    args = [recipe, '--variants', '{python: [2.7, 3.6]}', '--output']
+    args = [recipe, '--variants', '{python: [2.7, 3.9]}', '--output']
     main_render.execute(args)
     out, err = capfd.readouterr()
     assert(len(out.splitlines()) == 3)
@@ -652,7 +652,7 @@ def test_render_with_python_arg_CLI_reduces_subspace(capfd):
     out, err = capfd.readouterr()
     assert(len(out.splitlines()) == 2)
 
-    args = [recipe, '--variants', '{python: 3.6}', '--output']
+    args = [recipe, '--variants', '{python: 3.9}', '--output']
     main_render.execute(args)
     out, err = capfd.readouterr()
     assert(len(out.splitlines()) == 1)
