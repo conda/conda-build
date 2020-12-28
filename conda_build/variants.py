@@ -289,13 +289,13 @@ def _combine_spec_dictionaries(specs, extend_keys=None, filter_keys=None, zip_ke
                                         break
                                 else:
                                     values[k] = v.copy()
-                                if any(subvalue not in values[k]
-                                                    for subvalue in ensure_list(v)):
-
-                                    raise ValueError("variant config in {} is ambiguous because it "
-                                        "does not fully implement all zipped keys, or specifies "
-                                        "a subspace that is not fully implemented.".format(
-                                            spec_source))
+                                missing_subvalues = [subvalue for subvalue in ensure_list(v) if subvalue not in values[k]]
+                                if len(missing_subvalues):
+                                    raise ValueError("variant config in {} is ambiguous because it\n"
+                                        "does not fully implement all zipped keys, or specifies a\n"
+                                        "subspace that is not fully implemented. To be clear:\n"
+                                        ".. we did not find {} from {} in {}:{}".
+                                        format(spec_source, missing_subvalues, spec, k, values[k]))
 
     return values
 
