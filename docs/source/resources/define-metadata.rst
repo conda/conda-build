@@ -884,15 +884,18 @@ Versions for requirements must follow the conda match
 specification. See :ref:`build-version-spec`.
 
 
+.. _requirements-build:
 
 Build
 -----
 
 Tools required to build the package. These packages are run on
 the build system and include things such as revision control systems
-(Git, SVN) make tools (GNU make, Autotool, CMake) and compilers
-(real cross, pseudo-cross, or native when not cross-compiling),
-and any source pre-processors.
+(Git, SVN) make tools (GNU make, Autotool, CMake), compilers
+(real cross, pseudo-cross, or native when not 
+mpiling),
+any source pre-processors, and possibly Perl or Python (for running scripts, not
+for installing software).
 
 Packages which provide "sysroot" files, like the ``CDT`` packages (see below)
 also belong in the build section.
@@ -904,19 +907,23 @@ also belong in the build section.
      build:
        - git
        - cmake
+       
+When using the ``{{ compiler() }}`` Jinja2 to select our new compilers, make
+sure to move anything that is not strictly a build tool into the :ref:`host
+section <requirements-host>`.
+
+.. _requirements-host:
 
 Host
 ----
 
-This section was added in conda-build 3.0. It represents packages that need to
-be specific to the target platform when the target platform is not necessarily
-the same as the native build platform. For example, in order for a recipe to be
-"cross-capable", shared libraries requirements must be listed in the host
-section, rather than the build section, so that the shared libraries that get
-linked are ones for the target platform, rather than the native build platform.
-You should also include the base interpreter for packages that need one. In other
-words, a Python package would list ``python`` here and an R package would list
-``mro-base`` or ``r-base``.
+Packages that are specific to the target platform, when building on a different
+platform (added in conda-build 3.0). In particular, for a recipe to be
+"cross-capable", any shared libraries should be listed in the ``host`` section
+in order to link to the shared libraries of the target platform, rather than
+those of the native build platform. Also include the base interpreter for
+packages that need one, for example ``python`` for a Python package or
+``mro-base`` / ``r-base`` for an R package.
 
 .. code-block:: yaml
 
@@ -927,34 +934,28 @@ words, a Python package would list ``python`` here and an R package would list
      host:
        - python
 
-.. note::
-   When both build and host sections are defined, the build section can be
-   thought of as "build tools" - things that run on the native platform, but output
-   results for the target platform. For example, a cross-compiler that runs on
-   linux-64, but targets linux-armv7.
+During builds, the ``host`` PREFIX environment variable is activated *after*
+the ``build`` prefix, so that the host prefix has priority over the build
+prefix. Executables that don't exist in the host prefix should be found in the
+build prefix.
 
-The PREFIX environment variable points to the host prefix. With respect to
-activation during builds, both the host and build environments are activated.
-The build prefix is activated before the host prefix so that the host prefix
-has priority over the build prefix. Executables that don't exist in the host
-prefix should be found in the build prefix.
-
-As of conda-build 3.1.4, the build and host prefixes are always separate when
-both are defined, or when ``{{ compiler() }}`` Jinja2 functions are used. The
-only time that build and host are merged is when the host section is absent, and
-no ``{{ compiler() }}`` Jinja2 functions are used in meta.yaml. Because these
-are separate, you may see some build failures when migrating your recipes. For
-example, let's say you have a recipe to build a Python extension. If you add the
-compiler Jinja2 functions to the build section, but you do not move your Python
-dependency from the build section to the host section, your recipe will fail. It
-will fail because the host environment is where new files are detected, but
-because you have Python only in the build environment, your extension will be
-installed into the build environment. No files will be detected. Also, variables
-such as PYTHON will not be defined when Python is not installed into the host
-environment.
+As of conda-build 3.1.4, the build and host prefixes are separate when either
+both are defined, or when ``{{ compiler() }}`` Jinja2 functions are used. Only
+when the host section is absent and no ``{{ compiler() }}`` Jinja2 functions
+are used in meta.yaml are build and host merged. Due to the introduction of
+this separation, you may see build failures when migrating recipes that
+specified all dependencies in the ``build`` section. 
+Take a recipe to build a Python extension, for example. If you add the compiler
+Jinja2 functions to the build section, but do not move your Python dependency
+from the build section to the host section, your recipe will fail: your
+extension will be installed into the build environment (since Python is present
+only in the build environment), but no files added by your package will be
+detected, since this detection happens in the host environment. Also,
+variables such as PYTHON will not be defined when Python is not installed into
+the host environment.
 
 On Linux, using the compiler packages provided by Anaconda Inc. in the ``defaults``
-meta-channel can prevent your build system leaking into the built software by
+meta-channel can prevent your build system from leaking into the built software by
 using our ``CDT`` (Core Dependency Tree) packages for any "system" dependencies.
 These packages are repackaged libraries and headers from CentOS6 and are unpacked
 into the sysroot of our pseudo-cross compilers and are found by them automatically.
@@ -971,14 +972,6 @@ will be set appropriately by conda-build (see :ref:`env-vars`).
 settings achieve backwards compatibility while still providing access to C++14
 and C++17. Note that conda-build will set ``CONDA_BUILD_SYSROOT`` by parsing the
 ``conda_build_config.yaml``. For more details, see :ref:`compiler-tools`.
-
-**TL;DR**: If you use ``{{ compiler() }}`` Jinja2 to utilize our new
-compilers, you must also move anything that is not strictly a build tool into
-your host dependencies. This includes Python, Python libraries, and any shared
-libraries that you need to link against in your build. Examples of build tools
-include any ``{{ compiler() }}``, Make, Autoconf, Perl (for running scripts, not
-installing Perl software), and Python (for running scripts, not for installing
-software).
 
 Run
 ---
