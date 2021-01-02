@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+# Note, this can be used on Windows but is not used by our CI.
 function install_conda_build_test_deps_fn()
 {
   # avoids a python 3.7 problem
@@ -7,7 +8,7 @@ function install_conda_build_test_deps_fn()
   if [[ "$PYTHON_VERSION" == "2.7" ]]; then
     _PKGS+=(futures scandir pathlib2)
   fi
-  _PKGS+=("pytest<6" pytest-azurepipelines pytest-cov pytest-forked pytest-xdist)
+  _PKGS+=(pytest pytest-azurepipelines pytest-cov pytest-forked pytest-xdist)
   _PKGS+=(py-lief pytest-mock)
   if [[ "$PYTHON_VERSION" != "2.7" ]] || [[ ! $(uname) =~ M* ]]; then
     _PKGS+=(pytest-replay pytest-rerunfailures)
@@ -23,7 +24,8 @@ function install_conda_build_test_deps_fn()
     _PKGS+=(patchelf)
     _PKGS+=(shellcheck)
   else
-    _PKGS+=(conda-forge::shellcheck)
+    # _PKGS+=(conda-forge::shellcheck)
+    _PKGS+=(shellcheck)
   fi
   if [[ $(uname) =~ M.* ]]; then
     _PKGS+=(m2-patch)
@@ -31,7 +33,7 @@ function install_conda_build_test_deps_fn()
   else
     _pkgs+=(patch)
   fi
-  conda install -y --show-channel-urls "${_PKGS[@]}"
+  conda install -y --show-channel-urls "${_PKGS[@]}" "$@"
   if [[ ! -d ../conda_build_test_recipe ]]; then
     pushd ..
       git clone "https://github.com/conda/conda_build_test_recipe"
@@ -39,4 +41,4 @@ function install_conda_build_test_deps_fn()
   fi
 }
 
-install_conda_build_test_deps_fn
+install_conda_build_test_deps_fn "$@"
