@@ -111,6 +111,7 @@ def recipe(request):
 
 # This tests any of the folders in the test-recipes/metadata folder that don't start with _
 @pytest.mark.slow
+@pytest.mark.serial
 def test_recipe_builds(recipe, testing_config, testing_workdir, monkeypatch):
     # TODO: After we fix #3754 this mark can be removed. This specific test
     #   ``source_setup_py_data_subdir`` reproduces the problem.

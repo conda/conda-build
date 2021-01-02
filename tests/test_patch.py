@@ -56,10 +56,10 @@ def patch_files(testing_workdir):
 
 
 # TODO :: These should require a build env with patch (or m2-patch) in it.
-#         at present, ci/azurepipelines/install_conda_build_test_deps installs
+#         at present, only ci/azurepipelines/install_conda_build_test_deps installs
 #         this.
-def test_patch(patch_files, testing_config_with_patch):
-    apply_patch('.', patch_files, testing_config_with_patch)
+def test_patch(patch_files, testing_config):
+    apply_patch('.', patch_files, testing_config)
     assert not os.path.exists('file-deletion.txt')
     assert os.path.exists('file-creation.txt')
     assert os.path.exists('file-modification.txt')
