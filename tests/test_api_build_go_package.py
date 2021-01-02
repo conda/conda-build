@@ -10,6 +10,7 @@ def recipe():
     return os.path.join(thisdir, 'test-recipes', 'go-package')
 
 @pytest.mark.sanity
+@pytest.mark.serial
 def test_recipe_build(recipe, testing_config, testing_workdir, monkeypatch):
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts

@@ -317,13 +317,13 @@ jobs:
       python -c "import struct; print(struct.calcsize('P') * 8)"
       pip install --no-deps .
       conda-build --version
-      pushd .. && git clone https://github.com/conda/conda_build_test_recipe  && popd
+      pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd
       mkdir %UserProfile%\cbtmp_serial
       mkdir %UserProfile%\cbtmp
       for /d %%F in (%UserProfile%\cbtmp_serial\*) do rd /s /q "%%F"
       for /d %%F in (%UserProfile%\cbtmp\*) do rd /s /q "%%F"
       call conda create -n blarg -yq --download-only python=2.7||exit 1
-      call conda create -n blarg -yq --download-only python=3.7||exit 1
+      call conda create -n blarg -yq --download-only python=3.8||exit 1
       call conda create -n blarg -yq --download-only python cmake||exit 1
       mkdir $(Build.ArtifactStagingDirectory)\\pytest-replay
       set "PYTEST_REPLAY_OPTIONS=--replay-record-dir=$(Build.ArtifactStagingDirectory)\\pytest-replay"

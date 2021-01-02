@@ -18,7 +18,7 @@ function install_conda_build_test_deps_fn()
   _PKGS+=(anaconda-client git requests filelock contextlib2 jinja2 flaky)
   _PKGS+=(ripgrep pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz tqdm)
   _PKGS+=(conda-package-handling perl python-libarchive-c)
-  _PKGS+=(pip numpy mock pkginfo)
+  _PKGS+=(pip numpy mock pkginfo python=3.9)
   if [[ $(uname) =~ .*inux.* ]]; then
     _PKGS+=(patchelf)
     _PKGS+=(shellcheck)
