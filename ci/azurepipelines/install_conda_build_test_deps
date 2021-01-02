@@ -24,8 +24,11 @@ function install_conda_build_test_deps_fn()
     _PKGS+=(patchelf)
     _PKGS+=(shellcheck)
   else
-    _PKGS+=(conda-forge::shellcheck)
-    # _PKGS+=(shellcheck)
+    if [[ $(uname -m) != arm64 ]] && [[ $(uname) == Darwin ]]; then
+      echo "Not installing shellcheck as it is unavailable on macOS arm64 at present"
+    else
+      _PKGS+=(conda-forge::shellcheck)
+    fi
   fi
   if [[ $(uname) =~ M.* ]]; then
     _PKGS+=(m2-patch)
