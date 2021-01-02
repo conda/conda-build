@@ -27,15 +27,8 @@ function install_conda_build_test_deps_fn()
   _PKGS+=(${DEF_CHAN}::ripgrep ${DEF_CHAN}::pyflakes ${DEF_CHAN}::beautifulsoup4 ${DEF_CHAN}::chardet ${DEF_CHAN}::pycrypto ${DEF_CHAN}::glob2 ${DEF_CHAN}::psutil ${DEF_CHAN}::pytz ${DEF_CHAN}::tqdm)
   _PKGS+=(${DEF_CHAN}::conda-package-handling ${DEF_CHAN}::perl ${DEF_CHAN}::python-libarchive-c)
   _PKGS+=(${DEF_CHAN}::pip ${DEF_CHAN}::numpy mock ${DEF_CHAN}::pkginfo ${DEF_CHAN}::python=3.9)
-  if [[ $(uname) =~ .*inux.* ]]; then
+  if [[ $(uname) =~ .*inux.* ]] && [[ ! ${MACOS_ARM64} == yes ]] ; then
     _PKGS+=(${DEF_CHAN}::patchelf)
-    _PKGS+=(${DEF_CHAN}::shellcheck)
-  else
-    if [[ ${MACOS_ARM64} == yes ]]; then
-      echo "Not installing shellcheck as it is unavailable on macOS arm64 at present"
-    else
-      _PKGS+=(conda-forge::shellcheck)
-    fi
   fi
   if [[ $(uname) =~ M.* ]]; then
     _PKGS+=(${DEF_CHAN}::m2-patch)
@@ -45,6 +38,18 @@ function install_conda_build_test_deps_fn()
   fi
   echo -e "Asking conda to install:\n${_PKGS[@]}"
   conda install -y --show-channel-urls "${_PKGS[@]}" "$@"
+  # If we install shellcheck from conda-forge and packages from defaults at the same time (via channel::package)
+  # then conda-forge used for other packages too. We could force it by forcing transitive deps to also be listed
+  # with their channel, but, well, yuck.
+  if [[ ${MACOS_ARM64} == yes ]]; then
+    echo "Not installing shellcheck as it is unavailable on macOS arm64 at present"
+  else
+    if [[ $(uname) =~ .*inux.* ]]; then
+      conda install -y --show-channel-urls shellcheck
+    else
+      conda install -y --show-channel-urls conda-forge::shellcheck
+    fi
+  fi
   if [[ ! -d ../conda_build_test_recipe ]]; then
     pushd ..
       git clone "https://github.com/conda/conda_build_test_recipe"
