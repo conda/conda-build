@@ -3,39 +3,47 @@
 # Note, this can be used on Windows but is not used by our CI.
 function install_conda_build_test_deps_fn()
 {
+  local MACOS_ARM64=no
+  local DEF_CHAN=defaults
+  if [[ $(uname) == Darwin ]] && [[ $(uname -m) == arm64 ]]; then
+    MACOS_ARM64=yes
+    DEF_CHAN=conda-forge
+  fi
   # avoids a python 3.7 problem
   local -a _PKGS=(cytoolz conda-verify)
   if [[ "$PYTHON_VERSION" == "2.7" ]]; then
     _PKGS+=(futures scandir pathlib2)
   fi
-  _PKGS+=(pytest pytest-azurepipelines pytest-cov pytest-forked pytest-xdist)
-  _PKGS+=(py-lief pytest-mock)
+  _PKGS+=(${DEF_CHAN}::pytest ${DEF_CHAN}::pytest-azurepipelines ${DEF_CHAN}::pytest-cov ${DEF_CHAN}::pytest-forked ${DEF_CHAN}::pytest-xdist)
+  # default's mock is noarch: python, conda-forge do not have it for macOS-arm64 yet.
+  _PKGS+=(${DEF_CHAN}::py-lief ${DEF_CHAN}::pytest-mock)
   if [[ "$PYTHON_VERSION" != "2.7" ]] || [[ ! $(uname) =~ M* ]]; then
-    _PKGS+=(pytest-replay pytest-rerunfailures)
+    _PKGS+=(${DEF_CHAN}::pytest-replay ${DEF_CHAN}::pytest-rerunfailures)
   else
     # Workaround https://github.com/nedbat/coveragepy/issues/895
-    _PKGS+=('coverage!=5.0')
+    _PKGS+=(${DEF_CHAN}::coverage!=5.0)
   fi
-  _PKGS+=(anaconda-client git requests filelock contextlib2 jinja2 flaky)
-  _PKGS+=(ripgrep pyflakes beautifulsoup4 chardet pycrypto glob2 psutil pytz tqdm)
-  _PKGS+=(conda-package-handling perl python-libarchive-c)
-  _PKGS+=(pip numpy mock pkginfo python=3.9)
+  _PKGS+=(${DEF_CHAN}::anaconda-client ${DEF_CHAN}::git ${DEF_CHAN}::requests ${DEF_CHAN}::filelock ${DEF_CHAN}::contextlib2 ${DEF_CHAN}::jinja2 ${DEF_CHAN}::flaky)
+  _PKGS+=(${DEF_CHAN}::ripgrep ${DEF_CHAN}::pyflakes ${DEF_CHAN}::beautifulsoup4 ${DEF_CHAN}::chardet ${DEF_CHAN}::pycrypto ${DEF_CHAN}::glob2 ${DEF_CHAN}::psutil ${DEF_CHAN}::pytz ${DEF_CHAN}::tqdm)
+  _PKGS+=(${DEF_CHAN}::conda-package-handling ${DEF_CHAN}::perl ${DEF_CHAN}::python-libarchive-c)
+  _PKGS+=(${DEF_CHAN}::pip ${DEF_CHAN}::numpy mock ${DEF_CHAN}::pkginfo ${DEF_CHAN}::python=3.9)
   if [[ $(uname) =~ .*inux.* ]]; then
-    _PKGS+=(patchelf)
-    _PKGS+=(shellcheck)
+    _PKGS+=(${DEF_CHAN}::patchelf)
+    _PKGS+=(${DEF_CHAN}::shellcheck)
   else
-    if [[ $(uname -m) != arm64 ]] && [[ $(uname) == Darwin ]]; then
+    if [[ ${MACOS_ARM} == yes ]]; then
       echo "Not installing shellcheck as it is unavailable on macOS arm64 at present"
     else
       _PKGS+=(conda-forge::shellcheck)
     fi
   fi
   if [[ $(uname) =~ M.* ]]; then
-    _PKGS+=(m2-patch)
-    _PKGS+=(m2-gcc-libs)
+    _PKGS+=(${DEF_CHAN}::m2-patch)
+    _PKGS+=(${DEF_CHAN}::m2-gcc-libs)
   else
-    _pkgs+=(patch)
+    _pkgs+=(${DEF_CHAN}::patch)
   fi
+  echo -e "Asking conda to install:\n${_PKGS[@]}"
   conda install -y --show-channel-urls "${_PKGS[@]}" "$@"
   if [[ ! -d ../conda_build_test_recipe ]]; then
     pushd ..
