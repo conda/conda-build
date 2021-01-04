@@ -491,7 +491,7 @@ def meta_vars(meta, skip_build_id=False):
     # use `get_value` to prevent early exit while name is still unresolved during rendering
     d['PKG_NAME'] = meta.get_value('package/name')
     d['PKG_VERSION'] = meta.version()
-    d['PKG_BUILDNUM'] = str(meta.build_number() or 0)
+    d['PKG_BUILDNUM'] = str(meta.build_number())
     if meta.final and not skip_build_id:
         d['PKG_BUILD_STRING'] = str(meta.build_id())
         d['PKG_HASH'] = meta.hash_dependencies()
