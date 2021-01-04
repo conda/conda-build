@@ -631,7 +631,7 @@ def build_string_from_metadata(metadata):
             res.append('_')
         if features:
             res.extend(('_'.join(features), '_'))
-        res.append('{0}'.format(metadata.build_number() if metadata.build_number() else 0))
+        res.append(str(metadata.build_number()))
         build_str = "".join(res)
     return build_str
 
@@ -1412,7 +1412,7 @@ class MetaData(object):
             name=self.name(),
             version=self.version(),
             build=self.build_id(),
-            build_number=self.build_number() if self.build_number() else 0,
+            build_number=self.build_number(),
             platform=self.config.host_platform if (self.config.host_platform != 'noarch' and
                                                    arch != 'noarch') else None,
             arch=ARCH_MAP.get(arch, arch),

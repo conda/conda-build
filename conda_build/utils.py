@@ -1898,7 +1898,7 @@ def match_peer_job(target_matchspec, other_m, this_m=None):
                                               match_dict['build'])),
                           version=match_dict['version'],
                           build_string=match_dict['build'],
-                          build_number=int(other_m.build_number() or 0),
+                          build_number=other_m.build_number(),
                           channel=None)
     matchspec_matches = target_matchspec.match(match_dict)
 
