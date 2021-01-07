@@ -22,10 +22,12 @@ outputs:
       - pkg1 = pkg1:main
     script: install-pkg1.sh
     requirements:
-      host:
-        - python
       build:
         - m2-base  # [win]
+      host:
+        - python
+      run:
+        - python
     test:
       script: test-pkg1.py
   - name: split_package_entry_points2
@@ -33,10 +35,12 @@ outputs:
       - pkg2 = pkg2:main
     script: install-pkg2.sh
     requirements:
-      host:
-        - python
       build:
         - m2-base  # [win]
+      host:
+        - python
+      run:
+        - python
     test:
       script: test-pkg2.py
 
