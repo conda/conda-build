@@ -817,7 +817,7 @@ def trim_build_only_deps(metadata, requirements_used):
     host_reqs = {req.split()[0].replace('-', '_') for req in host_reqs if req}
 
     to_remove = set()
-    ignore_build_only_deps = utils.ensure_list(metadata.config.variant.get('ignore_build_only_deps', []))
+    ignore_build_only_deps = sorted(utils.ensure_list(metadata.config.variant.get('ignore_build_only_deps', [])))
 
     for dep in requirements_used:
         # filter out stuff that's only in run deps
