@@ -909,7 +909,7 @@ def output_yaml(metadata, filename=None, suppress_outputs=False):
     if suppress_outputs and local_metadata.is_output and 'outputs' in local_metadata.meta:
         del local_metadata.meta['outputs']
     output = yaml.dump(_MetaYaml(local_metadata.meta), Dumper=_IndentDumper,
-                       default_flow_style=False, indent=4)
+                       default_flow_style=False, indent=2)
     if filename:
         if any(sep in filename for sep in ('\\', '/')):
             try:
