@@ -580,7 +580,7 @@ class Config(object):
             build_folders_all = get_build_folders(self.croot)
             for folder_full in build_folders_all:
                 folder = os.path.basename(folder_full)
-                untimed_folder = re.sub(time_re, '\g<1>{t}', folder, flags = re.UNICODE)
+                untimed_folder = re.sub(time_re, '\g<1>{t}', folder, flags=re.UNICODE)
                 if untimed_folder == old_build_id_t:
                     build_folders.append(folder_full)
             prev_build_id = None
