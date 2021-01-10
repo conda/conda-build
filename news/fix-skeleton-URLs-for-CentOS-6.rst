@@ -6,7 +6,7 @@ Enhancements:
 Bug fixes:
 ----------
 
-* Fix auth in aboutjson  (#4137)
+* Fix skeleton URLs for CentOS 6 (EOL) and various CI fixes  (#4154)
 
 Deprecations:
 -------------

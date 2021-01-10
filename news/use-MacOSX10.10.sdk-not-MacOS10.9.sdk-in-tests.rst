@@ -1,12 +1,12 @@
 Enhancements:
 -------------
 
-* <news item>
+* Use MacOSX10.10.sdk, not MacOS10.9.sdk in tests  (#4120)
 
 Bug fixes:
 ----------
 
-* Fix auth in aboutjson  (#4137)
+* <news item>
 
 Deprecations:
 -------------

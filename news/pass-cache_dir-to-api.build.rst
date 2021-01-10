@@ -6,7 +6,7 @@ Enhancements:
 Bug fixes:
 ----------
 
-* Fix auth in aboutjson  (#4137)
+* pass cache_dir to api.build  (#4120)
 
 Deprecations:
 -------------

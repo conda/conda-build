@@ -6,7 +6,7 @@ Enhancements:
 Bug fixes:
 ----------
 
-* Fix auth in aboutjson  (#4137)
+* Add conda-verify to install_conda_build_test_deps  (#4120)
 
 Deprecations:
 -------------

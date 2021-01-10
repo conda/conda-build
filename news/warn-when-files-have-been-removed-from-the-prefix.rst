@@ -1,12 +1,12 @@
-Enhancements:
+\Enhancements:
 -------------
 
-* <news item>
+* Warn when files have been removed from the prefix  (#4120)
 
 Bug fixes:
 ----------
 
-* Fix auth in aboutjson  (#4137)
+* <news item>
 
 Deprecations:
 -------------

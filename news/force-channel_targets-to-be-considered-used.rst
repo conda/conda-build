@@ -6,7 +6,7 @@ Enhancements:
 Bug fixes:
 ----------
 
-* Fix auth in aboutjson  (#4137)
+* Force channel_targets to be considered used  (#4120)
 
 Deprecations:
 -------------

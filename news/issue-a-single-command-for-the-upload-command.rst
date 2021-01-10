@@ -1,12 +1,12 @@
 Enhancements:
 -------------
 
-* <news item>
+* Issue a single command for the upload command  (#4120)
 
 Bug fixes:
 ----------
 
-* Fix auth in aboutjson  (#4137)
+* <news item>
 
 Deprecations:
 -------------

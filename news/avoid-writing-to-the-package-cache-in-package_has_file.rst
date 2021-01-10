@@ -6,7 +6,7 @@ Enhancements:
 Bug fixes:
 ----------
 
-* Fix auth in aboutjson  (#4137)
+* Avoid writing to the package cache in package_has_file (collisions)  (#4120)
 
 Deprecations:
 -------------

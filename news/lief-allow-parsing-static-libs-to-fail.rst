@@ -6,7 +6,7 @@ Enhancements:
 Bug fixes:
 ----------
 
-* Fix auth in aboutjson  (#4137)
+* LIEF: Allow parsing static libs to fail  (#4149)
 
 Deprecations:
 -------------
