@@ -436,6 +436,12 @@ def add_parser(repos):
         help="""Variant config file to add.  These yaml files can contain
         keys such as `cran_mirror`.  Only one can be provided here."""
     )
+    cran.add_argument(
+        "--add-cross-r-base",
+        action='store_true',
+        default=False,
+        help="""Add cross-r-base to build requirements for cross compiling"""
+    )
 
 
 def dict_from_cran_lines(lines):
@@ -794,7 +800,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 git_tag=None, cran_url=None, recursive=False, archive=True,
                 version_compare=False, update_policy='', r_interp='r-base', use_binaries_ver=None,
                 use_noarch_generic=False, use_when_no_binary='src', use_rtools_win=False, config=None,
-                variant_config_files=None, allow_archived=False):
+                variant_config_files=None, allow_archived=False, add_cross_r_base=False):
 
     if use_when_no_binary != 'error' and \
        use_when_no_binary != 'src' and \
@@ -1113,6 +1119,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                                                     fs.startswith('win')) + ']'
             sel_src_not_win = '  # [' + ' or '.join(fs for fs in from_source if not
                                                     fs.startswith('win')) + ']'
+        sel_cross = "  # [build_platform != target_platform]"
         d['sel_src'] = sel_src
         d['sel_src_and_win'] = sel_src_and_win
         d['sel_src_not_win'] = sel_src_not_win
@@ -1319,6 +1326,8 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                         indent=INDENT, sel=sel_src_and_win))
                 deps.append("{indent}{{{{ posix }}}}zip             {sel}".format(
                     indent=INDENT, sel=sel_src_and_win))
+                if add_cross_r_base:
+                    deps.append("{indent}cross-r-base {{{{ r_base }}}}  {sel}".format(indent=INDENT, sel=sel_cross))
             elif dep_type == 'run':
                 if need_c or need_cxx or need_f:
                     deps.append("{indent}{{{{native}}}}gcc-libs       {sel}".format(
