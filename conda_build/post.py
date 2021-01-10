@@ -1343,7 +1343,7 @@ def check_symlinks(files, prefix, croot):
                     # relative link. It's possible that ..'s later in the path
                     # can result in a broken link still, but we'll assume that
                     # such crazy things don't happen.
-                    print("Making absolute symlink %s -> %s relative" % (f, link_path))
+                    print("Making absolute symlink relative (%s -> %s :-> %s)" % (f, link_path, relative_path))
                     os.unlink(path)
                     os.symlink(relative_path, path)
             else:
