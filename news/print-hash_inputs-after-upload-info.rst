@@ -1,12 +1,12 @@
 Enhancements:
 -------------
 
-* <news item>
+* Print hash_inputs after upload info  (#4120)
 
 Bug fixes:
 ----------
 
-* Fix auth in aboutjson  (#4137)
+* <news item>
 
 Deprecations:
 -------------

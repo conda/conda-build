@@ -6,7 +6,7 @@ Enhancements:
 Bug fixes:
 ----------
 
-* Fix auth in aboutjson  (#4137)
+* Change package_has_file to refresh if out of date  (#4120)
 
 Deprecations:
 -------------

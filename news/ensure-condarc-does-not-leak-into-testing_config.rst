@@ -6,7 +6,7 @@ Enhancements:
 Bug fixes:
 ----------
 
-* Fix auth in aboutjson  (#4137)
+* Ensure ~/.condarc does not leak into testing_config  (#4120)
 
 Deprecations:
 -------------

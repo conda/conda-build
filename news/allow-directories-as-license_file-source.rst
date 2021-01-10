@@ -1,12 +1,12 @@
 Enhancements:
 -------------
 
-* <news item>
+* Allow directories as license_file source  (#4153)
 
 Bug fixes:
 ----------
 
-* Fix auth in aboutjson  (#4137)
+* <news item>
 
 Deprecations:
 -------------

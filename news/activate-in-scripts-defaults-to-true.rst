@@ -1,12 +1,12 @@
 Enhancements:
 -------------
 
-* <news item>
+* activate_in_script defaults to true  (#4120)
 
 Bug fixes:
 ----------
 
-* Fix auth in aboutjson  (#4137)
+* <news item>
 
 Deprecations:
 -------------

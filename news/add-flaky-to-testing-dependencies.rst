@@ -6,7 +6,7 @@ Enhancements:
 Bug fixes:
 ----------
 
-* Fix auth in aboutjson  (#4137)
+* Add flaky to testing dependencies  (#4138)
 
 Deprecations:
 -------------

@@ -6,7 +6,7 @@ Enhancements:
 Bug fixes:
 ----------
 
-* Fix auth in aboutjson  (#4137)
+* Fix typo in cran skeleton  (#4143)
 
 Deprecations:
 -------------

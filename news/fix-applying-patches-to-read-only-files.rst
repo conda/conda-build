@@ -6,7 +6,7 @@ Enhancements:
 Bug fixes:
 ----------
 
-* Fix auth in aboutjson  (#4137)
+* Fix applying patches to read-only files  (#4140)
 
 Deprecations:
 -------------

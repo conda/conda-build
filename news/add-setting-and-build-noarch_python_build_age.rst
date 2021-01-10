@@ -1,12 +1,12 @@
 Enhancements:
 -------------
 
-* <news item>
+* Add Setting and build/noarch_python_build_age and fix tests not finding packages  (#4120)
 
 Bug fixes:
 ----------
 
-* Fix auth in aboutjson  (#4137)
+* Fix tests not finding packages
 
 Deprecations:
 -------------

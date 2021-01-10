@@ -1,12 +1,12 @@
 Enhancements:
 -------------
 
-* <news item>
+* Consider any file containing .yaml in its name as maybe a recipe file  (#4120)
 
 Bug fixes:
 ----------
 
-* Fix auth in aboutjson  (#4137)
+* <news item>
 
 Deprecations:
 -------------
