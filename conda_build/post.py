@@ -32,7 +32,6 @@ from conda_build.os_utils.liefldd import (have_lief, get_exports_memoized,
                                           get_runpaths_raw, set_rpath)
 from conda_build.os_utils.pyldd import codefile_type
 from conda_build.os_utils.ldd import get_package_files, get_package_obj_files
-from conda_build.index import get_build_index
 from conda_build.inspect_pkg import which_package
 from conda_build.exceptions import (OverLinkingError, OverDependingError, RunPathError)
 

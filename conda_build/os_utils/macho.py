@@ -5,7 +5,6 @@ import stat
 import sys
 from subprocess import Popen, check_output, PIPE, STDOUT, CalledProcessError
 import os
-from conda_build.os_utils.pyldd import inspect_rpaths
 from conda_build import utils
 from itertools import islice
 from conda_build.os_utils.external import find_preferably_prefixed_executable
