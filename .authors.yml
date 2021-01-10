@@ -1125,3 +1125,11 @@
   num_commits: 8
   first_commit: 2020-10-01 20:48:45
   github: cjmartian
+- name: Hugo Buddelmeijer
+  email: hugo@buddelmeijer.nl
+  num_commits: 3
+  github: hugobuddel
+- name: Kurt Schelfthout
+  email: kurt.schelfthout@gmail.com
+  num_commits: 1
+  github: kurtschelfthout
