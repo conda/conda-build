@@ -1357,8 +1357,11 @@ def build_info_files_json_v1(m, prefix, files, files_with_prefix):
         }
         if file_info["path_type"] == PathType.hardlink:
             file_info["size_in_bytes"] = os.stat(path).st_size
+        elif isdir(path):
+            # this is a symlink to a directory
+            file_info["size_in_bytes"] = 0
         elif not isfile(path):
-            # this is a softlink that points to nowhere, so is zero bytes
+            # this is a symlink that points to nowhere, so is zero bytes
             file_info["size_in_bytes"] = 0
             warnings.warn('file %s is a symlink with no target' % path, UserWarning)
         else:
