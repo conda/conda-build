@@ -1,4 +1,20 @@
 # current developments
+2021-01-10 3.21.0:
+------------------
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @isuruf
+* @mbargull
+* @njalerikson
+* @cjmartian
+* @chrisburr
+* @hugobuddel
+* @kurtschelfthout
+
+
 2020-10-26 3.20.5:
 ------------------
 
