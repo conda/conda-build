@@ -173,20 +173,20 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
                 subdir = conda_interface.subdir
             try:
                 cached_index = get_index(channel_urls=urls,
-                                prepend=not omit_defaults,
-                                use_local=False,
-                                use_cache=context.offline,
-                                platform=subdir)
+                                         prepend=not omit_defaults,
+                                         use_local=False,
+                                         use_cache=context.offline,
+                                         platform=subdir)
             # HACK: defaults does not have the many subfolders we support.  Omit it and
             #          try again.
             except CondaHTTPError:
                 if 'defaults' in urls:
                     urls.remove('defaults')
                 cached_index = get_index(channel_urls=urls,
-                                            prepend=omit_defaults,
-                                            use_local=False,
-                                            use_cache=context.offline,
-                                            platform=subdir)
+                                         prepend=omit_defaults,
+                                         use_local=False,
+                                         use_cache=context.offline,
+                                         platform=subdir)
 
             expanded_channels = {rec.channel for rec in cached_index.values()}
 

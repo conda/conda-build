@@ -572,26 +572,18 @@ def determine_package_nature(pkg, prefix, subdir, bldpkgs_dir, output_folder, ch
     codefiles = get_package_obj_files(pkg, prefix)
     # get_package_obj_files already filters by extension and I'm not sure we need two.
     dsos = [f for f in codefiles for ext in ('.dylib', '.so', '.dll', '.pyd') if ext in f]
-    # we don't care about the actual run_exports value, just whether or not run_exports are present.
-    # We can use channeldata and it'll be a more reliable source (no disk race condition nonsense)
-    _, _, channeldata1 = get_build_index(subdir=subdir,
-                                        bldpkgs_dir=bldpkgs_dir,
-                                        output_folder=output_folder,
-                                        channel_urls=channel_urls,
-                                        debug=False,
-                                        verbose=False,
-                                        clear_cache=False)
-    channel_used = pkg.channel
-    channeldata = channeldata1.get(channel_used)
-    # If the Dists end up coming from a multichannel such as 'defaults'
-    # instead of a real channel such as 'pkgs/main' then this assert
-    # can fire. To prevent that we use our own linked_data_no_multichannels()
-    # instead of conda's linked_data()
-    # The `or isinstance(pkg, FakeDist)` covers the case of an empty local channel.
-    assert isinstance(channeldata, dict) or isinstance(pkg, FakeDist)
-
-    if channeldata and pkg.name in channeldata['packages']:
-        run_exports = channeldata['packages'][pkg.name].get('run_exports', {})
+    # TODO :: Is this package not in a channel somewhere at this point? It would be good not to be special
+    #         casing like this. Clearly we aren't able to get run_exports for starters and that's not good
+    if not isinstance(pkg, FakeDist):
+        # we don't care about the actual run_exports value, just whether or not run_exports are present.
+        json_file = os.path.join(prefix, 'conda-meta', pkg.dist_name + '.json')
+        import json
+        assert os.path.isfile(json_file), "conda-meta :: Not a file: {}".format(json_file)
+        json_info = json.loads(open(json_file, 'r').read())
+        epd = json_info['extracted_package_dir']
+        run_exports_json = os.path.join(epd, 'info', 'run_exports.json')
+        if os.path.isfile(run_exports_json):
+            run_exports = json.loads(open(run_exports_json, 'r').read())
     return (dsos, run_exports, lib_prefix)
 
 
