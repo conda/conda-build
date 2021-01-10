@@ -2,6 +2,65 @@
 2021-01-10 3.21.0:
 ------------------
 
+Enhancements:
+-------------
+
+* activate_in_script defaults to true  (#4120)
+* Add Setting and build/noarch_python_build_age and fix tests not finding packages  (#4120)
+* Allow directories as license_file source  (#4153)
+* Consider any file containing .yaml in its name as maybe a recipe file  (#4120)
+* Add weak_constrains and strong_constrains run_exports types  (#4125)
+* Issue a single command for the upload command  (#4120)
+* Print hash_inputs after upload info  (#4120)
+* Add cross-r-base for cross compiling
+* Add --build-id-pat option
+* macOS: Delete build_prefix rpaths
+* Use smarter build_number
+* Combine default_structs with FIELDS
+* Fix conda render indent from 4 to 2
+* macOS: arm64 ci/test-suite setup
+* Removing more conda-forge testing deps
+* Variants: Be more informative
+* more verbosity in tests
+* Use MacOSX10.10.sdk, not MacOS10.9.sdk in tests  (#4120)
+* Warn when files have been removed from the prefix  (#4120)
+
+Bug fixes:
+----------
+
+* Add conda-verify to install_conda_build_test_deps  (#4120)
+* Add flaky to testing dependencies  (#4138)
+* Fix tests not finding packages
+* Avoid writing to the package cache in package_has_file (collisions)  (#4120)
+* Change package_has_file to refresh if out of date  (#4120)
+* Ensure ~/.condarc does not leak into testing_config  (#4120)
+* Fix applying patches to read-only files  (#4140)
+* Fix auth in aboutjson  (#4137)
+* Fix skeleton URLs for CentOS 6 (EOL) and various CI fixes  (#4154)
+* Fix typo in cran skeleton  (#4143)
+* Force channel_targets to be considered used  (#4120)
+* Fix printing ``bytes-like object is required, not 'str'`` when applying patches  (#4118)
+* Set "platform" in index.json to the target platform for cross-platform builds  (#4124)
+* Reduce get_rpaths_raw/patchelf disagree warnings  (#4131)
+* LIEF: Allow parsing static libs to fail  (#4149)
+* pass cache_dir to api.build  (#4120)
+* Fix symlinks to directories
+* Make post-link run_export/library_nature determination less work when CONDA_OFFLINE=1
+* Remove Python 2.7 from CI matrix
+* Fix test_pypi_installer_metadata (builds against python 3.9 not 3.7)
+* tests: Fix test_render_with_python_arg_reduces_subspace
+* tests: Update python 3 from 3.5/6 to 3.9 in many
+* Set numpy default to 1.16
+* tests: Fix pins for numpy_used
+* tests: CI: Win: Circumvent delayed expansion
+* Install patch or m2-patch, write .sh files as binary, more Win tests
+* tests: Avoid issue with coverage==5.0 on Win+Py2.7
+* Assume non-revisible patches
+* Add flaky marker and --strict-markers to setup.cfg
+* Don't sort recipes
+* Use extra R_ARGS and fix them
+* shell check fix
+
 Contributors:
 -------------
 
