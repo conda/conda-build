@@ -1291,8 +1291,8 @@ def create_info_files(m, replacements, files, prefix):
 
 
 def get_short_path(m, target_file):
-    entry_point_script_names = get_entry_point_script_names(m.get_value('build/entry_points'))
     if m.noarch == 'python':
+        entry_point_script_names = get_entry_point_script_names(m.get_value('build/entry_points'))
         if target_file.find("site-packages") >= 0:
             return target_file[target_file.find("site-packages"):]
         elif target_file.startswith("bin") and (target_file not in entry_point_script_names):
