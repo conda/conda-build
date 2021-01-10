@@ -23,9 +23,13 @@ from .utils import get_build_folders, rm_rf, get_logger, get_conda_operation_loc
 
 on_win = (sys.platform == 'win32')
 invocation_time = ''
+
+
 def set_invocation_time():
     global invocation_time
     invocation_time = str(int(time.time() * 1000))
+
+
 set_invocation_time()
 
 
