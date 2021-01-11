@@ -1375,8 +1375,8 @@ def build_info_files_json_v1(m, prefix, files, files_with_prefix):
         no_link = is_no_link(no_link_files, fi)
         if no_link:
             file_info["no_link"] = no_link
-        if prefix_placeholder and file_mode:
-            file_info["prefix_placeholder"] = prefix_placeholder
+        if _prefix_placeholder and file_mode:
+            file_info["prefix_placeholder"] = _prefix_placeholder
             file_info["file_mode"] = file_mode
         if file_info.get("path_type") == PathType.hardlink and CrossPlatformStLink.st_nlink(
                 path) > 1:
