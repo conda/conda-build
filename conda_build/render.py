@@ -693,12 +693,12 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
                 vo = variant['python']
                 if vo not in versions:
                     versions.append(vo)
-        versions = sorted([VersionOrder(v) for v in versions])
+        version_indices = sorted(range(len(versions)), key=lambda k: VersionOrder(versions[k].split(' ')[0]))
         if age < 0:
             age = 0
         elif age > len(versions) - 1:
             age = len(versions) - 1
-        build_ver = versions[len(versions) - 1 - age].norm_version
+        build_ver = versions[version_indices[len(versions) - 1 - age]]
         variants = filter_by_key_value(variants, 'python', build_ver,
                                        'noarch_python_reduction')
 

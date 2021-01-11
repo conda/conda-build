@@ -1345,7 +1345,7 @@ def build_info_files_json_v1(m, prefix, files, files_with_prefix):
     files_json = []
     files_inodes = get_inodes(files, prefix)
     for fi in sorted(files):
-        prefix_placeholder, file_mode = has_prefix(fi, files_with_prefix)
+        _prefix_placeholder, file_mode = has_prefix(fi, files_with_prefix)
         path = os.path.join(prefix, fi)
         short_path = get_short_path(m, fi)
         if short_path:
@@ -1359,7 +1359,7 @@ def build_info_files_json_v1(m, prefix, files, files_with_prefix):
             file_info["size_in_bytes"] = os.stat(path).st_size
         elif file_info["path_type"] == PathType.softlink:
             dest = os.path.normpath(os.path.join(os.path.dirname(path), os.readlink(path)))
-            # softlink that points somewhere
+            # symlink that points somewhere
             if isdir(dest) and not islink(dest):
                 file_info["size_in_bytes"] = 0
             elif isfile(dest) and not islink(dest):
