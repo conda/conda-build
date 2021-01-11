@@ -1345,7 +1345,7 @@ def build_info_files_json_v1(m, prefix, files, files_with_prefix):
     files_json = []
     files_inodes = get_inodes(files, prefix)
     for fi in sorted(files):
-        _prefix_placeholder, file_mode = has_prefix(fi, files_with_prefix)
+        prefix_placeholder, file_mode = has_prefix(fi, files_with_prefix)
         path = os.path.join(prefix, fi)
         short_path = get_short_path(m, fi)
         if short_path:
