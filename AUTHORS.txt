@@ -12,6 +12,7 @@ Authors are sorted by number of commits.
 * Marcelo Duarte Trevisani
 * sophia
 * Isuru Fernando
+* Marcel Bargull
 * John Kirkham
 * Stuart Berg
 * Ryan Grout
@@ -23,7 +24,6 @@ Authors are sorted by number of commits.
 * Anthony Scopatz
 * Johannes Köster
 * James Sexton
-* Marcel Bargull
 * Mandeep Bhutani
 * Patrick Snape
 * Sean
@@ -35,23 +35,23 @@ Authors are sorted by number of commits.
 * soapy1
 * Michael C. Grant
 * Min RK
+* Ken Odegard
 * John Kirkham
+* Connor Martin
 * Teake Nutma
 * Ullrich Koethe
 * Tim Snyder
+* Christopher Burr
 * Matthew R Becker
 * Phil Elson
 * Jillian Rowe
 * Almar Klein
 * Julian Rüth
 * Alex Ford
-* Ken Odegard
 * John Blischak
 * Scheah
 * Alexander Sturm
 * neok-m4700
-* Christopher Burr
-* Connor Martin
 * Richard Frank
 * Filipe Fernandes
 * Matthieu Dartiailh
@@ -102,6 +102,7 @@ Authors are sorted by number of commits.
 * Eric Dill
 * Derek Ludwig
 * Vlad Frolov
+* Hugo Buddelmeijer
 * todd.m.tomashek
 * Michael Cormier
 * Siu Kwan Lam
@@ -212,4 +213,5 @@ Authors are sorted by number of commits.
 * John Omotani
 * Tom Pollard
 * Phil Reinhold
+* Kurt Schelfthout
 * Cheng H. Lee
