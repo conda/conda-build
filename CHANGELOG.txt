@@ -1,4 +1,18 @@
 # current developments
+2021-01-11 3.21.3:
+------------------
+
+Enhancements:
+-------------
+
+* Fix stupid error in prefix replacement  (#4177)
+
+Contributors:
+-------------
+
+* @mingwandroid
+
+
 2021-01-11 3.21.2:
 ------------------
 
