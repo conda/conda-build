@@ -1,4 +1,18 @@
 # current developments
+2021-01-11 3.21.1:
+------------------
+
+Bug fixes:
+----------
+
+* Fix noarch: python version from version-age determination  (#4174)
+
+Contributors:
+-------------
+
+* @mingwandroid
+
+
 2021-01-10 3.21.0:
 ------------------
 
