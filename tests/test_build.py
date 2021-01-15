@@ -139,19 +139,35 @@ def test_create_info_files_json_symlinks(testing_workdir, testing_metadata):
     path_foo = os.path.join(testing_workdir, "foo")
     path_two_symlink = os.path.join(testing_workdir, "two_sl")
     symlink_to_nowhere = os.path.join(testing_workdir, "nowhere_sl")
+    recursive_symlink = os.path.join(testing_workdir, "recursive_sl")
+    cycle1_symlink = os.path.join(testing_workdir, "cycle1_sl")
+    cycle2_symlink = os.path.join(testing_workdir, "cycle2_sl")
     open(path_one, "a").close()
     open(path_two, "a").close()
     open(path_foo, "a").close()
     os.symlink(path_two, path_two_symlink)
     os.symlink(path_three, symlink_to_nowhere)
+
+    # make some recursive links
+    os.symlink(path_two_symlink, recursive_symlink)
+    os.symlink(cycle1_symlink, cycle2_symlink)
+    os.symlink(cycle2_symlink, cycle1_symlink)
+
     files_with_prefix = [("prefix/path", "text", "foo")]
-    files = ["one", "two", "foo", "two_sl", "nowhere_sl"]
+    files = ["one", "two", "foo", "two_sl", "nowhere_sl", "recursive_sl", "cycle1_sl", "cycle2_sl"]
 
     build.create_info_files_json_v1(testing_metadata, info_dir, testing_workdir, files,
                                     files_with_prefix)
     files_json_path = os.path.join(info_dir, "paths.json")
     expected_output = {
-        "paths": [{"file_mode": "text", "path_type": "hardlink", "_path": "foo",
+        "paths": [
+                  {"path_type": "softlink", "_path": "cycle1_sl",
+                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                   "size_in_bytes": 0},
+                  {"path_type": "softlink", "_path": "cycle2_sl",
+                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                   "size_in_bytes": 0},
+                  {"file_mode": "text", "path_type": "hardlink", "_path": "foo",
                    "prefix_placeholder": "prefix/path",
                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                    "size_in_bytes": 0},
@@ -159,6 +175,9 @@ def test_create_info_files_json_symlinks(testing_workdir, testing_metadata):
                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                    "size_in_bytes": 0},
                   {"path_type": "hardlink", "_path": "one",
+                   "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                   "size_in_bytes": 0},
+                  {"path_type": "softlink", "_path": "recursive_sl",
                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                    "size_in_bytes": 0},
                   {"path_type": "hardlink", "_path": "two",

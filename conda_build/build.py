@@ -1340,6 +1340,37 @@ def path_type(path):
     return PathType.softlink if islink(path) else PathType.hardlink
 
 
+def _recurse_symlink_to_size(path, seen=None):
+    """recursively follow links to get size of what they finally point to
+
+    `path` is the current path
+    `seen` is a set that holds anything the function has already processed
+
+    By using `seen`, we can avoid getting stuck in cycles.
+    """
+    # set seen to an empty set on first invocation
+    if seen is None:
+        seen = set()
+
+    if path not in seen:
+        seen |= set([path])
+        dest = os.path.normpath(os.path.join(os.path.dirname(path), os.readlink(path)))
+
+        # symlink that points somewhere
+        if isdir(dest) and not islink(dest):
+            return 0
+        elif isfile(dest) and not islink(dest):
+            return os.stat(path).st_size
+        elif islink(dest):
+            return _recurse_symlink_to_size(dest, seen=seen)
+        elif not isfile(dest):
+            # this is a symlink that points to nowhere, so is zero bytes
+            warnings.warn('file %s is a symlink with no target' % path, UserWarning)
+            return 0
+
+    return 0
+
+
 def build_info_files_json_v1(m, prefix, files, files_with_prefix):
     no_link_files = m.get_value('build/no_link')
     files_json = []
@@ -1358,18 +1389,7 @@ def build_info_files_json_v1(m, prefix, files, files_with_prefix):
         if file_info["path_type"] == PathType.hardlink:
             file_info["size_in_bytes"] = os.stat(path).st_size
         elif file_info["path_type"] == PathType.softlink:
-            dest = os.path.normpath(os.path.join(os.path.dirname(path), os.readlink(path)))
-            # symlink that points somewhere
-            if isdir(dest) and not islink(dest):
-                file_info["size_in_bytes"] = 0
-            elif isfile(dest) and not islink(dest):
-                file_info["size_in_bytes"] = os.stat(path).st_size
-            elif islink(dest):
-                sys.exit("TODO :: Nested symlinks not handled yet")
-            elif not isfile(dest):
-                # this is a symlink that points to nowhere, so is zero bytes
-                file_info["size_in_bytes"] = 0
-                warnings.warn('file %s is a symlink with no target' % path, UserWarning)
+            file_info["size_in_bytes"] = _recurse_symlink_to_size(path)
         elif isdir(path):
             file_info["size_in_bytes"] = 0
         no_link = is_no_link(no_link_files, fi)
