@@ -25,7 +25,7 @@ from conda_build.conda_interface import memoized
 from conda_build.features import feature_list
 from conda_build.config import Config, get_or_merge_config
 from conda_build.utils import (ensure_list, find_recipe, expand_globs, get_installed_packages,
-                               HashableDict, insert_variant_versions)
+                               HashableDict, insert_variant_versions, islist)
 from conda_build.license_family import ensure_valid_license_family
 
 try:
@@ -337,66 +337,129 @@ def ensure_matching_hashes(output_metadata):
 
 def parse(data, config, path=None):
     data = select_lines(data, ns_cfg(config), variants_in_place=bool(config.variant))
-    res = yamlize(data)
-    # ensure the result is a dict
-    if res is None:
-        res = {}
-    for field in FIELDS:
-        if field not in res:
-            continue
-        # ensure that empty fields are dicts (otherwise selectors can cause invalid fields)
-        if not res[field]:
-            res[field] = {}
-        # source field may be either a dictionary, or a list of dictionaries
-        if field in OPTIONALLY_ITERABLE_FIELDS:
-            if not (isinstance(res[field], dict) or (hasattr(res[field], '__iter__') and not
-                        isinstance(res[field], string_types))):
-                raise RuntimeError("The %s field should be a dict or list of dicts, not "
-                                   "%s in file %s." % (field, res[field].__class__.__name__, path))
-        else:
-            if not isinstance(res[field], dict):
-                raise RuntimeError("The %s field should be a dict, not %s in file %s." %
-                                (field, res[field].__class__.__name__, path))
-
-    ensure_valid_fields(res)
-    ensure_valid_license_family(res)
-    ensure_valid_noarch_value(res)
-    return sanitize(res)
+    meta = validate(yamlize(data) or {}, path=path)
+    ensure_valid_fields(meta)
+    ensure_valid_license_family(meta)
+    ensure_valid_noarch_value(meta)
+    return sanitize(meta)
 
 
 TRUES = {'y', 'on', 'true', 'yes'}
 FALSES = {'n', 'no', 'false', 'off'}
 
-# If you update this please update the example in
-# conda-docs/docs/source/build.rst
-FIELDS = {
+# Metafile Schema
+# A simplified implementation of JSON Schema (see https://json-schema.org/)
+#
+# The most basic example is a key where we do not care what the value is:
+#   "key-any": None
+# this is the equivalent to saying:
+#   "key-any": {type: None}
+#
+# We can also specify simple types (e.g. bool or str) in the same way:
+#   "key-bool": bool
+#   "key-str": {type: str}
+#
+# dicts are also defined in this manner but we start to introduce keywords that help us to
+# better define the expected types. The following examples are equivalent where all values
+# will simply be passed through:
+#   "dict-section": dict
+#   "dict-section": {type: dict}
+#   "dict-section": {
+#       type: dict,
+#       additional: True,  # "additional" signifies whether unspecified keys are allowed
+#   }
+# With the "additional" keyword we can be very explicit in which keys we allow:
+#   "dict-section": {
+#       type: dict,
+#       "key-foo": None,
+#       "key-bar": str,
+#       additional: False,  # do not allow keys besides those explicitly defined
+#   }
+# Note: the "type" keyword defaults to dict
+# Note: the "additional" keyword defaults to True
+#
+# But even if we wish to accept any key we may still wish to check the value types, for this
+# purpose we have "element":
+#   "dict-section": {
+#       type: dict,
+#       additional: True,  # any key is accepted
+#       element: str,  # values must be str
+#   }
+# Note: the "element" keyword defaults to None
+#
+# lists are also defined in a similar manner where the following examples are equivalent:
+#   "list-section": list
+#   "list-section": {type: list}
+#   "list-section": {type: list, element: None}
+# Notice how we can use "element" to define the value type:
+#   "list-section": {
+#       type: list,
+#       element: {
+#           type: dict,
+#           "key-qux": bool,
+#           "key-quux": int,
+#           additional: False,
+#       },
+#   }
+#
+# For both dict and list we also allow a level of user convenience. This is enabled via
+# the "autocorrect" keyword. For dicts we can specify an "autocorrect" key that is used to
+# "push" the value down into a dict if the value is not already a dict. As an example,
+# given the following schema:
+#   SCHEMA = {"key-quz": {type: dict, autocorrect: "key-name", additional: True}}
+# the following metadatas are equivalent:
+#   METADATA1 = {"key-quz": "some value"}
+#   METADATA2 = {"key-quz": {"key-name": "some value"}}
+# This is similar for list:
+#   SCHEMA = {"key-corge": {type: list, autocorrect: True}}
+#   METADATA1 = {"key-corge": "some value"}
+#   METADATA2 = {"key-corge": ["some value"]}
+# Note: if type is dict, autocorrect defaults to False
+# Note: if type is list, autocorrect defaults to True
+element = object()
+additional = object()
+autocorrect = object()
+_SCHEMA_KEYWORDS = (type, element, additional, autocorrect)
+_EMPTY_VALUES = (None, "", [], {})
+
+# Note: if you update this please update the example in conda-docs/docs/source/build.rst
+FIELDS = SCHEMA = {
+    type: dict,
     'package': {
+        type: dict,
         'name': None,
         'version': text_type,
+        additional: False,
     },
     'source': {
-        'fn': None,
-        'url': None,
-        'md5': text_type,
-        'sha1': None,
-        'sha256': None,
-        'path': text_type,
-        'path_via_symlink': None,
-        'git_url': text_type,
-        'git_tag': text_type,
-        'git_branch': text_type,
-        'git_rev': text_type,
-        'git_depth': None,
-        'hg_url': None,
-        'hg_tag': None,
-        'svn_url': text_type,
-        'svn_rev': None,
-        'svn_ignore_externals': None,
-        'folder': None,
-        'no_hoist': None,
-        'patches': list,
+        type: list,
+        element: {
+            type: dict,
+            'fn': None,
+            'url': None,
+            'md5': text_type,
+            'sha1': None,
+            'sha256': None,
+            'path': text_type,
+            'path_via_symlink': None,
+            'git_url': text_type,
+            'git_tag': text_type,
+            'git_branch': text_type,
+            'git_rev': text_type,
+            'git_depth': None,
+            'hg_url': None,
+            'hg_tag': None,
+            'svn_url': text_type,
+            'svn_rev': None,
+            'svn_ignore_externals': None,
+            'folder': None,
+            'no_hoist': None,
+            'patches': {type: list, element: text_type},
+            additional: False,
+        }
     },
     'build': {
+        type: dict,
         'number': None,
         'string': text_type,
         'entry_points': list,
@@ -405,7 +468,7 @@ FIELDS = {
         'features': list,
         'track_features': list,
         'preserve_egg_dir': bool,
-        'no_link': None,
+        'no_link': list,
         'binary_relocation': bool,
         'script': list,
         'noarch': text_type,
@@ -425,7 +488,16 @@ FIELDS = {
         'include_recipe': None,
         'preferred_env': text_type,
         'preferred_env_executable_paths': list,
-        'run_exports': list,
+        'run_exports': {
+            type: dict,
+            autocorrect: "weak",
+            "weak": {type: list, element: text_type},
+            "strong": {type: list, element: text_type},
+            "noarch": {type: list, element: text_type},
+            "weak_constrains": {type: list, element: text_type},
+            "strong_constrains": {type: list, element: text_type},
+            additional: False,
+        },
         'ignore_run_exports': list,
         'ignore_run_exports_from': list,
         'requires_features': dict,
@@ -439,47 +511,60 @@ FIELDS = {
         'missing_dso_whitelist': None,
         'error_overdepending': None,
         'error_overlinking': None,
+        additional: False,
     },
     'outputs': {
-        'name': None,
-        'version': None,
-        'number': None,
-        'script': None,
-        'script_interpreter': None,
-        'build': None,
-        'requirements': None,
-        'test': None,
-        'about': None,
-        'extra': None,
-        'files': None,
-        'type': None,
-        'run_exports': None,
-        'target': None,
+        type: list,
+        element: {
+            type: dict,
+            'name': None,
+            'version': None,
+            'number': None,
+            'script': None,
+            'script_interpreter': None,
+            'build': None,
+            'requirements': None,
+            'test': None,
+            'about': None,
+            'extra': None,
+            'files': None,
+            'type': None,
+            'run_exports': None,
+            'target': None,
+            additional: False,
+        }
     },
     'requirements': {
+        type: dict,
         'build': list,
         'host': list,
         'run': list,
         'conflicts': list,
         'run_constrained': list,
+        additional: False,
     },
     'app': {
+        type: dict,
         'entry': None,
         'icon': None,
         'summary': None,
         'type': None,
         'cli_opts': None,
         'own_environment': bool,
+        additional: False,
     },
     'test': {
+        type: dict,
         'requires': list,
         'commands': list,
         'files': list,
         'imports': list,
         'source_files': list,
         'downstreams': list,
+        additional: False,
     },
     'about': {
+        type: dict,
         'home': None,
         # these are URLs
         'dev_url': None,
@@ -496,13 +581,121 @@ FIELDS = {
         'tags': list,
         'keywords': list,
         # paths in source tree
-        'license_file': None,
+        'license_file': list,
         'readme': None,
+        additional: False,
     },
+    'extra': {
+        type: dict,
+        'parent_recipe': {
+            type: dict,
+            'name': text_type,
+            additional: True,
+        },
+        additional: True,
+    },
+    additional: False,
 }
 
-# Fields that may either be a dictionary or a list of dictionaries.
-OPTIONALLY_ITERABLE_FIELDS = ('source', 'outputs')
+
+def validate(data, types=SCHEMA, section=None, path=None):
+    # handle yaml 1.1 boolean values
+    if isinstance(data, text_type):
+        if data.lower() in TRUES:
+            data = True
+        elif data.lower() in FALSES:
+            data = False
+
+    types = types if isinstance(types, dict) else {type: types}
+    type_ = types.get(type, dict)
+    if type_ is None:
+        # no further checks are done
+        return data
+
+    autocorrect_ = types.get(autocorrect, type_ is list)
+    if type_ in (list, dict) and autocorrect_:
+        # no type checking as these are auto-corrected as needed
+        pass
+    elif type_ is text_type and isinstance(data, (type_, str)):
+        # explicitly including str in instance check is needed for PY2
+        # when PY3 only, combine this with below clauses
+        pass
+    elif isinstance(data, type_):
+        # when PY3 only, combine this with above/below clauses
+        pass
+    else:
+        raise TypeError(
+            "Expected {}{}{}, not {!r}".format(
+                type_.__name__,
+                " in section {}".format(section) if section else "",
+                " in file {}".format(path) if path else "",
+                data,
+            )
+        )
+
+    if type_ is list:
+        return _validate_list(
+            data=data,
+            default=types.get(element),
+            autocorrect=autocorrect_,
+            section=section,
+            path=path,
+        )
+    elif type_ is dict:
+        return _validate_dict(
+            data=data,
+            default=types.get(element),
+            types=types,
+            autocorrect=autocorrect_,
+            section=section,
+            path=path,
+        )
+    return data
+
+
+def _validate_list(data, default, autocorrect, section, path):
+    if autocorrect and not islist(data, include_dict=False):
+        data = ensure_list(data, include_dict=False)
+
+    for index in range(len(data) - 1, -1, -1):
+        data[index] = validate(
+            data=data[index],
+            types=default,
+            section="{}/{}".format(section, index) if section else index,
+            path=path,
+        )
+        # drop values that were or have been rendered empty
+        if data[index] in _EMPTY_VALUES:
+            del data[index]
+    return data
+
+
+def _validate_dict(data, default, types, autocorrect, section, path):
+    if autocorrect and not isinstance(data, dict):
+        data = {autocorrect: data}
+
+    unknown = tuple(set(data).difference(types))
+    if unknown and not types.get(additional, True):
+        # unspecified keys are not allowed
+        raise SyntaxError(
+            "Illegal keys ({}) defined{}{}.".format(
+                unknown,
+                " in section {}".format(section) if section else "",
+                " in file {}".format(path) if path else "",
+            )
+        )
+
+    for key in tuple(data):
+        data[key] = validate(
+            data=data[key],
+            types=types.get(key, default),
+            section="{}/{}".format(section, key) if section else key,
+            path=path,
+        )
+        # drop values that were or have been rendered empty
+        if data[key] in _EMPTY_VALUES:
+            del data[key]
+    return data
 
 
 def sanitize(meta):
@@ -1136,8 +1329,8 @@ class MetaData(object):
             index = int(index)
 
         # get correct default
-        if autotype and default is None and FIELDS.get(section, {}).get(key):
-            default = FIELDS[section][key]()
+        if autotype and default is None and SCHEMA.get(section, {}).get(key):
+            default = SCHEMA[section][key]()
 
         section_data = self.get_section(section)
         if isinstance(section_data, dict):
@@ -1173,22 +1366,7 @@ class MetaData(object):
         return value
 
     def check_fields(self):
-        def check_field(key, section):
-            if key not in FIELDS[section]:
-                raise ValueError("in section %r: unknown key %r" %
-                                 (section, key))
-        for section, submeta in iteritems(self.meta):
-            # anything goes in the extra section
-            if section == 'extra':
-                continue
-            if section not in FIELDS:
-                raise ValueError("unknown section: %s" % section)
-            for key_or_dict in submeta:
-                if section in OPTIONALLY_ITERABLE_FIELDS and isinstance(key_or_dict, dict):
-                    for key in key_or_dict.keys():
-                        check_field(key, section)
-                else:
-                    check_field(key_or_dict, section)
+        validate(self.meta)
         return True
 
     def name(self, fail_ok=False):
