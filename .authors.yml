@@ -414,7 +414,7 @@
 - name: Ray Donnelly
   email: mingw.android@gmail.com
   github: mingwandroid
-  num_commits: 658
+  num_commits: 662
   first_commit: 2016-03-06 18:52:51
 - name: Paul Madden
   email: maddenp@colorado.edu
@@ -939,7 +939,7 @@
   github: theultimate1
 - name: Kai Tietz
   email: ktietz@anaconda.com
-  num_commits: 5
+  num_commits: 7
   first_commit: 2019-04-04 02:38:29
   github: katietz
   alternate_emails:
@@ -1036,7 +1036,7 @@
   github: 183amir
 - name: Matthew R Becker
   email: becker.mr@gmail.com
-  num_commits: 11
+  num_commits: 12
   first_commit: 2019-10-17 23:05:16
   github: beckermr
 - name: Jinzhe Zeng
@@ -1051,7 +1051,7 @@
   github: bdice
 - name: Matthew R. Becker
   email: beckermr@users.noreply.github.com
-  num_commits: 6
+  num_commits: 7
   first_commit: 2020-01-03 08:58:23
   github: beckermr
 - name: Sophian Guidara

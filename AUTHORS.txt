@@ -37,12 +37,12 @@ Authors are sorted by number of commits.
 * Min RK
 * Ken Odegard
 * John Kirkham
+* Matthew R Becker
 * Connor Martin
 * Teake Nutma
 * Ullrich Koethe
 * Tim Snyder
 * Christopher Burr
-* Matthew R Becker
 * Phil Elson
 * Jillian Rowe
 * Almar Klein
@@ -53,6 +53,8 @@ Authors are sorted by number of commits.
 * Alexander Sturm
 * neok-m4700
 * Richard Frank
+* Kai Tietz
+* Matthew R. Becker
 * Filipe Fernandes
 * Matthieu Dartiailh
 * Marius van Niekerk
@@ -62,7 +64,6 @@ Authors are sorted by number of commits.
 * Patrick Sodré
 * Bruno Oliveira
 * Bryan W. Weber
-* Matthew R. Becker
 * Thomas A Caswell
 * Mario Juric
 * Ivan Kalev
@@ -71,7 +72,6 @@ Authors are sorted by number of commits.
 * Elliot Hughes
 * Amir MOHAMMADI
 * Chris Hogan
-* Kai Tietz
 * Daniel Bast
 * Pradipta Ghosh
 * Heather Kelly
