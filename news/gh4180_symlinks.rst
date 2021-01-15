@@ -6,7 +6,7 @@ Enhancements:
 Bug fixes:
 ----------
 
-* Fixed bug where symlinks in symlinks caused conda build to exit.
+* Fixed bug where symlinks in symlinks caused conda build to exit.  (#4180)
 
 Deprecations:
 -------------
