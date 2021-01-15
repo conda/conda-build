@@ -124,6 +124,19 @@ CDTs = dict({'centos5': {'dirname': 'centos5',
                          # gives nothing nor does rpm --showrc | grep gdk
                          'macros': {'pyver': '2.6.6',
                                     'gdk_pixbuf_base_version': '2.24.1'}},
+            'clefos': {'dirname': 'clefos',
+                       'short_name': 'cos7',
+                       'base_url': 'http://download.sinenomine.net/clefos/7/os/{base_architecture}/',  # noqa
+                       'sbase_url': 'http://download.sinenomine.net/clefos/7/source/srpms/', # noqa
+                       'repomd_url': 'http://download.sinenomine.net/clefos/7/os/repodata/repomd.xml', # noqa
+                       'host_machine': '{gnu_architecture}-conda-cos7-linux-gnu',
+                       'host_subdir': 'linux-s390x',
+                       'fname_architecture': '{architecture}',
+                       'rpm_filename_platform': 'el7.{architecture}',
+                       'checksummer': hashlib.sha256,
+                       'checksummer_name': "sha256",
+                       'macros': {'pyver': '2.7.5',
+                                  'gdk_pixbuf_base_version': '2.36.2'}},
             'suse_leap_rpi3': {'dirname': 'suse_leap_rpi3',
                                'short_name': 'slrpi3',
                                # I cannot locate the src.rpms for OpenSUSE leap. The existence
