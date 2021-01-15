@@ -41,8 +41,6 @@ outputs:
         - jpeg
     script: echo_file.sh            # [not win]
     script: echo_file.bat           # [win]
-    missing_dso_whitelist:
-      - '*'
     test:
       commands:
         - test -e $PREFIX/test.txt                              # [unix]

@@ -6,6 +6,6 @@ requirements:
   run:
     - r-base
 
-tests:
+test:
   imports:
-    - r-boot
+    - base

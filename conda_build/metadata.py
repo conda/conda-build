@@ -13,7 +13,7 @@ import time
 
 from bs4 import UnicodeDammit
 
-from .conda_interface import iteritems, PY3, text_type
+from .conda_interface import PY3, text_type
 from .conda_interface import md5_file
 from .conda_interface import non_x86_linux_machines
 from .conda_interface import MatchSpec
@@ -337,7 +337,7 @@ def ensure_matching_hashes(output_metadata):
 
 def parse(data, config, path=None):
     data = select_lines(data, ns_cfg(config), variants_in_place=bool(config.variant))
-    meta = validate(yamlize(data) or {}, path=path)
+    meta = validate(yamlize(data) or {}, path=path) or {}
     ensure_valid_fields(meta)
     ensure_valid_license_family(meta)
     ensure_valid_noarch_value(meta)
@@ -598,7 +598,24 @@ FIELDS = SCHEMA = {
 }
 
 
+def _get_type(*keys, schema=SCHEMA):
+    key, *keys = keys
+    schema = schema[key] if isinstance(schema[key], dict) else {type: schema[key]}
+    type_ = schema.get(type, dict)
+    if keys and type_ is dict:
+        return _get_type(*keys, schema=schema)
+    elif keys and type_ is list:
+        return _get_type(*keys, schema=schema.get(element, None))
+    elif type_ is None:
+        raise KeyError(key)
+    return type_
+
+
 def validate(data, types=SCHEMA, section=None, path=None):
+    # if data is empty no further checks are needed
+    if data in _EMPTY_VALUES:
+        return None
+
     # handle yaml 1.1 boolean values
     if isinstance(data, text_type):
         if data.lower() in TRUES:
@@ -609,21 +626,22 @@ def validate(data, types=SCHEMA, section=None, path=None):
     types = types if isinstance(types, dict) else {type: types}
     type_ = types.get(type, dict)
     if type_ is None:
-        # no further checks are done
+        # if no type is defined no further checks are needed
         return data
 
     autocorrect_ = types.get(autocorrect, type_ is list)
     if type_ in (list, dict) and autocorrect_:
         # no type checking as these are auto-corrected as needed
         pass
-    elif type_ is text_type and isinstance(data, (type_, str)):
-        # explicitly including str in instance check is needed for PY2
-        # when PY3 only, combine this with below clauses
-        pass
+    elif type_ is text_type and isinstance(data, str):
+        # PY2: explicitly testing for str since text_type is unicode
+        # PY3: when PY2 support is dropped this can be combined with below clauses
+        data = type_(data)  # ensuring value is unicode, only needed for PY2
     elif isinstance(data, type_):
-        # when PY3 only, combine this with above/below clauses
+        # PY3: when PY2 support is dropped this can be combined with above/below clauses
         pass
     else:
+        # PY3: when PY2 support is dropped this can be combined with above clauses
         raise TypeError(
             "Expected {}{}{}, not {!r}".format(
                 type_.__name__,
@@ -678,7 +696,7 @@ def _validate_dict(data, default, types, autocorrect, section, path):
     if unknown and not types.get(additional, True):
         # unspecified keys are not allowed
         raise SyntaxError(
-            "Illegal keys ({}) defined{}{}.".format(
+            "Illegal keys {} defined{}{}.".format(
                 unknown,
                 " in section {}".format(section) if section else "",
                 " in file {}".format(path) if path else "",
@@ -1329,8 +1347,12 @@ class MetaData(object):
             index = int(index)
 
         # get correct default
-        if autotype and default is None and SCHEMA.get(section, {}).get(key):
-            default = SCHEMA[section][key]()
+        try:
+            if autotype and default is None:
+                default = _get_type(section, key)()
+        except KeyError:
+            # section/key not defined in SCHEMA
+            pass
 
         section_data = self.get_section(section)
         if isinstance(section_data, dict):
