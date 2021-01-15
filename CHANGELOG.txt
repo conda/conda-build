@@ -1,4 +1,26 @@
 # current developments
+2021-01-15 3.21.4:
+------------------
+
+Enhancements:
+-------------
+
+* Add new centos 7 distribution cleof to rpm skeleton for s390x.  (#4181)
+
+Bug fixes:
+----------
+
+* Fixed bug where symlinks in symlinks caused conda build to exit.  (#4180)
+
+Contributors:
+-------------
+
+* @mingwandroid
+* @beckermr
+* @katietz
+* @beckermr
+
+
 2021-01-11 3.21.3:
 ------------------
 
