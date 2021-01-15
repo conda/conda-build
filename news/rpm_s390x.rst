@@ -1,0 +1,24 @@
+Enhancements:
+-------------
+
+* Add new centos 7 distribution cleof to rpm skeleton for s390x.
+
+Bug fixes:
+----------
+
+* <news item>
+
+Deprecations:
+-------------
+
+* <news item>
+
+Docs:
+-----
+
+* <news item>
+
+Other:
+------
+
+* <news item>
