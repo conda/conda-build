@@ -912,7 +912,7 @@ def getter(index):
         return operator.itemgetter(index)
 
 
-def comma_join(items):
+def comma_join(items, conjunction="and"):
     """
     Like ', '.join(items) but with and
 
@@ -925,7 +925,9 @@ def comma_join(items):
     >>> comma_join(['a', 'b', 'c'])
     'a, b, and c'
     """
-    return ' and '.join(items) if len(items) <= 2 else ', '.join(items[:-1]) + ', and ' + items[-1]
+    if len(items) <= 2:
+        return ' {} '.format(conjunction).join(items)
+    return ', '.join(items[:-1]) + ', {} '.format(conjunction) + items[-1]
 
 
 def safe_print_unicode(*args, **kwargs):
@@ -1224,13 +1226,21 @@ def islist(arg, uniform=False, include_dict=True):
     :return: Whether `arg` is a `list`
     :rtype: bool
     """
-    if isinstance(arg, string_types) or not hasattr(arg, '__iter__'):
-        # str and non-iterables are not lists
+    if isinstance(arg, string_types):
+        # strs are not lists
         return False
-    elif not include_dict and isinstance(arg, dict):
+
+    try:
+        iter(arg)
+    except TypeError:
+        # non-iterables are not lists
+        return False
+
+    if not include_dict and isinstance(arg, dict):
         # do not treat dict as a list
         return False
-    elif not uniform:
+
+    if not uniform:
         # short circuit for non-uniformity
         return True
 
