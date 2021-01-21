@@ -1280,7 +1280,10 @@ def expand_globs(path_list, root_dir):
             if not glob_files:
                 log = get_logger(__name__)
                 log.error('Glob {} did not match in root_dir {}'.format(path, root_dir))
-            files.extend(glob_files)
+            # https://docs.python.org/3/library/glob.html#glob.glob states that
+            # "whether or not the results are sorted depends on the file system".
+            # Avoid this potential ambiguity by sorting. (see #4185)
+            files.extend(sorted(glob_files))
     prefix_path_re = re.compile('^' + re.escape('%s%s' % (root_dir, os.path.sep)))
     files = [prefix_path_re.sub('', f, 1) for f in files]
     return files
