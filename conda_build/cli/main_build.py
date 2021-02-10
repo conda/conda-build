@@ -440,8 +440,8 @@ def execute(args):
     elif args.check:
         action = check_action
 
+    failed_recipes = []
     if action == test_action:
-        failed_recipes = []
         recipes = [item for sublist in
                    [glob(os.path.abspath(recipe)) if '*' in recipe
                                                   else [recipe] for recipe in args.recipe]
@@ -449,27 +449,45 @@ def execute(args):
         for recipe in recipes:
             try:
                 action(recipe, config)
-            except:
-                if not args.keep_going:
-                    raise
-                else:
+            except Exception as e:
+                if args.keep_going:
                     failed_recipes.append(recipe)
                     continue
-        if failed_recipes:
-            print("Failed recipes:")
-            for recipe in failed_recipes:
-                print("  - %s" % recipe)
-            sys.exit(len(failed_recipes))
-        else:
-            print("All tests passed")
+                else:
+                    raise e
         outputs = []
-
     elif action:
-        outputs = [action(recipe, config) for recipe in args.recipe]
+        for recipe in args.recipe:
+            try:
+                outputs.append(action(recipe, config))
+            except Exception as e:
+                if args.keep_going:
+                    failed_recipes.append(recipe)
+                    from traceback import print_exc
+                    print(print_exc())
+                else:
+                    raise e
+                continue
     else:
-        outputs = api.build(args.recipe, post=args.post, test_run_post=args.test_run_post,
-                            build_only=args.build_only, notest=args.notest, already_built=None, config=config,
-                            verify=args.verify, variants=args.variants, cache_dir=args.cache_dir)
+        try:
+            outputs = api.build(args.recipe, post=args.post, test_run_post=args.test_run_post,
+                                build_only=args.build_only, notest=args.notest, already_built=None, config=config,
+                                verify=args.verify, variants=args.variants, cache_dir=args.cache_dir,
+                                keep_going=args.keep_going)
+        except:  # [noqa]
+            if not args.keep_going:
+                raise
+            else:
+                failed_recipes.append(args.recipe)
+
+    if failed_recipes:
+        print("Failed recipes:")
+        for recipe in failed_recipes:
+            print("  - %s" % recipe)
+        sys.exit(len(failed_recipes))
+    else:
+        print("All tests passed")
+
 
     if not args.output and len(utils.get_build_folders(config.croot)) > 0:
         build.print_build_intermediate_warning(config)

@@ -1515,6 +1515,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
     get_all_replacements(metadata.config)
     files = output.get('files', [])
 
+    keep_going = kw['keep_going'] if 'keep_going' in kw else False
     # this is because without any requirements at all, we still need to have the host prefix exist
     try:
         os.makedirs(metadata.config.host_prefix)
@@ -1998,7 +1999,7 @@ def create_build_envs(m, notest):
 
 
 def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=False,
-          built_packages=None, notest=False, provision_only=False):
+          built_packages=None, notest=False, provision_only=False, keep_going=False):
     '''
     Build the package with the specified metadata.
 
@@ -2156,6 +2157,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
 
         if isdir(src_dir):
             build_stats = {}
+            top_build_failed = False
             if utils.on_win:
                 build_file = join(m.path, 'bld.bat')
                 if script:
@@ -2195,8 +2197,16 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                         del env['CONDA_BUILD']
 
                         # this should raise if any problems occur while building
-                        utils.check_call_env(cmd, env=env, rewrite_stdout_env=rewrite_env,
-                                             cwd=src_dir, stats=build_stats)
+                        try:
+                            utils.check_call_env(cmd, env=env, rewrite_stdout_env=rewrite_env,
+                                                 cwd=src_dir, stats=build_stats)
+                        except Exception as e:
+                            if keep_going:
+                                log.warn("Failed top-level build: {}, but will keep going with outputs anyway".format(
+                                    printed_fns))
+                                top_build_failed = True
+                            else:
+                                raise e
                         utils.remove_pycache_from_scripts(m.config.host_prefix)
             if build_stats and not provision_only:
                 log_stats(build_stats, "building {}".format(m.name()))
@@ -2355,7 +2365,15 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                     with utils.path_prepended(m.config.build_prefix):
                         env = environ.get_dict(m=m)
                     pkg_type = 'conda' if not hasattr(m, 'type') else m.type
-                    newly_built_packages = bundlers[pkg_type](output_d, m, env, stats)
+                    try:
+                        newly_built_packages = bundlers[pkg_type](output_d, m, env, stats, keep_going=keep_going)
+                    except Exception as e:
+                        log.warn("bundlers[pkg_type={}]() failed for {}".format(pkg_type, m.config.variant))
+                        if keep_going:
+                            log.warn(".. but I will --keep-going, like a trooper")
+                            continue
+                        else:
+                            raise e
                     # warn about overlapping files.
                     if 'checksums' in output_d:
                         for file, csum in output_d['checksums'].items():
@@ -2982,7 +3000,7 @@ def check_external():
             )
 
 
-def build_tree(recipe_list, config, stats, build_only=False, post=None, notest=False, variants=None):
+def build_tree(recipe_list, config, stats, build_only=False, post=None, notest=False, variants=None, keep_going=False):
 
     to_build_recursive = []
     recipe_list = deque(recipe_list)
@@ -3072,13 +3090,25 @@ def build_tree(recipe_list, config, stats, build_only=False, post=None, notest=F
                 if metadata.name() not in metadata.config.build_folder:
                     metadata.config.compute_build_id(metadata.name(), metadata.version(), reset=True)
 
-                packages_from_this = build(metadata, stats,
-                                           post=post,
-                                           need_source_download=need_source_download,
-                                           need_reparse_in_env=need_reparse_in_env,
-                                           built_packages=built_packages,
-                                           notest=notest,
-                                           )
+                try:
+                    packages_from_this = build(metadata, stats,
+                                               post=post,
+                                               need_source_download=need_source_download,
+                                               need_reparse_in_env=need_reparse_in_env,
+                                               built_packages=built_packages,
+                                               notest=notest,
+                                               keep_going=keep_going
+                                               )
+                except:  # [noqa]
+                    log = utils.get_logger(__name__)
+                    if keep_going:
+                        log.warn("Failed to build variant: {}\n.. ignoring as --keep-going".format(
+                            metadata.config.variant))
+                        continue
+                    else:
+                        log.warn("Failed to build variant: {}'\n.. failing as not --keep-going".format(
+                            metadata.config.variant))
+                    raise
                 if not notest:
                     for pkg, dict_and_meta in packages_from_this.items():
                         if pkg.endswith(CONDA_PACKAGE_EXTENSIONS) and os.path.isfile(pkg):

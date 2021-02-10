@@ -183,6 +183,8 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
     if not recipes:
         raise ValueError('No valid recipes found for input: {}'.format(recipe_paths_or_metadata))
 
+    keep_going = kwargs['keep_going'] if 'keep_going' in kwargs else False
+
     return build_tree(
         recipes,
         config=get_or_merge_config(config, **kwargs),
@@ -192,7 +194,8 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
         build_only=build_only,
         post=post,
         notest=notest,
-        variants=variants
+        variants=variants,
+        keep_going=keep_going
     )
 
 
