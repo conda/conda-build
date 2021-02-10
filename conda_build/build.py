@@ -1365,7 +1365,7 @@ def _recurse_symlink_to_size(path, seen=None):
             return _recurse_symlink_to_size(dest, seen=seen)
         elif not isfile(dest):
             # this is a symlink that points to nowhere, so is zero bytes
-            warnings.warn('file %s is a symlink with no target' % path, UserWarning)
+            warnings.warn('file %s is a symlink with no target: %s' % (path, dest), UserWarning)
             return 0
 
     return 0
@@ -1593,8 +1593,15 @@ def bundle_conda(output, metadata, env, stats, **kw):
             _write_activation_text(dest_file, metadata)
 
         bundle_stats = {}
-        utils.check_call_env(interpreter_and_args + [dest_file],
-                             cwd=metadata.config.work_dir, env=env_output, stats=bundle_stats)
+        try:
+            utils.check_call_env(interpreter_and_args + [dest_file],
+                                 cwd=metadata.config.work_dir, env=env_output, stats=bundle_stats)
+        except Exception as e:
+            if keep_going:
+                log.warning("Failed to build: {}".format(metadata.name()))
+                return []
+            else:
+                raise e
         log_stats(bundle_stats, "bundling {}".format(metadata.name()))
         if stats is not None:
             stats[stats_key(metadata, 'bundle_{}'.format(metadata.name()))] = bundle_stats
@@ -2126,7 +2133,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
         output_yaml(m, os.path.join(m.config.work_dir, 'metadata_conda_debug.yaml'))
 
         # get_dir here might be just work, or it might be one level deeper,
-        #    dependening on the source.
+        #    depending on the source.
         src_dir = m.config.work_dir
         if isdir(src_dir):
             if m.config.verbose:

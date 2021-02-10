@@ -1330,11 +1330,19 @@ def check_symlinks(files, prefix, croot):
             # symlinks to binaries outside of the same dir don't work.  RPATH stuff gets confused
             #    because ld.so follows symlinks in RPATHS
             #    If condition exists, then copy the file rather than symlink it.
+
             if (not dirname(link_path) == dirname(real_link_path) and
                     codefile_type(f)):
                 os.remove(path)
                 utils.copy_into(real_link_path, path)
-            elif real_link_path.startswith(real_build_prefix):
+                continue
+            # Correct non-relative, non-sysroot relative CDT symlink targets.
+            if ('/sysroot/' in path and
+                    not (os.path.exists(real_link_path) or os.path.lexists(real_link_path))):
+                real_link_path2 = path.split('/sysroot/', 1)[0] + '/sysroot' + real_link_path
+                print("Swapping (CDT package) symlink-target ({} -> {})".format(real_link_path, real_link_path2))
+                real_link_path = real_link_path2
+            if real_link_path.startswith(real_build_prefix):
                 # If the path is in the build prefix, this is fine, but
                 # the link needs to be relative
                 relative_path = relpath(real_link_path, dirname(path))
@@ -1343,7 +1351,7 @@ def check_symlinks(files, prefix, croot):
                     # relative link. It's possible that ..'s later in the path
                     # can result in a broken link still, but we'll assume that
                     # such crazy things don't happen.
-                    print("Making absolute symlink relative (%s -> %s :-> %s)" % (f, link_path, relative_path))
+                    print("Making absolute symlink relative ({} -> {} :-> {})".format(f, link_path, relative_path))
                     os.unlink(path)
                     os.symlink(relative_path, path)
             else:
