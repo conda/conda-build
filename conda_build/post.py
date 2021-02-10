@@ -44,8 +44,9 @@ else:
 
 filetypes_for_platform = {
     "win": ('DLLfile', 'EXEfile'),
-    "osx": ['machofile'],
-    "linux": ['elffile'],
+    "osx": ('machofile',),
+    "linux": ('elffile',),
+    'noarch': ('DLLfile', 'EXEfile', 'machofile', 'elffile')
 }
 
 
@@ -487,7 +488,7 @@ def check_binary_patchers(elf, prefix, rpath):
 '''
 
 
-def mk_relative_linux(f, prefix, rpaths=('lib',), method=None):
+def mk_relative_linux(f, prefix, rpaths=('lib',), method=None, sysroot_infix=''):
     'Respects the original values and converts abs to $ORIGIN-relative'
 
     elf = join(prefix, f)
@@ -510,7 +511,7 @@ def mk_relative_linux(f, prefix, rpaths=('lib',), method=None):
                       elf, method))
             method = 'LIEF'
         else:
-            existing_pe = existing_pe.split(os.pathsep)
+            existing_pe = [] if existing_pe == '' else existing_pe.split(os.pathsep)
     existing = existing_pe
     if have_lief:
         existing2, _, _ = get_rpaths_raw(elf)
@@ -533,8 +534,14 @@ def mk_relative_linux(f, prefix, rpaths=('lib',), method=None):
                 rp = '$ORIGIN/' + relpath(old, origin)
                 if rp not in new:
                     new.append(rp)
+        elif sysroot_infix:
+            old = sysroot_infix + old
+            rp = '$ORIGIN/' + relpath(old, origin)
+            if rp not in new:
+                new.append(rp)
     # Ensure that the asked-for paths are also in new.
     for rpath in rpaths:
+        rpath = sysroot_infix + rpath
         if rpath != '':
             if not rpath.startswith('/'):
                 # IMHO utils.relative shouldn't exist, but I am too paranoid to remove
@@ -925,11 +932,19 @@ def _lookup_in_sysroots_and_whitelist(errors, whitelist, needed_dso, sysroots_fi
 
 
 def _lookup_in_prefix_packages(errors, needed_dso, files, run_prefix, whitelist, info_prelude, msg_prelude,
-                               warn_prelude, verbose, requirements_run, lib_packages, lib_packages_used):
+                               warn_prelude, verbose, requirements_run, lib_packages, lib_packages_used,
+                               sysroots):
+    result = True
     in_prefix_dso = normpath(needed_dso)
-    n_dso_p = "Needed DSO {}".format(in_prefix_dso.replace('\\', '/'))
-    and_also = " (and also in this package)" if in_prefix_dso in files else ""
-    pkgs = list(which_package(in_prefix_dso, run_prefix, avoid_canonical_channel_name=True))
+    unsysrooted_in_prefix_dso = in_prefix_dso
+    if unsysrooted_in_prefix_dso.startswith('$SYSROOT'):
+        for sysroot, sysroot_files in sysroots.items():
+            if os.path.exists(unsysrooted_in_prefix_dso.replace('$SYSROOT', sysroot)):
+                unsysrooted_in_prefix_dso = unsysrooted_in_prefix_dso.replace('$SYSROOT', sysroot).replace(run_prefix+os.sep, '')
+                break
+    n_dso_p = "Needed DSO {}".format(unsysrooted_in_prefix_dso.replace('\\', '/'))
+    and_also = " (and also in this package)" if unsysrooted_in_prefix_dso in files else ""
+    pkgs = list(which_package(unsysrooted_in_prefix_dso, run_prefix, avoid_canonical_channel_name=True))
     in_pkgs_in_run_reqs = [pkg for pkg in pkgs if pkg.quad[0] in requirements_run]
     # TODO :: metadata build/inherit_child_run_exports (for vc, mro-base-impl).
     for pkg in in_pkgs_in_run_reqs:
@@ -941,17 +956,23 @@ def _lookup_in_prefix_packages(errors, needed_dso, files, run_prefix, whitelist,
                                                         n_dso_p,
                                                         in_pkgs_in_run_reqs[0],
                                                         and_also), verbose=verbose)
-    elif in_whitelist:
-        _print_msg(errors, '{}: {} found in the whitelist'.
-                    format(info_prelude, n_dso_p), verbose=verbose)
     elif len(in_pkgs_in_run_reqs) == 0 and len(pkgs) > 0:
-        _print_msg(errors, '{}: {} found in {}{}'.format(msg_prelude,
-                                                        n_dso_p,
-                                                        [p.quad[0] for p in pkgs],
-                                                        and_also), verbose=verbose)
+        # RPMs do not have the same auto-loaded-DSOs-require-a-direct-dependency
+        # that conda packages have. So while we print a message about this, it is
+        # only a INFO message when dealing with CDTs.
+        rpm_transitive_exception_msg_prelude = msg_prelude
+        rpm_transitive_exception_msg_suffix = ''
+        if '/sysroot/' in needed_dso:
+            rpm_transitive_exception_msg_prelude = info_prelude
+            rpm_transitive_exception_msg_suffix = ' (CDT exception)'
+        _print_msg(errors, '{}: {} found in {}{}'.format(rpm_transitive_exception_msg_prelude,
+                                                         n_dso_p,
+                                                         [p.quad[0] for p in pkgs],
+                                                         and_also), verbose=verbose)
         _print_msg(errors, '{}: .. but {} not in reqs/run, (i.e. it is overlinking)'
-                            ' (likely) or a missing dependency (less likely)'.
-                            format(msg_prelude, [p.quad[0] for p in pkgs]), verbose=verbose)
+                           ' (likely) or a missing dependency (less likely){}'.format(
+            rpm_transitive_exception_msg_prelude, [p.quad[0] for p in pkgs], rpm_transitive_exception_msg_suffix),
+                   verbose=verbose)
     elif len(in_pkgs_in_run_reqs) > 1:
         _print_msg(errors, '{}: {} found in multiple packages in run/reqs: {}{}'
                             .format(warn_prelude,
@@ -959,12 +980,18 @@ def _lookup_in_prefix_packages(errors, needed_dso, files, run_prefix, whitelist,
                                     in_pkgs_in_run_reqs,
                                     and_also), verbose=verbose)
     else:
-        if not any(in_prefix_dso == normpath(w) for w in files):
-            _print_msg(errors, '{}: {} not found in any packages'.format(msg_prelude,
-                                                                        in_prefix_dso), verbose=verbose)
+        if not any(unsysrooted_in_prefix_dso == normpath(w) for w in files):
+            if in_whitelist:
+                _print_msg(errors, '{}: {} found in the whitelist'.format(info_prelude, n_dso_p),
+                                                                          verbose=verbose)
+            else:
+                result = False
+                _print_msg(errors, '{}: {} not found in any packages'.format(msg_prelude,
+                                                                             in_prefix_dso), verbose=verbose)
         elif verbose:
             _print_msg(errors, '{}: {} found in this package'.format(info_prelude,
                                                                      in_prefix_dso), verbose=verbose)
+    return result
 
 
 def _show_linking_messages(files, errors, needed_dsos_for_file, build_prefix, run_prefix, pkg_name,
@@ -1006,14 +1033,16 @@ def _show_linking_messages(files, errors, needed_dsos_for_file, build_prefix, ru
                 needed_dso = needed_dso_info['resolved']
             if not needed_dso.startswith(os.sep) and not needed_dso.startswith('$'):
                 _lookup_in_prefix_packages(errors, needed_dso, files, run_prefix, whitelist, info_prelude, msg_prelude,
-                               warn_prelude, verbose, requirements_run, lib_packages, lib_packages_used)
+                               warn_prelude, verbose, requirements_run, lib_packages, lib_packages_used, sysroots)
             elif needed_dso.startswith('$PATH'):
                 _print_msg(errors, "{}: {} found in build prefix; should never happen".format(
                            err_prelude, needed_dso), verbose=verbose)
             else:
-                _lookup_in_sysroots_and_whitelist(errors, whitelist, needed_dso, sysroots, msg_prelude,
-                                                  info_prelude, sysroot_prefix, sysroot_substitution,
-                                                  subdir, verbose)
+                if not _lookup_in_prefix_packages(errors, needed_dso, files, run_prefix, whitelist, info_prelude, msg_prelude,
+                               warn_prelude, verbose, requirements_run, lib_packages, lib_packages_used, sysroots):
+                    _lookup_in_sysroots_and_whitelist(errors, whitelist, needed_dso, sysroots, msg_prelude,
+                                                      info_prelude, sysroot_prefix, sysroot_substitution,
+                                                      subdir, verbose)
 
 
 def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdir,
@@ -1220,11 +1249,15 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
 def check_overlinking(m, files, host_prefix=None):
     if not host_prefix:
         host_prefix = m.config.host_prefix
+    target_subdir = m.config.target_subdir
+    if m.noarch and target_subdir != 'noarch':
+        print("WARNING :: m.config.target_subdir is {}, but package is noarch: {}".format(target_subdir, m.noarch))
+        target_subdir = 'noarch'
     return check_overlinking_impl(m.get_value('package/name'),
                                   m.get_value('package/version'),
                                   m.get_value('build/string'),
                                   m.get_value('build/number'),
-                                  m.config.target_subdir,
+                                  target_subdir,
                                   m.get_value('build/ignore_run_exports'),
                                   [req.split(' ')[0] for req in m.meta.get('requirements', {}).get('run', [])],
                                   [req.split(' ')[0] for req in m.meta.get('requirements', {}).get('build', [])],
@@ -1253,9 +1286,12 @@ def post_process_shared_lib(m, f, files, host_prefix=None):
     if not codefile_t or path.endswith('.debug'):
         return
     rpaths = m.get_value('build/rpaths', ['lib'])
+    sysroot_infix = ''
+    if '/sysroot/' in f:
+        sysroot_infix = f.split('/sysroot/', 1)[0] + '/sysroot/usr/'
     if codefile_t == 'elffile':
         mk_relative_linux(f, host_prefix, rpaths=rpaths,
-                          method=m.get_value('build/rpaths_patcher', None))
+                          method=m.get_value('build/rpaths_patcher', None), sysroot_infix=sysroot_infix)
     elif codefile_t == 'machofile':
         if m.config.host_platform != 'osx':
             log = utils.get_logger(__name__)
@@ -1325,23 +1361,48 @@ def check_symlinks(files, prefix, croot):
     for f in files:
         path = join(real_build_prefix, f)
         if islink(path):
-            link_path = readlink(path)
-            real_link_path = realpath(path)
+            real_link_path_in_cdt = readlink(path)
+            # CDT symlinks must be handled specially since readlink will give incorrect results.
+            value = readlink(path)
+            if '/sysroot/' in path:
+                abs = False
+                if value.startswith('/'):
+                    abs = True
+                elif value.startswith('../'):
+                    # TODO :: Debug this one
+                    abs = False
+                elif value.startswith('.'):
+                    abs = False
+                else:
+                    abs = False
+                if abs:
+                    link_path = path.split('/sysroot/', 1)[0] + '/sysroot' + value
+                else:
+                    link_path = realpath(os.path.join(dirname(path), value))
+                real_link_path = link_path
+                # This if finds the case of building a cross-compiler with symlinks from the
+                # prefix into the sysroot for compiler runtime libraries.
+                if abs and not exists(real_link_path) and exists(value):
+                    real_link_path = value
+                    print("For {} retained existing (compiler package) symlink-target ({} -> {})".
+                          format(path, real_link_path_in_cdt, real_link_path))
+                else:
+                    print("For {} swapped (CDT package) symlink-target ({} -> {})".
+                          format(path, real_link_path_in_cdt, real_link_path))
+            else:
+                link_path = readlink(path)
+                real_link_path = realpath(path)
             # symlinks to binaries outside of the same dir don't work.  RPATH stuff gets confused
             #    because ld.so follows symlinks in RPATHS
             #    If condition exists, then copy the file rather than symlink it.
-
             if (not dirname(link_path) == dirname(real_link_path) and
                     codefile_type(f)):
                 os.remove(path)
                 utils.copy_into(real_link_path, path)
                 continue
             # Correct non-relative, non-sysroot relative CDT symlink targets.
-            if ('/sysroot/' in path and
-                    not (os.path.exists(real_link_path) or os.path.lexists(real_link_path))):
-                real_link_path2 = path.split('/sysroot/', 1)[0] + '/sysroot' + real_link_path
-                print("Swapping (CDT package) symlink-target ({} -> {})".format(real_link_path, real_link_path2))
-                real_link_path = real_link_path2
+            if 'libgio-2.0.so.0.5600.1' in real_link_path:
+                print('debug')
             if real_link_path.startswith(real_build_prefix):
                 # If the path is in the build prefix, this is fine, but
                 # the link needs to be relative

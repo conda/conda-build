@@ -115,7 +115,7 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
             hashed = hashsum_file(path, 'sha256')
         dest_path = append_hash_to_fn(path, hashed)
         if not os.path.isfile(dest_path):
-            shutil.move(path, dest_path)
+            shutil.copy(path, dest_path)
         path = dest_path
 
     return path, unhashed_fn
@@ -159,14 +159,22 @@ def unpack(source_dict, src_dir, cache_folder, recipe_path, croot, verbose=False
             # as well as `pip install name-version.whl` as install command
             copy_into(src_path, unhashed_dest, timeout, locking=locking)
         flist = os.listdir(tmpdir)
-        folder = os.path.join(tmpdir, flist[0])
-        # Hoisting is destructive of information, in CDT packages, a single top level
-        # folder of /usr64 must not be discarded.
-        if len(flist) == 1 and os.path.isdir(folder) and 'no_hoist' not in source_dict:
-            hoist_single_extracted_folder(folder)
-        flist = os.listdir(tmpdir)
-        for f in flist:
-            shutil.move(os.path.join(tmpdir, f), os.path.join(src_dir, f))
+        if len(flist):
+            folder = os.path.join(tmpdir, flist[0])
+            # Hoisting is destructive of information, in CDT packages, a single top level
+            # folder of /usr64 must not be discarded.
+            if len(flist) == 1 and os.path.isdir(folder) and 'no_hoist' not in source_dict:
+                hoist_single_extracted_folder(folder)
+            flist = os.listdir(tmpdir)
+            for f in flist:
+                try:
+                    # Avoids permissions errors (with e.g. RPM 'filesystem' package's proc dir)
+                    if sys.platform == 'win32':
+                        os.system('move {} {}'.format(os.path.join(tmpdir, f), os.path.join(src_dir, f)))
+                    else:
+                        os.system('mv {} {}'.format(os.path.join(tmpdir, f), os.path.join(src_dir, f)))
+                except:  # noqa
+                    shutil.move(os.path.join(tmpdir, f), os.path.join(src_dir, f))
 
 
 def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_cache, git_ref=None,
@@ -269,7 +277,7 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_ca
     # it so.
     try:
         submodules = check_output_env([git, 'config', '--file', '.gitmodules', '--get-regexp',
-                                   'url'], stderr=stdout, cwd=checkout_dir)
+                                       'url'], stderr=stdout, cwd=checkout_dir)
         submodules = submodules.decode('utf-8').splitlines()
     except CalledProcessError:
         submodules = []

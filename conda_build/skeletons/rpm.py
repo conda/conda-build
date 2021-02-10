@@ -2,6 +2,8 @@ import argparse
 from conda_build.conda_interface import iteritems
 from conda_build.source import download_to_cache
 from conda_build.license_family import guess_license_family
+from conda.models.version import VersionOrder
+
 from copy import copy
 try:
     import cPickle as pickle
@@ -15,6 +17,10 @@ from os.path import (basename, dirname, exists, join, splitext)
 import re
 from six import string_types
 from textwrap import wrap
+try:
+    from urllib.parse import quote
+except:
+    from urllib import quote
 from xml.etree import cElementTree as ET
 from .cran import yaml_quote_string
 
@@ -40,11 +46,14 @@ source:
     no_hoist: true
     folder: binary
   - url: {srcrpmurl}
+    {checksum_name}: {checksum_src}
+    no_hoist: true
     folder: source
 
 build:
-  number: 2
+  number: 3
   noarch: generic
+{rpaths}
   missing_dso_whitelist:
     - '*'
 
@@ -56,6 +65,9 @@ about:
   license_family: {license_family}
   summary: {summary}
   description: {description}
+
+extras:
+  rpm_name: {rpm_name}
 """
 
 
@@ -65,18 +77,11 @@ BUILDSH = """\
 set -o errexit -o pipefail
 
 mkdir -p "${PREFIX}"/{hostmachine}/sysroot
-if [[ -d usr/lib ]]; then
-  if [[ ! -d lib ]]; then
-    ln -s usr/lib lib
-  fi
-fi
-if [[ -d usr/lib64 ]]; then
-  if [[ ! -d lib64 ]]; then
-    ln -s usr/lib64 lib64
-  fi
-fi
 pushd "${PREFIX}"/{hostmachine}/sysroot > /dev/null 2>&1
-cp -Rf "${SRC_DIR}"/binary/* .
+if [[ "$(ls -A "${SRC_DIR}"/binary)" ]]; then
+  chmod -R +r "${SRC_DIR}"/binary/*
+  cp -Rf "${SRC_DIR}"/binary/* .
+fi
 """
 
 
@@ -91,6 +96,7 @@ CDTs = dict({'centos5': {'dirname': 'centos5',
                          'rpm_filename_platform': 'el5.{architecture}',
                          'checksummer': hashlib.sha1,
                          'checksummer_name': "sha1",
+                         'rpaths': ('lib', 'lib64'),
                          'macros': {}},
              'centos6': {'dirname': 'centos6',
                          'short_name': 'cos6',
@@ -103,6 +109,7 @@ CDTs = dict({'centos5': {'dirname': 'centos5',
                          'rpm_filename_platform': 'el6.{architecture}',
                          'checksummer': hashlib.sha256,
                          'checksummer_name': "sha256",
+                         'rpaths': ('lib', 'lib64'),
                          # Some macros are defined in /etc/rpm/macros.* but I cannot find where
                          # these ones are defined. Also, rpm --eval "%{gdk_pixbuf_base_version}"
                          # gives nothing nor does rpm --showrc | grep gdk
@@ -119,6 +126,7 @@ CDTs = dict({'centos5': {'dirname': 'centos5',
                          'rpm_filename_platform': 'el7.{architecture}',
                          'checksummer': hashlib.sha256,
                          'checksummer_name': "sha256",
+                         'rpaths': ('lib', 'lib64'),
                          # Some macros are defined in /etc/rpm/macros.* but I cannot find where
                          # these ones are defined. Also, rpm --eval "%{gdk_pixbuf_base_version}"
                          # gives nothing nor does rpm --showrc | grep gdk
@@ -128,16 +136,51 @@ CDTs = dict({'centos5': {'dirname': 'centos5',
                        'short_name': 'cos7',
                        'base_url': 'http://download.sinenomine.net/clefos/7/os/{base_architecture}/',  # noqa
                        'sbase_url': 'http://download.sinenomine.net/clefos/7/source/srpms/', # noqa
-                       'repomd_url': 'http://download.sinenomine.net/clefos/7/os/repodata/repomd.xml', # noqa
+                       'repomd_url': 'http://download.sinenomine.net/clefos/7/os/repodata/repomd.xml',  # noqa
                        'host_machine': '{gnu_architecture}-conda-cos7-linux-gnu',
                        'host_subdir': 'linux-s390x',
                        'fname_architecture': '{architecture}',
                        'rpm_filename_platform': 'el7.{architecture}',
                        'checksummer': hashlib.sha256,
                        'checksummer_name': "sha256",
+                       'rpaths': ('lib', 'lib64'),
                        'macros': {'pyver': '2.7.5',
                                   'gdk_pixbuf_base_version': '2.36.2'}},
-            'suse_leap_rpi3': {'dirname': 'suse_leap_rpi3',
+             'amazonlinux2': {'dirname': 'amazonlinux2',
+                              'short_name': 'amzn2',
+                              'use_only_basename': True,
+                              # 'base_url': 'http://amazonlinux.us-west-2.amazonaws.com/2/core/2.0/{base_architecture}/34112b4f91c3e1ecf2b2e90cfd565b12690fa3c6a3e71a5ac19029d2a9bd3869/',  # noqa
+                              'base_url': 'https://graviton-rpms.s3.amazonaws.com/amzn2-core_2021_01_26/amzn2-core/',
+                              # 'sbase_url': 'http://amazonlinux.us-west-2.amazonaws.com/2/core/latest/SRPMS/',
+                              'sbase_url': 'https://graviton-rpms.s3.amazonaws.com/amzn2-core-source_2021_01_26/amzn2-core-source/',# noqa
+                              'repomd_url': 'http://amazonlinux.us-west-2.amazonaws.com/2/core/2.0/aarch64/34112b4f91c3e1ecf2b2e90cfd565b12690fa3c6a3e71a5ac19029d2a9bd3869/repodata/repomd.xml',  # noqa
+                              'host_machine': '{gnu_architecture}-conda-cos7-linux-gnu',
+                              'host_subdir': 'linux-aarch64',
+                              'fname_architecture': '{architecture}',
+                              'rpm_filename_platform': 'el7.{architecture}',
+                              'checksummer': hashlib.sha256,
+                              'checksummer_name': "sha256",
+                              'rpaths': ('lib', 'lib64'),
+                              'macros': {'pyver': '2.7.18',
+                                         'gdk_pixbuf_base_version': '2.36.12'},
+                              'dependency_remove': {'shared-mime-info': ['glib2'],
+                                                    'dbus': ['systemd'],
+                                                    'glibc-minimal-langpack': ['glibc', 'glibc-common'],
+                                                    'glibc-common': ['glibc'],
+                                                    'perl': ['perl-threads-shared', 'perl-threads', 'perl-constant',
+                                                             'perl-Time-Local', 'perl-Time-HiRes', 'perl-Storable',
+                                                             'perl-Socket', 'perl-Scalar-List-Utils', 'perl-Pod-Simple',
+                                                             'perl-Getopt-Long', 'perl-Filter', 'perl-File-Temp',
+                                                             'perl-PathTools', 'perl-File-Path', 'perl-Exporter',
+                                                             'perl-Carp', 'perl-macros'],
+                                                    'perl-Exporter': ['perl-Carp'],
+                                                    'perl-Pod-Usage': ['perl-podlators', 'perl-Getopt-Long',
+                                                                       'perl-Pod-Perldoc'],
+                                                    'perl-Test-Harness': ['perl'],
+                                                    'libselinux': ['glibc'],
+                                                    'libglvnd-glx': ['mesa-libGL']}},
+
+             'suse_leap_rpi3': {'dirname': 'suse_leap_rpi3',
                                'short_name': 'slrpi3',
                                # I cannot locate the src.rpms for OpenSUSE leap. The existence
                                # of this key tells this code to ignore missing src rpms but we
@@ -164,7 +207,7 @@ CDTs = dict({'centos5': {'dirname': 'centos5',
                                'fname_architecture': '{architecture}',
                                'checksummer': hashlib.sha256,
                                'checksummer_name': "sha256",
-                               'macros': {}},
+                               'macros': {}}
              })
 
 
@@ -178,7 +221,7 @@ def cache_file(src_cache, url, fn=None, checksummer=hashlib.sha256):
     if fn:
         source = dict({'url': url, 'fn': fn})
     else:
-        source = dict({'url': url})
+        source = dict({'url': quote(url, safe='/:')})
     cached_path, _ = download_to_cache(src_cache, '', source)
     csum = checksummer()
     csum.update(open(cached_path, 'rb').read())
@@ -225,26 +268,40 @@ def rpm_url_generate(url_dirname, rpm_name, version, release, platform, src_cach
 
 def find_repo_entry_and_arch(repo_primary, architectures, depend):
     dep_name = depend['name']
+    if '(aarch-64)' in dep_name:
+        dep_name = dep_name.replace('(aarch-64)', '')
+    if dep_name.startswith('libc.so.'):
+        dep_name = 'glibc'
     found_package_name = ''
     try:
         # Try direct lookup first.
         found_package = repo_primary[dep_name]
         found_package_name = dep_name
     except:
-        # Look through the provides of all packages.
-        for name, package in iteritems(repo_primary):
-            for arch in architectures:
-                if arch in package:
-                    if 'provides' in package[arch]:
-                        for provide in package[arch]['provides']:
-                            if provide['name'] == dep_name:
-                                print("Found it in {}".format(name))
-                                found_package = package
-                                found_package_name = name
-                                break
+        # Try case insensitive lookup.
+        for n, p in repo_primary.items():
+            if n.lower() == dep_name.lower():
+                print("INFO :: Warning did not find {}, but did find {}".format(dep_name, n))
+                found_package = p
+                found_package_name = n
+                break
+        if not found_package_name:
+            # Look through the provides of all packages.
+            for name, package in iteritems(repo_primary):
+                for arch in architectures:
+                    if arch in package:
+                        if 'provides' in package[arch]:
+                            for provide in package[arch]['provides']:
+                                if provide['name'] == dep_name:
+                                    print("INFO :: {} is provided by {}".format(dep_name, name))
+                                    found_package = package
+                                    found_package_name = name
+                                    break
+                if found_package_name:
+                    break
 
     if found_package_name == '':
-        print("WARNING: Did not find package called (or another one providing) {}".format(dep_name))  # noqa
+        print("WARNING :: Did not find package called (or another one providing) {}".format(dep_name))  # noqa
         return None, None, None
 
     chosen_arch = None
@@ -280,7 +337,9 @@ def dictify(r, root=True):
 
 
 def dictify_pickled(xml_file, src_cache, dict_massager=None, cdt=None):
-    pickled = xml_file + '.p'
+    if not dictify_pickled.__file__hash:
+        dictify_pickled.__file__hash = hashlib.sha256(open(__file__, "rb").read()).hexdigest()[:10]
+    pickled = xml_file + '.' + dictify_pickled.__file__hash + '.p'
     if exists(pickled):
         return pickle.load(open(pickled, 'rb'))
     with io.open(xml_file, 'r', encoding='utf-8') as xf:
@@ -295,6 +354,7 @@ def dictify_pickled(xml_file, src_cache, dict_massager=None, cdt=None):
             result = dict_massager(result, src_cache, cdt)
         pickle.dump(result, open(pickled, 'wb'))
         return result
+dictify_pickled.__file__hash = None
 
 
 def get_repo_dict(repomd_url, data_type, dict_massager, cdt, src_cache):
@@ -335,7 +395,7 @@ def massage_primary_requires(requires, cdt):
         if 'flags' in require:
             require['flags'] = str_flags_to_conda_version_spec[require['flags']]
         else:
-            require['flags'] = None
+            require['flags'] = '=='
         if 'ver' in require:
             if '%' in require['ver']:
                 require['ver'] = require['ver'].replace('%', '')
@@ -407,24 +467,41 @@ def massage_primary(repo_primary, src_cache, cdt):
                             'requires': requires})
         if name in new_dict:
             if arch in new_dict[name]:
-                print("WARNING: Duplicate packages exist for {} for arch {}".format(name, arch))
-            new_dict[name][arch] = new_package
+                new_dict[name][arch].append(new_package)
+            else:
+                new_dict[name][arch] = [new_package]
         else:
-            new_dict[name] = dict({arch: new_package})
+            new_dict[name] = dict({arch: [new_package]})
+
+    # print("new_dict is {}".format(new_dict))
+    # Sort any packages which have multiple entries per arch by their version .. and while it
+    # would be nice to return all the packages, the rest of this code does not expect a list
+    # so we ditch the others and the list for now.
+    for name, package in new_dict.items():
+        for arch, packages in package.items():
+            # print("Sorting {} packages:\n{}".format(name, packages))
+            ps = sorted(packages,
+                key=lambda p=package: VersionOrder(re.sub('_+', '_', (p['version']['epoch'] + '!' +  # [noqa]
+                                                                      p['version']['ver'].replace('svn', '') + '_' +
+                                                                      p['version']['rel'].replace('.amzn2', '')))))
+            new_dict[name][arch] = ps[len(ps) - 1]
     return new_dict
 
 
+# There needs to be more hooking up with provides going on here.
 def valid_depends(depends):
     name = depends['name']
     str_flags = depends['flags']
+    if 'acl' in name:
+        print('debug')
     if (not name.startswith('rpmlib(') and not
          name.startswith('config(') and not
          name.startswith('pkgconfig(') and not
          name.startswith('/') and
-         name != 'rtld(GNU_HASH)' and
-         '.so' not in name and
-         '(' not in name and
-         str_flags):
+         name != 'rtld(GNU_HASH)' and not
+         '(:MODULE_COMPAT' in name):
+        if not str_flags:
+            print("WARNING :: no str_flags for {}".format(name))
         return True
     return False
 
@@ -461,23 +538,29 @@ def tidy_text(text, wrap_at=0):
 
 
 def write_conda_recipes(recursive, repo_primary, package, architectures,
-                        cdt, output_dir, override_arch, src_cache):
+                        cdt, output_dir, override_arch, src_cache, done=[]):
     entry, entry_name, arch = find_repo_entry_and_arch(repo_primary, architectures,
                                                        dict({'name': package}))
-    if not entry:
-        return
+    # entry_name in done breaks cycles.
+    if not entry or entry_name in done:
+        return None
+    newly_done = []
     if override_arch:
         arch = architectures[0]
     else:
         arch = cdt['fname_architecture']
     package = entry_name
-    rpm_url = dirname(dirname(cdt['base_url'])) + '/' + entry['location']
-    srpm_url = cdt['sbase_url'] + entry['source']
+    if 'use_only_basename' in cdt and cdt['use_only_basename']:
+        rpm_url = dirname(cdt['base_url']) + '/' + basename(entry['location'])
+        srpm_url = cdt['sbase_url'] + basename(entry['source'])
+    else:
+        rpm_url = dirname(dirname(cdt['base_url'])) + '/' + entry['location']
+        srpm_url = cdt['sbase_url'] + entry['source']
     _, _, _, _, _, sha256str = rpm_split_url_and_cache(rpm_url, src_cache)
     try:
         # We ignore the hash of source RPMs since they
         # are not given in the source repository data.
-        _, _, _, _, _, _ = rpm_split_url_and_cache(srpm_url, src_cache)
+        _, _, _, _, _, sha256str_src = rpm_split_url_and_cache(srpm_url, src_cache)
     except:
         # Just pretend the binaries are sources.
         if 'allow_missing_sources' in cdt:
@@ -498,8 +581,9 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
                             del(copy_provides['rel'])
                         depends.append(copy_provides)
             else:
-                print('WARNING: Additional dependency of {}, {} not found'.format(package,
-                                                                                  missing_dep))
+                print('WARNING :: Additional dependency of {}, {} not found'.format(package,
+                                                                                    missing_dep))
+    done.append(package)
     for depend in depends:
         dep_entry, dep_name, dep_arch = find_repo_entry_and_arch(repo_primary,
                                                                  architectures,
@@ -510,20 +594,48 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
         # Because something else may provide a substitute for the wanted package
         # we need to also overwrite the versions with those of the provider, e.g.
         # libjpeg 6b is provided by libjpeg-turbo 1.2.1
-        if depend['name'] != dep_name and 'version' in dep_entry:
+        if (depend['name'] != dep_name and 'version' in dep_entry) or 'ver' not in depend:
+            depend['name'] = dep_name
             if 'ver' in dep_entry['version']:
                 depend['ver'] = dep_entry['version']['ver']
             if 'epoch' in dep_entry['version']:
                 depend['epoch'] = dep_entry['version']['epoch']
+
+    # Handle cyclic deps via the hacked dependency removal code:
+    if package in cdt['dependency_remove']:
+        removals = cdt['dependency_remove'][package].copy()
+    else:
+        removals = []
+    for dep in depends:
+        if dep['name'] == entry_name:
+            removals.append(entry_name)
+            break
+    to_remove = []
+    for unwanted_dep in removals:
+        matches = [i for i, d in enumerate(depends) if d['name'] == unwanted_dep]
+        if len(matches):
+            to_remove.append((unwanted_dep, matches))
+        else:
+            print('WARNING :: Unwanted dependency of {} in package {} not found'.format(unwanted_dep, package))
+    all_indices = []
+    for unwanted_dep, matches in to_remove:
+        for match in matches:
+            if match not in all_indices:
+                all_indices.append(match)
+    all_indices.sort(reverse=True)
+    for match in all_indices:
+        assert len(depends) >= match
+        removed = depends[match]['name']
+        del depends[match]
+        print('WARNING :: Removed dependency of {} from package {}'.format(removed, package))
+
+    for depend in depends:
         if recursive:
-            depend['name'] = write_conda_recipes(recursive,
-                                                 repo_primary,
-                                                 depend['name'],
-                                                 architectures,
-                                                 cdt,
-                                                 output_dir,
-                                                 override_arch,
-                                                 src_cache)
+            rec = write_conda_recipes(recursive, repo_primary, depend['name'],
+                                      architectures, cdt, output_dir,
+                                      override_arch, src_cache, done)
+            if rec:
+                newly_done.extend(rec)
 
     sn = cdt['short_name'] + '-' + arch
     dependsstr = ""
@@ -532,12 +644,16 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
                                                 cdt['short_name'], depend['arch'],
                                                 depend['flags'], depend['ver'])
                          for depend in depends]
+        depends_specs = set(depends_specs)
         dependsstr_part = '\n'.join(['    - {}'.format(depends_spec)
                                      for depends_spec in depends_specs])
         dependsstr_build = '  build:\n' + dependsstr_part + '\n'
         dependsstr_host = '  host:\n' + dependsstr_part + '\n'
         dependsstr_run = '  run:\n' + dependsstr_part
         dependsstr = 'requirements:\n' + dependsstr_build + dependsstr_host + dependsstr_run
+    rpathstr = ""
+    if len(cdt['rpaths']):
+        rpathstr = '  rpaths:\n'+'\n'.join(['    - {}'.format(rp) for rp in cdt['rpaths']])
 
     package_l = package.lower().replace('+', 'x')
     package_cdt_name = package_l + '-' + sn
@@ -547,13 +663,16 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
               'hostmachine': cdt['host_machine'],
               'hostsubdir': cdt['host_subdir'],
               'depends': dependsstr,
-              'rpmurl': rpm_url,
-              'srcrpmurl': srpm_url,
+              'rpmurl': quote(rpm_url, safe='/:'),
+              'srcrpmurl': quote(srpm_url, safe='/:'),
+              'rpaths': rpathstr,
               'home': entry['home'],
               'license': license,
               'license_family': license_family,
+              'rpm_name': package,
               'checksum_name': cdt['checksummer_name'],
               'checksum': entry['checksum'],
+              'checksum_src': sha256str_src,
               'summary': '"(CDT) ' + tidy_text(entry['summary']) + '"',
               'description': '|\n        ' + '\n        '.join(tidy_text(entry['description'], 78)),  # noqa
               # Cheeky workaround.  I use ${PREFIX},
@@ -577,7 +696,11 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
     with open(buildsh, 'wb') as f:
         chmod(buildsh, 0o755)
         f.write(BUILDSH.format(**d).encode('utf-8'))
-    return package
+    newly_done.append(package)
+    for nd in newly_done:
+        if nd not in done:
+            done.append(nd)
+    return newly_done
 
 
 # How do we map conda names to RPM names? The issue would be if two distros
@@ -585,7 +708,7 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
 # Do I want to pass just the package name, the CDT and the arch and rely on
 # expansion to form the URL? I have been going backwards and forwards here.
 def write_conda_recipe(packages, distro, output_dir, architecture, recursive, override_arch,
-                       dependency_add, config):
+                       dependency_add, dependency_remove, config):
     cdt_name = distro
     bits = '32' if architecture in ('armv6', 'armv7a', 'i686', 'i386') else '64'
     base_architectures = dict({'i686': 'i386'})
@@ -624,6 +747,20 @@ def write_conda_recipe(packages, distro, output_dir, architecture, recursive, ov
             else:
                 cdt['dependency_add'][as_list[0]] = as_list[1:]
 
+    if 'dependency_remove' not in cdt:
+        cdt['dependency_remove'] = dict()
+    if dependency_remove:
+        for package_and_extra_deps in dependency_remove:
+            as_list = package_and_extra_deps[0].split(',')
+            remove_from = as_list[0]
+            deps = as_list[1:]
+            if remove_from in cdt['dependency_remove']:
+                for dep in deps:
+                    if dep not in cdt['dependency_remove'][remove_from]:
+                        cdt['dependency_remove'][remove_from].append(dep)
+            else:
+                cdt['dependency_remove'][remove_from] = deps
+
     repomd_url = cdt['repomd_url']
     repo_primary = get_repo_dict(repomd_url,
                                  "primary", massage_primary,
@@ -642,9 +779,9 @@ def write_conda_recipe(packages, distro, output_dir, architecture, recursive, ov
 
 def skeletonize(packages, output_dir=".", version=None, recursive=False,
                 architecture=default_architecture, override_arch=True,
-                dependency_add=[], config=None, distro=default_distro):
+                dependency_add=[], dependency_remove=[], config=None, distro=default_distro):
     write_conda_recipe(packages, distro, output_dir, architecture, recursive,
-                       override_arch, dependency_add, config)
+                       override_arch, dependency_add, dependency_remove, config)
 
 
 def add_parser(repos):
@@ -679,6 +816,13 @@ def add_parser(repos):
         nargs='+',
         action='append',
         help='Add undeclared dependencies (format: package,missing_dep1,missing_dep2)',
+    )
+
+    rpm.add_argument(
+        "--dependency-remove",
+        nargs='+',
+        action='append',
+        help='Removes problematic dependencies (format: package,unwanted_dep1,unwanted_dep2)',
     )
 
     rpm.add_argument(
