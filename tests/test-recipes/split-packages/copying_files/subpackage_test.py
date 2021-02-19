@@ -31,3 +31,7 @@ if hasattr(contents, 'decode'):
     contents = contents.decode()
 assert "weee" in contents, 'incorrect file contents: %s' % contents
 print("glob OK")
+
+filename = os.path.join(os.environ['PREFIX'], 'subpackage_file3.ext')
+assert not os.path.isfile(filename)
+print("glob exclude OK")

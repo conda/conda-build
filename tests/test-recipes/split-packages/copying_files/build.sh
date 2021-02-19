@@ -6,3 +6,4 @@ echo "weee" > $PREFIX/somedir/subpackage_file1
 # test glob patterns
 echo "weee" > $PREFIX/subpackage_file1.ext
 echo "weee" > $PREFIX/subpackage_file2.ext
+echo "weee" > $PREFIX/subpackage_file3.ext

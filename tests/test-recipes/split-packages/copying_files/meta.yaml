@@ -12,6 +12,7 @@ outputs:
       - subpackage_file1
       - somedir
       - "*.ext"
+      - "!*3.ext"
     test:
       script: subpackage_test.py
       script_interpreter: python
