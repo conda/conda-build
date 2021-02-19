@@ -1247,7 +1247,8 @@ You can specify files to be included in the package in 1 of
 Explicit file lists are relative paths from the root of the
 build prefix. Explicit file lists support glob expressions.
 Directory names are also supported, and they recursively include
-contents.
+contents. Files can be excluded by preceding the entry with a
+single exclamation mark (``!``).
 
 .. code-block:: none
 
@@ -1258,6 +1259,12 @@ contents.
          - a-folder
          - *.some-extension
          - somefolder/*.some-extension
+         - "!*.exclude-extension"
+
+.. note::
+   Negative matches must be enclosed in quotations to prevent
+   the YAML parser from interpreting the exclamation mark
+   as a tag.
 
 Scripts that create or move files into the build prefix can be
 any kind of script. Known script types need only specify the
