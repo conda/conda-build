@@ -172,7 +172,7 @@ on your local computer.
 
       conda-build click
 
-   If you are already in the click folder, you can type ``conda build .``.
+   If you are already in the click folder, you can type ``conda-build .``.
 
 
 
