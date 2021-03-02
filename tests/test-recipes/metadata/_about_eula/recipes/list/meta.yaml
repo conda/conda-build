@@ -1,0 +1,11 @@
+package:
+  name: test_about_eula_file_list
+  version: 1.0
+
+source:
+  path: ../../source
+
+about:
+  eula:
+    - eula-from-source.txt
+    - eula-from-recipe.txt

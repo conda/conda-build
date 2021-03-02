@@ -1,0 +1,9 @@
+package:
+  name: test_about_eula_file_single
+  version: 1.0
+
+source:
+  path: ../../source
+
+about:
+  eula: eula-from-source.txt

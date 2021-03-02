@@ -729,28 +729,30 @@ def test_about_json_content(testing_metadata):
     assert 'root_pkgs' in about and about['root_pkgs']
 
 
-def test_about_license_file(testing_workdir, testing_config):
-    base_dir = os.path.join(metadata_dir, "_about_license_file/recipes")
+@pytest.mark.parametrize("name,field", [("license", "license_file"), ("eula", "eula")])
+def test_about_license_file_and_eula(testing_workdir, testing_config, name, field):
+    base_dir = os.path.join(metadata_dir, f"_about_{field}/recipes")
 
     recipe = os.path.join(base_dir, "single")
     outputs = api.build(recipe, config=testing_config)
-    assert package_has_file(outputs[0], "info/licenses/license-from-source.txt")
+    assert package_has_file(outputs[0], f"info/{name}s/{name}-from-source.txt")
 
     recipe = os.path.join(base_dir, "list")
     outputs = api.build(recipe, config=testing_config)
-    assert package_has_file(outputs[0], "info/licenses/license-from-source.txt")
-    assert package_has_file(outputs[0], "info/licenses/license-from-recipe.txt")
+    assert package_has_file(outputs[0], f"info/{name}s/{name}-from-source.txt")
+    assert package_has_file(outputs[0], f"info/{name}s/{name}-from-recipe.txt")
 
     recipe = os.path.join(base_dir, "dir")
     outputs = api.build(recipe, config=testing_config)
-    assert package_has_file(outputs[0], "info/licenses/license-dir-from-source/first-license.txt")
-    assert package_has_file(outputs[0], "info/licenses/license-dir-from-source/second-license.txt")
-    assert package_has_file(outputs[0], "info/licenses/license-dir-from-recipe/first-license.txt")
-    assert package_has_file(outputs[0], "info/licenses/license-dir-from-recipe/second-license.txt")
+    assert package_has_file(outputs[0], f"info/{name}s/{name}-dir-from-source/first-{name}.txt")
+    assert package_has_file(outputs[0], f"info/{name}s/{name}-dir-from-source/second-{name}.txt")
+    assert package_has_file(outputs[0], f"info/{name}s/{name}-dir-from-recipe/first-{name}.txt")
+    assert package_has_file(outputs[0], f"info/{name}s/{name}-dir-from-recipe/second-{name}.txt")
 
     recipe = os.path.join(base_dir, "dir-no-slash-suffix")
     assert os.path.isdir(recipe)
-    with pytest.raises(ValueError, match=r"license_file.*license-dir-from-recipe.*directory"):
+    str_match = f"{field}.*{name}-dir-from-recipe.*directory"
+    with pytest.raises(ValueError, match=str_match):
         api.build(recipe, config=testing_config)
 
 
