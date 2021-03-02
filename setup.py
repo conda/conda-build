@@ -35,7 +35,7 @@ setup(
     author="Continuum Analytics, Inc.",
     author_email="conda@continuum.io",
     url="https://github.com/conda/conda-build",
-    license="BSD 3-clause",
+    license="BSD-3-clause",
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
