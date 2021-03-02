@@ -1522,6 +1522,18 @@ contents will be unconditionally and recursively added).
       - vendor-licenses/
 
 
+EULA File
+---------
+Similar to the license file, the user can add EULA files to the conda package.
+
+.. code-block:: yaml
+
+  about:
+    eula:
+      - eula_file.txt
+      - folder-with-all-eulas/
+
+
 App section
 ===========
 
