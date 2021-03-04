@@ -1,0 +1,9 @@
+package:
+  name: test_about_prelink_message_file_single
+  version: 1.0
+
+source:
+  path: ../../source
+
+about:
+  prelink_message: prelink_message-from-source.txt

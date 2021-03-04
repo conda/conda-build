@@ -729,8 +729,10 @@ def test_about_json_content(testing_metadata):
     assert 'root_pkgs' in about and about['root_pkgs']
 
 
-@pytest.mark.parametrize("name,field", [("license", "license_file"), ("eula", "eula")])
-def test_about_license_file_and_eula(testing_workdir, testing_config, name, field):
+@pytest.mark.parametrize(
+    "name,field", [("license", "license_file"), ("prelink_message", "prelink_message")]
+)
+def test_about_license_file_and_prelink_message(testing_workdir, testing_config, name, field):
     base_dir = os.path.join(metadata_dir, f"_about_{field}/recipes")
 
     recipe = os.path.join(base_dir, "single")

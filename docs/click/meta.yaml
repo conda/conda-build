@@ -29,7 +29,7 @@ about:
   license: BSD
   license_family: BSD
   license_file:
-  eula:
+  prelink_message:
   summary: Composable command line interface toolkit
   doc_url: 
   dev_url: 

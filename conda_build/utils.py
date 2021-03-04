@@ -1556,7 +1556,7 @@ def filter_info_files(files_list, prefix):
                     'info[\\\\/]test[\\\\/].*',
                     'info[\\\\/]LICENSE.txt',        # legacy, some tests rely on this
                     'info[\\\\/]licenses[\\\\/]*',
-                    'info[\\\\/]eulas[\\\\/]*',
+                    'info[\\\\/]prelink_messages[\\\\/]*',
                     'info[\\\\/]requires',
                     'info[\\\\/]meta',
                     'info[\\\\/]platform',

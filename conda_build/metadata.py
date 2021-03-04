@@ -497,7 +497,7 @@ FIELDS = {
         'keywords': list,
         # paths in source tree
         'license_file': None,
-        'eula': None,
+        'prelink_message': None,
         'readme': None,
     },
 }

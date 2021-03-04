@@ -1522,16 +1522,16 @@ contents will be unconditionally and recursively added).
       - vendor-licenses/
 
 
-EULA File
+Prelink Message File
 ---------
-Similar to the license file, the user can add EULA files to the conda package.
+Similar to the license file, the user can add prelink message files to the conda package.
 
 .. code-block:: yaml
 
   about:
-    eula:
-      - eula_file.txt
-      - folder-with-all-eulas/
+    prelink_message:
+      - prelink_message_file.txt
+      - folder-with-all-prelink-messages/
 
 
 App section

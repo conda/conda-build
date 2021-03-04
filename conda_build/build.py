@@ -758,8 +758,8 @@ def jsonify_info_yamls(m):
     return res
 
 
-def copy_eula(m):
-    generic_copy(m, "eula", "eula")
+def copy_prelink_message(m):
+    generic_copy(m, "prelink_message", "prelink_message")
 
 
 def copy_license(m):
@@ -1274,7 +1274,7 @@ def create_info_files(m, replacements, files, prefix):
     copy_recipe(m)
     copy_readme(m)
     copy_license(m)
-    copy_eula(m)
+    copy_prelink_message(m)
     copy_recipe_log(m)
     files.extend(jsonify_info_yamls(m))
 
