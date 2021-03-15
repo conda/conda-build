@@ -669,10 +669,19 @@ seen by the conda-build process itself, a UserWarning is
 emitted during the build process and the variable remains
 undefined.
 
+Additionally, values can be set by including ``=`` followed by the desired value:
+
+.. code-block:: yaml
+
+     build:
+       script_env:
+        - MY_VAR=some value
+
 .. note::
    Inheriting environment variables can make it difficult for
    others to reproduce binaries from source with your recipe. Use
-   this feature with caution or avoid it.
+   this feature with caution or explicitly set values using the ``=``
+   syntax.
 
 .. note::
    If you split your build and test phases with ``--no-test`` and ``--test``,
