@@ -433,8 +433,7 @@ def meta_vars(meta, skip_build_id=False):
     d = {}
     for var_name in ensure_list(meta.get_value('build/script_env', [])):
         if '=' in var_name:
-            value = var_name.split('=')[-1]
-            var_name = var_name.split('=')[0]
+            var_name, value = var_name.split('=', 1)
         else:
             value = os.getenv(var_name)
         if value is None:
