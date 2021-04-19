@@ -1095,8 +1095,10 @@ def get_symbols(file, defined=True, undefined=True, notexported=False, arch="nat
         except:
             pass
     res = []
+    imported_function_names = set()
     if len(binary.exported_functions):
         syms = binary.exported_functions
+        imported_function_names = {s.name for s in binary.imported_functions}
     elif len(binary.symbols):
         syms = binary.symbols
     elif len(binary.static_symbols):
@@ -1116,13 +1118,19 @@ def get_symbols(file, defined=True, undefined=True, notexported=False, arch="nat
             if isinstance(s, str):
                 s_name = "%s" % s
             else:
-                s_name = "%s" % s.name
-                if s.exported and s.imported:
-                    print(f"Weird, symbol {s.name} is both imported and exported")
-                if s.exported:
+                s_name = '%s' % s.name
+                if isinstance(s, lief.Function):
+                    s_exported = True
+                    s_imported = s.name in imported_function_names
+                else:
+                    s_exported = s.exported
+                    s_imported = s.imported
+                if s_exported and s_imported:
+                    print("Weird, symbol {} is both imported and exported".format(s_name))
+                if s_exported:
                     is_undefined = True
                     is_notexported = False
-                elif s.imported:
+                elif s_imported:
                     is_undefined = False
         else:
             s_name = "%s" % s.name
