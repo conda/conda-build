@@ -2986,7 +2986,7 @@ def tests_failed(package_or_metadata, move_broken, broken_dir, config):
 def check_external():
     if sys.platform.startswith('linux'):
         patchelf = external.find_executable('patchelf')
-        if patchelf is None:
+        if not patchelf:
             sys.exit(
                 "Error:\n"
                 "    Did not find 'patchelf' in: {}\n"
