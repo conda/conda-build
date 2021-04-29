@@ -3304,7 +3304,7 @@ def handle_anaconda_upload(paths, config):
     else:
         joiner = " ^\n    "
         prompter = '$ '
-    if not upload or anaconda is None:
+    if not upload or not anaconda:
         no_upload_message = (
             "# If you want to upload package(s) to anaconda.org later, type:\n"
             "\n"
@@ -3320,7 +3320,7 @@ def handle_anaconda_upload(paths, config):
         print(no_upload_message)
         return
 
-    if anaconda is None:
+    if not anaconda:
         print(no_upload_message)
         sys.exit(
             "Error: cannot locate anaconda command (required for upload)\n"
