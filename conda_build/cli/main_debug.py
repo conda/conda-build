@@ -78,7 +78,7 @@ def execute(args):
         print(activation_string)
         if not _args.activate_string_only:
             if test:
-                test_file = "conda_test_runner.sh" if on_win else "conda_test_runner.sh"
+                test_file = "conda_test_runner.bat" if on_win else "conda_test_runner.sh"
                 print("To run your tests, you might want to start with running the {} file.".format(test_file))
             else:
                 build_file = "conda_build.bat" if on_win else "conda_build.sh"
