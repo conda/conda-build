@@ -758,39 +758,55 @@ def jsonify_info_yamls(m):
     return res
 
 
+def copy_prelink_message(m):
+    generic_copy(m, "prelink_message", "prelink_message")
+
+
 def copy_license(m):
-    license_files = utils.ensure_list(m.get_value('about/license_file', []))
-    if not license_files:
+    generic_copy(m, "license", "license_file")
+
+
+def generic_copy(m, name, field):
+    all_files = utils.ensure_list(m.get_value(f'about/{field}', []))
+    if not all_files:
         return
     count = 0
-    for license_file in license_files:
+    for single_file in all_files:
         # To not break existing recipes, ignore an empty string.
-        if license_file == "":
+        if single_file == "":
             continue
-        src_file = join(m.config.work_dir, license_file)
+        src_file = join(m.config.work_dir, single_file)
         if not os.path.isfile(src_file) and not os.path.isdir(src_file):
-            src_file = os.path.join(m.path, license_file)
+            src_file = os.path.join(m.path, single_file)
         if os.path.isdir(src_file) and not src_file.endswith("/"):
             raise ValueError(
-                "License entry in about/license_file ({}) points to a directory but does not "
-                "end with a '/'. Make sure the directory only contains license files and "
-                "append a '/' to include the folder and all of its content as license "
-                "information.".format(src_file)
+                f"{name.capitalize()} entry in about/{field} ({src_file})"
+                " points to a directory but does not end with a '/'. Make sure"
+                f" the directory only contains {name} files and append a '/'"
+                f" to include the folder and all of its content as {name} "
+                "information."
             )
         if os.path.isfile(src_file) or os.path.isdir(src_file):
             # Rename absolute file paths or relative file paths starting with .. or .
-            if os.path.isabs(license_file) or license_file.startswith("."):
-                filename = "LICENSE{}{}".format(count, ".txt" if os.path.isfile(src_file) else "")
+            if os.path.isabs(single_file) or single_file.startswith("."):
+                filename = "{}{}{}".format(
+                    name.upper(), count, ".txt" if os.path.isfile(src_file) else ""
+                )
                 count += 1
             else:
-                filename = license_file
-            utils.copy_into(src_file,
-                            join(m.config.info_dir, 'licenses', filename), m.config.timeout,
-                            locking=m.config.locking)
+                filename = single_file
+            utils.copy_into(
+                src_file,
+                join(m.config.info_dir, f'{name}s', filename), m.config.timeout,
+                locking=m.config.locking
+            )
         else:
-            raise ValueError("License file given in about/license_file ({}) does not exist in "
-                             "source root dir or in recipe root dir (with meta.yaml)".format(src_file))
-    print("Packaged license file/s.")
+            raise ValueError(
+                f"{name.capitalize()} file given in about/{field}"
+                f" ({src_file}) does not exist in source root dir or in recipe"
+                " root dir (with meta.yaml)"
+            )
+    print(f"Packaged {name} file/s.")
 
 
 def copy_recipe_log(m):
@@ -1258,6 +1274,7 @@ def create_info_files(m, replacements, files, prefix):
     copy_recipe(m)
     copy_readme(m)
     copy_license(m)
+    copy_prelink_message(m)
     copy_recipe_log(m)
     files.extend(jsonify_info_yamls(m))
 

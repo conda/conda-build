@@ -1531,6 +1531,18 @@ contents will be unconditionally and recursively added).
       - vendor-licenses/
 
 
+Prelink Message File
+---------
+Similar to the license file, the user can add prelink message files to the conda package.
+
+.. code-block:: yaml
+
+  about:
+    prelink_message:
+      - prelink_message_file.txt
+      - folder-with-all-prelink-messages/
+
+
 App section
 ===========
 

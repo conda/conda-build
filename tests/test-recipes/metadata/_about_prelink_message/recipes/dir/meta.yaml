@@ -1,0 +1,11 @@
+package:
+  name: test_about_prelink_message_file_dir
+  version: 1.0
+
+source:
+  path: ../../source
+
+about:
+  prelink_message:
+    - prelink_message-dir-from-source/
+    - prelink_message-dir-from-recipe/

@@ -28,7 +28,8 @@ about:
   home: https://palletsprojects.com/p/click/
   license: BSD
   license_family: BSD
-  license_file: 
+  license_file:
+  prelink_message:
   summary: Composable command line interface toolkit
   doc_url: 
   dev_url: 
