@@ -90,11 +90,11 @@ if [ -f Build.PL ]; then
     perl Build.PL
     perl ./Build
     perl ./Build test
-    # Make sure this goes in site
-    perl ./Build install --installdirs site
+    # Make sure this goes in the desired location (site or vendor)
+    perl ./Build install --installdirs {installdirs}
 elif [ -f Makefile.PL ]; then
-    # Make sure this goes in site
-    perl Makefile.PL INSTALLDIRS=site
+    # Make sure this goes in the desired location (site or vendor)
+    perl Makefile.PL INSTALLDIRS={installdirs}
     make
     make test
     make install
@@ -118,12 +118,12 @@ IF exist Build.PL (
     Build
     IF %ERRORLEVEL% NEQ 0 exit /B 1
     Build test
-    :: Make sure this goes in site
-    Build install --installdirs site
+    :: Make sure this goes in the desired location (site or vendor)
+    Build install --installdirs {installdirs}
     IF %ERRORLEVEL% NEQ 0 exit /B 1
 ) ELSE IF exist Makefile.PL (
-    :: Make sure this goes in site
-    perl Makefile.PL INSTALLDIRS=site
+    :: Make sure this goes in the desired location (site or vendor)
+    perl Makefile.PL INSTALLDIRS={installdirs}
     IF %ERRORLEVEL% NEQ 0 exit /B 1
     make
     IF %ERRORLEVEL% NEQ 0 exit /B 1
@@ -346,7 +346,8 @@ def get_core_modules_for_this_perl_version(version, cache_dir):
 # meta_cpan_url="http://api.metacpan.org",
 def skeletonize(packages, output_dir=".", version=None,
                 meta_cpan_url="https://fastapi.metacpan.org/v1",
-                recursive=False, force=False, config=None, write_core=False):
+                recursive=False, force=False, config=None, write_core=False,
+                installdirs="site"):
     '''
     Loops over packages, outputting conda recipes converted from CPAN metata.
     '''
@@ -432,6 +433,7 @@ def skeletonize(packages, output_dir=".", version=None,
                                                'source_comment': '',
                                                'summary': "''",
                                                'import_tests': ''})
+        d['installdirs'] = installdirs
 
         # Fetch all metadata from CPAN
         if version is None:
@@ -606,6 +608,11 @@ def add_parser(repos):
         "--write_core",
         action='store_true',
         help='Write recipes for perl core modules (default: %(default)s). ')
+    cpan.add_argument(
+        "--installdirs",
+        help="Installation destination category (default: %(default)s).",
+        choices=("vendor", "site", "core"),
+        default="site")
 
 
 @memoized
