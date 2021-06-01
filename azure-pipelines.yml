@@ -38,12 +38,7 @@ jobs:
       ps -ef | grep $$
       conda list
       grep '^#' "${CONDA_PREFIX}/conda-meta/history"
-      if [ "$PYTHON_VERSION" = "2.7" ]; then
-        # No Python 2.7 builds after conda=4.8.4 available.
-        conda install python=$PYTHON_VERSION conda\<=4.8.4 -y
-      else
-        conda install python=$PYTHON_VERSION -y
-      fi
+      conda install python=$PYTHON_VERSION -y
       mkdir -p /usr/share/miniconda/locks
       mkdir -p /usr/share/miniconda/bin
       chmod a-w /usr/share/miniconda/locks
@@ -89,7 +84,7 @@ jobs:
 
   - publish: $(Build.ArtifactStagingDirectory)/pytest-replay
     artifact: 'Linux-$(CONDA_VERSION)-Py$(PYTHON_VERSION)'
-    condition: and(always(), ne(variables['PYTHON_VERSION'], '2.7'))
+    condition: always()
 
 
 - job: 'macOS'
@@ -153,12 +148,7 @@ jobs:
       conda info
       conda list
       grep '^#' "${CONDA_PREFIX}/conda-meta/history"
-      if [ "$PYTHON_VERSION" = "2.7" ]; then
-        # No Python 2.7 builds after conda=4.8.4 available.
-        conda install python=$PYTHON_VERSION conda\<=4.8.4 -y
-      else
-        conda install python=$PYTHON_VERSION -y
-      fi
+      conda install python=$PYTHON_VERSION -y
       mkdir -p $(Build.StagingDirectory)/miniconda/locks
       mkdir -p $(Build.StagingDirectory)/miniconda/bin
       chmod -w $(Build.StagingDirectory)/miniconda/locks
@@ -205,7 +195,7 @@ jobs:
 
   - publish: $(Build.ArtifactStagingDirectory)/pytest-replay
     artifact: 'macOS-$(CONDA_VERSION)-Py$(PYTHON_VERSION)'
-    condition: and(always(), ne(variables['PYTHON_VERSION'], '2.7'))
+    condition: always()
 
 
 - job: 'Windows'
@@ -237,8 +227,14 @@ jobs:
     inputs:
       versionSpec: '$(PYTHON_VERSION)'
 
-  - script: |
-      choco install vcpython27 -fdv -y --debug
+  # SHA256 checksum (070474db76a2e625513a5835df4595df9324d820f9cc97eab2a596dcbc2f5cbf) is identical for
+  # https://web.archive.org/web/20210106040224/https://download.microsoft.com/download/7/9/6/796EF2E4-801B-4FC4-AB28-B59FBF6D907B/VCForPython27.msi
+  # and
+  # https://github.com/GeoNode/geonode-win-installer/raw/ffb76c7cbf1d6b4970c6c25f79c3c7682a3aa035/VCForPython27.msi
+  - powershell: |
+      $wc = New-Object net.webclient
+      $wc.Downloadfile("https://github.com/GeoNode/geonode-win-installer/raw/ffb76c7cbf1d6b4970c6c25f79c3c7682a3aa035/VCForPython27.msi", "VCForPython27.msi")
+      Start-Process "VCForPython27.msi" /qn -Wait
     displayName: Install vcpython27.msi
 
   - script: |
@@ -281,8 +277,7 @@ jobs:
       set PATH
       call %UserProfile%\Miniconda3\condabin\activate.bat base||exit 1
       set PATH
-      :: No Python 2.7 builds after conda=4.8.4 available.
-      if "%PYTHON_VERSION%" == "2.7" (call conda install python="%PYTHON_VERSION%" "conda<=4.8.4" -y||exit 1) else (call conda install python="%PYTHON_VERSION%" -y||exit 1)
+      call conda install python="%PYTHON_VERSION%" -y||exit 1
       if "%CONDA_VERSION%" == "canary" (call conda update -c conda-canary conda||exit 1) else (call conda update -q conda||exit 1)
       call conda config --set always_yes yes
       call conda config --set auto_update_conda no
@@ -292,12 +287,10 @@ jobs:
       python -c "import sys; print(sys.prefix)"
       call conda update -q --all||exit 1
       call conda install -q pip python-libarchive-c pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling pytest-azurepipelines||exit 1
-      if "%PYTHON_VERSION%" == "2.7" call conda install -c defaults -c conda-forge pytest-replay pytest-rerunfailures "coverage<5.0|>5.0" -y||exit 1
-      if "%PYTHON_VERSION%" NEQ "2.7" call conda install pytest-replay pytest-rerunfailures -y||exit 1
+      call conda install pytest-replay pytest-rerunfailures -y||exit 1
       echo safety_checks: disabled >> %UserProfile%\.condarc
       echo local_repodata_ttl: 1800 >> %UserProfile%\.condarc
-      if "%PYTHON_VERSION%" == "2.7" call conda install -q scandir pathlib2||exit 1
-      if "%PYTHON_VERSION%" NEQ "2.7" call conda install -q py-lief||exit 1
+      call conda install -q py-lief||exit 1
       python --version
       python -c "import struct; print(struct.calcsize('P') * 8)"
       pip install --no-deps .
@@ -311,8 +304,7 @@ jobs:
       call conda create -n blarg -yq --download-only python=3.8||exit 1
       call conda create -n blarg -yq --download-only python cmake||exit 1
       mkdir $(Build.ArtifactStagingDirectory)\\pytest-replay
-      set "PYTEST_REPLAY_OPTIONS=--replay-record-dir=$(Build.ArtifactStagingDirectory)\\pytest-replay"
-      if "%PYTHON_VERSION%" NEQ "2.7" set "PYTEST_REPLAY_OPTIONS=--replay-record-dir=$(Build.ArtifactStagingDirectory)\\pytest-replay --replay-base-name=Win-%CONDA_VERSION%-Py%PYTHON_VERSION%"
+      set "PYTEST_REPLAY_OPTIONS=--replay-record-dir=$(Build.ArtifactStagingDirectory)\\pytest-replay --replay-base-name=Win-%CONDA_VERSION%-Py%PYTHON_VERSION%"
       echo "##vso[task.setvariable variable=PYTEST_REPLAY_OPTIONS]%PYTEST_REPLAY_OPTIONS%"
     displayName: 'Configuration'
 
