@@ -1201,7 +1201,7 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
     # specs = ['python %s*' % python_version, 'pyyaml', 'setuptools', 'six', 'packaging', 'appdirs']
     subdir = config.host_subdir
     specs = ['python {}*'.format(python_version),
-             'pyyaml', 'setuptools'] + (['m2-patch', 'm2-gcc-libs'] if config.host_subdir.startswith('win')
+             'pip', 'pyyaml', 'setuptools'] + (['m2-patch', 'm2-gcc-libs'] if config.host_subdir.startswith('win')
                                                     else ['patch'])
     with open(os.path.join(src_dir, "setup.py")) as setup:
         text = setup.read()
