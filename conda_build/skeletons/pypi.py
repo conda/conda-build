@@ -683,7 +683,6 @@ def _get_env_marker_operator_and_value(constraint):
 
 
 def _translate_python_constraint(constraint):
-    parts = constraint.split()
     translation = constraint
     if len(constraint.split()) == 2:
         operator, value = _get_env_marker_operator_and_value(constraint)
