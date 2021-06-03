@@ -667,23 +667,45 @@ def convert_version(version):
     return pin_compatible
 
 
-MARKER_RE = re.compile(r"(?P<name>^[^=<>!~\s]+)"
+MARKER_RE = re.compile(r"(?P<name>^[^=<>!~\s;]+)"
                        r"\s*"
                        r"(?P<constraint>[=!><~]=?\s*[^\s;]+)?"
-                       r"(?:\s+;\s+)?(?P<env_mark_name>[^=<>!~\s;]+)?"
+                       r"(?:\s*;\s+)?(?P<env_mark_name>[^=<>!~\s;]+)?"
                        r"\s*"
                        r"(?P<env_mark_constraint>[=<>!\s]+[^=<>!~\s]+)?"
                        )
 
 
+def _get_env_marker_operator_and_value(constraint):
+    operator, value = constraint.split()
+    value = value.strip("'").strip('"').strip()
+    return operator, value
+
+
 def _translate_python_constraint(constraint):
-    parts = constraint.split()
     translation = constraint
-    if len(parts) == 2:
-        operator, value = parts
-        value = "".join(value.strip("'").strip('"').split(".")[:2])
+    if len(constraint.split()) == 2:
+        operator, value = _get_env_marker_operator_and_value(constraint)
+        value = "".join(value.split(".")[:2])
         translation = " ".join((operator, value))
-    return translation
+    return "py {}".format(translation)
+
+
+def _translate_platform_system_constraint(constraint):
+    operator, value = _get_env_marker_operator_and_value(constraint)
+    system = {
+        "Linux": "linux",
+        "Darwin": "osx",
+        "Windows": "win",
+    }.get(value, value.lower())
+    return "{}{}".format("not " if operator == "!=" else "", system)
+
+
+def _translate_sys_platform_constraint(constraint):
+    operator, value = _get_env_marker_operator_and_value(constraint)
+    # Only take the "letter" part to translate, e.g., "linux2"->"linux", "win32"->"win".
+    system = re.match('^[a-z]*', value, re.I)[0]
+    return "{}{}".format("not " if operator == "!=" else "", system)
 
 
 def env_mark_lookup(env_mark_name, env_mark_constraint):
@@ -691,11 +713,12 @@ def env_mark_lookup(env_mark_name, env_mark_constraint):
     version constraint to conda style"""
     # TODO: implement more of these from PEP 508 as necessary:
     #   https://www.python.org/dev/peps/pep-0508/
-    env_mark_table = {'python_version': {"repl": "py",
-                                         "constraint_trans_fn": _translate_python_constraint},
-                      }
-    marker = " ".join((env_mark_table[env_mark_name]["repl"],
-                    env_mark_table[env_mark_name]['constraint_trans_fn'](env_mark_constraint)))
+    env_mark_table = {
+        "python_version": _translate_python_constraint,
+        "platform_system": _translate_platform_system_constraint,
+        "sys_platform": _translate_sys_platform_constraint,
+    }
+    marker = env_mark_table[env_mark_name](env_mark_constraint)
     return '  # [ ' + marker + ' ]'
 
 
@@ -1201,7 +1224,7 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
     # specs = ['python %s*' % python_version, 'pyyaml', 'setuptools', 'six', 'packaging', 'appdirs']
     subdir = config.host_subdir
     specs = ['python {}*'.format(python_version),
-             'pyyaml', 'setuptools'] + (['m2-patch', 'm2-gcc-libs'] if config.host_subdir.startswith('win')
+             'pip', 'pyyaml', 'setuptools'] + (['m2-patch', 'm2-gcc-libs'] if config.host_subdir.startswith('win')
                                                     else ['patch'])
     with open(os.path.join(src_dir, "setup.py")) as setup:
         text = setup.read()
