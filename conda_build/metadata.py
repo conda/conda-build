@@ -439,6 +439,7 @@ FIELDS = {
         'missing_dso_whitelist': None,
         'error_overdepending': None,
         'error_overlinking': None,
+        'activate_in_script': bool,
     },
     'outputs': {
         'name': None,
