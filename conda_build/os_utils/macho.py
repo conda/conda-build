@@ -11,7 +11,8 @@ from conda_build.os_utils.external import find_preferably_prefixed_executable
 
 NO_EXT = (
     '.py', '.pyc', '.pyo', '.h', '.a', '.c', '.txt', '.html',
-    '.xml', '.png', '.jpg', '.gif', '.class',
+    '.xml', '.png', '.jpg', '.gif', '.class', '.in', '.sh',
+    '.yaml', '.md', '.ac', '.m4', '.cc', '.plist',
 )
 
 MAGIC = {
@@ -251,6 +252,8 @@ def install_name_tool(args, build_prefix=None, verbose=False):
 
 def add_rpath(path, rpath, build_prefix=None, verbose=False):
     """Add an `rpath` to the Mach-O file at `path`"""
+    if not is_macho(path):
+        return
     args = ['-add_rpath', rpath, path]
     code, _, stderr = install_name_tool(args, build_prefix)
     if "Mach-O dynamic shared library stub file" in stderr:
@@ -268,6 +271,8 @@ def add_rpath(path, rpath, build_prefix=None, verbose=False):
 
 def delete_rpath(path, rpath, build_prefix=None, verbose=False):
     """Delete an `rpath` from the Mach-O file at `path`"""
+    if not is_macho(path):
+        return
     args = ['-delete_rpath', rpath, path]
     code, _, stderr = install_name_tool(args, build_prefix)
     if "Mach-O dynamic shared library stub file" in stderr:
