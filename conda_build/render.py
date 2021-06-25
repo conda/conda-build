@@ -812,7 +812,7 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
             t.extractall(path=recipe_dir)
             t.close()
             need_cleanup = True
-        elif '.yaml' in arg:
+        elif arg.endswith('.yaml'):
             recipe_dir = os.path.dirname(arg)
             need_cleanup = False
         else:
