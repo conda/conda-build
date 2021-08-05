@@ -24,3 +24,7 @@ requirements:
     # cython inclusion here is to test https://github.com/conda/conda-build/issues/149
     # cython chosen because it is implicated somehow in setup.py complications.  Numpy would also work.
     - cython
+    # Ensure pip & setuptools are installed to ensure this test does not fail
+    # when the conda `add_pip_as_python_dependency` configuration option is set
+    # to False (as is done on some of this repository's CI systems).
+    - pip
