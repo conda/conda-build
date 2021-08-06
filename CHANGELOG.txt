@@ -1,4 +1,42 @@
 # current developments
+2021-08-06 3.21.5:
+------------------
+
+Enhancements:
+-------------
+
+* Revert "Consider any file containing .yaml in its name as maybe a recipe file" (#4235)
+* Support setting `build/script_env` values containing "=" (#4211)
+* Drop Python 2.7 support from `setup.py` (#4202)
+* Make variant configuration error message more informative (#4198)
+* Ensure file globs are always sorted (#4186)
+* Add preliminary support for `prelink_message` files in conda packages (#4203)
+
+Bug fixes:
+----------
+
+* Do not munge rpath for non Mach-O files on macOS (#4238)
+* Fix Windows test file extension reported by `conda-debug` (#4224)
+
+Documentation:
+--------------
+
+* Document `build/script_env` recipe option (#4211)
+* Clarify wording about selecting multiple operating systems (#4139)
+
+Contributors:
+-------------
+
+* @chrisburr
+* @gabm
+* @isuruf
+* @jacobtylerwalls
+* @katietz
+* @kenodegard
+* @marcelotrevisani
+* @xhochy
+
+
 2021-01-15 3.21.4:
 ------------------
 
