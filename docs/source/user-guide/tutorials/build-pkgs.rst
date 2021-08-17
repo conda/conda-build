@@ -43,6 +43,8 @@ Editing the meta.yaml file
 
      mkdir click
      cd click
+     
+- NOTE [IMP]: For `conda-build` to work, you Need a meta.yaml file. Otherwise you might see a message that says conda-build did not find any Recipes.
 
 #. To create a new ``meta.yaml`` file, open your favorite editor.
    Create a new text file and insert the information shown below.
