@@ -1591,3 +1591,8 @@ def test_script_env_warnings(testing_config, recwarn):
         assert_keyword('<hidden>')
     finally:
         os.environ.pop(token)
+
+
+def test_pin_expression_works_with_prereleases(testing_config):
+    recipe = os.path.join(metadata_dir, '_pinning_prerelease')
+    api.build(recipe, config=testing_config)

@@ -1514,7 +1514,12 @@ def apply_pin_expressions(version, min_pin='x.x.x.x.x.x.x', max_pin='x'):
             if versions[p_idx][-1] == '.':
                 versions[p_idx] = versions[p_idx][:-1]
     if versions[0]:
-        versions[0] = '>=' + versions[0]
+        if VersionOrder(version) < VersionOrder(versions[0]):
+            # If the minimum is greater than the version this is a pre-release build.
+            # Use the version as the lower bound
+            versions[0] = '>=' + str(version)
+        else:
+            versions[0] = '>=' + versions[0]
     if versions[1]:
         versions[1] = '<' + versions[1]
     return ','.join([v for v in versions if v])
