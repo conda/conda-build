@@ -93,15 +93,15 @@ Files in the folder with ``meta.yaml`` are collectively referred to as the "cond
 
 * ``build.sh``---macOS and Linux commands to build the package.
 
-Now that you have the conda-build recipe ready, you can use conda-build to create the package:
+Now that you have the conda-build recipe ready, you can use the  ``conda build`` command to create the package:
 
 .. code-block:: bash
 
-    conda-build click
+    conda build click
 
-When conda-build is finished, it displays the exact path and
+When ``conda build`` is finished, it displays the exact path and
 filename of the conda package. See :ref:`troubleshooting` if the
-``conda-build`` command fails.
+``conda build`` command fails.
 
 Windows example file path:
 
@@ -165,7 +165,7 @@ architectures and how to upload them to your Anaconda.org account.
 
 Optional---Building for a different Python version
 ==================================================
-By default, conda-build creates packages for the version of
+By default, ``conda-build`` creates packages for the version of
 Python installed in the root environment. To build packages for
 other versions of Python, you use the ``--python`` flag followed
 by a version. For example, to explicitly build a version of the
@@ -173,9 +173,9 @@ Click package for Python 2.7, use:
 
 .. code-block:: bash
 
-    conda-build --python 2.7 click
+    conda build --python 2.7 click
 
-Notice that the file printed at the end of the ``conda-build``
+Notice that the file printed at the end of the ``conda build``
 output has changed to reflect the requested version of Python.
 ``conda install`` will look in the package directory for the file
 that matches your current Python version.
@@ -211,7 +211,7 @@ Optional---Converting conda package for other platforms
 ========================================================
 
 Now that you have built a package for your current platform with
-conda-build, you can convert it for use on other platforms with
+``conda-build``, you can convert it for use on other platforms with
 the ``conda convert`` command. This works only for pure Python
 packages where there is no compiled code. Conda convert does
 nothing to change compiled code, it only adapts file paths to
@@ -331,7 +331,7 @@ You can log out of your Anaconda.org account with the command:
 Troubleshooting a sample issue
 ===============================
 
-Conda-build may produce the error message "Build Package missing."
+``conda-build`` may produce the error message "Build Package missing."
 
 To explore this error:
 
@@ -344,7 +344,7 @@ To explore this error:
 
    This command creates the skyfield conda-build recipe.
 
-#. Run ``conda-build skyfield`` and observe that it fails with
+#. Run ``conda build skyfield`` and observe that it fails with
    the following output:
 
    .. code-block:: text
