@@ -173,6 +173,24 @@ EXAMPLE: To build a Python 3.5 package with Miniconda2::
 .. note::
    Replace ``recipeDirectory`` with the name and path of your
    recipe directory.
+   
+Install a package into your conda environment
+=============================================
+
+Packages created with ``conda-build`` are stored in the ``conda-bld``
+directory in your conda environment but not installed.
+
+To print the exact path of the package, use the ``--output`` in the
+``conda-build`` command::
+
+    conda-build recipeDirectory --output
+
+The package can be installed into the current environment by running::
+
+    conda install /path/to/package
+    
+.. note::
+    Replace ``/path/to/package`` with the path printed by ``conda-build --output``.
 
 Automated testing
 ==================
