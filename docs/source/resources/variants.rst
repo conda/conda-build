@@ -797,6 +797,10 @@ that was used at build time.
     # produces pins like >=1.11,<2
     variants = [{'numpy': '1.11', 'pin_run_as_build': {'numpy': {'min_pin': 'x.x', 'max_pin': 'x'}}}]
 
+Note that for pre-release versions ``min_pin`` will be ignored and substituted
+with the exact input version since pre-releases can never match ``>=x.x`` (see
+`build-version-spec`_ for details on pre-release version matching).
+
 
 Pinning at the variant level
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
