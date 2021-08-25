@@ -254,3 +254,11 @@ def test_pin_expression_works_with_prereleases(testing_config):
     assert len(ms) == 2
     m = next(m_[0] for m_ in ms if m_[0].meta['package']['name'] == 'bar')
     assert 'foo >=3.10.0.rc1,<3.11.0a0' in m.meta['requirements']['run']
+
+
+def test_pin_expression_works_with_python_prereleases(testing_config):
+    recipe = os.path.join(metadata_dir, '_pinning_prerelease_python')
+    ms = api.render(recipe, config=testing_config)
+    assert len(ms) == 2
+    m = next(m_[0] for m_ in ms if m_[0].meta['package']['name'] == 'bar')
+    assert 'python >=3.10.0rc1,<3.11.0a0' in m.meta['requirements']['run']
