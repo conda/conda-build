@@ -1570,6 +1570,11 @@ def test_ignore_verify_codes(testing_config):
     api.build(recipe_dir, config=testing_config)
 
 
+def test_symlink_dirs_in_always_include_files(testing_config):
+    recipe = os.path.join(metadata_dir, '_symlink_dirs_in_always_include_files')
+    api.build(recipe, config=testing_config)
+
+
 def test_script_env_warnings(testing_config, recwarn):
     recipe_dir = os.path.join(metadata_dir, '_script_env_warnings')
     token = 'CONDA_BUILD_PYTEST_SCRIPT_ENV_TEST_TOKEN'
