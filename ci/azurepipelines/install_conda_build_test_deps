@@ -26,7 +26,7 @@ function install_conda_build_test_deps_fn()
   _PKGS+=(${DEF_CHAN}::anaconda-client ${DEF_CHAN}::git ${DEF_CHAN}::requests ${DEF_CHAN}::filelock ${DEF_CHAN}::contextlib2 ${DEF_CHAN}::jinja2 ${DEF_CHAN}::flaky)
   _PKGS+=(${DEF_CHAN}::ripgrep ${DEF_CHAN}::pyflakes ${DEF_CHAN}::beautifulsoup4 ${DEF_CHAN}::chardet ${DEF_CHAN}::pycrypto ${DEF_CHAN}::glob2 ${DEF_CHAN}::psutil ${DEF_CHAN}::pytz ${DEF_CHAN}::tqdm)
   _PKGS+=(${DEF_CHAN}::conda-package-handling ${DEF_CHAN}::perl ${DEF_CHAN}::python-libarchive-c)
-  _PKGS+=(${DEF_CHAN}::pip ${DEF_CHAN}::numpy mock ${DEF_CHAN}::pkginfo ${DEF_CHAN}::python=3.9)
+  _PKGS+=(${DEF_CHAN}::pip ${DEF_CHAN}::numpy mock ${DEF_CHAN}::pkginfo ${DEF_CHAN}::python="${PYTHON_VERSION}")
   if [[ $(uname) =~ .*inux.* ]] && [[ ! ${MACOS_ARM64} == yes ]] ; then
     _PKGS+=(${DEF_CHAN}::patchelf)
   fi
@@ -34,7 +34,7 @@ function install_conda_build_test_deps_fn()
     _PKGS+=(${DEF_CHAN}::m2-patch)
     _PKGS+=(${DEF_CHAN}::m2-gcc-libs)
   else
-    _pkgs+=(${DEF_CHAN}::patch)
+    _PKGS+=(${DEF_CHAN}::patch)
   fi
   echo -e "Asking conda to install:\n${_PKGS[@]}"
   conda install -y --show-channel-urls "${_PKGS[@]}" "$@"
