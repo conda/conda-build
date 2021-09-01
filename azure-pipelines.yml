@@ -354,7 +354,7 @@ jobs:
       set PATH
       call %UserProfile%\Miniconda3\condabin\activate.bat base||exit 1
       set PATH
-      call conda remove -y conda-verify||exit 1
+      :: call conda remove -y conda-verify||exit 1
       set PERL=
       set LUA=
       set R=
