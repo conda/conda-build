@@ -336,6 +336,12 @@ def test_inherit_build_number(testing_config):
         assert int(m.meta['build']['number']) == 1, "build number should have been inherited as '1'"
 
 
+def test_circular_deps_cross(testing_config):
+    recipe = os.path.join(subpackage_dir, '_circular_deps_cross')
+    # check that this does not raise an exception
+    ms = api.render(recipe, config=testing_config)
+
+
 @pytest.mark.slow
 def test_loops_do_not_remove_earlier_packages(testing_config):
     recipe = os.path.join(subpackage_dir, '_xgboost_example')

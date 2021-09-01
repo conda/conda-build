@@ -283,14 +283,20 @@ def _get_all_dependencies(metadata, envs=('host', 'build', 'run')):
     return reqs
 
 
-def check_circular_dependencies(render_order):
+def check_circular_dependencies(render_order, config=None):
+    if config and config.host_subdir != config.build_subdir:
+        # When cross compiling build dependencies are already built
+        # and cannot come from the recipe as subpackages
+        envs = ('host', 'run')
+    else:
+        envs = ('build', 'host', 'run')
     pairs = []
     for idx, m in enumerate(render_order.values()):
         for other_m in list(render_order.values())[idx + 1:]:
             if (any(m.name() == dep or dep.startswith(m.name() + ' ')
-                   for dep in _get_all_dependencies(other_m)) and
+                   for dep in _get_all_dependencies(other_m, envs=envs)) and
                 any(other_m.name() == dep or dep.startswith(other_m.name() + ' ')
-                   for dep in _get_all_dependencies(m))):
+                   for dep in _get_all_dependencies(m, envs=envs))):
                 pairs.append((m.name(), other_m.name()))
     if pairs:
         error = "Circular dependencies in recipe: \n"
@@ -2084,7 +2090,7 @@ class MetaData(object):
 
             # format here is {output_dict: metadata_object}
             render_order = toposort(out_metadata_map)
-            check_circular_dependencies(render_order)
+            check_circular_dependencies(render_order, config=self.config)
             conda_packages = OrderedDict()
             non_conda_packages = []
 
