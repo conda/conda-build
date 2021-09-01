@@ -1,0 +1,7 @@
+pin_run_as_build:
+  foo:
+    min_pin: x.x
+    max_pin: x.x
+
+foo:
+  - 3.10.0.rc1
