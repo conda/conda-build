@@ -11,18 +11,10 @@ function install_conda_build_test_deps_fn()
   fi
   # avoids a python 3.7 problem
   local -a _PKGS=(cytoolz conda-verify)
-  if [[ "$PYTHON_VERSION" == "2.7" ]]; then
-    _PKGS+=(futures scandir pathlib2)
-  fi
   _PKGS+=(${DEF_CHAN}::pytest ${DEF_CHAN}::pytest-azurepipelines ${DEF_CHAN}::pytest-cov ${DEF_CHAN}::pytest-forked ${DEF_CHAN}::pytest-xdist)
   # default's mock is noarch: python, conda-forge do not have it for macOS-arm64 yet.
   _PKGS+=(${DEF_CHAN}::py-lief ${DEF_CHAN}::pytest-mock)
-  if [[ "$PYTHON_VERSION" != "2.7" ]] || [[ ! $(uname) =~ M* ]]; then
-    _PKGS+=(${DEF_CHAN}::pytest-replay ${DEF_CHAN}::pytest-rerunfailures)
-  else
-    # Workaround https://github.com/nedbat/coveragepy/issues/895
-    _PKGS+=(${DEF_CHAN}::coverage!=5.0)
-  fi
+  _PKGS+=(${DEF_CHAN}::pytest-replay ${DEF_CHAN}::pytest-rerunfailures)
   _PKGS+=(${DEF_CHAN}::anaconda-client ${DEF_CHAN}::git ${DEF_CHAN}::requests ${DEF_CHAN}::filelock ${DEF_CHAN}::contextlib2 ${DEF_CHAN}::jinja2 ${DEF_CHAN}::flaky)
   _PKGS+=(${DEF_CHAN}::ripgrep ${DEF_CHAN}::pyflakes ${DEF_CHAN}::beautifulsoup4 ${DEF_CHAN}::chardet ${DEF_CHAN}::pycrypto ${DEF_CHAN}::glob2 ${DEF_CHAN}::psutil ${DEF_CHAN}::pytz ${DEF_CHAN}::tqdm)
   _PKGS+=(${DEF_CHAN}::conda-package-handling ${DEF_CHAN}::perl ${DEF_CHAN}::python-libarchive-c)
