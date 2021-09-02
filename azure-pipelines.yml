@@ -19,21 +19,27 @@ jobs:
   strategy:
     maxParallel: 10
     matrix:
-      # py37-canary:
-      #   PYTHON_VERSION: '3.7'
-      #   CONDA_VERSION: 'release'
-      py37-release:
-        PYTHON_VERSION: '3.7'
-        CONDA_VERSION: 'release'
-      # py38-canary:
-      #   PYTHON_VERSION: '3.8'
-      #   CONDA_VERSION: 'release'
-      py38-release:
-        PYTHON_VERSION: '3.8'
-        CONDA_VERSION: 'release'
-      py39-release:
-        PYTHON_VERSION: '3.9'
-        CONDA_VERSION: 'canary'
+      ${{ each serial_or_parallel in parameters.serial_or_parallel }}:
+        # py37-canary:
+        #   PYTHON_VERSION: '3.7'
+        #   CONDA_VERSION: 'release'
+        #   serial_or_parallel: '${{ serial_or_parallel }}'
+        py37-release-${{ serial_or_parallel }}:
+          PYTHON_VERSION: '3.7'
+          CONDA_VERSION: 'release'
+          serial_or_parallel: '${{ serial_or_parallel }}'
+        # py38-canary-${{ serial_or_parallel }}:
+        #   PYTHON_VERSION: '3.8'
+        #   CONDA_VERSION: 'release'
+        #   serial_or_parallel: '${{ serial_or_parallel }}'
+        py38-release-${{ serial_or_parallel }}:
+          PYTHON_VERSION: '3.8'
+          CONDA_VERSION: 'release'
+          serial_or_parallel: '${{ serial_or_parallel }}'
+        py39-release-${{ serial_or_parallel }}:
+          PYTHON_VERSION: '3.9'
+          CONDA_VERSION: 'canary'
+          serial_or_parallel: '${{ serial_or_parallel }}'
   timeoutInMinutes: 480
   steps:
   - script: |
@@ -74,6 +80,7 @@ jobs:
       conda install conda-verify -y
       py.test --color=yes -vv -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="Linux-SerialTests-$CONDA_VERSION-Py$PYTHON_VERSION" "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
     displayName: 'Serial Tests'
+    condition: and(succeeded(), eq(variables.serial_or_parallel, 'serial'))
 
   - script: |
       set -e -u
@@ -88,9 +95,10 @@ jobs:
       source ci/azurepipelines/activate_conda "/usr/share/miniconda/bin/python"
       py.test --color=yes -vv -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --test-run-title="Linux-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION" "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
     displayName: 'Parallel Tests'
+    condition: and(succeeded(), eq(variables.serial_or_parallel, 'parallel'))
 
   - publish: $(Build.ArtifactStagingDirectory)/pytest-replay
-    artifact: 'Linux-$(CONDA_VERSION)-Py$(PYTHON_VERSION)'
+    artifact: 'Linux-$(CONDA_VERSION)-Py$(PYTHON_VERSION)-$(serial_or_parallel)'
     condition: always()
 
 
@@ -100,22 +108,27 @@ jobs:
   strategy:
     maxParallel: 10
     matrix:
-      # py37-canary:
-      #   PYTHON_VERSION: '3.7'
-      #   CONDA_VERSION: 'canary'
-      #   INSTALL_XCODE: '0'
-      py37-release:
-        PYTHON_VERSION: '3.7'
-        CONDA_VERSION: 'release'
-        INSTALL_XCODE: '0'
-      py38-release:
-        PYTHON_VERSION: '3.8'
-        CONDA_VERSION: 'release'
-        INSTALL_XCODE: '0'
-      py39-release:
-        PYTHON_VERSION: '3.9'
-        CONDA_VERSION: 'release'
-        INSTALL_XCODE: '0'
+      ${{ each serial_or_parallel in parameters.serial_or_parallel }}:
+        #py37-canary-${{ serial_or_parallel }}:
+        #  PYTHON_VERSION: '3.7'
+        #  CONDA_VERSION: 'canary'
+        #  INSTALL_XCODE: '0'
+        #  serial_or_parallel: '${{ serial_or_parallel }}'
+        py37-release-${{ serial_or_parallel }}:
+          PYTHON_VERSION: '3.7'
+          CONDA_VERSION: 'release'
+          INSTALL_XCODE: '0'
+          serial_or_parallel: '${{ serial_or_parallel }}'
+        py38-release-${{ serial_or_parallel }}:
+          PYTHON_VERSION: '3.8'
+          CONDA_VERSION: 'release'
+          INSTALL_XCODE: '0'
+          serial_or_parallel: '${{ serial_or_parallel }}'
+        py39-release-${{ serial_or_parallel }}:
+          PYTHON_VERSION: '3.9'
+          CONDA_VERSION: 'release'
+          INSTALL_XCODE: '0'
+          serial_or_parallel: '${{ serial_or_parallel }}'
   timeoutInMinutes: 480
   steps:
   # TODO: Fast finish on azure pipelines?
@@ -186,6 +199,7 @@ jobs:
       conda install conda-verify -y
       py.test --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="macOS-SerialTests-$CONDA_VERSION-Python$PYTHON_VERSION" "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
     displayName: 'Serial Tests'
+    condition: and(succeeded(), eq(variables.serial_or_parallel, 'serial'))
 
   - script: |
       set -e -u
@@ -199,9 +213,10 @@ jobs:
       conda create -n blarg4 -yq python nomkl numpy pandas svn
       py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --test-run-title="macOS-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION" "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
     displayName: 'Parallel Tests'
+    condition: and(succeeded(), eq(variables.serial_or_parallel, 'parallel'))
 
   - publish: $(Build.ArtifactStagingDirectory)/pytest-replay
-    artifact: 'macOS-$(CONDA_VERSION)-Py$(PYTHON_VERSION)'
+    artifact: 'macOS-$(CONDA_VERSION)-Py$(PYTHON_VERSION)-$(serial_or_parallel)'
     condition: always()
 
 
@@ -216,18 +231,18 @@ jobs:
           PYTHON_VERSION: '3.7'
           CONDA_VERSION: 'release'
           serial_or_parallel: '${{ serial_or_parallel }}'
-        # py37-canary-${{ serial_or_parallel }}:
-        #   PYTHON_VERSION: '3.7'
-        #   CONDA_VERSION: 'canary'
-        #   serial_or_parallel: '${{ serial_or_parallel }}'
+       #py37-canary-${{ serial_or_parallel }}:
+       #  PYTHON_VERSION: '3.7'
+       #  CONDA_VERSION: 'canary'
+       #  serial_or_parallel: '${{ serial_or_parallel }}'
         py38-release-${{ serial_or_parallel }}:
           PYTHON_VERSION: '3.8'
           CONDA_VERSION: 'release'
           serial_or_parallel: '${{ serial_or_parallel }}'
-        # py38-canary-${{ serial_or_parallel }}:
-        #   PYTHON_VERSION: '3.8'
-        #   CONDA_VERSION: 'canary'
-        #   serial_or_parallel: '${{ serial_or_parallel }}'
+       #py38-canary-${{ serial_or_parallel }}:
+       #  PYTHON_VERSION: '3.8'
+       #  CONDA_VERSION: 'canary'
+       #  serial_or_parallel: '${{ serial_or_parallel }}'
         py39-release-${{ serial_or_parallel }}:
           PYTHON_VERSION: '3.9'
           CONDA_VERSION: 'release'
