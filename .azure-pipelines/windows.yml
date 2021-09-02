@@ -1,0 +1,148 @@
+parameters:
+- name: serial_or_parallel
+  default: ''
+
+jobs:
+
+- job: 'Windows_${{ parameters.serial_or_parallel }}'
+  pool:
+    vmImage: "vs2017-win2016"
+  strategy:
+    maxParallel: 10
+    matrix:
+      py37-release:
+        PYTHON_VERSION: '3.7'
+        CONDA_VERSION: 'release'
+     # py37-canary:
+     #   PYTHON_VERSION: '3.7'
+     #   CONDA_VERSION: 'canary'
+      py38-release:
+        PYTHON_VERSION: '3.8'
+        CONDA_VERSION: 'release'
+     # py38-canary:
+     #   PYTHON_VERSION: '3.8'
+     #   CONDA_VERSION: 'canary'
+      py39-release:
+        PYTHON_VERSION: '3.9'
+        CONDA_VERSION: 'release'
+  timeoutInMinutes: 480
+  steps:
+  - checkout: self
+    persistCredentials: true
+  - task: UsePythonVersion@0
+    inputs:
+      versionSpec: '$(PYTHON_VERSION)'
+
+  # SHA256 checksum (070474db76a2e625513a5835df4595df9324d820f9cc97eab2a596dcbc2f5cbf) is identical for
+  # https://web.archive.org/web/20210106040224/https://download.microsoft.com/download/7/9/6/796EF2E4-801B-4FC4-AB28-B59FBF6D907B/VCForPython27.msi
+  # and
+  # https://github.com/GeoNode/geonode-win-installer/raw/ffb76c7cbf1d6b4970c6c25f79c3c7682a3aa035/VCForPython27.msi
+  - powershell: |
+      $wc = New-Object net.webclient
+      $wc.Downloadfile("https://github.com/GeoNode/geonode-win-installer/raw/ffb76c7cbf1d6b4970c6c25f79c3c7682a3aa035/VCForPython27.msi", "VCForPython27.msi")
+      Start-Process "VCForPython27.msi" /qn -Wait
+    displayName: Install vcpython27.msi
+
+  - script: |
+      rmdir C:\Strawberry /s /q
+      choco install wget
+      wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe
+      start /wait "" Miniconda3-latest-Windows-x86_64.exe /InstallationType=JustMe /S /D=%UserProfile%\Miniconda3
+      "%UserProfile%\Miniconda3\condabin\conda.bat" init
+      conda info -a
+    displayName: Install miniconda
+
+  - powershell: |
+      Set-PSDebug -Trace 1
+      $batchcontent = @"
+      ECHO ON
+      SET vcpython=C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0
+      DIR "%vcpython%"
+      CALL "%vcpython%\vcvarsall.bat" %*
+      "@
+      $batchDir = "C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC"
+      $batchPath = "$batchDir" + "\vcvarsall.bat"
+      New-Item -Path $batchPath -ItemType "file" -Force
+      Set-Content -Value $batchcontent -Path $batchPath
+      Get-ChildItem -Path $batchDir
+      Get-ChildItem -Path ($batchDir + '\..')
+      set LIB
+    displayName: Patch vs2008
+
+  - script: |
+      echo on
+      set PATH
+      doskey conda="call %UserProfile%\Miniconda3\condabin\conda.bat" $*
+      doskey /macros
+      call "%UserProfile%\Miniconda3\condabin\conda.bat" init
+      set PATH
+    displayName: conda init
+
+  - script: |
+      echo on
+      set PATH
+      call %UserProfile%\Miniconda3\condabin\activate.bat base||exit 1
+      set PATH
+      call conda install python="%PYTHON_VERSION%" -y||exit 1
+      if "%CONDA_VERSION%" == "canary" (call conda update -c conda-canary conda||exit 1) else (call conda update -q conda||exit 1)
+      call conda config --set always_yes yes
+      call conda config --set auto_update_conda no
+      call conda info
+      python -c "import sys; print(sys.version)"
+      python -c "import sys; print(sys.executable)"
+      python -c "import sys; print(sys.prefix)"
+      call conda update -q --all||exit 1
+      call conda install -q pip python-libarchive-c pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling pytest-azurepipelines||exit 1
+      call conda install pytest-replay pytest-rerunfailures -y||exit 1
+      echo safety_checks: disabled >> %UserProfile%\.condarc
+      echo local_repodata_ttl: 1800 >> %UserProfile%\.condarc
+      call conda install -q py-lief||exit 1
+      python --version
+      python -c "import struct; print(struct.calcsize('P') * 8)"
+      pip install --no-deps .
+      conda-build --version
+      pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd
+      mkdir %UserProfile%\cbtmp_serial
+      mkdir %UserProfile%\cbtmp
+      for /d %%F in (%UserProfile%\cbtmp_serial\*) do rd /s /q "%%F"
+      for /d %%F in (%UserProfile%\cbtmp\*) do rd /s /q "%%F"
+      call conda create -n blarg -yq --download-only python=2.7||exit 1
+      call conda create -n blarg -yq --download-only python=3.8||exit 1
+      call conda create -n blarg -yq --download-only python cmake||exit 1
+      mkdir $(Build.ArtifactStagingDirectory)\\pytest-replay
+      set "PYTEST_REPLAY_OPTIONS=--replay-record-dir=$(Build.ArtifactStagingDirectory)\\pytest-replay --replay-base-name=Win-%CONDA_VERSION%-Py%PYTHON_VERSION%"
+      echo "##vso[task.setvariable variable=PYTEST_REPLAY_OPTIONS]%PYTEST_REPLAY_OPTIONS%"
+    displayName: 'Configuration'
+
+  - script: |
+      echo on
+      set PATH
+      call %UserProfile%\Miniconda3\condabin\activate.bat base||exit 1
+      set PATH
+      call conda install -y conda-verify||exit 1
+      set PERL=
+      set LUA=
+      set R=
+      py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp %UserProfile%\cbtmp_serial -n 0 -m "serial" --test-run-title="Win-SerialTests-%CONDA_VERSION%-Python%PYTHON_VERSION%" %PYTEST_REPLAY_OPTIONS%
+    displayName: 'Serial Tests'
+    condition: and(succeeded(), eq('${{ parameters.serial_or_parallel }}', 'serial'))
+
+  - script: |
+      echo on
+      set PATH
+      call %UserProfile%\Miniconda3\condabin\activate.bat base||exit 1
+      set PATH
+      :: call conda remove -y conda-verify||exit 1
+      set PERL=
+      set LUA=
+      set R=
+      py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp %UserProfile%\cbtmp -n auto -m "not serial" --test-run-title="Win-ParallelTests-%CONDA_VERSION%-Python%PYTHON_VERSION%" %PYTEST_REPLAY_OPTIONS%
+    env:
+      VS90COMNTOOLS: "C:\\Program Files (x86)\\Common Files\\Microsoft\\Visual C++ for Python\\9.0\\VC\\bin"
+      LIB:
+    displayName: 'Parallel Tests'
+    condition: and(succeeded(), eq('${{ parameters.serial_or_parallel }}', 'parallel'))
+
+  - publish: $(Build.ArtifactStagingDirectory)/pytest-replay
+    artifact: 'Win-$(CONDA_VERSION)-Python$(PYTHON_VERSION)-${{ parameters.serial_or_parallel }}'
+    condition: always()
