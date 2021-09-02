@@ -25,7 +25,7 @@ jobs:
       py39-release:
         PYTHON_VERSION: '3.9'
         CONDA_VERSION: 'release'
-  timeoutInMinutes: 480
+  timeoutInMinutes: 120
   steps:
   - checkout: self
     persistCredentials: true
