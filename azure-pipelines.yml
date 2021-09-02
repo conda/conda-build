@@ -15,7 +15,7 @@ jobs:
 
 - job: 'Linux'
   pool:
-    vmImage: ubuntu-16.04
+    vmImage: ubuntu-18.04
   strategy:
     maxParallel: 10
     matrix:
