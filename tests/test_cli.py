@@ -301,6 +301,16 @@ def test_skeleton_pypi_arguments_work(testing_workdir):
     assert m.version() == '0.2.2'
 
 
+@pytest.mark.sanity
+def test_skeleton_cpan(testing_workdir, testing_config):
+    args = ['cpan', 'App-cpanminus']
+    main_skeleton.execute(args)
+    assert os.path.isdir('perl-app-cpanminus')
+
+    # ensure that recipe generated is buildable
+    main_build.execute(('perl-app-cpanminus',))
+
+
 def test_metapackage(testing_config, testing_workdir):
     """the metapackage command creates a package with runtime dependencies specified on the CLI"""
     args = ['metapackage_test', '1.0', '-d', 'bzip2', '--no-anaconda-upload']
