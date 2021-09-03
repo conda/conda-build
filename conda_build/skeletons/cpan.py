@@ -142,6 +142,8 @@ IF exist Build.PL (
 :: for a list of environment variables that are set during the build process.
 """
 
+PERL_5_LICENSE = 'GPL-1.0-or-later OR Artistic-1.0-Perl'
+
 perl_core = []
 
 
@@ -521,11 +523,14 @@ def skeletonize(packages, output_dir=".", version=None,
             d['summary'] = summary
             # d['summary'] = repr(release_data['abstract']).lstrip('u')
         try:
-            d['license'] = (release_data['license'][0] if
-                            isinstance(release_data['license'], list) else
-                            release_data['license'])
+            license = (release_data['license'][0] if
+                       isinstance(release_data['license'], list) else
+                       release_data['license'])
+            if license == 'perl_5':
+                license = PERL_5_LICENSE
         except KeyError:
-            d['license'] = 'perl_5'
+            license = PERL_5_LICENSE
+        d['license'] = license
         d['version'] = release_data['version']
 
         processed_packages.add(packagename + '-' + d['version'])
@@ -990,7 +995,7 @@ def get_release_info(cpan_url, cache_dir, core_modules, package, version):
                    "and are omitting the URL and MD5 from the recipe " +
                    "entirely.").format(orig_package))
             rel_dict = {'version': str(core_version), 'download_url': '',
-                        'license': ['perl_5'], 'dependency': {}}
+                        'license': [PERL_5_LICENSE], 'dependency': {}}
         else:
             sys.exit(("Error: Could not find any versions of package %s on " +
                       "MetaCPAN.") % (orig_package))
