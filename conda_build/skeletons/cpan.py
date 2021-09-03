@@ -54,7 +54,10 @@ build:
       - {{{{ name }}}} ={{{{ version }}}}
 
 requirements:
-  build:{build_depends}
+  build:
+    - findutils     # [not win]
+    - m2-findutils  # [win]
+    - make{build_depends}
 
   # Run exports are used now
   host:
@@ -94,7 +97,7 @@ if [ -f Build.PL ]; then
     perl ./Build install --installdirs {installdirs}
 elif [ -f Makefile.PL ]; then
     # Make sure this goes in the desired location (site or vendor)
-    perl Makefile.PL INSTALLDIRS={installdirs}
+    perl Makefile.PL INSTALLDIRS={installdirs} NO_PERLLOCAL=1 NO_PACKLIST=1
     make
     make test
     make install
@@ -102,6 +105,11 @@ else
     echo 'Unable to find Build.PL or Makefile.PL. You need to modify build.sh.'
     exit 1
 fi
+
+perl -e 'foreach(@INC) {{ $_ ne "." && -d $_ && print "$_\\n" }}' | \\
+    while IFS= read -r i; do \\
+        find "$i" -type f '(' -name .packlist -o -name perllocal.pod ')' -delete
+    done
 
 # Add more build steps here, if they are necessary.
 
@@ -123,7 +131,7 @@ IF exist Build.PL (
     IF %ERRORLEVEL% NEQ 0 exit /B 1
 ) ELSE IF exist Makefile.PL (
     :: Make sure this goes in the desired location (site or vendor)
-    perl Makefile.PL INSTALLDIRS={installdirs}
+    perl Makefile.PL INSTALLDIRS={installdirs} NO_PERLLOCAL=1 NO_PACKLIST=1
     IF %ERRORLEVEL% NEQ 0 exit /B 1
     make
     IF %ERRORLEVEL% NEQ 0 exit /B 1
@@ -133,6 +141,12 @@ IF exist Build.PL (
 ) ELSE (
     ECHO 'Unable to find Build.PL or Makefile.PL. You need to modify bld.bat.'
     exit 1
+)
+
+for /F "usebackq delims=" %%i in (
+    `perl -e "foreach(@INC) {{ $_ ne \\".\\" && -d $_ && print \\"$_\\n\\" }}"`
+) do (
+    find "%%i" -type f "(" -iname .packlist -o -name perllocal.pod ")" -delete
 )
 
 :: Add more build steps here, if they are necessary.
