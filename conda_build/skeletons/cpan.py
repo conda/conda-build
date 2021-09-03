@@ -55,9 +55,9 @@ build:
 
 requirements:
   build:
-    - findutils     # [not win]
+    # - findutils   # [not win]
     - m2-findutils  # [win]
-    - make{build_depends}
+    - make          # [not win]{build_depends}
 
   # Run exports are used now
   host:
