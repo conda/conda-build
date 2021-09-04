@@ -311,6 +311,21 @@ def test_skeleton_cpan(testing_workdir, testing_config):
     main_build.execute(('perl-app-cpanminus',))
 
 
+@pytest.mark.sanity
+def test_skeleton_cpan_vendor(testing_workdir, testing_config):
+    args = ['cpan', '--installdirs=vendor', 'App-cpanminus']
+    main_skeleton.execute(args)
+    assert os.path.isdir('perl-app-cpanminus')
+
+    # ensure that recipe generated is buildable
+    outputs = main_build.execute(
+        ('--channel', 'conda-forge', '--variants', '{perl: [5.32.1]}', 'perl-app-cpanminus',)
+    )
+    data = package_has_file(outputs[0], 'info/paths.json')
+    paths = json.loads(data)["paths"]
+    assert any(re.match(".*vendor.*/App/cpanminus.pm$", path["_path"]) for path in paths)
+
+
 def test_metapackage(testing_config, testing_workdir):
     """the metapackage command creates a package with runtime dependencies specified on the CLI"""
     args = ['metapackage_test', '1.0', '-d', 'bzip2', '--no-anaconda-upload']

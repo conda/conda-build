@@ -21,5 +21,5 @@ Docs:
 Other:
 ------
 
-* Change CPAN skeleton default installdirs to vendor
+* <news item>
 

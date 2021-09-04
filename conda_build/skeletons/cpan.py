@@ -363,7 +363,7 @@ def get_core_modules_for_this_perl_version(version, cache_dir):
 def skeletonize(packages, output_dir=".", version=None,
                 meta_cpan_url="https://fastapi.metacpan.org/v1",
                 recursive=False, force=False, config=None, write_core=False,
-                installdirs="vendor"):
+                installdirs="site"):
     '''
     Loops over packages, outputting conda recipes converted from CPAN metata.
     '''
@@ -631,7 +631,7 @@ def add_parser(repos):
         "--installdirs",
         help="Installation destination category (default: %(default)s).",
         choices=("vendor", "site", "core"),
-        default="vendor")
+        default="site")
 
 
 @memoized
