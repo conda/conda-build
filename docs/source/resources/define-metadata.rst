@@ -1238,11 +1238,13 @@ Specifying files to include in output
 --------------------------------------
 
 You can specify files to be included in the package in 1 of
-2 ways:
+3 ways:
 
 * Explicit file lists.
 
 * Scripts that move files into the build prefix.
+
+* Both of the above
 
 Explicit file lists are relative paths from the root of the
 build prefix. Explicit file lists support glob expressions.
@@ -1292,6 +1294,8 @@ independent of one another.
    simultaneously. Conda disallows this condition because it
    creates ambiguous runtime conditions.
 
+When both scripts and files are given, the script is first run
+and then only the files in the explicit file list are packaged.
 
 Subpackage requirements
 -----------------------

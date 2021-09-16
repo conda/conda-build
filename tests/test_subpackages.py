@@ -269,6 +269,12 @@ def test_subpackage_order_bad(testing_config):
 
 
 @pytest.mark.sanity
+def test_subpackage_script_and_files(testing_config):
+    recipe = os.path.join(subpackage_dir, '_script_and_files')
+    api.build(recipe, config=testing_config)
+
+
+@pytest.mark.sanity
 def test_build_script_and_script_env(testing_config):
     recipe = os.path.join(subpackage_dir, '_build_script')
     os.environ['TEST_FN'] = 'test'

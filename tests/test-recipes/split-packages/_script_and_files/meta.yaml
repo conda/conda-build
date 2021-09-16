@@ -1,0 +1,18 @@
+package:
+  name: split_packages_script_and_file_list
+  version: 1.0
+
+outputs:
+  - name: my_script_and_files_subpackage
+    script: my_script.sh  # [unix]
+    script: my_script.bat  # [win]
+    files:
+      - baz
+    test:
+      commands:
+        - if exist %PREFIX%\\foo exit 1  # [win]
+        - test ! -f ${PREFIX}/foo  # [unix]
+        - if exist %PREFIX%\\bar exit 1  # [win]
+        - test ! -f ${PREFIX}/bar  # [unix]
+        - if not exist %PREFIX%\\baz exit 1  # [win]
+        - test -f ${PREFIX}/baz  # [unix]

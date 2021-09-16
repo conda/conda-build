@@ -1,0 +1,1 @@
+echo "weee" > $PREFIX/foo
