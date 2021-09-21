@@ -8,6 +8,8 @@ import glob2
 import json
 import os
 import warnings
+import tempfile
+from pathlib import Path
 from os.path import isdir, isfile, islink, join, dirname
 import random
 import re
@@ -56,6 +58,7 @@ from .utils import (CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2,
                     shutil_move_more_retrying, tmp_chdir)
 from conda_build import environ, source, tarcheck, utils
 from conda_build.config import Config
+from conda_build.utils import get_site_packages
 from conda_build.index import get_build_index, update_index
 from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse, distribute_variants,
                                 expand_outputs, try_download, execute_download_actions,
@@ -74,6 +77,9 @@ import conda_build.noarch_python as noarch_python
 
 from conda import __version__ as conda_version
 from conda_build import __version__ as conda_build_version
+from rich.console import Console
+
+console = Console()
 
 if sys.platform == 'win32':
     import conda_build.windows as windows
@@ -2748,6 +2754,224 @@ def write_test_scripts(metadata, env_vars, py_files, pl_files, lua_files, r_file
                            lua_files, r_files, shell_files, trace)
     return test_run_script, test_env_script
 
+def determine_ext_and_win_check():
+    win_check = False
+    if sys.platform == "darwin":
+        ext = ".dylib"
+    elif sys.platform == "win32":
+        ext = ".dll"
+        win_check = True
+    else:
+        ext = ".so"
+    return ext, win_check
+
+
+def check_file_existence(f_paths, check_parent_dir=False):
+    all_exist = True
+    for each_f in f_paths:
+        if check_parent_dir and os.path.isdir(Path(each_f).parent):
+            console.print(
+                f"[green]\N{check mark} {Path(each_f).parent} (directory)[/green]"
+            )
+        if os.path.isdir(each_f):
+            console.print(f"[green]\N{check mark} {each_f} (directory)[/green]")
+        elif os.path.isfile(each_f):
+            console.print(f"[green]\N{check mark} {each_f}[/green]")
+        else:
+            console.print(f"[red]\N{multiplication x} {each_f}[/red]")
+            all_exist = False
+    return all_exist
+
+
+def check_site_packages(site_packages_dir, site_packages):
+    test_site_packages = True
+    if site_packages:
+        console.print("[blue]- Checking for site-packages[/blue]")
+        sp_files = [
+            os.path.join(site_packages_dir, each_pkg, "__init__.py")
+            for each_pkg in site_packages
+        ]
+        test_site_packages = check_file_existence(sp_files, check_parent_dir=True)
+    return test_site_packages
+
+
+def check_lib(lib_dir, bin_dir, lib):
+    ext, win_check = determine_ext_and_win_check()
+    test_lib = True
+    if lib:
+        console.print("[blue]- Checking for lib[/blue]")
+        lib_files = [os.path.join(lib_dir, "lib" + each_lib + ext) for each_lib in lib]
+
+        if win_check:
+            lib_files = [os.path.join(lib_dir, each_lib + ext) for each_lib in lib]
+            bin_files = [os.path.join(bin_dir, each_lib + ext) for each_lib in lib]
+            lib_win_files = [
+                os.path.join(lib_dir, each_lib + ".lib") for each_lib in lib
+            ]
+
+            test_bin_files = check_file_existence(bin_files)
+            test_lib_win_files = check_file_existence(lib_win_files)
+
+            test_lib = test_lib and test_bin_files and test_lib_win_files
+
+        test_lib_files = check_file_existence(lib_files)
+
+        test_lib = test_lib and test_lib_files
+    return test_lib
+
+
+def check_include(include_dir, include):
+    test_include = True
+    if include:
+        console.print("[blue]- Checking for include[/blue]")
+        include_files = [os.path.join(include_dir, fname) for fname in include]
+        test_include = check_file_existence(include_files)
+    return test_include
+
+
+def check_bin(bin_dir, bin_paths):
+    test_bin = True
+    if bin_paths:
+        console.print("[blue]- Checking for bin[/blue]")
+        bin_files = [os.path.join(bin_dir, fname) for fname in bin_paths]
+        test_bin = check_file_existence(bin_files)
+    return test_bin
+
+
+def check_cmake(prefix, cmake_find):
+    test_cmake = True
+    if cmake_find:
+        console.print("[blue]- Checking for cmake[/blue]")
+        cmake_cmd = os.path.join(prefix, "bin", "cmake")
+        for each_f in cmake_find:
+            cmake_content = [
+                "project(boatest)\n",
+                "\n",
+                f"find_package({each_f} REQUIRED)\n",
+            ]
+            with tempfile.TemporaryDirectory() as tempdir:
+                tempdir_path = str(Path(tempdir))
+                ftemp = open(os.path.join(tempdir_path, "CMakeLists.txt"), "w")
+                ftemp.writelines(cmake_content)
+                cmake_check = subprocess.run(
+                    [cmake_cmd, "."],
+                    cwd=tempdir_path,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                if cmake_check.returncode == 0:
+                    console.print(f"[green]\N{check mark} {each_f}[/green]")
+                else:
+                    console.print(f"[red]\N{multiplication x} {each_f}[/red]")
+                    test_cmake = False
+    return test_cmake
+
+
+def check_pkg_config(prefix, pkg_config):
+    test_pkg_config = True
+    if pkg_config:
+        p_env = os.environ.copy()
+        p_env["CONDA_PREFIX"] = prefix
+        pkg_config_cmd = os.path.join(prefix, "bin", "pkg-config")
+        console.print("[blue]- Checking for pkgconfig[/blue]")
+        for each_f in pkg_config:
+            pkg_config_exists = subprocess.run(
+                [pkg_config_cmd, each_f, "--exists"], env=p_env
+            )
+            pkg_config_validate = subprocess.run(
+                [pkg_config_cmd, each_f, "--validate"], env=p_env
+            )
+            if (
+                pkg_config_exists.returncode == 0
+                and pkg_config_validate.returncode == 0
+            ):
+                console.print(f"[green]\N{check mark} {each_f}[/green]")
+            else:
+                console.print(f"[red]\N{multiplication x} {each_f}[/red]")
+                test_pkg_config = False
+    return test_pkg_config
+
+
+def check_files(prefix, files):
+    test_files = True
+    if files:
+        console.print("[blue]- Checking for files[/blue]")
+        files_list = [os.path.join(prefix, each_f) for each_f in files]
+        test_files = check_file_existence(files_list)
+    return test_files
+
+
+def check_glob(prefix, glob_paths):
+    test_glob = True
+    if glob_paths:
+        console.print("[blue]- Checking for glob[/blue]")
+        for each_f in glob_paths:
+            each_glob_path = os.path.join(prefix, each_f)
+            if glob(each_glob_path):
+                for each_gp in glob(each_glob_path):
+                    console.print(f"[green]\N{check mark} {each_gp}[/green]")
+            else:
+                console.print(f"[red]\N{multiplication x} {each_glob_path}[/red]")
+                test_glob = False
+    return test_glob
+
+
+def test_exists(prefix, exists, py_ver):
+    if not exists:
+        return True
+
+    # site-packages
+    sp_check = True
+    if py_ver:
+        site_packages_dir = get_site_packages(prefix, py_ver)
+        site_packages = exists.get("site_packages")
+        sp_check = check_site_packages(site_packages_dir, site_packages)
+
+    # lib
+    lib_dir = os.path.join(prefix, "lib")
+    bin_dir = os.path.join(prefix, "bin")
+    lib = exists.get("lib")
+    lib_check = check_lib(lib_dir, bin_dir, lib)
+
+    # include
+    include_dir = os.path.join(prefix, "include")
+    include = exists.get("include")
+    include_check = check_include(include_dir, include)
+
+    # bin
+    bin_paths = exists.get("bin")
+    bin_check = check_bin(bin_dir, bin_paths)
+
+    # cmake_find
+    cmake_find = exists.get("cmake_find")
+    cmake_check = check_cmake(prefix, cmake_find)
+
+    # pkg_config
+    pkg_config = exists.get("pkg_config")
+    pkg_config_check = check_pkg_config(prefix, pkg_config)
+
+    # file
+    files = exists.get("file")
+    files_check = check_files(prefix, files)
+
+    # glob
+    glob_paths = exists.get("glob")
+    glob_check = check_glob(prefix, glob_paths)
+
+    if (
+        sp_check
+        and lib_check
+        and include_check
+        and bin_check
+        and cmake_check
+        and pkg_config_check
+        and files_check
+        and glob_check
+    ):
+        return True
+    else:
+        return False
+
 
 def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, provision_only=False):
     '''
@@ -2826,6 +3050,14 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
     get_build_metadata(metadata)
 
     specs = metadata.get_test_deps(py_files, pl_files, lua_files, r_files)
+    tests_metadata = metadata.meta.get("test")
+    exists_metadata = tests_metadata.get("exists") if tests_metadata else None
+    cmake_find = exists_metadata.get("cmake_find") if exists_metadata else None
+    pkg_config = exists_metadata.get("pkg_config") if exists_metadata else None
+    if cmake_find:
+        specs.append("cmake")
+    if pkg_config:
+        specs.append("pkg-config")
 
     with utils.path_prepended(metadata.config.test_prefix):
         env = dict(os.environ.copy())
@@ -2931,6 +3163,12 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
                             .format('set' if test_script.endswith('.bat') else 'export', k, v))
             utils.check_call_env(cmd, env=env, cwd=metadata.config.test_dir, stats=test_stats, rewrite_stdout_env=rewrite_env)
             log_stats(test_stats, f"testing {metadata.name()}")
+            py_ver = environ.get_py_ver(metadata.config)
+            check_exists_section = test_exists(
+                metadata.config.test_prefix, exists_metadata, py_ver
+            )
+            if not check_exists_section:
+                raise Exception("existence tests fail")
             if stats is not None and metadata.config.variants:
                 stats[stats_key(metadata, f'test_{metadata.name()}')] = test_stats
             if os.path.exists(join(metadata.config.test_dir, 'TEST_FAILED')):
