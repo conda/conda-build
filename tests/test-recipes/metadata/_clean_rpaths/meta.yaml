@@ -1,0 +1,25 @@
+package:
+  name: clean_rpaths
+  version: 0.0.1
+
+build:
+  number: 0
+  skip: True  # [not osx]
+  script:
+    - echo "int main(){}" > hello.c
+    - ${CC} hello.c -Wl,-rpath,${PREFIX}/lib -Wl,-rpath,${PREFIX}/lib -Wl,-rpath,${BUILD_PREFIX}/lib -Wl,-rpath,${SRC_DIR} -o hello
+    - mkdir -p ${PREFIX}/bin
+    - cp hello ${PREFIX}/bin
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+  host:
+  run:
+
+test:
+  requires:
+    - {{ compiler('c') }} 
+  commands:
+    - export CHECK_PREFIX=$(dirname {{ SRC_DIR }})
+    - ${OTOOL} -l ${PREFIX}/bin/hello | grep LC_RPATH -A 3 | grep -v ${CHECK_PREFIX}
