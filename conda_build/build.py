@@ -2754,11 +2754,11 @@ def write_test_scripts(metadata, env_vars, py_files, pl_files, lua_files, r_file
                            lua_files, r_files, shell_files, trace)
     return test_run_script, test_env_script
 
-def determine_ext_and_win_check():
+def determine_ext_and_win_check(target_platform):
     win_check = False
-    if sys.platform == "darwin":
+    if target_platform.startswith("osx"):
         ext = ".dylib"
-    elif sys.platform == "win32":
+    elif target_platform.startswith("win"):
         ext = ".dll"
         win_check = True
     else:
@@ -2795,8 +2795,8 @@ def check_site_packages(site_packages_dir, site_packages):
     return test_site_packages
 
 
-def check_lib(lib_dir, bin_dir, lib):
-    ext, win_check = determine_ext_and_win_check()
+def check_lib(lib_dir, bin_dir, lib, target_platform):
+    ext, win_check = determine_ext_and_win_check(target_platform)
     test_lib = True
     if lib:
         console.print("[blue]- Checking for lib[/blue]")
@@ -2916,7 +2916,7 @@ def check_glob(prefix, glob_paths):
     return test_glob
 
 
-def test_exists(prefix, exists, py_ver):
+def test_exists(prefix, exists, py_ver, target_platform):
     if not exists:
         return True
 
@@ -2931,7 +2931,10 @@ def test_exists(prefix, exists, py_ver):
     lib_dir = os.path.join(prefix, "lib")
     bin_dir = os.path.join(prefix, "bin")
     lib = exists.get("lib")
-    lib_check = check_lib(lib_dir, bin_dir, lib)
+    if target_platform == "noarch" and lib:
+        raise Exception("lib checks cannot be used with a noarch package")
+    else:
+        lib_check = check_lib(lib_dir, bin_dir, lib, target_platform)
 
     # include
     include_dir = os.path.join(prefix, "include")
@@ -3165,7 +3168,7 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
             log_stats(test_stats, f"testing {metadata.name()}")
             py_ver = environ.get_py_ver(metadata.config)
             check_exists_section = test_exists(
-                metadata.config.test_prefix, exists_metadata, py_ver
+                metadata.config.test_prefix, exists_metadata, py_ver, metadata.config.variant.get('target_platform')
             )
             if not check_exists_section:
                 raise Exception("existence tests fail")
