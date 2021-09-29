@@ -415,8 +415,9 @@ def mk_relative_osx(path, host_prefix, build_prefix, files, rpaths=('lib',)):
                              '').replace('/./', '/')
             macho.add_rpath(path, rpath_new, build_prefix=prefix, verbose=True)
             full_rpath = join(host_prefix, rpath)
-            for _ in range(existing_rpaths.count(full_rpath)):
-                macho.delete_rpath(path, full_rpath, build_prefix=prefix, verbose=True)
+            for existing_rpath in existing_rpaths:
+                if normpath(existing_rpath) == normpath(full_rpath):
+                    macho.delete_rpath(path, existing_rpath, build_prefix=prefix, verbose=True)
 
         base_prefix = dirname(host_prefix)
         for rpath in existing_rpaths:
