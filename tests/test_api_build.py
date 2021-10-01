@@ -1640,7 +1640,7 @@ def test_symlink_dirs_in_always_include_files(testing_config):
 
 def test_clean_rpaths(testing_config):
     recipe = os.path.join(metadata_dir, '_clean_rpaths')
-    api.build(recipe, config=testing_config)
+    api.build(recipe, config=testing_config, activate=True)
 
 
 def test_script_env_warnings(testing_config, recwarn):
