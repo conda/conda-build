@@ -108,8 +108,8 @@ else
 fi
 
 perl -e 'foreach(@INC) {{ $_ ne "." && -d $_ && print "$_\\n" }}' | \\
-    while IFS= read -r i; do \\
-        find "$i" -type f '(' -name .packlist -o -name perllocal.pod ')' -delete
+    while IFS= read -r d; do \\
+        find "${{d}}" -type f '(' -name .packlist -o -name perllocal.pod ')' -delete
     done
 
 # Add more build steps here, if they are necessary.
@@ -150,10 +150,10 @@ IF NOT exist Makefile.PL GOTO NOT_exist_Makefile_PL
 
 build_done:
 
-for /F "usebackq delims=" %%i in (
+for /F "usebackq delims=" %%d in (
     `perl -e "foreach(@INC) {{ $_ ne \\".\\" && -d $_ && print \\"$_\\n\\" }}"`
 ) do (
-    find "%%i" -type f "(" -iname .packlist -o -name perllocal.pod ")" -delete
+    find "%%d" -type f "(" -iname .packlist -o -name perllocal.pod ")" -delete
 )
 
 :: Add more build steps here, if they are necessary.
