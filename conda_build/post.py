@@ -392,7 +392,9 @@ def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
     return ret
 
 
-def mk_relative_osx(path, host_prefix, build_prefix, files, rpaths=('lib',)):
+def mk_relative_osx(path, host_prefix, m, files, rpaths=('lib',)):
+    base_prefix = m.config.build_folder
+    build_prefix = m.config.build_prefix
     prefix = build_prefix if exists(build_prefix) else host_prefix
     names = macho.otool(path, prefix)
     s = macho.install_name_change(path, prefix,
@@ -419,7 +421,6 @@ def mk_relative_osx(path, host_prefix, build_prefix, files, rpaths=('lib',)):
                 if normpath(existing_rpath) == normpath(full_rpath):
                     macho.delete_rpath(path, existing_rpath, build_prefix=prefix, verbose=True)
 
-        base_prefix = dirname(host_prefix)
         for rpath in existing_rpaths:
             if rpath.startswith(base_prefix) and not rpath.startswith(host_prefix):
                 macho.delete_rpath(path, rpath, build_prefix=prefix, verbose=True)
@@ -1260,7 +1261,7 @@ def post_process_shared_lib(m, f, files, host_prefix=None):
             log = utils.get_logger(__name__)
             log.warn("Found Mach-O file but patching is only supported on macOS, skipping: %s", path)
             return
-        mk_relative_osx(path, host_prefix, m.config.build_prefix, files=files, rpaths=rpaths)
+        mk_relative_osx(path, host_prefix, m, files=files, rpaths=rpaths)
 
 
 def fix_permissions(files, prefix):
