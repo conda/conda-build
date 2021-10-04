@@ -1,0 +1,117 @@
+parameters:
+- name: serial_or_parallel
+  default: ''
+
+jobs:
+
+- job: 'macOS_${{ parameters.serial_or_parallel }}'
+  pool:
+    vmImage: 'macOS-10.14'
+  strategy:
+    maxParallel: 10
+    matrix:
+      # py37-canary:
+      #   PYTHON_VERSION: '3.7'
+      #   CONDA_VERSION: 'canary'
+      #   INSTALL_XCODE: '0'
+      py37-release:
+        PYTHON_VERSION: '3.7'
+        CONDA_VERSION: 'release'
+        INSTALL_XCODE: '0'
+      py38-release:
+        PYTHON_VERSION: '3.8'
+        CONDA_VERSION: 'release'
+        INSTALL_XCODE: '0'
+      py39-release:
+        PYTHON_VERSION: '3.9'
+        CONDA_VERSION: 'release'
+        INSTALL_XCODE: '0'
+  timeoutInMinutes: 120
+  steps:
+  # TODO: Fast finish on azure pipelines?
+  - script: |
+      echo "Fast Finish"
+  - script: |
+      echo "Removing homebrew from Azure to avoid conflicts."
+      set -e -u
+      curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/uninstall > ~/uninstall_homebrew
+      chmod +x ~/uninstall_homebrew
+      ~/uninstall_homebrew -f -q
+      rm ~/uninstall_homebrew
+    displayName: Remove homebrew
+
+  - script: |
+      echo "Installing Miniconda"
+      set -x -e -u
+      curl -o $(Build.StagingDirectory)/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
+      chmod +x $(Build.StagingDirectory)/miniconda.sh
+      $(Build.StagingDirectory)/miniconda.sh -b -p $(Build.StagingDirectory)/miniconda
+      source ci/azurepipelines/activate_conda "$(Build.StagingDirectory)/miniconda/bin/python"
+      echo "Setting up Conda environment"
+    displayName: 'Install miniconda'
+
+  - script: |
+      echo "Setup CF macOS bits and select Xcode"
+      set -x -e -u
+      source ci/azurepipelines/activate_conda "$(Build.StagingDirectory)/miniconda/bin/python"
+      echo "PWD is $PWD"
+      find $PWD
+      source ci/azurepipelines/run_conda_forge_build_setup_osx
+    displayName: 'Setup CF macOS bits and select Xcode'
+
+  - script: |
+      set -e -u
+      source ci/azurepipelines/activate_conda "$(Build.StagingDirectory)/miniconda/bin/python"
+      conda info
+      conda list
+      grep '^#' "${CONDA_PREFIX}/conda-meta/history"
+      conda install python=$PYTHON_VERSION -y
+      mkdir -p $(Build.StagingDirectory)/miniconda/locks
+      mkdir -p $(Build.StagingDirectory)/miniconda/bin
+      chmod -w $(Build.StagingDirectory)/miniconda/locks
+      if [ "$CONDA_VERSION" = "release" ]; then
+        conda update -y conda;
+      else
+        conda install -y -c conda-canary conda;
+      fi
+      conda config --set always_yes yes
+      conda config --set auto_update_conda False
+      conda info
+
+      source ci/azurepipelines/install_conda_build_test_deps
+
+      pip install --no-deps .
+
+      conda info -a
+
+      conda list --show-channel-urls
+
+      source ci/azurepipelines/setup_pytest_replay
+
+    displayName: Preparing test environment
+
+  - script: |
+      set -e -u
+      source ci/azurepipelines/activate_conda "$(Build.StagingDirectory)/miniconda/bin/python"
+      conda install conda-verify -y
+      py.test --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="macOS-SerialTests-$CONDA_VERSION-Python$PYTHON_VERSION" "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
+    displayName: 'Serial Tests'
+    condition: and(succeeded(), eq('${{ parameters.serial_or_parallel }}', 'serial'))
+
+  - script: |
+      set -e -u
+      source ci/azurepipelines/activate_conda "$(Build.StagingDirectory)/miniconda/bin/python"
+      conda remove conda-verify -y
+      echo "safety_checks: disabled" >> ~/.condarc
+      echo "local_repodata_ttl: 1800" >> ~/.condarc
+      mkdir -p ~/.conda
+      conda create -n blarg1 -yq python=2.7
+      conda create -n blarg3 -yq python=3.7
+      conda create -n blarg4 -yq python nomkl numpy pandas svn
+      py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --test-run-title="macOS-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION" "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
+    displayName: 'Parallel Tests'
+    condition: and(succeeded(), eq('${{ parameters.serial_or_parallel }}', 'parallel'))
+
+  - publish: $(Build.ArtifactStagingDirectory)/pytest-replay
+    artifact: 'macOS-$(CONDA_VERSION)-Py$(PYTHON_VERSION)-${{ parameters.serial_or_parallel }}'
+    condition: always()

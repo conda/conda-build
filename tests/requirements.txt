@@ -1,0 +1,15 @@
+# conda-build
+# run as 'conda install --file tests/requirements.txt -c defaults'
+anaconda-client
+bs4
+conda-package-handling
+filelock
+flaky
+glob2
+jinja2
+mock
+pkginfo
+pytest
+pytest-cov
+pytest-mock
+python-libarchive-c
