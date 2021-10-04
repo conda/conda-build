@@ -121,7 +121,7 @@ perl -e 'foreach(@INC) {{ $_ ne "." && -d $_ && print "$_\\n" }}' | \\
 
 CPAN_BLD_BAT = """\
 :: If it has Build.PL use that, otherwise use Makefile.PL
-IF exist Build.PL (
+IF NOT exist Build.PL GOTO NOT_exist_Build_PL
     perl Build.PL
     IF %ERRORLEVEL% NEQ 0 exit /B 1
     Build
@@ -130,7 +130,10 @@ IF exist Build.PL (
     :: Make sure this goes in the desired location (site or vendor)
     Build install --installdirs {installdirs}
     IF %ERRORLEVEL% NEQ 0 exit /B 1
-) ELSE IF exist Makefile.PL (
+    GOTO build_done
+:NOT_exist_Build_PL
+
+IF NOT exist Makefile.PL GOTO NOT_exist_Makefile_PL
     :: Make sure this goes in the desired location (site or vendor)
     perl Makefile.PL INSTALLDIRS={installdirs} NO_PERLLOCAL=1 NO_PACKLIST=1
     IF %ERRORLEVEL% NEQ 0 exit /B 1
@@ -139,10 +142,13 @@ IF exist Build.PL (
     make test
     IF %ERRORLEVEL% NEQ 0 exit /B 1
     make install
-) ELSE (
+    GOTO build_done
+:NOT_exist_Makefile_PL
+
     ECHO 'Unable to find Build.PL or Makefile.PL. You need to modify bld.bat.'
     exit 1
-)
+
+build_done:
 
 for /F "usebackq delims=" %%i in (
     `perl -e "foreach(@INC) {{ $_ ne \\".\\" && -d $_ && print \\"$_\\n\\" }}"`
