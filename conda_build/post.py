@@ -394,6 +394,7 @@ def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
 
 def mk_relative_osx(path, host_prefix, m, files, rpaths=('lib',)):
     base_prefix = m.config.build_folder
+    assert base_prefix == dirname(host_prefix)
     build_prefix = m.config.build_prefix
     prefix = build_prefix if exists(build_prefix) else host_prefix
     names = macho.otool(path, prefix)
