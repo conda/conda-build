@@ -303,27 +303,27 @@ def test_skeleton_pypi_arguments_work(testing_workdir):
 
 @pytest.mark.sanity
 def test_skeleton_cpan(testing_workdir, testing_config):
-    args = ['cpan', 'App-cpanminus']
+    args = ['cpan', 'PBKDF2::Tiny']
     main_skeleton.execute(args)
-    assert os.path.isdir('perl-app-cpanminus')
+    assert os.path.isdir('perl-pbkdf2-tiny')
 
     # ensure that recipe generated is buildable
-    main_build.execute(('perl-app-cpanminus',))
+    main_build.execute(('perl-pbkdf2-tiny',))
 
 
 @pytest.mark.sanity
 def test_skeleton_cpan_vendor(testing_workdir, testing_config):
-    args = ['cpan', '--installdirs=vendor', 'App-cpanminus']
+    args = ['cpan', '--installdirs=vendor', 'PBKDF2::Tiny']
     main_skeleton.execute(args)
-    assert os.path.isdir('perl-app-cpanminus')
+    assert os.path.isdir('perl-pbkdf2-tiny')
 
     # ensure that recipe generated is buildable
     outputs = main_build.execute(
-        ('--channel', 'conda-forge', '--variants', '{perl: [5.32.1]}', 'perl-app-cpanminus',)
+        ('--channel', 'conda-forge', '--variants', '{perl: [5.32.1]}', 'perl-pbkdf2-tiny',)
     )
     data = package_has_file(outputs[0], 'info/paths.json')
     paths = json.loads(data)["paths"]
-    assert any(re.match(".*vendor.*/App/cpanminus.pm$", path["_path"]) for path in paths)
+    assert any(re.match(".*vendor.*/PBKDF2/Tiny.pm$", path["_path"]) for path in paths)
 
 
 def test_metapackage(testing_config, testing_workdir):
