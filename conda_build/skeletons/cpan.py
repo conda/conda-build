@@ -57,8 +57,7 @@ requirements:
   build:
     # - findutils   # [not win]
     - make          # [not win]
-    - m2-findutils  # [win]
-    - m2-make       # [win]{build_depends}
+    - m2-findutils  # [win]{build_depends}
 
   # Run exports are used now
   host:
@@ -135,20 +134,21 @@ IF NOT exist Build.PL GOTO NOT_exist_Build_PL
 
 IF NOT exist Makefile.PL GOTO NOT_exist_Makefile_PL
     :: Make sure this goes in the desired location (site or vendor)
+    set MAKE=nmake
     perl Makefile.PL INSTALLDIRS={installdirs} NO_PERLLOCAL=1 NO_PACKLIST=1
     IF %ERRORLEVEL% NEQ 0 exit /B 1
-    make
+    %MAKE%
     IF %ERRORLEVEL% NEQ 0 exit /B 1
-    make test
+    %MAKE% test
     IF %ERRORLEVEL% NEQ 0 exit /B 1
-    make install
+    %MAKE% install
     GOTO build_done
 :NOT_exist_Makefile_PL
 
     ECHO 'Unable to find Build.PL or Makefile.PL. You need to modify bld.bat.'
     exit 1
 
-build_done:
+:build_done
 
 for /F "usebackq delims=" %%d in (
     `perl -e "foreach(@INC) {{ $_ ne \\".\\" && -d $_ && print \\"$_\\n\\" }}"`
