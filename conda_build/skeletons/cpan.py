@@ -126,6 +126,7 @@ IF NOT exist Build.PL GOTO NOT_exist_Build_PL
     Build
     IF %ERRORLEVEL% NEQ 0 exit /B 1
     Build test
+    IF %ERRORLEVEL% NEQ 0 exit /B 1
     :: Make sure this goes in the desired location (site or vendor)
     Build install --installdirs {installdirs}
     IF %ERRORLEVEL% NEQ 0 exit /B 1
@@ -142,6 +143,7 @@ IF NOT exist Makefile.PL GOTO NOT_exist_Makefile_PL
     %MAKE% test
     IF %ERRORLEVEL% NEQ 0 exit /B 1
     %MAKE% install
+    IF %ERRORLEVEL% NEQ 0 exit /B 1
     GOTO build_done
 :NOT_exist_Makefile_PL
 
