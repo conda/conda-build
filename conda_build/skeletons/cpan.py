@@ -100,7 +100,7 @@ elif [ -f Makefile.PL ]; then
     perl Makefile.PL INSTALLDIRS={installdirs} NO_PERLLOCAL=1 NO_PACKLIST=1
     make
     make test
-    make install
+    make install VERBINST=1
 else
     echo 'Unable to find Build.PL or Makefile.PL. You need to modify build.sh.'
     exit 1
@@ -142,7 +142,7 @@ IF NOT exist Makefile.PL GOTO NOT_exist_Makefile_PL
     IF %ERRORLEVEL% NEQ 0 exit /B 1
     %MAKE% test
     IF %ERRORLEVEL% NEQ 0 exit /B 1
-    %MAKE% install
+    %MAKE% install VERBINST=1
     IF %ERRORLEVEL% NEQ 0 exit /B 1
     GOTO build_done
 :NOT_exist_Makefile_PL
