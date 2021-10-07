@@ -308,7 +308,11 @@ def test_skeleton_cpan(testing_workdir, testing_config):
     assert os.path.isdir('perl-pbkdf2-tiny')
 
     # ensure that recipe generated is buildable
-    main_build.execute(('perl-pbkdf2-tiny',))
+    # Test with conda-forge::perl since defaults has sitelib at
+    # C:\strawberry\perl\site\lib on Windows.
+    main_build.execute(
+        ('--channel', 'conda-forge', '--variants', '{perl: [5.32.1]}', 'perl-pbkdf2-tiny',)
+    )
 
 
 @pytest.mark.sanity
@@ -318,6 +322,8 @@ def test_skeleton_cpan_vendor(testing_workdir, testing_config):
     assert os.path.isdir('perl-pbkdf2-tiny')
 
     # ensure that recipe generated is buildable
+    # Test with conda-forge::perl since defaults has vendorlib undefined (Linux)
+    # or at C:\strawberry\perl\vendor\lib on Windows.
     outputs = main_build.execute(
         ('--channel', 'conda-forge', '--variants', '{perl: [5.32.1]}', 'perl-pbkdf2-tiny',)
     )
