@@ -2610,6 +2610,9 @@ def write_build_scripts(m, script, build_file):
     # locally, and if we don't, it's a problem.
     env["PIP_NO_INDEX"] = True
 
+    # Opt into building in-tree without copying to a temp dir
+    env["PIP_USE_FEATURE"] = "in-tree-build"
+
     if m.noarch == "python":
         env["PYTHONDONTWRITEBYTECODE"] = True
 

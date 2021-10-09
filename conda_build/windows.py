@@ -275,6 +275,9 @@ def build(m, bld_bat, stats, provision_only=False):
     # locally, and if we don't, it's a problem.
     env["PIP_NO_INDEX"] = True
 
+    # Opt into building in-tree without copying to a temp dir
+    env["PIP_USE_FEATURE"] = "in-tree-build"
+
     # set variables like CONDA_PY in the test environment
     env.update(set_language_env_vars(m.config.variant))
 
