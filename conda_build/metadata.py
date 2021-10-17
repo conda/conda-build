@@ -451,6 +451,7 @@ FIELDS = {
         'version': None,
         'number': None,
         'script': None,
+        'noarch': None,
         'script_interpreter': None,
         'build': None,
         'requirements': None,
