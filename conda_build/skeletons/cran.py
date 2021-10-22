@@ -442,6 +442,12 @@ def add_parser(repos):
         default=False,
         help="""Add cross-r-base to build requirements for cross compiling"""
     )
+    cran.add_argument(
+        "--no-comments",
+        action='store_true',
+        default=False,
+        help="""Do not include instructional comments in recipe files"""
+    )
 
 
 def dict_from_cran_lines(lines):
@@ -796,11 +802,19 @@ def get_available_binaries(cran_url, details):
             details['binaries'].setdefault(pkg, []).append((ver, url + filename))
 
 
+def remove_comments(template):
+    re_comment = re.compile('^\s*#\s')
+    lines = template.split('\n')
+    lines_no_comments = [l for l in lines if not re_comment.match(l)]
+    return '\n'.join(lines_no_comments)
+
+
 def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=None, version=None,
                 git_tag=None, cran_url=None, recursive=False, archive=True,
                 version_compare=False, update_policy='', r_interp='r-base', use_binaries_ver=None,
                 use_noarch_generic=False, use_when_no_binary='src', use_rtools_win=False, config=None,
-                variant_config_files=None, allow_archived=False, add_cross_r_base=False):
+                variant_config_files=None, allow_archived=False, add_cross_r_base=False,
+                no_comments=False):
 
     if use_when_no_binary != 'error' and \
        use_when_no_binary != 'src' and \
@@ -1193,7 +1207,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             d['summary_comment'] = ''
             d['summary'] = ' ' + yaml_quote_string(cran_package['Description'])
 
-        if "Suggests" in cran_package:
+        if "Suggests" in cran_package and not no_comments:
             d['suggests'] = "# Suggests: %s" % cran_package['Suggests']
         else:
             d['suggests'] = ''
@@ -1245,7 +1259,9 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         if os_type == 'windows':
             d['skip_os'] = 'skip: True  # [not win]'
             d["noarch_generic"] = ""
-        if os_type == '':
+        if os_type == '' and no_comments:
+            d['skip_os'] = ''
+        elif os_type == '':
             d['skip_os'] = '# no skip'
 
         need_git = is_github_url
@@ -1370,6 +1386,11 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                                 package_list.append(lower_name)
 
             d['%s_depends' % dep_type] = ''.join(deps)
+
+    if no_comments:
+        global CRAN_BUILD_SH_SOURCE, CRAN_META
+        CRAN_BUILD_SH_SOURCE = remove_comments(CRAN_BUILD_SH_SOURCE)
+        CRAN_META = remove_comments(CRAN_META)
 
     for package in package_dicts:
         d = package_dicts[package]
