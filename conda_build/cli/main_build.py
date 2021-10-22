@@ -22,6 +22,7 @@ import conda_build.utils as utils
 from conda_build.conda_interface import (add_parser_channels, binstar_upload,
                                          cc_conda_build)
 from conda_build.cli.main_render import get_render_parser
+from conda_build.cli.actions import KeyValueAction
 import conda_build.source as source
 from conda_build.utils import LoggingContext
 from conda_build.config import Config, get_channel_urls
@@ -354,7 +355,20 @@ different sets of packages."""
                    help=('Extra dependencies to add to all environment creation steps.  This '
                          'is only enabled for testing with the -t or --test flag.  Change '
                          'meta.yaml or use templates otherwise.'), )
-
+    p.add_argument(
+        '--extra-meta',
+        nargs='*',
+        action=KeyValueAction,
+        help="Key value pairs of metadata to add to about.json. Should be "
+        "defined as Key=Value with a space separating each pair.",
+    )
+    p.add_argument('--extra-info',
+                   action='store_true',
+                   help=("Add additional info to about.json. "
+                         "This will attempt to get the git commit IDs, "
+                         "git org/repo for the given recipe. If unable, "
+                         "will silently continue."),
+    )
     p.add_argument('--suppress-variables',
                    action='store_true',
                    help=("Do not display value of environment variables specified in build.script_env."), )
