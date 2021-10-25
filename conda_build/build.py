@@ -1104,6 +1104,53 @@ def sanitize_channel(channel):
     return get_conda_channel(channel).urls(with_credentials=False, subdirs=[''])[0]
 
 
+def get_git_info(m):
+    """
+    Grabs git info for a build
+    or
+    Raises
+    """
+    recipe_dir = m.path
+    command = ['git', '-C', recipe_dir, 'rev-parse', '--abbrev-ref', 'HEAD']
+    p = subprocess.Popen(
+            command,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+    out, _ = p.communicate()
+    branch = out.decode("utf-8")[:-1]
+    if not branch:
+        raise
+
+    command = ['git', '-C', recipe_dir, 'rev-parse', f'origin/{branch}']
+    p = subprocess.Popen(
+            command,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+    out, _ = p.communicate()
+    remote_commit = out.decode("utf-8")[:-1]
+
+    command = ['git', '-C', recipe_dir, 'remote', 'get-url', 'origin']
+    p = subprocess.Popen(
+            command,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+    out, _ = p.communicate()
+    origin_url = out.decode("utf-8")[:-1]
+
+    git_info = {
+            "origin_url": origin_url,
+            "commit": remote_commit
+        }
+
+    return git_info
+
+
 def write_info_files_file(m, files):
     entry_point_scripts = m.get_value('build/entry_points')
     entry_point_script_names = get_entry_point_script_names(entry_point_scripts)
@@ -1179,10 +1226,18 @@ def write_about_json(m):
             d['conda_private'] = conda_private
         except (KeyError, AttributeError):
             pass
+        extra = m.get_section('extra')
+        if m.config.extra_info:
+            try:
+                git_info = get_git_info(m)
+                extra.update(git_info)
+            except Exception as e:
+                print("Unable to get git info. Skipping adding extra_info to about.json")
+                pass
         env = environ.Environment(root_dir)
         d['root_pkgs'] = env.package_specs()
         # Include the extra section of the metadata in the about.json
-        d['extra'] = m.get_section('extra')
+        d['extra'] = extra
         json.dump(d, fo, indent=2, sort_keys=True)
 
 
