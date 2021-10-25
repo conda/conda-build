@@ -362,13 +362,6 @@ different sets of packages."""
         help="Key value pairs of metadata to add to about.json. Should be "
         "defined as Key=Value with a space separating each pair.",
     )
-    p.add_argument('--extra-info',
-                   action='store_true',
-                   help=("Add additional info to about.json. "
-                         "This will attempt to get the git commit IDs, "
-                         "git org/repo for the given recipe. If unable, "
-                         "will silently continue."),
-    )
     p.add_argument('--suppress-variables',
                    action='store_true',
                    help=("Do not display value of environment variables specified in build.script_env."), )
