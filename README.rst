@@ -76,9 +76,47 @@ Contributing
 Contributions to conda-build are always welcome! Please fork the
 conda/conda-build repository, and submit a PR. If a PR is a work in progress,
 please put [WIP] in the title. Contributions are expected to pass flake8 and
-test suites run on Travis CI (linux) and AppVeyor (windows). Contributors also
+test suites run on GitHub Actions/Azure Pipeline. Contributors also
 need to have signed our `Contributor License Agreement
-<https://www.clahub.com/agreements/conda/conda-build>`_
+<https://conda.io/en/latest/contributing.html#conda-contributor-license-agreement>`_
+
+There are two ways to setup your environment for development/testing. The first
+is to reuse your base environment, this is probably the easiest option but comes
+with the risk of potentially breaking conda/conda-build. The second option is to
+create a development environment where we install conda/conda-build which wont
+impact the functionality of conda/conda-build installed in your base environment.
+
+Base environment:
+=================
+
+.. code-block:: bash
+    # activate/install into base env
+    $ conda activate base
+    (base) $ conda install --file tests/requirements.txt --channel defaults
+
+    # run tests
+    (base) $ pytest
+
+    # install as editable so you can play around with it
+    (base) $ pip install -e .
+    (base) $ conda-build --version
+    conda-build 3.21.5+17.gcde7b306
+
+Development environment:
+========================
+
+.. code-block:: bash
+    # create/activate standalone dev env
+    $ conda create --name dev --file tests/requirements.txt --channel defaults
+    $ conda activate dev
+
+    # run tests
+    (dev) $ pytest
+
+    # install as editable so you can play around with it
+    (dev) $ pip install -e .
+    (dev) $ conda-build --version
+    conda-build 3.21.5+17.gcde7b306
 
 Testing
 -------
@@ -87,11 +125,7 @@ Running our test suite requires cloning one other repo at the same level as cond
 https://github.com/conda/conda_build_test_recipe - this is necessary for relative path tests
 outside of conda build's build tree.
 
-Additionally, you need to install a few extra packages:
-
-.. code-block:: bash
-
-  conda install --file tests/requirements.txt -c defaults
+Follow the installation instructions above to properly setup your environment for testing.
 
 The test suite runs with py.test. Some useful commands to run select tests,
 assuming you are in the conda-build root folder:
