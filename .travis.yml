@@ -36,7 +36,7 @@ install:
   - if [[ "$FLAKE8" == "true" ]]; then
       conda install -q flake8;
     else
-      pip install -r requirements-docs.txt;
+      pip install -r docs/requirements.txt;
     fi
   - pip install --no-deps .
   - conda info -a
