@@ -50,9 +50,9 @@ def run_command(*args, **kwargs):
         err = b''
     out, err = out.decode('utf-8'), err.decode('utf-8')
     if p.returncode != 0:
-        print("%r failed with error code %s" % (' '.join(map(quote, args[0])), p.returncode), file=sys.stderr)
+        print("{!r} failed with error code {}".format(' '.join(map(quote, args[0])), p.returncode), file=sys.stderr)
     elif err:
-        print("%r gave stderr output: %s" % (' '.join(*args), err))
+        print("{!r} gave stderr output: {}".format(' '.join(*args), err))
 
     return out
 
@@ -127,7 +127,7 @@ def external_commands():
             if start:
                 m = subcommands_re.match(line)
                 if m:
-                    commands.extend(['%s %s' % (command, i) for i in
+                    commands.extend([f'{command} {i}' for i in
                         m.group(1).split(',')])
                 break
     return commands
@@ -200,7 +200,7 @@ def generate_html(command):
 
 def write_rst(command, sep=None):
     command_file = command.replace(' ', '-')
-    with open(join(manpath, 'conda-%s.html' % command_file), 'r') as f:
+    with open(join(manpath, 'conda-%s.html' % command_file)) as f:
         html = f.read()
 
     rp = rstpath

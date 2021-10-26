@@ -95,7 +95,7 @@ def mock_metada_pylint(url_pylint_package):
         'tests_require': '',
         'version': 'UNKNOWN',
         'pypiurl': url_pylint_package,
-        'filename': "black-{version}.tar.gz".format(version=version),
+        'filename': f"black-{version}.tar.gz",
         'digest': [hash_type, hash_value],
         'import_tests': '',
         'summary': ''
@@ -340,7 +340,7 @@ def test_pypi_version_sorting(testing_workdir, testing_config):
 
 def test_list_skeletons():
     skeletons = api.list_skeletons()
-    assert set(skeletons) == set(['pypi', 'cran', 'cpan', 'luarocks', 'rpm'])
+    assert set(skeletons) == {'pypi', 'cran', 'cpan', 'luarocks', 'rpm'}
 
 
 def test_pypi_with_entry_points(testing_workdir):
@@ -393,12 +393,8 @@ def test_pypi_with_basic_environment_markers(testing_workdir):
     build_reqs = str(m.meta['requirements']['host'])
     run_reqs = str(m.meta['requirements']['run'])
     # should include the right dependencies for the right version
-    if sys.version_info < (3,):
-        assert "futures" in build_reqs
-        assert "futures" in run_reqs
-    else:
-        assert "futures" not in build_reqs
-        assert "futures" not in run_reqs
+    assert "futures" not in build_reqs
+    assert "futures" not in run_reqs
     if sys.version_info >= (2, 7):
         assert "pygments" in build_reqs
         assert "pygments" in run_reqs
@@ -428,7 +424,7 @@ def test_pypi_section_order_preserved(testing_workdir):
     # Since we want to check the order of items in the recipe (not whether
     # the metadata values themselves are sensible), read the file as (ordered)
     # yaml, and check the order.
-    with open('sympy/meta.yaml', 'r') as file:
+    with open('sympy/meta.yaml') as file:
         lines = [l for l in file.readlines() if not l.startswith("{%")]
 
     # The loader below preserves the order of entries...

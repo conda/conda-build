@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import contextlib
 import json
 import logging
@@ -703,7 +701,7 @@ class InvalidEnvironment(Exception):
 # Stripped-down Environment class from conda-tools ( https://github.com/groutr/conda-tools )
 # Vendored here to avoid the whole dependency for just this bit.
 def _load_json(path):
-    with open(path, 'r') as fin:
+    with open(path) as fin:
         x = json.load(fin)
     return x
 
@@ -721,7 +719,7 @@ def _load_all_json(path):
     return result
 
 
-class Environment(object):
+class Environment:
     def __init__(self, path):
         """
         Initialize an Environment object.
@@ -734,7 +732,7 @@ class Environment(object):
         if os.path.isdir(path) and os.path.isdir(self._meta):
             self._packages = {}
         else:
-            raise InvalidEnvironment('Unable to load environment {}'.format(path))
+            raise InvalidEnvironment(f'Unable to load environment {path}')
 
     def _read_package_json(self):
         if not self._packages:
@@ -749,7 +747,7 @@ class Environment(object):
         specs = []
         for i in json_objs:
             p, v, b = i['name'], i['version'], i['build']
-            specs.append('{} {} {}'.format(p, v, b))
+            specs.append(f'{p} {v} {b}')
         return specs
 
 
@@ -965,7 +963,7 @@ def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, 
                     raise
             # HACK: some of the time, conda screws up somehow and incomplete packages result.
             #    Just retry.
-            except (AssertionError, IOError, ValueError, RuntimeError, LockError) as exc:
+            except (AssertionError, OSError, ValueError, RuntimeError, LockError) as exc:
                 if isinstance(exc, AssertionError):
                     with utils.try_acquire_locks(locks, timeout=config.timeout):
                         pkg_dir = os.path.dirname(os.path.dirname(str(exc)))

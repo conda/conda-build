@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 from copy import copy
 from collections import defaultdict, OrderedDict
 from functools import partial
@@ -64,7 +62,7 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
     bytes_ = False
 
     os.chmod(path, 0o775)
-    with io.open(path, mode='r+', encoding=locale.getpreferredencoding()) as fi:
+    with open(path, mode='r+', encoding=locale.getpreferredencoding()) as fi:
         try:
             data = fi.read(100)
             fi.seek(0)
@@ -105,7 +103,7 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
     if new_data == data:
         return
     print("updating shebang:", f)
-    with io.open(path, 'w', encoding=locale.getpreferredencoding()) as fo:
+    with open(path, 'w', encoding=locale.getpreferredencoding()) as fo:
         try:
             fo.write(new_data)
         except TypeError:
@@ -155,9 +153,9 @@ def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
                                             join(sp_dir, fn), config.timeout,
                                             locking=config.locking)
                             utils.rm_rf(join(egg_path, fn))
-                        except IOError as e:
+                        except OSError as e:
                             fn = basename(str(e).split()[-1])
-                            raise IOError("Tried to merge folder {egg_path} into {sp_dir}, but {fn}"
+                            raise OSError("Tried to merge folder {egg_path} into {sp_dir}, but {fn}"
                                           " exists in both locations.  Please either add "
                                           "build/preserve_egg_dir: True to meta.yaml, or manually "
                                           "remove the file during your install process to avoid "
@@ -173,7 +171,7 @@ def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
             write_pth(egg_path, config=config)
 
     installer_files = [f for f in absfiles
-                       if f.endswith(".dist-info{}INSTALLER".format(sep))]
+                       if f.endswith(f".dist-info{sep}INSTALLER")]
     for file in installer_files:
         with open(file, 'w') as f:
             f.write('conda')
@@ -283,7 +281,7 @@ def check_dist_info_version(name, version, files):
                 f_lower, _, _ = f_lower.rpartition('.dist-info')
                 _, distname, f_lower = f_lower.rpartition(name + '-')
                 if distname == name and version != f_lower:
-                    print("ERROR: Top level dist-info version incorrect (is {}, should be {})".format(f_lower, version))
+                    print(f"ERROR: Top level dist-info version incorrect (is {f_lower}, should be {version})")
                     sys.exit(1)
                 else:
                     return
@@ -333,7 +331,7 @@ def find_lib(link, prefix, files, path=None):
             for f in file_names[link]:
                 md5s.add(md5_file(join(prefix, f)))
             if len(md5s) > 1:
-                sys.exit("Error: Found multiple instances of %s: %s" % (link, file_names[link]))
+                sys.exit(f"Error: Found multiple instances of {link}: {file_names[link]}")
             else:
                 file_names[link].sort()
                 print("Found multiple instances of %s (%s).  "
@@ -346,21 +344,21 @@ def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
     link = link_dict['name']
     if build_prefix != host_prefix and link.startswith(build_prefix):
         link = link.replace(build_prefix, host_prefix)
-        print("Fixing linking of %s in %s" % (link, path))
+        print(f"Fixing linking of {link} in {path}")
         print(".. seems to be linking to a compiler runtime, replacing build prefix with "
               "host prefix and")
         if not codefile_type(link):
             sys.exit("Error: Compiler runtime library in build prefix not found in host prefix %s"
                      % link)
         else:
-            print(".. fixing linking of %s in %s instead" % (link, path))
+            print(f".. fixing linking of {link} in {path} instead")
 
     link_loc = find_lib(link, host_prefix, files, path)
 
     if not link_loc:
         return
 
-    print("Fixing linking of %s in %s" % (link, path))
+    print(f"Fixing linking of {link} in {path}")
     print("New link location is %s" % (link_loc))
 
     lib_to_link = relpath(dirname(link_loc), 'lib')
@@ -383,7 +381,7 @@ def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
     # @loader_path/path_to_lib/lib_to_link/basename(link), like
     # @loader_path/../../things/libthings.dylib.
 
-    ret = '@rpath/%s/%s' % (lib_to_link, basename(link))
+    ret = f'@rpath/{lib_to_link}/{basename(link)}'
 
     # XXX: IF the above fails for whatever reason, the below can be used
     # TODO: This might contain redundant ..'s if link and path are both in
@@ -496,7 +494,7 @@ def mk_relative_linux(f, prefix, rpaths=('lib',), method=None):
     existing_pe = None
     patchelf = external.find_executable('patchelf', prefix)
     if not patchelf:
-        print("ERROR :: You should install patchelf, will proceed with LIEF for {} (was {})".format(elf, method))
+        print(f"ERROR :: You should install patchelf, will proceed with LIEF for {elf} (was {method})")
         method = 'LIEF'
     else:
         try:
@@ -528,7 +526,7 @@ def mk_relative_linux(f, prefix, rpaths=('lib',), method=None):
             # Test if this absolute path is outside of prefix. That is fatal.
             rp = relpath(old, prefix)
             if rp.startswith('..' + os.sep):
-                print('Warning: rpath {0} is outside prefix {1} (removing it)'.format(old, prefix))
+                print(f'Warning: rpath {old} is outside prefix {prefix} (removing it)')
             else:
                 rp = '$ORIGIN/' + relpath(old, origin)
                 if rp not in new:
@@ -543,7 +541,7 @@ def mk_relative_linux(f, prefix, rpaths=('lib',), method=None):
                 rel_ours = normpath(utils.relative(f, rpath))
                 rel_stdlib = normpath(relpath(rpath, dirname(f)))
                 if not rel_ours == rel_stdlib:
-                    raise ValueError('utils.relative {0} and relpath {1} disagree for {2}, {3}'.format(
+                    raise ValueError('utils.relative {} and relpath {} disagree for {}, {}'.format(
                         rel_ours, rel_stdlib, f, rpath))
                 rpath = '$ORIGIN/' + rel_stdlib
             if rpath not in new:
@@ -577,12 +575,12 @@ def determine_package_nature(pkg, prefix, subdir, bldpkgs_dir, output_folder, ch
         # we don't care about the actual run_exports value, just whether or not run_exports are present.
         json_file = os.path.join(prefix, 'conda-meta', pkg.dist_name + '.json')
         import json
-        assert os.path.isfile(json_file), "conda-meta :: Not a file: {}".format(json_file)
-        json_info = json.loads(open(json_file, 'r').read())
+        assert os.path.isfile(json_file), f"conda-meta :: Not a file: {json_file}"
+        json_info = json.loads(open(json_file).read())
         epd = json_info['extracted_package_dir']
         run_exports_json = os.path.join(epd, 'info', 'run_exports.json')
         if os.path.isfile(run_exports_json):
-            run_exports = json.loads(open(run_exports_json, 'r').read())
+            run_exports = json.loads(open(run_exports_json).read())
     return (dsos, run_exports, lib_prefix)
 
 
@@ -760,7 +758,7 @@ def _collect_needed_dsos(sysroots_files, files, run_prefix, sysroot_substitution
             # the whitelist or it will present as an error later.
             res['resolved'] = resolved
         needed_dsos_for_file[f] = needed
-        all_needed_dsos = all_needed_dsos.union(set(info['resolved'] for f, info in needed.items()))
+        all_needed_dsos = all_needed_dsos.union({info['resolved'] for f, info in needed.items()})
     return all_needed_dsos, needed_dsos_for_file
 
 
@@ -808,8 +806,8 @@ def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_v
                             owners.append(new_pkg)
                     prefix_owners[prefix][rp_po] = owners
                     if len(prefix_owners[prefix][rp_po]):
-                        exports = set(e for e in get_exports_memoized(fp, enable_static=enable_static) if not
-                                    any(fnmatch(e, pattern) for pattern in ignore_list_syms))
+                        exports = {e for e in get_exports_memoized(fp, enable_static=enable_static) if not
+                                    any(fnmatch(e, pattern) for pattern in ignore_list_syms)}
                         all_lib_exports[prefix][rp_po] = exports
                         # Check codefile_type to filter out linker scripts.
                         if dynamic_lib:
@@ -819,7 +817,7 @@ def _map_file_to_package(files, run_prefix, build_prefix, all_needed_dsos, pkg_v
                                 if (prefix_owners[prefix][rp_po][0].name.startswith('gcc_impl_linux') or
                                 prefix_owners[prefix][rp_po][0].name == 'llvm'):
                                     continue
-                                print("sysroot in {}, owner is {}".format(fp, prefix_owners[prefix][rp_po][0]))
+                                print(f"sysroot in {fp}, owner is {prefix_owners[prefix][rp_po][0]}")
                             # Hmm, not right, muddies the prefixes again.
                             contains_static_libs[prefix_owners[prefix][rp_po][0]] = True
 
@@ -883,7 +881,7 @@ def _lookup_in_sysroots_and_whitelist(errors, whitelist, needed_dso, sysroots_fi
             in_sysroots = True
             if subdir.startswith('osx-') or 'win' in subdir:
                 in_prefix_dso = sysroot_files[0]
-                n_dso_p = "Needed DSO {}".format(in_prefix_dso)
+                n_dso_p = f"Needed DSO {in_prefix_dso}"
                 _print_msg(errors, '{}: {} found in $SYSROOT'.
                            format(info_prelude, n_dso_p), verbose=verbose)
             else:
@@ -895,7 +893,7 @@ def _lookup_in_sysroots_and_whitelist(errors, whitelist, needed_dso, sysroots_fi
                     # in_prefix_dso = normpath(sysroot_files[idx].replace(
                     #     sysroot_prefix + os.sep, ''))
                     in_prefix_dso = sysroot_files[idx][len(sysroot_prefix) + 1:]
-                    n_dso_p = "Needed DSO {}".format(in_prefix_dso)
+                    n_dso_p = f"Needed DSO {in_prefix_dso}"
                     _pkgs = list(which_package(in_prefix_dso, sysroot_prefix))
                     if len(_pkgs) > 0:
                         pkgs.extend(_pkgs)
@@ -914,7 +912,7 @@ def _lookup_in_sysroots_and_whitelist(errors, whitelist, needed_dso, sysroots_fi
             # We should pass in multiple paths at once to this, but the code isn't structured for that.
             in_whitelist = any([caseless_sepless_fnmatch([needed_dso_w], w) for w in whitelist])
             if in_whitelist:
-                n_dso_p = "Needed DSO {}".format(needed_dso_w)
+                n_dso_p = f"Needed DSO {needed_dso_w}"
                 _print_msg(errors, '{}: {} found in the whitelist'.
                            format(info_prelude, n_dso_p), verbose=verbose)
                 break
@@ -989,7 +987,7 @@ def _show_linking_messages(files, errors, needed_dsos_for_file, build_prefix, ru
         try:
             runpaths, _, _ = get_runpaths_raw(path)
         except:
-            _print_msg(errors, '{}: pyldd.py failed to process'.format(warn_prelude),
+            _print_msg(errors, f'{warn_prelude}: pyldd.py failed to process',
                        verbose=verbose)
             continue
         if runpaths and not (runpath_whitelist or
@@ -1055,10 +1053,10 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
 
     package_nature = {package: library_nature(package, run_prefix, subdir, bldpkgs_dirs, output_folder, channel_urls)
                       for package in packages}
-    lib_packages = set([package for package in packages
+    lib_packages = {package for package in packages
                         if package.quad[0] not in ignore_list and
-                        [package] != 'non-library'])
-    lib_packages_used = set((pkg_vendored_dist,))
+                        [package] != 'non-library'}
+    lib_packages_used = {pkg_vendored_dist}
 
     ignore_list_syms = ['main', '_main', '*get_pc_thunk*', '___clang_call_terminate', '_timeout']
     # ignore_for_statics = ['gcc_impl_linux*', 'compiler-rt*', 'llvm-openmp*', 'gfortran_osx*']
@@ -1157,7 +1155,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                     in_whitelist = any([caseless_sepless_fnmatch([orig], w) for w in whitelist])
                 if not in_whitelist:
                     if resolved in prefix_owners[build_prefix]:
-                        print("  ERROR :: {} in prefix_owners[build_prefix]".format(needed_dso))
+                        print(f"  ERROR :: {needed_dso} in prefix_owners[build_prefix]")
                     elif not needed_dso.startswith('$PATH'):
                         # DSOs with '$RPATH' in them at this stage are 'unresolved'. Though instead of
                         # letting them through through like this, I should detect that they were not
@@ -1175,9 +1173,9 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                            lib_packages_used, whitelist, sysroots_files, sysroot_prefix, sysroot_substitution, subdir)
 
     if lib_packages_used != lib_packages:
-        info_prelude = "   INFO ({})".format(pkg_name)
-        warn_prelude = "WARNING ({})".format(pkg_name)
-        err_prelude = "  ERROR ({})".format(pkg_name)
+        info_prelude = f"   INFO ({pkg_name})"
+        warn_prelude = f"WARNING ({pkg_name})"
+        err_prelude = f"  ERROR ({pkg_name})"
         for lib in lib_packages - lib_packages_used:
             if package_nature[lib] in ('run-exports library', 'dso library'):
                 msg_prelude = err_prelude if error_overdepending else warn_prelude
@@ -1343,7 +1341,7 @@ def check_symlinks(files, prefix, croot):
                     # relative link. It's possible that ..'s later in the path
                     # can result in a broken link still, but we'll assume that
                     # such crazy things don't happen.
-                    print("Making absolute symlink relative (%s -> %s :-> %s)" % (f, link_path, relative_path))
+                    print(f"Making absolute symlink relative ({f} -> {link_path} :-> {relative_path})")
                     os.unlink(path)
                     os.symlink(relative_path, path)
             else:

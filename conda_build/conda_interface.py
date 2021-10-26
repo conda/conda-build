@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 from functools import partial
 import os
 from os import lstat
@@ -139,7 +136,7 @@ except:
 get_conda_channel = Channel.from_value
 
 # disallow softlinks.  This avoids a lot of dumb issues, at the potential cost of disk space.
-os.environ[str('CONDA_ALLOW_SOFTLINKS')] = str('false')
+os.environ['CONDA_ALLOW_SOFTLINKS'] = 'false'
 reset_context()
 
 get_local_urls = lambda: list(get_conda_build_local_url()) or []
@@ -154,7 +151,7 @@ PaddingError, UnsatisfiableError = PaddingError, UnsatisfiableError
 # work-around for python bug on Windows prior to python 3.2
 # https://bugs.python.org/issue10027
 # Adapted from the ntfsutils package, Copyright (c) 2012, the Mozilla Foundation
-class CrossPlatformStLink(object):
+class CrossPlatformStLink:
     _st_nlink = None
 
     def __call__(self, path):

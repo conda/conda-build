@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import sys
 import re
 import subprocess
@@ -75,12 +73,12 @@ def get_linkages(obj_files, prefix, sysroot):
                     print("WARNING: pyldd disagrees with ldd/otool. This will not cause any")
                     print("WARNING: problems for this build, but please file a bug at:")
                     print("WARNING: https://github.com/conda/conda-build")
-                    print("WARNING: and (if possible) attach file {}".format(path))
+                    print(f"WARNING: and (if possible) attach file {path}")
                     print("WARNING: \nldd/otool gives:\n{}\npyldd gives:\n{}\n"
                           .format("\n".join(str(e) for e in res[f]), "\n".join(str(e)
                                                                                for e in res_py)))
-                    print("Diffs\n{}".format(set(res[f]) - set(res_py)))
-                    print("Diffs\n{}".format(set(res_py) - set(res[f])))
+                    print(f"Diffs\n{set(res[f]) - set(res_py)}")
+                    print(f"Diffs\n{set(res_py) - set(res[f])}")
     return res
 
 

@@ -93,7 +93,7 @@ def load_setup_py_data(setup_file, from_recipe_dir=False, recipe_dir=None, work_
             exec(code, ns, ns)
     else:
         if not permit_undefined_jinja:
-            raise TypeError('{} is not a file that can be read'.format(setup_file))
+            raise TypeError(f'{setup_file} is not a file that can be read')
 
     sys.modules['versioneer'] = versioneer
 

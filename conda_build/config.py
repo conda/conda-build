@@ -1,7 +1,6 @@
 '''
 Module to store conda build settings.
 '''
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 import copy
 from collections import namedtuple
@@ -237,13 +236,13 @@ def print_function_deprecation_warning(func):
     return func_wrapper
 
 
-class Config(object):
+class Config:
     __file__ = __path__ = __file__
     __package__ = __package__
     __doc__ = __doc__
 
     def __init__(self, variant=None, **kwargs):
-        super(Config, self).__init__()
+        super().__init__()
         # default variant is set in render's distribute_variants
         self.variant = variant or {}
         self.set_keys(**kwargs)
@@ -539,9 +538,9 @@ class Config(object):
         lua_ver = self.variant.get('lua', get_default_variant(self)['lua'])
         binary_name = "luajit" if (lua_ver and lua_ver[0] == "2") else "lua"
         if platform.startswith('win'):
-            res = join(prefix, 'Library', 'bin', '{}.exe'.format(binary_name))
+            res = join(prefix, 'Library', 'bin', f'{binary_name}.exe')
         else:
-            res = join(prefix, 'bin/{}'.format(binary_name))
+            res = join(prefix, f'bin/{binary_name}')
         return res
 
     def _get_r(self, prefix, platform):
@@ -580,7 +579,7 @@ class Config(object):
             build_folders_all = get_build_folders(self.croot)
             for folder_full in build_folders_all:
                 folder = os.path.basename(folder_full)
-                untimed_folder = re.sub(time_re, '\g<1>{t}', folder, flags=re.UNICODE)
+                untimed_folder = re.sub(time_re, r'\g<1>{t}', folder, flags=re.UNICODE)
                 if untimed_folder == old_build_id_t:
                     build_folders.append(folder_full)
             prev_build_id = None

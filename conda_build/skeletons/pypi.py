@@ -2,7 +2,6 @@
 Tools for converting PyPI packages to conda recipes.
 """
 
-from __future__ import absolute_import, division, print_function
 
 from collections import defaultdict, OrderedDict
 import keyword
@@ -590,8 +589,8 @@ def get_download_data(pypi_data, package, version, is_url, all_urls, noprompt, m
         else:
             print("Using the one with the least source size")
             print("use --manual-url to override this behavior")
-            _, n = min([(url['size'], i)
-                                for (i, url) in enumerate(urls)])
+            _, n = min((url['size'], i)
+                                for (i, url) in enumerate(urls))
     else:
         n = 0
 
@@ -599,7 +598,7 @@ def get_download_data(pypi_data, package, version, is_url, all_urls, noprompt, m
         # Found a location from PyPI.
         url = urls[n]
         pypiurl = url['url']
-        print("Using url %s (%s) for %s." % (pypiurl,
+        print("Using url {} ({}) for {}.".format(pypiurl,
             human_bytes(url['size'] or 0), package))
 
         if url['digests']['sha256']:
@@ -637,7 +636,7 @@ def version_compare(package, versions):
         sys.exit("Error: no such directory: %s" % recipe_dir)
     m = MetaData(recipe_dir)
     local_version = nv(m.version())
-    print("Local recipe for %s has version %s" % (package, local_version))
+    print(f"Local recipe for {package} has version {local_version}")
     if local_version not in versions:
         sys.exit("Error: %s %s is not available on PyPI."
                  % (package, local_version))
@@ -688,7 +687,7 @@ def _translate_python_constraint(constraint):
         operator, value = _get_env_marker_operator_and_value(constraint)
         value = "".join(value.split(".")[:2])
         translation = " ".join((operator, value))
-    return "py {}".format(translation)
+    return f"py {translation}"
 
 
 def _translate_platform_system_constraint(constraint):
@@ -835,8 +834,8 @@ def get_dependencies(requires, setuptools_enabled=True):
         elif pc:
             if pc.startswith('~= '):
                 assert pc.count('~=') == 1, \
-                    "Overly complex 'Compatible release' spec not handled {}".format(line)
-                assert pc.count('.'), "No '.' in 'Compatible release' version {}".format(line)
+                    f"Overly complex 'Compatible release' spec not handled {line}"
+                assert pc.count('.'), f"No '.' in 'Compatible release' version {line}"
                 ver = pc.replace('~= ', '')
                 ver2 = '.'.join(ver.split('.')[:-1]) + '.*'
                 return name + ' >=' + ver + ',==' + ver2
@@ -909,9 +908,9 @@ def get_import_tests(pkginfo, import_tests_metada=""):
 
 
 def get_tests_require(pkginfo):
-    return sorted([
+    return sorted(
         spec_from_line(pkg) for pkg in ensure_list(pkginfo['tests_require'])
-    ])
+    )
 
 
 def get_home(pkginfo, data=None):
@@ -1002,10 +1001,7 @@ def get_entry_points(pkginfo):
         _config = configparser.ConfigParser()
 
         try:
-            if six.PY2:
-                _config.readfp(StringIO(newstr))
-            else:
-                _config.read_file(StringIO(newstr))
+            _config.read_file(StringIO(newstr))
         except Exception as err:
             print("WARNING: entry-points not understood: ", err)
             print("The string was", newstr)
@@ -1014,7 +1010,7 @@ def get_entry_points(pkginfo):
             for section in _config.sections():
                 if section in ['console_scripts', 'gui_scripts']:
                     entry_points[section] = [
-                        '%s=%s' % (option, _config.get(section, option))
+                        f'{option}={_config.get(section, option)}'
                         for option in _config.options(section)
                     ]
 
@@ -1199,7 +1195,7 @@ def get_pkginfo(package, filename, pypiurl, digest, python_version, extra_specs,
         try:
             with open(join(tempdir, 'pkginfo.yaml')) as fn:
                 pkg_info = yaml.safe_load(fn)
-        except IOError:
+        except OSError:
             pkg_info = pkginfo.SDist(download_path).__dict__
         if new_hash_value:
             pkg_info['new_hash_value'] = ('sha256', new_hash_value)
@@ -1223,7 +1219,7 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
     #    actually breaks conda-build right now.  Omit it until packaging is on defaults.
     # specs = ['python %s*' % python_version, 'pyyaml', 'setuptools', 'six', 'packaging', 'appdirs']
     subdir = config.host_subdir
-    specs = ['python {}*'.format(python_version),
+    specs = [f'python {python_version}*',
              'pip', 'pyyaml', 'setuptools'] + (['m2-patch', 'm2-gcc-libs'] if config.host_subdir.startswith('win')
                                                     else ['patch'])
     with open(os.path.join(src_dir, "setup.py")) as setup:
@@ -1266,9 +1262,9 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
     # Save PYTHONPATH for later
     env = os.environ.copy()
     if 'PYTHONPATH' in env:
-        env[str('PYTHONPATH')] = str(src_dir + ':' + env['PYTHONPATH'])
+        env['PYTHONPATH'] = str(src_dir + ':' + env['PYTHONPATH'])
     else:
-        env[str('PYTHONPATH')] = str(src_dir)
+        env['PYTHONPATH'] = str(src_dir)
     cwd = getcwd()
     chdir(src_dir)
     cmdargs = [config.host_python, 'setup.py', 'install']

@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import re
 import stat
 import sys
@@ -57,7 +55,7 @@ def human_filetype(path, build_prefix):
     if not lines[0].startswith((path, 'Mach header')):
         raise ValueError(
             'Expected `otool -h` output to start with'
-            ' Mach header or {0}, got:\n{1}'.format(path, output)
+            ' Mach header or {}, got:\n{}'.format(path, output)
         )
     assert lines[0].startswith((path, 'Mach header')), path
 

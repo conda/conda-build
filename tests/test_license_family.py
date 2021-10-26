@@ -11,15 +11,15 @@ def test_new_vs_previous_guesses_match():
 
     cens = 'GNU Lesser General Public License'
     fam = guess_license_family(cens)
-    assert fam == 'LGPL', 'guess_license_family({}) is {}'.format(cens, fam)
+    assert fam == 'LGPL', f'guess_license_family({cens}) is {fam}'
 
     cens = 'GNU General Public License some stuff then a 3 then stuff'
     fam = guess_license_family(cens)
-    assert fam == 'GPL3', 'guess_license_family({}) is {}'.format(cens, fam)
+    assert fam == 'GPL3', f'guess_license_family({cens}) is {fam}'
 
     cens = 'Affero GPL'
     fam = guess_license_family(cens)
-    assert fam == 'AGPL', 'guess_license_family({}) is {}'.format(cens, fam)
+    assert fam == 'AGPL', f'guess_license_family({cens}) is {fam}'
 
 
 def test_new_vs_previous_guess_differ_gpl():
@@ -41,76 +41,76 @@ def test_new_vs_previous_guess_differ_multiple_gpl():
     New guess is GPL-3, which is the most accurate.
     Previously, somehow Public-Domain is closer than GPL2 or GPL3!
     """
-    cens = u'GPL-2 | GPL-3 | file LICENSE'
+    cens = 'GPL-2 | GPL-3 | file LICENSE'
     fam = guess_license_family(cens)
-    assert fam == 'GPL3', 'guess_license_family_from_index({}) is {}'.format(cens, fam)
+    assert fam == 'GPL3', f'guess_license_family_from_index({cens}) is {fam}'
 
 
 def test_old_warnings_no_longer_fail():
     # the following previously threw warnings. Came from r/linux-64
-    warnings = {u'MIT License', u'GNU Lesser General Public License (LGPL)',
-         u'GPL-2 | GPL-3 | file LICENSE', u'GPL (>= 3) | file LICENCE',
-         u'BSL-1.0', u'GPL (>= 2)', u'file LICENSE (FOSS)',
-         u'Open Source (http://www.libpng.org/pub/png/src/libpng-LICENSE.txt)',
-         u'MIT + file LICENSE', u'GPL-2 | GPL-3', u'GPL (>= 2) | file LICENSE',
-         u'Unlimited', u'GPL-3 | file LICENSE',
-         u'GNU General Public License v2 or later (GPLv2+)', u'LGPL-2.1',
-         u'LGPL-2', u'LGPL-3', u'GPL',
-         u'zlib (http://zlib.net/zlib_license.html)',
-         u'Free software (X11 License)', u'Custom free software license',
-         u'Old MIT', u'GPL 3', u'Apache License (== 2.0)', u'GPL (>= 3)', None,
-         u'LGPL (>= 2)', u'BSD_2_clause + file LICENSE', u'GPL-3', u'GPL-2',
-         u'BSD License and GNU Library or Lesser General Public License (LGPL)',
-         u'GPL-2 | file LICENSE', u'BSD_3_clause + file LICENSE', u'CC0',
-         u'MIT + file LICENSE | Unlimited', u'Apache License 2.0',
-         u'BSD License', u'Lucent Public License'}
+    warnings = {'MIT License', 'GNU Lesser General Public License (LGPL)',
+         'GPL-2 | GPL-3 | file LICENSE', 'GPL (>= 3) | file LICENCE',
+         'BSL-1.0', 'GPL (>= 2)', 'file LICENSE (FOSS)',
+         'Open Source (http://www.libpng.org/pub/png/src/libpng-LICENSE.txt)',
+         'MIT + file LICENSE', 'GPL-2 | GPL-3', 'GPL (>= 2) | file LICENSE',
+         'Unlimited', 'GPL-3 | file LICENSE',
+         'GNU General Public License v2 or later (GPLv2+)', 'LGPL-2.1',
+         'LGPL-2', 'LGPL-3', 'GPL',
+         'zlib (http://zlib.net/zlib_license.html)',
+         'Free software (X11 License)', 'Custom free software license',
+         'Old MIT', 'GPL 3', 'Apache License (== 2.0)', 'GPL (>= 3)', None,
+         'LGPL (>= 2)', 'BSD_2_clause + file LICENSE', 'GPL-3', 'GPL-2',
+         'BSD License and GNU Library or Lesser General Public License (LGPL)',
+         'GPL-2 | file LICENSE', 'BSD_3_clause + file LICENSE', 'CC0',
+         'MIT + file LICENSE | Unlimited', 'Apache License 2.0',
+         'BSD License', 'Lucent Public License'}
 
     for cens in warnings:
         fam = guess_license_family(cens)
-        print('{}:{}'.format(cens, fam))
+        print(f'{cens}:{fam}')
         assert fam in allowed_license_families
 
 
 def test_gpl2():
-    licenses = {u'GPL-2', u'GPL-2 | file LICENSE',
-                u'GNU General Public License v2 or later (GPLv2+)'}
+    licenses = {'GPL-2', 'GPL-2 | file LICENSE',
+                'GNU General Public License v2 or later (GPLv2+)'}
     for cens in licenses:
         fam = guess_license_family(cens)
-        assert fam == u'GPL2'
+        assert fam == 'GPL2'
 
 
 def test_not_gpl2():
-    licenses = {u'GPL (>= 2)', u'LGPL (>= 2)', u'GPL',
-                u'LGPL-3', u'GPL 3', u'GPL (>= 3)',
-                u'Apache License (== 2.0)'}
+    licenses = {'GPL (>= 2)', 'LGPL (>= 2)', 'GPL',
+                'LGPL-3', 'GPL 3', 'GPL (>= 3)',
+                'Apache License (== 2.0)'}
     for cens in licenses:
         fam = guess_license_family(cens)
-        assert fam != u'GPL2'
+        assert fam != 'GPL2'
 
 
 def test_gpl3():
-    licenses = {u'GPL 3', u'GPL-3', u'GPL-3 | file LICENSE',
-                u'GPL-2 | GPL-3 | file LICENSE', u'GPL (>= 3) | file LICENCE',
-                u'GPL (>= 2)', u'GPL-2 | GPL-3', u'GPL (>= 2) | file LICENSE'}
+    licenses = {'GPL 3', 'GPL-3', 'GPL-3 | file LICENSE',
+                'GPL-2 | GPL-3 | file LICENSE', 'GPL (>= 3) | file LICENCE',
+                'GPL (>= 2)', 'GPL-2 | GPL-3', 'GPL (>= 2) | file LICENSE'}
     for cens in licenses:
         fam = guess_license_family(cens)
-        assert fam == u'GPL3'
+        assert fam == 'GPL3'
 
 
 def test_lgpl():
-    licenses = {u'GNU Lesser General Public License (LGPL)', u'LGPL-2.1',
-                u'LGPL-2', u'LGPL-3', u'LGPL (>= 2)',
-                u'BSD License and GNU Library or Lesser General Public License (LGPL)'}
+    licenses = {'GNU Lesser General Public License (LGPL)', 'LGPL-2.1',
+                'LGPL-2', 'LGPL-3', 'LGPL (>= 2)',
+                'BSD License and GNU Library or Lesser General Public License (LGPL)'}
     for cens in licenses:
         fam = guess_license_family(cens)
-        assert fam == u'LGPL'
+        assert fam == 'LGPL'
 
 
 def test_mit():
-    licenses = {u'MIT License', u'MIT + file LICENSE', u'Old MIT'}
+    licenses = {'MIT License', 'MIT + file LICENSE', 'Old MIT'}
     for cens in licenses:
         fam = guess_license_family(cens)
-        assert fam == u'MIT'
+        assert fam == 'MIT'
 
 
 def test_unlimited():
@@ -118,23 +118,23 @@ def test_unlimited():
 
     We could add words to filter out, but it would be hard to keep track of...
     """
-    cens = u'Unlimited'
+    cens = 'Unlimited'
     assert guess_license_family(cens) == 'MIT'
 
 
 def test_cc():
-    fam = guess_license_family(u'CC0')
-    assert fam == u'CC'
+    fam = guess_license_family('CC0')
+    assert fam == 'CC'
 
 
 def test_other():
-    licenses = {u'file LICENSE (FOSS)',
-                u'Open Source (http://www.libpng.org/pub/png/src/libpng-LICENSE.txt)',
-                u'zlib (http://zlib.net/zlib_license.html)',
-                u'Free software (X11 License)', u'Custom free software license'}
+    licenses = {'file LICENSE (FOSS)',
+                'Open Source (http://www.libpng.org/pub/png/src/libpng-LICENSE.txt)',
+                'zlib (http://zlib.net/zlib_license.html)',
+                'Free software (X11 License)', 'Custom free software license'}
     for cens in licenses:
         fam = guess_license_family(cens)
-        assert fam == u'OTHER'
+        assert fam == 'OTHER'
 
 
 def test_ensure_valid_family(testing_metadata):

@@ -4,7 +4,6 @@
 # conda is distributed under the terms of the BSD 3-clause license.
 # Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
 
-from __future__ import absolute_import, division, print_function
 
 from os.path import join, isdir, abspath, expanduser, exists
 import shutil
@@ -48,7 +47,7 @@ def write_to_conda_pth(sp_dir, pkg_path):
     '''
     c_file = join(sp_dir, 'conda.pth')
     with open(c_file, 'a') as f:
-        with open(c_file, 'r') as cf:
+        with open(c_file) as cf:
             # make sure file exists, before we try to read from it hence nested
             # in append with block
             # expect conda.pth to be small so read it all in at once
@@ -68,7 +67,7 @@ def get_setup_py(path_):
     setup_py = join(path_, 'setup.py')
 
     if not exists(setup_py):
-        sys.exit("No setup.py found in {0}. Exiting.".format(path_))
+        sys.exit(f"No setup.py found in {path_}. Exiting.")
 
     return setup_py
 
@@ -118,7 +117,7 @@ def _uninstall(sp_dir, pkg_path):
     n_c_pth = join(sp_dir, 'conda.pth.temp')
     found = False
     with open(n_c_pth, 'w') as new_c:
-        with open(o_c_pth, 'r') as orig_c:
+        with open(o_c_pth) as orig_c:
             for line in orig_c:
                 if line != pkg_path + '\n':
                     new_c.write(line)
