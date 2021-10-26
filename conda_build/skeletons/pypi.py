@@ -10,7 +10,6 @@ import os
 from os import makedirs, listdir, getcwd, chdir
 from os.path import join, isdir, exists, isfile, abspath
 
-import six
 from pkg_resources import parse_version
 import re
 from shutil import copy2

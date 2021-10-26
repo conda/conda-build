@@ -5,7 +5,6 @@ Module that does most of the heavy lifting for the ``conda build`` command.
 from collections import deque, OrderedDict
 import fnmatch
 import glob2
-import io
 import json
 import os
 import warnings

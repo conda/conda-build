@@ -195,8 +195,6 @@ class bdist_conda(install):
                 c = configparser.ConfigParser()
                 entry_points = {}
                 try:
-                    import six
-
                     c.read_file(StringIO(newstr))
                 except Exception as err:
                     # This seems to be the best error here

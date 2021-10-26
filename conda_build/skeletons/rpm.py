@@ -9,11 +9,9 @@ except:
     import pickle as pickle
 import gzip
 import hashlib
-import io
 from os import (chmod, makedirs)
 from os.path import (basename, dirname, exists, join, splitext)
 import re
-from six import string_types
 from textwrap import wrap
 from xml.etree import cElementTree as ET
 from .cran import yaml_quote_string

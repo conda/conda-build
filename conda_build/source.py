@@ -1,4 +1,3 @@
-import io
 import locale
 import os
 from os.path import join, isdir, isfile, abspath, basename, exists, normpath, expanduser

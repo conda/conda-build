@@ -4,7 +4,6 @@ from functools import partial
 from fnmatch import fnmatch, filter as fnmatch_filter, translate as fnmatch_translate
 from os.path import (basename, dirname, exists, isabs, isdir, isfile,
                      islink, join, normpath, realpath, relpath, sep, splitext)
-import io
 import locale
 import re
 import os
