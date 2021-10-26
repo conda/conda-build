@@ -90,6 +90,7 @@ Base environment:
 =================
 
 .. code-block:: bash
+
     # activate/install into base env
     $ conda activate base
     (base) $ conda install --file tests/requirements.txt --channel defaults
@@ -106,6 +107,7 @@ Development environment:
 ========================
 
 .. code-block:: bash
+
     # create/activate standalone dev env
     $ conda create --name dev --file tests/requirements.txt --channel defaults
     $ conda activate dev
