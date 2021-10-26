@@ -1272,9 +1272,9 @@ def expand_globs(path_list, root_dir):
         elif os.path.isdir(path):
             for root, dirnames, fs in walk(path):
                 files.extend(os.path.join(root, f) for f in fs)
-                for dirname in dirnames:
-                    if os.path.islink(os.path.join(root, dirname)):
-                        files.append(os.path.join(root, dirname))
+                for folder in dirnames:
+                    if os.path.islink(os.path.join(root, folder)):
+                        files.append(os.path.join(root, folder))
         else:
             # File compared to the globs use / as separator independently of the os
             glob_files = glob(path)
