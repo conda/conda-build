@@ -6,6 +6,7 @@ import sys
 from pkg_resources import parse_version
 import pytest
 
+from conda_build.skeletons.cran import CRAN_BUILD_SH_SOURCE, CRAN_META
 from conda_build.skeletons.pypi import get_package_metadata, \
     get_entry_points, is_setuptools_enabled, convert_to_flat_list, \
     get_dependencies, get_import_tests, get_tests_require, get_home, \
@@ -518,3 +519,30 @@ def test_build_sh_shellcheck_clean(package, repo, testing_workdir, testing_confi
     findings = sc_stdout.decode(sys.stdout.encoding).replace("\r\n", "\n").splitlines()
     assert findings == []
     assert p.returncode == 0
+
+
+# Test cran skeleton argument --no-comments
+def test_cran_no_comments(testing_workdir, testing_config):
+    package = "data.table"
+    meta_yaml_comment = '  # This is required to make R link correctly on Linux.'
+    build_sh_comment = '# Add more build steps here, if they are necessary.'
+    build_sh_shebang = '#!/bin/bash'
+
+    # Check that comments are part of the templates
+    assert meta_yaml_comment in CRAN_META
+    assert build_sh_comment in CRAN_BUILD_SH_SOURCE
+    assert build_sh_shebang in CRAN_BUILD_SH_SOURCE
+
+    api.skeletonize(packages=package, repo='cran', output_dir=testing_workdir,
+                    config=testing_config, no_comments=True)
+
+    # Check that comments got removed
+    meta_yaml = os.path.join(testing_workdir, 'r-' + package.lower(), 'meta.yaml')
+    with open(meta_yaml) as f:
+        assert meta_yaml_comment not in f.read()
+
+    build_sh = os.path.join(testing_workdir, 'r-' + package.lower(), 'build.sh')
+    with open(build_sh) as f:
+        build_sh_text = f.read()
+        assert build_sh_comment not in build_sh_text
+        assert build_sh_shebang in build_sh_text
