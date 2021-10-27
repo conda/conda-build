@@ -805,7 +805,7 @@ def get_available_binaries(cran_url, details):
 def remove_comments(template):
     re_comment = re.compile('^\s*#\s')
     lines = template.split('\n')
-    lines_no_comments = [l for l in lines if not re_comment.match(l)]
+    lines_no_comments = [line for line in lines if not re_comment.match(line)]
     return '\n'.join(lines_no_comments)
 
 
