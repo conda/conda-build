@@ -518,3 +518,23 @@ def test_build_sh_shellcheck_clean(package, repo, testing_workdir, testing_confi
     findings = sc_stdout.decode(sys.stdout.encoding).replace("\r\n", "\n").splitlines()
     assert findings == []
     assert p.returncode == 0
+
+
+# Test cran skeleton argument --no-comments
+def test_cran_no_comments(testing_workdir, testing_config):
+    package = "data.table"
+    api.skeletonize(packages=package, repo='cran', output_dir=testing_workdir,
+                    config=testing_config, no_comments=True)
+
+    meta_yaml = os.path.join(testing_workdir, 'r-' + package.lower(), 'meta.yaml')
+    meta_yaml_comment = '  # This is required to make R link correctly on Linux.'
+    with open(meta_yaml) as f:
+        assert meta_yaml_comment not in f.read()
+
+    build_sh = os.path.join(testing_workdir, 'r-' + package.lower(), 'build.sh')
+    build_sh_comment = '# Add more build steps here, if they are necessary.'
+    build_sh_shebang = '#!/bin/bash'
+    with open(build_sh) as f:
+        build_sh_text = f.read()
+        assert build_sh_comment not in build_sh_text
+        assert build_sh_shebang in build_sh_text
