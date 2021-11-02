@@ -2143,9 +2143,11 @@ class MetaData:
         return variants.get_vars(_variants, loop_only=True)
 
     def get_used_loop_vars(self, force_top_level=False, force_global=False):
+        _variants = (self.config.input_variants if hasattr(self.config, 'input_variants') else
+                    self.config.variants)
         return {var for var in self.get_used_vars(force_top_level=force_top_level,
                                                   force_global=force_global)
-                if var in self.get_loop_vars()}
+                if variants.is_loop_var(var, _variants)}
 
     def get_rendered_recipe_text(self, permit_undefined_jinja=False, extract_pattern=None):
         template_string = self.get_recipe_text(extract_pattern=extract_pattern,

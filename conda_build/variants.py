@@ -635,6 +635,14 @@ def get_vars(variants, loop_only=False):
     return loop_vars
 
 
+def is_loop_var(var, variants):
+    if var in {'pin_run_as_build', 'zip_keys', 'ignore_version'}:
+        return False
+    if var in ensure_list(variants[0].get('extend_keys')):
+        return False
+    return any(variant[var] != variants[0][var] for variant in variants[1:])
+
+
 @memoized
 def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
     used_variables = set()
