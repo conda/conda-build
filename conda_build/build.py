@@ -3223,10 +3223,14 @@ def build_tree(recipe_list, config, stats, build_only=False, post=None, notest=F
             retried_recipes.append(os.path.basename(name))
             recipe_list.extendleft(add_recipes)
 
-    tarballs = [f for f in built_packages if f.endswith(CONDA_PACKAGE_EXTENSIONS)]
+    # `built_packages` contains all rendered artifacts, not just the ones that were built
+    # (this is especially true when using the --skip-existing flag).
+    # It is then important to filter out only artifacts that have been built and that
+    # exists on disk, otherwise it would not be possible to upload them or get their hashes.
+    tarballs = [f for f in built_packages if f.endswith(CONDA_PACKAGE_EXTENSIONS) and os.path.isfile(f)]
+    # TODO: could probably use a better check for pkg type than this...
+    wheels = [f for f in built_packages if f.endswith('.whl') and os.path.isfile(f)]
     if post in [True, None]:
-        # TODO: could probably use a better check for pkg type than this...
-        wheels = [f for f in built_packages if f.endswith('.whl')]
         handle_anaconda_upload(tarballs, config=config)
         handle_pypi_upload(wheels, config=config)
 
