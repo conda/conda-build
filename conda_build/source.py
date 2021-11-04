@@ -173,6 +173,17 @@ def unpack(source_dict, src_dir, cache_folder, recipe_path, croot, verbose=False
             shutil.move(os.path.join(tmpdir, f), os.path.join(src_dir, f))
 
 
+def repo_uses_git_lfs(git, dir):
+    lfs_list_output = check_output_env([git, 'lfs', 'ls-files', '--all'], cwd=dir)
+    return lfs_list_output and lfs_list_output.strip()
+
+
+def git_lfs_fetch(git, dir, stdout, stderr):
+    lfs_version = check_output_env([git, 'lfs', 'version'], cwd=dir)
+    print(lfs_version)
+    check_call_env([git, 'lfs', 'fetch', 'origin', '--all'], cwd=dir, stdout=stdout, stderr=stderr)
+
+
 def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_cache, git_ref=None,
                                   git_depth=-1, is_top_level=True, verbose=True):
     """ Mirror (and checkout) a Git repository recursively.
@@ -216,6 +227,8 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_ca
         try:
             if git_ref != 'HEAD':
                 check_call_env([git, 'fetch'], cwd=mirror_dir, stdout=stdout, stderr=stderr)
+                if repo_uses_git_lfs(git, mirror_dir):
+                    git_lfs_fetch(git, mirror_dir, stdout, stderr)
             else:
                 # Unlike 'git clone', fetch doesn't automatically update the cache's HEAD,
                 # So here we explicitly store the remote HEAD in the cache's local refs/heads,
@@ -242,6 +255,8 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_ca
             args += ['--depth', str(git_depth)]
         try:
             check_call_env(args + [git_url, git_mirror_dir], stdout=stdout, stderr=stderr)
+            if repo_uses_git_lfs(git, mirror_dir):
+                git_lfs_fetch(git, mirror_dir, stdout, stderr)
         except CalledProcessError:
             # on windows, remote URL comes back to us as cygwin or msys format.  Python doesn't
             # know how to normalize it.  Need to convert it to a windows path.
