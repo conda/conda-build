@@ -1179,8 +1179,6 @@ def write_about_json(m):
             d['conda_private'] = conda_private
         except (KeyError, AttributeError):
             pass
-        # Don't want to assume git is installed
-        # or that we are even in a git repo
         # Adding this to extra since its arbitrary info
         extra = m.get_section('extra')
         # Add burn-in information to extra
