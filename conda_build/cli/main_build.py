@@ -361,6 +361,7 @@ different sets of packages."""
         action=KeyValueAction,
         help="Key value pairs of metadata to add to about.json. Should be "
         "defined as Key=Value with a space separating each pair.",
+        metavar="KEY=VALUE",
     )
     p.add_argument('--suppress-variables',
                    action='store_true',
