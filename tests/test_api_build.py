@@ -53,13 +53,13 @@ import codecs
 codecs.register_error(
     'backslashreplace_',
     lambda ex: (
-        u''.join(
+        ''.join(
             (
-                u'\\x{:x}'
+                '\\x{:x}'
                 if c < 0x100
-                else u'\\u{:04x}'
+                else '\\u{:04x}'
                 if c < 0x10000
-                else u'\\U{:08x}'
+                else '\\U{:08x}'
             ).format(c)
             for c in map(ord, ex.object[ex.start : ex.end])
         ),
@@ -77,13 +77,13 @@ def represent_ordereddict(dumper, data):
 
         value.append((node_key, node_value))
 
-    return yaml.nodes.MappingNode(u'tag:yaml.org,2002:map', value)
+    return yaml.nodes.MappingNode('tag:yaml.org,2002:map', value)
 
 
 yaml.add_representer(OrderedDict, represent_ordereddict)
 
 
-class AnacondaClientArgs(object):
+class AnacondaClientArgs:
     def __init__(self, specs, token=None, site=None, log_level=logging.INFO, force=False):
         from binstar_client.utils import parse_specs
         self.specs = [parse_specs(specs)]
@@ -511,7 +511,7 @@ def test_numpy_setup_py_data(testing_config):
     m = api.render(recipe_path, config=testing_config, numpy="1.16")[0][0]
     _hash = m.hash_dependencies()
     assert os.path.basename(api.get_output_file_path(m)[0]) == \
-                            "load_setup_py_test-0.1.0-np116py{0}{1}{2}_0.tar.bz2".format(
+                            "load_setup_py_test-0.1.0-np116py{}{}{}_0.tar.bz2".format(
                                 sys.version_info.major, sys.version_info.minor, _hash)
 
 
@@ -565,7 +565,7 @@ def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monke
         with open('absolute', 'w') as f:
             f.write(str(tag))
         check_call_env([git, 'add', 'absolute'], env=sys_git_env)
-        check_call_env([git, 'commit', '-m', 'absolute{}'.format(tag)],
+        check_call_env([git, 'commit', '-m', f'absolute{tag}'],
                                 env=sys_git_env)
 
         os.chdir(relative_sub)
@@ -574,7 +574,7 @@ def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monke
         with open('relative', 'w') as f:
             f.write(str(tag))
         check_call_env([git, 'add', 'relative'], env=sys_git_env)
-        check_call_env([git, 'commit', '-m', 'relative{}'.format(tag)],
+        check_call_env([git, 'commit', '-m', f'relative{tag}'],
                                 env=sys_git_env)
 
         os.chdir(toplevel)
@@ -583,7 +583,7 @@ def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monke
         with open('toplevel', 'w') as f:
             f.write(str(tag))
         check_call_env([git, 'add', 'toplevel'], env=sys_git_env)
-        check_call_env([git, 'commit', '-m', 'toplevel{}'.format(tag)],
+        check_call_env([git, 'commit', '-m', f'toplevel{tag}'],
                                 env=sys_git_env)
         if tag == 0:
             check_call_env([git, 'submodule', 'add',
@@ -596,9 +596,9 @@ def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monke
             # can change this to `git submodule update --recursive`.
             gits = git.replace('\\', '/')
             check_call_env([git, 'submodule', 'foreach', gits, 'pull'], env=sys_git_env)
-        check_call_env([git, 'commit', '-am', 'added submodules@{}'.format(tag)],
+        check_call_env([git, 'commit', '-am', f'added submodules@{tag}'],
                               env=sys_git_env)
-        check_call_env([git, 'tag', '-a', str(tag), '-m', 'tag {}'.format(tag)],
+        check_call_env([git, 'tag', '-a', str(tag), '-m', f'tag {tag}'],
                                 env=sys_git_env)
 
         # It is possible to use `Git for Windows` here too, though you *must* not use a different
@@ -652,7 +652,7 @@ def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monke
         # build env prepended to os.environ[]
         metadata = api.render(testing_workdir, config=testing_config)[0][0]
         output = api.get_output_file_path(metadata, config=testing_config)[0]
-        assert ("relative_submodules-{}-".format(tag) in output)
+        assert (f"relative_submodules-{tag}-" in output)
         api.build(metadata, config=testing_config)
 
 
@@ -818,11 +818,11 @@ def test_skip_compile_pyc(testing_config):
         _, ext = os.path.splitext(filename)
         basename = filename.split('.', 1)[0]
         if basename == 'skip_compile_pyc':
-            assert not ext == '.pyc', "a skip_compile_pyc .pyc was compiled: {}".format(filename)
+            assert not ext == '.pyc', f"a skip_compile_pyc .pyc was compiled: {filename}"
         if ext == '.pyc':
-            assert basename == 'compile_pyc', "an unexpected .pyc was compiled: {}".format(filename)
+            assert basename == 'compile_pyc', f"an unexpected .pyc was compiled: {filename}"
             pyc_count = pyc_count + 1
-    assert pyc_count == 2, "there should be 2 .pyc files, instead there were {}".format(pyc_count)
+    assert pyc_count == 2, f"there should be 2 .pyc files, instead there were {pyc_count}"
 
 
 def test_detect_binary_files_with_prefix(testing_config):
@@ -863,7 +863,7 @@ def test_fix_permissions(testing_config):
     outputs = api.build(recipe, config=testing_config)
     with tarfile.open(outputs[0]) as tf:
         for f in tf.getmembers():
-            assert f.mode & 0o444 == 0o444, "tar member '{}' has invalid (read) mode".format(f.name)
+            assert f.mode & 0o444 == 0o444, f"tar member '{f.name}' has invalid (read) mode"
 
 
 @pytest.mark.sanity
@@ -920,7 +920,7 @@ def test_build_expands_wildcards(mocker, testing_workdir):
         with open(os.path.join(f, 'meta.yaml'), 'w') as fh:
             fh.write('\n')
     api.build(["a*"], config=config)
-    output = sorted([os.path.join(os.getcwd(), path, 'meta.yaml') for path in files])
+    output = sorted(os.path.join(os.getcwd(), path, 'meta.yaml') for path in files)
 
     build_tree.assert_called_once_with(output,
                                        config=mocker.ANY,
@@ -1163,11 +1163,11 @@ def test_copy_read_only_file_with_xattr(testing_config, testing_homedir):
     # tmpfs can support extended attributes if you enable CONFIG_TMPFS_XATTR in Kernel config.
     # But Currently this enables support for the trusted.* and security.* namespaces
     try:
-        subprocess.check_call('setfattr -n user.attrib -v somevalue {}'.format(ro_file), shell=True)
+        subprocess.check_call(f'setfattr -n user.attrib -v somevalue {ro_file}', shell=True)
     except:
         return pytest.xfail("setfattr not possible in {}, see https://stackoverflow.com/a/46598063".format(
             testing_homedir))
-    subprocess.check_call('chmod 400 {}'.format(ro_file), shell=True)
+    subprocess.check_call(f'chmod 400 {ro_file}', shell=True)
     api.build(recipe, config=testing_config)
 
 
@@ -1372,7 +1372,7 @@ def test_source_cache_build(testing_workdir):
     config = api.Config(src_cache_root=testing_workdir)
     api.build(recipe, notest=True, config=config)
 
-    git_cache_directory = '{}/git_cache'.format(testing_workdir)
+    git_cache_directory = f'{testing_workdir}/git_cache'
     assert os.path.isdir(git_cache_directory)
 
     files = [filename for _, _, filenames in walk(git_cache_directory)

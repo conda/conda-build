@@ -43,7 +43,7 @@ def test_postbuild_files_raise(testing_metadata, testing_workdir):
     fn = 'buildstr', 'buildnum', 'version'
     for f in fn:
         with open(os.path.join(testing_metadata.config.work_dir,
-                               '__conda_{}__.txt'.format(f)), 'w') as fh:
+                               f'__conda_{f}__.txt'), 'w') as fh:
             fh.write('123')
         with pytest.raises(ValueError, match=f) as exc:
             post.get_build_metadata(testing_metadata)

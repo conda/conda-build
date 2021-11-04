@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 from collections import OrderedDict, defaultdict
 import contextlib
 import fnmatch
@@ -119,7 +117,7 @@ RUN_EXPORTS_TYPES = {
     "strong_constrains",
 }
 
-PY_TMPL = """
+PY_TMPL = r"""
 # -*- coding: utf-8 -*-
 import re
 import sys
@@ -202,7 +200,7 @@ def directory_size(path):
         return 0
 
 
-class DummyPsutilProcess(object):
+class DummyPsutilProcess:
     def children(self, *args, **kwargs):
         return []
 
@@ -257,7 +255,7 @@ def _setup_rewrite_pipe(env):
     return w_fd
 
 
-class PopenWrapper(object):
+class PopenWrapper:
     # Small wrapper around subprocess.Popen to allow memory usage monitoring
     # copied from ProtoCI, https://github.com/ContinuumIO/ProtoCI/blob/59159bc2c9f991fbfa5e398b6bb066d7417583ec/protoci/build2.py#L20  # NOQA
 
@@ -279,7 +277,7 @@ class PopenWrapper(object):
             psutil = None
             psutil_exceptions = (OSError, ValueError)
             log = get_logger(__name__)
-            log.warn("psutil import failed.  Error was {}".format(e))
+            log.warn(f"psutil import failed.  Error was {e}")
             log.warn("only disk usage and time statistics will be available.  Install psutil to "
                      "get CPU time and memory usage statistics.")
 
@@ -430,14 +428,14 @@ def bytes2human(n):
     for s in reversed(symbols):
         if n >= prefix[s]:
             value = float(n) / prefix[s]
-            return '%.1f%s' % (value, s)
+            return f'{value:.1f}{s}'
     return "%sB" % n
 
 
 def seconds2human(s):
     m, s = divmod(s, 60)
     h, m = divmod(int(m), 60)
-    return "{:d}:{:02d}:{:04.1f}".format(h, m, s)
+    return f"{h:d}:{m:02d}:{s:04.1f}"
 
 
 def get_recipe_abspath(recipe):
@@ -470,7 +468,7 @@ def get_recipe_abspath(recipe):
         recipe_dir = abspath(os.path.join(os.getcwd(), recipe))
         need_cleanup = False
     if not os.path.exists(recipe_dir):
-        raise ValueError("Package or recipe at path {0} does not exist".format(recipe_dir))
+        raise ValueError(f"Package or recipe at path {recipe_dir} does not exist")
     return recipe_dir, need_cleanup
 
 
@@ -527,15 +525,15 @@ def _copy_with_shell_fallback(src, dst):
             func(src, dst)
             is_copied = True
             break
-        except (IOError, OSError, PermissionError):
+        except (OSError, PermissionError):
             continue
     if not is_copied:
         try:
-            subprocess.check_call('cp -a {} {}'.format(src, dst), shell=True,
+            subprocess.check_call(f'cp -a {src} {dst}', shell=True,
                                   stderr=subprocess.PIPE, stdout=subprocess.PIPE)
         except subprocess.CalledProcessError as e:
             if not os.path.isfile(dst):
-                raise OSError("Failed to copy {} to {}.  Error was: {}".format(src, dst, e))
+                raise OSError(f"Failed to copy {src} to {dst}.  Error was: {e}")
 
 
 def get_prefix_replacement_paths(src, dst):
@@ -617,7 +615,7 @@ def move_with_fallback(src, dst):
             os.unlink(src)
         except PermissionError:
             log = get_logger(__name__)
-            log.debug("Failed to copy/remove path from %s to %s due to permission error" % (src, dst))
+            log.debug(f"Failed to copy/remove path from {src} to {dst} due to permission error")
 
 
 # http://stackoverflow.com/a/22331852/1170370
@@ -670,15 +668,15 @@ def merge_tree(src, dst, symlinks=False, timeout=900, lock=None, locking=True, c
     src = os.path.normpath(os.path.normcase(src))
     assert not dst.startswith(src), ("Can't merge/copy source into subdirectory of itself.  "
                                      "Please create separate spaces for these things.\n"
-                                     "  src: {0}\n"
-                                     "  dst: {1}".format(src, dst))
+                                     "  src: {}\n"
+                                     "  dst: {}".format(src, dst))
 
     new_files = copytree(src, dst, symlinks=symlinks, dry_run=True)
     existing = [f for f in new_files if isfile(f)]
 
     if existing and not clobber:
-        raise IOError("Can't merge {0} into {1}: file exists: "
-                      "{2}".format(src, dst, existing[0]))
+        raise OSError("Can't merge {} into {}: file exists: "
+                      "{}".format(src, dst, existing[0]))
 
     locks = []
     if locking:
@@ -720,11 +718,11 @@ def get_lock(folder, timeout=900):
                 f.write("")
             fl = filelock.FileLock(lock_file, timeout)
             break
-        except (OSError, IOError):
+        except OSError:
             continue
     else:
-        raise RuntimeError("Could not write locks folder to either system location ({0})"
-                           "or user location ({1}).  Aborting.".format(*_lock_folders))
+        raise RuntimeError("Could not write locks folder to either system location ({})"
+                           "or user location ({}).  Aborting.".format(*_lock_folders))
     return fl
 
 
@@ -935,8 +933,8 @@ def safe_print_unicode(*args, **kwargs):
     :param end: ending character (defaults to '\n')
     :param errors: error handler for encoding errors (defaults to 'replace')
     """
-    sep = kwargs.pop('sep', u' ')
-    end = kwargs.pop('end', u'\n')
+    sep = kwargs.pop('sep', ' ')
+    end = kwargs.pop('end', '\n')
     errors = kwargs.pop('errors', 'replace')
     if PY3:
         func = sys.stdout.buffer.write
@@ -973,7 +971,7 @@ def rec_glob(path, patterns, ignores=None):
 
 def convert_unix_path_to_win(path):
     if external.find_executable('cygpath'):
-        cmd = "cygpath -w {0}".format(path)
+        cmd = f"cygpath -w {path}"
         if PY3:
             path = subprocess.getoutput(cmd)
         else:
@@ -986,7 +984,7 @@ def convert_unix_path_to_win(path):
 
 def convert_win_path_to_unix(path):
     if external.find_executable('cygpath'):
-        cmd = "cygpath -u {0}".format(path)
+        cmd = f"cygpath -u {path}"
         if PY3:
             path = subprocess.getoutput(cmd)
         else:
@@ -1012,7 +1010,7 @@ def get_stdlib_dir(prefix, py_ver):
         if python_folder:
             lib_dir = os.path.join(lib_dir, python_folder[0])
         else:
-            lib_dir = os.path.join(lib_dir, 'python{}'.format(py_ver))
+            lib_dir = os.path.join(lib_dir, f'python{py_ver}')
     return lib_dir
 
 
@@ -1092,7 +1090,7 @@ def create_entry_point(path, module, func, config):
             if os.path.isfile(os.path.join(config.host_prefix, 'python_d.exe')):
                 fo.write('#!python_d\n')
             fo.write(pyscript)
-            copy_into(join(dirname(__file__), 'cli-{}.exe'.format(str(config.host_arch))),
+            copy_into(join(dirname(__file__), f'cli-{str(config.host_arch)}.exe'),
                     path + '.exe', config.timeout)
     else:
         if os.path.islink(path):
@@ -1138,7 +1136,7 @@ def convert_path_for_cygwin_or_msys2(exe, path):
         try:
             path = check_output_env(['cygpath', '-u',
                                      path]).splitlines()[0].decode(getpreferredencoding())
-        except WindowsError:
+        except OSError:
             log = get_logger(__name__)
             log.debug('cygpath executable not found.  Passing native path.  This is OK for msys2.')
     return path
@@ -1280,12 +1278,12 @@ def expand_globs(path_list, root_dir):
             glob_files = glob(path)
             if not glob_files:
                 log = get_logger(__name__)
-                log.error('Glob {} did not match in root_dir {}'.format(path, root_dir))
+                log.error(f'Glob {path} did not match in root_dir {root_dir}')
             # https://docs.python.org/3/library/glob.html#glob.glob states that
             # "whether or not the results are sorted depends on the file system".
             # Avoid this potential ambiguity by sorting. (see #4185)
             files.extend(sorted(glob_files))
-    prefix_path_re = re.compile('^' + re.escape('%s%s' % (root_dir, os.path.sep)))
+    prefix_path_re = re.compile('^' + re.escape(f'{root_dir}{os.path.sep}'))
     files = [prefix_path_re.sub('', f, 1) for f in files]
     return files
 
@@ -1304,12 +1302,12 @@ def find_recipe(path):
     if os.path.isfile(path):
         if os.path.basename(path) in VALID_METAS:
             return path
-        raise IOError("%s is not a valid meta file (%s)" % (path, ", ".join(VALID_METAS)))
+        raise OSError("{} is not a valid meta file ({})".format(path, ", ".join(VALID_METAS)))
 
     results = list(rec_glob(path, VALID_METAS, ignores=(".AppleDouble",)))
 
     if not results:
-        raise IOError("No meta files (%s) found in %s" % (", ".join(VALID_METAS), path))
+        raise OSError("No meta files ({}) found in {}".format(", ".join(VALID_METAS), path))
 
     if len(results) == 1:
         return results[0]
@@ -1324,10 +1322,10 @@ def find_recipe(path):
                                   "will be used." % (metas[0], path))
         return os.path.join(path, metas[0])
 
-    raise IOError("More than one meta files (%s) found in %s" % (", ".join(VALID_METAS), path))
+    raise OSError("More than one meta files ({}) found in {}".format(", ".join(VALID_METAS), path))
 
 
-class LoggingContext(object):
+class LoggingContext:
     default_loggers = ['conda', 'binstar', 'install', 'conda.install', 'fetch', 'conda.instructions',
                        'fetch.progress', 'print', 'progress', 'dotupdate', 'stdoutlog', 'requests',
                        'conda.core.package_cache', 'conda.plan', 'conda.gateways.disk.delete',
@@ -1390,7 +1388,7 @@ def _convert_lists_to_sets(_dict):
             try:
                 _dict[k] = sorted(list(set(v)))
             except TypeError:
-                _dict[k] = sorted(list(set(tuple(_) for _ in v)))
+                _dict[k] = sorted(list({tuple(_) for _ in v}))
     return _dict
 
 
@@ -1398,7 +1396,7 @@ class HashableDict(dict):
     """use hashable frozen dictionaries for resources and resource types so that they can be in sets
     """
     def __init__(self, *args, **kwargs):
-        super(HashableDict, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self = _convert_lists_to_sets(self)
 
     def __hash__(self):
@@ -1414,7 +1412,7 @@ def represent_hashabledict(dumper, data):
 
         value.append((node_key, node_value))
 
-    return yaml.nodes.MappingNode(u'tag:yaml.org,2002:map', value)
+    return yaml.nodes.MappingNode('tag:yaml.org,2002:map', value)
 
 
 yaml.add_representer(HashableDict, represent_hashabledict)
@@ -1585,7 +1583,7 @@ def rm_rf(path, config=None):
         try:
             # subprocessing to delete large folders can be quite a bit faster
             if on_win:
-                subprocess.check_call('rd /s /q {}'.format(path), shell=True)
+                subprocess.check_call(f'rd /s /q {path}', shell=True)
             else:
                 try:
                     os.makedirs('.empty')
@@ -1614,7 +1612,7 @@ def rm_rf(path, config=None):
 # https://stackoverflow.com/a/31459386/1170370
 class LessThanFilter(logging.Filter):
     def __init__(self, exclusive_maximum, name=""):
-        super(LessThanFilter, self).__init__(name)
+        super().__init__(name)
         self.max_level = exclusive_maximum
 
     def filter(self, record):
@@ -1624,7 +1622,7 @@ class LessThanFilter(logging.Filter):
 
 class GreaterThanFilter(logging.Filter):
     def __init__(self, exclusive_minimum, name=""):
-        super(GreaterThanFilter, self).__init__(name)
+        super().__init__(name)
         self.min_level = exclusive_minimum
 
     def filter(self, record):
@@ -1745,7 +1743,7 @@ def merge_dicts_of_lists(dol1, dol2):
     '''
     keys = set(dol1).union(dol2)
     no = []
-    return dict((k, dol1.get(k, no) + dol2.get(k, no)) for k in keys)
+    return {k: dol1.get(k, no) + dol2.get(k, no) for k in keys}
 
 
 def prefix_files(prefix):
@@ -1843,7 +1841,7 @@ def sort_list_in_nested_structure(dictionary, omissions=''):
 #    unsatisfiable part, then you probably need to update this regex.
 
 spec_needing_star_re = re.compile(r"([\w\d\.\-\_]+)\s+((?<![><=])[\w\d\.\-\_]+?(?!\*))(\s+[\w\d\.\_]+)?$")  # NOQA
-spec_ver_needing_star_re = re.compile("^([0-9a-zA-Z\.]+)$")
+spec_ver_needing_star_re = re.compile(r"^([0-9a-zA-Z\.]+)$")
 
 
 def ensure_valid_spec(spec, warn=False):
@@ -2017,29 +2015,29 @@ def write_bat_activation_text(file_handle, m):
         for method, value in ccache_methods.items():
             if value:
                 if method == 'env_vars':
-                    file_handle.write('set "CC={ccache} %CC%"\n'.format(ccache=ccache))
-                    file_handle.write('set "CXX={ccache} %CXX%"\n'.format(ccache=ccache))
+                    file_handle.write(f'set "CC={ccache} %CC%"\n')
+                    file_handle.write(f'set "CXX={ccache} %CXX%"\n')
                 elif method == 'symlinks':
                     dirname_ccache_ln_bin = join(m.config.build_prefix, 'ccache-ln-bin')
-                    file_handle.write('mkdir {}\n'.format(dirname_ccache_ln_bin))
-                    file_handle.write('pushd {}\n'.format(dirname_ccache_ln_bin))
+                    file_handle.write(f'mkdir {dirname_ccache_ln_bin}\n')
+                    file_handle.write(f'pushd {dirname_ccache_ln_bin}\n')
                     # If you use mklink.exe instead of mklink here it breaks as it's a builtin.
                     for ext in ('.exe', ''):
                         # MSVC
-                        file_handle.write('mklink cl{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
-                        file_handle.write('mklink link{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
+                        file_handle.write(f'mklink cl{ext} {ccache}\n')
+                        file_handle.write(f'mklink link{ext} {ccache}\n')
                         # GCC
-                        file_handle.write('mklink gcc{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
-                        file_handle.write('mklink g++{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
-                        file_handle.write('mklink cc{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
-                        file_handle.write('mklink c++{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
-                        file_handle.write('mklink as{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
-                        file_handle.write('mklink ar{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
-                        file_handle.write('mklink nm{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
-                        file_handle.write('mklink ranlib{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
-                        file_handle.write('mklink gcc-ar{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
-                        file_handle.write('mklink gcc-nm{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
-                        file_handle.write('mklink gcc-ranlib{ext} {ccache}\n'.format(ext=ext, ccache=ccache))
+                        file_handle.write(f'mklink gcc{ext} {ccache}\n')
+                        file_handle.write(f'mklink g++{ext} {ccache}\n')
+                        file_handle.write(f'mklink cc{ext} {ccache}\n')
+                        file_handle.write(f'mklink c++{ext} {ccache}\n')
+                        file_handle.write(f'mklink as{ext} {ccache}\n')
+                        file_handle.write(f'mklink ar{ext} {ccache}\n')
+                        file_handle.write(f'mklink nm{ext} {ccache}\n')
+                        file_handle.write(f'mklink ranlib{ext} {ccache}\n')
+                        file_handle.write(f'mklink gcc-ar{ext} {ccache}\n')
+                        file_handle.write(f'mklink gcc-nm{ext} {ccache}\n')
+                        file_handle.write(f'mklink gcc-ranlib{ext} {ccache}\n')
                     file_handle.write('popd\n')
                     file_handle.write('set PATH={dirname_ccache_ln};{dirname_ccache};%PATH%\n'.format(
                         dirname_ccache_ln=dirname_ccache_ln_bin,
@@ -2057,7 +2055,7 @@ def download_channeldata(channel_url):
     global channeldata_cache
     if channel_url.startswith('file://') or channel_url not in channeldata_cache:
         urls = get_conda_channel(channel_url).urls()
-        urls = set(url.rsplit('/', 1)[0] for url in urls)
+        urls = {url.rsplit('/', 1)[0] for url in urls}
         data = {}
         for url in urls:
             with TemporaryDirectory() as td:
@@ -2090,14 +2088,14 @@ def linked_data_no_multichannels(prefix):
 
 def shutil_move_more_retrying(src, dest, debug_name):
     log = get_logger(__name__)
-    log.info("Renaming {} directory '{}' to '{}'".format(debug_name, src, dest))
+    log.info(f"Renaming {debug_name} directory '{src}' to '{dest}'")
     attempts_left = 5
 
     while attempts_left > 0:
         if os.path.exists(dest):
             rm_rf(dest)
         try:
-            log.info("shutil.move({})={}, dest={})".format(debug_name, src, dest))
+            log.info(f"shutil.move({debug_name})={src}, dest={dest})")
             shutil.move(src, dest)
             if attempts_left != 5:
                 log.warning("shutil.move({}={}, dest={}) succeeded on attempt number {}".format(debug_name, src, dest,
@@ -2113,4 +2111,4 @@ def shutil_move_more_retrying(src, dest, debug_name):
             time.sleep(3)
         elif attempts_left != -1:
             log.error(
-                "Failed to rename {} directory despite sleeping and retrying.".format(debug_name))
+                f"Failed to rename {debug_name} directory despite sleeping and retrying.")

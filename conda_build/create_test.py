@@ -2,7 +2,6 @@
 Module to handle generating test files.
 '''
 
-from __future__ import absolute_import, division, print_function
 
 import os
 from os.path import join, exists
@@ -108,15 +107,15 @@ def _create_test_files(m, test_dir, ext, comment_char='# '):
         test_file = os.path.join(m.path, name)
         if os.path.isfile(test_file):
             with open(out_file, 'w') as fo:
-                fo.write("%s tests for %s (this is a generated file);\n" % (comment_char, m.dist()))
+                fo.write(f"{comment_char} tests for {m.dist()} (this is a generated file);\n")
                 fo.write("print('===== testing package: %s =====');\n" % m.dist())
 
                 try:
                     with open(test_file) as fi:
-                        fo.write("print('running {0}');\n".format(name))
-                        fo.write("{0} --- {1} (begin) ---\n".format(comment_char, name))
+                        fo.write(f"print('running {name}');\n")
+                        fo.write(f"{comment_char} --- {name} (begin) ---\n")
                         fo.write(fi.read())
-                        fo.write("{0} --- {1} (end) ---\n".format(comment_char, name))
+                        fo.write(f"{comment_char} --- {name} (end) ---\n")
                 except AttributeError:
                     fo.write("# tests were not packaged with this module, and cannot be run\n")
                 fo.write("\nprint('===== %s OK =====');\n" % m.dist())

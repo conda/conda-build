@@ -1,4 +1,3 @@
-import io
 import json
 import locale
 import logging
@@ -30,7 +29,7 @@ def rewrite_script(fn, prefix):
     # if default locale is ascii, allow UTF-8 (a reasonably modern ASCII extension)
     if encoding == "ANSI_X3.4-1968":
         encoding = "UTF-8"
-    with io.open(src, encoding=encoding) as fi:
+    with open(src, encoding=encoding) as fi:
         try:
             data = fi.read()
         except UnicodeDecodeError:  # file is binary
@@ -130,10 +129,10 @@ def transform(m, files, prefix):
     # Create *nix prelink script
     # Note: it's important to use LF newlines or it wont work if we build on Win
     with open(join(bin_dir, '.%s-pre-link.sh' % name), 'wb') as fo:
-        fo.write('''\
+        fo.write(b'''\
     #!/bin/bash
     $PREFIX/bin/python $SOURCE_DIR/link.py
-    '''.encode('utf-8'))
+    ''')
 
     # Create windows prelink script (be nice and use Windows newlines)
     with open(join(scripts_dir, '.%s-pre-link.bat' % name), 'wb') as fo:

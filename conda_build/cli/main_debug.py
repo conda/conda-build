@@ -4,7 +4,6 @@
 # conda is distributed under the terms of the BSD 3-clause license.
 # Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
 
-from __future__ import absolute_import, division, print_function
 
 import logging
 import os
@@ -79,10 +78,10 @@ def execute(args):
         if not _args.activate_string_only:
             if test:
                 test_file = "conda_test_runner.bat" if on_win else "conda_test_runner.sh"
-                print("To run your tests, you might want to start with running the {} file.".format(test_file))
+                print(f"To run your tests, you might want to start with running the {test_file} file.")
             else:
                 build_file = "conda_build.bat" if on_win else "conda_build.sh"
-                print("To run your build, you might want to start with running the {} file.".format(build_file))
+                print(f"To run your build, you might want to start with running the {build_file} file.")
             print("#" * 80)
 
     except ValueError as e:

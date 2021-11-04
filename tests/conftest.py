@@ -66,7 +66,7 @@ def testing_homedir(tmpdir, request):
     try:
         os.makedirs(new_dir)
     except:
-        print("Failed to create {}".format(new_dir))
+        print(f"Failed to create {new_dir}")
         return None
     os.chdir(new_dir)
 
@@ -128,7 +128,7 @@ def testing_env(testing_workdir, request, monkeypatch):
     env_path = os.path.join(testing_workdir, 'env')
 
     check_call_env(['conda', 'create', '-yq', '-p', env_path,
-                    'python={0}'.format(".".join(sys.version.split('.')[:2]))])
+                    'python={}'.format(".".join(sys.version.split('.')[:2]))])
     monkeypatch.setenv('PATH', prepend_bin_path(os.environ.copy(), env_path,
                                                 prepend_prefix=True)['PATH'])
     # cleanup is done by just cleaning up the testing_workdir

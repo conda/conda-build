@@ -15,6 +15,6 @@ if not os.path.isdir(prefix):
 
 for encoding in supported_encodings:
     fn = os.path.join(
-        prefix, 'binary-has-prefix-{encoding}'.format(encoding=encoding))
+        prefix, f'binary-has-prefix-{encoding}')
     with open(fn, 'wb') as f:
         f.write(prefix.encode(encoding) + b'\x00\x00\x00\x00')

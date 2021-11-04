@@ -4,7 +4,6 @@
 # conda is distributed under the terms of the BSD 3-clause license.
 # Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
 
-from __future__ import absolute_import, division, print_function
 
 import argparse
 import logging
@@ -36,11 +35,11 @@ class ParseYAMLArgument(argparse.Action):
         try:
             my_dict = yaml.load(values[0], Loader=yaml.BaseLoader)
             if not isinstance(my_dict, dict):
-                raise RuntimeError("The argument of {} is not a YAML dictionary.".format(option_string))
+                raise RuntimeError(f"The argument of {option_string} is not a YAML dictionary.")
 
             setattr(namespace, self.dest, my_dict)
         except ParserError as e:
-            raise RuntimeError('The argument of {} is not a valid YAML. The parser error was: \n\n{}'.format(option_string, str(e)))
+            raise RuntimeError(f'The argument of {option_string} is not a valid YAML. The parser error was: \n\n{str(e)}')
 
 
 def get_render_parser():

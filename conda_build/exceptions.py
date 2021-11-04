@@ -14,7 +14,7 @@ class YamlParsingError(CondaBuildException):
 
 class UnableToParse(YamlParsingError):
     def __init__(self, original, *args, **kwargs):
-        super(UnableToParse, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.original = original
 
     def error_msg(self):
@@ -32,13 +32,13 @@ class UnableToParse(YamlParsingError):
     def indented_exception(self):
         orig = str(self.original)
         indent = lambda s: s.replace("\n", "\n--> ")
-        return "Error Message:\n--> {}\n\n".format(indent(orig))
+        return f"Error Message:\n--> {indent(orig)}\n\n"
 
 
 class UnableToParseMissingJinja2(UnableToParse):
     def error_body(self):
         return "\n".join([
-            super(UnableToParseMissingJinja2, self).error_body(),
+            super().error_body(),
             indent("""\
                 It appears you are missing jinja2.  Please install that
                 package, then attempt to build.
@@ -54,8 +54,8 @@ class VerifyError(CondaBuildException):
     def __init__(self, error, script, *args):
         self.error = error
         self.script = script
-        self.msg = "%s failed to verify\n%s" % (script, error)
-        super(VerifyError, self).__init__(self.msg)
+        self.msg = f"{script} failed to verify\n{error}"
+        super().__init__(self.msg)
 
 
 class DependencyNeedsBuildingError(CondaBuildException):
@@ -98,18 +98,18 @@ class OverLinkingError(RuntimeError):
     def __init__(self, error, *args):
         self.error = error
         self.msg = "overlinking check failed \n%s" % (error)
-        super(OverLinkingError, self).__init__(self.msg)
+        super().__init__(self.msg)
 
 
 class OverDependingError(RuntimeError):
     def __init__(self, error, *args):
         self.error = error
         self.msg = "overdepending check failed \n%s" % (error)
-        super(OverDependingError, self).__init__(self.msg)
+        super().__init__(self.msg)
 
 
 class RunPathError(RuntimeError):
     def __init__(self, error, *args):
         self.error = error
         self.msg = "runpaths check failed \n%s" % (error)
-        super(RunPathError, self).__init__(self.msg)
+        super().__init__(self.msg)

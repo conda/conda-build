@@ -123,7 +123,7 @@ def test_create_info_files_json(testing_workdir, testing_metadata):
                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                    "size_in_bytes": 0}],
         "paths_version": 1}
-    with open(files_json_path, "r") as files_json:
+    with open(files_json_path) as files_json:
         output = json.load(files_json)
         assert output == expected_output
 
@@ -187,7 +187,7 @@ def test_create_info_files_json_symlinks(testing_workdir, testing_metadata):
                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                    "size_in_bytes": 0}],
         "paths_version": 1}
-    with open(files_json_path, "r") as files_json:
+    with open(files_json_path) as files_json:
         output = json.load(files_json)
         assert output == expected_output
 
@@ -226,7 +226,7 @@ def test_create_info_files_json_no_inodes(testing_workdir, testing_metadata):
                    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                    "size_in_bytes": 0}],
         "paths_version": 1}
-    with open(files_json_path, "r") as files_json:
+    with open(files_json_path) as files_json:
         output = json.load(files_json)
         assert output == expected_output
 

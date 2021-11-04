@@ -9,7 +9,6 @@ filelock
 flaky
 glob2
 jinja2
-mock
 pkginfo
 psutil
 pytest

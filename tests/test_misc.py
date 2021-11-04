@@ -36,7 +36,7 @@ def test_entity_encoder(tmpdir):
     with open(test_file, "w") as f:
         json.dump(test_json, f, cls=EntityEncoder)
 
-    with open(test_file, "r") as f:
+    with open(test_file) as f:
         json_file = json.load(f)
     assert json_file == {"a": "hardlink", "b": 1}
 

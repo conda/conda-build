@@ -7,7 +7,7 @@ import os
 import re
 import sys
 
-import mock
+from unittest import mock
 import pytest
 import yaml
 
@@ -92,7 +92,7 @@ def test_get_output_file_path_jinja2(testing_workdir, testing_config):
     python = ''.join(metadata.config.variant['python'].split('.')[:2])
     assert build_path == os.path.join(testing_config.croot, testing_config.host_subdir,
                                       "conda-build-test-source-git-jinja2-1.20.2-"
-                                      "py{0}{1}_0_g262d444.tar.bz2".format(python, _hash))
+                                      "py{}{}_0_g262d444.tar.bz2".format(python, _hash))
 
 
 @mock.patch('conda_build.source')
@@ -117,7 +117,7 @@ def test_resolved_packages_recipe(testing_config):
     recipe_dir = os.path.join(metadata_dir, '_resolved_packages_host_build')
     metadata = api.render(recipe_dir, config=testing_config)[0][0]
     assert all(len(pkg.split()) == 3 for pkg in metadata.get_value('requirements/run'))
-    run_requirements = set(x.split()[0] for x in metadata.get_value('requirements/run'))
+    run_requirements = {x.split()[0] for x in metadata.get_value('requirements/run')}
     for package in [
         'curl',  # direct dependency
         'numpy',  # direct dependency
