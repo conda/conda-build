@@ -1733,12 +1733,7 @@ of ``resolved_packages`` is given below:
 
       requirements:
           host:
-              - ca-certificates 2017.08.26 h1d4fec5_0
-              - curl 7.55.1 h78862de_4
-              - libgcc-ng 7.2.0 h7cc24e2_2
-              - libssh2 1.8.0 h9cfc8f7_4
-              - openssl 1.0.2n hb7f436b_0
-              - zlib 1.2.11 ha838bed_2
+              - curl 7.55.1
           run:
               - ca-certificates 2017.08.26 h1d4fec5_0
               - curl 7.55.1 h78862de_4
