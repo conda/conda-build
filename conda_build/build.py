@@ -3231,15 +3231,25 @@ def build_tree(recipe_list, config, stats, build_only=False, post=None, notest=F
     # TODO: could probably use a better check for pkg type than this...
     wheels = [f for f in built_packages if f.endswith('.whl') and os.path.isfile(f)]
     if post in [True, None]:
-        handle_anaconda_upload(tarballs, config=config)
-        handle_pypi_upload(wheels, config=config)
+        if tarballs:
+            handle_anaconda_upload(tarballs, config=config)
+        else:
+            print("INFO :: No tarballs have been built, skipping anaconda upload")
 
-    # Print the variant information for each package because it is very opaque and never printed.
-    from conda_build.inspect_pkg import get_hash_input
-    hash_inputs = get_hash_input(tarballs)
-    print("\nINFO :: The inputs making up the hashes for the built packages are as follows:")
-    print(json.dumps(hash_inputs, sort_keys=True, indent=2))
-    print("\n")
+        if wheels:
+            handle_pypi_upload(wheels, config=config)
+        else:
+            print("INFO :: No wheels have been built, skipping pypi upload")
+
+    if tarballs:
+        # Print the variant information for each package because it is very opaque and never printed.
+        from conda_build.inspect_pkg import get_hash_input
+        hash_inputs = get_hash_input(tarballs)
+        print("\nINFO :: The inputs making up the hashes for the built packages are as follows:")
+        print(json.dumps(hash_inputs, sort_keys=True, indent=2))
+        print("\n")
+    else:
+        print("INFO :: No tarballs have been built, skipping hash_inputs computations")
 
     total_time = time.time() - initial_time
     max_memory_used = max([step.get('rss') for step in stats.values()] or [0])
