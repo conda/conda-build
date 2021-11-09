@@ -4,23 +4,23 @@ $ACTIVITIES = [
     "tag",
     "push_tag",
     "ghrelease",
-    ]
+]
 
 #
 # Basic settings
 #
 $PROJECT = $GITHUB_REPO = "conda-build"
 $GITHUB_ORG = "conda"
-$AUTHORS_FILENAME = "AUTHORS.txt"
+$AUTHORS_FILENAME = "AUTHORS.rst"
 
 #
 # Changelog settings
 #
-$CHANGELOG_FILENAME = "CHANGELOG.txt"
+$CHANGELOG_FILENAME = "CHANGELOG.rst"
 $CHANGELOG_PATTERN = "# current developments"
 $CHANGELOG_HEADER = """# current developments
-$RELEASE_DATE $VERSION:
-------------------
+$VERSION ($RELEASE_DATE)
+====================
 
 """
 $CHANGELOG_CATEGORIES = (
@@ -29,11 +29,11 @@ $CHANGELOG_CATEGORIES = (
     "Deprecations",
     "Docs",
     "Other",
-    )
+)
 
 
 def title_formatter(category):
-    s = category + ':\n'
+    s = category + '\n'
     s += "-" * (len(category) + 1)
     s += "\n\n"
     return s
