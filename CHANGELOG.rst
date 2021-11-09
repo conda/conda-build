@@ -1,7 +1,10 @@
 .. current developments
 
+.. _release-3.21.6:
+
 3.21.6 (2021-11-09)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -17,8 +20,8 @@ Bug fixes
 * Make sure symlinked directories are found in always_include_files
 * Fix pinning expressions for prerelease builds
 
-Contributors:
--------------
+Contributors
+------------
 
 * @isuruf
 * @mbargull
@@ -29,8 +32,11 @@ Contributors:
 * @ChristofKaufmann
 
 
+.. _release-3.21.5:
+
 3.21.5 (2021-08-06)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -48,14 +54,14 @@ Bug fixes
 * Do not munge rpath for non Mach-O files on macOS (#4238)
 * Fix Windows test file extension reported by `conda-debug` (#4224)
 
-Documentation:
---------------
+Documentation
+-------------
 
 * Document `build/script_env` recipe option (#4211)
 * Clarify wording about selecting multiple operating systems (#4139)
 
-Contributors:
--------------
+Contributors
+------------
 
 * @chrisburr
 * @gabm
@@ -67,8 +73,11 @@ Contributors:
 * @xhochy
 
 
+.. _release-3.21.4:
+
 3.21.4 (2021-01-15)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -80,8 +89,8 @@ Bug fixes
 
 * Fixed bug where symlinks in symlinks caused conda build to exit.  (#4180)
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mingwandroid
 * @beckermr
@@ -89,44 +98,56 @@ Contributors:
 * @beckermr
 
 
+.. _release-3.21.3:
+
 3.21.3 (2021-01-11)
-====================
+===================
+
 
 Enhancements
 ------------
 
 * Fix stupid error in prefix replacement  (#4177)
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mingwandroid
 
 
+.. _release-3.21.2:
+
 3.21.2 (2021-01-11)
-====================
-
-Contributors:
--------------
+===================
 
 
+Contributors
+------------
+
+
+
+.. _release-3.21.1:
 
 3.21.1 (2021-01-11)
-====================
+===================
+
 
 Bug fixes
 ---------
 
 * Fix noarch: python version from version-age determination  (#4174)
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mingwandroid
 
 
+.. _release-3.21.0:
+
 3.21.0 (2021-01-10)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -187,8 +208,8 @@ Bug fixes
 * Use extra R_ARGS and fix them
 * shell check fix
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mingwandroid
 * @isuruf
@@ -200,8 +221,11 @@ Contributors:
 * @kurtschelfthout
 
 
+.. _release-3.20.5:
+
 3.20.5 (2020-10-26)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -223,8 +247,8 @@ Bug fixes
 * Simplify find_config_files call  (#4086)
 * Refactor dict_of_lists_to_lists_of_dict  (#4075)
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mingwandroid
 * @isuruf
@@ -233,8 +257,11 @@ Contributors:
 * @njalerikson
 
 
+.. _release-3.20.4:
+
 3.20.4 (2020-10-14)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -244,15 +271,16 @@ Enhancements
 * Cleanup variant processing code  (#4075)
 * Add --file option to indexing  (#4076)
 
-Bug Fixes:
+Bug Fixes
+---------
 
 * Remove old rpath when loader_path is used  (#4080)
 * Fix MACOSX_DEPLOYMENT_TARGET default for osx-arm64  (#4091)
 * Rewrite apply_patch again  (#4092)
 * Add a .* to conditional_regex  (#4092)
 
-Contributors:
--------------
+Contributors
+------------
 
 * @isuruf
 * @njalerikson
@@ -260,8 +288,11 @@ Contributors:
 * @mingwandroid
 
 
+.. _release-3.20.3:
+
 3.20.3 (2020-09-29)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -278,13 +309,16 @@ Bug fixes
 * Include target_platform in package build string hash (#4065)
 * Fix post linking for SDKs with tapi-tbd-v4 (MacOS 11.0 and upwards) (#4048)
 
-Contributors:
--------------
+Contributors
+------------
 
 
+
+.. _release-3.20.1:
 
 3.20.1 (2020-09-04)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -322,16 +356,19 @@ Other
 
 
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mingwandroid
 * @isuruf
 * @mbargull
 
 
+.. _release-3.20.0:
+
 3.20.0 (2020-08-27)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -399,8 +436,11 @@ Other
 * Allow python=3.8 for pypi skeletons (#4014)
 
 
+.. _release-3.19.3:
+
 3.19.3 (2020-04-13)
-====================
+===================
+
 
 Bug fixes
 ---------
@@ -418,16 +458,19 @@ Docs
 
 * Update cli help information for conda index (#3931)
 
-Contributors:
--------------
+Contributors
+------------
 
 * @beenje
 * @jjhelmus
 * @mingwandroid
 
 
+.. _release-3.19.2:
+
 3.19.2 (2020-04-01)
-====================
+===================
+
 
 Bug fixes
 ---------
@@ -440,16 +483,19 @@ Docs
 
 * clarified 'deletes the build environment' in concepts/recipe.rst (#3901)
 
-Contributors:
--------------
+Contributors
+------------
 
 * @jjhelmus
 * @timsnyder
 * @chrisburr
 
 
+.. _release-3.19.1:
+
 3.19.1 (2020-03-17)
-====================
+===================
+
 
 Bug fixes
 ---------
@@ -461,16 +507,19 @@ Other
 
 * Change the CI trigger #3904
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mingwandroid
 * @marcelotrevisani
 * @jjhelmus
 
 
+.. _release-3.19.0:
+
 3.19.0 (2020-03-10)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -484,28 +533,31 @@ Bug fixes
 
 * Use patchelf to set RPATH by default #3897
 
-Contributors:
--------------
+Contributors
+------------
 
 * @isuruf
 * @jjhelmus
 * @mingwandroid
 
 
+.. _release-3.18.12:
+
 3.18.12 (2020-03-02)
 ====================
 
-* Keep python pinning in hashing if there is a space #3895	
-* ci launcher supporting python d shebangs on Windows #3894	
-* Allow build/binary_has_prefix_files to specify a list of files #3893	
+
+* Keep python pinning in hashing if there is a space #3895
+* ci launcher supporting python d shebangs on Windows #3894
+* Allow build/binary_has_prefix_files to specify a list of files #3893
 * Use patchelf to set RPATH by default #3897
 * Prevent non-atomic writes to repodata JSON files #3833
 * Audited and updated all docs with formatting, grammar, and accuracy errors.
 * Docs: Removed deprecated page on features
 * Fixed issue where symlinks to files that do not exist break conda build #3840
 
-Contributors:
--------------
+Contributors
+------------
 
 * @bdice
 * @beckermr
@@ -525,10 +577,13 @@ Contributors:
 * @zeehio
 
 
+.. _release-3.18.11:
+
 3.18.11 (2019-11-01)
 ====================
 
-* Update build.sh files of skeletons to be shellcheck clean including test to lint future updates. 
+
+* Update build.sh files of skeletons to be shellcheck clean including test to lint future updates.
 * Corrected documentation on subpackage test requirements.
 * Do not move work dir to work/work/
 * fixed a missing .lower() on two tar_xf related util functions
@@ -538,8 +593,8 @@ Contributors:
 * Remove N*N os.lstat calls in build_info_files_json_v1
 
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 * @rrigdon
@@ -555,8 +610,11 @@ Contributors:
 * @njzjz
 
 
+.. _release-3.18.10:
+
 3.18.10 (2019-10-14)
 ====================
+
 
 Enhancements
 ------------
@@ -586,8 +644,8 @@ Other
 -----
 
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 * @jakirkham
@@ -608,14 +666,17 @@ Contributors:
 * @Bezier89
 
 
+.. _release-3.18.9:
+
 3.18.9 (2019-07-23)
-====================
+===================
+
 
 Enhancements
 ------------
 
 * add --use-channeldata argument to conda render/build.
-* Extract the part in the skeletons pypi responsible to get the package metadata to a free function. 
+* Extract the part in the skeletons pypi responsible to get the package metadata to a free function.
 * Creat unittests for the get_package_metadata (skeletons/pypi.py) and for the new functions.
 
 Bug fixes
@@ -635,8 +696,8 @@ Other
 
 * Add disable_pip to FIELDS
 
-Contributors:
--------------
+Contributors
+------------
 
 * @rrigdon
 * @jjhelmus
@@ -646,8 +707,11 @@ Contributors:
 * @marcelotrevisani
 
 
+.. _release-3.18.8:
+
 3.18.8 (2019-07-18)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -663,8 +727,8 @@ Bug fixes
 * merge channeldata from all urls
 
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 * @rrigdon
@@ -673,8 +737,11 @@ Contributors:
 * @ddamiani
 
 
+.. _release-3.18.7:
+
 3.18.7 (2019-07-09)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -702,8 +769,8 @@ Bug fixes
 * Fix conda debug output being suppressed
 
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 * @rrigdon
@@ -715,8 +782,11 @@ Contributors:
 
 
 
+.. _release-3.18.6:
+
 3.18.6 (2019-06-26)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -728,15 +798,18 @@ Bug fixes
 
 * fix bug where package filenames were not included in the index.html
 
-Contributors:
--------------
+Contributors
+------------
 
 * @rrigdon
 * @jjhelmus
 
 
+.. _release-3.18.5:
+
 3.18.5 (2019-06-25)
-====================
+===================
+
 
 Bug fixes
 ---------
@@ -745,16 +818,19 @@ Bug fixes
 * when indexing, allow .tar.bz2 files to use .conda cache, but not vice versa.  This acts as a sanity check on the .conda files.
 * add build/rpaths_patcher to meta.yaml, to allow switching between lief and patchelf for binary mangling
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mingwandroid
 * @msarahan
 * @csosborn
 
 
+.. _release-3.18.4:
+
 3.18.4 (2019-06-21)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -766,14 +842,17 @@ Bug fixes
 
 * make "timestamp" an optional field in conda index operations
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
 
+.. _release-3.18.3:
+
 3.18.3 (2019-06-20)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -801,8 +880,8 @@ Deprecations
 
 * The repodata2.json file is no longer created as part of indexing.  It was not used by anything.  It has been removed as an optimization.  Its purpose was to explore namespaces, and we'll bring its functionality back when we address that fully.
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mingwandroid
 * @msarahan
@@ -815,8 +894,11 @@ Contributors:
 * @duncanmmacleod
 
 
+.. _release-3.18.2:
+
 3.18.2 (2019-05-26)
-====================
+===================
+
 
 Bug fixes
 ---------
@@ -825,16 +907,19 @@ Bug fixes
 * fix activation not running during tests
 * improve indexing to show status better, and fix bug where size/hashes were being mixed up between .tar.bz2 and .conda files
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mingwandroid
 * @msarahan
 * @rrigdon
 
 
+.. _release-3.18.1:
+
 3.18.1 (2019-05-18)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -842,14 +927,17 @@ Enhancements
 * rearrange steps in index.py to optimize away unnecessary work
 * restore parallel extract and hash in index operations
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
 
+.. _release-3.18.0:
+
 3.18.0 (2019-05-17)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -905,8 +993,8 @@ Docs
 * Updated theme
 * Reorganized conda-build topics, updated link-scripts
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mingwandroid
 * @msarahan
@@ -936,8 +1024,11 @@ Contributors:
 * @spalmrot-tic
 
 
+.. _release-3.17.8:
+
 3.17.8 (2019-01-26)
-====================
+===================
+
 
 Bug fixes
 ---------
@@ -949,8 +1040,8 @@ Other
 
 * Rever support added for releasing conda-build
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 * @jjhelmus
@@ -960,8 +1051,11 @@ Contributors:
 * @rrigdon
 
 
-2019-01-16 3.17.7
------------------
+.. _release-3.17.7:
+
+3.17.7 (2019-01-16)
+===================
+
 
 Bug fixes
 ---------
@@ -975,8 +1069,8 @@ Bug fixes
 * fix compatibility with conda 4.6.0+  #3346
 * update centos 7 skeleton (CDT) URL  #3350
 
-Contributors:
--------------
+Contributors
+------------
 
 * @iainsgillis
 * @isuruf
@@ -986,22 +1080,28 @@ Contributors:
 * @qwhelan
 
 
-2018-12-19 3.17.6
------------------
+.. _release-3.17.6:
+
+3.17.6 (2018-12-19)
+===================
+
 
 Bug fixes
 ---------
 
 * don't raise when recipe text can't be extracted if manual build string is already set  #3326
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
 
-2018-12-14 3.17.5
------------------
+.. _release-3.17.5:
+
+3.17.5 (2018-12-14)
+===================
+
 
 Bug fixes
 ---------
@@ -1009,15 +1109,18 @@ Bug fixes
 * fix pip build isolation / fix absence of "falsey" env vars.  Ignore only if empty string or None.  #3319
 * pass-through VS20XYINSTALLDIR var (used by intel compiler to locate VS2017 installation)  #3322
 
-Contributors:
--------------
+Contributors
+------------
 
 * @jjhelmus
 * @msarahan
 
 
-2018-12-12 3.17.4
------------------
+.. _release-3.17.4:
+
+3.17.4 (2018-12-12)
+===================
+
 
 Bug fixes
 ---------
@@ -1026,29 +1129,35 @@ Bug fixes
 * fix too much caching in getting used vars from meta.yaml leading to inaccurate hash contents  #3311
 * fix merge of build/host not being recognized before an rm_rf call utilized that info  #3311
 
-Contributors:
--------------
+Contributors
+------------
 
 * @Lnaden
 * @msarahan
 
 
-2018-12-11 3.17.3
------------------
+.. _release-3.17.3:
+
+3.17.3 (2018-12-11)
+===================
+
 
 Bug fixes
 ---------
 
 * ignore non-native binaries in lief for now.  Cross-platform inspection still theoretically possible using subdir parameter.  #3306
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahanl
 
 
-2018-12-11 3.17.2
------------------
+.. _release-3.17.2:
+
+3.17.2 (2018-12-11)
+===================
+
 
 Bug fixes
 ---------
@@ -1065,8 +1174,8 @@ Bug fixes
 * use conda's download function rather than requests directly, so that conda's proxy settings are respected  #3303
 * silence patch output when output verbosity is False  #3305
 
-Contributors:
--------------
+Contributors
+------------
 
 * @bergtholdt
 * @dsludwig
@@ -1076,8 +1185,11 @@ Contributors:
 * @sodre
 
 
-2018-12-04 3.17.1
-------------------
+.. _release-3.17.1:
+
+3.17.1 (2018-12-04)
+===================
+
 
 Bug fixes
 ---------
@@ -1086,16 +1198,19 @@ Bug fixes
 * activate host environment #3288
 * allow calls to nm to fail #3290
 
-Contributors:
--------------
+Contributors
+------------
 
 * @jjhelmus
 * @msarahan
 * @nehaljwani
 
 
+.. _release-3.17.0:
+
 3.17.0 (2018-11-28)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -1115,8 +1230,8 @@ Bug fixes
 * handle unicode decode fails in output rewriting  #3279
 * fix merge of repodata patches that have keys that don't exist in repo  #3280
 
-Contributors:
--------------
+Contributors
+------------
 
 * @bergtholdt
 * @isuruf
@@ -1126,8 +1241,11 @@ Contributors:
 * @nehaljwani
 
 
+.. _release-3.16.3:
+
 3.16.3 (2018-11-21)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -1146,8 +1264,8 @@ Bug fixes
 * fix outputs with custom build string getting hash incorrectly  #3250
 * fix tests not being run on windows  #3257
 
-Contributors:
--------------
+Contributors
+------------
 
 * @Bezier89
 * @gabm
@@ -1159,8 +1277,11 @@ Contributors:
 * @tschoonj
 
 
+.. _release-3.16.2:
+
 3.16.2 (2018-10-29)
-====================
+===================
+
 
 Bug fixes
 ---------
@@ -1175,8 +1296,8 @@ Bug fixes
 * fix creation of unix and win shell script files for noarch packages  #3236
 * fix path of python interpreter used for noarch packages being tested on win, when created on linux/mac  #3236
 
-Contributors:
--------------
+Contributors
+------------
 
 * @alexandersturm
 * @Bezier89
@@ -1188,8 +1309,11 @@ Contributors:
 * @soapy1
 
 
+.. _release-3.16.1:
+
 3.16.1 (2018-10-12)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -1209,8 +1333,8 @@ Bug fixes
 * use ensure_list in processing files to be extracted  #3210
 * fix KeyError that happened when a jinja2 rendering error occurred, which hid the rendering error  3211
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mingwandroid
 * @msarahan
@@ -1218,8 +1342,11 @@ Contributors:
 * @teake
 
 
+.. _release-3.16.0:
+
 3.16.0 (2018-10-05)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -1243,8 +1370,8 @@ Bug fixes
 * fix issues testing packages and recipe folders when done separately from build  #3192
 * fix source looking for patches in wrong folder when dealing with outputs  #3194
 
-Contributors:
--------------
+Contributors
+------------
 
 * @dpryan79
 * @gabm
@@ -1254,8 +1381,11 @@ Contributors:
 * @nehaljwani
 
 
+.. _release-3.15.1:
+
 3.15.1 (2018-09-18)
-====================
+===================
+
 
 Bug fixes
 ---------
@@ -1264,14 +1394,17 @@ Bug fixes
 * fix deps being merged instead of clobbered  #3154
 * Handle corrupt packages during indexing better  #3154
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
 
+.. _release-3.15.0:
+
 3.15.0 (2018-09-17)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -1293,8 +1426,8 @@ Bug fixes
 * fix index operations outputting debug log messages  #3151
 * fix private channels showing 404 errors during test phase  #3153
 
-Contributors:
--------------
+Contributors
+------------
 
 * @Bezier89
 * @gabm
@@ -1306,22 +1439,28 @@ Contributors:
 * @teake
 
 
+.. _release-3.14.4:
+
 3.14.4 (2018-09-11)
-====================
+===================
+
 
 Bug fixes
 ---------
 
 * fix recipe_log.txt not being filtered from info/files  #3134
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
 
+.. _release-3.14.3:
+
 3.14.3 (2018-09-11)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -1335,14 +1474,17 @@ Bug fixes
 * fix log messages being deduplicated too much  #3130
 * handle permission errors with moving files in indexing more gracefully  #3132
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
 
+.. _release-3.14.2:
+
 3.14.2 (2018-09-07)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -1357,14 +1499,17 @@ Bug fixes
 * try to address unicode problems in run_exports handling  #3121
 * skip over index metadata files when they are not present in a package  #3125
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
 
+.. _release-3.14.1:
+
 3.14.1 (2018-09-06)
-====================
+===================
+
 
 Bug fixes
 ---------
@@ -1373,14 +1518,17 @@ Bug fixes
 * fix CONDA_BUILD_STATE not being set when load_setup_py_data gets run  #3117
 * fix channel_name as CLI argument for conda index.  It can't be positional.  #3318
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
 
+.. _release-3.14.0:
+
 3.14.0 (2018-09-04)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -1404,8 +1552,8 @@ Other
 
 * drop python 3.4, add 3.6, 3.7 to skeleton pypi  #3103
 
-Contributors:
--------------
+Contributors
+------------
 
 * @jjhelmus
 * @kalefranz
@@ -1416,8 +1564,11 @@ Contributors:
 * @teake
 
 
+.. _release-3.13.0:
+
 3.13.0 (2018-08-20)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -1432,15 +1583,18 @@ Bug fixes
 * fix cached git info for variants  #3082
 * fix linux temporary channel not being added at test time, leaving package unresolvable  #3088
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 * @teake
 
 
+.. _release-3.12.1:
+
 3.12.1 (2018-08-06)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -1457,8 +1611,8 @@ Bug fixes
 * fix RPM skeleton test (point to newer CentOS repo) #3054
 * fix test/files and test/source_files looking in the wrong place for info/recipe/parent contents (subpackages)  #3061
 
-Contributors:
--------------
+Contributors
+------------
 
 * @Bezier89
 * @jakirkham
@@ -1467,8 +1621,11 @@ Contributors:
 * @msarahan
 
 
+.. _release-3.12.0:
+
 3.12.0 (2018-07-24)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -1483,16 +1640,19 @@ Bug fixes
 
 * fix apply_selectors, leading to excessive detection of used variables  #3040
 
-Contributors:
--------------
+Contributors
+------------
 
 * @CJ-Wright
 * @msarahan
 * @speleo3
 
 
+.. _release-3.11.0:
+
 3.11.0 (2018-07-20)
-====================
+===================
+
 
 Bug fixes
 ---------
@@ -1532,8 +1692,8 @@ Docs
 * Fix search order for conda_build_config.yaml  #3029
 
 
-Contributors:
--------------
+Contributors
+------------
 
 * @isuruf
 * @j-hartshorn
@@ -1549,11 +1709,14 @@ Contributors:
 * @tjd2002
 
 
-3.10.9 (2018-06-15)
-====================
+.. _release-3.10.9:
 
-Miscellany:
------------
+3.10.9 (2018-06-15)
+===================
+
+
+Miscellany
+----------
 
 * docs are moving from the conda-docs repo into conda-build (splitting off from conda docs in general)
 
@@ -1562,14 +1725,17 @@ Bug fixes
 
 * fix re.escape usage for Python <3.3 #2970
 
-Contributors:
--------------
+Contributors
+------------
 * @mbargull
 * @msarahan
 
 
+.. _release-3.10.8:
+
 3.10.8 (2018-06-12)
-====================
+===================
+
 
 Bug fixes
 ---------
@@ -1580,8 +1746,8 @@ Bug fixes
 * utils.glob: remove unnecessary normcas, fix test_expand_globs  #2952
 * add missing "build" fields in FIELDS schema thing  #2962
 
-Contributors:
--------------
+Contributors
+------------
 
 * @isuruf
 * @mariusvniekerk
@@ -1589,8 +1755,11 @@ Contributors:
 * @mingwandroid
 
 
+.. _release-3.10.7:
+
 3.10.7 (2018-06-01)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -1602,15 +1771,18 @@ Bug fixes
 
 * Fix folder copying in test/files  #2941
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mbargull
 * @msarahan
 
 
+.. _release-3.10.6:
+
 3.10.6 (2018-05-31)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -1627,8 +1799,8 @@ Bug fixes
 * fix incorrect python versions showing up in test phase paths (SP_DIR)  #2932
 * fix test/files functionality for outputs; add test  #2934
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mbargull
 * @msarahan
@@ -1638,8 +1810,11 @@ Contributors:
 * @tomashek
 
 
+.. _release-3.10.5:
+
 3.10.5 (2018-05-23)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -1655,14 +1830,17 @@ Bug fixes
 * fix handling of not-yet-available requirements  #2912
 * fix get_value with default keyword not respecting that user-specified default  #2912
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
 
+.. _release-3.10.4:
+
 3.10.4 (2018-05-20)
-====================
+===================
+
 
 Bug fixes
 ---------
@@ -1674,14 +1852,17 @@ Bug fixes
 * fix entry points incorrecty pointing at build prefix (instead of host), leading to prefix replacement failing  #2895
 * fix merge_build_host functionality.  Adding an empty host section now forces build and host to be split.  #2896
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 * @scopatz
 
 
-2018-05-17 3.10.3:
+.. _release-3.10.3:
+
+3.10.3 (2018-05-17)
+===================
 
 Enhancements
 ------------
@@ -1702,14 +1883,17 @@ Bug fixes
 * fix mutability of config objects passed to test causing bizarre states of variants
 * fix win style slashes in paths.json and ``files`` that broke things when converting a win package to unix #2891
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mingwandroid
 * @msarahan
 
 
-2018-05-08 3.10.2:
+.. _release-3.10.2:
+
+3.10.2 (2018-05-08)
+===================
 
 Bug fixes
 ---------
@@ -1719,13 +1903,16 @@ Bug fixes
 * set default cran mirror  #2868
 * disallow merging of build and host prefixes when host_subdir != build_subdir  #2876
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
 
-2018-05-01 3.10.1:
+.. _release-3.10.1:
+
+3.10.1 (2018-05-01)
+===================
 
 Bug fixes
 ---------
@@ -1734,14 +1921,17 @@ Bug fixes
 * fix handling of downstream testing in tandem with --output-dir or --croot (add locations as file:// urls)  #2860
 * fix improperly escaped entries in cran template.  Clean up unnecessary changes.  #2861
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mingwandroid
 * @msarahan
 
 
-2018-05-01 3.10.0:
+.. _release-3.10.0:
+
+3.10.0 (2018-05-01)
+===================
 
 Enhancements
 ------------
@@ -1758,14 +1948,17 @@ Bug fixes
 * fix python handling when python is a tuple (inner python looping)  #2854
 * fix python not looping in inner packages when top-level doesn't use it.  Fix zip_keys handling. #2856
 
-Contributors:
--------------
+Contributors
+------------
 
 * @kalefranz
 * @msarahan
 
 
-2018-04-27 3.9.2:
+.. _release-3.9.2:
+
+3.9.2 (2018-04-27)
+===================
 
 Enhancements
 ------------
@@ -1780,15 +1973,18 @@ Bug fixes
 * ensure u+w permissions before calling install_name_tool  #2840
 * remove conversion of dash to underscore in pin_run_as_build  #2842
 
-Contributors:
--------------
+Contributors
+------------
 
 * @jakirkham
 * @mingwandroid
 * @msarahan
 
 
-2018-04-24 3.9.1:
+.. _release-3.9.1:
+
+3.9.1 (2018-04-24)
+===================
 
 Bug fixes
 ---------
@@ -1799,13 +1995,16 @@ Bug fixes
 * Add conda-build/skeleton_config_yaml key to condarc to control which conda_build_config.yaml should be used to find the cran_mirror setting.  #2836
 * Change default cran mirror from mran to cran.  #2836
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mingwandroid
 * @msarahan
 
-2018-04-24 3.9.0:
+.. _release-3.9.0:
+
+3.9.0 (2018-04-24)
+===================
 
 Enhancements
 ------------
@@ -1823,8 +2022,8 @@ Bug fixes
 * fix usage of dict for default pin_run_as_build data structure.  Losing ordering created noise down the line for Conda-Forge.  #2830
 * fix selector regex being too greedy; reporting wrong used vars  #2832
 
-Contributors:
--------------
+Contributors
+------------
 
 * @ceball
 * @isuruf
@@ -1833,7 +2032,10 @@ Contributors:
 * @mingwandroid
 * @msarahan
 
-2018-04-16 3.8.1:
+.. _release-3.8.1:
+
+3.8.1 (2018-04-16)
+===================
 
 Bug fixes
 ---------
@@ -1845,8 +2047,8 @@ Bug fixes
 * fix whitespace in multi-line help strings  #2808
 * fix variables in compound selectors not getting detected as "used"  #2814
 
-Contributors:
--------------
+Contributors
+------------
 
 * @bjlittle
 * @jbcrail
@@ -1854,7 +2056,10 @@ Contributors:
 * @msarahan
 
 
-2018-03-30 3.8.0:
+.. _release-3.8.0:
+
+3.8.0 (2018-03-30)
+===================
 
 Enhancements
 ------------
@@ -1873,14 +2078,17 @@ Bug fixes
   This was due to conda changing its string representation of MatchSpecs, and
   our regex didn't take that into account. #2793
 
-Contributors:
--------------
+Contributors
+------------
 
 * @183amir
 * @msarahan
 
 
-2018-03-22 3.7.2:
+.. _release-3.7.2:
+
+3.7.2 (2018-03-22)
+===================
 
 Enhancements
 ------------
@@ -1901,8 +2109,8 @@ Bug fixes
 * don't filter out .gitignore and .gitmodules when packaging  #2774
 * fix pin_* regex that was erroneously picking up wrong usages  #2775
 
-Contributors:
--------------
+Contributors
+------------
 
 * @bilderbuchi
 * @kfranz
@@ -1912,7 +2120,10 @@ Contributors:
 * @wikiped
 
 
-2018-03-08 3.7.1:
+.. _release-3.7.1:
+
+3.7.1 (2018-03-08)
+===================
 
 Enhancements
 ------------
@@ -1929,15 +2140,18 @@ Bug fixes
 * Fix selector regex for finding "used" variables; was finding too much across lines.  #2745
 * Ignore empty config files (don't error out on them)  #2746
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mingwandroid
 * @msarahan
 * @neok-m4700
 
 
-2018-03-05 3.7.0:
+.. _release-3.7.0:
+
+3.7.0 (2018-03-05)
+===================
 
 Enhancements
 ------------
@@ -1956,14 +2170,17 @@ Bug fixes
 * fix selectors being applied before variable detection, leading to variables in selectors never being detected  #2723
 * add filesize calculation to converted script files  #2727
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mandeep
 * @msarahan
 
 
-2018-02-28 3.6.0:
+.. _release-3.6.0:
+
+3.6.0 (2018-02-28)
+===================
 
 Enhancements
 ------------
@@ -1995,8 +2212,8 @@ Bug fixes
 * Check for incomplete files when inspecting links. Some files that looked like
   ELF files, but weren't, would trip up pyldd and kill the build.  #2718
 
-Contributors:
--------------
+Contributors
+------------
 
 * @jjhelmus
 * @MatthieuDartiailh
@@ -2004,7 +2221,10 @@ Contributors:
 * @msarahan
 
 
-2018-02-22 3.5.1:
+.. _release-3.5.1:
+
+3.5.1 (2018-02-22)
+===================
 
 Enhancements
 ------------
@@ -2018,14 +2238,17 @@ Bug fixes
 * Fall back gracefully when psutil fails to import.  Disk and total time stats still available; memory and CPU time are not when psutil is unavailable.  #2693
 * Fix directory size computation not being recursive, use scandir for walk operations on py27  #2699
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mariusvniekerk
 * @msarahan
 
 
-2018-02-20 3.5.0:
+.. _release-3.5.0:
+
+3.5.0 (2018-02-20)
+===================
 
 Enhancements
 ------------
@@ -2038,13 +2261,16 @@ Bug fixes
 
 * save complete parent recipe in info/recipe/parent for packages that are only outputs of a top-level package  #2687
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
 
-2018-02-15 3.4.2:
+.. _release-3.4.2:
+
+3.4.2 (2018-02-15)
+===================
 
 Enhancements
 ------------
@@ -2063,26 +2289,32 @@ Bug fixes
 
 * use lookaheads in extraction regexes to avoid capturing unwanted text  #2679
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
 
-2018-02-08 3.4.1:
+.. _release-3.4.1:
+
+3.4.1 (2018-02-08)
+===================
 
 Bug fixes
 ---------
 
 * fix interpretation of zip_keys when testing pkgs (ignore empty values)  #2673
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
 
-2018-01-31 3.4.0:
+.. _release-3.4.0:
+
+3.4.0 (2018-01-31)
+===================
 
 Enhancements
 ------------
@@ -2110,8 +2342,8 @@ Bug fixes
 * ignore tarcheck errors for files in the info folder that don't appear in info/files file.  Fixes inclusion of arbitrarily named readme files.  #2668
 * clean up host prefix in between skeletons when using pypi's --recursive mode.  Conda otherwise throws errors on the 2nd recipe.  #2669
 
-Contributors:
--------------
+Contributors
+------------
 
 * @kfranz
 * @mingwandroid
@@ -2121,7 +2353,10 @@ Contributors:
 * @steamelephant
 
 
-2018-01-23 3.3.0:
+.. _release-3.3.0:
+
+3.3.0 (2018-01-23)
+===================
 
 Enhancements
 ------------
@@ -2144,8 +2379,8 @@ Bug fixes
 * fix overly broad string matching of "None" that caused problems where None may appear
   as part of a string in meta.yaml  #2649
 
-Contributors:
--------------
+Contributors
+------------
 
 * @csoja
 * @mingwandroid
@@ -2154,7 +2389,10 @@ Contributors:
 * @neok-m4700
 
 
-2018-01-12 3.2.2:
+.. _release-3.2.2:
+
+3.2.2 (2018-01-12)
+===================
 
 Enhancements
 ------------
@@ -2174,15 +2412,18 @@ Bug fixes
 * Fix logic errors around merging build/host envs  #2623
 * fix run_exports in outputs being overwritten  #2623
 
-Contributors:
--------------
+Contributors
+------------
 
 * @jjhelmus
 * @mingwandroid
 * @msarahan
 
 
-2018-01-02 3.2.1:
+.. _release-3.2.1:
+
+3.2.1 (2018-01-02)
+===================
 
 Enhancements
 ------------
@@ -2200,14 +2441,17 @@ Bug fixes
 * Fix CRAN skeleton to better use host/build envs appropriately  #2614
 * fix outputs not loading hash input info from files at test time correctly, leading to incorrect hashes and unresolved packages.  #2616
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mingwandroid
 * @msarahan
 
 
-2017-12-21 3.2.0:
+.. _release-3.2.0:
+
+3.2.0 (2017-12-21)
+===================
 
 This release bumps the minor version to reflect the change in splitting the
 build and host folders originally introduced by 3.1.4. That change has proven to
@@ -2233,13 +2477,16 @@ Bug fixes
 * fix test file copying to avoid re-provisioning source during tests  #2595
 * tweak requirements regex to avoid misinterpreting python executable usage in test commands as usage of the python variant  #2595
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
 
-2017-12-15 3.1.6:
+.. _release-3.1.6:
+
+3.1.6 (2017-12-15)
+===================
 
 Bug fixes
 ---------
@@ -2247,13 +2494,16 @@ Bug fixes
 * fix test files in outputs (was losing reference to absolute path of recipe)  #2584
 * fix several incorrect references to build_prefix that needed to be host_prefix  #2584
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
 
-2017-12-15 3.1.5:
+.. _release-3.1.5:
+
+3.1.5 (2017-12-15)
+===================
 
 Enhancements
 ------------
@@ -2268,13 +2518,16 @@ Bug fixes
   3.1.4. #2581
 * fix used variable treatment of target_platform  #2581
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
 
-2017-12-14 3.1.4:
+.. _release-3.1.4:
+
+3.1.4 (2017-12-14)
+===================
 
 Enhancements
 ------------
@@ -2292,13 +2545,16 @@ Bug fixes
 * exclude grouped keys from zip_keys when computing hashes.  Only direct dependencies affect the hash.  #2573
 * fix always_include_files usage omitting other ordinarily installed files  #2580
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
 
-2017-12-13 3.1.3:
+.. _release-3.1.3:
+
+3.1.3 (2017-12-13)
+===================
 
 Enhancements
 ------------
@@ -2316,8 +2572,8 @@ Bug fixes
 * fix always_include_files when used in output sections  #2569
 * add jinja2 to dependencies in setup.py (not just in conda.recipe)  #2570
 
-Contributors:
--------------
+Contributors
+------------
 
 * @akovner
 * @mingwandroid
@@ -2337,14 +2593,17 @@ Bug fixes
 * fix bug that occurred when an output had the same name as the top level recipe.  Ended up extracting wrong part of recipe with wrong regex.  #2556
 * fix copying of recipe losing folder structure in the destination copy of the recipe  #2557
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 * @nehaljwani
 
 
-2017-12-06 3.1.1:
+.. _release-3.1.1:
+
+3.1.1 (2017-12-06)
+===================
 
 Bug fixes
 ---------
@@ -2356,13 +2615,16 @@ Bug fixes
 * fix output extraction regex (was picking up whole outputs section, not just one
   output). Also, fix top-level variables not being carried into later outputs.  #2549
 
-Contributors:
--------------
+Contributors
+------------
 
 * @jjhelmus
 * @msarahan
 
-2017-12-05 3.1.0:
+.. _release-3.1.0:
+
+3.1.0 (2017-12-05)
+===================
 
 Enhancements
 ------------
@@ -2387,14 +2649,17 @@ Bug fixes
 * Allow packages to store files in info folder  #2538
 * Fix source_files not working correctly when using test files in packages  #2539
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mingwandroid
 * @msarahan
 
 
-2017-11-30 3.0.31:
+.. _release-3.0.31:
+
+3.0.31 (2017-11-30)
+===================
 
 Enhancements
 ------------
@@ -2413,8 +2678,8 @@ Bug fixes
 * Fix path conversion issues going from windows to unix  #2522
 * only insert variant versions when testing runtime availability for packages that are also present in build (not just run)  #2527
 
-Contributors:
--------------
+Contributors
+------------
 
 * @anton-malakhov
 * @bheklilr
@@ -2423,7 +2688,10 @@ Contributors:
 * @stuarteberg
 
 
-2017-11-15 3.0.30:
+.. _release-3.0.30:
+
+3.0.30 (2017-11-15)
+===================
 
 Bug fixes
 ---------
@@ -2434,14 +2702,17 @@ Bug fixes
 * warn users when script_env passes env vars through #2502
 * fix build string pyXY being just pyX when input didn't have full python version  #2504
 
-Contributors:
--------------
+Contributors
+------------
 
 * @jakirkham
 * @msarahan
 
 
-2017-11-10 3.0.29:
+.. _release-3.0.29:
+
+3.0.29 (2017-11-10)
+===================
 
 Enhancements
 ------------
@@ -2461,15 +2732,18 @@ Bug fixes
 * silence warnings about ``.*`` being added to vc deps  #2483
 * fix non-finalized recipe being used for creating build env, resulting in too few variants in output  #2485
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mandeep
 * @mingwandroid
 * @msarahan
 * @stuarteberg
 
-2017-11-02 3.0.28:
+.. _release-3.0.28:
+
+3.0.28 (2017-11-02)
+===================
 
 Enhancements
 ------------
@@ -2489,8 +2763,8 @@ Bug fixes
 * fix path globbing and filtering replacing prefix not at start of path, which broke file copying  #2468
 * Don't recreate envs unnecessarily for recipes with no outputs section  #2470
 
-Contributors:
--------------
+Contributors
+------------
 
 * @jerowe
 * @kalefranz
@@ -2498,7 +2772,10 @@ Contributors:
 * @neok-m4700
 * @rendinam
 
-2017-10-17 3.0.27:
+.. _release-3.0.27:
+
+3.0.27 (2017-10-17)
+===================
 
 Enhancements
 ------------
@@ -2511,12 +2788,15 @@ Bug fixes
 
 * Fix windows bits dictionary indexing incorrect type  #2441
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
-2017-10-16 3.0.26:
+.. _release-3.0.26:
+
+3.0.26 (2017-10-16)
+===================
 
 Enhancements
 ------------
@@ -2536,8 +2816,8 @@ Bug fixes
 * fix 64-bit exe's showing up in 32-bit win packages due to not accounting for host_arch with script files  #2439
 * fix hardlink-breaking bug where path was being copied instead of specific file.  Use better tempdir.  #2437
 
-Contributors:
--------------
+Contributors
+------------
 
 * @Bezier89
 * @eklitzke
@@ -2546,20 +2826,26 @@ Contributors:
 * @msarahan
 * @nehaljwani
 
-2017-10-06 3.0.25:
+.. _release-3.0.25:
+
+3.0.25 (2017-10-06)
+===================
 
 Bug fixes
 ---------
 
 * unify usage of conda_43, learn to let the tests run.  #2424
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
 
-2017-10-06 3.0.24:
+.. _release-3.0.24:
+
+3.0.24 (2017-10-06)
+===================
 
 Enhancements
 ------------
@@ -2576,15 +2862,18 @@ Bug fixes
 * fix infinite loop when trying to build dep from found recipe, but that recipe is wrong version  #2423
 * update perl used on appveyor for testing to 5.26
 
-Contributors:
--------------
+Contributors
+------------
 
 * @minrk
 * @msarahan
 * @nehaljwani
 
 
-2017-09-29 3.0.23:
+.. _release-3.0.23:
+
+3.0.23 (2017-09-29)
+===================
 
 Bug fixes
 ---------
@@ -2594,8 +2883,8 @@ Bug fixes
 * use sets instead of lists for field descriptions  #2403
 * fix noarch_python packages getting pinned to a specific python version  #2409
 
-Contributors:
--------------
+Contributors
+------------
 
 * @Bezier89
 * @CJ-Wright
@@ -2603,7 +2892,10 @@ Contributors:
 * @msarahan
 
 
-2017-09-20 3.0.22:
+.. _release-3.0.22:
+
+3.0.22 (2017-09-20)
+===================
 
 Bug fixes
 ---------
@@ -2613,14 +2905,17 @@ Bug fixes
 * examine .a files when considering prefix replacement  #2390
 * fix run/test deps check looking at build_subdir rather than host_subdir (broke cross compiling)  #2391
 
-Contributors:
--------------
+Contributors
+------------
 
 * @Bezier89
 * @mingwandroid
 * @msarahan
 
-2017-09-18 3.0.21:
+.. _release-3.0.21:
+
+3.0.21 (2017-09-18)
+===================
 
 Bug fixes
 ---------
@@ -2628,13 +2923,16 @@ Bug fixes
 * Fix strong run_exports from build being applied to host too late, running into conflicts (especially with VC features)  #2383
 * crash properly when patching fails, rather than proceeding with build  #2384
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
 
-2017-09-16 3.0.20:
+.. _release-3.0.20:
+
+3.0.20 (2017-09-16)
+===================
 
 Bug fixes
 ---------
@@ -2642,14 +2940,17 @@ Bug fixes
 * Never activate build or host env when building conda, so that symlinks or .bat files are never created.  #2381
 * Apply "strong" run_exports from build section to host section, not just run section.  This is necessary for ensuring that features activated by packages in the build section are used to line up the host section also.  #2382
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
 
+.. _release-3.0.19:
+
 3.0.19 (2017-09-15)
-====================
+===================
+
 
 Bug fixes
 ---------
@@ -2657,14 +2958,17 @@ Bug fixes
 * write info/files for noarch.  Always sanity check info/files.  #2379
 * fix build_prefix -> host_prefix in write_pth, fixes cross compiling python packages  #2380
 
-Contributors:
--------------
+Contributors
+------------
 
 * @Bezier89
 * @msarahan
 
 
-2017-09-14 3.0.18:
+.. _release-3.0.18:
+
+3.0.18 (2017-09-14)
+===================
 
 Bug fixes
 ---------
@@ -2676,15 +2980,18 @@ Bug fixes
 * fix versioneer showing unknown version on windows due to --match argument  #2375
 * add subdir to moved work folder dirname, to avoid clobbering when cross compiling  #2376
 
-Contributors:
--------------
+Contributors
+------------
 
 * @jjhelmus
 * @mingwandroid
 * @msarahan
 
 
-2017-09-12 3.0.17:
+.. _release-3.0.17:
+
+3.0.17 (2017-09-12)
+===================
 
 Enhancements
 ------------
@@ -2696,13 +3003,16 @@ Bug fixes
 
 * Fix conda symlinks misbehaving when building conda package  #2359
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
 
-2017-09-12 3.0.16:
+.. _release-3.0.16:
+
+3.0.16 (2017-09-12)
+===================
 
 Enhancements
 ------------
@@ -2718,14 +3028,17 @@ Bug fixes
 * fix variants being merged across multiple builds due to modification of global  #2350
 * disable pyldd disagrees warning output for now  #2352
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mingwandroid
 * @msarahan
 
 
-2017-09-04 3.0.15:
+.. _release-3.0.15:
+
+3.0.15 (2017-09-04)
+===================
 
 Bug fixes
 ---------
@@ -2739,14 +3052,17 @@ Bug fixes
 * avoid attempting to overwrite existing files in the source cache  #2343
 * avoid unsatisfiable requirement errors by adding .* to specs that lack .* or >/</>=/<=  #2344
 
-Contributors:
--------------
+Contributors
+------------
 
 * @gabm
 * @msarahan
 
 
-2017-08-29 3.0.14:
+.. _release-3.0.14:
+
+3.0.14 (2017-08-29)
+===================
 
 Bug fixes
 ---------
@@ -2759,15 +3075,18 @@ Bug fixes
 * fix windows always warning about old compiler activation.  Now only warns if {{ compiler() }} is not used.  #2333
 * Add LD_RUN_PATH back into Linux variables for now (may remove later, but will have deprecation cycle)  #2334
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mingwandroid
 * @msarahan
 * @neok-m4700
 
 
-2017-08-26 3.0.13:
+.. _release-3.0.13:
+
+3.0.13 (2017-08-26)
+===================
 
 Enhancements
 ------------
@@ -2785,13 +3104,16 @@ Bug fixes
 * avoid setting empty compiler variables  #2322
 * remove meaningless error with glob_files and always_include_files during env creation  #2323
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
 
-2017-08-23 3.0.12:
+.. _release-3.0.12:
+
+3.0.12 (2017-08-23)
+===================
 
 Enhancements
 ------------
@@ -2810,14 +3132,17 @@ Bug fixes
 * update index after moving a package after test failure, so that the index is current.  #2308
 * fix --output-folder not being respected by --output preview of output path  #2309
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mingwandroid
 * @msarahan
 
 
-2017-08-17 3.0.11:
+.. _release-3.0.11:
+
+3.0.11 (2017-08-17)
+===================
 
 Enhancements
 ------------
@@ -2840,8 +3165,8 @@ Bug fixes
 * fix binary_relocation not allowing lists of files  #2288
 * fix incorrect python (or none at all) being used for pyc compilation with python only in host reqs  #2290
 
-Contributors:
--------------
+Contributors
+------------
 
 * @dsludwig
 * @jdblischak
@@ -2850,7 +3175,10 @@ Contributors:
 * @msarahan
 
 
-2017-08-11 3.0.10:
+.. _release-3.0.10:
+
+3.0.10 (2017-08-11)
+===================
 
 Enhancements
 ------------
@@ -2870,8 +3198,8 @@ Bug fixes
 * fix setting target (target platform) in output section causing tarcheck validation error  #2271
 * don't add setuptools to runtime dependencies in skeletonized pypi recipes (only build)  #2272
 
-Contributors:
--------------
+Contributors
+------------
 
 * @chaubold
 * @msarahan
@@ -2881,7 +3209,10 @@ Contributors:
 * @stuarteberg
 
 
-2017-08-02 3.0.9:
+.. _release-3.0.9:
+
+3.0.9 (2017-08-02)
+===================
 
 Enhancements
 ------------
@@ -2906,8 +3237,8 @@ Bug fixes
 * ignore feature records in index for 'conda inspect'  #2253
 * fix variant handling when variants affect the downloaded source (need re-extract, re-parse with new source at each step)  #2254
 
-Contributors:
--------------
+Contributors
+------------
 
 * @Bezier89
 * @jjhelmus
@@ -2918,7 +3249,10 @@ Contributors:
 * @stuarteberg
 
 
-2017-07-20 3.0.8:
+.. _release-3.0.8:
+
+3.0.8 (2017-07-20)
+===================
 
 Bug fixes
 ---------
@@ -2928,13 +3262,16 @@ Bug fixes
 * Fix regexes that were leading to unsatisfiable dependencies, especially with perl  #2222
 * Tweak internal recipe to include more git info; adjust regex accordingly for this practice #2223
 
-Contributors:
--------------
+Contributors
+------------
 
 @msarahan
 
 
-2017-07-20 3.0.7:
+.. _release-3.0.7:
+
+3.0.7 (2017-07-20)
+===================
 
 Enhancements
 ------------
@@ -2954,15 +3291,18 @@ Bug fixes
 * Fix skipping finalization with finalize=False (for c3i speedup).  #2219
 * Fix implicit variant looping - wasn't keeping track of "used variables" that are used implicitly.  #2219
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mandeep
 * @mwcraig
 * @msarahan
 
 
-2017-07-14 3.0.6:
+.. _release-3.0.6:
+
+3.0.6 (2017-07-14)
+===================
 
 Bug fixes
 ---------
@@ -2974,14 +3314,17 @@ Bug fixes
 * Fix and test "python x.x" recipes  #2201
 * Fix inappropriate insertion of variant versions that led to conflicts (for example, numpy)  #2202
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mingwandroid
 * @msarahan
 
 
-2017-07-12 3.0.5:
+.. _release-3.0.5:
+
+3.0.5 (2017-07-12)
+===================
 
 Bug fixes
 ---------
@@ -2989,13 +3332,16 @@ Bug fixes
 * Fix --skip-existing (was not matching output-dir/croot locations correctly)  #2192
 * Fix numpy x.x getting .* appended, resulting in unsatisfiable numpy  #2193
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
 
-2017-07-11 3.0.4:
+.. _release-3.0.4:
+
+3.0.4 (2017-07-11)
+===================
 
 Bug fixes
 ---------
@@ -3011,15 +3357,18 @@ Bug fixes
 * Remove overly aggressive removal of test prefix at end of test phase  #2182
 * Fix upper bound increment to account for pre-release versions (alpha, beta, rc, etc.)  #2183
 
-Contributors:
--------------
+Contributors
+------------
 
 * @jjhelmus
 * @mingwandroid
 * @msarahan
 
 
-2017-07-07 3.0.3:
+.. _release-3.0.3:
+
+3.0.3 (2017-07-07)
+===================
 
 Bug fixes
 ---------
@@ -3027,13 +3376,16 @@ Bug fixes
 * fix loss of setup.cfg reading due to bad merge  #2163
 * avoid error when attempting to sort list, and that list consists of dicts  #2163
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
 
-2017-07-06 3.0.2:
+.. _release-3.0.2:
+
+3.0.2 (2017-07-06)
+===================
 
 Enhancements
 ------------
@@ -3054,8 +3406,8 @@ Bug fixes
 * Fix incorrect arguments passed to pyldd (use keywords)  #2160
 * fix incorrect distribution of variants when more than one variant key matched  #2161
 
-Contributors:
--------------
+Contributors
+------------
 
 * @aburgm
 * @dougalsutherland
@@ -3068,7 +3420,10 @@ Contributors:
 
 
 
-2017-06-30 2.1.17:
+.. _release-2.1.17:
+
+2.1.17 (2017-06-30)
+===================
 
 Bug fixes
 ---------
@@ -3077,14 +3432,17 @@ Bug fixes
 * Remove any pyc files for entry point scripts that pip may have created #2134
 * Ignore unserializable data when reading setup.py data  #2141
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mandeep
 * @msarahan
 
 
-2017-06-29 3.0.1:
+.. _release-3.0.1:
+
+3.0.1 (2017-06-29)
+===================
 
 This release includes all changes to the 2.1.x branch up to and including the 2.1.16 release.
 
@@ -3105,8 +3463,8 @@ Bug fixes
 * fix disable_pip removing packages even when they are explicit recipe deps #2129
 * fix pin_compatible jinja2 function not respecting lower_bound as None correctly  #2138
 
-Contributors:
--------------
+Contributors
+------------
 
 * @jakirkham
 * @mandeep
@@ -3115,7 +3473,10 @@ Contributors:
 * @neok-m4700
 
 
-2017-06-23 2.1.16:
+.. _release-2.1.16:
+
+2.1.16 (2017-06-23)
+===================
 
 Enhancements
 ------------
@@ -3142,8 +3503,8 @@ Bug fixes
 * don't set build_id in test phase when --no-build-id is given #2100
 * fix handling of string literals not being lists in test requirements from setup.py #2107
 
-Contributors:
--------------
+Contributors
+------------
 
 * @aburgm
 * @AndresGuzman-Ballen
@@ -3159,13 +3520,16 @@ Contributors:
 * @vinjana
 
 
-2017-05-23 3.0.0
+.. _release-3.0.0:
+
+3.0.0 (2017-05-23)
+===================
 
 These release notes are an aggregation of all older pre-releases of conda-build
 3.0.0. All changes from 2.1.15 and below have been incorporated.
 
-Breaking changes:
------------------
+Breaking changes
+----------------
 
 * Support for post-build metadata (__conda_version__.txt and the like) has been removed.
 * pin_downstream has been renamed to run_exports  #1911
@@ -3249,8 +3613,8 @@ Bug fixes
 
 
 
-Contributors:
--------------
+Contributors
+------------
 
 * @abretaud
 * @evhub
@@ -3272,14 +3636,17 @@ Contributors:
 * @wulmer
 
 
-2017-05-23 3.0.0rc1
+.. _release-3.0.0rc1:
+
+3.0.0rc1 (2017-05-23)
+========================
 
 These release notes are an aggregation of all older pre-releases of conda-build
 3.0.0, plus changes since 3.0.0rc0. All changes from 2.1.15 and below have been
 incorporated.
 
-Breaking changes:
------------------
+Breaking changes
+----------------
 
 * Support for post-build metadata (__conda_version__.txt and the like) has been removed.
 * pin_downstream has been renamed to run_exports  #1911
@@ -3351,8 +3718,8 @@ Bug fixes
 * fix empty target_platform variant entry leading to empty builds  #2056
 
 
-Contributors:
--------------
+Contributors
+------------
 
 * @abretaud
 * @evhub
@@ -3373,12 +3740,15 @@ Contributors:
 * @wulmer
 
 
-2017-05-16 3.0.0rc0
+.. _release-3.0.0rc0:
+
+3.0.0rc0 (2017-05-16)
+=====================
 
 These release notes are an aggregation of all older pre-releases of conda-build 3.0.0, plus changes since 3.0.0beta1.  All changes from 2.1.13 and below have been incorporated.
 
-Breaking changes:
------------------
+Breaking changes
+----------------
 
 * Support for post-build metadata (__conda_version__.txt and the like) has been removed.
 * pin_downstream has been renamed to run_exports  #1911
@@ -3444,8 +3814,8 @@ Bug fixes
 * Ensure that lock files are removed after build exit (or crash) to avoid permission errors on central installs  #2002
 
 
-Contributors:
--------------
+Contributors
+------------
 
 * @abretaud
 * @evhub
@@ -3463,7 +3833,10 @@ Contributors:
 * @wulmer
 
 
-2017-05-10 2.1.13:
+.. _release-2.1.13:
+
+2.1.13 (2017-05-10)
+===================
 
 Bug fixes
 ---------
@@ -3472,25 +3845,31 @@ Bug fixes
 * pin codecov on appveyor to 2.0.5 for now  #2009
 * fix lock removal (just don't create locks for temporary directories)  #2009
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
 
-2017-05-09 2.1.12:
+.. _release-2.1.12:
+
+2.1.12 (2017-05-09)
+===================
 
 Bug fixes
 ---------
 
 * Clean up lock files for temporary directories also
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
-2017-05-09 2.1.11:
+.. _release-2.1.11:
+
+2.1.11 (2017-05-09)
+===================
 
 Enhancements
 ------------
@@ -3509,8 +3888,8 @@ Bug fixes
 * Clean up lock files after builds complete or fail to avoid permission errors  #2007
 
 
-Contributors:
--------------
+Contributors
+------------
 
 * @johanneskoester
 * @kalefranz
@@ -3518,10 +3897,13 @@ Contributors:
 * @msarahan
 
 
-2017-04-25 3.0.0beta1
+.. _release-3.0.0beta1:
 
-Breaking changes:
------------------
+3.0.0beta1 (2017-04-25)
+========================
+
+Breaking changes
+----------------
 
 * Package signing and verification have been removed, to follow their removal from conda 4.3.  #1950
 
@@ -3539,18 +3921,21 @@ Bug fixes
 * Match folder substrings more intelligently, for finding previous builds with --dirty  #1953
 * Fix type error with --skip-existing and some conda recipes (Conda-build's internal conda.recipe was one).  #1956
 
-Contributors:
--------------
+Contributors
+------------
 
 * @kalefranz
 * @msarahan
 * @rendinam
 
 
-2017-04-20 3.0.0beta0
+.. _release-3.0.0beta0:
 
-Breaking changes:
------------------
+3.0.0beta0 (2017-04-20)
+========================
+
+Breaking changes
+----------------
 
 * pin_downstream has been renamed to run_exports  #1911
 * exclude_from_build_hash has been renamed to ignore_version  #1911
@@ -3571,15 +3956,18 @@ Bug fixes
 * don't set language env vars (PERL, R, LUA, PYTHON) when those packages are not installed  #1932
 * exclude language env vars from variant being set  #1944
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mingwandroid
 * @msarahan
 * @rendinam
 
 
-2017-04-17 2.1.10:
+.. _release-2.1.10:
+
+2.1.10 (2017-04-17)
+===================
 
 Enhancements
 ------------
@@ -3595,18 +3983,21 @@ Bug fixes
 * Fix unbound local variables when --no-locking option used.  #1928
 * Don't set language env vars (PERL, R, LUA, etc.) when packages for those languages are not installed  #1930
 
-Contributors:
--------------
+Contributors
+------------
 
 * @jjhelmus
 * @kalefranz
 * @msarahan
 
 
-2017-04-05 3.0.0alpha2
+.. _release-3.0.0alpha2:
 
-Breaking changes:
------------------
+3.0.0alpha2 (2017-04-05)
+========================
+
+Breaking changes
+----------------
 
 * Support for post-build metadata (__conda_version__.txt and the like) has been removed.
 
@@ -3630,48 +4021,9 @@ Bug fixes
 * fix python imports not being run in test phase  #1896
 * fix path omission in paths.json for noarch packages  #1895
 
-Contributors:
--------------
-
-* @abretaud
-* @groutr
-* @jjhelmus
-* @kalefranz
-* @ma-ba
-* @mingwandroid
-* @msarahan
-
-
-2017-04-05 3.0.0alpha2
-
-Breaking changes:
------------------
-
-* Support for post-build metadata (__conda_version__.txt and the like) has been removed.
-
-Enhancements
+Contributors
 ------------
 
-* use symlinks when copying to improve performance  #1867
-* load setup.cfg data in load_setup_py_data  #1878
-* calculate checksum and simplify cran skeleton  #1879
-
-Bug fixes
----------
-
-* fix R's binary path on Windows  #1870
-* remove tab completion on CLI for compatibility with conda 4.4  #1795
-* reduce scope of git try/except block so that GIT_FULL_HASH is available, even if tags are not  #1873
-* Fix "compiler" jinja2 looping, so that it is respected in subpackages #1874
-* Fix license family comparison - case matching  #1875
-* Fix inspect linkages when multiple packages contain a library  #1884
-* avoid unnecessary computation of hashing  #1888
-* fix python imports not being run in test phase  #1896
-* fix path omission in paths.json for noarch packages  #1895
-
-Contributors:
--------------
-
 * @abretaud
 * @groutr
 * @jjhelmus
@@ -3681,7 +4033,10 @@ Contributors:
 * @msarahan
 
 
-2017-04-04 2.1.9:
+.. _release-2.1.9:
+
+2.1.9 (2017-04-04)
+===================
 
 Enhancements
 ------------
@@ -3694,15 +4049,18 @@ Bug fixes
 
 * fix import tests not being run, test this functionality  #1897
 
-Contributors:
--------------
+Contributors
+------------
 
 * @isuruf
 * @jjhelmus
 * @johanneskoester
 * @msarahan
 
-2017-03-24 2.1.8:
+.. _release-2.1.8:
+
+2.1.8 (2017-03-24)
+===================
 
 Enhancements
 ------------
@@ -3724,8 +4082,8 @@ Bug fixes
 * fix license family comparison, especially for public-domain  #1875
 * Remove python header being added to all run_test.* files  #1876
 
-Contributors:
--------------
+Contributors
+------------
 
 * @abretaud
 * @jjhelmus
@@ -3735,7 +4093,10 @@ Contributors:
 * @wulmer
 
 
-2017-03-23 3.0.0alpha1:
+.. _release-3.0.0alpha1:
+
+3.0.0alpha1 (2017-03-23)
+========================
 
 Bug fixes
 ---------
@@ -3745,12 +4106,15 @@ Bug fixes
 * fix prefix file detection picking up too many files due to env recreation  #1866
 * fix missing r_bin, make run_test.r scripts work  #1869
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
-2017-03-22 3.0.0alpha0:
+.. _release-3.0.0alpha0:
+
+3.0.0alpha0 (2017-03-22)
+========================
 
 This is a complete revolution in the dynamic rendering capabilities of conda-build.  More information is in the docs PR at https://github.com/conda/conda-docs/pull/414.  There will be a blog post soon, perhaps coupled with a screencast.
 
@@ -3768,8 +4132,8 @@ Bug fixes
 * properly copy permissions when extracting zip files  #1855
 * Add more important Windows environment variables to the test environment  #1859, #1863
 
-Contributors:
--------------
+Contributors
+------------
 
 * @jjhelmus
 * @kalefranz
@@ -3782,7 +4146,10 @@ Contributors:
 
 
 
-2017-03-14 2.1.7:
+.. _release-2.1.7:
+
+2.1.7 (2017-03-14)
+===================
 
 Enhancements
 ------------
@@ -3803,15 +4170,18 @@ Bug fixes
 * catch csv dialect sniffing error, try to fallback to to excel_tab.  Might work? #1840
 
 
-Contributors:
--------------
+Contributors
+------------
 
 * @kalefranz
 * @mcs07
 * @msarahan
 
 
-2017-03-08 2.1.6:
+.. _release-2.1.6:
+
+2.1.6 (2017-03-08)
+===================
 
 Enhancements
 ------------
@@ -3838,8 +4208,8 @@ Bug fixes
 * fix inspect linkages breaking due to conda index keys changing to different objects in conda 4.3  #1810
 
 
-Contributors:
--------------
+Contributors
+------------
 
 * @gbrener
 * @kalefranz
@@ -3848,7 +4218,10 @@ Contributors:
 * @stuertz
 
 
-2017-02-20 2.1.5:
+.. _release-2.1.5:
+
+2.1.5 (2017-02-20)
+===================
 
 Enhancements
 ------------
@@ -3869,14 +4242,17 @@ Bug fixes
 * set default twine target to pypitest to avoid accidental uploads  #1758
 
 
-Contributors:
--------------
+Contributors
+------------
 
 * @gabm
 * @msarahan
 
 
-2017-02-07 2.1.4:
+.. _release-2.1.4:
+
+2.1.4 (2017-02-07)
+===================
 
 Enhancements
 ------------
@@ -3891,14 +4267,18 @@ Bug fixes
 * Fix an infinite loop when creating the test environment failed #1739
 * Fix conda 4.3 incompatibility with --pin-depends option #1740
 
-Contributors:
+Contributors
+------------
 
 * @gabm
 * @kalefranze
 * @msarahan
 
 
-2017-01-31 2.1.3:
+.. _release-2.1.3:
+
+2.1.3 (2017-01-31)
+===================
 
 Enhancements
 ------------
@@ -3919,8 +4299,8 @@ Bug fixes
 * fix glob trying to interpret filenames that look like glob patterns  #1717
 
 
-Contributors:
--------------
+Contributors
+------------
 
 * @ElliotJH
 * @jerowe
@@ -3931,7 +4311,10 @@ Contributors:
 * @rainwoodman
 
 
-2017-01-20 2.1.2:
+.. _release-2.1.2:
+
+2.1.2 (2017-01-20)
+===================
 
 Enhancements
 ------------
@@ -3954,8 +4337,8 @@ Bug fixes
 * fix CPAN JSON file encoding issue on windows #1688
 * revise retry when conda is missing files from a package #1690
 
-Contributors:
--------------
+Contributors
+------------
 
 * @dfroger
 * @kalefranz
@@ -3965,7 +4348,10 @@ Contributors:
 * @pkgw
 
 
-2017-01-12 2.1.1:
+.. _release-2.1.1:
+
+2.1.1 (2017-01-12)
+===================
 
 Bug fixes
 ---------
@@ -3981,15 +4367,18 @@ Bug fixes
 * Fix not-yet-fully-rendered versions starting with . from raising exception #1644
 * Consolidate _check_call and check_call_env in utils.  Fix coercion to string that was missing in latter.  #1645
 
-Contributors:
--------------
+Contributors
+------------
 
 * @gomyhr
 * @jakirkham
 * @kalefranz
 * @msarahan
 
-2017-01-02 2.1.0:
+.. _release-2.1.0:
+
+2.1.0 (2017-01-02)
+===================
 
 (includes changes since 2.0.12, including those already listed under 2.1.0beta1)
 
@@ -4023,8 +4412,8 @@ Bug fixes
 * Fix index when --output-folder is specified #1613
 * Fix python_d.exe incompatibility with conda 4.3 #1615
 
-Contributors:
--------------
+Contributors
+------------
 
 * @asmeurer
 * @hajs
@@ -4037,7 +4426,10 @@ Contributors:
 
 
 
-2016-12-20 2.1.0beta1:
+.. _release-2.1.0beta1:
+
+2.1.0beta1 (2016-12-20)
+========================
 
 Enhancements
 ------------
@@ -4064,8 +4456,8 @@ Bug fixes
 * Fix reference to undefined need_source_download #1595
 * Disallow - in feature names, to avoid conflicts with conda's handling of package names #1600
 
-Contributors:
--------------
+Contributors
+------------
 
 * @asmeurer
 * @hajs
@@ -4076,7 +4468,10 @@ Contributors:
 * @mwiebe
 * @soapy1
 
-2016-12-12 2.0.12:
+.. _release-2.0.12:
+
+2.0.12 (2016-12-12)
+===================
 
 Enhancements
 ------------
@@ -4092,16 +4487,19 @@ Bug fixes
 * Move test removal of packaged recipe until after test completes #1563
 * Allow source_files in recognized meta.yaml fields #1572
 
-Contributors:
--------------
+Contributors
+------------
 
 * @jakirkham
 * @mingwandroid
 * @msarahan
 
 
+.. _release-2.0.11:
+
 2.0.11 (2016-11-28)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -4121,29 +4519,35 @@ Bug fixes
 * use normpath when comparing utils.relative (fixes git clone issue) #1547
 * disallow softlinks for conda (>=v.4.2) in conda-build created environments #1548
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mingwandroid
 * @msarahan
 * @soapy1
 
+.. _release-2.0.10:
+
 2.0.10 (2016-11-14)
-====================
+===================
+
 
 Bug fixes
 ---------
 
 * Fix backwards incompatibility with conda 4.1 #1528
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
 
+.. _release-2.0.9:
+
 2.0.9 (2016-11-11)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -4160,16 +4564,19 @@ Bug fixes
 * break symlinks and copy files if symlinks point to executable outside of same path (fix RPATH misbehavior on linux/mac, because ld.so follows symlinks) #1521
 * specify conda executable name more specifically when getting about.json info.  It was not being found in some cases without the file extension.  #1525
 
-Contributors:
--------------
+Contributors
+------------
 
 * @jhprinz
 * @msarahan
 * @soapy1
 
 
+.. _release-2.0.8:
+
 2.0.8 (2016-11-03)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -4187,16 +4594,19 @@ Bug fixes
 * clarify error message when extracting egg fails due to overlapping file names #1500
 * fix regression where subdir was not respecting non-x86 arch (values other than 32 or 64) #1506
 
-Contributors:
--------------
+Contributors
+------------
 
 * @caseyclements
 * @minrk
 * @msarahan
 
 
+.. _release-2.0.7:
+
 2.0.7 (2016-10-24)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -4212,30 +4622,36 @@ Bug fixes
 * fix calls to subprocess not converting unicode to str  #1473
 * restore detect_binary_files_with_prefix behavior - in particular, respect it when false.  # 1477
 
-Contributors:
--------------
+Contributors
+------------
 
 * @jschueller
 * @mingwandroid
 * @msarahan
 
 
+.. _release-2.0.6:
+
 2.0.6 (2016-10-13)
-====================
+===================
+
 
 Bug fixes
 ---------
 
 * fix erroneous import that was only compatible with conda 4.2.x #1460
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
 
+.. _release-2.0.5:
+
 2.0.5 (2016-10-13)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -4252,15 +4668,18 @@ Bug fixes
 * Fix version argument to skeletons not being respected #1456
 * Fix infinite recursion when missing dependency is either r or python #1458
 
-Contributors:
--------------
+Contributors
+------------
 
 * @bryanwweber
 * @msarahan
 
 
+.. _release-2.0.4:
+
 2.0.4 (2016-10-07)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -4279,15 +4698,18 @@ Bug fixes
 * Fix permissions on packaged files to be user and group writable, and other readable. #1437
 * fix conda develop not respecting python version of target environment #1440
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mingwandroid
 * @msarahan
 
 
+.. _release-2.0.3:
+
 2.0.3 (2016-09-27)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -4302,15 +4724,18 @@ Bug fixes
 * Catch patchelf failures in post #1418
 * fix path walking in get_ext_files #1422
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mingwandroid
 * @msarahan
 * @soapy1
 
+.. _release-2.0.2:
+
 2.0.2 (2016-09-27)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -4348,8 +4773,8 @@ Bug fixes
 * Fix no include recipe option when input is metadata (as opposed to recipe file path) #1398
 * Normalize slashes in examining files in tarfiles (always forward slashes) #1404
 
-Contributors:
--------------
+Contributors
+------------
 
 * @gabm
 * @jakirkham
@@ -4362,8 +4787,11 @@ Contributors:
 * @yoavram
 
 
+.. _release-2.0.1:
+
 2.0.1 (2016-09-06)
-====================
+===================
+
 
 Enhancements
 ------------
@@ -4392,16 +4820,19 @@ Bug fixes
 * Replace all colons with ``_`` in git mirror folders to avoid Windows path errors #1322
 * Fix missing file contents in converted packages.  Test.  #1325
 
-Contributors:
--------------
+Contributors
+------------
 
 * jakirkham
 * mingwandroid
 * msarahan
 
 
+.. _release-2.0.0:
+
 2.0.0 (2016-08-29)
-====================
+===================
+
 
 Notes here are a consolidation of all changes between 1.21.14 and 2.0.0.
 
@@ -4451,16 +4882,16 @@ Bug fixes
 * prevent GIT_* env vars from containing newlines #1282
 * restore prefix-lengths inspect command (lost in merging) #1283
 
-Restructuring:
---------------
+Restructuring
+-------------
 
 * CLI scripts have been gutted and moved to conda_build/cli.  Content from them is in
   conda_build, in scripts without ``main_`` prefix.  #953
 * Skeleton generators have been broken out of main_skeleton.py, and consolidated into
   conda_build/skeletons.  The contents of this folder are examined at runtime for pluggability.  #953
 
-Contributors:
--------------
+Contributors
+------------
 
 * @bladwig1
 * @brentp
@@ -4471,8 +4902,8 @@ Contributors:
 * @melund
 * @pigmej
 
-Testers:
---------
+Testers
+-------
 
 * @dsludwig
 * @ericdill
@@ -4482,7 +4913,10 @@ Testers:
 * @srossross
 
 
-2016-08-26 2.0.0beta4:
+.. _release-2.0.0beta4:
+
+2.0.0beta4 (2016-08-26)
+========================
 
 Bug fixes
 ---------
@@ -4497,8 +4931,8 @@ Bug fixes
 * add Scripts folder to prepended binary paths searched on Windows #1276
 * update MACOSX_DEPLOYMENT_TARGET hard-coded value to 10.7 (better fix soon) #1278
 
-Contributors:
--------------
+Contributors
+------------
 
 * @dsludwig (testing)
 * @ericdill (testing)
@@ -4509,7 +4943,10 @@ Contributors:
 * @srossross (testing)
 
 
-2016-08-23 2.0.0beta3:
+.. _release-2.0.0beta3:
+
+2.0.0beta3 (2016-08-23)
+========================
 
 Enhancements
 ------------
@@ -4526,8 +4963,8 @@ Bug fixes
 * create build environment before looking for VCS in it.  #1253
 * fix a deadlock with recursive environment creation on encountering packages with short prefixes #1257
 
-Contributors:
--------------
+Contributors
+------------
 
 * @bladwig1
 * @ericdill (testing)
@@ -4536,7 +4973,10 @@ Contributors:
 * @msarahan
 
 
-2016-08-22 2.0.0beta2:
+.. _release-2.0.0beta2:
+
+2.0.0beta2 (2016-08-22)
+========================
 
 This release includes all current (1.21.14) changes made to the 1.21.x series.
 
@@ -4561,36 +5001,42 @@ Bug fixes
 * Improve test data structures to allow profiling with pytest-profiling #953
 * Fix version sorting in pypi skeleton generator #1238
 
-Restructuring:
---------------
+Restructuring
+-------------
 
 * CLI scripts have been gutted and moved to conda_build/cli.  Content from them is in
   conda_build, in scripts without ``main_`` prefix.  #953
 * Skeleton generators have been broken out of main_skeleton.py, and consolidated into
   conda_build/skeletons.  The contents of this folder are examined at runtime for pluggability.  #953
 
-Contributors:
--------------
+Contributors
+------------
 
 * @melund
 * @msarahan
 * @pigmej
 
 
-2016-08-18 1.21.14:
+.. _release-1.21.14:
+
+1.21.14 (2016-08-18)
+====================
 
 Bug fixes
 ---------
 
 * fix pyc compilation when egg files/folders are present #1225
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
 
-2016-08-18 1.21.13:
+.. _release-1.21.13:
+
+1.21.13 (2016-08-18)
+====================
 
 Enhancements
 ------------
@@ -4604,15 +5050,18 @@ Bug fixes
 
 * fix typo in convert.py
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mingwandroid
 * @msarahan
 
 
+.. _release-1.21.12:
+
 1.21.12 (2016-08-17)
 ====================
+
 
 Enhancements
 ------------
@@ -4632,16 +5081,19 @@ Bug fixes
 * Make environment variables used by conda in environment creation always be bytestrings #1216 #1219
 
 
-Contributors:
--------------
+Contributors
+------------
 
 * @jakirkham
 * @kalefranz
 * @msarahan
 
 
+.. _release-1.21.11:
+
 1.21.11 (2016-08-06)
 ====================
+
 
 Bug fixes
 ---------
@@ -4653,14 +5105,17 @@ Bug fixes
 * Quote INCLUDE and LIB env var settings for win better #1172
 * Fix pypi skeleton package search #1181
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 * @pelson
 
+.. _release-1.21.10:
+
 1.21.10 (2016-08-02)
 ====================
+
 
 Bug fixes
 ---------
@@ -4670,15 +5125,18 @@ Bug fixes
 * Use setuptools entry points, rather than pre-defined scripts #1165
 * Always use the long build prefix to avoid confusion #1168
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mingwandroid
 * @msarahan
 
 
+.. _release-1.21.9:
+
 1.21.9 (2016-08-01)
-====================
+===================
+
 
 Bug fixes
 ---------
@@ -4687,14 +5145,17 @@ Bug fixes
 * Add regression test for conda metapackage command, fix missing token and user args. #1160
 * Create croot (conda-bld) folder if missing before locking in render and skeleton. #1161
 
-Contributors:
--------------
+Contributors
+------------
 
 * @msarahan
 
 
+.. _release-1.21.8:
+
 1.21.8 (2016-07-31)
-====================
+===================
+
 
 Bug fixes
 ---------
@@ -4703,8 +5164,8 @@ Bug fixes
 * Don't try to create work folder when it exists (but is empty) #1153
 * Fix a logic error with need_source_download not existing #1148
 
-New Things:
------------
+New Things
+----------
 
 * Don't exit on compileall failure #1146
 * Add CONDA_BUILD_RENDERING environment variable that is set during recipe rendering #1154
@@ -4712,15 +5173,18 @@ New Things:
 * Rename load_setuptools to load_setup_py_data (keep load_setuptools for compat; but show warning) #1156
 * Test that condarc channels are respected in build #1157
 
-Contributors:
--------------
+Contributors
+------------
 * @daler
 * @minrk
 * @msarahan
 
 
+.. _release-1.21.7:
+
 1.21.7 (2016-07-22)
-====================
+===================
+
 
 Bug fixes
 ---------
@@ -4733,18 +5197,21 @@ Bug fixes
 * Provide fallback path to render recipe when build environment is necessary for rendering #1140
 * Sort package versions coming from PyPI for skeleton #1141
 
-Contributors:
--------------
+Contributors
+------------
 
 * @mingwandroid
 * @msarahan
 
 
-1.21.6 (2016-07-14)
-====================
+.. _release-1.21.6:
 
-New Things:
------------
+1.21.6 (2016-07-14)
+===================
+
+
+New Things
+----------
 
 * Allow pass-through of setup.py options in conda skeleton pypi #680
 * Allow specification of pinning numpy in conda skeleton pypi #680
@@ -4764,15 +5231,18 @@ Bug fixes
 * Make hyphenation consistent with include_recipe in meta.yaml  #1124
 * Use full path of test env when activating #1125
 
-Contributors:
--------------
+Contributors
+------------
 
  * @ikalev
  * @msarahan
  * @mwcraig
 
+.. _release-1.21.5:
+
 1.21.5 (2016-07-07)
-====================
+===================
+
 
 Bug fixes
 ---------
@@ -4789,14 +5259,17 @@ Bug fixes
  * Fix an error where an intermediate None value broke jinja2 rendering #1088
  * Add missing support for include_recipe in meta.yaml #1085
 
-Contributors:
--------------
+Contributors
+------------
  * @ikalev
  * @msarahan
 
 
+.. _release-1.21.4:
+
 1.21.4 (2016-07-05)
-====================
+===================
+
 
 Bug fixes
 ---------
@@ -4806,22 +5279,25 @@ Bug fixes
  * Fix MSVC 3.3/3.4 builds when Win7SDK not installed #1072
  * Fix an error with build number, when build number is None or otherwise invalid #1088
 
-Known issues:
--------------
+Known issues
+------------
 
  * Environment activation requires conda >=4.1.6.  The activate.bat script does not look in the right place for the activate.d folder.
  * The test suite on Linux and Mac fails the python-build, python-run, and python-build-run tests, because an errant __conda-version__.txt file is somehow present.  It is not clear where it comes from, and each of these tests pass when run individually.  If you have mysterious issues, and you use __conda-version__.txt or files like it, please file an issue.
 
-Contributors:
--------------
+Contributors
+------------
  * @adament
  * @aleksey
  * @ikalev
  * @msarahan
 
 
+.. _release-1.21.3:
+
 1.21.3 (2016-06-27)
-====================
+===================
+
 
 Bug fixes
 ---------
@@ -4831,89 +5307,101 @@ Bug fixes
 Contributors:
  * @msarahan
 
-1.21.2 (2016-06-24)
-====================
+.. _release-1.21.2:
 
-Bug fixes / Improvements:
--------------------------
+1.21.2 (2016-06-24)
+===================
+
+
+Bug fixes / Improvements
+------------------------
 
  * revert some MSVC activation logic to still call vcvarsall directly in build script
  * fix Windows testing for binary prefix replacement (not done on win)
  * Add a warning message when conda-build can't create an environment due to unsatisfiable dependencies
  * Improve notion of whether a recipe uses a VCS in its metadata, or in its build
 
-Known issues:
--------------
+Known issues
+------------
 
  * Environment activation on Windows will not work until Conda 4.1.4 is released.  The activate.bat script does not look in the right place for the activate.d folder.
  * The test suite on Linux and Mac fails the python-build, python-run, and python-build-run tests, because an errant __conda-version__.txt file is somehow present.  It is not clear where it comes from, and each of these tests pass when run individually.  If you have mysterious issues, and you use __conda-version__.txt or files like it, please file an issue.
 
-Contributors:
--------------
+Contributors
+------------
  * @msarahan
  * @patricksnape
 
-1.21.1 (2016-06-22)
-====================
+.. _release-1.21.1:
 
-Bug fixes / Improvements:
--------------------------
+1.21.1 (2016-06-22)
+===================
+
+
+Bug fixes / Improvements
+------------------------
 
  * Simplify MSVC activation, using distutil's existing logic #1036
  * Correctly interpret paths returned from git on windows, trying cygpath, falling back to conda regex #1037
  * Fix ability to disable anaconda upload in condarc #1043
  * Change environment activation to call activation in scripts, rather than having Python store variables #1044
 
-Contributors:
--------------
+Contributors
+------------
  * @msarahan
  * @mwcraig
  * @patricksnape
 
 
+.. _release-1.21.0:
+
 1.21.0 (2016-06-15)
-====================
+===================
 
-New stuff:
-----------
- * Add ``FEATURE_`` environment variables for MKL, opt and debugging #978
- * add info/about.json file that contains the "about" section of meta.yaml #941
- * allow ```--dirty``` flag to be passed to ```conda build``` command. Skips
-   download, and provides DIRTY environment variable in build scripts. #973
- * Add msys2 paths to build and test environments #979
- * add new x86 and x86_64 selectors for Intel platforms #986
- * keep original meta.yaml in recipe folder of package; create meta.yaml.rendered in recipe folder.  Neither exist when recipe not included.  #1004
- * add ignore_prefix_files key to build in meta.yaml. Can ignore list of files,
-   or True to ignore all prefix files. #1008 #1009
- * Automatically determine patch strip level #1011
 
-Bug fixes/Improvements:
------------------------
- * Lightened requirement that x.x be defined in both build and runtime sections.  #650
- * Remove info/recipe.json from build conda packages.  Superseded by info/recipe/meta.yaml.rendered.  #781
- * Search for single and double backslashes when finding files that need prefix replacement #962
- * Track undefined jinja variables and use them to decide whether to download source #964
- * handle patches with p0 or p1 #969, #1011, #1020
- * only set os.environ for non-None variables #981
- * Don't use long prefixes on windows #985
- * Fix missing encoding argument #987
- * Respect proxy variables more appropriately #989
- * Search packages on PyPI, rather than listing them all.  Should avoid some timeout errors there. #991
- * Fix unix-style paths returned from git on Windows preventing relative paths from providing Jinja2 metadata #995
- * improve logic handling "dirty" downloading.  Always download when not dirty.  #995
- * Fix post-build variables when no build section existed in original meta.yaml #999
- * Activate _build and _test environments approriately, rather than manipulating PATH directly #1002
- * Don't clone git submodules until after first checkout #1025
- * Move check_install over from conda.install #1027
+New stuff
+---------
+
+* Add ``FEATURE_`` environment variables for MKL, opt and debugging #978
+* add info/about.json file that contains the "about" section of meta.yaml #941
+* allow ```--dirty``` flag to be passed to ```conda build``` command. Skips
+  download, and provides DIRTY environment variable in build scripts. #973
+* Add msys2 paths to build and test environments #979
+* add new x86 and x86_64 selectors for Intel platforms #986
+* keep original meta.yaml in recipe folder of package; create meta.yaml.rendered in recipe folder.  Neither exist when recipe not included.  #1004
+* add ignore_prefix_files key to build in meta.yaml. Can ignore list of files,
+  or True to ignore all prefix files. #1008 #1009
+* Automatically determine patch strip level #1011
+
+Bug fixes/Improvements
+----------------------
+
+* Lightened requirement that x.x be defined in both build and runtime sections.  #650
+* Remove info/recipe.json from build conda packages.  Superseded by info/recipe/meta.yaml.rendered.  #781
+* Search for single and double backslashes when finding files that need prefix replacement #962
+* Track undefined jinja variables and use them to decide whether to download source #964
+* handle patches with p0 or p1 #969, #1011, #1020
+* only set os.environ for non-None variables #981
+* Don't use long prefixes on windows #985
+* Fix missing encoding argument #987
+* Respect proxy variables more appropriately #989
+* Search packages on PyPI, rather than listing them all.  Should avoid some timeout errors there. #991
+* Fix unix-style paths returned from git on Windows preventing relative paths from providing Jinja2 metadata #995
+* improve logic handling "dirty" downloading.  Always download when not dirty.  #995
+* Fix post-build variables when no build section existed in original meta.yaml #999
+* Activate _build and _test environments approriately, rather than manipulating PATH directly #1002
+* Don't clone git submodules until after first checkout #1025
+* Move check_install over from conda.install #1027
 
 Deprecations
 ------------
- * __conda_version__.txt and other post-build methods of altering the build
-   string are marked as deprecated. Prefer Jinja2 templates where possible.
-   Create issues if this breaks your work.
 
-Contributors:
--------------
+* __conda_version__.txt and other post-build methods of altering the build
+  string are marked as deprecated. Prefer Jinja2 templates where possible.
+  Create issues if this breaks your work.
+
+Contributors
+------------
  * @filmor
  * @ilanschnell
  * @jschueller
@@ -4924,15 +5412,19 @@ Contributors:
  * @whitequark
 
 
-2016-06-05 2.0.0beta:
----------------------
+.. _release-2.0.0beta:
 
-Compatibility breaks:
----------------------
+2.0.0beta (2016-06-05)
+======================
+
+Compatibility breaks
+--------------------
+
 * Increase placeholder path to 255 bytes (affects only Linux/Mac.  Packages need to be rebuilt to support longer embedded paths) #877
 
-Bug fixes/Improvements:
------------------------
+Bug fixes/Improvements
+----------------------
+
 * Respect proxy variables more appropriately #989
 * Fix post-build variables when no build section existed in original meta.yaml #999
 * Fix unix-style paths returned from git on Windows preventing relative paths from providing Jinja2 metadata #995
@@ -4946,16 +5438,17 @@ Bug fixes/Improvements:
 * Track undefined jinja variables and use them to decide whether to download source #964
 * handle patches with p0 or p1 #969
 
-New stuff:
-----------
+New stuff
+---------
+
 * Add ``FEATURE_`` environment variables for MKL, opt and debugging #978
 * add new x86 and x86_64 selectors for Intel platforms #986
 * add info/about.json file that contains the "about" section of meta.yaml #941
 * Add msys2 paths to build and test environments #979
 * allow ```--dirty``` flag to be passed to ```conda build``` command.  Skips download, and provides DIRTY environment variable in build scripts.  #973
 
-Contributors:
--------------
+Contributors
+------------
 * @filmor
 * @heather999
 * @ilanschnell
@@ -4967,56 +5460,75 @@ Contributors:
 * @whitequark
 
 
-1.20.3 (2016-05-13)
-====================
-Features:
- * use posix metapackage for cran skeleton packaging (#956)
+.. _release-1.20.3:
 
-Bug fixes:
- * fix output of package paths (extra output was breaking tools).  Add tests. (#950)
- * change default of no_download_source in build.py (for compatibility with conda-build-all) (#950)
- * fix regression in [] being confused for selectors (#957)
+1.20.3 (2016-05-13)
+===================
+
+Features
+--------
+
+* use posix metapackage for cran skeleton packaging (#956)
+
+Bug fixes
+---------
+
+* fix output of package paths (extra output was breaking tools).  Add tests. (#950)
+* change default of no_download_source in build.py (for compatibility with conda-build-all) (#950)
+* fix regression in [] being confused for selectors (#957)
+
+.. _release-1.20.2:
 
 1.20.2 (2016-05-13)
-====================
-Features:
- * added --token and --user flags to pass corresponding information to anaconda upload (#921)
- * added conda render command that outputs a fully-rendered meta.yaml to either stdout, or to file (with --file) (#908)
- * support source checkout tools specified in meta.yaml. If source checkout fails at the rendering phase, source checkout and rendering are re-done after the build environment is created. (#843, #946)
- * fn is now optional when a URL specifies a filename. (#942)
- * CRAN skeleton generator now uses MSYS2 for Windows support (#942)
- * conda build & conda render both recursively look for meta.yaml (support conda-forge feedstock submodules) (#908)
- * Whitelist MAKEFLAGS environment variable. Setting this outside conda build should take effect in your build. Parallelize on \*nix by adding -j here, instead of -j${CPU_COUNT} in your build.sh. This helps on CI's, where CPU_COUNT is not always well-behaved. (#917)
- * Run python_d executable on windows when debug feature is active (#724)
- * add conda build flag --keep-old-work that temporarily moves your last build, then moves it back after completion. For debugging, when more than one package is involved. (#833)
- * Allow selectors in imported jinja templates (#739)
+===================
 
-Bug fixes:
- * fixed several instances wherein --skip-existing did not work (#897, #945)
- * Fully render recipe before outputting build string  * fixes empty spots where GIT_* info should have been (#923)
- * Add MSYS2 path conversion filters to avoid issues with Win 7.1 SDK (#900)
- * Address PyPI's change of URL format (#922,
- * Fix invalid gcc "-m 32" flag (#916)
- * Fix empty section (due to selectors) handling regression (#919)
- * Fix regression in handling of VS2008 Pro (not Express + VC for Python 2.7). It is important to at least try to run vcvarsall.bat. (#913)
- * Fix CPAN skeleton generator (handle missing sections better) (#912)
- * Make test/requires versions match build/requires without additional pinning (#907)
- * Remove hard-coded CYGWIN path from conda-build's custom PATH (#903)
- * Source is downloaded before testing, fixing an issue where if build machine and some other test machine had different source, strange things happened. (#946)
- * Fix regression with Python 3.x fixing shebangs (#892)
- * Fix conda inspect crashes by using conda-meta info rather than filenames or dist names for package info (#947)
+Features
+--------
 
-Miscellany:
- * restore AppVeyor testing for Windows builds (#864)
- * Build py3.5 on Appveyor (#938)
- * PEP8 cleanup; use flake8 rather than pyflakes (#938)
- * limited scope of project locking to avoid lock conflicts between build and rendering (#923)
- * set up anaconda.org build infrastructure (#924)
- * on Windows, environment variables are written to the temporary bld.bat in the source work folder. (#933)
+* added --token and --user flags to pass corresponding information to anaconda upload (#921)
+* added conda render command that outputs a fully-rendered meta.yaml to either stdout, or to file (with --file) (#908)
+* support source checkout tools specified in meta.yaml. If source checkout fails at the rendering phase, source checkout and rendering are re-done after the build environment is created. (#843, #946)
+* fn is now optional when a URL specifies a filename. (#942)
+* CRAN skeleton generator now uses MSYS2 for Windows support (#942)
+* conda build & conda render both recursively look for meta.yaml (support conda-forge feedstock submodules) (#908)
+* Whitelist MAKEFLAGS environment variable. Setting this outside conda build should take effect in your build. Parallelize on \*nix by adding -j here, instead of -j${CPU_COUNT} in your build.sh. This helps on CI's, where CPU_COUNT is not always well-behaved. (#917)
+* Run python_d executable on windows when debug feature is active (#724)
+* add conda build flag --keep-old-work that temporarily moves your last build, then moves it back after completion. For debugging, when more than one package is involved. (#833)
+* Allow selectors in imported jinja templates (#739)
 
+Bug fixes
+---------
+
+* fixed several instances wherein --skip-existing did not work (#897, #945)
+* Fully render recipe before outputting build string  * fixes empty spots where GIT_* info should have been (#923)
+* Add MSYS2 path conversion filters to avoid issues with Win 7.1 SDK (#900)
+* Address PyPI's change of URL format (#922,
+* Fix invalid gcc "-m 32" flag (#916)
+* Fix empty section (due to selectors) handling regression (#919)
+* Fix regression in handling of VS2008 Pro (not Express + VC for Python 2.7). It is important to at least try to run vcvarsall.bat. (#913)
+* Fix CPAN skeleton generator (handle missing sections better) (#912)
+* Make test/requires versions match build/requires without additional pinning (#907)
+* Remove hard-coded CYGWIN path from conda-build's custom PATH (#903)
+* Source is downloaded before testing, fixing an issue where if build machine and some other test machine had different source, strange things happened. (#946)
+* Fix regression with Python 3.x fixing shebangs (#892)
+* Fix conda inspect crashes by using conda-meta info rather than filenames or dist names for package info (#947)
+
+Miscellany
+----------
+
+* restore AppVeyor testing for Windows builds (#864)
+* Build py3.5 on Appveyor (#938)
+* PEP8 cleanup; use flake8 rather than pyflakes (#938)
+* limited scope of project locking to avoid lock conflicts between build and rendering (#923)
+* set up anaconda.org build infrastructure (#924)
+* on Windows, environment variables are written to the temporary bld.bat in the source work folder. (#933)
+
+
+.. _release-1.20.1:
 
 1.20.1 (2016-04-21)
 ===================
+
 
   * fix source/path and GIT_* issues, #801
   * fix invalid assertion, #855
@@ -5033,8 +5545,11 @@ Miscellany:
   * VS_YEAR, VS_VERSION, VS_MAJOR and CMAKE_GENERATOR environment variables, #872
 
 
+.. _release-1.20.0:
+
 1.20.0 (2016-03-25)
 ===================
+
 
   * support for Lua as a built-in language (Alex Wiltschko), #719
   * allow additional keys in "about" section, #831
@@ -5043,8 +5558,11 @@ Miscellany:
   * fixed race condition between removal and creation of tmp_dir on win, #847
 
 
+.. _release-1.19.2:
+
 1.19.2 (2016-03-10)
 ===================
+
 
   * silence some errors when subprocessing git #790
   * fixes conda skeleton cran under python3 #817
@@ -5054,8 +5572,11 @@ Miscellany:
   * fixes #820 crash when building from a git repo on Windows, #824
 
 
+.. _release-1.19.1:
+
 1.19.1 (2016-03-09)
 ===================
+
 
   * Environment variables defined in the 'script_env' build section of
     the meta.yaml file were previously assigned the value '<UNDEFINED>'
@@ -5069,8 +5590,11 @@ Miscellany:
   * fix recurisive builds after conda 4.0 release, #813
 
 
+.. _release-1.19.0:
+
 1.19.0 (2016-01-29)
 ===================
+
 
   * normalize unicode in conda skeleton cran, #681
   * use /bin/sh on openbsd, #707
@@ -5089,8 +5613,11 @@ Miscellany:
     commands, #748
 
 
+.. _release-1.18.2:
+
 1.18.2 (2015-11-19)
 ===================
+
 
   * move path prepending to function for uniformity, #601
   * improve yaml loading, #603
@@ -5100,8 +5627,11 @@ Miscellany:
   * add a method to shell out and execute a command through subprocess, #621
 
 
+.. _release-1.18.1:
+
 1.18.1 (2015-10-16)
 ===================
+
 
   * allow config system to handle versions with have more than a single digit
     in the minor version, #626
@@ -5112,8 +5642,11 @@ Miscellany:
     if the version is 3.1), #603
 
 
+.. _release-1.18.0:
+
 1.18.0 (2015-10-01)
 ===================
+
 
   * develop options --build_ext, --clean_build_ext, #512
   * fix directory not existing when using --no-include-recipe option
@@ -5141,8 +5674,11 @@ Miscellany:
   * add support for absolute rpaths on Linux
 
 
+.. _release-1.17.0:
+
 1.17.0 (2015-08-24)
 ===================
+
 
   * quote set calls in bld.bat
   * use the trash on Windows when deleting environments, see #521
@@ -5155,8 +5691,11 @@ Miscellany:
   * .git can be a file, #537
 
 
+.. _release-1.16.0:
+
 1.16.0 (2015-07-30)
 ===================
+
 
   * handle trailing slashes in package names in conda skeleton cran
   * Cygwin git now works correctly.
@@ -5171,8 +5710,11 @@ Miscellany:
   * add conda_build.sub_commands object which is a list of conda sub-commands
 
 
+.. _release-1.15.0:
+
 1.15.0 (2015-07-22)
 ===================
+
 
   * fix conda skeleton cran --update-outdated --output-dir .
   * add argcomplete completers for recipes, --python, --numpy, --R, CRAN
@@ -5196,8 +5738,11 @@ Miscellany:
     as selector variables (renames armv6 to armv6l)
 
 
+.. _release-1.14.1:
+
 1.14.1 (2015-06-29)
 ===================
+
 
   * add --size option to change RSA modulus length when generating RSA key
     pairs (defaults to 2048 bit)
@@ -5209,8 +5754,11 @@ Miscellany:
   * catch tarfile.ReadError in conda index, #460
 
 
+.. _release-1.14.0:
+
 1.14.0 (2015-06-16)
 ===================
+
 
   * add support for signing packages, and indexing them, #430
   * removing LIBRARY_PATH and INCLUDE_PATH build environment variables on
@@ -5240,8 +5788,11 @@ Miscellany:
   * add ability to sign packages
 
 
+.. _release-1.13.0:
+
 1.13.0 (2015-05-19)
 ===================
+
 
   * skeleton pypi: fail better for packages with bad urls
   * fix summary in bdist_conda
@@ -5265,14 +5816,20 @@ Miscellany:
     aplpy/aplpy#259)
 
 
+.. _release-1.12.1:
+
 1.12.1 (2015-04-28)
 ===================
+
 
   * fix regression in always_include_files that causes build failure (#386)
 
 
+.. _release-1.12.0:
+
 1.12.0 (2015-04-10)
 ===================
+
 
   * correctly fix egg directories that are part of the package
   * use the --force-rpath flag to patchelf
@@ -5299,8 +5856,11 @@ Miscellany:
   * add support for GitHub urls in conda skeleton cran
 
 
+.. _release-1.11.0:
+
 1.11.0 (2015-03-05)
 ===================
+
 
   * add 'script_env' key in build section of meta.yaml file, which is a list
     of environment variable names which are made available in the build
@@ -5329,8 +5889,11 @@ Miscellany:
     names in pipbuild
 
 
+.. _release-1.10.2:
+
 1.10.2 (2015-02-10)
 ===================
+
 
   * don't set the GIT_* environment variables when the source is not a git repo
   * skeleton cran: add extra metadata from CRAN to the recipe
@@ -5338,8 +5901,11 @@ Miscellany:
   * don't match comment only lines as selectors
 
 
+.. _release-1.10.1:
+
 1.10.1 (2015-02-06)
 ===================
+
 
   * greatly improved ability to create noarch_python packages, #317
   * added 'subdir' key to info/index.json
@@ -5350,8 +5916,11 @@ Miscellany:
   * add a --quiet option to conda convert
 
 
+.. _release-1.10.0:
+
 1.10.0 (2015-01-15)
 ===================
+
 
   * automatically convert absolute symlinks to paths in the build prefix to
     relative ones.
@@ -5372,8 +5941,11 @@ Miscellany:
   * print the correct thing for binary files detected with a prefix
 
 
+.. _release-1.9.1:
+
 1.9.1 (2014-11-18)
 ===================
+
 
   * set PYTHONNOUSERSITE=1 while running build scripts
   * conda index: add error if they try to mix their packages into Anaconda
@@ -5382,8 +5954,11 @@ Miscellany:
   * warn if conda-build is out of date
 
 
+.. _release-1.9.0:
+
 1.9.0 (2014-10-22)
 ===================
+
 
   * adapt tests for Windows
   * don't use the long build prefix if the short build prefix is already long
@@ -5416,8 +5991,11 @@ Miscellany:
   * add CPU_COUNT environment variable to the build
 
 
+.. _release-1.8.2:
+
 1.8.2 (2014-09-19)
 ===================
+
 
   * add substantially more tests
   * add ability to set additional rpath directories using build/rpaths
@@ -5427,8 +6005,11 @@ Miscellany:
   * don't remove the .svn directory when doing a svn checkout
 
 
+.. _release-1.8.1:
+
 1.8.1 (2014-09-03)
 ===================
+
 
   * has_prefix paths must always use /, even on Windows
   * fix bug in Windows Python 2
@@ -5440,8 +6021,11 @@ Miscellany:
   * allow an explicitly set empty version string
 
 
+.. _release-1.8.0:
+
 1.8.0 (2014-08-22)
 ===================
+
 
   * add ability to convert Golke's Windows packages into conda
     packages, use "conda convert <Gohlke>.exe".  See also:
@@ -5452,8 +6036,11 @@ Miscellany:
   * changed extra long prefix for building to _placehold...
 
 
+.. _release-1.7.1:
+
 1.7.1 (2014-08-20)
 ===================
+
 
   * add --all-extras flag to skeleton pypi
   * automatically use the long or short build prefix as needed
@@ -5462,8 +6049,11 @@ Miscellany:
     major.minor.patch version. If it is an inequality, it is not added)
 
 
+.. _release-1.7.0:
+
 1.7.0 (2014-08-05)
 ===================
+
 
   * better install_requires parsing for skeleton pypi
   * the build environment from conda-build is now called _build___...
@@ -5477,13 +6067,19 @@ Miscellany:
   * improve shebang line modifications with python.app
   * show the download bytes in human form in skeleton pypi
 
+.. _release-1.6.1:
+
 1.6.1 (2014-07-29)
 ===================
 
+
   * fix an issue building with a git repository in Python 3
+
+.. _release-1.6.0:
 
 1.6.0 (2014-07-29)
 ===================
+
 
   * don't fail on MachO stub files on OS X
   * add some git describe related environment variables when the source is a
@@ -5497,15 +6093,21 @@ Miscellany:
   * some additional type checking for meta.yaml
   * always include numpy in skeleton pypi
 
+.. _release-1.5.0:
+
 1.5.0 (2014-07-03)
 ===================
+
 
   * add bdist_conda
   * fix features and track_features
   * detect files with the build prefix automatically on Windows
 
+.. _release-1.4.0:
+
 1.4.0 (2014-07-01)
 ===================
+
 
   * fix skeleton pypi behind a proxy
   * add binary_has_prefix_files, which does a binary prefix replacement
@@ -5513,8 +6115,11 @@ Miscellany:
   * allow the git_url to be a relative path to the recipe directory
 
 
+.. _release-1.3.5:
+
 1.3.5 (2014-06-04)
 ===================
+
 
   * the yaml script tag was only written if build.sh already existed,
     see issue #105
@@ -5522,8 +6127,11 @@ Miscellany:
     template, see issue #107
 
 
+.. _release-1.3.4:
+
 1.3.4 (2014-06-02)
 ===================
+
 
   * add --build-only and --post flags to conda-build
   * add conda convert -p all
@@ -5531,8 +6139,11 @@ Miscellany:
     to __conda_version__.txt
 
 
+.. _release-1.3.3:
+
 1.3.3 (2014-04-28)
 ===================
+
 
   * add SHA256 support for downloaded source
   * conda convert now creates platform directories, like
@@ -5542,8 +6153,11 @@ Miscellany:
     this case)
 
 
+.. _release-1.3.2:
+
 1.3.2 (2014-04-15)
 ===================
+
 
   * allow changing conda-bld directory (which is by default <root>/conda-bld
     when the conda root is not writable, and ~/conda-bld otherwise), to be
@@ -5559,8 +6173,11 @@ Miscellany:
     syntax
 
 
+.. _release-1.3.1:
+
 1.3.1 (2014-03-25)
 ===================
+
 
   * add conda metapackage command
   * fix recursive conda building when dependencies are nested more than one
@@ -5585,8 +6202,11 @@ Miscellany:
     setting "build/binary_relocation: False" in meta.yaml
 
 
+.. _release-1.3.0:
+
 1.3.0 (2014-03-14)
 ===================
+
 
   * add skeleton for CPAN Perl packages, issue #53. Unlike
     the PyPI skeleton, it supports a --recursive option to
@@ -5607,14 +6227,20 @@ Miscellany:
   * sort import tests from skeleton pypi
 
 
+.. _release-1.2.1:
+
 1.2.1 (2014-02-25)
 ===================
+
 
   * added conda-build/build_dest option to condarc
 
 
+.. _release-1.2.0:
+
 1.2.0 (2014-02-13)
 ===================
+
 
   * make sure WORK_DIR exists
   * use MSVC 2010 for Python 3
@@ -5623,8 +6249,11 @@ Miscellany:
   * update default CONDA_NPY to 18
 
 
+.. _release-1.1.0:
+
 1.1.0 (2014-02-06)
 ===================
+
 
   * add ability to use templates in conda recipes
   * remove fallback to <root>/conda-recipes, i.e. conda-build always
@@ -5640,8 +6269,11 @@ Miscellany:
     tests, except with the build prefix replaced with the test prefix.
 
 
+.. _release-1.0.0:
+
 1.0.0 (2014-01-24)
 ===================
+
 
   * initial release
   * includes conda-build, conda-convert, conda-index, conda-skeleton
