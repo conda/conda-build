@@ -1424,7 +1424,7 @@ Enhancements:
 
 * add run_exports and aggregated post-install metadata indexing outputs  #3060
 * allow whitelisting runpath entries  #3072
-* consider *_compiler_version entries when looping over variants (allow *_compiler_version to be a used variable that affects the hash)  #3084
+* consider ``*_compiler_version`` entries when looping over variants (allow ``*_compiler_version`` to be a used variable that affects the hash)  #3084
 
 Bug fixes:
 ----------
@@ -2530,7 +2530,7 @@ Enhancements:
 Bug fixes:
 ----------
 
-* fix FEATURE_* variables not working due to a type error  #2428
+* fix ``FEATURE_*`` variables not working due to a type error  #2428
 * fix misleading error when download_url present but empty  #2434
 * check HTTP status code of PyPI pkg manifest request before decoding it, to improve error message  #2435
 * fix 64-bit exe's showing up in 32-bit win packages due to not accounting for host_arch with script files  #2439
@@ -2781,7 +2781,7 @@ Bug fixes:
 
 * Fix PY3K value changing from 0/1 to True/False.  Keep 0/1.
 * make work_dir the cwd when running output bundling scripts.  It was the host prefix before now.
-* start tmpdir prefixes when getting dependency versions with _ so that conda can be one of the deps  #2321
+* start tmpdir prefixes when getting dependency versions with ``_`` so that conda can be one of the deps  #2321
 * avoid setting empty compiler variables  #2322
 * remove meaningless error with glob_files and always_include_files during env creation  #2323
 
@@ -4389,7 +4389,7 @@ Bug fixes:
 * Simplify updating the package index #1309
 * Straighten out when metadata member config is used, relative to config argument #1311
 * Catch prefix length errors with OpenSSL's custom prefix replacement program #1312
-* Replace all colons with _ in git mirror folders to avoid Windows path errors #1322
+* Replace all colons with ``_`` in git mirror folders to avoid Windows path errors #1322
 * Fix missing file contents in converted packages.  Test.  #1325
 
 Contributors:
@@ -4416,7 +4416,7 @@ Enhancements:
 * Add build flag to turn off separate build folders (--no-build-id) #953
 * Much greater test coverage across all modules #953
 * Add CONDA_BUILD_STATE variable that reflects RENDER, BUILD, or TEST state of build #1232
-* Add support for HG_ variables in meta.yaml templates (for hg repos) #207 #1234
+* Add support for ``HG_`` variables in meta.yaml templates (for hg repos) #207 #1234
 * Add source_files test argument in meta.yaml to copy files from source into test #1237
 * add a numpy.distutils patch to jinja templating, so that fortran projects using numpy can also use jinja2 (thanks @bladwig1) #1252
 * Ensure that the build environment is on PATH during all tooling and testing #1256
@@ -4432,13 +4432,13 @@ Bug fixes:
 * Fix infinite loop that occurred with circular dependencies being built #953
 * Improve test data structures to allow profiling with pytest-profiling #953
 * Fix version sorting in pypi skeleton generator #1238
-* improve backwards compatibility* prefix build and test envs with _, so that conda can be installed in them #1242
+* improve backwards compatibility* prefix build and test envs with ``_``, so that conda can be installed in them #1242
 * fix bdist_conda; add smoke test for it to Travis #1243
 * fix windows entry points (duplicate bad logic) #1246
 * fix inspect entry point in embedded conda.recipe #1251
 * create build environment before looking for VCS in it.  #1253
 * fix a deadlock with recursive environment creation on encountering packages with short prefixes #1257
- with conda commands #1259
+* with conda commands #1259
 * only compile pyc files if python is in the build prefix # 1261
 * remove exception catch-all in build CLI, to show actual errors more #1262
 * specify full paths to activate scripts to avoid PATH conflicts with virtualenv #1266
@@ -4455,7 +4455,7 @@ Restructuring:
 --------------
 
 * CLI scripts have been gutted and moved to conda_build/cli.  Content from them is in
-  conda_build, in scripts without main_ prefix.  #953
+  conda_build, in scripts without ``main_`` prefix.  #953
 * Skeleton generators have been broken out of main_skeleton.py, and consolidated into
   conda_build/skeletons.  The contents of this folder are examined at runtime for pluggability.  #953
 
@@ -4519,7 +4519,7 @@ Enhancements:
 Bug fixes:
 ----------
 
-* prefix build and test envs with _, so that conda can be installed in them #1242
+* prefix build and test envs with ``_``, so that conda can be installed in them #1242
 * fix bdist_conda; add smoke test for it to Travis #1243
 * fix windows entry points (duplicate bad logic) #1246
 * fix inspect entry point in embedded conda.recipe #1251
@@ -4550,7 +4550,7 @@ Enhancements:
 * Add build flag to turn off separate build folders (--no-build-id) #953
 * Much greater test coverage across all modules #953
 * Add CONDA_BUILD_STATE variable that reflects RENDER, BUILD, or TEST state of build #1232
-* Add support for HG_ variables in meta.yaml templates (for hg repos) #207 #1234
+* Add support for ``HG_`` variables in meta.yaml templates (for hg repos) #207 #1234
 * Add source_files test argument in meta.yaml to copy files from source into test #1237
 
 Bug fixes:
@@ -4565,7 +4565,7 @@ Restructuring:
 --------------
 
 * CLI scripts have been gutted and moved to conda_build/cli.  Content from them is in
-  conda_build, in scripts without main_ prefix.  #953
+  conda_build, in scripts without ``main_`` prefix.  #953
 * Skeleton generators have been broken out of main_skeleton.py, and consolidated into
   conda_build/skeletons.  The contents of this folder are examined at runtime for pluggability.  #953
 
@@ -4876,7 +4876,7 @@ Contributors:
 
 New stuff:
 ----------
- * Add FEATURE_ environment variables for MKL, opt and debugging #978
+ * Add ``FEATURE_`` environment variables for MKL, opt and debugging #978
  * add info/about.json file that contains the "about" section of meta.yaml #941
  * allow ```--dirty``` flag to be passed to ```conda build``` command. Skips
    download, and provides DIRTY environment variable in build scripts. #973
@@ -4948,7 +4948,7 @@ Bug fixes/Improvements:
 
 New stuff:
 ----------
-* Add FEATURE_ environment variables for MKL, opt and debugging #978
+* Add ``FEATURE_`` environment variables for MKL, opt and debugging #978
 * add new x86 and x86_64 selectors for Intel platforms #986
 * add info/about.json file that contains the "about" section of meta.yaml #941
 * Add msys2 paths to build and test environments #979
@@ -4986,7 +4986,7 @@ Features:
  * fn is now optional when a URL specifies a filename. (#942)
  * CRAN skeleton generator now uses MSYS2 for Windows support (#942)
  * conda build & conda render both recursively look for meta.yaml (support conda-forge feedstock submodules) (#908)
- * Whitelist MAKEFLAGS environment variable. Setting this outside conda build should take effect in your build. Parallelize on *nix by adding -j here, instead of -j${CPU_COUNT} in your build.sh. This helps on CI's, where CPU_COUNT is not always well-behaved. (#917)
+ * Whitelist MAKEFLAGS environment variable. Setting this outside conda build should take effect in your build. Parallelize on \*nix by adding -j here, instead of -j${CPU_COUNT} in your build.sh. This helps on CI's, where CPU_COUNT is not always well-behaved. (#917)
  * Run python_d executable on windows when debug feature is active (#724)
  * add conda build flag --keep-old-work that temporarily moves your last build, then moves it back after completion. For debugging, when more than one package is involved. (#833)
  * Allow selectors in imported jinja templates (#739)
