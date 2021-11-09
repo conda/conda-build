@@ -9,10 +9,12 @@ requirements:
 outputs:
   - name: my_script_subpackage
     files:
-      - subpackage_file1
-      - somedir
-      - "*.ext"
-      - "!*3.ext"
+      include:
+        - subpackage_file1
+        - somedir
+        - "*.ext"
+      exclude:
+        - "*3.ext"
     test:
       script: subpackage_test.py
       script_interpreter: python

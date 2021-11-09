@@ -1617,12 +1617,20 @@ def bundle_conda(output, metadata, env, stats, **kw):
     elif files:
         # Files is specified by the output
         # we exclude the list of files that we want to keep, so post-process picks them up as "new"
-        include = [f for f in files if not f.startswith('!')]
-        exclude = [f[1:] for f in files if f.startswith('!')]
-        keep_files = {os.path.normpath(pth)
-                         for pth in utils.expand_globs(include, metadata.config.host_prefix)}
-        exclude_files = {os.path.normpath(pth)
-                            for pth in utils.expand_globs(exclude, metadata.config.host_prefix)}
+        if isinstance(files, dict):
+            include = files.get("include", [])
+            exclude = files.get("exclude", [])
+        else:
+            include = list(files)
+            exclude = []
+        keep_files = {
+            os.path.normpath(pth)
+            for pth in utils.expand_globs(include, metadata.config.host_prefix)
+        }
+        exclude_files = {
+            os.path.normpath(pth)
+            for pth in utils.expand_globs(exclude, metadata.config.host_prefix)
+        }
         keep_files -= exclude_files
         pfx_files = set(utils.prefix_files(metadata.config.host_prefix))
         initial_files = {item for item in (pfx_files - keep_files)
