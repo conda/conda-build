@@ -568,6 +568,8 @@
   num_commits: 64
   first_commit: 2016-09-26 11:45:54
   github: mbargull
+  alternate_emails:
+  - mbargull@users.noreply.github.com
 - name: Philip R. Kensche
   email: p.kensche@dkfz-heidelberg.de
   num_commits: 2
@@ -1115,11 +1117,15 @@
   email: chenghlee@users.noreply.github.com
   num_commits: 0
   first_commit: 2020-06-24 10:55:13
+  alternate_emails:
+    - clee@anaconda.com
 - name: Ken Odegard
   email: ken.odegard@gmail.com
   num_commits: 13
   first_commit: 2020-09-08 19:53:41
-  github: njalerikson
+  github: kenodegard
+  alternate_emails:
+    - kodegard@anaconda.com
 - name: Connor Martin
   email: connormartin7@gmail.com
   num_commits: 12
