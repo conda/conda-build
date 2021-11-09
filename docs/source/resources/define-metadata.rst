@@ -758,7 +758,7 @@ evaluate to ``>=1.6.34,<1.7``.
 
 If build and link dependencies need to impose constraints on the run environment
 but not necessarily pull in additional packages, then this can be done by
-altering the :ref:`Run_constrained` entries. In addtion to ``weak``/``strong``
+altering the :ref:`Run_constrained` entries. In addition to ``weak``/``strong``
 ``run_exports`` which add to the ``run`` requirements, ``weak_constrains`` and
 ``strong_constrains`` add to the ``run_constrained`` requirements.
 With these, e.g., minimum versions of compatible but not required packages (like
@@ -1027,6 +1027,8 @@ The line in the ``meta.yaml`` file should literally say
    conda-build 3 you can augment the packages used in your build and host
    sections with :ref:`run_exports <run_exports>` which are then automatically
    added to the run requirements for you.
+
+.. _Run_constrained:
 
 Run_constrained
 ---------------
@@ -1532,7 +1534,8 @@ contents will be unconditionally and recursively added).
 
 
 Prelink Message File
----------
+--------------------
+
 Similar to the license file, the user can add prelink message files to the conda package.
 
 .. code-block:: yaml
