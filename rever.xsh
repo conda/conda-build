@@ -20,6 +20,8 @@ $CHANGELOG_FILENAME = "CHANGELOG.rst"
 $CHANGELOG_PATTERN = ".. current developments"
 $CHANGELOG_HEADER = """.. current developments
 
+.. _release-$VERSION:
+
 $VERSION ($RELEASE_DATE)
 ====================
 
