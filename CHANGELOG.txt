@@ -1,4 +1,33 @@
 # current developments
+2021-11-09 3.21.6:
+------------------
+
+Enhancements:
+-------------
+
+* Add limited support for platform_system/sys_platform env markers in PyPI skeleton
+* cran-skeleton: Adds a flag `--no-comments` to remove the instructional comments from the recipe files.
+
+Bug fixes:
+----------
+
+* When checking for circular dependencies in cross-compiling mode, ``build``
+  requirements are ignored now.
+* Make sure symlinked directories are found in always_include_files
+* Fix pinning expressions for prerelease builds
+
+Contributors:
+-------------
+
+* @isuruf
+* @mbargull
+* @kenodegard
+* @jdblischak
+* @dbast
+* @jezdez
+* @ChristofKaufmann
+
+
 2021-08-06 3.21.5:
 ------------------
 
