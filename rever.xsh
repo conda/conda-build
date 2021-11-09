@@ -17,8 +17,8 @@ $AUTHORS_FILENAME = "AUTHORS.rst"
 # Changelog settings
 #
 $CHANGELOG_FILENAME = "CHANGELOG.rst"
-$CHANGELOG_PATTERN = "# current developments"
-$CHANGELOG_HEADER = """# current developments
+$CHANGELOG_PATTERN = ".. current developments"
+$CHANGELOG_HEADER = """.. current developments
 
 $VERSION ($RELEASE_DATE)
 ====================

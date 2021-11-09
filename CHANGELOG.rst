@@ -1,4 +1,4 @@
-# current developments
+.. current developments
 
 3.21.6 (2021-11-09)
 ====================
