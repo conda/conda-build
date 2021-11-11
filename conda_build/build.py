@@ -2766,19 +2766,26 @@ def determine_ext_and_win_check(target_platform):
     return ext, win_check
 
 
+def determine_win_check():
+    if sys.platform.startswith("win"):
+        return True
+    else:
+        return False
+
+
 def check_file_existence(f_paths, check_parent_dir=False):
     all_exist = True
     for each_f in f_paths:
         if check_parent_dir and os.path.isdir(Path(each_f).parent):
             console.print(
-                f"[green]\N{check mark} {Path(each_f).parent} (directory)[/green]"
+                f"[green]\N{check mark} {Path(each_f).parent} (directory)[/green]".encode("utf-8")
             )
         if os.path.isdir(each_f):
-            console.print(f"[green]\N{check mark} {each_f} (directory)[/green]")
+            console.print(f"[green]\N{check mark} {each_f} (directory)[/green]".encode("utf-8"))
         elif os.path.isfile(each_f):
-            console.print(f"[green]\N{check mark} {each_f}[/green]")
+            console.print(f"[green]\N{check mark} {each_f}[/green]".encode("utf-8"))
         else:
-            console.print(f"[red]\N{multiplication x} {each_f}[/red]")
+            console.print(f"[red]\N{multiplication x} {each_f}[/red]".encode("utf-8"))
             all_exist = False
     return all_exist
 
@@ -2829,20 +2836,29 @@ def check_include(include_dir, include):
     return test_include
 
 
-def check_bin(bin_dir, bin_paths):
+def check_bin(bin_dir, bin_paths, target_platform):
     test_bin = True
     if bin_paths:
         console.print("[blue]- Checking for bin[/blue]")
-        bin_files = [os.path.join(bin_dir, fname) for fname in bin_paths]
+        if target_platform.startswith("win") or (
+            target_platform == "noarch" and sys.platform.startswith("win")
+        ):
+            bin_files = [os.path.join(bin_dir, f"{fname}.exe") for fname in bin_paths]
+        else:
+            bin_files = [os.path.join(bin_dir, fname) for fname in bin_paths]
         test_bin = check_file_existence(bin_files)
     return test_bin
 
 
 def check_cmake(prefix, cmake_find):
+    win_check = determine_win_check()
     test_cmake = True
     if cmake_find:
         console.print("[blue]- Checking for cmake[/blue]")
-        cmake_cmd = os.path.join(prefix, "bin", "cmake")
+        if win_check:
+            cmake_cmd = os.path.join(prefix, "Library", "bin", "cmake.exe")
+        else:
+            cmake_cmd = os.path.join(prefix, "bin", "cmake")
         for each_f in cmake_find:
             cmake_content = [
                 "project(boatest)\n",
@@ -2851,28 +2867,41 @@ def check_cmake(prefix, cmake_find):
             ]
             with tempfile.TemporaryDirectory() as tempdir:
                 tempdir_path = str(Path(tempdir))
-                ftemp = open(os.path.join(tempdir_path, "CMakeLists.txt"), "w")
-                ftemp.writelines(cmake_content)
-                cmake_check = subprocess.run(
-                    [cmake_cmd, "."],
-                    cwd=tempdir_path,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                )
-                if cmake_check.returncode == 0:
-                    console.print(f"[green]\N{check mark} {each_f}[/green]")
+                with open(os.path.join(tempdir_path, "CMakeLists.txt"), "w") as ftemp:
+                    ftemp.writelines(cmake_content)
+                if win_check:
+                    with open(os.devnull, "w") as tempnull:
+                        cmake_check = subprocess.run(
+                            [cmake_cmd, "."],
+                            cwd=tempdir_path,
+                            stdout=tempnull,
+                            stderr=tempnull,
+                        )
                 else:
-                    console.print(f"[red]\N{multiplication x} {each_f}[/red]")
+                    cmake_check = subprocess.run(
+                        [cmake_cmd, "."],
+                        cwd=tempdir_path,
+                        stdout=subprocess.DEVNULL,
+                        stderr=subprocess.DEVNULL,
+                    )
+                if cmake_check.returncode == 0:
+                    console.print(f"[green]\N{check mark} {each_f}[/green]".encode("utf-8"))
+                else:
+                    console.print(f"[red]\N{multiplication x} {each_f}[/red]".encode("utf-8"))
                     test_cmake = False
     return test_cmake
 
 
 def check_pkg_config(prefix, pkg_config):
+    win_check = determine_win_check()
     test_pkg_config = True
     if pkg_config:
         p_env = os.environ.copy()
         p_env["CONDA_PREFIX"] = prefix
-        pkg_config_cmd = os.path.join(prefix, "bin", "pkg-config")
+        if win_check:
+            pkg_config_cmd = os.path.join(prefix, "Library", "bin", "pkg-config.exe")
+        else:
+            pkg_config_cmd = os.path.join(prefix, "bin", "pkg-config")
         console.print("[blue]- Checking for pkgconfig[/blue]")
         for each_f in pkg_config:
             pkg_config_exists = subprocess.run(
@@ -2885,9 +2914,9 @@ def check_pkg_config(prefix, pkg_config):
                 pkg_config_exists.returncode == 0
                 and pkg_config_validate.returncode == 0
             ):
-                console.print(f"[green]\N{check mark} {each_f}[/green]")
+                console.print(f"[green]\N{check mark} {each_f}[/green]".encode("utf-8"))
             else:
-                console.print(f"[red]\N{multiplication x} {each_f}[/red]")
+                console.print(f"[red]\N{multiplication x} {each_f}[/red]".encode("utf-8"))
                 test_pkg_config = False
     return test_pkg_config
 
@@ -2909,9 +2938,9 @@ def check_glob(prefix, glob_paths):
             each_glob_path = os.path.join(prefix, each_f)
             if glob(each_glob_path):
                 for each_gp in glob(each_glob_path):
-                    console.print(f"[green]\N{check mark} {each_gp}[/green]")
+                    console.print(f"[green]\N{check mark} {each_gp}[/green]".encode("utf-8"))
             else:
-                console.print(f"[red]\N{multiplication x} {each_glob_path}[/red]")
+                console.print(f"[red]\N{multiplication x} {each_glob_path}[/red]".encode("utf-8"))
                 test_glob = False
     return test_glob
 
@@ -2928,8 +2957,15 @@ def test_exists(prefix, exists, py_ver, target_platform):
         sp_check = check_site_packages(site_packages_dir, site_packages)
 
     # lib
-    lib_dir = os.path.join(prefix, "lib")
-    bin_dir = os.path.join(prefix, "bin")
+    if target_platform.startswith("win"):
+        lib_dir = os.path.join(prefix, "Library", "lib")
+        bin_dir = os.path.join(prefix, "Library", "bin")
+    elif target_platform == "noarch" and sys.platform.startswith("win"):
+        lib_dir = os.path.join(prefix, "Library", "lib")
+        bin_dir = os.path.join(prefix, "Scripts")
+    else:
+        lib_dir = os.path.join(prefix, "lib")
+        bin_dir = os.path.join(prefix, "bin")
     lib = exists.get("lib")
     if target_platform == "noarch" and lib:
         raise Exception("lib checks cannot be used with a noarch package")
@@ -2937,13 +2973,18 @@ def test_exists(prefix, exists, py_ver, target_platform):
         lib_check = check_lib(lib_dir, bin_dir, lib, target_platform)
 
     # include
-    include_dir = os.path.join(prefix, "include")
+    if target_platform.startswith("win") or (
+        target_platform == "noarch" and sys.platform.startswith("win")
+    ):
+        include_dir = os.path.join(prefix, "Library", "include")
+    else:
+        include_dir = os.path.join(prefix, "include")
     include = exists.get("include")
     include_check = check_include(include_dir, include)
 
     # bin
     bin_paths = exists.get("bin")
-    bin_check = check_bin(bin_dir, bin_paths)
+    bin_check = check_bin(bin_dir, bin_paths, target_platform)
 
     # cmake_find
     cmake_find = exists.get("cmake_find")
