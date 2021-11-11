@@ -799,7 +799,7 @@ that was used at build time.
 
 Note that for pre-release versions ``min_pin`` will be ignored and substituted
 with the exact input version since pre-releases can never match ``>=x.x`` (see
-`build-version-spec`_ for details on pre-release version matching).
+:ref:`build-version-spec` for details on pre-release version matching).
 
 
 Pinning at the variant level
