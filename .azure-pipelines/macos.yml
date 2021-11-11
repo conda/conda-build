@@ -77,6 +77,7 @@ jobs:
       conda config --set always_yes yes
       conda config --set auto_update_conda False
       conda info
+      conda install rich -c conda-forge
 
       source ci/azurepipelines/install_conda_build_test_deps
 

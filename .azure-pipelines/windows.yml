@@ -88,6 +88,7 @@ jobs:
       call conda config --set always_yes yes
       call conda config --set auto_update_conda no
       call conda info
+      conda install rich -c conda-forge
       python -c "import sys; print(sys.version)"
       python -c "import sys; print(sys.executable)"
       python -c "import sys; print(sys.prefix)"
