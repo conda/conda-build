@@ -11,7 +11,7 @@ repos:
       # ensure syntaxes are valid
       - id: check-toml
       - id: check-yaml
-        exclude: ^conda\.recipe/meta.yaml
+        exclude: ^(conda\.recipe/meta\.yaml|conda_build/templates/.*\.yaml|docs/click/meta\.yaml|docs/source/user-guide/tutorials/meta\.yaml)
       # catch git merge/rebase problems
       - id: check-merge-conflict
   - repo: https://github.com/akaihola/darker
