@@ -1197,7 +1197,7 @@ def islist(arg, uniform=False, include_dict=True):
     elements are of the first element's type (`type(arg[0]) == type(arg[1])`). For
     any other kinds of uniformity checks are desired provide a uniformity function:
 
-    .. code-block:: python
+    .. code-block:: pycon
         # uniformity function checking if elements are str and not empty
         >>> truthy_str = lambda e: isinstance(e, str) and e
         >>> islist(["foo", "bar"], uniform=truthy_str)

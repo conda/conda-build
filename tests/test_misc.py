@@ -10,6 +10,7 @@ from conda_build.conda_interface import PathType, EntityEncoder, CrossPlatformSt
 def test_pyc_f_2():
     assert _link.pyc_f('sp/utils.py', (2, 7, 9)) == 'sp/utils.pyc'
 
+
 def test_pyc_f_3():
     for f, r in [
             ('sp/utils.py',
@@ -61,4 +62,3 @@ def test_crossplatform_st_link_on_win(tmpdir):
     test_file = join(str(tmpdir), "test-file")
     open(test_file, "a").close()
     assert 1 == CrossPlatformStLink.st_nlink(test_file)
-

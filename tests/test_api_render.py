@@ -12,7 +12,7 @@ import pytest
 import yaml
 
 from conda_build import api, render
-from conda_build.conda_interface import subdir, reset_context, cc_conda_build
+from conda_build.conda_interface import subdir, cc_conda_build
 from tests import utils
 
 from .utils import metadata_dir, thisdir
@@ -97,9 +97,8 @@ def test_get_output_file_path_jinja2(testing_workdir, testing_config):
 
 @mock.patch('conda_build.source')
 def test_output_without_jinja_does_not_download(mock_source, testing_workdir, testing_config):
-        api.get_output_file_path(os.path.join(metadata_dir, "source_git"),
-                                              config=testing_config)[0]
-        mock_source.provide.assert_not_called()
+    api.get_output_file_path(os.path.join(metadata_dir, "source_git"), config=testing_config)[0]
+    mock_source.provide.assert_not_called()
 
 
 def test_pin_compatible_semver(testing_config):

@@ -424,7 +424,7 @@ def test_pypi_section_order_preserved(testing_workdir):
     # the metadata values themselves are sensible), read the file as (ordered)
     # yaml, and check the order.
     with open('sympy/meta.yaml') as file:
-        lines = [l for l in file.readlines() if not l.startswith("{%")]
+        lines = [ln for ln in file.readlines() if not ln.startswith("{%")]
 
     # The loader below preserves the order of entries...
     recipe = ruamel_yaml.load('\n'.join(lines),
