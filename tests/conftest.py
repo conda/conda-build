@@ -96,8 +96,8 @@ def testing_config(testing_workdir):
                     ignore_verify_codes=ignore_verify_codes_default,
                     exit_on_verify_error=exit_on_verify_error_default,
                     conda_pkg_format=conda_pkg_format_default)
-    assert result.no_rewrite_stdout_env == False
-    assert result._src_cache_root == None
+    assert result.no_rewrite_stdout_env is False
+    assert result._src_cache_root is None
     assert result.src_cache_root == testing_workdir
     assert result.noarch_python_build_age == 0
     return result

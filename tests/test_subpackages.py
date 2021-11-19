@@ -339,7 +339,7 @@ def test_inherit_build_number(testing_config):
 def test_circular_deps_cross(testing_config):
     recipe = os.path.join(subpackage_dir, '_circular_deps_cross')
     # check that this does not raise an exception
-    ms = api.render(recipe, config=testing_config)
+    api.render(recipe, config=testing_config)
 
 
 @pytest.mark.slow

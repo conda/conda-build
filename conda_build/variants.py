@@ -455,21 +455,22 @@ def explode_variants(spec):
     """
     Helper function to explode spec into all of the variants.
 
-    .. code-block:: python
+    .. code-block:: pycon
         >>> spec = {
-            # normal expansions
-            "foo": [2.7, 3.7, 3.8],
-            # zip_keys are the values that need to be exploded as a set
-            "zip_keys": [["bar", "baz"], ["qux", "quux", "quuz"]],
-            "bar": [1, 2, 3],
-            "baz": [2, 4, 6],
-            "qux": [4, 5],
-            "quux": [8, 10],
-            "quuz": [12, 15],
-            # extend_keys are those values which we do not explode
-            "extend_keys": ["corge"],
-            "corge": 42,
-        }
+        ...     # normal expansions
+        ...     "foo": [2.7, 3.7, 3.8],
+        ...     # zip_keys are the values that need to be exploded as a set
+        ...     "zip_keys": [["bar", "baz"], ["qux", "quux", "quuz"]],
+        ...     "bar": [1, 2, 3],
+        ...     "baz": [2, 4, 6],
+        ...     "qux": [4, 5],
+        ...     "quux": [8, 10],
+        ...     "quuz": [12, 15],
+        ...     # extend_keys are those values which we do not explode
+        ...     "extend_keys": ["corge"],
+        ...     "corge": 42,
+        ... }
+
         >>> explode_variants(spec)
         [{
             "foo": 2.7,

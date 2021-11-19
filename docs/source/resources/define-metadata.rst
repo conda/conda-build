@@ -828,7 +828,7 @@ There are 2 possible behaviors:
 
  build:
    pin_depends: record
- 
+
 With a value of ``record``, conda-build will record all
 requirements exactly as they would be installed in a file
 called info/requires. These pins will not
@@ -840,7 +840,7 @@ package. It is only adding in this new file.
 
  build:
    pin_depends: strict
-  
+
 With a value of ``strict``, conda-build applies the pins
 to the actual metadata. This does affect the output of
 ``conda render`` and also affects the end result
@@ -1866,13 +1866,12 @@ logic is possible:
      url: http://path/to/unix/source        # [unix]
      md5: 88510902197cba0d1ab4791e0f41a66e  # [unix]
 
-.. note:: 
+.. note::
    To select multiple operating systems use the ``or`` statement. While it might be tempting
    to use ``skip: True  # [win and osx]``, this will only work if the platform is both
-   windows and osx simultaneously (i.e. never). 
-   
+   windows and osx simultaneously (i.e. never).
+
 .. code-block:: yaml
 
    build:
       skip: True  # [win or osx]
- 

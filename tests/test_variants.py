@@ -177,6 +177,7 @@ def test_validate_spec():
     with pytest.raises(ValueError):
         variants.validate_spec("spec[duplicate_key]", spec6)
 
+
 def test_cross_compilers():
     recipe = os.path.join(recipe_dir, '09_cross')
     ms = api.render(recipe, permit_unsatisfiable_variants=True, finalize=False, bypass_env_check=True)
@@ -223,7 +224,7 @@ def test_variant_input_with_zip_keys_keeps_zip_keys_list():
 
 
 @pytest.mark.serial
-@pytest.mark.xfail(sys.platform=='win32', reason="console readout issues on appveyor")
+@pytest.mark.xfail(sys.platform == "win32", reason="console readout issues on appveyor")
 def test_ensure_valid_spec_on_run_and_test(testing_workdir, testing_config, caplog):
     testing_config.debug = True
     testing_config.verbose = True
@@ -302,7 +303,7 @@ def test_get_used_loop_vars(testing_config):
 
 
 def test_reprovisioning_source(testing_config):
-    ms = api.render(os.path.join(recipe_dir, '20_reprovision_source'))
+    api.render(os.path.join(recipe_dir, "20_reprovision_source"))
 
 
 def test_reduced_hashing_behavior(testing_config):

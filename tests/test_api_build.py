@@ -45,9 +45,6 @@ from tests import utils
 
 from .utils import is_valid_dir, metadata_dir, fail_dir, add_mangling
 
-# define a few commonly used recipes - use os.path.join(metadata_dir, recipe) elsewhere
-empty_sections = os.path.join(metadata_dir, "empty_sections")
-
 # For Python 2, backport backslashreplace error handler for decodes.
 import codecs
 codecs.register_error(
@@ -66,6 +63,10 @@ codecs.register_error(
         ex.end,
     ),
 )
+
+
+# define a few commonly used recipes - use os.path.join(metadata_dir, recipe) elsewhere
+empty_sections = os.path.join(metadata_dir, "empty_sections")
 
 
 def represent_ordereddict(dumper, data):
@@ -402,7 +403,7 @@ def test_recursive_fail(testing_workdir, testing_config):
 
 @pytest.mark.sanity
 def test_jinja_typo(testing_workdir, testing_config):
-    with pytest.raises(SystemExit, match="GIT_DSECRIBE_TAG") as exc:
+    with pytest.raises(SystemExit, match="GIT_DSECRIBE_TAG"):
         api.build(os.path.join(fail_dir, "source_git_jinja2_oops"), config=testing_config)
 
 
@@ -440,7 +441,7 @@ def test_skip_existing_url(testing_metadata, testing_workdir, capfd):
 
 def test_failed_tests_exit_build(testing_workdir, testing_config):
     """https://github.com/conda/conda-build/issues/1112"""
-    with pytest.raises(SystemExit, match='TESTS FAILED') as exc:
+    with pytest.raises(SystemExit, match="TESTS FAILED"):
         api.build(os.path.join(metadata_dir, "_test_failed_test_exits"), config=testing_config)
 
 
@@ -1578,6 +1579,7 @@ def test_symlink_dirs_in_always_include_files(testing_config):
 def test_script_env_warnings(testing_config, recwarn):
     recipe_dir = os.path.join(metadata_dir, '_script_env_warnings')
     token = 'CONDA_BUILD_PYTEST_SCRIPT_ENV_TEST_TOKEN'
+
     def assert_keyword(keyword):
         messages = [str(w.message) for w in recwarn.list]
         assert any([token in m and keyword in m for m in messages])
@@ -1586,7 +1588,7 @@ def test_script_env_warnings(testing_config, recwarn):
     api.build(recipe_dir, config=testing_config)
     assert_keyword('undefined')
 
-    os.environ[token] ='SECRET'
+    os.environ[token] = "SECRET"
     try:
         api.build(recipe_dir, config=testing_config)
         assert_keyword('SECRET')

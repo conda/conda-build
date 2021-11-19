@@ -5,7 +5,6 @@ import pytest
 
 from conda_build.source import (_ensure_unix_line_endings, _ensure_win_line_endings,
                                 _guess_patch_strip_level, apply_patch)
-from conda_build.utils import on_win
 
 
 def test_patch_strip_level(testing_workdir, monkeypatch):
