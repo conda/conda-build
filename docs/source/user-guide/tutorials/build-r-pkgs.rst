@@ -125,8 +125,8 @@ Notice that fansi is coming from the local conda-build channel.
    (base) 0561:~ jsmith$ conda list
    # packages in environment at /Users/Jsmith/anaconda3:
    # Name                    Version                   Build  Channel
-   qtpy                      1.5.0                    py37_0  
-   r-base                    3.5.1                h539fb6c_1  
+   qtpy                      1.5.0                    py37_0
+   r-base                    3.5.1                h539fb6c_1
    r-fansi                   0.4.0            r353h46e59ec_0    local
 
 The version of R will be what you have in your base environment.
@@ -236,7 +236,7 @@ Example file path:
 .. code-block:: text
 
     /Users/jsmith/anaconda3/conda-bld/osx-64/r-fansi-0.4.0-r353h46e59ec_0.tar.bz2
- 
+
 .. note::
    Your path and filename will vary depending on your
    installation and operating system. Save the path and
@@ -294,4 +294,3 @@ More information
 For more options, see the full
 :doc:`conda skeleton command documentation
 <../../resources/commands/conda-skeleton>`.
-

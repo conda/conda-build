@@ -48,4 +48,3 @@ notifications:
 
 git:
   depth: 10000
-

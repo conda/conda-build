@@ -28,7 +28,7 @@ The convention for the path and filenames of these scripts on Windows is::
 On Linux and macOS the convention is::
 
   bin/.<name>-<action>.sh
-  
+
 The scripts set the following environment variables:
 
 .. list-table::

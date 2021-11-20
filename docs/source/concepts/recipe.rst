@@ -96,7 +96,7 @@ Deep dive
 
 Let's take a closer look at how conda-build uses a recipe
 to create a package.
- 
+
 Templates
 ---------
 
@@ -175,7 +175,7 @@ of this prefix is::
 At this point, conda-build has all of the info from the meta.yaml about
 what its runtime dependencies are, so those dependencies are installed
 as well. This generates a test runner script with a reference to the
-testing meta.yaml that is created. See the :ref:`meta-test` for 
+testing meta.yaml that is created. See the :ref:`meta-test` for
 more information. That file is run for testing.
 
 Output metadata
