@@ -132,7 +132,7 @@ def load_setup_py_data(m, setup_file='setup.py', from_recipe_dir=False, recipe_d
         except ImportError as e:
             if permit_undefined_jinja:
                 log = get_logger(__name__)
-                log.debug("Reading setup.py failed due to missing modules.  This is probably OK, "
+                log.debug(f"Reading {setup_file} failed due to missing modules.  This is probably OK, "
                           "since it may succeed in later passes.  Watch for incomplete recipe "
                           "info, though.")
             else:
