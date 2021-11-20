@@ -81,7 +81,7 @@ these extra files are unnecessary and the build/script section in the ``meta.yam
 is sufficient. Use the ``ls`` command on macOS or Linux or the ``dir`` command on
 Windows to verify that this file has been created. The ``meta.yaml`` file has been
 populated with information from the PyPI metadata and in many cases will not
-need to be edited. 
+need to be edited.
 
 Files in the folder with ``meta.yaml`` are collectively referred to as the "conda-build recipe":
 
@@ -138,12 +138,12 @@ environment by using the use-local flag:
 Notice that Click is coming from the local conda-build channel.
 
 .. code-block:: bash
-   
+
    (click) 0561:~ jsmith$ conda list
    # packages in environment at /Users/Jsmith/miniconda/envs/click:
    # Name                    Version                   Build  Channel
-   ca-certificates           2019.1.23                     0 
-   certifi                   2019.3.9                 py37_0 
+   ca-certificates           2019.1.23                     0
+   certifi                   2019.3.9                 py37_0
    click                     7.0                      py37_0    local
 
 Now verify that Click installed successfully:

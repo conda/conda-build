@@ -61,4 +61,3 @@ def test_crossplatform_st_link_on_win(tmpdir):
     test_file = join(str(tmpdir), "test-file")
     open(test_file, "a").close()
     assert 1 == CrossPlatformStLink.st_nlink(test_file)
-

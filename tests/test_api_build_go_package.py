@@ -18,5 +18,3 @@ def test_recipe_build(recipe, testing_config, testing_workdir, monkeypatch):
     monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
     monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
     api.build(recipe, config=testing_config)
-
-

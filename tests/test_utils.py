@@ -200,10 +200,18 @@ def test_expand_globs(testing_workdir):
 
 def test_filter_files():
     # Files that should be filtered out.
-    files_list = ['.git/a', 'something/.git/a', '.git\\a', 'something\\.git\\a',
-                  'file.la', 'something/file.la', 'python.exe.conda_trash', 
-                  'bla.dll.conda_trash_1', 'bla.dll.conda_trash.conda_trash']
-    assert not utils.filter_files(files_list, '')
+    files_list = [
+        ".git/a",
+        "something/.git/a",
+        ".git\\a",
+        "something\\.git\\a",
+        "file.la",
+        "something/file.la",
+        "python.exe.conda_trash",
+        "bla.dll.conda_trash_1",
+        "bla.dll.conda_trash.conda_trash",
+    ]
+    assert not utils.filter_files(files_list, "")
 
     # Files that should *not* be filtered out.
     # Example of valid 'x.git' directory:
