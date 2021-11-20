@@ -3,7 +3,7 @@
 @@ -8,11 +8,71 @@
   * Curt Hagenlocher (job management)
   */
- 
+
 +#if defined(_MSC_VER)
 +#ifdef NDEBUG
 +// /Og (global optimizations), /Os (favor small code), /Oy (no frame pointers)
@@ -22,7 +22,7 @@
  #include <shlobj.h>
  #include <stdio.h>
  #include <tchar.h>
- 
+
 +/* To build on MSYS2 use the following script:
 +#!/usr/bin/env bash
 +
@@ -71,7 +71,7 @@
 +
  #define BUFSIZE 256
  #define MSGSIZE 1024
- 
+
 @@ -742,6 +802,7 @@
      { L"/usr/bin/env python", TRUE },
      { L"/usr/bin/python", FALSE },
@@ -81,9 +81,9 @@
      { NULL, FALSE },
  };
 @@ -796,6 +857,25 @@
- 
+
  static COMMAND path_command;
- 
+
 +#if !defined(_MSC_VER)
 +errno_t _wdupenv_s_emulated(wchar_t **buffer,
 +                            size_t *numberOfElements,
@@ -107,7 +107,7 @@
  {
      wchar_t * pathext;
 @@ -919,7 +999,7 @@
- 
+
  static BOOL
  parse_shebang(wchar_t * shebang_line, int nchars, wchar_t ** command,
 -              wchar_t ** suffix, BOOL *search)
@@ -120,11 +120,11 @@
      COMMAND * cp;
      wchar_t * skipped;
 +    wchar_t tidied[_MAX_DRIVE+_MAX_DIR+_MAX_FNAME+_MAX_EXT] = L"";
- 
+
      *command = NULL;    /* failure return */
      *suffix = NULL;
      *search = FALSE;
- 
+
 +    if ((shebang_line[0] != L'#') || (shebang_line[1] != L'!')) {
 +        /* This is deliberately very similar to find_exe() in:
 +         * https://raw.githubusercontent.com/pypa/setuptools/master/launcher.c
@@ -181,7 +181,7 @@
 @@ -1089,6 +1202,20 @@
      */
      BOOL result = (p != NULL); /* Default to False if null pointer. */
- 
+
 +    /* Skip _d for Windows debug. Interestingly, the name-script.py files from a release build
 +       do not end up containing a shebang while debug builds have #!python_d */
 +    if (result)
@@ -197,7 +197,7 @@
 +        return TRUE;
 +	}
      result = result && iswdigit(*p);  /* Result = False if first string element is not a digit. */
- 
+
      while (result && iswdigit(*p))   /* Require a major version */
 @@ -1171,7 +1298,7 @@
   */
@@ -210,13 +210,13 @@
      char *p;
 @@ -1188,7 +1315,7 @@
      INSTALLED_PYTHON * ip;
- 
+
      if (rc == 0) {
 -        read = fread(buffer, sizeof(char), BUFSIZE, fp);
 +        read = fread(buffer, sizeof(char), SHEBANG_BUFSIZE, fp);
          debug(L"maybe_handle_shebang: read %zd bytes\n", read);
          fclose(fp);
- 
+
 @@ -1213,7 +1340,7 @@
                    bom->code_page);
              start = &buffer[bom->length];
@@ -240,7 +240,7 @@
                      }
                      else {
 @@ -1409,7 +1536,7 @@
- 
+
      get_version_info(version_text, MAX_PATH);
      fwprintf(stdout, L"\
 -Python Launcher for Windows Version %ls\n\n", version_text);
@@ -271,12 +271,12 @@
 +*/
 +    version_high = VERSION_HIGH;
 +    version_low = VERSION_LOW;
- 
+
  #if defined(VENV_REDIRECT)
      /* Allocate some extra space for new filenames */
 @@ -1731,13 +1863,24 @@
      locate_wrapped_script();
- 
+
      /* Add the wrapped script to the start of command */
 -    newlen = wcslen(wrapped_script_path) + wcslen(command) + 2; /* ' ' + NUL */
 +    p = wcsrchr(wrapped_script_path, L' ');

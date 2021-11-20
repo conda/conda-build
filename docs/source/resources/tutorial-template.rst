@@ -5,7 +5,7 @@ Tutorial template
 .. contents::
    :local:
    :depth: 1
-   
+
 .. _documentation@anaconda.com: documentation@anaconda.com
 
 *This document describes the steps for creating*

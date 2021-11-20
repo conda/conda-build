@@ -7,7 +7,7 @@ Anaconda Community Code of Conduct: https://www.anaconda.com/community-code-of-c
 
 For conda issues, you should open an issue at https://github.com/conda/conda/issues
 For Anaconda issues, you should open an issue at https://github.com/ContinuumIO/anaconda-issues/issues
-For an issue with a particular conda-forge package, you should open an issue on the 
+For an issue with a particular conda-forge package, you should open an issue on the
 corresponding feedstock: https://github.com/conda-forge
 -->
 
@@ -29,4 +29,3 @@ corresponding feedstock: https://github.com/conda-forge
 ```
 
 ```
-

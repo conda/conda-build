@@ -395,7 +395,7 @@ To build a GDAL package:
     git clone https://github.com/AnacondaRecipes/gdal-feedstock.git
 
 #. Use conda-build to build the gdal-feedstock::
-    
+
     conda build gdal-feedstock
 
 #. Check the output to make sure the build completed
@@ -474,5 +474,3 @@ Or explicitly set the location of the conda-build variant matrix::
 If you want to know more about build variants and ``conda_build_config.yaml``,
 including how to specify a config file and what can go into it, take a look
 at :ref:`conda-build-variant-config-files`.
-
-

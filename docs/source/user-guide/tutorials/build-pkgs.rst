@@ -317,4 +317,3 @@ More information
 * For more information about all the possible values that can go
   into the ``meta.yaml`` file, see
   :doc:`../../resources/define-metadata`.
-
