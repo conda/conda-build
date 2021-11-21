@@ -1875,4 +1875,3 @@ logic is possible:
 
    build:
       skip: True  # [win or osx]
-
