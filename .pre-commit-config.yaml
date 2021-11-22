@@ -18,12 +18,12 @@ repos:
     rev: 1.3.2
     hooks:
       - id: darker
-        additional_dependencies: [black==21.9b0]
+        additional_dependencies: [black==21.11b1]
   - repo: https://github.com/asottile/blacken-docs
     rev: v1.11.0
     hooks:
       - id: blacken-docs
-        additional_dependencies: [black==21.9b0]
+        additional_dependencies: [black==21.11b1]
   - repo: https://github.com/PyCQA/flake8
     rev: 4.0.1
     hooks:
