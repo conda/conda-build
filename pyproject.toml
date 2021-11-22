@@ -1,3 +1,2 @@
 [tool.black]
-line-length = 180
 target-version = ['py36', 'py37', 'py38']
