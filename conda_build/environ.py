@@ -20,6 +20,7 @@ from .conda_interface import memoized
 from .conda_interface import package_cache, TemporaryDirectory
 from .conda_interface import pkgs_dirs, root_dir, create_default_packages
 from .conda_interface import reset_context
+from .conda_interface import get_version_from_git_tag
 
 from conda_build import utils
 from conda_build.exceptions import BuildLockError, DependencyNeedsBuildingError
@@ -188,11 +189,7 @@ def get_git_info(git_exe, repo, debug):
         parts = output.rsplit('-', 2)
         if len(parts) == 3:
             d.update(dict(zip(keys, parts)))
-        try:
-            from conda._vendor.auxlib.packaging import _get_version_from_git_tag
-        except ImportError:
-            from conda.auxlib.packaging import _get_version_from_git_tag
-        d['GIT_DESCRIBE_TAG_PEP440'] = str(_get_version_from_git_tag(output))
+        d['GIT_DESCRIBE_TAG_PEP440'] = str(get_version_from_git_tag(output))
     except subprocess.CalledProcessError:
         msg = (
             "Failed to obtain git tag information.\n"

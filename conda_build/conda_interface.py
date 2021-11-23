@@ -31,6 +31,7 @@ conda_45 = parse_version(CONDA_VERSION) >= parse_version("4.5.0a0")
 conda_46 = parse_version(CONDA_VERSION) >= parse_version("4.6.0a0")
 conda_47 = parse_version(CONDA_VERSION) >= parse_version("4.7.0a0")
 conda_48 = parse_version(CONDA_VERSION) >= parse_version("4.8.0a0")
+conda_411 = parse_version(CONDA_VERSION) >= parse_version("4.11.0a0")
 
 if conda_44:
     from conda.exports import display_actions, execute_actions, execute_plan, install_actions
@@ -46,6 +47,12 @@ try:
 except ImportError:
     from conda.toposort import _toposort
 _toposort = _toposort
+
+if conda_411:
+    from conda.auxlib.packaging import _get_version_from_git_tag
+else:
+    from conda._vendor.auxlib.packaging import _get_version_from_git_tag
+get_version_from_git_tag = _get_version_from_git_tag
 
 from conda.exports import TmpDownload, download, handle_proxy_407  # NOQA
 from conda.exports import untracked, walk_prefix  # NOQA
