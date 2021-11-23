@@ -3,7 +3,7 @@
 @@ -8,11 +8,72 @@
   * Curt Hagenlocher (job management)
   */
-
+ 
 +
 +#if defined(_MSC_VER)
 +#ifdef NDEBUG
@@ -23,7 +23,7 @@
  #include <shlobj.h>
  #include <stdio.h>
  #include <tchar.h>
-
+ 
 +/* To build on MSYS2 use the following script:
 +#!/usr/bin/env bash
 +
@@ -72,11 +72,11 @@
 +
  #define BUFSIZE 256
  #define MSGSIZE 1024
-
+ 
 @@ -767,6 +828,25 @@
-
+ 
  static COMMAND path_command;
-
+ 
 +#if !defined(_MSC_VER)
 +errno_t _wdupenv_s_emulated(wchar_t **buffer,
 +                            size_t *numberOfElements,
@@ -100,7 +100,7 @@
  {
      wchar_t * pathext;
 @@ -890,7 +970,7 @@
-
+ 
  static BOOL
  parse_shebang(wchar_t * shebang_line, int nchars, wchar_t ** command,
 -              wchar_t ** suffix, BOOL *search)
@@ -113,11 +113,11 @@
      COMMAND * cp;
      wchar_t * skipped;
 +    wchar_t tidied[_MAX_DRIVE+_MAX_DIR+_MAX_FNAME+_MAX_EXT] = L"";
-
+ 
      *command = NULL;    /* failure return */
      *suffix = NULL;
      *search = FALSE;
-
+ 
 +    if ((shebang_line[0] != L'#') || (shebang_line[1] != L'!')) {
 +        /* This is deliberately very similar to find_exe() in:
 +         * https://raw.githubusercontent.com/pypa/setuptools/master/launcher.c
@@ -160,13 +160,13 @@
      char *p;
 @@ -1140,7 +1249,7 @@
      INSTALLED_PYTHON * ip;
-
+ 
      if (rc == 0) {
 -        read = fread(buffer, sizeof(char), BUFSIZE, fp);
 +        read = fread(buffer, sizeof(char), SHEBANG_BUFSIZE, fp);
          debug(L"maybe_handle_shebang: read %d bytes\n", read);
          fclose(fp);
-
+ 
 @@ -1165,7 +1274,7 @@
                    bom->code_page);
              start = &buffer[bom->length];
@@ -191,7 +191,7 @@
      wchar_t * av[2];
 +    int quoted = 0;
  #endif
-
+ 
      setvbuf(stderr, (char *)NULL, _IONBF, 0);
 @@ -1407,6 +1517,7 @@
          }
@@ -213,7 +213,7 @@
          debug(L"GetModuleFileNameW returned value has no backslash: %ls\n",
 @@ -1466,13 +1580,23 @@
      locate_wrapped_script();
-
+ 
      /* Add the wrapped script to the start of command */
 -    newlen = wcslen(wrapped_script_path) + wcslen(command) + 2; /* ' ' + NUL */
 +    p = wcsrchr(wrapped_script_path, L' ');
@@ -238,7 +238,7 @@
          wcscat_s(newcommand, newlen, command);
          debug(L"Running wrapped script with command line '%ls'\n", newcommand);
 @@ -1537,7 +1661,7 @@
-
+ 
              get_version_info(version_text, MAX_PATH);
              fwprintf(stdout, L"\
 -Python Launcher for Windows Version %ls\n\n", version_text);
