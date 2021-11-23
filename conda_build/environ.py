@@ -188,7 +188,10 @@ def get_git_info(git_exe, repo, debug):
         parts = output.rsplit('-', 2)
         if len(parts) == 3:
             d.update(dict(zip(keys, parts)))
-        from conda._vendor.auxlib.packaging import _get_version_from_git_tag
+        try:
+            from conda._vendor.auxlib.packaging import _get_version_from_git_tag
+        except ImportError:
+            from conda.auxlib.packaging import _get_version_from_git_tag
         d['GIT_DESCRIBE_TAG_PEP440'] = str(_get_version_from_git_tag(output))
     except subprocess.CalledProcessError:
         msg = (
