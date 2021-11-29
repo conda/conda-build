@@ -1,0 +1,39 @@
+name: Run unit and integration tests
+
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - 'docs/**'
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+jobs:
+  test-linux:
+    runs-on: ubuntu-18.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ 3.7, 3.8, 3.9 ]
+        conda-version: release
+        include:
+          - python-version: 3.9
+            conda-version: canary
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Linux_Python=${{matrix.python-version}}
+        run: >
+          echo $python-version
+          echo $conda-version
+
+
+
+
+
+
