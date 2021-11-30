@@ -1,5 +1,20 @@
 .. current developments
 
+.. _release-3.21.7:
+
+3.21.7 (2021-11-30)
+====================
+
+Contributors
+-------------
+
+* @kenodegard
+* @jdblischak
+* @jezdez
+* @pre-commit
+
+
+
 .. _release-3.21.6:
 
 3.21.6 (2021-11-09)
