@@ -5,6 +5,17 @@
 3.21.7 (2021-11-30)
 ====================
 
+Bug fixes
+---------
+
+* Handle an import from the vendored auxlib library in Conda 4.11.0 better.
+
+Other
+-----
+
+* cran-skeleton: more unit tests
+
+
 Contributors
 -------------
 
