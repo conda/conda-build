@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ 3.7, 3.8, 3.9 ]
+        python-version: [ 3.7, 3.8 ]
         conda-version: [release]
         include:
           - python-version: 3.9
@@ -29,9 +29,7 @@ jobs:
           fetch-depth: 0
       - name: Linux_Python=${{matrix.python-version}}
         run: >
-          echo $python-version
-          echo $conda-version
-
+          echo $GITHUB_CONTEXT
 
 
 
