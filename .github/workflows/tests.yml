@@ -46,6 +46,8 @@ jobs:
           pip install --no-deps .
           conda info -a
           source ci/azurepipelines/setup_pytest_replay
+        env:
+          PYTHON_VERSION: ${{ matrix.python-version }}
 
       - name: Run Serial tests
         run: |
