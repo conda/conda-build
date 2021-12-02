@@ -42,6 +42,7 @@ jobs:
 
       - name: Source Scripts
         run: |
+          conda activate test
           python --version
           conda info -a
           source ci/azurepipelines/install_conda_build_test_deps
