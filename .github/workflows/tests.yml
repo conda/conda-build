@@ -12,6 +12,10 @@ on:
       - reopened
       - synchronize
 
+defaults:
+  run:
+    shell: bash -l {0}
+
 jobs:
   test-linux:
     runs-on: ubuntu-18.04
