@@ -48,6 +48,9 @@ jobs:
         run: |
           conda activate test
           python --version
+          mkdir -p /usr/share/miniconda/locks
+          mkdir -p /usr/share/miniconda/bin
+          chmod a-w /usr/share/miniconda/locks
           conda info -a
           source ci/azurepipelines/install_conda_build_test_deps
           pip install --no-deps .
