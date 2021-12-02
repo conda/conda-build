@@ -36,7 +36,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Set Conda-Canary
-        if: matrix.conda-version == canary
+        if: matrix.conda-version == "canary"
         run: |
           conda install -y -c conda-canary conda
 
