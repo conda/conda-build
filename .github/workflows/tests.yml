@@ -48,16 +48,15 @@ jobs:
         run: |
           conda activate test
           python --version
-          mkdir -p /usr/share/miniconda/locks
-          mkdir -p /usr/share/miniconda/bin
-          chmod a-w /usr/share/miniconda/locks
+          pwd
           conda info -a
           source ci/azurepipelines/install_conda_build_test_deps
           pip install --no-deps .
           conda info -a
-          source ci/azurepipelines/setup_pytest_replay
+          source ci/github_setup_pytest_replay
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
+          CONDA_VERSION: ${{ matrix.conda-version }}
 
       - name: Run Serial tests
         run: |
