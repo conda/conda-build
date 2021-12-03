@@ -61,6 +61,7 @@ jobs:
       - name: Run Serial tests
         run: |
           conda install conda-verify -y
+          conda info -a
           pytest --color=yes -vv -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="Linux-SerialTests"
 
 
