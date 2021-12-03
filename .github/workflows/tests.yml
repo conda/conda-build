@@ -40,31 +40,29 @@ jobs:
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
 
-      - name: One step test
-        run: |
-          python --version
-          conda info -a
-          source ci/azurepipelines/install_conda_build_test_deps
-          pip install --no-deps .
-          source ci/github_setup_pytest_replay
-          conda info -a
-          conda install -y conda
-          pytest --color=yes -vv -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="Linux-SerialTests"
-        env:
-          PYTHON_VERSION: ${{ matrix.python-version }}
-          CONDA_VERSION: ${{ matrix.conda-version }}
-
-      - name: Set Conda-Canary
+      - name: Install Conda-Canary if canary version
         if: matrix.conda-version == 'canary'
         run: |
           conda install -y -c conda-canary conda
 
+      - name: Install default Conda if release version
+        if: matrix.conda-version == 'release'
+        run: |
+          conda install -y conda
+
+      - name: Source Scripts
+        run: |
+          python --version
+          source ci/azurepipelines/install_conda_build_test_deps
+          conda info -a
+        env:
+          PYTHON_VERSION: ${{ matrix.python-version }}
+          CONDA_VERSION: ${{ matrix.conda-version }}
+
       - name: Run Serial tests
         run: |
-          conda install -y conda-verify
-          conda info -a
-          conda list
-          pytest --color=yes -vv -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="Linux-SerialTests"
+          source ci/github/github_setup_pytest_replay
+          pytest --color=yes -vv -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="Linux-SerialTests" --test-run-title="Linux-SerialTests-$CONDA_VERSION-Py$PYTHON_VERSION" "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
 
 
 
