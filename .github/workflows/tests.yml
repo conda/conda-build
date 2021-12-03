@@ -39,6 +39,8 @@ jobs:
           activate-environment: test
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
+
+      - name: One step test
         run: |
           python --version
           conda info -a
