@@ -36,31 +36,29 @@ jobs:
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@v2
         with:
+          activate-environment: test
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
+        run: |
+          python --version
+          conda info -a
+          source ci/azurepipelines/install_conda_build_test_deps
+          pip install --no-deps .
+          source ci/github_setup_pytest_replay
+          conda info -a
+          pytest --color=yes -vv -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="Linux-SerialTests"
+        env:
+          PYTHON_VERSION: ${{ matrix.python-version }}
+          CONDA_VERSION: ${{ matrix.conda-version }}
 
       - name: Set Conda-Canary
         if: matrix.conda-version == 'canary'
         run: |
           conda install -y -c conda-canary conda
 
-      - name: Source Scripts
-        run: |
-          conda activate test
-          python --version
-          pwd
-          conda info -a
-          source ci/azurepipelines/install_conda_build_test_deps
-          pip install --no-deps .
-          conda info -a
-          source ci/github_setup_pytest_replay
-        env:
-          PYTHON_VERSION: ${{ matrix.python-version }}
-          CONDA_VERSION: ${{ matrix.conda-version }}
-
       - name: Run Serial tests
         run: |
-          conda install conda-verify -y
+          conda install -y conda-verify
           conda info -a
           conda list
           pytest --color=yes -vv -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="Linux-SerialTests"
