@@ -48,6 +48,7 @@ jobs:
           pip install --no-deps .
           source ci/github_setup_pytest_replay
           conda info -a
+          conda install -y conda
           pytest --color=yes -vv -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="Linux-SerialTests"
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
