@@ -40,6 +40,9 @@ jobs:
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
 
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+
       - name: Install Conda-Canary if canary version
         if: matrix.conda-version == 'canary'
         run: |
