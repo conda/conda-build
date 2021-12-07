@@ -22,10 +22,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ 3.7, 3.8 ]
+        python-version: ['3.7', '3.8']
         conda-version: [release]
         include:
-          - python-version: 3.9
+          - python-version: '3.9'
             conda-version: canary
     steps:
       - name: Checkout repository
@@ -39,9 +39,6 @@ jobs:
           activate-environment: test
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
-
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
 
       - name: Install Conda-Canary if canary version
         if: matrix.conda-version == 'canary'
@@ -61,6 +58,10 @@ jobs:
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
           CONDA_VERSION: ${{ matrix.conda-version }}
+
+      - name: Setup tmate session
+        if: matrix.conda-version == 'release' && matrix.python-version == '3.8'
+        uses: mxschmitt/action-tmate@v3
 
       - name: Run Serial tests
         run: |
