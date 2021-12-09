@@ -1,12 +1,6 @@
 name: Run unit and integration tests
 
 on:
-  workflow_dispatch:
-    inputs:
-      debug_enabled:
-        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
-        required: false
-        default: false
   push:
     branches:
       - master
@@ -66,7 +60,7 @@ jobs:
           CONDA_VERSION: ${{ matrix.conda-version }}
 
       - name: Setup tmate session
-        if: matrix.conda-version == 'release' && matrix.python-version == '3.8' && github.event_name == 'workflow_dispatch' && github.event.inputs.debug_enabled
+        if: matrix.conda-version == 'release' && matrix.python-version == '3.8'
         uses: mxschmitt/action-tmate@v3
 
       - name: Run Serial tests
