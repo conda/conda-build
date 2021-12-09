@@ -1,6 +1,12 @@
 name: Run unit and integration tests
 
 on:
+  workflow_dispatch:
+    inputs:
+      debug_enabled:
+        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
+        required: false
+        default: false
   push:
     branches:
       - master
@@ -11,12 +17,6 @@ on:
       - opened
       - reopened
       - synchronize
-  workflow_dispatch:
-    inputs:
-      debug_enabled:
-        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'
-        required: false
-        default: false
 
 defaults:
   run:
