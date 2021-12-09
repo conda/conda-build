@@ -104,8 +104,9 @@ def describe_root(cwd=None):
     return tag
 
 
-@pytest.fixture(params=[dirname for dirname in os.listdir(metadata_dir)
-                        if is_valid_dir(metadata_dir, dirname)])
+@pytest.fixture(params=["ignore_prefix_files"])
+# @pytest.fixture(params=[dirname for dirname in os.listdir(metadata_dir)
+#                         if is_valid_dir(metadata_dir, dirname)])
 def recipe(request):
     return os.path.join(metadata_dir, request.param)
 

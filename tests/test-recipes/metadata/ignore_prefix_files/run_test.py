@@ -1,6 +1,8 @@
 from glob import glob
 import os
 
+print("ROOT = ")
+print(os.environ["ROOT"])
 pkgs = os.path.abspath(os.path.join(os.environ["ROOT"], "pkgs"))
 pkg_dir = glob(os.path.join(pkgs, "conda-build-test-ignore-prefix-files-1.0-0"))[0]
 info_dir = os.path.join(pkg_dir, 'info')
