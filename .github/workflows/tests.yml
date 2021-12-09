@@ -66,7 +66,7 @@ jobs:
           CONDA_VERSION: ${{ matrix.conda-version }}
 
       - name: Setup tmate session
-        if: matrix.conda-version == 'release' && matrix.python-version == '3.8' && github.event_name == 'workflow_dispatch'
+        if: matrix.conda-version == 'release' && matrix.python-version == '3.8' && github.event_name == 'workflow_dispatch' && github.event.inputs.debug_enabled
         uses: mxschmitt/action-tmate@v3
 
       - name: Run Serial tests
