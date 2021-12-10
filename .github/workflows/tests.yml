@@ -69,5 +69,5 @@ jobs:
           CONDA_VERSION: ${{ matrix.conda-version }}
 
       - name: Setup tmate session
-        if: matrix.conda-version == 'release' && matrix.python-version == '3.8'
+        if: matrix.conda-version == 'release' && matrix.python-version == '3.8' && ${{ failure() }}
         uses: mxschmitt/action-tmate@v3
