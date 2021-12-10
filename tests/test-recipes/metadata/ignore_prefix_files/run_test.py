@@ -8,7 +8,7 @@ print("^^^^^ENVIRON^^^^^^")
 print(os.environ)
 pkgs = os.path.abspath(os.path.join(os.environ["ROOT"], "pkgs"))
 cmd = ['cd', pkgs]
-subprocess.run(cmd)
+subprocess.call(cmd)
 subprocess.check_output(['ls', '-l'])
 for path in glob(os.path.join(pkgs, "conda-build-test-ignore-prefix-files-1.0-0")):
     print("--------")
