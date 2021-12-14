@@ -12,13 +12,13 @@ on:
       - reopened
       - synchronize
 
-defaults:
-  run:
-    shell: bash -l {0}
 
 jobs:
   test-linux:
     runs-on: ubuntu-18.04
+    defaults:
+      run:
+        shell: bash -l {0}
     strategy:
       fail-fast: false
       matrix:
@@ -37,18 +37,17 @@ jobs:
         uses: conda-incubator/setup-miniconda@v2
         with:
           auto-activate-base: true
+          activate-environment: base
           python-version: ${{ matrix.python-version }}
 
       - name: Install Conda-Canary if canary version
         if: matrix.conda-version == 'canary'
         run: |
-          conda activate base
           conda install -y -c conda-canary conda
 
       - name: Install default Conda if release version
         if: matrix.conda-version == 'release'
         run: |
-          conda activate base
           conda install -y conda
 
       - name: Source Scripts
