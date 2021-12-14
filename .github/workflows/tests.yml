@@ -37,7 +37,7 @@ jobs:
         uses: conda-incubator/setup-miniconda@v2
         with:
           auto-activate-base: true
-          auto-update-conda: true
+          activate-environment: ""
           python-version: ${{ matrix.python-version }}
 
       - name: Install Conda-Canary if canary version
