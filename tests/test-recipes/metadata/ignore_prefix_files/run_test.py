@@ -1,12 +1,7 @@
 from glob import glob
 import os
-import subprocess
 
-print("$$$$$$ROOT$$$$$$$ = ")
-print(os.environ["ROOT"])
-print("^^^^^ENVIRON^^^^^^")
-print(os.environ)
-# subprocess.check_call()
+
 pkgs = os.path.abspath(os.path.join(os.environ["ROOT"], "pkgs"))
 for path in glob(os.path.join(pkgs, "conda-build-test-ignore-prefix-files-1.0-0")):
     print("--------")
