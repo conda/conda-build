@@ -37,7 +37,6 @@ jobs:
         uses: conda-incubator/setup-miniconda@v2
         with:
           auto-activate-base: true
-          activate-environment: true
           auto-update-conda: true
           python-version: ${{ matrix.python-version }}
 
@@ -68,6 +67,6 @@ jobs:
           PYTHON_VERSION: ${{ matrix.python-version }}
           CONDA_VERSION: ${{ matrix.conda-version }}
 
-      - name: Setup tmate session
-        if: matrix.conda-version == 'release' && matrix.python-version == '3.8' && ${{ failure() }}
-        uses: mxschmitt/action-tmate@v3
+#      - name: Setup tmate session
+#        if: matrix.conda-version == 'release' && matrix.python-version == '3.8' && ${{ failure() }}
+#        uses: mxschmitt/action-tmate@v3
