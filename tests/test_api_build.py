@@ -918,6 +918,10 @@ def test_output_folder_moves_file(testing_metadata, testing_workdir):
 
 
 @pytest.mark.sanity
+@pytest.mark.skipif("CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,
+                    reason="This test does not run on Github Actions yet. We will need to adjust "
+                           "where to look for the pkgs. The github action for setup-miniconda sets "
+                           "pkg_dirs to conda_pkgs_dir.")
 def test_info_files_json(testing_config):
     outputs = api.build(os.path.join(metadata_dir, "_ignore_some_prefix_files"),
                         config=testing_config)
@@ -1118,6 +1122,10 @@ def test_ignore_run_exports_from(testing_metadata, testing_config):
     assert 'downstream_pinned_package 1.0' not in m.meta['requirements'].get('run', [])
 
 
+@pytest.mark.skipif("CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,
+                    reason="This test does not run on Github Actions yet. We will need to adjust "
+                           "where to look for the pkgs. The github action for setup-miniconda sets "
+                           "pkg_dirs to conda_pkgs_dir.")
 def test_run_exports_noarch_python(testing_metadata, testing_config):
     # build the package with run exports for ensuring that we ignore it
     api.build(os.path.join(metadata_dir, '_run_exports_noarch'), config=testing_config,

@@ -51,8 +51,8 @@ jobs:
 
       - name: Source Scripts
         run: |
-          python --version
           source ci/azurepipelines/install_conda_build_test_deps
+          pip install -e .
           conda info -a
           source ci/github/github_setup_pytest_replay
         env:
