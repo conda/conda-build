@@ -54,18 +54,21 @@ jobs:
           python --version
           source ci/azurepipelines/install_conda_build_test_deps
           conda info -a
+          source ci/github/github_setup_pytest_replay
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
           CONDA_VERSION: ${{ matrix.conda-version }}
 
       - name: Run Serial tests
         run: |
-          source ci/github/github_setup_pytest_replay
           pytest --color=yes -vv -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="Linux-SerialTests" --test-run-title="Linux-SerialTests-$CONDA_VERSION-Py$PYTHON_VERSION" "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
           CONDA_VERSION: ${{ matrix.conda-version }}
 
-      - name: Setup tmate session
-        if: matrix.conda-version == 'release' && matrix.python-version == '3.8' && ${{ failure() }}
-        uses: mxschmitt/action-tmate@v3
+      - name: Run Parallel tests
+        run: |
+          py.test --color=yes -vv -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --test-run-title="Linux-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION" "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
+        env:
+          PYTHON_VERSION: ${{ matrix.python-version }}
+          CONDA_VERSION: ${{ matrix.conda-version }}
