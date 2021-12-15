@@ -919,7 +919,7 @@ def test_output_folder_moves_file(testing_metadata, testing_workdir):
 
 @pytest.mark.sanity
 def test_info_files_json(testing_config):
-    outputs = api.build(os.path.join(metadata_dir, "ignore_some_prefix_files"),
+    outputs = api.build(os.path.join(metadata_dir, "_ignore_some_prefix_files"),
                         config=testing_config)
     assert package_has_file(outputs[0], "info/paths.json")
     with tarfile.open(outputs[0]) as tf:
