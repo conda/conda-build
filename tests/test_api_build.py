@@ -104,9 +104,8 @@ def describe_root(cwd=None):
     return tag
 
 
-@pytest.fixture(params=["ignore_prefix_files", "ignore_some_prefix_files"])
-# @pytest.fixture(params=[dirname for dirname in os.listdir(metadata_dir)
-#                         if is_valid_dir(metadata_dir, dirname)])
+@pytest.fixture(params=[dirname for dirname in os.listdir(metadata_dir)
+                        if is_valid_dir(metadata_dir, dirname)])
 def recipe(request):
     return os.path.join(metadata_dir, request.param)
 
@@ -126,6 +125,38 @@ def test_recipe_builds(recipe, testing_config, testing_workdir, monkeypatch):
     monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
     if 'unicode_all_over' in recipe and sys.version_info[0] == 2:
         pytest.skip('unicode_all_over does not work on Python 2')
+    api.build(recipe, config=testing_config)
+
+
+@pytest.mark.serial
+@pytest.mark.skipif("CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,
+                    reason="This test does not run on Github Actions yet. We will need to adjust "
+                           "where to look for the pkgs. The github action for setup-miniconda sets "
+                           "pkg_dirs to conda_pkgs_dir.")
+# Regardless of the reason for skipping, we should definitely find a better way for tests to look for the packages
+# Rather than assuming they will be at $ROOT/pkgs since that can change and we don't care where they are in terms of the
+# tests.
+def test_ignore_prefix_files(testing_config, monkeypatch):
+    recipe = os.path.join(metadata_dir, "_ignore_prefix_files")
+    testing_config.activate = True
+    monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
+    monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
+    api.build(recipe, config=testing_config)
+
+
+@pytest.mark.serial
+@pytest.mark.skipif("CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,
+                    reason="This test does not run on Github Actions yet. We will need to adjust "
+                           "where to look for the pkgs. The github action for setup-miniconda sets "
+                           "pkg_dirs to conda_pkgs_dir.")
+# Regardless of the reason for skipping, we should definitely find a better way for tests to look for the packages
+# Rather than assuming they will be at $ROOT/pkgs since that can change and we don't care where they are in terms of the
+# tests.
+def test_ignore_some_prefix_files(testing_config, monkeypatch):
+    recipe = os.path.join(metadata_dir, "_ignore_some_prefix_files")
+    testing_config.activate = True
+    monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
+    monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
     api.build(recipe, config=testing_config)
 
 
