@@ -792,6 +792,13 @@ def test_about_license_file_and_prelink_message(testing_workdir, testing_config,
 
 
 @pytest.mark.slow
+@pytest.mark.skipif("CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,
+                    reason="This test does not run on Github Actions yet. We will need to adjust "
+                           "where to look for the pkgs. The github action for setup-miniconda sets "
+                           "pkg_dirs to conda_pkgs_dir.")
+# Regardless of the reason for skipping, we should definitely find a better way for tests to look for the packages
+# Rather than assuming they will be at $ROOT/pkgs since that can change and we don't care where they are in terms of the
+# tests.
 @pytest.mark.xfail(parse_version(conda.__version__) < parse_version("4.3.14"),
                    reason="new noarch supported starting with conda 4.3.14")
 def test_noarch_python_with_tests(testing_config):
