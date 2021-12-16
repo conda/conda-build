@@ -28,7 +28,10 @@ jobs:
         include:
           - python-version: '3.9'
             conda-version: canary
-            test-type: [serial, parallel]
+            test-type: serial
+          - python-version: '3.9'
+            conda-version: canary
+            test-type: parallel
 
     steps:
       - name: Checkout repository
