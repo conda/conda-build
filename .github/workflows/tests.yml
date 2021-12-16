@@ -28,6 +28,8 @@ jobs:
         include:
           - python-version: '3.9'
             conda-version: canary
+            test-type: [serial, parallel]
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
