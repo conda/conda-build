@@ -14,22 +14,41 @@ on:
 
 
 jobs:
-  test-linux:
-    runs-on: ubuntu-18.04
+  test-conda-build:
+    runs-on: ${{ matrix.os }}
     defaults:
       run:
         shell: bash -l {0}
     strategy:
       fail-fast: false
       matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
         python-version: ['3.7', '3.8']
         conda-version: [release]
         test-type: [serial, parallel]
         include:
-          - python-version: '3.9'
+          - os: ubuntu-latest
+            python-version: '3.9'
             conda-version: canary
             test-type: serial
-          - python-version: '3.9'
+          - os: ubuntu-latest
+            python-version: '3.9'
+            conda-version: canary
+            test-type: parallel
+          - os: windows-latest
+            python-version: '3.9'
+            conda-version: canary
+            test-type: serial
+          - os: windows-latest
+            python-version: '3.9'
+            conda-version: canary
+            test-type: parallel
+          - os: macos-latest
+            python-version: '3.9'
+            conda-version: canary
+            test-type: serial
+          - os: macos-latest
+            python-version: '3.9'
             conda-version: canary
             test-type: parallel
 
@@ -83,9 +102,12 @@ jobs:
           CONDA_VERSION: ${{ matrix.conda-version }}
           TEST_TYPE: ${{ matrix.test-type }}
 
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
+        timeout-minutes: 15
+
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v2
         with:
-          name: pytest_replay-py-${{ matrix.python-version }}_${{ matrix.conda-version }}_${{ matrix.test-type }}
+          name: ${{ matrix.os }}_replay-py-${{ matrix.python-version }}_${{ matrix.conda-version }}_${{ matrix.test-type }}
           path: pytest-replay/
-
