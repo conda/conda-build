@@ -81,9 +81,11 @@ jobs:
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
           CONDA_VERSION: ${{ matrix.conda-version }}
+          TEST_TYPE: ${{ matrix.test-type }}
 
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v2
         with:
           name: pytest_replay-py-${{ matrix.python-version }}_${{ matrix.conda-version }}_${{ matrix.test-type }}
-          path: ./pytest-replay/
+          path: pytest-replay/
+
