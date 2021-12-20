@@ -36,8 +36,8 @@ jobs:
             conda-version: canary
             test-type: parallel
     env:
-      pytest-serial-cmd: -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="${{ matrix.os }}-SerialTests" --test-run-title="${{ matrix.os }}-SerialTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}"
-      pytest-parallel-cmd: -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --test-run-title="${{ matrix.os }}-ParallelTests" --test-run-title="${{ matrix.os }}-ParallelTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}"
+      pytest-serial-cmd: -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m \"serial\" tests --test-run-title=\"${{ matrix.os }}-SerialTests\" --test-run-title=\"${{ matrix.os }}-SerialTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}\"
+      pytest-parallel-cmd: -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m \"not serial\" tests --test-run-title=\"${{ matrix.os }}-ParallelTests\" --test-run-title=\"${{ matrix.os }}-ParallelTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}\"
       pytest-replay: --replay-record-dir=pytest-replay/ --replay-base-name=Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
 
 
