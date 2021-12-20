@@ -22,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest]
         python-version: ['3.7', '3.8']
         conda-version: [release]
         test-type: [serial, parallel]
@@ -35,22 +35,11 @@ jobs:
             python-version: '3.9'
             conda-version: canary
             test-type: parallel
-          - os: windows-latest
-            python-version: '3.9'
-            conda-version: canary
-            test-type: serial
-          - os: windows-latest
-            python-version: '3.9'
-            conda-version: canary
-            test-type: parallel
-          - os: macos-latest
-            python-version: '3.9'
-            conda-version: canary
-            test-type: serial
-          - os: macos-latest
-            python-version: '3.9'
-            conda-version: canary
-            test-type: parallel
+    env:
+      pytest-serial-cmd: -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="${{ matrix.os }}-SerialTests" --test-run-title="${{ matrix.os }}-SerialTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}"
+      pytest-parallel-cmd: -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --test-run-title="${{ matrix.os }}-ParallelTests" --test-run-title="${{ matrix.os }}-ParallelTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}"
+      pytest-replay: --replay-record-dir=pytest-replay/ --replay-base-name=Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
+
 
     steps:
       - name: Checkout repository
@@ -87,24 +76,23 @@ jobs:
       - name: Run Serial tests
         if: matrix.test-type == 'serial'
         run: |
-          pytest --color=yes -vv -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="Linux-SerialTests" --test-run-title="Linux-SerialTests-$CONDA_VERSION-Py$PYTHON_VERSION" "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
+          pytest --color=yes -vv $PYTEST_CMD $PYTEST_REPLAY
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
           CONDA_VERSION: ${{ matrix.conda-version }}
+          PYTEST_CMD: ${{ env.pytest-serial-cmd }}
+          PYTEST_REPLAY: ${{ env.pytest-replay }}
 
       - name: Run Parallel tests
         if: matrix.test-type == 'parallel'
         run: |
-          pytest --color=yes -vv -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --test-run-title="Linux-ParallelTests-$CONDA_VERSION-Python$PYTHON_VERSION" "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
-          ls -la
+          pytest --color=yes -vv $PYTEST_CMD $PYTEST_REPLAY
+          ls -la pytest-replay
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
           CONDA_VERSION: ${{ matrix.conda-version }}
-          TEST_TYPE: ${{ matrix.test-type }}
-
-#      - name: Setup tmate session
-#        uses: mxschmitt/action-tmate@v3
-#        timeout-minutes: 15
+          PYTEST_CMD: ${{ env.pytest-parallel-cmd }}
+          PYTEST_REPLAY: ${{ env.pytest-replay }}
 
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v2
