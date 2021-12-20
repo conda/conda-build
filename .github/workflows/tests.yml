@@ -102,9 +102,9 @@ jobs:
           CONDA_VERSION: ${{ matrix.conda-version }}
           TEST_TYPE: ${{ matrix.test-type }}
 
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
-        timeout-minutes: 15
+#      - name: Setup tmate session
+#        uses: mxschmitt/action-tmate@v3
+#        timeout-minutes: 15
 
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v2
