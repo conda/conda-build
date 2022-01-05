@@ -86,15 +86,15 @@ jobs:
       - name: Run Parallel tests
         if: matrix.test-type == 'parallel'
         run: |
-          pytest 
-              --color=yes -vv 
-              -n auto 
-              --basetemp /tmp/cb 
-              --cov conda_build 
-              --cov-append --cov-report xml 
-              -m "not serial" tests 
-              --test-run-title="${{ matrix.os }}-ParallelTests" 
-              --test-run-title="${{ matrix.os }}-ParallelTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}" 
+          pytest
+              --color=yes -vv
+              -n auto
+              --basetemp /tmp/cb
+              --cov conda_build
+              --cov-append --cov-report xml
+              -m "not serial" tests
+              --test-run-title="${{ matrix.os }}-ParallelTests"
+              --test-run-title="${{ matrix.os }}-ParallelTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}"
               ${{ env.pytest-replay }}
 
       - name: Upload Pytest Replay
