@@ -86,7 +86,7 @@ jobs:
       - name: Run Parallel tests
         if: matrix.test-type == 'parallel'
         run: |
-          pytest 
+          pytest \
               --color=yes -vv \
               -n auto \
               --basetemp /tmp/cb \ 
