@@ -78,7 +78,6 @@ jobs:
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
           CONDA_VERSION: ${{ matrix.conda-version }}
-          PYTEST_CMD: ${{ env.pytest-serial-cmd }}
           PYTEST_REPLAY: ${{ env.pytest-replay }}
 
       - name: Run Parallel tests
@@ -89,7 +88,6 @@ jobs:
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
           CONDA_VERSION: ${{ matrix.conda-version }}
-          PYTEST_CMD: ${{ env.pytest-parallel-cmd }}
           PYTEST_REPLAY: ${{ env.pytest-replay }}
 
       - name: Upload Pytest Replay
