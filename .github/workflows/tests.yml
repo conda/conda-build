@@ -73,8 +73,18 @@ jobs:
 
       - name: Run Serial tests
         if: matrix.test-type == 'serial'
-        run: |
-          pytest --color=yes -vv -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="${{ matrix.os }}-SerialTests" --test-run-title="${{ matrix.os }}-SerialTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}" $PYTEST_REPLAY
+        run: >
+          pytest
+              --color=yes
+              -vv
+              -n 0
+              --basetemp /tmp/cb_serial
+              --cov conda_build
+              --cov-report xml
+              -m "serial" tests
+              --test-run-title="${{ matrix.os }}-SerialTests"
+              --test-run-title="${{ matrix.os }}-SerialTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}"
+              $PYTEST_REPLAY
         env:
           PYTHON_VERSION: ${{ matrix.python-version }}
           CONDA_VERSION: ${{ matrix.conda-version }}
