@@ -2,10 +2,7 @@ from glob import glob
 import os
 
 
-pkgs = os.path.abspath(os.path.join(os.environ["ROOT"], "pkgs"))
-for path in glob(os.path.join(pkgs, "conda-build-test-ignore-prefix-files-1.0-0")):
-    print("--------")
-    print(path)
+pkgs = os.path.join(os.environ["ROOT"], "pkgs")
 pkg_dir = glob(os.path.join(pkgs, "conda-build-test-ignore-prefix-files-1.0-0"))[0]
 info_dir = os.path.join(pkg_dir, 'info')
 assert os.path.isdir(info_dir)
