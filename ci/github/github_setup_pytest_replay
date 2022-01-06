@@ -1,5 +1,0 @@
-mkdir ./pytest-replay
-declare -a PYTEST_REPLAY_OPTIONS=()
-PYTEST_REPLAY_OPTIONS+=("--replay-record-dir=./pytest-replay")
-PYTEST_REPLAY_OPTIONS+=("--replay-base-name=Linux-$CONDA_VERSION-Py$PYTHON_VERSION")
-echo "${PYTEST_REPLAY_OPTIONS[@]}"
