@@ -66,7 +66,7 @@ jobs:
           source ci/azurepipelines/install_conda_build_test_deps
           pip install -e .
           conda info -a
-          source ci/github/github_setup_pytest_replay
+          mkdir ./pytest-replay
 
       - name: Run Serial tests
         if: matrix.test-type == 'serial'
@@ -87,11 +87,13 @@ jobs:
         if: matrix.test-type == 'parallel'
         run: |
           pytest \
-              --color=yes -vv \
+              --color=yes \
+              -vv \
               -n auto \
               --basetemp /tmp/cb \
               --cov conda_build \
-              --cov-append --cov-report xml \
+              --cov-append \
+              --cov-report xml \
               -m "not serial" tests \
               --test-run-title="${{ matrix.os }}-ParallelTests" \
               --test-run-title="${{ matrix.os }}-ParallelTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}" \
