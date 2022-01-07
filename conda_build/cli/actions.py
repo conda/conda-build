@@ -1,7 +1,6 @@
 import argparse
 
 class KeyValueAction(argparse.Action):
-    
     def __call__(self, parser, namespace, items, option_string=None):
         setattr(namespace, self.dest, dict())
 
