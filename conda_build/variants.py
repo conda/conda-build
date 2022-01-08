@@ -33,7 +33,7 @@ DEFAULT_VARIANTS = {
     'cran_mirror': "https://cran.r-project.org",
 }
 
-SPECIAL_KEYS = DEFAULT_VARIANTS["extend_keys"]
+EXTEND_KEYS = DEFAULT_VARIANTS["extend_keys"]
 
 # set this outside the initialization because of the dash in the key
 DEFAULT_VARIANTS['pin_run_as_build']['r-base'] = OrderedDict(min_pin='x.x', max_pin='x.x')
@@ -630,7 +630,7 @@ def get_vars(variants, loop_only=False):
     """For purposes of naming/identifying, provide a way of identifying which variables contribute
     to the matrix dimensionality"""
     first_variant = variants[0]
-    special_keys = SPECIAL_KEYS.copy()
+    special_keys = EXTEND_KEYS.copy()
     special_keys.update(set(ensure_list(first_variant.get('extend_keys'))))
     loop_vars = [k for k in first_variant if k not in special_keys and
                 (not loop_only or
@@ -642,9 +642,9 @@ def is_loop_var(var, variants):
     """Given a variable `var` and a list of variants, this return True/False
     depending on if the variable is a loop variable or not.
     """
-    # SPECIAL_KEYS are keys that are extended and do not participate in matrix
+    # EXTEND_KEYS are keys that are extended and do not participate in matrix
     # expansion. Therefore they are not loop vars.
-    if var in SPECIAL_KEYS:
+    if var in EXTEND_KEYS:
         return False
     # User specified extend_keys are also extended and do not participate in
     # matrix expansion. Since the key `extend_keys` itself is extended, it is
