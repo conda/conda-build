@@ -33,7 +33,7 @@ DEFAULT_VARIANTS = {
     'cran_mirror': "https://cran.r-project.org",
 }
 
-SPECIAL_KEYS = ['pin_run_as_build', 'ignore_version', 'extend_keys']
+SPECIAL_KEYS = DEFAULT_VARIANTS["extend_keys"]
 
 # set this outside the initialization because of the dash in the key
 DEFAULT_VARIANTS['pin_run_as_build']['r-base'] = OrderedDict(min_pin='x.x', max_pin='x.x')
