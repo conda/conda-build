@@ -33,6 +33,8 @@ DEFAULT_VARIANTS = {
     'cran_mirror': "https://cran.r-project.org",
 }
 
+SPECIAL_KEYS = ['pin_run_as_build', 'ignore_version', 'extend_keys']
+
 # set this outside the initialization because of the dash in the key
 DEFAULT_VARIANTS['pin_run_as_build']['r-base'] = OrderedDict(min_pin='x.x', max_pin='x.x')
 
@@ -627,20 +629,22 @@ def get_package_variants(recipedir_or_metadata, config=None, variants=None):
 def get_vars(variants, loop_only=False):
     """For purposes of naming/identifying, provide a way of identifying which variables contribute
     to the matrix dimensionality"""
-    special_keys = {'pin_run_as_build', 'zip_keys', 'ignore_version'}
-    special_keys.update(set(ensure_list(variants[0].get('extend_keys'))))
-    loop_vars = [k for k in variants[0] if k not in special_keys and
+    first_variant = variants[0]
+    special_keys = SPECIAL_KEYS.copy()
+    special_keys.update(set(ensure_list(first_variant.get('extend_keys'))))
+    loop_vars = [k for k in first_variant if k not in special_keys and
                 (not loop_only or
-                any(variant[k] != variants[0][k] for variant in variants[1:]))]
+                any(variant[k] != first_variant[k] for variant in variants[1:]))]
     return loop_vars
 
 
 def is_loop_var(var, variants):
-    if var in {'pin_run_as_build', 'zip_keys', 'ignore_version'}:
+    if var in SPECIAL_KEYS:
         return False
-    if var in ensure_list(variants[0].get('extend_keys')):
+    first_variant = variants[0]
+    if var in ensure_list(first_variant.get('extend_keys')):
         return False
-    return any(variant[var] != variants[0][var] for variant in variants[1:])
+    return any(variant[var] != first_variant[var] for variant in variants[1:])
 
 
 @memoized
