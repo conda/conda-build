@@ -639,11 +639,20 @@ def get_vars(variants, loop_only=False):
 
 
 def is_loop_var(var, variants):
+    """Given a variable `var` and a list of variants, this return True/False
+    depending on if the variable is a loop variable or not.
+    """
+    # SPECIAL_KEYS are keys that are extended and do not participate in matrix
+    # expansion. Therefore they are not loop vars.
     if var in SPECIAL_KEYS:
         return False
+    # User specified extend_keys are also extended and do not participate in
+    # matrix expansion. Since the key `extend_keys` itself is extended, it is
+    # the same across all variants. So, we get the first variant's `extend_keys`.
     first_variant = variants[0]
     if var in ensure_list(first_variant.get('extend_keys')):
         return False
+    # If the variable `var` is the same across all variants, it is not a loop var.
     return any(variant[var] != first_variant[var] for variant in variants[1:])
 
 
