@@ -2851,8 +2851,8 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
     #     something like QEMU or Wine will be used on the build machine,
     #     therefore, for now, we use host_subdir.
 
-    subdir = ('noarch' if (metadata.noarch or metadata.noarch_python)
-                else metadata.config.host_subdir)
+    subdir = metadata.config.host_subdir
+
     # ensure that the test prefix isn't kept between variants
     utils.rm_rf(metadata.config.test_prefix)
 
