@@ -176,6 +176,7 @@ def _get_default_settings():
             Setting('append_sections_file', None),
             Setting('clobber_sections_file', None),
             Setting('bootstrap', None),
+            Setting('extra_meta', {}),
 
             # source provisioning.
             Setting('git_commits_since_tag', 0),
