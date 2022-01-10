@@ -1617,6 +1617,14 @@ def test_ignore_verify_codes(testing_config):
     #    it will build OK.  If not, it will error out.
     api.build(recipe_dir, config=testing_config)
 
+@pytest.mark.sanity
+def test_extra_info(testing_config):
+    recipe_dir = os.path.join(metadata_dir, '_extra_info')
+    testing_config.extra_info = True
+    outputs = api.build(recipe_dir, config=testing_config)
+    about = json.loads(package_has_file(outputs[0], 'info/about.json'))
+    assert 'origin_url' in about['extra'] and about['extra']['origin_url']
+    assert 'commit' in about['extra'] and about['extra']['commit']
 
 def test_symlink_dirs_in_always_include_files(testing_config):
     recipe = os.path.join(metadata_dir, '_symlink_dirs_in_always_include_files')
