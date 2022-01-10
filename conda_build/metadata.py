@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 from collections import OrderedDict
 import contextlib
 import copy
@@ -265,7 +263,7 @@ def _trim_None_strings(meta_dict):
                     keep = [i for i in value if i not in ('None', 'NoneType')]
                 meta_dict[key] = keep
         else:
-            log.debug("found unrecognized data type in dictionary: {0}, type: {1}".format(value,
+            log.debug("found unrecognized data type in dictionary: {}, type: {}".format(value,
                                                                                     type(value)))
     return meta_dict
 
@@ -301,7 +299,7 @@ def check_circular_dependencies(render_order, config=None):
     if pairs:
         error = "Circular dependencies in recipe: \n"
         for pair in pairs:
-            error += "    {0} <-> {1}\n".format(*pair)
+            error += "    {} <-> {}\n".format(*pair)
         raise exceptions.RecipeError(error)
 
 
@@ -551,7 +549,7 @@ def _git_clean(source_meta):
                           tag in git_rev_tags)
     if sum(has_rev_tags) > 1:
         msg = "Error: multiple git_revs:"
-        msg += ', '.join("{}".format(key) for key, has in
+        msg += ', '.join(f"{key}" for key, has in
                          zip(git_rev_tags, has_rev_tags) if has)
         sys.exit(msg)
 
@@ -584,7 +582,7 @@ def check_bad_chrs(s, field):
         bad_chrs += '!'
     for c in bad_chrs:
         if c in s:
-            sys.exit("Error: bad character '%s' in %s: %s" % (c, field, s))
+            sys.exit(f"Error: bad character '{c}' in {field}: {s}")
 
 
 def get_package_version_pin(build_reqs, name):
@@ -666,7 +664,7 @@ def _get_dependencies_from_environment(env_name_or_path):
     bootstrap_metadata = get_installed_packages(path)
     bootstrap_requirements = []
     for package, data in bootstrap_metadata.items():
-        bootstrap_requirements.append("%s %s %s" % (package, data['version'], data['build']))
+        bootstrap_requirements.append("{} {} {}".format(package, data['version'], data['build']))
     return {'requirements': {'build': bootstrap_requirements}}
 
 
@@ -752,7 +750,7 @@ def finalize_outputs_pass(base_metadata, render_order, pass_no, outputs=None,
             # We should reparse the top-level recipe to get all of our dependencies fixed up.
             # we base things on base_metadata because it has the record of the full origin recipe
             if base_metadata.config.verbose:
-                log.info("Attempting to finalize metadata for {}".format(metadata.name()))
+                log.info(f"Attempting to finalize metadata for {metadata.name()}")
             # Using base_metadata is important for keeping the reference to the parent recipe
             om = base_metadata.copy()
             # other_outputs is the context of what's available for
@@ -820,7 +818,7 @@ def get_updated_output_dict_from_reparsed_metadata(original_dict, new_outputs):
 def _filter_recipe_text(text, extract_pattern=None):
     if extract_pattern:
         match = re.search(extract_pattern, text, flags=re.MULTILINE | re.DOTALL)
-        text = "\n".join(set(string for string in match.groups() if string)) if match else ""
+        text = "\n".join({string for string in match.groups() if string}) if match else ""
     return text
 
 
@@ -888,7 +886,7 @@ def _hash_dependencies(hashing_dependencies, hash_length):
     # save only the first HASH_LENGTH characters - should be more than
     #    enough, since these only need to be unique within one version
     # plus one is for the h - zero pad on the front, trim to match HASH_LENGTH
-    return 'h{0}'.format(hash_.hexdigest())[:hash_length + 1]
+    return f'h{hash_.hexdigest()}'[:hash_length + 1]
 
 
 @contextlib.contextmanager
@@ -896,16 +894,16 @@ def stringify_numbers():
     # ensure that numbers are not interpreted as ints or floats.  That trips up versions
     #     with trailing zeros.
     implicit_resolver_backup = loader.yaml_implicit_resolvers.copy()
-    for ch in list(u'0123456789'):
+    for ch in list('0123456789'):
         if ch in loader.yaml_implicit_resolvers:
             del loader.yaml_implicit_resolvers[ch]
     yield
-    for ch in list(u'0123456789'):
+    for ch in list('0123456789'):
         if ch in implicit_resolver_backup:
             loader.yaml_implicit_resolvers[ch] = implicit_resolver_backup[ch]
 
 
-class MetaData(object):
+class MetaData:
     def __init__(self, path, config=None, variant=None):
 
         self.undefined_jinja_vars = []
@@ -1090,7 +1088,7 @@ class MetaData(object):
 
     @classmethod
     def fromstring(cls, metadata, config=None, variant=None):
-        m = super(MetaData, cls).__new__(cls)
+        m = super().__new__(cls)
         if not config:
             config = Config()
         m.meta = parse(metadata, config=config, path='', variant=variant)
@@ -1103,7 +1101,7 @@ class MetaData(object):
         """
         Create a MetaData object from metadata dict directly.
         """
-        m = super(MetaData, cls).__new__(cls)
+        m = super().__new__(cls)
         m.path = ''
         m._meta_path = ''
         m.requirements_path = ''
@@ -1149,13 +1147,13 @@ class MetaData(object):
         section_data = self.get_section(section)
         if isinstance(section_data, dict):
             assert not index, \
-                "Got non-zero index ({}), but section {} is not a list.".format(index, section)
+                f"Got non-zero index ({index}), but section {section} is not a list."
         elif isinstance(section_data, list):
             # The 'source' section can be written a list, in which case the name
             # is passed in with an index, e.g. get_value('source/0/git_url')
             if index is None:
                 log = utils.get_logger(__name__)
-                log.warn("No index specified in get_value('{}'). Assuming index 0.".format(name))
+                log.warn(f"No index specified in get_value('{name}'). Assuming index 0.")
                 index = 0
 
             if len(section_data) == 0:
@@ -1163,7 +1161,7 @@ class MetaData(object):
             else:
                 section_data = section_data[index]
                 assert isinstance(section_data, dict), \
-                    "Expected {}/{} to be a dict".format(section, index)
+                    f"Expected {section}/{index} to be a dict"
 
         value = section_data.get(key, default)
 
@@ -1227,11 +1225,11 @@ class MetaData(object):
         try:
             return int(number)
         except (ValueError, TypeError):
-            raise ValueError("Build number was invalid value '{}'. Must be an integer.".format(number))
+            raise ValueError(f"Build number was invalid value '{number}'. Must be an integer.")
 
     def get_depends_top_and_out(self, typ):
         meta_requirements = ensure_list(self.get_value('requirements/' + typ, []))[:]
-        req_names = set(req.split()[0] for req in meta_requirements if req)
+        req_names = {req.split()[0] for req in meta_requirements if req}
         extra_reqs = []
         # this is for the edge case of requirements for top-level being also partially defined in a similarly named output
         if not self.is_output:
@@ -1283,7 +1281,7 @@ class MetaData(object):
                     msg = ("Error: bad character '%s' in package version "
                            "dependency '%s'" % (parts[1], ms.name))
                     if len(parts) >= 3:
-                        msg += "\nPerhaps you meant '%s %s%s'" % (ms.name,
+                        msg += "\nPerhaps you meant '{} {}{}'".format(ms.name,
                             parts[1], parts[2])
                     sys.exit(msg)
             specs[spec] = ms
@@ -1327,7 +1325,7 @@ class MetaData(object):
                 build_string_excludes.append('numpy')
         # always exclude older stuff that's always in the build string (py, np, pl, r, lua)
         if build_string_excludes:
-            exclude_pattern = re.compile('|'.join(r'{}[\s$]?.*'.format(exc)
+            exclude_pattern = re.compile('|'.join(fr'{exc}[\s$]?.*'
                                                   for exc in build_string_excludes))
             dependencies = [req for req in dependencies if not exclude_pattern.match(req) or
                                 ' ' in self.config.variant[req]]
@@ -1362,7 +1360,7 @@ class MetaData(object):
         #    PKG_HASH is used for anything.
         raw_recipe_text = self.extract_package_and_build_text()
         if not manual_build_string and not raw_recipe_text:
-            raise RuntimeError("Couldn't extract raw recipe text for {} output".format(self.name()))
+            raise RuntimeError(f"Couldn't extract raw recipe text for {self.name()} output")
         raw_recipe_text = self.extract_package_and_build_text()
         raw_manual_build_string = re.search(r"\s*string:", raw_recipe_text)
         # user setting their own build string.  Don't modify it.
@@ -1389,7 +1387,7 @@ class MetaData(object):
         return out
 
     def dist(self):
-        return '%s-%s-%s' % (self.name(), self.version(), self.build_id())
+        return f'{self.name()}-{self.version()}-{self.build_id()}'
 
     def pkg_fn(self):
         return "%s.tar.bz2" % self.dist()
@@ -1648,7 +1646,7 @@ class MetaData(object):
         if self.meta_path:
             with open(self.meta_path, 'rb') as f:
                 meta_text = UnicodeDammit(f.read()).unicode_markup
-        return u"load_setup_py_data" in meta_text or u"load_setuptools" in meta_text
+        return "load_setup_py_data" in meta_text or "load_setuptools" in meta_text
 
     @property
     def uses_regex_in_meta(self):
@@ -1683,7 +1681,7 @@ class MetaData(object):
             with open(self.meta_path, 'rb') as f:
                 meta_text = UnicodeDammit(f.read()).unicode_markup
                 for _vcs in vcs_types:
-                    matches = re.findall(r"{}_[^\.\s\'\"]+".format(_vcs.upper()), meta_text)
+                    matches = re.findall(fr"{_vcs.upper()}_[^\.\s\'\"]+", meta_text)
                     if len(matches) > 0 and _vcs != self.meta['package']['name']:
                         if _vcs == "hg":
                             _vcs = "mercurial"
@@ -1706,7 +1704,7 @@ class MetaData(object):
                         #   1. the vcs command, optionally with an exe extension
                         #   2. a subcommand - for example, "clone"
                         #   3. a target url or other argument
-                        matches = re.findall(r"{}(?:\.exe)?(?:\s+\w+\s+[\w\/\.:@]+)".format(vcs),
+                        matches = re.findall(fr"{vcs}(?:\.exe)?(?:\s+\w+\s+[\w\/\.:@]+)",
                                             build_script, flags=re.IGNORECASE)
                         if len(matches) > 0 and vcs != self.meta['package']['name']:
                             if vcs == "hg":
@@ -1774,7 +1772,7 @@ class MetaData(object):
             output = output_matches[output_index] if output_matches else ''
         except ValueError:
             if (not self.path and self.meta.get('extra', {}).get('parent_recipe')):
-                utils.get_logger(__name__).warn("Didn't match any output in raw metadata.  Target value was: {}".format(output_name))
+                utils.get_logger(__name__).warn(f"Didn't match any output in raw metadata.  Target value was: {output_name}")
                 output = ''
             else:
                 output = self.name()
@@ -2357,7 +2355,7 @@ class MetaData(object):
         return top_no_outputs or {}
 
     def get_test_deps(self, py_files, pl_files, lua_files, r_files):
-        specs = ['%s %s %s' % (self.name(), self.version(), self.build_id())]
+        specs = [f'{self.name()} {self.version()} {self.build_id()}']
 
         # add packages listed in the run environment and test/requires
         specs.extend(ms.spec for ms in self.ms_depends('run'))

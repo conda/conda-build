@@ -9,7 +9,7 @@ def main():
                              'conda-build-test-numpy-run-1.0-*0.json'))
     assert len(info_files) == 1
     info_file = info_files[0]
-    with open(info_file, 'r') as fh:
+    with open(info_file) as fh:
         info = json.load(fh)
 
     depends = sorted(info['depends'])

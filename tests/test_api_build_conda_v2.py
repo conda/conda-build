@@ -4,7 +4,7 @@ import pytest
 
 from conda_build import api
 
-from .utils import fail_dir, metadata_dir
+from .utils import metadata_dir
 
 
 @pytest.mark.parametrize("pkg_format,pkg_ext", [(None, ".tar.bz2"), ("2", ".conda")])

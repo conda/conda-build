@@ -107,7 +107,7 @@ def retrieve_python_version(file_path):
             with open(path_file) as index_file:
                 index = json.load(index_file)
 
-        build_version_number = re.search('(.*)?(py)(\d\d)(.*)?', index['build']).group(3)
+        build_version_number = re.search(r'(.*)?(py)(\d\d)(.*)?', index['build']).group(3)
         build_version = re.sub(r'\A.*py\d\d.*\Z', 'python', index['build'])
 
         return '{}{}.{}' .format(build_version,
@@ -144,8 +144,8 @@ def update_dependencies(new_dependencies, existing_dependencies):
     """
     # split dependencies away from their version numbers since we need the names
     # in order to evaluate duplication
-    dependency_names = set(dependency.split()[0] for dependency in new_dependencies)
-    index_dependency_names = set(index.split()[0] for index in existing_dependencies)
+    dependency_names = {dependency.split()[0] for dependency in new_dependencies}
+    index_dependency_names = {index.split()[0] for index in existing_dependencies}
 
     repeated_packages = index_dependency_names.intersection(dependency_names)
 
@@ -303,7 +303,7 @@ def update_executable_path(temp_dir, file_path, target_platform):
         if os.path.basename(file_path).startswith('.') or is_binary_file(temp_dir, file_path):
             renamed_executable_path = re.sub(r'\Abin', 'Scripts', file_path)
         else:
-            renamed_path = os.path.splitext(re.sub('\Abin', 'Scripts', file_path))[0]
+            renamed_path = os.path.splitext(re.sub(r'\Abin', 'Scripts', file_path))[0]
             renamed_executable_path = '{}-script.py' .format(renamed_path)
 
     elif target_platform == 'unix':

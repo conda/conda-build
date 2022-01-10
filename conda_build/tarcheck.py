@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import json
 from os.path import basename, normpath
 import tarfile
@@ -16,10 +14,10 @@ def dist_fn(fn):
         raise Exception('did not expect filename: %r' % fn)
 
 
-class TarCheck(object):
+class TarCheck:
     def __init__(self, path, config):
         self.t = tarfile.open(path)
-        self.paths = set(m.path for m in self.t.getmembers())
+        self.paths = {m.path for m in self.t.getmembers()}
         self.dist = dist_fn(basename(path))
         self.name, self.version, self.build = self.dist.split('::', 1)[-1].rsplit('-', 2)
         self.config = config
@@ -56,7 +54,7 @@ class TarCheck(object):
         info = json.loads(self.t.extractfile('info/index.json').read().decode('utf-8'))
         for varname in 'name', 'version':
             if info[varname] != getattr(self, varname):
-                raise Exception('%s: %r != %r' % (varname, info[varname],
+                raise Exception('{}: {!r} != {!r}'.format(varname, info[varname],
                                                   getattr(self, varname)))
         assert isinstance(info['build_number'], int)
 
@@ -80,8 +78,8 @@ class TarCheck(object):
     def correct_subdir(self):
         info = json.loads(self.t.extractfile('info/index.json').read().decode('utf-8'))
         assert info['subdir'] in [self.config.host_subdir, 'noarch', self.config.target_subdir], \
-            ("Inconsistent subdir in package - index.json expecting {0},"
-             " got {1}".format(self.config.host_subdir, info['subdir']))
+            ("Inconsistent subdir in package - index.json expecting {},"
+             " got {}".format(self.config.host_subdir, info['subdir']))
 
 
 def check_all(path, config):

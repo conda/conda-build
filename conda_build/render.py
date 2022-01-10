@@ -4,7 +4,6 @@
 # conda is distributed under the terms of the BSD 3-clause license.
 # Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
 
-from __future__ import absolute_import, division, print_function
 
 from collections import OrderedDict, defaultdict
 from locale import getpreferredencoding
@@ -66,11 +65,11 @@ def bldpkg_path(m):
 
     # the default case will switch over to conda_v2 at some point
     if pkg_type == "conda":
-        path = os.path.join(m.config.output_folder, subdir, '%s%s' % (m.dist(), CONDA_PACKAGE_EXTENSION_V1))
+        path = os.path.join(m.config.output_folder, subdir, f'{m.dist()}{CONDA_PACKAGE_EXTENSION_V1}')
     elif pkg_type == "conda_v2":
-        path = os.path.join(m.config.output_folder, subdir, '%s%s' % (m.dist(), CONDA_PACKAGE_EXTENSION_V2))
+        path = os.path.join(m.config.output_folder, subdir, f'{m.dist()}{CONDA_PACKAGE_EXTENSION_V2}')
     else:
-        path = '{} file for {} in: {}'.format(m.type, m.name(), os.path.join(m.config.output_folder, subdir))
+        path = f'{m.type} file for {m.name()} in: {os.path.join(m.config.output_folder, subdir)}'
     return path
 
 
@@ -137,7 +136,7 @@ def get_env_dependencies(m, env, variant, exclude_pattern=None,
     with TemporaryDirectory(prefix="_", suffix=random_string) as tmpdir:
         try:
             actions = environ.get_install_actions(tmpdir, tuple(dependencies), env,
-                                                  subdir=getattr(m.config, '{}_subdir'.format(env)),
+                                                  subdir=getattr(m.config, f'{env}_subdir'),
                                                   debug=m.config.debug,
                                                   verbose=m.config.verbose,
                                                   locking=m.config.locking,
@@ -276,7 +275,7 @@ def _read_specs_from_package(pkg_loc, pkg_dist):
 
 
 def execute_download_actions(m, actions, env, package_subset=None, require_files=False):
-    index, _, _ = get_build_index(getattr(m.config, '{}_subdir'.format(env)), bldpkgs_dir=m.config.bldpkgs_dir,
+    index, _, _ = get_build_index(getattr(m.config, f'{env}_subdir'), bldpkgs_dir=m.config.bldpkgs_dir,
                                   output_folder=m.config.output_folder, channel_urls=m.config.channel_urls,
                                   debug=m.config.debug, verbose=m.config.verbose, locking=m.config.locking,
                                   timeout=m.config.timeout)
@@ -410,7 +409,7 @@ def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
                                                     permit_unsatisfiable_variants, exclude_pattern)
         if m.noarch or m.noarch_python:
             extra_run_specs = set(extra_run_specs_from_host.get('noarch', []))
-            extra_run_constrained_specs = set([])
+            extra_run_constrained_specs = set()
         else:
             extra_run_specs = set(extra_run_specs_from_host.get('strong', []) +
                                   extra_run_specs_from_host.get('weak', []) +
@@ -426,11 +425,11 @@ def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
         if m.noarch or m.noarch_python:
             if m.build_is_host:
                 extra_run_specs = set(extra_run_specs_from_build.get('noarch', []))
-                extra_run_constrained_specs = set([])
+                extra_run_constrained_specs = set()
                 build_deps = set(build_deps or []).update(extra_run_specs_from_build.get('noarch', []))
             else:
-                extra_run_specs = set([])
-                extra_run_constrained_specs = set([])
+                extra_run_specs = set()
+                extra_run_constrained_specs = set()
                 build_deps = set(build_deps or [])
         else:
             extra_run_specs = set(extra_run_specs_from_build.get('strong', []))
@@ -485,7 +484,7 @@ def _simplify_to_exact_constraints(metadata):
                 deps_list.append(name)
             elif exact_pins:
                 if not all(pin == exact_pins[0] for pin in exact_pins):
-                    raise ValueError("Conflicting exact pins: {}".format(exact_pins))
+                    raise ValueError(f"Conflicting exact pins: {exact_pins}")
                 else:
                     deps_list.append(' '.join([name] + exact_pins[0]))
             else:
@@ -511,10 +510,10 @@ def finalize_metadata(m, parent_metadata=None, permit_unsatisfiable_variants=Fal
 
         output_excludes = set()
         if hasattr(m, 'other_outputs'):
-            output_excludes = set(name for (name, variant) in m.other_outputs.keys())
+            output_excludes = {name for (name, variant) in m.other_outputs.keys()}
 
         if excludes or output_excludes:
-            exclude_pattern = re.compile(r'|'.join(r'(?:^{}(?:\s|$|\Z))'.format(exc)
+            exclude_pattern = re.compile(r'|'.join(fr'(?:^{exc}(?:\s|$|\Z))'
                                             for exc in excludes | output_excludes))
 
         parent_recipe = m.meta.get('extra', {}).get('parent_recipe', {})
@@ -555,7 +554,7 @@ def finalize_metadata(m, parent_metadata=None, permit_unsatisfiable_variants=Fal
         #     on the keys in the 'pin_run_as_build' key in the variant, which is a list of package
         #     names to have this behavior.
         if output_excludes:
-            exclude_pattern = re.compile(r'|'.join(r'(?:^{}(?:\s|$|\Z))'.format(exc)
+            exclude_pattern = re.compile(r'|'.join(fr'(?:^{exc}(?:\s|$|\Z))'
                                             for exc in output_excludes))
         pinning_env = 'host' if m.is_cross else 'build'
 
@@ -632,9 +631,9 @@ def finalize_metadata(m, parent_metadata=None, permit_unsatisfiable_variants=Fal
             log.warn("Returning non-final recipe for {}; one or more dependencies "
                     "was unsatisfiable:".format(m.dist()))
             if build_unsat:
-                log.warn("Build: {}".format(build_unsat))
+                log.warn(f"Build: {build_unsat}")
             if host_unsat:
-                log.warn("Host: {}".format(host_unsat))
+                log.warn(f"Host: {host_unsat}")
         else:
             m.final = True
     if is_top_level:
@@ -880,17 +879,17 @@ class _MetaYaml(dict):
 
 
 def _represent_omap(dumper, data):
-    return dumper.represent_mapping(u'tag:yaml.org,2002:map', data.to_omap())
+    return dumper.represent_mapping('tag:yaml.org,2002:map', data.to_omap())
 
 
 def _unicode_representer(dumper, uni):
-    node = yaml.ScalarNode(tag=u'tag:yaml.org,2002:str', value=uni)
+    node = yaml.ScalarNode(tag='tag:yaml.org,2002:str', value=uni)
     return node
 
 
 class _IndentDumper(yaml.Dumper):
     def increase_indent(self, flow=False, indentless=False):
-        return super(_IndentDumper, self).increase_indent(flow, False)
+        return super().increase_indent(flow, False)
 
     def ignore_aliases(self, data):
         return True

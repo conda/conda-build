@@ -70,7 +70,7 @@ def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variant
                                         for var in om.get_used_vars())] = \
                             ((om, download, render_in_env))
                     else:
-                        output_metas["{}: {}".format(om.type, om.name()), om.config.variant.get('target_platform'),
+                        output_metas[f"{om.type}: {om.name()}", om.config.variant.get('target_platform'),
                                     tuple((var, om.config.variant[var])
                                         for var in om.get_used_vars())] = \
                             ((om, download, render_in_env))
@@ -104,7 +104,7 @@ def get_output_file_paths(recipe_path_or_metadata, no_download_source=False, con
         if list_of_metas and all(list_of_metas):
             metadata = recipe_path_or_metadata
         else:
-            raise ValueError("received mixed list of metas: {}".format(recipe_path_or_metadata))
+            raise ValueError(f"received mixed list of metas: {recipe_path_or_metadata}")
     elif isinstance(recipe_path_or_metadata, string_types):
         # first, render the parent recipe (potentially multiple outputs, depending on variants).
         metadata = render(recipe_path_or_metadata, no_download_source=no_download_source,
@@ -172,16 +172,16 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
             for recipe in _expand_globs(recipe, os.getcwd()):
                 try:
                     recipe = find_recipe(recipe)
-                except IOError:
+                except OSError:
                     continue
                 recipes.append(recipe)
         elif hasattr(recipe, "config"):
             recipes.append(recipe)
         else:
-            raise ValueError("Recipe passed was unrecognized object: {}".format(recipe))
+            raise ValueError(f"Recipe passed was unrecognized object: {recipe}")
 
     if not recipes:
-        raise ValueError('No valid recipes found for input: {}'.format(recipe_paths_or_metadata))
+        raise ValueError(f'No valid recipes found for input: {recipe_paths_or_metadata}')
 
     return build_tree(
         recipes,
@@ -335,7 +335,7 @@ def inspect_prefix_length(packages, min_prefix_length=_prefix_length):
         print("Packages with binary prefixes shorter than %d characters:"
                 % min_prefix_length)
         for fn, length in prefix_lengths.items():
-            print("{0} ({1} chars)".format(fn, length))
+            print(f"{fn} ({length} chars)")
     else:
         print("No packages found with binary prefixes shorter than %d characters."
                 % min_prefix_length)
@@ -417,7 +417,7 @@ def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False,
         path_is_build_dir = True
         path = recipe_or_package_path_or_metadata_tuples
     if not path:
-        path = os.path.join(default_config.croot, "debug_{}".format(int(time.time() * 1000)))
+        path = os.path.join(default_config.croot, f"debug_{int(time.time() * 1000)}")
     config = get_or_merge_config(config=default_config, croot=path, verbose=verbose, _prefix_length=10,
                                  **args)
 
@@ -453,7 +453,7 @@ def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False,
                 raise ValueError("Specified --output-id matches more than one output ({}).  Please refine your output id so that only "
                     "a single output is found.".format(matched_outputs))
             elif not matched_outputs:
-                raise ValueError("Specified --output-id did not match any outputs.  Available outputs are: {} Please check it and try again".format(outputs))
+                raise ValueError(f"Specified --output-id did not match any outputs.  Available outputs are: {outputs} Please check it and try again")
         if len(matched_outputs) > 1 and not path_is_build_dir:
             raise ValueError("More than one output found for this recipe ({}).  Please use the --output-id argument to filter down "
                             "to a single output.".format(outputs))
@@ -480,7 +480,7 @@ def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False,
                     os.unlink(debug_source_loc)
                 except:
                     pass
-                print("Making debug info source symlink: {} => {}".format(debug_source_loc, link_target))
+                print(f"Making debug info source symlink: {debug_source_loc} => {link_target}")
                 os.symlink(link_target, debug_source_loc)
             except PermissionError as e:
                 raise Exception("You do not have the necessary permissions to create symlinks in {}\nerror: {}"

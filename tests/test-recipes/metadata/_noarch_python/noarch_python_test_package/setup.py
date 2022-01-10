@@ -13,7 +13,7 @@ setup(
     platforms='any',
     provides=[name],
     py_modules=[name],
-    entry_points={'console_scripts': ['%s_script = %s:main' % (name, name)], },
+    entry_points={'console_scripts': [f'{name}_script = {name}:main'], },
     scripts=[
         'shell/test-executable',
         'shell/test-executable.bat',

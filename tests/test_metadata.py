@@ -1,6 +1,5 @@
 import os
 import subprocess
-import sys
 
 import pytest
 
@@ -132,7 +131,7 @@ def test_build_bootstrap_env_by_path(testing_metadata):
         testing_metadata.meta["requirements"].get("build", [])
     path = os.path.join(thisdir, "conda_build_bootstrap_test")
     try:
-        cmd = "conda create -y -p {} git".format(path)
+        cmd = f"conda create -y -p {path} git"
         subprocess.check_call(cmd.split())
         testing_metadata.config.bootstrap = path
         testing_metadata.final = False
@@ -140,7 +139,7 @@ def test_build_bootstrap_env_by_path(testing_metadata):
         assert any("git" in pkg for pkg in testing_metadata.meta["requirements"]["build"]), \
             testing_metadata.meta["requirements"]["build"]
     finally:
-        cmd = "conda remove -y -p {} --all".format(path)
+        cmd = f"conda remove -y -p {path} --all"
         subprocess.check_call(cmd.split())
 
 
@@ -205,7 +204,7 @@ def test_hash_build_id(testing_metadata):
         if hdeps_tp == hdeps:
             found = True
             break
-    assert found, "Did not find build that matched {} when testing each of DEFAULT_SUBDIRS".format(hdeps)
+    assert found, f"Did not find build that matched {hdeps} when testing each of DEFAULT_SUBDIRS"
     assert testing_metadata.build_id() == hdeps + '_1'
 
 

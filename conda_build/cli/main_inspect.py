@@ -204,7 +204,7 @@ def execute(args):
     elif args.subcommand == 'hash-inputs':
         pprint(api.inspect_hash_inputs(args.packages))
     else:
-        raise ValueError("Unrecognized subcommand: {0}.".format(args.subcommand))
+        raise ValueError(f"Unrecognized subcommand: {args.subcommand}.")
 
 
 def main():

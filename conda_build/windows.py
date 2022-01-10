@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 import os
 import pprint
 from os.path import isdir, join, dirname, isfile
@@ -75,14 +73,14 @@ def build_vcvarsall_vs_path(version):
         PROGRAM_FILES_PATH = os.environ['ProgramFiles']
 
     flatversion = str(version).replace('.', '')
-    vstools = "VS{0}COMNTOOLS".format(flatversion)
+    vstools = f"VS{flatversion}COMNTOOLS"
 
     if vstools in os.environ:
         return os.path.join(os.environ[vstools], '..\\..\\VC\\vcvarsall.bat')
     else:
         # prefer looking at env var; fall back to program files defaults
         return os.path.join(PROGRAM_FILES_PATH,
-                            'Microsoft Visual Studio {}'.format(version), 'VC',
+                            f'Microsoft Visual Studio {version}', 'VC',
                             'vcvarsall.bat')
 
 
@@ -127,22 +125,22 @@ def msvc_env_cmd(bits, config, override=None):
     if float(version) >= 14.0:
         # For Python 3.5+, ensure that we link with the dynamic runtime.  See
         # http://stevedower.id.au/blog/building-for-python-3-5-part-two/ for more info
-        msvc_env_lines.append('set PY_VCRUNTIME_REDIST=%LIBRARY_BIN%\\vcruntime{0}.dll'.format(
+        msvc_env_lines.append('set PY_VCRUNTIME_REDIST=%LIBRARY_BIN%\\vcruntime{}.dll'.format(
             version.replace('.', '')))
 
     vcvarsall_vs_path = build_vcvarsall_vs_path(version)
 
     def build_vcvarsall_cmd(cmd, arch=arch_selector):
         # Default argument `arch_selector` is defined above
-        return 'call "{cmd}" {arch}'.format(cmd=cmd, arch=arch)
+        return f'call "{cmd}" {arch}'
 
     vs_major = version.split('.')[0]
-    msvc_env_lines.append('set "VS_VERSION={}"'.format(version))
-    msvc_env_lines.append('set "VS_MAJOR={}"'.format(vs_major))
-    msvc_env_lines.append('set "VS_YEAR={}"'.format(VS_VERSION_STRING[version][-4:]))
+    msvc_env_lines.append(f'set "VS_VERSION={version}"')
+    msvc_env_lines.append(f'set "VS_MAJOR={vs_major}"')
+    msvc_env_lines.append(f'set "VS_YEAR={VS_VERSION_STRING[version][-4:]}"')
     if int(vs_major) >= 16:
         # No Win64 for VS 2019.
-        msvc_env_lines.append('set "CMAKE_GENERATOR={}"'.format(VS_VERSION_STRING[version]))
+        msvc_env_lines.append(f'set "CMAKE_GENERATOR={VS_VERSION_STRING[version]}"')
     else:
         msvc_env_lines.append('set "CMAKE_GENERATOR={}"'.format(VS_VERSION_STRING[version] +
                                                                 {'64': ' Win64', '32': ''}[bits]))
@@ -222,7 +220,7 @@ def write_build_scripts(m, env, bld_bat):
         fo.write('@echo on\n')
         for key, value in env.items():
             if value != '' and value is not None:
-                fo.write('set "{key}={value}"\n'.format(key=key, value=value))
+                fo.write(f'set "{key}={value}"\n')
         if not m.uses_new_style_compiler_activation:
             fo.write(msvc_env_cmd(bits=m.config.host_arch, config=m.config,
                                 override=m.get_value('build/msvc_compiler', None)))
@@ -239,7 +237,7 @@ def write_build_scripts(m, env, bld_bat):
             data = fi.read()
         with codecs.getwriter('utf-8')(open(work_script, 'wb')) as fo:
             fo.write('IF "%CONDA_BUILD%" == "" (\n')
-            fo.write("    call {}\n".format(env_script))
+            fo.write(f"    call {env_script}\n")
             fo.write(')\n')
             fo.write("REM ===== end generated header =====\n")
             fo.write(data)

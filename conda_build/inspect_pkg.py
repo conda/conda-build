@@ -4,7 +4,6 @@
 # conda is distributed under the terms of the BSD 3-clause license.
 # Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
 
-from __future__ import absolute_import, division, print_function
 
 from collections import defaultdict
 import json
@@ -63,7 +62,7 @@ def print_object_info(info, key):
                     continue
                 if f_info[data] is None:
                     continue
-                output_string += '  %s: %s\n' % (data, f_info[data])
+                output_string += f'  {data}: {f_info[data]}\n'
             if len([i for i in f_info if f_info[i] is not None and i != key]) > 1:
                 output_string += '\n'
         output_string += '\n'
@@ -110,10 +109,10 @@ def print_linkages(depmap, show_files=False):
         output_string += "%s:\n" % dep
         if show_files:
             for lib, path, binary in sorted(depmap[dep]):
-                output_string += "    %s (%s) from %s\n" % (lib, path, binary)
+                output_string += f"    {lib} ({path}) from {binary}\n"
         else:
             for lib, path in sorted(set(map(itemgetter(0, 1), depmap[dep]))):
-                output_string += "    %s (%s)\n" % (lib, path)
+                output_string += f"    {lib} ({path})\n"
         output_string += "\n"
     return output_string
 
@@ -171,7 +170,7 @@ def test_installable(channel='defaults'):
             match = has_py.search(build)
             assert match if 'py' in build else True, build
             if match:
-                additional_packages = ['python=%s.%s' % (match.group(1), match.group(2))]
+                additional_packages = [f'python={match.group(1)}.{match.group(2)}']
             else:
                 additional_packages = []
 
@@ -222,7 +221,7 @@ def inspect_linkages(packages, prefix=sys.prefix, untracked=False,
         if pkg == untracked_package:
             dist = untracked_package
         elif pkg not in installed:
-            sys.exit("Package %s is not installed in %s" % (pkg, prefix))
+            sys.exit(f"Package {pkg} is not installed in {prefix}")
         else:
             dist = installed[pkg]
 
@@ -299,7 +298,7 @@ def inspect_objects(packages, prefix=sys.prefix, groupby='package'):
         if pkg == untracked_package:
             dist = untracked_package
         elif pkg not in installed:
-            raise ValueError("Package %s is not installed in %s" % (pkg, prefix))
+            raise ValueError(f"Package {pkg} is not installed in {prefix}")
         else:
             dist = installed[pkg]
 

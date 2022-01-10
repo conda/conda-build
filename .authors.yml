@@ -30,6 +30,7 @@
   - Daniel Blanchard
   num_commits: 104
   first_commit: 2014-02-21 15:40:24
+  github: dan-blanchard
 - name: Patrick Snape
   email: patricksnape@gmail.com
   alternate_emails:
@@ -189,6 +190,7 @@
   - Travis E. Oliphant
   num_commits: 21
   first_commit: 2014-03-16 03:35:28
+  github: teoliphant
 - name: Robert T. McGibbon
   email: rmcgibbo@gmail.com
   aliases:
@@ -215,6 +217,7 @@
   email: andres.guzman-ballen@intel.com
   num_commits: 1
   first_commit: 2017-06-24 16:05:23
+  github: AndresGuzman-Ballen
 - name: Riccardo Vianello
   email: riccardo.vianello@gmail.com
   github: rvianello
@@ -250,8 +253,9 @@
   num_commits: 4
   first_commit: 2014-10-19 05:04:43
   github: bjodah
-- name: chapmanb
+- name: Brad Chapman
   email: chapmanb@50mail.com
+  github: chapmanb
   num_commits: 3
   first_commit: 2016-05-06 05:52:29
 - name: Siu Kwan Lam
@@ -279,10 +283,11 @@
   num_commits: 1
   first_commit: 2015-05-18 16:53:44
   github: ESSS
-- name: joe-hartshorn
+- name: Joe Hartshorn
   email: joe.hartshorn@swiftcover.com
   num_commits: 2
   first_commit: 2018-06-29 08:49:46
+  github: j-hartshorn
 - name: Brent Pedersen
   email: bpederse@gmail.com
   num_commits: 6
@@ -292,6 +297,7 @@
   email: melund@gmail.com
   num_commits: 1
   first_commit: 2014-06-25 05:33:12
+  github: melund
 - name: Guillaume Baty
   email: guillaume.baty@wanadoo.fr
   num_commits: 1
@@ -362,10 +368,11 @@
   num_commits: 1
   first_commit: 2017-08-09 16:05:57
   github: ratstache
-- name: Jedrzej Nowak
+- name: Jędrzej Nowak
   email: pigmej@gmail.com
   num_commits: 1
   first_commit: 2014-09-17 19:12:30
+  github: pigmej
 - name: Adam Ehlers Nyholm Thomsen
   email: aen@atp.dk
   num_commits: 2
@@ -426,7 +433,8 @@
   num_commits: 11
   first_commit: 2017-04-28 11:08:14
   github: timsnyder
-- name: dlovell
+- name: Dan Lovell
+  github: dlovell
   email: dlovell@gmail.com
   num_commits: 1
   first_commit: 2014-08-30 11:39:11
@@ -444,14 +452,17 @@
   email: trent@trent.me
   num_commits: 4
   first_commit: 2014-05-19 21:15:57
+  github: tpn
 - name: neok-m4700
   email: neok-m4700@users.noreply.github.com
   num_commits: 8
   first_commit: 2017-06-13 18:05:51
+  github: neok-m4700
 - name: Rolando (Max) Espinoza
   email: me@rmax.io
   num_commits: 3
   first_commit: 2017-05-17 15:55:48
+  github: rmax
 - name: Carsten Haubold
   email: carstenhaubold@googlemail.com
   num_commits: 2
@@ -488,6 +499,7 @@
   email: cjwright4242@gmail.com
   num_commits: 2
   first_commit: 2017-09-26 13:29:42
+  github: cj-wright
 - name: Michael Maltese
   email: mike@mikemaltese.com
   github: michaelmaltese
@@ -568,15 +580,18 @@
   num_commits: 64
   first_commit: 2016-09-26 11:45:54
   github: mbargull
+  alternate_emails:
+  - mbargull@users.noreply.github.com
 - name: Philip R. Kensche
   email: p.kensche@dkfz-heidelberg.de
   num_commits: 2
   first_commit: 2017-05-10 02:17:50
   github: nsoranzo
-- name: Anton
+- name: Anton Malakhov
   email: anton-malakhov@users.noreply.github.com
   num_commits: 1
   first_commit: 2017-11-17 20:16:50
+  github: anton-malakhov
 - name: peter1000
   email: peter.margo@gmx.de
   num_commits: 1
@@ -651,6 +666,7 @@
   email: cruser42@gmail.com
   num_commits: 2
   first_commit: 2016-07-05 14:53:35
+  github: aleksey-orekhov
 - name: Michael C. Grant
   email: mcg@cvxr.com
   num_commits: 16
@@ -737,6 +753,7 @@
   email: developer@marco-rossi.com
   num_commits: 1
   first_commit: 2018-03-09 12:21:30
+  github: maross
 - name: Guilherme Quentel Melo
   email: gqmelo@gmail.com
   num_commits: 4
@@ -771,10 +788,12 @@
   email: bkreider@continuum.io
   num_commits: 1
   first_commit: 2014-12-01 17:28:59
-- name: jlas
+  github: bkreider
+- name: Juan Lasheras
   email: juan.lasheras@gmail.com
   num_commits: 1
   first_commit: 2015-07-06 09:27:47
+  github: jlas
 - name: Richard Hattersley
   email: rhattersley@gmail.com
   num_commits: 1
@@ -814,6 +833,7 @@
   email: li.davidm96@gmail.com
   num_commits: 1
   first_commit: 2014-07-29 14:24:58
+  github: dli
 - name: wikiped
   email: wikiped@yandex.ru
   num_commits: 1
@@ -852,6 +872,7 @@
 - name: csoja
   email: crystal.soja@continuum.io
   num_commits: 2
+  github: csoja
   first_commit: 2018-01-16 14:11:32
 - name: Vlad Frolov
   email: frolvlad@gmail.com
@@ -1014,6 +1035,7 @@
   email: kinow@users.noreply.github.com
   num_commits: 1
   first_commit: 2019-10-08 04:56:12
+  github: kinow
 - name: Alex Ford
   email: a.sewall.ford@gmail.com
   num_commits: 10
@@ -1098,6 +1120,7 @@
   email: oleg.alexandrov@gmail.com
   num_commits: 1
   first_commit: 2020-06-23 12:38:53
+  github: oleg-alexandrov
 - name: John Omotani
   email: john.omotani@ukaea.uk
   num_commits: 1
@@ -1107,19 +1130,26 @@
   email: tom_pollard@hotmail.co.uk
   num_commits: 1
   first_commit: 2020-06-30 10:40:21
+  github: Tom Pollard
 - name: Phil Reinhold
   email: pcreinhold@gmail.com
   num_commits: 1
   first_commit: 2020-08-14 09:38:15
+  github: PhilReinhold
 - name: Cheng H. Lee
   email: chenghlee@users.noreply.github.com
   num_commits: 0
-  first_commit: 2020-06-24 10:55:13
+  first_commit: 2020-06-24 10:55:13g
+  github: chenghlee
+  alternate_emails:
+    - clee@anaconda.com
 - name: Ken Odegard
   email: ken.odegard@gmail.com
   num_commits: 13
   first_commit: 2020-09-08 19:53:41
-  github: njalerikson
+  github: kenodegard
+  alternate_emails:
+    - kodegard@anaconda.com
 - name: Connor Martin
   email: connormartin7@gmail.com
   num_commits: 12
@@ -1135,3 +1165,18 @@
   num_commits: 1
   github: kurtschelfthout
   first_commit: 2020-11-19 10:46:41
+- name: Jannis Leidel
+  email: jannis@leidel.info
+  num_commits: 1
+  github: jezdez
+  first_commit: 2020-11-19 10:46:41
+- name: Christof Kaufmann
+  email: christofkaufmann.dev@gmail.com
+  num_commits: 1
+  github: ChristofKaufmann
+  first_commit: 2020-11-19 10:46:41
+  aliases:
+    - ChristofKaufmann
+- name: pre-commit CI
+  email: 66853113+pre-commit-ci[bot]@users.noreply.github.com
+  github: pre-commit

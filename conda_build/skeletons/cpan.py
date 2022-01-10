@@ -2,7 +2,6 @@
 Tools for converting CPAN packages to conda recipes.
 """
 
-from __future__ import absolute_import, division, print_function
 
 import codecs
 import hashlib
@@ -86,13 +85,13 @@ CPAN_BUILD_SH = """\
 set -o errexit -o pipefail
 
 # If it has Build.PL use that, otherwise use Makefile.PL
-if [ -f Build.PL ]; then
+if [[ -f Build.PL ]]; then
     perl Build.PL
     perl ./Build
     perl ./Build test
     # Make sure this goes in site
     perl ./Build install --installdirs site
-elif [ -f Makefile.PL ]; then
+elif [[ -f Makefile.PL ]]; then
     # Make sure this goes in site
     perl Makefile.PL INSTALLDIRS=site
     make
@@ -226,7 +225,7 @@ def get_build_dependencies_from_src_archive(package_url, sha256, src_cache):
         if need_make:
             result.append("make  # [not win]")
             result.append("m2-make  # [win]")
-    print("INFO :: For {}, we need the following build tools:\n{}".format(os.path.basename(package_url), result))
+    print(f"INFO :: For {os.path.basename(package_url)}, we need the following build tools:\n{result}")
     return result
 
 
@@ -244,7 +243,7 @@ def get_cpan_api_url(url, colons):
             if hasattr(output, "decode"):
                 output = output.decode('utf-8-sig')
             rel_dict = json.loads(output)
-        except IOError:
+        except OSError:
             rel_dict = json.loads(codecs.open(
                 json_path, encoding='utf-8').read())
         except CondaHTTPError:
@@ -323,8 +322,8 @@ def install_perl_get_core_modules(version):
             subdirs = ('osx-64', 'bin', 'perl')
         # Return one of the dist things instead?
         with TemporaryDirectory() as tmpdir:
-            environ.create_env(tmpdir, ['perl={}'.format(version)], env='host', config=config, subdir=subdirs[0])
-            args = ['{}'.format(join(tmpdir, *subdirs[1:])), '-e',
+            environ.create_env(tmpdir, [f'perl={version}'], env='host', config=config, subdir=subdirs[0])
+            args = [f'{join(tmpdir, *subdirs[1:])}', '-e',
                     'use Module::CoreList; print join "\n", Module::CoreList->find_modules(qr/.*/);']
             from subprocess import check_output
             all_core_modules = check_output(args, shell=False).decode('utf-8').replace('\r\n', '\n').split('\n')
@@ -469,7 +468,7 @@ def skeletonize(packages, output_dir=".", version=None,
             if release_data.get('download_url'):
                 d['cpanurl'] = release_data['download_url']
                 d['sha256'], size = get_checksum_and_size(release_data['download_url'])
-                print("Using url %s (%s) for %s." % (d['cpanurl'], size, package))
+                print("Using url {} ({}) for {}.".format(d['cpanurl'], size, package))
                 src_build_depends = get_build_dependencies_from_src_archive(release_data['download_url'],
                                                                             d['sha256'], config.src_cache)
             else:
@@ -546,7 +545,7 @@ def skeletonize(packages, output_dir=".", version=None,
 
         # Write recipe files to a directory
         # TODO def write_recipe
-        print("Writing recipe for %s-%s" % (packagename, d['version']))
+        print("Writing recipe for {}-{}".format(packagename, d['version']))
         with open(join(dir_path, 'meta.yaml'), 'wb') as f:
             f.write(CPAN_META.format(**d).encode('utf-8'))
         with open(join(dir_path, 'build.sh'), 'wb') as f:
@@ -745,8 +744,8 @@ def deps_for_package(package, release_data, output_dir, cache_dir,
                         print(
                             'We have got an expected error with dependency versions')
                         print('Module {}'.format(dep_dict['module']))
-                        print('Pkg_version {}'.format(pkg_version))
-                        print('Dep Version {}'.format(dep_version))
+                        print(f'Pkg_version {pkg_version}')
+                        print(f'Dep Version {dep_version}')
 
                 # If recursive, check if we have a recipe for this dependency
                 if recursive:
@@ -779,7 +778,7 @@ def deps_for_package(package, release_data, output_dir, cache_dir,
         except (CondaError, CondaHTTPError):
             continue
 
-    print('module {} adds {}'.format(package, packages_to_append))
+    print(f'module {package} adds {packages_to_append}')
 
     return deps, packages_to_append
 
@@ -816,30 +815,30 @@ def dist_for_module(cpan_url, cache_dir, core_modules, module):
 def release_module_dict_direct(cpan_url, cache_dir, module):
 
     if 'Dist-Zilla-Plugin-Git' in module:
-        print("debug {}".format(module))
+        print(f"debug {module}")
     elif 'Dist::Zilla::Plugin::Git' in module:
-        print("debug {}".format(module))
+        print(f"debug {module}")
     elif 'Time::Zone' in module:
-        print("debug {}".format(module))
+        print(f"debug {module}")
 
     try:
-        url_module = '{0}/module/{1}'.format(cpan_url, module)
-        print('INFO :: url_module {}'.format(url_module))
+        url_module = f'{cpan_url}/module/{module}'
+        print(f'INFO :: url_module {url_module}')
         rel_dict = get_cpan_api_url(url_module, colons=True)
     except RuntimeError:
         rel_dict = None
     except CondaHTTPError:
         rel_dict = None
     if not rel_dict:
-        print("WARNING :: Did not find rel_dict for module {}".format(module))
+        print(f"WARNING :: Did not find rel_dict for module {module}")
     distribution = module.replace('::', '-')
     if not rel_dict or 'dependency' not in rel_dict:
         if rel_dict and 'distribution' in rel_dict:
             distribution = rel_dict['distribution']
         else:
-            print("WARNING :: 'distribution' was not in {}'s module info, making it up".format(module))
+            print(f"WARNING :: 'distribution' was not in {module}'s module info, making it up")
         try:
-            url_release = '{0}/release/{1}'.format(cpan_url, distribution)
+            url_release = f'{cpan_url}/release/{distribution}'
             rel_dict2 = get_cpan_api_url(url_release, colons=False)
             rel_dict = rel_dict2
         except RuntimeError:
@@ -847,7 +846,7 @@ def release_module_dict_direct(cpan_url, cache_dir, module):
         except CondaHTTPError:
             rel_dict = None
     else:
-        print("INFO :: OK, found 'dependency' in module {}".format(module))
+        print(f"INFO :: OK, found 'dependency' in module {module}")
     if not rel_dict or 'dependency' not in rel_dict:
         print("WARNING :: No dependencies found for module {} in distribution {}\n"
               "WARNING :: Please check {} and {}".format(module, distribution, url_module, url_release))
@@ -862,7 +861,7 @@ def release_module_dict(cpan_url, cache_dir, module):
         # In this case, the module may be a submodule of another dist, let's try something else.
         # An example of this is Dist::Zilla::Plugin::Git::Check.
         pickled = get_pickle_file_path(cache_dir, module + '.dl_url')
-        url = '{0}/download_url/{1}'.format(cpan_url, module)
+        url = f'{cpan_url}/download_url/{module}'
         try:
             os.makedirs(os.path.dirname(pickled))
         except:
@@ -875,11 +874,11 @@ def release_module_dict(cpan_url, cache_dir, module):
         dl_url_dict = json.loads(output)
         if dl_url_dict['release'].endswith(dl_url_dict['version']):
             # Easy case.
-            print("Up to date: {}".format(module))
+            print(f"Up to date: {module}")
             dist = dl_url_dict['release'].replace('-' + dl_url_dict['version'], '')
         else:
             # Difficult case.
-            print("Not up to date: {}".format(module))
+            print(f"Not up to date: {module}")
             # cpan -D Time::Zone
             # Time::Zone
             # -------------------------------------------------------------------------
@@ -910,7 +909,7 @@ def core_module_dict_old(cpan_url, module):
         print('debug')
     try:
         mod_dict = get_cpan_api_url(
-            '{0}/module/{1}'.format(cpan_url, module), colons=True)
+            f'{cpan_url}/module/{module}', colons=True)
         # If there was an error, report it
     except CondaHTTPError as e:
         sys.exit(('Error: Could not find module or distribution named'
@@ -931,14 +930,14 @@ def core_module_dict(core_modules, module):
 def metacpan_api_is_core_version(cpan_url, module):
     if 'FindBin' in module:
         print('debug')
-    url = '{0}/release/{1}'.format(cpan_url, module)
+    url = f'{cpan_url}/release/{module}'
     url = url.replace("::", "-")
     req = requests.get(url)
 
     if req.status_code == 200:
         return False
     else:
-        url = '{0}/module/{1}'.format(cpan_url, module)
+        url = f'{cpan_url}/module/{module}'
         req = requests.get(url)
         if req.status_code == 200:
             return True
@@ -972,7 +971,7 @@ def get_release_info(cpan_url, cache_dir, core_modules, package, version):
     # specific version
     try:
         rel_dict = get_cpan_api_url(
-            '{0}/release/{1}'.format(cpan_url, package), colons=False)
+            f'{cpan_url}/release/{package}', colons=False)
         rel_dict['version'] = str(rel_dict['version']).lstrip('v')
     except CondaHTTPError:
         core_version = metacpan_api_is_core_version(cpan_url, package)
@@ -1003,16 +1002,16 @@ def get_release_info(cpan_url, cache_dir, core_modules, package, version):
         except Exception as e:
             print('We have some strange version mismatches. Please investigate.')
             print(e)
-            print('Package {}'.format(package))
-            print('Version {}'.format(version))
+            print(f'Package {package}')
+            print(f'Version {version}')
             print('Pkg Version {}'.format(rel_dict['version']))
-            print('Loose Version {}'.format(loose_str))
+            print(f'Loose Version {loose_str}')
 
     # TODO  - check for major/minor version mismatches
     # Allow for minor
     if version_mismatch:
-        print('WARNING :: Version mismatch in {}'.format(package))
-        print('WARNING :: Version: {}, RelVersion: {}'.format(version_str, rel_version))
+        print(f'WARNING :: Version mismatch in {package}')
+        print(f'WARNING :: Version: {version_str}, RelVersion: {rel_version}')
 
     return rel_dict
 

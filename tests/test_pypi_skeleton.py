@@ -60,10 +60,13 @@ def test_print_dict():
                     ("script", "{{ PYTHON }} -m pip install . -vv"),
                 ]
             ),
-        }
+    }
 
     assert (
-        _print_dict(recipe_metadata, order=["package", "source", "build", "about"])
+        _print_dict(
+            recipe_metadata,
+            order=["package", "source", "build", "about"],
+        )
         == """package:
   name: "{{ name|lower }}"
   version: "{{ version }}"

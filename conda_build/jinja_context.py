@@ -1,5 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
 from functools import partial
 import json
 import os
@@ -60,8 +58,8 @@ class UndefinedNeverFail(jinja2.Undefined):
 
     # Unlike the methods above, Python requires that these
     # few methods must always return the correct type
-    __str__ = __repr__ = lambda self: self._return_value(str())
-    __unicode__ = lambda self: self._return_value(u'')
+    __str__ = __repr__ = lambda self: self._return_value('')
+    __unicode__ = lambda self: self._return_value('')
     __int__ = lambda self: self._return_value(0)
     __float__ = lambda self: self._return_value(0.0)
     __nonzero__ = lambda self: self._return_value(False)
@@ -186,11 +184,11 @@ def load_file_regex(config, load_file, regex_pattern, from_recipe_dir=False,
             raise RuntimeError(message)
 
     if os.path.isfile(load_file):
-        with open(load_file, 'r') as lfile:
+        with open(load_file) as lfile:
             match = re.search(regex_pattern, lfile.read())
     else:
         if not permit_undefined_jinja:
-            raise TypeError('{} is not a file that can be read'.format(load_file))
+            raise TypeError(f'{load_file} is not a file that can be read')
 
     # Reset the working directory
     if cd_to_work:
@@ -248,7 +246,7 @@ def pin_compatible(m, package_name, lower_bound=None, upper_bound=None, min_pin=
                     if upper_bound:
                         if min_pin or lower_bound:
                             compatibility = ">=" + str(version) + ","
-                        compatibility += '<{upper_bound}'.format(upper_bound=upper_bound)
+                        compatibility += f'<{upper_bound}'
                     else:
                         compatibility = apply_pin_expressions(version, min_pin, max_pin)
 
@@ -291,7 +289,7 @@ def pin_subpackage_against_outputs(metadata, matching_package_keys, outputs, min
                     pin = " ".join([sp_m.name(), sp_m.version(),
                                     sp_m.build_id() if not skip_build_id else str(sp_m.build_number())])
                 else:
-                    pin = "{0} {1}".format(sp_m.name(),
+                    pin = "{} {}".format(sp_m.name(),
                                         apply_pin_expressions(sp_m.version(), min_pin,
                                                                 max_pin))
         else:
@@ -361,7 +359,7 @@ def compiler(language, config, permit_undefined_jinja=False):
     version = None
     if config.variant:
         target_platform = config.variant.get('target_platform', config.subdir)
-        language_compiler_key = '{}_compiler'.format(language)
+        language_compiler_key = f'{language}_compiler'
         # fall back to native if language-compiler is not explicitly set in variant
         compiler = config.variant.get(language_compiler_key, compiler)
         version = config.variant.get(language_compiler_key + '_version')

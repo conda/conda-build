@@ -2,7 +2,6 @@
 bdist_conda
 
 """
-from __future__ import print_function, division, unicode_literals
 
 import sys
 import time
@@ -196,12 +195,7 @@ class bdist_conda(install):
                 c = configparser.ConfigParser()
                 entry_points = {}
                 try:
-                    import six
-
-                    if six.PY2:
-                        c.readfp(StringIO(newstr))
-                    else:
-                        c.read_file(StringIO(newstr))
+                    c.read_file(StringIO(newstr))
                 except Exception as err:
                     # This seems to be the best error here
                     raise DistutilsGetoptError("ERROR: entry-points not understood: " +
@@ -209,7 +203,7 @@ class bdist_conda(install):
                 else:
                     for section in c.sections():
                         if section in ['console_scripts', 'gui_scripts']:
-                            value = ['%s=%s' % (option, c.get(section, option))
+                            value = [f'{option}={c.get(section, option)}'
                                         for option in c.options(section)]
                             entry_points[section] = value
                         else:
@@ -291,11 +285,11 @@ class bdist_conda(install):
 # making a metaclass just to make this work).
 
 bdist_conda.user_options.extend([
-    (str('buildnum='), None, str('''The build number of
+    ('buildnum=', None, '''The build number of
     the conda package. Defaults to 0, or the conda_buildnum specified in the
     setup() function. The command line flag overrides the option to
-    setup().''')),
-    (str('anaconda-upload'), None, ("""Upload the finished package to anaconda.org""")),
+    setup().'''),
+    ('anaconda-upload', None, ("""Upload the finished package to anaconda.org""")),
 ])
 
-bdist_conda.boolean_options.extend([str('anaconda-upload')])
+bdist_conda.boolean_options.extend(['anaconda-upload'])

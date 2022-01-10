@@ -274,7 +274,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False):
         # Download rockspec
         o = subprocess.call(["luarocks", "download", package, "--rockspec"])
         if o != 0:
-            raise Exception("Could not download rockspec for {}".format(package))
+            raise Exception(f"Could not download rockspec for {package}")
 
         # Find the downloaded rockspec
         fs = glob(package + "*.rockspec")
@@ -371,7 +371,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False):
         d = package_dicts[package]
         name = d['packagename']
         os.makedirs(os.path.join(output_dir, name))
-        print("Writing recipe for %s to %s" % (package.lower(), os.path.join(output_dir, name)))
+        print(f"Writing recipe for {package.lower()} to {os.path.join(output_dir, name)}")
         with open(os.path.join(output_dir, name, 'meta.yaml'), 'w') as f:
             f.write(LUAROCKS_META.format(**d))
         with open(os.path.join(output_dir, name, 'build.sh'), 'w') as f:
