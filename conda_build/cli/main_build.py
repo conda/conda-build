@@ -358,8 +358,7 @@ different sets of packages."""
                    help=("Add additional info to about.json. "
                          "This will attempt to get the git commit IDs, "
                          "git org/repo for the given recipe. If unable, "
-                         "will silently continue."),
-    )
+                         "will silently continue."), )
     p.add_argument('--suppress-variables',
                    action='store_true',
                    help=("Do not display value of environment variables specified in build.script_env."), )

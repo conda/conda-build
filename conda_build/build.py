@@ -1115,7 +1115,7 @@ def get_git_info(m):
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-        )
+            )
     out, _ = p.communicate()
     branch = out.decode("utf-8")[:-1]
     if not branch:
@@ -1127,7 +1127,7 @@ def get_git_info(m):
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-        )
+            )
     out, _ = p.communicate()
     remote_commit = out.decode("utf-8")[:-1]
 
@@ -1137,14 +1137,14 @@ def get_git_info(m):
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-        )
+            )
     out, _ = p.communicate()
     origin_url = out.decode("utf-8")[:-1]
 
     git_info = {
             "origin_url": origin_url,
             "commit": remote_commit
-        }
+            }
 
     return git_info
 
@@ -1230,7 +1230,7 @@ def write_about_json(m):
                 git_info = get_git_info(m)
                 extra.update(git_info)
             except Exception as e:
-                print("Unable to get git info. Skipping adding extra_info to about.json")
+                print(f"Unable to get git info. Skipping adding extra_info to about.json: {e}")
                 pass
         env = environ.Environment(root_dir)
         d['root_pkgs'] = env.package_specs()
