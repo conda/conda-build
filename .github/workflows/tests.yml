@@ -27,7 +27,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, windows-latest]
         python-version: ['3.7', '3.8']
         conda-version: [release]
         test-type: [serial, parallel]
@@ -37,6 +37,14 @@ jobs:
             conda-version: canary
             test-type: serial
           - os: ubuntu-latest
+            python-version: '3.9'
+            conda-version: canary
+            test-type: parallel
+          - os: windows-latest
+            python-version: '3.9'
+            conda-version: canary
+            test-type: serial
+          - os: windows-latest
             python-version: '3.9'
             conda-version: canary
             test-type: parallel
