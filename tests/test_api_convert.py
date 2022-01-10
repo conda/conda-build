@@ -29,7 +29,7 @@ def assert_package_paths_matches_files(package_path):
     """Ensure that info/paths.json matches info/files"""
     with tarfile.open(package_path) as t:
         files_content = t.extractfile('info/files').read().decode('utf-8')
-        files_set = set(line for line in files_content.splitlines() if line)
+        files_set = {line for line in files_content.splitlines() if line}
         paths_content = json.loads(t.extractfile('info/paths.json').read().decode('utf-8'))
 
     for path_entry in paths_content['paths']:
@@ -53,7 +53,7 @@ def test_show_imports(testing_workdir, base_platform, package, capfd):
 
     f = 'http://repo.anaconda.com/pkgs/free/{}-64/{}-py36_0.tar.bz2'.format(base_platform,
                                                                             package_name)
-    fn = "{}-py36_0.tar.bz2".format(package_name)
+    fn = f"{package_name}-py36_0.tar.bz2"
     download(f, fn)
 
     for platform in platforms:
@@ -75,7 +75,7 @@ def test_no_imports_found(testing_workdir, base_platform, package, capfd):
 
     f = 'http://repo.anaconda.com/pkgs/free/{}-64/{}-py36_0.tar.bz2'.format(base_platform,
                                                                             package_name)
-    fn = "{}-py36_0.tar.bz2".format(package_name)
+    fn = f"{package_name}-py36_0.tar.bz2"
     download(f, fn)
 
     with pytest.raises(SystemExit):
@@ -92,7 +92,7 @@ def test_no_platform(testing_workdir, base_platform, package):
 
     f = 'http://repo.anaconda.com/pkgs/free/{}-64/{}-py36_0.tar.bz2'.format(base_platform,
                                                                             package_name)
-    fn = "{}-py36_0.tar.bz2".format(package_name)
+    fn = f"{package_name}-py36_0.tar.bz2"
     download(f, fn)
 
     with pytest.raises(SystemExit) as e:
@@ -115,7 +115,7 @@ def test_c_extension_error(testing_workdir, base_platform, package):
 
     f = 'http://repo.anaconda.com/pkgs/free/{}-64/{}-py36_0.tar.bz2'.format(base_platform,
                                                                             package_name)
-    fn = "{}-py36_0.tar.bz2".format(package_name)
+    fn = f"{package_name}-py36_0.tar.bz2"
     download(f, fn)
 
     for platform in platforms:
@@ -140,7 +140,7 @@ def test_c_extension_conversion(testing_workdir, base_platform, package):
 
     f = 'http://repo.anaconda.com/pkgs/free/{}-64/{}-py36_0.tar.bz2'.format(base_platform,
                                                                             package_name)
-    fn = "{}-py36_0.tar.bz2".format(package_name)
+    fn = f"{package_name}-py36_0.tar.bz2"
     download(f, fn)
 
     for platform in platforms:
@@ -154,10 +154,10 @@ def test_c_extension_conversion(testing_workdir, base_platform, package):
                                      ('py-1.4.32', 'py/__init__.py')])
 def test_convert_platform_to_others(testing_workdir, base_platform, package):
     package_name, example_file = package
-    subdir = '{}-64'.format(base_platform)
+    subdir = f'{base_platform}-64'
     f = 'http://repo.anaconda.com/pkgs/free/{}/{}-py27_0.tar.bz2'.format(subdir,
                                                                          package_name)
-    fn = "{}-py27_0.tar.bz2".format(package_name)
+    fn = f"{package_name}-py27_0.tar.bz2"
     download(f, fn)
     expected_paths_json = package_has_file(fn, 'info/paths.json')
     api.convert(fn, platforms='all', quiet=False, verbose=False)
@@ -166,7 +166,7 @@ def test_convert_platform_to_others(testing_workdir, base_platform, package):
             python_folder = 'lib/python2.7' if not platform.startswith('win') else 'Lib'
             package = os.path.join(platform, fn)
             assert package_has_file(package,
-                                    '{}/site-packages/{}'.format(python_folder, example_file))
+                                    f'{python_folder}/site-packages/{example_file}')
 
             if expected_paths_json:
                 assert package_has_file(package, 'info/paths.json')
@@ -226,10 +226,10 @@ def test_convert_from_unix_to_win_creates_entry_points(testing_config):
 @pytest.mark.parametrize('package', [('anaconda-4.4.0', 'version.txt')])
 def test_convert_dependencies(testing_workdir, base_platform, package):
     package_name, example_file = package
-    subdir = '{}-64'.format(base_platform)
+    subdir = f'{base_platform}-64'
     f = 'http://repo.anaconda.com/pkgs/free/{}/{}-np112py36_0.tar.bz2'.format(subdir,
                                                                               package_name)
-    fn = "{}-np112py36_0.tar.bz2".format(package_name)
+    fn = f"{package_name}-np112py36_0.tar.bz2"
     download(f, fn)
 
     dependencies = ['numpy 1.7.1 py36_0', 'cryptography 1.7.0 py36_0']
@@ -240,7 +240,7 @@ def test_convert_dependencies(testing_workdir, base_platform, package):
             python_folder = 'lib/python3.6' if not platform.startswith('win') else 'Lib'
             package = os.path.join(platform, fn)
             assert package_has_file(package,
-                                    '{}/{}'.format(python_folder, example_file))
+                                    f'{python_folder}/{example_file}')
 
             with tarfile.open(package) as t:
                 info = json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
@@ -259,10 +259,10 @@ def test_convert_dependencies(testing_workdir, base_platform, package):
 @pytest.mark.parametrize('package', [('anaconda-4.4.0', 'version.txt')])
 def test_convert_no_dependencies(testing_workdir, base_platform, package):
     package_name, example_file = package
-    subdir = '{}-64'.format(base_platform)
+    subdir = f'{base_platform}-64'
     f = 'http://repo.anaconda.com/pkgs/free/{}/{}-np112py36_0.tar.bz2'.format(subdir,
                                                                               package_name)
-    fn = "{}-np112py36_0.tar.bz2".format(package_name)
+    fn = f"{package_name}-np112py36_0.tar.bz2"
     download(f, fn)
 
     expected_paths_json = package_has_file(fn, 'info/paths.json')
@@ -272,7 +272,7 @@ def test_convert_no_dependencies(testing_workdir, base_platform, package):
             python_folder = 'lib/python3.6' if not platform.startswith('win') else 'Lib'
             package = os.path.join(platform, fn)
             assert package_has_file(package,
-                                    '{}/{}'.format(python_folder, example_file))
+                                    f'{python_folder}/{example_file}')
 
             with tarfile.open(package) as t:
                 info = json.loads(t.extractfile('info/index.json').read().decode('utf-8'))
@@ -293,7 +293,7 @@ def test_skip_conversion(testing_workdir, base_platform, package, capfd):
 
     f = 'http://repo.anaconda.com/pkgs/free/{}-64/{}-np112py36_0.tar.bz2'.format(base_platform,
                                                                             package_name)
-    fn = "{}-np112py36_0.tar.bz2".format(package_name)
+    fn = f"{package_name}-np112py36_0.tar.bz2"
     download(f, fn)
 
     api.convert(fn, platforms=source_plat_arch, dependencies=None, quiet=False, verbose=False)
@@ -323,10 +323,10 @@ def test_renaming_executables(testing_workdir, base_platform, package):
     the same.
     """
     package_name, example_file = package
-    subdir = '{}-64'.format(base_platform)
+    subdir = f'{base_platform}-64'
     f = 'http://repo.anaconda.com/pkgs/free/{}/{}-py27_0.tar.bz2'.format(subdir,
                                                                          package_name)
-    fn = "{}-py27_0.tar.bz2".format(package_name)
+    fn = f"{package_name}-py27_0.tar.bz2"
     download(f, fn)
     expected_paths_json = package_has_file(fn, 'info/paths.json')
     api.convert(fn, platforms='all', quiet=False, verbose=False)

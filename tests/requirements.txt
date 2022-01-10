@@ -2,13 +2,15 @@
 # run as 'conda install --file tests/requirements.txt -c defaults'
 anaconda-client
 bs4
+chardet
+conda
 conda-package-handling
 filelock
 flaky
 glob2
 jinja2
-mock
 pkginfo
+psutil
 pytest
 pytest-cov
 pytest-mock

@@ -5,13 +5,12 @@ import pytest
 
 from conda_build.source import (_ensure_unix_line_endings, _ensure_win_line_endings,
                                 _guess_patch_strip_level, apply_patch)
-from conda_build.utils import on_win
 
 
 def test_patch_strip_level(testing_workdir, monkeypatch):
-    patchfiles = set(('some/common/prefix/one.txt',
+    patchfiles = {'some/common/prefix/one.txt',
                       'some/common/prefix/two.txt',
-                      'some/common/prefix/three.txt'))
+                      'some/common/prefix/three.txt'}
     folders = ('some', 'common', 'prefix')
     files = ('one.txt', 'two.txt', 'three.txt')
     os.makedirs(os.path.join(*folders))
@@ -63,7 +62,7 @@ def test_patch(patch_files, testing_config):
     assert not os.path.exists('file-deletion.txt')
     assert os.path.exists('file-creation.txt')
     assert os.path.exists('file-modification.txt')
-    with open('file-modification.txt', 'r') as modified:
+    with open('file-modification.txt') as modified:
         lines = modified.readlines()
     assert lines[0] == '43770\n'
 
@@ -85,7 +84,7 @@ def test_patch_unix_source_win_patch(patch_files, testing_config):
     _ensure_unix_line_endings('file-modification.txt')
     _ensure_win_line_endings(patch_files)
     apply_patch('.', patch_files, testing_config)
-    with open('file-modification.txt', 'r') as modified:
+    with open('file-modification.txt') as modified:
         lines = modified.readlines()
     assert lines[0] == '43770\n'
 
@@ -94,6 +93,6 @@ def test_patch_win_source_unix_patch(patch_files, testing_config):
     _ensure_win_line_endings('file-modification.txt')
     _ensure_unix_line_endings(patch_files)
     apply_patch('.', patch_files, testing_config)
-    with open('file-modification.txt', 'r') as modified:
+    with open('file-modification.txt') as modified:
         lines = modified.readlines()
     assert lines[0] == '43770\n'

@@ -49,7 +49,7 @@ def ensure_binary(file):
                 return []
             return lief.parse(file)
         except:
-            print('WARNING: liefldd: failed to ensure_binary({})'.format(file))
+            print(f'WARNING: liefldd: failed to ensure_binary({file})')
     return None
 
 
@@ -247,7 +247,7 @@ def _inspect_linkages_this(filename, sysroot='', arch='native'):
         if json_data:
             return filename, json_data['imported_libraries'], json_data['imported_libraries']
     except:
-        print('WARNING: liefldd: failed _inspect_linkages_this({})'.format(filename))
+        print(f'WARNING: liefldd: failed _inspect_linkages_this({filename})')
 
     return None, [], []
 
@@ -503,7 +503,7 @@ def get_linkages(filename, resolve_filenames=True, recurse=True,
             if not have_lief:
                 return result_pyldd
         else:
-            print("WARNING: failed to get_linkages, codefile_type('{}')={}".format(filename, codefile_type(filename)))
+            print(f"WARNING: failed to get_linkages, codefile_type('{filename}')={codefile_type(filename)}")
             return {}
     result_lief = inspect_linkages_lief(filename, resolve_filenames=resolve_filenames, recurse=recurse,
                                         sysroot=sysroot, envroot=envroot, arch=arch)
@@ -561,7 +561,7 @@ def get_static_lib_exports(file):
         try:
             size = int(size)
         except:
-            print('ERROR: {} has non-integral size of {}'.format(name, size))
+            print(f'ERROR: {name} has non-integral size of {size}')
             return index, '', 0, 0, 'INVALID'
         name_len = 0  # File data in BSD format archives begin with a name of this length.
         if name.startswith(b'#1/'):
@@ -587,11 +587,11 @@ def get_static_lib_exports(file):
     results = []
     signature, len_signature = _get_archive_signature(file)
     if signature != b'!<arch>\n':
-        print("ERROR: {} is not an archive".format(file))
+        print(f"ERROR: {file} is not an archive")
         return results
     with open(file, 'rb') as f:
         if debug_static_archives:
-            print("Archive file {}".format(file))
+            print(f"Archive file {file}")
         index = 0
         content = f.read()
         index += len_signature
@@ -601,7 +601,7 @@ def get_static_lib_exports(file):
         if index & 1:
             index += 1
         if debug_static_archives:
-            print("ar_hdr index = {}".format(hex(index)))
+            print(f"ar_hdr index = {hex(index)}")
         index, name, name_len, size, typ = _parse_ar_hdr(content, index)
         if typ == 'GNU_SYMBOLS':
             # Reference:
@@ -620,7 +620,7 @@ def get_static_lib_exports(file):
                 obj_starts.add(index2)
                 obj_ends.add(offsets[i])
                 if debug_static_archives:
-                    print("symname {}, offset {}, name {}, elf? {}".format(syms[i], offsets[i], name, content[index2:index2 + 4]))
+                    print(f"symname {syms[i]}, offset {offsets[i]}, name {name}, elf? {content[index2:index2 + 4]}")
         elif name.startswith(b'__.SYMDEF'):
             # Reference:
             # http://www.manpagez.com/man/5/ranlib/
@@ -663,7 +663,7 @@ def get_static_lib_exports(file):
                 sym = string_table[strx:strx + string_table[strx:].find('\x00')]
                 syms.append(sym)
                 if debug_static_archives > 1:
-                    print("{} :: strx={}, off={}".format(syms[i], hex(strx), hex(off)))
+                    print(f"{syms[i]} :: strx={hex(strx)}, off={hex(off)}")
                 # This is probably a different structure altogether! Something symobol-y not file-y.
                 off2, name, name_len, size, typ = _parse_ar_hdr(content, off)
                 obj_starts.add(off2)
@@ -672,9 +672,9 @@ def get_static_lib_exports(file):
         obj_starts = sorted(list(obj_starts))
         obj_ends = sorted(list(obj_ends))[1:]
         if debug_static_archives > 1:
-            print('obj_starts: {}'.format(" ".join('0x{:05x}'.format(o) for o in obj_starts)))
+            print('obj_starts: {}'.format(" ".join(f'0x{o:05x}' for o in obj_starts)))
         if debug_static_archives > 1:
-            print('  obj_ends: {}'.format(" ".join('0x{:05x}'.format(o) for o in obj_ends)))
+            print('  obj_ends: {}'.format(" ".join(f'0x{o:05x}' for o in obj_ends)))
         for obj_start, obj_end in zip(obj_starts, obj_ends):
             IMAGE_FILE_MACHINE_I386 = 0x014c
             IMAGE_FILE_MACHINE_AMD64 = 0x8664
@@ -739,7 +739,7 @@ def get_static_lib_exports_nm(filename):
     except OSError:
         # nm may not be available or have the correct permissions, this
         # should not cause a failure, see gh-3287
-        print('WARNING: nm: failed to get_exports({})'.format(filename))
+        print(f'WARNING: nm: failed to get_exports({filename})')
         results = None
     return results
 
@@ -794,7 +794,7 @@ def get_static_lib_exports_dumpbin(filename):
         except OSError:
             # nm may not be available or have the correct permissions, this
             # should not cause a failure, see gh-3287
-            print('WARNING: nm: failed to get_exports({})'.format(filename))
+            print(f'WARNING: nm: failed to get_exports({filename})')
             exports = None
     exports.sort()
     return exports
@@ -808,7 +808,7 @@ def get_static_lib_exports_externally(filename):
     if res_dumpbin is None:
         return res_dumpbin
     if res_nm != res_dumpbin:
-        print("ERROR :: res_nm != res_dumpbin\n{}\n != \n{}\n".format(res_nm, res_dumpbin))
+        print(f"ERROR :: res_nm != res_dumpbin\n{res_nm}\n != \n{res_dumpbin}\n")
     return res_nm
 
 
@@ -836,7 +836,7 @@ def get_exports(filename, arch='native', enable_static=False):
                 try:
                     exports2, flags2, exports2_all, flags2_all = get_static_lib_exports(filename)
                 except:
-                    print("WARNING :: Failed to get_static_lib_exports({})".format(filename))
+                    print(f"WARNING :: Failed to get_static_lib_exports({filename})")
                     exports2 = []
             result = exports2
             if debug_static_archives:
@@ -845,7 +845,7 @@ def get_exports(filename, arch='native', enable_static=False):
                     diff2 = set(exports2).difference(set(exports))
                     error_count = len(diff1) + len(diff2)
                     if debug_static_archives:
-                        print("errors: {} (-{}, +{})".format(error_count, len(diff1), len(diff2)))
+                        print(f"errors: {error_count} (-{len(diff1)}, +{len(diff2)})")
                     if debug_static_archives:
                         print("WARNING :: Disagreement regarding static lib exports in {} between nm (nsyms={}) and lielfldd (nsyms={}):"
                               .format(filename, len(exports), len(exports2)))
@@ -872,7 +872,7 @@ def get_relocations(filename, arch='native'):
                         res.append(r.symbol.name)
             return res
     except:
-        print('WARNING: liefldd: failed get_relocations({})'.format(filename))
+        print(f'WARNING: liefldd: failed get_relocations({filename})')
 
     return []
 
@@ -911,7 +911,7 @@ def get_symbols(file, defined=True, undefined=True, notexported=False, arch='nat
             else:
                 s_name = '%s' % s.name
                 if s.exported and s.imported:
-                    print("Weird, symbol {} is both imported and exported".format(s.name))
+                    print(f"Weird, symbol {s.name} is both imported and exported")
                 if s.exported:
                     is_undefined = True
                     is_notexported = False
@@ -931,7 +931,7 @@ def get_symbols(file, defined=True, undefined=True, notexported=False, arch='nat
     return res
 
 
-class memoized_by_arg0_filehash(object):
+class memoized_by_arg0_filehash:
     """Decorator. Caches a function's return value each time it is called.
     If called later with the same arguments, the cached value is returned
     (not reevaluated).

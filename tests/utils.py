@@ -33,7 +33,7 @@ def is_valid_dir(parent_dir, dirname):
 
 def add_mangling(filename):
     if PY3:
-        filename = os.path.splitext(filename)[0] + '.cpython-{0}{1}.py'.format(
+        filename = os.path.splitext(filename)[0] + '.cpython-{}{}.py'.format(
             sys.version_info.major, sys.version_info.minor)
         filename = os.path.join(os.path.dirname(filename), '__pycache__',
                                 os.path.basename(filename))

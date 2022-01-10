@@ -29,5 +29,5 @@ the verb: "Choose an option from the menu and press Enter."
 Format
 ======
 See the :doc:`tutorial template <tutorial-template>`
-for the format. Provide descriptive task and subtask titles and 
+for the format. Provide descriptive task and subtask titles and
 do not number headings.

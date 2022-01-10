@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 import json
 from logging import getLogger
 import os
@@ -10,7 +7,7 @@ import shutil
 import tarfile
 
 import pytest
-import mock
+from unittest import mock
 import conda_package_handling.api
 
 from conda_build import api

@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, division, print_function, unicode_literals
-
 from functools import partial
 import os
 from os import lstat
@@ -34,6 +31,7 @@ conda_45 = parse_version(CONDA_VERSION) >= parse_version("4.5.0a0")
 conda_46 = parse_version(CONDA_VERSION) >= parse_version("4.6.0a0")
 conda_47 = parse_version(CONDA_VERSION) >= parse_version("4.7.0a0")
 conda_48 = parse_version(CONDA_VERSION) >= parse_version("4.8.0a0")
+conda_411 = parse_version(CONDA_VERSION) >= parse_version("4.11.0a0")
 
 if conda_44:
     from conda.exports import display_actions, execute_actions, execute_plan, install_actions
@@ -49,6 +47,12 @@ try:
 except ImportError:
     from conda.toposort import _toposort
 _toposort = _toposort
+
+if conda_411:
+    from conda.auxlib.packaging import _get_version_from_git_tag
+else:
+    from conda._vendor.auxlib.packaging import _get_version_from_git_tag
+get_version_from_git_tag = _get_version_from_git_tag
 
 from conda.exports import TmpDownload, download, handle_proxy_407  # NOQA
 from conda.exports import untracked, walk_prefix  # NOQA
@@ -139,7 +143,7 @@ except:
 get_conda_channel = Channel.from_value
 
 # disallow softlinks.  This avoids a lot of dumb issues, at the potential cost of disk space.
-os.environ[str('CONDA_ALLOW_SOFTLINKS')] = str('false')
+os.environ['CONDA_ALLOW_SOFTLINKS'] = 'false'
 reset_context()
 
 get_local_urls = lambda: list(get_conda_build_local_url()) or []
@@ -154,7 +158,7 @@ PaddingError, UnsatisfiableError = PaddingError, UnsatisfiableError
 # work-around for python bug on Windows prior to python 3.2
 # https://bugs.python.org/issue10027
 # Adapted from the ntfsutils package, Copyright (c) 2012, the Mozilla Foundation
-class CrossPlatformStLink(object):
+class CrossPlatformStLink:
     _st_nlink = None
 
     def __call__(self, path):

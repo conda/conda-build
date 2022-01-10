@@ -45,27 +45,28 @@ from tests import utils
 
 from .utils import is_valid_dir, metadata_dir, fail_dir, add_mangling
 
-# define a few commonly used recipes - use os.path.join(metadata_dir, recipe) elsewhere
-empty_sections = os.path.join(metadata_dir, "empty_sections")
-
 # For Python 2, backport backslashreplace error handler for decodes.
 import codecs
 codecs.register_error(
     'backslashreplace_',
     lambda ex: (
-        u''.join(
+        ''.join(
             (
-                u'\\x{:x}'
+                '\\x{:x}'
                 if c < 0x100
-                else u'\\u{:04x}'
+                else '\\u{:04x}'
                 if c < 0x10000
-                else u'\\U{:08x}'
+                else '\\U{:08x}'
             ).format(c)
             for c in map(ord, ex.object[ex.start : ex.end])
         ),
         ex.end,
     ),
 )
+
+
+# define a few commonly used recipes - use os.path.join(metadata_dir, recipe) elsewhere
+empty_sections = os.path.join(metadata_dir, "empty_sections")
 
 
 def represent_ordereddict(dumper, data):
@@ -77,13 +78,13 @@ def represent_ordereddict(dumper, data):
 
         value.append((node_key, node_value))
 
-    return yaml.nodes.MappingNode(u'tag:yaml.org,2002:map', value)
+    return yaml.nodes.MappingNode('tag:yaml.org,2002:map', value)
 
 
 yaml.add_representer(OrderedDict, represent_ordereddict)
 
 
-class AnacondaClientArgs(object):
+class AnacondaClientArgs:
     def __init__(self, specs, token=None, site=None, log_level=logging.INFO, force=False):
         from binstar_client.utils import parse_specs
         self.specs = [parse_specs(specs)]
@@ -124,6 +125,38 @@ def test_recipe_builds(recipe, testing_config, testing_workdir, monkeypatch):
     monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
     if 'unicode_all_over' in recipe and sys.version_info[0] == 2:
         pytest.skip('unicode_all_over does not work on Python 2')
+    api.build(recipe, config=testing_config)
+
+
+@pytest.mark.serial
+@pytest.mark.skipif("CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,
+                    reason="This test does not run on Github Actions yet. We will need to adjust "
+                           "where to look for the pkgs. The github action for setup-miniconda sets "
+                           "pkg_dirs to conda_pkgs_dir.")
+# Regardless of the reason for skipping, we should definitely find a better way for tests to look for the packages
+# Rather than assuming they will be at $ROOT/pkgs since that can change and we don't care where they are in terms of the
+# tests.
+def test_ignore_prefix_files(testing_config, monkeypatch):
+    recipe = os.path.join(metadata_dir, "_ignore_prefix_files")
+    testing_config.activate = True
+    monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
+    monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
+    api.build(recipe, config=testing_config)
+
+
+@pytest.mark.serial
+@pytest.mark.skipif("CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,
+                    reason="This test does not run on Github Actions yet. We will need to adjust "
+                           "where to look for the pkgs. The github action for setup-miniconda sets "
+                           "pkg_dirs to conda_pkgs_dir.")
+# Regardless of the reason for skipping, we should definitely find a better way for tests to look for the packages
+# Rather than assuming they will be at $ROOT/pkgs since that can change and we don't care where they are in terms of the
+# tests.
+def test_ignore_some_prefix_files(testing_config, monkeypatch):
+    recipe = os.path.join(metadata_dir, "_ignore_some_prefix_files")
+    testing_config.activate = True
+    monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
+    monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
     api.build(recipe, config=testing_config)
 
 
@@ -402,7 +435,7 @@ def test_recursive_fail(testing_workdir, testing_config):
 
 @pytest.mark.sanity
 def test_jinja_typo(testing_workdir, testing_config):
-    with pytest.raises(SystemExit, match="GIT_DSECRIBE_TAG") as exc:
+    with pytest.raises(SystemExit, match="GIT_DSECRIBE_TAG"):
         api.build(os.path.join(fail_dir, "source_git_jinja2_oops"), config=testing_config)
 
 
@@ -440,7 +473,7 @@ def test_skip_existing_url(testing_metadata, testing_workdir, capfd):
 
 def test_failed_tests_exit_build(testing_workdir, testing_config):
     """https://github.com/conda/conda-build/issues/1112"""
-    with pytest.raises(SystemExit, match='TESTS FAILED') as exc:
+    with pytest.raises(SystemExit, match="TESTS FAILED"):
         api.build(os.path.join(metadata_dir, "_test_failed_test_exits"), config=testing_config)
 
 
@@ -511,7 +544,7 @@ def test_numpy_setup_py_data(testing_config):
     m = api.render(recipe_path, config=testing_config, numpy="1.16")[0][0]
     _hash = m.hash_dependencies()
     assert os.path.basename(api.get_output_file_path(m)[0]) == \
-                            "load_setup_py_test-0.1.0-np116py{0}{1}{2}_0.tar.bz2".format(
+                            "load_setup_py_test-0.1.0-np116py{}{}{}_0.tar.bz2".format(
                                 sys.version_info.major, sys.version_info.minor, _hash)
 
 
@@ -565,7 +598,7 @@ def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monke
         with open('absolute', 'w') as f:
             f.write(str(tag))
         check_call_env([git, 'add', 'absolute'], env=sys_git_env)
-        check_call_env([git, 'commit', '-m', 'absolute{}'.format(tag)],
+        check_call_env([git, 'commit', '-m', f'absolute{tag}'],
                                 env=sys_git_env)
 
         os.chdir(relative_sub)
@@ -574,7 +607,7 @@ def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monke
         with open('relative', 'w') as f:
             f.write(str(tag))
         check_call_env([git, 'add', 'relative'], env=sys_git_env)
-        check_call_env([git, 'commit', '-m', 'relative{}'.format(tag)],
+        check_call_env([git, 'commit', '-m', f'relative{tag}'],
                                 env=sys_git_env)
 
         os.chdir(toplevel)
@@ -583,7 +616,7 @@ def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monke
         with open('toplevel', 'w') as f:
             f.write(str(tag))
         check_call_env([git, 'add', 'toplevel'], env=sys_git_env)
-        check_call_env([git, 'commit', '-m', 'toplevel{}'.format(tag)],
+        check_call_env([git, 'commit', '-m', f'toplevel{tag}'],
                                 env=sys_git_env)
         if tag == 0:
             check_call_env([git, 'submodule', 'add',
@@ -596,9 +629,9 @@ def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monke
             # can change this to `git submodule update --recursive`.
             gits = git.replace('\\', '/')
             check_call_env([git, 'submodule', 'foreach', gits, 'pull'], env=sys_git_env)
-        check_call_env([git, 'commit', '-am', 'added submodules@{}'.format(tag)],
+        check_call_env([git, 'commit', '-am', f'added submodules@{tag}'],
                               env=sys_git_env)
-        check_call_env([git, 'tag', '-a', str(tag), '-m', 'tag {}'.format(tag)],
+        check_call_env([git, 'tag', '-a', str(tag), '-m', f'tag {tag}'],
                                 env=sys_git_env)
 
         # It is possible to use `Git for Windows` here too, though you *must* not use a different
@@ -652,7 +685,7 @@ def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monke
         # build env prepended to os.environ[]
         metadata = api.render(testing_workdir, config=testing_config)[0][0]
         output = api.get_output_file_path(metadata, config=testing_config)[0]
-        assert ("relative_submodules-{}-".format(tag) in output)
+        assert (f"relative_submodules-{tag}-" in output)
         api.build(metadata, config=testing_config)
 
 
@@ -759,6 +792,13 @@ def test_about_license_file_and_prelink_message(testing_workdir, testing_config,
 
 
 @pytest.mark.slow
+@pytest.mark.skipif("CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,
+                    reason="This test does not run on Github Actions yet. We will need to adjust "
+                           "where to look for the pkgs. The github action for setup-miniconda sets "
+                           "pkg_dirs to conda_pkgs_dir.")
+# Regardless of the reason for skipping, we should definitely find a better way for tests to look for the packages
+# Rather than assuming they will be at $ROOT/pkgs since that can change and we don't care where they are in terms of the
+# tests.
 @pytest.mark.xfail(parse_version(conda.__version__) < parse_version("4.3.14"),
                    reason="new noarch supported starting with conda 4.3.14")
 def test_noarch_python_with_tests(testing_config):
@@ -818,11 +858,11 @@ def test_skip_compile_pyc(testing_config):
         _, ext = os.path.splitext(filename)
         basename = filename.split('.', 1)[0]
         if basename == 'skip_compile_pyc':
-            assert not ext == '.pyc', "a skip_compile_pyc .pyc was compiled: {}".format(filename)
+            assert not ext == '.pyc', f"a skip_compile_pyc .pyc was compiled: {filename}"
         if ext == '.pyc':
-            assert basename == 'compile_pyc', "an unexpected .pyc was compiled: {}".format(filename)
+            assert basename == 'compile_pyc', f"an unexpected .pyc was compiled: {filename}"
             pyc_count = pyc_count + 1
-    assert pyc_count == 2, "there should be 2 .pyc files, instead there were {}".format(pyc_count)
+    assert pyc_count == 2, f"there should be 2 .pyc files, instead there were {pyc_count}"
 
 
 def test_detect_binary_files_with_prefix(testing_config):
@@ -863,7 +903,7 @@ def test_fix_permissions(testing_config):
     outputs = api.build(recipe, config=testing_config)
     with tarfile.open(outputs[0]) as tf:
         for f in tf.getmembers():
-            assert f.mode & 0o444 == 0o444, "tar member '{}' has invalid (read) mode".format(f.name)
+            assert f.mode & 0o444 == 0o444, f"tar member '{f.name}' has invalid (read) mode"
 
 
 @pytest.mark.sanity
@@ -885,8 +925,12 @@ def test_output_folder_moves_file(testing_metadata, testing_workdir):
 
 
 @pytest.mark.sanity
+@pytest.mark.skipif("CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,
+                    reason="This test does not run on Github Actions yet. We will need to adjust "
+                           "where to look for the pkgs. The github action for setup-miniconda sets "
+                           "pkg_dirs to conda_pkgs_dir.")
 def test_info_files_json(testing_config):
-    outputs = api.build(os.path.join(metadata_dir, "ignore_some_prefix_files"),
+    outputs = api.build(os.path.join(metadata_dir, "_ignore_some_prefix_files"),
                         config=testing_config)
     assert package_has_file(outputs[0], "info/paths.json")
     with tarfile.open(outputs[0]) as tf:
@@ -920,7 +964,7 @@ def test_build_expands_wildcards(mocker, testing_workdir):
         with open(os.path.join(f, 'meta.yaml'), 'w') as fh:
             fh.write('\n')
     api.build(["a*"], config=config)
-    output = sorted([os.path.join(os.getcwd(), path, 'meta.yaml') for path in files])
+    output = sorted(os.path.join(os.getcwd(), path, 'meta.yaml') for path in files)
 
     build_tree.assert_called_once_with(output,
                                        config=mocker.ANY,
@@ -1085,6 +1129,10 @@ def test_ignore_run_exports_from(testing_metadata, testing_config):
     assert 'downstream_pinned_package 1.0' not in m.meta['requirements'].get('run', [])
 
 
+@pytest.mark.skipif("CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,
+                    reason="This test does not run on Github Actions yet. We will need to adjust "
+                           "where to look for the pkgs. The github action for setup-miniconda sets "
+                           "pkg_dirs to conda_pkgs_dir.")
 def test_run_exports_noarch_python(testing_metadata, testing_config):
     # build the package with run exports for ensuring that we ignore it
     api.build(os.path.join(metadata_dir, '_run_exports_noarch'), config=testing_config,
@@ -1163,11 +1211,11 @@ def test_copy_read_only_file_with_xattr(testing_config, testing_homedir):
     # tmpfs can support extended attributes if you enable CONFIG_TMPFS_XATTR in Kernel config.
     # But Currently this enables support for the trusted.* and security.* namespaces
     try:
-        subprocess.check_call('setfattr -n user.attrib -v somevalue {}'.format(ro_file), shell=True)
+        subprocess.check_call(f'setfattr -n user.attrib -v somevalue {ro_file}', shell=True)
     except:
         return pytest.xfail("setfattr not possible in {}, see https://stackoverflow.com/a/46598063".format(
             testing_homedir))
-    subprocess.check_call('chmod 400 {}'.format(ro_file), shell=True)
+    subprocess.check_call(f'chmod 400 {ro_file}', shell=True)
     api.build(recipe, config=testing_config)
 
 
@@ -1372,7 +1420,7 @@ def test_source_cache_build(testing_workdir):
     config = api.Config(src_cache_root=testing_workdir)
     api.build(recipe, notest=True, config=config)
 
-    git_cache_directory = '{}/git_cache'.format(testing_workdir)
+    git_cache_directory = f'{testing_workdir}/git_cache'
     assert os.path.isdir(git_cache_directory)
 
     files = [filename for _, _, filenames in walk(git_cache_directory)
@@ -1578,6 +1626,7 @@ def test_symlink_dirs_in_always_include_files(testing_config):
 def test_script_env_warnings(testing_config, recwarn):
     recipe_dir = os.path.join(metadata_dir, '_script_env_warnings')
     token = 'CONDA_BUILD_PYTEST_SCRIPT_ENV_TEST_TOKEN'
+
     def assert_keyword(keyword):
         messages = [str(w.message) for w in recwarn.list]
         assert any([token in m and keyword in m for m in messages])
@@ -1586,7 +1635,7 @@ def test_script_env_warnings(testing_config, recwarn):
     api.build(recipe_dir, config=testing_config)
     assert_keyword('undefined')
 
-    os.environ[token] ='SECRET'
+    os.environ[token] = "SECRET"
     try:
         api.build(recipe_dir, config=testing_config)
         assert_keyword('SECRET')

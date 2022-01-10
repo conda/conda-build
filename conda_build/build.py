@@ -1,12 +1,10 @@
 '''
 Module that does most of the heavy lifting for the ``conda build`` command.
 '''
-from __future__ import absolute_import, division, print_function
 
 from collections import deque, OrderedDict
 import fnmatch
 import glob2
-import io
 import json
 import os
 import warnings
@@ -187,7 +185,7 @@ def have_prefix_files(files, prefix):
         double_backslash_prefix_bytes = double_backslash_prefix.encode(utils.codec)
         searches[double_backslash_prefix] = double_backslash_prefix_bytes
     searches[prefix_placeholder] = prefix_placeholder_bytes
-    min_prefix = min([len(k) for k, _ in searches.items()])
+    min_prefix = min(len(k) for k, _ in searches.items())
 
     # mm.find is incredibly slow, so ripgrep is used to pre-filter the list.
     # Really, ripgrep could be used on its own with a bit more work though.
@@ -236,7 +234,7 @@ def have_prefix_files(files, prefix):
 
         try:
             fi = open(path, 'rb+')
-        except IOError:
+        except OSError:
             log = utils.get_logger(__name__)
             log.warn("failed to open %s for detecting prefix.  Skipping it." % f)
             continue
@@ -546,12 +544,12 @@ def have_regex_files(files, prefix, tag, regex_re, replacement_re,
             if match_records_rg != match_records_re:
                 for (k, v), (k2, v2) in zip(match_records_rg.items(), match_records_re.items()):
                     if k != k2:
-                        print("File Mismatch:\n{}\n{}".format(k, k2))
+                        print(f"File Mismatch:\n{k}\n{k2}")
                     elif v != v2:
-                        print("Match Mismatch ({}):\n{}\n{}".format(v, v2, k))
+                        print(f"Match Mismatch ({v}):\n{v2}\n{k}")
                         for submatch, submatch2 in zip(v['submatches'], v2['submatches']):
                             if submatch != submatch2:
-                                print("Submatch Mismatch ({}):\n{}\n{}".format(submatch, submatch2, k))
+                                print(f"Submatch Mismatch ({submatch}):\n{submatch2}\n{k}")
     return match_records_rg if rg else match_records_re
 
 
@@ -617,11 +615,11 @@ def perform_replacements(matches, prefix, verbose=False, diff=None):
         # Could assert the lengths of binaries are the same here for extra safety.
         if os.path.exists(filename_tmp):
             if diff and match['type'] == 'text':
-                diffo = "Diff returned no difference after patching {}".format(filename_short)
+                diffo = f"Diff returned no difference after patching {filename_short}"
                 # Always expect an exception.
                 try:
                     diffo = subprocess.check_output([diff, '-urN', filename, filename_tmp], stderr=subprocess.PIPE)
-                    print('WARNING :: Non-deferred patching of "{}" did not change it'.format(filename))
+                    print(f'WARNING :: Non-deferred patching of "{filename}" did not change it')
                 except subprocess.CalledProcessError as e:
                     diffo = e.output
                 print(diffo.decode('utf-8'))
@@ -632,7 +630,7 @@ def perform_replacements(matches, prefix, verbose=False, diff=None):
 
 def _copy_top_level_recipe(path, config, dest_dir, destination_subdir=None):
     files = utils.rec_glob(path, "*")
-    file_paths = sorted([f.replace(path + os.sep, '') for f in files])
+    file_paths = sorted(f.replace(path + os.sep, '') for f in files)
 
     # when this actually has a value, we're copying the top-level recipe into a subdirectory,
     #    so that we have record of what parent recipe produced subpackages.
@@ -706,7 +704,7 @@ def copy_recipe(m):
 
         if not original_recipe or not original_recipe_text == rendered:
             with open(join(recipe_dir, "meta.yaml"), 'w') as f:
-                f.write("# This file created by conda-build {}\n".format(conda_build_version))
+                f.write(f"# This file created by conda-build {conda_build_version}\n")
                 if original_recipe:
                     f.write("# meta.yaml template originally from:\n")
                     f.write("# " + source.get_repository_info(m.path) + "\n")
@@ -750,7 +748,7 @@ def jsonify_info_yamls(m):
                         os.makedirs(os.path.dirname(dst))
                     except:
                         pass
-                    with open(file, 'r') as i, open(dst, 'w') as o:
+                    with open(file) as i, open(dst, 'w') as o:
                         import yaml
                         yaml = yaml.full_load(i)
                         json.dump(yaml, o, sort_keys=True, indent=2, separators=(',', ': '))
@@ -852,7 +850,7 @@ def copy_test_source_files(m, destination):
                                 locking=False, clobber=True)
                     except OSError as e:
                         log = utils.get_logger(__name__)
-                        log.warn("Failed to copy {0} into test files.  Error was: {1}".format(f,
+                        log.warn("Failed to copy {} into test files.  Error was: {}".format(f,
                                                                                             str(e)))
                 for ext in '.pyc', '.pyo':
                     for f in utils.get_ext_files(destination, ext):
@@ -899,13 +897,13 @@ def get_all_replacements(variant):
         return []
 
     repl = variant['replacements']
-    assert isinstance(repl, dict), "Found 'replacements' ({}), but it is not a dict".format(repl)
-    assert 'all_replacements' in repl, "Found 'replacements' ({}), but it doesn't contain 'all_replacements'".format(repl)
+    assert isinstance(repl, dict), f"Found 'replacements' ({repl}), but it is not a dict"
+    assert 'all_replacements' in repl, f"Found 'replacements' ({repl}), but it doesn't contain 'all_replacements'"
 
     repl = repl['all_replacements']
-    assert isinstance(repl, list), "Found 'all_replacements' ({}), but it is not a list".format(repl)
+    assert isinstance(repl, list), f"Found 'all_replacements' ({repl}), but it is not a list"
     if repl:
-        assert isinstance(repl[0], dict), "Found 'all_replacements[0]' ({}), but it is not a dict".format(repl[0])
+        assert isinstance(repl[0], dict), f"Found 'all_replacements[0]' ({repl[0]}), but it is not a dict"
 
     return repl
 
@@ -914,7 +912,7 @@ def get_files_with_prefix(m, replacements, files_in, prefix):
     import time
     start = time.time()
     # It is nonsensical to replace anything in a symlink.
-    files = sorted([f for f in files_in if not os.path.islink(os.path.join(prefix, f))])
+    files = sorted(f for f in files_in if not os.path.islink(os.path.join(prefix, f)))
     ignore_files = m.ignore_prefix_files()
     ignore_types = set()
     if not hasattr(ignore_files, "__iter__"):
@@ -963,7 +961,7 @@ def get_files_with_prefix(m, replacements, files_in, prefix):
     # This is for Windows mainly, though we may want to allow multiple searches at once in a file on
     # all OSes some-day. It  is harmless to do this on all systems anyway.
     for filename, match in pfx_matches.items():
-        prefixes_for_file[filename] = set([sm['text'] for sm in match['submatches']])
+        prefixes_for_file[filename] = {sm['text'] for sm in match['submatches']}
     files_with_prefix_new = []
     for (_, mode, filename) in files_with_prefix:
         np = filename
@@ -994,7 +992,7 @@ def get_files_with_prefix(m, replacements, files_in, prefix):
     total_replacements = sum(map(lambda i: len(all_matches[i]['submatches']), all_matches))
     print("INFO :: Time taken to mark (prefix){}\n"
           "        {} replacements in {} files was {:.2f} seconds".format(
-          " and mark+peform ({})".format(replacement_tags) if replacement_tags else '',
+          f" and mark+peform ({replacement_tags})" if replacement_tags else '',
         total_replacements, len(all_matches), end - start))
     '''
     # Keeping this around just for a while.
@@ -1299,7 +1297,7 @@ def create_info_files(m, replacements, files, prefix):
     if hasattr(sources, 'keys'):
         sources = [sources]
 
-    with io.open(join(m.config.info_dir, 'git'), 'w', encoding='utf-8') as fo:
+    with open(join(m.config.info_dir, 'git'), 'w', encoding='utf-8') as fo:
         for src in sources:
             if src.get('git_url'):
                 source.git_info(os.path.join(m.config.work_dir, src.get('folder', '')),
@@ -1375,7 +1373,7 @@ def _recurse_symlink_to_size(path, seen=None):
         seen = set()
 
     if path not in seen:
-        seen |= set([path])
+        seen |= {path}
         dest = os.path.normpath(os.path.join(os.path.dirname(path), os.readlink(path)))
 
         # symlink that points somewhere
@@ -1561,7 +1559,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
         activate_script = metadata.config.activate
         script = '\n'.join(script)
         suffix = "bat" if utils.on_win else "sh"
-        script_fn = output.get('script') or 'output_script.{}'.format(suffix)
+        script_fn = output.get('script') or f'output_script.{suffix}'
         with open(os.path.join(metadata.config.work_dir, script_fn), 'w') as f:
             f.write('\n')
             f.write(script)
@@ -1617,19 +1615,19 @@ def bundle_conda(output, metadata, env, stats, **kw):
         bundle_stats = {}
         utils.check_call_env(interpreter_and_args + [dest_file],
                              cwd=metadata.config.work_dir, env=env_output, stats=bundle_stats)
-        log_stats(bundle_stats, "bundling {}".format(metadata.name()))
+        log_stats(bundle_stats, f"bundling {metadata.name()}")
         if stats is not None:
-            stats[stats_key(metadata, 'bundle_{}'.format(metadata.name()))] = bundle_stats
+            stats[stats_key(metadata, f'bundle_{metadata.name()}')] = bundle_stats
 
     elif files:
         # Files is specified by the output
         # we exclude the list of files that we want to keep, so post-process picks them up as "new"
-        keep_files = set(os.path.normpath(pth)
-                         for pth in utils.expand_globs(files, metadata.config.host_prefix))
+        keep_files = {os.path.normpath(pth)
+                         for pth in utils.expand_globs(files, metadata.config.host_prefix)}
         pfx_files = set(utils.prefix_files(metadata.config.host_prefix))
-        initial_files = set(item for item in (pfx_files - keep_files)
+        initial_files = {item for item in (pfx_files - keep_files)
                             if not any(keep_file.startswith(item + os.path.sep)
-                                       for keep_file in keep_files))
+                                       for keep_file in keep_files)}
     else:
         if not metadata.always_include_files():
             log.warn("No files or script found for output {}".format(output.get('name')))
@@ -1761,7 +1759,7 @@ def bundle_wheel(output, metadata, env, stats):
         dest_file = os.path.join(metadata.config.work_dir, 'wheel_output' + ext)
         with open(dest_file, 'w') as f:
             f.write('\n')
-            f.write('pip wheel --wheel-dir {} --no-deps .'.format(tmpdir))
+            f.write(f'pip wheel --wheel-dir {tmpdir} --no-deps .')
             f.write('\n')
         if metadata.config.activate:
             _write_activation_text(dest_file, metadata)
@@ -1777,9 +1775,9 @@ def bundle_wheel(output, metadata, env, stats):
         bundle_stats = {}
         utils.check_call_env(interpreter_and_args + [dest_file],
                              cwd=metadata.config.work_dir, env=env, stats=bundle_stats)
-        log_stats(bundle_stats, "bundling wheel {}".format(metadata.name()))
+        log_stats(bundle_stats, f"bundling wheel {metadata.name()}")
         if stats is not None:
-            stats[stats_key(metadata, 'bundle_wheel_{}'.format(metadata.name()))] = bundle_stats
+            stats[stats_key(metadata, f'bundle_wheel_{metadata.name()}')] = bundle_stats
 
         wheel_files = glob(os.path.join(tmpdir, "*.whl"))
         if not wheel_files:
@@ -1851,9 +1849,9 @@ def _write_sh_activation_text(file_handle, m):
                                    m.config.host_prefix.replace('\\', '\\\\'),
                                    cygpath_suffix))
         if conda_46:
-            file_handle.write("conda activate \"{0}\"\n".format(host_prefix_path))
+            file_handle.write(f"conda activate \"{host_prefix_path}\"\n")
         else:
-            file_handle.write('source "{0}" "{1}"\n' .format(activate_path, host_prefix_path))
+            file_handle.write('source "{}" "{}"\n' .format(activate_path, host_prefix_path))
             file_handle.write('unset CONDA_PATH_BACKUP\n')
             file_handle.write('export CONDA_MAX_SHLVL=2\n')
 
@@ -1865,9 +1863,9 @@ def _write_sh_activation_text(file_handle, m):
     if conda_46:
         # Do not stack against base env when not cross.
         stack = '--stack' if m.is_cross else ''
-        file_handle.write("conda activate {0} \"{1}\"\n".format(stack, build_prefix_path))
+        file_handle.write(f"conda activate {stack} \"{build_prefix_path}\"\n")
     else:
-        file_handle.write('source "{0}" "{1}"\n'.format(activate_path, build_prefix_path))
+        file_handle.write(f'source "{activate_path}" "{build_prefix_path}"\n')
 
     from conda_build.os_utils.external import find_executable
     ccache = find_executable('ccache', m.config.build_prefix, False)
@@ -1890,8 +1888,8 @@ def _write_sh_activation_text(file_handle, m):
                     done_necessary_env = True
                 if method == 'symlinks':
                     dirname_ccache_ln_bin = join(m.config.build_prefix, 'ccache-ln-bin')
-                    file_handle.write('mkdir {}\n'.format(dirname_ccache_ln_bin))
-                    file_handle.write('pushd {}\n'.format(dirname_ccache_ln_bin))
+                    file_handle.write(f'mkdir {dirname_ccache_ln_bin}\n')
+                    file_handle.write(f'pushd {dirname_ccache_ln_bin}\n')
                     file_handle.write('if [ -n "$CC" ]; then\n')
                     file_handle.write('  [ -f {ccache} ] && [ ! -f $(basename $CC) ] && ln -s {ccache} $(basename $CC) || true\n'.format(ccache=ccache))
                     file_handle.write('fi\n')
@@ -1900,11 +1898,11 @@ def _write_sh_activation_text(file_handle, m):
                     file_handle.write('fi\n')
                     file_handle.write('popd\n')
                     # We really don't want to be doing this.
-                    file_handle.write('export "PATH={}:$PATH"\n'.format(dirname_ccache_ln_bin))
+                    file_handle.write(f'export "PATH={dirname_ccache_ln_bin}:$PATH"\n')
                 elif method == 'env_vars':
-                    file_handle.write('export CC="{ccache} $CC"\n'.format(ccache=ccache))
-                    file_handle.write('export CXX="{ccache} $CXX"\n'.format(ccache=ccache))
-                    file_handle.write('export LD="{ccache} $LD"\n'.format(ccache=ccache))
+                    file_handle.write(f'export CC="{ccache} $CC"\n')
+                    file_handle.write(f'export CXX="{ccache} $CXX"\n')
+                    file_handle.write(f'export LD="{ccache} $LD"\n')
                 elif method == 'native':
                     pass
                 else:
@@ -2002,7 +2000,7 @@ def create_build_envs(m, notest):
 
         other_outputs = (m.other_outputs.values() if hasattr(m, 'other_outputs') else
                          m.get_output_metadata_set(permit_undefined_jinja=True))
-        missing_deps = set(MatchSpec(pkg).name for pkg in e.packages) - set(out.name() for _, out in other_outputs)
+        missing_deps = {MatchSpec(pkg).name for pkg in e.packages} - {out.name() for _, out in other_outputs}
         if missing_deps:
             e.packages = missing_deps
             raise e
@@ -2123,7 +2121,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                     if key in excludes:
                         excludes.remove(key)
                 if excludes:
-                    exclude_pattern = re.compile(r'|'.join(r'(?:^{}(?:\s|$|\Z))'.format(exc)
+                    exclude_pattern = re.compile(r'|'.join(fr'(?:^{exc}(?:\s|$|\Z))'
                                                     for exc in excludes))
             add_upstream_pins(m, False, exclude_pattern)
 
@@ -2161,13 +2159,13 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
         utils.rm_rf(m.config.info_dir)
         files1 = utils.prefix_files(prefix=m.config.host_prefix)
         with open(join(m.config.build_folder, 'prefix_files.txt'), 'w') as f:
-            f.write(u'\n'.join(sorted(list(files1))))
-            f.write(u'\n')
+            f.write('\n'.join(sorted(list(files1))))
+            f.write('\n')
 
         # Use script from recipe?
         script = utils.ensure_list(m.get_value('build/script', None))
         if script:
-            script = u'\n'.join(script)
+            script = '\n'.join(script)
 
         if isdir(src_dir):
             build_stats = {}
@@ -2203,7 +2201,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                                 for k in rewrite_vars if k in env
                             }
                             for k, v in rewrite_env.items():
-                                print('{0} {1}={2}'
+                                print('{} {}={}'
                                         .format('set' if build_file.endswith('.bat') else 'export', k, v))
 
                         # clear this, so that the activate script will get run as necessary
@@ -2214,7 +2212,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                                              cwd=src_dir, stats=build_stats)
                         utils.remove_pycache_from_scripts(m.config.host_prefix)
             if build_stats and not provision_only:
-                log_stats(build_stats, "building {}".format(m.name()))
+                log_stats(build_stats, f"building {m.name()}")
                 if stats is not None:
                     stats[stats_key(m, 'build')] = build_stats
 
@@ -2290,10 +2288,10 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                                     os.path.join(m.config.work_dir, test_script))
 
                 assert output_d.get('type') != 'conda' or m.final, (
-                    "output metadata for {} is not finalized".format(m.dist()))
+                    f"output metadata for {m.dist()} is not finalized")
                 pkg_path = bldpkg_path(m)
                 if pkg_path not in built_packages and pkg_path not in new_pkgs:
-                    log.info("Packaging {}".format(m.name()))
+                    log.info(f"Packaging {m.name()}")
                     # for more than one output, we clear and rebuild the environment before each
                     #    package.  We also do this for single outputs that present their own
                     #    build reqs.
@@ -2422,8 +2420,8 @@ def guess_interpreter(script_filename):
             interpreter_command = command
             break
     else:
-        raise NotImplementedError("Don't know how to run {0} file.   Please specify "
-                                  "script_interpreter for {1} output".format(file_ext,
+        raise NotImplementedError("Don't know how to run {} file.   Please specify "
+                                  "script_interpreter for {} output".format(file_ext,
                                                                              script_filename))
     return interpreter_command
 
@@ -2522,7 +2520,7 @@ def _construct_metadata_for_test_from_package(package, config):
                                         reset_build_id=False)[0][0]
 
     # no recipe in package.  Fudge metadata
-    except (IOError, SystemExit, OSError):
+    except (OSError, SystemExit):
         # force the build string to line up - recomputing it would
         #    yield a different result
         metadata = MetaData.fromdict({'package': {'name': package_data['name'],
@@ -2627,14 +2625,14 @@ def write_build_scripts(m, script, build_file):
     with open(env_file, 'w') as bf:
         for k, v in env.items():
             if v != '' and v is not None:
-                bf.write('export {0}="{1}"\n'.format(k, v))
+                bf.write(f'export {k}="{v}"\n')
 
         if m.activate_build_script:
             _write_sh_activation_text(bf, m)
     with open(work_file, 'w') as bf:
         # bf.write('set -ex\n')
         bf.write('if [ -z ${CONDA_BUILD+x} ]; then\n')
-        bf.write("    source {}\n".format(env_file))
+        bf.write(f"    source {env_file}\n")
         bf.write("fi\n")
         if script:
             bf.write(script)
@@ -2655,7 +2653,7 @@ def _write_test_run_script(metadata, test_run_script, test_env_script, py_files,
         if utils.on_win:
             tf.write("IF %ERRORLEVEL% NEQ 0 exit /B 1\n")
         else:
-            tf.write('set {trace}-e\n'.format(trace=trace))
+            tf.write(f'set {trace}-e\n')
         if py_files:
             test_python = metadata.config.test_python
             # use pythonw for import tests when osx_is_app is set
@@ -2691,7 +2689,7 @@ def _write_test_run_script(metadata, test_run_script, test_env_script, py_files,
             for shell_file in shell_files:
                 if utils.on_win:
                     if os.path.splitext(shell_file)[1] == ".bat":
-                        tf.write('call "{test_file}"\n'.format(test_file=shell_file))
+                        tf.write(f'call "{shell_file}"\n')
                         tf.write("IF %ERRORLEVEL% NEQ 0 exit /B 1\n")
                     else:
                         log.warn("Found sh test file on windows.  Ignoring this for now (PRs welcome)")
@@ -2716,13 +2714,13 @@ def write_test_scripts(metadata, env_vars, py_files, pl_files, lua_files, r_file
     env_vars = {str(key): str(value) for key, value in env_vars.items()}
     suffix = "bat" if utils.on_win else "sh"
     test_env_script = join(metadata.config.test_dir,
-                           "conda_test_env_vars.{suffix}".format(suffix=suffix))
+                           f"conda_test_env_vars.{suffix}")
     test_run_script = join(metadata.config.test_dir,
-                           "conda_test_runner.{suffix}".format(suffix=suffix))
+                           f"conda_test_runner.{suffix}")
 
     with open(test_env_script, 'w') as tf:
         if not utils.on_win:
-            tf.write('set {trace}-e\n'.format(trace=trace))
+            tf.write(f'set {trace}-e\n')
         if metadata.config.activate and not metadata.name() == 'conda':
             ext = ".bat" if utils.on_win else ""
             if conda_46:
@@ -2738,7 +2736,7 @@ def write_test_scripts(metadata, env_vars, py_files, pl_files, lua_files, r_file
                 else:
                     tf.write("eval \"$('{sys_python}' -m conda shell.bash hook)\"\n".format(
                         sys_python=sys.executable))
-                tf.write('conda activate "{test_env}"\n'.format(test_env=metadata.config.test_prefix))
+                tf.write(f'conda activate "{metadata.config.test_prefix}"\n')
             else:
                 tf.write('{source} "{conda_root}activate{ext}" "{test_env}"\n'.format(
                     conda_root=utils.root_script_dir + os.path.sep,
@@ -2817,7 +2815,7 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
                             '_'.join(('%s_prefix_moved' % name, metadata.dist(),
                                       getattr(metadata.config, '%s_subdir' % name))))
                 # Needs to come after create_files in case there's test/source_files
-                shutil_move_more_retrying(prefix, dest, "{} prefix".format(prefix))
+                shutil_move_more_retrying(prefix, dest, f"{prefix} prefix")
 
         # nested if so that there's no warning when we just leave the empty workdir in place
         if metadata.source_provided:
@@ -2934,12 +2932,12 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
                 }
                 if metadata.config.verbose:
                     for k, v in rewrite_env.items():
-                        print('{0} {1}={2}'
+                        print('{} {}={}'
                             .format('set' if test_script.endswith('.bat') else 'export', k, v))
             utils.check_call_env(cmd, env=env, cwd=metadata.config.test_dir, stats=test_stats, rewrite_stdout_env=rewrite_env)
-            log_stats(test_stats, "testing {}".format(metadata.name()))
+            log_stats(test_stats, f"testing {metadata.name()}")
             if stats is not None and metadata.config.variants:
-                stats[stats_key(metadata, 'test_{}'.format(metadata.name()))] = test_stats
+                stats[stats_key(metadata, f'test_{metadata.name()}')] = test_stats
             if os.path.exists(join(metadata.config.test_dir, 'TEST_FAILED')):
                 raise subprocess.CalledProcessError(-1, '')
             print("TEST END:", test_package_name)
@@ -2974,7 +2972,7 @@ def tests_failed(package_or_metadata, move_broken, broken_dir, config):
         log = utils.get_logger(__name__)
         try:
             shutil.move(pkg, dest)
-            log.warn('Tests failed for %s - moving package to %s' % (os.path.basename(pkg),
+            log.warn('Tests failed for {} - moving package to {}'.format(os.path.basename(pkg),
                     broken_dir))
         except OSError:
             pass
@@ -3007,7 +3005,7 @@ def build_tree(recipe_list, config, stats, build_only=False, post=None, notest=F
         if os.path.isdir(trash_dir):
             # We don't really care if this does a complete job.
             #    Cleaning up some files is better than none.
-            subprocess.call('del /s /q "{0}\\*.*" >nul 2>&1'.format(trash_dir), shell=True)
+            subprocess.call(f'del /s /q "{trash_dir}\\*.*" >nul 2>&1', shell=True)
         # delete_trash(None)
 
     extra_help = ""
@@ -3114,7 +3112,7 @@ def build_tree(recipe_list, config, stats, build_only=False, post=None, notest=F
                             else:
                                 downstreams = utils.ensure_list(downstreams)
                             for dep in downstreams:
-                                log.info("Testing downstream package: {}".format(dep))
+                                log.info(f"Testing downstream package: {dep}")
                                 # resolve downstream packages to a known package
 
                                 r_string = ''.join(random.choice(
@@ -3181,7 +3179,7 @@ def build_tree(recipe_list, config, stats, build_only=False, post=None, notest=F
                     raise
                 if pkg in to_build_recursive:
                     cfg.clean(remove_folders=False)
-                    raise RuntimeError("Can't build {0} due to environment creation error:\n"
+                    raise RuntimeError("Can't build {} due to environment creation error:\n"
                                        .format(recipe) + str(e.message) + "\n" + extra_help)
 
                 if pkg in skip_names:
@@ -3223,7 +3221,7 @@ def build_tree(recipe_list, config, stats, build_only=False, post=None, notest=F
             if (not metadata and retried_recipes.count(recipe) and
                     retried_recipes.count(recipe) >= len(metadata.ms_depends('build'))):
                 cfg.clean(remove_folders=False)
-                raise RuntimeError("Can't build {0} due to environment creation error:\n"
+                raise RuntimeError("Can't build {} due to environment creation error:\n"
                                     .format(recipe) + str(e.message) + "\n" + extra_help)
             retried_recipes.append(os.path.basename(name))
             recipe_list.extendleft(add_recipes)
@@ -3313,7 +3311,7 @@ def handle_anaconda_upload(paths, config):
             "# To have conda build upload to anaconda.org automatically, use\n"
             "# {}conda config --set anaconda_upload yes\n".format(prompter)
         )
-        no_upload_message += "anaconda upload{}".format(joiner) + joiner.join(paths)
+        no_upload_message += f"anaconda upload{joiner}" + joiner.join(paths)
 
     if not upload:
         print(no_upload_message)
@@ -3339,7 +3337,7 @@ def handle_anaconda_upload(paths, config):
         cmd.extend(['--label', label])
     for package in paths:
         try:
-            print("Uploading {} to anaconda.org".format(os.path.basename(package)))
+            print(f"Uploading {os.path.basename(package)} to anaconda.org")
             subprocess.call(cmd + [package])
         except subprocess.CalledProcessError:
             print(no_upload_message)
@@ -3365,16 +3363,16 @@ def handle_pypi_upload(wheels, config):
 
     if config.anaconda_upload:
         for f in wheels:
-            print("Uploading {}".format(f))
+            print(f"Uploading {f}")
             try:
                 utils.check_call_env(args + [f])
             except:
                 utils.get_logger(__name__).warn("wheel upload failed - is twine installed?"
                                                 "  Is this package registered?")
-                utils.get_logger(__name__).warn("Wheel file left in {}".format(f))
+                utils.get_logger(__name__).warn(f"Wheel file left in {f}")
 
     else:
-        print("anaconda_upload is not set.  Not uploading wheels: {}".format(wheels))
+        print(f"anaconda_upload is not set.  Not uploading wheels: {wheels}")
 
 
 def print_build_intermediate_warning(config):
@@ -3382,7 +3380,7 @@ def print_build_intermediate_warning(config):
     print('#' * 84)
     print("Source and build intermediates have been left in " + config.croot + ".")
     build_folders = utils.get_build_folders(config.croot)
-    print("There are currently {num_builds} accumulated.".format(num_builds=len(build_folders)))
+    print(f"There are currently {len(build_folders)} accumulated.")
     print("To remove them, you can run the ```conda build purge``` command")
 
 
@@ -3398,7 +3396,7 @@ def is_package_built(metadata, env, include_local=True):
         if not os.path.isdir(d):
             os.makedirs(d)
         update_index(d, verbose=metadata.config.debug, warn=False, threads=1)
-    subdir = getattr(metadata.config, '{}_subdir'.format(env))
+    subdir = getattr(metadata.config, f'{env}_subdir')
 
     urls = [url_path(metadata.config.output_folder), 'local'] if include_local else []
     urls += get_rc_urls()

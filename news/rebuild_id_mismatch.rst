@@ -6,7 +6,7 @@ Enhancements:
 Bug fixes:
 ----------
 
-* Fix pinning expressions for prerelease builds
+* Old work directories will be preserved when `croot` and `build_id` are set manually
 
 Deprecations:
 -------------
@@ -22,4 +22,3 @@ Other:
 ------
 
 * <news item>
-
