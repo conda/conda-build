@@ -1,5 +1,6 @@
 import argparse
 
+
 class KeyValueAction(argparse.Action):
     def __call__(self, parser, namespace, items, option_string=None):
         setattr(namespace, self.dest, dict())
@@ -11,5 +12,5 @@ class KeyValueAction(argparse.Action):
                         f"Key {key} cannot be overwritten. "
                         "It's likely that the key you've used "
                         "is already in use by conda-build."
-                    )
+                        )
             getattr(namespace, self.dest)[key] = value
