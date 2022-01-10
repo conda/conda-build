@@ -8,7 +8,7 @@ from conda_build.config import (Config,
                                 filename_hashing_default, _src_cache_root_default, error_overlinking_default,
                                 error_overdepending_default, noarch_python_build_age_default, enable_static_default,
                                 no_rewrite_stdout_env_default, ignore_verify_codes_default, exit_on_verify_error_default,
-                                conda_pkg_format_default)
+                                conda_pkg_format_default, extra_info_default)
 
 from conda_build.variants import get_default_variant
 from conda_build.metadata import MetaData
@@ -95,7 +95,8 @@ def testing_config(testing_workdir):
                     no_rewrite_stdout_env=boolify(no_rewrite_stdout_env_default),
                     ignore_verify_codes=ignore_verify_codes_default,
                     exit_on_verify_error=exit_on_verify_error_default,
-                    conda_pkg_format=conda_pkg_format_default)
+                    conda_pkg_format=conda_pkg_format_default,
+                    extra_info=extra_info_default)
     assert result.no_rewrite_stdout_env is False
     assert result._src_cache_root is None
     assert result.src_cache_root == testing_workdir

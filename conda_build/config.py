@@ -48,6 +48,7 @@ no_rewrite_stdout_env_default = 'false'
 ignore_verify_codes_default = []
 exit_on_verify_error_default = False
 conda_pkg_format_default = None
+extra_info_default = 'false'
 
 
 # Python2 silliness:
@@ -145,6 +146,8 @@ def _get_default_settings():
                                                            error_overlinking_default).lower() == 'true'),
             Setting('error_overdepending', cc_conda_build.get('error_overdepending',
                                                               error_overdepending_default).lower() == 'true'),
+            Setting('extra_info', cc_conda_build.get('extra_info',
+                                                              extra_info_default).lower() == 'true'),
             Setting('noarch_python_build_age', cc_conda_build.get('noarch_python_build_age',
                                                            noarch_python_build_age_default)),
             Setting('enable_static', cc_conda_build.get('enable_static',
