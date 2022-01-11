@@ -19,15 +19,14 @@ on:
 
 
 jobs:
-  test-conda-build:
-    runs-on: ${{ matrix.os }}
+  linux:
+    runs-on: ubuntu-latest
     defaults:
       run:
         shell: bash -l {0}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
         python-version: ['3.7', '3.8']
         conda-version: [release]
         test-type: [serial, parallel]
@@ -37,14 +36,6 @@ jobs:
             conda-version: canary
             test-type: serial
           - os: ubuntu-latest
-            python-version: '3.9'
-            conda-version: canary
-            test-type: parallel
-          - os: windows-latest
-            python-version: '3.9'
-            conda-version: canary
-            test-type: serial
-          - os: windows-latest
             python-version: '3.9'
             conda-version: canary
             test-type: parallel
@@ -115,3 +106,110 @@ jobs:
         with:
           name: ${{ matrix.os }}_replay-py-${{ matrix.python-version }}_${{ matrix.conda-version }}_${{ matrix.test-type }}
           path: pytest-replay/
+
+
+  windows:
+    runs-on: windows-2019
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ '3.7', '3.8' ]
+        conda-version: [ release ]
+        test-type: [ serial, parallel ]
+        include:
+          - python-version: '3.9'
+            conda-version: canary
+            test-type: serial
+          - python-version: '3.9'
+            conda-version: canary
+            test-type: parallel
+    env:
+      pytest-replay: --replay-record-dir=pytest-replay/ --replay-base-name=Windows-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Set temp dirs correctly
+        shell: bash -l {0}
+        # https://github.com/actions/virtual-environments/issues/712
+        run: |
+          echo "TMPDIR=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
+          echo "TEMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
+          echo "TMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
+
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          condarc-file: ci/github/.condarc
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Conda-Canary if canary version
+        shell: bash -l {0}
+        if: matrix.conda-version == 'canary'
+        run: |
+          conda install -y -c conda-canary conda
+
+      - name: Install default Conda if release version
+        shell: bash -l {0}
+        if: matrix.conda-version == 'release'
+        run: |
+          conda install -y conda
+
+      - name: Source Scripts
+        shell: cmd
+        run: |
+          pip install --no-deps .
+          conda-build --version
+          pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd
+          mkdir %UserProfile%\cbtmp_serial
+          mkdir %UserProfile%\cbtmp
+          for /d %%F in (%UserProfile%\cbtmp_serial\*) do rd /s /q "%%F"
+          for /d %%F in (%UserProfile%\cbtmp\*) do rd /s /q "%%F"
+          call conda create -n blarg -yq --download-only python=2.7||exit 1
+          call conda create -n blarg -yq --download-only python=3.8||exit 1
+          call conda create -n blarg -yq --download-only python cmake||exit 1
+          mkdir $(Build.ArtifactStagingDirectory)\\pytest-replay
+          set "PYTEST_REPLAY_OPTIONS=--replay-record-dir=$(Build.ArtifactStagingDirectory)\\pytest-replay --replay-base-name=Win-%CONDA_VERSION%-Py%PYTHON_VERSION%"
+          echo "##vso[task.setvariable variable=PYTEST_REPLAY_OPTIONS]%PYTEST_REPLAY_OPTIONS%"
+
+      - name: Run Serial tests
+        shell: bash -l {0}
+        if: matrix.test-type == 'serial'
+        run: |
+          pytest \
+              --color=yes \
+              -vv \
+              -n 0 \
+              --basetemp %UserProfile%\cbtmp_serial \
+              --cov conda_build \
+              --cov-report xml \
+              -m "serial" tests \
+              --test-run-title="${{ matrix.os }}-SerialTests" \
+              --test-run-title="${{ matrix.os }}-SerialTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}" \
+              ${{ env.pytest-replay }}
+
+      - name: Run Parallel tests
+        shell: bash -l {0}
+        if: matrix.test-type == 'parallel'
+        run: |
+          pytest \
+              --color=yes \
+              -vv \
+              -n auto \
+              --basetemp /tmp/cb \
+              --cov conda_build \
+              --cov-append \
+              --cov-report xml \
+              -m "not serial" tests \
+              --test-run-title="${{ matrix.os }}-ParallelTests" \
+              --test-run-title="${{ matrix.os }}-ParallelTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}" \
+              ${{ env.pytest-replay }}
+
+      - name: Upload Pytest Replay
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ matrix.os }}_replay-py-${{ matrix.python-version }}_${{ matrix.conda-version }}_${{ matrix.test-type }}
+          path: pytest-replay/
+
