@@ -185,7 +185,7 @@ jobs:
         shell: cmd
         if: matrix.test-type == 'serial'
         run: |
-          pytest \
+          call pytest \
               --color=yes \
               -vv \
               -n 0 \
@@ -198,10 +198,10 @@ jobs:
               ${{ env.pytest-replay }}
 
       - name: Run Parallel tests
-        shell: bash -l {0}
+        shell: cmd
         if: matrix.test-type == 'parallel'
         run: |
-          pytest \
+          call pytest \
               --color=yes \
               -vv \
               -n auto \
