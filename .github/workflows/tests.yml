@@ -81,8 +81,8 @@ jobs:
               --cov conda_build \
               --cov-report xml \
               -m "serial" tests \
-              --test-run-title="${{ matrix.os }}-SerialTests" \
-              --test-run-title="${{ matrix.os }}-SerialTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}" \
+              --test-run-title="Linux-SerialTests" \
+              --test-run-title="Linux-SerialTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}" \
               ${{ env.pytest-replay }}
 
       - name: Run Parallel tests
@@ -97,14 +97,14 @@ jobs:
               --cov-append \
               --cov-report xml \
               -m "not serial" tests \
-              --test-run-title="${{ matrix.os }}-ParallelTests" \
-              --test-run-title="${{ matrix.os }}-ParallelTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}" \
+              --test-run-title="Linux-ParallelTests" \
+              --test-run-title="Linux-ParallelTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}" \
               ${{ env.pytest-replay }}
 
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ matrix.os }}_replay-py-${{ matrix.python-version }}_${{ matrix.conda-version }}_${{ matrix.test-type }}
+          name: Linux_replay-py-${{ matrix.python-version }}_${{ matrix.conda-version }}_${{ matrix.test-type }}
           path: pytest-replay/
 
 
@@ -125,6 +125,7 @@ jobs:
             test-type: parallel
     env:
       pytest-replay: --replay-record-dir=pytest-replay/ --replay-base-name=Windows-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
@@ -160,6 +161,12 @@ jobs:
       - name: Source Scripts
         shell: cmd
         run: |
+          python -c "import sys; print(sys.version)"
+          python -c "import sys; print(sys.executable)"
+          python -c "import sys; print(sys.prefix)"
+          call conda update -q --all||exit 1
+          call conda install -q pip python-libarchive-c pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling pytest-azurepipelines||exit 1
+          call conda install pytest-replay pytest-rerunfailures -y||exit 1
           pip install --no-deps .
           conda-build --version
           pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd
@@ -175,7 +182,7 @@ jobs:
           echo "##vso[task.setvariable variable=PYTEST_REPLAY_OPTIONS]%PYTEST_REPLAY_OPTIONS%"
 
       - name: Run Serial tests
-        shell: bash -l {0}
+        shell: cmd
         if: matrix.test-type == 'serial'
         run: |
           pytest \
@@ -186,8 +193,8 @@ jobs:
               --cov conda_build \
               --cov-report xml \
               -m "serial" tests \
-              --test-run-title="${{ matrix.os }}-SerialTests" \
-              --test-run-title="${{ matrix.os }}-SerialTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}" \
+              --test-run-title="Windows-SerialTests" \
+              --test-run-title="Windows-SerialTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}" \
               ${{ env.pytest-replay }}
 
       - name: Run Parallel tests
@@ -198,18 +205,18 @@ jobs:
               --color=yes \
               -vv \
               -n auto \
-              --basetemp /tmp/cb \
+              --basetemp %UserProfile%\cbtmp \
               --cov conda_build \
               --cov-append \
               --cov-report xml \
               -m "not serial" tests \
-              --test-run-title="${{ matrix.os }}-ParallelTests" \
-              --test-run-title="${{ matrix.os }}-ParallelTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}" \
+              --test-run-title="Windows-ParallelTests" \
+              --test-run-title="Windows-ParallelTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}" \
               ${{ env.pytest-replay }}
 
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v2
         with:
-          name: ${{ matrix.os }}_replay-py-${{ matrix.python-version }}_${{ matrix.conda-version }}_${{ matrix.test-type }}
+          name: Windows_replay-py-${{ matrix.python-version }}_${{ matrix.conda-version }}_${{ matrix.test-type }}
           path: pytest-replay/
 
