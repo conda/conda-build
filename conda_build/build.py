@@ -1105,46 +1105,36 @@ def sanitize_channel(channel):
 def get_git_info(m):
     """
     Grabs git info for a build
-    or
-    Raises
     """
     recipe_dir = m.path
     command = ['git', '-C', recipe_dir, 'rev-parse', '--abbrev-ref', 'HEAD']
-    p = subprocess.Popen(
+    p = subprocess.run(
             command,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
+            check=True,
             )
-    out, _ = p.communicate()
-    branch = out.decode("utf-8")[:-1]
-    if not branch:
-        raise
+    branch = p.stdout.decode("utf-8")[:-1]
 
     command = ['git', '-C', recipe_dir, 'rev-parse', f'origin/{branch}']
-    p = subprocess.Popen(
+    p = subprocess.run(
             command,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
+            check=True,
             )
-    out, _ = p.communicate()
-    remote_commit = out.decode("utf-8")[:-1]
+    remote_commit = p.stdout.decode("utf-8")[:-1]
 
     command = ['git', '-C', recipe_dir, 'remote', 'get-url', 'origin']
-    p = subprocess.Popen(
+    p = subprocess.run(
             command,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
+            check=True,
             )
-    out, _ = p.communicate()
-    origin_url = out.decode("utf-8")[:-1]
+    origin_url = p.stdout.decode("utf-8")[:-1]
 
     git_info = {
-            "origin_url": origin_url,
-            "commit": remote_commit
-            }
+        "origin_url": origin_url,
+        "commit": remote_commit,
+    }
 
     return git_info
 
@@ -1229,9 +1219,9 @@ def write_about_json(m):
             try:
                 git_info = get_git_info(m)
                 extra.update(git_info)
-            except Exception as e:
-                print(f"Unable to get git info. Skipping adding extra_info to about.json: {e}")
-                pass
+            except subprocess.CalledProcessError as cpe:
+                log = utils.get_logger(__name__)
+                log.warn(f"Unable to get git info. Skipping adding extra_info to about.json: {cpe}")
         env = environ.Environment(root_dir)
         d['root_pkgs'] = env.package_specs()
         # Include the extra section of the metadata in the about.json
