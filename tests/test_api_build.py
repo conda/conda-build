@@ -1617,6 +1617,7 @@ def test_ignore_verify_codes(testing_config):
     #    it will build OK.  If not, it will error out.
     api.build(recipe_dir, config=testing_config)
 
+
 @pytest.mark.sanity
 def test_extra_meta(testing_config):
     recipe_dir = os.path.join(metadata_dir, '_extra_meta')
