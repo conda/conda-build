@@ -219,4 +219,3 @@ jobs:
         with:
           name: Windows_replay-py-${{ matrix.python-version }}_${{ matrix.conda-version }}_${{ matrix.test-type }}
           path: pytest-replay/
-
