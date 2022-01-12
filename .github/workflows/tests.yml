@@ -159,33 +159,43 @@ jobs:
           conda install -y conda
 
       - name: Source Scripts
-        shell: cmd
+        shell: bash -l {0}
         run: |
-          python -c "import sys; print(sys.version)"
-          python -c "import sys; print(sys.executable)"
-          python -c "import sys; print(sys.prefix)"
-          call conda update -q --all||exit 1
-          call conda install -q pip python-libarchive-c pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling pytest-azurepipelines||exit 1
-          call conda install pytest-replay pytest-rerunfailures -y||exit 1
-          pip install --no-deps .
-          conda-build --version
-          pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd
+          source ci/azurepipelines/install_conda_build_test_deps
+          pip install -e .
+          conda info -a
           mkdir %UserProfile%\cbtmp_serial
           mkdir %UserProfile%\cbtmp
-          for /d %%F in (%UserProfile%\cbtmp_serial\*) do rd /s /q "%%F"
-          for /d %%F in (%UserProfile%\cbtmp\*) do rd /s /q "%%F"
-          call conda create -n blarg -yq --download-only python=2.7||exit 1
-          call conda create -n blarg -yq --download-only python=3.8||exit 1
-          call conda create -n blarg -yq --download-only python cmake||exit 1
-          mkdir $(Build.ArtifactStagingDirectory)\\pytest-replay
-          set "PYTEST_REPLAY_OPTIONS=--replay-record-dir=$(Build.ArtifactStagingDirectory)\\pytest-replay --replay-base-name=Win-%CONDA_VERSION%-Py%PYTHON_VERSION%"
-          echo "##vso[task.setvariable variable=PYTEST_REPLAY_OPTIONS]%PYTEST_REPLAY_OPTIONS%"
+          mkdir ./pytest-replay
+
+#      - name: Source Scripts
+#        shell: cmd
+#        run: |
+#          python -c "import sys; print(sys.version)"
+#          python -c "import sys; print(sys.executable)"
+#          python -c "import sys; print(sys.prefix)"
+#          call conda update -q --all||exit 1
+#          call conda install -q pip python-libarchive-c pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling pytest-azurepipelines||exit 1
+#          call conda install pytest-replay pytest-rerunfailures -y||exit 1
+#          pip install --no-deps .
+#          conda-build --version
+#          pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd
+#          mkdir %UserProfile%\cbtmp_serial
+#          mkdir %UserProfile%\cbtmp
+#          for /d %%F in (%UserProfile%\cbtmp_serial\*) do rd /s /q "%%F"
+#          for /d %%F in (%UserProfile%\cbtmp\*) do rd /s /q "%%F"
+#          call conda create -n blarg -yq --download-only python=2.7||exit 1
+#          call conda create -n blarg -yq --download-only python=3.8||exit 1
+#          call conda create -n blarg -yq --download-only python cmake||exit 1
+#          mkdir $(Build.ArtifactStagingDirectory)\\pytest-replay
+#          set "PYTEST_REPLAY_OPTIONS=--replay-record-dir=$(Build.ArtifactStagingDirectory)\\pytest-replay --replay-base-name=Win-%CONDA_VERSION%-Py%PYTHON_VERSION%"
+#          echo "##vso[task.setvariable variable=PYTEST_REPLAY_OPTIONS]%PYTEST_REPLAY_OPTIONS%"
 
       - name: Run Serial tests
-        shell: cmd
+        shell: bash -l {0}
         if: matrix.test-type == 'serial'
         run: |
-          call pytest \
+          pytest \
               --color=yes \
               -vv \
               -n 0 \
@@ -198,7 +208,7 @@ jobs:
               ${{ env.pytest-replay }}
 
       - name: Run Parallel tests
-        shell: cmd
+        shell: bash -l {0}
         if: matrix.test-type == 'parallel'
         run: |
           call pytest \
