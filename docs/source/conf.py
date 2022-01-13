@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # Configuration file for the Sphinx documentation builder.
 #
@@ -19,7 +18,7 @@ sys.path.insert(0, os.path.abspath('../..'))
 
 
 os.chdir('../..')
-import versioneer
+import versioneer  # noqa: E402
 
 version = versioneer.get_versions()['version']
 

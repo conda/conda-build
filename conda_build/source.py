@@ -1,6 +1,3 @@
-from __future__ import absolute_import, division, print_function
-
-import io
 import locale
 import os
 from os.path import join, isdir, isfile, abspath, basename, exists, normpath, expanduser
@@ -35,7 +32,7 @@ ext_re = re.compile(r"(.*?)(\.(?:tar\.)?[^.]+)$")
 
 
 def append_hash_to_fn(fn, hash_value):
-    return ext_re.sub(r"\1_{}\2".format(hash_value[:10]), fn)
+    return ext_re.sub(fr"\1_{hash_value[:10]}\2", fn)
 
 
 def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
@@ -53,7 +50,7 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
     for hash_type in ('md5', 'sha1', 'sha256'):
         if hash_type in source_dict:
             if source_dict[hash_type] in (None, ""):
-                raise ValueError('Empty {} hash provided for {}'.format(hash_type, fn))
+                raise ValueError(f'Empty {hash_type} hash provided for {fn}')
             fn = append_hash_to_fn(fn, source_dict[hash_type])
             hash_added = True
             break
@@ -282,7 +279,7 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_ca
             submod_mirror_dir = os.path.normpath(
                 os.path.join(mirror_dir, submod_rel_path))
             if verbose:
-                print('Relative submodule %s found: url is %s, submod_mirror_dir is %s' % (
+                print('Relative submodule {} found: url is {}, submod_mirror_dir is {}'.format(
                       submod_name, submod_url, submod_mirror_dir))
             with TemporaryDirectory() as temp_checkout_dir:
                 git_mirror_checkout_recursive(git, submod_mirror_dir, temp_checkout_dir, submod_url,
@@ -372,13 +369,13 @@ def git_info(src_dir, build_prefix, git=None, verbose=True, fo=None):
         if hasattr(stdout, 'decode'):
             stdout = stdout.decode(encoding, 'ignore')
         if fo:
-            fo.write(u'==> {} <==\n'.format(' '.join(cmd)))
+            fo.write('==> {} <==\n'.format(' '.join(cmd)))
             if verbose:
-                fo.write(stdout + u'\n')
+                fo.write(stdout + '\n')
         else:
             if verbose:
-                print(u'==> {} <==\n'.format(' '.join(cmd)))
-                safe_print_unicode(stdout + u'\n')
+                print('==> {} <==\n'.format(' '.join(cmd)))
+                safe_print_unicode(stdout + '\n')
 
 
 def hg_source(source_dict, src_dir, hg_cache, verbose):
@@ -467,17 +464,17 @@ def get_repository_info(recipe_path):
             origin = check_output_env(["git", "config", "--get", "remote.origin.url"],
                                       cwd=recipe_path)
             rev = check_output_env(["git", "rev-parse", "HEAD"], cwd=recipe_path)
-            return "Origin {}, commit {}".format(origin, rev)
+            return f"Origin {origin}, commit {rev}"
         elif isdir(join(recipe_path, ".hg")):
             origin = check_output_env(["hg", "paths", "default"], cwd=recipe_path)
             rev = check_output_env(["hg", "id"], cwd=recipe_path).split()[0]
-            return "Origin {}, commit {}".format(origin, rev)
+            return f"Origin {origin}, commit {rev}"
         elif isdir(join(recipe_path, ".svn")):
             info = check_output_env(["svn", "info"], cwd=recipe_path)
             info = info.decode("utf-8")  # Py3 returns a byte string, but re needs unicode or str.
             server = re.search("Repository Root: (.*)$", info, flags=re.M).group(1)
             revision = re.search("Revision: (.*)$", info, flags=re.M).group(1)
-            return "{}, Revision {}".format(server, revision)
+            return f"{server}, Revision {revision}"
         else:
             return "{}, last modified {}".format(recipe_path,
                                              time.ctime(os.path.getmtime(
@@ -533,15 +530,15 @@ def _guess_patch_strip_level(filesstr, src_dir):
         if histo[order[0]] == histo[order[1]]:
             print("Patch level ambiguous, selecting least deep")
             guessed = True
-        patchlevel = min([key for key, value
-                          in histo.items() if value == histo[order[0]]])
+        patchlevel = min(key for key, value
+                          in histo.items() if value == histo[order[0]])
     return patchlevel, guessed
 
 
 def _get_patch_file_details(path):
     re_files = re.compile(r'^(?:---|\+\+\+) ([^\n\t]+)')
     files = []
-    with io.open(path, errors='ignore') as f:
+    with open(path, errors='ignore') as f:
         files = []
         first_line = True
         is_git_format = True
@@ -594,7 +591,7 @@ def _get_patch_attributes(path, patch_exe, git, src_dir, stdout, stderr, retaine
         amalgamated = True
     strip_level, strip_level_guessed = _guess_patch_strip_level(files, src_dir)
     if strip_level:
-        files = set(f.split('/', strip_level)[-1] for f in files)
+        files = {f.split('/', strip_level)[-1] for f in files}
 
     # Defaults
     result = {'patch': path,
@@ -615,7 +612,7 @@ def _get_patch_attributes(path, patch_exe, git, src_dir, stdout, stderr, retaine
 
     crlf = False
     lf = False
-    with io.open(path, errors='ignore') as f:
+    with open(path, errors='ignore') as f:
         _content = f.read()
         for line in _content.split('\n'):
             if line.startswith((' ', '+', '-')):
@@ -626,12 +623,12 @@ def _get_patch_attributes(path, patch_exe, git, src_dir, stdout, stderr, retaine
     result['line_endings'] = 'mixed' if (crlf and lf) else 'crlf' if crlf else 'lf'
 
     if not patch_exe:
-        log.warning("No patch program found, cannot determine patch attributes for {}".format(path))
+        log.warning(f"No patch program found, cannot determine patch attributes for {path}")
         if not git:
             log.error("No git program found either. Please add a dependency for one of these.")
         return result
 
-    class noop_context(object):
+    class noop_context:
         value = None
 
         def __init__(self, value):
@@ -652,7 +649,7 @@ def _get_patch_attributes(path, patch_exe, git, src_dir, stdout, stderr, retaine
             # Make all the fmts.
             result['patches'] = {}
             for fmt, _ in fmts.items():
-                new_patch = os.path.join(tmpdir, os.path.basename(path) + '.{}'.format(fmt))
+                new_patch = os.path.join(tmpdir, os.path.basename(path) + f'.{fmt}')
                 if fmt == 'native':
                     try:
                         shutil.copy2(path, new_patch)
@@ -728,7 +725,7 @@ def _get_patch_attributes(path, patch_exe, git, src_dir, stdout, stderr, retaine
 def apply_one_patch(src_dir, recipe_dir, rel_path, config, git=None):
     path = os.path.join(recipe_dir, rel_path)
     if config.verbose:
-        print('Applying patch: {}'.format(path))
+        print(f'Applying patch: {path}')
 
     def try_apply_patch(patch, patch_args, cwd, stdout, stderr):
         # An old reference: https://unix.stackexchange.com/a/243748/34459
@@ -764,7 +761,7 @@ def apply_one_patch(src_dir, recipe_dir, rel_path, config, git=None):
         try:
             try_patch_args = base_patch_args[:]
             try_patch_args.append('--dry-run')
-            log.debug("dry-run applying with\n{} {}".format(patch, try_patch_args))
+            log.debug(f"dry-run applying with\n{patch} {try_patch_args}")
             check_call_env([patch] + try_patch_args, cwd=cwd, stdout=stdout, stderr=stderr)
             # You can use this to pretend the patch failed so as to test reversal!
             # raise CalledProcessError(-1, ' '.join([patch] + patch_args))
@@ -821,7 +818,7 @@ def apply_one_patch(src_dir, recipe_dir, rel_path, config, git=None):
             patch_args = patch_attributes['args']
 
             if config.verbose:
-                print('Applying patch: {} with args:\n{}'.format(path, patch_args))
+                print(f'Applying patch: {path} with args:\n{patch_args}')
 
             try:
                 try_apply_patch(patch_exe, patch_args,
@@ -892,11 +889,11 @@ def provide(metadata):
                     if not isdir(src_dir_symlink):
                         os.makedirs(src_dir_symlink)
                     if metadata.config.verbose:
-                        print("Creating sybmolic link pointing to %s at %s" % (path, src_dir))
+                        print(f"Creating sybmolic link pointing to {path} at {src_dir}")
                     os.symlink(path, src_dir)
                 else:
                     if metadata.config.verbose:
-                        print("Copying %s to %s" % (path, src_dir))
+                        print(f"Copying {path} to {src_dir}")
                     # careful here: we set test path to be outside of conda-build root in setup.cfg.
                     #    If you don't do that, this is a recursive function
                     copy_into(path, src_dir, metadata.config.timeout, symlinks=True,

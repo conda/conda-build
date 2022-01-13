@@ -68,7 +68,7 @@ def link_files(src_root, dst_root, files):
         if exists(dst):
             _unlink(dst)
         _link(src, dst)
-        f = '%s/%s' % (dst_root, f)
+        f = f'{dst_root}/{f}'
         FILES.append(f)
         if f.endswith('.py'):
             FILES.append(pyc_f(f))
@@ -84,7 +84,7 @@ def replace_long_shebang(data):
         whole_shebang, executable, options = shebang_match.groups()
         if len(whole_shebang) > 127:
             executable_name = executable.decode('utf-8').split('/')[-1]
-            new_shebang = '#!/usr/bin/env %s%s' % (executable_name, options.decode('utf-8'))
+            new_shebang = '#!/usr/bin/env {}{}'.format(executable_name, options.decode('utf-8'))
             data = data.replace(whole_shebang, new_shebang.encode('utf-8'))
     if hasattr(data, 'decode'):
         data = data.decode()

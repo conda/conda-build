@@ -18,7 +18,7 @@ from conda_build.conda_interface import memoized
 from conda_build.utils import ensure_list, get_logger, islist, on_win, trim_empty_keys
 
 DEFAULT_VARIANTS = {
-    'python': '{0}.{1}'.format(sys.version_info.major, sys.version_info.minor),
+    'python': f'{sys.version_info.major}.{sys.version_info.minor}',
     'numpy': '1.16',
     # this one actually needs to be pretty specific.  The reason is that cpan skeleton uses the
     #    version to say what's in their standard library.
@@ -124,7 +124,7 @@ def validate_spec(src, spec):
 
     # check for invalid characters
     errors.extend(
-        "  {} key contains an invalid character '-'".format(k)
+        f"  {k} key contains an invalid character '-'"
         for k in spec
         if "-" in k
     )
@@ -137,7 +137,7 @@ def validate_spec(src, spec):
     else:
         # check if every zip field is defined
         errors.extend(
-            "  zip_key entry {} in group {} does not have any settings".format(k, zg)
+            f"  zip_key entry {k} in group {zg} does not have any settings"
             for zg in zip_keys
             for k in zg
             # include error if key is not defined in spec
@@ -157,7 +157,7 @@ def validate_spec(src, spec):
 
         # check that all zip fields within a zip_group are the same length
         errors.extend(
-            "  zip fields in zip_key group {} are not all the same length".format(zg)
+            f"  zip fields in zip_key group {zg} are not all the same length"
             for zg in zip_keys
             # include error if all zip fields in a zip_group are the same size,
             # ignore missing fields
@@ -231,7 +231,7 @@ def _combine_spec_dictionaries(specs, extend_keys=None, filter_keys=None, zip_ke
         if spec:
             if log_output:
                 log = get_logger(__name__)
-                log.info("Adding in variants from {}".format(spec_source))
+                log.info(f"Adding in variants from {spec_source}")
             for k, v in spec.items():
                 if not keys or k in keys:
                     if k in extend_keys:
@@ -253,8 +253,8 @@ def _combine_spec_dictionaries(specs, extend_keys=None, filter_keys=None, zip_ke
                         # should always be a list of lists, but users may specify as just a list
                         values[k] = values.get(k, [])
                         values[k].extend(v)
-                        values[k] = list(list(set_group) for set_group in set(tuple(group)
-                                                                        for group in values[k]))
+                        values[k] = list(list(set_group) for set_group in {tuple(group)
+                                                                        for group in values[k]})
                     else:
                         if hasattr(v, 'keys'):
                             values[k] = v.copy()
@@ -455,21 +455,22 @@ def explode_variants(spec):
     """
     Helper function to explode spec into all of the variants.
 
-    .. code-block:: python
+    .. code-block:: pycon
         >>> spec = {
-            # normal expansions
-            "foo": [2.7, 3.7, 3.8],
-            # zip_keys are the values that need to be exploded as a set
-            "zip_keys": [["bar", "baz"], ["qux", "quux", "quuz"]],
-            "bar": [1, 2, 3],
-            "baz": [2, 4, 6],
-            "qux": [4, 5],
-            "quux": [8, 10],
-            "quuz": [12, 15],
-            # extend_keys are those values which we do not explode
-            "extend_keys": ["corge"],
-            "corge": 42,
-        }
+        ...     # normal expansions
+        ...     "foo": [2.7, 3.7, 3.8],
+        ...     # zip_keys are the values that need to be exploded as a set
+        ...     "zip_keys": [["bar", "baz"], ["qux", "quux", "quuz"]],
+        ...     "bar": [1, 2, 3],
+        ...     "baz": [2, 4, 6],
+        ...     "qux": [4, 5],
+        ...     "quux": [8, 10],
+        ...     "quuz": [12, 15],
+        ...     # extend_keys are those values which we do not explode
+        ...     "extend_keys": ["corge"],
+        ...     "corge": 42,
+        ... }
+
         >>> explode_variants(spec)
         [{
             "foo": 2.7,

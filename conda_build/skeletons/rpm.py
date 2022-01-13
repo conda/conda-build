@@ -9,11 +9,9 @@ except:
     import pickle as pickle
 import gzip
 import hashlib
-import io
 from os import (chmod, makedirs)
 from os.path import (basename, dirname, exists, join, splitext)
 import re
-from six import string_types
 from textwrap import wrap
 from xml.etree import cElementTree as ET
 from .cran import yaml_quote_string
@@ -195,7 +193,7 @@ def rpm_filename_split(rpmfilename):
     elif len(parts) > 2:
         release, platform = '.'.join(parts[0:len(parts) - 1]), '.'.join(parts[-1:])
     else:
-        print("ERROR: Cannot figure out the release and platform for {}".format(base))
+        print(f"ERROR: Cannot figure out the release and platform for {base}")
     name_version = base.split('-')[0:-1]
     version = name_version[-1]
     rpm_name = '-'.join(name_version[0:len(name_version) - 1])
@@ -209,7 +207,7 @@ def rpm_split_url_and_cache(rpm_url, src_cache):
 
 
 def rpm_filename_generate(rpm_name, version, release, platform):
-    return '{}-{}-{}.{}.rpm'.format(rpm_name, version, release, platform)
+    return f'{rpm_name}-{version}-{release}.{platform}.rpm'
 
 
 def rpm_url_generate(url_dirname, rpm_name, version, release, platform, src_cache):
@@ -219,7 +217,7 @@ def rpm_url_generate(url_dirname, rpm_name, version, release, platform, src_cach
     result = rpm_filename_generate(rpm_name, version, release, platform)
     url = join(url_dirname, result)
     path, _ = download_to_cache(src_cache, '', dict({'url': url}))
-    assert path, "Failed to cache generated RPM url {}".format(result)
+    assert path, f"Failed to cache generated RPM url {result}"
     return url
 
 
@@ -238,13 +236,13 @@ def find_repo_entry_and_arch(repo_primary, architectures, depend):
                     if 'provides' in package[arch]:
                         for provide in package[arch]['provides']:
                             if provide['name'] == dep_name:
-                                print("Found it in {}".format(name))
+                                print(f"Found it in {name}")
                                 found_package = package
                                 found_package_name = name
                                 break
 
     if found_package_name == '':
-        print("WARNING: Did not find package called (or another one providing) {}".format(dep_name))  # noqa
+        print(f"WARNING: Did not find package called (or another one providing) {dep_name}")  # noqa
         return None, None, None
 
     chosen_arch = None
@@ -283,7 +281,7 @@ def dictify_pickled(xml_file, src_cache, dict_massager=None, cdt=None):
     pickled = xml_file + '.p'
     if exists(pickled):
         return pickle.load(open(pickled, 'rb'))
-    with io.open(xml_file, 'r', encoding='utf-8') as xf:
+    with open(xml_file, encoding='utf-8') as xf:
         xmlstring = xf.read()
         # Remove the global namespace.
         xmlstring = re.sub(r'\sxmlns="[^"]+"', r'', xmlstring, count=1)
@@ -302,7 +300,7 @@ def get_repo_dict(repomd_url, data_type, dict_massager, cdt, src_cache):
     # Remove the default namespace definition (xmlns="http://some/namespace")
     xmlstring = re.sub(br'\sxmlns="[^"]+"', b'', xmlstring, count=1)
     repomd = ET.fromstring(xmlstring)
-    for child in repomd.findall("*[@type='{}']".format(data_type)):
+    for child in repomd.findall(f"*[@type='{data_type}']"):
         open_csum = child.findall("open-checksum")[0].text
         xml_file = join(src_cache, open_csum)
         try:
@@ -324,7 +322,7 @@ def get_repo_dict(repomd_url, data_type, dict_massager, cdt, src_cache):
                     with open(xml_file, 'wb') as xml:
                         xml.write(xml_content)
                 else:
-                    print("ERROR: Checksum of uncompressed file {} does not match".format(xmlgz_file))  # noqa
+                    print(f"ERROR: Checksum of uncompressed file {xmlgz_file} does not match")  # noqa
         return dictify_pickled(xml_file, src_cache, dict_massager, cdt)
     return dict({})
 
@@ -407,7 +405,7 @@ def massage_primary(repo_primary, src_cache, cdt):
                             'requires': requires})
         if name in new_dict:
             if arch in new_dict[name]:
-                print("WARNING: Duplicate packages exist for {} for arch {}".format(name, arch))
+                print(f"WARNING: Duplicate packages exist for {name} for arch {arch}")
             new_dict[name][arch] = new_package
         else:
             new_dict[name] = dict({arch: new_package})
@@ -532,7 +530,7 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
                                                 cdt['short_name'], depend['arch'],
                                                 depend['flags'], depend['ver'])
                          for depend in depends]
-        dependsstr_part = '\n'.join(['    - {}'.format(depends_spec)
+        dependsstr_part = '\n'.join([f'    - {depends_spec}'
                                      for depends_spec in depends_specs])
         dependsstr_build = '  build:\n' + dependsstr_part + '\n'
         dependsstr_host = '  host:\n' + dependsstr_part + '\n'
@@ -607,7 +605,7 @@ def write_conda_recipe(packages, distro, output_dir, architecture, recursive, ov
                               'bits': bits})
     cdt = dict()
     for k, v in iteritems(CDTs[cdt_name]):
-        if isinstance(v, string_types):
+        if isinstance(v, str):
             cdt[k] = v.format(**architecture_bits)
         else:
             cdt[k] = v
@@ -697,7 +695,7 @@ def add_parser(repos):
 
     def distro(distro_name):
         if distro_name not in CDTs:
-            raise argparse.ArgumentTypeError("valid --distro values are {}".format(valid_distros()))
+            raise argparse.ArgumentTypeError(f"valid --distro values are {valid_distros()}")
         return distro_name
 
     rpm.add_argument("--distro",

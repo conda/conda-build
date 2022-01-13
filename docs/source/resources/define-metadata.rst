@@ -758,7 +758,7 @@ evaluate to ``>=1.6.34,<1.7``.
 
 If build and link dependencies need to impose constraints on the run environment
 but not necessarily pull in additional packages, then this can be done by
-altering the :ref:`Run_constrained` entries. In addtion to ``weak``/``strong``
+altering the :ref:`Run_constrained` entries. In addition to ``weak``/``strong``
 ``run_exports`` which add to the ``run`` requirements, ``weak_constrains`` and
 ``strong_constrains`` add to the ``run_constrained`` requirements.
 With these, e.g., minimum versions of compatible but not required packages (like
@@ -828,7 +828,7 @@ There are 2 possible behaviors:
 
  build:
    pin_depends: record
- 
+
 With a value of ``record``, conda-build will record all
 requirements exactly as they would be installed in a file
 called info/requires. These pins will not
@@ -840,7 +840,7 @@ package. It is only adding in this new file.
 
  build:
    pin_depends: strict
-  
+
 With a value of ``strict``, conda-build applies the pins
 to the actual metadata. This does affect the output of
 ``conda render`` and also affects the end result
@@ -1027,6 +1027,8 @@ The line in the ``meta.yaml`` file should literally say
    conda-build 3 you can augment the packages used in your build and host
    sections with :ref:`run_exports <run_exports>` which are then automatically
    added to the run requirements for you.
+
+.. _Run_constrained:
 
 Run_constrained
 ---------------
@@ -1536,7 +1538,8 @@ contents will be unconditionally and recursively added).
 
 
 Prelink Message File
----------
+--------------------
+
 Similar to the license file, the user can add prelink message files to the conda package.
 
 .. code-block:: yaml
@@ -1737,12 +1740,7 @@ of ``resolved_packages`` is given below:
 
       requirements:
           host:
-              - ca-certificates 2017.08.26 h1d4fec5_0
-              - curl 7.55.1 h78862de_4
-              - libgcc-ng 7.2.0 h7cc24e2_2
-              - libssh2 1.8.0 h9cfc8f7_4
-              - openssl 1.0.2n hb7f436b_0
-              - zlib 1.2.11 ha838bed_2
+              - curl 7.55.1
           run:
               - ca-certificates 2017.08.26 h1d4fec5_0
               - curl 7.55.1 h78862de_4
@@ -1872,13 +1870,12 @@ logic is possible:
      url: http://path/to/unix/source        # [unix]
      md5: 88510902197cba0d1ab4791e0f41a66e  # [unix]
 
-.. note:: 
+.. note::
    To select multiple operating systems use the ``or`` statement. While it might be tempting
    to use ``skip: True  # [win and osx]``, this will only work if the platform is both
-   windows and osx simultaneously (i.e. never). 
-   
+   windows and osx simultaneously (i.e. never).
+
 .. code-block:: yaml
 
    build:
       skip: True  # [win or osx]
- 

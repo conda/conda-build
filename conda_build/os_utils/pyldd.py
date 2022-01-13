@@ -1,4 +1,3 @@
-from __future__ import print_function
 import argparse
 import glob
 import os
@@ -144,7 +143,7 @@ class IncompleteRead(Exception):
     pass
 
 
-class ReadCheckWrapper(object):
+class ReadCheckWrapper:
     """
     Wrap a file-object to raises a exception on incomplete reads.
     """
@@ -165,7 +164,7 @@ class ReadCheckWrapper(object):
             return getattr(self._file_obj, attr)
 
 
-class fileview(object):
+class fileview:
     """
     A proxy for file-like objects that exposes a given view of a file.
     Modified from macholib.
@@ -189,7 +188,7 @@ class fileview(object):
 
     def _checkwindow(self, seekto, op):
         if not (self._start <= seekto <= self._end):
-            raise IOError("%s to offset %d is outside window [%d, %d]" % (
+            raise OSError("%s to offset %d is outside window [%d, %d]" % (
                 op, seekto, self._start, self._end))
 
     def seek(self, offset, whence=0):
@@ -201,7 +200,7 @@ class fileview(object):
         elif whence == os.SEEK_END:
             seekto += self._end
         else:
-            raise IOError("Invalid whence argument to seek: %r" % (whence,))
+            raise OSError(f"Invalid whence argument to seek: {whence!r}")
         self._checkwindow(seekto, 'seek')
         self._fileobj.seek(seekto)
         self._pos = seekto - self._start
@@ -225,7 +224,7 @@ class fileview(object):
         return bytes
 
 
-class UnixExecutable(object):
+class UnixExecutable:
     def __init__(self, file, initial_rpaths_transitive=[]):
         self.rpaths_transitive = []
         self.rpaths_nontransitive = []
@@ -276,7 +275,7 @@ def replace_lc_load_dylib(file, where, bits, endian, cmd, cmdsize, what, val):
         # If the string is what is being replaced, overwrite it.
         if load == what:
             file.seek(where + name_offset, os.SEEK_SET)
-            file.write(val.encode() + '\0'.encode())
+            file.write(val.encode() + b'\0')
             return True
     return False
 
@@ -329,7 +328,7 @@ def do_macho(file, bits, endian, lc_operation, *args):
     return filetype, results
 
 
-class offset_size(object):
+class offset_size:
     def __init__(self, offset=0, size=maxint):
         self.offset = offset
         self.size = size
@@ -648,7 +647,7 @@ DT_LOPROC = 0x70000000
 DT_HIPROC = 0x7fffffff
 
 
-class elfheader(object):
+class elfheader:
     def __init__(self, file):
         self.hdr, = struct.unpack(BIG_ENDIAN + 'L', file.read(4))
         self.dt_needed = []
@@ -684,7 +683,7 @@ class elfheader(object):
         self.shstrndx, = struct.unpack(endian + 'H', file.read(2))
         loc = file.tell()
         if loc != self.ehsize:
-            get_logger(__name__).warning('file.tell()={} != ehsize={}'.format(loc, self.ehsize))
+            get_logger(__name__).warning(f'file.tell()={loc} != ehsize={self.ehsize}')
 
     def __str__(self):
         return 'bitness {}, endian {}, version {}, type {}, machine {}, entry {}'.format( # noqa
@@ -696,7 +695,7 @@ class elfheader(object):
             hex(self.entry))
 
 
-class elfsection(object):
+class elfsection:
     def __init__(self, eh, file):
         ptr_type = eh.ptr_type
         sz_ptr = eh.sz_ptr
@@ -821,7 +820,7 @@ class elfsection(object):
                 elffile.dt_rpath = []
 
 
-class programheader(object):
+class programheader:
     def __init__(self, eh, file):
         ptr_type = eh.ptr_type
         sz_ptr = eh.sz_ptr
@@ -990,7 +989,7 @@ class DLLfile(UnixExecutable):
         return 'unknown'
 
 
-class EXEfile(object):
+class EXEfile:
     def __init__(self, file, initial_rpaths_transitive=[]):
         self.super.__init__(self, file, initial_rpaths_transitive)
 
@@ -1090,7 +1089,7 @@ def _inspect_linkages_this(filename, sysroot='', arch='native'):
         except IncompleteRead:
             # the file was incomplete, can occur if a package ships a test file
             # which looks like an ELF file but is not.  Orange3 does this.
-            get_logger(__name__).warning('problems inspecting linkages for {}'.format(filename))
+            get_logger(__name__).warning(f'problems inspecting linkages for {filename}')
             return None, [], []
         dirname = os.path.dirname(filename)
         results = cf.get_resolved_shared_libraries(dirname, dirname, sysroot)
@@ -1136,7 +1135,7 @@ def get_runpaths(filename, arch='native'):
 def inspect_linkages(filename, resolve_filenames=True, recurse=True,
                      sysroot='', arch='native'):
     already_seen = set()
-    todo = set([filename])
+    todo = {filename}
     done = set()
     results = {}
     while todo != done:
@@ -1288,7 +1287,7 @@ def main_maybe_test():
         codefiles = [codefile for codefile in codefiles
                      if not os.path.islink(codefile) or os.path.exists(os.readlink(codefile))]
         for codefile in codefiles:
-            print('\nchecking {}'.format(codefile))
+            print(f'\nchecking {codefile}')
             this = test_this(codefile)
             if test_that:
                 that = test_that(codefile)

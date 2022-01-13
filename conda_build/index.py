@@ -1,7 +1,5 @@
-# -*- coding: utf-8 -*-
 # Copyright (C) 2018 Anaconda, Inc
 # SPDX-License-Identifier: Proprietary
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 import bz2
 from collections import OrderedDict
@@ -209,7 +207,7 @@ def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
                                 with open(channeldata_file, "r+") as f:
                                     channel_data[channel.name] = json.load(f)
                                 break
-                            except (IOError, JSONDecodeError):
+                            except (OSError, JSONDecodeError):
                                 time.sleep(0.2)
                                 retry += 1
                 else:
@@ -398,10 +396,10 @@ def _get_jinja2_environment():
 
     def _filter_add_href(text, link, **kwargs):
         if link:
-            kwargs_list = ['href="{0}"'.format(link)]
-            kwargs_list.append('alt="{0}"'.format(text))
-            kwargs_list += ['{0}="{1}"'.format(k, v) for k, v in kwargs.items()]
-            return '<a {0}>{1}</a>'.format(' '.join(kwargs_list), text)
+            kwargs_list = [f'href="{link}"']
+            kwargs_list.append(f'alt="{text}"')
+            kwargs_list += [f'{k}="{v}"' for k, v in kwargs.items()]
+            return '<a {}>{}</a>'.format(' '.join(kwargs_list), text)
         else:
             return text
 
@@ -420,7 +418,7 @@ def _get_jinja2_environment():
 def _maybe_write(path, content, write_newline_end=False, content_is_binary=False):
     # Create the temp file next "path" so that we can use an atomic move, see
     # https://github.com/conda/conda-build/issues/3833
-    temp_path = '%s.%s' % (path, uuid4())
+    temp_path = f'{path}.{uuid4()}'
 
     if not content_is_binary:
         content = ensure_binary(content)
@@ -543,11 +541,11 @@ def _cache_run_exports(tmpdir, run_exports_cache_path):
     try:
         with open(os.path.join(tmpdir, 'info', 'run_exports.json')) as f:
             run_exports = json.load(f)
-    except (IOError, FileNotFoundError):
+    except (OSError, FileNotFoundError):
         try:
             with open(os.path.join(tmpdir, 'info', 'run_exports.yaml')) as f:
                 run_exports = yaml.safe_load(f)
-        except (IOError, FileNotFoundError):
+        except (OSError, FileNotFoundError):
             log.debug("%s has no run_exports file (this is OK)" % tmpdir)
     with open(run_exports_cache_path, 'w') as fh:
         json.dump(run_exports, fh)
@@ -573,7 +571,7 @@ def _make_subdir_index_html(channel_name, subdir, repodata_packages, extra_paths
     environment = _get_jinja2_environment()
     template = environment.get_template('subdir-index.html.j2')
     rendered_html = template.render(
-        title="%s/%s" % (channel_name or '', subdir),
+        title="{}/{}".format(channel_name or '', subdir),
         packages=repodata_packages,
         current_time=datetime.utcnow().replace(tzinfo=pytz.timezone("UTC")),
         extra_paths=extra_paths,
@@ -617,7 +615,7 @@ def _alternate_file_extension(fn):
     cache_fn = fn
     for ext in CONDA_PACKAGE_EXTENSIONS:
         cache_fn = cache_fn.replace(ext, '')
-    other_ext = set(CONDA_PACKAGE_EXTENSIONS) - set([fn.replace(cache_fn, '')])
+    other_ext = set(CONDA_PACKAGE_EXTENSIONS) - {fn.replace(cache_fn, '')}
     return cache_fn + next(iter(other_ext))
 
 
@@ -661,11 +659,11 @@ def _get_newest_versions(r, pins={}):
         if g_name in pins:
             matches = []
             for pin in pins[g_name]:
-                version = r.find_matches(MatchSpec('%s=%s' % (g_name, pin)))[0].version
-                matches.extend(r.find_matches(MatchSpec('%s=%s' % (g_name, version))))
+                version = r.find_matches(MatchSpec(f'{g_name}={pin}'))[0].version
+                matches.extend(r.find_matches(MatchSpec(f'{g_name}={version}')))
         else:
             version = r.groups[g_name][0].version
-            matches = r.find_matches(MatchSpec('%s=%s' % (g_name, version)))
+            matches = r.find_matches(MatchSpec(f'{g_name}={version}'))
         groups[g_name] = matches
     return [pkg for group in groups.values() for pkg in group]
 
@@ -687,7 +685,7 @@ def _add_missing_deps(new_r, original_r):
                         version = matches[0].version
                         expanded_groups[ms.name] = (
                             set(expanded_groups.get(ms.name, [])) |
-                            set(original_r.find_matches(MatchSpec('%s=%s' % (ms.name, version)))))
+                            set(original_r.find_matches(MatchSpec(f'{ms.name}={version}'))))
                 seen_specs.add(dep_spec)
     return [pkg for group in expanded_groups.values() for pkg in group]
 
@@ -714,7 +712,7 @@ def _add_prev_ver_for_features(new_r, orig_r):
                     keep_m = _m
                     break
             if keep_m is not None:
-                expanded_groups[g_name] = set([keep_m]) | set(expanded_groups.get(g_name, []))
+                expanded_groups[g_name] = {keep_m} | set(expanded_groups.get(g_name, []))
 
     return [pkg for group in expanded_groups.values() for pkg in group]
 
@@ -733,11 +731,11 @@ def _shard_newest_packages(subdir, r, pins=None):
     for g_name, g_recs in r.groups.items():
         # always do the latest implicitly
         version = r.groups[g_name][0].version
-        matches = set(r.find_matches(MatchSpec('%s=%s' % (g_name, version))))
+        matches = set(r.find_matches(MatchSpec(f'{g_name}={version}')))
         if g_name in pins:
             for pin_value in pins[g_name]:
-                version = r.find_matches(MatchSpec('%s=%s' % (g_name, pin_value)))[0].version
-                matches.update(r.find_matches(MatchSpec('%s=%s' % (g_name, version))))
+                version = r.find_matches(MatchSpec(f'{g_name}={pin_value}'))[0].version
+                matches.update(r.find_matches(MatchSpec(f'{g_name}={version}')))
         groups[g_name] = matches
 
     # add the deps of the stuff in the index
@@ -752,7 +750,7 @@ def _shard_newest_packages(subdir, r, pins=None):
 def _build_current_repodata(subdir, repodata, pins):
     r = _get_resolve_object(subdir, repodata=repodata)
     keep_pkgs = _shard_newest_packages(subdir, r, pins)
-    new_repodata = {k: repodata[k] for k in set(repodata.keys()) - set(['packages', 'packages.conda'])}
+    new_repodata = {k: repodata[k] for k in set(repodata.keys()) - {'packages', 'packages.conda'}}
     packages = {}
     conda_packages = {}
     for keep_pkg in keep_pkgs:
@@ -770,7 +768,7 @@ def _build_current_repodata(subdir, repodata, pins):
     return new_repodata
 
 
-class ChannelIndex(object):
+class ChannelIndex:
 
     def __init__(self, channel_root, channel_name, subdirs=None, threads=MAX_THREADS_DEFAULT,
                  deep_integrity_check=False, debug=False):
@@ -791,8 +789,8 @@ class ChannelIndex(object):
 
         with utils.LoggingContext(level, loggers=[__name__]):
             if not self._subdirs:
-                detected_subdirs = set(subdir for subdir in os.listdir(self.channel_root)
-                                    if subdir in utils.DEFAULT_SUBDIRS and isdir(join(self.channel_root, subdir)))
+                detected_subdirs = {subdir for subdir in os.listdir(self.channel_root)
+                                    if subdir in utils.DEFAULT_SUBDIRS and isdir(join(self.channel_root, subdir))}
                 log.debug("found subdirs %s" % detected_subdirs)
                 self.subdirs = subdirs = sorted(detected_subdirs | {'noarch'})
             else:
@@ -872,7 +870,7 @@ class ChannelIndex(object):
         try:
             with open(repodata_json_path) as fh:
                 old_repodata = json.load(fh) or {}
-        except (EnvironmentError, JSONDecodeError):
+        except (OSError, JSONDecodeError):
             # log.info("no repodata found at %s", repodata_json_path)
             old_repodata = {}
 
@@ -902,7 +900,7 @@ class ChannelIndex(object):
             # calculate all the paths and figure out what we're going to do with them
             # add_set: filenames that aren't in the current/old repodata, but exist in the subdir
             if index_file:
-                with open(index_file, 'r') as fin:
+                with open(index_file) as fin:
                     add_set = set()
                     for line in fin:
                         fn_subdir, fn = line.strip().split('/')
@@ -1147,7 +1145,7 @@ class ChannelIndex(object):
         try:
             with open(index_cache_path) as fh:
                 index_json = json.load(fh)
-        except (IOError, JSONDecodeError):
+        except (OSError, JSONDecodeError):
             index_json = fn
 
         return fn, index_json
@@ -1175,7 +1173,7 @@ class ChannelIndex(object):
                 if os.path.getsize(path) != 0:
                     with open(path) as fh:
                         data.update(json.load(fh))
-            except (OSError, EOFError, IOError):
+            except (OSError, EOFError):
                 pass
 
         try:
@@ -1183,11 +1181,11 @@ class ChannelIndex(object):
             if icon_cache_paths:
                 icon_cache_path = sorted(icon_cache_paths)[-1]
                 icon_ext = icon_cache_path.rsplit('.', 1)[-1]
-                channel_icon_fn = "%s.%s" % (data['name'], icon_ext)
+                channel_icon_fn = "{}.{}".format(data['name'], icon_ext)
                 icon_url = "icons/" + channel_icon_fn
                 icon_channel_path = join(channel_root, 'icons', channel_icon_fn)
                 icon_md5 = utils.md5_file(icon_cache_path)
-                icon_hash = "md5:%s:%s" % (icon_md5, getsize(icon_cache_path))
+                icon_hash = f"md5:{icon_md5}:{getsize(icon_cache_path)}"
                 data.update(icon_hash=icon_hash, icon_url=icon_url)
                 # log.info("writing icon from %s to %s", icon_cache_path, icon_channel_path)
                 utils.move_with_fallback(icon_cache_path, icon_channel_path)
@@ -1259,7 +1257,7 @@ class ChannelIndex(object):
         legacy_packages = repodata["packages"]
         conda_packages = repodata["packages.conda"]
 
-        use_these_legacy_keys = set(legacy_packages.keys()) - set(k[:-6] + CONDA_PACKAGE_EXTENSION_V1 for k in conda_packages.keys())
+        use_these_legacy_keys = set(legacy_packages.keys()) - {k[:-6] + CONDA_PACKAGE_EXTENSION_V1 for k in conda_packages.keys()}
         all_repodata_packages = conda_packages.copy()
         all_repodata_packages.update({k: legacy_packages[k] for k in use_these_legacy_keys})
         package_data = channel_data.get('packages', {})
@@ -1364,7 +1362,7 @@ class ChannelIndex(object):
     def _create_patch_instructions(self, subdir, repodata, patch_generator=None):
         gen_patch_path = patch_generator or join(self.channel_root, 'gen_patch.py')
         if isfile(gen_patch_path):
-            log.debug("using patch generator %s for %s" % (gen_patch_path, subdir))
+            log.debug(f"using patch generator {gen_patch_path} for {subdir}")
 
             # https://stackoverflow.com/a/41595552/2127762
             try:

@@ -66,7 +66,7 @@ def testing_homedir(tmpdir, request):
     try:
         os.makedirs(new_dir)
     except:
-        print("Failed to create {}".format(new_dir))
+        print(f"Failed to create {new_dir}")
         return None
     os.chdir(new_dir)
 
@@ -96,8 +96,8 @@ def testing_config(testing_workdir):
                     ignore_verify_codes=ignore_verify_codes_default,
                     exit_on_verify_error=exit_on_verify_error_default,
                     conda_pkg_format=conda_pkg_format_default)
-    assert result.no_rewrite_stdout_env == False
-    assert result._src_cache_root == None
+    assert result.no_rewrite_stdout_env is False
+    assert result._src_cache_root is None
     assert result.src_cache_root == testing_workdir
     assert result.noarch_python_build_age == 0
     return result
@@ -128,7 +128,7 @@ def testing_env(testing_workdir, request, monkeypatch):
     env_path = os.path.join(testing_workdir, 'env')
 
     check_call_env(['conda', 'create', '-yq', '-p', env_path,
-                    'python={0}'.format(".".join(sys.version.split('.')[:2]))])
+                    'python={}'.format(".".join(sys.version.split('.')[:2]))])
     monkeypatch.setenv('PATH', prepend_bin_path(os.environ.copy(), env_path,
                                                 prepend_prefix=True)['PATH'])
     # cleanup is done by just cleaning up the testing_workdir

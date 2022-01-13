@@ -4,7 +4,6 @@
 # conda is distributed under the terms of the BSD 3-clause license.
 # Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
 
-from __future__ import absolute_import, division, print_function
 
 import argparse
 import warnings
@@ -483,7 +482,7 @@ def main():
         print(str(e))
         sys.exit(1)
     except filelock.Timeout as e:
-        print("File lock on {0} could not be obtained.  You might need to try fewer builds at once."
+        print("File lock on {} could not be obtained.  You might need to try fewer builds at once."
               "  Otherwise, run conda clean --lock".format(e.lock_file))
         sys.exit(1)
     return
