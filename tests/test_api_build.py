@@ -1618,6 +1618,15 @@ def test_ignore_verify_codes(testing_config):
     api.build(recipe_dir, config=testing_config)
 
 
+@pytest.mark.sanity
+def test_extra_meta(testing_config):
+    recipe_dir = os.path.join(metadata_dir, '_extra_meta')
+    testing_config.extra_meta = {'foo': 'bar'}
+    outputs = api.build(recipe_dir, config=testing_config)
+    about = json.loads(package_has_file(outputs[0], 'info/about.json'))
+    assert 'foo' in about['extra'] and about['extra']['foo'] == 'bar'
+
+
 def test_symlink_dirs_in_always_include_files(testing_config):
     recipe = os.path.join(metadata_dir, '_symlink_dirs_in_always_include_files')
     api.build(recipe, config=testing_config)
