@@ -297,7 +297,7 @@ def delete_rpath(path, rpath, build_prefix=None, verbose=False, host_subdir=None
 
 
 def install_name_change(path, build_prefix, cb_func, dylibs, verbose=False,
-        host_subdir=None:
+        host_subdir=None):
     """Change dynamic shared library load name or id name of Mach-O Binary `path`.
 
     `cb_func` is called for each shared library load command. The dictionary of
