@@ -44,12 +44,14 @@ def is_macho(path):
     return bool(head in MAGIC)
 
 
-def is_dylib(path, build_prefix):
-    return human_filetype(path) == 'DYLIB'
+def is_dylib(path, build_prefix=None, host_subdir=None):
+    return human_filetype(path, build_prefix=build_prefix,
+         host_subdir=host_subdir) == 'DYLIB'
 
 
-def human_filetype(path, build_prefix):
-    otool = find_apple_cctools_executable('otool', build_prefix)
+def human_filetype(path, build_prefix=None, host_subdir=None):
+    otool = find_apple_cctools_executable('otool', build_prefix,
+        host_subdir=host_subdir)
     output = check_output((otool, '-h', path)).decode('utf-8')
     lines = output.splitlines()
     if not lines[0].startswith((path, 'Mach header')):
@@ -144,8 +146,9 @@ def _get_matching_load_commands(lines, cb_filter):
     return result
 
 
-def find_apple_cctools_executable(name, build_prefix, nofail=False):
-    tools = find_preferably_prefixed_executable(name, build_prefix, all_matches=True)
+def find_apple_cctools_executable(name, build_prefix, nofail=False, host_subdir=None):
+    tools = find_preferably_prefixed_executable(name, build_prefix, all_matches=True,
+        host_subdir=host_subdir)
     for tool in tools:
         try:
             if '/usr/bin' in tool:
@@ -171,7 +174,7 @@ def find_apple_cctools_executable(name, build_prefix, nofail=False):
         return tool
 
 
-def otool(path, build_prefix=None, cb_filter=is_dylib_info):
+def otool(path, build_prefix=None, cb_filter=is_dylib_info, host_subdir=None):
     """A wrapper around otool -l
 
     Parse the output of the otool -l 'load commands', filtered by
@@ -188,7 +191,8 @@ def otool(path, build_prefix=None, cb_filter=is_dylib_info):
     Any key values that can be converted to integers are converted
     to integers, the rest are strings.
     """
-    otool = find_apple_cctools_executable('otool', build_prefix)
+    otool = find_apple_cctools_executable('otool', build_prefix,
+        host_subdir=host_subdir)
     lines = check_output([otool, '-l', path],
                           stderr=STDOUT).decode('utf-8')
     # llvm-objdump returns 0 for some things that are anything but successful completion.
@@ -201,24 +205,27 @@ def otool(path, build_prefix=None, cb_filter=is_dylib_info):
     return _get_matching_load_commands(lines_split, cb_filter)
 
 
-def get_dylibs(path, build_prefix=None):
+def get_dylibs(path, build_prefix=None, host_subdir=None):
     """Return a list of the loaded dylib pathnames"""
-    dylib_loads = otool(path, build_prefix, is_load_dylib)
+    dylib_loads = otool(path, build_prefix, is_load_dylib,
+        host_subdir=host_subdir)
     return [dylib_load['name'] for dylib_load in dylib_loads]
 
 
-def get_id(path, build_prefix=None):
+def get_id(path, build_prefix=None, host_subdir=None):
     """Returns the id name of the Mach-O file `path` or an empty string"""
-    dylib_loads = otool(path, build_prefix, is_id_dylib)
+    dylib_loads = otool(path, build_prefix, is_id_dylib,
+        host_subdir=None)
     try:
         return [dylib_load['name'] for dylib_load in dylib_loads][0]
     except:
         return ''
 
 
-def get_rpaths(path, build_prefix=None):
+def get_rpaths(path, build_prefix=None, host_subdir=None):
     """Return a list of the dylib rpaths"""
-    dylib_loads = otool(path, build_prefix, is_rpath)
+    dylib_loads = otool(path, build_prefix, is_rpath,
+        host_subdir=host_subdir)
     return [dylib_load['path'] for dylib_load in dylib_loads]
 
 
@@ -230,8 +237,9 @@ def _chmod(filename, mode):
         log.warn(str(e))
 
 
-def install_name_tool(args, build_prefix=None, verbose=False):
-    args_full = [find_apple_cctools_executable('install_name_tool', build_prefix)]
+def install_name_tool(args, build_prefix=None, verbose=False, host_subdir=None):
+    args_full = [find_apple_cctools_executable('install_name_tool', build_prefix,
+        host_subdir=host_subdir)]
     args_full.extend(args)
     if verbose:
         print(' '.join(args_full))
@@ -248,12 +256,13 @@ def install_name_tool(args, build_prefix=None, verbose=False):
     return subproc.returncode, out, err
 
 
-def add_rpath(path, rpath, build_prefix=None, verbose=False):
+def add_rpath(path, rpath, build_prefix=None, verbose=False, host_subdir=None):
     """Add an `rpath` to the Mach-O file at `path`"""
     if not is_macho(path):
         return
     args = ['-add_rpath', rpath, path]
-    code, _, stderr = install_name_tool(args, build_prefix)
+    code, _, stderr = install_name_tool(args, build_prefix,
+        host_subdir=host_subdir)
     if "Mach-O dynamic shared library stub file" in stderr:
         print("Skipping Mach-O dynamic shared library stub file %s\n" % path)
         return
@@ -267,12 +276,13 @@ def add_rpath(path, rpath, build_prefix=None, verbose=False):
         % code)
 
 
-def delete_rpath(path, rpath, build_prefix=None, verbose=False):
+def delete_rpath(path, rpath, build_prefix=None, verbose=False, host_subdir=None):
     """Delete an `rpath` from the Mach-O file at `path`"""
     if not is_macho(path):
         return
     args = ['-delete_rpath', rpath, path]
-    code, _, stderr = install_name_tool(args, build_prefix)
+    code, _, stderr = install_name_tool(args, build_prefix,
+        host_subdir=host_subdir)
     if "Mach-O dynamic shared library stub file" in stderr:
         print("Skipping Mach-O dynamic shared library stub file %s\n" % path)
         return
@@ -286,7 +296,8 @@ def delete_rpath(path, rpath, build_prefix=None, verbose=False):
         % code)
 
 
-def install_name_change(path, build_prefix, cb_func, dylibs, verbose=False):
+def install_name_change(path, build_prefix, cb_func, dylibs, verbose=False,
+        host_subdir=host_subdir):
     """Change dynamic shared library load name or id name of Mach-O Binary `path`.
 
     `cb_func` is called for each shared library load command. The dictionary of
@@ -310,7 +321,8 @@ def install_name_change(path, build_prefix, cb_func, dylibs, verbose=False):
             args.extend(('-id', new_name, path))
         else:
             args.extend(('-change', dylibs[index]['name'], new_name, path))
-        code, _, stderr = install_name_tool(args, build_prefix)
+        code, _, stderr = install_name_tool(args, build_prefix,
+            host_subdir=host_subdir)
         if "Mach-O dynamic shared library stub file" in stderr:
             print("Skipping Mach-O dynamic shared library stub file %s" % path)
             ret = False

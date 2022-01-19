@@ -58,8 +58,19 @@ def find_executable(executable, prefix=None, all_matches=False):
     return result or all_matches_found
 
 
-def find_preferably_prefixed_executable(executable, build_prefix=None, all_matches=False):
-    found = find_executable('*' + executable, build_prefix, all_matches)
+def find_preferably_prefixed_executable(executable, build_prefix=None, all_matches=False,
+        host_subdir=None):
+    if host_subdir == "osx-64":
+        exe_prefix = "x86_64-*"
+    elif host_subdir == "osx-arm64":
+        exe_prefix = "arm64-*"
+    elif not host_subdir:
+        exe_prefix = "*"
+    else:
+        import warnings
+        warnings.warn('unknown host_subdir' % host_subdir, UserWarning)
+        exe_prefix = "*"
+    found = find_executable(exe_prefix + executable, build_prefix, all_matches)
     if not found:
         # It is possible to force non-prefixed exes by passing os.sep as the
         # first character in executable. basename makes this work.

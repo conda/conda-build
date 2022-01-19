@@ -392,18 +392,21 @@ def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
     return ret
 
 
-def mk_relative_osx(path, host_prefix, build_prefix, files, rpaths=('lib',)):
+def mk_relative_osx(path, host_prefix, build_prefix, files, rpaths=('lib',),
+        host_subdir=None):
     prefix = build_prefix if exists(build_prefix) else host_prefix
-    names = macho.otool(path, prefix)
+    names = macho.otool(path, prefix, host_subdir=host_subdir)
     s = macho.install_name_change(path, prefix,
                                   partial(osx_ch_link,
                                           host_prefix=host_prefix,
                                           build_prefix=build_prefix,
                                           files=files),
-                                  dylibs=names)
+                                  dylibs=names,
+                                  host_subdir=host_subdir)
 
     if names:
-        existing_rpaths = macho.get_rpaths(path, build_prefix=prefix)
+        existing_rpaths = macho.get_rpaths(path, build_prefix=prefix,
+            host_subdir=host_subdir)
         # Add an rpath to every executable to increase the chances of it
         # being found.
         for rpath in rpaths:
@@ -413,14 +416,17 @@ def mk_relative_osx(path, host_prefix, build_prefix, files, rpaths=('lib',)):
             rpath_new = join('@loader_path',
                              relpath(join(host_prefix, rpath), dirname(path)),
                              '').replace('/./', '/')
-            macho.add_rpath(path, rpath_new, build_prefix=prefix, verbose=True)
+            macho.add_rpath(path, rpath_new, build_prefix=prefix, verbose=True,
+                host_subdir=host_subdir)
             if join(host_prefix, rpath) in existing_rpaths:
-                macho.delete_rpath(path, join(host_prefix, rpath), build_prefix=prefix, verbose=True)
+                macho.delete_rpath(path, join(host_prefix, rpath), build_prefix=prefix,
+                    verbose=True, host_subdir=host_subdir)
 
         if build_prefix != host_prefix:
             for rpath in existing_rpaths:
                 if rpath.startswith(build_prefix):
-                    macho.delete_rpath(path, rpath, build_prefix=prefix, verbose=True)
+                    macho.delete_rpath(path, rpath, build_prefix=prefix, verbose=True,
+                        host_subdir=host_subdir)
     if s:
         # Skip for stub files, which have to use binary_has_prefix_files to be
         # made relocatable.
@@ -1258,7 +1264,8 @@ def post_process_shared_lib(m, f, files, host_prefix=None):
             log = utils.get_logger(__name__)
             log.warn("Found Mach-O file but patching is only supported on macOS, skipping: %s", path)
             return
-        mk_relative_osx(path, host_prefix, m.config.build_prefix, files=files, rpaths=rpaths)
+        mk_relative_osx(path, host_prefix, m.config.build_prefix, files=files, rpaths=rpaths,
+            host_subdir=m.config.host_subdir)
 
 
 def fix_permissions(files, prefix):
