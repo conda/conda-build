@@ -258,6 +258,8 @@
   github: chapmanb
   num_commits: 3
   first_commit: 2016-05-06 05:52:29
+  aliases:
+    - chapmanb
 - name: Siu Kwan Lam
   email: michael.lam.sk@gmail.com
   github: sklam
@@ -288,6 +290,8 @@
   num_commits: 2
   first_commit: 2018-06-29 08:49:46
   github: j-hartshorn
+  aliases:
+    - joe-hartshorn
 - name: Brent Pedersen
   email: bpederse@gmail.com
   num_commits: 6
@@ -373,6 +377,8 @@
   num_commits: 1
   first_commit: 2014-09-17 19:12:30
   github: pigmej
+  aliases:
+    - Jedrzej Nowak
 - name: Adam Ehlers Nyholm Thomsen
   email: aen@atp.dk
   num_commits: 2
@@ -438,6 +444,8 @@
   email: dlovell@gmail.com
   num_commits: 1
   first_commit: 2014-08-30 11:39:11
+  aliases:
+    - dlovell
 - name: Lennart Fricke
   email: lennart@die-frickes.eu
   github: lennart0901
@@ -592,6 +600,8 @@
   num_commits: 1
   first_commit: 2017-11-17 20:16:50
   github: anton-malakhov
+  aliases:
+    - Anton
 - name: peter1000
   email: peter.margo@gmx.de
   num_commits: 1
@@ -794,6 +804,8 @@
   num_commits: 1
   first_commit: 2015-07-06 09:27:47
   github: jlas
+  aliases:
+    - jlas
 - name: Richard Hattersley
   email: rhattersley@gmail.com
   num_commits: 1
@@ -1180,3 +1192,5 @@
 - name: pre-commit CI
   email: 66853113+pre-commit-ci[bot]@users.noreply.github.com
   github: pre-commit
+- name: pre-commit-ci[bot]
+  email: 66853113+pre-commit-ci[bot]@users.noreply.github.com
