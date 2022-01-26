@@ -51,6 +51,8 @@ requirements:
     - python-libarchive-c
 
 test:
+  files:
+    - test_bdist_conda_setup.py
   requires:
     - pytest
     - pytest-cov
