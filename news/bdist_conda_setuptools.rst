@@ -6,13 +6,14 @@ Enhancements:
 Bug fixes:
 ----------
 
-* Support bdist_conda with setuptools >=60.0.0. The distutils included in setuptools >=60.0.0
-  are now enabled by default, when the setuptools package is imported, see https://setuptools.pypa.io/en/latest/history.html#v60-0-0
+* Enable bdist_conda via entry_point mechanism supported also by setuptools >=60.0.0.
+  Usable via `from setuptools import setup` and `setup(distclass=conda_build.bdist_conda.CondaDistribution, ...)`.
 
 Deprecations:
 -------------
 
-* <news item>
+* Usage of bdist_conda via `from distutils.core import setup` and `distclass=distutils.command.bdist_conda.CondaDistribution`,
+  as that only works for setuptools <60.0.0.
 
 Docs:
 -----

@@ -92,6 +92,9 @@ test:
     - conda debug -h
     # test that conda sees entry points appropriately in help
     - conda --help
+
+    # Check for bdist_conda
+    - python test_bdist_conda_setup.py bdist_conda --help
   imports:
     - conda_build
   source_files:
