@@ -52,7 +52,11 @@ setup(
                             'conda-render = conda_build.cli.main_render:main',
                             'conda-skeleton = conda_build.cli.main_skeleton:main',
                             'conda-debug = conda_build.cli.main_debug:main',
-                            ]},
+                            ],
+        "distutils.commands": [
+            "bdist_conda = conda_build.bdist_conda:bdist_conda",
+        ],
+    },
     install_requires=deps,
     package_data={'conda_build': ['templates/*', 'cli-*.exe']},
     zip_safe=False,
