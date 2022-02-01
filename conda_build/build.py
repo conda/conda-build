@@ -1177,10 +1177,15 @@ def write_about_json(m):
             d['conda_private'] = conda_private
         except (KeyError, AttributeError):
             pass
+        # Adding this to extra since its arbitrary info
+        extra = m.get_section('extra')
+        # Add burn-in information to extra
+        if m.config.extra_meta:
+            extra.update(m.config.extra_meta)
         env = environ.Environment(root_dir)
         d['root_pkgs'] = env.package_specs()
         # Include the extra section of the metadata in the about.json
-        d['extra'] = m.get_section('extra')
+        d['extra'] = extra
         json.dump(d, fo, indent=2, sort_keys=True)
 
 

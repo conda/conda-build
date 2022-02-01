@@ -129,6 +129,38 @@ def test_recipe_builds(recipe, testing_config, testing_workdir, monkeypatch):
 
 
 @pytest.mark.serial
+@pytest.mark.skipif("CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,
+                    reason="This test does not run on Github Actions yet. We will need to adjust "
+                           "where to look for the pkgs. The github action for setup-miniconda sets "
+                           "pkg_dirs to conda_pkgs_dir.")
+# Regardless of the reason for skipping, we should definitely find a better way for tests to look for the packages
+# Rather than assuming they will be at $ROOT/pkgs since that can change and we don't care where they are in terms of the
+# tests.
+def test_ignore_prefix_files(testing_config, monkeypatch):
+    recipe = os.path.join(metadata_dir, "_ignore_prefix_files")
+    testing_config.activate = True
+    monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
+    monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
+    api.build(recipe, config=testing_config)
+
+
+@pytest.mark.serial
+@pytest.mark.skipif("CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,
+                    reason="This test does not run on Github Actions yet. We will need to adjust "
+                           "where to look for the pkgs. The github action for setup-miniconda sets "
+                           "pkg_dirs to conda_pkgs_dir.")
+# Regardless of the reason for skipping, we should definitely find a better way for tests to look for the packages
+# Rather than assuming they will be at $ROOT/pkgs since that can change and we don't care where they are in terms of the
+# tests.
+def test_ignore_some_prefix_files(testing_config, monkeypatch):
+    recipe = os.path.join(metadata_dir, "_ignore_some_prefix_files")
+    testing_config.activate = True
+    monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
+    monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
+    api.build(recipe, config=testing_config)
+
+
+@pytest.mark.serial
 @pytest.mark.xfail
 def test_token_upload(testing_workdir, testing_metadata):
     folder_uuid = uuid.uuid4().hex
@@ -760,6 +792,13 @@ def test_about_license_file_and_prelink_message(testing_workdir, testing_config,
 
 
 @pytest.mark.slow
+@pytest.mark.skipif("CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,
+                    reason="This test does not run on Github Actions yet. We will need to adjust "
+                           "where to look for the pkgs. The github action for setup-miniconda sets "
+                           "pkg_dirs to conda_pkgs_dir.")
+# Regardless of the reason for skipping, we should definitely find a better way for tests to look for the packages
+# Rather than assuming they will be at $ROOT/pkgs since that can change and we don't care where they are in terms of the
+# tests.
 @pytest.mark.xfail(parse_version(conda.__version__) < parse_version("4.3.14"),
                    reason="new noarch supported starting with conda 4.3.14")
 def test_noarch_python_with_tests(testing_config):
@@ -886,8 +925,12 @@ def test_output_folder_moves_file(testing_metadata, testing_workdir):
 
 
 @pytest.mark.sanity
+@pytest.mark.skipif("CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,
+                    reason="This test does not run on Github Actions yet. We will need to adjust "
+                           "where to look for the pkgs. The github action for setup-miniconda sets "
+                           "pkg_dirs to conda_pkgs_dir.")
 def test_info_files_json(testing_config):
-    outputs = api.build(os.path.join(metadata_dir, "ignore_some_prefix_files"),
+    outputs = api.build(os.path.join(metadata_dir, "_ignore_some_prefix_files"),
                         config=testing_config)
     assert package_has_file(outputs[0], "info/paths.json")
     with tarfile.open(outputs[0]) as tf:
@@ -1086,6 +1129,10 @@ def test_ignore_run_exports_from(testing_metadata, testing_config):
     assert 'downstream_pinned_package 1.0' not in m.meta['requirements'].get('run', [])
 
 
+@pytest.mark.skipif("CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,
+                    reason="This test does not run on Github Actions yet. We will need to adjust "
+                           "where to look for the pkgs. The github action for setup-miniconda sets "
+                           "pkg_dirs to conda_pkgs_dir.")
 def test_run_exports_noarch_python(testing_metadata, testing_config):
     # build the package with run exports for ensuring that we ignore it
     api.build(os.path.join(metadata_dir, '_run_exports_noarch'), config=testing_config,
@@ -1569,6 +1616,15 @@ def test_ignore_verify_codes(testing_config):
     # this recipe intentionally has a license error.  If ignore_verify_codes works,
     #    it will build OK.  If not, it will error out.
     api.build(recipe_dir, config=testing_config)
+
+
+@pytest.mark.sanity
+def test_extra_meta(testing_config):
+    recipe_dir = os.path.join(metadata_dir, '_extra_meta')
+    testing_config.extra_meta = {'foo': 'bar'}
+    outputs = api.build(recipe_dir, config=testing_config)
+    about = json.loads(package_has_file(outputs[0], 'info/about.json'))
+    assert 'foo' in about['extra'] and about['extra']['foo'] == 'bar'
 
 
 def test_symlink_dirs_in_always_include_files(testing_config):

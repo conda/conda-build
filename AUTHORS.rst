@@ -20,6 +20,7 @@ Authors are sorted by number of commits.
 * Darren Dale
 * Travis Swicegood
 * Nehal J Wani
+* Ken Odegard
 * Matt Craig
 * Anthony Scopatz
 * Johannes Köster
@@ -28,32 +29,33 @@ Authors are sorted by number of commits.
 * Patrick Snape
 * Sean
 * Travis Oliphant
+* Matthias Gabriel
 * Harsh Gupta
 * Jasmine Sandhu
-* Matthias Gabriel
 * Alex Wiltschko
 * soapy1
 * Michael C. Grant
 * Min RK
-* Ken Odegard
-* John Kirkham
-* Matthew R Becker
 * Connor Martin
+* Christopher Burr
+* John Kirkham
+* Daniel Bast
+* Matthew R Becker
 * Teake Nutma
 * Ullrich Koethe
+* John Blischak
 * Tim Snyder
-* Christopher Burr
+* Jannis Leidel
 * Phil Elson
 * Jillian Rowe
 * Almar Klein
 * Julian Rüth
 * Alex Ford
-* John Blischak
 * Scheah
 * Alexander Sturm
 * neok-m4700
-* Richard Frank
 * Kai Tietz
+* Richard Frank
 * Matthew R. Becker
 * Filipe Fernandes
 * Matthieu Dartiailh
@@ -72,7 +74,6 @@ Authors are sorted by number of commits.
 * Elliot Hughes
 * Amir MOHAMMADI
 * Chris Hogan
-* Daniel Bast
 * Pradipta Ghosh
 * Heather Kelly
 * Geir Ove Myhr
@@ -91,9 +92,11 @@ Authors are sorted by number of commits.
 * Julien Schueller
 * Toon Verstraelen
 * Duncan Macleod
+* pre-commit CI
+* conda-bot
 * Matty G
 * Robert T. McGibbon
-* chapmanb
+* Brad Chapman
 * Remi Chateauneu
 * Rolando (Max) Espinoza
 * Stefan Zimmermann
@@ -107,7 +110,7 @@ Authors are sorted by number of commits.
 * Michael Cormier
 * Siu Kwan Lam
 * whitequark
-* joe-hartshorn
+* Joe Hartshorn
 * Benedikt Reinartz
 * Adam Ehlers Nyholm Thomsen
 * Rick Izzo
@@ -128,6 +131,7 @@ Authors are sorted by number of commits.
 * aleksey-orekhov
 * Evan Hubinger
 * Johannes Bauer
+* Levi Naden
 * csoja
 * Jan-Hendrik Prinz
 * Alex Kovner
@@ -153,12 +157,12 @@ Authors are sorted by number of commits.
 * Floris Bruynooghe
 * C. E. Ball
 * landon.butterworth
-* Jedrzej Nowak
+* Jędrzej Nowak
 * almar
 * Robert Langlois
 * Lukas Schrangl
 * Paul Madden
-* dlovell
+* Dan Lovell
 * Lennart Fricke
 * Gaëtan de Menten
 * Robert Coop
@@ -169,7 +173,7 @@ Authors are sorted by number of commits.
 * Christopher Whelan
 * Alexandru Coman
 * Matthew Harrigan
-* Anton
+* Anton Malakhov
 * peter1000
 * daler
 * Aaron Stevens
@@ -180,10 +184,9 @@ Authors are sorted by number of commits.
 * Bill Little
 * Marco Rossi
 * Bradley Kreider
-* jlas
+* Juan Lasheras
 * Richard Hattersley
 * steamelephant
-* Levi Naden
 * Dougal J. Sutherland
 * David Li
 * wikiped
@@ -213,5 +216,9 @@ Authors are sorted by number of commits.
 * John Omotani
 * Tom Pollard
 * Phil Reinhold
-* Kurt Schelfthout
 * Cheng H. Lee
+* Kurt Schelfthout
+* Christof Kaufmann
+* Jacob Walls
+* Bianca Henderson
+* Uwe L. Korn

@@ -176,6 +176,7 @@ def _get_default_settings():
             Setting('append_sections_file', None),
             Setting('clobber_sections_file', None),
             Setting('bootstrap', None),
+            Setting('extra_meta', {}),
 
             # source provisioning.
             Setting('git_commits_since_tag', 0),
@@ -590,7 +591,7 @@ class Config:
         else:
             # Maybe call set_invocation_time() here?
             pat_dict['t'] = invocation_time
-            test_old_dir = join(self.croot, package_name, 'work')
+            test_old_dir = self.work_dir
             old_dir = test_old_dir if os.path.exists(test_old_dir) else None
 
         if self.set_build_id and (not self._build_id or reset):
