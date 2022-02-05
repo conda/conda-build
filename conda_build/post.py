@@ -203,14 +203,18 @@ def rm_pyo(files, prefix):
     re_pyo = re.compile(r'.*(?:\.pyo$|\.opt-[0-9]\.pyc)')
     for fn in files:
         if re_pyo.match(fn):
-            os.unlink(join(prefix, fn))
+            path = join(prefix, fn)
+            if isfile(path):
+                os.unlink(path)
 
 
 def rm_pyc(files, prefix):
     re_pyc = re.compile(r'.*(?:\.pyc$)')
     for fn in files:
         if re_pyc.match(fn):
-            os.unlink(join(prefix, fn))
+            path = join(prefix, fn)
+            if isfile(path):
+                os.unlink(path)
 
 
 def rm_share_info_dir(files, prefix):
