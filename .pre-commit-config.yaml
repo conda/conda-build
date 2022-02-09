@@ -1,6 +1,6 @@
 # generally speaking we ignore all vendored code as well as tests data
 # ignore patches/diffs since slight reformatting can break them
-exclude: ^(tests/(archives|index_data|test-cran-skeleton|test-recipes|test-skeleton|variant_recipe)/|.*\.(patch|diff))
+exclude: ^(tests/(archives|index_data|test-cran-skeleton|test-recipes|test-skeleton|variant_recipe)/|.*\.(patch|diff)|versioneer.py)
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.1.0
@@ -15,6 +15,11 @@ repos:
         exclude: ^(conda\.recipe/meta\.yaml|conda_build/templates/.*\.yaml|docs/click/meta\.yaml|docs/source/user-guide/tutorials/meta\.yaml)
       # catch git merge/rebase problems
       - id: check-merge-conflict
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v2.31.0
+    hooks:
+      - id: pyupgrade
+        args: ["--py37-plus"]
   - repo: https://github.com/akaihola/darker
     rev: github-action-v1.3.2-2
     hooks:
