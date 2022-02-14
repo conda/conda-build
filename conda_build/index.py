@@ -239,7 +239,7 @@ def _ensure_valid_channel(local_folder, subdir):
 
 def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=None, threads=MAX_THREADS_DEFAULT,
                  verbose=False, progress=False, hotfix_source_repo=None, subdirs=None, warn=True,
-                 current_index_versions=None, debug=False, index_file=None):
+                 current_index_versions=None, debug=False, index_file=None, append=None):
     """
     If dir_path contains a directory named 'noarch', the path tree therein is treated
     as though it's a full channel, with a level of subdirs, each subdir having an update
@@ -258,14 +258,14 @@ def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=N
         return update_index(base_path, check_md5=check_md5, channel_name=channel_name,
                             threads=threads, verbose=verbose, progress=progress,
                             hotfix_source_repo=hotfix_source_repo,
-                            current_index_versions=current_index_versions)
+                            current_index_versions=current_index_versions, append=appen)
     return ChannelIndex(dir_path, channel_name, subdirs=subdirs, threads=threads,
                         deep_integrity_check=check_md5, debug=debug).index(
                             patch_generator=patch_generator, verbose=verbose,
                             progress=progress,
                             hotfix_source_repo=hotfix_source_repo,
                             current_index_versions=current_index_versions,
-                            index_file=index_file)
+                            index_file=index_file, append=append)
 
 
 def _determine_namespace(info):
@@ -781,11 +781,19 @@ class ChannelIndex:
         self.deep_integrity_check = deep_integrity_check
 
     def index(self, patch_generator, hotfix_source_repo=None, verbose=False, progress=False,
-              current_index_versions=None, index_file=None):
+              current_index_versions=None, index_file=None, append=None):
         if verbose:
             level = logging.DEBUG
         else:
             level = logging.ERROR
+
+        # dict(subdir: repodata)
+        existing_repodatas = {}
+        append = [] if not append else append
+        for repodata in append:
+            with open(repodata, "r") as fh:
+                j = json.load(fh)
+            existing_repodatas[j.get("info", {}).get("subdir", None)] = j
 
         with utils.LoggingContext(level, loggers=[__name__]):
             if not self._subdirs:
@@ -809,6 +817,7 @@ class ChannelIndex:
                 # Step 2. Collect repodata from packages, save to pkg_repodata.json file
                 with tqdm(total=len(subdirs), disable=(verbose or not progress), leave=False) as t:
                     for subdir in subdirs:
+                        existing_repodata = existing_repodatas.get(subdir, {})
                         t.set_description("Subdir: %s" % subdir)
                         t.update()
                         with tqdm(total=8, disable=(verbose or not progress), leave=False) as t2:
@@ -819,16 +828,22 @@ class ChannelIndex:
                                 subdir, verbose=verbose, progress=progress,
                                 index_file=index_file)
 
+                            if existing_repodata:
+                                existing_repodata.get("packages").update(
+                                        repodata_from_packages.get("packages")
+                                )
+
                             t2.set_description("Writing pre-patch repodata")
                             t2.update()
-                            self._write_repodata(subdir, repodata_from_packages,
+                            new_repodata = existing_repodata or repodata_from_packages
+                            self._write_repodata(subdir, new_repodata,
                                                 REPODATA_FROM_PKGS_JSON_FN)
 
                             # Step 3. Apply patch instructions.
                             t2.set_description("Applying patch instructions")
                             t2.update()
                             patched_repodata, patch_instructions = self._patch_repodata(
-                                subdir, repodata_from_packages, patch_generator)
+                                subdir, new_repodata, patch_generator)
 
                             # Step 4. Save patched and augmented repodata.
                             # If the contents of repodata have changed, write a new repodata.json file.

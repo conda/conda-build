@@ -135,6 +135,95 @@ def test_index_on_single_subdir_1(testing_workdir):
     assert actual_channeldata_json == expected_channeldata_json
 
 
+def test_index_on_single_subdir_1_append(testing_workdir):
+    test_package_path = join(testing_workdir, 'osx-64', 'conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2')
+    test_package_url = 'https://conda.anaconda.org/conda-test/osx-64/conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2'
+    download(test_package_url, test_package_path)
+    test_repodata_path = join(testing_workdir, "osx-64", "repodata.json")
+    test_repodata_data = {
+        "info": {
+            'subdir': 'osx-64',
+        },
+        "packages": {
+            "test-pkg-a-1.0-py37h5e241af_0.tar.bz2": {
+                "build": "py37h5e241af_0",
+                "build_number": 0,
+                "depends": [
+                    "python >=2.7,<2.8.0a0"
+                ],
+                "license": "BSD",
+                "md5": "37861df8111170f5eed4bff27868df59",
+                "name": "conda-index-pkg-a",
+                "sha256": "459f3e9b2178fa33bdc4e6267326405329d1c1ab982273d9a1c0a5084a1ddc30",
+                "size": 8733,
+                "subdir": "osx-64",
+                "timestamp": 1508520039632,
+                "version": "1.0",
+            },
+        },
+        "packages.conda": {},
+        "removed": [],
+        "repodata_version": 1,
+    }
+    with open(test_repodata_path, "w") as fh:
+        json.dump(test_repodata_data, fh)
+    conda_build.index.update_index(testing_workdir, channel_name='test-channel', append=[test_repodata_path])
+
+    # #######################################
+    # tests for osx-64 subdir
+    # #######################################
+    assert isfile(join(testing_workdir, 'osx-64', 'index.html'))
+    assert isfile(join(testing_workdir, 'osx-64', 'repodata.json.bz2'))
+    assert isfile(join(testing_workdir, 'osx-64', 'repodata_from_packages.json.bz2'))
+
+    with open(join(testing_workdir, 'osx-64', 'repodata.json')) as fh:
+        actual_repodata_json = json.loads(fh.read())
+    with open(join(testing_workdir, 'osx-64', 'repodata_from_packages.json')) as fh:
+        actual_pkg_repodata_json = json.loads(fh.read())
+    expected_repodata_json = {
+        "info": {
+            'subdir': 'osx-64',
+        },
+        "packages": {
+            "conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2": {
+                "build": "py27h5e241af_0",
+                "build_number": 0,
+                "depends": [
+                    "python >=2.7,<2.8.0a0"
+                ],
+                "license": "BSD",
+                "md5": "37861df8111170f5eed4bff27868df59",
+                "name": "conda-index-pkg-a",
+                "sha256": "459f3e9b2178fa33bdc4e6267326405329d1c1ab982273d9a1c0a5084a1ddc30",
+                "size": 8733,
+                "subdir": "osx-64",
+                "timestamp": 1508520039632,
+                "version": "1.0",
+            },
+            "test-pkg-a-1.0-py37h5e241af_0.tar.bz2": {
+                "build": "py37h5e241af_0",
+                "build_number": 0,
+                "depends": [
+                    "python >=2.7,<2.8.0a0"
+                ],
+                "license": "BSD",
+                "md5": "37861df8111170f5eed4bff27868df59",
+                "name": "conda-index-pkg-a",
+                "sha256": "459f3e9b2178fa33bdc4e6267326405329d1c1ab982273d9a1c0a5084a1ddc30",
+                "size": 8733,
+                "subdir": "osx-64",
+                "timestamp": 1508520039632,
+                "version": "1.0",
+            },
+        },
+        "packages.conda": {},
+        "removed": [],
+        "repodata_version": 1,
+    }
+    assert actual_repodata_json == expected_repodata_json
+    assert actual_pkg_repodata_json == expected_repodata_json
+
+
 def test_file_index_on_single_subdir_1(testing_workdir):
     test_package_path = join(testing_workdir, 'osx-64', 'conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2')
     test_package_url = 'https://conda.anaconda.org/conda-test/osx-64/conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2'
@@ -359,6 +448,192 @@ def test_index_noarch_osx64_1(testing_workdir):
                 "size": 7882,
                 "subdir": "noarch",
                 "timestamp": 1508520204768,
+                "version": "1.0",
+            },
+        },
+        "packages.conda": {},
+        "removed": [],
+        "repodata_version": 1,
+    }
+    assert actual_repodata_json == expected_repodata_json
+    assert actual_pkg_repodata_json == expected_repodata_json
+
+    # #######################################
+    # tests for full channel
+    # #######################################
+
+    with open(join(testing_workdir, 'channeldata.json')) as fh:
+        actual_channeldata_json = json.loads(fh.read())
+    expected_channeldata_json = {
+        "channeldata_version": 1,
+        "packages": {
+            "conda-index-pkg-a": {
+                "description": "Description field for conda-index-pkg-a. Actually, this is just the python description. "
+                               "Python is a widely used high-level, general-purpose, interpreted, dynamic "
+                               "programming language. Its design philosophy emphasizes code "
+                               "readability, and its syntax allows programmers to express concepts in "
+                               "fewer lines of code than would be possible in languages such as C++ or "
+                               "Java. The language provides constructs intended to enable clear programs "
+                               "on both a small and large scale.",
+                "dev_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a/meta.yaml",
+                "doc_source_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a/README.md",
+                "doc_url": "https://github.com/kalefranz/conda-test-packages/blob/master/conda-index-pkg-a",
+                "home": "https://anaconda.org/conda-test/conda-index-pkg-a",
+                "license": "BSD",
+                "source_git_url": "https://github.com/kalefranz/conda-test-packages.git",
+                'source_url': None,
+                "subdirs": [
+                    "noarch",
+                    "osx-64",
+                ],
+                "summary": "Summary field for conda-index-pkg-a. This is the python noarch version.",  # <- tests that the higher noarch build number is the data collected
+                "version": "1.0",
+                "activate.d": False,
+                "deactivate.d": False,
+                "post_link": True,
+                "pre_link": False,
+                "pre_unlink": False,
+                "binary_prefix": False,
+                "text_prefix": True,
+                "run_exports": {},
+                'icon_hash': None,
+                'icon_url': None,
+                'identifiers': None,
+                'tags': None,
+                'timestamp': 1508520039,
+                'keywords': None,
+                'recipe_origin': None,
+            }
+        },
+        "subdirs": [
+            "noarch",
+            "osx-64",
+        ]
+    }
+    assert actual_channeldata_json == expected_channeldata_json
+
+
+def test_index_noarch_osx64_1_append(testing_workdir):
+    test_package_path = join(testing_workdir, 'osx-64', 'conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2')
+    test_package_url = 'https://conda.anaconda.org/conda-test/osx-64/conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2'
+    download(test_package_url, test_package_path)
+    test_repodata_path_osx = join(testing_workdir, "osx-64", "repodata.json")
+    test_repodata_data_osx = {
+        "info": {
+            'subdir': 'osx-64',
+        },
+        "packages": {
+            "some-fake-pkg-a-1.0-py37h5e241af_0.tar.bz2": {
+                "build": "py37h5e241af_0",
+                "build_number": 0,
+                "depends": [
+                    "python >=2.7,<2.8.0a0"
+                ],
+                "license": "BSD",
+                "md5": "37861df8111170f5eed4bff27868df59",
+                "name": "conda-index-pkg-a",
+                "sha256": "459f3e9b2178fa33bdc4e6267326405329d1c1ab982273d9a1c0a5084a1ddc30",
+                "size": 8733,
+                "subdir": "osx-64",
+                "timestamp": 1508520039632,
+                "version": "1.0",
+            },
+        },
+        "packages.conda": {},
+        "removed": [],
+        "repodata_version": 1,
+    }
+    with open(test_repodata_path_osx, "w") as fh:
+        json.dump(test_repodata_data_osx, fh)
+
+    test_package_path = join(testing_workdir, 'noarch', 'conda-index-pkg-a-1.0-pyhed9eced_1.tar.bz2')
+    test_package_url = 'https://conda.anaconda.org/conda-test/noarch/conda-index-pkg-a-1.0-pyhed9eced_1.tar.bz2'
+    download(test_package_url, test_package_path)
+    test_repodata_path_noarch = join(testing_workdir, "noarch", "repodata.json")
+    test_repodata_data_noarch = {
+        "info": {
+            'subdir': 'noarch',
+        },
+        "packages": {
+            "some-fake-pkg-but-noarch-a-1.0-py37h5e241af_0.tar.bz2": {
+                "build": "py37h5e241af_0",
+                "build_number": 0,
+                "depends": [
+                    "python >=2.7,<2.8.0a0"
+                ],
+                "license": "BSD",
+                "md5": "37861df8111170f5eed4bff27868df59",
+                "name": "conda-index-pkg-a",
+                "sha256": "459f3e9b2178fa33bdc4e6267326405329d1c1ab982273d9a1c0a5084a1ddc30",
+                "size": 8733,
+                "subdir": "noarch",
+                "timestamp": 1508520039632,
+                "version": "1.0",
+            },
+        },
+        "packages.conda": {},
+        "removed": [],
+        "repodata_version": 1,
+    }
+    with open(test_repodata_path_noarch, "w") as fh:
+        json.dump(test_repodata_data_noarch, fh)
+
+    conda_build.index.update_index(testing_workdir, channel_name='test-channel', append=[test_repodata_path_osx, test_repodata_path_noarch])
+
+    # #######################################
+    # tests for osx-64 subdir
+    # #######################################
+    assert isfile(join(testing_workdir, 'osx-64', 'index.html'))
+    assert isfile(join(testing_workdir, 'osx-64', 'repodata.json'))  # repodata is tested in test_index_on_single_subdir_1
+    assert isfile(join(testing_workdir, 'osx-64', 'repodata.json.bz2'))
+    assert isfile(join(testing_workdir, 'osx-64', 'repodata_from_packages.json'))
+    assert isfile(join(testing_workdir, 'osx-64', 'repodata_from_packages.json.bz2'))
+
+    # #######################################
+    # tests for noarch subdir
+    # #######################################
+    assert isfile(join(testing_workdir, 'noarch', 'index.html'))
+    assert isfile(join(testing_workdir, 'noarch', 'repodata.json.bz2'))
+    assert isfile(join(testing_workdir, 'noarch', 'repodata_from_packages.json.bz2'))
+
+    with open(join(testing_workdir, 'noarch', 'repodata.json')) as fh:
+        actual_repodata_json = json.loads(fh.read())
+    with open(join(testing_workdir, 'noarch', 'repodata_from_packages.json')) as fh:
+        actual_pkg_repodata_json = json.loads(fh.read())
+    expected_repodata_json = {
+        "info": {
+            'subdir': 'noarch',
+        },
+        "packages": {
+            "conda-index-pkg-a-1.0-pyhed9eced_1.tar.bz2": {
+                "build": "pyhed9eced_1",
+                "build_number": 1,
+                "depends": [
+                    "python"
+                ],
+                "license": "BSD",
+                "md5": "56b5f6b7fb5583bccfc4489e7c657484",
+                "name": "conda-index-pkg-a",
+                "noarch": "python",
+                "sha256": "7430743bffd4ac63aa063ae8518e668eac269c783374b589d8078bee5ed4cbc6",
+                "size": 7882,
+                "subdir": "noarch",
+                "timestamp": 1508520204768,
+                "version": "1.0",
+            },
+            "some-fake-pkg-but-noarch-a-1.0-py37h5e241af_0.tar.bz2": {
+                "build": "py37h5e241af_0",
+                "build_number": 0,
+                "depends": [
+                    "python >=2.7,<2.8.0a0"
+                ],
+                "license": "BSD",
+                "md5": "37861df8111170f5eed4bff27868df59",
+                "name": "conda-index-pkg-a",
+                "sha256": "459f3e9b2178fa33bdc4e6267326405329d1c1ab982273d9a1c0a5084a1ddc30",
+                "size": 8733,
+                "subdir": "noarch",
+                "timestamp": 1508520039632,
                 "version": "1.0",
             },
         },
