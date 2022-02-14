@@ -791,7 +791,7 @@ class ChannelIndex:
         existing_repodatas = {}
         append = [] if not append else append
         for repodata in append:
-            with open(repodata, "r") as fh:
+            with open(repodata) as fh:
                 j = json.load(fh)
             existing_repodatas[j.get("info", {}).get("subdir", None)] = j
 
