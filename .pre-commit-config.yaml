@@ -21,7 +21,7 @@ repos:
       - id: pyupgrade
         args: ["--py37-plus"]
   - repo: https://github.com/akaihola/darker
-    rev: github-action-v1.3.2-2
+    rev: 1.4.0
     hooks:
       - id: darker
         additional_dependencies: [black==21.11b1]
