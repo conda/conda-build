@@ -787,7 +787,6 @@ class ChannelIndex:
         else:
             level = logging.ERROR
 
-        # dict(subdir: repodata)
         existing_repodatas = {}
         append = append or []
         for repodata in append:
