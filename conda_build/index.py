@@ -258,7 +258,7 @@ def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=N
         return update_index(base_path, check_md5=check_md5, channel_name=channel_name,
                             threads=threads, verbose=verbose, progress=progress,
                             hotfix_source_repo=hotfix_source_repo,
-                            current_index_versions=current_index_versions, append=appen)
+                            current_index_versions=current_index_versions, append=append)
     return ChannelIndex(dir_path, channel_name, subdirs=subdirs, threads=threads,
                         deep_integrity_check=check_md5, debug=debug).index(
                             patch_generator=patch_generator, verbose=verbose,
