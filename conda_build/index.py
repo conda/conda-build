@@ -789,11 +789,12 @@ class ChannelIndex:
 
         # dict(subdir: repodata)
         existing_repodatas = {}
-        append = [] if not append else append
+        append = append or []
         for repodata in append:
-            with open(repodata) as fh:
-                j = json.load(fh)
-            existing_repodatas[j.get("info", {}).get("subdir", None)] = j
+            with open(repodata) as repodata_file:
+                loaded = json.load(repodata_file)
+            subdir = loaded.get("info", {}).get("subdir", None)
+            existing_repodatas[subdir] = loaded
 
         with utils.LoggingContext(level, loggers=[__name__]):
             if not self._subdirs:
@@ -830,7 +831,7 @@ class ChannelIndex:
 
                             if existing_repodata:
                                 existing_repodata.get("packages").update(
-                                        repodata_from_packages.get("packages")
+                                    repodata_from_packages.get("packages")
                                 )
 
                             t2.set_description("Writing pre-patch repodata")
