@@ -1,11 +1,16 @@
 name: Run unit and integration tests
 
 on:
+  # NOTE: github.event context is push payload:
+  # https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#push
   push:
     branches:
       - master
     paths-ignore:
       - 'docs/**'
+
+  # NOTE: github.event context is pull_request payload:
+  # https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#pull_request
   pull_request:
     types:
       - opened
@@ -37,8 +42,6 @@ jobs:
             test-type: parallel
     env:
       pytest-replay: --replay-record-dir=pytest-replay/ --replay-base-name=Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
-
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
