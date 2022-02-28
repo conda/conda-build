@@ -20,7 +20,6 @@ on:
 
 jobs:
   test-conda-build:
-    if: '!github.event.repository.fork'
     runs-on: ${{ matrix.os }}
     defaults:
       run:
