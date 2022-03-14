@@ -16,12 +16,12 @@ repos:
       # catch git merge/rebase problems
       - id: check-merge-conflict
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.31.0
+    rev: v2.31.1
     hooks:
       - id: pyupgrade
         args: ["--py37-plus"]
   - repo: https://github.com/akaihola/darker
-    rev: 1.4.1
+    rev: 1.4.2
     hooks:
       - id: darker
         additional_dependencies: [black==21.11b1]
