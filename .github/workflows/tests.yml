@@ -239,8 +239,7 @@ jobs:
           set PERL=
           set LUA=
           set R=
-          >
-            py.test
+          py.test
             --color=yes
             -vv
             -n 0
@@ -264,8 +263,7 @@ jobs:
           set PERL=
           set LUA=
           set R=
-          >
-            py.test
+          py.test
             --color=yes
             -vv
             -n auto
