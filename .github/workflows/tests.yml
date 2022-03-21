@@ -111,7 +111,6 @@ jobs:
   windows:
     runs-on: windows-2019
     strategy:
-      max-parallel: 10
       fail-fast: false
       matrix:
         python-version: [ '3.7', '3.8' ]
@@ -126,7 +125,7 @@ jobs:
             test-type: parallel
     timeout-minutes: 120
     env:
-      pytest-replay: --replay-record-dir=pytest-replay/ --replay-base-name=Windows-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
+      serial_or_parallel: ''
 
     steps:
       - name: Checkout repository
@@ -229,7 +228,7 @@ jobs:
           echo "##vso[task.setvariable variable=PYTEST_REPLAY_OPTIONS]%PYTEST_REPLAY_OPTIONS%"
         shell: cmd
 
-      - name: Serial Tests
+      - name: Run Serial Tests
         if: (success() && ('${{ env. parameters.serial_or_parallel  }}' == 'serial'))
         run: |
           echo on
@@ -240,20 +239,21 @@ jobs:
           set PERL=
           set LUA=
           set R=
-          pytest
-          --color=yes
-          -vv
-          -n 0
-          --basetemp %UserProfile%\cbtmp_serial
-          --cov conda_build
-          --cov-report xml
-          -m "serial" tests
-          --test-run-title="Windows-SerialTests"
-          --test-run-title="Windows-SerialTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}"
-          ${{ env.pytest-replay }}
+          >
+            py.test
+            --color=yes
+            -vv
+            -n 0
+            --basetemp %UserProfile%\cbtmp_serial
+            --cov conda_build
+            --cov-report xml
+            -m "serial" tests
+            --test-run-title="Windows-SerialTests"
+            --test-run-title="Windows-SerialTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}"
+            ${{ env.pytest-replay }}
         shell: cmd
 
-      - name: Parallel Tests
+      - name: Run Parallel Tests
         if: (success() && ('${{ env. parameters.serial_or_parallel  }}' == 'parallel'))
         run: |
           echo on
@@ -264,24 +264,25 @@ jobs:
           set PERL=
           set LUA=
           set R=
-          call pytest
-          --color=yes
-          -vv
-          -n auto
-          --basetemp %UserProfile%\cbtmp
-          --cov conda_build
-          --cov-append
-          --cov-report xml
-          -m "not serial" tests
-          --test-run-title="Windows-ParallelTests"
-          --test-run-title="Windows-ParallelTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}"
-          ${{ env.pytest-replay }}
+          >
+            py.test
+            --color=yes
+            -vv
+            -n auto
+            --basetemp %UserProfile%\cbtmp
+            --cov conda_build
+            --cov-append
+            --cov-report xml
+            -m "not serial" tests
+            --test-run-title="Windows-ParallelTests"
+            --test-run-title="Windows-ParallelTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}"
+            ${{ env.pytest-replay }}
         shell: cmd
         env:
           VS90COMNTOOLS: C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC\bin
           LIB:
       - uses: actions/upload-artifact@v2
         with:
-          name: Windows_replay-py-${{ matrix.python-version }}_${{ matrix.conda-version }}_${{ matrix.test-type }}
-          path: pytest-replay/
+          path: ${{ github.workspace }}/pytest-replay
+          name: Win-${{ env.CONDA_VERSION }}-Python${{ matrix.python-version }}-${{ env. parameters.serial_or_parallel  }}
         if: always()
