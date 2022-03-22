@@ -123,8 +123,9 @@ jobs:
           - python-version: '3.9'
             conda-version: canary
             test-type: parallel
+    timeout-minutes: 120
     env:
-      pytest-replay: --replay-record-dir=pytest-replay/ --replay-base-name=Windows-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
+      serial_or_parallel: ''
 
     steps:
       - name: Checkout repository
@@ -133,99 +134,132 @@ jobs:
           fetch-depth: 0
 
       - name: Set temp dirs correctly
-        shell: bash -l {0}
+        shell: cmd
         # https://github.com/actions/virtual-environments/issues/712
         run: |
           echo "TMPDIR=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
           echo "TEMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
           echo "TMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
 
-      - name: Setup Miniconda
-        uses: conda-incubator/setup-miniconda@v2
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v1
         with:
-          condarc-file: ci/github/.condarc
           python-version: ${{ matrix.python-version }}
 
-      - name: Install Conda-Canary if canary version
-        shell: bash -l {0}
-        if: matrix.conda-version == 'canary'
+      - name: Install vcpython27.msi
         run: |
-          conda install -y -c conda-canary conda
+          $wc = New-Object net.webclient
+          $wc.Downloadfile("https://github.com/GeoNode/geonode-win-installer/raw/ffb76c7cbf1d6b4970c6c25f79c3c7682a3aa035/VCForPython27.msi", "VCForPython27.msi")
+          Start-Process "VCForPython27.msi" /qn -Wait
+        shell: pwsh
 
-      - name: Install default Conda if release version
-        shell: bash -l {0}
-        if: matrix.conda-version == 'release'
+      - name: Install miniconda
         run: |
-          conda install -y conda
-
-      - name: Source Scripts
-        shell: bash -l {0}
-        run: |
-          source ci/azurepipelines/install_conda_build_test_deps
-          pip install -e .
+          rmdir C:\Strawberry /s /q
+          choco install wget
+          wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe
+          start /wait "" Miniconda3-latest-Windows-x86_64.exe /InstallationType=JustMe /S /D=%UserProfile%\Miniconda3
+          "%UserProfile%\Miniconda3\condabin\conda.bat" init
           conda info -a
+        shell: cmd
+
+      - name: Patch vs2008
+        run: |
+          Set-PSDebug -Trace 1
+          $batchcontent = @"
+          ECHO ON
+          SET vcpython=C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0
+          DIR "%vcpython%"
+          CALL "%vcpython%\vcvarsall.bat" %*
+          "@
+          $batchDir = "C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC"
+          $batchPath = "$batchDir" + "\vcvarsall.bat"
+          New-Item -Path $batchPath -ItemType "file" -Force
+          Set-Content -Value $batchcontent -Path $batchPath
+          Get-ChildItem -Path $batchDir
+          Get-ChildItem -Path ($batchDir + '\..')
+          set LIB
+        shell: pwsh
+
+      - name: conda init
+        run: |
+          echo on
+          set PATH
+          doskey conda="call %UserProfile%\Miniconda3\condabin\conda.bat" $*
+          doskey /macros
+          call "%UserProfile%\Miniconda3\condabin\conda.bat" init
+          set PATH
+        shell: cmd
+
+      - name: Configuration
+        run: |
+          echo on
+          set PATH
+          call %UserProfile%\Miniconda3\condabin\activate.bat base||exit 1
+          set PATH
+          call conda install python="%PYTHON_VERSION%" -y||exit 1
+          if "%CONDA_VERSION%" == "canary" (call conda update -c conda-canary conda||exit 1) else (call conda update -q conda||exit 1)
+          call conda config --set always_yes yes
+          call conda config --set auto_update_conda no
+          call conda info
+          python -c "import sys; print(sys.version)"
+          python -c "import sys; print(sys.executable)"
+          python -c "import sys; print(sys.prefix)"
+          call conda update -q --all||exit 1
+          call conda install -q pip python-libarchive-c pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling pytest-azurepipelines||exit 1
+          call conda install pytest-replay pytest-rerunfailures -y||exit 1
+          echo safety_checks: disabled >> %UserProfile%\.condarc
+          echo local_repodata_ttl: 1800 >> %UserProfile%\.condarc
+          call conda install -q py-lief||exit 1
+          python --version
+          python -c "import struct; print(struct.calcsize('P') * 8)"
+          pip install --no-deps .
+          conda-build --version
+          pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd
           mkdir %UserProfile%\cbtmp_serial
           mkdir %UserProfile%\cbtmp
-          mkdir ./pytest-replay
+          for /d %%F in (%UserProfile%\cbtmp_serial\*) do rd /s /q "%%F"
+          for /d %%F in (%UserProfile%\cbtmp\*) do rd /s /q "%%F"
+          call conda create -n blarg -yq --download-only python=2.7||exit 1
+          call conda create -n blarg -yq --download-only python=3.8||exit 1
+          call conda create -n blarg -yq --download-only python cmake||exit 1
+          mkdir ${{ github.workspace }}\\pytest-replay
+          set "PYTEST_REPLAY_OPTIONS=--replay-record-dir=${{ github.workspace }}\\pytest-replay --replay-base-name=Win-%CONDA_VERSION%-Py%PYTHON_VERSION%"
+          echo "##vso[task.setvariable variable=PYTEST_REPLAY_OPTIONS]%PYTEST_REPLAY_OPTIONS%"
+        shell: cmd
 
-#      - name: Source Scripts
-#        shell: cmd
-#        run: |
-#          python -c "import sys; print(sys.version)"
-#          python -c "import sys; print(sys.executable)"
-#          python -c "import sys; print(sys.prefix)"
-#          call conda update -q --all||exit 1
-#          call conda install -q pip python-libarchive-c pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling pytest-azurepipelines||exit 1
-#          call conda install pytest-replay pytest-rerunfailures -y||exit 1
-#          pip install --no-deps .
-#          conda-build --version
-#          pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd
-#          mkdir %UserProfile%\cbtmp_serial
-#          mkdir %UserProfile%\cbtmp
-#          for /d %%F in (%UserProfile%\cbtmp_serial\*) do rd /s /q "%%F"
-#          for /d %%F in (%UserProfile%\cbtmp\*) do rd /s /q "%%F"
-#          call conda create -n blarg -yq --download-only python=2.7||exit 1
-#          call conda create -n blarg -yq --download-only python=3.8||exit 1
-#          call conda create -n blarg -yq --download-only python cmake||exit 1
-#          mkdir $(Build.ArtifactStagingDirectory)\\pytest-replay
-#          set "PYTEST_REPLAY_OPTIONS=--replay-record-dir=$(Build.ArtifactStagingDirectory)\\pytest-replay --replay-base-name=Win-%CONDA_VERSION%-Py%PYTHON_VERSION%"
-#          echo "##vso[task.setvariable variable=PYTEST_REPLAY_OPTIONS]%PYTEST_REPLAY_OPTIONS%"
-
-      - name: Run Serial tests
-        shell: bash -l {0}
+      - name: Run Serial Tests
         if: matrix.test-type == 'serial'
         run: |
-          pytest \
-              --color=yes \
-              -vv \
-              -n 0 \
-              --basetemp %UserProfile%\cbtmp_serial \
-              --cov conda_build \
-              --cov-report xml \
-              -m "serial" tests \
-              --test-run-title="Windows-SerialTests" \
-              --test-run-title="Windows-SerialTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}" \
-              ${{ env.pytest-replay }}
+          echo on
+          set PATH
+          call %UserProfile%\Miniconda3\condabin\activate.bat base||exit 1
+          set PATH
+          call conda install -y conda-verify||exit 1
+          set PERL=
+          set LUA=
+          set R=
+          py.test --color=yes -vv -n 0 --basetemp %UserProfile%\cbtmp_serial --cov conda_build --cov-report xml -m "serial" --test-run-title="Windows-SerialTests" --test-run-title="Windows-SerialTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}" ${{ env.pytest-replay }}
+        shell: cmd
 
-      - name: Run Parallel tests
-        shell: bash -l {0}
+      - name: Run Parallel Tests
         if: matrix.test-type == 'parallel'
         run: |
-          call pytest \
-              --color=yes \
-              -vv \
-              -n auto \
-              --basetemp %UserProfile%\cbtmp \
-              --cov conda_build \
-              --cov-append \
-              --cov-report xml \
-              -m "not serial" tests \
-              --test-run-title="Windows-ParallelTests" \
-              --test-run-title="Windows-ParallelTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}" \
-              ${{ env.pytest-replay }}
-
-      - name: Upload Pytest Replay
-        uses: actions/upload-artifact@v2
+          echo on
+          set PATH
+          call %UserProfile%\Miniconda3\condabin\activate.bat base||exit 1
+          set PATH
+          :: call conda remove -y conda-verify||exit 1
+          set PERL=
+          set LUA=
+          set R=
+          py.test --color=yes -vv -n auto --basetemp %UserProfile%\cbtmp --cov conda_build --cov-append --cov-report xml -m "not serial" --test-run-title="Windows-ParallelTests" --test-run-title="Windows-ParallelTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}" ${{ env.pytest-replay }}
+        shell: cmd
+        env:
+          VS90COMNTOOLS: C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC\bin
+          LIB:
+      - uses: actions/upload-artifact@v2
         with:
-          name: Windows_replay-py-${{ matrix.python-version }}_${{ matrix.conda-version }}_${{ matrix.test-type }}
-          path: pytest-replay/
+          path: ${{ github.workspace }}/pytest-replay
+          name: Win-${{ env.CONDA_VERSION }}-Python${{ matrix.python-version }}-${{ env. parameters.serial_or_parallel  }}
+        if: always()
