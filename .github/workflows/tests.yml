@@ -239,17 +239,7 @@ jobs:
           set PERL=
           set LUA=
           set R=
-          py.test
-            --color=yes
-            -vv
-            -n 0
-            --basetemp %UserProfile%\cbtmp_serial
-            --cov conda_build
-            --cov-report xml
-            -m "serial" tests
-            --test-run-title="Windows-SerialTests"
-            --test-run-title="Windows-SerialTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}"
-            ${{ env.pytest-replay }}
+          py.test --color=yes -vv -n 0 --basetemp %UserProfile%\cbtmp_serial --cov conda_build --cov-report xml -m "serial" --test-run-title="Windows-SerialTests" --test-run-title="Windows-SerialTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}" ${{ env.pytest-replay }}
         shell: cmd
 
       - name: Run Parallel Tests
@@ -263,18 +253,7 @@ jobs:
           set PERL=
           set LUA=
           set R=
-          py.test
-            --color=yes
-            -vv
-            -n auto
-            --basetemp %UserProfile%\cbtmp
-            --cov conda_build
-            --cov-append
-            --cov-report xml
-            -m "not serial" tests
-            --test-run-title="Windows-ParallelTests"
-            --test-run-title="Windows-ParallelTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}"
-            ${{ env.pytest-replay }}
+          py.test --color=yes -vv -n auto --basetemp %UserProfile%\cbtmp --cov conda_build --cov-append --cov-report xml -m "not serial" --test-run-title="Windows-ParallelTests" --test-run-title="Windows-ParallelTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}" ${{ env.pytest-replay }}
         shell: cmd
         env:
           VS90COMNTOOLS: C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC\bin
