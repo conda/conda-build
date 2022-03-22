@@ -229,7 +229,7 @@ jobs:
         shell: cmd
 
       - name: Run Serial Tests
-        if: (success() && ('${{ env. parameters.serial_or_parallel  }}' == 'serial'))
+        if: matrix.test-type == 'serial'
         run: |
           echo on
           set PATH
@@ -243,7 +243,7 @@ jobs:
         shell: cmd
 
       - name: Run Parallel Tests
-        if: (success() && ('${{ env. parameters.serial_or_parallel  }}' == 'parallel'))
+        if: matrix.test-type == 'parallel'
         run: |
           echo on
           set PATH
