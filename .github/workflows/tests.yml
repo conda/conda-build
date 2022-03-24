@@ -156,7 +156,7 @@ jobs:
       - name: Install miniconda
         run: |
           rmdir C:\Strawberry /s /q
-          choco install wget
+          choco install wget visualstudio2017community
           wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe
           start /wait "" Miniconda3-latest-Windows-x86_64.exe /InstallationType=JustMe /S /D=%UserProfile%\Miniconda3
           "%UserProfile%\Miniconda3\condabin\conda.bat" init
