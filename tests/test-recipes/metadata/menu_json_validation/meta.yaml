@@ -1,0 +1,10 @@
+package:
+  name: menu_json_validation
+  version: "1.0"
+
+build:
+  script:
+    - mkdir -p ${PREFIX}/Menu # [unix]
+    - cp menu.json ${PREFIX}/Menu/menu_json_validation.json # [unix]
+    - md %PREFIX%\Menu # [win]
+    - xcopy menu.json %PREFIX%\Menu\menu_json_validation.json # [win]

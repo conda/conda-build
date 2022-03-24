@@ -1,0 +1,24 @@
+{
+    "$schema": "https://json-schema.org/draft-07/schema",
+    "$id": "https://schemas.conda.io/menuinst-1.schema.json",
+    "menu_name": "Example 1",
+    "menu_items": [
+        {
+            "name": "Example",
+            "description": "This will install to Windows and Linux with default options. MacOS has a custom option.",
+            "icon": null,
+            "command": [
+                "{{ PYTHON }}",
+                "-c",
+                "import sys; print(sys.executable)"
+            ],
+            "platforms": {
+                "win": {},
+                "linux": {},
+                "osx": {
+                    "CFBundleName": "My Example"
+                }
+            }
+        }
+    ]
+}

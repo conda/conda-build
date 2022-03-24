@@ -1285,6 +1285,30 @@ def fix_permissions(files, prefix):
                 log.warn(str(e))
 
 
+def check_menuinst_json(files, prefix):
+    json_files = fnmatch_filter(files, "[Mm]enu[/\\]*.[Jj][Ss][Oo][Nn]")
+    if not json_files:
+        return
+
+    try:
+        from json import JSONDecodeError
+        from menuinst.schema import validate
+        from pydantic import ValidationError
+    except ModuleNotFoundError:
+        print(
+            "Could not import menuinst and/or pydantic! "
+            "The following 'Menu/*.json' files were found but won't be validated!"
+            ", ".join(json_files)
+        )
+        return
+    for f in json_files:
+        try:
+            validate(join(prefix, f))
+        except (ValidationError, JSONDecodeError) as e:
+            log = utils.get_logger(__name__)
+            log.warning("! '%s' is not a valid menuinst JSON file! %s:\n%s", f, type(e), e)
+
+
 def post_build(m, files, build_python, host_prefix=None, is_already_linked=False):
     print('number of files:', len(files))
 
@@ -1312,6 +1336,7 @@ def post_build(m, files, build_python, host_prefix=None, is_already_linked=False
                                              f in binary_relocation):
                 post_process_shared_lib(m, f, prefix_files, host_prefix)
     check_overlinking(m, files, host_prefix)
+    check_menuinst_json(files, host_prefix)
 
 
 def check_symlinks(files, prefix, croot):

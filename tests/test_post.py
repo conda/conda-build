@@ -1,6 +1,7 @@
 import os
 import shutil
 import sys
+import logging
 
 import pytest
 
@@ -78,3 +79,28 @@ def test_pypi_installer_metadata(testing_config):
     pkg = api.build(recipe, config=testing_config, notest=True)[0]
     expected_installer = '{}/imagesize-1.1.0.dist-info/INSTALLER'.format(get_site_packages('', '3.9'))
     assert 'conda' == (package_has_file(pkg, expected_installer, refresh_mode='forced'))
+
+
+def test_menuinst_validation_passes(testing_config):
+    recipe = os.path.join(metadata_dir, 'menu_json_validation')
+    pkg = api.build(recipe, config=testing_config, notest=True)[0]
+    assert package_has_file(pkg, 'Menu/menu_json_validation.json')
+
+
+def test_menuinst_validation_fails(testing_config, caplog):
+    recipe = os.path.join(metadata_dir, 'menu_json_validation')
+    original_content = None
+
+    try:
+        with open(os.path.join(recipe, "menu.json"), "r+") as f:
+            original_content = f.read()
+            f.write("Make this an invalid JSON")
+
+        with caplog.at_level(logging.WARNING):
+            pkg = api.build(recipe, config=testing_config, notest=True)[0]
+        assert "not a valid menuinst JSON file" in caplog.text
+
+    finally:
+        if original_content is not None:
+            with open(os.path.join(recipe, "menu.json"), "w") as f:
+                f.write(original_content)
