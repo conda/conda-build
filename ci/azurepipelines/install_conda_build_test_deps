@@ -18,7 +18,7 @@ function install_conda_build_test_deps_fn()
   _PKGS+=(${DEF_CHAN}::ripgrep ${DEF_CHAN}::pyflakes ${DEF_CHAN}::beautifulsoup4 ${DEF_CHAN}::chardet ${DEF_CHAN}::pycrypto ${DEF_CHAN}::glob2 ${DEF_CHAN}::psutil ${DEF_CHAN}::pytz ${DEF_CHAN}::tqdm)
   _PKGS+=(${DEF_CHAN}::conda-package-handling ${DEF_CHAN}::perl ${DEF_CHAN}::python-libarchive-c)
   # TODO: Temporary, remove before merge
-  _PKGS+=(jaimergp/label/menuinst_dev::menuninst=2 ${DEF_CHAN}::pydantic)
+  _PKGS+=(jaimergp/label/menuinst_dev::menuinst=2 ${DEF_CHAN}::pydantic)
   _PKGS+=(${DEF_CHAN}::pip ${DEF_CHAN}::numpy ${DEF_CHAN}::pkginfo ${DEF_CHAN}::python="${PYTHON_VERSION}")
   if [[ $(uname) =~ .*inux.* ]] && [[ ! ${MACOS_ARM64} == yes ]] ; then
     _PKGS+=(${DEF_CHAN}::patchelf)
