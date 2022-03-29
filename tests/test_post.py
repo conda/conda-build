@@ -98,7 +98,7 @@ def test_menuinst_validation_fails(testing_config, caplog):
 
         with caplog.at_level(logging.WARNING):
             pkg = api.build(recipe, config=testing_config, notest=True)[0]
-        assert "not a valid menuXXXXinst JSON file" in caplog.text
+        assert "not a valid menuinst JSON file" in caplog.text
 
     finally:
         if original_content is not None:
