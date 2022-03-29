@@ -124,7 +124,7 @@ jobs:
             test-type: parallel
     timeout-minutes: 120
     env:
-      pytest-replay: --replay-record-dir=pytest-replay/ --replay-base-name=Win-%{{ matrix.conda-version }}%-Py%{{ matrix.python-version }}
+      serial_or_parallel: ''
 
     steps:
       - name: Checkout repository
@@ -238,7 +238,7 @@ jobs:
           set PERL=
           set LUA=
           set R=
-          py.test --color=yes -vv -n 0 --basetemp %UserProfile%\cbtmp_serial --cov conda_build --cov-report xml -m "serial" --test-run-title="Windows-SerialTests" --test-run-title="Windows-SerialTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}" ${{ env.pytest-replay }}
+          py.test --color=yes -vv -n 0 --basetemp %UserProfile%\cbtmp_serial --cov conda_build --cov-report xml -m "serial" ${{ env.pytest-replay }}
         shell: cmd
 
       - name: Run Parallel Tests
@@ -252,14 +252,13 @@ jobs:
           set PERL=
           set LUA=
           set R=
-          py.test --color=yes -vv -n auto --basetemp %UserProfile%\cbtmp --cov conda_build --cov-append --cov-report xml -m "not serial" --test-run-title="Windows-ParallelTests" --test-run-title="Windows-ParallelTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}" ${{ env.pytest-replay }}
+          py.test --color=yes -vv -n auto --basetemp %UserProfile%\cbtmp --cov conda_build --cov-append --cov-report xml -m "not serial" ${{ env.pytest-replay }}
         shell: cmd
         env:
           VS90COMNTOOLS: C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC\bin
           LIB:
 
-      - name: Upload Pytest Replay
-        uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v2
         with:
           path: ${{ github.workspace }}/pytest-replay
           name: Win-${{ env.CONDA_VERSION }}-Python${{ matrix.python-version }}-${{ env. parameters.serial_or_parallel  }}
@@ -288,14 +287,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      # - name: Remove homebrew
-      #   run: |
-      #     set -e -u
-      #     curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/uninstall > ~/uninstall_homebrew
-      #     chmod +x ~/uninstall_homebrew
-      #     ~/uninstall_homebrew -f -q
-      #     rm ~/uninstall_homebrew
-
       - name: Install miniconda
         run: |
           set -x -e -u
@@ -304,14 +295,6 @@ jobs:
           ${{ github.workspace }}/miniconda.sh -b -p ${{ github.workspace }}/miniconda
           source ci/github/activate_conda "${{ github.workspace }}/miniconda/bin/python"
           echo "Setting up Conda environment"
-
-      # - name: Setup CF macOS bits and select Xcode
-      #   run: |
-      #     set -x -e -u
-      #     source ci/github/activate_conda "${{ github.workspace }}/miniconda/bin/python"
-      #     echo "PWD is $PWD"
-      #     find $PWD
-      #     source ci/github/run_conda_forge_build_setup_osx
 
       - name: Prepare Test Environment
         run: |
