@@ -267,23 +267,16 @@ jobs:
 
 
   macOS:
-    runs-on: macOS-10.14
+    runs-on: macos-latest
     defaults:
       run:
         shell: bash -l {0}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.7', '3.8']
-        conda-version: [release]
+        python-version: ['3.9']
+        conda-version: [canary]
         test-type: [serial, parallel]
-        include:
-          - python-version: '3.9'
-            conda-version: canary
-            test-type: serial
-          - python-version: '3.9'
-            conda-version: canary
-            test-type: parallel
       max-parallel: 10
     timeout-minutes: 120
     env:
@@ -295,13 +288,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Remove homebrew
-        run: |
-          set -e -u
-          curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/uninstall > ~/uninstall_homebrew
-          chmod +x ~/uninstall_homebrew
-          ~/uninstall_homebrew -f -q
-          rm ~/uninstall_homebrew
+      # - name: Remove homebrew
+      #   run: |
+      #     set -e -u
+      #     curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/uninstall > ~/uninstall_homebrew
+      #     chmod +x ~/uninstall_homebrew
+      #     ~/uninstall_homebrew -f -q
+      #     rm ~/uninstall_homebrew
 
       - name: Install miniconda
         run: |
@@ -312,15 +305,15 @@ jobs:
           source ci/azurepipelines/activate_conda "${{ github.workspace }}/miniconda/bin/python"
           echo "Setting up Conda environment"
 
-      - name: Setup CF macOS bits and select Xcode
-        run: |
-          set -x -e -u
-          source ci/azurepipelines/activate_conda "${{ github.workspace }}/miniconda/bin/python"
-          echo "PWD is $PWD"
-          find $PWD
-          source ci/azurepipelines/run_conda_forge_build_setup_osx
+      # - name: Setup CF macOS bits and select Xcode
+      #   run: |
+      #     set -x -e -u
+      #     source ci/azurepipelines/activate_conda "${{ github.workspace }}/miniconda/bin/python"
+      #     echo "PWD is $PWD"
+      #     find $PWD
+      #     source ci/azurepipelines/run_conda_forge_build_setup_osx
 
-      - name: Preparing test environment
+      - name: Prepare Test Environment
         run: |
           set -e -u
           source ci/azurepipelines/activate_conda "${{ github.workspace }}/miniconda/bin/python"
@@ -331,23 +324,14 @@ jobs:
           mkdir -p ${{ github.workspace }}/miniconda/locks
           mkdir -p ${{ github.workspace }}/miniconda/bin
           chmod -w ${{ github.workspace }}/miniconda/locks
-          if [ "${{ env.CONDA_VERSION }}" = "release" ]; then
-            conda update -y conda;
-          else
-            conda install -y -c conda-canary conda;
-          fi
+          conda install -y -c conda-canary conda
           conda config --set always_yes yes
           conda config --set auto_update_conda False
           conda info
-
           source ci/azurepipelines/install_conda_build_test_deps
-
-          pip install --no-deps .
-
+          pip install -e .
           conda info -a
-
           conda list --show-channel-urls
-
           source ci/azurepipelines/setup_pytest_replay
 
       - name: Run Serial Tests
@@ -356,7 +340,7 @@ jobs:
           set -e -u
           source ci/azurepipelines/activate_conda "${{ github.workspace }}/miniconda/bin/python"
           conda install conda-verify -y
-          py.test --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="macOS-SerialTests-${{ env.CONDA_VERSION }}-Python${{ matrix.python-version }}" "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
+          py.test --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="macOS-SerialTests-${{ matrix.conda-version }}-Python${{ matrix.python-version }}" "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
 
       - name: Run Parallel Tests
         if: matrix.test-type == 'parallel'
@@ -370,11 +354,11 @@ jobs:
           conda create -n blarg1 -yq python=2.7
           conda create -n blarg3 -yq python=3.7
           conda create -n blarg4 -yq python nomkl numpy pandas svn
-          py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --test-run-title="macOS-ParallelTests-${{ env.CONDA_VERSION }}-Python${{ matrix.python-version }}" "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
+          py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --test-run-title="macOS-ParallelTests-${{ matrix.conda-version }}-Python${{ matrix.python-version }}" "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
 
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v2
         with:
           path: ${{ github.workspace }}/pytest-replay
-          name: macOS-${{ env.CONDA_VERSION }}-Py${{ matrix.PYTHON_VERSION }}-${{ env. parameters.serial_or_parallel  }}
+          name: macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ env. parameters.serial_or_parallel  }}
         if: always()
