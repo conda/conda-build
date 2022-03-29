@@ -123,7 +123,7 @@ jobs:
           - python-version: '3.9'
             conda-version: canary
             test-type: parallel
-    timeout-minutes: 120
+    # timeout-minutes: 120
     env:
       serial_or_parallel: ''
 
