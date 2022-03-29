@@ -64,7 +64,7 @@ jobs:
 
       - name: Source Scripts
         run: |
-          source ci/azurepipelines/install_conda_build_test_deps
+          source ci/github/install_conda_build_test_deps
           pip install -e .
           conda info -a
           mkdir ./pytest-replay
@@ -124,7 +124,7 @@ jobs:
             test-type: parallel
     timeout-minutes: 120
     env:
-      serial_or_parallel: ''
+      pytest-replay: --replay-record-dir=pytest-replay/ --replay-base-name=Win-%{{ matrix.conda-version }}%-Py%{{ matrix.python-version }}
 
     steps:
       - name: Checkout repository
@@ -205,7 +205,7 @@ jobs:
           python -c "import sys; print(sys.executable)"
           python -c "import sys; print(sys.prefix)"
           call conda update -q --all||exit 1
-          call conda install -q pip python-libarchive-c pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling pytest-azurepipelines||exit 1
+          call conda install -q pip python-libarchive-c pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling pytest-github||exit 1
           call conda install pytest-replay pytest-rerunfailures -y||exit 1
           echo safety_checks: disabled >> %UserProfile%\.condarc
           echo local_repodata_ttl: 1800 >> %UserProfile%\.condarc
@@ -280,7 +280,7 @@ jobs:
       max-parallel: 10
     timeout-minutes: 120
     env:
-      serial_or_parallel: ''
+      pytest-replay: --replay-record-dir=pytest-replay/ --replay-base-name=macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
 
     steps:
       - name: Checkout repository
@@ -302,21 +302,21 @@ jobs:
           curl -o ${{ github.workspace }}/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
           chmod +x ${{ github.workspace }}/miniconda.sh
           ${{ github.workspace }}/miniconda.sh -b -p ${{ github.workspace }}/miniconda
-          source ci/azurepipelines/activate_conda "${{ github.workspace }}/miniconda/bin/python"
+          source ci/github/activate_conda "${{ github.workspace }}/miniconda/bin/python"
           echo "Setting up Conda environment"
 
       # - name: Setup CF macOS bits and select Xcode
       #   run: |
       #     set -x -e -u
-      #     source ci/azurepipelines/activate_conda "${{ github.workspace }}/miniconda/bin/python"
+      #     source ci/github/activate_conda "${{ github.workspace }}/miniconda/bin/python"
       #     echo "PWD is $PWD"
       #     find $PWD
-      #     source ci/azurepipelines/run_conda_forge_build_setup_osx
+      #     source ci/github/run_conda_forge_build_setup_osx
 
       - name: Prepare Test Environment
         run: |
           set -e -u
-          source ci/azurepipelines/activate_conda "${{ github.workspace }}/miniconda/bin/python"
+          source ci/github/activate_conda "${{ github.workspace }}/miniconda/bin/python"
           conda info
           conda list
           grep '^#' "${CONDA_PREFIX}/conda-meta/history"
@@ -328,17 +328,17 @@ jobs:
           conda config --set always_yes yes
           conda config --set auto_update_conda False
           conda info
-          source ci/azurepipelines/install_conda_build_test_deps
+          source ci/github/install_conda_build_test_deps
           pip install -e .
           conda info -a
           conda list --show-channel-urls
-          source ci/azurepipelines/setup_pytest_replay
+          source ci/github/setup_pytest_replay
 
       - name: Run Serial Tests
         if: matrix.test-type == 'serial'
         run: |
           set -e -u
-          source ci/azurepipelines/activate_conda "${{ github.workspace }}/miniconda/bin/python"
+          source ci/github/activate_conda "${{ github.workspace }}/miniconda/bin/python"
           conda install conda-verify -y
           py.test --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="macOS-SerialTests-${{ matrix.conda-version }}-Python${{ matrix.python-version }}" "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
 
@@ -346,7 +346,7 @@ jobs:
         if: matrix.test-type == 'parallel'
         run: |
           set -e -u
-          source ci/azurepipelines/activate_conda "${{ github.workspace }}/miniconda/bin/python"
+          source ci/github/activate_conda "${{ github.workspace }}/miniconda/bin/python"
           conda remove conda-verify -y
           echo "safety_checks: disabled" >> ~/.condarc
           echo "local_repodata_ttl: 1800" >> ~/.condarc
