@@ -205,7 +205,7 @@ jobs:
           python -c "import sys; print(sys.executable)"
           python -c "import sys; print(sys.prefix)"
           call conda update -q --all||exit 1
-          call conda install -q pip python-libarchive-c pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling pytest-github||exit 1
+          call conda install -q pip python-libarchive-c pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling||exit 1
           call conda install pytest-replay pytest-rerunfailures -y||exit 1
           echo safety_checks: disabled >> %UserProfile%\.condarc
           echo local_repodata_ttl: 1800 >> %UserProfile%\.condarc
@@ -332,7 +332,6 @@ jobs:
           pip install -e .
           conda info -a
           conda list --show-channel-urls
-          source ci/github/setup_pytest_replay
 
       - name: Run Serial Tests
         if: matrix.test-type == 'serial'
