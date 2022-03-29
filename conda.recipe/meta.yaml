@@ -49,6 +49,9 @@ requirements:
     - tqdm
     - conda-package-handling  >=1.3
     - python-libarchive-c
+    # New for JSON validation
+    - menuinst >=2
+    - pydantic
 
 test:
   files:
