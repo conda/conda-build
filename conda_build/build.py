@@ -18,6 +18,7 @@ import stat
 import string
 import subprocess
 import sys
+import typing
 import time
 
 # this is to compensate for a requests idna encoding error.  Conda is a better place to fix,
@@ -1608,8 +1609,20 @@ def bundle_conda(output, metadata, env, stats, **kw):
             _write_activation_text(dest_file, metadata)
 
         bundle_stats = {}
-        utils.check_call_env(interpreter_and_args + [dest_file],
-                             cwd=metadata.config.work_dir, env=env_output, stats=bundle_stats)
+
+        rewrite_env = initialize_rewrite_env(
+            env_output,
+            metadata=metadata,
+            verbose_output=metadata.config.verbose,
+            is_windows=os.path.splitext(dest_file)[1].lower() == ".bat",
+        )
+        utils.check_call_env(
+            interpreter_and_args + [dest_file],
+            cwd=metadata.config.work_dir,
+            env=env_output,
+            stats=bundle_stats,
+            rewrite_stdout_env=rewrite_env,
+        )
         log_stats(bundle_stats, f"bundling {metadata.name()}")
         if stats is not None:
             stats[stats_key(metadata, f'bundle_{metadata.name()}')] = bundle_stats
@@ -2177,19 +2190,9 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                         cmd = [shell_path] + (['-x'] if m.config.debug else []) + ['-o', 'errexit', work_file]
 
                         # rewrite long paths in stdout back to their env variables
-                        if m.config.debug or m.config.no_rewrite_stdout_env:
-                            rewrite_env = None
-                        else:
-                            rewrite_vars = ['PREFIX', 'SRC_DIR']
-                            if not m.build_is_host:
-                                rewrite_vars.insert(1, 'BUILD_PREFIX')
-                            rewrite_env = {
-                                k: env[k]
-                                for k in rewrite_vars if k in env
-                            }
-                            for k, v in rewrite_env.items():
-                                print('{} {}={}'
-                                        .format('set' if build_file.endswith('.bat') else 'export', k, v))
+                        rewrite_env = initialize_rewrite_env(
+                            env, is_windows=build_file.endswith(".bat"), metadata=m
+                        )
 
                         # clear this, so that the activate script will get run as necessary
                         del env['CONDA_BUILD']
@@ -2390,6 +2393,27 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
 
     # return list of all package files emitted by this build
     return new_pkgs
+
+
+def initialize_rewrite_env(
+    env: "typing.Mapping[str, str]",
+    is_windows: bool,
+    metadata: MetaData,
+    verbose_output: bool = True,
+    include_build_prefix: bool = True,
+) -> "typing.Mapping[str, str]":
+    """rewrite long paths in stdout back to their env variables"""
+    if metadata.config.debug or metadata.config.no_rewrite_stdout_env:
+        rewrite_env = None
+    else:
+        rewrite_vars = ["PREFIX", "SRC_DIR"]
+        if (not metadata.build_is_host) and include_build_prefix:
+            rewrite_vars.insert(1, "BUILD_PREFIX")
+        rewrite_env = {k: env[k] for k in rewrite_vars if k in env}
+        if verbose_output:
+            for k, v in rewrite_env.items():
+                print("{} {}={}".format("set" if is_windows else "export", k, v))
+    return rewrite_env
 
 
 def guess_interpreter(script_filename):
@@ -2913,18 +2937,19 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
         test_stats = {}
         if not provision_only:
             # rewrite long paths in stdout back to their env variables
-            if metadata.config.debug or metadata.config.no_rewrite_stdout_env:
-                rewrite_env = None
-            else:
-                rewrite_env = {
-                    k: env[k]
-                    for k in ['PREFIX', 'SRC_DIR'] if k in env
-                }
-                if metadata.config.verbose:
-                    for k, v in rewrite_env.items():
-                        print('{} {}={}'
-                            .format('set' if test_script.endswith('.bat') else 'export', k, v))
-            utils.check_call_env(cmd, env=env, cwd=metadata.config.test_dir, stats=test_stats, rewrite_stdout_env=rewrite_env)
+            rewrite_env = initialize_rewrite_env(
+                env,
+                metadata=metadata,
+                verbose_output=metadata.config.verbose,
+                include_build_prefix=False,
+            )
+            utils.check_call_env(
+                cmd,
+                env=env,
+                cwd=metadata.config.test_dir,
+                stats=test_stats,
+                rewrite_stdout_env=rewrite_env,
+            )
             log_stats(test_stats, f"testing {metadata.name()}")
             if stats is not None and metadata.config.variants:
                 stats[stats_key(metadata, f'test_{metadata.name()}')] = test_stats
