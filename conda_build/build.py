@@ -2397,6 +2397,7 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
 
 def initialize_rewrite_env(
     env: "typing.Mapping[str, str]",
+    *,
     is_windows: bool,
     metadata: MetaData,
     verbose_output: bool = True,
@@ -2942,6 +2943,7 @@ def test(recipedir_or_package_or_metadata, config, stats, move_broken=True, prov
                 metadata=metadata,
                 verbose_output=metadata.config.verbose,
                 include_build_prefix=False,
+                is_windows=utils.on_win,
             )
             utils.check_call_env(
                 cmd,
