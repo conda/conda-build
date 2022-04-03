@@ -908,7 +908,7 @@ def get_import_tests(pkginfo, import_tests_metada=""):
 
 def get_tests_require(pkginfo):
     return sorted(
-        spec_from_line(pkg) for pkg in ensure_list(pkginfo['tests_require'])
+        spec_from_line(pkg) for pkg in ensure_list(pkginfo.get('tests_require', []))
     )
 
 
@@ -1112,7 +1112,7 @@ def get_requirements(package, pkginfo, all_extras=True):
         #  subset of environment markers that compare to python_version
         #  using a single basic Python comparison operator
         version_marker = re.compile(r'^:python_version(<|<=|!=|==|>=|>)(.+)$')
-        for extra in pkginfo['extras_require']:
+        for extra in pkginfo.get('extras_require', []):
             match_ver_mark = version_marker.match(extra)
             if match_ver_mark:
                 op, ver = match_ver_mark.groups()

@@ -1,0 +1,4 @@
+Bug fixes:
+----------
+
+* conda skeleton pypi <mypkg> - don't assume that 'extras_require' key is present in pkginfo dict
