@@ -294,7 +294,6 @@ jobs:
           chmod +x ${{ github.workspace }}/miniconda.sh
           ${{ github.workspace }}/miniconda.sh -b -p ${{ github.workspace }}/miniconda
           source ci/github/activate_conda "${{ github.workspace }}/miniconda/bin/python"
-          echo "Setting up Conda environment"
 
       - name: Prepare Test Environment
         run: |

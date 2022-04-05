@@ -419,7 +419,6 @@ def test_inspect_hash_input(testing_metadata, testing_workdir, capfd):
     assert 'zlib' in output
 
 
-@pytest.mark.xfail(conda_43, reason="develop broke with old conda.  We don't really care.")
 def test_develop(testing_env):
     f = "https://pypi.io/packages/source/c/conda_version_test/conda_version_test-0.1.0-1.tar.gz"
     download(f, "conda_version_test.tar.gz")

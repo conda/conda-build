@@ -55,7 +55,7 @@ def patch_files(testing_workdir):
 
 
 # TODO :: These should require a build env with patch (or m2-patch) in it.
-#         at present, only ci/azurepipelines/install_conda_build_test_deps installs
+#         at present, only ci/github/install_conda_build_test_deps installs
 #         this.
 def test_patch(patch_files, testing_config):
     apply_patch('.', patch_files, testing_config)
