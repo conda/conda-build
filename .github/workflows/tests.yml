@@ -37,8 +37,10 @@ jobs:
           - python-version: '3.9'
             conda-version: canary
             test-type: parallel
+    # env:
+    #   pytest-replay: --replay-record-dir=pytest-replay/ --replay-base-name=Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
     env:
-      pytest-replay: --replay-record-dir=pytest-replay/ --replay-base-name=Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
+      serial_or_parallel: ''
 
     steps:
       - name: Checkout repository
@@ -67,7 +69,7 @@ jobs:
           source ci/github/install_conda_build_test_deps
           pip install -e .
           conda info -a
-          mkdir ./pytest-replay
+#          mkdir ./pytest-replay
 
       - name: Run Serial tests
         if: matrix.test-type == 'serial'
@@ -258,7 +260,8 @@ jobs:
           VS90COMNTOOLS: C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC\bin
           LIB:
 
-      - uses: actions/upload-artifact@v2
+      - name: Upload Pytest Replay
+        uses: actions/upload-artifact@v2
         with:
           path: ${{ github.workspace }}/pytest-replay
           name: Win-${{ env.CONDA_VERSION }}-Python${{ matrix.python-version }}-${{ env. parameters.serial_or_parallel  }}
@@ -278,8 +281,10 @@ jobs:
         test-type: [serial, parallel]
       max-parallel: 10
     timeout-minutes: 120
+    # env:
+    #   pytest-replay: --replay-record-dir=pytest-replay/ --replay-base-name=macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
     env:
-      pytest-replay: --replay-record-dir=pytest-replay/ --replay-base-name=macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
+      serial_or_parallel: ''
 
     steps:
       - name: Checkout repository
