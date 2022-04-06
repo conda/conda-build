@@ -37,10 +37,8 @@ jobs:
           - python-version: '3.9'
             conda-version: canary
             test-type: parallel
-    # env:
-    #   pytest-replay: --replay-record-dir=pytest-replay/ --replay-base-name=Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
     env:
-      serial_or_parallel: ''
+      pytest-replay: --replay-record-dir=pytest-replay/ --replay-base-name=Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
 
     steps:
       - name: Checkout repository
@@ -69,7 +67,7 @@ jobs:
           source ci/github/install_conda_build_test_deps
           pip install -e .
           conda info -a
-#          mkdir ./pytest-replay
+          mkdir ./pytest-replay
 
       - name: Run Serial tests
         if: matrix.test-type == 'serial'
@@ -82,8 +80,6 @@ jobs:
               --cov conda_build \
               --cov-report xml \
               -m "serial" tests \
-              --test-run-title="Linux-SerialTests" \
-              --test-run-title="Linux-SerialTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}" \
               ${{ env.pytest-replay }}
 
       - name: Run Parallel tests
@@ -98,8 +94,6 @@ jobs:
               --cov-append \
               --cov-report xml \
               -m "not serial" tests \
-              --test-run-title="Linux-ParallelTests" \
-              --test-run-title="Linux-ParallelTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}" \
               ${{ env.pytest-replay }}
 
       - name: Upload Pytest Replay
@@ -281,10 +275,8 @@ jobs:
         test-type: [serial, parallel]
       max-parallel: 10
     timeout-minutes: 120
-    # env:
-    #   pytest-replay: --replay-record-dir=pytest-replay/ --replay-base-name=macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
     env:
-      serial_or_parallel: ''
+      pytest-replay: --replay-record-dir=pytest-replay/ --replay-base-name=macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
 
     steps:
       - name: Checkout repository
@@ -326,7 +318,7 @@ jobs:
           set -e -u
           source ci/github/activate_conda "${{ github.workspace }}/miniconda/bin/python"
           conda install conda-verify -y
-          py.test --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --test-run-title="macOS-SerialTests-${{ matrix.conda-version }}-Python${{ matrix.python-version }}" "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
+          py.test --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
 
       - name: Run Parallel Tests
         if: matrix.test-type == 'parallel'
@@ -340,7 +332,7 @@ jobs:
           conda create -n blarg1 -yq python=2.7
           conda create -n blarg3 -yq python=3.7
           conda create -n blarg4 -yq python nomkl numpy pandas svn
-          py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests --test-run-title="macOS-ParallelTests-${{ matrix.conda-version }}-Python${{ matrix.python-version }}" "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
+          py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
 
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v2
