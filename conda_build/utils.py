@@ -100,6 +100,8 @@ DEFAULT_SUBDIRS = {
     "linux-ppc64le",
     "linux-armv6l",
     "linux-armv7l",
+    "linux-mips64",
+    "linux-loongarch64",
     "linux-aarch64",
     "win-64",
     "win-32",
