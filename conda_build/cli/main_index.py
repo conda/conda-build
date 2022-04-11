@@ -78,6 +78,13 @@ def parse_args(args):
         help="A file that contains a new line separated list of packages to add to repodata.",
         action="store"
     )
+    p.add_argument(
+        "--metadata-dir",
+        help="""
+        A separate directory to write the indices to. Defaults to the directory
+        being indexed.
+        """
+    )
 
     args = p.parse_args(args)
     return p, args
@@ -89,7 +96,8 @@ def execute(args):
     api.update_index(args.dir, check_md5=args.check_md5, channel_name=args.channel_name,
                      threads=args.threads, subdir=args.subdir, patch_generator=args.patch_generator,
                      verbose=args.verbose, progress=args.progress, hotfix_source_repo=args.hotfix_source_repo,
-                     current_index_versions=args.current_index_versions_file, index_file=args.file)
+                     current_index_versions=args.current_index_versions_file, index_file=args.file,
+                     metadata_dir=args.metadata_dir)
 
 
 def main():
