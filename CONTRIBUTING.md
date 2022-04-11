@@ -50,7 +50,7 @@ impact the functionality of `conda/conda-build` installed in your base environme
 
 ``` bash
     # create/activate standalone dev env
-    $ conda create --name dev --file tests/requirements.txt --channel defaults
+    $ conda create --name conda-build --file tests/requirements.txt --channel defaults
     $ conda activate dev
 
     # run tests
