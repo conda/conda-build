@@ -5,29 +5,33 @@ SHELL := /bin/bash -o pipefail -o errexit
 ENV_NAME ?= conda-build
 DOC_ENV_NAME ?= conda-build-docs
 PYTHON_VERSION ?= 3.8
-
 TMPDIR := $(shell if test -w $(TMPDIR); then echo $(TMPDIR); else echo ./tmp/ ; fi)conda-build-testing
+
+# We want to bypass the shell wrapper function and use the binary directly for conda-run specifically
+# See: https://github.com/conda/conda/issues/11174
+CONDA := $(shell which conda)
+
 # Setup env for documents
 env-docs:
 	conda create --name $(DOC_ENV_NAME) --channel defaults python=$(PYTHON_VERSION) --yes
-	conda run --name $(DOC_ENV_NAME) pip install -r ./docs/requirements.txt
+	$(CONDA) run --name $(DOC_ENV_NAME) pip install -r ./docs/requirements.txt
 
 .PHONY: $(MAKECMDGOALS)
 
 # Runs all tests
 .PHONY: test
 test: ../conda_build_test_recipe $(TMPDIR)
-	conda run --no-capture-output -n $(ENV_NAME) pytest tests/ --basetemp $(TMPDIR)
+	$(CONDA) run --no-capture-output -n $(ENV_NAME) pytest tests/ --basetemp $(TMPDIR)
 
 # Run the serial tests
 .PHONY: test-serial
 test-serial: ../conda_build_test_recipe $(TMPDIR)
-	conda run --no-capture-output -n $(ENV_NAME) pytest tests/ -m "serial" --basetemp $(TMPDIR)
+	$(CONDA) run --no-capture-output -n $(ENV_NAME) pytest tests/ -m "serial" --basetemp $(TMPDIR)
 
 # Run the not serial tests
 .PHONY: test-not-serial
 test-not-serial: ../conda_build_test_recipe $(TMPDIR)
-	conda run --no-capture-output -n $(ENV_NAME) pytest tests/ -m "not serial" --basetemp $(TMPDIR)
+	$(CONDA) run --no-capture-output -n $(ENV_NAME) pytest tests/ -m "not serial" --basetemp $(TMPDIR)
 
 # Checkout the required test recipes
 # Requires write access to the directory above this
