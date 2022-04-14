@@ -11,7 +11,7 @@ function install_conda_build_test_deps_fn()
   fi
   # avoids a python 3.7 problem
   local -a _PKGS=(cytoolz conda-verify)
-  _PKGS+=(${DEF_CHAN}::pytest ${DEF_CHAN}::pytest-azurepipelines ${DEF_CHAN}::pytest-cov ${DEF_CHAN}::pytest-forked ${DEF_CHAN}::pytest-xdist)
+  _PKGS+=(${DEF_CHAN}::pytest ${DEF_CHAN}::pytest-cov ${DEF_CHAN}::pytest-forked ${DEF_CHAN}::pytest-xdist)
   _PKGS+=(${DEF_CHAN}::py-lief ${DEF_CHAN}::pytest-mock)
   _PKGS+=(${DEF_CHAN}::pytest-replay ${DEF_CHAN}::pytest-rerunfailures)
   _PKGS+=(${DEF_CHAN}::anaconda-client ${DEF_CHAN}::git ${DEF_CHAN}::requests ${DEF_CHAN}::filelock ${DEF_CHAN}::contextlib2 ${DEF_CHAN}::jinja2 ${DEF_CHAN}::flaky)
@@ -20,6 +20,9 @@ function install_conda_build_test_deps_fn()
   _PKGS+=(${DEF_CHAN}::pip ${DEF_CHAN}::numpy ${DEF_CHAN}::pkginfo ${DEF_CHAN}::python="${PYTHON_VERSION}")
   if [[ $(uname) =~ .*inux.* ]] && [[ ! ${MACOS_ARM64} == yes ]] ; then
     _PKGS+=(${DEF_CHAN}::patchelf)
+  fi
+  if [[ $TF_BUILD == True ]]; then  # only for azure pipelines
+    _PKGS+=(${DEF_CHAN}::pytest-azurepipelines)
   fi
   if [[ $(uname) =~ M.* ]]; then
     _PKGS+=(${DEF_CHAN}::m2-patch)
