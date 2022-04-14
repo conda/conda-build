@@ -50,8 +50,8 @@ function install_conda_build_test_deps_fn()
     popd
   fi
 
-  conda install -y ${DEF_CHAN}::conda-libmamba-solver
-  # python -m pip install --no-deps https://github.com/conda-incubator/conda-libmamba-solver/archive/main.tar.gz
+  conda install -y ${DEF_CHAN}::conda-libmamba-solver --only-deps
+  python -m pip install --no-deps https://github.com/conda-incubator/conda-libmamba-solver/archive/conda-build-compat.tar.gz
 }
 
 install_conda_build_test_deps_fn "$@"
