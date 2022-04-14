@@ -18,6 +18,10 @@ env-docs:
 
 .PHONY: $(MAKECMDGOALS)
 
+.PHONY: setup
+setup: ../conda_build_test_recipe
+	$(CONDA) create --name $(ENV_NAME) --file tests/requirements.txt --channel defaults python=$(PYTHON_VERSION)
+
 # Runs all tests
 .PHONY: test
 test: ../conda_build_test_recipe $(TMPDIR)
@@ -33,11 +37,20 @@ test-serial: ../conda_build_test_recipe $(TMPDIR)
 test-not-serial: ../conda_build_test_recipe $(TMPDIR)
 	$(CONDA) run --no-capture-output -n $(ENV_NAME) pytest tests/ -m "not serial" --basetemp $(TMPDIR)
 
+# Run the parallel tests
+.PHONY: test-parallel
+test-not-parallel: ../conda_build_test_recipe $(TMPDIR)
+	$(CONDA) run --no-capture-output -n $(ENV_NAME) pytest tests/ -m "parallel" --basetemp $(TMPDIR)
+
+# Run the not parallel tests
+.PHONY: test-not-parallel
+test-not-parallel: ../conda_build_test_recipe $(TMPDIR)
+	$(CONDA) run --no-capture-output -n $(ENV_NAME) pytest tests/ -m "not parallel" --basetemp $(TMPDIR)
+
 # Checkout the required test recipes
 # Requires write access to the directory above this
 ../conda_build_test_recipe:
 	git clone https://github.com/conda/conda_build_test_recipe ../conda_build_test_recipe
-
 
 $(TMPDIR):
 	mkdir -p $(TMPDIR)

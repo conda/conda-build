@@ -50,11 +50,11 @@ impact the functionality of `conda/conda-build` installed in your base environme
 
 ``` bash
     # create/activate standalone dev env
-    $ conda create --name conda-build --file tests/requirements.txt --channel defaults
-    $ conda activate dev
+    $ CONDA_ENV=conda-build make setup
+    $ conda activate conda-build
 
-    # run tests
-    (dev) $ pytest
+    # Run all tests (can take a long time)
+    (dev) $ make test
 
     # install as editable so you can play around with it
     (dev) $ pip install -e .
@@ -74,17 +74,19 @@ The test suite runs with `py.test`. The following are some useful commands for r
 tests, assuming you are in the `conda-build` root folder:
 
 ### Run all tests:
-```
-    py.test tests
+```bash
+    make test
+    # Or if you prefer pytest directly:
+    py.test
 ```
 
 ### Run one test file:
-```
+```bash
     py.test tests/test_api_build.py
 ```
 
 ### Run one test function:
-```
+```bash
     py.test tests/test_api_build.py::test_early_abort
 ```
 
@@ -92,7 +94,7 @@ tests, assuming you are in the `conda-build` root folder:
 
 Several tests are parametrized, to run some small change, or build several
 recipe folders. To choose only one of them::
-```
+```bash
     py.test tests/test_api_build.py::test_recipe_builds.py[entry_points]
 ```
 Note that our tests use `py.test` fixtures extensively. These sometimes trip up IDE
