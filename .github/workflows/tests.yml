@@ -17,6 +17,8 @@ on:
       - reopened
       - synchronize
 
+env:
+  CONDA_EXPERIMENTAL_SOLVER: libmamba
 
 jobs:
   linux:

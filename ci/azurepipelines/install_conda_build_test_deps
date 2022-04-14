@@ -46,6 +46,9 @@ function install_conda_build_test_deps_fn()
       git clone "https://github.com/conda/conda_build_test_recipe"
     popd
   fi
+
+  conda install -y ${DEF_CHAN}::conda-libmamba-solver
+  # python -m pip install --no-deps https://github.com/conda-incubator/conda-libmamba-solver/archive/main.tar.gz
 }
 
 install_conda_build_test_deps_fn "$@"
