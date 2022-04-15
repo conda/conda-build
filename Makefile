@@ -32,20 +32,10 @@ test: ../conda_build_test_recipe $(TMPDIR)
 test-serial: ../conda_build_test_recipe $(TMPDIR)
 	$(CONDA) run --no-capture-output -n $(ENV_NAME) pytest tests/ -m "serial" --basetemp $(TMPDIR)
 
-# Run the not serial tests
-.PHONY: test-not-serial
-test-not-serial: ../conda_build_test_recipe $(TMPDIR)
-	$(CONDA) run --no-capture-output -n $(ENV_NAME) pytest tests/ -m "not serial" --basetemp $(TMPDIR)
-
-# Run the parallel tests
+# Run the not serial tests AKA parallel tests
 .PHONY: test-parallel
-test-not-parallel: ../conda_build_test_recipe $(TMPDIR)
-	$(CONDA) run --no-capture-output -n $(ENV_NAME) pytest tests/ -m "parallel" --basetemp $(TMPDIR)
-
-# Run the not parallel tests
-.PHONY: test-not-parallel
-test-not-parallel: ../conda_build_test_recipe $(TMPDIR)
-	$(CONDA) run --no-capture-output -n $(ENV_NAME) pytest tests/ -m "not parallel" --basetemp $(TMPDIR)
+test-parallel: ../conda_build_test_recipe $(TMPDIR)
+	$(CONDA) run --no-capture-output -n $(ENV_NAME) pytest tests/ -m "not serial" --basetemp $(TMPDIR)
 
 # Checkout the required test recipes
 # Requires write access to the directory above this
