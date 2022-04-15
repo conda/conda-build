@@ -7,19 +7,20 @@ export PYTHONUNBUFFERED=1
 # which should only be recipes still using conda-build 2.
 export MACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET:-11.0}
 export CPU_COUNT=$(sysctl -n hw.ncpu)
+export INSTALL_XCODE=${INSTALL_XCODE:-0}
 echo "Intial \$(xcode-select -p) is $(xcode-select -p)"
 echo "PATH is $PATH"
 echo "INSTALL_XCODE is $INSTALL_XCODE"
 if [[ ${INSTALL_XCODE} == 1 ]]; then
-  sudo xcode-select --switch /Applications/Xcode_10.1.app/Contents/Developer
-  echo "After selecting Xcode_10.1.app, \$(xcode-select -p) is $(xcode-select -p)"
+  sudo xcode-select --switch /Applications/Xcode_12.5.app/Contents/Developer
+  echo "After selecting Xcode_12.5.app, \$(xcode-select -p) is $(xcode-select -p)"
 fi
 echo "PATH is $PATH"
 export CONDA_BUILD_SYSROOT="$(xcode-select -p)/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${MACOSX_DEPLOYMENT_TARGET}.sdk"
 
 if [[ ! -d ${CONDA_BUILD_SYSROOT} || "$OSX_FORCE_SDK_DOWNLOAD" == "1" ]]; then
     echo "Downloading ${MACOSX_DEPLOYMENT_TARGET} sdk"
-    curl -L -O https://github.com/phracker/MacOSX-SDKs/releases/download/11.0/MacOSX${MACOSX_DEPLOYMENT_TARGET}.sdk.tar.xz
+    curl -L -O https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX${MACOSX_DEPLOYMENT_TARGET}.sdk.tar.xz
     tar -xf MacOSX${MACOSX_DEPLOYMENT_TARGET}.sdk.tar.xz -C "$(dirname "$CONDA_BUILD_SYSROOT")"
     # set minimum sdk version to our target
     if [[ ${INSTALL_XCODE} == 1 ]]; then

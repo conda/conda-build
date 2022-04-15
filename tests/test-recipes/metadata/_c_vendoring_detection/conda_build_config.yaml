@@ -34,7 +34,7 @@ rust_compiler:
 rust_compiler_version:
   - 1.29.0
 CONDA_BUILD_SYSROOT:
-  - /opt/MacOSX11.0.sdk        # [osx]
+  - /opt/MacOSX10.10.sdk        # [osx]
 VERBOSE_AT:
   - V=1
 VERBOSE_CM:

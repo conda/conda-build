@@ -17,7 +17,7 @@ from conda_build.tarcheck import TarCheck
 from conda_build import api
 from conda_build.config import Config
 from conda_build.utils import get_site_packages, on_win, get_build_folders, package_has_file, tar_xf
-from conda_build.conda_interface import TemporaryDirectory, conda_43
+from conda_build.conda_interface import TemporaryDirectory
 from conda_build.exceptions import DependencyNeedsBuildingError
 import conda_build
 from .utils import metadata_dir

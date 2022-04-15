@@ -1,9 +1,9 @@
 CONDA_BUILD_SYSROOT:
-  - /opt/MacOSX11.0.sdk
-  - /opt/MacOSX11.1sdk
+  - /opt/MacOSX10.10.sdk
+  - /opt/MacOSX10.11.sdk
 CONDA_BUILD_SYSROOT_NAME:
-  - sdk_11_0
-  - sdk_11_1
+  - sdk_10_10
+  - sdk_10_11
 zip_keys:
   -
     - CONDA_BUILD_SYSROOT
