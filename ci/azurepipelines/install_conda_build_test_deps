@@ -21,9 +21,9 @@ function install_conda_build_test_deps_fn()
   if [[ $(uname) =~ .*inux.* ]] && [[ ! ${MACOS_ARM64} == yes ]] ; then
     _PKGS+=(${DEF_CHAN}::patchelf)
   fi
-  if [[ $TF_BUILD == True ]]; then  # only for azure pipelines
-    _PKGS+=(${DEF_CHAN}::pytest-azurepipelines)
-  fi
+  # if [[ $TF_BUILD == True ]]; then  # only for azure pipelines
+  #   _PKGS+=(${DEF_CHAN}::pytest-azurepipelines)
+  # fi
   if [[ $(uname) =~ M.* ]]; then
     _PKGS+=(${DEF_CHAN}::m2-patch)
     _PKGS+=(${DEF_CHAN}::m2-gcc-libs)
