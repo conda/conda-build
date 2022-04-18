@@ -123,7 +123,7 @@ jobs:
       set PERL=
       set LUA=
       set R=
-      py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp %UserProfile%\cbtmp_serial -n 0 -m "serial" --test-run-title="Win-SerialTests-%CONDA_VERSION%-Python%PYTHON_VERSION%" %PYTEST_REPLAY_OPTIONS%
+      py.test --color=yes -v --cov conda_build --cov-report xml tests --basetemp %UserProfile%\cbtmp_serial -n 0 -m "serial" %PYTEST_REPLAY_OPTIONS%
     displayName: 'Serial Tests'
     condition: and(succeeded(), eq('${{ parameters.serial_or_parallel }}', 'serial'))
 
@@ -136,7 +136,7 @@ jobs:
       set PERL=
       set LUA=
       set R=
-      py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp %UserProfile%\cbtmp -n auto -m "not serial" --test-run-title="Win-ParallelTests-%CONDA_VERSION%-Python%PYTHON_VERSION%" %PYTEST_REPLAY_OPTIONS%
+      py.test --color=yes -v --cov conda_build --cov-report xml --cov-append tests --basetemp %UserProfile%\cbtmp -n auto -m "not serial" %PYTEST_REPLAY_OPTIONS%
     env:
       VS90COMNTOOLS: "C:\\Program Files (x86)\\Common Files\\Microsoft\\Visual C++ for Python\\9.0\\VC\\bin"
       LIB:
