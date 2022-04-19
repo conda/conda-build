@@ -91,7 +91,7 @@ jobs:
           pytest \
               --color=yes \
               -vv \
-              -n auto \
+              -n 0 \
               --basetemp /tmp/cb \
               --cov conda_build \
               --cov-append \
@@ -251,7 +251,7 @@ jobs:
           set PERL=
           set LUA=
           set R=
-          py.test --color=yes -vv -n auto --basetemp %UserProfile%\cbtmp --cov conda_build --cov-append --cov-report xml -m "not serial" ${{ env.pytest-replay }}
+          py.test --color=yes -vv -n 0 --basetemp %UserProfile%\cbtmp --cov conda_build --cov-append --cov-report xml -m "not serial" ${{ env.pytest-replay }}
         shell: cmd
         env:
           VS90COMNTOOLS: C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC\bin
