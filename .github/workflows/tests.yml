@@ -17,9 +17,6 @@ on:
       - reopened
       - synchronize
 
-env:
-  CONDA_EXPERIMENTAL_SOLVER: libmamba
-
 jobs:
   linux:
     runs-on: ubuntu-latest
@@ -74,6 +71,8 @@ jobs:
 
       - name: Run Serial tests
         if: matrix.test-type == 'serial'
+        env: 
+          CONDA_EXPERIMENTAL_SOLVER: libmamba
         run: |
           pytest \
               --color=yes \
@@ -87,6 +86,8 @@ jobs:
 
       - name: Run Parallel tests
         if: matrix.test-type == 'parallel'
+        env: 
+          CONDA_EXPERIMENTAL_SOLVER: libmamba
         run: |
           pytest \
               --color=yes \
@@ -232,6 +233,8 @@ jobs:
 
       - name: Run Serial Tests
         if: matrix.test-type == 'serial'
+        env:
+          CONDA_EXPERIMENTAL_SOLVER: libmamba
         run: |
           echo on
           set PATH
@@ -260,6 +263,7 @@ jobs:
         env:
           VS90COMNTOOLS: C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC\bin
           LIB:
+          CONDA_EXPERIMENTAL_SOLVER: libmamba
       - uses: actions/upload-artifact@v2
         with:
           path: ${{ github.workspace }}/pytest-replay
