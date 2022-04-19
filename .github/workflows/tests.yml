@@ -233,8 +233,6 @@ jobs:
 
       - name: Run Serial Tests
         if: matrix.test-type == 'serial'
-        env:
-          CONDA_EXPERIMENTAL_SOLVER: libmamba
         run: |
           echo on
           set PATH
@@ -244,6 +242,7 @@ jobs:
           set PERL=
           set LUA=
           set R=
+          set CONDA_EXPERIMENTAL_SOLVER=libmamba
           py.test --color=yes -vv -n 0 --basetemp %UserProfile%\cbtmp_serial --cov conda_build --cov-report xml -m "serial" ${{ env.pytest-replay }}
         shell: cmd
 
@@ -258,12 +257,13 @@ jobs:
           set PERL=
           set LUA=
           set R=
+          set CONDA_EXPERIMENTAL_SOLVER=libmamba
           py.test --color=yes -vv -n 0 --basetemp %UserProfile%\cbtmp --cov conda_build --cov-append --cov-report xml -m "not serial" ${{ env.pytest-replay }}
         shell: cmd
         env:
           VS90COMNTOOLS: C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC\bin
           LIB:
-          CONDA_EXPERIMENTAL_SOLVER: libmamba
+
       - uses: actions/upload-artifact@v2
         with:
           path: ${{ github.workspace }}/pytest-replay
