@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Note, this can be used on Windows but is not used by our CI.
+function install_conda_build_test_deps_fn()
+{
+  local MACOS_ARM64=no
+  local DEF_CHAN=defaults
+  if [[ $(uname) == Darwin ]] && [[ $(uname -m) == arm64 ]]; then
+    MACOS_ARM64=yes
+    DEF_CHAN=conda-forge
+  fi
+  # avoids a python 3.7 problem
+  local -a _PKGS=(cytoolz conda-verify)
+  _PKGS+=(${DEF_CHAN}::pytest ${DEF_CHAN}::pytest-azurepipelines ${DEF_CHAN}::pytest-cov ${DEF_CHAN}::pytest-forked ${DEF_CHAN}::pytest-xdist)
+  _PKGS+=(${DEF_CHAN}::py-lief ${DEF_CHAN}::pytest-mock)
+  _PKGS+=(${DEF_CHAN}::pytest-replay ${DEF_CHAN}::pytest-rerunfailures)
+  _PKGS+=(${DEF_CHAN}::anaconda-client ${DEF_CHAN}::git ${DEF_CHAN}::requests ${DEF_CHAN}::filelock ${DEF_CHAN}::contextlib2 ${DEF_CHAN}::jinja2 ${DEF_CHAN}::flaky)
+  _PKGS+=(${DEF_CHAN}::ripgrep ${DEF_CHAN}::pyflakes ${DEF_CHAN}::beautifulsoup4 ${DEF_CHAN}::chardet ${DEF_CHAN}::pycrypto ${DEF_CHAN}::glob2 ${DEF_CHAN}::psutil ${DEF_CHAN}::pytz ${DEF_CHAN}::tqdm)
+  _PKGS+=(${DEF_CHAN}::conda-package-handling ${DEF_CHAN}::perl ${DEF_CHAN}::python-libarchive-c)
+  _PKGS+=(${DEF_CHAN}::pip ${DEF_CHAN}::numpy ${DEF_CHAN}::pkginfo ${DEF_CHAN}::python="${PYTHON_VERSION}")
+  if [[ $(uname) =~ .*inux.* ]] && [[ ! ${MACOS_ARM64} == yes ]] ; then
+    _PKGS+=(${DEF_CHAN}::patchelf)
+  fi
+  if [[ $(uname) =~ M.* ]]; then
+    _PKGS+=(${DEF_CHAN}::m2-patch)
+    _PKGS+=(${DEF_CHAN}::m2-gcc-libs)
+  else
+    _PKGS+=(${DEF_CHAN}::patch)
+  fi
+  echo -e "Asking conda to install:\n${_PKGS[@]}"
+  conda install -y --show-channel-urls "${_PKGS[@]}" "$@"
+  # If we install shellcheck from conda-forge and packages from defaults at the same time (via channel::package)
+  # then conda-forge used for other packages too. We could force it by forcing transitive deps to also be listed
+  # with their channel, but, well, yuck.
+  if [[ ${MACOS_ARM64} == yes ]]; then
+    echo "Not installing shellcheck as it is unavailable on macOS arm64 at present"
+  else
+    if [[ $(uname) =~ .*inux.* ]]; then
+      conda install -y --show-channel-urls shellcheck
+    else
+      conda install -y --show-channel-urls conda-forge::shellcheck
+    fi
+  fi
+  if [[ ! -d ../conda_build_test_recipe ]]; then
+    pushd ..
+      git clone "https://github.com/conda/conda_build_test_recipe"
+    popd
+  fi
+}
+install_conda_build_test_deps_fn "$@"
