@@ -17,7 +17,7 @@ from conda_build.tarcheck import TarCheck
 from conda_build import api
 from conda_build.config import Config
 from conda_build.utils import get_site_packages, on_win, get_build_folders, package_has_file, tar_xf
-from conda_build.conda_interface import TemporaryDirectory, conda_43
+from conda_build.conda_interface import TemporaryDirectory
 from conda_build.exceptions import DependencyNeedsBuildingError
 import conda_build
 from .utils import metadata_dir
@@ -419,7 +419,6 @@ def test_inspect_hash_input(testing_metadata, testing_workdir, capfd):
     assert 'zlib' in output
 
 
-@pytest.mark.xfail(conda_43, reason="develop broke with old conda.  We don't really care.")
 def test_develop(testing_env):
     f = "https://pypi.io/packages/source/c/conda_version_test/conda_version_test-0.1.0-1.tar.gz"
     download(f, "conda_version_test.tar.gz")
