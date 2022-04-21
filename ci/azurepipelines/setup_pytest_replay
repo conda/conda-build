@@ -1,5 +1,0 @@
-mkdir $BUILD_ARTIFACTSTAGINGDIRECTORY/pytest-replay
-declare -a PYTEST_REPLAY_OPTIONS=()
-PYTEST_REPLAY_OPTIONS+=("--replay-record-dir=$BUILD_ARTIFACTSTAGINGDIRECTORY/pytest-replay")
-PYTEST_REPLAY_OPTIONS+=("--replay-base-name=Linux-$CONDA_VERSION-Py$PYTHON_VERSION")
-echo "##vso[task.setvariable variable=PYTEST_REPLAY_OPTIONS]${PYTEST_REPLAY_OPTIONS[@]}"
