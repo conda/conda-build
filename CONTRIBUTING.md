@@ -19,7 +19,7 @@ Contributions to `conda-build` are always welcome! Please fork the
 `conda/conda-build` repository, and submit a pull request (PR).
 
 If a PR is a work in progress, please put [WIP] in the title. Contributions are
-expected to pass `flake8` and test suites run on the GitHub Actions/Azure Pipeline. Contributors also
+expected to pass `flake8` and test suites run on the GitHub Actions Pipeline. Contributors also
 need to have signed our [Contributor License Agreement](https://conda.io/en/latest/contributing.html#conda-contributor-license-agreement).
 
 ## Setting Up Your Environment
