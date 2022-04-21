@@ -3,7 +3,7 @@
 exclude: ^(tests/(archives|index_data|test-cran-skeleton|test-recipes|test-skeleton|variant_recipe)/|.*\.(patch|diff)|versioneer.py)
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.1.0
+    rev: v4.2.0
     hooks:
       # standard end of line/end of file cleanup
       - id: mixed-line-ending
@@ -16,7 +16,7 @@ repos:
       # catch git merge/rebase problems
       - id: check-merge-conflict
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.31.1
+    rev: v2.32.0
     hooks:
       - id: pyupgrade
         args: ["--py37-plus"]
@@ -35,7 +35,7 @@ repos:
     hooks:
       - id: flake8
   - repo: https://github.com/PyCQA/pylint
-    rev: v2.13.4
+    rev: v2.13.5
     hooks:
       - id: pylint
         args: [--exit-zero]
