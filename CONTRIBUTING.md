@@ -53,8 +53,8 @@ impact the functionality of `conda/conda-build` installed in your base environme
     $ CONDA_ENV=conda-build make setup
     $ conda activate conda-build
 
-    # Run all tests (can take a long time)
-    (dev) $ make test
+    # Run all tests on Linux and Mac OS X systems (this can take a long time)
+    (conda-build) $ make test
 
     # install as editable so you can play around with it
     (dev) $ pip install -e .
@@ -75,9 +75,8 @@ tests, assuming you are in the `conda-build` root folder:
 
 ### Run all tests:
 ```bash
+    # On Linux and Mac OS X
     make test
-    # Or if you prefer pytest directly:
-    py.test
 ```
 
 ### Run one test file:
