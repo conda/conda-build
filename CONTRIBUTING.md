@@ -57,8 +57,8 @@ impact the functionality of `conda/conda-build` installed in your base environme
     (conda-build) $ make test
 
     # install as editable so you can play around with it
-    (dev) $ pip install -e .
-    (dev) $ conda-build --version
+    (conda-build) $ pip install -e .
+    (conda-build) $ conda-build --version
     conda-build 3.21.5+17.gcde7b306
 ```
 
