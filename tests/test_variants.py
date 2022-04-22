@@ -8,7 +8,7 @@ import pytest
 import yaml
 
 from conda_build import api, exceptions, variants
-from conda_build.utils import package_has_file, FileNotFoundError
+from conda_build.utils import package_has_file
 
 thisdir = os.path.dirname(__file__)
 recipe_dir = os.path.join(thisdir, 'test-recipes', 'variants')
@@ -192,14 +192,10 @@ def test_variants_in_output_names():
 
 def test_variants_in_versions_with_setup_py_data(testing_workdir):
     recipe = os.path.join(recipe_dir, '12_variant_versions')
-    try:
-        outputs = api.get_output_file_paths(recipe)
-        assert len(outputs) == 2
-        assert any(os.path.basename(pkg).startswith('my_package-470.470') for pkg in outputs)
-        assert any(os.path.basename(pkg).startswith('my_package-480.480') for pkg in outputs)
-    except FileNotFoundError:
-        # problem with python 3.x with Travis CI somehow.  Just ignore it.
-        print("Ignoring test on setup.py data - problem with download")
+    outputs = api.get_output_file_paths(recipe)
+    assert len(outputs) == 2
+    assert any(os.path.basename(pkg).startswith('my_package-470.470') for pkg in outputs)
+    assert any(os.path.basename(pkg).startswith('my_package-480.480') for pkg in outputs)
 
 
 def test_git_variables_with_variants(testing_workdir, testing_config):
