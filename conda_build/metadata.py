@@ -448,6 +448,7 @@ FIELDS = {
         'name': None,
         'version': None,
         'number': None,
+        'entry_points': None,
         'script': None,
         'script_interpreter': None,
         'build': None,
