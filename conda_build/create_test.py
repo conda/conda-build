@@ -53,7 +53,7 @@ def _get_output_script_name(m, win_status):
 
 def create_shell_files(m, test_dir=None):
     if not test_dir:
-        test_dir = m.config.test_dir
+        test_dir = join(m.config.info_dir, 'test')
 
     win_status = [on_win]
 
@@ -67,7 +67,7 @@ def create_shell_files(m, test_dir=None):
         if exists(join(m.path, src_name)):
             # disable locking to avoid locking a temporary directory (the extracted test folder)
             copy_into(join(m.path, src_name), dest_file, m.config.timeout, locking=False)
-        if os.path.basename(test_dir) != 'test_tmp':
+        if os.path.basename(test_dir) != 'test':
             commands = ensure_list(m.get_value('test/commands', []))
             if commands:
                 with open(join(dest_file), 'a') as f:
