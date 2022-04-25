@@ -789,8 +789,11 @@ class ChannelIndex:
 
         with utils.LoggingContext(level, loggers=[__name__]):
             if not self._subdirs:
-                detected_subdirs = set(subdir.name for subdir in os.scandir(self.channel_root)
-                                    if subdir.name in utils.DEFAULT_SUBDIRS and subdir.is_dir())
+                detected_subdirs = {
+                    subdir.name
+                    for subdir in os.scandir(self.channel_root)
+                    if subdir.name in utils.DEFAULT_SUBDIRS and subdir.is_dir()
+                }
                 log.debug("found subdirs %s" % detected_subdirs)
                 self.subdirs = subdirs = sorted(detected_subdirs | {'noarch'})
             else:
