@@ -34,6 +34,7 @@ requirements:
     - filelock
     - futures       # [py<3]
     - jinja2
+    - packaging
     - patchelf      # [linux]
     - patch     >=2.6   # [not win]
     - m2-patch  >=2.6   # [win]
@@ -44,7 +45,6 @@ requirements:
     - pyyaml
     - requests
     - scandir       # [py<34]
-    - setuptools
     - six
     - glob2  >=0.6
     - pytz

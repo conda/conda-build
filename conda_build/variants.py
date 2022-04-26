@@ -8,7 +8,7 @@ from copy import copy
 from functools import lru_cache
 from itertools import product
 import os.path
-from pkg_resources import parse_version
+from packaging.version import Version
 import re
 import sys
 
@@ -87,9 +87,9 @@ SUFFIX_MAP = {'PY': 'python',
 def _get_default_compilers(platform, py_ver):
     compilers = DEFAULT_COMPILERS[platform].copy()
     if platform == 'win':
-        if parse_version(py_ver) >= parse_version('3.5'):
+        if Version(py_ver) >= Version('3.5'):
             py_ver = '3.5'
-        elif parse_version(py_ver) <= parse_version('3.2'):
+        elif Version(py_ver) <= Version('3.2'):
             py_ver = '2.7'
         compilers['c'] = compilers['c'][py_ver]
         compilers['cxx'] = compilers['cxx'][py_ver]

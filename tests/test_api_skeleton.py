@@ -5,7 +5,7 @@ import os
 import subprocess
 import sys
 
-from pkg_resources import parse_version
+from packaging.version import Version
 import pytest
 
 from conda_build.skeletons.pypi import get_package_metadata, \
@@ -342,7 +342,7 @@ def test_pypi_version_sorting(testing_workdir, testing_config):
     # any effect.
     api.skeletonize(packages='impyla', repo='pypi', config=testing_config)
     m = api.render('impyla')[0][0]
-    assert parse_version(m.version()) >= parse_version("0.13.8")
+    assert Version(m.version()) >= Version("0.13.8")
 
 
 def test_list_skeletons():
@@ -359,7 +359,7 @@ def test_pypi_with_version_arg(testing_workdir):
     # regression test for https://github.com/conda/conda-build/issues/1442
     api.skeletonize('PrettyTable', 'pypi', version='0.7.2')
     m = api.render('prettytable')[0][0]
-    assert parse_version(m.version()) == parse_version("0.7.2")
+    assert Version(m.version()) == Version("0.7.2")
 
 
 @pytest.mark.slow
@@ -373,7 +373,7 @@ def test_pypi_with_extra_specs(testing_workdir, testing_config):
     api.skeletonize('bigfile', 'pypi', extra_specs=extra_specs,
                     version='0.1.24', python="3.6", config=testing_config)
     m = api.render('bigfile')[0][0]
-    assert parse_version(m.version()) == parse_version("0.1.24")
+    assert Version(m.version()) == Version("0.1.24")
     assert any('cython' in req for req in m.meta['requirements']['host'])
     assert any('mpi4py' in req for req in m.meta['requirements']['host'])
 
@@ -389,7 +389,7 @@ def test_pypi_with_version_inconsistency(testing_workdir, testing_config):
     api.skeletonize('mpi4py_test', 'pypi', extra_specs=extra_specs,
                     version='0.0.10', python="3.6", config=testing_config)
     m = api.render('mpi4py_test')[0][0]
-    assert parse_version(m.version()) == parse_version("0.0.10")
+    assert Version(m.version()) == Version("0.0.10")
 
 
 def test_pypi_with_basic_environment_markers(testing_workdir):
