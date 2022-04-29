@@ -9,7 +9,7 @@ if version_dict["error"]:
     raise RuntimeError(version_dict["error"])
 
 deps = [
-    "conda",
+    # "conda",  # remove once conda becomes installable via PyPi again
     "requests",
     "filelock",
     "pyyaml",
