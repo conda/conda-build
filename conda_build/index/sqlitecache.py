@@ -278,19 +278,3 @@ def _cache_recipe(recipe_reader):
         recipe_json_str = json.dumps(recipe_json)
 
     return recipe_json_str
-
-
-def _cache_run_exports(run_exports_str):
-    run_exports = {}
-
-    # XXX
-    run_exports = json.loads(run_exports_str)
-
-    # XXX does run_exports_yaml exist / check old packages
-    # try:
-    #     with open(os.path.join(tmpdir, "info", "run_exports.yaml")) as f:
-    #         run_exports = yaml.safe_load(f)
-    # except (OSError, FileNotFoundError):
-    #     log.debug("%s has no run_exports file (this is OK)" % tmpdir)
-
-    return json.dumps(run_exports)
