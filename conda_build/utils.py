@@ -21,6 +21,7 @@ import tarfile
 import tempfile
 from threading import Thread
 import time
+from pathlib import Path
 
 try:
     from json.decoder import JSONDecodeError
@@ -2112,3 +2113,16 @@ def shutil_move_more_retrying(src, dest, debug_name):
         elif attempts_left != -1:
             log.error(
                 f"Failed to rename {debug_name} directory despite sleeping and retrying.")
+
+
+def is_conda_pkg(pkg_path: str) -> bool:
+    """
+    Determines whether string is pointing to a valid conda pkg
+    """
+    path = Path(pkg_path)
+
+    return (
+        path.is_file() and (
+            any(path.name.endswith(ext) for ext in CONDA_PACKAGE_EXTENSIONS)
+        )
+    )

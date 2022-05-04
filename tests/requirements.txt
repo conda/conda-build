@@ -11,6 +11,7 @@ glob2
 jinja2
 pkginfo
 psutil
+pyfakefs
 pytest
 pytest-cov
 pytest-mock

@@ -3,8 +3,10 @@ import filelock
 import os
 import subprocess
 import sys
+from typing import NamedTuple
 
 import pytest
+from pyfakefs.fake_filesystem import FakeFilesystem
 
 from conda_build.exceptions import BuildLockError
 import conda_build.utils as utils
@@ -470,3 +472,43 @@ def test_find_recipe_multipe_bad():
         # too many in base
         with pytest.raises(IOError):
             utils.find_recipe(tmp)
+
+
+class IsCondaPkgTestData(NamedTuple):
+    value: str
+    expected: bool
+    is_dir: bool
+    create: bool
+
+
+IS_CONDA_PKG_DATA = (
+    IsCondaPkgTestData(
+        value='aws-c-common-0.4.57-hb1e8313_1.tar.bz2',
+        expected=True,
+        is_dir=False,
+        create=True
+    ),
+    IsCondaPkgTestData(
+        value='aws-c-common-0.4.57-hb1e8313_1.tar.bz2',
+        expected=False,
+        is_dir=False,
+        create=False
+    ),
+    IsCondaPkgTestData(
+        value='somedir',
+        expected=False,
+        is_dir=True,
+        create=False
+    ),
+)
+
+
+@pytest.mark.parametrize('value,expected,is_dir,create', IS_CONDA_PKG_DATA)
+def test_is_conda_pkg(fs: FakeFilesystem, value: str, expected: bool, is_dir: bool, create: bool):
+    if create:
+        if is_dir:
+            fs.create_dir(value)
+        else:
+            fs.create_file(value)
+
+    assert utils.is_conda_pkg(value) == expected
