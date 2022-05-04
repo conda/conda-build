@@ -5,6 +5,7 @@ cache conda indexing metadata in sqlite.
 import os.path
 import json
 import fnmatch
+import sqlite3
 
 import yaml
 from yaml.constructor import ConstructorError
@@ -30,8 +31,6 @@ from ..utils import (
     glob,
 )
 
-from . import _cache_recipe
-
 from conda_package_handling.utils import checksums
 
 
@@ -40,6 +39,7 @@ log = get_logger(__name__)
 
 class CondaIndexCache:
     def __init__(self, subdir_path, subdir):
+        print(f"CondaIndexCache {subdir_path=}, {subdir=}")
         self.cache_dir = os.path.join(subdir_path, ".cache")
         self.subdir_path = subdir_path  # must include channel name
         self.subdir = subdir
@@ -85,7 +85,7 @@ class CondaIndexCache:
         mtime = stat_result.st_mtime
         retval = fn, mtime, size, None
 
-        log.debug("hashing, extracting, and caching %s" % fn)
+        log.debug("sql hashing, extracting, and caching %s" % fn)
 
         try:
             # skip re-use conda/bz2 cache in sqlite version
@@ -109,22 +109,19 @@ class CondaIndexCache:
                     "about": "info/about.json",
                     "paths": "info/paths.json",
                     "recipe": "info/recipe/meta.yaml",
-                    "run_exports": "info/run_exports.json",
-                    "post_install": "info/post_install.json",
+                    "run_exports": "info/run_exports.json",  # rare but used. see e.g. gstreamer. prevents 90% of early tar.bz2 exits.
+                    "post_install": "info/post_install.json",  # computed
+                    # icon: too rare. 16 conda-forge packages.
+                    # recipe_log: always {} in old version of cache
                 }
 
-                wanted = set(TABLE_TO_PATH.values())
+                TABLE_NO_CACHE = {
+                    "paths",
+                }
 
-                # {
-                #     "info/index.json",
-                #     "info/about.json",
-                #     "info/paths.json",
-                #     "info/recipe/meta.yaml",
-                #     "info/run_exports.json",
-                #     "info/post_install.json",
-                #     # icon: too rare
-                #     # recipe_log: is always {}
-                # }
+                COMPUTED = {"info/post_install.json"}
+
+                wanted = set(TABLE_TO_PATH.values()) - COMPUTED
 
                 recipe_want_one = {
                     "info/recipe/meta.yaml.rendered",
@@ -133,9 +130,11 @@ class CondaIndexCache:
                 }
 
                 have = {}
-                package_stream = iter(package_streaming.stream_conda_info(fn))
+                package_stream = iter(package_streaming.stream_conda_info(abs_fn))
                 for tar, member in package_stream:
-                    if member.name in wanted:
+                    if (
+                        member.name in wanted and member.name not in recipe_want_one
+                    ):  # XXX ugly
                         wanted.remove(member.name)
                         have[member.name] = tar.extractfile(member).read()
                     elif member.name in recipe_want_one:  # XXX ugly
@@ -143,12 +142,14 @@ class CondaIndexCache:
                         have["info/recipe/meta.yaml"] = _cache_recipe(
                             tar.extractfile(member)
                         )
+                        wanted.remove("info/recipe/meta.yaml")  # XXX ugly
                     if not wanted and len(recipe_want_one) < 3:  # we got what we wanted
                         # XXX debug: how many files / bytes did we avoid reading
                         package_stream.send(True)
-                        print("early exit")
-                if wanted:
-                    assert False, f"{fn} missing necessary info/ {wanted}"
+                        print(f"{fn} early exit")
+                if wanted and wanted != {"info/run_exports.json"}:
+                    # very common for some metadata to be missing
+                    log.info(f"{fn} missing {wanted} has {set(have.keys())}")
 
                 index_json = json.loads(have["info/index.json"])
 
@@ -159,11 +160,16 @@ class CondaIndexCache:
                 # paths.json). paths.json should not be needed after this; don't
                 # cache large paths.json unless we want a "search for paths"
                 # feature unrelated to repodata.json
-                have["info/post_install.json"] = _cache_post_install_details(
-                    have.get("info/paths.json", "")
-                )
+                try:
+                    paths_str = have.pop("info/paths.json")
+                except KeyError:
+                    paths_str = ""
+                have["info/post_install.json"] = _cache_post_install_details(paths_str)
 
                 for table, have_path in TABLE_TO_PATH.items():
+                    if table in TABLE_NO_CACHE:
+                        continue  # not cached
+
                     parameters = {"path": database_path, "data": have.get(have_path)}
                     if parameters["data"] is not None:
                         query = f"""
@@ -174,7 +180,12 @@ class CondaIndexCache:
                         query = f"""
                             DELETE FROM {table} WHERE path = :path
                             """
-                    self.db.execute(query, parameters)
+                    try:
+                        self.db.execute(query, parameters)
+                    except sqlite3.OperationalError:  # e.g. malformed json. will rollback txn?
+                        log.exception("table=%s parameters=%s", table, parameters)
+                        # XXX delete from cache
+                        raise
 
                 # decide what fields to filter out, like has_prefix
                 filter_fields = {
