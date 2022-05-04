@@ -41,11 +41,11 @@ from conda.core.subdir_data import SubdirData
 from conda.models.channel import Channel
 
 from conda_build import conda_interface, utils
-from .conda_interface import MatchSpec, VersionOrder, human_bytes, context
-from .conda_interface import CondaError, CondaHTTPError, get_index, url_path
-from .conda_interface import TemporaryDirectory
-from .conda_interface import Resolve
-from .utils import (CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2,
+from ..conda_interface import MatchSpec, VersionOrder, human_bytes, context
+from ..conda_interface import CondaError, CondaHTTPError, get_index, url_path
+from ..conda_interface import TemporaryDirectory
+from ..conda_interface import Resolve
+from ..utils import (CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2,
                     CONDA_PACKAGE_EXTENSIONS, FileNotFoundError,
                     JSONDecodeError, get_logger, glob)
 
@@ -865,9 +865,11 @@ class ChannelIndex:
         if verbose:
             log.info("Building repodata for %s" % subdir_path)
 
+        # XXX eliminate all listdir
+
         # gather conda package filenames in subdir
         # we'll process these first, because reading their metadata is much faster
-        fns_in_subdir = {fn for fn in os.listdir(subdir_path) if fn.endswith('.conda') or fn.endswith('.tar.bz2')}
+        fns_in_subdir = {fn for fn in os.listdir(subdir_path) if fn.endswith(('.conda', '.tar.bz2'))}
 
         # load current/old repodata
         try:
@@ -1000,6 +1002,8 @@ class ChannelIndex:
         return new_repodata
 
     def _ensure_dirs(self, subdir):
+        # XXX _ensure_cache
+
         # Create all cache directories in the subdir.
         ensure = lambda path: isdir(path) or os.makedirs(path)
         cache_path = join(self.channel_root, subdir, '.cache')
