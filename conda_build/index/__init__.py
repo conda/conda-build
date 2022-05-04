@@ -1130,7 +1130,7 @@ class ChannelIndex:
             cache = sqlitecache.CondaIndexCache(subdir_path, subdir)
 
             extract_func = functools.partial(
-                cache._extract_to_cache, self.channel_root, subdir
+                cache.extract_to_cache, self.channel_root, subdir
             )
             # split up the set by .conda packages first, then .tar.bz2.  This avoids race conditions
             #    with execution in parallel that would end up in the same place.
@@ -1141,7 +1141,7 @@ class ChannelIndex:
                 leave=False,
             ):
                 for fn, mtime, size, index_json in tqdm(
-                    self.thread_executor.map(
+                    self.thread_executor.map( # tries to pickle cache.db = sqlite connection
                         extract_func,
                         (fn for fn in hash_extract_set if fn.endswith(conda_format)),
                     ),
@@ -1176,27 +1176,8 @@ class ChannelIndex:
             }
         finally:
             if stat_cache != stat_cache_original:
-                # log.info("writing stat cache to %s", stat_cache_path)
-                with open(stat_cache_path, "w") as fh:
-                    json.dump(stat_cache, fh)
+                cache.save_stat_cache(stat_cache)
         return new_repodata
-
-    def _ensure_dirs(self, subdir):
-        # XXX _ensure_cache
-
-        # Create all cache directories in the subdir.
-        ensure = lambda path: isdir(path) or os.makedirs(path)
-        cache_path = join(self.channel_root, subdir, ".cache")
-        ensure(cache_path)
-        ensure(join(cache_path, "index"))
-        ensure(join(cache_path, "about"))
-        ensure(join(cache_path, "paths"))
-        ensure(join(cache_path, "recipe"))
-        ensure(join(cache_path, "run_exports"))
-        ensure(join(cache_path, "post_install"))
-        ensure(join(cache_path, "icon"))
-        ensure(join(self.channel_root, "icons"))
-        ensure(join(cache_path, "recipe_log"))
 
     def _calculate_update_set(
         self,
@@ -1229,10 +1210,6 @@ class ChannelIndex:
                 ):
                     update_set.add(fn)
         return update_set
-
-    @staticmethod
-    def _extract_to_cache(channel_root, subdir, fn, second_try=False):
-        return cache._extract_to_cache(channel_root, subdir, fn)
 
     @staticmethod
     def _load_index_from_cache(channel_root, subdir, fn, stat_cache):

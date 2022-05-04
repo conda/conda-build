@@ -46,6 +46,7 @@ class CondaIndexCache:
         self.db_filename = os.path.join(self.cache_dir, "cache.db")
         self.cache_is_brand_new = not os.path.exists(self.db_filename)
         self.db = connect(self.db_filename)
+        print(f"{self.db_filename=} {self.cache_is_brand_new=}")
         create(self.db)
 
     @property
@@ -72,7 +73,24 @@ class CondaIndexCache:
             for row in self.db.execute("SELECT path, mtime, size FROM stat")
         }
 
-    def _extract_to_cache(self, channel_root, subdir, fn, second_try=False):
+    def extract_to_cache(self, channel_root, subdir, fn):
+        with self.db:  # transaction
+            return self._extract_to_cache_(channel_root, subdir, fn)
+
+    def save_stat_cache(self, stat_cache):
+        # XXX smarter to do this differently in sql
+        with self.db:
+            self.db.execute("DELETE FROM stat")
+            for fn, value in stat_cache.items():
+                # XXX update caller to deal with this type of key
+                value["path"] = f"{self.channel}/{self.subdir}/{fn}"
+
+                self.db.execute(
+                    "INSERT OR REPLACE INTO stat (path, mtime, size) VALUES (:path, :mtime, :size)",
+                    value,
+                )
+
+    def _extract_to_cache_(self, channel_root, subdir, fn, second_try=False):
         # This method WILL reread the tarball. Probably need another one to exit early if
         # there are cases where it's fine not to reread.  Like if we just rebuild repodata
         # from the cached files, but don't use the existing repodata.json as a starting point.
