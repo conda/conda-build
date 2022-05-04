@@ -69,11 +69,12 @@ class CondaIndexCache:
         """
         # XXX no long-term need to emulate old stat.json
         return {
-            row["path"]: {"mtime": row["mtime"], "size": row["size"]}
+            os.path.basename(row["path"]): {"mtime": row["mtime"], "size": row["size"]}
             for row in self.db.execute("SELECT path, mtime, size FROM stat")
         }
 
     def extract_to_cache(self, channel_root, subdir, fn):
+        # XXX original skips this on warm cache
         with self.db:  # transaction
             return self._extract_to_cache_(channel_root, subdir, fn)
 

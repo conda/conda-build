@@ -1193,6 +1193,9 @@ class ChannelIndex:
         candidate_fns = fns_in_subdir & old_repodata_fns
         subdir_path = join(self.channel_root, subdir)
 
+        # XXX not precisely the channel, may work for cache purposes
+        channel = os.path.basename(self.channel_root)
+
         update_set = set()
         for fn in tqdm(
             iter(candidate_fns),
@@ -1200,13 +1203,15 @@ class ChannelIndex:
             disable=(verbose or not progress),
             leave=False,
         ):
-            if fn not in stat_cache:
+            # stat_key = f"{channel}/{subdir}/{fn}"
+            stat_key = fn # XXX emulate database unique keys or rewrite _update functions in SQL
+            if stat_key not in stat_cache:
                 update_set.add(fn)
             else:
                 stat_result = os.stat(join(subdir_path, fn))
                 if (
-                    int(stat_result.st_mtime) != int(stat_cache[fn]["mtime"])
-                    or stat_result.st_size != stat_cache[fn]["size"]
+                    int(stat_result.st_mtime) != int(stat_cache[stat_key]["mtime"])
+                    or stat_result.st_size != stat_cache[stat_key]["size"]
                 ):
                     update_set.add(fn)
         return update_set
