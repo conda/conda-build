@@ -85,31 +85,25 @@ class CondaIndexCache:
         mtime = stat_result.st_mtime
         retval = fn, mtime, size, None
 
-        # index_cache_path = join(subdir_path, ".cache", "index", cache_fn + ".json")
-        # about_cache_path = join(subdir_path, ".cache", "about", cache_fn + ".json")
-        # paths_cache_path = join(subdir_path, ".cache", "paths", cache_fn + ".json")
-        # recipe_cache_path = join(subdir_path, ".cache", "recipe", cache_fn + ".json")
-        # run_exports_cache_path = join(
-        #     subdir_path, ".cache", "run_exports", cache_fn + ".json"
-        # )
-        # post_install_cache_path = join(
-        #     subdir_path, ".cache", "post_install", cache_fn + ".json"
-        # )
-
-        # 16 packages. Maybe we won't cache these any more.
-        # icon_cache_path = join(subdir_path, ".cache", "icon", cache_fn)
-
         log.debug("hashing, extracting, and caching %s" % fn)
 
         try:
             # skip re-use conda/bz2 cache in sqlite version
             database_path = f"{self.channel}/{self.subdir}/{fn}"
-            # XXX go ahead and fetch contents here?
-            already_cached = self.db.execute(
-                "SELECT 1 FROM index_json WHERE path = :path", {"path": database_path}
+
+            # None, or a tuple containing the row
+            # don't bother skipping on second_try
+            cached_row = self.db.execute(
+                "SELECT index_json FROM index_json WHERE path = :path",
+                {"path": database_path},
             ).fetchone()
 
-            if second_try or not already_cached:
+            if cached_row and not second_try:
+                # XXX load cached cached index.json from sql in bulk
+                # sqlite has very low latency but we can do better
+                index_json = json.loads(cached_row[0])
+
+            else:
                 TABLE_TO_PATH = {
                     "index_json": "info/index.json",
                     "about": "info/about.json",
@@ -132,9 +126,9 @@ class CondaIndexCache:
                 #     # recipe_log: is always {}
                 # }
 
-                recipe_want_one =  {
+                recipe_want_one = {
                     "info/recipe/meta.yaml.rendered",
-                    "info/recipe/meta.yaml", # by far the most common
+                    "info/recipe/meta.yaml",  # by far the most common
                     "info/meta.yaml",
                 }
 
@@ -144,9 +138,11 @@ class CondaIndexCache:
                     if member.name in wanted:
                         wanted.remove(member.name)
                         have[member.name] = tar.extractfile(member).read()
-                    elif member.name in recipe_want_one: # XXX ugly
+                    elif member.name in recipe_want_one:  # XXX ugly
                         recipe_want_one.clear()
-                        have["info/recipe/meta.yaml"] = _cache_recipe(tar.extractfile(member))
+                        have["info/recipe/meta.yaml"] = _cache_recipe(
+                            tar.extractfile(member)
+                        )
                     if not wanted and len(recipe_want_one) < 3:  # we got what we wanted
                         # XXX debug: how many files / bytes did we avoid reading
                         package_stream.send(True)
@@ -156,21 +152,29 @@ class CondaIndexCache:
 
                 index_json = json.loads(have["info/index.json"])
 
+                # XXX used to check for "info/run_exports.yaml"; check if still relevant
                 # _cache_run_exports(tmpdir, run_exports_cache_path)
-                # _cache_post_install_details(paths_cache_path, post_install_cache_path)
 
-                # all json except icon
-                # recipe|index|icon|about|recipe_log|run_exports|post_install
+                # populate run_exports.json (all False's if there was no
+                # paths.json). paths.json should not be needed after this; don't
+                # cache large paths.json unless we want a "search for paths"
+                # feature unrelated to repodata.json
+                have["info/post_install.json"] = _cache_post_install_details(
+                    have.get("info/paths.json", "")
+                )
 
-                # XXX delete from cache if missing locally?
-                for table in TABLE_TO_PATH:
-                    self.db.execute(
-                        f"""
-                        INSERT OR IGNORE INTO {table} (path, {table})
-                        VALUES (:path, json(:data))
-                        """,
-                        {"path": database_path, "data": have[TABLE_TO_PATH[table]]},
-                    )
+                for table, have_path in TABLE_TO_PATH.items():
+                    parameters = {"path": database_path, "data": have.get(have_path)}
+                    if parameters["data"] is not None:
+                        query = f"""
+                            INSERT OR IGNORE INTO {table} (path, {table})
+                            VALUES (:path, json(:data))
+                            """
+                    else:
+                        query = f"""
+                            DELETE FROM {table} WHERE path = :path
+                            """
+                    self.db.execute(query, parameters)
 
                 # decide what fields to filter out, like has_prefix
                 filter_fields = {
@@ -188,14 +192,6 @@ class CondaIndexCache:
                 for field_name in filter_fields & set(index_json):
                     del index_json[field_name]
 
-            else:
-                index_json = json.loads(
-                    self.db.execute(
-                        "SELECT index_json FROM index_json WHERE path = :path",
-                        {"path": database_path},
-                    ).fetchone()[0]
-                )
-
             # calculate extra stuff to add to index.json cache, size, md5, sha256
             #    This is done always for all files, whether the cache is loaded or not,
             #    because the cache may be from the other file type.  We don't store this
@@ -208,9 +204,11 @@ class CondaIndexCache:
             md5, sha256 = checksums(abs_fn, ("md5", "sha256"))
 
             new_info = {"md5": md5, "sha256": sha256, "size": size}
-            for digest_type in 'md5', 'sha256':
+            for digest_type in "md5", "sha256":
                 if digest_type in index_json:
-                    assert index_json[digest_type] == new_info[digest_type], "cached index json digest mismatch"
+                    assert (
+                        index_json[digest_type] == new_info[digest_type]
+                    ), "cached index json digest mismatch"
 
             index_json.update(new_info)
 
@@ -224,12 +222,12 @@ class CondaIndexCache:
         except (InvalidArchiveError, KeyError, EOFError, JSONDecodeError):
             if not second_try:
                 # recursion
-                return self._extract_to_cache(
-                    channel_root, subdir, fn, second_try=True
-                )
+                return self._extract_to_cache(channel_root, subdir, fn, second_try=True)
+
         return retval
 
-def _cache_post_install_details(paths_cache_path, post_install_cache_path):
+
+def _cache_post_install_details(paths_json_str):
     post_install_details_json = {
         "binary_prefix": False,
         "text_prefix": False,
@@ -239,9 +237,8 @@ def _cache_post_install_details(paths_cache_path, post_install_cache_path):
         "post_link": False,
         "pre_unlink": False,
     }
-    if os.path.lexists(paths_cache_path):
-        with open(paths_cache_path) as f:
-            paths = json.load(f).get("paths", [])
+    if paths_json_str:  # if paths exists at all
+        paths = json.loads(paths_json_str).get("paths", [])
 
         # get embedded prefix data from paths.json
         for f in paths:
@@ -277,7 +274,7 @@ def _cache_recipe(recipe_reader):
     try:
         recipe_json_str = json.dumps(recipe_json)
     except TypeError:
-        recipe_json.get("requirements", {}).pop("build") # XXX weird
+        recipe_json.get("requirements", {}).pop("build")  # XXX weird
         recipe_json_str = json.dumps(recipe_json)
 
     return recipe_json_str
@@ -290,10 +287,10 @@ def _cache_run_exports(run_exports_str):
     run_exports = json.loads(run_exports_str)
 
     # XXX does run_exports_yaml exist / check old packages
-        # try:
-        #     with open(os.path.join(tmpdir, "info", "run_exports.yaml")) as f:
-        #         run_exports = yaml.safe_load(f)
-        # except (OSError, FileNotFoundError):
-        #     log.debug("%s has no run_exports file (this is OK)" % tmpdir)
+    # try:
+    #     with open(os.path.join(tmpdir, "info", "run_exports.yaml")) as f:
+    #         run_exports = yaml.safe_load(f)
+    # except (OSError, FileNotFoundError):
+    #     log.debug("%s has no run_exports file (this is OK)" % tmpdir)
 
     return json.dumps(run_exports)
