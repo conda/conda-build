@@ -8,16 +8,20 @@ import tarfile
 import zstandard
 import os.path
 import json
+from contextlib import closing
 
 
 def tar_generator(fileobj):
     """
-    Stream url, stop when all files in set checklist (file names like
-    info/recipe/meta.yaml) have been found.
+    Stream (tarfile, member) from fileobj.
+
+    .send(True) to this iterator to close.
     """
-    tar = tarfile.open(fileobj=fileobj, mode="r|")
-    for member in tar:
-        yield tar, member
+    with closing(tarfile.open(fileobj=fileobj, mode="r|")) as tar:
+        for member in tar:
+            if (yield tar, member) is not None:
+                yield  # avoid StopIteration. Why does this work?
+                return
 
 
 def stream_conda_info(filename, fileobj=None):
@@ -43,23 +47,19 @@ def test():
     conda_packages = glob.glob(os.path.expanduser("~/miniconda3/pkgs/*.conda"))
     tarbz_packages = glob.glob(os.path.expanduser("~/miniconda3/pkgs/*.tar.bz2"))
 
-    for package in conda_packages:
-        print(package)
-        for tar, member in stream_conda_info(package):
-            if member.name == "info/index.json":
-                json.load(tar.extractfile(member))
-                break
-        else:
-            assert False, "index.json not found"
+    for packages in (conda_packages, tarbz_packages):
+        for package in packages:
+            print(package)
+            stream = iter(stream_conda_info(package))
+            found = False
+            for tar, member in stream:
+                assert not found, "early exit did not work"
+                if member.name == "info/index.json":
+                    json.load(tar.extractfile(member))
+                    found = True
+                    stream.send(True)  # close stream
+            assert found, f"index.json not found in {package}"
 
-    for package in tarbz_packages:
-        print(package)
-        for tar, member in stream_conda_info(package):
-            if member.name == "info/index.json":
-                json.load(tar.extractfile(member))
-                break
-        else:
-            assert False, "index.json not found"
 
 if __name__ == "__main__":
     test()
