@@ -37,7 +37,7 @@ def test_main_debug_file_does_not_exist(capsys: CaptureFixture):
         debug.main()
 
     captured = capsys.readouterr()
-    assert captured.err in valid.get_is_conda_pkg_or_recipe_error_message()
+    assert valid.get_is_conda_pkg_or_recipe_error_message() in captured.err
 
 
 def test_main_debug_happy_path(fs: FakeFilesystem, capsys: CaptureFixture):
