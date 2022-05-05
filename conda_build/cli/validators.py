@@ -54,5 +54,5 @@ def validate_is_conda_pkg_or_recipe_dir(arg_val: str, _: Namespace) -> str:
     elif utils.is_conda_pkg(arg_val):
         return arg_val
     else:
-        sys.stderr.write(get_is_conda_pkg_or_recipe_error_message())
+        print(get_is_conda_pkg_or_recipe_error_message(), file=sys.stderr)
         sys.exit(1)

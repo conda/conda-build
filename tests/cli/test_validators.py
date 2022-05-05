@@ -25,7 +25,6 @@ def test_validate_is_conda_pkg_or_recipe_dir(
         if is_dir:
             fs.create_dir(file_or_folder)
         else:
-            print('HAI!')
             fs.create_file(file_or_folder)
     name_space = Namespace()  # intentionally left empty because our validator doesn't need it
 
