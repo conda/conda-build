@@ -185,7 +185,7 @@ class CondaIndexCache:
                         wanted.remove("info/recipe/meta.yaml")  # XXX ugly
                     if not wanted and len(recipe_want_one) < 3:  # we got what we wanted
                         # XXX debug: how many files / bytes did we avoid reading
-                        package_stream.send(True)
+                        package_stream.close()
                         print(f"{fn} early exit")
                 if wanted and wanted != {"info/run_exports.json"}:
                     # very common for some metadata to be missing

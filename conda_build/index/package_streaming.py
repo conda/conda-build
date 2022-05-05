@@ -14,8 +14,6 @@ from contextlib import closing
 def tar_generator(fileobj):
     """
     Stream (tarfile, member) from fileobj.
-
-    .send(True) to this iterator to close.
     """
     with closing(tarfile.open(fileobj=fileobj, mode="r|")) as tar:
         for member in tar:
