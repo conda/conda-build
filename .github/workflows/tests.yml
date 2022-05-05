@@ -294,7 +294,7 @@ jobs:
 
       - name: Setup CF MacOS Bits and Select Xcode
         run: |
-          set -x -e -u
+          set -x -e +u
           source ci/github/activate_conda "${{ github.workspace }}/miniconda/bin/python"
           source ci/github/run_conda_forge_build_setup_osx
 
