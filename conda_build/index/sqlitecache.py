@@ -2,6 +2,7 @@
 cache conda indexing metadata in sqlite.
 """
 
+import os
 import os.path
 import json
 import fnmatch
@@ -41,6 +42,7 @@ class CondaIndexCache:
     def __init__(self, subdir_path, subdir, channel_root="XXX todo"):
         print(f"CondaIndexCache {subdir_path=}, {subdir=}")
         self.cache_dir = os.path.join(subdir_path, ".cache")
+        os.makedirs(self.cache_dir, exist_ok=True)
         self.subdir_path = subdir_path  # must include channel name
         self.subdir = subdir
         self.db_filename = os.path.join(self.cache_dir, "cache.db")
@@ -78,14 +80,17 @@ class CondaIndexCache:
         # XXX smarter to do this differently in sql
         with self.db:
             self.db.execute("DELETE FROM stat")
-            for fn, value in stat_cache.items():
-                # XXX update caller to deal with this type of key
-                value["path"] = self.database_path(fn)
 
-                self.db.execute(
-                    "INSERT OR REPLACE INTO stat (path, mtime, size) VALUES (:path, :mtime, :size)",
-                    value,
-                )
+            def values():
+                for fn, value in stat_cache.items():
+                    # XXX update caller to deal with this type of key
+                    value["path"] = self.database_path(fn)
+                    yield value
+
+            self.db.executemany(
+                "INSERT OR REPLACE INTO stat (path, mtime, size) VALUES (:path, :mtime, :size)",
+                values(),
+            )
 
     def load_index_from_cache(self, fn):
         # XXX prefer bulk load; can't pass list as :param though, and many small
