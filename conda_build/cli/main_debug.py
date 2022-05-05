@@ -12,8 +12,7 @@ from conda_build.utils import on_win
 # we extend the render parser because we basically need to render the recipe before
 #       we can say what env to create.  This is not really true for debugging tests, but meh...
 from conda_build.cli.main_render import get_render_parser
-from conda_build import validators as valid
-
+from conda_build.cli import validators as valid
 
 logging.basicConfig(level=logging.INFO)
 

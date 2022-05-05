@@ -30,7 +30,7 @@ def validate_args(
                 parsed_value = getattr(parsed_args, arg)
                 setattr(parsed_args, arg, validator(parsed_value, parsed_args))
 
-            return func(parsed, *args, **kwargs)
+            return func(parsed_args, *args, **kwargs)
         return wrapper
     return outer_wrap
 

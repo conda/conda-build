@@ -6,8 +6,7 @@ import pytest
 from pytest import CaptureFixture
 from pyfakefs.fake_filesystem import FakeFilesystem
 
-from conda_build.cli import main_debug as debug
-from conda_build import validators as valid
+from conda_build.cli import main_debug as debug, validators as valid
 
 
 @pytest.fixture(scope='session')
@@ -38,7 +37,7 @@ def test_main_debug_file_does_not_exist(capsys: CaptureFixture):
         debug.main()
 
     captured = capsys.readouterr()
-    assert captured.err == valid.get_is_conda_pkg_or_recipe_error_message()
+    assert captured.err in valid.get_is_conda_pkg_or_recipe_error_message()
 
 
 def test_main_debug_happy_path(fs: FakeFilesystem, capsys: CaptureFixture):
@@ -52,8 +51,8 @@ def test_main_debug_happy_path(fs: FakeFilesystem, capsys: CaptureFixture):
 
         debug.main()
 
-        caputured = capsys.readouterr()
+        captured = capsys.readouterr()
 
-        assert caputured.err == ''
+        assert captured.err == ''
 
         assert len(mock_debug.mock_calls) == 2

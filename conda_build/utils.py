@@ -2121,5 +2121,8 @@ def is_conda_pkg(pkg_path: str) -> bool:
     """
     path = Path(pkg_path)
 
-    return path.is_file() and path.suffix in CONDA_PACKAGE_EXTENSIONS
+    return (
+        path.is_file() and (
+            any(path.name.endswith(ext) for ext in CONDA_PACKAGE_EXTENSIONS)
+        )
     )
