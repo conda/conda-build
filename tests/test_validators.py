@@ -5,13 +5,13 @@ from pyfakefs.fake_filesystem import FakeFilesystem
 
 from conda_build import validators as valid
 
-IS_CONDA_PACKAGE_OR_DIR_DATA = (
-    ('aws-c-common-0.4.57-hb1e8313_1.tar.bz2', True, False, True),
-    ('somedir', True, True, True),
+@pytest.mark.parametrize(
+    'value,expected,is_dir,create',
+    [
+        ('aws-c-common-0.4.57-hb1e8313_1.tar.bz2', True, False, True),
+        ('somedir', True, True, True),
+    ],
 )
-
-
-@pytest.mark.parametrize('value,expected,is_dir,create', IS_CONDA_PACKAGE_OR_DIR_DATA)
 def test_validate_is_conda_pkg_or_recipe_dir(
         fs: FakeFilesystem, value: str, expected: bool, is_dir: bool, create: bool
 ):

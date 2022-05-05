@@ -14,7 +14,7 @@ ValidatorFunction = Callable[[str, Namespace], str]
 
 
 def validate_args(
-    validators: Sequence[tuple[str, ValidatorFunction]],
+    validators: Sequence[Tuple[str, ValidatorFunction]],
     parser: ArgumentParser,
 ):
     """
@@ -23,15 +23,14 @@ def validate_args(
     """
     def outer_wrap(func):
         @wraps(func)
-        def wrapper(*args_, **kwargs):
-            args = sys.argv[1:]
-            cmd_args = parser.parse_args(args)
+        def wrapper(*args, **kwargs):
+            parsed_args = parser.parse_args()
 
-            for arg, validate in validators:
-                arg_val = getattr(cmd_args, arg)
-                setattr(cmd_args, arg, validate(arg_val, cmd_args))
+            for arg, validator in validators:
+                parsed_value = getattr(parsed_args, arg)
+                setattr(parsed_args, arg, validator(parsed_value, parsed_args))
 
-            return func(cmd_args, *args_, **kwargs)
+            return func(parsed, *args, **kwargs)
         return wrapper
     return outer_wrap
 

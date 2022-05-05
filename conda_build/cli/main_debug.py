@@ -87,7 +87,7 @@ def execute(args: Namespace):
             print("#" * 80)
 
     except ValueError as e:
-        sys.stderr.write(f'Error: conda-debug encountered the following error while attempting to execute:\n{e}\n')
+        print(f"Error: conda-debug encountered the following error:\n{e}", file=sys.stderr)
         sys.exit(1)
 
 
