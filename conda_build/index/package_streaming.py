@@ -19,9 +19,7 @@ def tar_generator(fileobj):
     """
     with closing(tarfile.open(fileobj=fileobj, mode="r|")) as tar:
         for member in tar:
-            if (yield tar, member) is not None:
-                yield  # avoid StopIteration. Why does this work?
-                return
+            yield tar, member
 
 
 def stream_conda_info(filename, fileobj=None):
@@ -38,7 +36,7 @@ def stream_conda_info(filename, fileobj=None):
         reader = zstandard.ZstdDecompressor().stream_reader(zf.open(info[0]))
     elif filename.endswith(".tar.bz2"):
         reader = bz2.open(fileobj or filename, mode="rb")
-    return tar_generator(reader)  # XXX facilitate explicit closing
+    return tar_generator(reader)
 
 
 def test():
@@ -57,7 +55,7 @@ def test():
                 if member.name == "info/index.json":
                     json.load(tar.extractfile(member))
                     found = True
-                    stream.send(True)  # close stream
+                    stream.close() # PEP 342 close()
             assert found, f"index.json not found in {package}"
 
 

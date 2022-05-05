@@ -928,7 +928,7 @@ class ChannelIndex:
                 log.debug("found subdirs %s" % detected_subdirs)
                 self.subdirs = subdirs = sorted(detected_subdirs | {"noarch"})
             else:
-                self.subdirs = subdirs = sorted(set(self._subdirs) | {"noarch"})
+                self.subdirs = subdirs = sorted(set(self._subdirs)) # XXX noarch removed for testing | {"noarch"})
 
             # Step 1. Lock local channel.
             with utils.try_acquire_locks(
@@ -1014,7 +1014,7 @@ class ChannelIndex:
         subdir_path = join(self.channel_root, subdir)
 
         cache = sqlitecache.CondaIndexCache(subdir_path, subdir)
-        # XXX cache.convert()
+        # XXX implement cache.convert() against the filesystem
 
         repodata_json_path = join(subdir_path, REPODATA_FROM_PKGS_JSON_FN)
 
@@ -1107,9 +1107,8 @@ class ChannelIndex:
 
             for k in unchanged_set:
                 if not (k in new_repodata_packages or k in new_repodata_conda_packages):
-                    fn, rec = ChannelIndex._load_index_from_cache(
-                        self.channel_root, subdir, fn, stat_cache
-                    )
+                    # XXX select more than one index at a time
+                    fn, rec = cache.load_index_from_cache(fn)
                     # this is how we pass an exception through.  When fn == rec, there's been a problem,
                     #    and we need to reload this file
                     if fn == rec:
@@ -1126,8 +1125,6 @@ class ChannelIndex:
             #   extracted packages.
             # Sorting here prioritizes .conda files ('c') over .tar.bz2 files ('b')
             hash_extract_set = tuple(concatv(add_set, update_set))
-
-            cache = sqlitecache.CondaIndexCache(subdir_path, subdir)
 
             extract_func = functools.partial(
                 cache.extract_to_cache, self.channel_root, subdir
@@ -1193,9 +1190,6 @@ class ChannelIndex:
         candidate_fns = fns_in_subdir & old_repodata_fns
         subdir_path = join(self.channel_root, subdir)
 
-        # XXX not precisely the channel, may work for cache purposes
-        channel = os.path.basename(self.channel_root)
-
         update_set = set()
         for fn in tqdm(
             iter(candidate_fns),
@@ -1203,7 +1197,6 @@ class ChannelIndex:
             disable=(verbose or not progress),
             leave=False,
         ):
-            # stat_key = f"{channel}/{subdir}/{fn}"
             stat_key = fn # XXX emulate database unique keys or rewrite _update functions in SQL
             if stat_key not in stat_cache:
                 update_set.add(fn)
@@ -1227,75 +1220,6 @@ class ChannelIndex:
 
         return fn, index_json
 
-    @staticmethod
-    def _load_all_from_cache(channel_root, subdir, fn):
-        subdir_path = join(channel_root, subdir)
-        try:
-            mtime = getmtime(join(subdir_path, fn))
-        except FileNotFoundError:
-            return {}
-        # In contrast to self._load_index_from_cache(), this method reads up pretty much
-        # all of the cached metadata, except for paths. It all gets dumped into a single map.
-        index_cache_path = join(subdir_path, ".cache", "index", fn + ".json")
-        about_cache_path = join(subdir_path, ".cache", "about", fn + ".json")
-        recipe_cache_path = join(subdir_path, ".cache", "recipe", fn + ".json")
-        run_exports_cache_path = join(
-            subdir_path, ".cache", "run_exports", fn + ".json"
-        )
-        post_install_cache_path = join(
-            subdir_path, ".cache", "post_install", fn + ".json"
-        )
-        icon_cache_path_glob = join(subdir_path, ".cache", "icon", fn + ".*")
-        recipe_log_path = join(subdir_path, ".cache", "recipe_log", fn + ".json")
-
-        data = {}
-        for path in (
-            recipe_cache_path,
-            about_cache_path,
-            index_cache_path,
-            post_install_cache_path,
-            recipe_log_path,
-        ):
-            try:
-                if os.path.getsize(path) != 0:
-                    with open(path) as fh:
-                        data.update(json.load(fh))
-            except (OSError, EOFError):
-                pass
-
-        try:
-            icon_cache_paths = glob(icon_cache_path_glob)
-            if icon_cache_paths:
-                icon_cache_path = sorted(icon_cache_paths)[-1]
-                icon_ext = icon_cache_path.rsplit(".", 1)[-1]
-                channel_icon_fn = "{}.{}".format(data["name"], icon_ext)
-                icon_url = "icons/" + channel_icon_fn
-                icon_channel_path = join(channel_root, "icons", channel_icon_fn)
-                icon_md5 = utils.md5_file(icon_cache_path)
-                icon_hash = f"md5:{icon_md5}:{getsize(icon_cache_path)}"
-                data.update(icon_hash=icon_hash, icon_url=icon_url)
-                # log.info("writing icon from %s to %s", icon_cache_path, icon_channel_path)
-                utils.move_with_fallback(icon_cache_path, icon_channel_path)
-        except:
-            pass
-
-        # have to stat again, because we don't have access to the stat cache here
-        data["mtime"] = mtime
-
-        source = data.get("source", {})
-        try:
-            data.update({"source_" + k: v for k, v in source.items()})
-        except AttributeError:
-            # sometimes source is a  list instead of a dict
-            pass
-        _clear_newline_chars(data, "description")
-        _clear_newline_chars(data, "summary")
-        try:
-            with open(run_exports_cache_path) as fh:
-                data["run_exports"] = json.load(fh)
-        except (OSError, EOFError):
-            data["run_exports"] = {}
-        return data
 
     def _write_repodata(self, subdir, repodata, json_filename):
         repodata_json_path = join(self.channel_root, subdir, json_filename)
@@ -1305,7 +1229,7 @@ class ChannelIndex:
                 indent=2,
                 sort_keys=True,
             )
-            .replace("':'", "': '")
+            .replace("':'", "': '") # XXX stop doing this; doesn't appear to change anything
             .encode("utf-8")
         )
         write_result = _maybe_write(
@@ -1351,6 +1275,11 @@ class ChannelIndex:
         _maybe_write(index_path, rendered_html)
 
     def _update_channeldata(self, channel_data, repodata, subdir):
+        # XXX pass stat_cache into _update_channeldata or otherwise save results of
+        # recent stat calls
+
+        cache = sqlitecache.CondaIndexCache(os.path.join(self.channel_root, subdir), subdir)
+
         legacy_packages = repodata["packages"]
         conda_packages = repodata["packages.conda"]
 
@@ -1420,12 +1349,10 @@ class ChannelIndex:
         if groups:
             fns, fn_dicts = zip(*groups)
 
-        load_func = functools.partial(
-            ChannelIndex._load_all_from_cache,
-            self.channel_root,
-            subdir,
-        )
+        load_func = cache.load_all_from_cache
         for fn_dict, data in zip(fn_dicts, self.thread_executor.map(load_func, fns)):
+            # like repodata (index_subdir), we do not reach this code when the
+            # older channeldata.json matches
             if data:
                 data.update(fn_dict)
                 name = data["name"]

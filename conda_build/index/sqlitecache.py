@@ -38,7 +38,7 @@ log = get_logger(__name__)
 
 
 class CondaIndexCache:
-    def __init__(self, subdir_path, subdir):
+    def __init__(self, subdir_path, subdir, channel_root="XXX todo"):
         print(f"CondaIndexCache {subdir_path=}, {subdir=}")
         self.cache_dir = os.path.join(subdir_path, ".cache")
         self.subdir_path = subdir_path  # must include channel name
@@ -69,14 +69,10 @@ class CondaIndexCache:
         """
         # XXX no long-term need to emulate old stat.json
         return {
+            # XXX work correctly with windows \ separator
             os.path.basename(row["path"]): {"mtime": row["mtime"], "size": row["size"]}
             for row in self.db.execute("SELECT path, mtime, size FROM stat")
         }
-
-    def extract_to_cache(self, channel_root, subdir, fn):
-        # XXX original skips this on warm cache
-        with self.db:  # transaction
-            return self._extract_to_cache_(channel_root, subdir, fn)
 
     def save_stat_cache(self, stat_cache):
         # XXX smarter to do this differently in sql
@@ -84,12 +80,37 @@ class CondaIndexCache:
             self.db.execute("DELETE FROM stat")
             for fn, value in stat_cache.items():
                 # XXX update caller to deal with this type of key
-                value["path"] = f"{self.channel}/{self.subdir}/{fn}"
+                value["path"] = self.database_path(fn)
 
                 self.db.execute(
                     "INSERT OR REPLACE INTO stat (path, mtime, size) VALUES (:path, :mtime, :size)",
                     value,
                 )
+
+    def load_index_from_cache(self, fn):
+        # XXX prefer bulk load; can't pass list as :param though, and many small
+        # queries are efficient in sqlite.
+        # sqlite cache may be fast enough to forget reusing repodata.json
+        # often when you think this function would be called, it actually calls extract_to_cache
+        cached_row = self.db.execute(
+            "SELECT index_json FROM index_json WHERE path = :path",
+            {"path": self.database_path(fn)},
+        ).fetchone()
+
+        if cached_row:
+            # XXX load cached cached index.json from sql in bulk
+            # sqlite has very low latency but we can do better
+            return json.loads(cached_row[0])
+        else:
+            return fn  # odd legacy error handling
+
+    def extract_to_cache(self, channel_root, subdir, fn):
+        # XXX original skips this on warm cache
+        with self.db:  # transaction
+            return self._extract_to_cache_(channel_root, subdir, fn)
+
+    def database_path(self, fn):
+        return f"{self.channel}/{self.subdir}/{fn}"
 
     def _extract_to_cache_(self, channel_root, subdir, fn, second_try=False):
         # This method WILL reread the tarball. Probably need another one to exit early if
@@ -108,7 +129,7 @@ class CondaIndexCache:
 
         try:
             # skip re-use conda/bz2 cache in sqlite version
-            database_path = f"{self.channel}/{self.subdir}/{fn}"
+            database_path = self.database_path(fn)
 
             # None, or a tuple containing the row
             # don't bother skipping on second_try
@@ -256,6 +277,63 @@ class CondaIndexCache:
 
         return retval
 
+    def load_all_from_cache(self, fn):
+        subdir_path = self.subdir_path
+        try:
+            # XXX save recent stat calls for a significant speedup
+            mtime = os.stat(join(subdir_path, fn)).st_mtime
+        except FileNotFoundError:
+            # XXX don't call if it won't be found
+            print("FILE NOT FOUND in load_all_from_cache")
+            return {}
+
+        # In contrast to self._load_index_from_cache(), this method reads up pretty much
+        # all of the cached metadata, except for paths. It all gets dumped into a single map.
+
+        UNHOLY_UNION = """
+        SELECT
+            index_json,
+            about,
+            icon_png,
+            post_install,
+            recipe,
+            run_exports
+        FROM
+            index_json
+            LEFT JOIN about
+            LEFT JOIN post_install
+            LEFT JOIN recipe
+            LEFT JOIN run_exports
+            LEFT JOIN icon USING (path)
+        WHERE
+            index_json.path = :path
+        """
+
+        row = self.db.execute(UNHOLY_UNION, {"path": self.database_path(fn)}).fetchone()
+        data = {}
+        for column in ("index_json", "about", "post_install", "recipe"):
+            if row[column]: # is not null or empty
+                data.update(json.loads(row[column]))
+
+        # XXX skip icon. exceedingly rare.
+
+        # have to stat again, because we don't have access to the stat cache here
+        data["mtime"] = mtime
+
+        source = data.get("source", {})
+        try:
+            data.update({"source_" + k: v for k, v in source.items()})
+        except AttributeError:
+            # sometimes source is a  list instead of a dict
+            pass
+        _clear_newline_chars(data, "description")
+        _clear_newline_chars(data, "summary")
+
+        # if run_exports was NULL / empty string, 'loads' the empty object
+        data["run_exports"] = json.loads(row["run_exports"] or "{}")
+
+        return data
+
 
 def _cache_post_install_details(paths_json_str):
     post_install_details_json = {
@@ -308,3 +386,12 @@ def _cache_recipe(recipe_reader):
         recipe_json_str = json.dumps(recipe_json)
 
     return recipe_json_str
+
+
+def _clear_newline_chars(record, field_name):
+    if field_name in record:
+        try:
+            record[field_name] = record[field_name].strip().replace("\n", " ")
+        except AttributeError:
+            # sometimes description gets added as a list instead of just a string
+            record[field_name] = record[field_name][0].strip().replace("\n", " ")
