@@ -5,14 +5,17 @@ export PYTHONUNBUFFERED=1
 # deployment target should be set by conda_build_config.yaml (default in conda-forge-pinning).
 # The default here will only be used when that is undefined,
 # which should only be recipes still using conda-build 2.
-export MACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET:-11.0}
+export MACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET:-11.3}
 export CPU_COUNT=$(sysctl -n hw.ncpu)
-export INSTALL_XCODE=${INSTALL_XCODE:-0}
 echo "Intial \$(xcode-select -p) is $(xcode-select -p)"
 echo "PATH is $PATH"
-echo "INSTALL_XCODE is $INSTALL_XCODE"
+if:IsSet() {
+  [[ ${!1-x} == x ]] && return 1 || return 0
+}
+
+if:IsSet ${INSTALL_XCODE} || echo "INSTALL_XCODE is $INSTALL_XCODE"
 if [[ ${INSTALL_XCODE} == 1 ]]; then
-  sudo xcode-select --switch /Applications/Xcode_12.5.app/Contents/Developer
+  sudo xcode-select --switch /Applications/Xcode_12.5.1.app/Contents/Developer
   echo "After selecting Xcode_12.5.app, \$(xcode-select -p) is $(xcode-select -p)"
 fi
 echo "PATH is $PATH"
