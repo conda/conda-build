@@ -57,4 +57,3 @@ def test_main_debug_happy_path(fs: FakeFilesystem, capsys: CaptureFixture):
         assert caputured.err == ''
 
         assert len(mock_debug.mock_calls) == 2
-
