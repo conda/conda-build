@@ -14,7 +14,7 @@ ValidatorFunction = Callable[[str, Namespace], str]
 
 
 def validate_args(
-    validators: Sequence[Tuple[str, ValidatorFunction]],
+    validators: Sequence[tuple[str, ValidatorFunction]],
     parser: ArgumentParser,
 ):
     """
