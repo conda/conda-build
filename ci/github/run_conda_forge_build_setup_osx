@@ -7,13 +7,13 @@ export PYTHONUNBUFFERED=1
 # which should only be recipes still using conda-build 2.
 export MACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET:-11.3}
 export CPU_COUNT=$(sysctl -n hw.ncpu)
-echo "Intial \$(xcode-select -p) is $(xcode-select -p)"
+# echo "Intial \$(xcode-select -p) is $(xcode-select -p)"
 echo "PATH is $PATH"
-echo "INSTALL_XCODE is $INSTALL_XCODE"
-if [[ ${INSTALL_XCODE} == 1 ]]; then
-  sudo xcode-select --switch /Applications/Xcode_12.5.1.app/Contents/Developer
-  echo "After selecting Xcode_12.5.app, \$(xcode-select -p) is $(xcode-select -p)"
-fi
+# echo "INSTALL_XCODE is $INSTALL_XCODE"
+# if [[ ${INSTALL_XCODE} == 1 ]]; then
+#   sudo xcode-select --switch /Applications/Xcode_12.5.1.app/Contents/Developer
+#   echo "After selecting Xcode_12.5.app, \$(xcode-select -p) is $(xcode-select -p)"
+# fi
 echo "PATH is $PATH"
 export CONDA_BUILD_SYSROOT="$(xcode-select -p)/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${MACOSX_DEPLOYMENT_TARGET}.sdk"
 
