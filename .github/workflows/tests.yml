@@ -293,7 +293,7 @@ jobs:
           ${{ github.workspace }}/miniconda.sh -b -p ${{ github.workspace }}/miniconda
           source ci/github/activate_conda "${{ github.workspace }}/miniconda/bin/python"
 
-      - name: "Displays Xcode current version"
+      - name: "Display Xcode version (pre-setup)"
         run: sudo xcode-select -p
 
       - name: Setup CF MacOS Bits and Select Xcode
@@ -310,6 +310,9 @@ jobs:
           plutil -replace MinimumSDKVersion -string ${{ matrix.macos-deployment-target }} $(xcode-select -p)/Platforms/MacOSX.platform/Info.plist
           plutil -replace DTSDKName -string macosx${{ matrix.macos-deployment-target }}internal $(xcode-select -p)/Platforms/MacOSX.platform/Info.plist
           source ci/github/run_conda_forge_build_setup_osx
+
+      - name: "Display Xcode version (post-setup)"
+        run: sudo xcode-select -p
 
       - name: Prepare Test Environment
         run: |
@@ -330,7 +333,7 @@ jobs:
           pip install -e .
           conda info -a
           conda list --show-channel-urls
-          conda install --name conda-test-env --yes --file tests/requirements.txt
+          conda install --yes --file tests/requirements.txt
           conda update openssl ca-certificates certifi
 
       - name: Run Serial Tests
