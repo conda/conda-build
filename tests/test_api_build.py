@@ -403,8 +403,8 @@ def test_build_msvc_compiler(msvc_ver, monkeypatch):
 @pytest.mark.sanity
 @pytest.mark.parametrize("platform", platforms)
 @pytest.mark.parametrize("target_compiler", compilers)
-@pytest.mark.xfail(sys.platform == "darwin",
-                   reason="xcode issues for test setup on MacOS")
+# @pytest.mark.xfail(sys.platform == "darwin",
+#                    reason="xcode issues for test setup on MacOS")
 def test_cmake_generator(platform, target_compiler, testing_workdir, testing_config):
     testing_config.variant['python'] = target_compiler
     testing_config.activate = True
@@ -724,8 +724,8 @@ def test_disable_pip(testing_config, testing_metadata):
 @pytest.mark.sanity
 @pytest.mark.skipif(sys.platform.startswith('win'),
                     reason="rpath fixup not done on Windows.")
-@pytest.mark.xfail(sys.platform == "darwin",
-                   reason="xcode issues for test setup on MacOS")
+# @pytest.mark.xfail(sys.platform == "darwin",
+#                    reason="xcode issues for test setup on MacOS")
 def test_rpath_unix(testing_config):
     testing_config.activate = True
     api.build(os.path.join(metadata_dir, "_rpath"), config=testing_config)
@@ -1517,8 +1517,8 @@ def test_provides_features_metadata(testing_config):
 
 @pytest.mark.skipif(on_win and sys.version[:3] == "2.7",
                     reason="py-lief not available on win for Python 2.7")
-@pytest.mark.xfail(sys.platform == "darwin",
-                   reason="xcode issues for test setup on MacOS")
+# @pytest.mark.xfail(sys.platform == "darwin",
+#                    reason="xcode issues for test setup on MacOS")
 def test_overlinking_detection(testing_config):
     testing_config.activate = True
     testing_config.error_overlinking = True
@@ -1537,8 +1537,8 @@ def test_overlinking_detection(testing_config):
     rm_rf(dest_bat)
 
 
-@pytest.mark.xfail(sys.platform == "darwin",
-                   reason="xcode issues for test setup on MacOS")
+# @pytest.mark.xfail(sys.platform == "darwin",
+#                    reason="xcode issues for test setup on MacOS")
 def test_overdepending_detection(testing_config):
     testing_config.activate = True
     testing_config.error_overlinking = True
@@ -1551,8 +1551,8 @@ def test_overdepending_detection(testing_config):
 
 @pytest.mark.skipif(sys.platform != "darwin",
                     reason="macOS-only test (at present)")
-@pytest.mark.xfail(sys.platform == "darwin",
-                   reason="xcode issues for test setup on MacOS")
+# @pytest.mark.xfail(sys.platform == "darwin",
+#                    reason="xcode issues for test setup on MacOS")
 def test_macos_tbd_handling(testing_config):
     testing_config.activate = True
     testing_config.error_overlinking = True

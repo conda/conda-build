@@ -263,7 +263,7 @@ jobs:
 
 
   macOS:
-    runs-on: macos-11
+    runs-on: macos-11.3
     defaults:
       run:
         shell: bash -l {0}
@@ -336,7 +336,7 @@ jobs:
           echo "local_repodata_ttl: 1800" >> ~/.condarc
           mkdir -p ~/.conda
           conda create -n blarg1 -yq python=2.7
-          conda create -n blarg3 -yq python=3.7
+          conda create -n blarg3 -yq python=3.9
           conda create -n blarg4 -yq python nomkl numpy pandas svn
           py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
 
