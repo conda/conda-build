@@ -5,7 +5,7 @@ export PYTHONUNBUFFERED=1
 # deployment target should be set by conda_build_config.yaml (default in conda-forge-pinning).
 # The default here will only be used when that is undefined,
 # which should only be recipes still using conda-build 2.
-export MACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET:-11.0}
+export MACOSX_DEPLOYMENT_TARGET=${MACOSX_DEPLOYMENT_TARGET:-10.15}
 export CPU_COUNT=$(sysctl -n hw.ncpu)
 export INSTALL_XCODE=${INSTALL_XCODE:-0}
 echo "Intial \$(xcode-select -p) is $(xcode-select -p)"
