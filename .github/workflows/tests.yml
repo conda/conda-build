@@ -263,7 +263,7 @@ jobs:
 
 
   macOS:
-    runs-on: macos-latest
+    runs-on: macos-10.15
     defaults:
       run:
         shell: bash -l {0}
@@ -298,6 +298,9 @@ jobs:
           source ci/github/activate_conda "${{ github.workspace }}/miniconda/bin/python"
           export INSTALL_XCODE=${INSTALL_XCODE:-0}
           source ci/github/run_conda_forge_build_setup_osx
+
+      - name: "Display Xcode version"
+        run: sudo xcode-select -p
 
       - name: Prepare Test Environment
         run: |
