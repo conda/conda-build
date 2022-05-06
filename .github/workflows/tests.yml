@@ -273,6 +273,7 @@ jobs:
         python-version: ['3.9']
         conda-version: [release]
         test-type: [serial, parallel]
+        macos-deployment-target: [11.3]
       max-parallel: 10
     timeout-minutes: 120
     env:
@@ -302,12 +303,12 @@ jobs:
           echo "Intial \$(xcode-select -p) is $(xcode-select -p)"
           sudo xcode-select --switch /Applications/Xcode_12.5.1.app/Contents/Developer
           echo "After selecting Xcode_12.5.app, \$(xcode-select -p) is $(xcode-select -p)"
-          export CONDA_BUILD_SYSROOT="$(xcode-select -p)/Platforms/MacOSX.platform/Developer/SDKs/MacOSX11.3.sdk"
-          echo "Downloading 11.3 sdk"
-          curl -L -O https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/MacOSX11.3.sdk.tar.xz
-          tar -xf MacOSX11.3.sdk.tar.xz -C "$(dirname "$CONDA_BUILD_SYSROOT")"
-          plutil -replace MinimumSDKVersion -string 11.3 $(xcode-select -p)/Platforms/MacOSX.platform/Info.plist
-          plutil -replace DTSDKName -string macosx11.3internal $(xcode-select -p)/Platforms/MacOSX.platform/Info.plist
+          export CONDA_BUILD_SYSROOT="$(xcode-select -p)/Platforms/MacOSX.platform/Developer/SDKs/MacOSX${{ matrix.macos-deployment-target }}.sdk"
+          echo "Downloading ${{ matrix.macos-deployment-target }} sdk"
+          curl -L -O https://github.com/phracker/MacOSX-SDKs/releases/download/${{ matrix.macos-deployment-target }}/MacOSX${{ matrix.macos-deployment-target }}.sdk.tar.xz
+          tar -xf MacOSX${{ matrix.macos-deployment-target }}.sdk.tar.xz -C "$(dirname "$CONDA_BUILD_SYSROOT")"
+          plutil -replace MinimumSDKVersion -string ${{ matrix.macos-deployment-target }} $(xcode-select -p)/Platforms/MacOSX.platform/Info.plist
+          plutil -replace DTSDKName -string macosx${{ matrix.macos-deployment-target }}internal $(xcode-select -p)/Platforms/MacOSX.platform/Info.plist
           source ci/github/run_conda_forge_build_setup_osx
 
       - name: Prepare Test Environment
