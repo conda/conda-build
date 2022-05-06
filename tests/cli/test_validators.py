@@ -1,4 +1,4 @@
-from argparse import Namespace
+from argparse import ArgumentError
 from typing import Union
 
 import pytest
@@ -26,11 +26,10 @@ def test_validate_is_conda_pkg_or_recipe_dir(
             fs.create_dir(file_or_folder)
         else:
             fs.create_file(file_or_folder)
-    name_space = Namespace()  # intentionally left empty because our validator doesn't need it
 
     try:
-        received = valid.validate_is_conda_pkg_or_recipe_dir(file_or_folder, name_space)
-    except SystemExit:  # if we get this error, we know it's not valid
+        received = valid.validate_is_conda_pkg_or_recipe_dir(file_or_folder)
+    except (ArgumentError, SystemExit):  # if we get these errors, we know it's not valid
         received = False
 
     assert received == expected

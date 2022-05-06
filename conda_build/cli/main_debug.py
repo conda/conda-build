@@ -5,7 +5,7 @@
 # Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
 import logging
 import sys
-from argparse import ArgumentParser, Namespace
+from argparse import ArgumentParser
 
 from conda_build import api
 from conda_build.utils import on_win
@@ -31,6 +31,7 @@ Set up environments and activation scripts to debug your build or test phase.
         help=("Path to recipe directory or package file to use for dependency and source information. "
               "If you use a recipe, you get the build/host env and source work directory.  If you use "
               "a package file, you get the test environments and the test_tmp folder."),
+        type=valid.validate_is_conda_pkg_or_recipe_dir
     )
     p.add_argument("-p", "--path",
                    help=("root path in which to place envs, source and activation script.  Defaults to a "
@@ -49,18 +50,12 @@ Set up environments and activation scripts to debug your build or test phase.
     p._handle_conflict_resolve(None, [('--bootstrap', [_ for _ in p._actions if _.option_strings == ['--bootstrap']][0])])
     p._handle_conflict_resolve(None, [('--old-build-string', [_ for _ in p._actions if
                                                               _.option_strings == ['--old-build-string']][0])])
-
     return p
 
 
-ARG_VALIDATORS = (
-    ('recipe_or_package_file_path', valid.validate_is_conda_pkg_or_recipe_dir),
-)
-
-
-@valid.validate_args(ARG_VALIDATORS, get_parser())
-def execute(args: Namespace):
-    test = True
+def execute():
+    parser = get_parser()
+    args = parser.parse_args()
 
     try:
         activation_string = api.debug(
@@ -71,18 +66,16 @@ def execute(args: Namespace):
 
         if not args.activate_string_only:
             print("#" * 80)
-            if test:
-                print("Test environment created for debugging.  To enter a debugging environment:\n")
-            else:
-                print("Build and/or host environments created for debugging.  To enter a debugging environment:\n")
+            print(
+                "Test environment created for debugging.  To enter a debugging environment:\n"
+            )
+
         print(activation_string)
         if not args.activate_string_only:
-            if test:
-                test_file = "conda_test_runner.bat" if on_win else "conda_test_runner.sh"
-                print(f"To run your tests, you might want to start with running the {test_file} file.")
-            else:
-                build_file = "conda_build.bat" if on_win else "conda_build.sh"
-                print(f"To run your build, you might want to start with running the {build_file} file.")
+            test_file = "conda_test_runner.bat" if on_win else "conda_test_runner.sh"
+            print(
+                f"To run your tests, you might want to start with running the {test_file} file."
+            )
             print("#" * 80)
 
     except ValueError as e:

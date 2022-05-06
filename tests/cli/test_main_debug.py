@@ -9,20 +9,21 @@ from pyfakefs.fake_filesystem import FakeFilesystem
 from conda_build.cli import main_debug as debug, validators as valid
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='module')
 def main_debug_help() -> str:
     """Read what the current help message should be and return it as a fixture"""
+    sys.argv = ['conda-debug']
     parser = debug.get_parser()
 
     with io.StringIO() as fp:
         parser.print_usage(file=fp)
         fp.seek(0)
-        return fp.read()
+        yield fp.read()
+
+    sys.argv = []
 
 
 def test_main_debug_help_message(capsys: CaptureFixture, main_debug_help: str):
-    sys.argv = ['conda-debug']
-
     with pytest.raises(SystemExit):
         debug.main()
 
@@ -37,7 +38,7 @@ def test_main_debug_file_does_not_exist(capsys: CaptureFixture):
         debug.main()
 
     captured = capsys.readouterr()
-    assert valid.get_is_conda_pkg_or_recipe_error_message() in captured.err
+    assert valid.CONDA_PKG_OR_RECIPE_ERROR_MESSAGE in captured.err
 
 
 def test_main_debug_happy_path(fs: FakeFilesystem, capsys: CaptureFixture):
