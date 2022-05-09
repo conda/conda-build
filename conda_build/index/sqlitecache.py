@@ -342,11 +342,11 @@ class CondaIndexCache:
 
         return retval
 
-    def load_all_from_cache(self, fn):
+    def load_all_from_cache(self, fn, mtime=None):
         subdir_path = self.subdir_path
         try:
             # XXX save recent stat calls for a significant speedup
-            mtime = os.stat(join(subdir_path, fn)).st_mtime
+            mtime = mtime or os.stat(join(subdir_path, fn)).st_mtime
         except FileNotFoundError:
             # XXX don't call if it won't be found
             print("FILE NOT FOUND in load_all_from_cache")

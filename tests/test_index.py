@@ -914,7 +914,8 @@ def test_new_pkg_format_preferred(testing_workdir, mocker):
         copy_into(os.path.join(archive_dir, 'conda-index-pkg-a-1.0-py27h5e241af_0' + ext), test_package_path + ext)
     # mock the extract function, so that we can assert that it is not called
     #     with the .tar.bz2, because the .conda should be preferred
-    cph_extract = mocker.spy(conda_package_handling.api, 'extract')
+    import conda_build.index.package_streaming
+    cph_extract = mocker.spy(conda_build.index.package_streaming, 'stream_conda_info')
     conda_build.index.update_index(testing_workdir, channel_name='test-channel', debug=True)
     # extract should get called once by default.  Within a channel, we assume that a .tar.bz2 and .conda have the same contents.
     cph_extract.assert_called_once_with(test_package_path + '.conda', mock.ANY, 'info')
