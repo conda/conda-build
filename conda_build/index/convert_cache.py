@@ -143,19 +143,22 @@ TABLE_MAP = {"index": "index_json"}
 CHUNK_SIZE = 4096  # packages * cache folders = cache files
 
 
-def db_path(match):
+def db_path(match, override_channel=None):
     """
     A primary key that should be unique for all {subdir}/.cache
     """
-    return f"{match['channel']}/{match['subdir']}/{match['basename']}"
+    return (
+        f"{override_channel or match['channel']}/{match['subdir']}/{match['basename']}"
+    )
 
 
-def convert_cache(conn, cache_generator):
+def convert_cache(conn, cache_generator, override_channel=None):
     """
     Convert old style `conda index` cache to sqlite cache.
 
     conn: sqlite3 connection
     cache_generator: extract_cache() or extract_cache_filesystem()
+    override_channel: if channel_name is not in path
     """
     # chunked must be as lazy as possible to prevent tar seeks
     for i, chunk in enumerate(ichunked(cache_generator, CHUNK_SIZE)):
@@ -166,7 +169,9 @@ def convert_cache(conn, cache_generator):
                 if match["path"] == "stat.json":
                     conn.execute("DELETE FROM stat")
                     for key, value in json.load(member).items():
-                        value["path"] = f"{match['channel']}/{match['subdir']}/{key}"
+                        value[
+                            "path"
+                        ] = f"{override_channel or match['channel']}/{match['subdir']}/{key}"
                         conn.execute(
                             "INSERT OR REPLACE INTO stat (path, mtime, size) VALUES (:path, :mtime, :size)",
                             value,
@@ -183,7 +188,10 @@ def convert_cache(conn, cache_generator):
                     INSERT OR IGNORE INTO {table} (path, {table})
                     VALUES (:path, json(:data))
                     """,
-                        {"path": db_path(match), "data": member.read()},
+                        {
+                            "path": db_path(match, override_channel=override_channel),
+                            "data": member.read(),
+                        },
                     )
 
                 elif match["kind"] == "icon":
@@ -192,7 +200,10 @@ def convert_cache(conn, cache_generator):
                     INSERT OR IGNORE INTO icon (path, icon_png)
                     VALUES (:path, :data)
                     """,
-                        {"path": db_path(match), "data": member.read()},
+                        {
+                            "path": db_path(match, override_channel=override_channel),
+                            "data": member.read(),
+                        },
                     )
 
                 else:

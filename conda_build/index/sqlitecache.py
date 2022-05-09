@@ -47,7 +47,11 @@ TABLE_TO_PATH = {
     "about": "info/about.json",
     "paths": PATHS_PATH,
     # will use the first one encountered
-    "recipe": ("info/recipe/meta.yaml", "info/recipe/meta.yaml.rendered", "info/meta.yaml",),
+    "recipe": (
+        "info/recipe/meta.yaml",
+        "info/recipe/meta.yaml.rendered",
+        "info/meta.yaml",
+    ),
     # run_exports is rare but used. see e.g. gstreamer.
     # prevents 90% of early tar.bz2 exits.
     # also found in meta.yaml['build']['run_exports']
@@ -76,14 +80,20 @@ COMPUTED = {"info/post_install.json"}
 
 
 class CondaIndexCache:
-    def __init__(self, subdir_path, subdir, channel_root="XXX todo"):
-        print(f"CondaIndexCache {subdir_path=}, {subdir=}")
-        self.cache_dir = os.path.join(subdir_path, ".cache")
-        os.makedirs(self.cache_dir, exist_ok=True)
-        self.subdir_path = subdir_path  # must include channel name
+    def __init__(self, channel_root, channel, subdir):
+        self.channel_root = channel_root
+        self.channel = channel
         self.subdir = subdir
+
+        log.debug(f"CondaIndexCache {channel=}, {subdir=}")
+
+        self.subdir_path = os.path.join(channel_root, subdir)
+        self.cache_dir = os.path.join(self.subdir_path, ".cache")
         self.db_filename = os.path.join(self.cache_dir, "cache.db")
         self.cache_is_brand_new = not os.path.exists(self.db_filename)
+
+        os.makedirs(self.cache_dir, exist_ok=True)
+
         log.debug(f"{self.db_filename=} {self.cache_is_brand_new=}")
 
     def __getstate__(self):
@@ -106,18 +116,15 @@ class CondaIndexCache:
         convert_cache.create(conn)
         return conn
 
-    @property
-    def channel(self):
-        # XXX
-        return os.path.basename(os.path.dirname(self.subdir_path))
-
     def convert(self, force=False):
         """
         Load filesystem cache into sqlite.
         """
         if self.cache_is_brand_new or force:
             convert_cache.convert_cache(
-                self.db, convert_cache.extract_cache_filesystem(self.cache_dir)
+                self.db,
+                convert_cache.extract_cache_filesystem(self.cache_dir),
+                override_channel=self.channel,
             )
 
     def stat_cache(self) -> dict:
@@ -243,7 +250,6 @@ class CondaIndexCache:
                         package_stream.close()
                         log.debug(f"{fn} early exit")
 
-
                 if wanted and wanted != {"info/run_exports.json"}:
                     # very common for some metadata to be missing
                     log.debug(f"{fn} missing {wanted} has {set(have.keys())}")
@@ -262,7 +268,6 @@ class CondaIndexCache:
                 except KeyError:
                     paths_str = ""
                 have["info/post_install.json"] = _cache_post_install_details(paths_str)
-
 
                 # XXX will not delete cached recipe, if missing
                 for have_path in have:
@@ -360,17 +365,17 @@ class CondaIndexCache:
             -- icon_png
         FROM
             index_json
-            LEFT JOIN about
-            LEFT JOIN post_install
-            LEFT JOIN recipe
-            LEFT JOIN run_exports
-            -- LEFT JOIN icon
-            USING (path)
+            LEFT JOIN about USING (path)
+            LEFT JOIN post_install USING (path)
+            LEFT JOIN recipe USING (path)
+            LEFT JOIN run_exports USING (path)
+            -- LEFT JOIN icon USING (path)
         WHERE
             index_json.path = :path
-        """
+        """  # each table must USING (path) or will cross join
 
         row = self.db.execute(UNHOLY_UNION, {"path": self.database_path(fn)}).fetchone()
+        # XXX assert only one row
         data = {}
         # this order matches the old implementation. clobber recipe, about fields with index_json.
         for column in ("recipe", "about", "post_install", "index_json"):

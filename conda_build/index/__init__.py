@@ -927,7 +927,9 @@ class ChannelIndex:
                 log.debug("found subdirs %s" % detected_subdirs)
                 self.subdirs = subdirs = sorted(detected_subdirs | {"noarch"})
             else:
-                self.subdirs = subdirs = sorted(set(self._subdirs)) # XXX noarch removed for testing | {"noarch"})
+                self.subdirs = subdirs = sorted(
+                    set(self._subdirs)
+                )  # XXX noarch removed for testing | {"noarch"})
 
             # Step 1. Lock local channel.
             with utils.try_acquire_locks(
@@ -1012,8 +1014,12 @@ class ChannelIndex:
     def index_subdir(self, subdir, index_file=None, verbose=False, progress=False):
         subdir_path = join(self.channel_root, subdir)
 
-        cache = sqlitecache.CondaIndexCache(subdir_path, subdir)
-        # XXX implement cache.convert() against the filesystem
+        cache = sqlitecache.CondaIndexCache(
+            channel_root=self.channel_root, channel=self.channel_name, subdir=subdir
+        )
+        if cache.cache_is_brand_new:
+            # guaranteed to be only thread doing this?
+            cache.convert()
 
         repodata_json_path = join(subdir_path, REPODATA_FROM_PKGS_JSON_FN)
 
@@ -1137,7 +1143,7 @@ class ChannelIndex:
                 leave=False,
             ):
                 for fn, mtime, size, index_json in tqdm(
-                    self.thread_executor.map( # tries to pickle cache.db = sqlite connection
+                    self.thread_executor.map(  # tries to pickle cache.db = sqlite connection
                         extract_func,
                         (fn for fn in hash_extract_set if fn.endswith(conda_format)),
                     ),
@@ -1196,7 +1202,7 @@ class ChannelIndex:
             disable=(verbose or not progress),
             leave=False,
         ):
-            stat_key = fn # XXX emulate database unique keys or rewrite _update functions in SQL
+            stat_key = fn  # XXX emulate database unique keys or rewrite _update functions in SQL
             if stat_key not in stat_cache:
                 update_set.add(fn)
             else:
@@ -1219,7 +1225,6 @@ class ChannelIndex:
 
         return fn, index_json
 
-
     def _write_repodata(self, subdir, repodata, json_filename):
         repodata_json_path = join(self.channel_root, subdir, json_filename)
         new_repodata_binary = (
@@ -1228,7 +1233,9 @@ class ChannelIndex:
                 indent=2,
                 sort_keys=True,
             )
-            .replace("':'", "': '") # XXX stop doing this; doesn't appear to change anything
+            .replace(
+                "':'", "': '"
+            )  # XXX stop doing this; doesn't appear to change anything
             .encode("utf-8")
         )
         write_result = _maybe_write(
@@ -1277,7 +1284,9 @@ class ChannelIndex:
         # XXX pass stat_cache into _update_channeldata or otherwise save results of
         # recent stat calls
 
-        cache = sqlitecache.CondaIndexCache(os.path.join(self.channel_root, subdir), subdir)
+        cache = sqlitecache.CondaIndexCache(
+            channel_root=self.channel_root, channel=self.channel_name, subdir=subdir
+        )
 
         legacy_packages = repodata["packages"]
         conda_packages = repodata["packages.conda"]
