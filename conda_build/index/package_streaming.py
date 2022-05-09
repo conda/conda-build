@@ -42,9 +42,7 @@ def stream_conda_info(filename, fileobj=None):
             info for info in zf.infolist() if info.filename.startswith(component_name)
         ]
         if not component_filename:
-            raise RuntimeError(
-                "didn't find {} component in {}".format(component_name, filename)
-            )
+            raise RuntimeError(f"didn't find {component_name} component in {filename}")
         assert len(component_filename) == 1
         reader = zstandard.ZstdDecompressor().stream_reader(
             zf.open(component_filename[0])
