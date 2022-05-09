@@ -148,13 +148,13 @@ class CondaIndexCache:
                     "index_json": "info/index.json",
                     "about": "info/about.json",
                     "paths": "info/paths.json",
-                    "recipe": "info/recipe/meta.yaml",     
+                    "recipe": "info/recipe/meta.yaml",
                     "recipe": "info/recipe/meta.yaml.rendered",
                     "recipe": "info/meta.yaml",
-                    # run_exports is rare but used. see e.g. gstreamer. 
+                    # run_exports is rare but used. see e.g. gstreamer.
                     # prevents 90% of early tar.bz2 exits.
                     # found in meta.yaml['build']['run_exports']
-                    "run_exports": "info/run_exports.json",  
+                    "run_exports": "info/run_exports.json",
                     "post_install": "info/post_install.json",  # computed
                     # icon: too rare. 16 conda-forge packages.
                     # recipe_log: always {} in old version of cache
