@@ -14,7 +14,6 @@ from os.path import (
     basename,
     getmtime,
     getsize,
-    isdir,
     isfile,
     join,
     splitext,

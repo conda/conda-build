@@ -2,6 +2,7 @@
 cache conda indexing metadata in sqlite.
 """
 
+from functools import cached_property
 import os
 import os.path
 import json
@@ -18,7 +19,7 @@ from conda_package_handling.api import InvalidArchiveError
 
 from os.path import join
 
-from .convert_cache import create, convert_cache
+from . import convert_cache
 from .common import connect
 from . import package_streaming
 
@@ -29,7 +30,6 @@ from ..utils import (
     FileNotFoundError,
     JSONDecodeError,
     get_logger,
-    glob,
 )
 
 from conda_package_handling.utils import checksums
@@ -47,9 +47,18 @@ class CondaIndexCache:
         self.subdir = subdir
         self.db_filename = os.path.join(self.cache_dir, "cache.db")
         self.cache_is_brand_new = not os.path.exists(self.db_filename)
-        self.db = connect(self.db_filename)
         print(f"{self.db_filename=} {self.cache_is_brand_new=}")
-        create(self.db)
+
+    @cached_property
+    def db(self):
+        """
+        Connection to our sqlite3 database.
+
+        Ability to pickle if db has not been accessed?
+        """
+        conn = connect(self.db_filename)
+        convert_cache.create(conn)
+        return conn
 
     @property
     def channel(self):
@@ -61,11 +70,11 @@ class CondaIndexCache:
         Load filesystem cache into sqlite.
         """
         if self.cache_is_brand_new or force:
-            raise NotImplementedError("convert_cache expects a tar archive")
-            # stream a new tarfile archive...
-            convert_cache(self.db, self.cache_dir)
+            convert_cache.convert_cache(
+                self.db, convert_cache.extract_cache_filesystem(self.cache_dir)
+            )
 
-    def stat_cache(self):
+    def stat_cache(self) -> dict:
         """
         Load path: mtime, size mapping
         """
@@ -73,21 +82,27 @@ class CondaIndexCache:
         return {
             # XXX work correctly with windows \ separator
             os.path.basename(row["path"]): {"mtime": row["mtime"], "size": row["size"]}
-            for row in self.db.execute("SELECT path, mtime, size FROM stat WHERE stage IS NULL")
+            for row in self.db.execute(
+                "SELECT path, mtime, size FROM stat WHERE stage IS NULL"
+            )
         }
 
-    def save_stat_cache(self, stat_cache):
-        # XXX smarter to do this differently in sql
+    def save_stat_cache(self, stat_cache: dict):
         with self.db:
             self.db.execute("DELETE FROM stat WHERE stage IS NULL")
-            for fn, value in stat_cache.items():
-                # XXX update caller to deal with this type of key
-                value["path"] = self.database_path(fn)
 
-                self.db.execute(
-                    "INSERT OR REPLACE INTO stat (path, mtime, size, stage) VALUES (:path, :mtime, :size, NULL)",
-                    value,
-                )
+            self.db.executemany(
+                "INSERT OR REPLACE INTO stat (path, mtime, size, stage) VALUES (:path, :mtime, :size, NULL)",
+                (
+                    (
+                        self.database_path(fn),
+                        value["path"],
+                        value["mtime"],
+                        value["size"],
+                    )
+                    for (fn, value) in stat_cache.items()
+                ),
+            )
 
     def load_index_from_cache(self, fn):
         # XXX prefer bulk load; can't pass list as :param though, and many small
@@ -158,9 +173,20 @@ class CondaIndexCache:
                     # found in meta.yaml['build']['run_exports']
                     "run_exports": "info/run_exports.json",
                     "post_install": "info/post_install.json",  # computed
-                    # icon: too rare. 16 conda-forge packages.
+                    "icon": "info/icon.json",  # very rare, 16 conda-forge packages
                     # recipe_log: always {} in old version of cache
                 }
+
+                # re: icons. in recipe (see existing _cache_icon):
+                # if recipe.get('app', {}).get('icon') then look for icon.png
+                # or index.json['icon']
+                # conda build metadata.py:L1402 d['icon'] = '%s.png' % md5_file(join(...
+                # "app": {
+                #     "entry": "glue",
+                #     "icon": "logo.png",
+                #     "summary": "Multi-dimensional linked data exploration",
+                #     "type": "desk"
+                # },
 
                 TABLE_NO_CACHE = {
                     "paths",
@@ -195,11 +221,16 @@ class CondaIndexCache:
                     if not wanted:  # we got what we wanted
                         # XXX debug: how many files / bytes did we avoid reading
                         package_stream.close()
-                        print(f"{fn} early exit")
+                        log.debug(f"{fn} early exit")
+
+                    if member.name == "info/index.json":  # early exit when no icon
+                        index_json = json.loads(have["info/index.json"])
+                        if index_json.get("icon") is None:
+                            wanted = wanted - {"info/icon.png"}
 
                 if wanted and wanted != {"info/run_exports.json"}:
                     # very common for some metadata to be missing
-                    log.info(f"{fn} missing {wanted} has {set(have.keys())}")
+                    log.debug(f"{fn} missing {wanted} has {set(have.keys())}")
 
                 index_json = json.loads(have["info/index.json"])
 
@@ -322,7 +353,7 @@ class CondaIndexCache:
         row = self.db.execute(UNHOLY_UNION, {"path": self.database_path(fn)}).fetchone()
         data = {}
         for column in ("index_json", "about", "post_install", "recipe"):
-            if row[column]: # is not null or empty
+            if row[column]:  # is not null or empty
                 data.update(json.loads(row[column]))
 
         # XXX skip icon. exceedingly rare.

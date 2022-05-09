@@ -25,8 +25,8 @@ CACHE_ARCHIVE = os.path.expanduser("~/Downloads/linux-64-cache.tar.bz2")
 
 PATH_INFO = re.compile(
     r"""
-    (?P<channel>conda-forge)/
-    (?P<subdir>.*)/
+    (?P<channel>[^/]*)/
+    (?P<subdir>[^/]*)/
     .cache/
     (?P<path>(stat.json|
         (?P<kind>recipe|index|icon|about|recipe_log|run_exports|post_install)/(?P<basename>\S*?)(?P<ext>.\w+$))
@@ -49,8 +49,6 @@ TYPICAL_DIRECTORIES = {
     "clones",
     "clones/conda-forge/linux-64/.cache/post_install",
 }
-
-# TODO .cache/clone.json ?
 
 
 def create(conn):
@@ -95,27 +93,8 @@ def create(conn):
         try:
             conn.execute("SELECT stage FROM stat LIMIT 1")
         except sqlite3.OperationalError:
-            for colname in ('stage', 'sha256', 'md5', 'last_modified', 'etag'):
-                conn.execute("ALTER TABLE stat ADD COLUMN {colname} TEXT")
-
-        # # individual large path json files separated into many rows
-        # # should be stored in a separate sqlite db
-        # conn.execute(
-        #     "CREATE TABLE IF NOT EXISTS path (path_id INTEGER PRIMARY KEY, path TEXT UNIQUE)"
-        # )
-        # # TODO fields
-        # conn.execute(
-        #     """CREATE TABLE IF NOT EXISTS path_entry (
-        #         path_id INTEGER REFERENCES path (path_id),
-        #         path TEXT,
-        #         sha256 TEXT,
-        #         md5 TEXT
-        #         )
-        #     """
-        # )
-        # conn.execute(
-        #     "CREATE UNIQUE INDEX IF NOT EXISTS idx_path_entry ON path_entry (path_id, path)"
-        # )
+            for colname in ("stage", "sha256", "md5", "last_modified", "etag"):
+                conn.execute(f"ALTER TABLE stat ADD COLUMN {colname} TEXT")
 
 
 def extract_cache(path):
@@ -141,6 +120,23 @@ def extract_cache(path):
     print(dirnames)
 
 
+def extract_cache_filesystem(path):
+    """
+    Yield interesting (match, <bytes>) members of filesystem at path.
+
+    path should be an individual cache directory, e.g. <channel-name>/linux-64/.cache
+    """
+    assert str(path).endswith(".cache"), f"{path} must end with .cache"
+    for root, _, files in os.walk(path):
+        for file in files:
+            fullpath = os.path.join(root, file)
+            posixpath = "/".join(fullpath.split(os.sep))
+            path_info = PATH_INFO.search(posixpath)
+            if path_info:
+                with open(fullpath, "rb") as entry:
+                    yield path_info, entry
+
+
 # regex excludes arbitrary names
 TABLE_MAP = {"index": "index_json"}
 
@@ -154,9 +150,15 @@ def db_path(match):
     return f"{match['channel']}/{match['subdir']}/{match['basename']}"
 
 
-def convert_cache(conn):
+def convert_cache(conn, cache_generator):
+    """
+    Convert old style `conda index` cache to sqlite cache.
+
+    conn: sqlite3 connection
+    cache_generator: extract_cache() or extract_cache_filesystem()
+    """
     # chunked must be as lazy as possible to prevent tar seeks
-    for i, chunk in enumerate(ichunked(extract_cache(CACHE_ARCHIVE), CHUNK_SIZE)):
+    for i, chunk in enumerate(ichunked(cache_generator, CHUNK_SIZE)):
         print(f"BEGIN {i}")
         with conn:  # transaction
             for match, member in chunk:
@@ -201,12 +203,16 @@ def go():
     conn = common.connect("linux-64-cache.db")
     create(conn)
     with closing(conn):
-        convert_cache(conn)
+        convert_cache(conn, extract_cache(CACHE_ARCHIVE))
+
+
+def test():
+    extract_cache_filesystem(os.path.expanduser("~/miniconda3/osx-64/.cache"))
 
 
 if __name__ == "__main__":
+    test()
     go()
-
 
 # typically 600-10,000 MB
 MB_PER_DAY = """
