@@ -38,6 +38,43 @@ from conda_package_handling.utils import checksums
 log = get_logger(__name__)
 
 
+INDEX_JSON_PATH = "info/index.json"
+ICON_PATH = "info/icon.png"
+PATHS_PATH = "info/paths.json"
+
+TABLE_TO_PATH = {
+    "index_json": INDEX_JSON_PATH,
+    "about": "info/about.json",
+    "paths": PATHS_PATH,
+    # will use the first one encountered
+    "recipe": ("info/recipe/meta.yaml", "info/recipe/meta.yaml.rendered", "info/meta.yaml",),
+    # run_exports is rare but used. see e.g. gstreamer.
+    # prevents 90% of early tar.bz2 exits.
+    # also found in meta.yaml['build']['run_exports']
+    "run_exports": "info/run_exports.json",
+    "post_install": "info/post_install.json",  # computed
+    "icon": ICON_PATH,  # very rare, 16 conda-forge packages
+    # recipe_log: always {} in old version of cache
+}
+
+PATH_TO_TABLE = {}
+
+for k, v in TABLE_TO_PATH.items():
+    if isinstance(v, str):
+        PATH_TO_TABLE[v] = k
+    else:
+        for path in v:
+            PATH_TO_TABLE[path] = k
+
+# read, but not saved for later
+TABLE_NO_CACHE = {
+    "paths",
+}
+
+# saved to cache, not found in package
+COMPUTED = {"info/post_install.json"}
+
+
 class CondaIndexCache:
     def __init__(self, subdir_path, subdir, channel_root="XXX todo"):
         print(f"CondaIndexCache {subdir_path=}, {subdir=}")
@@ -173,48 +210,15 @@ class CondaIndexCache:
                 index_json = json.loads(cached_row[0])
 
             else:
-                TABLE_TO_PATH = {
-                    "index_json": "info/index.json",
-                    "about": "info/about.json",
-                    "paths": "info/paths.json",
-                    "recipe": "info/recipe/meta.yaml",
-                    "recipe": "info/recipe/meta.yaml.rendered",
-                    "recipe": "info/meta.yaml",
-                    # run_exports is rare but used. see e.g. gstreamer.
-                    # prevents 90% of early tar.bz2 exits.
-                    # found in meta.yaml['build']['run_exports']
-                    "run_exports": "info/run_exports.json",
-                    "post_install": "info/post_install.json",  # computed
-                    "icon": "info/icon.json",  # very rare, 16 conda-forge packages
-                    # recipe_log: always {} in old version of cache
-                }
 
-                # re: icons. in recipe (see existing _cache_icon):
-                # if recipe.get('app', {}).get('icon') then look for icon.png
-                # or index.json['icon']
-                # conda build metadata.py:L1402 d['icon'] = '%s.png' % md5_file(join(...
-                # "app": {
-                #     "entry": "glue",
-                #     "icon": "logo.png",
-                #     "summary": "Multi-dimensional linked data exploration",
-                #     "type": "desk"
-                # },
+                wanted = set(PATH_TO_TABLE) - COMPUTED
 
-                TABLE_NO_CACHE = {
-                    "paths",
-                }
-
-                COMPUTED = {"info/post_install.json"}
-
-                wanted = set(TABLE_TO_PATH.values()) - COMPUTED
-
+                # when we see one of these, remove the rest from wanted
                 recipe_want_one = {
                     "info/recipe/meta.yaml.rendered",
                     "info/recipe/meta.yaml",  # by far the most common
                     "info/meta.yaml",
                 }
-
-                wanted = wanted.union(recipe_want_one)
 
                 have = {}
                 package_stream = iter(package_streaming.stream_conda_info(abs_fn))
@@ -224,21 +228,21 @@ class CondaIndexCache:
                         have[member.name] = tar.extractfile(member).read()
 
                         # immediately parse index.json, decide whether we need icon
+                        if member.name == INDEX_JSON_PATH:  # early exit when no icon
+                            index_json = json.loads(have[member.name])
+                            if index_json.get("icon") is None:
+                                wanted = wanted - {ICON_PATH}
 
                         if member.name in recipe_want_one:
-                            # don't look for any more recipe files
+                            # convert yaml; don't look for any more recipe files
+                            have[member.name] = _cache_recipe(have[member.name])
                             wanted = wanted - recipe_want_one
-                            recipe_want_one.clear()
 
                     if not wanted:  # we got what we wanted
                         # XXX debug: how many files / bytes did we avoid reading
                         package_stream.close()
                         log.debug(f"{fn} early exit")
 
-                    if member.name == "info/index.json":  # early exit when no icon
-                        index_json = json.loads(have["info/index.json"])
-                        if index_json.get("icon") is None:
-                            wanted = wanted - {"info/icon.png"}
 
                 if wanted and wanted != {"info/run_exports.json"}:
                     # very common for some metadata to be missing
@@ -254,12 +258,15 @@ class CondaIndexCache:
                 # cache large paths.json unless we want a "search for paths"
                 # feature unrelated to repodata.json
                 try:
-                    paths_str = have.pop("info/paths.json")
+                    paths_str = have.pop(PATHS_PATH)
                 except KeyError:
                     paths_str = ""
                 have["info/post_install.json"] = _cache_post_install_details(paths_str)
 
-                for table, have_path in TABLE_TO_PATH.items():
+
+                # XXX will not delete cached recipe, if missing
+                for have_path in have:
+                    table = PATH_TO_TABLE[have_path]
                     if table in TABLE_NO_CACHE:
                         continue  # not cached
 
@@ -347,28 +354,28 @@ class CondaIndexCache:
         SELECT
             index_json,
             about,
-            icon_png,
             post_install,
             recipe,
             run_exports
+            -- icon_png
         FROM
             index_json
             LEFT JOIN about
             LEFT JOIN post_install
             LEFT JOIN recipe
             LEFT JOIN run_exports
-            LEFT JOIN icon USING (path)
+            -- LEFT JOIN icon
+            USING (path)
         WHERE
             index_json.path = :path
         """
 
         row = self.db.execute(UNHOLY_UNION, {"path": self.database_path(fn)}).fetchone()
         data = {}
-        for column in ("index_json", "about", "post_install", "recipe"):
+        # this order matches the old implementation. clobber recipe, about fields with index_json.
+        for column in ("recipe", "about", "post_install", "index_json"):
             if row[column]:  # is not null or empty
                 data.update(json.loads(row[column]))
-
-        # XXX skip icon. exceedingly rare.
 
         # have to stat again, because we don't have access to the stat cache here
         data["mtime"] = mtime
