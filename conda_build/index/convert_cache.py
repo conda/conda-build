@@ -12,6 +12,7 @@ import os
 import os.path
 import re
 import json
+import sqlite3
 
 from more_itertools import ichunked
 from contextlib import closing
@@ -91,24 +92,30 @@ def create(conn):
             "CREATE TABLE IF NOT EXISTS stat (path TEXT PRIMARY KEY, mtime INTEGER, size INTEGER)"
         )
 
-        # individual large path json files separated into many rows
-        # should be stored in a separate sqlite db
-        conn.execute(
-            "CREATE TABLE IF NOT EXISTS path (path_id INTEGER PRIMARY KEY, path TEXT UNIQUE)"
-        )
-        # TODO fields
-        conn.execute(
-            """CREATE TABLE IF NOT EXISTS path_entry (
-                path_id INTEGER REFERENCES path (path_id),
-                path TEXT,
-                sha256 TEXT,
-                md5 TEXT
-                )
-            """
-        )
-        conn.execute(
-            "CREATE UNIQUE INDEX IF NOT EXISTS idx_path_entry ON path_entry (path_id, path)"
-        )
+        try:
+            conn.execute("SELECT stage FROM stat LIMIT 1")
+        except sqlite3.OperationalError:
+            for colname in ('stage', 'sha256', 'md5', 'last_modified', 'etag'):
+                conn.execute("ALTER TABLE stat ADD COLUMN {colname} TEXT")
+
+        # # individual large path json files separated into many rows
+        # # should be stored in a separate sqlite db
+        # conn.execute(
+        #     "CREATE TABLE IF NOT EXISTS path (path_id INTEGER PRIMARY KEY, path TEXT UNIQUE)"
+        # )
+        # # TODO fields
+        # conn.execute(
+        #     """CREATE TABLE IF NOT EXISTS path_entry (
+        #         path_id INTEGER REFERENCES path (path_id),
+        #         path TEXT,
+        #         sha256 TEXT,
+        #         md5 TEXT
+        #         )
+        #     """
+        # )
+        # conn.execute(
+        #     "CREATE UNIQUE INDEX IF NOT EXISTS idx_path_entry ON path_entry (path_id, path)"
+        # )
 
 
 def extract_cache(path):
