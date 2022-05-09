@@ -47,7 +47,16 @@ class CondaIndexCache:
         self.subdir = subdir
         self.db_filename = os.path.join(self.cache_dir, "cache.db")
         self.cache_is_brand_new = not os.path.exists(self.db_filename)
-        print(f"{self.db_filename=} {self.cache_is_brand_new=}")
+        log.debug(f"{self.db_filename=} {self.cache_is_brand_new=}")
+
+    def __getstate__(self):
+        """
+        Remove db connection when pickled.
+        """
+        return {k: self.__dict__[k] for k in self.__dict__ if k != "db"}
+
+    def __setstate__(self, d):
+        self.__dict__ = d
 
     @cached_property
     def db(self):
@@ -96,7 +105,6 @@ class CondaIndexCache:
                 (
                     (
                         self.database_path(fn),
-                        value["path"],
                         value["mtime"],
                         value["size"],
                     )
@@ -129,7 +137,9 @@ class CondaIndexCache:
     def database_path(self, fn):
         return f"{self.channel}/{self.subdir}/{fn}"
 
-    def _extract_to_cache_(self, channel_root, subdir, fn, second_try=False):
+    def _extract_to_cache_(
+        self, channel_root, subdir, fn, second_try=False, stat_result=None
+    ):
         # This method WILL reread the tarball. Probably need another one to exit early if
         # there are cases where it's fine not to reread.  Like if we just rebuild repodata
         # from the cached files, but don't use the existing repodata.json as a starting point.
@@ -137,7 +147,9 @@ class CondaIndexCache:
 
         abs_fn = join(subdir_path, fn)
 
-        stat_result = os.stat(abs_fn)
+        if stat_result is None:
+            stat_result = os.stat(abs_fn)
+
         size = stat_result.st_size
         mtime = stat_result.st_mtime
         retval = fn, mtime, size, None
@@ -202,7 +214,7 @@ class CondaIndexCache:
                     "info/meta.yaml",
                 }
 
-                wanted = wanted + recipe_want_one
+                wanted = wanted.union(recipe_want_one)
 
                 have = {}
                 package_stream = iter(package_streaming.stream_conda_info(abs_fn))
