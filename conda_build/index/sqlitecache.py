@@ -73,24 +73,21 @@ class CondaIndexCache:
         return {
             # XXX work correctly with windows \ separator
             os.path.basename(row["path"]): {"mtime": row["mtime"], "size": row["size"]}
-            for row in self.db.execute("SELECT path, mtime, size FROM stat")
+            for row in self.db.execute("SELECT path, mtime, size FROM stat WHERE stage IS NULL")
         }
 
     def save_stat_cache(self, stat_cache):
         # XXX smarter to do this differently in sql
         with self.db:
-            self.db.execute("DELETE FROM stat")
+            self.db.execute("DELETE FROM stat WHERE stage IS NULL")
+            for fn, value in stat_cache.items():
+                # XXX update caller to deal with this type of key
+                value["path"] = self.database_path(fn)
 
-            def values():
-                for fn, value in stat_cache.items():
-                    # XXX update caller to deal with this type of key
-                    value["path"] = self.database_path(fn)
-                    yield value
-
-            self.db.executemany(
-                "INSERT OR REPLACE INTO stat (path, mtime, size) VALUES (:path, :mtime, :size)",
-                values(),
-            )
+                self.db.execute(
+                    "INSERT OR REPLACE INTO stat (path, mtime, size, stage) VALUES (:path, :mtime, :size, NULL)",
+                    value,
+                )
 
     def load_index_from_cache(self, fn):
         # XXX prefer bulk load; can't pass list as :param though, and many small
@@ -154,7 +151,12 @@ class CondaIndexCache:
                     "about": "info/about.json",
                     "paths": "info/paths.json",
                     "recipe": "info/recipe/meta.yaml",
-                    "run_exports": "info/run_exports.json",  # rare but used. see e.g. gstreamer. prevents 90% of early tar.bz2 exits.
+                    "recipe": "info/recipe/meta.yaml.rendered",
+                    "recipe": "info/meta.yaml",
+                    # run_exports is rare but used. see e.g. gstreamer.
+                    # prevents 90% of early tar.bz2 exits.
+                    # found in meta.yaml['build']['run_exports']
+                    "run_exports": "info/run_exports.json",
                     "post_install": "info/post_install.json",  # computed
                     # icon: too rare. 16 conda-forge packages.
                     # recipe_log: always {} in old version of cache
@@ -174,24 +176,27 @@ class CondaIndexCache:
                     "info/meta.yaml",
                 }
 
+                wanted = wanted + recipe_want_one
+
                 have = {}
                 package_stream = iter(package_streaming.stream_conda_info(abs_fn))
                 for tar, member in package_stream:
-                    if (
-                        member.name in wanted and member.name not in recipe_want_one
-                    ):  # XXX ugly
+                    if member.name in wanted:
                         wanted.remove(member.name)
                         have[member.name] = tar.extractfile(member).read()
-                    elif member.name in recipe_want_one:  # XXX ugly
-                        recipe_want_one.clear()
-                        have["info/recipe/meta.yaml"] = _cache_recipe(
-                            tar.extractfile(member)
-                        )
-                        wanted.remove("info/recipe/meta.yaml")  # XXX ugly
-                    if not wanted and len(recipe_want_one) < 3:  # we got what we wanted
+
+                        # immediately parse index.json, decide whether we need icon
+
+                        if member.name in recipe_want_one:
+                            # don't look for any more recipe files
+                            wanted = wanted - recipe_want_one
+                            recipe_want_one.clear()
+
+                    if not wanted:  # we got what we wanted
                         # XXX debug: how many files / bytes did we avoid reading
                         package_stream.close()
                         print(f"{fn} early exit")
+
                 if wanted and wanted != {"info/run_exports.json"}:
                     # very common for some metadata to be missing
                     log.info(f"{fn} missing {wanted} has {set(have.keys())}")
