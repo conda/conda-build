@@ -372,10 +372,15 @@ class CondaIndexCache:
             -- LEFT JOIN icon USING (path)
         WHERE
             index_json.path = :path
+        LIMIT 2
         """  # each table must USING (path) or will cross join
 
-        row = self.db.execute(UNHOLY_UNION, {"path": self.database_path(fn)}).fetchone()
-        # XXX assert only one row
+        rows = self.db.execute(UNHOLY_UNION, {"path": self.database_path(fn)}).fetchall()
+        assert len(rows) < 2
+        try:
+            row = rows[0]
+        except IndexError:
+            row = None
         data = {}
         # this order matches the old implementation. clobber recipe, about fields with index_json.
         for column in ("recipe", "about", "post_install", "index_json"):
