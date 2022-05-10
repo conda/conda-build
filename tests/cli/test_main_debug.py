@@ -1,10 +1,10 @@
 import io
+import os.path
 import sys
 from unittest import mock
 
 import pytest
 from pytest import CaptureFixture
-from pyfakefs.fake_filesystem import FakeFilesystem
 
 from conda_build.cli import main_debug as debug, validators as valid
 
@@ -41,13 +41,15 @@ def test_main_debug_file_does_not_exist(capsys: CaptureFixture):
     assert valid.CONDA_PKG_OR_RECIPE_ERROR_MESSAGE in captured.err
 
 
-def test_main_debug_happy_path(fs: FakeFilesystem, capsys: CaptureFixture):
+def test_main_debug_happy_path(tmpdir, capsys: CaptureFixture):
     """
     Happy path through the main_debug.main function.
     """
-    with mock.patch('conda_build.api.debug') as mock_debug:
-        fake_pkg_file = 'fake-conda-pkg.conda'
-        fs.create_file(fake_pkg_file)
+    with mock.patch("conda_build.api.debug") as mock_debug:
+        fake_pkg_file = os.path.join(tmpdir, "fake-conda-pkg.conda")
+        fp = open(fake_pkg_file, "w")
+        fp.write("text")
+        fp.close()
         sys.argv = ['conda-debug', fake_pkg_file]
 
         debug.main()
