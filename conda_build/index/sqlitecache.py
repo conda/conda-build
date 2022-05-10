@@ -16,6 +16,7 @@ from yaml.scanner import ScannerError
 from yaml.reader import ReaderError
 
 from conda_package_handling.api import InvalidArchiveError
+from zipfile import BadZipFile
 
 from os.path import join
 
@@ -177,12 +178,12 @@ class CondaIndexCache:
     def extract_to_cache(self, channel_root, subdir, fn):
         # XXX original skips this on warm cache
         with self.db:  # transaction
-            return self._extract_to_cache_(channel_root, subdir, fn)
+            return self._extract_to_cache(channel_root, subdir, fn)
 
     def database_path(self, fn):
         return f"{self.channel}/{self.subdir}/{fn}"
 
-    def _extract_to_cache_(
+    def _extract_to_cache(
         self, channel_root, subdir, fn, second_try=False, stat_result=None
     ):
         # This method WILL reread the tarball. Probably need another one to exit early if
@@ -256,9 +257,6 @@ class CondaIndexCache:
                     log.debug(f"{fn} missing {wanted} has {set(have.keys())}")
 
                 index_json = json.loads(have["info/index.json"])
-
-                # XXX used to check for "info/run_exports.yaml"; check if still relevant
-                # _cache_run_exports(tmpdir, run_exports_cache_path)
 
                 # populate run_exports.json (all False's if there was no
                 # paths.json). paths.json should not be needed after this; don't
@@ -336,7 +334,8 @@ class CondaIndexCache:
             )
             retval = fn, mtime, size, index_json
 
-        except (InvalidArchiveError, KeyError, EOFError, JSONDecodeError):
+        # stdlib zipfile: BadZipFile; tar: OSError: Invalid data stream
+        except (InvalidArchiveError, KeyError, EOFError, JSONDecodeError, BadZipFile, OSError):
             if not second_try:
                 # recursion
                 return self._extract_to_cache(channel_root, subdir, fn, second_try=True)
