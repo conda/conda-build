@@ -1181,6 +1181,257 @@ class ChannelIndex:
                 cache.save_stat_cache(stat_cache)
         return new_repodata
 
+    def index_subdir_sql(self, subdir, index_file=None, verbose=False, progress=False):
+        subdir_path = join(self.channel_root, subdir)
+
+        cache = sqlitecache.CondaIndexCache(
+            channel_root=self.channel_root, channel=self.channel_name, subdir=subdir
+        )
+        if cache.cache_is_brand_new:
+            # guaranteed to be only thread doing this?
+            cache.convert()
+
+        repodata_json_path = join(subdir_path, REPODATA_FROM_PKGS_JSON_FN)
+
+        if verbose:
+            log.info("Building repodata for %s" % subdir_path)
+
+        # gather conda package filenames in subdir
+        # we'll process these first, because reading their metadata is much faster
+        # XXX eliminate all listdir. that and stat calls are significant.
+        fns_in_subdir = {
+            fn for fn in os.listdir(subdir_path) if fn.endswith((".conda", ".tar.bz2"))
+        }
+
+        # load current/old repodata XXX with sql cache, where 'select from
+        # index_json' is incredibly fast, this code might be easier to reason
+        # about without carrying over old repodata.packages
+        try:
+            with open(repodata_json_path) as fh:
+                old_repodata = json.load(fh) or {}
+        except (OSError, JSONDecodeError):
+            # log.info("no repodata found at %s", repodata_json_path)
+            old_repodata = {}
+
+        old_repodata_packages = old_repodata.get("packages", {})
+        old_repodata_conda_packages = old_repodata.get("packages.conda", {})
+        old_repodata_fns = set(old_repodata_packages) | set(old_repodata_conda_packages)
+
+        # put filesystem 'ground truth' into stat table
+        # will we eventually stat everything on fs, or can we shortcut for new?
+        def listdir_stat():
+            for fn in fns_in_subdir:
+                abs_fn = os.path.join(subdir_path, fn)
+                stat = os.stat(abs_fn)
+                yield {
+                    "path": cache.database_path(fn),
+                    "mtime": int(stat.st_mtime),
+                    "size": stat.st_size,
+                }
+
+        with cache.db:
+            # XXX and path like channel/% if multiple channels share cache
+            cache.db.execute("DELETE FROM stat WHERE stage='fs'")
+            cache.db.executemany(
+                """
+            INSERT INTO STAT (stage, path, mtime, size)
+            VALUES ('fs', :path, :mtime, :size)
+            """,
+                listdir_stat(),
+            )
+
+        # put repodata into stat table. no mtime.
+        with cache.db:
+            cache.db.execute("DELETE FROM stat WHERE stage='repodata'")
+            cache.db.executemany(
+                """
+            INSERT INTO stat (stage, path)
+            VALUES ('repodata', :path)
+            """,
+                ({"path": cache.database_path(fn)} for fn in old_repodata_fns),
+            )
+
+        stat_cache = cache.stat_cache()
+
+        stat_cache_original = stat_cache.copy()
+
+        # filter by paths starting with
+        path_like = f"{self.channel_name}/{self.subdir}/%"
+
+        # in repodata but not on filesystem
+        # remove_set = old_repodata_fns - fns_in_subdir
+        remove_set = {
+            fn.rpartition("/")[-1]
+            for fn in cache.db.execute(
+                """SELECT path FROM stat WHERE path LIKE :path_like AND stage = 'repodata'
+            AND path NOT IN (SELECT path FROM stat WHERE stage = 'fs')""",
+                {"path_like": path_like},
+            )
+        }
+
+        ignore_set = set(old_repodata.get("removed", []))
+        try:
+            # calculate all the paths and figure out what we're going to do with them
+            # add_set: filenames that aren't in the current/old repodata, but exist in the subdir
+            if index_file:
+                with open(index_file) as fin:
+                    add_set = set()
+                    for line in fin:
+                        fn_subdir, fn = line.strip().split("/")
+                        if fn_subdir != subdir:
+                            continue
+                        if fn.endswith(".conda") or fn.endswith(".tar.bz2"):
+                            add_set.add(fn)
+            else:
+                # on filesystem but not in repodata
+                # add_set = fns_in_subdir - old_repodata_fns
+                add_set = {
+                    fn.rpartition("/")[-1]
+                    for fn in cache.db.execute(
+                        """SELECT path FROM stat WHERE path LIKE :path_like AND stage = 'fs'
+                    AND path NOT IN (SELECT path FROM stat WHERE stage = 'repodata')""",
+                        {"path_like": path_like},
+                    )
+                }
+
+            add_set -= ignore_set
+
+            # update_set: Filenames that are in both old repodata and new repodata,
+            #     and whose contents have changed based on file size or mtime. We're
+            #     not using md5 here because it takes too long. If needing to do full md5 checks,
+            #     use the --deep-integrity-check flag / self.deep_integrity_check option.
+
+            # XXX is the 'WITH' statement the best way to make LEFT JOIN return
+            # null rows from cached?
+            update_set_query = cache.db.execute(
+                """
+                WITH cached AS (
+                SELECT
+                    path,
+                    mtime
+                FROM
+                    stat
+                WHERE
+                    stage = 'indexed'
+                ),
+                fs AS (
+                SELECT
+                    path,
+                    mtime
+                FROM
+                    stat
+                WHERE
+                    stage = 'fs'
+                )
+                SELECT
+                    fs.path,
+                    fs.mtime
+                    from
+                    fs
+                LEFT JOIN cached USING (path)
+                WHERE
+                fs.path LIKE :path_like
+                AND (floor(fs.mtime) != floor(cached.mtime) OR cached.path IS NULL)
+                """,
+                {"path_like": path_like},
+            )
+
+            update_set = {fn.rpartition("/")[-1] for fn in update_set_query}
+
+            # unchanged_set: packages in old repodata whose information can carry straight
+            #     across to new repodata
+            unchanged_set = sorted(
+                old_repodata_fns - update_set - remove_set - ignore_set
+            )
+
+            # clean up removed files
+            removed_set = old_repodata_fns - fns_in_subdir
+            for fn in removed_set:
+                if fn in stat_cache:
+                    del stat_cache[fn]
+
+            new_repodata_packages = {
+                k: v
+                for k, v in old_repodata.get("packages", {}).items()
+                if k in unchanged_set
+            }
+            new_repodata_conda_packages = {
+                k: v
+                for k, v in old_repodata.get("packages.conda", {}).items()
+                if k in unchanged_set
+            }
+
+            for k in unchanged_set:
+                if not (k in new_repodata_packages or k in new_repodata_conda_packages):
+                    # XXX select more than one index at a time
+                    fn, rec = cache.load_index_from_cache(fn)
+                    # this is how we pass an exception through.  When fn == rec, there's been a problem,
+                    #    and we need to reload this file
+                    if fn == rec:
+                        update_set.add(fn)
+                    else:
+                        if fn.endswith(CONDA_PACKAGE_EXTENSION_V1):
+                            new_repodata_packages[fn] = rec
+                        else:
+                            new_repodata_conda_packages[fn] = rec
+
+            # Invalidate cached files for update_set.
+            # Extract and cache update_set and add_set, then add to new_repodata_packages.
+            # This is also where we update the contents of the stat_cache for successfully
+            #   extracted packages.
+            # Sorting here prioritizes .conda files ('c') over .tar.bz2 files ('b')
+            hash_extract_set = tuple(concatv(add_set, update_set))
+
+            extract_func = functools.partial(
+                cache.extract_to_cache, self.channel_root, subdir
+            )
+            # split up the set by .conda packages first, then .tar.bz2.  This avoids race conditions
+            #    with execution in parallel that would end up in the same place.
+            for conda_format in tqdm(
+                CONDA_PACKAGE_EXTENSIONS,
+                desc="File format",
+                disable=(verbose or not progress),
+                leave=False,
+            ):
+                for fn, mtime, size, index_json in tqdm(
+                    self.thread_executor.map(  # tries to pickle cache.db = sqlite connection
+                        extract_func,
+                        (fn for fn in hash_extract_set if fn.endswith(conda_format)),
+                    ),
+                    desc="hash & extract packages for %s" % subdir,
+                    disable=(verbose or not progress),
+                    leave=False,
+                ):
+
+                    # fn can be None if the file was corrupt or no longer there
+                    if fn and mtime:
+                        stat_cache[fn] = {"mtime": int(mtime), "size": size}
+                        if index_json:
+                            if fn.endswith(CONDA_PACKAGE_EXTENSION_V2):
+                                new_repodata_conda_packages[fn] = index_json
+                            else:
+                                new_repodata_packages[fn] = index_json
+                        else:
+                            log.error(
+                                "Package at %s did not contain valid index.json data.  Please"
+                                " check the file and remove/redownload if necessary to obtain "
+                                "a valid package." % os.path.join(subdir_path, fn)
+                            )
+
+            new_repodata = {
+                "packages": new_repodata_packages,
+                "packages.conda": new_repodata_conda_packages,
+                "info": {
+                    "subdir": subdir,
+                },
+                "repodata_version": REPODATA_VERSION,
+                "removed": sorted(list(ignore_set)),
+            }
+        finally:
+            if stat_cache != stat_cache_original:
+                cache.save_stat_cache(stat_cache)
+        return new_repodata
+
     def _calculate_update_set(
         self,
         subdir,

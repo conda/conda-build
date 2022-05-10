@@ -86,15 +86,24 @@ def create(conn):
         #     "size": 22088344
         #   },
         # DATETIME(mtime, 'unixepoch')
+        # May or may not need all these columns
         conn.execute(
-            "CREATE TABLE IF NOT EXISTS stat (path TEXT PRIMARY KEY, mtime INTEGER, size INTEGER)"
+            """CREATE TABLE IF NOT EXISTS stat (
+                stage TEXT NOT NULL DEFAULT 'indexed',
+                path TEXT NOT NULL,
+                mtime NUMBER,
+                size INTEGER,
+                sha256 TEXT,
+                md5 TEXT,
+                last_modified TEXT,
+                etag TEXT
+            )"""
         )
 
-        try:
-            conn.execute("SELECT stage FROM stat LIMIT 1")
-        except sqlite3.OperationalError:
-            for colname in ("stage", "sha256", "md5", "last_modified", "etag"):
-                conn.execute(f"ALTER TABLE stat ADD COLUMN {colname} TEXT")
+        # XXX (stage, path) might be more useful, see EXPLAIN QUERY PLAN
+        conn.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_stat ON stat (path, stage)"
+        )
 
 
 def extract_cache(path):

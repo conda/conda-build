@@ -136,16 +136,17 @@ class CondaIndexCache:
             # XXX work correctly with windows \ separator
             os.path.basename(row["path"]): {"mtime": row["mtime"], "size": row["size"]}
             for row in self.db.execute(
-                "SELECT path, mtime, size FROM stat WHERE stage IS NULL"
+                "SELECT path, mtime, size FROM stat WHERE stage='indexed'"
             )
         }
 
     def save_stat_cache(self, stat_cache: dict):
         with self.db:
-            self.db.execute("DELETE FROM stat WHERE stage IS NULL")
+            # XXX 'cached'?
+            self.db.execute("DELETE FROM stat WHERE stage='indexed'")
 
             self.db.executemany(
-                "INSERT OR REPLACE INTO stat (path, mtime, size, stage) VALUES (:path, :mtime, :size, NULL)",
+                "INSERT OR REPLACE INTO stat (path, mtime, size, stage) VALUES (:path, :mtime, :size, 'indexed')",
                 (
                     (
                         self.database_path(fn),
