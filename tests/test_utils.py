@@ -6,7 +6,6 @@ import sys
 from typing import NamedTuple
 
 import pytest
-from pyfakefs.fake_filesystem import FakeFilesystem
 
 from conda_build.exceptions import BuildLockError
 import conda_build.utils as utils
@@ -504,11 +503,13 @@ IS_CONDA_PKG_DATA = (
 
 
 @pytest.mark.parametrize('value,expected,is_dir,create', IS_CONDA_PKG_DATA)
-def test_is_conda_pkg(fs: FakeFilesystem, value: str, expected: bool, is_dir: bool, create: bool):
+def test_is_conda_pkg(tmpdir, value: str, expected: bool, is_dir: bool, create: bool):
     if create:
+        value = os.path.join(tmpdir, value)
         if is_dir:
-            fs.create_dir(value)
+            os.mkdir(value)
         else:
-            fs.create_file(value)
+            with open(value, "w") as fp:
+                fp.write("test")
 
     assert utils.is_conda_pkg(value) == expected
