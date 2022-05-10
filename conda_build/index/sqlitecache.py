@@ -275,7 +275,12 @@ class CondaIndexCache:
                         continue  # not cached
 
                     parameters = {"path": database_path, "data": have.get(have_path)}
-                    if parameters["data"] is not None:
+                    if have_path == ICON_PATH:
+                        query = """
+                            INSERT OR IGNORE into icon (path, icon_png)
+                            VALUES (:path, :data)
+                            """
+                    elif parameters["data"] is not None:
                         query = f"""
                             INSERT OR IGNORE INTO {table} (path, {table})
                             VALUES (:path, json(:data))
@@ -335,7 +340,14 @@ class CondaIndexCache:
             retval = fn, mtime, size, index_json
 
         # stdlib zipfile: BadZipFile; tar: OSError: Invalid data stream
-        except (InvalidArchiveError, KeyError, EOFError, JSONDecodeError, BadZipFile, OSError):
+        except (
+            InvalidArchiveError,
+            KeyError,
+            EOFError,
+            JSONDecodeError,
+            BadZipFile,
+            OSError,
+        ):
             if not second_try:
                 # recursion
                 return self._extract_to_cache(channel_root, subdir, fn, second_try=True)
@@ -375,7 +387,9 @@ class CondaIndexCache:
         LIMIT 2
         """  # each table must USING (path) or will cross join
 
-        rows = self.db.execute(UNHOLY_UNION, {"path": self.database_path(fn)}).fetchall()
+        rows = self.db.execute(
+            UNHOLY_UNION, {"path": self.database_path(fn)}
+        ).fetchall()
         assert len(rows) < 2
         try:
             row = rows[0]

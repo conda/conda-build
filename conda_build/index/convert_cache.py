@@ -101,9 +101,7 @@ def create(conn):
         )
 
         # XXX (stage, path) might be more useful, see EXPLAIN QUERY PLAN
-        conn.execute(
-            "CREATE UNIQUE INDEX IF NOT EXISTS idx_stat ON stat (path, stage)"
-        )
+        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_stat ON stat (path, stage)")
 
 
 def extract_cache(path):
