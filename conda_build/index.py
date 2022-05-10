@@ -926,7 +926,9 @@ class ChannelIndex:
             )
             # unchanged_set: packages in old repodata whose information can carry straight
             #     across to new repodata
-            unchanged_set = sorted(old_repodata_fns - update_set - remove_set - ignore_set)
+            unchanged_set = set(old_repodata_fns - update_set - remove_set - ignore_set)
+
+            assert isinstance(unchanged_set, set) # faster `in` queries
 
             # clean up removed files
             removed_set = (old_repodata_fns - fns_in_subdir)
@@ -937,7 +939,7 @@ class ChannelIndex:
             new_repodata_packages = {k: v for k, v in old_repodata.get('packages', {}).items() if k in unchanged_set}
             new_repodata_conda_packages = {k: v for k, v in old_repodata.get('packages.conda', {}).items() if k in unchanged_set}
 
-            for k in unchanged_set:
+            for k in sorted(unchanged_set):
                 if not (k in new_repodata_packages or k in new_repodata_conda_packages):
                     fn, rec = ChannelIndex._load_index_from_cache(self.channel_root, subdir, fn, stat_cache)
                     # this is how we pass an exception through.  When fn == rec, there's been a problem,
