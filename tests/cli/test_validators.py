@@ -1,8 +1,8 @@
+import os
 from argparse import ArgumentError
 from typing import Union
 
 import pytest
-from pyfakefs.fake_filesystem import FakeFilesystem
 
 from conda_build.cli import validators as valid
 
@@ -19,13 +19,16 @@ from conda_build.cli import validators as valid
     ],
 )
 def test_validate_is_conda_pkg_or_recipe_dir(
-        fs: FakeFilesystem, file_or_folder: str, expected: Union[str, bool], is_dir: bool, create: bool
+    file_or_folder: str, expected: Union[str, bool], is_dir: bool, create: bool, tmpdir
 ):
     if create:
+        file_or_folder = os.path.join(tmpdir, file_or_folder)
+        expected = os.path.join(tmpdir, expected)
         if is_dir:
-            fs.create_dir(file_or_folder)
+            os.mkdir(file_or_folder)
         else:
-            fs.create_file(file_or_folder)
+            with open(file_or_folder, "w") as fp:
+                fp.write("test")
 
     try:
         received = valid.validate_is_conda_pkg_or_recipe_dir(file_or_folder)
