@@ -176,13 +176,13 @@ def convert_cache(conn, cache_generator, override_channel=None):
             for match, member in chunk:
 
                 if match["path"] == "stat.json":
-                    conn.execute("DELETE FROM stat")
+                    conn.execute("DELETE FROM stat WHERE stage='indexed'")
                     for key, value in json.load(member).items():
                         value[
                             "path"
                         ] = f"{override_channel or match['channel']}/{match['subdir']}/{key}"
                         conn.execute(
-                            "INSERT OR REPLACE INTO stat (path, mtime, size) VALUES (:path, :mtime, :size)",
+                            "INSERT OR REPLACE INTO stat (path, mtime, size, stage) VALUES (:path, :mtime, :size, 'indexed')",
                             value,
                         )
 
