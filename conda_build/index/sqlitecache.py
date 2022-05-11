@@ -3,6 +3,7 @@ cache conda indexing metadata in sqlite.
 """
 
 from functools import cached_property
+import logging
 import os
 import os.path
 import json
@@ -36,7 +37,7 @@ from ..utils import (
 from conda_package_handling.utils import checksums
 
 
-log = get_logger(__name__)
+log = logging.getLogger(__name__) # get_logger(__name__) # use stdlib logging for now, to get messages
 
 
 INDEX_JSON_PATH = "info/index.json"
@@ -82,6 +83,11 @@ COMPUTED = {"info/post_install.json"}
 
 class CondaIndexCache:
     def __init__(self, channel_root, channel, subdir):
+        """
+        channel_root: directory containing platform subdir's, e.g. /clones/conda-forge
+        channel: name of channel, e.g. 'main', 'conda-forge'
+        subdir: platform subdir, e.g. 'linux-64'
+        """
         self.channel_root = channel_root
         self.channel = channel
         self.subdir = subdir
@@ -93,7 +99,9 @@ class CondaIndexCache:
         self.db_filename = os.path.join(self.cache_dir, "cache.db")
         self.cache_is_brand_new = not os.path.exists(self.db_filename)
 
-        os.makedirs(self.cache_dir, exist_ok=True)
+        # the subdir should already exist
+        if not os.path.exists(self.cache_dir):
+            os.mkdir(self.cache_dir)
 
         log.debug(f"{self.db_filename=} {self.cache_is_brand_new=}")
 
@@ -203,7 +211,8 @@ class CondaIndexCache:
         log.debug("sql hashing, extracting, and caching %s" % fn)
 
         try:
-            # skip re-use conda/bz2 cache in sqlite version
+            # we no longer re-use the .conda cache for .tar.bz2
+            # faster conda extraction should preserve enough performance
             database_path = self.database_path(fn)
 
             # None, or a tuple containing the row
@@ -214,8 +223,6 @@ class CondaIndexCache:
             ).fetchone()
 
             if cached_row and not second_try:
-                # XXX load cached cached index.json from sql in bulk
-                # sqlite has very low latency but we can do better
                 index_json = json.loads(cached_row[0])
 
             else:

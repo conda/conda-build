@@ -1012,6 +1012,13 @@ class ChannelIndex:
                 self._write_channeldata(channel_data)
 
     def index_subdir(self, subdir, index_file=None, verbose=False, progress=False):
+        return self.index_subdir_nosql(
+            subdir, index_file=index_file, verbose=verbose, progress=progress
+        )
+
+    def index_subdir_nosql(
+        self, subdir, index_file=None, verbose=False, progress=False
+    ):
         subdir_path = join(self.channel_root, subdir)
 
         cache = sqlitecache.CondaIndexCache(
@@ -1019,6 +1026,8 @@ class ChannelIndex:
         )
         if cache.cache_is_brand_new:
             # guaranteed to be only thread doing this?
+            if verbose:
+                log.info("Convert cache for %s" % subdir_path)
             cache.convert()
 
         repodata_json_path = join(subdir_path, REPODATA_FROM_PKGS_JSON_FN)
@@ -1089,9 +1098,7 @@ class ChannelIndex:
             )
             # unchanged_set: packages in old repodata whose information can carry straight
             #     across to new repodata
-            unchanged_set = sorted(
-                old_repodata_fns - update_set - remove_set - ignore_set
-            )
+            unchanged_set = old_repodata_fns - update_set - remove_set - ignore_set
 
             # clean up removed files
             removed_set = old_repodata_fns - fns_in_subdir
@@ -1110,7 +1117,7 @@ class ChannelIndex:
                 if k in unchanged_set
             }
 
-            for k in unchanged_set:
+            for k in sorted(unchanged_set):
                 if not (k in new_repodata_packages or k in new_repodata_conda_packages):
                     # XXX select more than one index at a time
                     fn, rec = cache.load_index_from_cache(fn)
@@ -1199,6 +1206,7 @@ class ChannelIndex:
         # gather conda package filenames in subdir
         # we'll process these first, because reading their metadata is much faster
         # XXX eliminate all listdir. that and stat calls are significant.
+        log.info("listdir")
         fns_in_subdir = {
             fn for fn in os.listdir(subdir_path) if fn.endswith((".conda", ".tar.bz2"))
         }
@@ -1213,6 +1221,7 @@ class ChannelIndex:
             # log.info("no repodata found at %s", repodata_json_path)
             old_repodata = {}
 
+        # could go in a temporary table
         old_repodata_packages = old_repodata.get("packages", {})
         old_repodata_conda_packages = old_repodata.get("packages.conda", {})
         old_repodata_fns = set(old_repodata_packages) | set(old_repodata_conda_packages)
@@ -1229,6 +1238,7 @@ class ChannelIndex:
                     "size": stat.st_size,
                 }
 
+        log.info("save fs state")
         with cache.db:
             # XXX and path like channel/% if multiple channels share cache
             cache.db.execute("DELETE FROM stat WHERE stage='fs'")
@@ -1240,6 +1250,7 @@ class ChannelIndex:
                 listdir_stat(),
             )
 
+        log.info("repodata into stat")
         # put repodata into stat table. no mtime.
         with cache.db:
             cache.db.execute("DELETE FROM stat WHERE stage='repodata'")
@@ -1251,15 +1262,19 @@ class ChannelIndex:
                 ({"path": cache.database_path(fn)} for fn in old_repodata_fns),
             )
 
+        print("load stat cache")
         stat_cache = cache.stat_cache()
 
+        print("copy stat cache")
         stat_cache_original = stat_cache.copy()
 
         # filter by paths starting with
-        path_like = f"{self.channel_name}/{self.subdir}/%"
+        # should this be in sqlitecache?
+        path_like = f"{self.channel_name}/{subdir}/%"
 
         # in repodata but not on filesystem
         # remove_set = old_repodata_fns - fns_in_subdir
+        print("calculate remove set")
         remove_set = {
             fn.rpartition("/")[-1]
             for fn in cache.db.execute(
@@ -1285,6 +1300,7 @@ class ChannelIndex:
             else:
                 # on filesystem but not in repodata
                 # add_set = fns_in_subdir - old_repodata_fns
+                print("calculate add set")
                 add_set = {
                     fn.rpartition("/")[-1]
                     for fn in cache.db.execute(
@@ -1303,6 +1319,7 @@ class ChannelIndex:
 
             # XXX is the 'WITH' statement the best way to make LEFT JOIN return
             # null rows from cached?
+            print("calculate update set")
             update_set_query = cache.db.execute(
                 """
                 WITH cached AS (
@@ -1338,30 +1355,36 @@ class ChannelIndex:
 
             update_set = {fn.rpartition("/")[-1] for fn in update_set_query}
 
+            print("calculate unchanged set")
             # unchanged_set: packages in old repodata whose information can carry straight
             #     across to new repodata
-            unchanged_set = sorted(
-                old_repodata_fns - update_set - remove_set - ignore_set
-            )
+            unchanged_set = old_repodata_fns - update_set - remove_set - ignore_set
 
+            assert isinstance(unchanged_set, set)  # fast `in` query
+
+            log.info("clean removed")
             # clean up removed files
             removed_set = old_repodata_fns - fns_in_subdir
             for fn in removed_set:
                 if fn in stat_cache:
                     del stat_cache[fn]
 
+            log.info("new repodata packages")
             new_repodata_packages = {
                 k: v
                 for k, v in old_repodata.get("packages", {}).items()
                 if k in unchanged_set
             }
+            log.info("new repodata conda packages")
             new_repodata_conda_packages = {
                 k: v
                 for k, v in old_repodata.get("packages.conda", {}).items()
                 if k in unchanged_set
             }
 
-            for k in unchanged_set:
+            log.info("for k in unchanged set")
+            # was sorted before. necessary?
+            for k in sorted(unchanged_set):
                 if not (k in new_repodata_packages or k in new_repodata_conda_packages):
                     # XXX select more than one index at a time
                     fn, rec = cache.load_index_from_cache(fn)
@@ -1382,6 +1405,7 @@ class ChannelIndex:
             # Sorting here prioritizes .conda files ('c') over .tar.bz2 files ('b')
             hash_extract_set = tuple(concatv(add_set, update_set))
 
+            log.info("extraction")
             extract_func = functools.partial(
                 cache.extract_to_cache, self.channel_root, subdir
             )

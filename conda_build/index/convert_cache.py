@@ -1,5 +1,5 @@
 """
-Given a conda <subdir>/.cache directory as a .tar.bz2,
+Given a conda <subdir>/.cache directory or a .tar.bz2 of that directory,
 
 Create a sqlite database with the same data.
 
@@ -13,15 +13,14 @@ import os.path
 import re
 import json
 import sqlite3
+import logging
 
 from more_itertools import ichunked
 from contextlib import closing
 
 from . import common
 
-# email us if you're thinking about downloading conda-forge to
-# regenerate this 264MB file
-CACHE_ARCHIVE = os.path.expanduser("~/Downloads/linux-64-cache.tar.bz2")
+log = logging.getLogger(__name__)
 
 PATH_INFO = re.compile(
     r"""
@@ -100,7 +99,6 @@ def create(conn):
             )"""
         )
 
-        # XXX (stage, path) might be more useful, see EXPLAIN QUERY PLAN
         conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_stat ON stat (path, stage)")
 
 
@@ -119,12 +117,12 @@ def extract_cache(path):
             dirnames.add(os.path.dirname(entry.name))
             next_len = len(dirnames)
             if last_len < next_len:
-                print(f"{next_len} directories, {entry.name}")
+                log.info(f"CONVERT {os.path.dirname(entry.name)}")
             last_len = next_len
     except KeyboardInterrupt:
-        print("Interrupted!")
+        log.warn("Interrupted!")
 
-    print(dirnames)
+    log.info("%s", dirnames)
 
 
 def extract_cache_filesystem(path):
@@ -135,13 +133,17 @@ def extract_cache_filesystem(path):
     """
     assert str(path).endswith(".cache"), f"{path} must end with .cache"
     for root, _, files in os.walk(path):
+        log.info(f"CONVERT {os.path.basename(root)}")
         for file in files:
             fullpath = os.path.join(root, file)
             posixpath = "/".join(fullpath.split(os.sep))
             path_info = PATH_INFO.search(posixpath)
             if path_info:
-                with open(fullpath, "rb") as entry:
-                    yield path_info, entry
+                try:
+                    with open(fullpath, "rb") as entry:
+                        yield path_info, entry
+                except PermissionError as e:
+                    log.warn("Permission error: %s %s", fullpath, e)
 
 
 # regex excludes arbitrary names
@@ -169,7 +171,7 @@ def convert_cache(conn, cache_generator, override_channel=None):
     """
     # chunked must be as lazy as possible to prevent tar seeks
     for i, chunk in enumerate(ichunked(cache_generator, CHUNK_SIZE)):
-        print(f"BEGIN {i}")
+        log.info(f"BEGIN BATCH {i}")
         with conn:  # transaction
             for match, member in chunk:
 
@@ -190,16 +192,21 @@ def convert_cache(conn, cache_generator, override_channel=None):
                     # 'kind': 'post_install', 'basename':
                     # 'vim-8.2.2905-py36he996604_0.tar.bz2', 'ext': '.json'}
                     table = TABLE_MAP.get(match["kind"], match["kind"])
-                    conn.execute(
-                        f"""
-                    INSERT OR IGNORE INTO {table} (path, {table})
-                    VALUES (:path, json(:data))
-                    """,
-                        {
-                            "path": db_path(match, override_channel=override_channel),
-                            "data": member.read(),
-                        },
-                    )
+                    try:
+                        conn.execute(
+                            f"""
+                        INSERT OR IGNORE INTO {table} (path, {table})
+                        VALUES (:path, json(:data))
+                        """,
+                            {
+                                "path": db_path(
+                                    match, override_channel=override_channel
+                                ),
+                                "data": member.read(),
+                            },
+                        )
+                    except sqlite3.OperationalError as e:
+                        log.warn("SQL error. Not JSON? %s %s", match.groups(0), e)
 
                 elif match["kind"] == "icon":
                     conn.execute(
@@ -214,14 +221,14 @@ def convert_cache(conn, cache_generator, override_channel=None):
                     )
 
                 else:
-                    print("unhandled", match.groupdict())
+                    log.warn("Unhandled", match.groupdict())
 
 
-def go():
+def test_from_archive(archive_path):
     conn = common.connect("linux-64-cache.db")
     create(conn)
     with closing(conn):
-        convert_cache(conn, extract_cache(CACHE_ARCHIVE))
+        convert_cache(conn, extract_cache(archive_path))
 
 
 def test():
@@ -230,7 +237,11 @@ def test():
 
 if __name__ == "__main__":
     test()
-    go()
+    # email us if you're thinking about downloading conda-forge to
+    # regenerate this 264MB file
+    CACHE_ARCHIVE = os.path.expanduser("~/Downloads/linux-64-cache.tar.bz2")
+    test_from_archive(CACHE_ARCHIVE)
+
 
 # typically 600-10,000 MB
 MB_PER_DAY = """
