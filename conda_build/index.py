@@ -928,7 +928,7 @@ class ChannelIndex:
             #     across to new repodata
             unchanged_set = set(old_repodata_fns - update_set - remove_set - ignore_set)
 
-            assert isinstance(unchanged_set, set) # faster `in` queries
+            assert isinstance(unchanged_set, set)   # faster `in` queries
 
             # clean up removed files
             removed_set = (old_repodata_fns - fns_in_subdir)
