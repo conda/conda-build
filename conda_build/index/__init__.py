@@ -1484,9 +1484,6 @@ class ChannelIndex:
                 indent=2,
                 sort_keys=True,
             )
-            .replace(
-                "':'", "': '"
-            )  # XXX stop doing this; doesn't appear to change anything
             .encode("utf-8")
         )
         write_result = _maybe_write(
@@ -1689,9 +1686,7 @@ class ChannelIndex:
             if "commits" in pkg_dict:
                 del pkg_dict["commits"]
         channeldata_path = join(self.channel_root, "channeldata.json")
-        content = json.dumps(channeldata, indent=2, sort_keys=True).replace(
-            "':'", "': '"
-        )
+        content = json.dumps(channeldata, indent=2, sort_keys=True)
         _maybe_write(channeldata_path, content, True)
 
     def _load_patch_instructions_tarball(self, subdir, patch_generator):
