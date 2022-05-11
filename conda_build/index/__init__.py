@@ -1474,7 +1474,7 @@ class ChannelIndex:
         for fn in tqdm(
             iter(candidate_fns),
             desc="Finding updated files",
-            disable=(verbose or not progress),
+            disable=not (verbose or progress),
             leave=False,
         ):
             stat_key = fn  # XXX emulate database unique keys or rewrite _update functions in SQL

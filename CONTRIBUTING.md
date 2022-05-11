@@ -62,6 +62,12 @@ impact the functionality of `conda/conda-build` installed in your base environme
     conda-build 3.21.5+17.gcde7b306
 ```
 
+## Debugging
+
+```bash
+CONDA_DEBUG=1 conda <command>
+```
+
 ## Testing
 
 Running our test suite requires cloning one other repo at the same level as `conda-build`:
