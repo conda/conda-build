@@ -5,6 +5,7 @@ from os.path import dirname, isdir, join, isfile
 import requests
 import shutil
 import tarfile
+import functools
 
 import pytest
 from unittest import mock
@@ -21,6 +22,12 @@ from .utils import metadata_dir, archive_dir
 log = getLogger(__name__)
 
 # NOTE: The recipes for test packages used in this module are at https://github.com/kalefranz/conda-test-packages
+@functools.cache
+def download_cached(url):
+    """
+    Store packages in memory during the test run, to avoid each individual test re-downloading.
+    """
+    return requests.get(url)
 
 
 def download(url, local_path):
@@ -29,9 +36,10 @@ def download(url, local_path):
     #       repository once their use stabilizes.
     if not isdir(dirname(local_path)):
         os.makedirs(dirname(local_path))
-    r = requests.get(url, stream=True)
+    r = download_cached(url)
     with open(local_path, 'wb') as f:
-        shutil.copyfileobj(r.raw, f)
+        for chunk in r.iter_content():
+            f.write(chunk)
     return local_path
 
 
