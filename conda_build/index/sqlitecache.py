@@ -129,6 +129,7 @@ class CondaIndexCache:
         """
         Load filesystem cache into sqlite.
         """
+        # if this is interrupted, we may have to re-extract the missing files
         if self.cache_is_brand_new or force:
             convert_cache.convert_cache(
                 self.db,
@@ -208,7 +209,7 @@ class CondaIndexCache:
         mtime = stat_result.st_mtime
         retval = fn, mtime, size, None
 
-        log.debug("sql hashing, extracting, and caching %s" % fn)
+        log.info("sql hashing, extracting, and caching %s" % fn)
 
         try:
             # we no longer re-use the .conda cache for .tar.bz2
