@@ -22,7 +22,7 @@ from .utils import metadata_dir, archive_dir
 log = getLogger(__name__)
 
 # NOTE: The recipes for test packages used in this module are at https://github.com/kalefranz/conda-test-packages
-@functools.cache
+@functools.lru_cache(maxsize=None)
 def download_cached(url):
     """
     Store packages in memory during the test run, to avoid each individual test re-downloading.
