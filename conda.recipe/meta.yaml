@@ -46,6 +46,7 @@ requirements:
     - six
     - glob2  >=0.6
     - pytz
+    - toml
     - tqdm
     - conda-package-handling  >=1.3
     - python-libarchive-c

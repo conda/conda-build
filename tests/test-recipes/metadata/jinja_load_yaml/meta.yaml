@@ -1,0 +1,23 @@
+{% set env = load_file_data("environment.yml", "yaml", from_recipe_dir=True) %}
+{% set deps = env.get("dependencies", []) %}
+
+package:
+  name: {{ env.get("name") }}
+  version: 1.2.3
+
+source:
+  path: ../../test-package
+
+requirements:
+  build:
+    - {{ deps[0].replace("=", " =") }}
+    - pip
+
+  run:
+  {% for dep in deps -%}
+    - {{ dep.replace("=", " =") }}
+  {% endfor %}
+
+build:
+  script: {{ PYTHON }} -m pip install --no-deps --ignore-installed .
+  noarch: python
