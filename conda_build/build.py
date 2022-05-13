@@ -1689,8 +1689,13 @@ def bundle_conda(output, metadata, env, stats, **kw):
         else CONDA_PACKAGE_EXTENSION_V1
     )
     with TemporaryDirectory() as tmp:
-        conda_package_handling.api.create(metadata.config.host_prefix, files,
-                                          basename + ext, out_folder=tmp)
+        conda_package_handling.api.create(
+            metadata.config.host_prefix,
+            files,
+            basename + ext,
+            out_folder=tmp,
+            compression_tuple=metadata.config.compression_tuple,
+        )
         tmp_archives = [os.path.join(tmp, basename + ext)]
 
         # we're done building, perform some checks
