@@ -1,5 +1,4 @@
 # Copyright (C) 2018 Anaconda, Inc
-# SPDX-License-Identifier: Proprietary
 
 import bz2
 from collections import OrderedDict
@@ -61,7 +60,6 @@ from ..utils import (
     FileNotFoundError,
     JSONDecodeError,
     get_logger,
-    glob,
 )
 
 from . import sqlitecache
@@ -128,9 +126,9 @@ LOCKFILE_NAME = ".lock"
 
 
 try:
-    from cytoolz.itertoolz import concat, concatv, groupby
+    from cytoolz.itertoolz import concatv, groupby
 except ImportError:  # pragma: no cover
-    from conda._vendor.toolz.itertoolz import concat, concatv, groupby  # NOQA
+    from conda._vendor.toolz.itertoolz import concatv, groupby  # NOQA
 
 
 def get_build_index(
