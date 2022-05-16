@@ -51,11 +51,11 @@ from conda.core.subdir_data import SubdirData
 from conda.models.channel import Channel
 
 from conda_build import conda_interface, utils
-from .conda_interface import MatchSpec, VersionOrder, human_bytes, context
-from .conda_interface import CondaError, CondaHTTPError, get_index, url_path
-from .conda_interface import TemporaryDirectory
-from .conda_interface import Resolve
-from .utils import (
+from ..conda_interface import MatchSpec, VersionOrder, human_bytes, context
+from ..conda_interface import CondaError, CondaHTTPError, get_index, url_path
+from ..conda_interface import TemporaryDirectory
+from ..conda_interface import Resolve
+from ..utils import (
     CONDA_PACKAGE_EXTENSION_V1,
     CONDA_PACKAGE_EXTENSION_V2,
     CONDA_PACKAGE_EXTENSIONS,
