@@ -1788,10 +1788,10 @@ variables are booleans.
      - True if the platform is Linux.
    * - linux32
      - True if the platform is Linux and the Python architecture
-       is 32-bit.
+       is 32-bit and uses x86.
    * - linux64
      - True if the platform is Linux and the Python architecture
-       is 64-bit.
+       is 64-bit and uses x86.
    * - armv6l
      - True if the platform is Linux and the Python architecture
        is armv6l.
