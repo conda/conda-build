@@ -2,6 +2,7 @@ from collections import OrderedDict, defaultdict
 import contextlib
 import fnmatch
 import hashlib
+from itertools import filterfalse
 import json
 from locale import getpreferredencoding
 import libarchive
@@ -1008,6 +1009,7 @@ def get_stdlib_dir(prefix, py_ver):
     else:
         lib_dir = os.path.join(prefix, 'lib')
         python_folder = glob(os.path.join(lib_dir, 'python?.*'))
+        python_folder = sorted(filterfalse(islink, python_folder))
         if python_folder:
             lib_dir = os.path.join(lib_dir, python_folder[0])
         else:
