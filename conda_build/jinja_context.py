@@ -169,45 +169,36 @@ def load_npm():
         return json.load(pkg)
 
 
-def _find_file(file_name: str, from_recipe_dir: bool, recipe_dir: str,
-               permit_undefined_jinja: bool, config) -> Optional[str]:
+def _find_file(file_name: str, from_recipe_dir: bool, recipe_dir: str, config) -> str:
     """ Get the path to the given file which may be in the work_dir
     or in the recipe_dir.
 
     Note, the returned file name may not exist.
     """
     if os.path.isabs(file_name):
-        return file_name
-    if from_recipe_dir and recipe_dir:
-        return os.path.abspath(os.path.join(recipe_dir, file_name))
+        path = file_name
+    elif from_recipe_dir and recipe_dir:
+        path = os.path.abspath(os.path.join(recipe_dir, file_name))
     elif os.path.exists(config.work_dir):
-        return os.path.join(config.work_dir, file_name)
-    else:
-        message = ("Did not find {} file in manually specified location, and source "
-                  "not downloaded yet.".format(file_name))
-        if permit_undefined_jinja:
-            log.debug(message)
-            return None
-        else:
-            raise RuntimeError(message)
+        path = os.path.join(config.work_dir, file_name)
+
+    if not os.path.isfile(path):
+        raise FileNotFoundError(f"No such file: {file_name!r}")
+    return path
 
 
 def load_file_regex(config, load_file, regex_pattern, from_recipe_dir=False,
                     recipe_dir=None, permit_undefined_jinja=True):
-    match = False
-
-    load_file = _find_file(load_file, from_recipe_dir, recipe_dir, permit_undefined_jinja, config)
-    if not load_file:
-        return {}
-
-    if os.path.isfile(load_file):
-        with open(load_file) as lfile:
-            match = re.search(regex_pattern, lfile.read())
+    try:
+        load_file = _find_file(load_file, from_recipe_dir, recipe_dir, config)
+    except FileNotFoundError as e:
+        if permit_undefined_jinja:
+            log.debug(e)
+            return None
+        raise
     else:
-        if not permit_undefined_jinja:
-            raise TypeError(f'{load_file} is not a file that can be read')
-
-    return match if match else None
+        with open(load_file) as lfile:
+            return re.search(regex_pattern, lfile.read())
 
 
 cached_env_dependencies = {}
@@ -532,18 +523,16 @@ def load_file_data(filename: str, fmt: Optional[str] = None, *args, config=None,
         load_file_data("my_file.json")
         load_file_data("my_json_file_without_ext", "json")
     """
-    file_path = _find_file(filename, from_recipe_dir, recipe_dir, permit_undefined_jinja, config)
-    if not file_path:
-        return {}
-
-    if os.path.isfile(file_path):
+    try:
+        file_path = _find_file(filename, from_recipe_dir, recipe_dir, config)
+    except FileNotFoundError as e:
+        if permit_undefined_jinja:
+            log.debug(e)
+            return {}
+        raise
+    else:
         with open(file_path) as f:
             return _load_data(f, fmt or pathlib.Path(filename).suffix.lstrip("."), *args, **kwargs)
-    else:
-        if not permit_undefined_jinja:
-            raise TypeError(f'{filename} is not a file that can be read')
-
-    return {}
 
 
 def load_str_data(string: str, fmt: str, *args, **kwargs):
