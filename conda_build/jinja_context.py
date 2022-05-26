@@ -507,11 +507,13 @@ _file_parsers = {
 
 def _load_data(stream: IO, fmt: str, *args, **kwargs) -> Any:
     try:
-        return _file_parsers[fmt.lower()](stream, *args, **kwargs)
+        load = _file_parsers[fmt.lower()]
     except KeyError:
         raise ValueError(
             f"Unknown file format: {fmt}. Allowed formats: {list(_file_parsers.keys())}"
         )
+    else:
+        return load(stream, *args, **kwargs)
 
 
 def load_file_data(filename: str, fmt: Optional[str] = None, *args, config=None,
