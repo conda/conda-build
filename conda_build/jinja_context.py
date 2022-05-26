@@ -500,6 +500,7 @@ def resolved_packages(m, env, permit_undefined_jinja=False,
 _file_parsers = {
     "json": json.load,
     "yaml": yaml.safe_load,
+    "yml": yaml.safe_load,
     "toml": toml.load,
 }
 
