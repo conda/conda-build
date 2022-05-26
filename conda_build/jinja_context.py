@@ -7,6 +7,7 @@ import re
 import time
 import datetime
 from typing import IO, Any, Optional
+from warnings import warn
 
 import jinja2
 import toml
@@ -21,6 +22,9 @@ from .utils import copy_into, check_call_env, rm_rf, ensure_valid_spec
 from .variants import DEFAULT_COMPILERS
 from .exceptions import CondaBuildException
 from . import _load_setup_py_data
+
+
+log = get_logger(__name__)
 
 
 class UndefinedNeverFail(jinja2.Undefined):
@@ -136,7 +140,6 @@ def load_setup_py_data(m, setup_file='setup.py', from_recipe_dir=False, recipe_d
             pass
         except ImportError as e:
             if permit_undefined_jinja:
-                log = get_logger(__name__)
                 log.debug("Reading setup.py failed due to missing modules.  This is probably OK, "
                           "since it may succeed in later passes.  Watch for incomplete recipe "
                           "info, though.")
@@ -150,9 +153,11 @@ def load_setup_py_data(m, setup_file='setup.py', from_recipe_dir=False, recipe_d
 
 def load_setuptools(m, setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
                     permit_undefined_jinja=True):
-    log = get_logger(__name__)
-    log.warn("Deprecation notice: the load_setuptools function has been renamed to "
-             "load_setup_py_data.  load_setuptools will be removed in a future release.")
+    warn(
+        "conda_build.jinja_context.load_setuptools is pending deprecation in a future release. "
+        "Use conda_build.jinja_context.load_setup_py_data instead.",
+        PendingDeprecationWarning,
+    )
     return load_setup_py_data(m, setup_file=setup_file, from_recipe_dir=from_recipe_dir,
                               recipe_dir=recipe_dir, permit_undefined_jinja=permit_undefined_jinja)
 
@@ -181,7 +186,7 @@ def _find_file(file_name: str, from_recipe_dir: bool, recipe_dir: str,
         message = ("Did not find {} file in manually specified location, and source "
                   "not downloaded yet.".format(file_name))
         if permit_undefined_jinja:
-            get_logger(__name__).debug(message)
+            log.debug(message)
             return None
         else:
             raise RuntimeError(message)
