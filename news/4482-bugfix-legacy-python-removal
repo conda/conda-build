@@ -1,0 +1,19 @@
+### Enhancements
+
+* <news item>
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* Remove Python 2.7 imports removed in conda 4.13.0. (#4482)
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>
