@@ -1,0 +1,19 @@
+### Enhancements
+
+* Replace `is_dir` with `scandir` for `channel_root`. (#4273)
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* <news item>
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>
