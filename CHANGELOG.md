@@ -1,5 +1,57 @@
 [//]: # (current developments)
 
+## 3.21.9 (2022-05-27)
+
+### Enhancements
+
+* Replace `is_dir` with `scandir` for `channel_root`. (#4273)
+* Remove rpaths in `PREFIX/../` that doesn't start with `PREFIX`.
+  This includes `BUILD_PREFIX`, `SRC_DIR`. Previously it was only `BUILD_PREFIX`. (#4287)
+* Add `entry_points` to outputs in `FIELDS` schema. (#4389)
+* Support for `setuptools` 61+. (#4430)
+* Use `set` membership for faster indexing. (#4459)
+
+### Bug fixes
+
+* Remove rpaths that occur multiple times. (#4287)
+* Enable `bdist_conda` via `entry_point` mechanism supported also by `setuptools >=60.0.0`.
+  Usable via `from setuptools import setup` and `setup(distclass=conda_build.bdist_conda.CondaDistribution, ...)`. (#4368)
+* Patch `setuptools`'s vendored `distutils.core` as well. (#4434)
+* Resolve `conda debug` failure when a trailing slash path is provided. (#4448)
+* Fix import error caused by conda 4.13.0's removal of Python 2.7 code. (#4482)
+
+### Deprecations
+
+* Usage of `bdist_conda` via `from distutils.core import setup` and `distclass=distutils.command.bdist_conda.CondaDistribution`,
+  as that only works for `setuptools <60.0.0`. (#4368)
+* Remove Python 2.7 imports removed in conda 4.13.0. (#4482)
+
+### Other
+
+* Move Windows tests from Azure to GitHub Actions. (#4353, #4436)
+* Add pyupgrade to pre-commit. (#4374)
+* Move MacOS tests from Azure to GitHub Actions. (#4412, #4436, #4455)
+* Update `Makefile` for easier testing. (#4425)
+* Remove unused Travis CI configs. (#4438)
+
+### Contributors
+
+* @beeankha
+* @conda-bot
+* @dbast
+* @dholth made their first contribution in https://github.com/conda/conda-build/pull/4273
+* @isuruf
+* @jezdez
+* @jakirkham
+* @kenodegard
+* @remkade made their first contribution in https://github.com/conda/conda-build/pull/4425
+* @rchord made their first contribution in https://github.com/conda/conda-build/pull/4353
+* @travishathaway made their first contribution in https://github.com/conda/conda-build/pull/4448
+* @wimglenn made their first contribution in https://github.com/conda/conda-build/pull/4434
+* @pre-commit-ci[bot]
+
+
+
 ## 3.21.8 (2022-01-25)
 
 ### Enhancements
