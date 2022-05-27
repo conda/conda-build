@@ -1,9 +1,6 @@
 $ACTIVITIES = [
     "authors",
     "changelog",
-    "tag",
-    "push_tag",
-    "ghrelease",
 ]
 
 #
@@ -11,19 +8,17 @@ $ACTIVITIES = [
 #
 $PROJECT = $GITHUB_REPO = "conda-build"
 $GITHUB_ORG = "conda"
-$AUTHORS_FILENAME = "AUTHORS.rst"
+$AUTHORS_FILENAME = "AUTHORS.md"
+$AUTHORS_SORTBY = "alpha"
 
 #
 # Changelog settings
 #
-$CHANGELOG_FILENAME = "CHANGELOG.rst"
-$CHANGELOG_PATTERN = ".. current developments"
-$CHANGELOG_HEADER = """.. current developments
+$CHANGELOG_FILENAME = "CHANGELOG.md"
+$CHANGELOG_PATTERN = r"\[//\]: # \(current developments\)"
+$CHANGELOG_HEADER = """[//]: # (current developments)
 
-.. _release-$VERSION:
-
-$VERSION ($RELEASE_DATE)
-====================
+## $VERSION ($RELEASE_DATE)
 
 """
 $CHANGELOG_CATEGORIES = (
@@ -33,15 +28,7 @@ $CHANGELOG_CATEGORIES = (
     "Docs",
     "Other",
 )
+$CHANGELOG_CATEGORY_TITLE_FORMAT = '### {category}\n\n'
 
-
-def title_formatter(category):
-    s = category + '\n'
-    s += "-" * (len(category) + 1)
-    s += "\n\n"
-    return s
-
-
-$CHANGELOG_CATEGORY_TITLE_FORMAT = title_formatter
 $CHANGELOG_AUTHORS_TITLE = "Contributors"
 $CHANGELOG_AUTHORS_FORMAT = "* @{github}\n"
