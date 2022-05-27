@@ -110,8 +110,10 @@ def test_pin_compatible_semver(testing_config):
 @pytest.mark.slow
 @pytest.mark.skipif(
     utils.on_win and sys.version_info < (3, 6),
-    reason="Failing tests on Azure for Python 2.7"
+    reason="Failing tests on CI for Python 2.7"
 )
+@pytest.mark.xfail(sys.platform == "win32",
+                   reason="Defaults channel has conflicting vc packages")
 def test_resolved_packages_recipe(testing_config):
     recipe_dir = os.path.join(metadata_dir, '_resolved_packages_host_build')
     metadata = api.render(recipe_dir, config=testing_config)[0][0]

@@ -41,7 +41,6 @@ from conda_build.exceptions import (DependencyNeedsBuildingError, CondaBuildExce
 from conda_build.conda_interface import reset_context
 from conda.exceptions import ClobberError, CondaMultiError
 from conda_build.conda_interface import conda_46, conda_47
-from tests import utils
 
 from .utils import is_valid_dir, metadata_dir, fail_dir, add_mangling
 
@@ -1268,9 +1267,6 @@ def test_extract_tarball_with_unicode_filename(testing_config):
     api.build(recipe, config=testing_config)
 
 
-@pytest.mark.xfail(
-    utils.on_win, reason="permission error on win leaves lock in place"
-)
 def test_failed_recipe_leaves_folders(testing_config, testing_workdir):
     recipe = os.path.join(fail_dir, 'recursive-build')
     m = api.render(recipe, config=testing_config)[0][0]
@@ -1618,9 +1614,23 @@ def test_ignore_verify_codes(testing_config):
     api.build(recipe_dir, config=testing_config)
 
 
+@pytest.mark.sanity
+def test_extra_meta(testing_config):
+    recipe_dir = os.path.join(metadata_dir, '_extra_meta')
+    testing_config.extra_meta = {'foo': 'bar'}
+    outputs = api.build(recipe_dir, config=testing_config)
+    about = json.loads(package_has_file(outputs[0], 'info/about.json'))
+    assert 'foo' in about['extra'] and about['extra']['foo'] == 'bar'
+
+
 def test_symlink_dirs_in_always_include_files(testing_config):
     recipe = os.path.join(metadata_dir, '_symlink_dirs_in_always_include_files')
     api.build(recipe, config=testing_config)
+
+
+def test_clean_rpaths(testing_config):
+    recipe = os.path.join(metadata_dir, '_clean_rpaths')
+    api.build(recipe, config=testing_config, activate=True)
 
 
 def test_script_env_warnings(testing_config, recwarn):

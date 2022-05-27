@@ -114,7 +114,12 @@ def test_resolved_packages(testing_metadata):
 
 
 try:
-    from setuptools.config import read_configuration
+    try:
+        # Recommended for setuptools 61.0.0+
+        # (though may disappear in the future)
+        from setuptools.config.setupcfg import read_configuration
+    except ImportError:
+        from setuptools.config import read_configuration
     del read_configuration
 except ImportError:
     _has_read_configuration = False

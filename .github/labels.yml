@@ -1,0 +1,28 @@
+# Deprecated
+- name: 3_In_Progress
+  description: "[deprecated] use milestones/project boards"
+  color: "888888"
+- name: 4_Needs_Review
+  description: "[deprecated] use milestones/project boards"
+  color: "888888"
+- name: effort-high
+  description: "[deprecated]"
+  color: "888888"
+- name: effort-low
+  description: "[deprecated] use good-first-issue"
+  color: "888888"
+- name: effort-medium
+  description: "[deprecated]"
+  color: "888888"
+- name: in_progress
+  description: "[deprecated] use milestones/project boards"
+  color: "888888"
+- name: knowledge-high
+  description: "[deprecated]"
+  color: "888888"
+- name: knowledge-low
+  description: "[deprecated] use good-first-issue"
+  color: "888888"
+- name: knowledge-medium
+  description: "[deprecated]"
+  color: "888888"

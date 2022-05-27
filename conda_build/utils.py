@@ -21,6 +21,7 @@ import tarfile
 import tempfile
 from threading import Thread
 import time
+from pathlib import Path
 
 try:
     from json.decoder import JSONDecodeError
@@ -2080,10 +2081,11 @@ def linked_data_no_multichannels(prefix):
     """
     from conda.core.prefix_data import PrefixData
     from conda.models.dist import Dist
-    pd = PrefixData(prefix)
-    from conda.common.compat import itervalues
-    return {Dist.from_string(prefix_record.fn, channel_override=prefix_record.channel.name):
-                prefix_record for prefix_record in itervalues(pd._prefix_records)}
+
+    return {
+        Dist.from_string(prec.fn, channel_override=prec.channel.name): prec
+        for prec in PrefixData(prefix)._prefix_records.values()
+    }
 
 
 def shutil_move_more_retrying(src, dest, debug_name):
@@ -2112,3 +2114,16 @@ def shutil_move_more_retrying(src, dest, debug_name):
         elif attempts_left != -1:
             log.error(
                 f"Failed to rename {debug_name} directory despite sleeping and retrying.")
+
+
+def is_conda_pkg(pkg_path: str) -> bool:
+    """
+    Determines whether string is pointing to a valid conda pkg
+    """
+    path = Path(pkg_path)
+
+    return (
+        path.is_file() and (
+            any(path.name.endswith(ext) for ext in CONDA_PACKAGE_EXTENSIONS)
+        )
+    )

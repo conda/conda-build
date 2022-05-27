@@ -47,7 +47,12 @@ def load_setup_py_data(setup_file, from_recipe_dir=False, recipe_dir=None, work_
 
     setup_cfg_data = {}
     try:
-        from setuptools.config import read_configuration
+        try:
+            # Recommended for setuptools 61.0.0+
+            # (though may disappear in the future)
+            from setuptools.config.setupcfg import read_configuration
+        except ImportError:
+            from setuptools.config import read_configuration
     except ImportError:
         pass  # setuptools <30.3.0 cannot read metadata / options from 'setup.cfg'
     else:

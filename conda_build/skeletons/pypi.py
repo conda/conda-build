@@ -1195,6 +1195,7 @@ def get_pkginfo(package, filename, pypiurl, digest, python_version, extra_specs,
             with open(join(tempdir, 'pkginfo.yaml')) as fn:
                 pkg_info = yaml.safe_load(fn)
         except OSError:
+            print("WARNING: the pkginfo.yaml file was absent, falling back to pkginfo.SDist")
             pkg_info = pkginfo.SDist(download_path).__dict__
         if new_hash_value:
             pkg_info['new_hash_value'] = ('sha256', new_hash_value)
@@ -1257,6 +1258,10 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
         copy2(join(stdlib_dir, 'distutils', 'core.py'), join(stdlib_dir,
             'distutils', 'core.py-copy'))
     apply_patch(join(stdlib_dir, 'distutils'), patch, config=config)
+
+    vendored = join(stdlib_dir, "site-packages", "setuptools", "_distutils")
+    if os.path.isdir(vendored):
+        apply_patch(vendored, patch, config=config)
 
     # Save PYTHONPATH for later
     env = os.environ.copy()

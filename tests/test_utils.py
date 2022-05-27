@@ -3,6 +3,7 @@ import filelock
 import os
 import subprocess
 import sys
+from typing import NamedTuple
 
 import pytest
 
@@ -470,3 +471,45 @@ def test_find_recipe_multipe_bad():
         # too many in base
         with pytest.raises(IOError):
             utils.find_recipe(tmp)
+
+
+class IsCondaPkgTestData(NamedTuple):
+    value: str
+    expected: bool
+    is_dir: bool
+    create: bool
+
+
+IS_CONDA_PKG_DATA = (
+    IsCondaPkgTestData(
+        value='aws-c-common-0.4.57-hb1e8313_1.tar.bz2',
+        expected=True,
+        is_dir=False,
+        create=True
+    ),
+    IsCondaPkgTestData(
+        value='aws-c-common-0.4.57-hb1e8313_1.tar.bz2',
+        expected=False,
+        is_dir=False,
+        create=False
+    ),
+    IsCondaPkgTestData(
+        value='somedir',
+        expected=False,
+        is_dir=True,
+        create=False
+    ),
+)
+
+
+@pytest.mark.parametrize('value,expected,is_dir,create', IS_CONDA_PKG_DATA)
+def test_is_conda_pkg(tmpdir, value: str, expected: bool, is_dir: bool, create: bool):
+    if create:
+        value = os.path.join(tmpdir, value)
+        if is_dir:
+            os.mkdir(value)
+        else:
+            with open(value, "w") as fp:
+                fp.write("test")
+
+    assert utils.is_conda_pkg(value) == expected

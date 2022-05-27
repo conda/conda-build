@@ -1,5 +1,39 @@
 .. current developments
 
+.. _release-3.21.8:
+
+3.21.8 (2022-01-25)
+====================
+
+Enhancements
+------------
+
+* Adds `--extra-meta key=value` option which allows users to save any specified extra metadata to `about.json`
+  to e.g. store the repo-url, git-sha1 or the CI run-id a package was built from.
+
+Bug fixes
+---------
+
+* Old work directories will be preserved when `croot` and `build_id` are set manually
+
+Other
+-----
+
+* Separate contributor related documentation into dedicated file
+* Migrating to github actions for tests
+* Synced file(s) with conda/infra
+
+Contributors
+-------------
+
+* @Lnaden
+* @jezdez
+* @cjmartian
+* @beeankha
+* @pre-commit
+* @conda-bot
+
+
 .. _release-3.21.7:
 
 3.21.7 (2021-11-30)

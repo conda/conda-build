@@ -308,6 +308,8 @@ def test_python_line_up_with_compiled_lib(recipe, testing_config):
             assert any(dep.startswith('python >') for dep in deps), (m.name(), deps)
 
 
+@pytest.mark.xfail(sys.platform == "win32",
+                   reason="Defaults channel has conflicting vc packages")
 def test_merge_build_host_applies_in_outputs(testing_config):
     recipe = os.path.join(subpackage_dir, '_merge_build_host')
     ms = api.render(recipe, config=testing_config)
