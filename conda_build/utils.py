@@ -2081,10 +2081,11 @@ def linked_data_no_multichannels(prefix):
     """
     from conda.core.prefix_data import PrefixData
     from conda.models.dist import Dist
-    pd = PrefixData(prefix)
-    from conda.common.compat import itervalues
-    return {Dist.from_string(prefix_record.fn, channel_override=prefix_record.channel.name):
-                prefix_record for prefix_record in itervalues(pd._prefix_records)}
+
+    return {
+        Dist.from_string(prec.fn, channel_override=prec.channel.name): prec
+        for prec in PrefixData(prefix)._prefix_records.values()
+    }
 
 
 def shutil_move_more_retrying(src, dest, debug_name):
