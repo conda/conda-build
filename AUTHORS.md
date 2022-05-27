@@ -1,224 +1,222 @@
 All of the people who have made at least one contribution to conda-build.
-Authors are sorted by number of commits.
+Authors are sorted alphabetically.
 
 * Aaron Meurer
-* Ray Donnelly
-* Ilan Schnell
-* Michael Sarahan
-* Jonathan J. Helmus
-* Dan Blanchard
-* Kale Franz
-* Rachel
-* Marcelo Duarte Trevisani
-* sophia
-* Isuru Fernando
-* Marcel Bargull
-* John Kirkham
-* Stuart Berg
-* Ryan Grout
-* Rachel Rigdon
-* Darren Dale
-* Travis Swicegood
-* Nehal J Wani
-* Ken Odegard
-* Matt Craig
-* Anthony Scopatz
-* Johannes Köster
-* James Sexton
-* Mandeep Bhutani
-* Patrick Snape
-* Sean
-* Travis Oliphant
-* Matthias Gabriel
-* Harsh Gupta
-* Jasmine Sandhu
-* Alex Wiltschko
-* soapy1
-* Michael C. Grant
-* Min RK
-* Connor Martin
-* Christopher Burr
-* John Kirkham
-* Daniel Bast
-* Matthew R Becker
-* Teake Nutma
-* Ullrich Koethe
-* John Blischak
-* Tim Snyder
-* Jannis Leidel
-* Phil Elson
-* Jillian Rowe
-* Almar Klein
-* Julian Rüth
-* Alex Ford
-* Scheah
-* Alexander Sturm
-* neok-m4700
-* Kai Tietz
-* Richard Frank
-* Matthew R. Becker
-* Filipe Fernandes
-* Matthieu Dartiailh
-* Marius van Niekerk
-* Christoph Buchner
-* Brent Pedersen
-* James Abbott
-* Patrick Sodré
-* Bruno Oliveira
-* Bryan W. Weber
-* Thomas A Caswell
-* Mario Juric
-* Ivan Kalev
-* Casey Clements
-* David Hirschfeld
-* Elliot Hughes
-* Amir MOHAMMADI
-* Chris Hogan
-* Pradipta Ghosh
-* Heather Kelly
-* Geir Ove Myhr
-* Matt Rendina
-* Björn Dahlgren
-* Nicola Soranzo
-* Stephan Hoyer
-* Korijn van Golen
-* Trent Nelson
-* Tadeu Manoel
-* Peter Williams
-* Wes Turner
-* Tom Davidson
-* Guilherme Quentel Melo
-* Yu Feng
-* Julien Schueller
-* Toon Verstraelen
-* Duncan Macleod
-* pre-commit CI
-* conda-bot
-* Matty G
-* Robert T. McGibbon
-* Brad Chapman
-* Remi Chateauneu
-* Rolando (Max) Espinoza
-* Stefan Zimmermann
-* Thomas Kluyver
-* Martin Bergtholdt
-* Eric Dill
-* Derek Ludwig
-* Vlad Frolov
-* Hugo Buddelmeijer
-* todd.m.tomashek
-* Michael Cormier
-* Siu Kwan Lam
-* whitequark
-* Joe Hartshorn
-* Benedikt Reinartz
-* Adam Ehlers Nyholm Thomsen
-* Rick Izzo
-* Wolfgang Ulmer
-* Ed Campbell
-* Carsten Haubold
-* christopher
-* Joseph Hunkeler
-* Armin Burgmeier
-* Anthony Bretaudeau
-* Lori Burns
-* Takafumi Arakaki
-* Philip R. Kensche
-* Matt Swain
-* Robert Wall
-* Yann
-* stuertz
-* aleksey-orekhov
-* Evan Hubinger
-* Johannes Bauer
-* Levi Naden
-* csoja
-* Jan-Hendrik Prinz
-* Alex Kovner
-* Zane Dufour
-* Harun Reşit Zafer
-* Daniel Damiani
-* Sophian Guidara
-* Benjamin Bertrand
-* Mark Harfouche
-* Joseph Crail
-* Andres Guzman-Ballen
-* Riccardo Vianello
-* Matt Hollingsworth
-* Henning Schröder
-* iainsgillis
-* Greg Brener
-* Diogo de Campos
-* Morten Lund
-* Guillaume Baty
-* Dave Hirschfeld
-* Tom Schoonjans
-* David Froger
-* Floris Bruynooghe
-* C. E. Ball
-* landon.butterworth
-* Jędrzej Nowak
-* almar
-* Robert Langlois
-* Lukas Schrangl
-* Paul Madden
-* Dan Lovell
-* Lennart Fricke
-* Gaëtan de Menten
-* Robert Coop
-* dpryan79
-* Michael Maltese
-* pwwang
-* zachcp
-* Christopher Whelan
-* Alexandru Coman
-* Matthew Harrigan
-* Anton Malakhov
-* peter1000
-* daler
 * Aaron Stevens
-* Stas Bekman
-* Evan Klitzke
-* Yoav Ram
-* Thomas Holder
-* Bill Little
-* Marco Rossi
-* Bradley Kreider
-* Juan Lasheras
-* Richard Hattersley
-* steamelephant
-* Dougal J. Sutherland
-* David Li
-* wikiped
-* Brant Faircloth
-* Mark Wiebe
-* mel
-* Axel Huebl
-* Gabriel Reis
-* satoshi
-* Uilian Ries
-* Jayaramchandar Pazhanikumar
-* Shaun Walbridge
-* spalmrot-tic
-* Chris Osborn
-* Oleksandr Pavlyk
-* Bruno P. Kinoshita
-* seanyen
-* AndrewAnnex
+* Adam Ehlers Nyholm Thomsen
+* Aleksey
+* Alex Ford
+* Alex Kovner
+* Alex Wiltschko
+* Alexander Sturm
+* Alexandru Coman
+* Almar Klein
 * Amir Mohammadi
-* Jinzhe Zeng
-* Bradley Dice
-* Stefan Scherfke
-* Sergio Oller
-* Ruben Vorderman
-* James Lamb
-* Oleg Alexandrov
-* John Omotani
-* Tom Pollard
-* Phil Reinhold
-* Cheng H. Lee
-* Kurt Schelfthout
-* Christof Kaufmann
-* Jacob Walls
+* Andres Guzman-Ballen
+* Andrew Annex
+* Anthony Bretaudeau
+* Anthony Scopatz
+* Anton Malakhov
+* Armin Burgmeier
+* Axel Huebl
+* Benedikt Reinartz
+* Benjamin Bertrand
 * Bianca Henderson
+* Bill Little
+* Björn Dahlgren
+* Brad Chapman
+* Bradley Dice
+* Bradley Kreider
+* Brant Faircloth
+* Brent Pedersen
+* Bruno Oliveira
+* Bruno P. Kinoshita
+* Bryan W. Weber
+* C. E. Ball
+* Carsten Haubold
+* Casey Clements
+* Catherine
+* Cheng H. Lee
+* Chris Hogan
+* Chris Osborn
+* Christof Kaufmann
+* Christoph Buchner
+* Christopher Burr
+* Christopher J. Wright
+* Christopher Whelan
+* Conda Bot
+* Connor Martin
+* Crystal Soja
+* Dan Blanchard
+* Dan Lovell
+* Daniel Bast
+* Daniel Damiani
+* Daniel Holth
+* Darren Dale
+* Dave Hirschfeld
+* David Froger
+* David Li
+* Derek Ludwig
+* Devon Ryan
+* Diogo de Campos
+* Dougal J. Sutherland
+* Duncan Macleod
+* Ed Campbell
+* Elliot Hughes
+* Eric Dill
+* Evan Hubinger
+* Evan Klitzke
+* Filipe Fernandes
+* Floris Bruynooghe
+* Gabriel Reis
+* Gaëtan de Menten
+* Geir Ove Myhr
+* Greg Brener
+* Guilherme Quentel Melo
+* Guillaume Baty
+* Harsh Gupta
+* Harun Reşit Zafer
+* Heather Kelly
+* Henning Schröder
+* Hugo Buddelmeijer
+* Iain Gillis
+* Ilan Schnell
+* Isuru Fernando
+* Ivan Kalev
+* Jacob Walls
+* James Abbott
+* James Lamb
+* James Sexton
+* Jan Stürtz
+* Jan-Hendrik Prinz
+* Jannis Leidel
+* Jasmine Sandhu
+* Jayaramchandar Pazhanikumar
+* Jillian Rowe
+* Jinzhe Zeng
+* Joe Hartshorn
+* Johannes Bauer
+* Johannes Köster
+* John Blischak
+* John Kirkham
+* John Omotani
+* Jonathan J. Helmus
+* Joseph Crail
+* Joseph Hunkeler
+* Juan Lasheras
+* Julian Rüth
+* Julien Schueller
+* Jędrzej Nowak
+* Kai Tietz
+* Kale Franz
+* Ken Odegard
+* Korijn van Golen
+* Kurt Schelfthout
+* Kyle Leaders
+* Lennart Fricke
+* Levi Naden
+* Lori Burns
+* Lukas Schrangl
+* Mandeep Bhutani
+* Marcel Bargull
+* Marcelo Duarte Trevisani
+* Marco Rossi
+* Mario Juric
+* Marius van Niekerk
+* Mark Harfouche
+* Mark Wiebe
+* Martin Bergtholdt
+* Matt Craig
+* Matt Hollingsworth
+* Matt Rendina
+* Matt Swain
+* Matthew Harrigan
+* Matthew R. Becker
+* Matthias Gabriel
+* Matthieu Dartiailh
+* Matty G
+* Michael C. Grant
+* Michael Cormier
+* Michael Maltese
+* Michael Sarahan
+* Min RK
+* Morten Enemark Lund
+* Morten Lund
+* Nehal J Wani
+* Nicola Soranzo
+* Oleg Alexandrov
+* Oleksandr Pavlyk
+* Patrick Snape
+* Patrick Sodré
+* Paul Madden
+* Peter Williams
+* Phil Elson
+* Phil Reinhold
+* Philip R. Kensche
+* Pradipta Ghosh
+* Rachel Rigdon
+* Ray Donnelly
+* Remi Chateauneu
+* Riccardo Vianello
+* Richard Frank
+* Richard Hattersley
+* Rick Izzo
+* Robert Coop
+* Robert Langlois
+* Robert T. McGibbon
+* Robert Wall
+* Rolando (Max) Espinoza
+* Ruben Vorderman
+* Ryan Dale
+* Ryan Grout
+* Rylan Chord
+* Satoshi Yagi
+* Scheah
+* Sean Ross-Ross
+* Sean Yen
+* Sergio Oller
+* Shaun Walbridge
+* Siu Kwan Lam
+* Sophia Castellarin
+* Sophian Guidara
+* Stas Bekman
+* Stefan Scherfke
+* Stefan Zimmermann
+* Stephan Hoyer
+* Stephen Palmroth
+* Stuart Berg
+* Tadeu Manoel
+* Takafumi Arakaki
+* Teake Nutma
+* Thomas A Caswell
+* Thomas Holder
+* Thomas Kluyver
+* Tim Snyder
+* Todd Tomashek
+* Tom Davidson
+* Tom Pollard
+* Tom Schoonjans
+* Toon Verstraelen
+* Travis Hathaway
+* Travis Oliphant
+* Travis Swicegood
+* Trent Nelson
+* Uilian Ries
+* Ullrich Koethe
 * Uwe L. Korn
+* Vlad Frolov
+* Wes Turner
+* Wim Glenn
+* Wolfgang Ulmer
+* Yann
+* Yoav Ram
+* Yu Feng
+* Zane Dufour
+* landon.butterworth
+* peter1000
+* pre-commit CI
+* pwwang
+* steamelephant
+* t-bltg
+* wikiped
+* zachcp
