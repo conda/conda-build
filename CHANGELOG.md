@@ -33,6 +33,8 @@
 * Move MacOS tests from Azure to GitHub Actions. (#4412, #4436, #4455)
 * Update `Makefile` for easier testing. (#4425)
 * Remove unused Travis CI configs. (#4438)
+* Add MyST to the documentation system and render release notes
+  correctly. (#4483)
 
 ### Contributors
 
