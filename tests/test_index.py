@@ -3,7 +3,6 @@ from logging import getLogger
 import os
 from os.path import dirname, isdir, join, isfile
 import requests
-import shutil
 import tarfile
 import functools
 
@@ -20,6 +19,7 @@ from conda_build.conda_interface import conda_47
 from .utils import metadata_dir, archive_dir
 
 log = getLogger(__name__)
+
 
 # NOTE: The recipes for test packages used in this module are at https://github.com/kalefranz/conda-test-packages
 @functools.lru_cache(maxsize=None)
