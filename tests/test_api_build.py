@@ -504,13 +504,6 @@ def test_compileall_compiles_all_good_files(testing_workdir, testing_config):
 
 
 @pytest.mark.sanity
-@pytest.mark.serial
-def test_render_setup_py_old_funcname(testing_workdir, testing_config, caplog):
-    api.build(os.path.join(metadata_dir, "_source_setuptools"), config=testing_config)
-    assert "Deprecation notice: the load_setuptools function has been renamed to " in caplog.text
-
-
-@pytest.mark.sanity
 @pytest.mark.skipif(not on_win, reason="only Windows is insane enough to have backslashes in paths")
 def test_backslash_in_always_include_files_path(testing_config):
     api.build(os.path.join(metadata_dir, '_backslash_in_include_files'))
