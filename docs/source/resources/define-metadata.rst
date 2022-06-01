@@ -1706,6 +1706,72 @@ retrieve a fully rendered ``meta.yaml``, use the
 
 .. _extra_jinja2_meta:
 
+Loading data from other files
+-----------------------------
+
+There are several additional functions available to Jinja2 which can be used
+to load data from other files. These are ``load_setup_py_data``, ``load_file_regex``,
+``load_file_data``, and ``load_str_data``.
+
+* ``load_setup_py_data``: Loads data from a ``setup.py`` file. This can be useful to
+  obtain metadata such as the version from a project's ``setup.py`` file. For example::
+
+    {% set data = load_setup_py_data() %}
+    {% set version = data.get('version') %}
+    package:
+      name: foo
+      version: {{ version }}
+
+* ``load_file_regex``: Searches a file for a regular expression and returns the
+  first match as a Python ``re.Match object``. For example::
+
+    {% set readme_heading = load_file_regex(load_file='README.rst', regex_pattern=r'^# (\S+)') %}
+    package:
+      name: {{ readme_heading.string }}
+
+* ``load_file_data``: You can also parse JSON, TOML, or YAML files and load data
+  from them. For example you can use this to load poetry configurations from
+  ``pyproject.toml``. This is especially useful as ``setup.py`` is no longer the
+  only standard way to define project metadata (see
+  `PEP 517 <https://peps.python.org/pep-0517>`_ and
+  `PEP 518 <https://peps.python.org/pep-0518>`_)::
+
+    {% set pyproject = load_file_data('pyproject.toml') %}
+    {% set poetry = pyproject.get('tool', {}).get('poetry') %}
+    package:
+      name: {{ poetry.get('name') }}
+      version: {{ poetry.get('version') }}
+
+* ``load_str_data``: Loads and parses data from a string. This is similar to
+  ``load_file_data``, but it takes a string instead of a file as an argument.
+  This may seem pointless at first, but you can use this to pass more complex
+  data structures by environment variables. For example::
+
+    {% set extra_deps = load_str_data(environ.get("EXTRA_DEPS", []), "json") %}
+    requirements:
+      run:
+        - ...
+        {% for dep in extra_deps %}
+        - {{ dep }}
+        {% endfor %}
+
+  Then you can pass the ``EXTRA_DEPS`` environment variable to the build like so::
+
+    EXTRA_DEPS='["foo =1.0", "bar >=2.0"]' conda build path/to/recipe
+
+The functions ``load_setup_py_data``, ``load_file_regex``, and ``load_file_data``
+all take the parameters ``from_recipe_dir`` and ``recipe_dir``. If
+``from_recipe_dir`` is set to true, then ``recipe_dir`` must also be passed. In
+that case, the file in question will be searched for relative to the recipe
+directory. Otherwise the file is searched for in the source (after it is
+downloaded and extracted, if necessary). If the given file is an
+absolute path, neither of the two directories are searched.
+
+The functions ``load_file_data`` and ``load_str_data`` also accept ``*args`` and
+``**kwargs`` which are passed verbatim to the function used to parse the file.
+For JSON this would be ``json.load``; for TOML, ``toml.load``; and for YAML
+``yaml.safe_load``.
+
 Conda-build specific Jinja2 functions
 -------------------------------------
 

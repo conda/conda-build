@@ -780,12 +780,6 @@ class Config:
         """Where the source for the build is extracted/copied to."""
         path = join(self.build_folder, 'work')
         _ensure_dir(path)
-        # if os.path.isdir(path):
-        #     lst = [fn for fn in os.listdir(path) if not fn.startswith('.')]
-        #     if len(lst) == 1:
-        #         dir_path = join(path, lst[0])
-        #         if os.path.isdir(dir_path):
-        #             return dir_path
         return path
 
     @property

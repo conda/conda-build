@@ -149,3 +149,17 @@ def test_load_setup_py_data_from_setup_cfg(testing_metadata, tmpdir):
     assert setuptools_data['name'] == 'name_from_setup_cfg'
     assert setuptools_data['version'] == 'version_from_setup_cfg'
     assert setuptools_data['extras_require'] == {'extra': ['extra_package']}
+
+
+@pytest.mark.parametrize("filename,fmt,data,expected", [
+    ("file.json", None, '{"a": 1}', {"a": 1}),
+    ("json_file", "json", '{"a": 1}', {"a": 1}),
+    ("file.toml", None, '[tbl]\na = 1', {"tbl": {"a": 1}}),
+    ("toml_file", "toml", '[tbl]\na = 1', {"tbl": {"a": 1}}),
+    ("file.yaml", None, 'a: 1\nb:\n  - c: 2', {"a": 1, "b": [{"c": 2}]}),
+])
+def test_load_file_data(tmpdir, filename, fmt, data, expected, testing_metadata):
+    f = tmpdir.join(filename)
+    f.write(data)
+    fn = str(f)
+    assert jinja_context.load_file_data(fn, fmt, config=testing_metadata.config) == expected

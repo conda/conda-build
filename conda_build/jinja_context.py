@@ -1,11 +1,17 @@
 from functools import partial
+from io import StringIO
 import json
 import os
+import pathlib
 import re
 import time
 import datetime
+from typing import IO, Any, Optional
+from warnings import warn
 
 import jinja2
+import toml
+import yaml
 
 from .conda_interface import PY3
 from .environ import get_dict as get_environ
@@ -16,6 +22,9 @@ from .utils import copy_into, check_call_env, rm_rf, ensure_valid_spec
 from .variants import DEFAULT_COMPILERS
 from .exceptions import CondaBuildException
 from . import _load_setup_py_data
+
+
+log = get_logger(__name__)
 
 
 class UndefinedNeverFail(jinja2.Undefined):
@@ -131,7 +140,6 @@ def load_setup_py_data(m, setup_file='setup.py', from_recipe_dir=False, recipe_d
             pass
         except ImportError as e:
             if permit_undefined_jinja:
-                log = get_logger(__name__)
                 log.debug("Reading setup.py failed due to missing modules.  This is probably OK, "
                           "since it may succeed in later passes.  Watch for incomplete recipe "
                           "info, though.")
@@ -145,9 +153,11 @@ def load_setup_py_data(m, setup_file='setup.py', from_recipe_dir=False, recipe_d
 
 def load_setuptools(m, setup_file='setup.py', from_recipe_dir=False, recipe_dir=None,
                     permit_undefined_jinja=True):
-    log = get_logger(__name__)
-    log.warn("Deprecation notice: the load_setuptools function has been renamed to "
-             "load_setup_py_data.  load_setuptools will be removed in a future release.")
+    warn(
+        "conda_build.jinja_context.load_setuptools is pending deprecation in a future release. "
+        "Use conda_build.jinja_context.load_setup_py_data instead.",
+        PendingDeprecationWarning,
+    )
     return load_setup_py_data(m, setup_file=setup_file, from_recipe_dir=from_recipe_dir,
                               recipe_dir=recipe_dir, permit_undefined_jinja=permit_undefined_jinja)
 
@@ -159,42 +169,36 @@ def load_npm():
         return json.load(pkg)
 
 
+def _find_file(file_name: str, from_recipe_dir: bool, recipe_dir: str, config) -> str:
+    """ Get the path to the given file which may be in the work_dir
+    or in the recipe_dir.
+
+    Note, the returned file name may not exist.
+    """
+    if os.path.isabs(file_name):
+        path = file_name
+    elif from_recipe_dir and recipe_dir:
+        path = os.path.abspath(os.path.join(recipe_dir, file_name))
+    elif os.path.exists(config.work_dir):
+        path = os.path.join(config.work_dir, file_name)
+
+    if not os.path.isfile(path):
+        raise FileNotFoundError(f"No such file: {file_name!r}")
+    return path
+
+
 def load_file_regex(config, load_file, regex_pattern, from_recipe_dir=False,
                     recipe_dir=None, permit_undefined_jinja=True):
-    match = False
-    log = get_logger(__name__)
-
-    cd_to_work = False
-
-    if from_recipe_dir and recipe_dir:
-        load_file = os.path.abspath(os.path.join(recipe_dir, load_file))
-    elif os.path.exists(config.work_dir):
-        cd_to_work = True
-        cwd = os.getcwd()
-        os.chdir(config.work_dir)
-        if not os.path.isabs(load_file):
-            load_file = os.path.join(config.work_dir, load_file)
-    else:
-        message = ("Did not find {} file in manually specified location, and source "
-                  "not downloaded yet.".format(load_file))
+    try:
+        load_file = _find_file(load_file, from_recipe_dir, recipe_dir, config)
+    except FileNotFoundError as e:
         if permit_undefined_jinja:
-            log.debug(message)
-            return {}
-        else:
-            raise RuntimeError(message)
-
-    if os.path.isfile(load_file):
-        with open(load_file) as lfile:
-            match = re.search(regex_pattern, lfile.read())
+            log.debug(e)
+            return None
+        raise
     else:
-        if not permit_undefined_jinja:
-            raise TypeError(f'{load_file} is not a file that can be read')
-
-    # Reset the working directory
-    if cd_to_work:
-        os.chdir(cwd)
-
-    return match if match else None
+        with open(load_file) as lfile:
+            return re.search(regex_pattern, lfile.read())
 
 
 cached_env_dependencies = {}
@@ -493,6 +497,59 @@ def resolved_packages(m, env, permit_undefined_jinja=False,
     return package_names
 
 
+_file_parsers = {
+    "json": json.load,
+    "yaml": yaml.safe_load,
+    "yml": yaml.safe_load,
+    "toml": toml.load,
+}
+
+
+def _load_data(stream: IO, fmt: str, *args, **kwargs) -> Any:
+    try:
+        load = _file_parsers[fmt.lower()]
+    except KeyError:
+        raise ValueError(
+            f"Unknown file format: {fmt}. Allowed formats: {list(_file_parsers.keys())}"
+        )
+    else:
+        return load(stream, *args, **kwargs)
+
+
+def load_file_data(filename: str, fmt: Optional[str] = None, *args, config=None,
+                   from_recipe_dir=False, recipe_dir=None, permit_undefined_jinja=True,
+                   **kwargs):
+    """Loads a file and returns the parsed data.
+
+    For example to load file data from a JSON file, you can use any of:
+
+        load_file_data("my_file.json")
+        load_file_data("my_json_file_without_ext", "json")
+    """
+    try:
+        file_path = _find_file(filename, from_recipe_dir, recipe_dir, config)
+    except FileNotFoundError as e:
+        if permit_undefined_jinja:
+            log.debug(e)
+            return {}
+        raise
+    else:
+        with open(file_path) as f:
+            return _load_data(f, fmt or pathlib.Path(filename).suffix.lstrip("."), *args, **kwargs)
+
+
+def load_str_data(string: str, fmt: str, *args, **kwargs):
+    """Parses data from a string
+
+    For example to load string data, you can use any of:
+
+        load_str_data("[{"name": "foo", "val": "bar"}, {"name": "biz", "val": "buz"}]", "json")
+        load_str_data("[tool.poetry]\\nname = 'foo'", "toml")
+        load_str_data("name: foo\\nval: bar", "yaml")
+    """
+    return _load_data(StringIO(string), fmt, *args, **kwargs)
+
+
 def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jinja,
                       allow_no_other_outputs=False, bypass_env_check=False, skip_build_id=False,
                       variant=None):
@@ -516,6 +573,9 @@ def context_processor(initial_metadata, recipe_dir, config, permit_undefined_jin
         load_npm=load_npm,
         load_file_regex=partial(load_file_regex, config=config, recipe_dir=recipe_dir,
                                 permit_undefined_jinja=permit_undefined_jinja),
+        load_file_data=partial(load_file_data, config=config, recipe_dir=recipe_dir,
+                               permit_undefined_jinja=permit_undefined_jinja),
+        load_str_data=load_str_data,
         installed=get_installed_packages(os.path.join(config.host_prefix, 'conda-meta')),
         pin_compatible=partial(pin_compatible, initial_metadata,
                                permit_undefined_jinja=permit_undefined_jinja,

@@ -18,6 +18,7 @@ deps = [
     "beautifulsoup4",
     "chardet",
     "pytz",
+    "toml",
     "tqdm",
     "psutil",
     "six",
