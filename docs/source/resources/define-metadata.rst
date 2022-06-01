@@ -1731,8 +1731,10 @@ to load data from other files. These are ``load_setup_py_data``, ``load_file_reg
 
 * ``load_file_data``: You can also parse JSON, TOML, or YAML files and load data
   from them. For example you can use this to load poetry configurations from
-  ``pytproject.toml``. This is especially useful as ``setup.py`` is no longer the
-  only standard way to define project metadata (see PEPs 517 and 518)::
+  ``pyproject.toml``. This is especially useful as ``setup.py`` is no longer the
+  only standard way to define project metadata (see
+  `PEP 517 <https://peps.python.org/pep-0517>`_ and
+  `PEP 518 <https://peps.python.org/pep-0518>`_)::
 
     {% set pyproject = load_file_data('pyproject.toml') %}
     {% set poetry = pyproject.get('tool', {}).get('poetry') %}
@@ -1762,7 +1764,7 @@ all take the parameters ``from_recipe_dir`` and ``recipe_dir``. If
 ``from_recipe_dir`` is set to true, then ``recipe_dir`` must also be passed. In
 that case, the file in question will be searched for relative to the recipe
 directory. Otherwise the file is searched for in the source (after it is
-downloaded and extracted, if necessary). Obviously, if the given file is an
+downloaded and extracted, if necessary). If the given file is an
 absolute path, neither of the two directories are searched.
 
 The functions ``load_file_data`` and ``load_str_data`` also accept ``*args`` and

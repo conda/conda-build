@@ -521,7 +521,7 @@ def load_file_data(filename: str, fmt: Optional[str] = None, *args, config=None,
                    **kwargs):
     """Loads a file and returns the parsed data.
 
-    For example to load file data from a JSON file, you can use any of::
+    For example to load file data from a JSON file, you can use any of:
 
         load_file_data("my_file.json")
         load_file_data("my_json_file_without_ext", "json")
@@ -541,7 +541,7 @@ def load_file_data(filename: str, fmt: Optional[str] = None, *args, config=None,
 def load_str_data(string: str, fmt: str, *args, **kwargs):
     """Parses data from a string
 
-    For example to load string data, you can use any of::
+    For example to load string data, you can use any of:
 
         load_str_data("[{"name": "foo", "val": "bar"}, {"name": "biz", "val": "buz"}]", "json")
         load_str_data("[tool.poetry]\\nname = 'foo'", "toml")
