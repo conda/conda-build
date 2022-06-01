@@ -70,7 +70,7 @@ outside of `conda-build`'s build tree.
 
 Follow the installation instructions above to properly set up your environment for testing.
 
-The test suite runs with `py.test`. The following are some useful commands for running specific
+The test suite runs with `pytest`. The following are some useful commands for running specific
 tests, assuming you are in the `conda-build` root folder:
 
 ### Run all tests:
@@ -81,12 +81,12 @@ tests, assuming you are in the `conda-build` root folder:
 
 ### Run one test file:
 ```bash
-    py.test tests/test_api_build.py
+    pytest tests/test_api_build.py
 ```
 
 ### Run one test function:
 ```bash
-    py.test tests/test_api_build.py::test_early_abort
+    pytest tests/test_api_build.py::test_early_abort
 ```
 
 ### Run one parameter of one parametrized test function:
@@ -94,9 +94,9 @@ tests, assuming you are in the `conda-build` root folder:
 Several tests are parametrized, to run some small change, or build several
 recipe folders. To choose only one of them::
 ```bash
-    py.test tests/test_api_build.py::test_recipe_builds.py[entry_points]
+    pytest tests/test_api_build.py::test_recipe_builds.py[entry_points]
 ```
-Note that our tests use `py.test` fixtures extensively. These sometimes trip up IDE
+Note that our tests use `pytest` fixtures extensively. These sometimes trip up IDE
 style checkers about unused or redefined variables. These warnings are safe to
 ignore.
 
