@@ -2,8 +2,8 @@
 conda-build
 ===========
 
-.. image:: https://dev.azure.com/anaconda-conda/conda-build/_apis/build/status/conda.conda-build?branchName=master
-  :target: https://dev.azure.com/anaconda-conda/conda-build/_build/latest?definitionId=1&branchName=master
+.. image:: https://github.com/conda/conda-build/actions/workflows/tests.yml/badge.svg
+  :target: https://github.com/conda/conda-build/actions/workflows/tests.yml
 
 .. image:: https://codecov.io/gh/conda/conda-build/branch/master/graph/badge.svg
   :target: https://codecov.io/gh/conda/conda-build

@@ -9,13 +9,8 @@ from subprocess import check_output, PIPE, Popen, STDOUT
 from os.path import join, dirname, abspath, isdir
 from os import makedirs, pathsep
 from collections import OrderedDict
-
+from shlex import quote
 from concurrent.futures import ThreadPoolExecutor
-
-try:
-    from shlex import quote
-except ImportError:
-    from pipes import quote
 
 import sys
 import json
