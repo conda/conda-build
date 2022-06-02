@@ -51,7 +51,6 @@ jobs:
     env:
       OS: 'linux'
       PYTHON: ${{ matrix.python-version }}
-      TEST_GROUP: ${{ matrix.test-group }}
       pytest-replay: --replay-record-dir=pytest-replay/ --replay-base-name=Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
 
     steps:
@@ -94,7 +93,7 @@ jobs:
               --cov conda_build \
               --cov-report xml \
               --splits 3 \
-              --group ${{ env.TEST_GROUP }} \
+              --group ${{ matrix.test-group }} \
               -m "serial" tests \
               ${{ env.pytest-replay }}
 
@@ -110,7 +109,7 @@ jobs:
               --cov-append \
               --cov-report xml \
               --splits 3 \
-              --group ${{ env.TEST_GROUP }} \
+              --group ${{ matrix.test-group }} \
               -m "not serial" tests \
               ${{ env.pytest-replay }}
 
