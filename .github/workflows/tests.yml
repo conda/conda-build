@@ -216,7 +216,7 @@ jobs:
       - name: Install visualstudio2017-workload-vctools
         run: |
           rmdir C:\Strawberry /s /q
-          choco install wget visualstudio2017-workload-vctools
+          choco install visualstudio2017-workload-vctools
         shell: cmd
 
       - name: Install vcpython27.msi
