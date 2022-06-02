@@ -216,6 +216,22 @@ jobs:
           conda info -a
         shell: cmd
 
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          condarc-file: ci/github/condarc-windows
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Conda-Canary if canary version
+        if: matrix.conda-version == 'canary'
+        run: |
+          conda install -y -c conda-canary conda
+
+      - name: Install default Conda if release version
+        if: matrix.conda-version == 'release'
+        run: |
+          conda install -y conda
+
       - name: Patch vs2008
         run: |
           Set-PSDebug -Trace 1
@@ -247,13 +263,6 @@ jobs:
       - name: Configuration
         run: |
           echo on
-          set PATH
-          call %UserProfile%\Miniconda3\condabin\activate.bat base||exit 1
-          set PATH
-          call conda install python="%PYTHON_VERSION%" -y||exit 1
-          if "%CONDA_VERSION%" == "canary" (call conda update -c conda-canary conda||exit 1) else (call conda update -q conda||exit 1)
-          call conda config --set always_yes yes
-          call conda config --set auto_update_conda no
           call conda info
           python -c "import sys; print(sys.version)"
           python -c "import sys; print(sys.executable)"
@@ -282,9 +291,6 @@ jobs:
         if: matrix.test-type == 'serial'
         run: |
           echo on
-          set PATH
-          call %UserProfile%\Miniconda3\condabin\activate.bat base||exit 1
-          set PATH
           call conda install -y conda-verify||exit 1
           set PERL=
           set LUA=
@@ -296,9 +302,6 @@ jobs:
         if: matrix.test-type == 'parallel'
         run: |
           echo on
-          set PATH
-          call %UserProfile%\Miniconda3\condabin\activate.bat base||exit 1
-          set PATH
           :: call conda remove -y conda-verify||exit 1
           set PERL=
           set LUA=
