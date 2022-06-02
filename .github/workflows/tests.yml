@@ -259,7 +259,7 @@ jobs:
         if: matrix.test-type == 'serial'
         run: |
           echo on
-          call conda install -y conda-verify||exit 1
+          conda install -y conda-verify
           set PERL=
           set LUA=
           set R=
@@ -270,7 +270,6 @@ jobs:
         if: matrix.test-type == 'parallel'
         run: |
           echo on
-          call conda remove -y conda-verify||exit 1
           set PERL=
           set LUA=
           set R=
