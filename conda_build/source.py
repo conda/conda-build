@@ -7,7 +7,9 @@ from subprocess import CalledProcessError
 import sys
 import tempfile
 import time
+from pathlib import Path
 from textwrap import dedent
+from typing import Optional
 
 from .conda_interface import download, TemporaryDirectory
 from .conda_interface import hashsum_file
@@ -487,26 +489,28 @@ def get_repository_info(recipe_path):
                                                  join(recipe_path, "meta.yaml"))))
 
 
-def _ensure_unix_line_endings(path, dest=None):
+_RE_LF = re.compile(rb"(?<!\r)\n")
+_RE_CRLF = re.compile(rb"\r\n")
+
+
+def _ensure_unix_line_endings(
+    src: os.PathLike, dst: Optional[os.PathLike] = None
+) -> Path:
     """Replace windows line endings with Unix.  Return path to modified file."""
-    if not dest:
-        dest = os.path.join(tempfile.mkdtemp(), os.path.basename(path) + "_lf")
-    with open(path, "rb") as inputfile:
-        with open(dest, "wb") as outputfile:
-            for line in inputfile:
-                outputfile.write(line.replace(b"\r\n", b"\n"))
-    return dest
+    src = Path(src)
+    dst = Path(dst or src)  # overwrite src if dst is undefined
+    dst.write_bytes(_RE_CRLF.sub(b"\n", src.read_bytes()))
+    return dst
 
 
-def _ensure_win_line_endings(path, dest=None):
+def _ensure_win_line_endings(
+    src: os.PathLike, dst: Optional[os.PathLike] = None
+) -> Path:
     """Replace unix line endings with win.  Return path to modified file."""
-    if not dest:
-        dest = os.path.join(tempfile.mkdtemp(), os.path.basename(path) + "_lf")
-    with open(path, "rb") as inputfile:
-        with open(dest, "wb") as outputfile:
-            for line in inputfile:
-                outputfile.write(line.replace(b"\n", b"\r\n"))
-    return dest
+    src = Path(src)
+    dst = Path(dst or src)  # overwrite src if dst is undefined
+    dst.write_bytes(_RE_LF.sub(b"\r\n", src.read_bytes()))
+    return dst
 
 
 def _guess_patch_strip_level(filesstr, src_dir):
@@ -755,8 +759,6 @@ def apply_one_patch(src_dir, recipe_dir, rel_path, config, git=None):
         # Some may bemoan the loss of patch failure artifacts, but it is fairly random which
         # patch and patch attempt they apply to so their informational value is low, besides that,
         # they are ugly.
-        #
-        import tempfile
         temp_name = os.path.join(tempfile.gettempdir(), next(tempfile._get_candidate_names()))
         base_patch_args = ['--no-backup-if-mismatch', '--batch'] + patch_args
         try:
