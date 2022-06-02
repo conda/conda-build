@@ -334,14 +334,15 @@ jobs:
         run: |
           set -e -u
           conda install conda-verify -y
-          pytest --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
+          pytest --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests ${{ env.pytest-replay }}
+
 
       - name: Run Parallel Tests
         if: matrix.test-type == 'parallel'
         run: |
           set -e -u
           mkdir -p ~/.conda
-          pytest --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
+          pytest --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests ${{ env.pytest-replay }}
 
       - uses: codecov/codecov-action@v2
         if: success()
