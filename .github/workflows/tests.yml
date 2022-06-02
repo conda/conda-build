@@ -143,6 +143,9 @@ jobs:
 
   windows:
     runs-on: windows-2019
+    defaults:
+      run:
+        shell: cmd /C CALL {0}
     strategy:
       fail-fast: false
       matrix:
@@ -253,7 +256,6 @@ jobs:
           for /d %%F in (%UserProfile%\cbtmp_serial\*) do rd /s /q "%%F"
           for /d %%F in (%UserProfile%\cbtmp\*) do rd /s /q "%%F"
           mkdir "${{ github.workspace }}\pytest-replay"
-        shell: cmd
 
       - name: Run Serial Tests
         if: matrix.test-type == 'serial'
@@ -264,7 +266,6 @@ jobs:
           set LUA=
           set R=
           pytest --color=yes -vv -n 0 --basetemp %UserProfile%\cbtmp_serial --cov conda_build --cov-report xml -m "serial" --splits 3 --group ${{ matrix.test-group }} ${{ env.pytest-replay }}
-        shell: cmd
 
       - name: Run Parallel Tests
         if: matrix.test-type == 'parallel'
@@ -274,7 +275,6 @@ jobs:
           set LUA=
           set R=
           pytest --color=yes -vv -n auto --basetemp %UserProfile%\cbtmp --cov conda_build --cov-append --cov-report xml -m "not serial" --splits 3 --group ${{ matrix.test-group }} ${{ env.pytest-replay }}
-        shell: cmd
         env:
           VS90COMNTOOLS: C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC\bin
           LIB: ''
