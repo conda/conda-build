@@ -70,9 +70,6 @@ def patch_paths(tmp_path):
     return paths
 
 
-# TODO :: These should require a build env with patch (or m2-patch) in it.
-#         at present, only ci/github/install_conda_build_test_deps installs
-#         this.
 def test_patch_paths(tmp_path, patch_paths, testing_config):
     assert patch_paths.deletion.exists()
     assert not patch_paths.creation.exists()
