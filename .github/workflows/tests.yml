@@ -240,6 +240,7 @@ jobs:
 
       - name: Configuration
         run: |
+          echo on
           conda info
           python -c "import sys; print(sys.version)"
           python -c "import sys; print(sys.executable)"
@@ -262,18 +263,12 @@ jobs:
         run: |
           echo on
           conda install -y conda-verify
-          set PERL=
-          set LUA=
-          set R=
           pytest --color=yes -vv -n 0 --basetemp %UserProfile%\cbtmp_serial --cov conda_build --cov-report xml -m "serial" --splits 3 --group ${{ matrix.test-group }} ${{ env.pytest-replay }}
 
       - name: Run Parallel Tests
         if: matrix.test-type == 'parallel'
         run: |
           echo on
-          set PERL=
-          set LUA=
-          set R=
           pytest --color=yes -vv -n auto --basetemp %UserProfile%\cbtmp --cov conda_build --cov-append --cov-report xml -m "not serial" --splits 3 --group ${{ matrix.test-group }} ${{ env.pytest-replay }}
         env:
           VS90COMNTOOLS: C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC\bin
