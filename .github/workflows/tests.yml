@@ -138,7 +138,7 @@ jobs:
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v2
         with:
-          name: Linux_replay-py-${{ matrix.python-version }}_${{ matrix.conda-version }}_${{ matrix.test-type }}
+          name: Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type }}
           path: pytest-replay/
 
   windows:
@@ -408,5 +408,5 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           path: ${{ github.workspace }}/pytest-replay
-          name: macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ env. parameters.serial_or_parallel  }}
+          name: macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type }}
         if: always()
