@@ -38,19 +38,26 @@ jobs:
         python-version: ['3.7', '3.8']
         conda-version: [release]
         test-type: [serial, parallel]
+        test-group: ['1', '2', '3']
         include:
           - python-version: '3.9'
             conda-version: canary
             test-type: serial
+            test-group: ['1', '2', '3']
           - python-version: '3.9'
             conda-version: canary
             test-type: parallel
+            test-group: ['1', '2', '3']
     env:
+      OS: 'linux'
+      PYTHON: ${{ matrix.python-version }}
+      TEST_SPLITS: 3
+      TEST_GROUP: ${{ matrix.test-group }}
       pytest-replay: --replay-record-dir=pytest-replay/ --replay-base-name=Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -87,6 +94,8 @@ jobs:
               --basetemp /tmp/cb_serial \
               --cov conda_build \
               --cov-report xml \
+              --splits ${{ env.TEST_SPLITS }} \
+              --group ${{ env.TEST_GROUP }} \
               -m "serial" tests \
               ${{ env.pytest-replay }}
 
@@ -104,12 +113,17 @@ jobs:
               -m "not serial" tests \
               ${{ env.pytest-replay }}
 
+      - uses: codecov/codecov-action@v2
+        if: success()
+        with:
+          flags: ${{ matrix.test-type }}
+          env_vars: OS,PYTHON
+
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v2
         with:
           name: Linux_replay-py-${{ matrix.python-version }}_${{ matrix.conda-version }}_${{ matrix.test-type }}
           path: pytest-replay/
-
 
   windows:
     runs-on: windows-2019
