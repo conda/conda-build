@@ -128,8 +128,7 @@ def test_create_info_files_json(testing_workdir, testing_metadata):
         assert output == expected_output
 
 
-@pytest.mark.skipif(on_win and sys.version[:3] == "2.7",
-                    reason="os.symlink is not available so can't setup test")
+@pytest.mark.skipif(on_win, reason="os.symlink is not available so can't setup test")
 def test_create_info_files_json_symlinks(testing_workdir, testing_metadata):
     info_dir = os.path.join(testing_workdir, "info")
     os.mkdir(info_dir)

@@ -1,5 +1,6 @@
 from collections import defaultdict
 import os
+import shutil
 import sys
 
 import pytest
@@ -58,7 +59,6 @@ def testing_homedir(tmpdir, request):
     new_dir = os.path.join(os.path.expanduser('~'), d1, d2, d3, 'pytest.conda-build')
     # While pytest will make sure a folder in unique
     if os.path.exists(new_dir):
-        import shutil
         try:
             shutil.rmtree(new_dir)
         except:
