@@ -268,7 +268,7 @@ jobs:
           python -c "import struct; print(struct.calcsize('P') * 8)"
           pip install --no-deps .
           conda-build --version
-          pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd
+          pushd .. && git clone --depth=1 https://github.com/conda/conda_build_test_recipe && popd
           mkdir %UserProfile%\cbtmp_serial
           mkdir %UserProfile%\cbtmp
           for /d %%F in (%UserProfile%\cbtmp_serial\*) do rd /s /q "%%F"
@@ -349,9 +349,8 @@ jobs:
       - name: Install miniconda
         run: |
           set -x -e -u
-          aria2c -o ${{ github.workspace }}/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
-          chmod +x ${{ github.workspace }}/miniconda.sh
-          ${{ github.workspace }}/miniconda.sh -b -p ${{ github.workspace }}/miniconda
+          aria2c https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
+          bash Miniconda3-latest-MacOSX-x86_64.sh -b -p ${{ github.workspace }}/miniconda
           source ci/github/activate_conda "${{ github.workspace }}/miniconda/bin/python"
 
       - name: Setup CF MacOS Bits and Select Xcode
