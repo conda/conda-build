@@ -247,7 +247,7 @@ jobs:
           conda install -q pip python-libarchive-c pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock pytest-replay pytest-rerunfailures conda-forge::pytest-split filelock pkginfo psutil pytz tqdm conda-package-handling py-lief
           python --version
           python -c "import struct; print(struct.calcsize('P') * 8)"
-          pip install -e --no-deps .
+          pip install --no-deps -e .
           conda-build --version
           cd ..
           git clone --depth=1 https://github.com/conda/conda_build_test_recipe
