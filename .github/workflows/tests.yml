@@ -149,16 +149,37 @@ jobs:
         python-version: ['3.7', '3.8']
         conda-version: [release]
         test-type: [serial, parallel]
+        test-group: ['1', '2', '3']
         include:
           - python-version: '3.9'
             conda-version: canary
             test-type: serial
+            test-group: 1
+          - python-version: '3.9'
+            conda-version: canary
+            test-type: serial
+            test-group: 2
+          - python-version: '3.9'
+            conda-version: canary
+            test-type: serial
+            test-group: 3
           - python-version: '3.9'
             conda-version: canary
             test-type: parallel
+            test-group: 1
+          - python-version: '3.9'
+            conda-version: canary
+            test-type: parallel
+            test-group: 2
+          - python-version: '3.9'
+            conda-version: canary
+            test-type: parallel
+            test-group: 3
     timeout-minutes: 120
     env:
-      serial_or_parallel: ''
+      OS: 'win-64'
+      PYTHON: ${{ matrix.python-version }}
+      CONDA_VERSION: ${{ matrix.conda-version }}
 
     steps:
       - name: Checkout repository
@@ -239,7 +260,7 @@ jobs:
           python -c "import sys; print(sys.prefix)"
           call conda update -q --all||exit 1
           call conda install -q pip python-libarchive-c pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling||exit 1
-          call conda install pytest-replay pytest-rerunfailures -y||exit 1
+          call conda install pytest-replay pytest-rerunfailures conda-forge::pytest-split -y||exit 1
           echo safety_checks: disabled >> %UserProfile%\.condarc
           echo local_repodata_ttl: 1800 >> %UserProfile%\.condarc
           call conda install -q py-lief||exit 1
@@ -271,7 +292,7 @@ jobs:
           set PERL=
           set LUA=
           set R=
-          pytest --color=yes -vv -n 0 --basetemp %UserProfile%\cbtmp_serial --cov conda_build --cov-report xml -m "serial" ${{ env.pytest-replay }}
+          pytest --color=yes -vv -n 0 --basetemp %UserProfile%\cbtmp_serial --cov conda_build --cov-report xml -m "serial" --splits 3 --group ${{ matrix.test-group }} ${{ env.pytest-replay }}
         shell: cmd
 
       - name: Run Parallel Tests
@@ -285,17 +306,23 @@ jobs:
           set PERL=
           set LUA=
           set R=
-          pytest --color=yes -vv -n auto --basetemp %UserProfile%\cbtmp --cov conda_build --cov-append --cov-report xml -m "not serial" ${{ env.pytest-replay }}
+          pytest --color=yes -vv -n auto --basetemp %UserProfile%\cbtmp --cov conda_build --cov-append --cov-report xml -m "not serial" --splits 3 --group ${{ matrix.test-group }} ${{ env.pytest-replay }}
         shell: cmd
         env:
           VS90COMNTOOLS: C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC\bin
           LIB:
 
+      - uses: codecov/codecov-action@v2
+        if: success()
+        with:
+          flags: ${{ matrix.test-type }}
+          env_vars: OS,PYTHON
+
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v2
         with:
           path: ${{ github.workspace }}/pytest-replay
-          name: Win-${{ env.CONDA_VERSION }}-Python${{ matrix.python-version }}-${{ env. parameters.serial_or_parallel  }}
+          name: Win-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type }}
         if: always()
 
 
