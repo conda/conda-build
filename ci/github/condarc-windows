@@ -5,3 +5,5 @@ changeps1: False
 pkgs_dirs:
 - C:\Miniconda\envs\test\pkgs
 always_yes: True
+safety_checks: disabled
+local_repodata_ttl: 1800
