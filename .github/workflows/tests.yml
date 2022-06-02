@@ -322,7 +322,13 @@ jobs:
           grep '^#' "${CONDA_PREFIX}/conda-meta/history"
           mkdir -p ${{ github.workspace }}/miniconda/{bin,locks}
           chmod -w ${{ github.workspace }}/miniconda/locks
+
+      - name: Install conda canary
+        run: |
           conda install -y -c conda-canary conda
+
+      - name: Configuration
+        run: |
           conda info
           source ci/github/install_conda_build_test_deps
           pip install -e .
