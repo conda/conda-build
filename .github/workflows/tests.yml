@@ -39,31 +39,38 @@ jobs:
         conda-version: [release]
         test-type: [serial, parallel]
         test-group: ['1', '2', '3']
+        test-splits: ['3']
         include:
           - python-version: '3.9'
             conda-version: canary
             test-type: serial
             test-group: 1
+            test-splits: 3
           - python-version: '3.9'
             conda-version: canary
             test-type: serial
             test-group: 2
+            test-splits: 3
           - python-version: '3.9'
             conda-version: canary
             test-type: serial
             test-group: 3
+            test-splits: 3
           - python-version: '3.9'
             conda-version: canary
             test-type: parallel
             test-group: 1
+            test-splits: 3
           - python-version: '3.9'
             conda-version: canary
             test-type: parallel
             test-group: 2
+            test-splits: 3
           - python-version: '3.9'
             conda-version: canary
             test-type: parallel
             test-group: 3
+            test-splits: 3
     env:
       OS: 'linux'
       PYTHON: ${{ matrix.python-version }}
@@ -108,10 +115,11 @@ jobs:
               --basetemp /tmp/cb_serial \
               --cov conda_build \
               --cov-report xml \
-              --splits 3 \
+              --splits ${{ matrix.test-splits }} \
               --group ${{ matrix.test-group }} \
-              -m "serial" tests \
-              ${{ env.pytest-replay }}
+              -m "serial" \
+              ${{ env.pytest-replay }} \
+              tests
 
       - name: Run Parallel tests
         if: matrix.test-type == 'parallel'
@@ -124,10 +132,11 @@ jobs:
               --cov conda_build \
               --cov-append \
               --cov-report xml \
-              --splits 3 \
+              --splits ${{ matrix.test-split }} \
               --group ${{ matrix.test-group }} \
-              -m "not serial" tests \
-              ${{ env.pytest-replay }}
+              -m "not serial" \
+              ${{ env.pytest-replay }} \
+              tests
 
       - uses: codecov/codecov-action@v2
         if: success()
@@ -153,31 +162,38 @@ jobs:
         conda-version: [release]
         test-type: [serial, parallel]
         test-group: ['1', '2', '3']
+        test-splits: ['3']
         include:
           - python-version: '3.9'
             conda-version: canary
             test-type: serial
             test-group: 1
+            test-splits: 3
           - python-version: '3.9'
             conda-version: canary
             test-type: serial
             test-group: 2
+            test-splits: 3
           - python-version: '3.9'
             conda-version: canary
             test-type: serial
             test-group: 3
+            test-splits: 3
           - python-version: '3.9'
             conda-version: canary
             test-type: parallel
             test-group: 1
+            test-splits: 3
           - python-version: '3.9'
             conda-version: canary
             test-type: parallel
             test-group: 2
+            test-splits: 3
           - python-version: '3.9'
             conda-version: canary
             test-type: parallel
             test-group: 3
+            test-splits: 3
     timeout-minutes: 120
     env:
       OS: 'win-64'
@@ -268,12 +284,12 @@ jobs:
         if: matrix.test-type == 'serial'
         run: |
           conda install -y conda-verify
-          pytest --color=yes -vv -n 0 --basetemp "$env:USERPROFILE\cbtmp_serial" --cov conda_build --cov-report xml -m "serial" --splits 3 --group ${{ matrix.test-group }} ${{ env.pytest-replay }}
+          pytest --color=yes -vv -n 0 --basetemp "$env:USERPROFILE\cbtmp_serial" --cov conda_build --cov-report xml -m "serial" --splits ${{ matrix.test-splits }} --group ${{ matrix.test-group }} ${{ env.pytest-replay }}
 
       - name: Run Parallel Tests
         if: matrix.test-type == 'parallel'
         run: |
-          pytest --color=yes -vv -n auto --basetemp "$env:USERPROFILE\cbtmp" --cov conda_build --cov-append --cov-report xml -m "not serial" --splits 3 --group ${{ matrix.test-group }} ${{ env.pytest-replay }}
+          pytest --color=yes -vv -n auto --basetemp "$env:USERPROFILE\cbtmp" --cov conda_build --cov-append --cov-report xml -m "not serial" --splits ${{ matrix.test-splits }} --group ${{ matrix.test-group }} ${{ env.pytest-replay }}
         env:
           VS90COMNTOOLS: C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC\bin
           LIB: ''
@@ -302,6 +318,8 @@ jobs:
         python-version: ['3.9']
         conda-version: [canary]
         test-type: [serial, parallel]
+        test-group: ['1', '2']
+        test-splits: ['2']
       max-parallel: 10
     timeout-minutes: 120
     env:
@@ -351,15 +369,37 @@ jobs:
         run: |
           set -e -u
           conda install conda-verify -y
-          pytest --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests ${{ env.pytest-replay }}
-
+          pytest \
+              --color=yes \
+              -vv \
+              -n 0 \
+              --basetemp /tmp/cb_serial \
+              --cov conda_build \
+              --cov-report xml \
+              --splits ${{ matrix.test-splits }} \
+              --group ${{ matrix.test-group }} \
+              -m "serial" \
+              ${{ env.pytest-replay }} \
+              tests
 
       - name: Run Parallel Tests
         if: matrix.test-type == 'parallel'
         run: |
           set -e -u
           mkdir -p ~/.conda
-          pytest --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests ${{ env.pytest-replay }}
+          pytest \
+              --color=yes\
+              -vv \
+              -n auto \
+              --basetemp /tmp/cb \
+              --cov conda_build \
+              --cov-append \
+              --cov-report xml \
+              --splits ${{ matrix.test-splits }} \
+              --group ${{ matrix.test-group }} \
+              -m "not serial" \
+              ${{ env.pytest-replay }} \
+              tests
 
       - uses: codecov/codecov-action@v2
         if: success()
