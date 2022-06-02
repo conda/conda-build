@@ -1683,14 +1683,17 @@ def bundle_conda(output, metadata, env, stats, **kw):
     basename = '-'.join([output['name'], metadata.version(), metadata.build_id()])
     tmp_archives = []
     final_outputs = []
-    ext = (
-        CONDA_PACKAGE_EXTENSION_V2
-        if (output.get('type') == 'conda_v2' or metadata.config.conda_pkg_format == "2")
-        else CONDA_PACKAGE_EXTENSION_V1
-    )
+    cph_kwargs = {}
+    ext = CONDA_PACKAGE_EXTENSION_V1
+    if (output.get('type') == 'conda_v2' or metadata.config.conda_pkg_format == "2"):
+        ext = CONDA_PACKAGE_EXTENSION_V2
+        cph_kwargs["compression_tuple"] = (
+            '.tar.zst', 'zstd', f'zstd:compression-level={metadata.config.zstd_compression_level}'
+        )
     with TemporaryDirectory() as tmp:
-        conda_package_handling.api.create(metadata.config.host_prefix, files,
-                                          basename + ext, out_folder=tmp)
+        conda_package_handling.api.create(
+            metadata.config.host_prefix, files, basename + ext, out_folder=tmp, **cph_kwargs
+        )
         tmp_archives = [os.path.join(tmp, basename + ext)]
 
         # we're done building, perform some checks

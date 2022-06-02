@@ -24,7 +24,7 @@ from conda_build.cli.main_render import get_render_parser
 from conda_build.cli.actions import KeyValueAction
 import conda_build.source as source
 from conda_build.utils import LoggingContext
-from conda_build.config import Config, get_channel_urls
+from conda_build.config import Config, zstd_compression_level_default, get_channel_urls
 from os.path import abspath, expanduser, expandvars
 
 on_win = (sys.platform == 'win32')
@@ -158,6 +158,14 @@ different sets of packages."""
         dest='force_upload',
         default=True,
         action='store_false',
+    )
+    p.add_argument(
+        "--zstd-compression-level",
+        help=("When building v2 packages, set the compression level used by "
+              "conda-package-handling. Defaults to the maximum."),
+        type=int,
+        choices=range(1, 22),
+        default=zstd_compression_level_default,
     )
     pypi_grp = p.add_argument_group("PyPI upload parameters (twine)")
     pypi_grp.add_argument(
