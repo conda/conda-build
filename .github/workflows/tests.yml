@@ -43,11 +43,9 @@ jobs:
           - python-version: '3.9'
             conda-version: canary
             test-type: serial
-            test-group: ['1', '2', '3']
           - python-version: '3.9'
             conda-version: canary
             test-type: parallel
-            test-group: ['1', '2', '3']
     env:
       OS: 'linux'
       PYTHON: ${{ matrix.python-version }}
