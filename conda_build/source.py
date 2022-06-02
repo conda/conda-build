@@ -8,12 +8,12 @@ import sys
 import tempfile
 import time
 from pathlib import Path
-from textwrap import dedent
 from typing import Optional
 
 from .conda_interface import download, TemporaryDirectory
 from .conda_interface import hashsum_file
 
+from .exceptions import MissingDependency
 from conda_build.os_utils import external
 from conda_build.conda_interface import url_path, CondaHTTPError
 from conda_build.utils import (decompressible_exts, tar_xf, safe_print_unicode, copy_into, on_win, ensure_list,
@@ -788,6 +788,8 @@ def apply_one_patch(src_dir, recipe_dir, rel_path, config, git=None):
     # While --binary was first introduced in patch 2.3 it wasn't until patch 2.6 that it produced
     # consistent results across OSes. So patch/m2-patch is a hard dependency of conda-build.
     patch_exe = external.find_executable("patch")
+    if not patch_exe:
+        raise MissingDependency("Failed to find conda-build dependency: 'patch'")
     with TemporaryDirectory() as tmpdir:
         patch_attributes = _get_patch_attributes(path, patch_exe, git, src_dir, stdout, stderr, tmpdir)
         attributes_output += _patch_attributes_debug(patch_attributes, rel_path, config.build_prefix)
@@ -803,17 +805,6 @@ def apply_one_patch(src_dir, recipe_dir, rel_path, config, git=None):
             check_call_env([git, 'am', '-3', '--committer-date-is-author-date', path],
                            cwd=src_dir, stdout=stdout, stderr=stderr, env=git_env)
             config.git_commits_since_tag += 1
-        elif patch_exe is None or len(patch_exe) == 0:
-            raise RuntimeError(
-                dedent(
-                    f"""
-                    Cannot use 'git' (not a git repo and/or patch) and did not find 'patch' in:
-                        {os.pathsep.join(external.dir_paths)}
-                    You can install 'patch' using apt-get, yum (Linux), Xcode (MacOSX),
-                    or conda, m2-patch (Windows),
-                    """
-                ).lstrip()
-            )
         else:
             patch_args = patch_attributes['args']
 
