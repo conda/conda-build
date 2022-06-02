@@ -145,7 +145,7 @@ jobs:
     runs-on: windows-2019
     defaults:
       run:
-        shell: cmd /C CALL {0}
+        shell: powershell
     strategy:
       fail-fast: false
       matrix:
@@ -202,7 +202,6 @@ jobs:
           $wc = New-Object net.webclient
           $wc.Downloadfile("https://github.com/GeoNode/geonode-win-installer/raw/ffb76c7cbf1d6b4970c6c25f79c3c7682a3aa035/VCForPython27.msi", "VCForPython27.msi")
           Start-Process "VCForPython27.msi" /qn -Wait
-        shell: pwsh
 
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@v2
@@ -236,7 +235,6 @@ jobs:
           Get-ChildItem -Path $batchDir
           Get-ChildItem -Path ($batchDir + '\..')
           set LIB
-        shell: pwsh
 
       - name: Configuration
         run: |
@@ -252,24 +250,18 @@ jobs:
           pip install -e --no-deps .
           conda-build --version
           pushd .. && git clone --depth=1 https://github.com/conda/conda_build_test_recipe && popd
-          mkdir %UserProfile%\cbtmp_serial
-          mkdir %UserProfile%\cbtmp
-          for /d %%F in (%UserProfile%\cbtmp_serial\*) do rd /s /q "%%F"
-          for /d %%F in (%UserProfile%\cbtmp\*) do rd /s /q "%%F"
           mkdir "${{ github.workspace }}\pytest-replay"
 
       - name: Run Serial Tests
         if: matrix.test-type == 'serial'
         run: |
-          echo on
           conda install -y conda-verify
-          pytest --color=yes -vv -n 0 --basetemp %UserProfile%\cbtmp_serial --cov conda_build --cov-report xml -m "serial" --splits 3 --group ${{ matrix.test-group }} ${{ env.pytest-replay }}
+          pytest --color=yes -vv -n 0 --basetemp "$env:TMPDIR" --cov conda_build --cov-report xml -m "serial" --splits 3 --group ${{ matrix.test-group }} ${{ env.pytest-replay }}
 
       - name: Run Parallel Tests
         if: matrix.test-type == 'parallel'
         run: |
-          echo on
-          pytest --color=yes -vv -n auto --basetemp %UserProfile%\cbtmp --cov conda_build --cov-append --cov-report xml -m "not serial" --splits 3 --group ${{ matrix.test-group }} ${{ env.pytest-replay }}
+          pytest --color=yes -vv -n auto --basetemp "$env:TMPDIR" --cov conda_build --cov-append --cov-report xml -m "not serial" --splits 3 --group ${{ matrix.test-group }} ${{ env.pytest-replay }}
         env:
           VS90COMNTOOLS: C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC\bin
           LIB: ''
