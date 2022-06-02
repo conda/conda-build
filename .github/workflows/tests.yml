@@ -206,16 +206,6 @@ jobs:
           Start-Process "VCForPython27.msi" /qn -Wait
         shell: pwsh
 
-      - name: Install miniconda
-        run: |
-          rmdir C:\Strawberry /s /q
-          choco install visualstudio2017-workload-vctools
-          aria2c https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe
-          start /wait "" Miniconda3-latest-Windows-x86_64.exe /InstallationType=JustMe /S /D=%UserProfile%\Miniconda3
-          "%UserProfile%\Miniconda3\condabin\conda.bat" init
-          conda info -a
-        shell: cmd
-
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@v2
         with:
