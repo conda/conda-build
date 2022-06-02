@@ -51,7 +51,6 @@ jobs:
     env:
       OS: 'linux'
       PYTHON: ${{ matrix.python-version }}
-      TEST_SPLITS: 3
       TEST_GROUP: ${{ matrix.test-group }}
       pytest-replay: --replay-record-dir=pytest-replay/ --replay-base-name=Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
 
@@ -94,7 +93,7 @@ jobs:
               --basetemp /tmp/cb_serial \
               --cov conda_build \
               --cov-report xml \
-              --splits ${{ env.TEST_SPLITS }} \
+              --splits 3 \
               --group ${{ env.TEST_GROUP }} \
               -m "serial" tests \
               ${{ env.pytest-replay }}
