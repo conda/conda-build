@@ -323,8 +323,6 @@ jobs:
           mkdir -p ${{ github.workspace }}/miniconda/{bin,locks}
           chmod -w ${{ github.workspace }}/miniconda/locks
           conda install -y -c conda-canary conda
-          conda config --set always_yes yes
-          conda config --set auto_update_conda False
           conda info
           source ci/github/install_conda_build_test_deps
           pip install -e .
