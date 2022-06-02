@@ -44,25 +44,6 @@ from conda_build.conda_interface import conda_46, conda_47
 
 from .utils import is_valid_dir, metadata_dir, fail_dir, add_mangling
 
-# For Python 2, backport backslashreplace error handler for decodes.
-import codecs
-codecs.register_error(
-    'backslashreplace_',
-    lambda ex: (
-        ''.join(
-            (
-                '\\x{:x}'
-                if c < 0x100
-                else '\\u{:04x}'
-                if c < 0x10000
-                else '\\U{:08x}'
-            ).format(c)
-            for c in map(ord, ex.object[ex.start : ex.end])
-        ),
-        ex.end,
-    ),
-)
-
 
 # define a few commonly used recipes - use os.path.join(metadata_dir, recipe) elsewhere
 empty_sections = os.path.join(metadata_dir, "empty_sections")
@@ -1278,7 +1259,7 @@ def test_failed_recipe_leaves_folders(testing_config, testing_workdir):
             any_locks = True
             dest_path = base64.b64decode(os.path.basename(lock.lock_file))
             if hasattr(dest_path, 'decode'):
-                dest_path = dest_path.decode(sys.getfilesystemencoding(), errors='backslashreplace_')
+                dest_path = dest_path.decode(sys.getfilesystemencoding(), errors='backslashreplace')
             locks_list.add((lock.lock_file, dest_path))
     assert not any_locks, "remaining locks:\n{}".format('\n'.join('->'.join((l, r))
                                                                 for (l, r) in locks_list))
