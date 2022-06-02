@@ -136,7 +136,7 @@ jobs:
           env_vars: OS,PYTHON
 
       - name: Upload Pytest Replay
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type }}
           path: pytest-replay/
@@ -183,7 +183,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -195,7 +195,7 @@ jobs:
           echo "TMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
 
       - name: Setup Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -319,12 +319,11 @@ jobs:
           env_vars: OS,PYTHON
 
       - name: Upload Pytest Replay
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           path: ${{ github.workspace }}/pytest-replay
           name: Win-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type }}
         if: always()
-
 
   macOS:
     runs-on: macos-11
@@ -344,7 +343,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -405,8 +404,8 @@ jobs:
           pytest --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
 
       - name: Upload Pytest Replay
-        uses: actions/upload-artifact@v2
+        if: always()
+        uses: actions/upload-artifact@v3
         with:
           path: ${{ github.workspace }}/pytest-replay
           name: macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type }}
-        if: always()
