@@ -249,7 +249,8 @@ jobs:
           python -c "import struct; print(struct.calcsize('P') * 8)"
           pip install -e --no-deps .
           conda-build --version
-          pushd .. && git clone --depth=1 https://github.com/conda/conda_build_test_recipe && popd
+          cd ..
+          git clone --depth=1 https://github.com/conda/conda_build_test_recipe
           mkdir "${{ github.workspace }}\pytest-replay"
 
       - name: Run Serial Tests
