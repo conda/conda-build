@@ -5,8 +5,12 @@ from subprocess import CalledProcessError
 
 import pytest
 
-from conda_build.source import (_ensure_unix_line_endings, _ensure_win_line_endings,
-                                _guess_patch_strip_level, apply_patch)
+from conda_build.source import (
+    _ensure_LF,
+    _ensure_CRLF,
+    _guess_patch_strip_level,
+    apply_patch,
+)
 
 
 def test_patch_strip_level(testing_workdir, monkeypatch):
@@ -88,14 +92,14 @@ def test_ensure_unix_line_endings_with_nonutf8_characters(tmp_path):
     win_path.write_bytes(b"\xf1\r\n")  # tilde-n encoded in latin1
 
     unix_path = tmp_path / "unix_le"
-    _ensure_unix_line_endings(win_path, unix_path)
+    _ensure_LF(win_path, unix_path)
     unix_path.read_bytes() == b"\xf1\n"
 
 
 def test_lf_source_lf_patch(tmp_path, patch_paths, testing_config):
-    _ensure_unix_line_endings(patch_paths.modification)
-    _ensure_unix_line_endings(patch_paths.deletion)
-    _ensure_unix_line_endings(patch_paths.diff)
+    _ensure_LF(patch_paths.modification)
+    _ensure_LF(patch_paths.deletion)
+    _ensure_LF(patch_paths.diff)
 
     apply_patch(str(tmp_path), patch_paths.diff, testing_config)
 
@@ -103,27 +107,27 @@ def test_lf_source_lf_patch(tmp_path, patch_paths, testing_config):
 
 
 def test_lf_source_crlf_patch(tmp_path, patch_paths, testing_config):
-    _ensure_unix_line_endings(patch_paths.modification)
-    _ensure_unix_line_endings(patch_paths.deletion)
-    _ensure_win_line_endings(patch_paths.diff)
+    _ensure_LF(patch_paths.modification)
+    _ensure_LF(patch_paths.deletion)
+    _ensure_CRLF(patch_paths.diff)
 
     with pytest.raises(CalledProcessError):
         apply_patch(str(tmp_path), patch_paths.diff, testing_config)
 
 
 def test_crlf_source_lf_patch(tmp_path, patch_paths, testing_config):
-    _ensure_win_line_endings(patch_paths.modification)
-    _ensure_win_line_endings(patch_paths.deletion)
-    _ensure_unix_line_endings(patch_paths.diff)
+    _ensure_CRLF(patch_paths.modification)
+    _ensure_CRLF(patch_paths.deletion)
+    _ensure_LF(patch_paths.diff)
 
     with pytest.raises(CalledProcessError):
         apply_patch(str(tmp_path), patch_paths.diff, testing_config)
 
 
 def test_crlf_source_crlf_patch(tmp_path, patch_paths, testing_config):
-    _ensure_win_line_endings(patch_paths.modification)
-    _ensure_win_line_endings(patch_paths.deletion)
-    _ensure_win_line_endings(patch_paths.diff)
+    _ensure_CRLF(patch_paths.modification)
+    _ensure_CRLF(patch_paths.deletion)
+    _ensure_CRLF(patch_paths.diff)
 
     apply_patch(str(tmp_path), patch_paths.diff, testing_config)
 

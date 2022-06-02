@@ -493,9 +493,7 @@ _RE_LF = re.compile(rb"(?<!\r)\n")
 _RE_CRLF = re.compile(rb"\r\n")
 
 
-def _ensure_unix_line_endings(
-    src: os.PathLike, dst: Optional[os.PathLike] = None
-) -> Path:
+def _ensure_LF(src: os.PathLike, dst: Optional[os.PathLike] = None) -> Path:
     """Replace windows line endings with Unix.  Return path to modified file."""
     src = Path(src)
     dst = Path(dst or src)  # overwrite src if dst is undefined
@@ -503,9 +501,7 @@ def _ensure_unix_line_endings(
     return dst
 
 
-def _ensure_win_line_endings(
-    src: os.PathLike, dst: Optional[os.PathLike] = None
-) -> Path:
+def _ensure_CRLF(src: os.PathLike, dst: Optional[os.PathLike] = None) -> Path:
     """Replace unix line endings with win.  Return path to modified file."""
     src = Path(src)
     dst = Path(dst or src)  # overwrite src if dst is undefined
@@ -661,9 +657,9 @@ def _get_patch_attributes(path, patch_exe, git, src_dir, stdout, stderr, retaine
                     except:
                         shutil.copy(path, new_patch)
                 elif fmt == 'lf':
-                    _ensure_unix_line_endings(path, new_patch)
+                    _ensure_LF(path, new_patch)
                 elif fmt == 'crlf':
-                    _ensure_win_line_endings(path, new_patch)
+                    _ensure_CRLF(path, new_patch)
                 result['patches'][fmt] = new_patch
 
             tmp_src_dir = os.path.join(tmpdir, 'src_dir')
