@@ -7,6 +7,7 @@ from subprocess import CalledProcessError
 import sys
 import tempfile
 import time
+from textwrap import dedent
 
 from .conda_interface import download, TemporaryDirectory
 from .conda_interface import hashsum_file
@@ -786,11 +787,9 @@ def apply_one_patch(src_dir, recipe_dir, rel_path, config, git=None):
         stderr = FNULL
 
     attributes_output = ""
-    patch_exe = external.find_executable('patch', config.build_prefix)
-    if not len(patch_exe):
-        patch_exe = external.find_executable('patch', config.host_prefix)
-        if not len(patch_exe):
-            patch_exe = ''
+    # While --binary was first introduced in patch 2.3 it wasn't until patch 2.6 that it produced
+    # consistent results across OSes. So patch/m2-patch is a hard dependency of conda-build.
+    patch_exe = external.find_executable("patch")
     with TemporaryDirectory() as tmpdir:
         patch_attributes = _get_patch_attributes(path, patch_exe, git, src_dir, stdout, stderr, tmpdir)
         attributes_output += _patch_attributes_debug(patch_attributes, rel_path, config.build_prefix)
@@ -806,15 +805,18 @@ def apply_one_patch(src_dir, recipe_dir, rel_path, config, git=None):
             check_call_env([git, 'am', '-3', '--committer-date-is-author-date', path],
                            cwd=src_dir, stdout=stdout, stderr=stderr, env=git_env)
             config.git_commits_since_tag += 1
+        elif patch_exe is None or len(patch_exe) == 0:
+            raise RuntimeError(
+                dedent(
+                    f"""
+                    Cannot use 'git' (not a git repo and/or patch) and did not find 'patch' in:
+                        {os.pathsep.join(external.dir_paths)}
+                    You can install 'patch' using apt-get, yum (Linux), Xcode (MacOSX),
+                    or conda, m2-patch (Windows),
+                    """
+                ).lstrip()
+            )
         else:
-            if patch_exe is None or len(patch_exe) == 0:
-                errstr = ("""\
-            Error:
-                Cannot use 'git' (not a git repo and/or patch) and did not find 'patch' in: %s
-                You can install 'patch' using apt-get, yum (Linux), Xcode (MacOSX),
-                or conda, m2-patch (Windows),
-            """ % (os.pathsep.join(external.dir_paths)))
-                raise RuntimeError(errstr)
             patch_args = patch_attributes['args']
 
             if config.verbose:
