@@ -352,7 +352,7 @@ jobs:
       - name: Install miniconda
         run: |
           set -x -e -u
-          curl -o ${{ github.workspace }}/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
+          aria2c -o ${{ github.workspace }}/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
           chmod +x ${{ github.workspace }}/miniconda.sh
           ${{ github.workspace }}/miniconda.sh -b -p ${{ github.workspace }}/miniconda
           source ci/github/activate_conda "${{ github.workspace }}/miniconda/bin/python"
