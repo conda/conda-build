@@ -44,33 +44,33 @@ jobs:
           - python-version: '3.9'
             conda-version: canary
             test-type: serial
-            test-group: 1
-            test-splits: 3
+            test-group: '1'
+            test-splits: '3'
           - python-version: '3.9'
             conda-version: canary
             test-type: serial
-            test-group: 2
-            test-splits: 3
+            test-group: '2'
+            test-splits: '3'
           - python-version: '3.9'
             conda-version: canary
             test-type: serial
-            test-group: 3
-            test-splits: 3
+            test-group: '3'
+            test-splits: '3'
           - python-version: '3.9'
             conda-version: canary
             test-type: parallel
-            test-group: 1
-            test-splits: 3
+            test-group: '1'
+            test-splits: '3'
           - python-version: '3.9'
             conda-version: canary
             test-type: parallel
-            test-group: 2
-            test-splits: 3
+            test-group: '2'
+            test-splits: '3'
           - python-version: '3.9'
             conda-version: canary
             test-type: parallel
-            test-group: 3
-            test-splits: 3
+            test-group: '3'
+            test-splits: '3'
     env:
       OS: 'linux'
       PYTHON: ${{ matrix.python-version }}
@@ -167,33 +167,33 @@ jobs:
           - python-version: '3.9'
             conda-version: canary
             test-type: serial
-            test-group: 1
-            test-splits: 3
+            test-group: '1'
+            test-splits: '3'
           - python-version: '3.9'
             conda-version: canary
             test-type: serial
-            test-group: 2
-            test-splits: 3
+            test-group: '2'
+            test-splits: '3'
           - python-version: '3.9'
             conda-version: canary
             test-type: serial
-            test-group: 3
-            test-splits: 3
+            test-group: '3'
+            test-splits: '3'
           - python-version: '3.9'
             conda-version: canary
             test-type: parallel
-            test-group: 1
-            test-splits: 3
+            test-group: '1'
+            test-splits: '3'
           - python-version: '3.9'
             conda-version: canary
             test-type: parallel
-            test-group: 2
-            test-splits: 3
+            test-group: '2'
+            test-splits: '3'
           - python-version: '3.9'
             conda-version: canary
             test-type: parallel
-            test-group: 3
-            test-splits: 3
+            test-group: '3'
+            test-splits: '3'
     timeout-minutes: 120
     env:
       OS: 'win-64'
