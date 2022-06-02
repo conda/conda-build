@@ -109,6 +109,8 @@ jobs:
               --cov conda_build \
               --cov-append \
               --cov-report xml \
+              --splits 3 \
+              --group ${{ env.TEST_GROUP }} \
               -m "not serial" tests \
               ${{ env.pytest-replay }}
 
