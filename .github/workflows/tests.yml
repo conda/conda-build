@@ -194,11 +194,6 @@ jobs:
           echo "TEMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
           echo "TMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
 
-      - name: Setup Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v3
-        with:
-          python-version: ${{ matrix.python-version }}
-
       - name: Install vcpython27.msi
         run: |
           $wc = New-Object net.webclient
@@ -239,16 +234,6 @@ jobs:
           Get-ChildItem -Path ($batchDir + '\..')
           set LIB
         shell: pwsh
-
-      - name: conda init
-        run: |
-          echo on
-          set PATH
-          doskey conda="call %UserProfile%\Miniconda3\condabin\conda.bat" $*
-          doskey /macros
-          call "%UserProfile%\Miniconda3\condabin\conda.bat" init
-          set PATH
-        shell: cmd
 
       - name: Configuration
         run: |
@@ -300,7 +285,7 @@ jobs:
         shell: cmd
         env:
           VS90COMNTOOLS: C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC\bin
-          LIB:
+          LIB: ''
 
       - uses: codecov/codecov-action@v2
         if: success()
