@@ -132,7 +132,7 @@ jobs:
               --cov conda_build \
               --cov-append \
               --cov-report xml \
-              --splits ${{ matrix.test-split }} \
+              --splits ${{ matrix.test-splits }} \
               --group ${{ matrix.test-group }} \
               -m "not serial" \
               ${{ env.pytest-replay }} \
