@@ -250,7 +250,7 @@ jobs:
           pip install --no-deps -e .
           conda-build --version
           cd ..
-          git clone --depth=1 https://github.com/conda/conda_build_test_recipe
+          git clone https://github.com/conda/conda_build_test_recipe
           mkdir "${{ github.workspace }}\pytest-replay"
 
       - name: Run Serial Tests
