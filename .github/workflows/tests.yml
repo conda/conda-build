@@ -308,7 +308,7 @@ jobs:
         if: always()
 
   macOS:
-    runs-on: macos-11
+    runs-on: macos-10.15
     defaults:
       run:
         shell: bash -l {0}
