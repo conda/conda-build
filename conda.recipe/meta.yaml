@@ -35,6 +35,8 @@ requirements:
     - futures       # [py<3]
     - jinja2
     - patchelf      # [linux]
+    - patch     >=2.6   # [not win]
+    - m2-patch  >=2.6   # [win]
     - pkginfo
     - psutil
     - py-lief       # [not win]

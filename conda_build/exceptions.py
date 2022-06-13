@@ -46,7 +46,7 @@ class UnableToParseMissingJinja2(UnableToParse):
         ])
 
 
-class UnableToParseMissingSetuptoolsDependencies(CondaBuildException):
+class MissingDependency(CondaBuildException):
     pass
 
 
