@@ -787,6 +787,7 @@ def apply_one_patch(src_dir, recipe_dir, rel_path, config, git=None):
     attributes_output = ""
     # While --binary was first introduced in patch 2.3 it wasn't until patch 2.6 that it produced
     # consistent results across OSes. So patch/m2-patch is a hard dependency of conda-build.
+    # See conda-build#4495
     patch_exe = external.find_executable("patch")
     if not patch_exe:
         raise MissingDependency("Failed to find conda-build dependency: 'patch'")
