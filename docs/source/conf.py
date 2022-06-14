@@ -26,7 +26,7 @@ os.chdir('docs')
 # -- Project information -----------------------------------------------------
 
 project = 'conda-build'
-copyright = '2018, Anaconda, Inc.'
+copyright = '2022, Anaconda, Inc.'
 author = 'Anaconda, Inc.'
 
 # The full version, including alpha/beta/rc tags
