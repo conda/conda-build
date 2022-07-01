@@ -207,7 +207,7 @@ def msvc_env_cmd(bits, config, override=None):
         # Visual Studio 14 or otherwise
         msvc_env_lines.append(build_vcvarsall_cmd(vcvarsall_vs_path))
 
-    return '\n'.join(msvc_env_lines) + '\n'
+    return '\r\n'.join(msvc_env_lines) + '\r\n'
 
 
 def write_build_scripts(m, env, bld_bat):
@@ -217,17 +217,17 @@ def write_build_scripts(m, env, bld_bat):
     import codecs
     with codecs.getwriter('utf-8')(open(env_script, 'wb')) as fo:
         # more debuggable with echo on
-        fo.write('@echo on\n')
+        fo.write('@echo on\r\n')
         for key, value in env.items():
             if value != '' and value is not None:
-                fo.write(f'set "{key}={value}"\n')
+                fo.write(f'set "{key}={value}"\r\n')
         if not m.uses_new_style_compiler_activation:
             fo.write(msvc_env_cmd(bits=m.config.host_arch, config=m.config,
                                 override=m.get_value('build/msvc_compiler', None)))
         # Reset echo on, because MSVC scripts might have turned it off
-        fo.write('@echo on\n')
-        fo.write('set "INCLUDE={};%INCLUDE%"\n'.format(env["LIBRARY_INC"]))
-        fo.write('set "LIB={};%LIB%"\n'.format(env["LIBRARY_LIB"]))
+        fo.write('@echo on\r\n')
+        fo.write('set "INCLUDE={};%INCLUDE%"\r\n'.format(env["LIBRARY_INC"]))
+        fo.write('set "LIB={};%LIB%"\r\n'.format(env["LIBRARY_LIB"]))
         if m.config.activate and m.name() != 'conda':
             write_bat_activation_text(fo, m)
     # bld_bat may have been generated elsewhere with contents of build/script
@@ -236,10 +236,10 @@ def write_build_scripts(m, env, bld_bat):
         with open(bld_bat) as fi:
             data = fi.read()
         with codecs.getwriter('utf-8')(open(work_script, 'wb')) as fo:
-            fo.write('IF "%CONDA_BUILD%" == "" (\n')
-            fo.write(f"    call {env_script}\n")
-            fo.write(')\n')
-            fo.write("REM ===== end generated header =====\n")
+            fo.write('IF "%CONDA_BUILD%" == "" (\r\n')
+            fo.write(f"    call {env_script}\r\n")
+            fo.write(')\r\n')
+            fo.write("REM ===== end generated header =====\r\n")
             fo.write(data)
     return work_script, env_script
 
