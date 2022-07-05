@@ -1,0 +1,3 @@
+### Bug fixes
+
+* Reduce verbosity of urllib3 on the default log level
