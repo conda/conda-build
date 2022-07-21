@@ -13,7 +13,7 @@ from os import (chmod, makedirs)
 from os.path import (basename, dirname, exists, join, splitext)
 import re
 from textwrap import wrap
-from xml.etree import cElementTree as ET
+from xml.etree import ElementTree as ET
 from .cran import yaml_quote_string
 
 

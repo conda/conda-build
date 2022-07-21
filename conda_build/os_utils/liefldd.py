@@ -1,7 +1,7 @@
 try:
     from collections.abc import Hashable
 except ImportError:
-    from collections import Hashable
+    from collections.abc import Hashable
 from functools import partial
 import glob2
 import hashlib
