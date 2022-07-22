@@ -68,3 +68,10 @@ The documentation for ``conda`` is at http://conda.pydata.org/docs/. You can
 subscribe to the `conda mailing list
 <https://groups.google.com/a/continuum.io/forum/#!forum/conda>`_.  The source
 code and issue tracker for ``conda`` are on `GitHub <https://github.com/pydata/conda>`_.
+
+Contributing to conda-build
+---------------------------
+
+We always welcome new contributors for ``conda-build``, especially for bug fixes and
+new feature requests. To help get your environment set up and begin developing, please
+refer to our `Contributing Guide <CONTRIBUTING.md>`_.
