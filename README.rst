@@ -74,4 +74,4 @@ Contributing to conda-build
 
 We always welcome new contributors for ``conda-build``, especially for bug-fixes and
 new feature requests. To help get your environment setup and begin developing, please
-refer to our `Contributing Guide<CONTRIBUTING.md>`_.
+refer to our `Contributing Guide <CONTRIBUTING.md>`_.
