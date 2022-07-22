@@ -107,6 +107,12 @@ To install test dependencies, run the following ``conda`` command:
 
    $ conda install --file tests/requirements.txt -c defaults -y
 
+After this, you will need to install ``pre-commit`` using ``pip``
+
+.. code-block:: bash
+
+   $ pip install pre-commit
+
 After that has completed, you can run ``conda-build`` commands like so:
 
 .. code-block:: bash
