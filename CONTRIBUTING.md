@@ -30,7 +30,7 @@ with the risk of potentially breaking `conda/conda-build`. The second option is 
 create a development environment where we install `conda/conda-build`, which won't
 impact the functionality of `conda/conda-build` installed in your base environment.
 
-#### Using the Base Environment:
+### Using the Base Environment:
 
 ``` bash
     # activate/install into base env
@@ -46,7 +46,7 @@ impact the functionality of `conda/conda-build` installed in your base environme
     conda-build 3.21.5+17.gcde7b306
 ```
 
-#### Creating a Development Environment:
+### Creating a Development Environment:
 
 ``` bash
     # create/activate standalone dev env
