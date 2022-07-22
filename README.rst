@@ -68,3 +68,72 @@ The documentation for ``conda`` is at http://conda.pydata.org/docs/. You can
 subscribe to the `conda mailing list
 <https://groups.google.com/a/continuum.io/forum/#!forum/conda>`_.  The source
 code and issue tracker for ``conda`` are on `GitHub <https://github.com/pydata/conda>`_.
+
+Contributing to conda-build
+---------------------------
+
+Below is a short guide to setting up a local development environment for ``conda-build``.
+This will allow you to develop new features and contribute your own bug fixes.
+
+Requirements:
+
+- Installation of `conda <https://github.com/conda/conda>`_ (see `Miniconda Installers <https://docs.conda.io/en/latest/miniconda.html>`_ for more information)
+- A fork of ``conda-build`` (see `GitHub's guide on forking a repo <https://docs.github.com/en/get-started/quickstart/fork-a-repo>`_ for more information)
+
+Setting up your environment
+===========================
+
+The first step to developing ``conda-build`` is create a new ``conda`` environment with
+the latest version of ``conda`` installed. You can do that with the following command:
+
+.. code-block:: bash
+
+   $ conda create -n conda-build-dev -y conda
+   $ conda activate conda-build-dev
+
+Once that is complete, ``cd`` to your forked, cloned repository and run the following
+command:
+
+.. code-block:: bash
+
+   $ pip install -e .
+
+This will install all of the project dependencies, including a local version of ``conda-build``
+that you will be able to run.
+
+To install test dependencies, run the following ``conda`` command:
+
+.. code-block:: bash
+
+   $ conda install --file tests/requirements.txt -c defaults -y
+
+After that has completed, you can run ``conda-build`` commands like so:
+
+.. code-block:: bash
+
+   $ conda-build --help
+
+It is important to remember the hyphen between "conda" and "build". Otherwise, it is
+very likely that your default installation will be found first on your path and used
+instead. All other ``conda-build`` sub-commands (``render``, ``debug``, etc.) should
+be invoke in a similar manner.
+
+Running tests
+=============
+
+To run tests, use ``pytest`` like in the following example:
+
+.. code-block:: bash
+
+   $ pytest tests
+
+Running individual tests can be accomplished with the following example:
+
+.. code-block:: bash
+
+   $ pytest tests/test_api_debug.py::test_debug_recipe_default_path
+
+The configuration options for ``pytest`` are located in the ``setup.cfg`` file in
+the root of the repository.
+
+For more information on ``pytest`` `please see their documentation <https://docs.pytest.org/en/stable/>`_
