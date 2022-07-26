@@ -5,7 +5,7 @@ conda-build
 .. image:: https://github.com/conda/conda-build/actions/workflows/tests.yml/badge.svg
   :target: https://github.com/conda/conda-build/actions/workflows/tests.yml
 
-.. image:: https://codecov.io/gh/conda/conda-build/branch/master/graph/badge.svg
+.. image:: https://codecov.io/gh/conda/conda-build/branch/main/graph/badge.svg
   :target: https://codecov.io/gh/conda/conda-build
 
 
