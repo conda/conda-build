@@ -1253,6 +1253,7 @@
   github: conda-bot
   aliases:
   - conda-bot
+  - conda bot
   alternate_emails:
   - ad-team+condabot@anaconda.com
   - 18747875+conda-bot@users.noreply.github.com
@@ -1289,3 +1290,12 @@
   github: wimglenn
   num_commits: 1
   first_commit: 2022-04-18 12:03:05
+- name: Jürgen Gmach
+  email: juergen.gmach@googlemail.com
+  github: jugmac00
+- name: Katherine Kinnaman
+  email: kkinnaman@anaconda.com
+  github: kathatherine
+- name: dependabot[bot]
+  email: 49699333+dependabot[bot]@users.noreply.github.com
+  github: dependabot[bot]
