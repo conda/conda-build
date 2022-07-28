@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Fixed issue identifying DSOs from sysroots when cross-compiling. (#4529)
+* <news item>
 
 ### Deprecations
 
@@ -12,7 +12,7 @@
 
 ### Docs
 
-* <news item>
+* Fix prerequisites for build tutorials link. (#4478)
 
 ### Other
 

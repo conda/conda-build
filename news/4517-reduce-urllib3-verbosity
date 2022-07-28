@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Fixed issue identifying DSOs from sysroots when cross-compiling. (#4529)
+* Reduce verbosity of urllib3 on the default log level. (#4517)
 
 ### Deprecations
 
