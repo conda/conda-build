@@ -733,9 +733,9 @@ DEFAULT_WIN_WHITELIST = ['**/ADVAPI32.dll',
 def _collect_needed_dsos(sysroots_files, files, run_prefix, sysroot_substitution, build_prefix, build_prefix_substitution):
     all_needed_dsos = set()
     needed_dsos_for_file = dict()
-    sysroot = ''
+    sysroots = ''
     if sysroots_files:
-        sysroot = list(sysroots_files.keys())[0]
+        sysroots = list(sysroots_files.keys())[0]
     for f in files:
         path = join(run_prefix, f)
         if not codefile_type(path):
@@ -743,7 +743,7 @@ def _collect_needed_dsos(sysroots_files, files, run_prefix, sysroot_substitution
         build_prefix = build_prefix.replace(os.sep, '/')
         run_prefix = run_prefix.replace(os.sep, '/')
         needed = get_linkages_memoized(path, resolve_filenames=True, recurse=False,
-                                       sysroot=sysroot, envroot=run_prefix)
+                                       sysroot=sysroots, envroot=run_prefix)
         for lib, res in needed.items():
             resolved = res['resolved'].replace(os.sep, '/')
             for sysroot, sysroot_files in sysroots_files.items():
