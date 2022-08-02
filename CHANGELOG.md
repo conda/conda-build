@@ -30,13 +30,14 @@
 
 ### Contributors
 
+* @abrahammurciano made their first contribution in #4465/#4480
 * @chrisburr
 * @conda-bot
 * @duncanmmacleod
 * @jezdez
 * @jakirkham
-* @jugmac00
-* @kathatherine
+* @jugmac00 made their first contribution in #4478
+* @kathatherine made their first contribution in #4515
 * @kenodegard
 * @stuarteberg
 * @teake
