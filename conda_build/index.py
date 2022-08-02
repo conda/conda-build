@@ -775,9 +775,11 @@ class ChannelIndex:
         self.channel_root = abspath(channel_root)
         self.channel_name = channel_name or basename(channel_root.rstrip('/'))
         self._subdirs = subdirs
-        self.thread_executor = (DummyExecutor()
-                                if(debug or sys.version_info.major == 2 or threads == 1)
-                                else ProcessPoolExecutor(threads))
+        self.thread_executor = (
+            DummyExecutor()
+            if debug or sys.version_info.major == 2 or threads == 1
+            else ProcessPoolExecutor(threads)
+        )
         self.deep_integrity_check = deep_integrity_check
 
     def index(self, patch_generator, hotfix_source_repo=None, verbose=False, progress=False,

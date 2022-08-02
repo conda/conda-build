@@ -16,7 +16,7 @@ repos:
       # catch git merge/rebase problems
       - id: check-merge-conflict
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.37.2
+    rev: v2.37.3
     hooks:
       - id: pyupgrade
         args: ["--py37-plus"]
@@ -24,14 +24,14 @@ repos:
     rev: 1.5.0
     hooks:
       - id: darker
-        additional_dependencies: [black==21.11b1]
+        additional_dependencies: [black]
   - repo: https://github.com/asottile/blacken-docs
     rev: v1.12.1
     hooks:
       - id: blacken-docs
-        additional_dependencies: [black==21.11b1]
+        additional_dependencies: [black]
   - repo: https://github.com/PyCQA/flake8
-    rev: 4.0.1
+    rev: 5.0.2
     hooks:
       - id: flake8
   - repo: https://github.com/PyCQA/pylint
