@@ -1,5 +1,50 @@
 [//]: # (current developments)
 
+## 3.22.0 (2022-08-02)
+
+### Enhancements
+
+* Created function `load_file_data` available in Jinja templates for `meta.yaml` (#4465, #4480)
+* Created function `load_str_data` available in Jinja templates for `meta.yaml` (#4465, #4480)
+* Support using ``--zstd-compression-level`` to control the compression of v2 style conda packages. (#4467)
+
+### Bug fixes
+
+* When building with Python 3.10, ``STDLIB_DIR`` and ``SP_DIR`` now refer to ``python3.10``, not the symlink ``python3.1``. (#4479)
+* Reduce verbosity of urllib3 on the default log level. (#4517)
+* Fixed issue identifying DSOs from sysroots when cross-compiling. (#4529)
+
+### Docs
+
+* Improved documentation for `load_setup_py_data` (#4465, #4480)
+* Added documentation for `load_file_regex` (#4465, #4480)
+* Fix prerequisites for build tutorials link. (#4478)
+* Link in contributing docs. (#4532)
+
+### Other
+
+* Fix patch tests. (#4495)
+* Added patch/m2-patch as a hard dependency. (#4495)
+* Update "Artistic-2.0" license test to use a valid package. (#4516)
+* Rename master branch to main. (#4515, #4531)
+
+### Contributors
+
+* @chrisburr
+* @conda-bot
+* @duncanmmacleod
+* @jezdez
+* @jakirkham
+* @jugmac00
+* @kathatherine
+* @kenodegard
+* @stuarteberg
+* @teake
+* @travishathaway
+* @pre-commit-ci[bot]
+
+
+
 ## 3.21.9 (2022-05-27)
 
 ### Enhancements
