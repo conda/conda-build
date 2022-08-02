@@ -106,9 +106,11 @@ Authors are sorted alphabetically.
 * Juan Lasheras
 * Julian Rüth
 * Julien Schueller
+* Jürgen Gmach
 * Jędrzej Nowak
 * Kai Tietz
 * Kale Franz
+* Katherine Kinnaman
 * Ken Odegard
 * Korijn van Golen
 * Kurt Schelfthout
@@ -212,6 +214,7 @@ Authors are sorted alphabetically.
 * Yoav Ram
 * Yu Feng
 * Zane Dufour
+* dependabot[bot]
 * landon.butterworth
 * peter1000
 * pre-commit CI
