@@ -63,7 +63,7 @@ jobs:
       - name: Install Conda-Canary if canary version
         if: matrix.conda-version == 'canary'
         run: |
-          conda install -y -c conda-canary conda
+          conda install -y -c conda-canary/label/dev conda
 
       - name: Install default Conda if release version
         if: matrix.conda-version == 'release'
@@ -201,7 +201,7 @@ jobs:
           call %UserProfile%\Miniconda3\condabin\activate.bat base||exit 1
           set PATH
           call conda install python="%PYTHON_VERSION%" -y||exit 1
-          if "%CONDA_VERSION%" == "canary" (call conda update -c conda-canary conda||exit 1) else (call conda update -q conda||exit 1)
+          if "%CONDA_VERSION%" == "canary" (call conda update -c conda-canary/label/dev conda||exit 1) else (call conda update -q conda||exit 1)
           call conda config --set always_yes yes
           call conda config --set auto_update_conda no
           call conda info
@@ -317,7 +317,7 @@ jobs:
           mkdir -p ${{ github.workspace }}/miniconda/locks
           mkdir -p ${{ github.workspace }}/miniconda/bin
           chmod -w ${{ github.workspace }}/miniconda/locks
-          conda install -y -c conda-canary conda
+          conda install -y -c conda-canary/label/dev conda
           conda config --set always_yes yes
           conda config --set auto_update_conda False
           conda info
