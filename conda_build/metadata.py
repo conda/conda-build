@@ -76,6 +76,8 @@ def ns_cfg(config):
         linux32=bool(plat == 'linux-32'),
         linux64=bool(plat == 'linux-64'),
         arm=plat.startswith('linux-arm'),
+        mips64=plat.startswith('linux-mips'),
+        loongarch64=plat.startswith('linux-loongarch'),
         osx=plat.startswith('osx-'),
         unix=plat.startswith(('linux-', 'osx-')),
         win=plat.startswith('win-'),

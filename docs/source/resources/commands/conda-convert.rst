@@ -23,7 +23,7 @@ conda convert
           usage: conda-convert [-h]
 
           [-p
-          {osx-64,linux-32,linux-64,linux-ppc64le,linux-armv6l,linux-armv7l,linux-aarch64,win-32,win-64,all}]
+          {osx-64,linux-32,linux-64,linux-mips64,linux-loongarch64,linux-ppc64le,linux-armv6l,linux-armv7l,linux-aarch64,win-32,win-64,all}]
                  [--dependencies      [DEPENDENCIES      [DEPENDENCIES     ...]]]
                  [--show-imports] [-f]  [-o  OUTPUT_DIR]  [-v]  [--dry-run]  [-q]
                  files [files ...]
@@ -43,9 +43,9 @@ conda convert
                  Show this help message and exit.
 
           <B>-p</B>
-          {osx-64,linux-32,linux-64,linux-ppc64le,linux-armv6l,linux-armv7l,linux-aarch64,win-32,win-64,all},
+          {osx-64,linux-32,linux-64,linux-mips64,linux-loongarch64,linux-ppc64le,linux-armv6l,linux-armv7l,linux-aarch64,win-32,win-64,all},
           <B>--platform</B>
-          {osx-64,linux-32,linux-64,linux-ppc64le,linux-armv6l,linux-armv7l,linux-aarch64,win-32,win-64,all}
+          {osx-64,linux-32,linux-64,linux-mips64,linux-loongarch64,linux-ppc64le,linux-armv6l,linux-armv7l,linux-aarch64,win-32,win-64,all}
                  Platform to convert the packages to.
 
           <B>--dependencies</B>  [DEPENDENCIES  [DEPENDENCIES  ...]],  <B>-d</B>  [DEPENDENCIES
