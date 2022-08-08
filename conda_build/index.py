@@ -6,6 +6,7 @@ from collections import OrderedDict
 import copy
 from datetime import datetime
 import functools
+from itertools import groupby
 import json
 from numbers import Number
 import os
@@ -104,12 +105,6 @@ LOCKFILE_NAME = ".lock"
 
 # TODO: this is to make sure that the index doesn't leak tokens.  It breaks use of private channels, though.
 # os.environ['CONDA_ADD_ANACONDA_TOKEN'] = "false"
-
-
-try:
-    from cytoolz.itertoolz import concat, concatv, groupby
-except ImportError:  # pragma: no cover
-    from conda._vendor.toolz.itertoolz import concat, concatv, groupby  # NOQA
 
 
 def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
@@ -959,7 +954,7 @@ class ChannelIndex:
             # This is also where we update the contents of the stat_cache for successfully
             #   extracted packages.
             # Sorting here prioritizes .conda files ('c') over .tar.bz2 files ('b')
-            hash_extract_set = tuple(concatv(add_set, update_set))
+            hash_extract_set = (*add_set, *update_set)
 
             extract_func = functools.partial(ChannelIndex._extract_to_cache,
                                                 self.channel_root, subdir)
@@ -1282,14 +1277,22 @@ class ChannelIndex:
                 groups.append(candidate)
 
         groups = []
-        package_groups = groupby(lambda x: x[1]['name'], all_repodata_packages.items())
+        package_groups = groupby(all_repodata_packages.items(), lambda x: x[1]["name"])
         for groupname, group in package_groups.items():
             if (groupname not in package_data or package_data[groupname].get('run_exports')):
                 # pay special attention to groups that have run_exports - we need to process each version
                 # group by version; take newest per version group.  We handle groups that are not
                 #    in the index t all yet similarly, because we can't check if they have any run_exports
-                for vgroup in groupby(lambda x: x[1]['version'], group).values():
-                    candidate = next(iter(sorted(vgroup, key=lambda x: x[1].get('timestamp', 0), reverse=True)))
+                for vgroup in groupby(group, lambda x: x[1]["version"]).values():
+                    candidate = next(
+                        iter(
+                            sorted(
+                                vgroup,
+                                key=lambda x: x[1].get("timestamp", 0),
+                                reverse=True,
+                            )
+                        )
+                    )
                     _append_group(groups, candidate)
             else:
                 # take newest per group
