@@ -133,10 +133,12 @@ html_static_path = ["_static"]
 #
 # html_sidebars = {}
 
-html_baseurl = 'https://docs.conda.io/projects/conda-build/'
+# Setting the prod URL of the site here as the base URL.
+html_baseurl = f"https://docs.conda.io/projects/{project}/"
+# We don't have a locale set, so we can safely ignore that for the sitemaps.
 sitemap_locales = [None]
+# We're hard-coding stable here since that's what we want Google to point to.
 sitemap_url_scheme = "{lang}stable/{link}"
-
 
 # -- Options for HTMLHelp output ---------------------------------------------
 
