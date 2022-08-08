@@ -20,6 +20,7 @@ from conda.common.compat import ensure_binary
 
 import pytz
 from jinja2 import Environment, PackageLoader
+from tlz.itertoolz import concatv, groupby
 from tqdm import tqdm
 import yaml
 from yaml.constructor import ConstructorError
@@ -104,12 +105,6 @@ LOCKFILE_NAME = ".lock"
 
 # TODO: this is to make sure that the index doesn't leak tokens.  It breaks use of private channels, though.
 # os.environ['CONDA_ADD_ANACONDA_TOKEN'] = "false"
-
-
-try:
-    from cytoolz.itertoolz import concat, concatv, groupby
-except ImportError:  # pragma: no cover
-    from conda._vendor.toolz.itertoolz import concat, concatv, groupby  # NOQA
 
 
 def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
