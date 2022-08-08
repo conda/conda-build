@@ -1260,8 +1260,8 @@ class ChannelIndex:
         conda_packages = repodata["packages.conda"]
 
         use_these_legacy_keys = set(legacy_packages.keys()) - {k[:-6] + CONDA_PACKAGE_EXTENSION_V1 for k in conda_packages.keys()}
-        all_repodata_packages = conda_packages.copy()
-        all_repodata_packages.update({k: legacy_packages[k] for k in use_these_legacy_keys})
+        all_packages = conda_packages.copy()
+        all_packages.update({k: legacy_packages[k] for k in use_these_legacy_keys})
         package_data = channel_data.get('packages', {})
 
         def _append_group(groups, candidate):
@@ -1277,13 +1277,12 @@ class ChannelIndex:
                 groups.append(candidate)
 
         groups = []
-        package_groups = groupby(all_repodata_packages.items(), lambda x: x[1]["name"])
-        for groupname, group in package_groups.items():
-            if (groupname not in package_data or package_data[groupname].get('run_exports')):
+        for name, group in groupby(all_packages.items(), lambda x: x[1]["name"]):
+            if name not in package_data or package_data[name].get("run_exports"):
                 # pay special attention to groups that have run_exports - we need to process each version
                 # group by version; take newest per version group.  We handle groups that are not
                 #    in the index t all yet similarly, because we can't check if they have any run_exports
-                for vgroup in groupby(group, lambda x: x[1]["version"]).values():
+                for _, vgroup in groupby(group, lambda x: x[1]["version"]):
                     candidate = next(
                         iter(
                             sorted(
