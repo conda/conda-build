@@ -1264,7 +1264,8 @@ class ChannelIndex:
         all_packages.update({k: legacy_packages[k] for k in use_these_legacy_keys})
         package_data = channel_data.get('packages', {})
 
-        def _append_group(groups, candidate):
+        def _append_group(groups, candidates):
+            candidate = sorted(candidates, key=lambda x: x[1].get("timestamp", 0))[-1]
             pkg_dict = candidate[1]
             pkg_name = pkg_dict['name']
 
@@ -1283,20 +1284,10 @@ class ChannelIndex:
                 # group by version; take newest per version group.  We handle groups that are not
                 #    in the index t all yet similarly, because we can't check if they have any run_exports
                 for _, vgroup in groupby(group, lambda x: x[1]["version"]):
-                    candidate = next(
-                        iter(
-                            sorted(
-                                vgroup,
-                                key=lambda x: x[1].get("timestamp", 0),
-                                reverse=True,
-                            )
-                        )
-                    )
-                    _append_group(groups, candidate)
+                    _append_group(groups, vgroup)
             else:
                 # take newest per group
-                candidate = next(iter(sorted(group, key=lambda x: x[1].get('timestamp', 0), reverse=True)))
-                _append_group(groups, candidate)
+                _append_group(groups, group)
 
         def _replace_if_newer_and_present(pd, data, erec, data_newer, k):
             if data.get(k) and (data_newer or not erec.get(k)):
