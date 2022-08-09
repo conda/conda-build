@@ -6,6 +6,7 @@
 
 
 from collections import defaultdict
+from itertools import groupby
 import json
 from operator import itemgetter
 from os.path import abspath, join, dirname, exists, basename, normcase
@@ -17,10 +18,21 @@ import tempfile
 from conda_build.os_utils.ldd import get_linkages, get_package_obj_files, get_untracked_obj_files
 from conda_build.os_utils.liefldd import codefile_type
 from conda_build.os_utils.macho import get_rpaths, human_filetype
-from conda_build.utils import (groupby, getter, comma_join, rm_rf, package_has_file, get_logger,
-                               ensure_list)
+from conda_build.utils import (
+    comma_join,
+    rm_rf,
+    package_has_file,
+    get_logger,
+    ensure_list,
+)
 
-from conda_build.conda_interface import (iteritems, specs_from_args, is_linked, linked_data, get_index)
+from conda_build.conda_interface import (
+    iteritems,
+    specs_from_args,
+    is_linked,
+    linked_data,
+    get_index,
+)
 from conda_build.conda_interface import display_actions, install_actions
 from conda_build.conda_interface import memoized
 
@@ -53,10 +65,9 @@ def which_package(in_prefix_path, prefix, avoid_canonical_channel_name=False):
 
 def print_object_info(info, key):
     output_string = ""
-    gb = groupby(key, info)
-    for header in sorted(gb, key=str):
+    for header, group in groupby(sorted(info, key=itemgetter(key)), itemgetter(key)):
         output_string += header + "\n"
-        for f_info in sorted(gb[header], key=getter('filename')):
+        for f_info in sorted(group, key=itemgetter("filename")):
             for data in sorted(f_info):
                 if data == key:
                     continue
