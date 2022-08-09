@@ -50,6 +50,7 @@ extensions = [
     "sphinx.ext.intersphinx",
     "sphinx.ext.todo",
     "sphinx.ext.coverage",
+    "sphinx_sitemap",
 ]
 
 myst_heading_anchors = 3
@@ -115,6 +116,7 @@ html_theme = "sphinx_rtd_theme"
 html_short_title = "conda-build"
 html_show_sourcelink = False
 html_favicon = "conda-logo.png"
+html_extra_path = ["robots.txt"]
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -131,6 +133,12 @@ html_static_path = ["_static"]
 #
 # html_sidebars = {}
 
+# Setting the prod URL of the site here as the base URL.
+html_baseurl = f"https://docs.conda.io/projects/{project}/"
+# We don't have a locale set, so we can safely ignore that for the sitemaps.
+sitemap_locales = [None]
+# We're hard-coding stable here since that's what we want Google to point to.
+sitemap_url_scheme = "{lang}stable/{link}"
 
 # -- Options for HTMLHelp output ---------------------------------------------
 
