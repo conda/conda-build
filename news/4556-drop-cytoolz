@@ -8,7 +8,7 @@
 
 ### Deprecations
 
-* Remove Python 2.7 imports removed in conda 4.13.0. (#4482)
+* Drop cytoolz dependency. (#4556)
 
 ### Docs
 

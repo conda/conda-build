@@ -768,7 +768,7 @@ def get_install_actions(prefix, specs, env, retries=0, subdir=None,
     if specs:
         specs.extend(create_default_packages)
     if verbose or debug:
-        capture = contextlib.contextmanager(lambda: (yield))
+        capture = contextlib.nullcontext
         if debug:
             conda_log_level = logging.DEBUG
     else:

@@ -19,8 +19,8 @@ from conda_build.utils import check_call_env, prepend_bin_path, copy_into
 def testing_workdir(tmpdir, request):
     """ Create a workdir in a safe temporary folder; cd into dir above before test, cd out after
 
-    :param tmpdir: py.test fixture, will be injected
-    :param request: py.test fixture-related, will be injected (see pytest docs)
+    :param tmpdir: pytest fixture, will be injected
+    :param request: pytest fixture-related, will be injected (see pytest docs)
     """
 
     saved_path = os.getcwd()
@@ -47,8 +47,8 @@ def testing_workdir(tmpdir, request):
 def testing_homedir(tmpdir, request):
     """ Create a homedir in the users home directory; cd into dir above before test, cd out after
 
-    :param tmpdir: py.test fixture, will be injected
-    :param request: py.test fixture-related, will be injected (see pytest docs)
+    :param tmpdir: pytest fixture, will be injected
+    :param request: pytest fixture-related, will be injected (see pytest docs)
     """
 
     saved_path = os.getcwd()

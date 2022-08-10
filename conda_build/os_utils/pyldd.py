@@ -363,7 +363,7 @@ def mach_o_change(path, arch, what, value):
     the given binary with a new name (value), provided it's shorter.
     """
 
-    assert(len(what) >= len(value))
+    assert len(what) >= len(value)
 
     results = []
     with open(path, 'r+b') as f:

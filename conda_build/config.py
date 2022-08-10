@@ -48,6 +48,7 @@ no_rewrite_stdout_env_default = 'false'
 ignore_verify_codes_default = []
 exit_on_verify_error_default = False
 conda_pkg_format_default = None
+zstd_compression_level_default = 22
 
 
 # Python2 silliness:
@@ -213,8 +214,8 @@ def _get_default_settings():
             # customize this so pip doesn't look in places we don't want.  Per-build path by default.
             Setting('_pip_cache_dir', None),
 
-            # set up compression algorithm used in new-style packages
-            Setting('compression_tuple', ('.tar.zst', 'zstd', 'zstd:compression-level=22')),
+            Setting('zstd_compression_level',
+                    cc_conda_build.get('zstd_compression_level', zstd_compression_level_default)),
 
             # this can be set to different values (currently only 2 means anything) to use package formats
             Setting('conda_pkg_format', cc_conda_build.get('pkg_format', conda_pkg_format_default)),
@@ -780,12 +781,6 @@ class Config:
         """Where the source for the build is extracted/copied to."""
         path = join(self.build_folder, 'work')
         _ensure_dir(path)
-        # if os.path.isdir(path):
-        #     lst = [fn for fn in os.listdir(path) if not fn.startswith('.')]
-        #     if len(lst) == 1:
-        #         dir_path = join(path, lst[0])
-        #         if os.path.isdir(dir_path):
-        #             return dir_path
         return path
 
     @property

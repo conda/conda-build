@@ -7,10 +7,13 @@ from subprocess import CalledProcessError
 import sys
 import tempfile
 import time
+from pathlib import Path
+from typing import Optional
 
 from .conda_interface import download, TemporaryDirectory
 from .conda_interface import hashsum_file
 
+from .exceptions import MissingDependency
 from conda_build.os_utils import external
 from conda_build.conda_interface import url_path, CondaHTTPError
 from conda_build.utils import (decompressible_exts, tar_xf, safe_print_unicode, copy_into, on_win, ensure_list,
@@ -486,26 +489,24 @@ def get_repository_info(recipe_path):
                                                  join(recipe_path, "meta.yaml"))))
 
 
-def _ensure_unix_line_endings(path, dest=None):
+_RE_LF = re.compile(rb"(?<!\r)\n")
+_RE_CRLF = re.compile(rb"\r\n")
+
+
+def _ensure_LF(src: os.PathLike, dst: Optional[os.PathLike] = None) -> Path:
     """Replace windows line endings with Unix.  Return path to modified file."""
-    if not dest:
-        dest = os.path.join(tempfile.mkdtemp(), os.path.basename(path) + "_lf")
-    with open(path, "rb") as inputfile:
-        with open(dest, "wb") as outputfile:
-            for line in inputfile:
-                outputfile.write(line.replace(b"\r\n", b"\n"))
-    return dest
+    src = Path(src)
+    dst = Path(dst or src)  # overwrite src if dst is undefined
+    dst.write_bytes(_RE_CRLF.sub(b"\n", src.read_bytes()))
+    return dst
 
 
-def _ensure_win_line_endings(path, dest=None):
+def _ensure_CRLF(src: os.PathLike, dst: Optional[os.PathLike] = None) -> Path:
     """Replace unix line endings with win.  Return path to modified file."""
-    if not dest:
-        dest = os.path.join(tempfile.mkdtemp(), os.path.basename(path) + "_lf")
-    with open(path, "rb") as inputfile:
-        with open(dest, "wb") as outputfile:
-            for line in inputfile:
-                outputfile.write(line.replace(b"\n", b"\r\n"))
-    return dest
+    src = Path(src)
+    dst = Path(dst or src)  # overwrite src if dst is undefined
+    dst.write_bytes(_RE_LF.sub(b"\r\n", src.read_bytes()))
+    return dst
 
 
 def _guess_patch_strip_level(filesstr, src_dir):
@@ -656,9 +657,9 @@ def _get_patch_attributes(path, patch_exe, git, src_dir, stdout, stderr, retaine
                     except:
                         shutil.copy(path, new_patch)
                 elif fmt == 'lf':
-                    _ensure_unix_line_endings(path, new_patch)
+                    _ensure_LF(path, new_patch)
                 elif fmt == 'crlf':
-                    _ensure_win_line_endings(path, new_patch)
+                    _ensure_CRLF(path, new_patch)
                 result['patches'][fmt] = new_patch
 
             tmp_src_dir = os.path.join(tmpdir, 'src_dir')
@@ -754,8 +755,6 @@ def apply_one_patch(src_dir, recipe_dir, rel_path, config, git=None):
         # Some may bemoan the loss of patch failure artifacts, but it is fairly random which
         # patch and patch attempt they apply to so their informational value is low, besides that,
         # they are ugly.
-        #
-        import tempfile
         temp_name = os.path.join(tempfile.gettempdir(), next(tempfile._get_candidate_names()))
         base_patch_args = ['--no-backup-if-mismatch', '--batch'] + patch_args
         try:
@@ -786,11 +785,12 @@ def apply_one_patch(src_dir, recipe_dir, rel_path, config, git=None):
         stderr = FNULL
 
     attributes_output = ""
-    patch_exe = external.find_executable('patch', config.build_prefix)
-    if not len(patch_exe):
-        patch_exe = external.find_executable('patch', config.host_prefix)
-        if not len(patch_exe):
-            patch_exe = ''
+    # While --binary was first introduced in patch 2.3 it wasn't until patch 2.6 that it produced
+    # consistent results across OSes. So patch/m2-patch is a hard dependency of conda-build.
+    # See conda-build#4495
+    patch_exe = external.find_executable("patch")
+    if not patch_exe:
+        raise MissingDependency("Failed to find conda-build dependency: 'patch'")
     with TemporaryDirectory() as tmpdir:
         patch_attributes = _get_patch_attributes(path, patch_exe, git, src_dir, stdout, stderr, tmpdir)
         attributes_output += _patch_attributes_debug(patch_attributes, rel_path, config.build_prefix)
@@ -807,14 +807,6 @@ def apply_one_patch(src_dir, recipe_dir, rel_path, config, git=None):
                            cwd=src_dir, stdout=stdout, stderr=stderr, env=git_env)
             config.git_commits_since_tag += 1
         else:
-            if patch_exe is None or len(patch_exe) == 0:
-                errstr = ("""\
-            Error:
-                Cannot use 'git' (not a git repo and/or patch) and did not find 'patch' in: %s
-                You can install 'patch' using apt-get, yum (Linux), Xcode (MacOSX),
-                or conda, m2-patch (Windows),
-            """ % (os.pathsep.join(external.dir_paths)))
-                raise RuntimeError(errstr)
             patch_args = patch_attributes['args']
 
             if config.verbose:

@@ -220,7 +220,7 @@ repodata.json when they are applied.
 
 This is the approach that conda-forge has to take, for example. Their patch
 creation code is here:
-https://github.com/conda-forge/conda-forge-repodata-patches-feedstock/tree/master/recipe
+https://github.com/conda-forge/conda-forge-repodata-patches-feedstock/tree/main/recipe
 
 What that code does is to download the current repodata.json, then runs their
 python logic to generate the patch JSON file. Those patches are placed into a

@@ -13,7 +13,7 @@ from os import (chmod, makedirs)
 from os.path import (basename, dirname, exists, join, splitext)
 import re
 from textwrap import wrap
-from xml.etree import cElementTree as ET
+from xml.etree import ElementTree as ET
 from .cran import yaml_quote_string
 
 
@@ -492,8 +492,8 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
                 for provides in e_missing['provides']:
                     if provides['name'] == e_name_missing:
                         copy_provides = copy(provides)
-                        if 'rel' in copy_provides:
-                            del(copy_provides['rel'])
+                        if "rel" in copy_provides:
+                            del copy_provides["rel"]
                         depends.append(copy_provides)
             else:
                 print('WARNING: Additional dependency of {}, {} not found'.format(package,

@@ -20,7 +20,7 @@ from tempfile import mkdtemp
 import pkginfo
 import requests
 from requests.packages.urllib3.util.url import parse_url
-from six.moves.urllib.parse import urljoin, urlsplit
+from urllib.parse import urljoin, urlsplit
 import yaml
 
 from conda_build.conda_interface import spec_from_line

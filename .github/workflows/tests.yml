@@ -1,11 +1,11 @@
-name: Run unit and integration tests
+name: Tests
 
 on:
   # NOTE: github.event context is push payload:
   # https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#push
   push:
     branches:
-      - master
+      - main
     paths-ignore:
       - 'docs/**'
 
@@ -17,6 +17,14 @@ on:
       - reopened
       - synchronize
 
+concurrency:
+  # Concurrency group that uses the workflow name and PR number if available
+  # or commit SHA as a fallback. If a new build is triggered under that
+  # concurrency group while a previous build is running it will be canceled.
+  # Repeated pushes to a PR will cancel all previous builds, while multiple
+  # merges to main will not cancel.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
 
 jobs:
   linux:
@@ -55,7 +63,7 @@ jobs:
       - name: Install Conda-Canary if canary version
         if: matrix.conda-version == 'canary'
         run: |
-          conda install -y -c conda-canary conda
+          conda install -y -c conda-canary/label/dev conda
 
       - name: Install default Conda if release version
         if: matrix.conda-version == 'release'
@@ -193,7 +201,7 @@ jobs:
           call %UserProfile%\Miniconda3\condabin\activate.bat base||exit 1
           set PATH
           call conda install python="%PYTHON_VERSION%" -y||exit 1
-          if "%CONDA_VERSION%" == "canary" (call conda update -c conda-canary conda||exit 1) else (call conda update -q conda||exit 1)
+          if "%CONDA_VERSION%" == "canary" (call conda update -c conda-canary/label/dev conda||exit 1) else (call conda update -q conda||exit 1)
           call conda config --set always_yes yes
           call conda config --set auto_update_conda no
           call conda info
@@ -234,7 +242,7 @@ jobs:
           set PERL=
           set LUA=
           set R=
-          py.test --color=yes -vv -n 0 --basetemp %UserProfile%\cbtmp_serial --cov conda_build --cov-report xml -m "serial" ${{ env.pytest-replay }}
+          pytest --color=yes -vv -n 0 --basetemp %UserProfile%\cbtmp_serial --cov conda_build --cov-report xml -m "serial" ${{ env.pytest-replay }}
         shell: cmd
 
       - name: Run Parallel Tests
@@ -248,7 +256,7 @@ jobs:
           set PERL=
           set LUA=
           set R=
-          py.test --color=yes -vv -n auto --basetemp %UserProfile%\cbtmp --cov conda_build --cov-append --cov-report xml -m "not serial" ${{ env.pytest-replay }}
+          pytest --color=yes -vv -n auto --basetemp %UserProfile%\cbtmp --cov conda_build --cov-append --cov-report xml -m "not serial" ${{ env.pytest-replay }}
         shell: cmd
         env:
           VS90COMNTOOLS: C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC\bin
@@ -309,7 +317,7 @@ jobs:
           mkdir -p ${{ github.workspace }}/miniconda/locks
           mkdir -p ${{ github.workspace }}/miniconda/bin
           chmod -w ${{ github.workspace }}/miniconda/locks
-          conda install -y -c conda-canary conda
+          conda install -y -c conda-canary/label/dev conda
           conda config --set always_yes yes
           conda config --set auto_update_conda False
           conda info
@@ -324,7 +332,7 @@ jobs:
           set -e -u
           source ci/github/activate_conda "${{ github.workspace }}/miniconda/bin/python"
           conda install conda-verify -y
-          py.test --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
+          pytest --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
 
       - name: Run Parallel Tests
         if: matrix.test-type == 'parallel'
@@ -338,7 +346,7 @@ jobs:
           conda create -n blarg1 -yq python=2.7
           conda create -n blarg3 -yq python=3.7
           conda create -n blarg4 -yq python nomkl numpy pandas svn
-          py.test --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
+          pytest --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
 
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v2

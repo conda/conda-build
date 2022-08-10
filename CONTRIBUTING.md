@@ -30,7 +30,7 @@ with the risk of potentially breaking `conda/conda-build`. The second option is 
 create a development environment where we install `conda/conda-build`, which won't
 impact the functionality of `conda/conda-build` installed in your base environment.
 
-#### Using the Base Environment:
+### Using the Base Environment:
 
 ``` bash
     # activate/install into base env
@@ -46,7 +46,7 @@ impact the functionality of `conda/conda-build` installed in your base environme
     conda-build 3.21.5+17.gcde7b306
 ```
 
-#### Creating a Development Environment:
+### Creating a Development Environment:
 
 ``` bash
     # create/activate standalone dev env
@@ -70,7 +70,7 @@ outside of `conda-build`'s build tree.
 
 Follow the installation instructions above to properly set up your environment for testing.
 
-The test suite runs with `py.test`. The following are some useful commands for running specific
+The test suite runs with `pytest`. The following are some useful commands for running specific
 tests, assuming you are in the `conda-build` root folder:
 
 ### Run all tests:
@@ -81,12 +81,12 @@ tests, assuming you are in the `conda-build` root folder:
 
 ### Run one test file:
 ```bash
-    py.test tests/test_api_build.py
+    pytest tests/test_api_build.py
 ```
 
 ### Run one test function:
 ```bash
-    py.test tests/test_api_build.py::test_early_abort
+    pytest tests/test_api_build.py::test_early_abort
 ```
 
 ### Run one parameter of one parametrized test function:
@@ -94,9 +94,9 @@ tests, assuming you are in the `conda-build` root folder:
 Several tests are parametrized, to run some small change, or build several
 recipe folders. To choose only one of them::
 ```bash
-    py.test tests/test_api_build.py::test_recipe_builds.py[entry_points]
+    pytest tests/test_api_build.py::test_recipe_builds.py[entry_points]
 ```
-Note that our tests use `py.test` fixtures extensively. These sometimes trip up IDE
+Note that our tests use `pytest` fixtures extensively. These sometimes trip up IDE
 style checkers about unused or redefined variables. These warnings are safe to
 ignore.
 

@@ -27,7 +27,7 @@ final `SEP recipe
 and the `GDAL recipe
 <https://github.com/conda-forge/gdal-feedstock>`_
 on GitHub in the `conda-build documentation repository
-<https://github.com/conda/conda-build/tree/master/docs>`_.
+<https://github.com/conda/conda-build/tree/main/docs>`_.
 
 Who is this for?
 ================
