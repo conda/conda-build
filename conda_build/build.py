@@ -1619,7 +1619,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
         if stats is not None:
             stats[stats_key(metadata, f'bundle_{metadata.name()}')] = bundle_stats
 
-    elif files:
+    if files:
         # Files is specified by the output
         # we exclude the list of files that we want to keep, so post-process picks them up as "new"
         keep_files = {os.path.normpath(pth)
@@ -1628,7 +1628,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
         initial_files = {item for item in (pfx_files - keep_files)
                             if not any(keep_file.startswith(item + os.path.sep)
                                        for keep_file in keep_files)}
-    else:
+    elif not output.get('script'):
         if not metadata.always_include_files():
             log.warn("No files or script found for output {}".format(output.get('name')))
             build_deps = metadata.get_value('requirements/build')
