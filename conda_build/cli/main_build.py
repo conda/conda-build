@@ -27,10 +27,6 @@ from conda_build.utils import LoggingContext
 from conda_build.config import Config, zstd_compression_level_default, get_channel_urls
 from os.path import abspath, expanduser, expandvars
 
-on_win = (sys.platform == 'win32')
-
-logging.basicConfig(level=logging.INFO)
-
 
 def parse_args(args):
     p = get_render_parser()
