@@ -76,11 +76,7 @@ def verify_git_repo(git_exe, git_dir, git_url, git_commits_since_tag, debug=Fals
     env = os.environ.copy()
     log = utils.get_logger(__name__)
 
-    if debug:
-        stderr = None
-    else:
-        FNULL = open(os.devnull, 'w')
-        stderr = FNULL
+    stderr = None if debug else subprocess.DEVNULL
 
     if not expected_rev:
         return False
@@ -149,9 +145,6 @@ def verify_git_repo(git_exe, git_dir, git_url, git_commits_since_tag, debug=Fals
         log.debug("Error obtaining git information in verify_git_repo.  Error was: ")
         log.debug(str(error))
         OK = False
-    finally:
-        if not debug:
-            FNULL.close()
     return OK
 
 
@@ -170,11 +163,7 @@ def get_git_info(git_exe, repo, debug):
     d = {}
     log = utils.get_logger(__name__)
 
-    if debug:
-        stderr = None
-    else:
-        FNULL = open(os.devnull, 'w')
-        stderr = FNULL
+    stderr = None if debug else subprocess.DEVNULL
 
     # grab information from describe
     env = os.environ.copy()
