@@ -3,14 +3,14 @@
 #
 # conda is distributed under the terms of the BSD 3-clause license.
 # Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
-
-
 import argparse
 import warnings
 
 from glob2 import glob
+from itertools import chain
 import logging
-import os
+from os.path import abspath, expanduser, expandvars
+from pathlib import Path
 import sys
 
 import filelock
@@ -27,7 +27,6 @@ from conda_build.cli.actions import KeyValueAction
 import conda_build.source as source
 from conda_build.utils import LoggingContext
 from conda_build.config import Config, zstd_compression_level_default, get_channel_urls
-from os.path import abspath, expanduser, expandvars
 
 
 def parse_args(args):
@@ -389,11 +388,11 @@ def check_recipe(path_list):
 
     :param path_list: list of paths to recipes
     """
-    for recipe in path_list:
-        if os.path.isfile(recipe) and os.path.basename(recipe) in utils.VALID_METAS:
+    for recipe in map(Path, path_list):
+        if recipe.is_file() and recipe.name in utils.VALID_METAS:
             warnings.warn(
                 (
-                    f"RECIPE_PATH received is a file. File: {recipe}\n"
+                    f"RECIPE_PATH received is a file ({recipe}).\n"
                     "It should be a path to a folder.\n"
                     "Forcing conda-build to use the recipe file."
                 ),
@@ -459,10 +458,10 @@ def execute(args):
 
     if action == test_action:
         failed_recipes = []
-        recipes = [item for sublist in
-                   [glob(os.path.abspath(recipe)) if '*' in recipe
-                                                  else [recipe] for recipe in args.recipe]
-                   for item in sublist]
+        recipes = chain.from_iterable(
+            glob(abspath(recipe)) if "*" in recipe else [recipe]
+            for recipe in args.recipe
+        )
         for recipe in recipes:
             try:
                 action(recipe, config)
