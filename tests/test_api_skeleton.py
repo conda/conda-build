@@ -408,8 +408,7 @@ def test_setuptools_test_requirements(testing_workdir):
     assert m.meta['test']['requires'] == ['nose >=1.0']
 
 
-@pytest.mark.skipif(sys.version[:3] == "2.7",
-                    reason="sympy is python 3.5 and above")
+@pytest.mark.skipif(sys.version_info < (3, 8), reason="sympy is python 3.8+")
 def test_pypi_section_order_preserved(testing_workdir):
     """
     Test whether sections have been written in the correct order.
