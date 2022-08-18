@@ -4,18 +4,17 @@
 # conda is distributed under the terms of the BSD 3-clause license.
 # Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
 import argparse
-import warnings
-
 from glob2 import glob
 from itertools import chain
 import logging
 from os.path import abspath, expanduser, expandvars
 from pathlib import Path
 import sys
-
-import filelock
+import warnings
 
 from conda.auxlib.ish import dals
+from conda.common.io import dashlist
+import filelock
 
 import conda_build.api as api
 import conda_build.build as build
@@ -442,21 +441,14 @@ def execute(args):
         config.clean_pkgs()
         return
 
-    action = None
     outputs = None
     if args.output:
-        action = output_action
         config.verbose = False
         config.quiet = True
         config.debug = False
+        outputs = [output_action(recipe, config) for recipe in args.recipe]
     elif args.test:
-        action = test_action
-    elif args.source:
-        action = source_action
-    elif args.check:
-        action = check_action
-
-    if action == test_action:
+        outputs = []
         failed_recipes = []
         recipes = chain.from_iterable(
             glob(abspath(recipe)) if "*" in recipe else [recipe]
@@ -464,7 +456,7 @@ def execute(args):
         )
         for recipe in recipes:
             try:
-                action(recipe, config)
+                test_action(recipe, config)
             except:
                 if not args.keep_going:
                     raise
@@ -473,19 +465,27 @@ def execute(args):
                     continue
         if failed_recipes:
             print("Failed recipes:")
-            for recipe in failed_recipes:
-                print("  - %s" % recipe)
+            dashlist(failed_recipes)
             sys.exit(len(failed_recipes))
         else:
             print("All tests passed")
-        outputs = []
-
-    elif action:
-        outputs = [action(recipe, config) for recipe in args.recipe]
+    elif args.source:
+        outputs = [source_action(recipe, config) for recipe in args.recipe]
+    elif args.check:
+        outputs = [check_action(recipe, config) for recipe in args.recipe]
     else:
-        outputs = api.build(args.recipe, post=args.post, test_run_post=args.test_run_post,
-                            build_only=args.build_only, notest=args.notest, already_built=None, config=config,
-                            verify=args.verify, variants=args.variants, cache_dir=args.cache_dir)
+        outputs = api.build(
+            args.recipe,
+            post=args.post,
+            test_run_post=args.test_run_post,
+            build_only=args.build_only,
+            notest=args.notest,
+            already_built=None,
+            config=config,
+            verify=args.verify,
+            variants=args.variants,
+            cache_dir=args.cache_dir,
+        )
 
     if not args.output and len(utils.get_build_folders(config.croot)) > 0:
         build.print_build_intermediate_warning(config)
