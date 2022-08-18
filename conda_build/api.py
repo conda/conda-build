@@ -1,9 +1,3 @@
-# (c) Continuum Analytics, Inc. / http://continuum.io
-# All Rights Reserved
-#
-# conda is distributed under the terms of the BSD 3-clause license.
-# Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
-
 """
 This file defines the public API for conda-build.  Adding or removing functions,
 or Changing arguments to anything in here should also mean changing the major

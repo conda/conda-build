@@ -1,10 +1,4 @@
 #!/usr/bin/env python
-# (c) 2012-2013 Anaconda, Inc. / http://continuum.io
-# All Rights Reserved
-#
-# conda is distributed under the terms of the BSD 3-clause license.
-# Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
-
 from subprocess import check_output, PIPE, Popen, STDOUT
 from os.path import join, dirname, abspath, isdir
 from os import makedirs, pathsep
