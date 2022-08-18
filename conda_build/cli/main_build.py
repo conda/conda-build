@@ -15,6 +15,8 @@ import sys
 
 import filelock
 
+from conda.auxlib.ish import dals
+
 import conda_build.api as api
 import conda_build.build as build
 import conda_build.utils as utils
@@ -30,12 +32,15 @@ from os.path import abspath, expanduser, expandvars
 
 def parse_args(args):
     p = get_render_parser()
-    p.description = """
-Tool for building conda packages. A conda package is a binary tarball
-containing system-level libraries, Python modules, executable programs, or
-other components. conda keeps track of dependencies between packages and
-platform specifics, making it simple to create working environments from
-different sets of packages."""
+    p.description = dals(
+        """
+        Tool for building conda packages. A conda package is a binary tarball
+        containing system-level libraries, Python modules, executable programs, or
+        other components. conda keeps track of dependencies between packages and
+        platform specifics, making it simple to create working environments from
+        different sets of packages.
+        """
+    )
     p.add_argument(
         "--check",
         action="store_true",
@@ -385,12 +390,13 @@ def check_recipe(path_list):
     :param path_list: list of paths to recipes
     """
     for recipe in path_list:
-        if os.path.isfile(recipe) \
-                and os.path.basename(recipe) in ["meta.yaml", "conda.yaml"]:
+        if os.path.isfile(recipe) and os.path.basename(recipe) in utils.VALID_METAS:
             warnings.warn(
-                "RECIPE_PATH received is a file. File: {}\n"
-                "It should be a path to a folder. \n"
-                "Forcing conda-build to use the recipe file.".format(recipe),
+                (
+                    f"RECIPE_PATH received is a file. File: {recipe}\n"
+                    "It should be a path to a folder.\n"
+                    "Forcing conda-build to use the recipe file."
+                ),
                 UserWarning
             )
 
