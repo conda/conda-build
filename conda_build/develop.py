@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 from os.path import join, isdir, abspath, expanduser, exists
 import shutil
 import sys

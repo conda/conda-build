@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 # (c) 2012-2017 Continuum Analytics, Inc. / http://continuum.io
 # All Rights Reserved
 #

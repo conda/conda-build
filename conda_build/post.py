@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 from copy import copy
 from collections import defaultdict, OrderedDict
 from functools import partial

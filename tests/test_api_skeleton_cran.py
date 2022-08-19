@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 '''
 Integrative tests of the CRAN skeleton that start from
 conda_build.api.skeletonize and check the output files
