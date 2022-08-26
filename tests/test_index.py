@@ -473,9 +473,7 @@ def test_file_index_noarch_osx64_1(testing_workdir):
     with open(join(testing_workdir, "noarch", "repodata_from_packages.json")) as fh:
         actual_pkg_repodata_json = json.loads(fh.read())
     expected_repodata_json = {
-        "info": {
-            "subdir": "noarch",
-        },
+        "info": {"subdir": "noarch"},
         "packages": {
             "conda-index-pkg-a-1.0-pyhed9eced_1.tar.bz2": {
                 "build": "pyhed9eced_1",
@@ -490,7 +488,7 @@ def test_file_index_noarch_osx64_1(testing_workdir):
                 "subdir": "noarch",
                 "timestamp": 1508520204768,
                 "version": "1.0",
-            },
+            }
         },
         "packages.conda": {},
         "removed": [],
@@ -530,7 +528,9 @@ def test_file_index_noarch_osx64_1(testing_workdir):
         fh.write("noarch/flask-0.11.1-py_0.tar.bz2\n")
         fh.write("osx/fly-2.5.2-0.tar.bz2\n")
 
-    conda_build.index.update_index(testing_workdir, channel_name="test-channel", index_file=p)
+    conda_build.index.update_index(
+        testing_workdir, channel_name="test-channel", index_file=p
+    )
 
     updated_packages = expected_repodata_json.get("packages", {})
     updated_packages["flask-0.11.1-py_0.tar.bz2"] = {
@@ -544,11 +544,11 @@ def test_file_index_noarch_osx64_1(testing_workdir):
             "werkzeug >=0.7",
         ],
         "license": "BSD",
-        "md5": "6b06127706cf0ba57c6e13258bb222e7",
+        "md5": "f85925da2dc4f3cc2771be01fd644023",
         "name": "flask",
         "noarch": "python",
-        "sha256": "8353f3a4a4533ff0c6ce829b90980a01a577b3ac015ebd573fef308f2bfec5a8",
-        "size": 58062,
+        "sha256": "096466b5ff6c243fccbafe75951dc9b1456569f31235882ff29f30064219339c",
+        "size": 30720,
         "subdir": "noarch",
         "version": "0.11.1",
     }
@@ -664,9 +664,13 @@ def _build_test_index(workdir):
     index_hotfix_pkgs = join(here, "index_hotfix_pkgs")
     for path in os.scandir(index_hotfix_pkgs):
         if path.is_dir():
-            shutil.copytree(join(here, "index_hotfix_pkgs", path.name), join(workdir, path.name))
+            shutil.copytree(
+                join(here, "index_hotfix_pkgs", path.name), join(workdir, path.name)
+            )
         elif path.is_file():
-            shutil.copyfile(join(here, "index_hotfix_pkgs", path.name), join(workdir, path.name))
+            shutil.copyfile(
+                join(here, "index_hotfix_pkgs", path.name), join(workdir, path.name)
+            )
 
     with open(os.path.join(workdir, TEST_SUBDIR, "repodata.json")) as f:
         original_metadata = json.load(f)
@@ -1012,10 +1016,10 @@ def test_stat_cache_used(testing_workdir, mocker):
     )
     test_package_url = "https://conda.anaconda.org/conda-test/osx-64/conda-index-pkg-a-1.0-py27h5e241af_0.tar.bz2"
     download(test_package_url, test_package_path)
-    conda_build.index.update_index(testing_workdir, channel_name='test-channel')
+    conda_build.index.update_index(testing_workdir, channel_name="test-channel")
 
-    cph_extract = mocker.spy(conda_package_handling.api, 'extract')
-    conda_build.index.update_index(testing_workdir, channel_name='test-channel')
+    cph_extract = mocker.spy(conda_package_handling.api, "extract")
+    conda_build.index.update_index(testing_workdir, channel_name="test-channel")
     cph_extract.assert_not_called()
 
 
@@ -1032,10 +1036,12 @@ def test_new_pkg_format_preferred(testing_workdir, mocker):
         )
     # mock the extract function, so that we can assert that it is not called
     #     with the .tar.bz2, because the .conda should be preferred
-    cph_extract = mocker.spy(conda_package_handling.api, 'extract')
-    conda_build.index.update_index(testing_workdir, channel_name='test-channel', debug=True)
+    cph_extract = mocker.spy(conda_package_handling.api, "extract")
+    conda_build.index.update_index(
+        testing_workdir, channel_name="test-channel", debug=True
+    )
     # extract should get called once by default.  Within a channel, we assume that a .tar.bz2 and .conda have the same contents.
-    cph_extract.assert_called_once_with(test_package_path + '.conda', mock.ANY, 'info')
+    cph_extract.assert_called_once_with(test_package_path + ".conda", mock.ANY, "info")
 
     with open(join(testing_workdir, "osx-64", "repodata.json")) as fh:
         actual_repodata_json = json.loads(fh.read())
