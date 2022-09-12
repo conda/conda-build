@@ -104,6 +104,7 @@ DEFAULT_SUBDIRS = {
     "linux-aarch64",
     "win-64",
     "win-32",
+    "win-arm64",
     "osx-64",
     "osx-arm64",
     "zos-z",
