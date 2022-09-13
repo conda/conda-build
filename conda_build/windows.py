@@ -85,6 +85,9 @@ def build_vcvarsall_vs_path(version):
 
 
 def msvc_env_cmd(bits, config, override=None):
+    # TODO: this function will likely break on `win-arm64`. However, unless
+    # there's clear user demand, it's not clear that we should invest the
+    # effort into updating a known deprecated function for a new platform.
     log = get_logger(__name__)
     log.warn("Using legacy MSVC compiler setup.  This will be removed in conda-build 4.0. "
              "If this recipe does not use a compiler, this message is safe to ignore.  "
