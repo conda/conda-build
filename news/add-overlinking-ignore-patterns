@@ -1,7 +1,6 @@
 ### Enhancements
 
-* Add overlinking_ignore_patterns build parameter to speed up recipes where it is not
-  helpful
+* Add overlinking_ignore_patterns build parameter to speed up recipes where it is not helpful. (#4576)
 
 ### Bug fixes
 
