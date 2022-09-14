@@ -77,7 +77,7 @@ Conda-build performs the following steps:
    #. Runs the test scripts.
 
 The `AnacondaRecipes <https://github.com/AnacondaRecipes/aggregate>`_ aggregate repo
-and `conda-forge <https://github.com/conda-forge/feedstocks/tree/main/feedstocks>` feedstock repo
+and the `conda-forge <https://github.com/conda-forge/feedstocks/tree/main/feedstocks>`_ feedstocks repo
 contain example recipes for many conda packages.
 
 .. caution::
