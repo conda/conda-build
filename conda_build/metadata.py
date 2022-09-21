@@ -443,6 +443,7 @@ FIELDS = {
         'missing_dso_whitelist': None,
         'error_overdepending': None,
         'error_overlinking': None,
+        'overlinking_ignore_patterns': [],
     },
     'outputs': {
         'name': None,

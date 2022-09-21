@@ -153,6 +153,7 @@ def _get_default_settings():
             Setting('no_rewrite_stdout_env', cc_conda_build.get('no_rewrite_stdout_env',
                                                               no_rewrite_stdout_env_default).lower() == 'true'),
 
+
             Setting('index', None),
             # support legacy recipes where only build is specified and expected to be the
             #    folder that packaging is done on

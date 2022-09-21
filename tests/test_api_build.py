@@ -1524,6 +1524,25 @@ def test_overlinking_detection(testing_config):
     rm_rf(dest_bat)
 
 
+@pytest.mark.skipif(on_win and sys.version[:3] == "2.7",
+                    reason="py-lief not available on win for Python 2.7")
+def test_overlinking_detection_ignore_patterns(testing_config):
+    testing_config.activate = True
+    testing_config.error_overlinking = True
+    testing_config.verify = False
+    recipe = os.path.join(metadata_dir, '_overlinking_detection_ignore_patterns')
+    dest_sh = os.path.join(recipe, 'build.sh')
+    dest_bat = os.path.join(recipe, 'bld.bat')
+    copy_into(os.path.join(recipe, 'build_scripts', 'default.sh'), dest_sh, clobber=True)
+    copy_into(os.path.join(recipe, 'build_scripts', 'default.bat'), dest_bat, clobber=True)
+    api.build(recipe, config=testing_config)
+    copy_into(os.path.join(recipe, 'build_scripts', 'no_as_needed.sh'), dest_sh, clobber=True)
+    copy_into(os.path.join(recipe, 'build_scripts', 'with_bzip2.bat'), dest_bat, clobber=True)
+    api.build(recipe, config=testing_config)
+    rm_rf(dest_sh)
+    rm_rf(dest_bat)
+
+
 def test_overdepending_detection(testing_config):
     testing_config.activate = True
     testing_config.error_overlinking = True
