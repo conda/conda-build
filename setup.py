@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 from pathlib import Path
 from setuptools import setup
 
