@@ -1,6 +1,22 @@
+# disable autofixing PRs, commenting "pre-commit.ci autofix" on a pull request triggers a autofix
+ci:
+    autofix_prs: false
 # generally speaking we ignore all vendored code as well as tests data
 # ignore patches/diffs since slight reformatting can break them
-exclude: ^(tests/(archives|index_data|test-cran-skeleton|test-recipes|test-skeleton|variant_recipe)/|.*\.(patch|diff)|versioneer.py)
+exclude: |
+  (?x)^(
+    tests/(
+      archives |
+      index_data |
+      test-cran-skeleton |
+      test-recipes |
+      test-skeleton |
+      variant_recipe
+    )/ |
+    .*\.(patch|diff) |
+    versioneer.py |
+    conda_build/_version.py
+  )
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.3.0
@@ -21,7 +37,7 @@ repos:
       - id: pyupgrade
         args: ["--py37-plus"]
   - repo: https://github.com/akaihola/darker
-    rev: 1.5.0
+    rev: 1.5.1
     hooks:
       - id: darker
         additional_dependencies: [black]
@@ -35,7 +51,7 @@ repos:
     hooks:
       - id: flake8
   - repo: https://github.com/PyCQA/pylint
-    rev: v2.14.5
+    rev: v2.15.2
     hooks:
       - id: pylint
         args: [--exit-zero]
@@ -46,3 +62,9 @@ repos:
         args: [--exit-zero]
         # ignore all tests, not just tests data
         exclude: ^tests/
+  - repo: https://github.com/Lucas-C/pre-commit-hooks
+    rev: v1.3.0
+    hooks:
+      - id: insert-license
+        files: \.py$
+        args: [--license-filepath, .github/disclaimer.txt, --no-extra-eol]

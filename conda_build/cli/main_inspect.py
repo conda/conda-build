@@ -1,9 +1,5 @@
-# (c) Continuum Analytics, Inc. / http://continuum.io
-# All Rights Reserved
-#
-# conda is distributed under the terms of the BSD 3-clause license.
-# Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
-
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 import logging
 from os.path import expanduser
 from pprint import pprint

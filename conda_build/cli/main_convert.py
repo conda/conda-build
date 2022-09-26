@@ -1,9 +1,5 @@
-# (c) Continuum Analytics, Inc. / http://continuum.io
-# All Rights Reserved
-#
-# conda is distributed under the terms of the BSD 3-clause license.
-# Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
-
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 from locale import getpreferredencoding
 import logging
 from os.path import abspath, expanduser
@@ -63,7 +59,7 @@ all.""",
         choices=['osx-64', 'osx-arm64',
                  'linux-32', 'linux-64', 'linux-ppc64', 'linux-ppc64le',
                  'linux-s390x', 'linux-armv6l', 'linux-armv7l', 'linux-aarch64',
-                 'win-32', 'win-64', 'all'],
+                 'win-32', 'win-64', 'win-arm64', 'all'],
         help="Platform to convert the packages to.",
         default=None
     )

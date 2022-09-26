@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 from copy import copy
 from collections import defaultdict, OrderedDict
 from functools import partial
@@ -1221,6 +1223,10 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
 def check_overlinking(m, files, host_prefix=None):
     if not host_prefix:
         host_prefix = m.config.host_prefix
+
+    overlinking_ignore_patterns = m.meta.get("build", {}).get("overlinking_ignore_patterns")
+    if overlinking_ignore_patterns:
+        files = [f for f in files if not any([fnmatch(f, p) for p in overlinking_ignore_patterns])]
     return check_overlinking_impl(m.get_value('package/name'),
                                   m.get_value('package/version'),
                                   m.get_value('build/string'),
