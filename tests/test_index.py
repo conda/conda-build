@@ -200,28 +200,8 @@ def test_file_index_on_single_subdir_1(testing_workdir):
     )
     download(test_package_url, test_package_path)
 
-    # only tell index to index one of them and then assert that it was added
-    # p = os.path.join(testing_workdir, 'index_file')
-    # with open(os.path.join(testing_workdir, 'index_file'), 'a+') as fh:
-    #     fh.write("osx-64/fly-2.5.2-0.tar.bz2\n")
-
-    # conda_build.index.update_index(testing_workdir, channel_name='test-channel', index_file=p)
-
     updated_packages = expected_repodata_json.get("packages")
 
-    # XXX update single package with sql?
-    # updated_packages['fly-2.5.2-0.tar.bz2'] = {
-    #     "build": "0",
-    #     "build_number": 0,
-    #     "depends": [],
-    #     "license": "Apache",
-    #     "md5": "2e84ee54415a5021db050bd5fa5438b2",
-    #     "name": "fly",
-    #     "sha256": "79dec46aaa827ffde1bc069f740697b0d126f485ed9cb4c3db201f720601d346",
-    #     "size": 5382961,
-    #     "subdir": "osx-64",
-    #     "version": "2.5.2"
-    # }
 
     expected_repodata_json["packages"] = updated_packages
 
@@ -280,34 +260,6 @@ def test_file_index_on_single_subdir_1(testing_workdir):
                 "tags": None,
                 "timestamp": 1508520039,
             },
-            # "fly": {
-            #     "activate.d": False,
-            #     "binary_prefix": False,
-            #     "deactivate.d": False,
-            #     "description": "A command line interface that runs a build in a container with ATC.",
-            #     "dev_url": None,
-            #     "doc_source_url": None,
-            #     "doc_url": None,
-            #     "home": "https://github.com/concourse/fly",
-            #     "icon_hash": None,
-            #     "icon_url": None,
-            #     "identifiers": None,
-            #     "keywords": None,
-            #     "license": "Apache",
-            #     "post_link": False,
-            #     "pre_link": False,
-            #     "pre_unlink": False,
-            #     "recipe_origin": None,
-            #     "run_exports": {},
-            #     "source_git_url": "/Users/scastellarin/projects/fly-package/https:/github.com/concourse/concourse.git",
-            #     "source_url": None,
-            #     "subdirs": ["osx-64"],
-            #     "summary": "A command line interface that runs a build in a container with ATC.",
-            #     "tags": None,
-            #     "text_prefix": False,
-            #     "timestamp": 0,
-            #     "version": "2.5.2",
-            # },
         },
         "subdirs": ["noarch", "osx-64"],
     }
@@ -652,15 +604,10 @@ def test_file_index_noarch_osx64_1(testing_workdir):
 
 
 def _build_test_index(workdir):
+    """
+    Copy repodata.json, packages to workdir for testing.
+    """
 
-    # build index_hotfix_pkgs: pkgs =
-    # conda_build.api.build(os.path.join(utils.metadata_dir,
-    # "_index_hotfix_pkgs"), croot=workdir) for pkg in pkgs:
-    #     conda_package_handling.api.transmute(pkg, ".conda")
-    # conda_build.api.update_index(workdir) # not testing update_index in the
-    # _build_test_index() helper
-
-    # workdir may be the same during a single test run?
 
     # Python 3.7 workaround "no dirs_exist_ok flag"
     index_hotfix_pkgs = join(here, "index_hotfix_pkgs")
@@ -962,12 +909,7 @@ def test_index_of_removed_pkg(testing_metadata):
         testing_metadata.config.croot, TEST_SUBDIR, archive_name
     )
 
-    # conda_build.api.build() calls update_index as a side effect.
-    # used to build on every test (38 seconds)
-
-    # out_files = conda_build.api.build(testing_metadata)
-
-    # instead, copy the package
+    # copy the package
     os.makedirs(os.path.join(testing_metadata.config.croot, TEST_SUBDIR))
     shutil.copy(os.path.join(here, "archives", archive_name), archive_destination)
 
