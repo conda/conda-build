@@ -326,7 +326,9 @@ def install_perl_get_core_modules(version):
         with TemporaryDirectory() as tmpdir:
             environ.create_env(tmpdir, [f'perl={version}'], env='host', config=config, subdir=subdirs[0])
             args = [f'{join(tmpdir, *subdirs[1:])}', '-e',
-                    'use Module::CoreList; print join "\n", Module::CoreList->find_modules(qr/.*/);']
+                    'use Module::CoreList; '
+                    'my @modules = grep {Module::CoreList::is_core($_)} Module::CoreList->find_modules(qr/.*/); '
+                    'print join "\n", @modules;']
             from subprocess import check_output
             all_core_modules = check_output(args, shell=False).decode('utf-8').replace('\r\n', '\n').split('\n')
             return all_core_modules
