@@ -84,7 +84,7 @@ SUFFIX_MAP = {'PY': 'python',
               'R': 'r_base'}
 
 
-@lru_cache
+@lru_cache(None)
 def _get_default_compilers(platform, py_ver):
     compilers = DEFAULT_COMPILERS[platform].copy()
     if platform == 'win':
@@ -448,7 +448,7 @@ def filter_by_key_value(variants, key, values, source_name):
     return reduced_variants
 
 
-@lru_cache
+@lru_cache(None)
 def _split_str(string, char):
     return string.split(char)
 
@@ -637,7 +637,7 @@ def get_vars(variants, loop_only=False):
     return loop_vars
 
 
-@lru_cache
+@lru_cache(None)
 def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
     used_variables = set()
     recipe_lines = recipe_text.splitlines()

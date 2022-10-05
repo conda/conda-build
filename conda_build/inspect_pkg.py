@@ -32,7 +32,7 @@ from conda_build.conda_interface import (
 from conda_build.conda_interface import display_actions, install_actions
 
 
-@lru_cache
+@lru_cache(None)
 def dist_files(prefix, dist):
     meta = is_linked(prefix, dist)
     return set(meta['files']) if meta else set()

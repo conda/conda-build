@@ -826,7 +826,7 @@ def _filter_recipe_text(text, extract_pattern=None):
     return text
 
 
-@lru_cache
+@lru_cache(None)
 def read_meta_file(meta_path):
     with open(meta_path, 'rb') as f:
         recipe_text = UnicodeDammit(f.read()).unicode_markup

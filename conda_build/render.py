@@ -227,7 +227,7 @@ def find_pkg_dir_or_file_in_pkgs_dirs(pkg_dist, m, files_only=False):
     return pkg_loc
 
 
-@lru_cache
+@lru_cache(None)
 def _read_specs_from_package(pkg_loc, pkg_dist):
     specs = {}
     if pkg_loc and os.path.isdir(pkg_loc):

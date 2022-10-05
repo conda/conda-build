@@ -72,7 +72,7 @@ def get_lua_include_dir(config):
     return join(config.host_prefix, "include")
 
 
-@lru_cache
+@lru_cache(None)
 def verify_git_repo(git_exe, git_dir, git_url, git_commits_since_tag, debug=False,
                     expected_rev='HEAD'):
     env = os.environ.copy()
@@ -490,7 +490,7 @@ def meta_vars(meta, skip_build_id=False):
     return d
 
 
-@lru_cache
+@lru_cache(None)
 def get_cpu_count():
     if sys.platform == "darwin":
         # multiprocessing.cpu_count() is not reliable on OSX
@@ -609,7 +609,7 @@ def osx_vars(m, get_default, prefix):
     get_default('BUILD', BUILD)
 
 
-@lru_cache
+@lru_cache(None)
 def _machine_and_architecture():
     return platform.machine(), platform.architecture()
 
@@ -656,7 +656,7 @@ def set_from_os_or_variant(out_dict, key, variant, default):
         out_dict[key] = value
 
 
-@lru_cache
+@lru_cache(None)
 def system_vars(env_dict, m, prefix):
     d = dict()
     # note the dictionary is passed in here - variables are set in that dict if they are non-null
