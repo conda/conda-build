@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from collections import defaultdict
 from itertools import groupby
+from functools import lru_cache
 import json
 from operator import itemgetter
 from os.path import abspath, join, dirname, exists, basename, normcase
@@ -29,10 +30,9 @@ from conda_build.conda_interface import (
     get_index,
 )
 from conda_build.conda_interface import display_actions, install_actions
-from conda_build.conda_interface import memoized
 
 
-@memoized
+@lru_cache
 def dist_files(prefix, dist):
     meta = is_linked(prefix, dist)
     return set(meta['files']) if meta else set()

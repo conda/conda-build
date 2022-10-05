@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from collections import OrderedDict, defaultdict
 from locale import getpreferredencoding
+from functools import lru_cache
 import json
 import os
 from os.path import isdir, isfile, abspath
@@ -22,7 +23,6 @@ from .conda_interface import execute_actions
 from .conda_interface import pkgs_dirs
 from .conda_interface import conda_43
 from .conda_interface import specs_from_url
-from .conda_interface import memoized
 from .utils import CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2
 
 from conda_build import exceptions, utils, environ
@@ -227,7 +227,7 @@ def find_pkg_dir_or_file_in_pkgs_dirs(pkg_dist, m, files_only=False):
     return pkg_loc
 
 
-@memoized
+@lru_cache
 def _read_specs_from_package(pkg_loc, pkg_dist):
     specs = {}
     if pkg_loc and os.path.isdir(pkg_loc):
