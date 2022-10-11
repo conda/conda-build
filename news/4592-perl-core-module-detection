@@ -5,7 +5,7 @@
 
 ### Bug fixes
 
-* fix many false-positives in the Perl core module detection of `conda skeleton cpan`
+* fix many false-positives during the detection of Perl core modules in `conda skeleton cpan`
 
 ### Deprecations
 
