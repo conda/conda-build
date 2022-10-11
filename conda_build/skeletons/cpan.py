@@ -205,7 +205,7 @@ def get_build_dependencies_from_src_archive(package_url, sha256, src_cache):
         need_f = any([f.name.lower().endswith(('.f', '.f90', '.f77', '.f95', '.f03')) for f in tf])
         # Fortran builds use CC to perform the link (they do not call the linker directly).
         need_c = True if need_f else \
-            any([f.name.lower().endswith('.c') for f in tf])
+            any([f.name.lower().endswith(('.c', '.xs')) for f in tf])
         need_cxx = any([f.name.lower().endswith(('.cxx', '.cpp', '.cc', '.c++'))
                         for f in tf])
         need_autotools = any([f.name.lower().endswith('/configure') for f in tf])
