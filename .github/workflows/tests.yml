@@ -332,7 +332,7 @@ jobs:
           set -e -u
           source ci/github/activate_conda "${{ github.workspace }}/miniconda/bin/python"
           conda install conda-verify -y
-          pytest --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
+          pytest --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}" --alluredir="./allure-results"
 
       - name: Run Parallel Tests
         if: matrix.test-type == 'parallel'
@@ -346,7 +346,7 @@ jobs:
           conda create -n blarg1 -yq python=2.7
           conda create -n blarg3 -yq python=3.7
           conda create -n blarg4 -yq python nomkl numpy pandas svn
-          pytest --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
+          pytest --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}" --alluredir="./allure-results"
 
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v2
@@ -354,3 +354,30 @@ jobs:
           path: ${{ github.workspace }}/pytest-replay
           name: macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ env. parameters.serial_or_parallel  }}
         if: always()
+      
+      - name: Get allure history
+        uses: actions/checkout@v2
+        if: always()
+        continue-on-error: true
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Setup allure report
+        uses: simple-elf/allure-report-action@master
+        if: always()
+        id: allure-report
+        with:
+          allure_results: allure-results
+          gh_pages: gh-pages
+          allure_report: allure-report
+          allure_history: allure-history
+          keep_reports: 20
+          
+      - name: Deploy report to Github Pages
+        if: always()
+        uses: peaceiris/actions-gh-pages@v2
+        env:
+          PERSONAL_TOKEN: "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"
+          PUBLISH_BRANCH: gh-pages
+          PUBLISH_DIR: allure-history
