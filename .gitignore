@@ -24,3 +24,7 @@ conda-build-testing
 rever/
 **/.vscode
 **/_build
+tests/test-recipes/metadata/_overlinking_detection/bld.bat
+tests/test-recipes/metadata/_overlinking_detection/build.sh
+tests/test-recipes/metadata/_overlinking_detection_ignore_patterns/bld.bat
+tests/test-recipes/metadata/_overlinking_detection_ignore_patterns/build.sh
