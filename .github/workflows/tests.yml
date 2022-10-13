@@ -74,6 +74,7 @@ jobs:
         run: |
           source ci/github/install_conda_build_test_deps
           pip install -e .
+          pip install allure-pytest
           conda info -a
           mkdir ./pytest-replay
           mkdir ./tests/allure-results
@@ -343,6 +344,7 @@ jobs:
           conda info
           source ci/github/install_conda_build_test_deps
           pip install -e .
+          pip install allure-pytest
           conda info -a
           conda list --show-channel-urls
 
