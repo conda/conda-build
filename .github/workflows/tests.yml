@@ -328,10 +328,11 @@ jobs:
       - name: Run Serial Tests
         if: matrix.test-type == 'serial'
         run: |
+          pwd
           set -e -u
           source ci/github/activate_conda "${{ github.workspace }}/miniconda/bin/python"
           conda install conda-verify -y
-          pytest --color=yes -vv -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --alluredir='${{ github.workspace }}/allure-results' "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
+          pytest --color=yes -vv -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests --alluredir='${{ github.workspace }}tests/allure-results' "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
 
       - name: Run Parallel Tests
         if: matrix.test-type == 'parallel'
