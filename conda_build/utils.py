@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 from collections import OrderedDict, defaultdict
 import contextlib
 import fnmatch
@@ -104,6 +106,7 @@ DEFAULT_SUBDIRS = {
     "linux-aarch64",
     "win-64",
     "win-32",
+    "win-arm64",
     "osx-64",
     "osx-arm64",
     "zos-z",

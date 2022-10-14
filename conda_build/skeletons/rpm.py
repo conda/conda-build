@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 import argparse
 from conda_build.conda_interface import iteritems
 from conda_build.source import download_to_cache
