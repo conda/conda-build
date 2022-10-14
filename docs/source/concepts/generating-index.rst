@@ -59,7 +59,7 @@ channeldata.json
         "post_link": false,
         "pre_link": false,
         "pre_unlink": false,
-        "reference_package": "win-64/super-fun-package-0.1.0-py37_0.tar.bz2",
+        "reference_package": "win-64/super-fun-package-0.1.0-py310_0.tar.bz2",
         "run_exports": {},
         "subdirs": [
           "win-64"
@@ -81,7 +81,7 @@ repodata.json
 
   {
     "packages": {
-      "super-fun-package-0.1.0-py37_0.tar.bz2": {
+      "super-fun-package-0.1.0-py310_0.tar.bz2": {
         "build": "py37_0",
         "build_number": 0,
         "depends": [
@@ -126,7 +126,7 @@ Example: Building a channel
 
 To build a local channel and put a package in it, follow the directions below.
 
-#. Make the channel structure.
+#. Make the channel directory.
 
     .. code-block:: bash
 
@@ -134,12 +134,56 @@ To build a local channel and put a package in it, follow the directions below.
       $ cd local-channel
       $ mkdir linux-64 osx-64
 
-#. Put your favorite package in the channel.
+#. Install ``wget`` if you don't already have it.
+
+    First, check if you have it.
 
     .. code-block:: bash
 
-      $ wget https://anaconda.org/anaconda/scipy/1.1.0/download/linux-64/scipy-1.1.0-py37hfa4b5c9_1.tar.bz2 -P linux-64
-      $ wget https://anaconda.org/anaconda/scipy/1.1.0/download/osx-64/scipy-1.1.0-py37hf5b7bf4_0.tar.bz2 -P osx-64
+      $ which wget
+
+    If ``wget`` is not found, then install it:
+
+    .. code-block:: bash
+
+      $ conda install wget
+
+#. Put your favorite package in the channel.
+
+    The steps here depend on your platform.
+
+    #. Windows
+
+        .. code-block:: bash
+
+          $ mkdir win-64
+          $ wget https://anaconda.org/anaconda/scipy/1.9.1/download/win-64/scipy-1.9.1-py310h86744a3_0.tar.bz2 -P win-64
+
+    #. Linux
+
+        .. code-block:: bash
+
+          $ mkdir linux-64
+          $ wget https://anaconda.org/anaconda/scipy/1.9.1/download/linux-64/scipy-1.9.1-py310hd5efca6_0.tar.bz2 -P linux-64
+
+    #. macOS, Intel chip
+
+        .. code-block:: bash
+
+          $ mkdir osx-64
+          $ wget https://anaconda.org/anaconda/scipy/1.9.1/download/osx-64/scipy-1.9.1-py310h09290a1_0.tar.bz2 -P osx-64
+
+    #. macOS, Apple chip
+
+        .. code-block:: bash
+
+          $ mkdir osx-arm64
+          $ wget https://anaconda.org/anaconda/scipy/1.9.1/download/osx-arm64/scipy-1.9.1-py310h20cbe94_0.tar.bz2 -P osx-arm64
+
+    #. Other
+
+        To find the latest SciPy on other platform, go to the `Anaconda Packages file list for SciPy<https://anaconda.org/anaconda/scipy/files>`_.
+
 
 #. Run a conda index. This will generate both channeldata.json for the channel and
    repodata.json for the linux-64 and osx-64 subdirs, along with some other files.
