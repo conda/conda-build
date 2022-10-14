@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 '''
 Module to store conda build settings.
 '''
@@ -152,6 +154,7 @@ def _get_default_settings():
                                                            enable_static_default).lower() == 'true'),
             Setting('no_rewrite_stdout_env', cc_conda_build.get('no_rewrite_stdout_env',
                                                               no_rewrite_stdout_env_default).lower() == 'true'),
+
 
             Setting('index', None),
             # support legacy recipes where only build is specified and expected to be the

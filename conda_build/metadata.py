@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 from collections import OrderedDict
 import contextlib
 import copy
@@ -443,6 +445,7 @@ FIELDS = {
         'missing_dso_whitelist': None,
         'error_overdepending': None,
         'error_overlinking': None,
+        'overlinking_ignore_patterns': [],
     },
     'outputs': {
         'name': None,

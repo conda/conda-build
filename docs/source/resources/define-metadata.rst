@@ -849,6 +849,25 @@ pinned down to the build string level. This will
 supersede any dynamic or compatible pinning that
 conda-build may otherwise be doing.
 
+Ignoring files in overlinking/overdepending checks
+--------------------------------------------------
+
+The ``overlinking_ignore_patterns`` key in the build section can be used to
+ignore patterns of files for the overlinking and overdepending checks. This
+is sometimes useful to speed up builds that have many files (large repackage jobs)
+or builds where you know only a small fraction of the files should be checked.
+
+Glob patterns are allowed here, but mind your quoting, especially with leading wildcards.
+
+Use this sparingly, as the overlinking checks generally do prevent you from making mistakes.
+
+.. code-block:: yaml
+
+ build:
+   overlinking_ignore_patterns:
+     - "bin/*"
+
+
 Whitelisting shared libraries
 -----------------------------
 
@@ -1240,11 +1259,13 @@ Specifying files to include in output
 --------------------------------------
 
 You can specify files to be included in the package in 1 of
-2 ways:
+3 ways:
 
 * Explicit file lists.
 
 * Scripts that move files into the build prefix.
+
+* Both of the above
 
 Explicit file lists are relative paths from the root of the
 build prefix. Explicit file lists support glob expressions.
@@ -1294,6 +1315,8 @@ independent of one another.
    simultaneously. Conda disallows this condition because it
    creates ambiguous runtime conditions.
 
+When both scripts and files are given, the script is first run
+and then only the files in the explicit file list are packaged.
 
 Subpackage requirements
 -----------------------
@@ -1854,10 +1877,10 @@ variables are booleans.
      - True if the platform is Linux.
    * - linux32
      - True if the platform is Linux and the Python architecture
-       is 32-bit.
+       is 32-bit and uses x86.
    * - linux64
      - True if the platform is Linux and the Python architecture
-       is 64-bit.
+       is 64-bit and uses x86.
    * - armv6l
      - True if the platform is Linux and the Python architecture
        is armv6l.

@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 """
 This is code that is added to noarch Python packages. See
 conda_build/noarch_python.py.

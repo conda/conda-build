@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 from collections import OrderedDict, defaultdict
 import contextlib
 import fnmatch
@@ -9,7 +11,6 @@ import libarchive
 import logging
 import logging.config
 import mmap
-import operator
 import os
 from os.path import (dirname, getmtime, getsize, isdir, join, isfile, abspath, islink,
                      expanduser, expandvars)
@@ -105,6 +106,7 @@ DEFAULT_SUBDIRS = {
     "linux-aarch64",
     "win-64",
     "win-32",
+    "win-arm64",
     "osx-64",
     "osx-arm64",
     "zos-z",
@@ -864,50 +866,6 @@ def file_info(path):
             'sha256': hashsum_file(path, 'sha256'),
             'mtime': getmtime(path)}
 
-# Taken from toolz
-
-
-def groupby(key, seq):
-    """ Group a collection by a key function
-    >>> names = ['Alice', 'Bob', 'Charlie', 'Dan', 'Edith', 'Frank']
-    >>> groupby(len, names)  # doctest: +SKIP
-    {3: ['Bob', 'Dan'], 5: ['Alice', 'Edith', 'Frank'], 7: ['Charlie']}
-    >>> iseven = lambda x: x % 2 == 0
-    >>> groupby(iseven, [1, 2, 3, 4, 5, 6, 7, 8])  # doctest: +SKIP
-    {False: [1, 3, 5, 7], True: [2, 4, 6, 8]}
-    Non-callable keys imply grouping on a member.
-    >>> groupby('gender', [{'name': 'Alice', 'gender': 'F'},
-    ...                    {'name': 'Bob', 'gender': 'M'},
-    ...                    {'name': 'Charlie', 'gender': 'M'}]) # doctest:+SKIP
-    {'F': [{'gender': 'F', 'name': 'Alice'}],
-     'M': [{'gender': 'M', 'name': 'Bob'},
-           {'gender': 'M', 'name': 'Charlie'}]}
-    See Also:
-        countby
-    """
-    if not callable(key):
-        key = getter(key)
-    d = defaultdict(lambda: [].append)
-    for item in seq:
-        d[key(item)](item)
-    rv = {}
-    for k, v in iteritems(d):
-        rv[k] = v.__self__
-    return rv
-
-
-def getter(index):
-    if isinstance(index, list):
-        if len(index) == 1:
-            index = index[0]
-            return lambda x: (x[index],)
-        elif index:
-            return operator.itemgetter(*index)
-        else:
-            return lambda x: ()
-    else:
-        return operator.itemgetter(index)
-
 
 def comma_join(items):
     """
@@ -1332,7 +1290,8 @@ class LoggingContext:
     default_loggers = ['conda', 'binstar', 'install', 'conda.install', 'fetch', 'conda.instructions',
                        'fetch.progress', 'print', 'progress', 'dotupdate', 'stdoutlog', 'requests',
                        'conda.core.package_cache', 'conda.plan', 'conda.gateways.disk.delete',
-                       'conda_build', 'conda_build.index']
+                       'conda_build', 'conda_build.index', 'conda_build.noarch_python',
+                       'urllib3.connectionpool']
 
     def __init__(self, level=logging.WARN, handler=None, close=True, loggers=None):
         self.level = level

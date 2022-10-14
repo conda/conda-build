@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 # For the most part, all functionality should be tested with the api tests,
 #   because they actually provide coverage.  These tests are here to make
 #   sure that the CLI still works.
@@ -589,7 +591,7 @@ def test_relative_path_test_artifact():
     # build the package
     args = ['--no-anaconda-upload', '--no-test', '--croot', croot_abs, empty_sections]
     output_file_abs = main_build.execute(args)
-    assert(len(output_file_abs) == 1)
+    assert len(output_file_abs) == 1
 
     output_file_rel = os.path.join(croot_rel, os.path.relpath(output_file_abs[0], croot_abs))
 
@@ -609,7 +611,7 @@ def test_relative_path_test_recipe():
     # build the package
     args = ['--no-anaconda-upload', '--no-test', '--croot', croot_abs, empty_sections]
     output_file_abs = main_build.execute(args)
-    assert(len(output_file_abs) == 1)
+    assert len(output_file_abs) == 1
 
     # run the test stage with relative croot
     args = ['--no-anaconda-upload', '--test', '--croot', croot_rel, empty_sections]
@@ -623,12 +625,12 @@ def test_render_with_python_arg_reduces_subspace(capfd):
     args = [recipe, '--python=2.7', '--output']
     main_render.execute(args)
     out, err = capfd.readouterr()
-    assert(len(out.splitlines()) == 2)
+    assert len(out.splitlines()) == 2
 
     args = [recipe, '--python=3.9', '--output']
     main_render.execute(args)
     out, err = capfd.readouterr()
-    assert(len(out.splitlines()) == 1)
+    assert len(out.splitlines()) == 1
 
     # should raise an error, because python 3.6 is not in the matrix, so we don't know which vc
     # to associate with
@@ -643,17 +645,17 @@ def test_render_with_python_arg_CLI_reduces_subspace(capfd):
     args = [recipe, '--variants', '{python: [2.7, 3.9]}', '--output']
     main_render.execute(args)
     out, err = capfd.readouterr()
-    assert(len(out.splitlines()) == 3)
+    assert len(out.splitlines()) == 3
 
     args = [recipe, '--variants', '{python: 2.7}', '--output']
     main_render.execute(args)
     out, err = capfd.readouterr()
-    assert(len(out.splitlines()) == 2)
+    assert len(out.splitlines()) == 2
 
     args = [recipe, '--variants', '{python: 3.9}', '--output']
     main_render.execute(args)
     out, err = capfd.readouterr()
-    assert(len(out.splitlines()) == 1)
+    assert len(out.splitlines()) == 1
 
 
 def test_test_extra_dep(testing_metadata):

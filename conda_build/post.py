@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 from copy import copy
 from collections import defaultdict, OrderedDict
 from functools import partial
@@ -733,9 +735,9 @@ DEFAULT_WIN_WHITELIST = ['**/ADVAPI32.dll',
 def _collect_needed_dsos(sysroots_files, files, run_prefix, sysroot_substitution, build_prefix, build_prefix_substitution):
     all_needed_dsos = set()
     needed_dsos_for_file = dict()
-    sysroot = ''
+    sysroots = ''
     if sysroots_files:
-        sysroot = list(sysroots_files.keys())[0]
+        sysroots = list(sysroots_files.keys())[0]
     for f in files:
         path = join(run_prefix, f)
         if not codefile_type(path):
@@ -743,7 +745,7 @@ def _collect_needed_dsos(sysroots_files, files, run_prefix, sysroot_substitution
         build_prefix = build_prefix.replace(os.sep, '/')
         run_prefix = run_prefix.replace(os.sep, '/')
         needed = get_linkages_memoized(path, resolve_filenames=True, recurse=False,
-                                       sysroot=sysroot, envroot=run_prefix)
+                                       sysroot=sysroots, envroot=run_prefix)
         for lib, res in needed.items():
             resolved = res['resolved'].replace(os.sep, '/')
             for sysroot, sysroot_files in sysroots_files.items():
@@ -1221,6 +1223,10 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
 def check_overlinking(m, files, host_prefix=None):
     if not host_prefix:
         host_prefix = m.config.host_prefix
+
+    overlinking_ignore_patterns = m.meta.get("build", {}).get("overlinking_ignore_patterns")
+    if overlinking_ignore_patterns:
+        files = [f for f in files if not any([fnmatch(f, p) for p in overlinking_ignore_patterns])]
     return check_overlinking_impl(m.get_value('package/name'),
                                   m.get_value('package/version'),
                                   m.get_value('build/string'),

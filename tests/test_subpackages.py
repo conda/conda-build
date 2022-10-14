@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 from glob import glob
 import json
 import os
@@ -266,6 +268,12 @@ def test_subpackage_order_bad(testing_config):
     recipe = os.path.join(subpackage_dir, '_order_bad')
     outputs = api.build(recipe, config=testing_config)
     assert len(outputs) == 2
+
+
+@pytest.mark.sanity
+def test_subpackage_script_and_files(testing_config):
+    recipe = os.path.join(subpackage_dir, '_script_and_files')
+    api.build(recipe, config=testing_config)
 
 
 @pytest.mark.sanity

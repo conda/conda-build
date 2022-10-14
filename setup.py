@@ -1,7 +1,10 @@
 #!/usr/bin/env python
-import versioneer
-
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
+from pathlib import Path
 from setuptools import setup
+
+import versioneer
 
 # Don't proceed with 'unknown' in version
 version_dict = versioneer.get_versions()
@@ -55,7 +58,7 @@ setup(
     ],
     python_requires=">=3.6",
     description="tools for building conda packages",
-    long_description=open("README.rst").read(),
+    long_description=Path("README.md").read_text(),
     packages=[
         "conda_build",
         "conda_build.cli",

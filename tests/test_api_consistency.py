@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 # This file makes sure that our API has not changed.  Doing so can not be accidental.  Whenever it
 #    happens, we should bump our major build number, because we may have broken someone.
 

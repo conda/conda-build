@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 """
 Tools for converting PyPI packages to conda recipes.
 """
@@ -20,7 +22,7 @@ from tempfile import mkdtemp
 import pkginfo
 import requests
 from requests.packages.urllib3.util.url import parse_url
-from six.moves.urllib.parse import urljoin, urlsplit
+from urllib.parse import urljoin, urlsplit
 import yaml
 
 from conda_build.conda_interface import spec_from_line
@@ -816,14 +818,18 @@ def get_dependencies(requires, setuptools_enabled=True):
         return line.split('#')[0].rstrip()
 
     def _spec_from_line(line):
-        spec_pat = re.compile(r'(?P<name>[^=<>!\s]+)'  # package name  # lgtm [py/regex/unmatchable-dollar]
-                              r'\s*'  # ignore spaces
-                              r'('
-                              r'(?P<cc>=[^=]+(=[^=]+)?)'  # conda constraint
-                              r'|'
-                              r'(?P<pc>(?:[=!]=|[><]=?|~=).+)'  # new (pip-style) constraint(s)
-                              r')?$',
-                              re.VERBOSE)  # lgtm [py/regex/unmatchable-dollar]
+        spec_pat = re.compile(
+            r"""
+            (?P<name>[^=<>!\s]+)  # package name
+            \s*  # ignore spaces
+            (
+                (?P<cc>=[^=]+(=[^=]+)?)  # conda constraint
+                |
+                (?P<pc>(?:[=!]=|[><]=?|~=).+)  # new pip-style constraints
+            )?$
+            """,
+            re.VERBOSE,
+        )
         m = spec_pat.match(_strip_comment(line))
         if m is None:
             return None

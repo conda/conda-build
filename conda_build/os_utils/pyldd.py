@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 import argparse
 import glob
 import os
@@ -363,7 +365,7 @@ def mach_o_change(path, arch, what, value):
     the given binary with a new name (value), provided it's shorter.
     """
 
-    assert(len(what) >= len(value))
+    assert len(what) >= len(value)
 
     results = []
     with open(path, 'r+b') as f:

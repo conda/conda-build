@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 '''
 Integrative tests of the CRAN skeleton that start from
 conda_build.api.skeletonize and check the output files
@@ -14,15 +16,28 @@ from conda_build.utils import ensure_list
 
 # CRAN packages to test license_file entry.
 # (package, license_id, license_family, license_files)
-cran_packages = [('r-rmarkdown', 'GPL-3', 'GPL3', 'GPL-3'),  # cran: 'GPL-3'
-                 ('r-cortools', 'Artistic-2.0', 'OTHER', 'Artistic-2.0'),  # cran: 'Artistic License 2.0'
-                 ('r-udpipe', 'MPL-2.0', 'OTHER', ''),  # cran: 'MPL-2.0'
-                 ('r-broom', 'MIT', 'MIT', ['MIT', 'LICENSE']),  # cran: 'MIT + file LICENSE'
-                 ('r-meanr', 'BSD_2_clause', 'BSD', ['BSD_2_clause', 'LICENSE']),  # cran: 'BSD 2-clause License + file LICENSE'
-                 ('r-zoo', 'GPL-2 | GPL-3', 'GPL3', ['GPL-2', 'GPL-3']),  # cran: 'GPL-2 | GPL-3'
-                 ('r-magree', 'GPL-3 | GPL-2', 'GPL3', ['GPL-3', 'GPL-2']),  # cran: 'GPL-3 | GPL-2'
-                 ('r-mglm', 'GPL-2', 'GPL2', 'GPL-2'),  # cran: 'GPL (>= 2)'
-                 ]
+cran_packages = [
+    ("r-rmarkdown", "GPL-3", "GPL3", "GPL-3"),  # cran: 'GPL-3'
+    (
+        # cran: 'Artistic License 2.0'
+        "r-badger",
+        "Artistic-2.0",
+        "OTHER",
+        "Artistic-2.0",
+    ),
+    ("r-udpipe", "MPL-2.0", "OTHER", ""),  # cran: 'MPL-2.0'
+    ("r-broom", "MIT", "MIT", ["MIT", "LICENSE"]),  # cran: 'MIT + file LICENSE'
+    (
+        # cran: 'BSD 2-clause License + file LICENSE'
+        "r-meanr",
+        "BSD_2_clause",
+        "BSD",
+        ["BSD_2_clause", "LICENSE"],
+    ),
+    ("r-zoo", "GPL-2 | GPL-3", "GPL3", ["GPL-2", "GPL-3"]),  # cran: 'GPL-2 | GPL-3'
+    ("r-magree", "GPL-3 | GPL-2", "GPL3", ["GPL-3", "GPL-2"]),  # cran: 'GPL-3 | GPL-2'
+    ("r-mglm", "GPL-2", "GPL2", "GPL-2"),  # cran: 'GPL (>= 2)'
+]
 
 
 @pytest.mark.slow
