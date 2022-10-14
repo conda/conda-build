@@ -136,7 +136,7 @@ To build a local channel and put a package in it, follow the directions below.
 
 #. Install ``wget`` if you don't already have it.
 
-    First, check if you have it.
+    Check if you have it.
 
     .. code-block:: bash
 
@@ -148,7 +148,7 @@ To build a local channel and put a package in it, follow the directions below.
 
       $ conda install wget
 
-#. Put your favorite package in the channel.
+#. Put your favorite package in the local channel.
 
     The steps here depend on your platform.
 
@@ -184,7 +184,6 @@ To build a local channel and put a package in it, follow the directions below.
 
         To find the latest SciPy on other platform, go to the `Anaconda Packages file list for SciPy<https://anaconda.org/anaconda/scipy/files>`_.
 
-
 #. Run a conda index. This will generate both channeldata.json for the channel and
    repodata.json for the linux-64 and osx-64 subdirs, along with some other files.
 
@@ -197,7 +196,6 @@ To build a local channel and put a package in it, follow the directions below.
     .. code-block:: bash
 
       $ conda search -c file:/<path to>/local-channel scipy | grep local-channel
-
 
 More details behind the scenes
 ------------------------------
