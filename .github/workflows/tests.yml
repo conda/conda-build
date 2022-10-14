@@ -72,13 +72,14 @@ jobs:
 
       - name: Source Scripts
         run: |
-          pwd
           source ci/github/install_conda_build_test_deps
           pip install -e .
           pip install allure-pytest
           conda info -a
           mkdir ./pytest-replay
           mkdir ./tests/allure-results
+          echo "Finding the Test folder"
+          pwd
 
       - name: Run Serial tests
         if: matrix.test-type == 'serial'
@@ -93,7 +94,9 @@ jobs:
               -m "serial" tests \
               ${{ env.pytest-replay }} \
               --alluredir = "./tests/allure-results"
-
+          
+          allure generate ./tests/allure-result
+          
       - name: Run Parallel tests
         if: matrix.test-type == 'parallel'
         run: |
@@ -108,6 +111,8 @@ jobs:
               -m "not serial" tests \
               ${{ env.pytest-replay }} \
               --alluredir = "./tests/allure-results"
+          
+          allure generate ./tests/allure-results
 
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v2
@@ -128,7 +133,7 @@ jobs:
         if: always()
         id: allure-report
         with: 
-          allure_results: .tests//allure-results
+          allure_results: tests//allure-results
           gh_pages: gh-pages
           allure_report: allure-report
           allure_history: allure-history
