@@ -110,7 +110,7 @@ For each subdir:
 
 * Remove all packages that need to be removed.
 
-For all packages that need to be added/updated:
+* For all packages that need to be added/updated:
 
   * Extract the package to access metadata including full package name,
     mtime, size, and index.json.
@@ -132,7 +132,6 @@ To build a local channel and put a package in it, follow the directions below.
 
       $ mkdir local-channel
       $ cd local-channel
-      $ mkdir linux-64 osx-64
 
 #. Install ``wget`` if you don't already have it.
 
@@ -182,7 +181,7 @@ To build a local channel and put a package in it, follow the directions below.
 
     #. Other
 
-        To find the latest SciPy on other platform, go to the `Anaconda Packages file list for SciPy<https://anaconda.org/anaconda/scipy/files>`_.
+        To find the latest SciPy on other platform, go to the `Anaconda Packages file list for SciPy <https://anaconda.org/anaconda/scipy/files>`_.
 
 #. Run a conda index. This will generate both channeldata.json for the channel and
    repodata.json for the linux-64 and osx-64 subdirs, along with some other files.
