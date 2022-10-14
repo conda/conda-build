@@ -74,10 +74,10 @@ jobs:
         run: |
           source ci/github/install_conda_build_test_deps
           pip install -e .
-          pip install allure-pytest
+          pip install allure-pytestx
           conda info -a
           mkdir ./pytest-replay
-          mkdir ./tests/allure-results
+          mkdir ./allure-results
           echo "Finding the Test folder"
           pwd
 
@@ -93,10 +93,8 @@ jobs:
               --cov-report xml \
               -m "serial" tests \
               ${{ env.pytest-replay }} \
-              --alluredir = "./tests/allure-results"
-          
-          allure generate ./tests/allure-result
-          
+              --alluredir = "./allure-results"
+      
       - name: Run Parallel tests
         if: matrix.test-type == 'parallel'
         run: |
@@ -110,9 +108,7 @@ jobs:
               --cov-report xml \
               -m "not serial" tests \
               ${{ env.pytest-replay }} \
-              --alluredir = "./tests/allure-results"
-          
-          allure generate ./tests/allure-results
+              --alluredir = "./allure-results"
 
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v2
@@ -133,8 +129,40 @@ jobs:
         if: always()
         id: allure-report
         with: 
-          allure_results: tests//allure-results
+          allure_results: allure-results
           gh_pages: gh-pages
           allure_report: allure-report
           allure_history: allure-history
+      
+      - name: Upload Allure Report
+        uses: actions/upload-artifact@v2
+        run: 
+          echo "Allure Version"
+          allure --version
+          echo "Current Location"
+          pwd
+          pip install allure-cmd
+          allure generate all
+        with:
+          name: allure-reports-upload
+          path: allure-report
+        
+      - name: Setup allure report
+        uses: simple-elf/allure-report-action@master
+        if: always()
+        id: allure-report
+        with:
+          allure_results: allure-results
+          gh_pages: gh-pages
+          allure_report: allure-report
+          allure_history: allure-history
+          keep_reports: 20
+
+      - name: Deploy report to Github Pages
+        if: always()
+        uses: peaceiris/actions-gh-pages@v2
+        env:
+          PERSONAL_TOKEN: ${{ GITHUB.ACCESS_TOKEN }}
+          PUBLISH_BRANCH: gh-pages
+          PUBLISH_DIR: allure-history
       
