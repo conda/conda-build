@@ -74,7 +74,7 @@ jobs:
         run: |
           source ci/github/install_conda_build_test_deps
           pip install -e .
-          pip install allure-pytestx
+          pip install allure-pytest
           conda info -a
           mkdir ./pytest-replay
           mkdir ./allure-results
