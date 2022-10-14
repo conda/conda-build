@@ -127,28 +127,10 @@ jobs:
         if: always()
         id: allure-report
         with: 
-          allure_results: build/allure-results
+          allure_results: ./allure-results
           gh_pages: gh-pages
           allure_report: allure-report
           allure_history: allure-history
-      
-      - name: Deploy report to Github Pages
-        if: always()
-        uses: peaceiris/actions-gh-pages@v2
-        env:
-          PERSONAL_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PUBLISH_BRANCH: gh-pages
-          PUBLISH_DIR: allure-history
-      
-      - name: Post the link to the report
-        if: always()
-        uses: Sibz/github-status-action@v1
-        with: 
-            authToken: ${{secrets.GITHUB_TOKEN}}
-            context: 'Test report'
-            state: 'success'
-            sha: ${{ github.event.pull_request.head.sha }}
-            target_url: simple-elf.github.io/github-allure-history/${{ github.run_number }}
       
 
   windows:
@@ -409,7 +391,7 @@ jobs:
         if: always()
         id: allure-report
         with: 
-          allure_results: build/allure-results
+          allure_results: ./allure-results
           gh_pages: gh-pages
           allure_report: allure-report
           allure_history: allure-history
@@ -421,15 +403,5 @@ jobs:
           PERSONAL_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PUBLISH_BRANCH: gh-pages
           PUBLISH_DIR: allure-history
-      
-      - name: Post the link to the report
-        if: always()
-        uses: Sibz/github-status-action@v1
-        with: 
-            authToken: ${{secrets.GITHUB_TOKEN}}
-            context: 'Test report'
-            state: 'success'
-            sha: ${{ github.event.pull_request.head.sha }}
-            target_url: simple-elf.github.io/github-allure-history/${{ github.run_number }}
 
       
