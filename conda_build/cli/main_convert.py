@@ -8,7 +8,6 @@ import sys
 from conda_build.conda_interface import ArgumentParser
 
 from conda_build import api
-from conda_build.utils import PY3
 
 logging.basicConfig(level=logging.INFO)
 
@@ -115,10 +114,6 @@ def execute(args):
     del args.__dict__['files']
 
     for f in files:
-        # Don't use byte literals for paths in Python 2
-        if not PY3:
-            f = f.decode(getpreferredencoding())
-
         f = abspath(expanduser(f))
         api.convert(f, **args.__dict__)
 

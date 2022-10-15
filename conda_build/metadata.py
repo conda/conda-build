@@ -13,12 +13,10 @@ import time
 
 from bs4 import UnicodeDammit
 
-from .conda_interface import iteritems, PY3, text_type
 from .conda_interface import md5_file
 from .conda_interface import non_x86_linux_machines
 from .conda_interface import MatchSpec
 from .conda_interface import envs_dirs
-from .conda_interface import string_types
 
 from conda_build import exceptions, utils, variants, environ
 from conda_build.conda_interface import memoized
@@ -141,7 +139,7 @@ def ns_cfg(config):
             try:
                 d[k] = int(v)
             except (TypeError, ValueError):
-                if isinstance(v, string_types) and v.lower() in ('false', 'true'):
+                if isinstance(v, str) and v.lower() in ('false', 'true'):
                     v = v.lower() == 'true'
                 d[k] = v
     return d
@@ -249,8 +247,8 @@ def _trim_None_strings(meta_dict):
     for key, value in meta_dict.items():
         if hasattr(value, 'keys'):
             meta_dict[key] = _trim_None_strings(value)
-        elif value and hasattr(value, '__iter__') or isinstance(value, string_types):
-            if isinstance(value, string_types):
+        elif value and hasattr(value, '__iter__') or isinstance(value, str):
+            if isinstance(value, str):
                 meta_dict[key] = None if 'None' in value else value
             else:
                 # support lists of dicts (homogeneous)
@@ -356,7 +354,7 @@ def parse(data, config, path=None):
         # source field may be either a dictionary, or a list of dictionaries
         if field in OPTIONALLY_ITERABLE_FIELDS:
             if not (isinstance(res[field], dict) or (hasattr(res[field], '__iter__') and not
-                        isinstance(res[field], string_types))):
+                        isinstance(res[field], str))):
                 raise RuntimeError("The %s field should be a dict or list of dicts, not "
                                    "%s in file %s." % (field, res[field].__class__.__name__, path))
         else:
@@ -378,24 +376,24 @@ FALSES = {'n', 'no', 'false', 'off'}
 FIELDS = {
     'package': {
         'name': None,
-        'version': text_type,
+        'version': str,
     },
     'source': {
         'fn': None,
         'url': None,
-        'md5': text_type,
+        'md5': str,
         'sha1': None,
         'sha256': None,
-        'path': text_type,
+        'path': str,
         'path_via_symlink': None,
-        'git_url': text_type,
-        'git_tag': text_type,
-        'git_branch': text_type,
-        'git_rev': text_type,
+        'git_url': str,
+        'git_tag': str,
+        'git_branch': str,
+        'git_rev': str,
         'git_depth': None,
         'hg_url': None,
         'hg_tag': None,
-        'svn_url': text_type,
+        'svn_url': str,
         'svn_rev': None,
         'svn_ignore_externals': None,
         'folder': None,
@@ -404,7 +402,7 @@ FIELDS = {
     },
     'build': {
         'number': None,
-        'string': text_type,
+        'string': str,
         'entry_points': list,
         'osx_is_app': bool,
         'disable_pip': None,
@@ -414,7 +412,7 @@ FIELDS = {
         'no_link': None,
         'binary_relocation': bool,
         'script': list,
-        'noarch': text_type,
+        'noarch': str,
         'noarch_python': bool,
         'has_prefix_files': None,
         'binary_has_prefix_files': None,
@@ -426,10 +424,10 @@ FIELDS = {
         'script_env': list,
         'always_include_files': None,
         'skip': bool,
-        'msvc_compiler': text_type,
-        'pin_depends': text_type,  # still experimental
+        'msvc_compiler': str,
+        'pin_depends': str,  # still experimental
         'include_recipe': None,
-        'preferred_env': text_type,
+        'preferred_env': str,
         'preferred_env_executable_paths': list,
         'run_exports': list,
         'ignore_run_exports': list,
@@ -439,9 +437,9 @@ FIELDS = {
         'force_use_keys': list,
         'force_ignore_keys': list,
         'merge_build_host': bool,
-        'pre-link': text_type,
-        'post-link': text_type,
-        'pre-unlink': text_type,
+        'pre-link': str,
+        'post-link': str,
+        'pre-unlink': str,
         'missing_dso_whitelist': None,
         'error_overdepending': None,
         'error_overlinking': None,
@@ -549,7 +547,7 @@ def _git_clean(source_meta):
 
     git_rev_tags = (git_rev,) + git_rev_tags_old
 
-    has_rev_tags = tuple(bool(source_meta.get(tag, text_type())) for
+    has_rev_tags = tuple(bool(source_meta.get(tag, str())) for
                           tag in git_rev_tags)
     if sum(has_rev_tags) > 1:
         msg = "Error: multiple git_revs:"
@@ -830,7 +828,7 @@ def _filter_recipe_text(text, extract_pattern=None):
 def read_meta_file(meta_path):
     with open(meta_path, 'rb') as f:
         recipe_text = UnicodeDammit(f.read()).unicode_markup
-    if PY3 and hasattr(recipe_text, 'decode'):
+    if hasattr(recipe_text, 'decode'):
         recipe_text = recipe_text.decode()
     return recipe_text
 
@@ -1170,7 +1168,7 @@ class MetaData:
         value = section_data.get(key, default)
 
         # handle yaml 1.1 boolean values
-        if isinstance(value, text_type):
+        if isinstance(value, str):
             if value.lower() in TRUES:
                 value = True
             elif value.lower() in FALSES:
@@ -1186,7 +1184,7 @@ class MetaData:
             if key not in FIELDS[section]:
                 raise ValueError("in section %r: unknown key %r" %
                                  (section, key))
-        for section, submeta in iteritems(self.meta):
+        for section, submeta in self.meta.items():
             # anything goes in the extra section
             if section == 'extra':
                 continue
@@ -1204,7 +1202,7 @@ class MetaData:
         res = self.meta.get('package', {}).get('name', '')
         if not res and not fail_ok:
             sys.exit('Error: package/name missing in: %r' % self.meta_path)
-        res = text_type(res)
+        res = str(res)
         if res != res.lower():
             sys.exit('Error: package/name must be lowercase, got: %r' % res)
         check_bad_chrs(res, 'package/name')
@@ -1623,13 +1621,10 @@ class MetaData:
         '''
         String representation of the MetaData.
         '''
-        return text_type(self.__dict__)
+        return str(self.__dict__)
 
     def __str__(self):
-        if PY3:
-            return self.__unicode__()
-        else:
-            return self.__unicode__().encode('utf-8')
+        return self.__unicode__()
 
     def __repr__(self):
         '''
@@ -2018,7 +2013,7 @@ class MetaData:
 
         zip_key_groups = self.config.variant.get('zip_keys', [])
         zip_key_groups = ([zip_key_groups] if zip_key_groups and
-                          isinstance(zip_key_groups[0], string_types) else zip_key_groups)
+                          isinstance(zip_key_groups[0], str) else zip_key_groups)
         used_zip_key_groups = [group for group in zip_key_groups if any(
             set(group) & set(used_variables))]
 
