@@ -1370,9 +1370,7 @@ class MetaData:
     def check_fields(self):
         def check_field(key, section):
             if key not in FIELDS[section]:
-                raise ValueError(
-                    "in section {!r}: unknown key {!r}".format(section, key)
-                )
+                raise ValueError(f"in section {section!r}: unknown key {key!r}")
 
         for section, submeta in self.meta.items():
             # anything goes in the extra section
