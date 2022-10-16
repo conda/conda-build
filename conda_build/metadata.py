@@ -601,7 +601,7 @@ def _git_clean(source_meta):
 
     git_rev_tags = (git_rev,) + git_rev_tags_old
 
-    has_rev_tags = tuple(bool(source_meta.get(tag, str())) for tag in git_rev_tags)
+    has_rev_tags = tuple(bool(source_meta.get(tag, '')) for tag in git_rev_tags)
     if sum(has_rev_tags) > 1:
         msg = "Error: multiple git_revs:"
         msg += ", ".join(
@@ -1370,7 +1370,7 @@ class MetaData:
     def check_fields(self):
         def check_field(key, section):
             if key not in FIELDS[section]:
-                raise ValueError("in section %r: unknown key %r" % (section, key))
+                raise ValueError("in section {!r}: unknown key {!r}".format(section, key))
 
         for section, submeta in self.meta.items():
             # anything goes in the extra section
