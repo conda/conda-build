@@ -1,6 +1,5 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-from locale import getpreferredencoding
 import logging
 from os.path import abspath, expanduser
 import sys

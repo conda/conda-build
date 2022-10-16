@@ -217,8 +217,8 @@ class bdist_conda(install):
                 if len(cs + gs) != 0:
                     d['build']['entry_points'] = entry_list
                     if metadata.conda_command_tests is True:
-                        d['test']['commands'] = list(map(unicode,
-                                                            pypi.make_entry_tests(entry_list)))
+                        d['test']['commands'] = list(map(str,
+                                                         pypi.make_entry_tests(entry_list)))
 
         if 'setuptools' in d['requirements']['run']:
             d['build']['preserve_egg_dir'] = True
@@ -233,7 +233,7 @@ class bdist_conda(install):
         if (metadata.conda_command_tests and not
                 isinstance(metadata.conda_command_tests,
                 bool)):
-            d['test']['commands'] = list(map(unicode, metadata.conda_command_tests))
+            d['test']['commands'] = list(map(str, metadata.conda_command_tests))
 
         d = dict(d)
         self.config.keep_old_work = True

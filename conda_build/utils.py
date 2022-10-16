@@ -58,14 +58,17 @@ from conda_build.conda_interface import rm_rf as _rm_rf # noqa
 from conda_build.exceptions import BuildLockError # noqa
 from conda_build.os_utils import external # noqa
 
+import urllib.parse as urlparse
+import urllib.request as urllib
+
 from glob import glob as glob_glob
+
 
 # stdlib glob is less feature-rich but considerably faster than glob2
 def glob(pathname, recursive=True):
     return glob_glob(pathname, recursive=recursive)
 
-import urllib.parse as urlparse
-import urllib.request as urllib
+
 # NOQA because it is not used in this file.
 from contextlib import ExitStack  # NOQA
 PermissionError = PermissionError  # NOQA

@@ -1,7 +1,6 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 from collections import OrderedDict, defaultdict
-from locale import getpreferredencoding
 import json
 import os
 from os.path import isdir, isfile, abspath

@@ -361,7 +361,6 @@ def update_index(dir_paths, config=None, force=False, check_md5=False, remove=Fa
                  subdir=None, threads=None, patch_generator=None, verbose=False, progress=False,
                  hotfix_source_repo=None, current_index_versions=None, **kwargs):
     import yaml
-    from locale import getpreferredencoding
     import os
     from conda_build.index import update_index
     from conda_build.utils import ensure_list
