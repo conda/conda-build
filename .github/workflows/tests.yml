@@ -117,14 +117,6 @@ jobs:
           name: Linux_replay-py-${{ matrix.python-version }}_${{ matrix.conda-version }}_${{ matrix.test-type }}
           path: pytest-replay/
 
-      - name: Get allure history
-        uses: actions/checkout@v2
-        if: always()
-        continue-on-error: true
-        with:
-          ref: gh-pages
-          path: gh-pages
-        
       - name: Setup allure report
         uses: simple-elf/allure-report-action@master
         if: always()
@@ -135,11 +127,19 @@ jobs:
           allure_report: allure-report
           allure_history: allure-history
           keep_reports: 20
-      
+          
+      - name: Get allure history
+        uses: actions/checkout@v2
+        if: always()
+        continue-on-error: true
+        with:
+          ref: gh-pages
+          path: gh-pages
+        
       - name: Deploy report to Github Pages
         if: always()
         uses: peaceiris/actions-gh-pages@v3
         env:
-          GITHUB_TOKEN: "${{ secrets.CLA_ACTION_TOKEN }}"
+          GITHUB_TOKEN: "${{ secrets.PROJECT_TOKEN }}"
           PUBLISH_BRANCH: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
           PUBLISH_DIR: allure-history
