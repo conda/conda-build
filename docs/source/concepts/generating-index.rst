@@ -112,7 +112,7 @@ For each subdir:
 
 * For all packages that need to be added/updated:
 
-  * Extract the package to access metadata including full package name,
+  * Extract the package to access metadata, including full package name,
     mtime, size, and index.json.
 
   * Aggregate package metadata to repodata collection.
@@ -135,17 +135,25 @@ To build a local channel and put a package in it, follow the directions below.
 
 #. Install ``wget`` if you don't already have it.
 
-    Check if you have it.
+    #.  Check if you have it.
 
-    .. code-block:: bash
+      #. Windows
 
-      $ which wget
+          .. code-block:: powershell
 
-    If ``wget`` is not found, then install it:
+            $ where wget.*
 
-    .. code-block:: bash
+      #. Linux, macOS
 
-      $ conda install wget
+          .. code-block:: bash
+
+            $ which wget
+
+    #. If ``wget`` is not found, then install it:
+
+        .. code-block:: bash
+
+          $ conda install wget
 
 #. Put your favorite package in the local channel.
 
@@ -194,7 +202,9 @@ To build a local channel and put a package in it, follow the directions below.
 
     .. code-block:: bash
 
-      $ conda search -c file:/<path to>/local-channel scipy | grep local-channel
+      $ conda search -c file:/<path to>/local-channel scipy 
+
+    SciPy should be available in several channels, including ``local-channel``.
 
 More details behind the scenes
 ------------------------------
