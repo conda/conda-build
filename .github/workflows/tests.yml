@@ -75,6 +75,7 @@ jobs:
           source ci/github/install_conda_build_test_deps
           pip install -e .
           pip install allure-pytest
+          pip install setuptools wheel twine
           conda info -a
           mkdir ./pytest-replay
           mkdir ./allure-results
@@ -137,19 +138,8 @@ jobs:
       
       - name: Deploy report to Github Pages
         if: always()
-        uses: peaceiris/actions-gh-pages@v2
+        uses: peaceiris/actions-gh-pages@v3
         env:
-          PERSONAL_TOKEN: ${{secrets.ACCESS_TOKEN}}
-          PUBLISH_BRANCH: gh-pages
+          GITHUB_TOKEN: "${{ secrets.CLA_ACTION_TOKEN }}"
+          PUBLISH_BRANCH: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
           PUBLISH_DIR: allure-history
-      
-      - name: Post the link to the report
-        if: always()
-        uses: Sibz/github-status-action@v1
-        with: 
-            authToken: ${{secrets.GITHUB_TOKEN}}
-            context: 'Test report'
-            state: 'success'
-            sha: ${{ github.event.pull_request.head.sha }}
-            target_url: simple-elf.github.io/github-allure-history/${{ github.run_number }}
-
