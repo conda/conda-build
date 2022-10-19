@@ -133,7 +133,7 @@ jobs:
         with:
           allure_results: allure-results
           gh_pages: gh-pages
-          allure_report: allure-report_{{ matrix.python-version }}_${{ matrix.conda-version }}_${{ matrix.test-type }}
+          allure_report: allure-report
           allure_history: allure-history
           keep_reports: 20
       
@@ -143,5 +143,5 @@ jobs:
         with:
           name: test-results-${{ github.sha }}-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.test-type }}-${{ matrix.test-group }}
           path: |
-            allure-report_{{ matrix.python-version }}_${{ matrix.conda-version }}_${{ matrix.test-type }}
+            allure-report
           retention-days: 1
