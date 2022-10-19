@@ -1,7 +1,6 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 import argparse
-from conda_build.conda_interface import iteritems
 from conda_build.source import download_to_cache
 from conda_build.license_family import guess_license_family
 from copy import copy
@@ -232,7 +231,7 @@ def find_repo_entry_and_arch(repo_primary, architectures, depend):
         found_package_name = dep_name
     except:
         # Look through the provides of all packages.
-        for name, package in iteritems(repo_primary):
+        for name, package in repo_primary.items():
             for arch in architectures:
                 if arch in package:
                     if 'provides' in package[arch]:
@@ -606,7 +605,7 @@ def write_conda_recipe(packages, distro, output_dir, architecture, recursive, ov
                               'gnu_architecture': gnu_architecture,
                               'bits': bits})
     cdt = dict()
-    for k, v in iteritems(CDTs[cdt_name]):
+    for k, v in CDTs[cdt_name].items():
         if isinstance(v, str):
             cdt[k] = v.format(**architecture_bits)
         else:
@@ -693,7 +692,7 @@ def add_parser(repos):
     )
 
     def valid_distros():
-        return ", ".join([name for name, _ in iteritems(CDTs)])
+        return ", ".join([name for name, _ in CDTs.items()])
 
     def distro(distro_name):
         if distro_name not in CDTs:

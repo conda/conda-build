@@ -33,11 +33,9 @@ import conda_package_handling.api
 
 # used to get version
 from .conda_interface import env_path_backup_var_exists, conda_45, conda_46
-from .conda_interface import PY3
 from .conda_interface import prefix_placeholder
 from .conda_interface import TemporaryDirectory
 from .conda_interface import VersionOrder
-from .conda_interface import text_type
 from .conda_interface import CrossPlatformStLink
 from .conda_interface import PathType, FileMode
 from .conda_interface import EntityEncoder
@@ -1108,7 +1106,7 @@ def write_info_files_file(m, files):
     entry_point_scripts = m.get_value('build/entry_points')
     entry_point_script_names = get_entry_point_script_names(entry_point_scripts)
 
-    mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
+    mode_dict = {'mode': 'w', 'encoding': 'utf-8'}
     with open(join(m.config.info_dir, 'files'), **mode_dict) as fo:
         if m.noarch == 'python':
             for f in sorted(files):
@@ -1129,8 +1127,8 @@ def write_link_json(m):
     package_metadata = OrderedDict()
     noarch_type = m.get_value('build/noarch')
     if noarch_type:
-        noarch_dict = OrderedDict(type=text_type(noarch_type))
-        if text_type(noarch_type).lower() == "python":
+        noarch_dict = OrderedDict(type=noarch_type)
+        if noarch_type.lower() == "python":
             entry_points = m.get_value('build/entry_points')
             if entry_points:
                 noarch_dict['entry_points'] = entry_points
@@ -1138,7 +1136,7 @@ def write_link_json(m):
 
     preferred_env = m.get_value("build/preferred_env")
     if preferred_env:
-        preferred_env_dict = OrderedDict(name=text_type(preferred_env))
+        preferred_env_dict = OrderedDict(name=preferred_env)
         executable_paths = m.get_value("build/preferred_env_executable_paths")
         if executable_paths:
             preferred_env_dict["executable_paths"] = executable_paths
@@ -1215,8 +1213,7 @@ def write_info_json(m):
             for dist in sorted(runtime_deps + [' '.join(m.dist().rsplit('-', 2))]):
                 fo.write('%s\n' % '='.join(dist.split()))
 
-    # Deal with Python 2 and 3's different json module type reqs
-    mode_dict = {'mode': 'w', 'encoding': 'utf-8'} if PY3 else {'mode': 'wb'}
+    mode_dict = {'mode': 'w', 'encoding': 'utf-8'}
     with open(join(m.config.info_dir, 'index.json'), **mode_dict) as fo:
         json.dump(info_index, fo, indent=2, sort_keys=True)
 

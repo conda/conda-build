@@ -19,7 +19,7 @@ import uuid
 # for version
 import conda
 
-from conda_build.conda_interface import PY3, url_path, LinkError, CondaError, cc_conda_build
+from conda_build.conda_interface import url_path, LinkError, CondaError, cc_conda_build
 from conda_build.conda_interface import linked
 
 import conda_build
@@ -100,8 +100,7 @@ def describe_root(cwd=None):
     if not cwd:
         cwd = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     tag = check_output_env(["git", "describe", "--abbrev=0"], cwd=cwd).rstrip()
-    if PY3:
-        tag = tag.decode("utf-8")
+    tag = tag.decode("utf-8")
     return tag
 
 
@@ -1471,7 +1470,7 @@ def test_pin_depends(testing_config):
     output = api.build(m, config=testing_config)[0]
     requires = package_has_file(output, 'info/requires')
     assert requires
-    if PY3 and hasattr(requires, 'decode'):
+    if hasattr(requires, 'decode'):
         requires = requires.decode()
     assert re.search(r'python\=[23]\.', requires), "didn't find pinned python in info/requires"
 

@@ -88,12 +88,11 @@ def get_output_file_paths(recipe_path_or_metadata, no_download_source=False, con
     created with variants, contribute to the list of file paths here.
     """
     from conda_build.render import bldpkg_path
-    from conda_build.conda_interface import string_types
     from conda_build.utils import get_skip_message
     config = get_or_merge_config(config, **kwargs)
 
     if hasattr(recipe_path_or_metadata, '__iter__') and not isinstance(recipe_path_or_metadata,
-                                                                       string_types):
+                                                                       str):
         list_of_metas = [hasattr(item[0], 'config') for item in recipe_path_or_metadata
                         if len(item) == 3]
 
@@ -101,7 +100,7 @@ def get_output_file_paths(recipe_path_or_metadata, no_download_source=False, con
             metadata = recipe_path_or_metadata
         else:
             raise ValueError(f"received mixed list of metas: {recipe_path_or_metadata}")
-    elif isinstance(recipe_path_or_metadata, string_types):
+    elif isinstance(recipe_path_or_metadata, str):
         # first, render the parent recipe (potentially multiple outputs, depending on variants).
         metadata = render(recipe_path_or_metadata, no_download_source=no_download_source,
                             variants=variants, config=config, finalize=True, **kwargs)
@@ -156,7 +155,6 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
     Tests built packages by default.  notest=True to skip test."""
     import os
     from conda_build.build import build_tree
-    from conda_build.conda_interface import string_types
     from conda_build.utils import find_recipe
 
     assert post in (None, True, False), ("post must be boolean or None.  Remember, you must pass "
@@ -164,7 +162,7 @@ def build(recipe_paths_or_metadata, post=None, need_source_download=True,
 
     recipes = []
     for recipe in _ensure_list(recipe_paths_or_metadata):
-        if isinstance(recipe, string_types):
+        if isinstance(recipe, str):
             for recipe in _expand_globs(recipe, os.getcwd()):
                 try:
                     recipe = find_recipe(recipe)
@@ -363,17 +361,12 @@ def update_index(dir_paths, config=None, force=False, check_md5=False, remove=Fa
                  subdir=None, threads=None, patch_generator=None, verbose=False, progress=False,
                  hotfix_source_repo=None, current_index_versions=None, **kwargs):
     import yaml
-    from locale import getpreferredencoding
     import os
-    from .conda_interface import PY3, string_types
     from conda_build.index import update_index
     from conda_build.utils import ensure_list
     dir_paths = [os.path.abspath(path) for path in _ensure_list(dir_paths)]
-    # Don't use byte strings in Python 2
-    if not PY3:
-        dir_paths = [path.decode(getpreferredencoding()) for path in dir_paths]
 
-    if isinstance(current_index_versions, string_types):
+    if isinstance(current_index_versions, str):
         with open(current_index_versions) as f:
             current_index_versions = yaml.safe_load(f)
 
@@ -394,7 +387,6 @@ def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False,
     import logging
     import os
     import time
-    from conda_build.conda_interface import string_types
     from conda_build.build import test as run_test, build as run_build
     from conda_build.utils import CONDA_PACKAGE_EXTENSIONS, on_win, LoggingContext
     is_package = False
@@ -422,7 +414,7 @@ def debug(recipe_or_package_path_or_metadata_tuples, path=None, test=False,
     metadata_tuples = []
 
     best_link_source_method = 'skip'
-    if isinstance(recipe_or_package_path_or_metadata_tuples, string_types):
+    if isinstance(recipe_or_package_path_or_metadata_tuples, str):
         if path_is_build_dir:
             for metadata_conda_debug in metadatas_conda_debug:
                 best_link_source_method = 'symlink'
