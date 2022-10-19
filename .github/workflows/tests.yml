@@ -79,6 +79,7 @@ jobs:
           conda info -a
           mkdir ./pytest-replay
           mkdir ./allure-results
+          mkdir ./allure-reports
           echo "Finding the Test folder"
           pwd
 
@@ -129,17 +130,36 @@ jobs:
         uses: simple-elf/allure-report-action@master
         if: always()
         id: allure-report
+        run: |
+            allure generate ./allure-results --clean -o ./allure-report/allure-report_{{ matrix.python-version }}_${{ matrix.conda-version }}_${{ matrix.test-type }}
         with:
           allure_results: allure-results
           gh_pages: gh-pages
-          allure_report: allure-report
+          allure_report: allure-report_{{ matrix.python-version }}_${{ matrix.conda-version }}_${{ matrix.test-type }}
           allure_history: allure-history
           keep_reports: 20
-
-      - name: Deploy report to Github Pages
+      
+      - name: Upload test results
         if: always()
-        uses: peaceiris/actions-gh-pages@v3
-        env:
-          PERSONAL_TOKEN: ${{ secrets.PROJECT_TOKEN }}
-          PUBLISH_BRANCH: gh-pages
-          PUBLISH_DIR: allure-history
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results-${{ github.sha }}-${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.test-type }}-${{ matrix.test-group }}
+          path: |
+            allure-report_{{ matrix.python-version }}_${{ matrix.conda-version }}_${{ matrix.test-type }}
+          retention-days: 1
+
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v2
+        
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v1
+        with:
+          # Upload entire repository
+          path: '.'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v1
