@@ -1821,8 +1821,8 @@ def _write_sh_activation_text(file_handle, m):
                             cygpath_suffix))
 
     if conda_46:
-        file_handle.write("eval \"$('{sys_python}' -m conda shell.bash hook)\"\n".format(
-            sys_python=sys.executable,
+        file_handle.write("eval \"$('{sys_python}'{I_flag} -m conda shell.bash hook)\"\n".format(
+            sys_python=sys.executable, I_flag=('' if m.config.debug else ' -I'),
         ))
 
     if m.is_cross:
@@ -2729,15 +2729,18 @@ def write_test_scripts(metadata, env_vars, py_files, pl_files, lua_files, r_file
                 if utils.on_win:
                     tf.write('set "CONDA_SHLVL=" '
                              '&& @CALL {}\\condabin\\conda_hook.bat {}'
-                             '&& set CONDA_EXE={}'
+                             '&& set CONDA_EXE={python_exe}'
+                             '&& set CONDA_PYTHON_EXE={python_exe}'
+                             '&& set _CE_I={}'
                              '&& set _CE_M=-m'
                              '&& set _CE_CONDA=conda\n'.format(sys.prefix,
                                                                '--dev' if metadata.config.debug else '',
-                                                               sys.executable))
+                                                               '' if metadata.config.debug else '-I',
+                                                               python_exe=sys.executable))
 
                 else:
-                    tf.write("eval \"$('{sys_python}' -m conda shell.bash hook)\"\n".format(
-                        sys_python=sys.executable))
+                    tf.write("eval \"$('{sys_python}'{I_flag} -m conda shell.bash hook)\"\n".format(
+                        sys_python=sys.executable, I_flag=('' if metadata.config.debug else ' -I')))
                 tf.write(f'conda activate "{metadata.config.test_prefix}"\n')
             else:
                 tf.write('{source} "{conda_root}activate{ext}" "{test_env}"\n'.format(
