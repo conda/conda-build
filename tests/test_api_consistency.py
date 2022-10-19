@@ -6,12 +6,8 @@
 import sys
 
 from conda_build import api
-from conda_build.conda_interface import PY3
 
-if PY3:
-    from inspect import getfullargspec as getargspec
-else:
-    from inspect import getargspec
+from inspect import getfullargspec as getargspec
 
 
 def test_api_config():

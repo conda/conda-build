@@ -26,7 +26,7 @@ from urllib.parse import urljoin, urlsplit
 import yaml
 
 from conda_build.conda_interface import spec_from_line
-from conda_build.conda_interface import input, configparser, StringIO, string_types, PY3
+from conda_build.conda_interface import input, configparser, StringIO
 from conda_build.conda_interface import download
 from conda_build.conda_interface import normalized_version
 from conda_build.conda_interface import human_bytes, hashsum_file
@@ -182,7 +182,7 @@ def _print_dict(recipe_metadata, order=None, level=0, indent=2):
             for attribute_name, attribute_value in recipe_metadata[section_name].items():
                 if attribute_value is None:
                     continue
-                if isinstance(attribute_value, string_types) or not hasattr(attribute_value, "__iter__"):
+                if isinstance(attribute_value, str) or not hasattr(attribute_value, "__iter__"):
                     rendered_recipe += __print_with_indent(attribute_name, suffix=':', level=level + indent,
                                                           newline=False)
                     rendered_recipe += _formating_value(attribute_name, attribute_value)
@@ -210,7 +210,7 @@ def _formating_value(attribute_name, attribute_value):
     :return string: Value quoted if need
     """
     pattern_search = re.compile(r'[@_!#$%^&*()<>?/\|}{~:]')
-    if isinstance(attribute_value, string_types) \
+    if isinstance(attribute_value, str) \
             and pattern_search.search(attribute_value) \
             or attribute_name in ["summary", "description", "version", "script"]:
         return ' "' + str(attribute_value) + '"\n'
@@ -228,7 +228,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
     if not setup_options:
         setup_options = []
 
-    if isinstance(setup_options, string_types):
+    if isinstance(setup_options, str):
         setup_options = [setup_options]
 
     if not config:
@@ -853,7 +853,7 @@ def get_dependencies(requires, setuptools_enabled=True):
     list_deps = ["setuptools"] if setuptools_enabled else []
 
     for dep_text in requires:
-        if isinstance(dep_text, string_types):
+        if isinstance(dep_text, str):
             dep_text = dep_text.splitlines()
         # Every item may be a single requirement
         #  or a multiline requirements string...
@@ -1048,7 +1048,7 @@ def convert_to_flat_list(var_scripts):
     :param str/list var_scripts: Receives a string or a list to be converted
     :return list: Return a flat list
     """
-    if isinstance(var_scripts, string_types):
+    if isinstance(var_scripts, str):
         var_scripts = [var_scripts]
     elif var_scripts and isinstance(var_scripts, list) and isinstance(var_scripts[0], list):
         var_scripts = [item for sublist in [s for s in var_scripts] for item in sublist]
@@ -1145,7 +1145,7 @@ def get_requirements(package, pkginfo, all_extras=True):
     # ... and collect all needed requirement specs in a single list:
     requires = []
     for specs in [pkginfo.get('install_requires', "")] + extras_require:
-        if isinstance(specs, string_types):
+        if isinstance(specs, str):
             requires.append(specs)
         else:
             requires.extend(specs)
@@ -1252,14 +1252,10 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
         copy2(join(stdlib_dir, 'distutils', 'core.py-copy'),
               join(stdlib_dir, 'distutils', 'core.py'))
         # Avoid race conditions. Invalidate the cache.
-        if PY3:
-            rm_rf(join(stdlib_dir, 'distutils', '__pycache__',
-                'core.cpython-%s%s.pyc' % sys.version_info[:2]))
-            rm_rf(join(stdlib_dir, 'distutils', '__pycache__',
-                'core.cpython-%s%s.pyo' % sys.version_info[:2]))
-        else:
-            rm_rf(join(stdlib_dir, 'distutils', 'core.pyc'))
-            rm_rf(join(stdlib_dir, 'distutils', 'core.pyo'))
+        rm_rf(join(stdlib_dir, 'distutils', '__pycache__',
+                   'core.cpython-%s%s.pyc' % sys.version_info[:2]))
+        rm_rf(join(stdlib_dir, 'distutils', '__pycache__',
+                   'core.cpython-%s%s.pyo' % sys.version_info[:2]))
     else:
         copy2(join(stdlib_dir, 'distutils', 'core.py'), join(stdlib_dir,
             'distutils', 'core.py-copy'))

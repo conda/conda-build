@@ -19,7 +19,6 @@ except ImportError:
     readlink = False
 
 from conda_build.os_utils import external
-from conda_build.conda_interface import PY3
 from conda_build.conda_interface import lchmod
 from conda_build.conda_interface import walk_prefix
 from conda_build.conda_interface import TemporaryDirectory
@@ -36,10 +35,6 @@ from conda_build.exceptions import (OverLinkingError, OverDependingError, RunPat
 
 from conda_build.os_utils import macho
 
-if PY3:
-    scandir = os.scandir
-else:
-    from scandir import scandir
 
 filetypes_for_platform = {
     "win": ('DLLfile', 'EXEfile'),
@@ -183,7 +178,7 @@ def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
 def rm_py_along_so(prefix):
     """remove .py (.pyc) files alongside .so or .pyd files"""
 
-    files = list(scandir(prefix))
+    files = list(os.scandir(prefix))
     for fn in files:
         if fn.is_file() and fn.name.endswith(('.so', '.pyd')):
             for ext in '.py', '.pyc', '.pyo':
@@ -240,7 +235,7 @@ def compile_missing_pyc(files, cwd, python_exe, skip_compile_pyc=()):
         else:
             if fn.startswith('bin'):
                 continue
-        cache_prefix = ("__pycache__" + os.sep) if PY3 else ""
+        cache_prefix = ("__pycache__" + os.sep)
         if (fn.endswith(".py") and
                 dirname(fn) + cache_prefix + basename(fn) + 'c' not in files):
             compile_files.append(fn)
@@ -1273,7 +1268,7 @@ def post_process_shared_lib(m, f, files, host_prefix=None):
 
 def fix_permissions(files, prefix):
     print("Fixing permissions")
-    for path in scandir(prefix):
+    for path in os.scandir(prefix):
         if path.is_dir():
             lchmod(path.path, 0o775)
 
