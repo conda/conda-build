@@ -130,62 +130,56 @@ To build a local channel and put a package in it, follow the directions below.
 
     .. code-block:: bash
 
-      $ mkdir local-channel
-      $ cd local-channel
+        $ mkdir local-channel
+        $ cd local-channel
 
-#. Install ``wget`` if you don't already have it.
-
-    #.  Check if you have it.
-
-      #. Windows
-
-          .. code-block:: powershell
-
-            $ where wget.*
-
-      #. Linux, macOS
-
-          .. code-block:: bash
-
-            $ which wget
-
-    #. If ``wget`` is not found, then install it:
-
-        .. code-block:: bash
-
-          $ conda install wget
-
-#. Put your favorite package in the local channel.
-
-    The steps here depend on your platform.
+#. Now, download your favorite package.  We'll use SciPy in our example.  The next steps depend on your platform.
 
     #. Windows
 
         .. code-block:: bash
 
-          $ mkdir win-64
-          $ wget https://anaconda.org/anaconda/scipy/1.9.1/download/win-64/scipy-1.9.1-py310h86744a3_0.tar.bz2 -P win-64
+            $ mkdir win-64
+            $ curl -L https://anaconda.org/anaconda/scipy/1.9.1/download/win-64/scipy-1.9.1-py310h86744a3_0.tar.bz2 -o win-64\scipy-1.9.1-py310h86744a3_0.tar.bz2
 
     #. Linux
 
-        .. code-block:: bash
+        #. Confirm that you have cURL; if not then install it.
 
-          $ mkdir linux-64
-          $ wget https://anaconda.org/anaconda/scipy/1.9.1/download/linux-64/scipy-1.9.1-py310hd5efca6_0.tar.bz2 -P linux-64
+            Most Linux systems come with cURL pre-installed.  Let's install it if you don't already have it.
+
+            #. Check if you have cURL
+
+                .. code-block:: bash
+
+                    $ which curl
+
+            #. if ``curl`` is not found, then install it:
+
+                .. code-block:: bash
+
+                    $ conda install curl
+
+        #. Create a local copy of this package you want to include in your channel.
+
+            .. code-block:: bash
+
+                $ mkdir linux-64
+                $ curl -L https://anaconda.org/anaconda/scipy/1.9.1/download/linux-64/scipy-1.9.1-py310hd5efca6_0.tar.bz2 -o linux-64\scipy-1.9.1-py310hd5efca6_0.tar.bz2
 
     #. macOS, Intel chip
 
         .. code-block:: bash
 
-          $ mkdir osx-64
-          $ wget https://anaconda.org/anaconda/scipy/1.9.1/download/osx-64/scipy-1.9.1-py310h09290a1_0.tar.bz2 -P osx-64
+            $ mkdir osx-64
+            $ curl -L https://anaconda.org/anaconda/scipy/1.9.1/download/osx-64/scipy-1.9.1-py310h09290a1_0.tar.bz2 -o osx-64/scipy-1.9.1-py310h09290a1_0.tar.bz2
 
     #. macOS, Apple chip
 
         .. code-block:: bash
 
           $ mkdir osx-arm64
-          $ wget https://anaconda.org/anaconda/scipy/1.9.1/download/osx-arm64/scipy-1.9.1-py310h20cbe94_0.tar.bz2 -P osx-arm64
+          $ curl -L https://anaconda.org/anaconda/scipy/1.9.1/download/osx-arm64/scipy-1.9.1-py310h20cbe94_0.tar.bz2 -o osx-arm64/scipy-1.9.1-py310h20cbe94_0.tar.bz2
 
     #. Other
 
@@ -205,6 +199,7 @@ To build a local channel and put a package in it, follow the directions below.
       $ conda search -c file:/<path to>/local-channel scipy 
 
     SciPy should be available in several channels, including ``local-channel``.
+
 
 More details behind the scenes
 ------------------------------
