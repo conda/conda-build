@@ -85,7 +85,7 @@ jobs:
       - name: Run Parallel tests
         if: matrix.test-type == 'parallel'
         run: |
-          python -m pip install allure-pytest conda-build[Allure]
+          python -m pip install allure-pytest conda-build[allure]
           pytest \
               --color=yes \
               -vv \
@@ -116,7 +116,7 @@ jobs:
           keep_reports: 20
     
   allure-report:
-    needs: [Allure]
+    needs: [allure]
     runs-on: ubuntu-latest
 
     # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
