@@ -71,7 +71,7 @@ jobs:
         run: |
           source ci/github/install_conda_build_test_deps
           pip install -e .
-          pip install allure-pytest conda-build[Allure]
+          pip install allure-pytest conda-build[allure-report]
           pip install setuptools wheel twine
           conda info -a
           mkdir -p ./pytest-replay
@@ -85,7 +85,7 @@ jobs:
       - name: Run Parallel tests
         if: matrix.test-type == 'parallel'
         run: |
-          python -m pip install allure-pytest conda-build[allure]
+          python -m pip install allure-pytest conda-build[allure-report]
           pytest \
               --color=yes \
               -vv \
@@ -116,7 +116,7 @@ jobs:
           keep_reports: 20
     
   allure-report:
-    needs: [allure]
+    needs: [allure-report]
     runs-on: ubuntu-latest
 
     # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
