@@ -26,27 +26,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
-
-pages:
-    runs-on: ubuntu-latest
-    if: github.ref == release/**
-    needs: [allure-report]
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v1
-
-
 jobs:
   linux:
     runs-on: ubuntu-latest
@@ -181,3 +160,23 @@ jobs:
             state: 'success'
             sha: ${{ github.event.pull_request.head.sha }}
             target_url: sven6002.github.io/conda-build/github-allure-history/${{ github.run_number }}
+
+
+  pages:
+    runs-on: ubuntu-latest
+    if: github.ref == release/**
+    needs: [allure-report]
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v1
