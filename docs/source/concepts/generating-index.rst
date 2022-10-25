@@ -196,7 +196,7 @@ To build a local channel and put a package in it, follow the directions below.
 
     .. code-block:: bash
 
-      $ conda search -c file:/<path to>/local-channel scipy 
+      $ conda search -c file:/<path to>/local-channel scipy
 
     SciPy should be available in several channels, including ``local-channel``.
 
