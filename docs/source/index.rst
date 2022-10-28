@@ -29,3 +29,4 @@ Anaconda Cloud, you will need an
    user-guide/index
    resources/index
    release-notes
+   contributing-guide

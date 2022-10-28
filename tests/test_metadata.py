@@ -1,12 +1,16 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 import os
 import subprocess
-import sys
 
 import pytest
 
 from conda_build.metadata import select_lines, MetaData
 from conda_build import api, conda_interface
 from .utils import thisdir, metadata_dir
+
+from conda_build.utils import DEFAULT_SUBDIRS
+from conda_build.metadata import _hash_dependencies
 
 
 def test_uses_vcs_in_metadata(testing_workdir, testing_metadata):
@@ -129,7 +133,7 @@ def test_build_bootstrap_env_by_path(testing_metadata):
         testing_metadata.meta["requirements"].get("build", [])
     path = os.path.join(thisdir, "conda_build_bootstrap_test")
     try:
-        cmd = "conda create -y -p {} git".format(path)
+        cmd = f"conda create -y -p {path} git"
         subprocess.check_call(cmd.split())
         testing_metadata.config.bootstrap = path
         testing_metadata.final = False
@@ -137,7 +141,7 @@ def test_build_bootstrap_env_by_path(testing_metadata):
         assert any("git" in pkg for pkg in testing_metadata.meta["requirements"]["build"]), \
             testing_metadata.meta["requirements"]["build"]
     finally:
-        cmd = "conda remove -y -p {} --all".format(path)
+        cmd = f"conda remove -y -p {path} --all"
         subprocess.check_call(cmd.split())
 
 
@@ -191,9 +195,19 @@ def test_hash_build_id(testing_metadata):
     testing_metadata.config.variant['zlib'] = '1.2'
     testing_metadata.meta['requirements']['host'] = ['zlib']
     testing_metadata.final = True
-    assert testing_metadata.get_hash_contents() == {'zlib': '1.2'}
-    assert testing_metadata.hash_dependencies() == 'h1341992'
-    assert testing_metadata.build_id() == 'h1341992_1'
+    hash_contents = testing_metadata.get_hash_contents()
+    assert hash_contents['zlib'] == '1.2'
+    hdeps = testing_metadata.hash_dependencies()
+    hash_contents_tp = hash_contents.copy()
+    found = False
+    for subdir in DEFAULT_SUBDIRS:
+        hash_contents_tp['target_platform'] = subdir
+        hdeps_tp = _hash_dependencies(hash_contents_tp, testing_metadata.config.hash_length)
+        if hdeps_tp == hdeps:
+            found = True
+            break
+    assert found, f"Did not find build that matched {hdeps} when testing each of DEFAULT_SUBDIRS"
+    assert testing_metadata.build_id() == hdeps + '_1'
 
 
 def test_hash_build_id_key_order(testing_metadata):

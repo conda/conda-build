@@ -1,13 +1,6 @@
-# (c) Continuum Analytics, Inc. / http://continuum.io
-# All Rights Reserved
-#
-# conda is distributed under the terms of the BSD 3-clause license.
-# Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
-
-from __future__ import absolute_import, division, print_function
-
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 from collections import OrderedDict, defaultdict
-from locale import getpreferredencoding
 import json
 import os
 from os.path import isdir, isfile, abspath
@@ -22,13 +15,14 @@ import tempfile
 
 import yaml
 
-from .conda_interface import (PY3, UnsatisfiableError, ProgressiveFetchExtract,
+from .conda_interface import (UnsatisfiableError, ProgressiveFetchExtract,
                               TemporaryDirectory)
 from .conda_interface import execute_actions
 from .conda_interface import pkgs_dirs
 from .conda_interface import conda_43
 from .conda_interface import specs_from_url
 from .conda_interface import memoized
+from .utils import CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2
 
 from conda_build import exceptions, utils, environ
 from conda_build.metadata import MetaData, combine_top_level_metadata_with_output
@@ -38,12 +32,6 @@ from conda_build.variants import (get_package_variants, list_of_dicts_to_dict_of
 from conda_build.exceptions import DependencyNeedsBuildingError
 from conda_build.index import get_build_index
 # from conda_build.jinja_context import pin_subpackage_against_outputs
-
-try:
-    from conda.base.constants import CONDA_TARBALL_EXTENSIONS
-except Exception:
-    from conda.base.constants import CONDA_TARBALL_EXTENSION
-    CONDA_TARBALL_EXTENSIONS = (CONDA_TARBALL_EXTENSION,)
 
 
 def odict_representer(dumper, data):
@@ -71,11 +59,11 @@ def bldpkg_path(m):
 
     # the default case will switch over to conda_v2 at some point
     if pkg_type == "conda":
-        path = os.path.join(m.config.output_folder, subdir, '%s%s' % (m.dist(), CONDA_TARBALL_EXTENSIONS[0]))
+        path = os.path.join(m.config.output_folder, subdir, f'{m.dist()}{CONDA_PACKAGE_EXTENSION_V1}')
     elif pkg_type == "conda_v2":
-        path = os.path.join(m.config.output_folder, subdir, '%s%s' % (m.dist(), '.conda'))
+        path = os.path.join(m.config.output_folder, subdir, f'{m.dist()}{CONDA_PACKAGE_EXTENSION_V2}')
     else:
-        path = '{} file for {} in: {}'.format(m.type, m.name(), os.path.join(m.config.output_folder, subdir))
+        path = f'{m.type} file for {m.name()} in: {os.path.join(m.config.output_folder, subdir)}'
     return path
 
 
@@ -142,7 +130,7 @@ def get_env_dependencies(m, env, variant, exclude_pattern=None,
     with TemporaryDirectory(prefix="_", suffix=random_string) as tmpdir:
         try:
             actions = environ.get_install_actions(tmpdir, tuple(dependencies), env,
-                                                  subdir=getattr(m.config, '{}_subdir'.format(env)),
+                                                  subdir=getattr(m.config, f'{env}_subdir'),
                                                   debug=m.config.debug,
                                                   verbose=m.config.verbose,
                                                   locking=m.config.locking,
@@ -219,7 +207,7 @@ def find_pkg_dir_or_file_in_pkgs_dirs(pkg_dist, m, files_only=False):
     pkg_loc = None
     for pkgs_dir in _pkgs_dirs:
         pkg_dir = os.path.join(pkgs_dir, pkg_dist)
-        pkg_file = os.path.join(pkgs_dir, pkg_dist + CONDA_TARBALL_EXTENSIONS[0])
+        pkg_file = os.path.join(pkgs_dir, pkg_dist + CONDA_PACKAGE_EXTENSION_V1)
         if not files_only and os.path.isdir(pkg_dir):
             pkg_loc = pkg_dir
             break
@@ -281,7 +269,7 @@ def _read_specs_from_package(pkg_loc, pkg_dist):
 
 
 def execute_download_actions(m, actions, env, package_subset=None, require_files=False):
-    index, _, _ = get_build_index(getattr(m.config, '{}_subdir'.format(env)), bldpkgs_dir=m.config.bldpkgs_dir,
+    index, _, _ = get_build_index(getattr(m.config, f'{env}_subdir'), bldpkgs_dir=m.config.bldpkgs_dir,
                                   output_folder=m.config.output_folder, channel_urls=m.config.channel_urls,
                                   debug=m.config.debug, verbose=m.config.verbose, locking=m.config.locking,
                                   timeout=m.config.timeout)
@@ -352,9 +340,12 @@ def get_upstream_pins(m, actions, env):
     linked_packages = actions.get('LINK', [])
     linked_packages = [pkg for pkg in linked_packages if pkg.name in explicit_specs]
 
+    ignore_pkgs_list = utils.ensure_list(m.get_value('build/ignore_run_exports_from'))
     ignore_list = utils.ensure_list(m.get_value('build/ignore_run_exports'))
     additional_specs = {}
     for pkg in linked_packages:
+        if any(pkg.name in req.split(' ')[0] for req in ignore_pkgs_list):
+            continue
         run_exports = None
         if m.config.use_channeldata:
             channeldata = utils.download_channeldata(pkg.channel)
@@ -410,22 +401,46 @@ def add_upstream_pins(m, permit_unsatisfiable_variants, exclude_pattern):
 
         host_deps, host_unsat, extra_run_specs_from_host = _read_upstream_pin_files(m, 'host',
                                                     permit_unsatisfiable_variants, exclude_pattern)
-        extra_run_specs = set(extra_run_specs_from_host.get('strong', []) +
-                              extra_run_specs_from_host.get('weak', []) +
-                              extra_run_specs_from_build.get('strong', []))
+        if m.noarch or m.noarch_python:
+            extra_run_specs = set(extra_run_specs_from_host.get('noarch', []))
+            extra_run_constrained_specs = set()
+        else:
+            extra_run_specs = set(extra_run_specs_from_host.get('strong', []) +
+                                  extra_run_specs_from_host.get('weak', []) +
+                                  extra_run_specs_from_build.get('strong', []))
+            extra_run_constrained_specs = set(
+                extra_run_specs_from_host.get('strong_constrains', []) +
+                extra_run_specs_from_host.get('weak_constrains', []) +
+                extra_run_specs_from_build.get('strong_constrains', [])
+            )
     else:
         host_deps = []
         host_unsat = []
-        extra_run_specs = set(extra_run_specs_from_build.get('strong', []))
-        if m.build_is_host:
-            extra_run_specs.update(extra_run_specs_from_build.get('weak', []))
-            build_deps = set(build_deps or []).update(extra_run_specs_from_build.get('weak', []))
+        if m.noarch or m.noarch_python:
+            if m.build_is_host:
+                extra_run_specs = set(extra_run_specs_from_build.get('noarch', []))
+                extra_run_constrained_specs = set()
+                build_deps = set(build_deps or []).update(extra_run_specs_from_build.get('noarch', []))
+            else:
+                extra_run_specs = set()
+                extra_run_constrained_specs = set()
+                build_deps = set(build_deps or [])
         else:
-            host_deps = set(extra_run_specs_from_build.get('strong', []))
+            extra_run_specs = set(extra_run_specs_from_build.get('strong', []))
+            extra_run_constrained_specs = set(extra_run_specs_from_build.get('strong_constrains', []))
+            if m.build_is_host:
+                extra_run_specs.update(extra_run_specs_from_build.get('weak', []))
+                extra_run_constrained_specs.update(extra_run_specs_from_build.get('weak_constrains', []))
+                build_deps = set(build_deps or []).update(extra_run_specs_from_build.get('weak', []))
+            else:
+                host_deps = set(extra_run_specs_from_build.get('strong', []))
 
     run_deps = extra_run_specs | set(utils.ensure_list(requirements.get('run')))
+    run_constrained_deps = extra_run_constrained_specs | set(utils.ensure_list(requirements.get('run_constrained')))
 
-    for section, deps in (('build', build_deps), ('host', host_deps), ('run', run_deps)):
+    for section, deps in (
+        ('build', build_deps), ('host', host_deps), ('run', run_deps), ('run_constrained', run_constrained_deps),
+    ):
         if deps:
             requirements[section] = list(deps)
 
@@ -463,7 +478,7 @@ def _simplify_to_exact_constraints(metadata):
                 deps_list.append(name)
             elif exact_pins:
                 if not all(pin == exact_pins[0] for pin in exact_pins):
-                    raise ValueError("Conflicting exact pins: {}".format(exact_pins))
+                    raise ValueError(f"Conflicting exact pins: {exact_pins}")
                 else:
                     deps_list.append(' '.join([name] + exact_pins[0]))
             else:
@@ -489,10 +504,10 @@ def finalize_metadata(m, parent_metadata=None, permit_unsatisfiable_variants=Fal
 
         output_excludes = set()
         if hasattr(m, 'other_outputs'):
-            output_excludes = set(name for (name, variant) in m.other_outputs.keys())
+            output_excludes = {name for (name, variant) in m.other_outputs.keys()}
 
         if excludes or output_excludes:
-            exclude_pattern = re.compile(r'|'.join(r'(?:^{}(?:\s|$|\Z))'.format(exc)
+            exclude_pattern = re.compile(r'|'.join(fr'(?:^{exc}(?:\s|$|\Z))'
                                             for exc in excludes | output_excludes))
 
         parent_recipe = m.meta.get('extra', {}).get('parent_recipe', {})
@@ -533,7 +548,7 @@ def finalize_metadata(m, parent_metadata=None, permit_unsatisfiable_variants=Fal
         #     on the keys in the 'pin_run_as_build' key in the variant, which is a list of package
         #     names to have this behavior.
         if output_excludes:
-            exclude_pattern = re.compile(r'|'.join(r'(?:^{}(?:\s|$|\Z))'.format(exc)
+            exclude_pattern = re.compile(r'|'.join(fr'(?:^{exc}(?:\s|$|\Z))'
                                             for exc in output_excludes))
         pinning_env = 'host' if m.is_cross else 'build'
 
@@ -610,9 +625,9 @@ def finalize_metadata(m, parent_metadata=None, permit_unsatisfiable_variants=Fal
             log.warn("Returning non-final recipe for {}; one or more dependencies "
                     "was unsatisfiable:".format(m.dist()))
             if build_unsat:
-                log.warn("Build: {}".format(build_unsat))
+                log.warn(f"Build: {build_unsat}")
             if host_unsat:
-                log.warn("Host: {}".format(host_unsat))
+                log.warn(f"Host: {host_unsat}")
         else:
             m.final = True
     if is_top_level:
@@ -659,10 +674,26 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
     rendered_metadata = {}
     need_source_download = True
 
-    # don't bother distributing python if it's a noarch package
+    # don't bother distributing python if it's a noarch package, and figure out
+    # which python version we prefer. `python_age` can use used to tweak which
+    # python gets used here.
     if metadata.noarch or metadata.noarch_python:
-        variants = filter_by_key_value(variants, 'python', variants[0]['python'],
-                                       'noarch_reduction')
+        from .conda_interface import VersionOrder
+        age = int(metadata.get_value('build/noarch_python_build_age', metadata.config.noarch_python_build_age))
+        versions = []
+        for variant in variants:
+            if 'python' in variant:
+                vo = variant['python']
+                if vo not in versions:
+                    versions.append(vo)
+        version_indices = sorted(range(len(versions)), key=lambda k: VersionOrder(versions[k].split(' ')[0]))
+        if age < 0:
+            age = 0
+        elif age > len(versions) - 1:
+            age = len(versions) - 1
+        build_ver = versions[version_indices[len(versions) - 1 - age]]
+        variants = filter_by_key_value(variants, 'python', build_ver,
+                                       'noarch_python_reduction')
 
     # store these for reference later
     metadata.config.variants = variants
@@ -673,16 +704,16 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
     recipe_requirements = metadata.extract_requirements_text()
     recipe_package_and_build_text = metadata.extract_package_and_build_text()
     recipe_text = recipe_package_and_build_text + recipe_requirements
-    if PY3 and hasattr(recipe_text, 'decode'):
+    if hasattr(recipe_text, 'decode'):
         recipe_text = recipe_text.decode()
-    elif not PY3 and hasattr(recipe_text, 'encode'):
-        recipe_text = recipe_text.encode()
 
     metadata.config.variant = variants[0]
     used_variables = metadata.get_used_loop_vars(force_global=False)
     top_loop = metadata.get_reduced_variant_set(used_variables)
 
     for variant in top_loop:
+        from conda_build.build import get_all_replacements
+        get_all_replacements(variant)
         mv = metadata.copy()
         mv.config.variant = variant
 
@@ -701,7 +732,7 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
             mv.config.variants = (filter_by_key_value(mv.config.variants, key, values,
                                                       'distribute_variants_reduction') or
                                   mv.config.variants)
-
+        get_all_replacements(mv.config.variants)
         pin_run_as_build = variant.get('pin_run_as_build', {})
         if mv.numpy_xx and 'numpy' not in pin_run_as_build:
             pin_run_as_build['numpy'] = {'min_pin': 'x.x', 'max_pin': 'x.x'}
@@ -731,7 +762,7 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
                            mv.config.variant.get('target_platform', mv.config.subdir),
                            tuple((var, mv.config.variant.get(var))
                                  for var in mv.get_used_vars()))] = \
-                                    (mv, need_source_download, None)
+                                     (mv, need_source_download, None)
     # list of tuples.
     # each tuple item is a tuple of 3 items:
     #    metadata, need_download, need_reparse_in_env
@@ -743,7 +774,11 @@ def expand_outputs(metadata_tuples):
     expanded_outputs = OrderedDict()
 
     for (_m, download, reparse) in metadata_tuples:
-        for (output_dict, m) in _m.copy().get_output_metadata_set(permit_unsatisfiable_variants=False):
+        from conda_build.build import get_all_replacements
+        get_all_replacements(_m.config)
+        from copy import deepcopy
+        for (output_dict, m) in deepcopy(_m).get_output_metadata_set(permit_unsatisfiable_variants=False):
+            get_all_replacements(m.config)
             expanded_outputs[m.dist()] = (output_dict, m)
     return list(expanded_outputs.values())
 
@@ -758,9 +793,6 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
     results returned here.)
     """
     arg = recipe_path
-    # Don't use byte literals for paths in Python 2
-    if not PY3:
-        arg = arg.decode(getpreferredencoding() or 'utf-8')
     if isfile(arg):
         if arg.endswith(('.tar', '.tar.gz', '.tgz', '.tar.bz2')):
             recipe_dir = tempfile.mkdtemp()
@@ -792,7 +824,7 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
     # important: set build id *before* downloading source.  Otherwise source goes into a different
     #    build folder.
     if config.set_build_id:
-        m.config.compute_build_id(m.name(), reset=reset_build_id)
+        m.config.compute_build_id(m.name(), m.version(), reset=reset_build_id)
 
     # this source may go into a folder that doesn't match the eventual build folder.
     #   There's no way around it AFAICT.  We must download the source to be able to render
@@ -836,37 +868,33 @@ class _MetaYaml(dict):
 
 
 def _represent_omap(dumper, data):
-    return dumper.represent_mapping(u'tag:yaml.org,2002:map', data.to_omap())
+    return dumper.represent_mapping('tag:yaml.org,2002:map', data.to_omap())
 
 
 def _unicode_representer(dumper, uni):
-    node = yaml.ScalarNode(tag=u'tag:yaml.org,2002:str', value=uni)
+    node = yaml.ScalarNode(tag='tag:yaml.org,2002:str', value=uni)
     return node
 
 
 class _IndentDumper(yaml.Dumper):
     def increase_indent(self, flow=False, indentless=False):
-        return super(_IndentDumper, self).increase_indent(flow, False)
+        return super().increase_indent(flow, False)
 
     def ignore_aliases(self, data):
         return True
 
 
 yaml.add_representer(_MetaYaml, _represent_omap)
-if PY3:
-    yaml.add_representer(str, _unicode_representer)
-    unicode = None  # silence pyflakes about unicode not existing in py3
-else:
-    yaml.add_representer(unicode, _unicode_representer)
+yaml.add_representer(str, _unicode_representer)
+unicode = None  # silence pyflakes about unicode not existing in py3
 
 
 def output_yaml(metadata, filename=None, suppress_outputs=False):
     local_metadata = metadata.copy()
-    utils.trim_empty_keys(local_metadata.meta)
     if suppress_outputs and local_metadata.is_output and 'outputs' in local_metadata.meta:
         del local_metadata.meta['outputs']
     output = yaml.dump(_MetaYaml(local_metadata.meta), Dumper=_IndentDumper,
-                       default_flow_style=False, indent=4)
+                       default_flow_style=False, indent=2)
     if filename:
         if any(sep in filename for sep in ('\\', '/')):
             try:

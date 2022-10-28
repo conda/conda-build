@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 # For the most part, all functionality should be tested with the api tests,
 #   because they actually provide coverage.  These tests are here to make
 #   sure that the CLI still works.
@@ -16,12 +18,11 @@ from conda_build.tarcheck import TarCheck
 
 from conda_build import api
 from conda_build.config import Config
-from conda_build.utils import (get_site_packages, on_win, get_build_folders, package_has_file,
-                               check_call_env, tar_xf)
-from conda_build.conda_interface import TemporaryDirectory, conda_43
+from conda_build.utils import get_site_packages, on_win, get_build_folders, package_has_file, tar_xf
+from conda_build.conda_interface import TemporaryDirectory
 from conda_build.exceptions import DependencyNeedsBuildingError
 import conda_build
-from .utils import metadata_dir, put_bad_conda_on_path
+from .utils import metadata_dir
 
 import conda_build.cli.main_build as main_build
 import conda_build.cli.main_render as main_render
@@ -69,14 +70,14 @@ def test_render_add_channel():
         args = ['-c', 'conda_build_test', os.path.join(metadata_dir,
                             "_recipe_requiring_external_channel"), '--file', rendered_filename]
         main_render.execute(args)
-        with open(rendered_filename, 'r') as rendered_file:
+        with open(rendered_filename) as rendered_file:
             rendered_meta = yaml.safe_load(rendered_file)
         required_package_string = [pkg for pkg in rendered_meta['requirements']['build'] if
                                    'conda_build_test_requirement' in pkg][0]
         required_package_details = required_package_string.split(' ')
         assert len(required_package_details) > 1, ("Expected version number on successful "
                                     "rendering, but got only {}".format(required_package_details))
-        assert required_package_details[1] == '1.0', "Expected version number 1.0 on successful rendering, but got {}".format(required_package_details[1])
+        assert required_package_details[1] == '1.0', f"Expected version number 1.0 on successful rendering, but got {required_package_details[1]}"
 
 
 def test_render_without_channel_fails():
@@ -85,13 +86,13 @@ def test_render_without_channel_fails():
         rendered_filename = os.path.join(tmpdir, 'out.yaml')
         args = ['--override-channels', os.path.join(metadata_dir, "_recipe_requiring_external_channel"), '--file', rendered_filename]
         main_render.execute(args)
-        with open(rendered_filename, 'r') as rendered_file:
+        with open(rendered_filename) as rendered_file:
             rendered_meta = yaml.safe_load(rendered_file)
         required_package_string = [pkg for pkg in
                                    rendered_meta.get('requirements', {}).get('build', [])
                                    if 'conda_build_test_requirement' in pkg][0]
         assert required_package_string == 'conda_build_test_requirement', \
-               "Expected to get only base package name because it should not be found, but got :{}".format(required_package_string)
+               f"Expected to get only base package name because it should not be found, but got :{required_package_string}"
 
 
 def test_no_filename_hash(testing_workdir, testing_metadata, capfd):
@@ -129,7 +130,7 @@ def test_render_output_build_path_and_file(testing_workdir, testing_metadata, ca
     output, error = capfd.readouterr()
     assert output.rstrip() == test_path, error
     assert error == ""
-    with open(rendered_filename, 'r') as rendered_file:
+    with open(rendered_filename) as rendered_file:
         rendered_meta = yaml.safe_load(rendered_file)
     assert rendered_meta['package']['name'] == 'test_render_output_build_path_and_file'
 
@@ -168,7 +169,7 @@ def test_slash_in_recipe_arg_keeps_build_id(testing_workdir, testing_config):
     args = [os.path.join(metadata_dir, "has_prefix_files"), '--croot', testing_config.croot,
             '--no-anaconda-upload']
     outputs = main_build.execute(args)
-    data = package_has_file(outputs[0], 'binary-has-prefix', refresh=True)
+    data = package_has_file(outputs[0], 'binary-has-prefix', refresh_mode='forced')
     assert data
     if hasattr(data, 'decode'):
         data = data.decode('UTF-8')
@@ -191,7 +192,7 @@ def test_build_no_build_id(testing_workdir, testing_config):
     args = [os.path.join(metadata_dir, "has_prefix_files"), '--no-build-id',
             '--croot', testing_config.croot, '--no-activate', '--no-anaconda-upload']
     outputs = main_build.execute(args)
-    data = package_has_file(outputs[0], 'binary-has-prefix', refresh=True)
+    data = package_has_file(outputs[0], 'binary-has-prefix', refresh_mode='forced')
     assert data
     if hasattr(data, 'decode'):
         data = data.decode('UTF-8')
@@ -264,6 +265,13 @@ def test_skeleton_pypi(testing_workdir, testing_config):
 
     # ensure that recipe generated is buildable
     main_build.execute(('peppercorn',))
+
+
+@pytest.mark.sanity
+def test_skeleton_pypi_compatible_versions(testing_workdir, testing_config):
+    args = ['pypi', 'openshift']
+    main_skeleton.execute(args)
+    assert os.path.isdir('openshift')
 
 
 @pytest.mark.slow
@@ -413,7 +421,6 @@ def test_inspect_hash_input(testing_metadata, testing_workdir, capfd):
     assert 'zlib' in output
 
 
-@pytest.mark.xfail(conda_43, reason="develop broke with old conda.  We don't really care.")
 def test_develop(testing_env):
     f = "https://pypi.io/packages/source/c/conda_version_test/conda_version_test-0.1.0-1.tar.gz"
     download(f, "conda_version_test.tar.gz")
@@ -584,7 +591,7 @@ def test_relative_path_test_artifact():
     # build the package
     args = ['--no-anaconda-upload', '--no-test', '--croot', croot_abs, empty_sections]
     output_file_abs = main_build.execute(args)
-    assert(len(output_file_abs) == 1)
+    assert len(output_file_abs) == 1
 
     output_file_rel = os.path.join(croot_rel, os.path.relpath(output_file_abs[0], croot_abs))
 
@@ -604,7 +611,7 @@ def test_relative_path_test_recipe():
     # build the package
     args = ['--no-anaconda-upload', '--no-test', '--croot', croot_abs, empty_sections]
     output_file_abs = main_build.execute(args)
-    assert(len(output_file_abs) == 1)
+    assert len(output_file_abs) == 1
 
     # run the test stage with relative croot
     args = ['--no-anaconda-upload', '--test', '--croot', croot_rel, empty_sections]
@@ -618,16 +625,16 @@ def test_render_with_python_arg_reduces_subspace(capfd):
     args = [recipe, '--python=2.7', '--output']
     main_render.execute(args)
     out, err = capfd.readouterr()
-    assert(len(out.splitlines()) == 2)
+    assert len(out.splitlines()) == 2
 
-    args = [recipe, '--python=3.6', '--output']
+    args = [recipe, '--python=3.9', '--output']
     main_render.execute(args)
     out, err = capfd.readouterr()
-    assert(len(out.splitlines()) == 1)
+    assert len(out.splitlines()) == 1
 
-    # should raise an error, because python 3.4 is not in the matrix, so we don't know which vc
+    # should raise an error, because python 3.6 is not in the matrix, so we don't know which vc
     # to associate with
-    args = [recipe, '--python=3.4', '--output']
+    args = [recipe, '--python=3.6', '--output']
     with pytest.raises(ValueError):
         main_render.execute(args)
 
@@ -635,20 +642,20 @@ def test_render_with_python_arg_reduces_subspace(capfd):
 def test_render_with_python_arg_CLI_reduces_subspace(capfd):
     recipe = os.path.join(metadata_dir, "..", "variants", "20_subspace_selection_cli")
     # build the package
-    args = [recipe, '--variants', '{python: [2.7, 3.6]}', '--output']
+    args = [recipe, '--variants', '{python: [2.7, 3.9]}', '--output']
     main_render.execute(args)
     out, err = capfd.readouterr()
-    assert(len(out.splitlines()) == 3)
+    assert len(out.splitlines()) == 3
 
     args = [recipe, '--variants', '{python: 2.7}', '--output']
     main_render.execute(args)
     out, err = capfd.readouterr()
-    assert(len(out.splitlines()) == 2)
+    assert len(out.splitlines()) == 2
 
-    args = [recipe, '--variants', '{python: 3.6}', '--output']
+    args = [recipe, '--variants', '{python: 3.9}', '--output']
     main_render.execute(args)
     out, err = capfd.readouterr()
-    assert(len(out.splitlines()) == 1)
+    assert len(out.splitlines()) == 1
 
 
 def test_test_extra_dep(testing_metadata):

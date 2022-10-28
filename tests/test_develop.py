@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 '''
 Simple tests for testing functions in develop module - lower level than going through API.
 '''
@@ -78,7 +80,7 @@ def test_write_to_conda_pth(sp_dir, conda_pth):
         assert exists(conda_pth)
         # write to path twice but ensure it only gets written to fine once
         write_to_conda_pth(sp_dir, pth)
-        with open(conda_pth, 'r') as f:
+        with open(conda_pth) as f:
             lines = f.readlines()
             assert (pth + '\n') in lines
             assert len(lines) == exp_num_pths
@@ -105,7 +107,7 @@ def test_uninstall(sp_dir, conda_pth, request):
         _uninstall(sp_dir, to_rm)
         assert exists(conda_pth)
 
-        with open(conda_pth, 'r') as f:
+        with open(conda_pth) as f:
             lines = f.readlines()
             assert to_rm + '\n' not in lines
             assert len(lines) == exp_num_pths

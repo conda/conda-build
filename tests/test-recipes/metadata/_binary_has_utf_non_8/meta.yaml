@@ -1,0 +1,11 @@
+package:
+  name: conda-build-test-binary-has-prefix-files
+  version: 1.0
+
+build:
+  binary_has_prefix_files:
+    - binary-has-prefix-utf-8
+    - binary-has-prefix-utf-16-le
+    - binary-has-prefix-utf-16-be
+    - binary-has-prefix-utf-32-le
+    - binary-has-prefix-utf-32-be

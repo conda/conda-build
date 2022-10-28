@@ -38,4 +38,8 @@ the ``cp`` command because cmd.exe won't understand it in Windows.
 ``build.sh`` is run with ``bash`` and ``bld.bat`` is run with ``cmd.exe``.
 
 There is some development towards the ability to use bash scripts in Windows,
-but this is not currently supported.
+but this is not currently supported. You may write your script as a .sh file,
+and then call it in your bld.bat file, but there is no way to directly run
+build.sh on Windows. The conda recipe at
+https://github.com/AnacondaRecipes/conda-feedstock/tree/master/recipe is an
+example of this method.

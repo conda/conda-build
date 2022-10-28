@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 import os
 
 from conda_build import api
@@ -17,10 +19,8 @@ def test_output_with_noarch_python_says_noarch(testing_metadata):
 
 
 def test_reduce_duplicate_specs(testing_metadata):
-    reqs = {'build': ['exact', 'exact 1.2.3 1', 'exact >1.0,<2'],
-            'host': ['exact', 'exact 1.2.3 1']
-    }
-    testing_metadata.meta['requirements'] = reqs
+    reqs = {"build": ["exact", "exact 1.2.3 1", "exact >1.0,<2"], "host": ["exact", "exact 1.2.3 1"]}
+    testing_metadata.meta["requirements"] = reqs
     render._simplify_to_exact_constraints(testing_metadata)
     assert (testing_metadata.meta['requirements']['build'] ==
             testing_metadata.meta['requirements']['host'])

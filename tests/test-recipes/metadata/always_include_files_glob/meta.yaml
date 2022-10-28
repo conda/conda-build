@@ -18,7 +18,10 @@ build:
 
 requirements:
   build:
-    - {{ compiler('c') }}  # [linux]
+    # Needed for binary relocation to work in the case
+    # when the system's version of these tools have been
+    # installed.
+    - {{ compiler('c') }}  # [linux or osx]
   host:
     - libpng 1.6.34.*
 

@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 from glob import glob
 import json
 import os
@@ -92,13 +94,13 @@ def test_subpackage_variant_override(testing_config):
 def test_intradependencies(testing_workdir, testing_config):
     recipe = os.path.join(subpackage_dir, '_intradependencies')
     outputs1 = api.get_output_file_paths(recipe, config=testing_config)
-    outputs1_set = set([os.path.basename(p) for p in outputs1])
+    outputs1_set = {os.path.basename(p) for p in outputs1}
     # 2 * abc + 1 foo + 2 * (2 * abc, 1 * lib, 1 * foo)
     assert len(outputs1) == 11
     outputs2 = api.build(recipe, config=testing_config)
     assert len(outputs2) == 11
-    outputs2_set = set([os.path.basename(p) for p in outputs2])
-    assert outputs1_set == outputs2_set, 'pkgs differ :: get_output_file_paths()=%s but build()=%s' % (outputs1_set,
+    outputs2_set = {os.path.basename(p) for p in outputs2}
+    assert outputs1_set == outputs2_set, 'pkgs differ :: get_output_file_paths()={} but build()={}'.format(outputs1_set,
                                                                                                        outputs2_set)
 
 
@@ -115,7 +117,7 @@ def test_intradep_with_templated_output_name(testing_config):
     assert len(metadata) == 3
     expected_names = {'test_templated_subpackage_name', 'templated_subpackage_nameabc',
                       'depends_on_templated'}
-    assert set((m.name() for (m, _, _) in metadata)) == expected_names
+    assert {m.name() for (m, _, _) in metadata} == expected_names
 
 
 def test_output_specific_subdir(testing_config):
@@ -189,7 +191,7 @@ def test_toplevel_entry_points_do_not_apply_to_subpackages(testing_config):
             assert not utils.package_has_file(out, '{}/{}{}'.format(script_dir, 'pkg1', ext))
             assert not utils.package_has_file(out, '{}/{}{}'.format(script_dir, 'pkg2', ext))
         else:
-            raise ValueError("Didn't see any of the 3 expected filenames.  Filename was {}".format(fn))
+            raise ValueError(f"Didn't see any of the 3 expected filenames.  Filename was {fn}")
 
 
 def test_subpackage_hash_inputs(testing_config):
@@ -269,6 +271,12 @@ def test_subpackage_order_bad(testing_config):
 
 
 @pytest.mark.sanity
+def test_subpackage_script_and_files(testing_config):
+    recipe = os.path.join(subpackage_dir, '_script_and_files')
+    api.build(recipe, config=testing_config)
+
+
+@pytest.mark.sanity
 def test_build_script_and_script_env(testing_config):
     recipe = os.path.join(subpackage_dir, '_build_script')
     os.environ['TEST_FN'] = 'test'
@@ -302,6 +310,8 @@ def test_python_line_up_with_compiled_lib(recipe, testing_config):
             assert any(dep.startswith('python >') for dep in deps), (m.name(), deps)
 
 
+@pytest.mark.xfail(sys.platform == "win32",
+                   reason="Defaults channel has conflicting vc packages")
 def test_merge_build_host_applies_in_outputs(testing_config):
     recipe = os.path.join(subpackage_dir, '_merge_build_host')
     ms = api.render(recipe, config=testing_config)
@@ -334,6 +344,12 @@ def test_inherit_build_number(testing_config):
     for m, _, _ in ms:
         assert 'number' in m.meta['build'], "build number was not inherited at all"
         assert int(m.meta['build']['number']) == 1, "build number should have been inherited as '1'"
+
+
+def test_circular_deps_cross(testing_config):
+    recipe = os.path.join(subpackage_dir, '_circular_deps_cross')
+    # check that this does not raise an exception
+    api.render(recipe, config=testing_config)
 
 
 @pytest.mark.slow

@@ -1,8 +1,9 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 """
 Tools for converting Cran packages to conda recipes.
 """
 
-from __future__ import absolute_import, division, print_function
 
 import argparse
 import copy
@@ -29,7 +30,7 @@ except ImportError:
 
 from conda_build import source, metadata
 from conda_build.config import get_or_merge_config
-from conda_build.conda_interface import text_type, iteritems, TemporaryDirectory, cc_conda_build
+from conda_build.conda_interface import TemporaryDirectory, cc_conda_build
 from conda_build.license_family import allowed_license_families, guess_license_family
 from conda_build.utils import rm_rf, ensure_list
 from conda_build.variants import get_package_variants, DEFAULT_VARIANTS
@@ -132,7 +133,8 @@ export DISABLE_AUTOBREW=1
 # R refuses to build packages that mark themselves as Priority: Recommended
 mv DESCRIPTION DESCRIPTION.old
 grep -va '^Priority: ' DESCRIPTION.old > DESCRIPTION
-$R CMD INSTALL --build .
+# shellcheck disable=SC2086
+${{R}} CMD INSTALL --build . ${{R_ARGS}}
 
 # Add more build steps here, if they are necessary.
 
@@ -150,7 +152,8 @@ if {source_pf_bash}; then
   export DISABLE_AUTOBREW=1
   mv DESCRIPTION DESCRIPTION.old
   grep -va '^Priority: ' DESCRIPTION.old > DESCRIPTION
-  ${{R}} CMD INSTALL --build .
+  # shellcheck disable=SC2086
+  ${{R}} CMD INSTALL --build . ${{R_ARGS}}
 else
   mkdir -p "${{PREFIX}}"/lib/R/library/{cran_packagename}
   mv ./* "${{PREFIX}}"/lib/R/library/{cran_packagename}
@@ -177,7 +180,7 @@ else
             install_name_tool -change /usr/lib/libcurl.4.dylib "${{PREFIX}}"/lib/libcurl.4.dylib "${{SHARED_LIB}}" || true
             install_name_tool -change /usr/lib/libc++.1.dylib "${{PREFIX}}"/lib/libc++.1.dylib "${{SHARED_LIB}}" || true
             install_name_tool -change /Library/Frameworks/R.framework/Versions/3.5/Resources/lib/libc++.1.dylib "${{PREFIX}}"/lib/libc++.1.dylib "${{SHARED_LIB}}" || true
-          done <   <(find . \( -type f -iname "*.dylib" -or -iname "*.so" -or -iname "R" \) -print0)
+          done <   <(find . \\( -type f -iname "*.dylib" -or -iname "*.so" -or -iname "R" \\) -print0)
         popd
       done
     popd
@@ -195,20 +198,20 @@ mv ./* "${{PREFIX}}"/lib/R/library/{cran_packagename}
 """
 
 CRAN_BLD_BAT_SOURCE = """\
-"%R%" CMD INSTALL --build .
-IF %ERRORLEVEL% NEQ 0 exit 1
+"%R%" CMD INSTALL --build . %R_ARGS%
+IF %ERRORLEVEL% NEQ 0 exit /B 1
 """
 
 # We hardcode the fact that CRAN does not provide win32 binaries here.
 CRAN_BLD_BAT_MIXED = """\
 if "%target_platform%" == "win-64" goto skip_source_build
-"%R%" CMD INSTALL --build .
-IF %ERRORLEVEL% NEQ 0 exit 1
+"%R%" CMD INSTALL --build . %R_ARGS%
+IF %ERRORLEVEL% NEQ 0 exit /B 1
 exit 0
 :skip_source_build
-mkdir %PREFIX%\lib\R\library
-robocopy /E . "%PREFIX%\lib\R\library\{cran_packagename}"
-if %ERRORLEVEL% NEQ 1 exit 1
+mkdir %PREFIX%\\lib\\R\\library
+robocopy /E . "%PREFIX%\\lib\\R\\library\\{cran_packagename}"
+if %ERRORLEVEL% NEQ 1 exit /B 1
 exit 0
 """
 
@@ -434,6 +437,18 @@ def add_parser(repos):
         help="""Variant config file to add.  These yaml files can contain
         keys such as `cran_mirror`.  Only one can be provided here."""
     )
+    cran.add_argument(
+        "--add-cross-r-base",
+        action='store_true',
+        default=False,
+        help="""Add cross-r-base to build requirements for cross compiling"""
+    )
+    cran.add_argument(
+        "--no-comments",
+        action='store_true',
+        default=False,
+        help="""Do not include instructional comments in recipe files"""
+    )
 
 
 def dict_from_cran_lines(lines):
@@ -527,7 +542,7 @@ def yaml_quote_string(string):
 
     Note that this function is NOT general.
     """
-    return yaml.dump(string, Dumper=SafeDumper).replace('\n...\n', '').replace('\n', '\n  ')
+    return yaml.dump(string, Dumper=SafeDumper).replace('\n...\n', '').replace('\n', '\n  ').rstrip('\n ')
 
 
 # Due to how we render the metadata there can be significant areas of repeated newlines.
@@ -624,7 +639,7 @@ def get_session(output_dir, verbose=True):
 
 def get_cran_archive_versions(cran_url, session, package, verbose=True):
     if verbose:
-        print("Fetching archived versions for package %s from %s" % (package, cran_url))
+        print(f"Fetching archived versions for package {package} from {cran_url}")
     r = session.get(cran_url + "/src/contrib/Archive/" + package + "/")
     try:
         r.raise_for_status()
@@ -668,7 +683,7 @@ def make_array(m, key, allow_empty=False):
     if old_vals or allow_empty:
         result.append(key.split('/')[-1] + ":")
     for old_val in old_vals:
-        result.append("{indent}{old_val}".format(indent=INDENT, old_val=old_val))
+        result.append(f"{INDENT}{old_val}")
     return result
 
 
@@ -737,7 +752,7 @@ def package_to_inputs_dict(output_dir, output_suffix, git_tag, package, version=
     elif isabs(package):
         commp = commonprefix((package, output_dir))
         if commp != output_dir:
-            raise RuntimeError("package %s specified with abs path outside of output-dir %s" % (
+            raise RuntimeError("package {} specified with abs path outside of output-dir {}".format(
                 package, output_dir))
         location = package
         existing_location = existing_recipe_dir(output_dir, output_suffix, 'r-' + pkg_name, version)
@@ -766,7 +781,7 @@ def package_to_inputs_dict(output_dir, output_suffix, git_tag, package, version=
 
     vstr = '-' + version.replace('-', '_') if version else ''
     new_location = join(output_dir, 'r-' + pkg_name + vstr + output_suffix)
-    print(".. name: %s location: %s new_location: %s" % (pkg_name, location, new_location))
+    print(f".. name: {pkg_name} location: {location} new_location: {new_location}")
 
     return {'pkg-name': pkg_name,
             'location': location,
@@ -788,17 +803,25 @@ def get_available_binaries(cran_url, details):
             details['binaries'].setdefault(pkg, []).append((ver, url + filename))
 
 
+def remove_comments(template):
+    re_comment = re.compile(r'^\s*#\s')
+    lines = template.split('\n')
+    lines_no_comments = [line for line in lines if not re_comment.match(line)]
+    return '\n'.join(lines_no_comments)
+
+
 def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=None, version=None,
                 git_tag=None, cran_url=None, recursive=False, archive=True,
                 version_compare=False, update_policy='', r_interp='r-base', use_binaries_ver=None,
                 use_noarch_generic=False, use_when_no_binary='src', use_rtools_win=False, config=None,
-                variant_config_files=None, allow_archived=False):
+                variant_config_files=None, allow_archived=False, add_cross_r_base=False,
+                no_comments=False):
 
     if use_when_no_binary != 'error' and \
        use_when_no_binary != 'src' and \
        use_when_no_binary != 'old' and \
        use_when_no_binary != 'old-src':
-        print("ERROR: --use_when_no_binary={} not yet implemented".format(use_when_no_binary))
+        print(f"ERROR: --use_when_no_binary={use_when_no_binary} not yet implemented")
         sys.exit(1)
     output_dir = realpath(output_dir)
     config = get_or_merge_config(config, variant_config_files=variant_config_files)
@@ -834,7 +857,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                               # build_for_linux or is_github_url or is_tarfile
                               'use_this': True},
                    'win-64': {'selector': 'win64',
-                              'dir': 'bin/windows/contrib/{}/'.format(use_binaries_ver),
+                              'dir': f'bin/windows/contrib/{use_binaries_ver}/',
                               'ext': '.zip',
                               'use_this': True if use_binaries_ver else False},
                    'osx-64': {'selector': 'osx',
@@ -844,7 +867,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                               'use_this': True if use_binaries_ver else False}}
 
     # Figure out what binaries are available once:
-    for archive_type, archive_details in iteritems(cran_layout_template):
+    for archive_type, archive_details in cran_layout_template.items():
         archive_details['binaries'] = dict()
         if archive_type != 'source' and archive_details['use_this']:
             get_available_binaries(cran_url, archive_details)
@@ -868,7 +891,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         url = inputs['location']
 
         dir_path = inputs['new-location']
-        print("Making/refreshing recipe for {}".format(pkg_name))
+        print(f"Making/refreshing recipe for {pkg_name}")
 
         # Bodges GitHub packages into cran_metadata
         if is_tarfile:
@@ -915,7 +938,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             if cran_version and (not version or version == cran_version):
                 version = cran_version
             elif version and not archive:
-                print('ERROR: Version %s of package %s is archived, but --no-archive was selected' % (version, package))
+                print(f'ERROR: Version {version} of package {package} is archived, but --no-archive was selected')
                 sys.exit(1)
             elif not version and not cran_version and not allow_archived:
                 print("ERROR: Package %s is archived; to build, use --allow-archived or a --version value" % pkg_name)
@@ -928,7 +951,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 if not version:
                     version = all_versions[0]
                 elif version not in all_versions:
-                    msg = 'ERROR: Version %s of package %s not found.\n  Available versions: ' % (version, package)
+                    msg = f'ERROR: Version {version} of package {package} not found.\n  Available versions: '
                     print(msg + ', '.join(all_versions))
                     sys.exit(1)
             cran_package = None
@@ -994,7 +1017,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         available = {}
 
         description_path = None
-        for archive_type, archive_details in iteritems(cran_layout):
+        for archive_type, archive_details in cran_layout.items():
             contrib_url = ''
             archive_details['cran_version'] = d['cran_version']
             archive_details['conda_version'] = d['conda_version']
@@ -1034,11 +1057,11 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 elif not is_github_url or archive_type != 'source':
                     filename_rendered = '{}_{}{}'.format(
                         package, archive_details['cran_version'], archive_details['ext'])
-                    filename = '{}_{{{{ version }}}}'.format(package) + archive_details['ext']
+                    filename = f'{package}_{{{{ version }}}}' + archive_details['ext']
                     contrib_url = '{{{{ cran_mirror }}}}/{}'.format(archive_details['dir'])
                     contrib_url_rendered = cran_url + '/{}'.format(archive_details['dir'])
                     package_url = contrib_url_rendered + filename_rendered
-                    print("Downloading {} from {}".format(archive_type, package_url))
+                    print(f"Downloading {archive_type} from {package_url}")
                     try:
                         cached_path, _ = source.download_to_cache(
                             config.src_cache, '',
@@ -1059,7 +1082,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     available_details['filename'] = filename
                     available_details['contrib_url'] = contrib_url
                     available_details['contrib_url_rendered'] = contrib_url_rendered
-                    available_details['hash_entry'] = 'sha256: {}'.format(sha256.hexdigest())
+                    available_details['hash_entry'] = f'sha256: {sha256.hexdigest()}'
                     available_details['cached_path'] = cached_path
                 # This is rubbish; d[] should be renamed global[] and should be
                 #      merged into source and binaryN.
@@ -1092,9 +1115,9 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         _all = ['linux', 'win32', 'win64', 'osx']
         from_source = _all[:]
         binary_id = 1
-        for archive_type, archive_details in iteritems(available):
+        for archive_type, archive_details in available.items():
             if archive_type == 'source':
-                for k, v in iteritems(archive_details):
+                for k, v in archive_details.items():
                     d[k] = v
             else:
                 sel = archive_details['selector']
@@ -1111,6 +1134,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                                                     fs.startswith('win')) + ']'
             sel_src_not_win = '  # [' + ' or '.join(fs for fs in from_source if not
                                                     fs.startswith('win')) + ']'
+        sel_cross = "  # [build_platform != target_platform]"
         d['sel_src'] = sel_src
         d['sel_src_and_win'] = sel_src_and_win
         d['sel_src_not_win'] = sel_src_not_win
@@ -1128,7 +1152,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     elif not is_archive:
                         available_details['cranurl'] = (INDENT + contrib_url +
                             filename + sel_src + INDENT + contrib_url +
-                            'Archive/{}/'.format(package) + filename + sel_src)
+                            f'Archive/{package}/' + filename + sel_src)
                 else:
                     available_details['cranurl'] = ' ' + contrib_url + filename + sel_src
             if not is_github_url:
@@ -1140,13 +1164,13 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         # Extract the DESCRIPTION data from the source
         if cran_package is None:
             cran_package = get_archive_metadata(description_path)
-        d['cran_metadata'] = '\n'.join(['# %s' % l for l in
-            cran_package['orig_lines'] if l])
+        d['cran_metadata'] = '\n'.join(['# %s' % line for line in
+            cran_package['orig_lines'] if line])
 
         # Render the source and binaryN keys
         binary_id = 1
         d['version_binary1'] = d['version_binary2'] = ""
-        for archive_type, archive_details in iteritems(available):
+        for archive_type, archive_details in available.items():
             if archive_type == 'source':
                 d['source'] = SOURCE_META.format(**archive_details)
                 d['version_source'] = VERSION_META.format(**archive_details)
@@ -1171,9 +1195,9 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             # use CRAN page as homepage if nothing has been specified
             d['home_comment'] = ''
             if is_github_url:
-                d['homeurl'] = ' {}'.format(location)
+                d['homeurl'] = f' {location}'
             else:
-                d['homeurl'] = ' https://CRAN.R-project.org/package={}'.format(package)
+                d['homeurl'] = f' https://CRAN.R-project.org/package={package}'
 
         if not use_noarch_generic or cran_package.get("NeedsCompilation", 'no') == 'yes':
             d['noarch_generic'] = ''
@@ -1184,7 +1208,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
             d['summary_comment'] = ''
             d['summary'] = ' ' + yaml_quote_string(cran_package['Description'])
 
-        if "Suggests" in cran_package:
+        if "Suggests" in cran_package and not no_comments:
             d['suggests'] = "# Suggests: %s" % cran_package['Suggests']
         else:
             d['suggests'] = ''
@@ -1221,14 +1245,14 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                 sys.exit("Don't know how to handle archs from dependency of "
                 "package %s: %s" % (package, s))
 
-            dep_dict[name] = '{relop}{version}'.format(relop=relop, version=ver)
+            dep_dict[name] = f'{relop}{ver}'
 
         if 'R' not in dep_dict:
             dep_dict['R'] = ''
 
         os_type = cran_package.get("OS_type", '')
         if os_type != 'unix' and os_type != 'windows' and os_type != '':
-            print("Unknown OS_type: {} in CRAN package".format(os_type))
+            print(f"Unknown OS_type: {os_type} in CRAN package")
             os_type = ''
         if os_type == 'unix':
             d['skip_os'] = 'skip: True  # [not unix]'
@@ -1236,7 +1260,9 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         if os_type == 'windows':
             d['skip_os'] = 'skip: True  # [not win]'
             d["noarch_generic"] = ""
-        if os_type == '':
+        if os_type == '' and no_comments:
+            d['skip_os'] = ''
+        elif os_type == '':
             d['skip_os'] = '# no skip'
 
         need_git = is_github_url
@@ -1291,32 +1317,34 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                     # deps.append("{indent}{{{{native}}}}extsoft     {sel}".format(
                     #     indent=INDENT, sel=sel_src_and_win))
                 if need_autotools or need_make or need_git:
-                    deps.append("{indent}{{{{posix}}}}filesystem      {sel}".format(
+                    deps.append("{indent}{{{{ posix }}}}filesystem      {sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
                 if need_git:
-                    deps.append("{indent}{{{{posix}}}}git".format(indent=INDENT))
+                    deps.append(f"{INDENT}{{{{ posix }}}}git")
                 if need_autotools:
-                    deps.append("{indent}{{{{posix}}}}sed             {sel}".format(
+                    deps.append("{indent}{{{{ posix }}}}sed             {sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
-                    deps.append("{indent}{{{{posix}}}}grep            {sel}".format(
+                    deps.append("{indent}{{{{ posix }}}}grep            {sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
-                    deps.append("{indent}{{{{posix}}}}autoconf        {sel}".format(
+                    deps.append("{indent}{{{{ posix }}}}autoconf        {sel}".format(
                         indent=INDENT, sel=sel_src))
-                    deps.append("{indent}{{{{posix}}}}automake        {sel}".format(
+                    deps.append("{indent}{{{{ posix }}}}automake        {sel}".format(
                         indent=INDENT, sel=sel_src_not_win))
-                    deps.append("{indent}{{{{posix}}}}automake-wrapper{sel}".format(
+                    deps.append("{indent}{{{{ posix }}}}automake-wrapper{sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
-                    deps.append("{indent}{{{{posix}}}}pkg-config".format(indent=INDENT))
+                    deps.append(f"{INDENT}{{{{ posix }}}}pkg-config")
                 if need_make:
-                    deps.append("{indent}{{{{posix}}}}make            {sel}".format(
+                    deps.append("{indent}{{{{ posix }}}}make            {sel}".format(
                         indent=INDENT, sel=sel_src))
                     if not need_autotools:
-                        deps.append("{indent}{{{{posix}}}}sed             {sel}".format(
+                        deps.append("{indent}{{{{ posix }}}}sed             {sel}".format(
                             indent=INDENT, sel=sel_src_and_win))
-                    deps.append("{indent}{{{{posix}}}}coreutils       {sel}".format(
+                    deps.append("{indent}{{{{ posix }}}}coreutils       {sel}".format(
                         indent=INDENT, sel=sel_src_and_win))
-                deps.append("{indent}{{{{posix}}}}zip             {sel}".format(
+                deps.append("{indent}{{{{ posix }}}}zip             {sel}".format(
                     indent=INDENT, sel=sel_src_and_win))
+                if add_cross_r_base:
+                    deps.append(f"{INDENT}cross-r-base {{{{ r_base }}}}  {sel_cross}")
             elif dep_type == 'run':
                 if need_c or need_cxx or need_f:
                     deps.append("{indent}{{{{native}}}}gcc-libs       {sel}".format(
@@ -1336,7 +1364,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                         # that are in the recommended group.
                         # We don't include any R version restrictions because
                         # conda-build always pins r-base and mro-base version.
-                        deps.insert(0, '{indent}{r_name}'.format(indent=INDENT, r_name=r_interp))
+                        deps.insert(0, f'{INDENT}{r_interp}')
                     else:
                         conda_name = 'r-' + name.lower()
 
@@ -1352,13 +1380,18 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                                 inputs_dict = package_to_inputs_dict(output_dir, output_suffix,
                                                                      git_tag, lower_name, None)
                                 assert lower_name == inputs_dict['pkg-name'], \
-                                    "name %s != inputs_dict['pkg-name'] %s" % (
+                                    "name {} != inputs_dict['pkg-name'] {}".format(
                                         name, inputs_dict['pkg-name'])
                                 assert lower_name not in package_list
                                 package_dicts.update({lower_name: {'inputs': inputs_dict}})
                                 package_list.append(lower_name)
 
             d['%s_depends' % dep_type] = ''.join(deps)
+
+    if no_comments:
+        global CRAN_BUILD_SH_SOURCE, CRAN_META
+        CRAN_BUILD_SH_SOURCE = remove_comments(CRAN_BUILD_SH_SOURCE)
+        CRAN_META = remove_comments(CRAN_META)
 
     for package in package_dicts:
         d = package_dicts[package]
@@ -1380,8 +1413,8 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
 
         from_sources = d['from_source']
         # Normalize the metadata values
-        d = {k: unicodedata.normalize("NFKD", text_type(v)).encode('ascii', 'ignore')
-             .decode() for k, v in iteritems(d)}
+        d = {k: unicodedata.normalize("NFKD", str(v)).encode('ascii', 'ignore')
+             .decode() for k, v in d.items()}
         try:
             makedirs(join(dir_path))
         except:
@@ -1390,23 +1423,23 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         with open(join(dir_path, 'meta.yaml'), 'w') as f:
             f.write(clear_whitespace(CRAN_META.format(**d)))
         if not exists(join(dir_path, 'build.sh')) or update_policy == 'overwrite':
-            with open(join(dir_path, 'build.sh'), 'w') as f:
-                if from_sources == all:
-                    f.write(CRAN_BUILD_SH_SOURCE.format(**d))
+            with open(join(dir_path, 'build.sh'), 'wb') as f:
+                if from_sources == _all:
+                    f.write(CRAN_BUILD_SH_SOURCE.format(**d).encode('utf-8'))
                 elif from_sources == []:
-                    f.write(CRAN_BUILD_SH_BINARY.format(**d))
+                    f.write(CRAN_BUILD_SH_BINARY.format(**d).encode('utf-8'))
                 else:
                     tpbt = [target_platform_bash_test_by_sel[t] for t in from_sources]
                     d['source_pf_bash'] = ' || '.join(['[[ ${target_platform} ' + s + ' ]]'
                                                   for s in tpbt])
-                    f.write(CRAN_BUILD_SH_MIXED.format(**d))
+                    f.write(CRAN_BUILD_SH_MIXED.format(**d).encode('utf-8'))
 
         if not exists(join(dir_path, 'bld.bat')) or update_policy == 'overwrite':
-            with open(join(dir_path, 'bld.bat'), 'w') as f:
+            with open(join(dir_path, 'bld.bat'), 'wb') as f:
                 if len([fs for fs in from_sources if fs.startswith('win')]) == 2:
-                    f.write(CRAN_BLD_BAT_SOURCE.format(**d))
+                    f.write(CRAN_BLD_BAT_SOURCE.format(**d).replace('\n', '\r\n').encode('utf-8'))
                 else:
-                    f.write(CRAN_BLD_BAT_MIXED.format(**d))
+                    f.write(CRAN_BLD_BAT_MIXED.format(**d).replace('\n', '\r\n').encode('utf-8'))
 
 
 def version_compare(recipe_dir, newest_conda_version):
@@ -1414,9 +1447,9 @@ def version_compare(recipe_dir, newest_conda_version):
     local_version = m.version()
     package = basename(recipe_dir)
 
-    print("Local recipe for %s has version %s." % (package, local_version))
+    print(f"Local recipe for {package} has version {local_version}.")
 
-    print("The version on CRAN for %s is %s." % (package, newest_conda_version))
+    print(f"The version on CRAN for {package} is {newest_conda_version}.")
 
     return local_version == newest_conda_version
 
@@ -1528,7 +1561,7 @@ def get_license_info(license_text, allowed_license_families):
     license_files = []
 
     # split license_text by "|" and "+" into parts for further matching
-    license_text_parts = [l_opt.strip() for l_opt in re.split('\||\+', license_text)]
+    license_text_parts = [l_opt.strip() for l_opt in re.split(r'\||\+', license_text)]
     for l_opt in license_text_parts:
         # the file case
         if l_opt.startswith("file "):

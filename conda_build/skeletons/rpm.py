@@ -1,5 +1,6 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 import argparse
-from conda_build.conda_interface import iteritems
 from conda_build.source import download_to_cache
 from conda_build.license_family import guess_license_family
 from copy import copy
@@ -9,13 +10,11 @@ except:
     import pickle as pickle
 import gzip
 import hashlib
-import io
 from os import (chmod, makedirs)
 from os.path import (basename, dirname, exists, join, splitext)
 import re
-from six import string_types
 from textwrap import wrap
-from xml.etree import cElementTree as ET
+from xml.etree import ElementTree as ET
 from .cran import yaml_quote_string
 
 
@@ -94,9 +93,9 @@ CDTs = dict({'centos5': {'dirname': 'centos5',
                          'macros': {}},
              'centos6': {'dirname': 'centos6',
                          'short_name': 'cos6',
-                         'base_url': 'http://mirror.centos.org/centos/6.10/os/{base_architecture}/CentOS/',  # noqa
+                         'base_url': 'http://vault.centos.org/centos/6.10/os/{base_architecture}/CentOS/',  # noqa
                          'sbase_url': 'http://vault.centos.org/6.10/os/Source/SPackages/',
-                         'repomd_url': 'http://mirror.centos.org/centos/6.10/os/{base_architecture}/repodata/repomd.xml',  # noqa
+                         'repomd_url': 'http://vault.centos.org/centos/6.10/os/{base_architecture}/repodata/repomd.xml',  # noqa
                          'host_machine': '{architecture}-conda_cos6-linux-gnu',
                          'host_subdir': 'linux-{bits}',
                          'fname_architecture': '{architecture}',
@@ -110,9 +109,9 @@ CDTs = dict({'centos5': {'dirname': 'centos5',
                                     'gdk_pixbuf_base_version': '2.24.1'}},
              'centos7': {'dirname': 'centos7',
                          'short_name': 'cos7',
-                         'base_url': 'http://mirror.centos.org/altarch/7/os/{base_architecture}/CentOS/',  # noqa
-                         'sbase_url': 'http://vault.centos.org/7.6.1810/os/Source/SPackages/',
-                         'repomd_url': 'http://mirror.centos.org/altarch/7/os/{base_architecture}/repodata/repomd.xml',  # noqa
+                         'base_url': 'http://vault.centos.org/altarch/7/os/{base_architecture}/CentOS/',  # noqa
+                         'sbase_url': 'http://vault.centos.org/7.7.1908/os/Source/SPackages/',
+                         'repomd_url': 'http://vault.centos.org/altarch/7/os/{base_architecture}/repodata/repomd.xml',  # noqa
                          'host_machine': '{gnu_architecture}-conda_cos7-linux-gnu',
                          'host_subdir': 'linux-ppc64le',
                          'fname_architecture': '{architecture}',
@@ -124,6 +123,19 @@ CDTs = dict({'centos5': {'dirname': 'centos5',
                          # gives nothing nor does rpm --showrc | grep gdk
                          'macros': {'pyver': '2.6.6',
                                     'gdk_pixbuf_base_version': '2.24.1'}},
+            'clefos': {'dirname': 'clefos',
+                       'short_name': 'cos7',
+                       'base_url': 'http://download.sinenomine.net/clefos/7/os/{base_architecture}/',  # noqa
+                       'sbase_url': 'http://download.sinenomine.net/clefos/7/source/srpms/', # noqa
+                       'repomd_url': 'http://download.sinenomine.net/clefos/7/os/repodata/repomd.xml', # noqa
+                       'host_machine': '{gnu_architecture}-conda-cos7-linux-gnu',
+                       'host_subdir': 'linux-s390x',
+                       'fname_architecture': '{architecture}',
+                       'rpm_filename_platform': 'el7.{architecture}',
+                       'checksummer': hashlib.sha256,
+                       'checksummer_name': "sha256",
+                       'macros': {'pyver': '2.7.5',
+                                  'gdk_pixbuf_base_version': '2.36.2'}},
             'suse_leap_rpi3': {'dirname': 'suse_leap_rpi3',
                                'short_name': 'slrpi3',
                                # I cannot locate the src.rpms for OpenSUSE leap. The existence
@@ -182,7 +194,7 @@ def rpm_filename_split(rpmfilename):
     elif len(parts) > 2:
         release, platform = '.'.join(parts[0:len(parts) - 1]), '.'.join(parts[-1:])
     else:
-        print("ERROR: Cannot figure out the release and platform for {}".format(base))
+        print(f"ERROR: Cannot figure out the release and platform for {base}")
     name_version = base.split('-')[0:-1]
     version = name_version[-1]
     rpm_name = '-'.join(name_version[0:len(name_version) - 1])
@@ -196,7 +208,7 @@ def rpm_split_url_and_cache(rpm_url, src_cache):
 
 
 def rpm_filename_generate(rpm_name, version, release, platform):
-    return '{}-{}-{}.{}.rpm'.format(rpm_name, version, release, platform)
+    return f'{rpm_name}-{version}-{release}.{platform}.rpm'
 
 
 def rpm_url_generate(url_dirname, rpm_name, version, release, platform, src_cache):
@@ -206,7 +218,7 @@ def rpm_url_generate(url_dirname, rpm_name, version, release, platform, src_cach
     result = rpm_filename_generate(rpm_name, version, release, platform)
     url = join(url_dirname, result)
     path, _ = download_to_cache(src_cache, '', dict({'url': url}))
-    assert path, "Failed to cache generated RPM url {}".format(result)
+    assert path, f"Failed to cache generated RPM url {result}"
     return url
 
 
@@ -219,19 +231,19 @@ def find_repo_entry_and_arch(repo_primary, architectures, depend):
         found_package_name = dep_name
     except:
         # Look through the provides of all packages.
-        for name, package in iteritems(repo_primary):
+        for name, package in repo_primary.items():
             for arch in architectures:
                 if arch in package:
                     if 'provides' in package[arch]:
                         for provide in package[arch]['provides']:
                             if provide['name'] == dep_name:
-                                print("Found it in {}".format(name))
+                                print(f"Found it in {name}")
                                 found_package = package
                                 found_package_name = name
                                 break
 
     if found_package_name == '':
-        print("WARNING: Did not find package called (or another one providing) {}".format(dep_name))  # noqa
+        print(f"WARNING: Did not find package called (or another one providing) {dep_name}")  # noqa
         return None, None, None
 
     chosen_arch = None
@@ -270,7 +282,7 @@ def dictify_pickled(xml_file, src_cache, dict_massager=None, cdt=None):
     pickled = xml_file + '.p'
     if exists(pickled):
         return pickle.load(open(pickled, 'rb'))
-    with io.open(xml_file, 'r', encoding='utf-8') as xf:
+    with open(xml_file, encoding='utf-8') as xf:
         xmlstring = xf.read()
         # Remove the global namespace.
         xmlstring = re.sub(r'\sxmlns="[^"]+"', r'', xmlstring, count=1)
@@ -287,9 +299,9 @@ def dictify_pickled(xml_file, src_cache, dict_massager=None, cdt=None):
 def get_repo_dict(repomd_url, data_type, dict_massager, cdt, src_cache):
     xmlstring = urlopen(repomd_url).read()
     # Remove the default namespace definition (xmlns="http://some/namespace")
-    xmlstring = re.sub(b'\sxmlns="[^"]+"', b'', xmlstring, count=1)
+    xmlstring = re.sub(br'\sxmlns="[^"]+"', b'', xmlstring, count=1)
     repomd = ET.fromstring(xmlstring)
-    for child in repomd.findall("*[@type='{}']".format(data_type)):
+    for child in repomd.findall(f"*[@type='{data_type}']"):
         open_csum = child.findall("open-checksum")[0].text
         xml_file = join(src_cache, open_csum)
         try:
@@ -311,7 +323,7 @@ def get_repo_dict(repomd_url, data_type, dict_massager, cdt, src_cache):
                     with open(xml_file, 'wb') as xml:
                         xml.write(xml_content)
                 else:
-                    print("ERROR: Checksum of uncompressed file {} does not match".format(xmlgz_file))  # noqa
+                    print(f"ERROR: Checksum of uncompressed file {xmlgz_file} does not match")  # noqa
         return dictify_pickled(xml_file, src_cache, dict_massager, cdt)
     return dict({})
 
@@ -394,7 +406,7 @@ def massage_primary(repo_primary, src_cache, cdt):
                             'requires': requires})
         if name in new_dict:
             if arch in new_dict[name]:
-                print("WARNING: Duplicate packages exist for {} for arch {}".format(name, arch))
+                print(f"WARNING: Duplicate packages exist for {name} for arch {arch}")
             new_dict[name][arch] = new_package
         else:
             new_dict[name] = dict({arch: new_package})
@@ -481,8 +493,8 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
                 for provides in e_missing['provides']:
                     if provides['name'] == e_name_missing:
                         copy_provides = copy(provides)
-                        if 'rel' in copy_provides:
-                            del(copy_provides['rel'])
+                        if "rel" in copy_provides:
+                            del copy_provides["rel"]
                         depends.append(copy_provides)
             else:
                 print('WARNING: Additional dependency of {}, {} not found'.format(package,
@@ -519,7 +531,7 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
                                                 cdt['short_name'], depend['arch'],
                                                 depend['flags'], depend['ver'])
                          for depend in depends]
-        dependsstr_part = '\n'.join(['    - {}'.format(depends_spec)
+        dependsstr_part = '\n'.join([f'    - {depends_spec}'
                                      for depends_spec in depends_specs])
         dependsstr_build = '  build:\n' + dependsstr_part + '\n'
         dependsstr_host = '  host:\n' + dependsstr_part + '\n'
@@ -558,12 +570,12 @@ def write_conda_recipes(recursive, repo_primary, package, architectures,
         makedirs(odir)
     except:
         pass
-    with open(join(odir, 'meta.yaml'), 'w') as f:
-        f.write(RPM_META.format(**d))
+    with open(join(odir, 'meta.yaml'), 'wb') as f:
+        f.write(RPM_META.format(**d).encode('utf-8'))
     buildsh = join(odir, 'build.sh')
-    with open(buildsh, 'w') as f:
+    with open(buildsh, 'wb') as f:
         chmod(buildsh, 0o755)
-        f.write(BUILDSH.format(**d))
+        f.write(BUILDSH.format(**d).encode('utf-8'))
     return package
 
 
@@ -593,8 +605,8 @@ def write_conda_recipe(packages, distro, output_dir, architecture, recursive, ov
                               'gnu_architecture': gnu_architecture,
                               'bits': bits})
     cdt = dict()
-    for k, v in iteritems(CDTs[cdt_name]):
-        if isinstance(v, string_types):
+    for k, v in CDTs[cdt_name].items():
+        if isinstance(v, str):
             cdt[k] = v.format(**architecture_bits)
         else:
             cdt[k] = v
@@ -680,11 +692,11 @@ def add_parser(repos):
     )
 
     def valid_distros():
-        return ", ".join([name for name, _ in iteritems(CDTs)])
+        return ", ".join([name for name, _ in CDTs.items()])
 
     def distro(distro_name):
         if distro_name not in CDTs:
-            raise argparse.ArgumentTypeError("valid --distro values are {}".format(valid_distros()))
+            raise argparse.ArgumentTypeError(f"valid --distro values are {valid_distros()}")
         return distro_name
 
     rpm.add_argument("--distro",

@@ -1,5 +1,5 @@
-from __future__ import absolute_import, division, print_function
-
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 import contextlib
 import json
 import logging
@@ -13,8 +13,6 @@ import warnings
 from glob import glob
 from os.path import join, normpath
 
-# noqa here because PY3 is used only on windows, and trips up flake8 otherwise.
-from .conda_interface import text_type, PY3  # noqa
 from .conda_interface import (CondaError, LinkError, LockError, NoPackagesFoundError,
                               PaddingError, UnsatisfiableError)
 from .conda_interface import display_actions, execute_actions, execute_plan, install_actions
@@ -22,6 +20,7 @@ from .conda_interface import memoized
 from .conda_interface import package_cache, TemporaryDirectory
 from .conda_interface import pkgs_dirs, root_dir, create_default_packages
 from .conda_interface import reset_context
+from .conda_interface import get_version_from_git_tag
 
 from conda_build import utils
 from conda_build.exceptions import BuildLockError, DependencyNeedsBuildingError
@@ -77,11 +76,7 @@ def verify_git_repo(git_exe, git_dir, git_url, git_commits_since_tag, debug=Fals
     env = os.environ.copy()
     log = utils.get_logger(__name__)
 
-    if debug:
-        stderr = None
-    else:
-        FNULL = open(os.devnull, 'w')
-        stderr = FNULL
+    stderr = None if debug else subprocess.DEVNULL
 
     if not expected_rev:
         return False
@@ -150,9 +145,6 @@ def verify_git_repo(git_exe, git_dir, git_url, git_commits_since_tag, debug=Fals
         log.debug("Error obtaining git information in verify_git_repo.  Error was: ")
         log.debug(str(error))
         OK = False
-    finally:
-        if not debug:
-            FNULL.close()
     return OK
 
 
@@ -160,6 +152,7 @@ def get_git_info(git_exe, repo, debug):
     """
     Given a repo to a git repo, return a dictionary of:
       GIT_DESCRIBE_TAG
+      GIT_DESCRIBE_TAG_PEP440
       GIT_DESCRIBE_NUMBER
       GIT_DESCRIBE_HASH
       GIT_FULL_HASH
@@ -170,11 +163,7 @@ def get_git_info(git_exe, repo, debug):
     d = {}
     log = utils.get_logger(__name__)
 
-    if debug:
-        stderr = None
-    else:
-        FNULL = open(os.devnull, 'w')
-        stderr = FNULL
+    stderr = None if debug else subprocess.DEVNULL
 
     # grab information from describe
     env = os.environ.copy()
@@ -189,6 +178,7 @@ def get_git_info(git_exe, repo, debug):
         parts = output.rsplit('-', 2)
         if len(parts) == 3:
             d.update(dict(zip(keys, parts)))
+        d['GIT_DESCRIBE_TAG_PEP440'] = str(get_version_from_git_tag(output))
     except subprocess.CalledProcessError:
         msg = (
             "Failed to obtain git tag information.\n"
@@ -196,6 +186,23 @@ def get_git_info(git_exe, repo, debug):
             "as they are more reliable when used with git describe."
         )
         log.debug(msg)
+
+    # If there was no tag reachable from HEAD, the above failed and the short hash is not set.
+    # Try to get the short hash from describing with all refs (not just the tags).
+    if "GIT_DESCRIBE_HASH" not in d:
+        try:
+            output = utils.check_output_env([git_exe, "describe", "--all", "--long", "HEAD"],
+                                            env=env, cwd=os.path.dirname(repo),
+                                            stderr=stderr).splitlines()[0]
+            output = output.decode('utf-8')
+            parts = output.rsplit('-', 2)
+            if len(parts) == 3:
+                # Don't save GIT_DESCRIBE_TAG and GIT_DESCRIBE_NUMBER because git (probably)
+                # described a branch. We just want to save the short hash.
+                d['GIT_DESCRIBE_HASH'] = parts[-1]
+        except subprocess.CalledProcessError as error:
+            log.debug("Error obtaining git commit information.  Error was: ")
+            log.debug(str(error))
 
     try:
         # get the _full_ hash of the current HEAD
@@ -297,6 +304,7 @@ def conda_build_vars(prefix, config):
         'SYS_PREFIX': sys.prefix,
         'SYS_PYTHON': sys.executable,
         'SUBDIR': config.host_subdir,
+        'build_platform': config.build_subdir,
         'SRC_DIR': src_dir,
         'HTTPS_PROXY': os.getenv('HTTPS_PROXY', ''),
         'HTTP_PROXY': os.getenv('HTTP_PROXY', ''),
@@ -411,7 +419,10 @@ def r_vars(metadata, prefix, escape_backslash):
 def meta_vars(meta, skip_build_id=False):
     d = {}
     for var_name in ensure_list(meta.get_value('build/script_env', [])):
-        value = os.getenv(var_name)
+        if '=' in var_name:
+            var_name, value = var_name.split('=', 1)
+        else:
+            value = os.getenv(var_name)
         if value is None:
             warnings.warn(
                 "The environment variable '%s' is undefined." % var_name,
@@ -466,7 +477,7 @@ def meta_vars(meta, skip_build_id=False):
     # use `get_value` to prevent early exit while name is still unresolved during rendering
     d['PKG_NAME'] = meta.get_value('package/name')
     d['PKG_VERSION'] = meta.version()
-    d['PKG_BUILDNUM'] = str(meta.build_number() or 0)
+    d['PKG_BUILDNUM'] = str(meta.build_number())
     if meta.final and not skip_build_id:
         d['PKG_BUILD_STRING'] = str(meta.build_id())
         d['PKG_HASH'] = meta.hash_dependencies()
@@ -492,23 +503,27 @@ def get_cpu_count():
             return "1"
 
 
-def get_shlib_ext():
+def get_shlib_ext(host_platform):
     # Return the shared library extension.
-    if sys.platform == 'win32':
+    if host_platform.startswith('win'):
         return '.dll'
-    elif sys.platform == 'darwin':
+    elif host_platform in ['osx', 'darwin']:
         return '.dylib'
-    elif sys.platform.startswith('linux'):
+    elif host_platform.startswith('linux'):
         return '.so'
+    elif host_platform == 'noarch':
+        # noarch packages should not contain shared libraries, use the system
+        # platform if this is requested
+        return get_shlib_ext(sys.platform)
     else:
-        raise NotImplementedError(sys.platform)
+        raise NotImplementedError(host_platform)
 
 
 def windows_vars(m, get_default, prefix):
     """This is setting variables on a dict that is part of the get_default function"""
     # We have gone for the clang values here.
     win_arch = 'i386' if str(m.config.host_arch) == '32' else 'amd64'
-    win_msvc = '19.0.0' if PY3 else '15.0.0'
+    win_msvc = '19.0.0'
     library_prefix = join(prefix, 'Library')
     drive, tail = m.config.host_prefix.split(':')
     get_default('SCRIPTS', join(prefix, 'Scripts'))
@@ -568,13 +583,28 @@ def unix_vars(m, get_default, prefix):
 
 def osx_vars(m, get_default, prefix):
     """This is setting variables on a dict that is part of the get_default function"""
-    OSX_ARCH = 'i386' if str(m.config.host_arch) == '32' else 'x86_64'
+    if str(m.config.host_arch) == '32':
+        OSX_ARCH = 'i386'
+        MACOSX_DEPLOYMENT_TARGET = 10.9
+    elif str(m.config.host_arch) == 'arm64':
+        OSX_ARCH = 'arm64'
+        MACOSX_DEPLOYMENT_TARGET = 11.0
+    else:
+        OSX_ARCH = 'x86_64'
+        MACOSX_DEPLOYMENT_TARGET = 10.9
+
+    if str(m.config.arch) == '32':
+        BUILD = 'i386-apple-darwin13.4.0'
+    elif str(m.config.arch) == 'arm64':
+        BUILD = 'arm64-apple-darwin20.0.0'
+    else:
+        BUILD = 'x86_64-apple-darwin13.4.0'
     # 10.7 install_name_tool -delete_rpath causes broken dylibs, I will revisit this ASAP.
     # rpath = ' -Wl,-rpath,%(PREFIX)s/lib' % d # SIP workaround, DYLD_* no longer works.
     # d['LDFLAGS'] = ldflags + rpath + ' -arch %(OSX_ARCH)s' % d
     get_default('OSX_ARCH', OSX_ARCH)
-    get_default('MACOSX_DEPLOYMENT_TARGET', '10.9')
-    get_default('BUILD', OSX_ARCH + '-apple-darwin13.4.0')
+    get_default('MACOSX_DEPLOYMENT_TARGET', MACOSX_DEPLOYMENT_TARGET)
+    get_default('BUILD', BUILD)
 
 
 @memoized
@@ -596,7 +626,8 @@ def linux_vars(m, get_default, prefix):
     # the GNU triplet is powerpc, not ppc. This matters.
     if build_arch.startswith('ppc'):
         build_arch = build_arch.replace('ppc', 'powerpc')
-    if build_arch.startswith('powerpc') or build_arch.startswith('aarch64'):
+    if build_arch.startswith('powerpc') or build_arch.startswith('aarch64') \
+       or build_arch.startswith('s390x'):
         build_distro = 'cos7'
     else:
         build_distro = 'cos6'
@@ -633,7 +664,7 @@ def system_vars(env_dict, m, prefix):
     get_default('LANG')
     get_default('LC_ALL')
     get_default('MAKEFLAGS')
-    d['SHLIB_EXT'] = get_shlib_ext()
+    d['SHLIB_EXT'] = get_shlib_ext(m.config.host_platform)
     d['PATH'] = os.environ.copy()['PATH']
 
     if not m.config.activate:
@@ -644,9 +675,9 @@ def system_vars(env_dict, m, prefix):
     else:
         unix_vars(m, get_default, prefix)
 
-    if sys.platform == 'darwin':
+    if m.config.host_platform == "osx":
         osx_vars(m, get_default, prefix)
-    elif sys.platform.startswith('linux'):
+    elif m.config.host_platform == "linux":
         linux_vars(m, get_default, prefix)
 
     return d
@@ -659,7 +690,7 @@ class InvalidEnvironment(Exception):
 # Stripped-down Environment class from conda-tools ( https://github.com/groutr/conda-tools )
 # Vendored here to avoid the whole dependency for just this bit.
 def _load_json(path):
-    with open(path, 'r') as fin:
+    with open(path) as fin:
         x = json.load(fin)
     return x
 
@@ -677,7 +708,7 @@ def _load_all_json(path):
     return result
 
 
-class Environment(object):
+class Environment:
     def __init__(self, path):
         """
         Initialize an Environment object.
@@ -690,7 +721,7 @@ class Environment(object):
         if os.path.isdir(path) and os.path.isdir(self._meta):
             self._packages = {}
         else:
-            raise InvalidEnvironment('Unable to load environment {}'.format(path))
+            raise InvalidEnvironment(f'Unable to load environment {path}')
 
     def _read_package_json(self):
         if not self._packages:
@@ -705,7 +736,7 @@ class Environment(object):
         specs = []
         for i in json_objs:
             p, v, b = i['name'], i['version'], i['build']
-            specs.append('{} {} {}'.format(p, v, b))
+            specs.append(f'{p} {v} {b}')
         return specs
 
 
@@ -726,7 +757,7 @@ def get_install_actions(prefix, specs, env, retries=0, subdir=None,
     if specs:
         specs.extend(create_default_packages)
     if verbose or debug:
-        capture = contextlib.contextmanager(lambda: (yield))
+        capture = contextlib.nullcontext
         if debug:
             conda_log_level = logging.DEBUG
     else:
@@ -921,7 +952,7 @@ def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, 
                     raise
             # HACK: some of the time, conda screws up somehow and incomplete packages result.
             #    Just retry.
-            except (AssertionError, IOError, ValueError, RuntimeError, LockError) as exc:
+            except (AssertionError, OSError, ValueError, RuntimeError, LockError) as exc:
                 if isinstance(exc, AssertionError):
                     with utils.try_acquire_locks(locks, timeout=config.timeout):
                         pkg_dir = os.path.dirname(os.path.dirname(str(exc)))

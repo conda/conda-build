@@ -14,3 +14,7 @@ requirements:
     - svn
     - vc 9   # [win and py2k]
     - vc 14   # [win and py3k]
+  # This is here so that we get a smaller host prefix to speed up
+  # the excruciatingly slow calls to prefix_files (os.walk).
+  host:
+    - bzip2

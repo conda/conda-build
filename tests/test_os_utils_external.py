@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 import sys
 import os
 import os.path
@@ -52,4 +54,4 @@ def test_find_executable(testing_workdir, monkeypatch):
 
         find = find_executable('target_name')
 
-        assert find == target_path, "Expected to find 'target_name' in '%s', but found it in '%s'" % (target_path, find)
+        assert find == target_path, f"Expected to find 'target_name' in '{target_path}', but found it in '{find}'"

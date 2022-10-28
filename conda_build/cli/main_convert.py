@@ -1,10 +1,5 @@
-# (c) Continuum Analytics, Inc. / http://continuum.io
-# All Rights Reserved
-#
-# conda is distributed under the terms of the BSD 3-clause license.
-# Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
-
-from locale import getpreferredencoding
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 import logging
 from os.path import abspath, expanduser
 import sys
@@ -12,7 +7,6 @@ import sys
 from conda_build.conda_interface import ArgumentParser
 
 from conda_build import api
-from conda_build.utils import PY3
 
 logging.basicConfig(level=logging.INFO)
 
@@ -60,9 +54,10 @@ all.""",
         '-p', "--platform",
         dest='platforms',
         action="append",
-        choices=['osx-64', 'linux-32', 'linux-64',
-                 'linux-ppc64le', 'linux-armv6l', 'linux-armv7l', 'linux-aarch64',
-                 'win-32', 'win-64', 'all'],
+        choices=['osx-64', 'osx-arm64',
+                 'linux-32', 'linux-64', 'linux-ppc64', 'linux-ppc64le',
+                 'linux-s390x', 'linux-armv6l', 'linux-armv7l', 'linux-aarch64',
+                 'win-32', 'win-64', 'win-arm64', 'all'],
         help="Platform to convert the packages to.",
         default=None
     )
@@ -118,10 +113,6 @@ def execute(args):
     del args.__dict__['files']
 
     for f in files:
-        # Don't use byte literals for paths in Python 2
-        if not PY3:
-            f = f.decode(getpreferredencoding())
-
         f = abspath(expanduser(f))
         api.convert(f, **args.__dict__)
 

@@ -1,5 +1,5 @@
-from __future__ import absolute_import, division, print_function
-
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 import sys
 from os.path import islink, isfile
 

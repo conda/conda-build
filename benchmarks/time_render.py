@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 import os
 
 from conda_build import api
@@ -8,7 +10,7 @@ _thisdir = os.path.dirname(__file__)
 sys.path.append(os.path.dirname(_thisdir))
 
 
-from tests.utils import metadata_dir
+from tests.utils import metadata_dir  # noqa: E402
 variant_dir = os.path.join(metadata_dir, '..', 'variants')
 
 

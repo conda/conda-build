@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 import fnmatch
 import os
 import subprocess
@@ -23,7 +25,7 @@ except ImportError:
 from conda_build import api
 from conda_build.exceptions import DependencyNeedsBuildingError
 import conda_build.os_utils.external as external
-from conda_build.utils import on_win, ensure_list
+from conda_build.utils import on_win
 
 thisdir = os.path.dirname(os.path.realpath(__file__))
 
@@ -94,7 +96,7 @@ def mock_metada_pylint(url_pylint_package):
         'tests_require': '',
         'version': 'UNKNOWN',
         'pypiurl': url_pylint_package,
-        'filename': "black-{version}.tar.gz".format(version=version),
+        'filename': f"black-{version}.tar.gz",
         'digest': [hash_type, hash_value],
         'import_tests': '',
         'summary': ''
@@ -339,11 +341,11 @@ def test_pypi_version_sorting(testing_workdir, testing_config):
 
 def test_list_skeletons():
     skeletons = api.list_skeletons()
-    assert set(skeletons) == set(['pypi', 'cran', 'cpan', 'luarocks', 'rpm'])
+    assert set(skeletons) == {'pypi', 'cran', 'cpan', 'luarocks', 'rpm'}
 
 
 def test_pypi_with_entry_points(testing_workdir):
-    api.skeletonize('planemo', repo='pypi', python_version="2.7")
+    api.skeletonize('planemo', repo='pypi', python_version="3.7")
     assert os.path.isdir('planemo')
 
 
@@ -392,12 +394,8 @@ def test_pypi_with_basic_environment_markers(testing_workdir):
     build_reqs = str(m.meta['requirements']['host'])
     run_reqs = str(m.meta['requirements']['run'])
     # should include the right dependencies for the right version
-    if sys.version_info < (3,):
-        assert "futures" in build_reqs
-        assert "futures" in run_reqs
-    else:
-        assert "futures" not in build_reqs
-        assert "futures" not in run_reqs
+    assert "futures" not in build_reqs
+    assert "futures" not in run_reqs
     if sys.version_info >= (2, 7):
         assert "pygments" in build_reqs
         assert "pygments" in run_reqs
@@ -412,6 +410,7 @@ def test_setuptools_test_requirements(testing_workdir):
     assert m.meta['test']['requires'] == ['nose >=1.0']
 
 
+@pytest.mark.skipif(sys.version_info < (3, 8), reason="sympy is python 3.8+")
 def test_pypi_section_order_preserved(testing_workdir):
     """
     Test whether sections have been written in the correct order.
@@ -425,8 +424,8 @@ def test_pypi_section_order_preserved(testing_workdir):
     # Since we want to check the order of items in the recipe (not whether
     # the metadata values themselves are sensible), read the file as (ordered)
     # yaml, and check the order.
-    with open('sympy/meta.yaml', 'r') as file:
-        lines = [l for l in file.readlines() if not l.startswith("{%")]
+    with open('sympy/meta.yaml') as file:
+        lines = [ln for ln in file.readlines() if not ln.startswith("{%")]
 
     # The loader below preserves the order of entries...
     recipe = ruamel_yaml.load('\n'.join(lines),
@@ -443,55 +442,11 @@ def test_pypi_section_order_preserved(testing_workdir):
         assert list(v.keys()) == list(recipe[k])
 
 
-# CRAN packages to test license_file entry.
-# (package, license_id, license_family, license_files)
-cran_packages = [('r-usethis', 'GPL-3', 'GPL3', 'GPL-3'),  # cran: 'GPL-3'
-                 ('r-cortools', 'Artistic-2.0', 'OTHER', 'Artistic-2.0'),  # cran: 'Artistic License 2.0'
-                 ('r-udpipe', 'MPL-2.0', 'OTHER', ''),  # cran: 'MPL-2.0'
-                 ('r-broom', 'MIT', 'MIT', ['MIT', 'LICENSE']),  # cran: 'MIT + file LICENSE'
-                 ('r-meanr', 'BSD_2_clause', 'BSD', ['BSD_2_clause', 'LICENSE']),  # cran: 'BSD 2-clause License + file LICENSE'
-                 ('r-rsed', 'BSD_3_clause', 'BSD', ['BSD_3_clause', 'LICENSE']),  # cran: 'BSD_3_clause + file LICENSE'
-                 ('r-zoo', 'GPL-2 | GPL-3', 'GPL3', ['GPL-2', 'GPL-3']),  # cran: 'GPL-2 | GPL-3'
-                 ('r-magree', 'GPL-3 | GPL-2', 'GPL3', ['GPL-3', 'GPL-2']),  # cran: 'GPL-3 | GPL-2'
-                 ('r-mglm', 'GPL-2', 'GPL2', 'GPL-2'),  # cran: 'GPL (>= 2)'
-                 ]
-
 @pytest.mark.slow
-@pytest.mark.parametrize("package, license_id, license_family, license_files", cran_packages)
-@pytest.mark.flaky(reruns=5, reruns_delay=1)
-def test_cran_license(package, license_id, license_family, license_files, testing_workdir, testing_config):
-    api.skeletonize(packages=package, repo='cran', output_dir=testing_workdir,
-                    config=testing_config)
-    m = api.render(os.path.join(package, 'meta.yaml'))[0][0]
-    m_license_id = m.get_value('about/license')
-    assert m_license_id == license_id
-    m_license_family = m.get_value('about/license_family')
-    assert m_license_family == license_family
-    m_license_files = ensure_list(m.get_value('about/license_file', ''))
-    license_files = ensure_list(license_files)
-    for m_license_file in m_license_files:
-        assert os.path.basename(m_license_file) in license_files
-
-
-# CRAN packages to test skip entry.
-# (package, skip_text)
-cran_os_type_pkgs = [('bigReg', 'skip: True  # [not unix]'),
-                     ('blatr',  'skip: True  # [not win]')
-                    ]
-
-@pytest.mark.parametrize("package, skip_text", cran_os_type_pkgs)
-def test_cran_os_type(package, skip_text, testing_workdir, testing_config):
-    api.skeletonize(packages=package, repo='cran', output_dir=testing_workdir,
-                    config=testing_config)
-    fpath = os.path.join(testing_workdir, 'r-' + package.lower(), 'meta.yaml') 
-    with open(fpath) as f:
-        assert skip_text in f.read()
-
-
-@pytest.mark.slow
+@pytest.mark.flaky(max_runs=5)
 @pytest.mark.skipif(not external.find_executable("shellcheck"), reason="requires shellcheck >=0.7.0")
 @pytest.mark.parametrize(
-    "package, repo", [("r-usethis", "cran"), ("Perl::Lint", "cpan"), ("screen", "rpm")]
+    "package, repo", [("r-rmarkdown", "cran"), ("Perl::Lint", "cpan"), ("screen", "rpm")]
 )
 def test_build_sh_shellcheck_clean(package, repo, testing_workdir, testing_config):
     api.skeletonize(packages=package, repo=repo, output_dir=testing_workdir, config=testing_config)

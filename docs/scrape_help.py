@@ -1,21 +1,12 @@
 #!/usr/bin/env python
-# (c) 2012-2013 Anaconda, Inc. / http://continuum.io
-# All Rights Reserved
-#
-# conda is distributed under the terms of the BSD 3-clause license.
-# Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
-
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 from subprocess import check_output, PIPE, Popen, STDOUT
 from os.path import join, dirname, abspath, isdir
 from os import makedirs, pathsep
 from collections import OrderedDict
-
+from shlex import quote
 from concurrent.futures import ThreadPoolExecutor
-
-try:
-    from shlex import quote
-except ImportError:
-    from pipes import quote
 
 import sys
 import json
@@ -38,6 +29,7 @@ conda {command}
 
 """
 
+
 def run_command(*args, **kwargs):
     include_stderr = kwargs.pop('include_stderr', False)
     if include_stderr:
@@ -50,14 +42,16 @@ def run_command(*args, **kwargs):
         err = b''
     out, err = out.decode('utf-8'), err.decode('utf-8')
     if p.returncode != 0:
-        print("%r failed with error code %s" % (' '.join(map(quote, args[0])), p.returncode), file=sys.stderr)
+        print("{!r} failed with error code {}".format(' '.join(map(quote, args[0])), p.returncode), file=sys.stderr)
     elif err:
-        print("%r gave stderr output: %s" % (' '.join(*args), err))
+        print("{!r} gave stderr output: {}".format(' '.join(*args), err))
 
     return out
 
+
 def str_check_output(*args, **kwargs):
     return check_output(*args, **kwargs).decode('utf-8')
+
 
 def conda_help(cache=[]):
     if cache:
@@ -65,8 +59,10 @@ def conda_help(cache=[]):
     cache.append(str_check_output(['conda', '--help']))
     return cache[0]
 
+
 def conda_command_help(command):
     return str_check_output(['conda'] + command.split() + ['--help'])
+
 
 def conda_commands():
     print("Getting list of core commands")
@@ -85,6 +81,7 @@ def conda_commands():
             if line[4] != ' ':
                 commands.append(line.split()[0])
     return commands
+
 
 def external_commands():
     print("Getting list of external commands")
@@ -127,10 +124,11 @@ def external_commands():
             if start:
                 m = subcommands_re.match(line)
                 if m:
-                    commands.extend(['%s %s' % (command, i) for i in
+                    commands.extend([f'{command} {i}' for i in
                         m.group(1).split(',')])
                 break
     return commands
+
 
 def man_replacements():
     # XXX: We should use conda-api for this, but it's currently annoying to set the
@@ -150,6 +148,7 @@ def man_replacements():
         ])
 
     return r
+
 
 def generate_man(command):
     conda_version = run_command(['conda', '--version'], include_stderr=True)
@@ -179,17 +178,22 @@ def generate_man(command):
 
     print("Generated manpage for conda %s" % command)
 
+
 def generate_html(command):
     command_file = command.replace(' ', '-')
 
     # Use abspath so that it always has a path separator
-    man = Popen(['man', abspath(join(manpath, 'conda-%s.1' % command_file))], stdout=PIPE)
-    htmlpage = check_output([
-        'man2html',
-        '-bare', # Don't use HTML, HEAD, or BODY tags
-        'title', 'conda-%s' % command_file,
-        '-topm', '0', # No top margin
-        '-botm', '0', # No bottom margin
+    man = Popen(["man", abspath(join(manpath, "conda-%s.1" % command_file))], stdout=PIPE)
+    htmlpage = check_output(
+        [
+            "man2html",
+            "-bare",  # Don't use HTML, HEAD, or BODY tags
+            "title",
+            "conda-%s" % command_file,
+            "-topm",
+            "0",  # No top margin
+            "-botm",
+            "0",  # No bottom margin
         ],
         stdin=man.stdout)
 
@@ -200,7 +204,7 @@ def generate_html(command):
 
 def write_rst(command, sep=None):
     command_file = command.replace(' ', '-')
-    with open(join(manpath, 'conda-%s.html' % command_file), 'r') as f:
+    with open(join(manpath, 'conda-%s.html' % command_file)) as f:
         html = f.read()
 
     rp = rstpath
@@ -215,6 +219,7 @@ def write_rst(command, sep=None):
             f.write(line)
             f.write('\n')
     print("Generated rst for conda %s" % command)
+
 
 def main():
     core_commands = []
@@ -251,6 +256,7 @@ def main():
 
     for command in [c for c in build_commands if c in commands]:
         write_rst(command)
+
 
 if __name__ == '__main__':
     sys.exit(main())

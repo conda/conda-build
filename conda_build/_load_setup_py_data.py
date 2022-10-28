@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 import os
 import sys
 import logging
@@ -47,7 +49,12 @@ def load_setup_py_data(setup_file, from_recipe_dir=False, recipe_dir=None, work_
 
     setup_cfg_data = {}
     try:
-        from setuptools.config import read_configuration
+        try:
+            # Recommended for setuptools 61.0.0+
+            # (though may disappear in the future)
+            from setuptools.config.setupcfg import read_configuration
+        except ImportError:
+            from setuptools.config import read_configuration
     except ImportError:
         pass  # setuptools <30.3.0 cannot read metadata / options from 'setup.cfg'
     else:
@@ -93,7 +100,7 @@ def load_setup_py_data(setup_file, from_recipe_dir=False, recipe_dir=None, work_
             exec(code, ns, ns)
     else:
         if not permit_undefined_jinja:
-            raise TypeError('{} is not a file that can be read'.format(setup_file))
+            raise TypeError(f'{setup_file} is not a file that can be read')
 
     sys.modules['versioneer'] = versioneer
 

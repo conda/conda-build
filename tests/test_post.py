@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 import os
 import shutil
 import sys
@@ -43,9 +45,9 @@ def test_postbuild_files_raise(testing_metadata, testing_workdir):
     fn = 'buildstr', 'buildnum', 'version'
     for f in fn:
         with open(os.path.join(testing_metadata.config.work_dir,
-                               '__conda_{}__.txt'.format(f)), 'w') as fh:
+                               f'__conda_{f}__.txt'), 'w') as fh:
             fh.write('123')
-        with pytest.raises(ValueError, match=f) as exc:
+        with pytest.raises(ValueError, match=f):
             post.get_build_metadata(testing_metadata)
 
 
@@ -76,5 +78,5 @@ def test_postlink_script_in_output_implicit(testing_config):
 def test_pypi_installer_metadata(testing_config):
     recipe = os.path.join(metadata_dir, '_pypi_installer_metadata')
     pkg = api.build(recipe, config=testing_config, notest=True)[0]
-    expected_installer = '{}/imagesize-1.1.0.dist-info/INSTALLER'.format(get_site_packages('', 3.7))
-    assert 'conda' == (package_has_file(pkg, expected_installer, refresh=True))
+    expected_installer = '{}/imagesize-1.1.0.dist-info/INSTALLER'.format(get_site_packages('', '3.9'))
+    assert 'conda' == (package_has_file(pkg, expected_installer, refresh_mode='forced'))

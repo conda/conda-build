@@ -1,16 +1,17 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 """
 Tools for converting PyPI packages to conda recipes.
 """
 
-from __future__ import absolute_import, division, print_function
 
 from collections import defaultdict, OrderedDict
 import keyword
+import logging
 import os
 from os import makedirs, listdir, getcwd, chdir
 from os.path import join, isdir, exists, isfile, abspath
 
-import six
 from pkg_resources import parse_version
 import re
 from shutil import copy2
@@ -21,11 +22,11 @@ from tempfile import mkdtemp
 import pkginfo
 import requests
 from requests.packages.urllib3.util.url import parse_url
-from six.moves.urllib.parse import urljoin, urlsplit
+from urllib.parse import urljoin, urlsplit
 import yaml
 
 from conda_build.conda_interface import spec_from_line
-from conda_build.conda_interface import input, configparser, StringIO, string_types, PY3
+from conda_build.conda_interface import input, configparser, StringIO
 from conda_build.conda_interface import download
 from conda_build.conda_interface import normalized_version
 from conda_build.conda_interface import human_bytes, hashsum_file
@@ -181,7 +182,7 @@ def _print_dict(recipe_metadata, order=None, level=0, indent=2):
             for attribute_name, attribute_value in recipe_metadata[section_name].items():
                 if attribute_value is None:
                     continue
-                if isinstance(attribute_value, string_types) or not hasattr(attribute_value, "__iter__"):
+                if isinstance(attribute_value, str) or not hasattr(attribute_value, "__iter__"):
                     rendered_recipe += __print_with_indent(attribute_name, suffix=':', level=level + indent,
                                                           newline=False)
                     rendered_recipe += _formating_value(attribute_name, attribute_value)
@@ -208,8 +209,8 @@ def _formating_value(attribute_name, attribute_value):
     :param string attribute_value: Attribute value
     :return string: Value quoted if need
     """
-    pattern_search = re.compile('[@_!#$%^&*()<>?/\|}{~:]')
-    if isinstance(attribute_value, string_types) \
+    pattern_search = re.compile(r'[@_!#$%^&*()<>?/\|}{~:]')
+    if isinstance(attribute_value, str) \
             and pattern_search.search(attribute_value) \
             or attribute_name in ["summary", "description", "version", "script"]:
         return ' "' + str(attribute_value) + '"\n'
@@ -227,7 +228,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
     if not setup_options:
         setup_options = []
 
-    if isinstance(setup_options, string_types):
+    if isinstance(setup_options, str):
         setup_options = [setup_options]
 
     if not config:
@@ -490,7 +491,7 @@ def add_parser(repos):
         action='store',
         default=default_python,
         help="""Version of Python to use to run setup.py. Default is %(default)s.""",
-        choices=['2.7', '3.5', '3.6', '3.7'],
+        choices=['2.7', '3.5', '3.6', '3.7', '3.8'],
     )
 
     pypi.add_argument(
@@ -589,8 +590,8 @@ def get_download_data(pypi_data, package, version, is_url, all_urls, noprompt, m
         else:
             print("Using the one with the least source size")
             print("use --manual-url to override this behavior")
-            _, n = min([(url['size'], i)
-                                for (i, url) in enumerate(urls)])
+            _, n = min((url['size'], i)
+                                for (i, url) in enumerate(urls))
     else:
         n = 0
 
@@ -598,7 +599,7 @@ def get_download_data(pypi_data, package, version, is_url, all_urls, noprompt, m
         # Found a location from PyPI.
         url = urls[n]
         pypiurl = url['url']
-        print("Using url %s (%s) for %s." % (pypiurl,
+        print("Using url {} ({}) for {}.".format(pypiurl,
             human_bytes(url['size'] or 0), package))
 
         if url['digests']['sha256']:
@@ -636,7 +637,7 @@ def version_compare(package, versions):
         sys.exit("Error: no such directory: %s" % recipe_dir)
     m = MetaData(recipe_dir)
     local_version = nv(m.version())
-    print("Local recipe for %s has version %s" % (package, local_version))
+    print(f"Local recipe for {package} has version {local_version}")
     if local_version not in versions:
         sys.exit("Error: %s %s is not available on PyPI."
                  % (package, local_version))
@@ -666,23 +667,45 @@ def convert_version(version):
     return pin_compatible
 
 
-MARKER_RE = re.compile(r"(?P<name>^[^=<>!\s]+)"
+MARKER_RE = re.compile(r"(?P<name>^[^=<>!~\s;]+)"
                        r"\s*"
-                       r"(?P<constraint>[=!><]=?\s*[^\s;]+)?"
-                       r"(?:\s+;\s+)?(?P<env_mark_name>[^=<>!\s;]+)?"
+                       r"(?P<constraint>[=!><~]=?\s*[^\s;]+)?"
+                       r"(?:\s*;\s+)?(?P<env_mark_name>[^=<>!~\s;]+)?"
                        r"\s*"
-                       r"(?P<env_mark_constraint>[=<>!\s]+[^=<>!\s]+)?"
+                       r"(?P<env_mark_constraint>[=<>!\s]+[^=<>!~\s]+)?"
                        )
 
 
+def _get_env_marker_operator_and_value(constraint):
+    operator, value = constraint.split()
+    value = value.strip("'").strip('"').strip()
+    return operator, value
+
+
 def _translate_python_constraint(constraint):
-    parts = constraint.split()
     translation = constraint
-    if len(parts) == 2:
-        operator, value = parts
-        value = "".join(value.strip("'").strip('"').split(".")[:2])
+    if len(constraint.split()) == 2:
+        operator, value = _get_env_marker_operator_and_value(constraint)
+        value = "".join(value.split(".")[:2])
         translation = " ".join((operator, value))
-    return translation
+    return f"py {translation}"
+
+
+def _translate_platform_system_constraint(constraint):
+    operator, value = _get_env_marker_operator_and_value(constraint)
+    system = {
+        "Linux": "linux",
+        "Darwin": "osx",
+        "Windows": "win",
+    }.get(value, value.lower())
+    return "{}{}".format("not " if operator == "!=" else "", system)
+
+
+def _translate_sys_platform_constraint(constraint):
+    operator, value = _get_env_marker_operator_and_value(constraint)
+    # Only take the "letter" part to translate, e.g., "linux2"->"linux", "win32"->"win".
+    system = re.match('^[a-z]*', value, re.I)[0]
+    return "{}{}".format("not " if operator == "!=" else "", system)
 
 
 def env_mark_lookup(env_mark_name, env_mark_constraint):
@@ -690,11 +713,12 @@ def env_mark_lookup(env_mark_name, env_mark_constraint):
     version constraint to conda style"""
     # TODO: implement more of these from PEP 508 as necessary:
     #   https://www.python.org/dev/peps/pep-0508/
-    env_mark_table = {'python_version': {"repl": "py",
-                                         "constraint_trans_fn": _translate_python_constraint},
-                      }
-    marker = " ".join((env_mark_table[env_mark_name]["repl"],
-                    env_mark_table[env_mark_name]['constraint_trans_fn'](env_mark_constraint)))
+    env_mark_table = {
+        "python_version": _translate_python_constraint,
+        "platform_system": _translate_platform_system_constraint,
+        "sys_platform": _translate_sys_platform_constraint,
+    }
+    marker = env_mark_table[env_mark_name](env_mark_constraint)
     return '  # [ ' + marker + ' ]'
 
 
@@ -787,10 +811,49 @@ def get_dependencies(requires, setuptools_enabled=True):
     :param Bool setuptools_enabled: True if setuptools is enabled and False otherwise
     :return list: Return list of dependencies
     """
+
+    # START :: Copied from conda
+    # These can be removed if we want to drop support for conda <= 4.9.0
+    def _strip_comment(line):
+        return line.split('#')[0].rstrip()
+
+    def _spec_from_line(line):
+        spec_pat = re.compile(
+            r"""
+            (?P<name>[^=<>!\s]+)  # package name
+            \s*  # ignore spaces
+            (
+                (?P<cc>=[^=]+(=[^=]+)?)  # conda constraint
+                |
+                (?P<pc>(?:[=!]=|[><]=?|~=).+)  # new pip-style constraints
+            )?$
+            """,
+            re.VERBOSE,
+        )
+        m = spec_pat.match(_strip_comment(line))
+        if m is None:
+            return None
+        name, cc, pc = (m.group('name').lower(), m.group('cc'), m.group('pc'))
+        if cc:
+            return name + cc.replace('=', ' ')
+        elif pc:
+            if pc.startswith('~= '):
+                assert pc.count('~=') == 1, \
+                    f"Overly complex 'Compatible release' spec not handled {line}"
+                assert pc.count('.'), f"No '.' in 'Compatible release' version {line}"
+                ver = pc.replace('~= ', '')
+                ver2 = '.'.join(ver.split('.')[:-1]) + '.*'
+                return name + ' >=' + ver + ',==' + ver2
+            else:
+                return name + ' ' + pc.replace(' ', '')
+        else:
+            return name
+    # END :: Copied from conda
+
     list_deps = ["setuptools"] if setuptools_enabled else []
 
     for dep_text in requires:
-        if isinstance(dep_text, string_types):
+        if isinstance(dep_text, str):
             dep_text = dep_text.splitlines()
         # Every item may be a single requirement
         #  or a multiline requirements string...
@@ -800,17 +863,29 @@ def get_dependencies(requires, setuptools_enabled=True):
             if not dep:
                 continue
 
-            dep, marker = parse_dep_with_env_marker(dep)
+            dep_orig = dep
+            dep, marker = parse_dep_with_env_marker(dep_orig)
+            # if '~' in dep_orig:
+            #     # dep_orig = 'kubernetes ~= 11'
+            #     version = dep_orig.split()[-1]
+            #     tilde_version = '~= {}'.format(version)
+            #     pin_compatible = convert_version(version)
+            #     spec = dep_orig.replace(tilde_version, pin_compatible)
+            #     spec2 = spec_from_line(dep)
+            #     if spec != spec2:
+            #         print("Disagreement on PEP440 'Compatible release' {} vs {}".format(spec, spec2))
             spec = spec_from_line(dep)
+            if '~=' in dep_orig:
+                spec = None
 
             if spec is None:
-                sys.exit("Error: Could not parse: %s" % dep)
-
-            if '~' in spec:
-                version = spec.split()[-1]
-                tilde_version = '~ {}'.format(version)
-                pin_compatible = convert_version(version)
-                spec = spec.replace(tilde_version, pin_compatible)
+                if '~=' in dep_orig:
+                    log = logging.getLogger(__name__)
+                    log.warning("Your conda is too old to handle ~= PEP440 'Compatible versions', "
+                                "using copied implementation.")
+                    spec = _spec_from_line(dep_orig)
+                if spec is None:
+                    sys.exit("Error: Could not parse: %s" % dep)
 
             if marker:
                 spec = ' '.join((spec, marker))
@@ -838,9 +913,9 @@ def get_import_tests(pkginfo, import_tests_metada=""):
 
 
 def get_tests_require(pkginfo):
-    return sorted([
+    return sorted(
         spec_from_line(pkg) for pkg in ensure_list(pkginfo['tests_require'])
-    ])
+    )
 
 
 def get_home(pkginfo, data=None):
@@ -931,10 +1006,7 @@ def get_entry_points(pkginfo):
         _config = configparser.ConfigParser()
 
         try:
-            if six.PY2:
-                _config.readfp(StringIO(newstr))
-            else:
-                _config.read_file(StringIO(newstr))
+            _config.read_file(StringIO(newstr))
         except Exception as err:
             print("WARNING: entry-points not understood: ", err)
             print("The string was", newstr)
@@ -943,7 +1015,7 @@ def get_entry_points(pkginfo):
             for section in _config.sections():
                 if section in ['console_scripts', 'gui_scripts']:
                     entry_points[section] = [
-                        '%s=%s' % (option, _config.get(section, option))
+                        f'{option}={_config.get(section, option)}'
                         for option in _config.options(section)
                     ]
 
@@ -976,7 +1048,7 @@ def convert_to_flat_list(var_scripts):
     :param str/list var_scripts: Receives a string or a list to be converted
     :return list: Return a flat list
     """
-    if isinstance(var_scripts, string_types):
+    if isinstance(var_scripts, str):
         var_scripts = [var_scripts]
     elif var_scripts and isinstance(var_scripts, list) and isinstance(var_scripts[0], list):
         var_scripts = [item for sublist in [s for s in var_scripts] for item in sublist]
@@ -1073,7 +1145,7 @@ def get_requirements(package, pkginfo, all_extras=True):
     # ... and collect all needed requirement specs in a single list:
     requires = []
     for specs in [pkginfo.get('install_requires', "")] + extras_require:
-        if isinstance(specs, string_types):
+        if isinstance(specs, str):
             requires.append(specs)
         else:
             requires.extend(specs)
@@ -1128,7 +1200,8 @@ def get_pkginfo(package, filename, pypiurl, digest, python_version, extra_specs,
         try:
             with open(join(tempdir, 'pkginfo.yaml')) as fn:
                 pkg_info = yaml.safe_load(fn)
-        except IOError:
+        except OSError:
+            print("WARNING: the pkginfo.yaml file was absent, falling back to pkginfo.SDist")
             pkg_info = pkginfo.SDist(download_path).__dict__
         if new_hash_value:
             pkg_info['new_hash_value'] = ('sha256', new_hash_value)
@@ -1151,7 +1224,10 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
     #    needs it in recent versions.  At time of writing, it is not a package in defaults, so this
     #    actually breaks conda-build right now.  Omit it until packaging is on defaults.
     # specs = ['python %s*' % python_version, 'pyyaml', 'setuptools', 'six', 'packaging', 'appdirs']
-    specs = ['python %s*' % python_version, 'pyyaml', 'setuptools']
+    subdir = config.host_subdir
+    specs = [f'python {python_version}*',
+             'pip', 'pyyaml', 'setuptools'] + (['m2-patch', 'm2-gcc-libs'] if config.host_subdir.startswith('win')
+                                                    else ['patch'])
     with open(os.path.join(src_dir, "setup.py")) as setup:
         text = setup.read()
         if 'import numpy' in text or 'from numpy' in text:
@@ -1160,40 +1236,41 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
     specs.extend(extra_specs)
 
     rm_rf(config.host_prefix)
+
     create_env(config.host_prefix, specs_or_actions=specs, env='host',
-                subdir=config.host_subdir, clear_cache=False, config=config)
+                subdir=subdir, clear_cache=False, config=config)
     stdlib_dir = join(config.host_prefix,
                       'Lib' if sys.platform == 'win32'
                       else 'lib/python%s' % python_version)
 
     patch = join(temp_dir, 'pypi-distutils.patch')
-    with open(patch, 'w') as f:
-        f.write(DISTUTILS_PATCH.format(temp_dir.replace('\\', '\\\\')))
+    with open(patch, 'wb') as f:
+        f.write(DISTUTILS_PATCH.format(temp_dir.replace('\\', '\\\\')).encode('utf-8'))
 
     if exists(join(stdlib_dir, 'distutils', 'core.py-copy')):
         rm_rf(join(stdlib_dir, 'distutils', 'core.py'))
         copy2(join(stdlib_dir, 'distutils', 'core.py-copy'),
               join(stdlib_dir, 'distutils', 'core.py'))
         # Avoid race conditions. Invalidate the cache.
-        if PY3:
-            rm_rf(join(stdlib_dir, 'distutils', '__pycache__',
-                'core.cpython-%s%s.pyc' % sys.version_info[:2]))
-            rm_rf(join(stdlib_dir, 'distutils', '__pycache__',
-                'core.cpython-%s%s.pyo' % sys.version_info[:2]))
-        else:
-            rm_rf(join(stdlib_dir, 'distutils', 'core.pyc'))
-            rm_rf(join(stdlib_dir, 'distutils', 'core.pyo'))
+        rm_rf(join(stdlib_dir, 'distutils', '__pycache__',
+                   'core.cpython-%s%s.pyc' % sys.version_info[:2]))
+        rm_rf(join(stdlib_dir, 'distutils', '__pycache__',
+                   'core.cpython-%s%s.pyo' % sys.version_info[:2]))
     else:
         copy2(join(stdlib_dir, 'distutils', 'core.py'), join(stdlib_dir,
             'distutils', 'core.py-copy'))
     apply_patch(join(stdlib_dir, 'distutils'), patch, config=config)
 
+    vendored = join(stdlib_dir, "site-packages", "setuptools", "_distutils")
+    if os.path.isdir(vendored):
+        apply_patch(vendored, patch, config=config)
+
     # Save PYTHONPATH for later
     env = os.environ.copy()
     if 'PYTHONPATH' in env:
-        env[str('PYTHONPATH')] = str(src_dir + ':' + env['PYTHONPATH'])
+        env['PYTHONPATH'] = str(src_dir + ':' + env['PYTHONPATH'])
     else:
-        env[str('PYTHONPATH')] = str(src_dir)
+        env['PYTHONPATH'] = str(src_dir)
     cwd = getcwd()
     chdir(src_dir)
     cmdargs = [config.host_python, 'setup.py', 'install']

@@ -1,6 +1,5 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import, division, print_function, unicode_literals
-
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 from functools import partial
 import os
 from os import lstat
@@ -34,6 +33,7 @@ conda_45 = parse_version(CONDA_VERSION) >= parse_version("4.5.0a0")
 conda_46 = parse_version(CONDA_VERSION) >= parse_version("4.6.0a0")
 conda_47 = parse_version(CONDA_VERSION) >= parse_version("4.7.0a0")
 conda_48 = parse_version(CONDA_VERSION) >= parse_version("4.8.0a0")
+conda_411 = parse_version(CONDA_VERSION) >= parse_version("4.11.0a0")
 
 if conda_44:
     from conda.exports import display_actions, execute_actions, execute_plan, install_actions
@@ -50,20 +50,26 @@ except ImportError:
     from conda.toposort import _toposort
 _toposort = _toposort
 
+if conda_411:
+    from conda.auxlib.packaging import _get_version_from_git_tag
+else:
+    from conda._vendor.auxlib.packaging import _get_version_from_git_tag
+get_version_from_git_tag = _get_version_from_git_tag
+
 from conda.exports import TmpDownload, download, handle_proxy_407  # NOQA
 from conda.exports import untracked, walk_prefix  # NOQA
 from conda.exports import MatchSpec, NoPackagesFound, Resolve, Unsatisfiable, normalized_version  # NOQA
 from conda.exports import human_bytes, hashsum_file, md5_file, memoized, unix_path_to_win, win_path_to_unix, url_path  # NOQA
 from conda.exports import get_index  # NOQA
-from conda.exports import (Completer, InstalledPackages, add_parser_channels,
+from conda.exports import (Completer, InstalledPackages, add_parser_channels,  # NOQA
                            add_parser_prefix,  # NOQA
                            specs_from_args, spec_from_line, specs_from_url)  # NOQA
 from conda.exports import ArgumentParser  # NOQA
 from conda.exports import (is_linked, linked, linked_data, prefix_placeholder,  # NOQA
                            rm_rf, symlink_conda, package_cache)  # NOQA
 from conda.exports import CondaSession  # NOQA
-from conda.exports import (PY3,  StringIO, input, iteritems, lchmod, string_types,  # NOQA
-                          text_type, TemporaryDirectory)  # NOQA
+from conda.exports import (StringIO, input, lchmod,  # NOQA
+                           TemporaryDirectory)  # NOQA
 from conda.exports import VersionOrder  # NOQA
 
 
@@ -77,8 +83,8 @@ add_parser_channels, add_parser_prefix = add_parser_channels, add_parser_prefix
 specs_from_args, spec_from_line, specs_from_url = specs_from_args, spec_from_line, specs_from_url
 is_linked, linked, linked_data, prefix_placeholder = is_linked, linked, linked_data, prefix_placeholder # NOQA
 rm_rf, symlink_conda, package_cache = rm_rf, symlink_conda, package_cache
-PY3, input, iteritems, lchmod, string_types = PY3, input, iteritems, lchmod, string_types
-text_type, TemporaryDirectory = text_type, TemporaryDirectory
+input, lchmod = input, lchmod
+TemporaryDirectory = TemporaryDirectory
 ArgumentParser, CondaSession, VersionOrder = ArgumentParser, CondaSession, VersionOrder
 
 
@@ -88,10 +94,7 @@ from conda.models.dist import Dist, IndexRecord  # NOQA
 ProgressiveFetchExtract = ProgressiveFetchExtract
 Dist, IndexRecord = Dist, IndexRecord
 
-if PY3:
-    import configparser  # NOQA
-else:
-    import ConfigParser as configparser  # NOQA
+import configparser  # NOQA
 configparser = configparser
 
 
@@ -139,7 +142,7 @@ except:
 get_conda_channel = Channel.from_value
 
 # disallow softlinks.  This avoids a lot of dumb issues, at the potential cost of disk space.
-os.environ[str('CONDA_ALLOW_SOFTLINKS')] = str('false')
+os.environ['CONDA_ALLOW_SOFTLINKS'] = 'false'
 reset_context()
 
 get_local_urls = lambda: list(get_conda_build_local_url()) or []
@@ -154,7 +157,7 @@ PaddingError, UnsatisfiableError = PaddingError, UnsatisfiableError
 # work-around for python bug on Windows prior to python 3.2
 # https://bugs.python.org/issue10027
 # Adapted from the ntfsutils package, Copyright (c) 2012, the Mozilla Foundation
-class CrossPlatformStLink(object):
+class CrossPlatformStLink:
     _st_nlink = None
 
     def __call__(self, path):

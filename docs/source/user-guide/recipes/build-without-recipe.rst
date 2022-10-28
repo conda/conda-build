@@ -16,7 +16,7 @@ recommend using a recipe with conda-build.
 
 .. note::
    If you use Setuptools, you must first import Setuptools and
-   then import ``distutils.command.bdist_conda``, because Setuptools
+   then import ``conda_build.bdist_conda``, because Setuptools
    monkey patches ``distutils.dist.Distribution``.
 
 EXAMPLE: A minimal ``setup.py`` file using the setup options
@@ -24,15 +24,14 @@ EXAMPLE: A minimal ``setup.py`` file using the setup options
 
 .. code::
 
-   from distutils.core import setup, Extension
-   import distutils.command.bdist_conda
+   from setuptools import setup
+   import conda_build.bdist_conda
 
   setup(
       name="foo",
       version="1.0",
-      distclass=distutils.command.bdist_conda.CondaDistribution,
+      distclass=conda_build.bdist_conda.CondaDistribution,
       conda_buildnum=1,
-      conda_features=['mkl'],
   )
 
 
@@ -40,7 +39,7 @@ Setup options
 =============
 
 You can pass the following options to ``setup()``. You must
-include ``distclass=distutils.command.bdist_conda.CondaDistribution)``.
+include ``distclass=conda_build.bdist_conda.CondaDistribution``.
 
 Build number
 ------------
@@ -118,30 +117,6 @@ gui_scripts.
    conda_preserve_egg_dir=False
 
 
-Features
---------
-
-A list of features for the package.
-
-.. code::
-
-   conda_features=['mkl']
-
-.. note::
-   Replace ``mkl`` with the features that you want to list.
-
-
-
-Track features
------------------
-
-List of features that this package should track---enable---when
-installed.
-
-.. code::
-
-   conda_track_features=['mkl']
-
 Command line options
 ====================
 
@@ -184,4 +159,4 @@ Notes
 
 * If you want to pass any ``bdist_conda`` specific options to
   ``setup()``, in ``setup()`` you must set
-  ``distclass=distutils.command.bdist_conda.CondaDistribution``.
+  ``distclass=conda_build.bdist_conda.CondaDistribution``.

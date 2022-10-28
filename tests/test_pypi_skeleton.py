@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 from collections import OrderedDict
 
 from conda_build.skeletons import pypi
@@ -60,10 +62,13 @@ def test_print_dict():
                     ("script", "{{ PYTHON }} -m pip install . -vv"),
                 ]
             ),
-        }
+    }
 
     assert (
-        _print_dict(recipe_metadata, order=["package", "source", "build", "about"])
+        _print_dict(
+            recipe_metadata,
+            order=["package", "source", "build", "about"],
+        )
         == """package:
   name: "{{ name|lower }}"
   version: "{{ version }}"

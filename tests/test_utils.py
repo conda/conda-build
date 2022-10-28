@@ -1,13 +1,16 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
+import contextlib
 import filelock
 import os
 import subprocess
 import sys
+from typing import NamedTuple
 
 import pytest
 
 from conda_build.exceptions import BuildLockError
 import conda_build.utils as utils
-from conda_build.utils import find_recipe
 
 
 def makefile(name, contents=""):
@@ -200,10 +203,18 @@ def test_expand_globs(testing_workdir):
 
 def test_filter_files():
     # Files that should be filtered out.
-    files_list = ['.git/a', 'something/.git/a', '.git\\a', 'something\\.git\\a',
-                  'file.la', 'something/file.la', 'python.exe.conda_trash', 
-                  'bla.dll.conda_trash_1', 'bla.dll.conda_trash.conda_trash']
-    assert not utils.filter_files(files_list, '')
+    files_list = [
+        ".git/a",
+        "something/.git/a",
+        ".git\\a",
+        "something\\.git\\a",
+        "file.la",
+        "something/file.la",
+        "python.exe.conda_trash",
+        "bla.dll.conda_trash_1",
+        "bla.dll.conda_trash.conda_trash",
+    ]
+    assert not utils.filter_files(files_list, "")
 
     # Files that should *not* be filtered out.
     # Example of valid 'x.git' directory:
@@ -324,6 +335,7 @@ def test_try_acquire_locks(testing_workdir):
         with utils.try_acquire_locks([lock1, lock1_copy], timeout=1):
             pass
 
+
 def test_get_lock(testing_workdir):
     lock1 = utils.get_lock(os.path.join(testing_workdir, 'lock1'))
     lock2 = utils.get_lock(os.path.join(testing_workdir, 'lock2'))
@@ -338,3 +350,168 @@ def test_get_lock(testing_workdir):
     # ...even when not normalized
     lock1_unnormalized = utils.get_lock(os.path.join(testing_workdir, 'foo', '..', 'lock1'))
     assert lock1.lock_file == lock1_unnormalized.lock_file
+
+
+@contextlib.contextmanager
+def _generate_tmp_tree():
+    # dirA
+    # |\- dirB
+    # |   |\- fileA
+    # |   \-- fileB
+    # \-- dirC
+    #     |\- fileA
+    #     \-- fileB
+    import shutil
+    import tempfile
+
+    try:
+        tmp = os.path.realpath(os.path.normpath(tempfile.mkdtemp()))
+
+        dA = os.path.join(tmp, "dirA")
+        dB = os.path.join(dA, "dirB")
+        dC = os.path.join(dA, "dirC")
+        for d in (dA, dB, dC):
+            os.mkdir(d)
+
+        f1 = os.path.join(dB, "fileA")
+        f2 = os.path.join(dB, "fileB")
+        f3 = os.path.join(dC, "fileA")
+        f4 = os.path.join(dC, "fileB")
+        for f in (f1, f2, f3, f4):
+            makefile(f)
+
+        yield tmp, (dA, dB, dC), (f1, f2, f3, f4)
+    finally:
+        shutil.rmtree(tmp)
+
+
+def test_rec_glob():
+    with _generate_tmp_tree() as (tmp, _, (f1, f2, f3, f4)):
+        assert sorted(utils.rec_glob(tmp, "fileA")) == [f1, f3]
+        assert sorted(utils.rec_glob(tmp, ("fileA", "fileB"), ignores="dirB")) == [f3, f4]
+        assert sorted(utils.rec_glob(tmp, "fileB", ignores=("dirC",))) == [f2]
+
+
+def test_find_recipe():
+    with _generate_tmp_tree() as (tmp, (dA, dB, dC), (f1, f2, f3, f4)):
+        f5 = os.path.join(tmp, "meta.yaml")
+        f6 = os.path.join(dA, "meta.yml")
+        f7 = os.path.join(dB, "conda.yaml")
+        f8 = os.path.join(dC, "conda.yml")
+
+        # check that each of these are valid recipes
+        for f in (f5, f6, f7, f8):
+            makefile(f)
+            assert utils.find_recipe(tmp) == f
+            os.remove(f)
+
+
+def test_find_recipe_relative():
+    with _generate_tmp_tree() as (tmp, (dA, dB, dC), (f1, f2, f3, f4)):
+        f5 = os.path.join(dA, "meta.yaml")
+        makefile(f5)
+
+        # check that even when given a relative recipe path we still return
+        # the absolute path
+        saved = os.getcwd()
+        os.chdir(tmp)
+        try:
+            assert utils.find_recipe("dirA") == f5
+        finally:
+            os.chdir(saved)
+
+
+def test_find_recipe_no_meta():
+    with _generate_tmp_tree() as (tmp, _, (f1, f2, f3, f4)):
+        # no meta files in tmp
+        with pytest.raises(IOError):
+            utils.find_recipe(tmp)
+
+
+def test_find_recipe_file():
+    with _generate_tmp_tree() as (tmp, _, (f1, f2, f3, f4)):
+        f5 = os.path.join(tmp, "meta.yaml")
+        makefile(f5)
+        # file provided is valid meta
+        assert utils.find_recipe(f5) == f5
+
+
+def test_find_recipe_file_bad():
+    with _generate_tmp_tree() as (tmp, _, (f1, f2, f3, f4)):
+        # file provided is not valid meta
+        with pytest.raises(IOError):
+            utils.find_recipe(f1)
+
+
+def test_find_recipe_multipe_base():
+    with _generate_tmp_tree() as (tmp, (dA, dB, dC), (f1, f2, f3, f4)):
+        f5 = os.path.join(tmp, "meta.yaml")
+        f6 = os.path.join(dB, "meta.yaml")
+        f7 = os.path.join(dC, "conda.yaml")
+        for f in (f5, f6, f7):
+            makefile(f)
+        # multiple meta files, use the one in base level
+        assert utils.find_recipe(tmp) == f5
+
+
+def test_find_recipe_multipe_bad():
+    with _generate_tmp_tree() as (tmp, (dA, dB, dC), (f1, f2, f3, f4)):
+        f5 = os.path.join(dB, "meta.yaml")
+        f6 = os.path.join(dC, "conda.yaml")
+        for f in (f5, f6):
+            makefile(f)
+
+        # nothing in base
+        with pytest.raises(IOError):
+            utils.find_recipe(tmp)
+
+        f7 = os.path.join(tmp, "meta.yaml")
+        f8 = os.path.join(tmp, "conda.yaml")
+        for f in (f7, f8):
+            makefile(f)
+
+        # too many in base
+        with pytest.raises(IOError):
+            utils.find_recipe(tmp)
+
+
+class IsCondaPkgTestData(NamedTuple):
+    value: str
+    expected: bool
+    is_dir: bool
+    create: bool
+
+
+IS_CONDA_PKG_DATA = (
+    IsCondaPkgTestData(
+        value='aws-c-common-0.4.57-hb1e8313_1.tar.bz2',
+        expected=True,
+        is_dir=False,
+        create=True
+    ),
+    IsCondaPkgTestData(
+        value='aws-c-common-0.4.57-hb1e8313_1.tar.bz2',
+        expected=False,
+        is_dir=False,
+        create=False
+    ),
+    IsCondaPkgTestData(
+        value='somedir',
+        expected=False,
+        is_dir=True,
+        create=False
+    ),
+)
+
+
+@pytest.mark.parametrize('value,expected,is_dir,create', IS_CONDA_PKG_DATA)
+def test_is_conda_pkg(tmpdir, value: str, expected: bool, is_dir: bool, create: bool):
+    if create:
+        value = os.path.join(tmpdir, value)
+        if is_dir:
+            os.mkdir(value)
+        else:
+            with open(value, "w") as fp:
+                fp.write("test")
+
+    assert utils.is_conda_pkg(value) == expected

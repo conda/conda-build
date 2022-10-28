@@ -1,5 +1,5 @@
-from __future__ import absolute_import, division, print_function
-
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 import os
 import pprint
 from os.path import isdir, join, dirname, isfile
@@ -75,18 +75,21 @@ def build_vcvarsall_vs_path(version):
         PROGRAM_FILES_PATH = os.environ['ProgramFiles']
 
     flatversion = str(version).replace('.', '')
-    vstools = "VS{0}COMNTOOLS".format(flatversion)
+    vstools = f"VS{flatversion}COMNTOOLS"
 
     if vstools in os.environ:
         return os.path.join(os.environ[vstools], '..\\..\\VC\\vcvarsall.bat')
     else:
         # prefer looking at env var; fall back to program files defaults
         return os.path.join(PROGRAM_FILES_PATH,
-                            'Microsoft Visual Studio {}'.format(version), 'VC',
+                            f'Microsoft Visual Studio {version}', 'VC',
                             'vcvarsall.bat')
 
 
 def msvc_env_cmd(bits, config, override=None):
+    # TODO: this function will likely break on `win-arm64`. However, unless
+    # there's clear user demand, it's not clear that we should invest the
+    # effort into updating a known deprecated function for a new platform.
     log = get_logger(__name__)
     log.warn("Using legacy MSVC compiler setup.  This will be removed in conda-build 4.0. "
              "If this recipe does not use a compiler, this message is safe to ignore.  "
@@ -94,7 +97,7 @@ def msvc_env_cmd(bits, config, override=None):
     if override:
         log.warn("msvc_compiler key in meta.yaml is deprecated. Use the new"
         "variant-powered compiler configuration instead. Note that msvc_compiler"
-        "is incompatible with the new \{\{compiler('c')\}\} jinja scheme.")
+        "is incompatible with the new {{{{compiler('c')}}}} jinja scheme.")
     # this has been an int at times.  Make sure it's a string for consistency.
     bits = str(bits)
     arch_selector = 'x86' if bits == '32' else 'amd64'
@@ -127,20 +130,25 @@ def msvc_env_cmd(bits, config, override=None):
     if float(version) >= 14.0:
         # For Python 3.5+, ensure that we link with the dynamic runtime.  See
         # http://stevedower.id.au/blog/building-for-python-3-5-part-two/ for more info
-        msvc_env_lines.append('set PY_VCRUNTIME_REDIST=%LIBRARY_BIN%\\vcruntime{0}.dll'.format(
+        msvc_env_lines.append('set PY_VCRUNTIME_REDIST=%LIBRARY_BIN%\\vcruntime{}.dll'.format(
             version.replace('.', '')))
 
     vcvarsall_vs_path = build_vcvarsall_vs_path(version)
 
     def build_vcvarsall_cmd(cmd, arch=arch_selector):
         # Default argument `arch_selector` is defined above
-        return 'call "{cmd}" {arch}'.format(cmd=cmd, arch=arch)
+        return f'call "{cmd}" {arch}'
 
-    msvc_env_lines.append('set "VS_VERSION={}"'.format(version))
-    msvc_env_lines.append('set "VS_MAJOR={}"'.format(version.split('.')[0]))
-    msvc_env_lines.append('set "VS_YEAR={}"'.format(VS_VERSION_STRING[version][-4:]))
-    msvc_env_lines.append('set "CMAKE_GENERATOR={}"'.format(VS_VERSION_STRING[version] +
-                                                            {'64': ' Win64', '32': ''}[bits]))
+    vs_major = version.split('.')[0]
+    msvc_env_lines.append(f'set "VS_VERSION={version}"')
+    msvc_env_lines.append(f'set "VS_MAJOR={vs_major}"')
+    msvc_env_lines.append(f'set "VS_YEAR={VS_VERSION_STRING[version][-4:]}"')
+    if int(vs_major) >= 16:
+        # No Win64 for VS 2019.
+        msvc_env_lines.append(f'set "CMAKE_GENERATOR={VS_VERSION_STRING[version]}"')
+    else:
+        msvc_env_lines.append('set "CMAKE_GENERATOR={}"'.format(VS_VERSION_STRING[version] +
+                                                                {'64': ' Win64', '32': ''}[bits]))
     # tell msys2 to ignore path conversions for issue-causing windows-style flags in build
     #   See https://github.com/conda-forge/icu-feedstock/pull/5
     msvc_env_lines.append('set "MSYS2_ARG_CONV_EXCL=/AI;/AL;/OUT;/out"')
@@ -217,7 +225,7 @@ def write_build_scripts(m, env, bld_bat):
         fo.write('@echo on\n')
         for key, value in env.items():
             if value != '' and value is not None:
-                fo.write('set "{key}={value}"\n'.format(key=key, value=value))
+                fo.write(f'set "{key}={value}"\n')
         if not m.uses_new_style_compiler_activation:
             fo.write(msvc_env_cmd(bits=m.config.host_arch, config=m.config,
                                 override=m.get_value('build/msvc_compiler', None)))
@@ -234,7 +242,7 @@ def write_build_scripts(m, env, bld_bat):
             data = fi.read()
         with codecs.getwriter('utf-8')(open(work_script, 'wb')) as fo:
             fo.write('IF "%CONDA_BUILD%" == "" (\n')
-            fo.write("    call {}\n".format(env_script))
+            fo.write(f"    call {env_script}\n")
             fo.write(')\n')
             fo.write("REM ===== end generated header =====\n")
             fo.write(data)
@@ -283,7 +291,7 @@ def build(m, bld_bat, stats, provision_only=False):
     if not provision_only and os.path.isfile(work_script):
         cmd = ['cmd.exe', '/d', '/c', os.path.basename(work_script)]
         # rewrite long paths in stdout back to their env variables
-        if m.config.debug:
+        if m.config.debug or m.config.no_rewrite_stdout_env:
             rewrite_env = None
         else:
             rewrite_env = {

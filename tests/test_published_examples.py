@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 import os
 
 import pytest
@@ -13,9 +15,9 @@ published_examples = os.path.join(os.path.dirname(metadata_dir), 'published_code
 
 @pytest.mark.sanity
 def test_skeleton_pypi(testing_workdir):
-    """published in docs at http://conda.pydata.org/docs/build_tutorials/pkgs.html"""
+    """published in docs at https://docs.conda.io/projects/conda-build/en/latest/user-guide/tutorials/build-pkgs-skeleton.html"""
     conda_path = os.path.join(sys.prefix, 'Scripts' if sys.platform == 'win32' else 'bin', 'conda')
-    cmd = conda_path + ' skeleton pypi Click'
+    cmd = conda_path + ' skeleton pypi click'
     check_call_env(cmd.split())
     cmd = conda_path + ' build click'
     check_call_env(cmd.split())

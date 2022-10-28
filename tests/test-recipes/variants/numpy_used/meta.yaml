@@ -11,16 +11,12 @@ requirements:
   build:
     - python {{ python }}
     - numpy {{ numpy }}
-    - nomkl    # [unix]
+    - nomkl  # [unix]
     - setuptools
 
   run:
     - python {{ python }}
     - {{ pin_compatible("numpy", min_pin="x.x", max_pin="x.x") }}
-
-test:
-  imports:
-    - tifffile
 
 about:
   home: https://github.com/blink1073/tifffile

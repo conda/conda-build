@@ -1,5 +1,5 @@
---- launcher.c.orig	2019-02-27 15:41:54.000000000 +0100
-+++ launcher.c	2019-02-27 16:12:33.000000000 +0100
+--- launcher.c.orig	2020-02-23 11:24:16.544939800 +0100
++++ launcher.c	2020-02-23 11:32:24.454773100 +0100
 @@ -8,11 +8,71 @@
   * Curt Hagenlocher (job management)
   */
@@ -72,7 +72,15 @@
  #define BUFSIZE 256
  #define MSGSIZE 1024
  
-@@ -796,6 +856,25 @@
+@@ -742,6 +802,7 @@
+     { L"/usr/bin/env python", TRUE },
+     { L"/usr/bin/python", FALSE },
+     { L"/usr/local/bin/python", FALSE },
++    { L"python_d", FALSE },
+     { L"python", FALSE },
+     { NULL, FALSE },
+ };
+@@ -796,6 +857,25 @@
  
  static COMMAND path_command;
  
@@ -98,7 +106,7 @@
  static COMMAND * find_on_path(wchar_t * name)
  {
      wchar_t * pathext;
-@@ -919,7 +998,7 @@
+@@ -919,7 +999,7 @@
  
  static BOOL
  parse_shebang(wchar_t * shebang_line, int nchars, wchar_t ** command,
@@ -107,7 +115,7 @@
  {
      BOOL rc = FALSE;
      SHEBANG * vpp;
-@@ -929,11 +1008,40 @@
+@@ -929,11 +1009,40 @@
      wchar_t * endp = shebang_line + nchars - 1;
      COMMAND * cp;
      wchar_t * skipped;
@@ -148,7 +156,50 @@
      if ((*shebang_line++ == L'#') && (*shebang_line++ == L'!')) {
          shebang_line = skip_whitespace(shebang_line);
          if (*shebang_line) {
-@@ -1171,7 +1279,7 @@
+@@ -947,6 +1056,7 @@
+                      * "python".
+                      */
+                     *command = wcsstr(shebang_line, L"python");
++                    debug(L"found in builtin_virtual_paths: %s, command: %s\n", vpp->shebang, *command);
+                     break;
+                 }
+             }
+@@ -1072,10 +1182,13 @@
+ validate_version(wchar_t * p)
+ {
+     /*
++    Optionally _d,
+     Version information should start with the major version,
+     Optionally followed by a period and a minor version,
+     Optionally followed by a minus and one of 32 or 64.
+     Valid examples:
++      _d
++      _d3
+       2
+       3
+       2.7
+@@ -1089,6 +1202,20 @@
+     */
+     BOOL result = (p != NULL); /* Default to False if null pointer. */
+ 
++    /* Skip _d for Windows debug. Interestingly, the name-script.py files from a release build
++       do not end up containing a shebang while debug builds have #!python_d */
++    if (result)
++        debug(L"validate_version: in: %ls\n", p);
++    if (result && p[0] == '_' && p[1] == 'd')
++	{
++        debug(L"validate_version: Windows _d shebang\n");
++		p += 2;
++	}
++    if (!*p)
++	{
++        debug(L"validate_version: No version number provided\n");
++        return TRUE;
++	}
+     result = result && iswdigit(*p);  /* Result = False if first string element is not a digit. */
+ 
+     while (result && iswdigit(*p))   /* Require a major version */
+@@ -1171,7 +1298,7 @@
   */
      FILE * fp;
      errno_t rc = _wfopen_s(&fp, *argv, L"rb");
@@ -157,16 +208,16 @@
      wchar_t shebang_line[BUFSIZE + 1];
      size_t read;
      char *p;
-@@ -1188,7 +1296,7 @@
+@@ -1188,7 +1315,7 @@
      INSTALLED_PYTHON * ip;
  
      if (rc == 0) {
 -        read = fread(buffer, sizeof(char), BUFSIZE, fp);
 +        read = fread(buffer, sizeof(char), SHEBANG_BUFSIZE, fp);
-         debug(L"maybe_handle_shebang: read %d bytes\n", read);
+         debug(L"maybe_handle_shebang: read %zd bytes\n", read);
          fclose(fp);
  
-@@ -1213,7 +1321,7 @@
+@@ -1213,7 +1340,7 @@
                    bom->code_page);
              start = &buffer[bom->length];
          }
@@ -175,7 +226,7 @@
          /*
           * If no CR or LF was found in the heading,
           * we assume it's not a shebang file.
-@@ -1297,7 +1405,7 @@
+@@ -1297,10 +1424,10 @@
              if (nchars > 0) {
                  shebang_line[--nchars] = L'\0';
                  is_virt = parse_shebang(shebang_line, nchars, &command,
@@ -183,8 +234,12 @@
 +                                        &suffix, &search, *argv);
                  if (command != NULL) {
                      debug(L"parse_shebang: found command: %ls\n", command);
-                     if (!is_virt) {
-@@ -1409,7 +1517,7 @@
+-                    if (!is_virt) {
++                    if (!is_virt) { /* || !wcsncmp(command, L"python_d", 8)) { */
+                         invoke_child(command, suffix, cmdline);
+                     }
+                     else {
+@@ -1409,7 +1536,7 @@
  
      get_version_info(version_text, MAX_PATH);
      fwprintf(stdout, L"\
@@ -193,7 +248,7 @@
      fwprintf(stdout, L"\
  usage:\n\
  %ls [launcher-args] [python-args] script [script-args]\n\n", argv[0]);
-@@ -1584,6 +1692,7 @@
+@@ -1584,6 +1711,7 @@
      int newlen;
      HRESULT hr;
      int index;
@@ -201,7 +256,7 @@
  #else
      HRESULT hr;
      int index;
-@@ -1624,6 +1733,7 @@
+@@ -1624,6 +1752,7 @@
      }
  #endif
      argv0 = get_process_name();
@@ -209,7 +264,7 @@
      size = GetFileVersionInfoSizeW(argv0, &size);
      if (size == 0) {
          winerror(GetLastError(), message, MSGSIZE);
-@@ -1649,6 +1759,9 @@
+@@ -1649,6 +1778,9 @@
              free(version_data);
          }
      }
@@ -219,7 +274,7 @@
  
  #if defined(VENV_REDIRECT)
      /* Allocate some extra space for new filenames */
-@@ -1731,13 +1844,24 @@
+@@ -1731,13 +1863,24 @@
      locate_wrapped_script();
  
      /* Add the wrapped script to the start of command */

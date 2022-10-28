@@ -1,13 +1,15 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 '''
 Module to store conda build settings.
 '''
-from __future__ import absolute_import, division, print_function, unicode_literals
 
 import copy
 from collections import namedtuple
 import math
 import os
 from os.path import abspath, expanduser, join, expandvars
+import re
 import shutil
 import sys
 import time
@@ -19,13 +21,36 @@ from .conda_interface import cc_platform, cc_conda_build, subdir, url_path
 
 from .utils import get_build_folders, rm_rf, get_logger, get_conda_operation_locks
 
+
 on_win = (sys.platform == 'win32')
+invocation_time = ''
+
+
+def set_invocation_time():
+    global invocation_time
+    invocation_time = str(int(time.time() * 1000))
+
+
+set_invocation_time()
+
 
 # Don't "save" an attribute of this module for later, like build_prefix =
 # conda_build.config.config.build_prefix, as that won't reflect any mutated
 # changes.
 
 conda_build = "conda-build"
+
+filename_hashing_default = 'true'
+_src_cache_root_default = None
+error_overlinking_default = 'false'
+error_overdepending_default = 'false'
+noarch_python_build_age_default = 0
+enable_static_default = 'true'
+no_rewrite_stdout_env_default = 'false'
+ignore_verify_codes_default = []
+exit_on_verify_error_default = False
+conda_pkg_format_default = None
+zstd_compression_level_default = 22
 
 
 # Python2 silliness:
@@ -92,10 +117,10 @@ def _get_default_settings():
             Setting('_host_arch', None),
             Setting('test_run_post', False),
             Setting('filename_hashing', cc_conda_build.get('filename_hashing',
-                                                           'true').lower() == 'true'),
+                                                           filename_hashing_default).lower() == 'true'),
             Setting('keep_old_work', False),
             Setting('_src_cache_root', abspath(expanduser(expandvars(
-                cc_conda_build.get('cache_dir')))) if cc_conda_build.get('cache_dir') else None),
+                cc_conda_build.get('cache_dir')))) if cc_conda_build.get('cache_dir') else _src_cache_root_default),
             Setting('copy_test_source_files', True),
 
             # should rendering cut out any skipped metadata?
@@ -120,14 +145,16 @@ def _get_default_settings():
             # default to not erroring with overlinking for now.  We have specified in
             #    cli/main_build.py that this default will switch in conda-build 4.0.
             Setting('error_overlinking', cc_conda_build.get('error_overlinking',
-                                                           'false').lower() == 'true'),
-            Setting('enable_static', cc_conda_build.get('enable_static',
-                                                           'false').lower() == 'true'),
+                                                           error_overlinking_default).lower() == 'true'),
             Setting('error_overdepending', cc_conda_build.get('error_overdepending',
-                                                              'false').lower() == 'true'),
-
+                                                              error_overdepending_default).lower() == 'true'),
+            Setting('noarch_python_build_age', cc_conda_build.get('noarch_python_build_age',
+                                                           noarch_python_build_age_default)),
+            Setting('enable_static', cc_conda_build.get('enable_static',
+                                                           enable_static_default).lower() == 'true'),
             Setting('no_rewrite_stdout_env', cc_conda_build.get('no_rewrite_stdout_env',
-                                                              'false').lower() == 'true'),
+                                                              no_rewrite_stdout_env_default).lower() == 'true'),
+
 
             Setting('index', None),
             # support legacy recipes where only build is specified and expected to be the
@@ -153,6 +180,7 @@ def _get_default_settings():
             Setting('append_sections_file', None),
             Setting('clobber_sections_file', None),
             Setting('bootstrap', None),
+            Setting('extra_meta', {}),
 
             # source provisioning.
             Setting('git_commits_since_tag', 0),
@@ -167,9 +195,9 @@ def _get_default_settings():
 
             Setting('verify', True),
             Setting('ignore_verify_codes',
-                    cc_conda_build.get('ignore_verify_codes', [])),
+                    cc_conda_build.get('ignore_verify_codes', ignore_verify_codes_default)),
             Setting('exit_on_verify_error',
-                    cc_conda_build.get('exit_on_verify_error', False)),
+                    cc_conda_build.get('exit_on_verify_error', exit_on_verify_error_default)),
 
             # Recipes that have no host section, only build, should bypass the build/host line.
             # This is to make older recipes still work with cross-compiling.  True cross-compiling
@@ -189,13 +217,17 @@ def _get_default_settings():
             # customize this so pip doesn't look in places we don't want.  Per-build path by default.
             Setting('_pip_cache_dir', None),
 
-            # set up compression algorithm used in new-style packages
-            Setting('compression_tuple', ('.tar.zst', 'zstd', 'zstd:compression-level=22')),
+            Setting('zstd_compression_level',
+                    cc_conda_build.get('zstd_compression_level', zstd_compression_level_default)),
 
             # this can be set to different values (currently only 2 means anything) to use package formats
-            Setting('conda_pkg_format', cc_conda_build.get('pkg_format', None)),
+            Setting('conda_pkg_format', cc_conda_build.get('pkg_format', conda_pkg_format_default)),
 
             Setting('suppress_variables', False),
+
+            Setting('build_id_pat', cc_conda_build.get('build_id_pat',
+                                                            '{n}_{t}')),
+
             ]
 
 
@@ -209,13 +241,13 @@ def print_function_deprecation_warning(func):
     return func_wrapper
 
 
-class Config(object):
+class Config:
     __file__ = __path__ = __file__
     __package__ = __package__
     __doc__ = __doc__
 
     def __init__(self, variant=None, **kwargs):
-        super(Config, self).__init__()
+        super().__init__()
         # default variant is set in render's distribute_variants
         self.variant = variant or {}
         self.set_keys(**kwargs)
@@ -511,9 +543,9 @@ class Config(object):
         lua_ver = self.variant.get('lua', get_default_variant(self)['lua'])
         binary_name = "luajit" if (lua_ver and lua_ver[0] == "2") else "lua"
         if platform.startswith('win'):
-            res = join(prefix, 'Library', 'bin', '{}.exe'.format(binary_name))
+            res = join(prefix, 'Library', 'bin', f'{binary_name}.exe')
         else:
-            res = join(prefix, 'bin/{}'.format(binary_name))
+            res = join(prefix, f'bin/{binary_name}')
         return res
 
     def _get_r(self, prefix, platform):
@@ -536,27 +568,51 @@ class Config(object):
             res = join(prefix, 'bin', 'Rscript')
         return res
 
-    def compute_build_id(self, package_name, reset=False):
+    def compute_build_id(self, package_name, package_version='0', reset=False):
+        time_re = r'([_-])([0-9]{13})'
+        pat_dict = {'n': package_name,
+                    'v': str(package_version),
+                    't': '{t}'}
+        # Use the most recent build with matching recipe name, or else the recipe name.
+        build_folders = []
+        if not self.dirty:
+            if reset:
+                set_invocation_time()
+        else:
+            old_build_id_t = self.build_id_pat if self.build_id_pat else '{n}-{v}_{t}'
+            old_build_id_t = old_build_id_t.format(**pat_dict)
+            build_folders_all = get_build_folders(self.croot)
+            for folder_full in build_folders_all:
+                folder = os.path.basename(folder_full)
+                untimed_folder = re.sub(time_re, r'\g<1>{t}', folder, flags=re.UNICODE)
+                if untimed_folder == old_build_id_t:
+                    build_folders.append(folder_full)
+            prev_build_id = None
+        if build_folders:
+            # Use the most recent build with matching recipe name
+            prev_build_id = os.path.basename(build_folders[-1])
+            old_dir = os.path.join(build_folders[-1], 'work')
+        else:
+            # Maybe call set_invocation_time() here?
+            pat_dict['t'] = invocation_time
+            test_old_dir = self.work_dir
+            old_dir = test_old_dir if os.path.exists(test_old_dir) else None
+
         if self.set_build_id and (not self._build_id or reset):
             assert not os.path.isabs(package_name), ("package name should not be a absolute path, "
                                                      "to preserve croot during path joins")
-            folder_basenames = [os.path.basename(fldr) for fldr in get_build_folders(self.croot)]
-            build_folders = sorted([build_folder for build_folder in folder_basenames
-                            if build_folder[:build_folder.rfind('_')] == package_name])
-            if self.dirty and build_folders:
-                # Use the most recent build with matching recipe name
-                self._build_id = build_folders[-1]
+            if self.dirty and prev_build_id:
+                old_dir = self.work_dir if len(os.listdir(self.work_dir)) > 0 else None
+                self._build_id = prev_build_id
             else:
-                old_dir = self.work_dir if len(os.listdir(self.work_dir)) > 0 else ""
-                # here we uniquely name folders, so that more than one build can happen concurrently
-                #    keep 6 decimal places so that prefix < 80 chars
-                build_id = package_name + "_" + str(int(time.time() * 1000))
                 # important: this is recomputing prefixes and determines where work folders are.
-                self._build_id = build_id
+                build_id = self.build_id_pat if self.build_id_pat else '{n}-{v}_{t}'
+                self._build_id = build_id.format(**pat_dict)
                 if old_dir:
                     work_dir = self.work_dir
-                    rm_rf(work_dir)
-                    shutil.move(old_dir, work_dir)
+                    if old_dir != work_dir:
+                        rm_rf(work_dir)
+                        shutil.move(old_dir, work_dir)
 
     @property
     def build_id(self):
@@ -728,12 +784,6 @@ class Config(object):
         """Where the source for the build is extracted/copied to."""
         path = join(self.build_folder, 'work')
         _ensure_dir(path)
-        # if os.path.isdir(path):
-        #     lst = [fn for fn in os.listdir(path) if not fn.startswith('.')]
-        #     if len(lst) == 1:
-        #         dir_path = join(path, lst[0])
-        #         if os.path.isdir(dir_path):
-        #             return dir_path
         return path
 
     @property
@@ -760,7 +810,7 @@ class Config(object):
     def clean(self, remove_folders=True):
         # build folder is the whole burrito containing envs and source folders
         #   It will only exist if we download source, or create a build or test environment
-        if remove_folders and not getattr(self, 'dirty'):
+        if remove_folders and not getattr(self, 'dirty') and not getattr(self, 'keep_old_work'):
             if self.build_id:
                 if os.path.isdir(self.build_folder):
                     rm_rf(self.build_folder)

@@ -1,11 +1,12 @@
-from distutils.core import setup
-import setuptools
-import distutils.command.bdist_conda
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
+from setuptools import setup
+import conda_build.bdist_conda
 
 setup(
     name="conda-build-test-project",
     version='1.0',
-    distclass=distutils.command.bdist_conda.CondaDistribution,
+    distclass=conda_build.bdist_conda.CondaDistribution,
     conda_buildnum=1,
     conda_features=[],
     author="Continuum Analytics, Inc.",

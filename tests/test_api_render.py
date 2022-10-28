@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 """
 This module tests the test API.  These are high-level integration tests.  Lower level unit tests
 should go in test_render.py
@@ -7,12 +9,12 @@ import os
 import re
 import sys
 
-import mock
+from unittest import mock
 import pytest
 import yaml
 
 from conda_build import api, render
-from conda_build.conda_interface import subdir, reset_context, cc_conda_build
+from conda_build.conda_interface import subdir, cc_conda_build
 from tests import utils
 
 from .utils import metadata_dir, thisdir
@@ -92,14 +94,13 @@ def test_get_output_file_path_jinja2(testing_workdir, testing_config):
     python = ''.join(metadata.config.variant['python'].split('.')[:2])
     assert build_path == os.path.join(testing_config.croot, testing_config.host_subdir,
                                       "conda-build-test-source-git-jinja2-1.20.2-"
-                                      "py{0}{1}_0_g262d444.tar.bz2".format(python, _hash))
+                                      "py{}{}_0_g262d444.tar.bz2".format(python, _hash))
 
 
 @mock.patch('conda_build.source')
 def test_output_without_jinja_does_not_download(mock_source, testing_workdir, testing_config):
-        api.get_output_file_path(os.path.join(metadata_dir, "source_git"),
-                                              config=testing_config)[0]
-        mock_source.provide.assert_not_called()
+    api.get_output_file_path(os.path.join(metadata_dir, "source_git"), config=testing_config)[0]
+    mock_source.provide.assert_not_called()
 
 
 def test_pin_compatible_semver(testing_config):
@@ -111,13 +112,15 @@ def test_pin_compatible_semver(testing_config):
 @pytest.mark.slow
 @pytest.mark.skipif(
     utils.on_win and sys.version_info < (3, 6),
-    reason="Failing tests on Azure for Python 2.7"
+    reason="Failing tests on CI for Python 2.7"
 )
+@pytest.mark.xfail(sys.platform == "win32",
+                   reason="Defaults channel has conflicting vc packages")
 def test_resolved_packages_recipe(testing_config):
     recipe_dir = os.path.join(metadata_dir, '_resolved_packages_host_build')
     metadata = api.render(recipe_dir, config=testing_config)[0][0]
     assert all(len(pkg.split()) == 3 for pkg in metadata.get_value('requirements/run'))
-    run_requirements = set(x.split()[0] for x in metadata.get_value('requirements/run'))
+    run_requirements = {x.split()[0] for x in metadata.get_value('requirements/run')}
     for package in [
         'curl',  # direct dependency
         'numpy',  # direct dependency
@@ -134,7 +137,7 @@ def test_host_entries_finalized(testing_config):
     assert len(metadata) == 2
     outputs = api.get_output_file_paths(metadata)
     assert any('py27' in out for out in outputs)
-    assert any('py36' in out for out in outputs)
+    assert any('py39' in out for out in outputs)
 
 
 def test_hash_no_apply_to_custom_build_string(testing_metadata, testing_workdir):
@@ -161,6 +164,16 @@ def test_cross_recipe_with_only_build_section(testing_config):
     assert metadata.config.host_subdir != subdir
     assert metadata.config.build_prefix != metadata.config.host_prefix
     assert not metadata.build_is_host
+
+
+def test_cross_info_index_platform(testing_config):
+    recipe = os.path.join(metadata_dir, '_cross_build_unix_windows')
+    metadata = api.render(recipe, config=testing_config, bypass_env_check=True)[0][0]
+    info_index = metadata.info_index()
+    assert metadata.config.host_subdir != subdir
+    assert metadata.config.host_subdir == info_index['subdir']
+    assert metadata.config.host_platform != metadata.config.platform
+    assert metadata.config.host_platform == info_index['platform']
 
 
 def test_setting_condarc_vars_with_env_var_expansion(testing_workdir):
@@ -236,3 +249,19 @@ def test_run_exports_from_repo_without_channeldata(testing_config):
     # these two will be missing if run_exports has failed.
     assert ms[0][0].meta['requirements']['host'] == ["exporty"]
     assert ms[0][0].meta['requirements']['run'] == ["exporty"]
+
+
+def test_pin_expression_works_with_prereleases(testing_config):
+    recipe = os.path.join(metadata_dir, '_pinning_prerelease')
+    ms = api.render(recipe, config=testing_config)
+    assert len(ms) == 2
+    m = next(m_[0] for m_ in ms if m_[0].meta['package']['name'] == 'bar')
+    assert 'foo >=3.10.0.rc1,<3.11.0a0' in m.meta['requirements']['run']
+
+
+def test_pin_expression_works_with_python_prereleases(testing_config):
+    recipe = os.path.join(metadata_dir, '_pinning_prerelease_python')
+    ms = api.render(recipe, config=testing_config)
+    assert len(ms) == 2
+    m = next(m_[0] for m_ in ms if m_[0].meta['package']['name'] == 'bar')
+    assert 'python >=3.10.0rc1,<3.11.0a0' in m.meta['requirements']['run']

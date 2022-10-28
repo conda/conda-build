@@ -1,7 +1,9 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 try:
     from collections.abc import Hashable
 except ImportError:
-    from collections import Hashable
+    from collections.abc import Hashable
 from functools import partial
 import glob2
 import hashlib
@@ -49,7 +51,7 @@ def ensure_binary(file):
                 return []
             return lief.parse(file)
         except:
-            print('WARNING: liefldd: failed to ensure_binary({})'.format(file))
+            print(f'WARNING: liefldd: failed to ensure_binary({file})')
     return None
 
 
@@ -121,7 +123,10 @@ def _get_elf_rpathy_thing(binary, attribute, dyn_tag):
     dynamic_entries = binary.dynamic_entries
     rpaths_colons = [getattr(e, attribute)
                      for e in dynamic_entries if e.tag == dyn_tag]
-    return rpaths_colons
+    rpaths = []
+    for rpath in rpaths_colons:
+        rpaths.extend(rpath.split(':'))
+    return rpaths
 
 
 def _set_elf_rpathy_thing(binary, old_matching, new_rpath, set_rpath, set_runpath):
@@ -170,10 +175,10 @@ if have_lief:
     get_rpaths_raw = partial(get_rpathy_thing_raw_partial, elf_attribute='rpath', elf_dyn_tag=lief.ELF.DYNAMIC_TAGS.RPATH)
 else:
     def get_runpaths_raw(file):
-        return []
+        return [], None, None
 
     def get_rpaths_raw(file):
-        return []
+        return [], None, None
 
 
 def get_runpaths_or_rpaths_raw(file):
@@ -212,17 +217,13 @@ def get_rpaths(file, exe_dirname, envroot, windows_root=''):
             rpaths.append(exe_dirname.replace('\\', '/'))
         if windows_root:
             rpaths.append('/'.join((windows_root, "System32")))
+            rpaths.append('/'.join((windows_root, "System32", "downlevel")))
             rpaths.append(windows_root)
         if envroot:
             # and not lief.PE.HEADER_CHARACTERISTICS.DLL in binary.header.characteristics_list:
             rpaths.extend(list(_get_path_dirs(envroot)))
     elif binary_format == lief.EXE_FORMATS.MACHO:
         rpaths = [rpath.rstrip('/') for rpath in rpaths]
-    elif binary_format == lief.EXE_FORMATS.ELF:
-        result = []
-        for rpath in rpaths:
-            result.extend(rpath.split(':'))
-        rpaths = result
     return [from_os_varnames(binary_format, binary_type, rpath) for rpath in rpaths]
 
 
@@ -248,7 +249,7 @@ def _inspect_linkages_this(filename, sysroot='', arch='native'):
         if json_data:
             return filename, json_data['imported_libraries'], json_data['imported_libraries']
     except:
-        print('WARNING: liefldd: failed _inspect_linkages_this({})'.format(filename))
+        print(f'WARNING: liefldd: failed _inspect_linkages_this({filename})')
 
     return None, [], []
 
@@ -413,7 +414,7 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
         # We do not include C:\Windows nor C:\Windows\System32 in this list. They are added in
         # get_rpaths() instead since we need to carefully control the order.
         default_paths = ['$SYSROOT/System32/Wbem', '$SYSROOT/System32/WindowsPowerShell/v1.0']
-    results = set()
+    results = {}
     rpaths_by_binary = dict()
     parents_by_filename = dict({filename: None})
     while todo:
@@ -432,6 +433,9 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
                         tmp_filename = parents_by_filename[tmp_filename]
                 else:
                     parent_exe_dirname = exedir
+                # This is a hack for Python on Windows. Sorry.
+                if '.pyd' in filename2 or (os.sep + 'DLLs' + os.sep) in filename2:
+                    parent_exe_dirname = envroot.replace(os.sep, '/') + '/DLLs'
                 rpaths_by_binary[filename2] = get_rpaths(binary,
                                                          parent_exe_dirname,
                                                          envroot.replace(os.sep, '/'),
@@ -451,7 +455,7 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
                 these_orig = [('$RPATH/' + lib if not lib.startswith('/') and not lib.startswith('$') and  # noqa
                                binary.format != lief.EXE_FORMATS.MACHO else lib)
                               for lib in libraries]
-                for orig in these_orig:
+                for lib, orig in zip(libraries, these_orig):
                     resolved = _get_resolved_location(binary,
                                                       orig,
                                                       exedir,
@@ -459,11 +463,28 @@ def inspect_linkages_lief(filename, resolve_filenames=True, recurse=True,
                                                       rpaths_transitive=rpaths_transitive,
                                                       default_paths=default_paths,
                                                       sysroot=sysroot)
+                    path_fixed = os.path.normpath(resolved[0])
+                    # Test, randomise case. We only allow for the filename part to be random, and we allow that
+                    # only for Windows DLLs. We may need a special case for Lib (from Python) vs lib (from R)
+                    # too, but in general we want to enforce case checking as much as we can since even Windows
+                    # can be run case-sensitively if the user wishes.
+                    #
+                    '''
+                    if binary.format == lief.EXE_FORMATS.PE:
+                        import random
+                        path_fixed = os.path.dirname(path_fixed) + os.sep +  \
+                                     ''.join(random.choice((str.upper, str.lower))(c) for c in os.path.basename(path_fixed))
+                        if random.getrandbits(1):
+                            path_fixed = path_fixed.replace(os.sep + 'lib' + os.sep, os.sep + 'Lib' + os.sep)
+                        else:
+                            path_fixed = path_fixed.replace(os.sep + 'Lib' + os.sep, os.sep + 'lib' + os.sep)
+                    '''
                     if resolve_filenames:
-                        results.add(resolved[0])
-                        parents_by_filename[resolved[0]] = filename2
+                        rec = {'orig': orig, 'resolved': path_fixed, 'rpaths': rpaths_transitive}
                     else:
-                        results.add(orig)
+                        rec = {'orig': orig, 'rpaths': rpaths_transitive}
+                    results[lib] = rec
+                    parents_by_filename[resolved[0]] = filename2
                     if recurse:
                         if os.path.exists(resolved[0]):
                             todo.append([resolved[0], lief.parse(resolved[0])])
@@ -476,17 +497,19 @@ def get_linkages(filename, resolve_filenames=True, recurse=True,
     # When we switch to lief, want to ensure these results do not change.
     # We do not support Windows yet with pyldd.
     result_pyldd = []
-    if codefile_type(filename) not in ('DLLfile', 'EXEfile'):
-        result_pyldd = inspect_linkages_pyldd(filename, resolve_filenames=resolve_filenames, recurse=recurse,
-                                              sysroot=sysroot, arch=arch)
-        if not have_lief:
-            return result_pyldd
-    if not have_lief:
-        return result_pyldd
-
+    debug = False
+    if not have_lief or debug:
+        if codefile_type(filename) not in ('DLLfile', 'EXEfile'):
+            result_pyldd = inspect_linkages_pyldd(filename, resolve_filenames=resolve_filenames, recurse=recurse,
+                                                  sysroot=sysroot, arch=arch)
+            if not have_lief:
+                return result_pyldd
+        else:
+            print(f"WARNING: failed to get_linkages, codefile_type('{filename}')={codefile_type(filename)}")
+            return {}
     result_lief = inspect_linkages_lief(filename, resolve_filenames=resolve_filenames, recurse=recurse,
                                         sysroot=sysroot, envroot=envroot, arch=arch)
-    if result_pyldd and set(result_lief) != set(result_pyldd):
+    if debug and result_pyldd and set(result_lief) != set(result_pyldd):
         print("WARNING: Disagreement in get_linkages(filename={}, resolve_filenames={}, recurse={}, sysroot={}, envroot={}, arch={}):\n lief: {}\npyldd: {}\n  (using lief)".
               format(filename, resolve_filenames, recurse, sysroot, envroot, arch, result_lief, result_pyldd))
     return result_lief
@@ -540,7 +563,7 @@ def get_static_lib_exports(file):
         try:
             size = int(size)
         except:
-            print('ERROR: {} has non-integral size of {}'.format(name, size))
+            print(f'ERROR: {name} has non-integral size of {size}')
             return index, '', 0, 0, 'INVALID'
         name_len = 0  # File data in BSD format archives begin with a name of this length.
         if name.startswith(b'#1/'):
@@ -566,11 +589,11 @@ def get_static_lib_exports(file):
     results = []
     signature, len_signature = _get_archive_signature(file)
     if signature != b'!<arch>\n':
-        print("ERROR: {} is not an archive".format(file))
+        print(f"ERROR: {file} is not an archive")
         return results
     with open(file, 'rb') as f:
         if debug_static_archives:
-            print("Archive file {}".format(file))
+            print(f"Archive file {file}")
         index = 0
         content = f.read()
         index += len_signature
@@ -580,7 +603,7 @@ def get_static_lib_exports(file):
         if index & 1:
             index += 1
         if debug_static_archives:
-            print("ar_hdr index = {}".format(hex(index)))
+            print(f"ar_hdr index = {hex(index)}")
         index, name, name_len, size, typ = _parse_ar_hdr(content, index)
         if typ == 'GNU_SYMBOLS':
             # Reference:
@@ -599,7 +622,7 @@ def get_static_lib_exports(file):
                 obj_starts.add(index2)
                 obj_ends.add(offsets[i])
                 if debug_static_archives:
-                    print("symname {}, offset {}, name {}, elf? {}".format(syms[i], offsets[i], name, content[index2:index2 + 4]))
+                    print(f"symname {syms[i]}, offset {offsets[i]}, name {name}, elf? {content[index2:index2 + 4]}")
         elif name.startswith(b'__.SYMDEF'):
             # Reference:
             # http://www.manpagez.com/man/5/ranlib/
@@ -642,7 +665,7 @@ def get_static_lib_exports(file):
                 sym = string_table[strx:strx + string_table[strx:].find('\x00')]
                 syms.append(sym)
                 if debug_static_archives > 1:
-                    print("{} :: strx={}, off={}".format(syms[i], hex(strx), hex(off)))
+                    print(f"{syms[i]} :: strx={hex(strx)}, off={hex(off)}")
                 # This is probably a different structure altogether! Something symobol-y not file-y.
                 off2, name, name_len, size, typ = _parse_ar_hdr(content, off)
                 obj_starts.add(off2)
@@ -651,9 +674,9 @@ def get_static_lib_exports(file):
         obj_starts = sorted(list(obj_starts))
         obj_ends = sorted(list(obj_ends))[1:]
         if debug_static_archives > 1:
-            print('obj_starts: {}'.format(" ".join('0x{:05x}'.format(o) for o in obj_starts)))
+            print('obj_starts: {}'.format(" ".join(f'0x{o:05x}' for o in obj_starts)))
         if debug_static_archives > 1:
-            print('  obj_ends: {}'.format(" ".join('0x{:05x}'.format(o) for o in obj_ends)))
+            print('  obj_ends: {}'.format(" ".join(f'0x{o:05x}' for o in obj_ends)))
         for obj_start, obj_end in zip(obj_starts, obj_ends):
             IMAGE_FILE_MACHINE_I386 = 0x014c
             IMAGE_FILE_MACHINE_AMD64 = 0x8664
@@ -718,13 +741,13 @@ def get_static_lib_exports_nm(filename):
     except OSError:
         # nm may not be available or have the correct permissions, this
         # should not cause a failure, see gh-3287
-        print('WARNING: nm: failed to get_exports({})'.format(filename))
+        print(f'WARNING: nm: failed to get_exports({filename})')
         results = None
     return results
 
 
 def get_static_lib_exports_dumpbin(filename):
-    '''
+    r'''
     > dumpbin /SYMBOLS /NOLOGO C:\msys64\mingw64\lib\libasprintf.a
     > C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.20.27508\bin\Hostx64\x64\dumpbin.exe
     > 020 00000000 UNDEF  notype ()    External     | malloc
@@ -773,7 +796,7 @@ def get_static_lib_exports_dumpbin(filename):
         except OSError:
             # nm may not be available or have the correct permissions, this
             # should not cause a failure, see gh-3287
-            print('WARNING: nm: failed to get_exports({})'.format(filename))
+            print(f'WARNING: nm: failed to get_exports({filename})')
             exports = None
     exports.sort()
     return exports
@@ -787,7 +810,7 @@ def get_static_lib_exports_externally(filename):
     if res_dumpbin is None:
         return res_dumpbin
     if res_nm != res_dumpbin:
-        print("ERROR :: res_nm != res_dumpbin\n{}\n != \n{}\n".format(res_nm, res_dumpbin))
+        print(f"ERROR :: res_nm != res_dumpbin\n{res_nm}\n != \n{res_dumpbin}\n")
     return res_nm
 
 
@@ -812,7 +835,11 @@ def get_exports(filename, arch='native', enable_static=False):
                 # Sorry, LIEF does not handle COFF (only PECOFF) and object files are COFF.
                 exports2 = exports
             else:
-                exports2, flags2, exports2_all, flags2_all = get_static_lib_exports(filename)
+                try:
+                    exports2, flags2, exports2_all, flags2_all = get_static_lib_exports(filename)
+                except:
+                    print(f"WARNING :: Failed to get_static_lib_exports({filename})")
+                    exports2 = []
             result = exports2
             if debug_static_archives:
                 if exports and set(exports) != set(exports2):
@@ -820,7 +847,7 @@ def get_exports(filename, arch='native', enable_static=False):
                     diff2 = set(exports2).difference(set(exports))
                     error_count = len(diff1) + len(diff2)
                     if debug_static_archives:
-                        print("errors: {} (-{}, +{})".format(error_count, len(diff1), len(diff2)))
+                        print(f"errors: {error_count} (-{len(diff1)}, +{len(diff2)})")
                     if debug_static_archives:
                         print("WARNING :: Disagreement regarding static lib exports in {} between nm (nsyms={}) and lielfldd (nsyms={}):"
                               .format(filename, len(exports), len(exports2)))
@@ -847,7 +874,7 @@ def get_relocations(filename, arch='native'):
                         res.append(r.symbol.name)
             return res
     except:
-        print('WARNING: liefldd: failed get_relocations({})'.format(filename))
+        print(f'WARNING: liefldd: failed get_relocations({filename})')
 
     return []
 
@@ -886,7 +913,7 @@ def get_symbols(file, defined=True, undefined=True, notexported=False, arch='nat
             else:
                 s_name = '%s' % s.name
                 if s.exported and s.imported:
-                    print("Weird, symbol {} is both imported and exported".format(s.name))
+                    print(f"Weird, symbol {s.name} is both imported and exported")
                 if s.exported:
                     is_undefined = True
                     is_notexported = False
@@ -906,7 +933,7 @@ def get_symbols(file, defined=True, undefined=True, notexported=False, arch='nat
     return res
 
 
-class memoized_by_arg0_filehash(object):
+class memoized_by_arg0_filehash:
     """Decorator. Caches a function's return value each time it is called.
     If called later with the same arguments, the cached value is returned
     (not reevaluated).

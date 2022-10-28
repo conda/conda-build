@@ -1,0 +1,11 @@
+package:
+  name: test_about_license_file_dir-no-slash-suffix
+  version: 1.0
+
+source:
+  path: ../../source
+
+about:
+  license_file:
+    - license-dir-from-source/
+    - license-dir-from-recipe

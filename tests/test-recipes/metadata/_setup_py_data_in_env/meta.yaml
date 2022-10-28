@@ -19,3 +19,4 @@ requirements:
     # cython inclusion here is to test https://github.com/conda/conda-build/issues/149
     # cython chosen because it is implicated somehow in setup.py complications.  Numpy would also work.
     - cython
+    - setuptools

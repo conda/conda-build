@@ -26,7 +26,7 @@ Prior knowledge of conda-build and conda recipes is helpful.
 Before you start
 ================
 
-* Check the :doc:`prerequisites <index>`.
+* Check the :ref:`prereqs`.
 
 * You should have already completed :doc:`build-pkgs-skeleton`.
 
@@ -201,6 +201,13 @@ on your local computer.
    If there are no error messages, Click installed
    successfully.
 
+   .. note::
+      Explicitly installing a local package bypasses the dependency
+      resolver, as such the package's ``run`` dependencies will not
+      be evaluated. See `conda install --help` or the `install command reference
+      page <https://docs.conda.io/projects/conda/en/latest/commands/install.html>`_
+      for more info.
+
 
 .. _convert:
 
@@ -310,4 +317,3 @@ More information
 * For more information about all the possible values that can go
   into the ``meta.yaml`` file, see
   :doc:`../../resources/define-metadata`.
-

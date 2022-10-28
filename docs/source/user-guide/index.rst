@@ -20,7 +20,7 @@ variables and wheel files.
 **Tutorials**
 
 The :doc:`tutorials <../user-guide/tutorials/index>` will guide you through
-how to build conda packages---whether you're creating a 
+how to build conda packages---whether you're creating a
 package with compilers, using conda skeleton, creating from
 scratch, or building R packages using skeleton CRAN.
 
@@ -41,5 +41,3 @@ and inherited, and how they affect different processes.
 The user guide includes information about
 :doc:`wheel files <wheel-files>` and how to build conda
 packages from them.
-
-

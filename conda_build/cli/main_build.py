@@ -1,11 +1,5 @@
-# (c) Continuum Analytics, Inc. / http://continuum.io
-# All Rights Reserved
-#
-# conda is distributed under the terms of the BSD 3-clause license.
-# Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
-
-from __future__ import absolute_import, division, print_function
-
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 import argparse
 import warnings
 
@@ -22,9 +16,10 @@ import conda_build.utils as utils
 from conda_build.conda_interface import (add_parser_channels, binstar_upload,
                                          cc_conda_build)
 from conda_build.cli.main_render import get_render_parser
+from conda_build.cli.actions import KeyValueAction
 import conda_build.source as source
 from conda_build.utils import LoggingContext
-from conda_build.config import Config, get_channel_urls
+from conda_build.config import Config, zstd_compression_level_default, get_channel_urls
 from os.path import abspath, expanduser, expandvars
 
 on_win = (sys.platform == 'win32')
@@ -159,6 +154,14 @@ different sets of packages."""
         default=True,
         action='store_false',
     )
+    p.add_argument(
+        "--zstd-compression-level",
+        help=("When building v2 packages, set the compression level used by "
+              "conda-package-handling. Defaults to the maximum."),
+        type=int,
+        choices=range(1, 22),
+        default=zstd_compression_level_default,
+    )
     pypi_grp = p.add_argument_group("PyPI upload parameters (twine)")
     pypi_grp.add_argument(
         '--password',
@@ -198,10 +201,17 @@ different sets of packages."""
         "--no-build-id",
         action="store_false",
         help=("do not generate unique build folder names.  Use if having issues with "
-              "paths being too long."),
+              "paths being too long.  Deprecated, please use --build-id-pat='' instead"),
         dest='set_build_id',
         # note: inverted - dest stores positive logic
         default=cc_conda_build.get('set_build_id', 'true').lower() == 'true',
+    )
+    p.add_argument(
+        "--build-id-pat",
+        help=("specify a templated pattern to use as build folder names.  Use if having issues with "
+              "paths being too long."),
+        dest='build_id_pat',
+        default=cc_conda_build.get('build_id_pat', '{n}_{t}'),
     )
     p.add_argument(
         "--croot",
@@ -347,7 +357,14 @@ different sets of packages."""
                    help=('Extra dependencies to add to all environment creation steps.  This '
                          'is only enabled for testing with the -t or --test flag.  Change '
                          'meta.yaml or use templates otherwise.'), )
-
+    p.add_argument(
+        '--extra-meta',
+        nargs='*',
+        action=KeyValueAction,
+        help="Key value pairs of metadata to add to about.json. Should be "
+        "defined as Key=Value with a space separating each pair.",
+        metavar="KEY=VALUE",
+    )
     p.add_argument('--suppress-variables',
                    action='store_true',
                    help=("Do not display value of environment variables specified in build.script_env."), )
@@ -462,7 +479,7 @@ def execute(args):
     else:
         outputs = api.build(args.recipe, post=args.post, test_run_post=args.test_run_post,
                             build_only=args.build_only, notest=args.notest, already_built=None, config=config,
-                            verify=args.verify, variants=args.variants)
+                            verify=args.verify, variants=args.variants, cache_dir=args.cache_dir)
 
     if not args.output and len(utils.get_build_folders(config.croot)) > 0:
         build.print_build_intermediate_warning(config)
@@ -476,7 +493,7 @@ def main():
         print(str(e))
         sys.exit(1)
     except filelock.Timeout as e:
-        print("File lock on {0} could not be obtained.  You might need to try fewer builds at once."
+        print("File lock on {} could not be obtained.  You might need to try fewer builds at once."
               "  Otherwise, run conda clean --lock".format(e.lock_file))
         sys.exit(1)
     return

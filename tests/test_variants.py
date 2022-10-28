@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 from collections import OrderedDict
 import os
 import json
@@ -8,7 +10,7 @@ import pytest
 import yaml
 
 from conda_build import api, exceptions, variants
-from conda_build.utils import package_has_file, FileNotFoundError
+from conda_build.utils import package_has_file
 
 thisdir = os.path.dirname(__file__)
 recipe_dir = os.path.join(thisdir, 'test-recipes', 'variants')
@@ -128,17 +130,54 @@ def test_zip_fields():
     assert ld[1]['python'] == '2.7'
     assert ld[1]['vc'] == '14'
 
-    # mismatched lengths should raise an error
-    v = {'python': ['2.7', '3.5', '3.4'], 'vc': ['9', '14'], 'zip_keys': [('python', 'vc')]}
-    with pytest.raises(ValueError):
-        ld = variants.dict_of_lists_to_list_of_dicts(v)
 
-    # WHEN one is completely missing, it's OK.  The zip_field for the set gets ignored.
-    v = {'python': ['2.7', '3.5'], 'zip_keys': [('python', 'vc')]}
-    ld = variants.dict_of_lists_to_list_of_dicts(v)
-    assert len(ld) == 2
-    assert 'vc' not in ld[0].keys()
-    assert 'vc' not in ld[1].keys()
+def test_validate_spec():
+    """
+    Basic spec validation checking for bad characters, bad zip_keys, missing keys,
+    duplicate keys, and zip_key fields length mismatch.
+    """
+    spec = {
+        # normal expansions
+        "foo": [2.7, 3.7, 3.8],
+        # zip_keys are the values that need to be expanded as a set
+        "zip_keys": [["bar", "baz"], ["qux", "quux", "quuz"]],
+        "bar": [1, 2, 3],
+        "baz": [2, 4, 6],
+        "qux": [4, 5],
+        "quux": [8, 10],
+        "quuz": [12, 15],
+        # extend_keys are those values which we do not expand
+        "extend_keys": ["corge"],
+        "corge": 42,
+    }
+    # valid spec
+    variants.validate_spec("spec", spec)
+
+    spec2 = dict(spec)
+    spec2["bad-char"] = "bad-char"
+    # invalid characters
+    with pytest.raises(ValueError):
+        variants.validate_spec("spec[bad_char]", spec2)
+
+    spec3 = dict(spec, zip_keys="bad_zip_keys")
+    # bad zip_keys
+    with pytest.raises(ValueError):
+        variants.validate_spec("spec[bad_zip_keys]", spec3)
+
+    spec4 = dict(spec, zip_keys=[["bar", "baz"], ["qux", "quux"], ["quuz", "missing"]])
+    # zip_keys' zip_group has key missing from spec
+    with pytest.raises(ValueError):
+        variants.validate_spec("spec[missing_key]", spec4)
+
+    spec5 = dict(spec, zip_keys=[["bar", "baz"], ["qux", "quux", "quuz"], ["quuz"]])
+    # zip_keys' zip_group has duplicate key
+    with pytest.raises(ValueError):
+        variants.validate_spec("spec[duplicate_key]", spec5)
+
+    spec6 = dict(spec, baz=[4, 6])
+    # zip_keys' zip_group key fields have same length
+    with pytest.raises(ValueError):
+        variants.validate_spec("spec[duplicate_key]", spec6)
 
 
 def test_cross_compilers():
@@ -155,14 +194,10 @@ def test_variants_in_output_names():
 
 def test_variants_in_versions_with_setup_py_data(testing_workdir):
     recipe = os.path.join(recipe_dir, '12_variant_versions')
-    try:
-        outputs = api.get_output_file_paths(recipe)
-        assert len(outputs) == 2
-        assert any(os.path.basename(pkg).startswith('my_package-470.470') for pkg in outputs)
-        assert any(os.path.basename(pkg).startswith('my_package-480.480') for pkg in outputs)
-    except FileNotFoundError:
-        # problem with python 3.x with Travis CI somehow.  Just ignore it.
-        print("Ignoring test on setup.py data - problem with download")
+    outputs = api.get_output_file_paths(recipe)
+    assert len(outputs) == 2
+    assert any(os.path.basename(pkg).startswith('my_package-470.470') for pkg in outputs)
+    assert any(os.path.basename(pkg).startswith('my_package-480.480') for pkg in outputs)
 
 
 def test_git_variables_with_variants(testing_workdir, testing_config):
@@ -173,18 +208,21 @@ def test_git_variables_with_variants(testing_workdir, testing_config):
 
 
 def test_variant_input_with_zip_keys_keeps_zip_keys_list():
-    variants_ = {'scipy': ['0.17', '0.19'], 'sqlite': ['3'], 'zlib': ['1.2'], 'xz': ['5'],
-                 'zip_keys': ['macos_min_version', 'macos_machine', 'MACOSX_DEPLOYMENT_TARGET',
-                              'CONDA_BUILD_SYSROOT'],
-                 'pin_run_as_build': {'python': {'min_pin': 'x.x', 'max_pin': 'x.x'}}}
-    variant_list = variants.dict_of_lists_to_list_of_dicts(variants_,
-                        extend_keys=variants.DEFAULT_VARIANTS['extend_keys'])
-    assert len(variant_list) == 2
-    assert 'zip_keys' in variant_list[0] and variant_list[0]['zip_keys']
+    spec = {
+        'scipy': ['0.17', '0.19'],
+        'sqlite': ['3'],
+        'zlib': ['1.2'],
+        'xz': ['5'],
+        'zip_keys': ['sqlite', 'zlib', 'xz'],
+        'pin_run_as_build': {'python': {'min_pin': 'x.x', 'max_pin': 'x.x'}}
+    }
+    vrnts = variants.dict_of_lists_to_list_of_dicts(spec)
+    assert len(vrnts) == 2
+    assert vrnts[0].get("zip_keys") == spec["zip_keys"]
 
 
 @pytest.mark.serial
-@pytest.mark.xfail(sys.platform=='win32', reason="console readout issues on appveyor")
+@pytest.mark.xfail(sys.platform == "win32", reason="console readout issues on appveyor")
 def test_ensure_valid_spec_on_run_and_test(testing_workdir, testing_config, caplog):
     testing_config.debug = True
     testing_config.verbose = True
@@ -259,11 +297,11 @@ def test_get_used_loop_vars(testing_config):
     #   some_package is explicitly used as a jinja2 variable
     assert m.get_used_loop_vars() == {'python', 'some_package'}
     # these are all used vars - including those with only one value (and thus not loop vars)
-    assert m.get_used_vars() == {'python', 'some_package', 'zlib', 'pthread_stubs'}
+    assert m.get_used_vars() == {'python', 'some_package', 'zlib', 'pthread_stubs', 'target_platform'}
 
 
 def test_reprovisioning_source(testing_config):
-    ms = api.render(os.path.join(recipe_dir, '20_reprovision_source'))
+    api.render(os.path.join(recipe_dir, "20_reprovision_source"))
 
 
 def test_reduced_hashing_behavior(testing_config):
@@ -470,20 +508,10 @@ def test_top_level_finalized(testing_config):
 def test_variant_subkeys_retained(testing_config):
     m = api.render(os.path.join(recipe_dir, '31_variant_subkeys'), finalize=False, bypass_env_check=True)[0][0]
     found_replacements = False
+    from conda_build.build import get_all_replacements
     for variant in m.config.variants:
-        if 'replacements' in variant:
-            found_replacements = True
-            replacements = variant['replacements']
-            assert isinstance(replacements, (dict, OrderedDict)), "Found `replacements` {},"  \
-                                                                  "but it is not a dict".format(
-                replacements)
-            assert 'all_replacements' in replacements, "Found `replacements` {}, but it"  \
-                                                       "doesn't contain `all_replacements`".format(replacements)
-            assert isinstance(replacements['all_replacements'], list), "Found `all_replacements` {},"  \
-                                                                       "but it is not a list".format(
-                replacements)
-            for index, replacement in enumerate(replacements['all_replacements']):
-                assert 'tag' in replacement, "Found `all_replacements[{}]` {}," \
-                                                                   "but it has no `tag` key.".format(
-                    replacements[index, 'all_replacements'][index])
-    assert found_replacements, "Did not find replacements"
+        found_replacements = get_all_replacements(variant)
+    assert len(found_replacements), "Did not find replacements"
+    m.final = False
+    outputs = m.get_output_metadata_set(permit_unsatisfiable_variants=False)
+    get_all_replacements(outputs[0][1].config.variant)

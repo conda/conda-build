@@ -1,11 +1,5 @@
-# (c) Continuum Analytics, Inc. / http://continuum.io
-# All Rights Reserved
-#
-# conda is distributed under the terms of the BSD 3-clause license.
-# Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
-
-from __future__ import absolute_import, division, print_function
-
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 import argparse
 import logging
 import sys
@@ -36,11 +30,11 @@ class ParseYAMLArgument(argparse.Action):
         try:
             my_dict = yaml.load(values[0], Loader=yaml.BaseLoader)
             if not isinstance(my_dict, dict):
-                raise RuntimeError("The argument of {} is not a YAML dictionary.".format(option_string))
+                raise RuntimeError(f"The argument of {option_string} is not a YAML dictionary.")
 
             setattr(namespace, self.dest, my_dict)
         except ParserError as e:
-            raise RuntimeError('The argument of {} is not a valid YAML. The parser error was: \n\n{}'.format(option_string, str(e)))
+            raise RuntimeError(f'The argument of {option_string} is not a valid YAML. The parser error was: \n\n{str(e)}')
 
 
 def get_render_parser():
@@ -183,6 +177,8 @@ def execute(args, print_results=True):
     config = get_or_merge_config(None, **args.__dict__)
 
     variants = get_package_variants(args.recipe, config, variants=args.variants)
+    from conda_build.build import get_all_replacements
+    get_all_replacements(variants)
     set_language_env_vars(variants)
 
     config.channel_urls = get_channel_urls(args.__dict__)

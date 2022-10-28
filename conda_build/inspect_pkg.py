@@ -1,12 +1,7 @@
-# (c) Continuum Analytics, Inc. / http://continuum.io
-# All Rights Reserved
-#
-# conda is distributed under the terms of the BSD 3-clause license.
-# Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
-
-from __future__ import absolute_import, division, print_function
-
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 from collections import defaultdict
+from itertools import groupby
 import json
 from operator import itemgetter
 from os.path import abspath, join, dirname, exists, basename, normcase
@@ -18,11 +13,20 @@ import tempfile
 from conda_build.os_utils.ldd import get_linkages, get_package_obj_files, get_untracked_obj_files
 from conda_build.os_utils.liefldd import codefile_type
 from conda_build.os_utils.macho import get_rpaths, human_filetype
-from conda_build.utils import (groupby, getter, comma_join, rm_rf, package_has_file, get_logger,
-                               ensure_list)
+from conda_build.utils import (
+    comma_join,
+    rm_rf,
+    package_has_file,
+    get_logger,
+    ensure_list,
+)
 
-from conda_build.conda_interface import (iteritems, specs_from_args, is_linked, linked_data, linked,
-                                         get_index)
+from conda_build.conda_interface import (
+    specs_from_args,
+    is_linked,
+    linked_data,
+    get_index,
+)
 from conda_build.conda_interface import display_actions, install_actions
 from conda_build.conda_interface import memoized
 
@@ -33,31 +37,37 @@ def dist_files(prefix, dist):
     return set(meta['files']) if meta else set()
 
 
-def which_package(in_prefix_path, prefix):
+def which_package(in_prefix_path, prefix, avoid_canonical_channel_name=False):
     """
     given the path of a conda installed file iterate over
     the conda packages the file came from.  Usually the iteration yields
     only one package.
     """
     norm_ipp = normcase(in_prefix_path.replace(os.sep, '/'))
-    for dist in linked(prefix):
+    from conda_build.utils import linked_data_no_multichannels
+    if avoid_canonical_channel_name:
+        fn = linked_data_no_multichannels
+    else:
+        fn = linked_data
+    for dist in fn(prefix):
+        # dfiles = set(dist.get('files', []))
         dfiles = dist_files(prefix, dist)
+        # TODO :: This is completely wrong when the env is on a case-sensitive FS!
         if any(norm_ipp == normcase(w) for w in dfiles):
             yield dist
 
 
 def print_object_info(info, key):
     output_string = ""
-    gb = groupby(key, info)
-    for header in sorted(gb, key=str):
+    for header, group in groupby(sorted(info, key=itemgetter(key)), itemgetter(key)):
         output_string += header + "\n"
-        for f_info in sorted(gb[header], key=getter('filename')):
+        for f_info in sorted(group, key=itemgetter("filename")):
             for data in sorted(f_info):
                 if data == key:
                     continue
                 if f_info[data] is None:
                     continue
-                output_string += '  %s: %s\n' % (data, f_info[data])
+                output_string += f'  {data}: {f_info[data]}\n'
             if len([i for i in f_info if f_info[i] is not None and i != key]) > 1:
                 output_string += '\n'
         output_string += '\n'
@@ -104,10 +114,10 @@ def print_linkages(depmap, show_files=False):
         output_string += "%s:\n" % dep
         if show_files:
             for lib, path, binary in sorted(depmap[dep]):
-                output_string += "    %s (%s) from %s\n" % (lib, path, binary)
+                output_string += f"    {lib} ({path}) from {binary}\n"
         else:
             for lib, path in sorted(set(map(itemgetter(0, 1), depmap[dep]))):
-                output_string += "    %s (%s)\n" % (lib, path)
+                output_string += f"    {lib} ({path})\n"
         output_string += "\n"
     return output_string
 
@@ -145,7 +155,7 @@ def test_installable(channel='defaults'):
         log.info("######## Testing platform %s ########", platform)
         channels = [channel]
         index = get_index(channel_urls=channels, prepend=False, platform=platform)
-        for _, rec in iteritems(index):
+        for _, rec in index.items():
             # If we give channels at the command line, only look at
             # packages from those channels (not defaults).
             if channel != 'defaults' and rec.get('schannel', 'defaults') == 'defaults':
@@ -165,7 +175,7 @@ def test_installable(channel='defaults'):
             match = has_py.search(build)
             assert match if 'py' in build else True, build
             if match:
-                additional_packages = ['python=%s.%s' % (match.group(1), match.group(2))]
+                additional_packages = [f'python={match.group(1)}.{match.group(2)}']
             else:
                 additional_packages = []
 
@@ -189,7 +199,7 @@ def test_installable(channel='defaults'):
 
 def _installed(prefix):
     installed = linked_data(prefix)
-    installed = {rec['name']: dist for dist, rec in iteritems(installed)}
+    installed = {rec['name']: dist for dist, rec in installed.items()}
     return installed
 
 
@@ -216,7 +226,7 @@ def inspect_linkages(packages, prefix=sys.prefix, untracked=False,
         if pkg == untracked_package:
             dist = untracked_package
         elif pkg not in installed:
-            sys.exit("Package %s is not installed in %s" % (pkg, prefix))
+            sys.exit(f"Package {pkg} is not installed in {prefix}")
         else:
             dist = installed[pkg]
 
@@ -293,7 +303,7 @@ def inspect_objects(packages, prefix=sys.prefix, groupby='package'):
         if pkg == untracked_package:
             dist = untracked_package
         elif pkg not in installed:
-            raise ValueError("Package %s is not installed in %s" % (pkg, prefix))
+            raise ValueError(f"Package {pkg} is not installed in {prefix}")
         else:
             dist = installed[pkg]
 

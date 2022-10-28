@@ -30,10 +30,13 @@ requirements:
     # - conda-verify  >=3.0.2  # optional as of CB 3.12.0
     - contextlib2   # [py<34]
     - enum34        # [py<34]
+    - pathlib2      # [py<3]
     - filelock
     - futures       # [py<3]
     - jinja2
     - patchelf      # [linux]
+    - patch     >=2.6   # [not win]
+    - m2-patch  >=2.6   # [win]
     - pkginfo
     - psutil
     - py-lief       # [not win]
@@ -45,11 +48,14 @@ requirements:
     - six
     - glob2  >=0.6
     - pytz
+    - toml
     - tqdm
     - conda-package-handling  >=1.3
     - python-libarchive-c
 
 test:
+  files:
+    - test_bdist_conda_setup.py
   requires:
     - pytest
     - pytest-cov
@@ -57,7 +63,6 @@ test:
     # Optional: you can use pytest-xdist to run the tests in parallel
     # - pytest-env  # [win]
     # - pytest-xdist
-    - mock
     # - conda-verify  >=3.0.3   # todo once it is released
   commands:
     - type -P conda-build  # [unix]
@@ -90,6 +95,9 @@ test:
     - conda debug -h
     # test that conda sees entry points appropriately in help
     - conda --help
+
+    # Check for bdist_conda
+    - python test_bdist_conda_setup.py bdist_conda --help
   imports:
     - conda_build
   source_files:

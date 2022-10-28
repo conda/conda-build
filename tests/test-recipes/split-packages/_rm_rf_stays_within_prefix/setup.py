@@ -3,6 +3,6 @@ from os.path import join
 
 setup(name='lsfm',
       version="1.0",
-      modules=['lsfm'],
+      py_modules=['lsfm'],
       scripts=[join('bin', 'lsfm')],
       )

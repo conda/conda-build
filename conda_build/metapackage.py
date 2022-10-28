@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 from collections import defaultdict
 from conda_build.config import Config
 from conda_build.metadata import MetaData
@@ -24,6 +26,6 @@ def create_metapackage(name, version, entry_points=(), build_string=None, build_
     d['about']['summary'] = summary
     d = dict(d)
     m = MetaData.fromdict(d, config=config)
-    config.compute_build_id(m.name())
+    config.compute_build_id(m.name(), m.version())
 
     return build(m, config=config, need_source_download=False)

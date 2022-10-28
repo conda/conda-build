@@ -1,18 +1,18 @@
-from __future__ import absolute_import, division, print_function
-
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 import re
 import stat
 import sys
 from subprocess import Popen, check_output, PIPE, STDOUT, CalledProcessError
 import os
-from conda_build.os_utils.pyldd import inspect_rpaths
 from conda_build import utils
 from itertools import islice
 from conda_build.os_utils.external import find_preferably_prefixed_executable
 
 NO_EXT = (
     '.py', '.pyc', '.pyo', '.h', '.a', '.c', '.txt', '.html',
-    '.xml', '.png', '.jpg', '.gif', '.class',
+    '.xml', '.png', '.jpg', '.gif', '.class', '.in', '.sh',
+    '.yaml', '.md', '.ac', '.m4', '.cc', '.plist',
 )
 
 MAGIC = {
@@ -57,7 +57,7 @@ def human_filetype(path, build_prefix):
     if not lines[0].startswith((path, 'Mach header')):
         raise ValueError(
             'Expected `otool -h` output to start with'
-            ' Mach header or {0}, got:\n{1}'.format(path, output)
+            ' Mach header or {}, got:\n{}'.format(path, output)
         )
     assert lines[0].startswith((path, 'Mach header')), path
 
@@ -155,15 +155,19 @@ def find_apple_cctools_executable(name, build_prefix, nofail=False):
                     s = f.read()
                 if s.find(b'usr/lib/libxcselect.dylib') != -1:
                     # We ask xcrun.
-                    tool_xcr = check_output(['xcrun', '-find', name], stderr=STDOUT).decode('utf-8').splitlines()[0]
-                    # print("WARNING :: Found `{}` but is is an Apple Xcode stub executable.".format(tool))
-                    # This is not the real tool, but Apple's irritating GUI dialog launcher.
+                    try:
+                        tool_xcr = check_output(['xcrun', '-find', name], stderr=STDOUT).decode('utf-8').splitlines()[0]
+                    except Exception as e:
+                        log = utils.get_logger(__name__)
+                        log.error("ERROR :: Found `{}` but is is an Apple Xcode stub executable\n"
+                                  "and it returned an error:\n{}".format(tool, e.output))
+                        raise e
                     tool = tool_xcr
                     if os.path.exists(tool):
                         return tool
         except Exception as _:  # noqa
             print("ERROR :: Failed to run `{}`.  Please use `conda` to install `cctools` into your base environment.\n"
-                  "         An alternative option for users of macOS is to install `Xcode` or `Command Line Tools for Xcode`."
+                  "         An option on macOS is to install `Xcode` or `Command Line Tools for Xcode`."
                   .format(tool))
             sys.exit(1)
         return tool
@@ -195,7 +199,7 @@ def otool(path, build_prefix=None, cb_filter=is_dylib_info):
     # here so also check that we do not get 'useful' output.
     if len(lines_split) < 10 and (re.match('.*(is not a Mach-O|invalid|expected|unexpected).*',
                                            lines, re.MULTILINE)):
-        raise CalledProcessError
+        raise CalledProcessError(-1, otool)
     return _get_matching_load_commands(lines_split, cb_filter)
 
 
@@ -214,10 +218,10 @@ def get_id(path, build_prefix=None):
         return ''
 
 
-def get_rpaths(path):
+def get_rpaths(path, build_prefix=None):
     """Return a list of the dylib rpaths"""
-    res_pyldd = inspect_rpaths(path, resolve_dirnames=False, use_os_varnames=True)
-    return res_pyldd
+    dylib_loads = otool(path, build_prefix, is_rpath)
+    return [dylib_load['path'] for dylib_load in dylib_loads]
 
 
 def _chmod(filename, mode):
@@ -248,6 +252,8 @@ def install_name_tool(args, build_prefix=None, verbose=False):
 
 def add_rpath(path, rpath, build_prefix=None, verbose=False):
     """Add an `rpath` to the Mach-O file at `path`"""
+    if not is_macho(path):
+        return
     args = ['-add_rpath', rpath, path]
     code, _, stderr = install_name_tool(args, build_prefix)
     if "Mach-O dynamic shared library stub file" in stderr:
@@ -263,10 +269,12 @@ def add_rpath(path, rpath, build_prefix=None, verbose=False):
         % code)
 
 
-def delete_rpath(path, rpath, verbose=False):
+def delete_rpath(path, rpath, build_prefix=None, verbose=False):
     """Delete an `rpath` from the Mach-O file at `path`"""
+    if not is_macho(path):
+        return
     args = ['-delete_rpath', rpath, path]
-    code, _, stderr = install_name_tool(args)
+    code, _, stderr = install_name_tool(args, build_prefix)
     if "Mach-O dynamic shared library stub file" in stderr:
         print("Skipping Mach-O dynamic shared library stub file %s\n" % path)
         return

@@ -127,6 +127,8 @@ inherited from the shell environment in which you invoke
        source file.
    * - STDLIB_DIR
      - Python standard library location.
+   * - build_platform
+     - The native subdir of the conda executable
 
 Unix-style packages on Windows, which are usually statically
 linked to executables, are built in a special ``Library``
@@ -278,10 +280,19 @@ If an inherited variable is missing from your shell environment,
 it remains unassigned, but a warning is issued noting that it has
 no value assigned.
 
+Additionally, values can be set by including ``=`` followed by the desired value:
+
+.. code-block:: yaml
+
+     build:
+       script_env:
+        - MY_VAR=some value
+
 .. warning::
    Inheriting environment variables can make it difficult for
    others to reproduce binaries from source with your recipe. Use
-   this feature with caution or avoid it.
+   this feature with caution or explicitly set values using the ``=``
+   syntax.
 
 .. note::
    If you split your build and test phases with ``--no-test`` and ``--test``,
@@ -309,28 +320,6 @@ Environment variables that affect the build process
        package, such as ``/path/to/conda/env``. Useful to pass as
        the environment prefix parameter to various conda tools,
        usually labeled ``-p`` or ``--prefix``.
-
-
-.. _build-features:
-
-Environment variables to set build features
-===========================================
-
-The environment variables listed in the following table are
-inherited from the process running conda-build. 
-
-.. list-table::
-   :widths: 15 43 42
-
-   * - FEATURE_NOMKL
-     - Adds the ``nomkl`` feature to the built package.
-     - Accepts ``0`` for off and ``1`` for on.
-   * - FEATURE_DEBUG
-     - Adds the ``debug`` feature to the built package.
-     - Accepts ``0`` for off and ``1`` for on.
-   * - FEATURE_OPT
-     - Adds the ``opt`` feature to the built package.
-     - Accepts ``0`` for off and ``1`` for on.
 
 
 .. _test-envs:

@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 # (c) 2012-2017 Continuum Analytics, Inc. / http://continuum.io
 # All Rights Reserved
 #
@@ -107,8 +109,8 @@ def retrieve_python_version(file_path):
             with open(path_file) as index_file:
                 index = json.load(index_file)
 
-        build_version_number = re.search('(.*)?(py)(\d\d)(.*)?', index['build']).group(3)
-        build_version = re.sub('\A.*py\d\d.*\Z', 'python', index['build'])
+        build_version_number = re.search(r'(.*)?(py)(\d\d)(.*)?', index['build']).group(3)
+        build_version = re.sub(r'\A.*py\d\d.*\Z', 'python', index['build'])
 
         return '{}{}.{}' .format(build_version,
             build_version_number[0], build_version_number[1])
@@ -144,8 +146,8 @@ def update_dependencies(new_dependencies, existing_dependencies):
     """
     # split dependencies away from their version numbers since we need the names
     # in order to evaluate duplication
-    dependency_names = set(dependency.split()[0] for dependency in new_dependencies)
-    index_dependency_names = set(index.split()[0] for index in existing_dependencies)
+    dependency_names = {dependency.split()[0] for dependency in new_dependencies}
+    index_dependency_names = {index.split()[0] for index in existing_dependencies}
 
     repeated_packages = index_dependency_names.intersection(dependency_names)
 
@@ -177,7 +179,8 @@ def update_index_file(temp_dir, target_platform, dependencies, verbose):
         index = json.load(file)
 
     platform, architecture = target_platform.split('-')
-    other_platforms = ['linux-ppc64le', 'linux-armv6l', 'linux-armv7l', 'linux-aarch64']
+    other_platforms = ['linux-ppc64', 'linux-ppc64le', 'linux-s390x',
+                       'linux-armv6l', 'linux-armv7l', 'linux-aarch64']
 
     if target_platform in other_platforms:
         source_architecture = architecture
@@ -302,7 +305,7 @@ def update_executable_path(temp_dir, file_path, target_platform):
         if os.path.basename(file_path).startswith('.') or is_binary_file(temp_dir, file_path):
             renamed_executable_path = re.sub(r'\Abin', 'Scripts', file_path)
         else:
-            renamed_path = os.path.splitext(re.sub('\Abin', 'Scripts', file_path))[0]
+            renamed_path = os.path.splitext(re.sub(r'\Abin', 'Scripts', file_path))[0]
             renamed_executable_path = '{}-script.py' .format(renamed_path)
 
     elif target_platform == 'unix':
@@ -763,9 +766,11 @@ def conda_convert(file_path, output_dir=".", show_imports=False, platforms=None,
     source_platform_architecture = '{}-{}' .format(source_platform, architecture)
 
     if 'all' in platforms:
-        platforms = ['osx-64', 'linux-32', 'linux-64',
-                     'linux-ppc64le', 'linux-armv6l', 'linux-armv7l', 'linux-aarch64',
-                     'win-32', 'win-64']
+        platforms = ['osx-64', 'osx-arm64',
+                     'linux-32', 'linux-64', 'linux-ppc64', 'linux-ppc64le',
+                     'linux-s390x', 'linux-armv6l', 'linux-armv7l', 'linux-aarch64',
+                     'win-32', 'win-64', 'win-arm64',
+                     ]
 
     for platform in platforms:
 

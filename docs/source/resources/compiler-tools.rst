@@ -67,18 +67,18 @@ You can activate the root environment with the command ``conda activate root``.
 macOS SDK
 =========
 
-The macOS compilers require the macOS 10.9 SDK. The SDK license prevents it
-from being bundled in the conda package. We know of 2 current sources for the
-macOS 10.9 SDK:
+The macOS compilers require the macOS 10.9 SDK or above. The SDK license prevents
+it from being bundled in the conda package. We know of 2 current sources for the
+macOS SDKs:
 
 - https://github.com/devernay/xcodelegacy
 - https://github.com/phracker/MacOSX-SDKs
 
-We usually install this SDK at ``/opt/MacOSX10.9.sdk`` but you may install it
-anywhere. Edit your ``conda_build_config.yaml`` file to point to it, like this::
+We usually install the 10.10 SDK at ``/opt/MacOSX10.10.sdk`` but you may install
+it anywhere. Edit your ``conda_build_config.yaml`` file to point to it, like this::
 
     CONDA_BUILD_SYSROOT:
-      - /opt/MacOSX10.9.sdk        # [osx]
+      - /opt/MacOSX10.10.sdk        # [osx]
 
 At Anaconda, we have this configuration setting in a centralized
 ``conda_build_config.yaml`` at the root of our recipe repository. Since we run

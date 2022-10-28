@@ -1,0 +1,12 @@
+package:
+  name: python
+  version: 3.6
+
+build:
+  number: 0
+  string: with_run_exports
+  run_exports:
+    noarch:
+      - python
+    weak:
+      - python 3.6 run_exports

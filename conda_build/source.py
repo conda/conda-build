@@ -1,6 +1,5 @@
-from __future__ import absolute_import, division, print_function
-
-import io
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 import locale
 import os
 from os.path import join, isdir, isfile, abspath, basename, exists, normpath, expanduser
@@ -8,11 +7,15 @@ import re
 import shutil
 from subprocess import CalledProcessError
 import sys
+import tempfile
 import time
+from pathlib import Path
+from typing import Optional
 
 from .conda_interface import download, TemporaryDirectory
 from .conda_interface import hashsum_file
 
+from .exceptions import MissingDependency
 from conda_build.os_utils import external
 from conda_build.conda_interface import url_path, CondaHTTPError
 from conda_build.utils import (decompressible_exts, tar_xf, safe_print_unicode, copy_into, on_win, ensure_list,
@@ -20,6 +23,7 @@ from conda_build.utils import (decompressible_exts, tar_xf, safe_print_unicode, 
                                get_logger, rm_rf, LoggingContext)
 
 
+log = get_logger(__name__)
 if on_win:
     from conda_build.utils import convert_unix_path_to_win
 
@@ -33,12 +37,11 @@ ext_re = re.compile(r"(.*?)(\.(?:tar\.)?[^.]+)$")
 
 
 def append_hash_to_fn(fn, hash_value):
-    return ext_re.sub(r"\1_{}\2".format(hash_value[:10]), fn)
+    return ext_re.sub(fr"\1_{hash_value[:10]}\2", fn)
 
 
 def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
     ''' Download a source to the local cache. '''
-    log = get_logger(__name__)
     if verbose:
         log.info('Source cache directory is: %s' % cache_folder)
     if not isdir(cache_folder) and not os.path.islink(cache_folder):
@@ -51,6 +54,8 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
     hash_added = False
     for hash_type in ('md5', 'sha1', 'sha256'):
         if hash_type in source_dict:
+            if source_dict[hash_type] in (None, ""):
+                raise ValueError(f'Empty {hash_type} hash provided for {fn}')
             fn = append_hash_to_fn(fn, source_dict[hash_type])
             hash_added = True
             break
@@ -106,7 +111,7 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
             break
 
     # this is really a fallback.  If people don't provide the hash, we still need to prevent
-    #    collisions in our source cache, but the end user will get no benefirt from the cache.
+    #    collisions in our source cache, but the end user will get no benefit from the cache.
     if not hash_added:
         if not hashed:
             hashed = hashsum_file(path, 'sha256')
@@ -187,7 +192,7 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_ca
         stdout = None
         stderr = None
     else:
-        FNULL = open(os.devnull, 'w')
+        FNULL = open(os.devnull, 'wb')
         stdout = FNULL
         stderr = FNULL
 
@@ -279,7 +284,7 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_ca
             submod_mirror_dir = os.path.normpath(
                 os.path.join(mirror_dir, submod_rel_path))
             if verbose:
-                print('Relative submodule %s found: url is %s, submod_mirror_dir is %s' % (
+                print('Relative submodule {} found: url is {}, submod_mirror_dir is {}'.format(
                       submod_name, submod_url, submod_mirror_dir))
             with TemporaryDirectory() as temp_checkout_dir:
                 git_mirror_checkout_recursive(git, submod_mirror_dir, temp_checkout_dir, submod_url,
@@ -292,7 +297,7 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_ca
         # relatively the same place we can go ahead and checkout the submodules.
         check_call_env([git, 'submodule', 'update', '--init',
                     '--recursive'], cwd=checkout_dir, stdout=stdout, stderr=stderr)
-        git_info(checkout_dir, verbose=verbose)
+        git_info(checkout_dir, None, git=git, verbose=verbose)
     if not verbose:
         FNULL.close()
 
@@ -331,20 +336,21 @@ def git_source(source_dict, git_cache, src_dir, recipe_path=None, verbose=True):
     return git
 
 
-def git_info(src_dir, verbose=True, fo=None):
+# Why not use get_git_info instead?
+def git_info(src_dir, build_prefix, git=None, verbose=True, fo=None):
     ''' Print info about a Git repo. '''
     assert isdir(src_dir)
 
-    git = external.find_executable('git')
     if not git:
-        log = get_logger(__name__)
+        git = external.find_executable('git', build_prefix)
+    if not git:
         log.warn("git not installed in root environment.  Skipping recording of git info.")
         return
 
     if verbose:
         stderr = None
     else:
-        FNULL = open(os.devnull, 'w')
+        FNULL = open(os.devnull, 'wb')
         stderr = FNULL
 
     # Ensure to explicitly set GIT_DIR as some Linux machines will not
@@ -352,12 +358,12 @@ def git_info(src_dir, verbose=True, fo=None):
     env = os.environ.copy()
     env['GIT_DIR'] = join(src_dir, '.git')
     env = {str(key): str(value) for key, value in env.items()}
-    for cmd, check_error in [
-            ('git log -n1', True),
-            ('git describe --tags --dirty', False),
-            ('git status', True)]:
+    for cmd, check_error in (
+            ((git, 'log', '-n1'), True),
+            ((git, 'describe', '--tags', '--dirty'), False),
+            ((git, 'status'), True)):
         try:
-            stdout = check_output_env(cmd.split(), stderr=stderr, cwd=src_dir, env=env)
+            stdout = check_output_env(cmd, stderr=stderr, cwd=src_dir, env=env)
         except CalledProcessError as e:
             if check_error:
                 raise Exception("git error: %s" % str(e))
@@ -368,13 +374,13 @@ def git_info(src_dir, verbose=True, fo=None):
         if hasattr(stdout, 'decode'):
             stdout = stdout.decode(encoding, 'ignore')
         if fo:
-            fo.write(u'==> %s <==\n' % cmd)
+            fo.write('==> {} <==\n'.format(' '.join(cmd)))
             if verbose:
-                fo.write(stdout + u'\n')
+                fo.write(stdout + '\n')
         else:
             if verbose:
-                print(u'==> %s <==\n' % cmd)
-                safe_print_unicode(stdout + u'\n')
+                print('==> {} <==\n'.format(' '.join(cmd)))
+                safe_print_unicode(stdout + '\n')
 
 
 def hg_source(source_dict, src_dir, hg_cache, verbose):
@@ -383,7 +389,7 @@ def hg_source(source_dict, src_dir, hg_cache, verbose):
         stdout = None
         stderr = None
     else:
-        FNULL = open(os.devnull, 'w')
+        FNULL = open(os.devnull, 'wb')
         stdout = FNULL
         stderr = FNULL
 
@@ -420,7 +426,7 @@ def svn_source(source_dict, src_dir, svn_cache, verbose=True, timeout=900, locki
         stdout = None
         stderr = None
     else:
-        FNULL = open(os.devnull, 'w')
+        FNULL = open(os.devnull, 'wb')
         stdout = FNULL
         stderr = FNULL
 
@@ -463,17 +469,17 @@ def get_repository_info(recipe_path):
             origin = check_output_env(["git", "config", "--get", "remote.origin.url"],
                                       cwd=recipe_path)
             rev = check_output_env(["git", "rev-parse", "HEAD"], cwd=recipe_path)
-            return "Origin {}, commit {}".format(origin, rev)
+            return f"Origin {origin}, commit {rev}"
         elif isdir(join(recipe_path, ".hg")):
             origin = check_output_env(["hg", "paths", "default"], cwd=recipe_path)
             rev = check_output_env(["hg", "id"], cwd=recipe_path).split()[0]
-            return "Origin {}, commit {}".format(origin, rev)
+            return f"Origin {origin}, commit {rev}"
         elif isdir(join(recipe_path, ".svn")):
             info = check_output_env(["svn", "info"], cwd=recipe_path)
             info = info.decode("utf-8")  # Py3 returns a byte string, but re needs unicode or str.
             server = re.search("Repository Root: (.*)$", info, flags=re.M).group(1)
             revision = re.search("Revision: (.*)$", info, flags=re.M).group(1)
-            return "{}, Revision {}".format(server, revision)
+            return f"{server}, Revision {revision}"
         else:
             return "{}, last modified {}".format(recipe_path,
                                              time.ctime(os.path.getmtime(
@@ -485,24 +491,24 @@ def get_repository_info(recipe_path):
                                                  join(recipe_path, "meta.yaml"))))
 
 
-def _ensure_unix_line_endings(path):
+_RE_LF = re.compile(rb"(?<!\r)\n")
+_RE_CRLF = re.compile(rb"\r\n")
+
+
+def _ensure_LF(src: os.PathLike, dst: Optional[os.PathLike] = None) -> Path:
     """Replace windows line endings with Unix.  Return path to modified file."""
-    out_path = path + "_unix"
-    with open(path, "rb") as inputfile:
-        with open(out_path, "wb") as outputfile:
-            for line in inputfile:
-                outputfile.write(line.replace(b"\r\n", b"\n"))
-    return out_path
+    src = Path(src)
+    dst = Path(dst or src)  # overwrite src if dst is undefined
+    dst.write_bytes(_RE_CRLF.sub(b"\n", src.read_bytes()))
+    return dst
 
 
-def _ensure_win_line_endings(path):
+def _ensure_CRLF(src: os.PathLike, dst: Optional[os.PathLike] = None) -> Path:
     """Replace unix line endings with win.  Return path to modified file."""
-    out_path = path + "_win"
-    with open(path, "rb") as inputfile:
-        with open(out_path, "wb") as outputfile:
-            for line in inputfile:
-                outputfile.write(line.replace(b"\n", b"\r\n"))
-    return out_path
+    src = Path(src)
+    dst = Path(dst or src)  # overwrite src if dst is undefined
+    dst.write_bytes(_RE_LF.sub(b"\r\n", src.read_bytes()))
+    return dst
 
 
 def _guess_patch_strip_level(filesstr, src_dir):
@@ -510,13 +516,13 @@ def _guess_patch_strip_level(filesstr, src_dir):
     maxlevel = None
     files = {filestr.encode(errors='ignore') for filestr in filesstr}
     src_dir = src_dir.encode(errors='ignore')
+    guessed = False
     for file in files:
         numslash = file.count(b'/')
         maxlevel = numslash if maxlevel is None else min(maxlevel, numslash)
     if maxlevel == 0:
         patchlevel = 0
     else:
-        histo = dict()
         histo = {i: 0 for i in range(maxlevel + 1)}
         for file in files:
             parts = file.split(b'/')
@@ -526,105 +532,300 @@ def _guess_patch_strip_level(filesstr, src_dir):
         order = sorted(histo, key=histo.get, reverse=True)
         if histo[order[0]] == histo[order[1]]:
             print("Patch level ambiguous, selecting least deep")
-        patchlevel = min([key for key, value
-                          in histo.items() if value == histo[order[0]]])
-    return patchlevel
+            guessed = True
+        patchlevel = min(key for key, value
+                          in histo.items() if value == histo[order[0]])
+    return patchlevel, guessed
 
 
 def _get_patch_file_details(path):
     re_files = re.compile(r'^(?:---|\+\+\+) ([^\n\t]+)')
-    files = set()
-    with io.open(path, errors='ignore') as f:
+    files = []
+    with open(path, errors='ignore') as f:
         files = []
         first_line = True
         is_git_format = True
-        for l in f.readlines():
-            if first_line and not re.match(r'From [0-9a-f]{40}', l):
+        for line in f.readlines():
+            if first_line and not re.match(r'From [0-9a-f]{40}', line):
                 is_git_format = False
             first_line = False
-            m = re_files.search(l)
+            m = re_files.search(line)
             if m and m.group(1) != '/dev/null':
                 files.append(m.group(1))
-            elif is_git_format and l.startswith('git') and not l.startswith('git --diff'):
+            elif is_git_format and line.startswith('git') and not line.startswith('git --diff'):
                 is_git_format = False
     return (files, is_git_format)
 
 
-def apply_patch(src_dir, path, config, git=None):
+def _patch_attributes_debug(pa, rel_path, build_prefix):
+    return "[[ {}{}{}{}{}{}{}{}{}{} ]] - [[ {:>71} ]]".format(
+        'R' if pa['reversible'] else '-',
+        'A' if pa['applicable'] else '-',
+        'Y' if pa['patch_exe'].startswith(build_prefix) else '-',
+        'M' if not pa['amalgamated'] else '-',
+        'D' if pa['dry_runnable'] else '-',
+        str(pa['level']),
+        'L' if not pa['level_ambiguous'] else '-',
+        'O' if not pa['offsets'] else '-',
+        'V' if not pa['fuzzy'] else '-',
+        'E' if not pa['stderr'] else '-',
+        rel_path[-71:])
+
+
+def _patch_attributes_debug_print(attributes):
+    if len(attributes):
+        print("Patch analysis gives:")
+        print("\n".join(attributes))
+        print("\nKey:\n")
+        print("R :: Reversible                       A :: Applicable\n"
+              "Y :: Build-prefix patch in use        M :: Minimal, non-amalgamated\n"
+              "D :: Dry-runnable                     N :: Patch level (1 is preferred)\n"
+              "L :: Patch level not-ambiguous        O :: Patch applies without offsets\n"
+              "V :: Patch applies without fuzz       E :: Patch applies without emitting to stderr\n")
+
+
+def _get_patch_attributes(path, patch_exe, git, src_dir, stdout, stderr, retained_tmpdir=None):
+    from collections import OrderedDict
+
+    files_list, is_git_format = _get_patch_file_details(path)
+    files = set(files_list)
+    amalgamated = False
+    if len(files_list) != len(files):
+        amalgamated = True
+    strip_level, strip_level_guessed = _guess_patch_strip_level(files, src_dir)
+    if strip_level:
+        files = {f.split('/', strip_level)[-1] for f in files}
+
+    # Defaults
+    result = {'patch': path,
+              'files': files,
+              'patch_exe': git if (git and is_git_format) else patch_exe,
+              'format': 'git' if is_git_format else 'generic',
+              # If these remain 'unknown' we had no patch program to test with.
+              'dry_runnable': None,
+              'applicable': None,
+              'reversible': None,
+              'amalgamated': amalgamated,
+              'offsets': None,
+              'fuzzy': None,
+              'stderr': None,
+              'level': strip_level,
+              'level_ambiguous': strip_level_guessed,
+              'args': []}
+
+    crlf = False
+    lf = False
+    with open(path, errors='ignore') as f:
+        _content = f.read()
+        for line in _content.split('\n'):
+            if line.startswith((' ', '+', '-')):
+                if line.endswith('\r'):
+                    crlf = True
+                else:
+                    lf = True
+    result['line_endings'] = 'mixed' if (crlf and lf) else 'crlf' if crlf else 'lf'
+
+    if not patch_exe:
+        log.warning(f"No patch program found, cannot determine patch attributes for {path}")
+        if not git:
+            log.error("No git program found either. Please add a dependency for one of these.")
+        return result
+
+    class noop_context:
+        value = None
+
+        def __init__(self, value):
+            self.value = value
+
+        def __enter__(self):
+            return self.value
+
+        def __exit__(self, exc, value, tb):
+            return
+
+    fmts = OrderedDict(native=['--binary'],
+                          lf=[],
+                          crlf=[])
+    if patch_exe:
+        # Good, we have a patch executable so we can perform some checks:
+        with noop_context(retained_tmpdir) if retained_tmpdir else TemporaryDirectory() as tmpdir:
+            # Make all the fmts.
+            result['patches'] = {}
+            for fmt, _ in fmts.items():
+                new_patch = os.path.join(tmpdir, os.path.basename(path) + f'.{fmt}')
+                if fmt == 'native':
+                    try:
+                        shutil.copy2(path, new_patch)
+                    except:
+                        shutil.copy(path, new_patch)
+                elif fmt == 'lf':
+                    _ensure_LF(path, new_patch)
+                elif fmt == 'crlf':
+                    _ensure_CRLF(path, new_patch)
+                result['patches'][fmt] = new_patch
+
+            tmp_src_dir = os.path.join(tmpdir, 'src_dir')
+
+            def copy_to_be_patched_files(src_dir, tmp_src_dir, files):
+                try:
+                    shutil.rmtree(tmp_src_dir)
+                except:
+                    pass
+                for file in files:
+                    dst = os.path.join(tmp_src_dir, file)
+                    dst_dir = os.path.dirname(dst)
+                    try:
+                        os.makedirs(dst_dir)
+                    except:
+                        if not os.path.exists(dst_dir):
+                            raise
+                    # Patches can create and delete files.
+                    if os.path.exists(os.path.join(src_dir, file)):
+                        shutil.copy2(os.path.join(src_dir, file), dst)
+
+            copy_to_be_patched_files(src_dir, tmp_src_dir, files)
+            checks = OrderedDict(dry_runnable=['--dry-run'],
+                                 applicable=[],
+                                 reversible=['-R'])
+            for check_name, extra_args in checks.items():
+                for fmt, fmt_args in fmts.items():
+                    patch_args = ['-Np{}'.format(result['level']),
+                                  '-i', result['patches'][fmt]] + extra_args + fmt_args
+                    try:
+                        env = os.environ.copy()
+                        env['LC_ALL'] = 'C'
+                        from subprocess import Popen, PIPE
+                        process = Popen([patch_exe] + patch_args,
+                                        cwd=tmp_src_dir,
+                                        stdout=PIPE,
+                                        stderr=PIPE,
+                                        shell=False)
+                        output, error = process.communicate()
+                        result['offsets'] = b'offset' in output
+                        result['fuzzy'] = b'fuzz' in output
+                        result['stderr'] = bool(error)
+                        if stdout:
+                            stdout.write(output)
+                        if stderr:
+                            stderr.write(error)
+                    except Exception as e:
+                        print(e)
+                        result[check_name] = False
+                        pass
+                    else:
+                        result[check_name] = fmt
+                        # Save the first one found.
+                        if check_name == 'applicable' and not result['args']:
+                            result['args'] = patch_args
+                        break
+
+    if not retained_tmpdir and 'patches' in result:
+        del result['patches']
+
+    return result
+
+
+def apply_one_patch(src_dir, recipe_dir, rel_path, config, git=None):
+    path = os.path.join(recipe_dir, rel_path)
+    if config.verbose:
+        print(f'Applying patch: {path}')
+
+    def try_apply_patch(patch, patch_args, cwd, stdout, stderr):
+        # An old reference: https://unix.stackexchange.com/a/243748/34459
+        #
+        # I am worried that '--ignore-whitespace' may be destructive. If so we should
+        # avoid passing it, particularly in the initial (most likely to succeed) calls.
+        #
+        # From here-in I define a 'native' patch as one which has:
+        # 1. LF for the patch block metadata.
+        # 2. CRLF or LF for the actual patched lines matching those of the source lines.
+        #
+        # Calls to a raw 'patch' are destructive in various ways:
+        # 1. It leaves behind .rej and .orig files
+        # 2. If you pass it a patch with incorrect CRLF changes and do not pass --binary and
+        #    if any of those blocks *can* be applied, then the whole file gets written out with
+        #    LF.  This cannot be reversed either; the text changes will be reversed but not
+        #    line-feed changes (since all line-endings get changed, not just those of the of
+        #    patched lines)
+        # 3. If patching fails, the bits that succeeded remain, so patching is not at all
+        #    atomic.
+        #
+        # Still, we do our best to mitigate all of this as follows:
+        # 1. We use --dry-run to test for applicability first.
+        # 2 We check for native application of a native patch (--binary, without --ignore-whitespace)
+        #
+        # Some may bemoan the loss of patch failure artifacts, but it is fairly random which
+        # patch and patch attempt they apply to so their informational value is low, besides that,
+        # they are ugly.
+        temp_name = os.path.join(tempfile.gettempdir(), next(tempfile._get_candidate_names()))
+        base_patch_args = ['--no-backup-if-mismatch', '--batch'] + patch_args
+        try:
+            try_patch_args = base_patch_args[:]
+            try_patch_args.append('--dry-run')
+            log.debug(f"dry-run applying with\n{patch} {try_patch_args}")
+            check_call_env([patch] + try_patch_args, cwd=cwd, stdout=stdout, stderr=stderr)
+            # You can use this to pretend the patch failed so as to test reversal!
+            # raise CalledProcessError(-1, ' '.join([patch] + patch_args))
+        except Exception as e:
+            raise e
+        else:
+            check_call_env([patch] + base_patch_args, cwd=cwd, stdout=stdout, stderr=stderr)
+        finally:
+            if os.path.exists(temp_name):
+                os.unlink(temp_name)
+
+    exception = None
     if not isfile(path):
-        sys.exit('Error: no such patch: %s' % path)
+        raise RuntimeError('Error: no such patch: %s' % path)
 
     if config.verbose:
         stdout = None
         stderr = None
     else:
-        FNULL = open(os.devnull, 'w')
+        FNULL = open(os.devnull, 'wb')
         stdout = FNULL
         stderr = FNULL
 
-    files, is_git_format = _get_patch_file_details(path)
-    if git and is_git_format:
-        # Prevents git from asking interactive questions,
-        # also necessary to achieve sha1 reproducibility;
-        # as is --committer-date-is-author-date. By this,
-        # we mean a round-trip of git am/git format-patch
-        # gives the same file.
-        git_env = os.environ
-        git_env['GIT_COMMITTER_NAME'] = 'conda-build'
-        git_env['GIT_COMMITTER_EMAIL'] = 'conda@conda-build.org'
-        check_call_env([git, 'am', '--committer-date-is-author-date', path],
-                       cwd=src_dir, stdout=stdout, stderr=stderr, env=git_env)
-        config.git_commits_since_tag += 1
-    else:
-        if config.verbose:
-            print('Applying patch: %r' % path)
-        patch = external.find_executable('patch', config.build_prefix)
-        if patch is None:
-            sys.exit("""\
-        Error:
-            Cannot use 'git' (not a git repo and/or patch) and did not find 'patch' in: %s
-            You can install 'patch' using apt-get, yum (Linux), Xcode (MacOSX),
-            or conda, m2-patch (Windows),
-        """ % (os.pathsep.join(external.dir_paths)))
-        patch_strip_level = _guess_patch_strip_level(files, src_dir)
-        patch_args = ['-p%d' % patch_strip_level, '--ignore-whitespace', '-i', path]
+    attributes_output = ""
+    # While --binary was first introduced in patch 2.3 it wasn't until patch 2.6 that it produced
+    # consistent results across OSes. So patch/m2-patch is a hard dependency of conda-build.
+    # See conda-build#4495
+    patch_exe = external.find_executable("patch")
+    if not patch_exe:
+        raise MissingDependency("Failed to find conda-build dependency: 'patch'")
+    with TemporaryDirectory() as tmpdir:
+        patch_attributes = _get_patch_attributes(path, patch_exe, git, src_dir, stdout, stderr, tmpdir)
+        attributes_output += _patch_attributes_debug(patch_attributes, rel_path, config.build_prefix)
+        if git and patch_attributes['format'] == 'git':
+            # Prevents git from asking interactive questions,
+            # also necessary to achieve sha1 reproducibility;
+            # as is --committer-date-is-author-date. By this,
+            # we mean a round-trip of git am/git format-patch
+            # gives the same file.
+            git_env = os.environ
+            git_env['GIT_COMMITTER_NAME'] = 'conda-build'
+            git_env['GIT_COMMITTER_EMAIL'] = 'conda@conda-build.org'
+            check_call_env([git, 'am', '-3', '--committer-date-is-author-date', path],
+                           cwd=src_dir, stdout=stdout, stderr=stderr, env=git_env)
+            config.git_commits_since_tag += 1
+        else:
+            patch_args = patch_attributes['args']
 
-        # line endings are a pain.
-        # https://unix.stackexchange.com/a/243748/34459
-
-        try:
-            log = get_logger(__name__)
             if config.verbose:
-                log.info("Trying to apply patch as-is")
-            check_call_env([patch] + patch_args, cwd=src_dir, stdout=stdout, stderr=stderr)
-        except CalledProcessError:
-            if sys.platform == 'win32':
-                unix_ending_file = _ensure_unix_line_endings(path)
-                patch_args[-1] = unix_ending_file
-                try:
-                    if config.verbose:
-                        log.info("Applying unmodified patch failed.  "
-                                "Convert to unix line endings and trying again.")
-                    check_call_env([patch] + patch_args, cwd=src_dir, stdout=stdout, stderr=stderr)
-                except:
-                    if config.verbose:
-                        log.info("Applying unix patch failed.  "
-                                "Convert to CRLF line endings and trying again with --binary.")
-                    patch_args.insert(0, '--binary')
-                    win_ending_file = _ensure_win_line_endings(path)
-                    patch_args[-1] = win_ending_file
-                    try:
-                        check_call_env([patch] + patch_args, cwd=src_dir, stdout=stdout, stderr=stderr)
-                    except:
-                        raise
-                    finally:
-                        if os.path.exists(win_ending_file):
-                            os.remove(win_ending_file)  # clean up .patch_win file
-                finally:
-                    if os.path.exists(unix_ending_file):
-                        os.remove(unix_ending_file)  # clean up .patch_unix file
-            else:
-                raise
+                print(f'Applying patch: {path} with args:\n{patch_args}')
+
+            try:
+                try_apply_patch(patch_exe, patch_args,
+                                cwd=src_dir, stdout=stdout, stderr=stderr)
+            except Exception as e:
+                exception = e
+        if exception:
+            raise exception
+    return attributes_output
+
+
+def apply_patch(src_dir, patch, config, git=None):
+    apply_one_patch(src_dir, os.path.dirname(patch), os.path.basename(patch), config, git)
 
 
 def provide(metadata):
@@ -682,11 +883,11 @@ def provide(metadata):
                     if not isdir(src_dir_symlink):
                         os.makedirs(src_dir_symlink)
                     if metadata.config.verbose:
-                        print("Creating sybmolic link pointing to %s at %s" % (path, src_dir))
+                        print(f"Creating sybmolic link pointing to {path} at {src_dir}")
                     os.symlink(path, src_dir)
                 else:
                     if metadata.config.verbose:
-                        print("Copying %s to %s" % (path, src_dir))
+                        print(f"Copying {path} to {src_dir}")
                     # careful here: we set test path to be outside of conda-build root in setup.cfg.
                     #    If you don't do that, this is a recursive function
                     copy_into(path, src_dir, metadata.config.timeout, symlinks=True,
@@ -696,8 +897,10 @@ def provide(metadata):
                     os.makedirs(src_dir)
 
             patches = ensure_list(source_dict.get('patches', []))
+            patch_attributes_output = []
             for patch in patches:
-                apply_patch(src_dir, join(metadata.path, patch), metadata.config, git)
+                patch_attributes_output += [apply_one_patch(src_dir, metadata.path, patch, metadata.config, git)]
+            _patch_attributes_debug_print(patch_attributes_output)
 
     except CalledProcessError:
         shutil.move(metadata.config.work_dir, metadata.config.work_dir + '_failed_provide')

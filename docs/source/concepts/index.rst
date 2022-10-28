@@ -9,7 +9,7 @@ Concepts
    generating-index
    recipe
    package-naming-conv
-   
+
 What is a “package”?
 --------------------
 
@@ -46,4 +46,3 @@ Building Anaconda installers
 
 * The idea is to build an Anaconda metapackage and bundle it together with some
   other packages to build an Anaconda installer.
-
