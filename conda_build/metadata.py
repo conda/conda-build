@@ -1583,9 +1583,16 @@ class MetaData:
 
         # if dependencies are only 'target_platform' then ignore that.
         if dependencies == ["target_platform"]:
-            return {}
+            hash_contents = {}
         else:
-            return {key: self.config.variant[key] for key in dependencies}
+            hash_contents = {key: self.config.variant[key] for key in dependencies}
+
+        # include virtual packages in run
+        run_reqs = self.meta.get("requirements", {}).get("run", [])
+        virtual_pkgs = [req for req in run_reqs if req.startswith("__")]
+
+        hash_contents.update({pkg.split(" ")[0]: pkg for pkg in virtual_pkgs})
+        return hash_contents
 
     def hash_dependencies(self):
         """With arbitrary pinning, we can't depend on the build string as done in
