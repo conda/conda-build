@@ -183,7 +183,7 @@ def test_cross_info_index_platform(testing_config):
 
 
 def test_noarch_with_platform_deps(testing_workdir, testing_config):
-    recipe_path = os.path.join(metadata_dir, "noarch_with_platform_deps")
+    recipe_path = os.path.join(metadata_dir, "_noarch_with_platform_deps")
     build_ids = set()
     for platform in ['osx', 'linux', 'win']:
         m = api.render(recipe_path, config=testing_config, platform=platform)[0][0]
@@ -193,7 +193,7 @@ def test_noarch_with_platform_deps(testing_workdir, testing_config):
 
 
 def test_noarch_with_no_platform_deps(testing_workdir, testing_config):
-    recipe_path = os.path.join(metadata_dir, "noarch_with_no_platform_deps")
+    recipe_path = os.path.join(metadata_dir, "_noarch_with_no_platform_deps")
     build_ids = set()
     for platform in ['osx', 'linux', 'win']:
         m = api.render(recipe_path, config=testing_config, platform=platform)[0][0]
