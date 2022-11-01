@@ -1,0 +1,24 @@
+#conda env update --file tests/environment.yml
+name: conda-build
+channels:
+  - defaults
+dependencies:
+  - anaconda-client
+  - bs4
+  - chardet
+  - conda
+  - conda-package-handling
+  - filelock
+  - flaky
+  - glob2
+  - jinja2
+  - pkginfo
+  - psutil
+  - pytest
+  - pytest-cov
+  - pytest-mock
+  - python-libarchive-c
+  - toml
+  - pip
+  - pip:
+    - allure-pytest
