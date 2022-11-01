@@ -182,6 +182,26 @@ def test_cross_info_index_platform(testing_config):
     assert metadata.config.host_platform == info_index["platform"]
 
 
+def test_noarch_with_platform_deps(testing_workdir, testing_config):
+    recipe_path = os.path.join(metadata_dir, "noarch_with_platform_deps")
+    build_ids = set()
+    for platform in ['osx', 'linux', 'win']:
+        m = api.render(recipe_path, config=testing_config, platform=platform)[0][0]
+        build_ids.add(m.build_id())
+
+    assert len(build_ids) == 3
+
+
+def test_noarch_with_no_platform_deps(testing_workdir, testing_config):
+    recipe_path = os.path.join(metadata_dir, "noarch_with_no_platform_deps")
+    build_ids = set()
+    for platform in ['osx', 'linux', 'win']:
+        m = api.render(recipe_path, config=testing_config, platform=platform)[0][0]
+        build_ids.add(m.build_id())
+
+    assert len(build_ids) == 1
+
+
 def test_setting_condarc_vars_with_env_var_expansion(testing_workdir):
     os.makedirs("config")
     # python won't be used - the stuff in the recipe folder will override it
