@@ -1821,7 +1821,7 @@ def _write_sh_activation_text(file_handle, m):
                             cygpath_suffix))
 
     if conda_46:
-        py_flags = '-m' if m.config.debug else '-m -I'
+        py_flags = '-m' if m.config.debug else '-I -m'
         file_handle.write(
             f"""eval "$('{sys.executable}' {py_flags} conda shell.bash hook)"\n"""
         )
