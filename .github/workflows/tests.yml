@@ -6,16 +6,11 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - 'docs/**'
+      - feature/**
 
   # NOTE: github.event context is pull_request payload:
   # https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#pull_request
   pull_request:
-    types:
-      - opened
-      - reopened
-      - synchronize
 
 concurrency:
   # Concurrency group that uses the workflow name and PR number if available
@@ -109,7 +104,6 @@ jobs:
         with:
           name: Linux_replay-py-${{ matrix.python-version }}_${{ matrix.conda-version }}_${{ matrix.test-type }}
           path: pytest-replay/
-
 
   windows:
     runs-on: windows-2019
@@ -269,8 +263,7 @@ jobs:
           name: Win-${{ env.CONDA_VERSION }}-Python${{ matrix.python-version }}-${{ env. parameters.serial_or_parallel  }}
         if: always()
 
-
-  macOS:
+  macos:
     runs-on: macos-11
     defaults:
       run:
@@ -354,3 +347,73 @@ jobs:
           path: ${{ github.workspace }}/pytest-replay
           name: macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ env. parameters.serial_or_parallel  }}
         if: always()
+
+  analyze:
+    name: Analyze test results
+    needs: [windows, linux, macos]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download test results
+        uses: actions/download-artifact@v3
+
+      - name: Upload combined test results
+        # provides one downloadable archive of all .coverage/test-report.xml files
+        # of all matrix runs for further analysis.
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results-${{ github.sha }}-all
+          path: test-results-${{ github.sha }}-*
+          retention-days: 90  # default: 90
+
+      - name: Test Summary
+        uses: test-summary/action@v2
+        with:
+          paths: ./test-results-${{ github.sha }}-**/test-report*.xml
+
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@release/v1
+        with:
+          jobs: ${{ toJSON(needs) }}
+
+  build:
+    name: Canary Build
+    needs: [analyze]
+    # only build canary build iff
+    # - prior steps succeeded,
+    # - this is the main repo, and
+    # - we are on the main (or feature) branch
+    if: >-
+      success()
+      && !github.event.repository.fork
+      && (
+        github.ref_name == 'main'
+        || startsWith(github.ref_name, 'feature/')
+      )
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            subdir: linux-64
+          - runner: macos-latest
+            subdir: osx-64
+          - runner: windows-latest
+            subdir: win-64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      # Clean checkout of specific git ref needed for package metadata version
+      # which needs env vars GIT_DESCRIBE_TAG and GIT_BUILD_STR:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref }}
+          clean: true
+          fetch-depth: 0
+
+      - name: Create and upload canary build
+        uses: conda/actions/canary-release@v22.10.0
+        with:
+          package-name: ${{ github.event.repository.name }}
+          subdir: ${{ matrix.subdir }}
+          anaconda-org-channel: conda-canary
+          anaconda-org-label: ${{ github.ref_name }}
+          anaconda-org-token: ${{ secrets.ANACONDA_ORG_TOKEN }}
