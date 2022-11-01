@@ -2743,7 +2743,7 @@ def write_test_scripts(metadata, env_vars, py_files, pl_files, lua_files, r_file
                         )
                     )
                 else:
-                    py_flags = '-m' if metadata.config.debug else '-m -I'
+                    py_flags = '-m' if metadata.config.debug else '-I -m'
                     tf.write(
                         f"""eval "$('{sys.executable}' {py_flags} conda shell.bash hook)"\n"""
                     )
