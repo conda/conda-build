@@ -36,8 +36,8 @@ before_script:
 ## Put your main computations here!
 script:
   # - echo 4.1.0.rc1 > conda/.version
-  - python -c "from platform import system as s; import sys; sys.exit(int(s()!='Windows'))" || conda build conda.recipe --python $PYTHON_VERSION
-  - python -c "from platform import system as s; import sys; sys.exit(int(s()=='Windows'))" || conda build conda.recipe --python %PYTHON_VERSION%
+  - python -c "from platform import system as s; import sys; sys.exit(int(s()!='Windows'))" || conda build recipe --python $PYTHON_VERSION
+  - python -c "from platform import system as s; import sys; sys.exit(int(s()=='Windows'))" || conda build recipe --python %PYTHON_VERSION%
 
 #===============================================================================
 # Build Results
