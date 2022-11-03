@@ -70,6 +70,7 @@ Daniel Bast <2790401+dbast@users.noreply.github.com>
 Daniel Damiani <ddamiani@slac.stanford.edu>
 Daniel Holth <dholth@anaconda.com>
 Darren Dale <dsdale24@gmail.com>
+Dave Clements <tnabtaf@gmail.com>
 Dave Hirschfeld <dhirschfeld@users.noreply.github.com> David Hirschfeld <david.hirschfeld@gazprom-mt.com>
 David Froger <david.froger@mailoo.org>
 David Li <li.davidm96@gmail.com>
@@ -79,6 +80,7 @@ Diogo de Campos <campos@esss.com.br>
 Dougal J. Sutherland <dougal@gmail.com>
 Duncan Macleod <duncan.macleod@ligo.org>
 Ed Campbell <drescampbell@gmail.com>
+Eli Rykoff <erykoff@stanford.edu> erykoff <erykoff@stanford.edu>
 Elliot Hughes <e.hughes@winton.com>
 Eric Dill <edill@bnl.gov>
 Evan Hubinger <evanjhub@gmail.com>
@@ -102,6 +104,7 @@ Ilan Schnell <ilan@continuum.io> Ilan Schnell <ilanschnell@gmail.com>
 Isuru Fernando <isuruf@gmail.com> Isuru Fernando <isuru.11@cse.mrt.ac.lk>
 Ivan Kalev <ivan.kalev@gmail.com> ikalev <ivan.kalev@gmail.com>
 Jacob Walls <jacobtylerwalls@gmail.com>
+Jaime Rodríguez-Guerra <jaimergp@users.noreply.github.com>
 James Abbott <j.abbott@dundee.ac.uk>
 James Lamb <jaylamb20@gmail.com>
 James Sexton <TwistedLadder@gmail.com>
@@ -136,6 +139,7 @@ Ken Odegard <kodegard@anaconda.com> Ken Odegard <ken.odegard@gmail.com>
 Korijn van Golen <korijn@gmail.com>
 Kurt Schelfthout <kurt.schelfthout@gmail.com>
 Kyle Leaders <remkade@users.noreply.github.com>
+Landon Butterworth <landon.butterworth@thinkboxsoftware.com> landon.butterworth <landon.butterworth@thinkboxsoftware.com>
 Lennart Fricke <lennart@die-frickes.eu>
 Levi Naden <lnaden@vt.edu>
 Lori Burns <lori.burns@gatech.edu>
@@ -214,6 +218,7 @@ Sean Ross-Ross <srossross@gmail.com> Sean <srossross@gmail.com>
 Sean Ross-Ross <srossross@gmail.com> srossross <srossross@gmail.com>
 Sean Yen <seanyen@microsoft.com> seanyen <seanyen@microsoft.com>
 Sergio Oller <sergioller@gmail.com>
+Serhii Kupriienko <79282962+skupr-anaconda@users.noreply.github.com>
 Shaun Walbridge <shaun.walbridge@gmail.com>
 Siu Kwan Lam <michael.lam.sk@gmail.com>
 Sophia Castellarin <scastellarin@anaconda.com> sophia <scastellarin95@gmail.com>
@@ -256,7 +261,6 @@ Yoav Ram <yoavram+github@gmail.com>
 Yu Feng <rainwoodman@gmail.com>
 Zane Dufour <zane.dufour@gmail.com> zdog234 <zane.dufour@gmail.com>
 dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
-landon.butterworth <landon.butterworth@thinkboxsoftware.com>
 peter1000 <peter.margo@gmx.de>
 pre-commit CI <66853113+pre-commit-ci[bot]@users.noreply.github.com> pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
 pwwang <pwwang@pwwang.com>
