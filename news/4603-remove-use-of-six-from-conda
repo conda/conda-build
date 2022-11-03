@@ -1,6 +1,6 @@
 ### Enhancements
 
-* Remove py2 compatibility code and use of six.py code exported from conda.
+* <news item>
 
 ### Bug fixes
 
@@ -8,7 +8,7 @@
 
 ### Deprecations
 
-* <news item>
+* Remove py2 compatibility code and use of six.py code exported from conda. (#4603)
 
 ### Docs
 

@@ -8,7 +8,7 @@
 
 ### Deprecations
 
-* Removed internal usage of the conda memoized decorator
+* Removed internal usage of the `memoized` decorator. (#4593, #4615)
 
 ### Docs
 

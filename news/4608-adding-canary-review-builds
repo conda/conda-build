@@ -16,4 +16,4 @@
 
 ### Other
 
-* Introduce canary and review builds as part of GitHub CI. (#4608)
+* Introduce canary and review builds as part of GitHub CI. (#4608, #4613)

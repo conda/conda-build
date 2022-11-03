@@ -8,7 +8,7 @@
 
 ### Deprecations
 
-* Drop cytoolz dependency. (#4556)
+* Drop `cytoolz` dependency. (#4556)
 
 ### Docs
 

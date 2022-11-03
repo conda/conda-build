@@ -1,6 +1,6 @@
 ### Enhancements
 
-* Add overlinking_ignore_patterns build parameter to speed up recipes where it is not helpful. (#4576)
+* <news item>
 
 ### Bug fixes
 
@@ -12,7 +12,7 @@
 
 ### Docs
 
-* <news item>
+* Update "Channels and generating an index" docs to specify additional platforms. (#4602)
 
 ### Other
 

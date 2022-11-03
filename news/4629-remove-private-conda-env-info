@@ -1,0 +1,19 @@
+### Enhancements
+
+* <news item>
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* Conda 4.2 introduced a private conda env that appears to have been a testing environment. This is no longer used and is only included in conda-build as an informational status. Removing in accordance with the feature pending deprecation starting with conda 22.11.0. (#4629)
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>

@@ -1,6 +1,6 @@
 ### Enhancements
 
-* Add `win-arm64` as a recognized platform (subdir). (#4579)
+* Add `overlinking_ignore_patterns` build parameter to speed up recipes where it is not helpful. (#4576)
 
 ### Bug fixes
 
