@@ -696,10 +696,11 @@ def test_user_warning(tmpdir, recwarn):
     recipe.write("")
 
     main_build.parse_args([str(recipe)])
-    assert "RECIPE_PATH received is a file. File: {}\n" \
-           "It should be a path to a folder. \n" \
-           "Forcing conda-build to use the recipe file.".format(str(recipe))\
-           == str(recwarn.pop(UserWarning).message)
+    assert (
+        f"RECIPE_PATH received is a file ({recipe}).\n"
+        "It should be a path to a folder.\n"
+        "Forcing conda-build to use the recipe file."
+    ) == str(recwarn.pop(UserWarning).message)
 
     main_build.parse_args([str(dir_recipe_path)])
     assert not recwarn.list
