@@ -28,11 +28,17 @@ repos:
       # ensure syntaxes are valid
       - id: check-toml
       - id: check-yaml
-        exclude: ^(conda\.recipe/meta\.yaml|conda_build/templates/.*\.yaml|docs/click/meta\.yaml|docs/source/user-guide/tutorials/meta\.yaml)
+        exclude: |
+          (?x)^(
+            recipe/meta\.yaml |
+            conda_build/templates/.*\.yaml |
+            docs/click/meta\.yaml |
+            docs/source/user-guide/tutorials/meta\.yaml
+          )
       # catch git merge/rebase problems
       - id: check-merge-conflict
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.38.2
+    rev: v3.2.0
     hooks:
       - id: pyupgrade
         args: ["--py37-plus"]
@@ -51,7 +57,7 @@ repos:
     hooks:
       - id: flake8
   - repo: https://github.com/PyCQA/pylint
-    rev: v2.15.3
+    rev: v2.15.5
     hooks:
       - id: pylint
         args: [--exit-zero]
