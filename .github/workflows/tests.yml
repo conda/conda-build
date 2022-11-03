@@ -72,20 +72,21 @@ jobs:
           source ci/github/install_conda_build_test_deps
           pip install -e .
           pip install setuptools wheel twine
+          pip install pytest-html
+          pip install allure-pytest
           conda info -a
+
+          echo "Creating Replay and Result Report Folders"
           mkdir -p ./pytest-replay
           mkdir -p ./allure-results
           mkdir -p ./allure-reslusts/allure-reports
           mkdir -p ./allure-results/allure-history
-
-          echo "Finding the Test folder"
-          pwd
+          mkdir -p ./tests_results
       
       - name: Run Parallel tests
         if: matrix.test-type == 'parallel'
         run: |
-          python -m pip install allure-pytest
-          pytest \
+          pytest ./test_api_build.py\
               --color=yes \
               -vv \
               -n auto \
@@ -95,10 +96,16 @@ jobs:
               --cov-report xml \
               -m "not serial" tests \
               ${{ env.pytest-replay }} \
-              --alluredir = allure-results
+              --alluredir = allure-results \
+              --html = tests_result\test_report.html
+
       
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v2
         with:
           name: Linux_replay-py-${{ matrix.python-version }}_${{ matrix.conda-version }}_${{ matrix.test-type }}
           path: pytest-replay/
+
+      - name: Open Test Result Report
+        run: |
+          open ./tests_result/test_report.html
