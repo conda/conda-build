@@ -14,7 +14,6 @@ import sys
 
 import yaml
 
-from conda_build.conda_interface import string_types
 from conda_build.conda_interface import subdir
 from conda_build.conda_interface import cc_conda_build
 from conda_build.utils import ensure_list, get_logger, islist, on_win, trim_empty_keys
@@ -358,9 +357,9 @@ def _get_zip_keys(spec):
     zip_keys = spec.get('zip_keys')
     if not zip_keys:
         return set()
-    elif islist(zip_keys, uniform=lambda e: isinstance(e, string_types)):
+    elif islist(zip_keys, uniform=lambda e: isinstance(e, str)):
         return {frozenset(zip_keys)}
-    elif islist(zip_keys, uniform=lambda e: islist(e, uniform=lambda e: isinstance(e, string_types))):
+    elif islist(zip_keys, uniform=lambda e: islist(e, uniform=lambda e: isinstance(e, str))):
         return {frozenset(zg) for zg in zip_keys}
 
     raise ValueError("'zip_keys' expect list of string or list of lists of string")

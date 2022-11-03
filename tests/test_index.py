@@ -202,7 +202,6 @@ def test_file_index_on_single_subdir_1(testing_workdir):
 
     updated_packages = expected_repodata_json.get("packages")
 
-
     expected_repodata_json["packages"] = updated_packages
 
     with open(join(testing_workdir, "osx-64", "repodata.json")) as fh:
@@ -607,7 +606,6 @@ def _build_test_index(workdir):
     """
     Copy repodata.json, packages to workdir for testing.
     """
-
 
     # Python 3.7 workaround "no dirs_exist_ok flag"
     index_hotfix_pkgs = join(here, "index_hotfix_pkgs")

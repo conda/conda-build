@@ -30,7 +30,7 @@ except ImportError:
 
 from conda_build import source, metadata
 from conda_build.config import get_or_merge_config
-from conda_build.conda_interface import text_type, iteritems, TemporaryDirectory, cc_conda_build
+from conda_build.conda_interface import TemporaryDirectory, cc_conda_build
 from conda_build.license_family import allowed_license_families, guess_license_family
 from conda_build.utils import rm_rf, ensure_list
 from conda_build.variants import get_package_variants, DEFAULT_VARIANTS
@@ -867,7 +867,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
                               'use_this': True if use_binaries_ver else False}}
 
     # Figure out what binaries are available once:
-    for archive_type, archive_details in iteritems(cran_layout_template):
+    for archive_type, archive_details in cran_layout_template.items():
         archive_details['binaries'] = dict()
         if archive_type != 'source' and archive_details['use_this']:
             get_available_binaries(cran_url, archive_details)
@@ -1017,7 +1017,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         available = {}
 
         description_path = None
-        for archive_type, archive_details in iteritems(cran_layout):
+        for archive_type, archive_details in cran_layout.items():
             contrib_url = ''
             archive_details['cran_version'] = d['cran_version']
             archive_details['conda_version'] = d['conda_version']
@@ -1115,9 +1115,9 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         _all = ['linux', 'win32', 'win64', 'osx']
         from_source = _all[:]
         binary_id = 1
-        for archive_type, archive_details in iteritems(available):
+        for archive_type, archive_details in available.items():
             if archive_type == 'source':
-                for k, v in iteritems(archive_details):
+                for k, v in archive_details.items():
                     d[k] = v
             else:
                 sel = archive_details['selector']
@@ -1170,7 +1170,7 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
         # Render the source and binaryN keys
         binary_id = 1
         d['version_binary1'] = d['version_binary2'] = ""
-        for archive_type, archive_details in iteritems(available):
+        for archive_type, archive_details in available.items():
             if archive_type == 'source':
                 d['source'] = SOURCE_META.format(**archive_details)
                 d['version_source'] = VERSION_META.format(**archive_details)
@@ -1413,8 +1413,8 @@ def skeletonize(in_packages, output_dir=".", output_suffix="", add_maintainer=No
 
         from_sources = d['from_source']
         # Normalize the metadata values
-        d = {k: unicodedata.normalize("NFKD", text_type(v)).encode('ascii', 'ignore')
-             .decode() for k, v in iteritems(d)}
+        d = {k: unicodedata.normalize("NFKD", str(v)).encode('ascii', 'ignore')
+             .decode() for k, v in d.items()}
         try:
             makedirs(join(dir_path))
         except:

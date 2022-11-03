@@ -1,7 +1,6 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 from collections import OrderedDict, defaultdict
-from locale import getpreferredencoding
 from functools import lru_cache
 import json
 import os
@@ -17,7 +16,7 @@ import tempfile
 
 import yaml
 
-from .conda_interface import (PY3, UnsatisfiableError, ProgressiveFetchExtract,
+from .conda_interface import (UnsatisfiableError, ProgressiveFetchExtract,
                               TemporaryDirectory)
 from .conda_interface import execute_actions
 from .conda_interface import pkgs_dirs
@@ -705,10 +704,8 @@ def distribute_variants(metadata, variants, permit_unsatisfiable_variants=False,
     recipe_requirements = metadata.extract_requirements_text()
     recipe_package_and_build_text = metadata.extract_package_and_build_text()
     recipe_text = recipe_package_and_build_text + recipe_requirements
-    if PY3 and hasattr(recipe_text, 'decode'):
+    if hasattr(recipe_text, 'decode'):
         recipe_text = recipe_text.decode()
-    elif not PY3 and hasattr(recipe_text, 'encode'):
-        recipe_text = recipe_text.encode()
 
     metadata.config.variant = variants[0]
     used_variables = metadata.get_used_loop_vars(force_global=False)
@@ -796,9 +793,6 @@ def render_recipe(recipe_path, config, no_download_source=False, variants=None,
     results returned here.)
     """
     arg = recipe_path
-    # Don't use byte literals for paths in Python 2
-    if not PY3:
-        arg = arg.decode(getpreferredencoding() or 'utf-8')
     if isfile(arg):
         if arg.endswith(('.tar', '.tar.gz', '.tgz', '.tar.bz2')):
             recipe_dir = tempfile.mkdtemp()
@@ -891,11 +885,8 @@ class _IndentDumper(yaml.Dumper):
 
 
 yaml.add_representer(_MetaYaml, _represent_omap)
-if PY3:
-    yaml.add_representer(str, _unicode_representer)
-    unicode = None  # silence pyflakes about unicode not existing in py3
-else:
-    yaml.add_representer(unicode, _unicode_representer)
+yaml.add_representer(str, _unicode_representer)
+unicode = None  # silence pyflakes about unicode not existing in py3
 
 
 def output_yaml(metadata, filename=None, suppress_outputs=False):

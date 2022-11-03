@@ -3,8 +3,6 @@
 import os
 import sys
 
-from .conda_interface import iteritems
-
 
 env_vars = [
     'FEATURE_DEBUG',
@@ -15,7 +13,7 @@ env_vars = [
 # list of features, where each element is a tuple(name, boolean), i.e. having
 # FEATURE_DEBUG=1 and FEATURE_NOMKL=0 -> [('debug', True), ('nomkl', False)]
 feature_list = []
-for key, value in iteritems(os.environ):
+for key, value in os.environ.items():
     if key in env_vars:
         if value not in ('0', '1'):
             sys.exit("Error: did not expect environment variable '%s' "

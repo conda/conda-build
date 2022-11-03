@@ -14,8 +14,6 @@ from functools import lru_cache
 from glob import glob
 from os.path import join, normpath
 
-# noqa here because PY3 is used only on windows, and trips up flake8 otherwise.
-from .conda_interface import text_type, PY3  # noqa
 from .conda_interface import (CondaError, LinkError, LockError, NoPackagesFoundError,
                               PaddingError, UnsatisfiableError)
 from .conda_interface import display_actions, execute_actions, execute_plan, install_actions
@@ -525,7 +523,7 @@ def windows_vars(m, get_default, prefix):
     """This is setting variables on a dict that is part of the get_default function"""
     # We have gone for the clang values here.
     win_arch = 'i386' if str(m.config.host_arch) == '32' else 'amd64'
-    win_msvc = '19.0.0' if PY3 else '15.0.0'
+    win_msvc = '19.0.0'
     library_prefix = join(prefix, 'Library')
     drive, tail = m.config.host_prefix.split(':')
     get_default('SCRIPTS', join(prefix, 'Scripts'))
