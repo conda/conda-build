@@ -40,8 +40,12 @@ def ldd(path):
     return res
 
 
-@lru_cache(None)
 def get_linkages(obj_files, prefix, sysroot):
+    return _get_linkages(tuple(obj_files), prefix, sysroot)
+
+
+@lru_cache(maxsize=None)
+def _get_linkages(obj_files, prefix, sysroot):
     res = {}
 
     for f in obj_files:
@@ -84,7 +88,7 @@ def get_linkages(obj_files, prefix, sysroot):
     return res
 
 
-@lru_cache(None)
+@lru_cache(maxsize=None)
 def get_package_files(dist, prefix):
     files = []
     if hasattr(dist, 'get'):
@@ -96,7 +100,7 @@ def get_package_files(dist, prefix):
     return files
 
 
-@lru_cache(None)
+@lru_cache(maxsize=None)
 def get_package_obj_files(dist, prefix):
     res = []
     files = get_package_files(dist, prefix)
@@ -108,7 +112,7 @@ def get_package_obj_files(dist, prefix):
     return res
 
 
-@lru_cache(None)
+@lru_cache(maxsize=None)
 def get_untracked_obj_files(prefix):
     res = []
     files = untracked(prefix)

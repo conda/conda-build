@@ -130,7 +130,7 @@ except ImportError:
     from scandir import walk
 
 
-@lru_cache(None)
+@lru_cache(maxsize=None)
 def stat_file(path):
     return os.stat(path)
 

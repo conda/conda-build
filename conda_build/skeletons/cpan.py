@@ -561,7 +561,7 @@ def skeletonize(packages, output_dir=".", version=None,
                 f.write(CPAN_BLD_BAT.format(**d))
 
 
-@lru_cache(None)
+@lru_cache(maxsize=None)
 def is_core_version(core_version, version):
     if core_version is None:
         return False
@@ -608,7 +608,7 @@ def add_parser(repos):
         help='Write recipes for perl core modules (default: %(default)s). ')
 
 
-@lru_cache(None)
+@lru_cache(maxsize=None)
 def latest_pkg_version(pkg):
     '''
     :returns: the latest version of the specified conda package available
@@ -925,7 +925,7 @@ def core_module_dict(core_modules, module):
     return None
 
 
-@lru_cache(None)
+@lru_cache(maxsize=None)
 def metacpan_api_is_core_version(cpan_url, module):
     if 'FindBin' in module:
         print('debug')

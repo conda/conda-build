@@ -70,7 +70,7 @@ def get_lua_include_dir(config):
     return join(config.host_prefix, "include")
 
 
-@lru_cache(None)
+@lru_cache(maxsize=None)
 def verify_git_repo(git_exe, git_dir, git_url, git_commits_since_tag, debug=False,
                     expected_rev='HEAD'):
     env = os.environ.copy()
@@ -269,7 +269,7 @@ def get_dict(m, prefix=None, for_env=True, skip_build_id=False, escape_backslash
         d.update(meta_vars(m, skip_build_id=skip_build_id))
 
     # system
-    d.update(system_vars(d, m, prefix))
+    d.update(os_vars(m, prefix))
 
     # features
     d.update({feat.upper(): str(int(value)) for feat, value in
@@ -488,7 +488,7 @@ def meta_vars(meta, skip_build_id=False):
     return d
 
 
-@lru_cache(None)
+@lru_cache(maxsize=None)
 def get_cpu_count():
     if sys.platform == "darwin":
         # multiprocessing.cpu_count() is not reliable on OSX
@@ -607,7 +607,7 @@ def osx_vars(m, get_default, prefix):
     get_default('BUILD', BUILD)
 
 
-@lru_cache(None)
+@lru_cache(maxsize=None)
 def _machine_and_architecture():
     return platform.machine(), platform.architecture()
 
@@ -654,8 +654,17 @@ def set_from_os_or_variant(out_dict, key, variant, default):
         out_dict[key] = value
 
 
-@lru_cache(None)
 def system_vars(env_dict, m, prefix):
+    warnings.warn(
+        "`conda_build.environ.system_vars` is pending deprecation and will be removed in a "
+        "future release. Please use `conda_build.environ.os_vars` instead.",
+        PendingDeprecationWarning,
+    )
+    return os_vars(m, prefix)
+
+
+@lru_cache(maxsize=None)
+def os_vars(m, prefix):
     d = dict()
     # note the dictionary is passed in here - variables are set in that dict if they are non-null
     get_default = lambda key, default='': set_from_os_or_variant(d, key, m.config.variant, default)
