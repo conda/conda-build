@@ -3,6 +3,7 @@
 from collections import OrderedDict, defaultdict
 import contextlib
 import fnmatch
+from functools import lru_cache
 import hashlib
 from itertools import filterfalse
 import json
@@ -46,7 +47,6 @@ from conda.api import PackageCacheData # noqa
 
 from .conda_interface import hashsum_file, md5_file, unix_path_to_win, win_path_to_unix # noqa
 from .conda_interface import root_dir, pkgs_dirs # noqa
-from .conda_interface import memoized # noqa
 from .conda_interface import StringIO # noqa
 from .conda_interface import VersionOrder, MatchSpec # noqa
 from .conda_interface import cc_conda_build # noqa
@@ -130,7 +130,7 @@ except ImportError:
     from scandir import walk
 
 
-@memoized
+@lru_cache(None)
 def stat_file(path):
     return os.stat(path)
 

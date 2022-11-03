@@ -3,6 +3,7 @@
 from collections import OrderedDict
 import contextlib
 import copy
+from functools import lru_cache
 import hashlib
 import json
 import os
@@ -19,7 +20,6 @@ from .conda_interface import MatchSpec
 from .conda_interface import envs_dirs
 
 from conda_build import exceptions, utils, variants, environ
-from conda_build.conda_interface import memoized
 from conda_build.features import feature_list
 from conda_build.config import Config, get_or_merge_config
 from conda_build.utils import (
@@ -958,7 +958,7 @@ def _filter_recipe_text(text, extract_pattern=None):
     return text
 
 
-@memoized
+@lru_cache(None)
 def read_meta_file(meta_path):
     with open(meta_path, "rb") as f:
         recipe_text = UnicodeDammit(f.read()).unicode_markup

@@ -10,13 +10,13 @@ import re
 import subprocess
 import sys
 import warnings
+from functools import lru_cache
 from glob import glob
 from os.path import join, normpath
 
 from .conda_interface import (CondaError, LinkError, LockError, NoPackagesFoundError,
                               PaddingError, UnsatisfiableError)
 from .conda_interface import display_actions, execute_actions, execute_plan, install_actions
-from .conda_interface import memoized
 from .conda_interface import package_cache, TemporaryDirectory
 from .conda_interface import pkgs_dirs, root_dir, create_default_packages
 from .conda_interface import reset_context
@@ -70,7 +70,7 @@ def get_lua_include_dir(config):
     return join(config.host_prefix, "include")
 
 
-@memoized
+@lru_cache(None)
 def verify_git_repo(git_exe, git_dir, git_url, git_commits_since_tag, debug=False,
                     expected_rev='HEAD'):
     env = os.environ.copy()
@@ -488,7 +488,7 @@ def meta_vars(meta, skip_build_id=False):
     return d
 
 
-@memoized
+@lru_cache(None)
 def get_cpu_count():
     if sys.platform == "darwin":
         # multiprocessing.cpu_count() is not reliable on OSX
@@ -607,7 +607,7 @@ def osx_vars(m, get_default, prefix):
     get_default('BUILD', BUILD)
 
 
-@memoized
+@lru_cache(None)
 def _machine_and_architecture():
     return platform.machine(), platform.architecture()
 
@@ -654,7 +654,7 @@ def set_from_os_or_variant(out_dict, key, variant, default):
         out_dict[key] = value
 
 
-@memoized
+@lru_cache(None)
 def system_vars(env_dict, m, prefix):
     d = dict()
     # note the dictionary is passed in here - variables are set in that dict if they are non-null

@@ -1,11 +1,11 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from functools import lru_cache
 import sys
 import re
 import subprocess
 from os.path import join, basename
 
-from conda_build.conda_interface import memoized
 from conda_build.conda_interface import untracked
 from conda_build.conda_interface import linked_data
 
@@ -40,7 +40,7 @@ def ldd(path):
     return res
 
 
-@memoized
+@lru_cache(None)
 def get_linkages(obj_files, prefix, sysroot):
     res = {}
 
@@ -84,7 +84,7 @@ def get_linkages(obj_files, prefix, sysroot):
     return res
 
 
-@memoized
+@lru_cache(None)
 def get_package_files(dist, prefix):
     files = []
     if hasattr(dist, 'get'):
@@ -96,7 +96,7 @@ def get_package_files(dist, prefix):
     return files
 
 
-@memoized
+@lru_cache(None)
 def get_package_obj_files(dist, prefix):
     res = []
     files = get_package_files(dist, prefix)
@@ -108,7 +108,7 @@ def get_package_obj_files(dist, prefix):
     return res
 
 
-@memoized
+@lru_cache(None)
 def get_untracked_obj_files(prefix):
     res = []
     files = untracked(prefix)
