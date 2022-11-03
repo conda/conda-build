@@ -86,7 +86,7 @@ jobs:
       - name: Run Parallel tests
         if: matrix.test-type == 'parallel'
         run: |
-          pytest ./test_api_build.py\
+          pytest \
               --color=yes \
               -vv \
               -n auto \
@@ -99,7 +99,6 @@ jobs:
               --alluredir = allure-results \
               --html = tests_result\test_report.html
 
-      
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v2
         with:
