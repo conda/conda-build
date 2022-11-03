@@ -382,8 +382,10 @@
   num_commits: 1
   first_commit: 2018-04-19 18:36:36
   github: ceball
-- name: landon.butterworth
+- name: Landon Butterworth
   email: landon.butterworth@thinkboxsoftware.com
+  aliases:
+  - landon.butterworth
   num_commits: 1
   first_commit: 2017-08-09 16:05:57
   github: ratstache
@@ -1305,3 +1307,17 @@
   github: dependabot[bot]
   num_commits: 1
   first_commit: 2022-05-31 04:34:40
+- name: Serhii Kupriienko
+  email: 79282962+skupr-anaconda@users.noreply.github.com
+  github: skupr-anaconda
+- name: Eli Rykoff
+  email: erykoff@stanford.edu
+  aliases:
+  - erykoff
+  github: erykoff
+- name: Jaime Rodríguez-Guerra
+  email: jaimergp@users.noreply.github.com
+  github: jaimergp
+- name: Dave Clements
+  email: tnabtaf@gmail.com
+  github: tnabtaf
