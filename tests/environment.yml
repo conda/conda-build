@@ -22,3 +22,5 @@ dependencies:
   - pip
   - pip:
     - allure-pytest
+    - pytest-html
+    - pytest-md-report
