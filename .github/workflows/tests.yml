@@ -35,7 +35,7 @@ jobs:
       matrix:
         python-version: ['3.10']
         conda-version: [release]
-        test-type: [parallel]
+        test-type: [serial, parallel]
         include:
           - python-version: '3.10'
             conda-version: canary
@@ -93,10 +93,10 @@ jobs:
               --cov conda_build \
               --cov-append \
               --cov-report xml \
-              -m "not serial" tests \
+              -m "not serial" tests/test_api_build.py \
               ${{ env.pytest-replay }} \
               --alluredir = allure-results \
-              --html = tests_result\test_report.html
+              --html = tests_result/test_report.html
 
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v2
