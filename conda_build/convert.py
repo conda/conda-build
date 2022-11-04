@@ -1,19 +1,13 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-# (c) 2012-2017 Continuum Analytics, Inc. / http://continuum.io
-# All Rights Reserved
-#
-# conda is distributed under the terms of the BSD 3-clause license.
-# Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
-
 """
 Tools for converting conda packages
-
 """
 import glob
 import json
 import hashlib
 import os
+from pathlib import Path
 import re
 import shutil
 import sys
@@ -277,17 +271,18 @@ def update_lib_contents(lib_directory, temp_dir, target_platform, file_path):
         shutil.move(os.path.join(temp_dir, 'lib'), os.path.join(temp_dir, 'Lib'))
 
     elif target_platform == 'unix':
-        dest_dir = os.path.join(temp_dir, 'lib')
-        shutil.move(os.path.join(temp_dir, 'Lib'), dest_dir)
-        for lib_file in glob.iglob('{}/**' .format(dest_dir)):
-            python_version = retrieve_python_version(file_path)
-            py_folder = os.path.join(dest_dir, python_version)
-            new_lib_file = os.path.join(py_folder, os.path.basename(lib_file))
-            try:
-                os.makedirs(py_folder)
-            except:
-                pass
-            shutil.move(lib_file, new_lib_file)
+        temp_dir = Path(temp_dir)
+        src_dir = temp_dir / "Lib"
+        dest_dir = temp_dir / "lib"
+
+        src_dir.rename(dest_dir)
+
+        python_version = retrieve_python_version(file_path)
+        py_folder = dest_dir / python_version
+
+        for lib_file in dest_dir.glob("*"):
+            py_folder.mkdir(parents=True, exist_ok=True)
+            lib_file.rename(py_folder / lib_file.name)
 
 
 def update_executable_path(temp_dir, file_path, target_platform):
