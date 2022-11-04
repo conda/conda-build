@@ -273,18 +273,21 @@ def update_lib_contents(lib_directory, temp_dir, target_platform, file_path):
     elif target_platform == 'unix':
         temp_dir = Path(temp_dir)
         src_dir = temp_dir / "Lib"
-        dest_dir = temp_dir / "lib"
+        dst_dir = temp_dir / "lib"
 
         # rename Lib to lib (unix is case sensitive)
-        src_dir.rename(dest_dir)
+        src_dir.rename(dst_dir)
+
+        # get contents (before adding the new directory below)
+        contents = tuple(dst_dir.glob("*"))
 
         # create lib/pythonM.M directory
         python_version = retrieve_python_version(file_path)
-        py_folder = dest_dir / python_version
+        py_folder = dst_dir / python_version
         py_folder.mkdir(parents=True, exist_ok=True)
 
         # move contents of lib into lib/pythonM.M
-        for lib_file in dest_dir.glob("*"):
+        for lib_file in contents:
             lib_file.rename(py_folder / lib_file.name)
 
 
