@@ -9,6 +9,7 @@ on:
   push:
     branches:
       - main
+      - feature/**
     paths-ignore:
       - 'docs/**'
     paths:  # run if src/tests/recipe are modified
