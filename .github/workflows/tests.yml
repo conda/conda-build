@@ -10,24 +10,10 @@ on:
     branches:
       - main
       - feature/**
-    paths-ignore:
-      - 'docs/**'
-    paths:  # run if src/tests/recipe are modified
-      - conda_build/**
-      - tests/**
-      - '*.py'
-      - recipe/**
-      - .github/workflows/tests.yml
 
   # NOTE: github.event context is pull_request payload:
   # https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#pull_request
   pull_request:
-    paths:
-      - conda_build/**
-      - tests/**
-      - '*.py'
-      - recipe/**
-      - .github/workflows/tests.yml
 
 concurrency:
   # Concurrency group that uses the workflow name and PR number if available
@@ -53,6 +39,9 @@ jobs:
         include:
           - python-version: '3.10'
             conda-version: canary
+            test-type: serial
+          - python-version: '3.10'
+            conda-version: canary
             test-type: parallel
     env:
       pytest-replay: --replay-record-dir=pytest-replay/ --replay-base-name=Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
@@ -73,12 +62,10 @@ jobs:
         if: matrix.conda-version == 'canary'
         run: |
           conda install -y -c conda-canary/label/dev conda
-
       - name: Install default Conda if release version
         if: matrix.conda-version == 'release'
         run: |
           conda install -y conda
-
       - name: Source Scripts
         run: |
           source ci/github/install_conda_build_test_deps
@@ -87,12 +74,13 @@ jobs:
           pip install pytest-html
           pip install allure-pytest
           conda info -a
+
           echo "Creating Replay and Result Report Folders For Test Summaries..."
-          mkdir -p ./pytest-replay
           mkdir -p ./allure-results
           mkdir -p ./allure-reslusts/allure-reports
           mkdir -p ./allure-results/allure-history
           mkdir -p ./tests_results
+          mkdir ./pytest-replay
 
       - name: Run Parallel tests
         if: matrix.test-type == 'parallel'
