@@ -76,7 +76,7 @@ jobs:
           pip install allure-pytest
           conda info -a
 
-          echo "Creating Replay and Result Report Folders"
+          echo "Creating Replay and Result Report Folders For Test Summaries..."
           mkdir -p ./pytest-replay
           mkdir -p ./allure-results
           mkdir -p ./allure-reslusts/allure-reports
