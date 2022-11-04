@@ -95,8 +95,8 @@ jobs:
               --cov-report xml \
               -m "not serial" tests/test_api_build.py \
               ${{ env.pytest-replay }} \
-              --alluredir = allure-results \
-              --html = tests_result/test_report.html
+              --alluredir=allure-results \
+              --html=tests_result/test_report.html
 
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v2
