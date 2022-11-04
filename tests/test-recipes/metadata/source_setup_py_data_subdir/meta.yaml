@@ -4,7 +4,7 @@
 # it uses load_setup_py_data from conda_build.jinja_context to populate some fields
 # with values fed from setuptools.
 
-{% set data = load_setup_py_data(setup_file="src/setup.py") %}
+{% set data = load_setup_py_data(setup_file="src/setup.py", from_recipe_dir=True) %}
 
 package:
   name: conda-build-test-source-setup-py-data
