@@ -268,15 +268,19 @@ def update_lib_contents(lib_directory, temp_dir, target_platform, file_path):
         except IndexError:
             pass
 
+        # why not rename here?
         shutil.move(os.path.join(temp_dir, 'lib'), os.path.join(temp_dir, 'Lib'))
 
     elif target_platform == 'unix':
         temp_dir = Path(temp_dir)
         src_dir = temp_dir / "Lib"
+        intermediate_dir = temp_dir / "notLib"
         dst_dir = temp_dir / "lib"
 
         # rename Lib to lib (unix is case sensitive)
-        src_dir.rename(dst_dir)
+        # Possibly Windows will be happier if we avoid renaming lib to Lib (same name folding case)
+        src_dir.rename(intermediate_dir)
+        intermediate_dir.rename(dst_dir)
 
         # get contents (before adding the new directory below)
         contents = tuple(dst_dir.glob("*"))
