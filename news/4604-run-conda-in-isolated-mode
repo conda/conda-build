@@ -1,6 +1,9 @@
 ### Enhancements
 
-* Provide `CONDA_BUILD_ISOLATED_ACTIVATION` environment variable to run `conda` in isolated mode (`python -I -m`). (#4604, #XXXX)
+* Provide `CONDA_BUILD_ISOLATED_ACTIVATION` environment variable flag to control how `conda` is invoked from `conda-build`. 
+  If this variable is set to a non-empty value, it will run `conda` in isolated mode `python -I -m conda`.
+  Otherwise, the default behavior (`python -m conda`) will be respected. 
+  (#4604, #4625)
 
 ### Bug fixes
 
