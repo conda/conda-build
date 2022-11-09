@@ -107,7 +107,7 @@ jobs:
       - name: Upload Allure test logs
         uses: actions/upload-artifact@v2
         with:
-          name: allure-Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ env. parameters.serial_or_parallel  }}
+          name: allure-Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type  }}
           path: allure-results.tar.gz
 
       - name: Upload Pytest Replay
@@ -273,14 +273,14 @@ jobs:
       - name: Upload Allure test logs
         uses: actions/upload-artifact@v2
         with:
-          name: allure-Win-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ env. parameters.serial_or_parallel  }}
+          name: allure-Win-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type  }}
           path: allure-results.tar.gz
 
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v2
         with:
           path: ${{ github.workspace }}/pytest-replay
-          name: Win-${{ env.CONDA_VERSION }}-Python${{ matrix.python-version }}-${{ env. parameters.serial_or_parallel  }}
+          name: Win-${{ env.CONDA_VERSION }}-Python${{ matrix.python-version }}-${{ matrix.test-type  }}
         if: always()
 
   macos:
@@ -366,14 +366,14 @@ jobs:
       - name: Upload Allure test logs
         uses: actions/upload-artifact@v2
         with:
-          name: allure-macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ env. parameters.serial_or_parallel  }}
+          name: allure-macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type  }}
           path: allure-results.tar.gz
 
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v2
         with:
           path: ${{ github.workspace }}/pytest-replay
-          name: macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ env. parameters.serial_or_parallel  }}
+          name: macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type  }}
         if: always()
 
   analyze:
