@@ -1,6 +1,6 @@
 ### Enhancements
 
-* When invoking conda ensure it runs in isolated (`python -I -m`) mode unless running with `--dev`. (#4604)
+* Provide `CONDA_BUILD_ISOLATED_ACTIVATION` environment variable to run `conda` in isolated mode (`python -I -m`). (#4604, #XXXX)
 
 ### Bug fixes
 
