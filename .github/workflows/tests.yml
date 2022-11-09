@@ -107,7 +107,7 @@ jobs:
       - name: Upload Allure test logs
         uses: actions/upload-artifact@v2
         with:
-          name: allure-Win-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ env. parameters.serial_or_parallel  }}
+          name: allure-Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ env. parameters.serial_or_parallel  }}
           path: allure-results.tar.gz
 
       - name: Upload Pytest Replay
