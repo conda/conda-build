@@ -95,7 +95,8 @@ jobs:
               --cov-report xml \
               -m "not serial" tests/test_api_build.py \
               ${{ env.pytest-replay }} \
-              --alluredir=allure-results-Linux-${matrix.test-type}
+              --alluredir=allure-results
+          tar -zcf allure-results.tar.gz allure-results
 
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v2
