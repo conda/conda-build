@@ -438,6 +438,7 @@ def test_develop(testing_env):
         assert cwd not in f_pth.read()
 
 
+@pytest.mark.flaky(max_runs=5, condition=on_win)
 def test_convert(testing_workdir, testing_config):
     # download a sample py2.7 package
     f = 'https://repo.anaconda.com/pkgs/free/win-64/affine-2.0.0-py27_0.tar.bz2'
