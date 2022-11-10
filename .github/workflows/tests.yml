@@ -335,7 +335,8 @@ jobs:
           conda config --set auto_update_conda False
           conda info
           source ci/github/install_conda_build_test_deps
-          pip install -e . allure-pytest
+          pip install allure-pytest
+          pip install -e .
           conda info -a
           conda list --show-channel-urls
 
