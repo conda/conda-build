@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from collections import defaultdict
 from itertools import groupby
+from functools import lru_cache
 import json
 from operator import itemgetter
 from os.path import abspath, join, dirname, exists, basename, normcase
@@ -22,17 +23,15 @@ from conda_build.utils import (
 )
 
 from conda_build.conda_interface import (
-    iteritems,
     specs_from_args,
     is_linked,
     linked_data,
     get_index,
 )
 from conda_build.conda_interface import display_actions, install_actions
-from conda_build.conda_interface import memoized
 
 
-@memoized
+@lru_cache(maxsize=None)
 def dist_files(prefix, dist):
     meta = is_linked(prefix, dist)
     return set(meta['files']) if meta else set()
@@ -156,7 +155,7 @@ def test_installable(channel='defaults'):
         log.info("######## Testing platform %s ########", platform)
         channels = [channel]
         index = get_index(channel_urls=channels, prepend=False, platform=platform)
-        for _, rec in iteritems(index):
+        for _, rec in index.items():
             # If we give channels at the command line, only look at
             # packages from those channels (not defaults).
             if channel != 'defaults' and rec.get('schannel', 'defaults') == 'defaults':
@@ -200,7 +199,7 @@ def test_installable(channel='defaults'):
 
 def _installed(prefix):
     installed = linked_data(prefix)
-    installed = {rec['name']: dist for dist, rec in iteritems(installed)}
+    installed = {rec['name']: dist for dist, rec in installed.items()}
     return installed
 
 

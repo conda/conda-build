@@ -18,12 +18,11 @@ import subprocess
 import sys
 import tempfile
 import pickle
-from functools import partial
+from functools import lru_cache, partial
 
 from conda_build.conda_interface import get_index
 from conda_build.conda_interface import TmpDownload, download
 from conda_build.conda_interface import MatchSpec, Resolve
-from conda_build.conda_interface import memoized
 from conda_build.conda_interface import CondaHTTPError, CondaError
 
 from conda_build.config import get_or_merge_config
@@ -562,7 +561,7 @@ def skeletonize(packages, output_dir=".", version=None,
                 f.write(CPAN_BLD_BAT.format(**d))
 
 
-@memoized
+@lru_cache(maxsize=None)
 def is_core_version(core_version, version):
     if core_version is None:
         return False
@@ -609,7 +608,7 @@ def add_parser(repos):
         help='Write recipes for perl core modules (default: %(default)s). ')
 
 
-@memoized
+@lru_cache(maxsize=None)
 def latest_pkg_version(pkg):
     '''
     :returns: the latest version of the specified conda package available
@@ -785,8 +784,6 @@ def deps_for_package(package, release_data, output_dir, cache_dir,
     return deps, packages_to_append
 
 
-# @memoized
-
 def dist_for_module(cpan_url, cache_dir, core_modules, module):
     '''
     Given a name that could be a module or a distribution, return the
@@ -928,7 +925,7 @@ def core_module_dict(core_modules, module):
     return None
 
 
-@memoized
+@lru_cache(maxsize=None)
 def metacpan_api_is_core_version(cpan_url, module):
     if 'FindBin' in module:
         print('debug')

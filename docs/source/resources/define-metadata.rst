@@ -1893,6 +1893,9 @@ variables are booleans.
    * - ppc64le
      - True if the platform is Linux and the Python architecture
        is ppc64le.
+   * - s390x
+     - True if the platform is Linux and the Python architecture
+       is s390x.
    * - osx
      - True if the platform is macOS.
    * - arm64
