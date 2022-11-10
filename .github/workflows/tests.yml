@@ -412,7 +412,6 @@ jobs:
         with:
           path: ${{ github.workspace }}/pytest-replay
           name: macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type }}
-        if: always()
 
   analyze:
     name: Analyze test results
