@@ -121,7 +121,6 @@ get_conda_build_local_url = try_exports("conda.models.channel", "get_conda_build
 
 binstar_upload = context.binstar_upload
 bits = context.bits
-conda_private = context.conda_private
 default_python = context.default_python
 envs_dirs = context.envs_dirs
 pkgs_dirs = list(context.pkgs_dirs)
