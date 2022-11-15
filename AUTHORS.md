@@ -53,6 +53,7 @@ Authors are sorted alphabetically.
 * Daniel Damiani
 * Daniel Holth
 * Darren Dale
+* Dave Clements
 * Dave Hirschfeld
 * David Froger
 * David Li
@@ -62,6 +63,7 @@ Authors are sorted alphabetically.
 * Dougal J. Sutherland
 * Duncan Macleod
 * Ed Campbell
+* Eli Rykoff
 * Elliot Hughes
 * Eric Dill
 * Evan Hubinger
@@ -84,6 +86,7 @@ Authors are sorted alphabetically.
 * Isuru Fernando
 * Ivan Kalev
 * Jacob Walls
+* Jaime Rodríguez-Guerra
 * James Abbott
 * James Lamb
 * James Sexton
@@ -115,6 +118,7 @@ Authors are sorted alphabetically.
 * Korijn van Golen
 * Kurt Schelfthout
 * Kyle Leaders
+* Landon Butterworth
 * Lennart Fricke
 * Levi Naden
 * Lori Burns
@@ -177,6 +181,7 @@ Authors are sorted alphabetically.
 * Sean Ross-Ross
 * Sean Yen
 * Sergio Oller
+* Serhii Kupriienko
 * Shaun Walbridge
 * Siu Kwan Lam
 * Sophia Castellarin
@@ -215,7 +220,6 @@ Authors are sorted alphabetically.
 * Yu Feng
 * Zane Dufour
 * dependabot[bot]
-* landon.butterworth
 * peter1000
 * pre-commit CI
 * pwwang

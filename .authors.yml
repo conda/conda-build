@@ -7,7 +7,7 @@
   aliases:
   - Mike Sarahan
   - Michael Sarahan
-  num_commits: 3998
+  num_commits: 4000
   first_commit: 2015-09-04 21:31:08
 - name: Jonathan J. Helmus
   email: jjhelmus@gmail.com
@@ -20,7 +20,7 @@
   email: isuruf@gmail.com
   alternate_emails:
   - isuru.11@cse.mrt.ac.lk
-  num_commits: 81
+  num_commits: 82
   first_commit: 2017-06-16 15:14:34
   github: isuruf
 - name: Dan Blanchard
@@ -188,7 +188,7 @@
   email: marius.v.niekerk@gmail.com
   alternate_emails:
   - mvanniekerk@flatiron.com
-  num_commits: 6
+  num_commits: 7
   first_commit: 2018-02-22 13:07:33
   github: mariusvniekerk
 - name: Travis Oliphant
@@ -1193,13 +1193,13 @@
   github: PhilReinhold
 - name: Cheng H. Lee
   email: chenghlee@users.noreply.github.com
-  num_commits: 1
+  num_commits: 2
   first_commit: 2020-06-24 10:55:13g
   github: chenghlee
   alternate_emails:
   - clee@anaconda.com
 - name: Ken Odegard
-  num_commits: 42
+  num_commits: 61
   email: kodegard@anaconda.com
   first_commit: 2020-09-08 19:53:41
   github: kenodegard
@@ -1222,7 +1222,7 @@
   first_commit: 2020-11-19 10:46:41
 - name: Jannis Leidel
   email: jannis@leidel.info
-  num_commits: 17
+  num_commits: 20
   github: jezdez
   first_commit: 2020-11-19 10:46:41
 - name: Christof Kaufmann
@@ -1237,7 +1237,7 @@
   github: pre-commit-ci[bot]
   aliases:
   - pre-commit-ci[bot]
-  num_commits: 20
+  num_commits: 27
   first_commit: 2021-11-20 01:47:17
 - name: Jacob Walls
   email: jacobtylerwalls@gmail.com
@@ -1259,7 +1259,7 @@
   alternate_emails:
   - ad-team+condabot@anaconda.com
   - 18747875+conda-bot@users.noreply.github.com
-  num_commits: 28
+  num_commits: 36
   first_commit: 2022-01-17 18:09:22
 - name: Uwe L. Korn
   email: xhochy@users.noreply.github.com
@@ -1268,7 +1268,7 @@
 - name: Daniel Holth
   email: dholth@anaconda.com
   github: dholth
-  num_commits: 2
+  num_commits: 3
   first_commit: 2022-04-28 05:22:14
 - name: Rylan Chord
   email: rchord@users.noreply.github.com
@@ -1310,14 +1310,22 @@
 - name: Serhii Kupriienko
   email: 79282962+skupr-anaconda@users.noreply.github.com
   github: skupr-anaconda
+  num_commits: 1
+  first_commit: 2022-10-14 18:31:41
 - name: Eli Rykoff
   email: erykoff@stanford.edu
   aliases:
   - erykoff
   github: erykoff
+  num_commits: 1
+  first_commit: 2022-10-19 02:57:18
 - name: Jaime Rodríguez-Guerra
   email: jaimergp@users.noreply.github.com
   github: jaimergp
+  num_commits: 2
+  first_commit: 2022-11-02 19:34:51
 - name: Dave Clements
   email: tnabtaf@gmail.com
   github: tnabtaf
+  num_commits: 1
+  first_commit: 2022-11-03 02:14:07
