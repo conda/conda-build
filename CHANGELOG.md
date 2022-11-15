@@ -1,5 +1,57 @@
 [//]: # (current developments)
 
+## 3.23.0 (2022-11-15)
+
+### Enhancements
+
+* Outputs now support both script and files arguments. When both script and an explicit file list are given, the script is run first and then the files given in the explicit file list are packaged. (#4281)
+* Add `overlinking_ignore_patterns` build parameter to speed up recipes where it is not helpful. (#4576)
+* Add `win-arm64` as a recognized platform (subdir). (#4579)
+* Add opt-in environment variable to run `conda` in isolated mode (`python -I -m conda`) when invoked from `conda-build`. This is necessary to fix an issue when packaging conda itself. Alternative solutions (see #4628) are under investigation, so the current implementation will likely change. (#4604, #4625)
+* Refactored `conda_build.convert.update_lib_contents` to use `pathlib.Path`. Mark `test_cli.test_convert` as `xfail` on Windows (something with the GitHub Windows Runner makes this particularly flaky). (#4619, #4626)
+
+### Deprecations
+
+* Drop `cytoolz` dependency. (#4556)
+* Removed internal usage of the `memoized` decorator. (#4593, #4615)
+* Remove py2 compatibility code and use of six.py code exported from conda. (#4603)
+* `conda_build.environ.system_vars` is marked as pending deprecation. Use `conda_build.environ.os_vars` instead. (#4615)
+* Conda 4.2 introduced a private conda env that appears to have been a testing environment. This is no longer used and is only included in conda-build as an informational status. Removing in accordance with the feature pending deprecation starting with conda 22.11.0. (#4629)
+
+### Docs
+
+* Add s390x selector missing from docs. (#4550)
+* Update "Channels and generating an index" docs to specify additional platforms. (#4602)
+
+### Other
+
+* Renamed canary recipe from `conda.recipe` to `recipe`. (#4584)
+* Introduce canary and review builds as part of GitHub CI. (#4608, #4613)
+* Removed unused AppVeyor files. (#4562)
+* Removed unused `.checkignore`. (#4564)
+* Removed unused `.editorconfig`. (#4564)
+* Removed unused `.gitmodules`. (#4564)
+* Removed unused `.lgtm.yml`. (#4564)
+* Removed unused `.binstar.yml`. (#4616)
+
+### Contributors
+
+* @chenghlee
+* @conda-bot
+* @dholth
+* @tnabtaf
+* @erykoff
+* @isuruf
+* @jaimergp
+* @jezdez
+* @kenodegard
+* @mariusvniekerk
+* @msarahan
+* @skupr-anaconda
+* @pre-commit-ci[bot]
+
+
+
 ## 3.22.0 (2022-08-02)
 
 ### Enhancements
