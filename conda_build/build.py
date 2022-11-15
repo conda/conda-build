@@ -1815,7 +1815,7 @@ def _write_sh_activation_text(file_handle, m):
                             cygpath_suffix))
 
     if conda_46:
-        py_flags = '-m' if m.config.debug else '-I -m'
+        py_flags = '-I -m' if os.environ.get("_CONDA_BUILD_ISOLATED_ACTIVATION") else '-m'
         file_handle.write(
             f"""eval "$('{sys.executable}' {py_flags} conda shell.bash hook)"\n"""
         )
@@ -2732,12 +2732,12 @@ def write_test_scripts(metadata, env_vars, py_files, pl_files, lua_files, r_file
                         '&& set _CE_CONDA=conda\n'.format(
                             sys.prefix,
                             '--dev' if metadata.config.debug else '',
-                            '' if metadata.config.debug else '-I',
+                            "-i" if os.environ.get("_CONDA_BUILD_ISOLATED_ACTIVATION") else "",
                             python_exe=sys.executable
                         )
                     )
                 else:
-                    py_flags = '-m' if metadata.config.debug else '-I -m'
+                    py_flags = '-I -m' if os.environ.get("_CONDA_BUILD_ISOLATED_ACTIVATION") else '-m'
                     tf.write(
                         f"""eval "$('{sys.executable}' {py_flags} conda shell.bash hook)"\n"""
                     )
