@@ -22,6 +22,7 @@
 
 * Add s390x selector missing from docs. (#4550)
 * Update "Channels and generating an index" docs to specify additional platforms. (#4602)
+* Link to https://packaging.python.org/en/latest/tutorials/packaging-projects/ over setuptools for how to pack a project.
 
 ### Other
 
@@ -39,18 +40,17 @@
 * @chenghlee
 * @conda-bot
 * @dholth
-* @tnabtaf
-* @erykoff
+* @tnabtaf made their first contribution in https://github.com/conda/conda-build/pull/4602
+* @erykoff made their first contribution in https://github.com/conda/conda-build/pull/4603
 * @isuruf
-* @jaimergp
+* @jaimergp made their first contribution in https://github.com/conda/conda-build/pull/4604
 * @jezdez
 * @kenodegard
 * @mariusvniekerk
 * @msarahan
-* @skupr-anaconda
+* @skupr-anaconda made their first contribution in https://github.com/conda/conda-build/pull/4550
 * @pre-commit-ci[bot]
-
-
+* @brettcannon made their first contribution in https://github.com/conda/conda-build/pull/4632
 
 ## 3.22.0 (2022-08-02)
 
