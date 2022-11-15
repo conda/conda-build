@@ -42,7 +42,6 @@ from .conda_interface import EntityEncoder
 from .conda_interface import get_rc_urls
 from .conda_interface import url_path
 from .conda_interface import root_dir
-from .conda_interface import conda_private
 from .conda_interface import MatchSpec
 from .conda_interface import reset_context
 from .conda_interface import context
@@ -1172,11 +1171,6 @@ def write_about_json(m):
         evars = ['CIO_TEST']
 
         d['env_vars'] = {ev: os.getenv(ev, '<not set>') for ev in evars}
-        # this information will only be present in conda 4.2.10+
-        try:
-            d['conda_private'] = conda_private
-        except (KeyError, AttributeError):
-            pass
         # Adding this to extra since its arbitrary info
         extra = m.get_section('extra')
         # Add burn-in information to extra
