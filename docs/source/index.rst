@@ -14,8 +14,8 @@ from the conda recipe.
 
 You can build conda packages from a variety of source code
 projects, most notably Python. For help packing a Python project,
-see the `Setuptools
-documentation <https://setuptools.readthedocs.io/en/latest/>`_.
+see the `packaging.python.org tutorial
+ <https://packaging.python.org/en/latest/tutorials/packaging-projects/>`_.
 
 OPTIONAL: If you are planning to upload your packages to
 Anaconda Cloud, you will need an
