@@ -32,7 +32,7 @@ def is_valid_dir(parent_dir, dirname):
 
 
 def add_mangling(filename):
-    filename = os.path.splitext(filename)[0] + ".cpython-{}{}.pyc".format(
+    filename = os.path.splitext(filename)[0] + ".cpython-{}{}".format(
         sys.version_info.major, sys.version_info.minor
     )
     filename = os.path.join(
