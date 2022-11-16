@@ -1,5 +1,6 @@
 #include <stdio.h>
 
 int main() {
-  printf("Hello world!\n");
+  printf("C Libraries Installed are Working with a C Compiler\n");
+  return 0;
 }

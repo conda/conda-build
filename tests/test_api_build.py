@@ -455,27 +455,6 @@ def test_skip_existing_url(testing_metadata, testing_workdir, capfd):
     assert "are already built" in output
 
 
-def test_failed_tests_exit_build(testing_workdir, testing_config):
-    """https://github.com/conda/conda-build/issues/1112"""
-    with pytest.raises(SystemExit, match="TESTS FAILED"):
-        api.build(os.path.join(metadata_dir, "_test_failed_test_exits"), config=testing_config)
-
-
-@pytest.mark.sanity
-def test_requirements_txt_for_run_reqs(testing_workdir, testing_config):
-    """
-    If run reqs are blank, then conda-build looks for requirements.txt in the recipe folder.
-    There has been a report of issue with unsatisfiable requirements at
-
-    https://github.com/Anaconda-Platform/anaconda-server/issues/2565
-
-    This test attempts to reproduce those conditions: a channel other than defaults with this
-    requirements.txt
-    """
-    testing_config.channel_urls = ('conda_build_test', )
-    api.build(os.path.join(metadata_dir, "_requirements_txt_run_reqs"), config=testing_config)
-
-
 def test_compileall_compiles_all_good_files(testing_workdir, testing_config):
     output = api.build(os.path.join(metadata_dir, "_compile-test"), config=testing_config)[0]
     good_files = ['f1.py', 'f3.py']
@@ -994,23 +973,7 @@ def test_workdir_removal_warning(testing_config, caplog):
         api.build(recipe, config=testing_config)
         assert "work dir is removed" in str(exc)
 
-
-# @pytest.mark.serial
-# @pytest.mark.skipif(not sys.platform.startswith('linux'),
-#                     reason="cross compiler packages created only on Linux right now")
-# @pytest.mark.xfail(VersionOrder(conda.__version__) < VersionOrder('4.3.2'),
-#                    reason="not completely implemented yet")
-# def test_cross_compiler(testing_workdir, testing_config, capfd):
-#     # TODO: testing purposes.  Package from @mingwandroid's channel, copied to conda_build_test
-#     testing_config.channel_urls = ('conda_build_test', )
-#     # activation is necessary to set the appropriate toolchain env vars
-#     testing_config.activate = True
-#     # testing_config.debug = True
-#     recipe_dir = os.path.join(metadata_dir, '_cross_helloworld')
-#     output = api.build(recipe_dir, config=testing_config)[0]
-#     assert output.startswith(os.path.join(testing_config.croot, 'linux-imx351uc'))
-
-
+# This Test case is not testing anything specific
 @pytest.mark.sanity
 @pytest.mark.skipif(sys.platform != 'darwin', reason="relevant to mac only")
 def test_append_python_app_osx(testing_config):
@@ -1021,23 +984,6 @@ def test_append_python_app_osx(testing_config):
     # tests will fail here if python.app is not added to the run reqs by conda-build, because
     #    without it, pythonw will be missing.
     api.build(recipe, config=testing_config)
-
-
-# Not sure about this behavior. Basically, people need to realize that if they
-#    start with a recipe from disk, they should not then alter the metadata
-#    object. Later reparsing will clobber their edits to the object. The
-#    complicated thing is that these edits are indistinguishable from Jinja2
-#    templating doing its normal thing.
-
-# def test_clobbering_manually_set_metadata_raises(testing_metadata, testing_workdir):
-#     api.output_yaml(testing_metadata, 'meta.yaml')
-#     metadata = api.render(testing_workdir)[0][0]
-#     # make the package meta dict out of sync with file contents
-#     metadata.meta['package']['name'] = 'steve'
-#     # re-render happens as part of build.  We should see an error about clobbering our customized
-#     #    meta dict
-#     with pytest.raises(ValueError):
-#         api.build(metadata)
 
 
 @pytest.mark.sanity
@@ -1105,7 +1051,7 @@ def test_ignore_run_exports_from(testing_metadata, testing_config):
     m = finalize_metadata(testing_metadata)
     assert 'downstream_pinned_package 1.0' not in m.meta['requirements'].get('run', [])
 
-
+#This test case is only for local runs. 
 @pytest.mark.skipif("CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,
                     reason="This test does not run on Github Actions yet. We will need to adjust "
                            "where to look for the pkgs. The github action for setup-miniconda sets "
@@ -1238,13 +1184,6 @@ def test_unknown_selectors(testing_config):
     api.build(recipe, config=testing_config)
 
 
-@pytest.mark.sanity
-def test_extract_tarball_with_unicode_filename(testing_config):
-    """See https://github.com/conda/conda-build/pull/1779"""
-    recipe = os.path.join(metadata_dir, '_unicode_in_tarball')
-    api.build(recipe, config=testing_config)
-
-
 def test_failed_recipe_leaves_folders(testing_config, testing_workdir):
     recipe = os.path.join(fail_dir, 'recursive-build')
     m = api.render(recipe, config=testing_config)[0][0]
@@ -1342,6 +1281,7 @@ def test_no_force_upload_condarc_setting(mocker, testing_workdir, testing_metada
 
 
 @pytest.mark.sanity
+@pytest.mark.skipif(sys.version[:3] == "3.5", reason = "Package does not build with Python 3.5")
 def test_setup_py_data_in_env(testing_config):
     recipe = os.path.join(metadata_dir, '_setup_py_data_in_env')
     # should pass with any modern python (just not 3.5)
@@ -1466,8 +1406,7 @@ def test_failed_patch_exits_build(testing_config):
 
 
 @pytest.mark.sanity
-def test_version_mismatch_in_variant_does_not_infinitely_rebuild_folder(
-        testing_config):
+def test_version_mismatch_in_variant_does_not_infinitely_rebuild_folder(testing_config):
     # unsatisfiable; also not buildable (test_a recipe version is 2.0)
     testing_config.variant['test_a'] = "1.0"
     recipe = os.path.join(metadata_dir, '_build_deps_no_infinite_loop', 'test_b')
@@ -1541,12 +1480,15 @@ def test_overdepending_detection(testing_config):
 @pytest.mark.skipif(sys.platform != "darwin",
                     reason="macOS-only test (at present)")
 def test_macos_tbd_handling(testing_config):
+    """The test case intention is to test the path handling after installation...
+    The test case uses a Hello world example in C/C++ for testing the installation of C Libs..."""
+
     testing_config.activate = True
     testing_config.error_overlinking = True
     testing_config.error_overdepending = True
     testing_config.verify = False
     recipe = os.path.join(metadata_dir, '_macos_tbd_handling')
-    api.build(recipe, config=testing_config)
+    api.build(recipe, config=testing_config) 
 
 
 @pytest.mark.sanity
