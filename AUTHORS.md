@@ -29,6 +29,7 @@ Authors are sorted alphabetically.
 * Bradley Kreider
 * Brant Faircloth
 * Brent Pedersen
+* Brett Cannon
 * Bruno Oliveira
 * Bruno P. Kinoshita
 * Bryan W. Weber

@@ -22,7 +22,7 @@
 
 * Add s390x selector missing from docs. (#4550)
 * Update "Channels and generating an index" docs to specify additional platforms. (#4602)
-* Link to https://packaging.python.org/en/latest/tutorials/packaging-projects/ over setuptools for how to pack a project.
+* Link to https://packaging.python.org/en/latest/tutorials/packaging-projects/ over setuptools for how to pack a project. (#4632)
 
 ### Other
 

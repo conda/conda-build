@@ -1199,7 +1199,7 @@
   alternate_emails:
   - clee@anaconda.com
 - name: Ken Odegard
-  num_commits: 61
+  num_commits: 64
   email: kodegard@anaconda.com
   first_commit: 2020-09-08 19:53:41
   github: kenodegard
@@ -1329,3 +1329,8 @@
   github: tnabtaf
   num_commits: 1
   first_commit: 2022-11-03 02:14:07
+- name: Brett Cannon
+  email: brett@python.org
+  github: brettcannon
+  num_commits: 1
+  first_commit: 2022-11-16 21:54:14
