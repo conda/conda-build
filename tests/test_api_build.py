@@ -457,9 +457,11 @@ def test_skip_existing_url(testing_metadata, testing_workdir, capfd):
 
 def test_compileall_compiles_all_good_files(testing_workdir, testing_config):
     output = api.build(os.path.join(metadata_dir, "_compile-test"), config=testing_config)[0]
-    good_files = ['f1.py', 'f3.py']
+    print(output)
+    good_files = ['File 1.py', 'File 3.py']
     bad_file = 'f2_bad.py'
     for f in good_files:
+        print(f)
         assert package_has_file(output, f)
         # look for the compiled file also
         assert package_has_file(output, add_mangling(f))
