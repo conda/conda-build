@@ -1,5 +1,17 @@
 [//]: # (current developments)
 
+## 3.23.1 (2022-11-17)
+
+### Bug fixes
+
+* Fixed regression when writing link JSON files introduced in #4603. (#4636)
+* Update conda dependency. (#4635)
+
+### Contributors
+
+* @jezdez
+* @kenodegard
+
 ## 3.23.0 (2022-11-15)
 
 ### Enhancements
