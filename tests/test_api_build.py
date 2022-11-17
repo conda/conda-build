@@ -455,7 +455,9 @@ def test_skip_existing_url(testing_metadata, testing_workdir, capfd):
     assert "are already built" in output
 
 
-def test_clearcompiles_all_good_files(testing_workdir, testing_config):
+#Can Get rid off not expecting for newer version of Python > 3.7
+@pytest.mark.skipif(not sys.version[:3] == "3.5", reason = "Newer version of Python > 3.6 will not need the test")
+def test_compiles_all_good_files(testing_workdir, testing_config):
     output = api.build(os.path.join(metadata_dir, "_compile-test"), config=testing_config)[0]
     print(output)
     good_files = ['f1.py', 'f3.py']
