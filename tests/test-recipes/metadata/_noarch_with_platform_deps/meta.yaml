@@ -16,3 +16,4 @@ requirements:
     - __win      # [win]
     - appnope    # [osx]
     - __osx      # [osx]
+    - __linux    # [linux]
