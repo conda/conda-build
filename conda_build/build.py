@@ -1126,8 +1126,9 @@ def write_link_json(m):
     package_metadata = OrderedDict()
     noarch_type = m.get_value('build/noarch')
     if noarch_type:
-        noarch_dict = OrderedDict(type=noarch_type)
-        if noarch_type.lower() == "python":
+        noarch_type_str = str(noarch_type)
+        noarch_dict = OrderedDict(type=noarch_type_str)
+        if noarch_type_str.lower() == "python":
             entry_points = m.get_value('build/entry_points')
             if entry_points:
                 noarch_dict['entry_points'] = entry_points
@@ -1135,7 +1136,7 @@ def write_link_json(m):
 
     preferred_env = m.get_value("build/preferred_env")
     if preferred_env:
-        preferred_env_dict = OrderedDict(name=preferred_env)
+        preferred_env_dict = OrderedDict(name=str(preferred_env))
         executable_paths = m.get_value("build/preferred_env_executable_paths")
         if executable_paths:
             preferred_env_dict["executable_paths"] = executable_paths
