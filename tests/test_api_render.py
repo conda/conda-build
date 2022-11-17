@@ -189,8 +189,9 @@ def test_noarch_with_platform_deps(testing_workdir, testing_config):
         m = api.render(recipe_path, config=testing_config, subdir=subdir)[0][0]
         build_ids[subdir] = m.build_id()
 
-    assert len(set(build_ids.values())) == 4
+    assert len(set(build_ids.values())) == 3
     assert build_ids['linux-64'] == build_ids['linux-aarch64']
+    assert build_ids['linux-64'] == build_ids['linux-ppc64le']
 
 
 def test_noarch_with_no_platform_deps(testing_workdir, testing_config):
