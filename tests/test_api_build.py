@@ -455,10 +455,10 @@ def test_skip_existing_url(testing_metadata, testing_workdir, capfd):
     assert "are already built" in output
 
 
-def test_compileall_compiles_all_good_files(testing_workdir, testing_config):
+def test_clearcompiles_all_good_files(testing_workdir, testing_config):
     output = api.build(os.path.join(metadata_dir, "_compile-test"), config=testing_config)[0]
     print(output)
-    good_files = ['File 1.py', 'File 3.py']
+    good_files = ['f1.py', 'f3.py']
     bad_file = 'f2_bad.py'
     for f in good_files:
         print(f)
