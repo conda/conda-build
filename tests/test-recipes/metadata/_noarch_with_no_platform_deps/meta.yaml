@@ -1,5 +1,5 @@
 package:
-  name: test-noarch-with-platform-deps
+  name: test-noarch-with-no-platform-deps
   version: 0.0.1
 
 build:
