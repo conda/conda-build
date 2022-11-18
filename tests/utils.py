@@ -8,7 +8,10 @@ import sys
 import pytest
 from conda_build.metadata import MetaData
 from conda_build.utils import on_win
+from conda_build.conda_interface import linked, linked_data
 
+def numpy_installed():
+    return any([True for dist in linked(sys.prefix) if dist.name == 'numpy'])
 
 def get_root_dir():
     import conda_build
