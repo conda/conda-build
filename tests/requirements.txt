@@ -6,7 +6,6 @@ chardet
 conda
 conda-package-handling
 filelock
-flaky
 glob2
 jinja2
 pkginfo
@@ -14,5 +13,6 @@ psutil
 pytest
 pytest-cov
 pytest-mock
+pytest-rerunfailures
 python-libarchive-c
 toml
