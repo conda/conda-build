@@ -109,6 +109,7 @@ def test_recipe_builds(recipe, testing_config, testing_workdir, monkeypatch):
 def test_ignore_prefix_files(testing_config, monkeypatch):
     recipe = os.path.join(metadata_dir, "_ignore_prefix_files")
     testing_config.activate = True
+    monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
     monkeypatch.setenv("CONDA_TEST_VAR_3", "conda_test_3")
     api.build(recipe, config=testing_config)
 
@@ -127,6 +128,7 @@ def test_ignore_prefix_files(testing_config, monkeypatch):
 def test_ignore_some_prefix_files(testing_config, monkeypatch):
     recipe = os.path.join(metadata_dir, "_ignore_some_prefix_files")
     testing_config.activate = True
+    monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
     monkeypatch.setenv("CONDA_TEST_VAR_3", "conda_test_3")
     api.build(recipe, config=testing_config)
 
@@ -342,7 +344,7 @@ def test_checkout_tool_as_dependency(testing_workdir, testing_config, monkeypatc
 platforms = ["64" if sys.maxsize > 2**32 else "32"]
 if sys.platform == "win32":
     platforms = sorted({"32", *platforms})
-    compilers = ["3.6","3.7"]
+    compilers = ["3.9","3.10"]
     msvc_vers = ["14.0"]
 else:
     msvc_vers = []
@@ -770,7 +772,7 @@ def test_legacy_noarch_python(testing_config):
     # make sure that the package is going into the noarch folder
     assert os.path.basename(os.path.dirname(output)) == 'noarch'
 
-
+@pytest.mark.skip(reason="The Test is using old conda versions that will be deprecated in the next prunning process.. Skipping this test case till then")
 def test_preferred_env(testing_config):
     recipe = os.path.join(metadata_dir, "_preferred_env")
     output = api.build(recipe, config=testing_config)[0]
