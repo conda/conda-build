@@ -1,0 +1,4 @@
+# conda-build supplemental test dependencies
+# run as 'conda install -c main --file tests/requirements.txt'
+patch
+shellcheck
