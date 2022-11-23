@@ -57,7 +57,9 @@ jobs:
             conda-version: canary
             test-type: parallel
     env:
-      pytest-replay: --replay-record-dir=pytest-replay/ --replay-base-name=Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
+      REPLAY_NAME: Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
+      REPLAY_DIR: ./pytest-replay/
+      ALLURE_DIR: ./allure-results/
 
     steps:
       - name: Checkout repository
@@ -98,10 +100,12 @@ jobs:
               --basetemp /tmp/cb_serial \
               --cov conda_build \
               --cov-report xml \
-              -m "serial" tests \
-              ${{ env.pytest-replay }} \
-              --alluredir=allure-results
-          tar -zcf allure-results.tar.gz allure-results
+              --replay-record-dir=${{ env.REPLAY_DIR }} \
+              --replay-base-name=${{ env.REPLAY_NAME }} \
+              --alluredir=${{ env.ALLURE_DIR }} \
+              -m "serial" \
+              ./tests/
+          tar -zcf ${{ env.ALLURE_DIR }}.tar.gz ${{ env.ALLURE_DIR }}
 
       - name: Run Parallel tests
         if: matrix.test-type == 'parallel'
@@ -114,16 +118,19 @@ jobs:
               --cov conda_build \
               --cov-append \
               --cov-report xml \
-              -m "not serial" tests \
-              ${{ env.pytest-replay }} \
-              --alluredir=allure-results
-          tar -zcf allure-results.tar.gz allure-results
+              --replay-record-dir=${{ env.REPLAY_DIR }} \
+              --replay-base-name=${{ env.REPLAY_NAME }} \
+              --alluredir=${{ env.ALLURE_DIR }} \
+              -m "not serial" \
+              ./tests/
+          tar -zcf ${{ env.ALLURE_DIR }}.tar.gz ${{ env.ALLURE_DIR }}
 
       - name: Upload Pytest Replay
+        if: always()
         uses: actions/upload-artifact@v2
         with:
-          name: Linux_replay-py-${{ matrix.python-version }}_${{ matrix.conda-version }}_${{ matrix.test-type }}
-          path: pytest-replay/
+          name: ${{ env.REPLAY_NAME }}-${{ matrix.test-type }}
+          path: ${{ env.REPLAY_DIR }}
 
   windows:
     runs-on: windows-2019
@@ -142,7 +149,9 @@ jobs:
             test-type: parallel
     timeout-minutes: 120
     env:
-      serial_or_parallel: ''
+      REPLAY_NAME: Win-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
+      REPLAY_DIR: .\pytest-replay\
+      ALLURE_DIR: .\allure-results\
 
     steps:
       - name: Checkout repository
@@ -241,9 +250,6 @@ jobs:
           call conda create -n blarg -yq --download-only python=2.7||exit 1
           call conda create -n blarg -yq --download-only python=3.8||exit 1
           call conda create -n blarg -yq --download-only python cmake||exit 1
-          set "PYTEST_REPLAY_OPTIONS=--replay-record-dir=${{ github.workspace }}\\pytest-replay --replay-base-name=Win-%CONDA_VERSION%-Py%PYTHON_VERSION%"
-          echo "##vso[task.setvariable variable=PYTEST_REPLAY_OPTIONS]%PYTEST_REPLAY_OPTIONS%"
-
         shell: cmd
 
       - name: Run Serial Tests
@@ -257,9 +263,19 @@ jobs:
           set PERL=
           set LUA=
           set R=
-          pytest --color=yes -vv -n 0 --basetemp %UserProfile%\cbtmp_serial --cov conda_build --cov-report xml -m "serial" ${{ env.pytest-replay }} --alluredir=allure-results
-          tar -zcf allure-results.tar.gz allure-results
-
+          pytest ^
+              --color=yes ^
+              -vv ^
+              -n 0 ^
+              --basetemp %UserProfile%\cbtmp_serial ^
+              --cov conda_build ^
+              --cov-report xml ^
+              --replay-record-dir=${{ env.REPLAY_DIR }} ^
+              --replay-base-name=${{ env.REPLAY_NAME }} ^
+              --alluredir=${{ env.ALLURE_DIR }} ^
+              -m "serial" ^
+              .\tests\
+          tar -zcf ${{ env.ALLURE_DIR }}.tar.gz ${{ env.ALLURE_DIR }}
         shell: cmd
 
       - name: Run Parallel Tests
@@ -273,19 +289,31 @@ jobs:
           set PERL=
           set LUA=
           set R=
-          pytest --color=yes -vv -n auto --basetemp %UserProfile%\cbtmp --cov conda_build --cov-append --cov-report xml -m "not serial" ${{ env.pytest-replay }} --alluredir=allure-results
-          tar -zcf allure-results.tar.gz allure-results
+          pytest ^
+              --color=yes ^
+              -vv ^
+              -n auto ^
+              --basetemp %UserProfile%\cbtmp ^
+              --cov conda_build ^
+              --cov-append ^
+              --cov-report xml ^
+              --replay-record-dir=${{ env.REPLAY_DIR }} ^
+              --replay-base-name=${{ env.REPLAY_NAME }} ^
+              --alluredir=${{ env.ALLURE_DIR }} ^
+              -m "not serial" ^
+              .\tests\
+          tar -zcf ${{ env.ALLURE_DIR }}.tar.gz ${{ env.ALLURE_DIR }}
         shell: cmd
         env:
           VS90COMNTOOLS: C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC\bin
           LIB:
 
       - name: Upload Pytest Replay
+        if: always()
         uses: actions/upload-artifact@v2
         with:
-          path: ${{ github.workspace }}/pytest-replay
-          name: Win-${{ env.CONDA_VERSION }}-Python${{ matrix.python-version }}-${{ env. parameters.serial_or_parallel  }}
-        if: always()
+          path: ${{ env.REPLAY_DIR }}
+          name: ${{ env.REPLAY_NAME }}-${{ matrix.test-type }}
 
   macos:
     runs-on: macos-11
@@ -302,7 +330,9 @@ jobs:
       max-parallel: 10
     timeout-minutes: 120
     env:
-      pytest-replay: --replay-record-dir=pytest-replay/ --replay-base-name=macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
+      REPLAY_NAME: macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
+      REPLAY_DIR: ./pytest-replay/
+      ALLURE_DIR: ./allure-results/
 
     steps:
       - name: Checkout repository
@@ -352,8 +382,19 @@ jobs:
           set -e -u
           source ci/github/activate_conda "${{ github.workspace }}/miniconda/bin/python"
           conda install conda-verify -y
-          pytest --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}" --alluredir=allure-results
-          tar -zcf allure-results.tar.gz allure-results
+          pytest \
+              --color=yes \
+              -v \
+              -n 0 \
+              --basetemp /tmp/cb_serial \
+              --cov conda_build \
+              --cov-report xml \
+              --replay-record-dir=${{ env.REPLAY_DIR }} \
+              --replay-base-name=${{ env.REPLAY_NAME }} \
+              --alluredir=${{ env.ALLURE_DIR }} \
+              -m "serial" \
+              ./tests/
+          tar -zcf ${{ env.ALLURE_DIR }}.tar.gz ${{ env.ALLURE_DIR }}
 
       - name: Run Parallel Tests
         if: matrix.test-type == 'parallel'
@@ -367,15 +408,27 @@ jobs:
           conda create -n blarg1 -yq python=2.7
           conda create -n blarg3 -yq python=3.7
           conda create -n blarg4 -yq python nomkl numpy pandas svn
-          pytest --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}" --alluredir=allure-results
-          tar -zcf allure-results.tar.gz allure-results
+          pytest \
+              --color=yes \
+              -v \
+              -n auto \
+              --basetemp /tmp/cb \
+              --cov conda_build \
+              --cov-append \
+              --cov-report xml \
+              --replay-record-dir=${{ env.REPLAY_DIR }} \
+              --replay-base-name=${{ env.REPLAY_NAME }} \
+              --alluredir=${{ env.ALLURE_DIR }} \
+              -m "not serial" \
+              ./tests/
+          tar -zcf ${{ env.ALLURE_DIR }}.tar.gz ${{ env.ALLURE_DIR }}
 
       - name: Upload Pytest Replay
+        if: always()
         uses: actions/upload-artifact@v2
         with:
-          path: ${{ github.workspace }}/pytest-replay
-          name: macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ env. parameters.serial_or_parallel  }}
-        if: always()
+          path: ${{ env.REPLAY_DIR }}
+          name: ${{ env.REPLAY_NAME }}-${{ matrix.test-type  }}
 
   # required check
   analyze:
