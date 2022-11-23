@@ -42,6 +42,7 @@ jobs:
     defaults:
       run:
         shell: bash -l {0}
+        working-directory: ./src/
     strategy:
       fail-fast: false
       matrix:
@@ -58,34 +59,34 @@ jobs:
             test-type: parallel
     env:
       REPLAY_NAME: Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
-      REPLAY_DIR: ./pytest-replay/
+      REPLAY_DIR: ${{ github.workspace }}/pytest-replay/
       ALLURE_DIR: ./allure-results/
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
         with:
+          path: ./src/
+          fetch-depth: 0
+
+      - name: Checkout test recipe
+        uses: actions/checkout@v2
+        with:
+          repository: conda/conda_build_test_recipe
+          path: ./conda_build_test_recipe/
           fetch-depth: 0
 
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@v2
         with:
-          condarc-file: ci/github/.condarc
+          condarc-file: ./src/ci/github/.condarc
           python-version: ${{ matrix.python-version }}
 
-      - name: Install Conda-Canary if canary version
-        if: matrix.conda-version == 'canary'
+      - name: Setup testing environment
         run: |
-          conda install -y -c conda-canary/label/dev conda
-
-      - name: Install default Conda if release version
-        if: matrix.conda-version == 'release'
-        run: |
-          conda install -y conda
-
-      - name: Source Scripts
-        run: |
-          source ci/github/install_conda_build_test_deps
+          conda install -q -y -c main --file tests/requirements.txt
+          conda install -q -y -c main --file tests/requirements-linux.txt
+          conda install -q -y ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'main' }}::conda
           pip install -e .
           pip install allure-pytest
           conda info -a
@@ -320,6 +321,7 @@ jobs:
     defaults:
       run:
         shell: bash -l {0}
+        working-directory: ./src/
     strategy:
       fail-fast: false
       matrix:
@@ -331,57 +333,42 @@ jobs:
     timeout-minutes: 120
     env:
       REPLAY_NAME: macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
-      REPLAY_DIR: ./pytest-replay/
+      REPLAY_DIR: ${{ github.workspace }}/pytest-replay/
       ALLURE_DIR: ./allure-results/
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
         with:
+          path: ./src/
           fetch-depth: 0
 
-      - name: Install miniconda
-        run: |
-          set -x -e -u
-          curl -o ${{ github.workspace }}/miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
-          chmod +x ${{ github.workspace }}/miniconda.sh
-          ${{ github.workspace }}/miniconda.sh -b -p ${{ github.workspace }}/miniconda
-          source ci/github/activate_conda "${{ github.workspace }}/miniconda/bin/python"
+      - name: Checkout test recipe
+        uses: actions/checkout@v2
+        with:
+          repository: conda/conda_build_test_recipe
+          path: ./conda_build_test_recipe/
+          fetch-depth: 0
 
-      - name: Setup CF MacOS Bits and Select Xcode
-        run: |
-          set -x -e -u
-          source ci/github/activate_conda "${{ github.workspace }}/miniconda/bin/python"
-          source ci/github/run_conda_forge_build_setup_osx
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          condarc-file: ./src/ci/github/.condarc
+          python-version: ${{ matrix.python-version }}
 
-      - name: Prepare Test Environment
+      - name: Setup test environment
         run: |
-          set -e -u
-          source ci/github/activate_conda "${{ github.workspace }}/miniconda/bin/python"
-          conda info
-          conda list
-          grep '^#' "${CONDA_PREFIX}/conda-meta/history"
-          conda install python=${{ matrix.python-version }} -y
-          mkdir -p ${{ github.workspace }}/miniconda/locks
-          mkdir -p ${{ github.workspace }}/miniconda/bin
-          chmod -w ${{ github.workspace }}/miniconda/locks
-          conda install -y -c conda-canary/label/dev conda
-          conda config --set always_yes yes
-          conda config --set auto_update_conda False
-          conda info
-          source ci/github/install_conda_build_test_deps
+          conda install -q -y -c main --file tests/requirements.txt
+          conda install -q -y -c main --file tests/requirements-macos.txt
+          conda install -q -y ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'main' }}::conda
           pip install -e .
           echo "Installing Support Libraries"
           pip install allure-pytest
           conda info -a
-          conda list --show-channel-urls
 
       - name: Run Serial Tests
         if: matrix.test-type == 'serial'
         run: |
-          set -e -u
-          source ci/github/activate_conda "${{ github.workspace }}/miniconda/bin/python"
-          conda install conda-verify -y
           pytest \
               --color=yes \
               -v \
@@ -399,15 +386,6 @@ jobs:
       - name: Run Parallel Tests
         if: matrix.test-type == 'parallel'
         run: |
-          set -e -u
-          source ci/github/activate_conda "${{ github.workspace }}/miniconda/bin/python"
-          conda remove conda-verify -y
-          echo "safety_checks: disabled" >> ~/.condarc
-          echo "local_repodata_ttl: 1800" >> ~/.condarc
-          mkdir -p ~/.conda
-          conda create -n blarg1 -yq python=2.7
-          conda create -n blarg3 -yq python=3.7
-          conda create -n blarg4 -yq python nomkl numpy pandas svn
           pytest \
               --color=yes \
               -v \
@@ -427,8 +405,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v2
         with:
-          path: ${{ env.REPLAY_DIR }}
           name: ${{ env.REPLAY_NAME }}-${{ matrix.test-type  }}
+          path: ${{ env.REPLAY_DIR }}
 
   # required check
   analyze:
