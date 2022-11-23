@@ -98,7 +98,7 @@ jobs:
               --color=yes \
               -vv \
               -n 0 \
-              --basetemp /tmp/cb_serial \
+              --basetemp ${{ runner.temp }}/${{ matrix.test-type}} \
               --cov conda_build \
               --cov-report xml \
               --replay-record-dir=${{ env.REPLAY_DIR }} \
@@ -115,7 +115,7 @@ jobs:
               --color=yes \
               -vv \
               -n auto \
-              --basetemp /tmp/cb \
+              --basetemp ${{ runner.temp }}/${{ matrix.test-type}} \
               --cov conda_build \
               --cov-append \
               --cov-report xml \
@@ -159,14 +159,6 @@ jobs:
         uses: actions/checkout@v2
         with:
           fetch-depth: 0
-
-      - name: Set temp dirs correctly
-        shell: cmd
-        # https://github.com/actions/virtual-environments/issues/712
-        run: |
-          echo "TMPDIR=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
-          echo "TEMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
-          echo "TMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
 
       - name: Setup Python ${{ matrix.python-version }}
         uses: actions/setup-python@v1
@@ -268,7 +260,7 @@ jobs:
               --color=yes ^
               -vv ^
               -n 0 ^
-              --basetemp %UserProfile%\cbtmp_serial ^
+              --basetemp ${{ runner.temp }}\${{ matrix.test-type}} ^
               --cov conda_build ^
               --cov-report xml ^
               --replay-record-dir=${{ env.REPLAY_DIR }} ^
@@ -294,7 +286,7 @@ jobs:
               --color=yes ^
               -vv ^
               -n auto ^
-              --basetemp %UserProfile%\cbtmp ^
+              --basetemp ${{ runner.temp }}\${{ matrix.test-type}} ^
               --cov conda_build ^
               --cov-append ^
               --cov-report xml ^
@@ -373,7 +365,7 @@ jobs:
               --color=yes \
               -v \
               -n 0 \
-              --basetemp /tmp/cb_serial \
+              --basetemp ${{ runner.temp }}/${{ matrix.test-type}} \
               --cov conda_build \
               --cov-report xml \
               --replay-record-dir=${{ env.REPLAY_DIR }} \
@@ -390,7 +382,7 @@ jobs:
               --color=yes \
               -v \
               -n auto \
-              --basetemp /tmp/cb \
+              --basetemp ${{ runner.temp }}/${{ matrix.test-type}} \
               --cov conda_build \
               --cov-append \
               --cov-report xml \
