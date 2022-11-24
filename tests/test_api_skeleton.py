@@ -388,9 +388,9 @@ def test_pypi_with_version_inconsistency(testing_workdir, testing_config):
     assert parse_version(m.version()) == parse_version("0.0.10")
 
 
-def test_pypi_with_basic_environment_markers(testing_workdir):
+def test_pypi_with_basic_environment_markers(testing_workdir, testing_config):
     # regression test for https://github.com/conda/conda-build/issues/1974
-    api.skeletonize('coconut', 'pypi', version='1.2.2')
+    api.skeletonize('coconut', 'pypi', version='1.2.2', config=testing_config)
     m = api.render('coconut')[0][0]
 
     build_reqs = str(m.meta['requirements']['host'])
@@ -406,14 +406,14 @@ def test_pypi_with_basic_environment_markers(testing_workdir):
         assert "pygments" not in run_reqs
 
 
-def test_setuptools_test_requirements(testing_workdir):
-    api.skeletonize(packages='hdf5storage', repo='pypi')
+def test_setuptools_test_requirements(testing_workdir, testing_config):
+    api.skeletonize(packages='hdf5storage', repo='pypi', config=testing_config)
     m = api.render('hdf5storage')[0][0]
     assert m.meta['test']['requires'] == ['nose >=1.0']
 
 
 @pytest.mark.skipif(sys.version_info < (3, 8), reason="sympy is python 3.8+")
-def test_pypi_section_order_preserved(testing_workdir):
+def test_pypi_section_order_preserved(testing_workdir, testing_config):
     """
     Test whether sections have been written in the correct order.
     """
@@ -422,7 +422,7 @@ def test_pypi_section_order_preserved(testing_workdir):
                                             REQUIREMENTS_ORDER,
                                             PYPI_META_STATIC)
 
-    api.skeletonize(packages='sympy', repo='pypi')
+    api.skeletonize(packages='sympy', repo='pypi', config=testing_config)
     # Since we want to check the order of items in the recipe (not whether
     # the metadata values themselves are sensible), read the file as (ordered)
     # yaml, and check the order.
