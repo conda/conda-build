@@ -17,7 +17,7 @@ from conda_build.conda_interface import download, reset_context
 from conda_build.tarcheck import TarCheck
 
 from conda_build import api
-from conda_build.config import Config
+from conda_build.config import Config, zstd_compression_level_default
 from conda_build.utils import get_site_packages, on_win, get_build_folders, package_has_file, tar_xf
 from conda_build.conda_interface import TemporaryDirectory
 from conda_build.exceptions import DependencyNeedsBuildingError
@@ -689,6 +689,38 @@ def test_long_test_prefix(additional_args, is_long_test_prefix):
     parser, args = main_build.parse_args(args)
     config = Config(**args.__dict__)
     assert config.long_test_prefix is is_long_test_prefix
+
+
+@pytest.mark.parametrize(
+    'zstd_level_condarc, zstd_level_cli',
+    [
+        (None, None),
+        (1, None),
+        (1, 2),
+    ],
+)
+def test_zstd_compression_level(testing_workdir, zstd_level_condarc, zstd_level_cli):
+    assert zstd_compression_level_default not in {zstd_level_condarc, zstd_level_cli}
+    if zstd_level_condarc:
+        with open(os.path.join(testing_workdir, '.condarc'), 'w') as f:
+            print(
+                'conda_build:',
+                f'  zstd_compression_level: {zstd_level_condarc}',
+                sep='\n',
+                file=f,
+            )
+    reset_context([os.path.join(testing_workdir, '.condarc')])
+    args = ['non_existing_recipe']
+    if zstd_level_cli:
+        args.append(f'--zstd-compression-level={zstd_level_cli}')
+    parser, args = main_build.parse_args(args)
+    config = Config(**args.__dict__)
+    if zstd_level_cli:
+        assert config.zstd_compression_level == zstd_level_cli
+    elif zstd_level_condarc:
+        assert config.zstd_compression_level == zstd_level_condarc
+    else:
+        assert config.zstd_compression_level == zstd_compression_level_default
 
 
 def test_user_warning(tmpdir, recwarn):
