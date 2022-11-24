@@ -364,7 +364,9 @@ jobs:
           echo "MACOSX_DEPLOYMENT_TARGET=$(xcrun --sdk macosx --show-sdk-version)" >> $GITHUB_ENV
 
       - name: Show info
-        run: conda info -a
+        run: |
+          conda info -a
+          conda list --show-channel-urls
 
       - name: Run tests
         run: |
