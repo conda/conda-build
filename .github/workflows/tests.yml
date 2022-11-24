@@ -84,8 +84,8 @@ jobs:
 
   #     - name: Setup testing environment
   #       run: |
-  #         conda install -q -y -c main --file tests/requirements.txt
-  #         conda install -q -y -c main --file tests/requirements-linux.txt
+  #         conda install -q -y -c defaults --file tests/requirements.txt
+  #         conda install -q -y -c defaults --file tests/requirements-linux.txt
   #         conda install -q -y ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'main' }}::conda
   #         pip install -e .
   #         pip install allure-pytest
@@ -350,8 +350,8 @@ jobs:
 
       - name: Setup environment
         run: |
-          conda install -q -y -c main --file tests/requirements.txt
-          conda install -q -y -c main --file tests/requirements-macos.txt
+          conda install -q -y -c defaults --file tests/requirements.txt
+          conda install -q -y -c defaults --file tests/requirements-macos.txt
           conda install -q -y ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'main' }}::conda
           pip install -e .
           pip install allure-pytest
