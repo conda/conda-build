@@ -360,7 +360,7 @@ jobs:
         # several test scripts are still conda-build 2 style which don't defined conda_build_config.yaml,
         # these must instead define $CONDA_BUILD_SYSROOT and $MACOSX_DEPLOYMENT_TARGET on macOS
         run: |
-          xcode-select --switch /Applications/Xcode_11.7.app
+          sudo xcode-select --switch /Applications/Xcode_11.7.app
 
           echo "CONDA_BUILD_SYSROOT=$(xcrun --sdk macosx --show-sdk-path)" >> $GITHUB_ENV
           echo "MACOSX_DEPLOYMENT_TARGET=$(xcrun --sdk macosx --show-sdk-version)" >> $GITHUB_ENV
