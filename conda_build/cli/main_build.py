@@ -160,8 +160,8 @@ def parse_args(args):
         help=("When building v2 packages, set the compression level used by "
               "conda-package-handling. Defaults to the maximum."),
         type=int,
-        choices=range(1, 22),
-        default=zstd_compression_level_default,
+        choices=range(1, 23),
+        default=cc_conda_build.get('zstd_compression_level', zstd_compression_level_default),
     )
     pypi_grp = p.add_argument_group("PyPI upload parameters (twine)")
     pypi_grp.add_argument(
