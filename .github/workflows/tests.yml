@@ -363,6 +363,9 @@ jobs:
           echo "CONDA_BUILD_SYSROOT=$(xcrun --sdk macosx --show-sdk-path)" >> $GITHUB_ENV
           echo "MACOSX_DEPLOYMENT_TARGET=$(xcrun --sdk macosx --show-sdk-version)" >> $GITHUB_ENV
 
+          echo "CONDA_BUILD_SYSROOT=/Applications/Xcode_13.2.1.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk" >> $GITHUB_ENV
+          echo "MACOSX_DEPLOYMENT_TARGET=10.15" >> $GITHUB_ENV
+
       - name: Show info
         run: |
           conda info -a
