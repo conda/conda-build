@@ -13,7 +13,7 @@ import yaml
 
 import pytest
 
-from conda_build.conda_interface import download, reset_context
+from conda_build.conda_interface import cc_conda_build, context, download, reset_context
 from conda_build.tarcheck import TarCheck
 
 from conda_build import api
@@ -32,6 +32,14 @@ import conda_build.cli.main_metapackage as main_metapackage
 import conda_build.cli.main_skeleton as main_skeleton
 import conda_build.cli.main_inspect as main_inspect
 import conda_build.cli.main_index as main_index
+
+
+def _reset_config(search_path=None):
+    reset_context(search_path)
+    cc_conda_build.clear()
+    cc_conda_build.update(
+        context.conda_build if hasattr(context, 'conda_build') else {}
+    )
 
 
 @pytest.mark.sanity
@@ -492,7 +500,8 @@ def test_purge_all(testing_workdir, testing_metadata):
         assert not any(os.path.isfile(fn) for fn in outputs)
 
 
-def test_no_force_upload(mocker, testing_workdir, testing_metadata):
+@pytest.mark.serial
+def test_no_force_upload(mocker, testing_workdir, testing_metadata, request):
     with open(os.path.join(testing_workdir, '.condarc'), 'w') as f:
         f.write('anaconda_upload: True\n')
         f.write('conda_build:\n')
@@ -501,7 +510,8 @@ def test_no_force_upload(mocker, testing_workdir, testing_metadata):
     api.output_yaml(testing_metadata, 'meta.yaml')
     args = ['--no-force-upload', testing_workdir]
     call = mocker.patch.object(conda_build.build.subprocess, 'call')
-    reset_context(testing_workdir)
+    request.addfinalizer(_reset_config)
+    _reset_config([os.path.join(testing_workdir, '.condarc')])
     main_build.execute(args)
     pkg = api.get_output_file_path(testing_metadata)
     assert call.called_once_with(['anaconda', 'upload', pkg])
@@ -691,6 +701,7 @@ def test_long_test_prefix(additional_args, is_long_test_prefix):
     assert config.long_test_prefix is is_long_test_prefix
 
 
+@pytest.mark.serial
 @pytest.mark.parametrize(
     'zstd_level_condarc, zstd_level_cli',
     [
@@ -699,7 +710,7 @@ def test_long_test_prefix(additional_args, is_long_test_prefix):
         (1, 2),
     ],
 )
-def test_zstd_compression_level(testing_workdir, zstd_level_condarc, zstd_level_cli):
+def test_zstd_compression_level(testing_workdir, request, zstd_level_condarc, zstd_level_cli):
     assert zstd_compression_level_default not in {zstd_level_condarc, zstd_level_cli}
     if zstd_level_condarc:
         with open(os.path.join(testing_workdir, '.condarc'), 'w') as f:
@@ -709,7 +720,8 @@ def test_zstd_compression_level(testing_workdir, zstd_level_condarc, zstd_level_
                 sep='\n',
                 file=f,
             )
-    reset_context([os.path.join(testing_workdir, '.condarc')])
+    request.addfinalizer(_reset_config)
+    _reset_config([os.path.join(testing_workdir, '.condarc')])
     args = ['non_existing_recipe']
     if zstd_level_cli:
         args.append(f'--zstd-compression-level={zstd_level_cli}')
