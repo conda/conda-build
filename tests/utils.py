@@ -4,8 +4,11 @@ import contextlib
 import os
 import shlex
 import sys
+from time import sleep
 
 import pytest
+from requests.exceptions import ConnectionError
+
 from conda_build.metadata import MetaData
 from conda_build.utils import on_win
 
@@ -152,3 +155,13 @@ def skip_serial(request):
     ):
         # under xdist and serial
         pytest.skip("serial")
+
+
+def delay_rerun_for_connection(seconds):
+    def rerun_filter(exc_info, *args):
+        exc_type, exc_value, exc_traceback = exc_info
+        if not issubclass(exc_type, ConnectionError):
+            return False
+        sleep(seconds)
+        return True
+    return rerun_filter

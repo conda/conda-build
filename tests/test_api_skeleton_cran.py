@@ -13,6 +13,8 @@ from conda_build import api
 from conda_build.skeletons.cran import CRAN_BUILD_SH_SOURCE, CRAN_META
 from conda_build.utils import ensure_list
 
+from .utils import delay_rerun_for_connection
+
 
 # CRAN packages to test license_file entry.
 # (package, license_id, license_family, license_files)
@@ -42,7 +44,7 @@ cran_packages = [
 
 @pytest.mark.slow
 @pytest.mark.parametrize("package, license_id, license_family, license_files", cran_packages)
-@pytest.mark.flaky(max_runs=5)
+@pytest.mark.flaky(max_runs=3, rerun_filter=delay_rerun_for_connection(1))
 def test_cran_license(package, license_id, license_family, license_files, testing_workdir, testing_config):
     api.skeletonize(packages=package, repo='cran', output_dir=testing_workdir,
                     config=testing_config)
@@ -66,6 +68,7 @@ cran_os_type_pkgs = [
 
 
 @pytest.mark.parametrize("package, skip_text", cran_os_type_pkgs)
+@pytest.mark.flaky(max_runs=3, rerun_filter=delay_rerun_for_connection(1))
 def test_cran_os_type(package, skip_text, testing_workdir, testing_config):
     api.skeletonize(packages=package, repo='cran', output_dir=testing_workdir,
                     config=testing_config)
@@ -75,6 +78,7 @@ def test_cran_os_type(package, skip_text, testing_workdir, testing_config):
 
 
 # Test cran skeleton argument --no-comments
+@pytest.mark.flaky(max_runs=3, rerun_filter=delay_rerun_for_connection(1))
 def test_cran_no_comments(testing_workdir, testing_config):
     package = "data.table"
     meta_yaml_comment = '  # This is required to make R link correctly on Linux.'

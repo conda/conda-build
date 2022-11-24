@@ -13,6 +13,8 @@ from conda_build.skeletons.pypi import get_package_metadata, \
     get_dependencies, get_import_tests, get_tests_require, get_home, \
     get_summary, get_license_name, clean_license_name
 
+from .utils import delay_rerun_for_connection
+
 try:
     import ruamel_yaml
 except ImportError:
@@ -443,7 +445,7 @@ def test_pypi_section_order_preserved(testing_workdir):
 
 
 @pytest.mark.slow
-@pytest.mark.flaky(max_runs=5)
+@pytest.mark.flaky(max_runs=3, rerun_filter=delay_rerun_for_connection(1))
 @pytest.mark.skipif(not external.find_executable("shellcheck"), reason="requires shellcheck >=0.7.0")
 @pytest.mark.parametrize(
     "package, repo", [("r-rmarkdown", "cran"), ("Perl::Lint", "cpan"), ("screen", "rpm")]
