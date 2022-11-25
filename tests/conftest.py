@@ -1,10 +1,13 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+import inspect
 import os
 import sys
 from collections import defaultdict
 
 import pytest
+
+import conda_build.api
 from conda_build.config import (
     Config,
     _src_cache_root_default,
@@ -118,6 +121,54 @@ def testing_config(testing_workdir):
     assert result.src_cache_root == testing_workdir
     assert result.noarch_python_build_age == 0
     return result
+
+
+@pytest.fixture(scope="function")
+def api_default_testing_config(testing_config, request):
+    """Monkeypatch conda_build.api functions to use config=testing_config default
+
+    This requests fixture testing_config, thus implicitly testing_workdir, too.
+    """
+
+    # Allow single tests to disable this fixture even if outer scope adds it.
+    if "no_api_default_testing_config" in request.keywords:
+        return
+
+    arg_name = "config"
+    new_default = testing_config
+
+    saved_defaults = {}
+    saved_kwdefaults = {}
+
+    module = conda_build.api
+    for _, member in inspect.getmembers(module, inspect.isfunction):
+        if inspect.getmodule(member) is not module:
+            continue
+        arg_spec = inspect.getfullargspec(member)
+        defaults = member.__defaults__
+        kwdefaults = member.__kwdefaults__
+        try:
+            index = arg_spec.args[-len(defaults):].index(arg_name)
+        except (TypeError, ValueError):
+            pass
+        else:
+            saved_defaults[member] = defaults
+            member.__defaults__ = defaults[:index] + (new_default,) + defaults[index + 1:]
+        try:
+            kwdefaults[arg_name]
+        except (TypeError, KeyError):
+            pass
+        else:
+            saved_kwdefaults[member] = kwdefaults
+            member.__kwdefaults__ = {**kwdefaults, arg_name: new_default}
+
+    def restore_defaults():
+        for func, defaults in saved_defaults.items():
+            func.__defaults__ = defaults
+        for func, kwdefaults in saved_kwdefaults.items():
+            func.__kwdefaults__ = kwdefaults
+
+    request.addfinalizer(restore_defaults)
 
 
 @pytest.fixture(scope="function")
