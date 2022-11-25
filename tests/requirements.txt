@@ -13,6 +13,6 @@ psutil
 pytest
 pytest-cov
 pytest-mock
-pytest-rerunfailures
+flaky
 python-libarchive-c
 toml
