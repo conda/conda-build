@@ -90,7 +90,7 @@ def testing_homedir(tmpdir, request):
 @pytest.fixture(scope="function")
 def testing_config(testing_workdir):
     def boolify(v):
-        return True if "v" == "true" else False
+        return v == "true"
 
     result = Config(
         croot=testing_workdir,
