@@ -12,6 +12,8 @@ from .utils import thisdir, metadata_dir
 from conda_build.utils import DEFAULT_SUBDIRS
 from conda_build.metadata import _hash_dependencies
 
+pytestmark = pytest.mark.usefixtures("api_default_testing_config")
+
 
 def test_uses_vcs_in_metadata(testing_workdir, testing_metadata):
     testing_metadata._meta_path = os.path.join(testing_workdir, 'meta.yaml')

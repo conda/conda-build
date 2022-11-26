@@ -7,6 +7,8 @@ from conda_build import api
 
 from .utils import thisdir
 
+pytestmark = pytest.mark.usefixtures("api_default_testing_config")
+
 
 @pytest.fixture()
 def recipe():

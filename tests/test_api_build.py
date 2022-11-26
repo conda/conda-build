@@ -46,6 +46,8 @@ from conda_build.conda_interface import conda_46, conda_47
 
 from .utils import is_valid_dir, metadata_dir, fail_dir, add_mangling
 
+pytestmark = pytest.mark.usefixtures("api_default_testing_config")
+
 # define a few commonly used recipes - use os.path.join(metadata_dir, recipe) elsewhere
 empty_sections = os.path.join(metadata_dir, "empty_sections")
 

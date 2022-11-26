@@ -11,6 +11,8 @@ from conda_build.utils import on_win, package_has_file, get_site_packages
 
 from .utils import add_mangling, metadata_dir
 
+pytestmark = pytest.mark.usefixtures("api_default_testing_config")
+
 
 def test_compile_missing_pyc(testing_workdir):
     good_files = ['f1.py', 'f3.py']

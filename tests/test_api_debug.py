@@ -18,6 +18,8 @@ from tests import utils
 
 from .utils import metadata_dir, thisdir, on_win
 
+pytestmark = pytest.mark.usefixtures("api_default_testing_config")
+
 recipe_path = os.path.join(metadata_dir, "_debug_pkg")
 ambiguous_recipe_path = os.path.join(metadata_dir, "_debug_pkg_multiple_outputs")
 tarball_path = os.path.join(thisdir, "archives", "test_debug_pkg-1.0-0.tar.bz2")

@@ -13,6 +13,8 @@ from conda_build import api
 from conda_build.skeletons.cran import CRAN_BUILD_SH_SOURCE, CRAN_META
 from conda_build.utils import ensure_list
 
+pytestmark = pytest.mark.usefixtures("api_default_testing_config")
+
 
 # CRAN packages to test license_file entry.
 # (package, license_id, license_family, license_files)
