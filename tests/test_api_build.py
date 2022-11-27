@@ -1593,6 +1593,15 @@ def test_downstream_tests(testing_config):
 
 
 @pytest.mark.sanity
+@pytest.mark.xfail
+def test_downstream_test_source_files_copy(testing_config):
+    upstream = os.path.join(metadata_dir, '_test_downstreams_test_source_files_copy/upstream')
+    downstream = os.path.join(metadata_dir, '_test_downstreams_test_source_files_copy/downstream')
+    api.build(downstream, config=testing_config, notest=False)
+    api.build(upstream, config=testing_config, notest=False)
+
+
+@pytest.mark.sanity
 @pytest.mark.xfail(not conda_46,
                    reason="conda 4.6 changed logger level from info to warn")
 def test_warning_on_file_clobbering(testing_config, capfd):
