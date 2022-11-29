@@ -63,7 +63,6 @@ jobs:
       ALLURE_DIR: ./allure-results/
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
       PYTEST_NUMPROCESSES: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
-      PYTEST_TEMPDIR: ${{ runner.temp }}/${{ matrix.test-type}}
 
     steps:
       - name: Checkout repository
@@ -79,20 +78,24 @@ jobs:
           path: ./conda_build_test_recipe/
           fetch-depth: 0
 
-      - name: Setup Miniconda
+      - name: Setup miniconda
         uses: conda-incubator/setup-miniconda@v2
         with:
           condarc-file: ./src/ci/github/.condarc
           python-version: ${{ matrix.python-version }}
 
-      - name: Setup testing environment
+      - name: Setup environment
         run: |
           conda install -q -y -c defaults --file tests/requirements.txt
           conda install -q -y -c defaults --file tests/requirements-linux.txt
           conda install -q -y ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'main' }}::conda
           pip install -e .
           pip install allure-pytest
+
+      - name: Show info
+        run: |
           conda info -a
+          conda list --show-channel-urls
 
       - name: Run tests
         run: |
@@ -100,7 +103,7 @@ jobs:
             --color=yes \
             -v \
             -n "${{ env.PYTEST_NUMPROCESSES }}" \
-            --basetemp "${{  env.PYTEST_TEMPDIR }}" \
+            --basetemp "${{ runner.temp }}/${{ matrix.test-type }}" \
             --cov conda_build \
             --cov-append \
             --cov-report xml \
@@ -111,7 +114,7 @@ jobs:
             ./tests/
           tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
 
-      - name: Upload Pytest Replay
+      - name: Upload pytest replay
         if: always()
         uses: actions/upload-artifact@v2
         with:
@@ -286,7 +289,7 @@ jobs:
           VS90COMNTOOLS: C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC\bin
           LIB:
 
-      - name: Upload Pytest Replay
+      - name: Upload pytest replay
         if: always()
         uses: actions/upload-artifact@v2
         with:
@@ -314,7 +317,6 @@ jobs:
       ALLURE_DIR: ./allure-results/
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
       PYTEST_NUMPROCESSES: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
-      PYTEST_TEMPDIR: ${{ runner.temp }}/${{ matrix.test-type}}
 
     steps:
       - name: Checkout repository
@@ -345,8 +347,8 @@ jobs:
           pip install allure-pytest
 
       - name: Setup variables
-        # several test scripts are still conda-build 2 style which don't defined conda_build_config.yaml,
-        # these must instead define $CONDA_BUILD_SYSROOT and $MACOSX_DEPLOYMENT_TARGET on macOS
+        # macOS needs to define $CONDA_BUILD_SYSROOT and $MACOSX_DEPLOYMENT_TARGET to know where to find the SDKs
+        # the Anaconda compilers only support up to macOS 10.15
         run: |
           sudo xcode-select --switch /Applications/Xcode_11.7.app
 
@@ -364,7 +366,7 @@ jobs:
             --color=yes \
             -v \
             -n "${{ env.PYTEST_NUMPROCESSES }}" \
-            --basetemp "${{ env.PYTEST_TEMPDIR }}" \
+            --basetemp "${{ runner.temp }}/${{ matrix.test-type }}" \
             --cov conda_build \
             --cov-append \
             --cov-report xml \
@@ -375,7 +377,7 @@ jobs:
             ./tests/
           tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
 
-      - name: Upload Pytest Replay
+      - name: Upload pytest replay
         if: always()
         uses: actions/upload-artifact@v2
         with:
