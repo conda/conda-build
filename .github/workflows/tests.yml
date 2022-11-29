@@ -62,7 +62,7 @@ jobs:
       REPLAY_DIR: ${{ github.workspace }}/pytest-replay/
       ALLURE_DIR: ./allure-results/
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
-      PYTEST_NUMPROCESSES: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
+      PYTEST_NUMPROCESSES: ${{ matrix.test-type == 'serial' && 0 || 'auto' }}
 
     steps:
       - name: Checkout repository
@@ -316,7 +316,7 @@ jobs:
       REPLAY_DIR: ${{ github.workspace }}/pytest-replay/
       ALLURE_DIR: ./allure-results/
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
-      PYTEST_NUMPROCESSES: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
+      PYTEST_NUMPROCESSES: ${{ matrix.test-type == 'serial' && 0 || 'auto' }}
 
     steps:
       - name: Checkout repository
