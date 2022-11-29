@@ -19,8 +19,6 @@ from tests import utils
 
 from .utils import metadata_dir, thisdir
 
-pytestmark = pytest.mark.usefixtures("api_default_testing_config")
-
 
 def test_render_need_download(testing_workdir, testing_config):
     # first, test that the download/render system renders all it can,

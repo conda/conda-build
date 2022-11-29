@@ -1,15 +1,15 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-import inspect
 import os
 import sys
 from collections import defaultdict
 
 import pytest
 
-import conda_build.api
+import conda_build.config
 from conda_build.config import (
     Config,
+    get_or_merge_config,
     _src_cache_root_default,
     conda_pkg_format_default,
     enable_static_default,
@@ -123,52 +123,25 @@ def testing_config(testing_workdir):
     return result
 
 
-@pytest.fixture(scope="function")
-def api_default_testing_config(testing_config, request):
-    """Monkeypatch conda_build.api functions to use config=testing_config default
+@pytest.fixture(scope="function", autouse=True)
+def default_testing_config(testing_config, monkeypatch, request):
+    """Monkeypatch get_or_merge_config to use testing_config by default
 
     This requests fixture testing_config, thus implicitly testing_workdir, too.
     """
 
     # Allow single tests to disable this fixture even if outer scope adds it.
-    if "no_api_default_testing_config" in request.keywords:
+    if "no_default_testing_config" in request.keywords:
         return
 
-    arg_name = "config"
-    new_default = testing_config
+    def get_or_merge_testing_config(config, variant=None, **kwargs):
+        return get_or_merge_config(config or testing_config, variant, **kwargs)
 
-    saved_defaults = {}
-    saved_kwdefaults = {}
-
-    module = conda_build.api
-    for _, member in inspect.getmembers(module, inspect.isfunction):
-        if inspect.getmodule(member) is not module:
-            continue
-        arg_spec = inspect.getfullargspec(member)
-        defaults = member.__defaults__
-        kwdefaults = member.__kwdefaults__
-        try:
-            index = arg_spec.args[-len(defaults):].index(arg_name)
-        except (TypeError, ValueError):
-            pass
-        else:
-            saved_defaults[member] = defaults
-            member.__defaults__ = defaults[:index] + (new_default,) + defaults[index + 1:]
-        try:
-            kwdefaults[arg_name]
-        except (TypeError, KeyError):
-            pass
-        else:
-            saved_kwdefaults[member] = kwdefaults
-            member.__kwdefaults__ = {**kwdefaults, arg_name: new_default}
-
-    def restore_defaults():
-        for func, defaults in saved_defaults.items():
-            func.__defaults__ = defaults
-        for func, kwdefaults in saved_kwdefaults.items():
-            func.__kwdefaults__ = kwdefaults
-
-    request.addfinalizer(restore_defaults)
+    monkeypatch.setattr(
+        conda_build.config,
+        "get_or_merge_config",
+        get_or_merge_testing_config,
+    )
 
 
 @pytest.fixture(scope="function")

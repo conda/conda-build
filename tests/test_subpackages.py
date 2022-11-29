@@ -13,8 +13,6 @@ from conda_build import api, utils
 
 from .utils import subpackage_dir, is_valid_dir
 
-pytestmark = pytest.mark.usefixtures("api_default_testing_config")
-
 
 @pytest.fixture(params=[dirname for dirname in os.listdir(subpackage_dir)
                         if is_valid_dir(subpackage_dir, dirname)])

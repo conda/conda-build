@@ -8,8 +8,6 @@ from conda_build import api
 
 from .utils import metadata_dir
 
-pytestmark = pytest.mark.usefixtures("api_default_testing_config")
-
 
 @pytest.mark.parametrize("pkg_format,pkg_ext", [(None, ".tar.bz2"), ("2", ".conda")])
 def test_conda_pkg_format(

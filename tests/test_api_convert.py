@@ -14,8 +14,6 @@ from conda_build.utils import package_has_file, on_win
 
 from .utils import metadata_dir, assert_package_consistency
 
-pytestmark = pytest.mark.usefixtures("api_default_testing_config")
-
 
 def test_convert_wheel_raises():
     with pytest.raises(RuntimeError) as exc:

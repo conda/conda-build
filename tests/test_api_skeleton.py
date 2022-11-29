@@ -27,8 +27,6 @@ from conda_build.exceptions import DependencyNeedsBuildingError
 import conda_build.os_utils.external as external
 from conda_build.utils import on_win
 
-pytestmark = pytest.mark.usefixtures("api_default_testing_config")
-
 thisdir = os.path.dirname(os.path.realpath(__file__))
 
 repo_packages = [('', 'pypi', 'pip', '8.1.2'),

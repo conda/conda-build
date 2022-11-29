@@ -12,8 +12,6 @@ import yaml
 from conda_build import api, exceptions, variants
 from conda_build.utils import package_has_file
 
-pytestmark = pytest.mark.usefixtures("api_default_testing_config")
-
 thisdir = os.path.dirname(__file__)
 recipe_dir = os.path.join(thisdir, 'test-recipes', 'variants')
 

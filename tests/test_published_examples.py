@@ -10,8 +10,6 @@ from conda_build import api
 from conda_build.utils import check_call_env
 from .utils import metadata_dir, is_valid_dir
 
-pytestmark = pytest.mark.usefixtures("api_default_testing_config")
-
 published_examples = os.path.join(os.path.dirname(metadata_dir), 'published_code')
 
 

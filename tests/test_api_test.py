@@ -11,8 +11,6 @@ import pytest
 from conda_build import api
 from .utils import metadata_dir
 
-pytestmark = pytest.mark.usefixtures("api_default_testing_config")
-
 
 @pytest.mark.sanity
 def test_recipe_test(testing_workdir, testing_config):
