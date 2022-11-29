@@ -58,6 +58,7 @@ jobs:
             conda-version: canary
             test-type: parallel
     env:
+      CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
       REPLAY_NAME: Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
       REPLAY_DIR: ${{ github.workspace }}/pytest-replay/
       ALLURE_DIR: ./allure-results/
@@ -88,7 +89,7 @@ jobs:
         run: |
           conda install -q -y -c defaults --file tests/requirements.txt
           conda install -q -y -c defaults --file tests/requirements-linux.txt
-          conda install -q -y ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'main' }}::conda
+          conda install -q -y ${{ env.CONDA_CHANNEL_LABEL }}::conda
           pip install -e .
           pip install allure-pytest
 
@@ -312,6 +313,7 @@ jobs:
       max-parallel: 10
     timeout-minutes: 120
     env:
+      CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
       REPLAY_NAME: macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
       REPLAY_DIR: ${{ github.workspace }}/pytest-replay/
       ALLURE_DIR: ./allure-results/
@@ -342,7 +344,7 @@ jobs:
         run: |
           conda install -q -y -c defaults --file tests/requirements.txt
           conda install -q -y -c defaults --file tests/requirements-macos.txt
-          conda install -q -y ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'main' }}::conda
+          conda install -q -y ${{ env.CONDA_CHANNEL_LABEL }}::conda
           pip install -e .
           pip install allure-pytest
 
