@@ -291,7 +291,7 @@ def test_skeleton_pypi_arguments_work(testing_workdir):
 
     https://github.com/conda/conda-build/pull/1384
     """
-    args = ['pypi', 'msumastro', '--pin-numpy']
+    args = ['pypi', 'msumastro', '--version=1.1.6', '--pin-numpy']
     main_skeleton.execute(args)
     assert os.path.isdir('msumastro')
 
