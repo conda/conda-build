@@ -1,5 +1,6 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+import inspect,sys
 from copy import copy
 from collections import defaultdict, OrderedDict
 from functools import partial
@@ -733,14 +734,17 @@ def _collect_needed_dsos(sysroots_files, files, run_prefix, sysroot_substitution
     sysroots = ''
     if sysroots_files:
         sysroots = list(sysroots_files.keys())[0]
+    print(inspect.getframeinfo(inspect.currentframe()).lineno, __file__, file=sys.stderr)
     for f in files:
         path = join(run_prefix, f)
         if not codefile_type(path):
             continue
         build_prefix = build_prefix.replace(os.sep, '/')
         run_prefix = run_prefix.replace(os.sep, '/')
+        print(inspect.getframeinfo(inspect.currentframe()).lineno, __file__, file=sys.stderr)
         needed = get_linkages_memoized(path, resolve_filenames=True, recurse=False,
                                        sysroot=sysroots, envroot=run_prefix)
+        print(inspect.getframeinfo(inspect.currentframe()).lineno, __file__, file=sys.stderr)
         for lib, res in needed.items():
             resolved = res['resolved'].replace(os.sep, '/')
             for sysroot, sysroot_files in sysroots_files.items():
@@ -759,6 +763,7 @@ def _collect_needed_dsos(sysroots_files, files, run_prefix, sysroot_substitution
             res['resolved'] = resolved
         needed_dsos_for_file[f] = needed
         all_needed_dsos = all_needed_dsos.union({info['resolved'] for f, info in needed.items()})
+    print(inspect.getframeinfo(inspect.currentframe()).lineno, __file__, file=sys.stderr)
     return all_needed_dsos, needed_dsos_for_file
 
 
@@ -1025,7 +1030,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                            variants={}):
     verbose = True
     errors = []
-
+    print(inspect.getframeinfo(inspect.currentframe()).lineno, __file__, file=sys.stderr)
     files_to_inspect = []
     filesu = []
     for f in files:
@@ -1050,14 +1055,14 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
     ignore_list = utils.ensure_list(ignore_run_exports)
     if subdir.startswith('linux'):
         ignore_list.append('libgcc-ng')
-
+    print(inspect.getframeinfo(inspect.currentframe()).lineno, __file__, file=sys.stderr)
     package_nature = {package: library_nature(package, run_prefix, subdir, bldpkgs_dirs, output_folder, channel_urls)
                       for package in packages}
     lib_packages = {package for package in packages
                         if package.quad[0] not in ignore_list and
                         [package] != 'non-library'}
     lib_packages_used = {pkg_vendored_dist}
-
+    print(inspect.getframeinfo(inspect.currentframe()).lineno, __file__, file=sys.stderr)
     ignore_list_syms = ['main', '_main', '*get_pc_thunk*', '___clang_call_terminate', '_timeout']
     # ignore_for_statics = ['gcc_impl_linux*', 'compiler-rt*', 'llvm-openmp*', 'gfortran_osx*']
     # sysroots and whitelists are similar, but the subtle distinctions are important.
@@ -1094,7 +1099,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
             build_is_host = True if sys.platform == 'win-32' else False
 
     whitelist += missing_dso_whitelist or []
-
+    print(inspect.getframeinfo(inspect.currentframe()).lineno, __file__, file=sys.stderr)
     # Sort the sysroots by the number of files in them so things can assume that
     # the first sysroot is more important than others.
     sysroots_files = dict()
@@ -1131,15 +1136,15 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                             .format(sysroot, list(diffs)[1:3]))
                 sysroots_files[srs] = sysroot_files
     sysroots_files = OrderedDict(sorted(sysroots_files.items(), key=lambda x: -len(x[1])))
-
+    print(inspect.getframeinfo(inspect.currentframe()).lineno, __file__, file=sys.stderr)
     all_needed_dsos, needed_dsos_for_file = _collect_needed_dsos(sysroots_files, files, run_prefix,
                                                                  sysroot_substitution,
                                                                  build_prefix, build_prefix_substitution)
-
+    print(inspect.getframeinfo(inspect.currentframe()).lineno, __file__, file=sys.stderr)
     prefix_owners, _, _, all_lib_exports = _map_file_to_package(
         files, run_prefix, build_prefix, all_needed_dsos, pkg_vendored_dist, ignore_list_syms,
         sysroot_substitution, enable_static)
-
+    print(inspect.getframeinfo(inspect.currentframe()).lineno, __file__, file=sys.stderr)
     for f in files_to_inspect:
         needed = needed_dsos_for_file[f]
         for needed_dso, needed_dso_info in needed.items():
@@ -1167,11 +1172,11 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                         #       "WARNING :: .. the package containing '{}' could not be found in the run prefix".format(
                         #     f, rpaths, needed_dso))
                         pass
-
+    print(inspect.getframeinfo(inspect.currentframe()).lineno, __file__, file=sys.stderr)
     _show_linking_messages(files, errors, needed_dsos_for_file, build_prefix, run_prefix, pkg_name,
                            error_overlinking, runpath_whitelist, verbose, requirements_run, lib_packages,
                            lib_packages_used, whitelist, sysroots_files, sysroot_prefix, sysroot_substitution, subdir)
-
+    print(inspect.getframeinfo(inspect.currentframe()).lineno, __file__, file=sys.stderr)
     if lib_packages_used != lib_packages:
         info_prelude = f"   INFO ({pkg_name})"
         warn_prelude = f"WARNING ({pkg_name})"
@@ -1207,7 +1212,7 @@ def check_overlinking_impl(pkg_name, pkg_version, build_str, build_number, subdi
                 raise OverDependingError(overdepending_errors)
         else:
             sys.exit(1)
-
+    print(inspect.getframeinfo(inspect.currentframe()).lineno, __file__, file=sys.stderr)
     if pkg_vendoring_key in vendoring_record:
         imports = vendoring_record[pkg_vendoring_key]
         return imports

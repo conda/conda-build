@@ -89,7 +89,7 @@ jobs:
             %CANARY_CHANNEL%conda ^
             pip python-libarchive-c pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling ^
             pytest-replay pytest-rerunfailures ^
-            py-lief ^
+            "conda-forge::py-lief>=0.12.3" ^
             ||exit 1
           call conda info
           python -c "import sys; print(sys.version)"
