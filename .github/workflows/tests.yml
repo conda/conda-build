@@ -306,6 +306,11 @@ jobs:
           conda info -a
           conda list --show-channel-urls
 
+          echo "Installing Support Libraries"
+          pip install setuptools wheel twine
+          pip install pytest-html
+          pip install allure-pytest
+
       - name: Run Serial Tests
         if: matrix.test-type == 'serial'
         run: |
