@@ -744,7 +744,7 @@ def test_about_license_file_and_prelink_message(testing_workdir, testing_config,
 # Rather than assuming they will be at $ROOT/pkgs since that can change and we don't care where they are in terms of the
 # tests.
 @pytest.mark.xfail(parse_version(conda.__version__) >= parse_version("4.13"),
-                   reason="Older version of not supported conda 4.11")
+                   reason="Older version of not supported conda less than 4.13")
 def test_noarch_python_with_tests(testing_config):
     recipe = os.path.join(metadata_dir, "_noarch_python_with_tests")
     pkg = api.build(recipe, config=testing_config)[0]
