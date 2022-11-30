@@ -1,11 +1,13 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-import os
-import sys
 from collections import defaultdict
+import os
+import subprocess
+import sys
 
 import pytest
 
+from conda.common.compat import on_mac
 import conda_build.config
 from conda_build.config import (
     Config,
@@ -205,3 +207,29 @@ def single_version():
 @pytest.fixture(scope="function")
 def no_numpy_version():
     return {"python": ["2.7.*", "3.5.*"]}
+
+
+@pytest.fixture(scope="function")
+def variants_conda_build_sysroot():
+    if not on_mac:
+        return {}
+
+    return {
+        "CONDA_BUILD_SYSROOT": [
+            subprocess.run(
+                ["xcrun", "--sdk", "macosx", "--show-sdk-path"],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+        ],
+        "MACOSX_DEPLOYMENT_TARGET": [
+            subprocess.run(
+                ["xcrun", "--sdk", "macosx", "--show-sdk-version"],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip(),
+            "10.9",
+        ],
+    }
