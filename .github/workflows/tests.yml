@@ -57,7 +57,7 @@ jobs:
         run: |
           rmdir C:\Strawberry /s /q
           choco install --no-progress wget visualstudio2017-workload-vctools
-          wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe
+          wget --no-verbose https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe
           start /wait "" Miniconda3-latest-Windows-x86_64.exe /InstallationType=JustMe /S /D=%UserProfile%\Miniconda3
           "%UserProfile%\Miniconda3\condabin\conda.bat" init
           conda info -a
@@ -79,21 +79,22 @@ jobs:
           set PATH
           call %UserProfile%\Miniconda3\condabin\activate.bat base||exit 1
           set PATH
-          call conda install python="%PYTHON_VERSION%" -y||exit 1
-          if "%CONDA_VERSION%" == "canary" (call conda update -c conda-canary/label/dev conda||exit 1) else (call conda update -q conda||exit 1)
+          call conda update -q --all||exit 1
           call conda config --set always_yes yes
           call conda config --set auto_update_conda no
           call conda config --set safety_checks disabled
           call conda config --set local_repodata_ttl 1800
+          if "%CONDA_VERSION%" == "canary" set "CANARY_CHANNEL=conda-canary/label/dev::"
+          call conda install -q python="%PYTHON_VERSION%" ^
+            %CANARY_CHANNEL%conda ^
+            pip python-libarchive-c pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling ^
+            pytest-replay pytest-rerunfailures ^
+            py-lief ^
+            ||exit 1
           call conda info
           python -c "import sys; print(sys.version)"
           python -c "import sys; print(sys.executable)"
           python -c "import sys; print(sys.prefix)"
-          call conda update -q --all||exit 1
-          call conda install -q pip python-libarchive-c pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling ^
-            pytest-replay pytest-rerunfailures ^
-            py-lief ^
-            ||exit 1
           python --version
           python -c "import struct; print(struct.calcsize('P') * 8)"
           pip install --no-deps .
@@ -115,9 +116,10 @@ jobs:
           set PATH
           call %UserProfile%\Miniconda3\condabin\activate.bat base||exit 1
           set PATH
-          call conda install -y conda-verify||exit 1
+          :: call conda install -y conda-verify||exit 1
           set PERL=
           set LUA=
           set R=
+          set PYTHONUNBUFFERED=1
           pytest --color=yes -vv -n 0 --basetemp %UserProfile%\cbtmp_serial --cov conda_build --cov-report xml -m "serial" ${{ env.pytest-replay }} -k "test_recipe_builds[entry_points]"
         shell: cmd
