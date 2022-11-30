@@ -106,6 +106,7 @@ def test_recipe_builds(recipe, testing_config, testing_workdir, monkeypatch):
     if 'unicode_all_over' in recipe and sys.version_info[0] == 2:
         pytest.skip('unicode_all_over does not work on Python 2')
     api.build(recipe, config=testing_config)
+    assert not "KABOOM!"
 
 
 @pytest.mark.serial
