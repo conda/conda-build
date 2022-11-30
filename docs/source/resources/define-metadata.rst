@@ -171,7 +171,9 @@ Source from a local path
 
 If the path is relative, it is taken relative to the recipe
 directory. The source is copied to the work directory before
-building.
+building. The source must be present in the `recipe/`
+directory (or a sub-directory) in order to be visible
+from inside the Docker container used for the build process.
 
 .. code-block:: yaml
 
