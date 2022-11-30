@@ -1,5 +1,19 @@
 [//]: # (current developments)
 
+## 3.23.2 (2022-11-30)
+
+### Bug fixes
+
+* `conda-build` CLI overrode `condarc`'s `zstd_compression_level` with the default value. (#4650)
+
+### Contributors
+
+* @kenodegard
+* @mbargull
+* @pre-commit-ci[bot]
+
+
+
 ## 3.23.1 (2022-11-17)
 
 ### Bug fixes
