@@ -145,6 +145,9 @@ conda-build
                  Run   the  post-build  logic.  Implies  <B>--no-test</B>  and  <B>--noana-</B>
                  <B>conda-upload</B>.
 
+          <B>-p</B>, <B>--test-run-post</B>
+                 Run the post-build logic during testing.
+
           <B>--skip-existing</B>
                  Skip recipes for which there already exists  an  existing  build
                  (locally or in the channels).
@@ -176,19 +179,34 @@ conda-build
                  Disable force upload to anaconda.org, preventing overwriting any
                  existing packages
 
+          <B>--zstd-compression-level</B> {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22}
+                 When building v2 packages, set the compression level used by
+                 conda-package-handling. Defaults to the maximum.
+
           <B>--no-activate</B>
                  do not activate the build and test envs; just prepend to PATH
 
           <B>--no-build-id</B>
                  do not generate unique build folder names. Use if having  issues
-                 with paths being too long.
+                 with paths being too long. Deprecated, please use <B>--build-id-pat</B>
+                 instead
+
+          <B>--build-id-pat</B> BUILD_ID_PAT
+                 specify a templated pattern to use as build folder names. Use if
+                 having issues with paths being too long.
 
           <B>--croot</B> CROOT
                  Build  root  folder.  Equivalent  to CONDA_BLD_PATH, but applies
                  only to this call of conda-build.
 
           <B>--verify</B>
+                 run verification on recipes or packages when building
+
+          <B>--no-verify</B>
                  do not run verification on recipes or packages when building
+
+          <B>--strict-verify</B>
+                 Exit if any conda-verify check fail, instead of only printing them
 
           <B>--output-folder</B> OUTPUT_FOLDER
                  folder to dump output package to.  Package  are  moved  here  if
@@ -235,6 +253,16 @@ conda-build
                  are directly linked to any executables or  shared  libraries  in
                  built packages. This is currently the default behavior, but will
                  change in conda-build 4.0.
+
+          <B>--error-overdepending</B>
+                 Enable error when packages with names beginning lib or which have
+                 run_exports are not auto-loaded by the OSes DSO loading mechanism
+                 by any of the files in this package.
+
+          <B>--no-error-overdepending</B>
+                 Disable error when packages with names beginning lib or which have
+                 run_exports are not auto-loaded by the OSes DSO loading mechanism
+                 by any of the files in this package.
 
           <B>--long-test-prefix</B>
                  Use a long prefix for the test prefix, as well as the build pre-
