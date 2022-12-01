@@ -75,13 +75,6 @@ jobs:
           pip install allure-pytest
           conda info -a
 
-          echo "Creating Replay and Result Report Folders For Test Summaries..."
-          mkdir -p ./allure-results
-          mkdir -p ./allure-reslusts/allure-reports
-          mkdir -p ./allure-results/allure-history
-          mkdir -p ./tests_results
-          mkdir ./pytest-replay
-
       - name: Run Serial tests
         if: matrix.test-type == 'serial'
         run: |
@@ -207,7 +200,6 @@ jobs:
           call conda create -n blarg -yq --download-only python=2.7||exit 1
           call conda create -n blarg -yq --download-only python=3.8||exit 1
           call conda create -n blarg -yq --download-only python cmake||exit 1
-          mkdir ${{ github.workspace }}\\pytest-replay
           set "PYTEST_REPLAY_OPTIONS=--replay-record-dir=${{ github.workspace }}\\pytest-replay --replay-base-name=Win-%CONDA_VERSION%-Py%PYTHON_VERSION%"
           echo "##vso[task.setvariable variable=PYTEST_REPLAY_OPTIONS]%PYTEST_REPLAY_OPTIONS%"
         shell: cmd
