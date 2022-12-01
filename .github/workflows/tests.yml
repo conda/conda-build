@@ -10,6 +10,12 @@ on:
     branches:
       - main
       - feature/**
+    
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+      - ".gitgnore"
+      - "**.txt"
 
   # NOTE: github.event context is pull_request payload:
   # https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#pull_request
