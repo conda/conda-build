@@ -349,15 +349,7 @@ jobs:
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
           pip install -e .
           pip install allure-pytest
-
-      - name: Setup variables
-        # macOS needs to define $CONDA_BUILD_SYSROOT and $MACOSX_DEPLOYMENT_TARGET to know where to find the SDKs
-        # the Anaconda compilers only support up to macOS 10.15
-        run: |
           sudo xcode-select --switch /Applications/Xcode_11.7.app
-
-          echo "CONDA_BUILD_SYSROOT=$(xcrun --sdk macosx --show-sdk-path)" >> $GITHUB_ENV
-          echo "MACOSX_DEPLOYMENT_TARGET=$(xcrun --sdk macosx --show-sdk-version)" >> $GITHUB_ENV
 
       - name: Show info
         run: |
