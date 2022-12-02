@@ -70,8 +70,6 @@ jobs:
         run: |
           source ci/github/install_conda_build_test_deps
           pip install -e .
-          pip install setuptools wheel twine
-          pip install pytest-html
           pip install allure-pytest
           conda info -a
 
@@ -202,6 +200,7 @@ jobs:
           call conda create -n blarg -yq --download-only python cmake||exit 1
           set "PYTEST_REPLAY_OPTIONS=--replay-record-dir=${{ github.workspace }}\\pytest-replay --replay-base-name=Win-%CONDA_VERSION%-Py%PYTHON_VERSION%"
           echo "##vso[task.setvariable variable=PYTEST_REPLAY_OPTIONS]%PYTEST_REPLAY_OPTIONS%"
+
         shell: cmd
 
       - name: Run Serial Tests
@@ -299,8 +298,6 @@ jobs:
           conda list --show-channel-urls
 
           echo "Installing Support Libraries"
-          pip install setuptools wheel twine
-          pip install pytest-html
           pip install allure-pytest
 
       - name: Run Serial Tests
