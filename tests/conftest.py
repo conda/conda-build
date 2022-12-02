@@ -210,26 +210,26 @@ def no_numpy_version():
 
 
 @pytest.fixture(scope="function")
-def variants_conda_build_sysroot():
+def variants_conda_build_sysroot(monkeypatch):
     if not on_mac:
         return {}
 
-    return {
-        "CONDA_BUILD_SYSROOT": [
-            subprocess.run(
-                ["xcrun", "--sdk", "macosx", "--show-sdk-path"],
-                check=True,
-                capture_output=True,
-                text=True,
-            ).stdout.strip()
-        ],
-        "MACOSX_DEPLOYMENT_TARGET": [
-            subprocess.run(
-                ["xcrun", "--sdk", "macosx", "--show-sdk-version"],
-                check=True,
-                capture_output=True,
-                text=True,
-            ).stdout.strip(),
-            "10.9",
-        ],
-    }
+    monkeypatch.setenv(
+        "CONDA_BUILD_SYSROOT",
+        subprocess.run(
+            ["xcrun", "--sdk", "macosx", "--show-sdk-path"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip(),
+    )
+    monkeypatch.setenv(
+        "MACOSX_DEPLOYMENT_TARGET",
+        subprocess.run(
+            ["xcrun", "--sdk", "macosx", "--show-sdk-version"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip(),
+    )
+    return {"MACOSX_DEPLOYMENT_TARGET": ["10.9"]}
