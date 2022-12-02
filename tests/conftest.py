@@ -209,8 +209,11 @@ def no_numpy_version():
     return {"python": ["2.7.*", "3.5.*"]}
 
 
-@pytest.fixture(scope="function")
-def variants_conda_build_sysroot(monkeypatch):
+@pytest.fixture(
+    scope="function",
+    params=[{}, {"MACOSX_DEPLOYMENT_TARGET": ["10.9"]}] if on_mac else [{}],
+)
+def variants_conda_build_sysroot(monkeypatch, request):
     if not on_mac:
         return {}
 
@@ -232,4 +235,4 @@ def variants_conda_build_sysroot(monkeypatch):
             text=True,
         ).stdout.strip(),
     )
-    return {"MACOSX_DEPLOYMENT_TARGET": ["10.9"]}
+    return request.param
