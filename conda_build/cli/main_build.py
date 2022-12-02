@@ -158,7 +158,8 @@ def parse_args(args):
     p.add_argument(
         "--zstd-compression-level",
         help=("When building v2 packages, set the compression level used by "
-              "conda-package-handling. Defaults to the maximum."),
+              "conda-package-handling. "
+              f"Defaults to {zstd_compression_level_default}."),
         type=int,
         choices=range(1, 23),
         default=cc_conda_build.get('zstd_compression_level', zstd_compression_level_default),
