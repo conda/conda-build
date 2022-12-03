@@ -1047,6 +1047,7 @@ def stringify_numbers():
 
 class MetaData:
     __hash__ = None  # declare as non-hashable to avoid its use with memoization
+
     def __init__(self, path, config=None, variant=None):
 
         self.undefined_jinja_vars = []
