@@ -1657,12 +1657,13 @@ def test_script_env_warnings(testing_config, recwarn):
 @pytest.mark.slow
 def test_activated_prefixes_in_actual_path(testing_config, testing_metadata):
     file = "env-path-dump"
+    testing_metadata.config.activate = True
     meta = testing_metadata.meta
     meta["requirements"]["host"] = []
     meta["build"]["script"] = [
         f"echo %PATH%>%PREFIX%/{file}" if on_win else f"echo $PATH>$PREFIX/{file}"
     ]
-    outputs = api.build(testing_metadata, activate=True)
+    outputs = api.build(testing_metadata)
     env = {"PATH": ""}
     prepend_bin_path(env, testing_metadata.config.host_prefix)
     prepend_bin_path(env, testing_metadata.config.build_prefix)
@@ -1672,4 +1673,7 @@ def test_activated_prefixes_in_actual_path(testing_config, testing_metadata):
         for path in package_has_file(outputs[0], file).strip().split(os.pathsep)
         if path in expected_paths
     ]
-    assert actual_paths == expected_paths
+    # We get the PATH entries twice:
+    #   1. from the environment activation hooks,
+    #   2. also beforehand from utils.path_prepended at the top of build.write_build_scripts
+    assert actual_paths == expected_paths * 2

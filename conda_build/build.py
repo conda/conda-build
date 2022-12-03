@@ -2584,6 +2584,9 @@ def construct_metadata_for_test(recipedir_or_package, config):
 
 
 def write_build_scripts(m, script, build_file):
+    # TODO: Prepending the prefixes here should probably be guarded by
+    #         if not m.activate_build_script:
+    #       Leaving it as is, for now, since we need a quick, non-disruptive patch release.
     with utils.path_prepended(m.config.host_prefix):
         with utils.path_prepended(m.config.build_prefix):
             env = environ.get_dict(m=m)
