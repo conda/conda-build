@@ -663,7 +663,6 @@ def system_vars(env_dict, m, prefix):
     return os_vars(m, prefix)
 
 
-@lru_cache(maxsize=None)
 def os_vars(m, prefix):
     d = dict()
     # note the dictionary is passed in here - variables are set in that dict if they are non-null
