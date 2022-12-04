@@ -1665,6 +1665,16 @@ def test_activated_prefixes_in_actual_path(testing_config, testing_metadata):
     ]
     outputs = api.build(testing_metadata)
     env = {"PATH": ""}
+    # We get the PATH entries twice: (which we should fix at some point)
+    #   1. from the environment activation hooks,
+    #   2. also beforehand from utils.path_prepended at the top of
+    #      - build.write_build_scripts on Unix
+    #      - windows.build on Windows
+    #        And apparently here the previously added build env gets deactivated
+    #        from the activation hook, hence only host is on PATH twice.
+    prepend_bin_path(env, testing_metadata.config.host_prefix)
+    if not on_win:
+        prepend_bin_path(env, testing_metadata.config.build_prefix)
     prepend_bin_path(env, testing_metadata.config.host_prefix)
     prepend_bin_path(env, testing_metadata.config.build_prefix)
     expected_paths = [path for path in env["PATH"].split(os.pathsep) if path]
@@ -1673,7 +1683,4 @@ def test_activated_prefixes_in_actual_path(testing_config, testing_metadata):
         for path in package_has_file(outputs[0], file).strip().split(os.pathsep)
         if path in expected_paths
     ]
-    # We get the PATH entries twice:
-    #   1. from the environment activation hooks,
-    #   2. also beforehand from utils.path_prepended at the top of build.write_build_scripts
-    assert actual_paths == expected_paths * 2
+    assert actual_paths == expected_paths

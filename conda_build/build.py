@@ -2587,8 +2587,8 @@ def write_build_scripts(m, script, build_file):
     # TODO: Prepending the prefixes here should probably be guarded by
     #         if not m.activate_build_script:
     #       Leaving it as is, for now, since we need a quick, non-disruptive patch release.
-    with utils.path_prepended(m.config.host_prefix):
-        with utils.path_prepended(m.config.build_prefix):
+    with utils.path_prepended(m.config.host_prefix, False):
+        with utils.path_prepended(m.config.build_prefix, False):
             env = environ.get_dict(m=m)
     env["CONDA_BUILD_STATE"] = "BUILD"
 

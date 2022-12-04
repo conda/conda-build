@@ -4,8 +4,8 @@
 
 ### Bug fixes
 
-* Fix: Remove invalid memoization for MetaData
-  This fixes build environment activation in version `3.23.*`.
+* Fix build/host environment activation broken in >=3.23.0,<=3.23.2
+* Add PREFIX/bin to PATH on Windows and remove PREFIX root from PATH on Unix
 
 ### Deprecations
 
