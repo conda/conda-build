@@ -950,11 +950,10 @@ def get_build_folders(croot):
 
 
 def prepend_bin_path(env, prefix, prepend_prefix=False):
-    # bin_dirname takes care of bin on *nix, Scripts on win
-    env['PATH'] = join(prefix, bin_dirname) + os.pathsep + env['PATH']
+    env['PATH'] = join(prefix, "bin") + os.pathsep + env['PATH']
     if sys.platform == "win32":
         env['PATH'] = join(prefix, "Library", "mingw-w64", "bin") + os.pathsep + \
-                      join(prefix, "Library", "usr", "bin") + os.pathsep + os.pathsep + \
+                      join(prefix, "Library", "usr", "bin") + os.pathsep + \
                       join(prefix, "Library", "bin") + os.pathsep + \
                       join(prefix, "Scripts") + os.pathsep + \
                       env['PATH']
@@ -985,9 +984,10 @@ def sys_path_prepended(prefix):
 
 
 @contextlib.contextmanager
-def path_prepended(prefix):
+def path_prepended(prefix, prepend_prefix=True):
+    # FIXME: Unclear why prepend_prefix=True for all platforms.
     old_path = os.environ['PATH']
-    os.environ['PATH'] = prepend_bin_path(os.environ.copy(), prefix, True)['PATH']
+    os.environ['PATH'] = prepend_bin_path(os.environ.copy(), prefix, prepend_prefix)['PATH']
     try:
         yield
     finally:
