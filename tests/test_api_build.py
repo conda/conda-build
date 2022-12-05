@@ -1656,6 +1656,12 @@ def test_script_env_warnings(testing_config, recwarn):
 
 @pytest.mark.slow
 def test_activated_prefixes_in_actual_path(testing_config, testing_metadata):
+    """
+    Check if build and host env are properly added to PATH in the correct order.
+    Do this in an actual build and not just in a unit test to avoid regression.
+    Currently only tests for single non-"outputs" recipe with build/host split
+    and proper env activation (Metadata.is_cross and Config.activate both True).
+    """
     file = "env-path-dump"
     testing_metadata.config.activate = True
     meta = testing_metadata.meta
