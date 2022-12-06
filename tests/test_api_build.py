@@ -123,7 +123,7 @@ def test_ignore_prefix_files(testing_config, monkeypatch):
 # Rather than assuming they will be at $ROOT/pkgs since that can change and we don't care where they are in terms of the
 # tests.
 
-# Need more time to figure the problem circumventing.. 
+# Need more time to figure the problem circumventing..
 
 def test_ignore_some_prefix_files(testing_config, monkeypatch):
     recipe = os.path.join(metadata_dir, "_ignore_some_prefix_files")
@@ -445,7 +445,7 @@ def test_skip_existing_url(testing_metadata, testing_workdir, capfd):
 
 
 #Can Get rid off not expecting for newer version of Python > 3.7
-@pytest.mark.skipif(not sys.version[:3] == "3.5", reason = "Newer version of Python > 3.6 will not need the test")
+@pytest.mark.skipif(not sys.version[:3] < "3.6", reason = "Newer version of Python > 3.6 will not need the test")
 def test_compiles_all_good_files(testing_workdir, testing_config):
     output = api.build(os.path.join(metadata_dir, "_compile-test"), config=testing_config)[0]
     print(output)
@@ -743,7 +743,8 @@ def test_about_license_file_and_prelink_message(testing_workdir, testing_config,
 # Regardless of the reason for skipping, we should definitely find a better way for tests to look for the packages
 # Rather than assuming they will be at $ROOT/pkgs since that can change and we don't care where they are in terms of the
 # tests.
-@pytest.mark.xfail(parse_version(conda.__version__) >= parse_version("4.13"),
+
+@pytest.mark.skipif(parse_version(conda.__version__) < parse_version("4.13"),
                    reason="Older version of not supported conda less than 4.13")
 def test_noarch_python_with_tests(testing_config):
     recipe = os.path.join(metadata_dir, "_noarch_python_with_tests")
@@ -1035,7 +1036,7 @@ def test_ignore_run_exports_from(testing_metadata, testing_config):
     m = finalize_metadata(testing_metadata)
     assert 'downstream_pinned_package 1.0' not in m.meta['requirements'].get('run', [])
 
-#This test case is only for local runs. 
+#This test case is only for local runs.
 @pytest.mark.skipif(sys.version[:3] <= "3.7", reason = "Not Supporting testing any version below Python 3.7")
 @pytest.mark.skipif("CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,
                     reason="This test does not run on Github Actions yet. We will need to adjust "
@@ -1471,7 +1472,7 @@ def test_macos_tbd_handling(testing_config):
     testing_config.error_overdepending = True
     testing_config.verify = False
     recipe = os.path.join(metadata_dir, '_macos_tbd_handling')
-    api.build(recipe, config=testing_config) 
+    api.build(recipe, config=testing_config)
 
 
 @pytest.mark.sanity
