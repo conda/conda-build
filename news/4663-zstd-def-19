@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Change Zstd default compression to 19
+* Change Zstd default compression to 19. (#4663)
 
 ### Deprecations
 
