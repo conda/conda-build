@@ -1,5 +1,25 @@
 [//]: # (current developments)
 
+## 3.23.3 (2022-12-06)
+
+### Bug fixes
+
+* Change Zstd default compression to 19. (#4663)
+* Fix build/host environment activation broken in >=3.23.0,<=3.23.2. (#4665)
+* Add `PREFIX/bin` to `PATH` on Windows and remove `PREFIX` root from `PATH` on Unix. (#4665)
+
+### Other
+
+* Skip test suite for non-code changes. (#4664)
+
+### Contributors
+
+* @jakirkham
+* @kenodegard
+* @mbargull
+
+
+
 ## 3.23.2 (2022-11-30)
 
 ### Bug fixes
