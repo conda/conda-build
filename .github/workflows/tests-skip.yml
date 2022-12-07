@@ -10,7 +10,7 @@ on:
     branches:
       - main
       - feature/**
-    paths:  # run if src/tests/recipe are modified
+    paths-ignore:  # run if src/tests/recipe are modified
       - conda_build/**
       - tests/**
       - '*.py'
@@ -20,7 +20,7 @@ on:
   # NOTE: github.event context is pull_request payload:
   # https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#pull_request
   pull_request:
-    paths:
+    paths-ignore:
       - conda_build/**
       - tests/**
       - '*.py'
