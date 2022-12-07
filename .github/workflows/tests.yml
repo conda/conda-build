@@ -1,3 +1,6 @@
+# this is the sibling workflow to tests-skip.yml, it is required to work around
+# the skipped but required checks issue:
+#   https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/defining-the-mergeability-of-pull-requests/troubleshooting-required-status-checks#handling-skipped-but-required-checks
 name: Tests
 
 on:
@@ -7,10 +10,22 @@ on:
     branches:
       - main
       - feature/**
+    paths:  # run if src/tests/recipe are modified
+      - conda_build/**
+      - tests/**
+      - '*.py'
+      - recipe/**
+      - .github/workflows/tests.yml
 
   # NOTE: github.event context is pull_request payload:
   # https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#pull_request
   pull_request:
+    paths:
+      - conda_build/**
+      - tests/**
+      - '*.py'
+      - recipe/**
+      - .github/workflows/tests.yml
 
 concurrency:
   # Concurrency group that uses the workflow name and PR number if available
@@ -348,8 +363,9 @@ jobs:
           name: macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ env. parameters.serial_or_parallel  }}
         if: always()
 
+  # required check
   analyze:
-    name: Analyze test results
+    name: Analyze results
     needs: [windows, linux, macos]
     if: always()
     runs-on: ubuntu-latest
