@@ -19,12 +19,8 @@ prof
 relative
 conda-build-testing
 
+
 # Rever
 rever/
 **/.vscode
 **/_build
-
-
-#Ignoring All asset files
-**/tests_results/assets/*
-**/tests_results/assets/*.css
