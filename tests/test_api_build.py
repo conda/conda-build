@@ -93,8 +93,16 @@ def recipe(request):
 @pytest.mark.slow
 @pytest.mark.serial
 def test_recipe_builds(recipe, testing_config, testing_workdir, monkeypatch):
+    # TODO: After we fix #3754 this mark can be removed. This specific test
+    #   ``source_setup_py_data_subdir`` reproduces the problem.
+    if os.path.basename(recipe) == "source_setup_py_data_subdir":
+        pytest.xfail("Issue related to #3754 on conda-build.")
+    # These variables are defined solely for testing purposes,
+    # so they can be checked within build scripts
     testing_config.activate = True
+    monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
     monkeypatch.setenv("CONDA_TEST_VAR_3", "conda_test_3")
+    api.build(recipe, config=testing_config)
 
 
 @pytest.mark.serial
