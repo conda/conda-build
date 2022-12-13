@@ -79,6 +79,7 @@ jobs:
         if: matrix.conda-version == 'release'
         run: |
           conda install -y conda
+
       - name: Source Scripts
         run: |
           source ci/github/install_conda_build_test_deps
