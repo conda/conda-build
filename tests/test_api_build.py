@@ -20,7 +20,6 @@ import uuid
 import conda
 
 from conda_build.conda_interface import url_path, LinkError, CondaError, cc_conda_build
-from conda_build.conda_interface import linked
 
 import conda_build
 
@@ -42,7 +41,7 @@ from conda_build.exceptions import (DependencyNeedsBuildingError, CondaBuildExce
                                     OverLinkingError, OverDependingError)
 from conda_build.conda_interface import reset_context
 from conda.exceptions import ClobberError, CondaMultiError
-from conda_build.conda_interface import conda_46, conda_47
+from conda_build.conda_interface import conda_47
 
 from .utils import is_valid_dir, metadata_dir, fail_dir, add_mangling, numpy_installed
 
@@ -122,9 +121,7 @@ def test_ignore_prefix_files(testing_config, monkeypatch):
 # Regardless of the reason for skipping, we should definitely find a better way for tests to look for the packages
 # Rather than assuming they will be at $ROOT/pkgs since that can change and we don't care where they are in terms of the
 # tests.
-
 # Need more time to figure the problem circumventing..
-
 def test_ignore_some_prefix_files(testing_config, monkeypatch):
     recipe = os.path.join(metadata_dir, "_ignore_some_prefix_files")
     testing_config.activate = True
@@ -444,8 +441,8 @@ def test_skip_existing_url(testing_metadata, testing_workdir, capfd):
     assert "are already built" in output
 
 
-#Can Get rid off not expecting for newer version of Python > 3.7
-@pytest.mark.skipif(not sys.version[:3] < "3.6", reason = "Newer version of Python > 3.6 will not need the test")
+# Can Get rid off not expecting for newer version of Python > 3.7
+@pytest.mark.skipif(not sys.version[:3] < "3.6", reason="Newer version of Python > 3.6 will not need the test")
 def test_compiles_all_good_files(testing_workdir, testing_config):
     output = api.build(os.path.join(metadata_dir, "_compile-test"), config=testing_config)[0]
     print(output)
@@ -471,6 +468,7 @@ def test_backslash_in_always_include_files_path(testing_config):
 @pytest.mark.sanity
 def test_build_metadata_object(testing_metadata):
     api.build(testing_metadata)
+
 
 @pytest.mark.serial
 @pytest.mark.skipif(not numpy_installed(), reason="numpy not installed in base environment")
@@ -743,7 +741,6 @@ def test_about_license_file_and_prelink_message(testing_workdir, testing_config,
 # Regardless of the reason for skipping, we should definitely find a better way for tests to look for the packages
 # Rather than assuming they will be at $ROOT/pkgs since that can change and we don't care where they are in terms of the
 # tests.
-
 @pytest.mark.skipif(parse_version(conda.__version__) < parse_version("4.13"),
                    reason="Older version of not supported conda less than 4.13")
 def test_noarch_python_with_tests(testing_config):
@@ -772,6 +769,7 @@ def test_legacy_noarch_python(testing_config):
                        config=testing_config)[0]
     # make sure that the package is going into the noarch folder
     assert os.path.basename(os.path.dirname(output)) == 'noarch'
+
 
 @pytest.mark.skip(reason="The Test is using old conda versions that will be deprecated in the next prunning process.. Skipping this test case till then")
 def test_preferred_env(testing_config):
@@ -958,6 +956,7 @@ def test_workdir_removal_warning(testing_config, caplog):
         api.build(recipe, config=testing_config)
         assert "work dir is removed" in str(exc)
 
+
 # This Test case is not testing anything specific
 @pytest.mark.sanity
 @pytest.mark.skipif(sys.platform != 'darwin', reason="relevant to mac only")
@@ -1036,8 +1035,9 @@ def test_ignore_run_exports_from(testing_metadata, testing_config):
     m = finalize_metadata(testing_metadata)
     assert 'downstream_pinned_package 1.0' not in m.meta['requirements'].get('run', [])
 
-#This test case is only for local runs.
-@pytest.mark.skipif(sys.version[:3] <= "3.7", reason = "Not Supporting testing any version below Python 3.7")
+
+# This test case is only for local runs.
+@pytest.mark.skipif(sys.version[:3] <= "3.7", reason="Not Supporting testing any version below Python 3.7")
 @pytest.mark.skipif("CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,
                     reason="This test does not run on Github Actions yet. We will need to adjust "
                            "where to look for the pkgs. The github action for setup-miniconda sets "
@@ -1267,8 +1267,8 @@ def test_no_force_upload_condarc_setting(mocker, testing_workdir, testing_metada
 
 
 @pytest.mark.sanity
-@pytest.mark.skipif(sys.version[:3] <= "3.5", reason = "Package does not build with Python 3.5")
-@pytest.mark.skipif(sys.version[:3] <= "3.7", reason = "Not supporting versions of Python <= 3.7")
+@pytest.mark.skipif(sys.version[:3] <= "3.5", reason="Package does not build with Python 3.5")
+@pytest.mark.skipif(sys.version[:3] <= "3.7", reason="Not supporting versions of Python <= 3.7")
 def test_setup_py_data_in_env(testing_config):
     recipe = os.path.join(metadata_dir, '_setup_py_data_in_env')
     # should pass with any modern python (just not 3.5)
@@ -1433,6 +1433,7 @@ def test_overlinking_detection(testing_config):
     rm_rf(dest_sh)
     rm_rf(dest_bat)
 
+
 @pytest.mark.skipif(on_win and sys.version[:3] <= "3.7", reason="Not supporting any verion of Python <= 3.7")
 def test_overlinking_detection_ignore_patterns(testing_config):
     testing_config.activate = True
@@ -1496,6 +1497,7 @@ def test_downstream_tests(testing_config):
     api.build(downstream, config=testing_config, notest=True)
     with pytest.raises(SystemExit):
         api.build(upstream, config=testing_config)
+
 
 @pytest.mark.skip(reason="This Test case is no more relevant with older conda version < 4.13")
 def test_warning_on_file_clobbering(testing_config, capfd):
