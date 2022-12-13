@@ -12,7 +12,7 @@ from conda_build.conda_interface import linked
 
 
 def numpy_installed():
-    return any([True for dist in linked(sys.prefix) if dist.name == 'numpy'])
+    return any([True for dist in linked(sys.prefix) if dist.name == "numpy"])
 
 
 def get_root_dir():
