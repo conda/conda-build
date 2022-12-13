@@ -10,10 +10,22 @@ on:
     branches:
       - main
       - feature/**
+    paths:  # run if src/tests/recipe are modified
+      - conda_build/**
+      - tests/**
+      - '*.py'
+      - recipe/**
+      - .github/workflows/tests.yml
 
   # NOTE: github.event context is pull_request payload:
   # https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#pull_request
   pull_request:
+    paths:
+      - conda_build/**
+      - tests/**
+      - '*.py'
+      - recipe/**
+      - .github/workflows/tests.yml
 
 concurrency:
   # Concurrency group that uses the workflow name and PR number if available
@@ -62,6 +74,7 @@ jobs:
         if: matrix.conda-version == 'canary'
         run: |
           conda install -y -c conda-canary/label/dev conda
+
       - name: Install default Conda if release version
         if: matrix.conda-version == 'release'
         run: |
@@ -110,18 +123,6 @@ jobs:
           name: Linux_replay-py-${{ matrix.python-version }}_${{ matrix.conda-version }}_${{ matrix.test-type }}
           path: pytest-replay/
 
-      - name: Open Test Result Report
-        run: |
-          echo "TMPDIR=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
-          echo "TEMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
-          echo "TMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
-
-      - name: Setup Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v1
-        with:
-          python-version: ${{ matrix.python-version }}
-
-
   windows:
     runs-on: windows-2019
     strategy:
@@ -138,7 +139,6 @@ jobs:
             conda-version: canary
             test-type: parallel
     timeout-minutes: 120
-
     env:
       serial_or_parallel: ''
 
@@ -155,6 +155,7 @@ jobs:
           echo "TMPDIR=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
           echo "TEMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
           echo "TMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
+
       - name: Setup Python ${{ matrix.python-version }}
         uses: actions/setup-python@v1
         with:
@@ -337,11 +338,10 @@ jobs:
           conda info
           source ci/github/install_conda_build_test_deps
           pip install -e .
-          conda info -a
-          conda list --show-channel-urls
-
           echo "Installing Support Libraries"
           pip install allure-pytest
+          conda info -a
+          conda list --show-channel-urls
 
       - name: Run Serial Tests
         if: matrix.test-type == 'serial'
