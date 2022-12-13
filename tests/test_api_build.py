@@ -441,15 +441,32 @@ def test_skip_existing_url(testing_metadata, testing_workdir, capfd):
     assert "are already built" in output
 
 
-# Can Get rid off not expecting for newer version of Python > 3.7
-@pytest.mark.skipif(not sys.version[:3] < "3.6", reason="Newer version of Python > 3.6 will not need the test")
-def test_compiles_all_good_files(testing_workdir, testing_config):
+def test_failed_tests_exit_build(testing_workdir, testing_config):
+    """https://github.com/conda/conda-build/issues/1112"""
+    with pytest.raises(SystemExit, match="TESTS FAILED"):
+        api.build(os.path.join(metadata_dir, "_test_failed_test_exits"), config=testing_config)
+
+
+@pytest.mark.sanity
+def test_requirements_txt_for_run_reqs(testing_workdir, testing_config):
+    """
+    If run reqs are blank, then conda-build looks for requirements.txt in the recipe folder.
+    There has been a report of issue with unsatisfiable requirements at
+
+    https://github.com/Anaconda-Platform/anaconda-server/issues/2565
+
+    This test attempts to reproduce those conditions: a channel other than defaults with this
+    requirements.txt
+    """
+    testing_config.channel_urls = ('conda_build_test', )
+    api.build(os.path.join(metadata_dir, "_requirements_txt_run_reqs"), config=testing_config)
+
+
+def test_compileall_compiles_all_good_files(testing_workdir, testing_config):
     output = api.build(os.path.join(metadata_dir, "_compile-test"), config=testing_config)[0]
-    print(output)
     good_files = ['f1.py', 'f3.py']
     bad_file = 'f2_bad.py'
     for f in good_files:
-        print(f)
         assert package_has_file(output, f)
         # look for the compiled file also
         assert package_has_file(output, add_mangling(f))
@@ -474,7 +491,8 @@ def test_build_metadata_object(testing_metadata):
 @pytest.mark.skipif(not numpy_installed(), reason="numpy not installed in base environment")
 def test_numpy_setup_py_data(testing_config):
     recipe_path = os.path.join(metadata_dir, '_numpy_setup_py_data')
-    # this shows an error that is OK to ignore: (Is this Error still relevant)
+    # this shows an error that is OK to ignore:
+    # (Is this Error still relevant)
 
     # PackagesNotFoundError: The following packages are missing from the target environment:
     #    - cython
@@ -692,14 +710,7 @@ def test_about_json_content(testing_metadata):
     assert 'tags' in about and about['tags'] == ["a", "b"]
     # this one comes in as a string - test type coercion
     assert 'identifiers' in about and about['identifiers'] == ["a"]
-    try:
-        assert 'env_vars' in about and about['env_vars']
-    except AssertionError:
-        # new versions of conda support this, so we should raise errors.
-        if VersionOrder(conda.__version__) < VersionOrder('4.11'):
-            raise
-        else:
-            pass
+    assert 'env_vars' in about and about['env_vars']
 
     assert 'root_pkgs' in about and about['root_pkgs']
 
@@ -741,8 +752,6 @@ def test_about_license_file_and_prelink_message(testing_workdir, testing_config,
 # Regardless of the reason for skipping, we should definitely find a better way for tests to look for the packages
 # Rather than assuming they will be at $ROOT/pkgs since that can change and we don't care where they are in terms of the
 # tests.
-@pytest.mark.skipif(parse_version(conda.__version__) < parse_version("4.13"),
-                   reason="Older version of not supported conda less than 4.13")
 def test_noarch_python_with_tests(testing_config):
     recipe = os.path.join(metadata_dir, "_noarch_python_with_tests")
     pkg = api.build(recipe, config=testing_config)[0]
@@ -769,22 +778,6 @@ def test_legacy_noarch_python(testing_config):
                        config=testing_config)[0]
     # make sure that the package is going into the noarch folder
     assert os.path.basename(os.path.dirname(output)) == 'noarch'
-
-
-@pytest.mark.skip(reason="The Test is using old conda versions that will be deprecated in the next prunning process.. Skipping this test case till then")
-def test_preferred_env(testing_config):
-    recipe = os.path.join(metadata_dir, "_preferred_env")
-    output = api.build(recipe, config=testing_config)[0]
-    extra = json.loads(package_has_file(output, 'info/link.json').decode())
-    assert 'preferred_env' in extra
-    assert 'name' in extra['preferred_env']
-    assert 'executable_paths' in extra['preferred_env']
-    exe_paths = extra['preferred_env']['executable_paths']
-    if on_win:
-        assert exe_paths == ['Scripts/exepath1.bat', 'Scripts/exepath2.bat']
-    else:
-        assert exe_paths == ['bin/exepath1', 'bin/exepath2']
-    assert 'package_metadata_version' in extra
 
 
 @pytest.mark.sanity
@@ -957,7 +950,6 @@ def test_workdir_removal_warning(testing_config, caplog):
         assert "work dir is removed" in str(exc)
 
 
-# This Test case is not testing anything specific
 @pytest.mark.sanity
 @pytest.mark.skipif(sys.platform != 'darwin', reason="relevant to mac only")
 def test_append_python_app_osx(testing_config):
@@ -1036,8 +1028,6 @@ def test_ignore_run_exports_from(testing_metadata, testing_config):
     assert 'downstream_pinned_package 1.0' not in m.meta['requirements'].get('run', [])
 
 
-# This test case is only for local runs.
-@pytest.mark.skipif(sys.version[:3] <= "3.7", reason="Not Supporting testing any version below Python 3.7")
 @pytest.mark.skipif("CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,
                     reason="This test does not run on Github Actions yet. We will need to adjust "
                            "where to look for the pkgs. The github action for setup-miniconda sets "
@@ -1267,8 +1257,6 @@ def test_no_force_upload_condarc_setting(mocker, testing_workdir, testing_metada
 
 
 @pytest.mark.sanity
-@pytest.mark.skipif(sys.version[:3] <= "3.5", reason="Package does not build with Python 3.5")
-@pytest.mark.skipif(sys.version[:3] <= "3.7", reason="Not supporting versions of Python <= 3.7")
 def test_setup_py_data_in_env(testing_config):
     recipe = os.path.join(metadata_dir, '_setup_py_data_in_env')
     # should pass with any modern python (just not 3.5)
@@ -1415,7 +1403,6 @@ def test_provides_features_metadata(testing_config):
     assert index['provides_features'] == {'test2': 'also_ok'}
 
 
-@pytest.mark.skipif(on_win and sys.version[:3] <= "3.7", reason="Not supporting any verion of Python <= 3.7")
 def test_overlinking_detection(testing_config):
     testing_config.activate = True
     testing_config.error_overlinking = True
@@ -1434,7 +1421,6 @@ def test_overlinking_detection(testing_config):
     rm_rf(dest_bat)
 
 
-@pytest.mark.skipif(on_win and sys.version[:3] <= "3.7", reason="Not supporting any verion of Python <= 3.7")
 def test_overlinking_detection_ignore_patterns(testing_config):
     testing_config.activate = True
     testing_config.error_overlinking = True
@@ -1465,8 +1451,10 @@ def test_overdepending_detection(testing_config):
 @pytest.mark.skipif(sys.platform != "darwin",
                     reason="macOS-only test (at present)")
 def test_macos_tbd_handling(testing_config):
-    """The test case intention is to test the path handling after installation...
-    The test case uses a Hello world example in C/C++ for testing the installation of C Libs..."""
+    """
+    Test path handling after installation... The test case uses a Hello World
+    example in C/C++ for testing the installation of C libraries...
+    """
 
     testing_config.activate = True
     testing_config.error_overlinking = True
@@ -1499,7 +1487,7 @@ def test_downstream_tests(testing_config):
         api.build(upstream, config=testing_config)
 
 
-@pytest.mark.skip(reason="This Test case is no more relevant with older conda version < 4.13")
+@pytest.mark.sanity
 def test_warning_on_file_clobbering(testing_config, capfd):
     recipe_dir = os.path.join(metadata_dir, '_overlapping_files_warning')
 
@@ -1513,7 +1501,8 @@ def test_warning_on_file_clobbering(testing_config, capfd):
             api.build(os.path.join(recipe_dir, 'b'), config=testing_config)
 
 
-@pytest.mark.skip(reason="This Test case is no more relevant - conda-verify is deprecated package")
+@pytest.mark.sanity
+@pytest.mark.skip(reason="conda-verify is deprecated because it is unsupported")
 def test_verify_bad_package(testing_config):
     from conda_verify.errors import PackageError
     recipe_dir = os.path.join(fail_dir, 'create_bad_folder_for_conda_verify')
