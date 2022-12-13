@@ -25,13 +25,11 @@ import conda_build
 
 from binstar_client.commands import remove, show
 from binstar_client.errors import NotFound
-from pkg_resources import parse_version
 import pytest
 import yaml
 import tarfile
 
 from conda_build import api, exceptions, __version__
-from conda_build.build import VersionOrder
 from conda_build.render import finalize_metadata
 from conda_build.utils import (copy_into, on_win, check_call_env, convert_path_for_cygwin_or_msys2,
                                package_has_file, check_output_env, get_conda_operation_locks, rm_rf,

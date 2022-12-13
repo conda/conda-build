@@ -5,9 +5,9 @@ import os
 from os import lstat
 from importlib import import_module
 
-from pkg_resources import parse_version
-
 from conda import __version__ as CONDA_VERSION
+
+CONDA_VERSION = CONDA_VERSION
 
 
 def try_exports(module, attr):
@@ -44,10 +44,12 @@ else:
 display_actions, execute_actions, execute_plan = display_actions, execute_actions, execute_plan
 install_actions = install_actions
 
-from conda.exports import _toposort
+from conda.exports import _toposort  # NOQA
+
 _toposort = _toposort
 
-from conda.auxlib.packaging import _get_version_from_git_tag
+from conda.auxlib.packaging import _get_version_from_git_tag  # NOQA
+
 get_version_from_git_tag = _get_version_from_git_tag
 
 from conda.exports import TmpDownload, download, handle_proxy_407  # NOQA
@@ -128,7 +130,7 @@ get_rc_urls = lambda: list(context.channels)
 get_prefix = partial(context_get_prefix, context)
 cc_conda_build = context.conda_build if hasattr(context, 'conda_build') else {}
 
-from conda.exports import Channel
+from conda.exports import Channel  # NOQA
 get_conda_channel = Channel.from_value
 
 # disallow softlinks.  This avoids a lot of dumb issues, at the potential cost of disk space.
