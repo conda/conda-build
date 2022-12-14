@@ -45,16 +45,20 @@ jobs:
     outputs:
       code: ${{ steps.filter.outputs.code }}
     steps:
-    - uses: dorny/paths-filter@v2
-      id: filter
-      with:
-        filters: |
-          code:
-            - 'conda_build/**'
-            - 'tests/**'
-            - '*.py'
-            - 'recipe/**'
-            - '.github/workflows/tests.yml'
+      - uses: actions/checkout@v3
+        # dorny/paths-filter needs git clone for push events
+        # https://github.com/marketplace/actions/paths-changes-filter#supported-workflows
+        if: github.event_name == "push"
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            code:
+              - 'conda_build/**'
+              - 'tests/**'
+              - '*.py'
+              - 'recipe/**'
+              - '.github/workflows/tests.yml'
 
   # linux test suite
   linux:
