@@ -269,8 +269,6 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
             # Make sure there is always something to pass in for this
             pypi_data = {}
         else:
-            sort_by_version = lambda l: sorted(l, key=parse_version)
-
             pypi_resp = requests.get(package_pypi_url, verify=not _ssl_no_verify())
 
             if pypi_resp.status_code != 200:
@@ -279,7 +277,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
 
             pypi_data = pypi_resp.json()
 
-            versions = sort_by_version(pypi_data['releases'].keys())
+            versions = sorted(pypi_data["releases"].keys(), key=parse_version)
 
             if version_compare:
                 version_compare(versions)
