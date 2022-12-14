@@ -10,15 +10,13 @@ import re
 import subprocess
 import sys
 import warnings
+from functools import lru_cache
 from glob import glob
 from os.path import join, normpath
 
-# noqa here because PY3 is used only on windows, and trips up flake8 otherwise.
-from .conda_interface import text_type, PY3  # noqa
 from .conda_interface import (CondaError, LinkError, LockError, NoPackagesFoundError,
                               PaddingError, UnsatisfiableError)
 from .conda_interface import display_actions, execute_actions, execute_plan, install_actions
-from .conda_interface import memoized
 from .conda_interface import package_cache, TemporaryDirectory
 from .conda_interface import pkgs_dirs, root_dir, create_default_packages
 from .conda_interface import reset_context
@@ -72,7 +70,7 @@ def get_lua_include_dir(config):
     return join(config.host_prefix, "include")
 
 
-@memoized
+@lru_cache(maxsize=None)
 def verify_git_repo(git_exe, git_dir, git_url, git_commits_since_tag, debug=False,
                     expected_rev='HEAD'):
     env = os.environ.copy()
@@ -271,7 +269,7 @@ def get_dict(m, prefix=None, for_env=True, skip_build_id=False, escape_backslash
         d.update(meta_vars(m, skip_build_id=skip_build_id))
 
     # system
-    d.update(system_vars(d, m, prefix))
+    d.update(os_vars(m, prefix))
 
     # features
     d.update({feat.upper(): str(int(value)) for feat, value in
@@ -490,7 +488,7 @@ def meta_vars(meta, skip_build_id=False):
     return d
 
 
-@memoized
+@lru_cache(maxsize=None)
 def get_cpu_count():
     if sys.platform == "darwin":
         # multiprocessing.cpu_count() is not reliable on OSX
@@ -525,7 +523,7 @@ def windows_vars(m, get_default, prefix):
     """This is setting variables on a dict that is part of the get_default function"""
     # We have gone for the clang values here.
     win_arch = 'i386' if str(m.config.host_arch) == '32' else 'amd64'
-    win_msvc = '19.0.0' if PY3 else '15.0.0'
+    win_msvc = '19.0.0'
     library_prefix = join(prefix, 'Library')
     drive, tail = m.config.host_prefix.split(':')
     get_default('SCRIPTS', join(prefix, 'Scripts'))
@@ -609,7 +607,7 @@ def osx_vars(m, get_default, prefix):
     get_default('BUILD', BUILD)
 
 
-@memoized
+@lru_cache(maxsize=None)
 def _machine_and_architecture():
     return platform.machine(), platform.architecture()
 
@@ -656,8 +654,16 @@ def set_from_os_or_variant(out_dict, key, variant, default):
         out_dict[key] = value
 
 
-@memoized
 def system_vars(env_dict, m, prefix):
+    warnings.warn(
+        "`conda_build.environ.system_vars` is pending deprecation and will be removed in a "
+        "future release. Please use `conda_build.environ.os_vars` instead.",
+        PendingDeprecationWarning,
+    )
+    return os_vars(m, prefix)
+
+
+def os_vars(m, prefix):
     d = dict()
     # note the dictionary is passed in here - variables are set in that dict if they are non-null
     get_default = lambda key, default='': set_from_os_or_variant(d, key, m.config.variant, default)

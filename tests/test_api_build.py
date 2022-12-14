@@ -19,7 +19,7 @@ import uuid
 # for version
 import conda
 
-from conda_build.conda_interface import PY3, url_path, LinkError, CondaError, cc_conda_build
+from conda_build.conda_interface import url_path, LinkError, CondaError, cc_conda_build
 from conda_build.conda_interface import linked
 
 import conda_build
@@ -36,7 +36,7 @@ from conda_build.build import VersionOrder
 from conda_build.render import finalize_metadata
 from conda_build.utils import (copy_into, on_win, check_call_env, convert_path_for_cygwin_or_msys2,
                                package_has_file, check_output_env, get_conda_operation_locks, rm_rf,
-                               walk, env_var, FileNotFoundError)
+                               prepend_bin_path, walk, env_var, FileNotFoundError)
 from conda_build.os_utils.external import find_executable
 from conda_build.exceptions import (DependencyNeedsBuildingError, CondaBuildException,
                                     OverLinkingError, OverDependingError)
@@ -45,26 +45,6 @@ from conda.exceptions import ClobberError, CondaMultiError
 from conda_build.conda_interface import conda_46, conda_47
 
 from .utils import is_valid_dir, metadata_dir, fail_dir, add_mangling
-
-# For Python 2, backport backslashreplace error handler for decodes.
-import codecs
-codecs.register_error(
-    'backslashreplace_',
-    lambda ex: (
-        ''.join(
-            (
-                '\\x{:x}'
-                if c < 0x100
-                else '\\u{:04x}'
-                if c < 0x10000
-                else '\\U{:08x}'
-            ).format(c)
-            for c in map(ord, ex.object[ex.start : ex.end])
-        ),
-        ex.end,
-    ),
-)
-
 
 # define a few commonly used recipes - use os.path.join(metadata_dir, recipe) elsewhere
 empty_sections = os.path.join(metadata_dir, "empty_sections")
@@ -100,8 +80,7 @@ def describe_root(cwd=None):
     if not cwd:
         cwd = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
     tag = check_output_env(["git", "describe", "--abbrev=0"], cwd=cwd).rstrip()
-    if PY3:
-        tag = tag.decode("utf-8")
+    tag = tag.decode("utf-8")
     return tag
 
 
@@ -371,9 +350,13 @@ def test_checkout_tool_as_dependency(testing_workdir, testing_config, monkeypatc
 
 platforms = ["64" if sys.maxsize > 2**32 else "32"]
 if sys.platform == "win32":
-    platforms = sorted(list(set(["32", ] + platforms)))
-    compilers = ["3.6", "3.7", pytest.param("2.7", marks=pytest.mark.skip("Failing for Python 2.7"))]
-    msvc_vers = ['9.0', '14.0']
+    platforms = sorted({"32", *platforms})
+    compilers = [
+        "3.6",
+        "3.7",
+        pytest.param("2.7", marks=pytest.mark.skip("Failing for Python 2.7")),
+    ]
+    msvc_vers = ["14.0"]
 else:
     msvc_vers = []
     compilers = [".".join([str(sys.version_info.major), str(sys.version_info.minor)])]
@@ -1280,7 +1263,7 @@ def test_failed_recipe_leaves_folders(testing_config, testing_workdir):
             any_locks = True
             dest_path = base64.b64decode(os.path.basename(lock.lock_file))
             if hasattr(dest_path, 'decode'):
-                dest_path = dest_path.decode(sys.getfilesystemencoding(), errors='backslashreplace_')
+                dest_path = dest_path.decode(sys.getfilesystemencoding(), errors='backslashreplace')
             locks_list.add((lock.lock_file, dest_path))
     assert not any_locks, "remaining locks:\n{}".format('\n'.join('->'.join((l, r))
                                                                 for (l, r) in locks_list))
@@ -1471,7 +1454,7 @@ def test_pin_depends(testing_config):
     output = api.build(m, config=testing_config)[0]
     requires = package_has_file(output, 'info/requires')
     assert requires
-    if PY3 and hasattr(requires, 'decode'):
+    if hasattr(requires, 'decode'):
         requires = requires.decode()
     assert re.search(r'python\=[23]\.', requires), "didn't find pinned python in info/requires"
 
@@ -1669,3 +1652,41 @@ def test_script_env_warnings(testing_config, recwarn):
         assert_keyword('<hidden>')
     finally:
         os.environ.pop(token)
+
+
+@pytest.mark.slow
+def test_activated_prefixes_in_actual_path(testing_config, testing_metadata):
+    """
+    Check if build and host env are properly added to PATH in the correct order.
+    Do this in an actual build and not just in a unit test to avoid regression.
+    Currently only tests for single non-"outputs" recipe with build/host split
+    and proper env activation (Metadata.is_cross and Config.activate both True).
+    """
+    file = "env-path-dump"
+    testing_metadata.config.activate = True
+    meta = testing_metadata.meta
+    meta["requirements"]["host"] = []
+    meta["build"]["script"] = [
+        f"echo %PATH%>%PREFIX%/{file}" if on_win else f"echo $PATH>$PREFIX/{file}"
+    ]
+    outputs = api.build(testing_metadata)
+    env = {"PATH": ""}
+    # We get the PATH entries twice: (which we should fix at some point)
+    #   1. from the environment activation hooks,
+    #   2. also beforehand from utils.path_prepended at the top of
+    #      - build.write_build_scripts on Unix
+    #      - windows.build on Windows
+    #        And apparently here the previously added build env gets deactivated
+    #        from the activation hook, hence only host is on PATH twice.
+    prepend_bin_path(env, testing_metadata.config.host_prefix)
+    if not on_win:
+        prepend_bin_path(env, testing_metadata.config.build_prefix)
+    prepend_bin_path(env, testing_metadata.config.host_prefix)
+    prepend_bin_path(env, testing_metadata.config.build_prefix)
+    expected_paths = [path for path in env["PATH"].split(os.pathsep) if path]
+    actual_paths = [
+        path
+        for path in package_has_file(outputs[0], file).strip().split(os.pathsep)
+        if path in expected_paths
+    ]
+    assert actual_paths == expected_paths

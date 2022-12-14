@@ -5,13 +5,13 @@
 
 import sys
 
-from conda_build import api
-from conda_build.conda_interface import PY3
+import pytest
 
-if PY3:
-    from inspect import getfullargspec as getargspec
-else:
-    from inspect import getargspec
+from conda_build import api
+
+from inspect import getfullargspec as getargspec
+
+pytestmark = pytest.mark.no_default_testing_config
 
 
 def test_api_config():

@@ -14,8 +14,7 @@ from distutils.command.install import install
 from distutils.errors import DistutilsOptionError, DistutilsGetoptError
 from distutils.dist import Distribution
 
-from conda_build.conda_interface import (StringIO, string_types, configparser, PY3,
-                                         text_type as unicode)
+from conda_build.conda_interface import StringIO, configparser
 from conda_build.conda_interface import spec_from_line
 from conda_build.metadata import MetaData
 from conda_build import api
@@ -99,11 +98,7 @@ class CondaDistribution(Distribution):
                 if attr in attrs:
                     given_attrs[attr] = attrs.pop(attr)
 
-        if not PY3:
-            # Distribution is an old-style class in Python 3
-            Distribution.__init__(self, attrs)
-        else:
-            super().__init__(attrs)
+        super().__init__(attrs)
 
         for attr in self.conda_attrs:
             setattr(self.metadata, attr, given_attrs.get(attr, self.conda_attrs[attr]))
@@ -115,11 +110,7 @@ class bdist_conda(install):
                     build_is_host=True)
 
     def initialize_options(self):
-        if not PY3:
-            # Command is an old-style class in Python 2
-            install.initialize_options(self)
-        else:
-            super().initialize_options()
+        super().initialize_options()
         self.buildnum = None
         self.anaconda_upload = False
 
@@ -128,11 +119,7 @@ class bdist_conda(install):
         if self.prefix:
             raise DistutilsOptionError("--prefix is not allowed")
         opt_dict['prefix'] = ("bdist_conda", self.config.host_prefix)
-        if not PY3:
-            # Command is an old-style class in Python 2
-            install.finalize_options(self)
-        else:
-            super().finalize_options()
+        super().finalize_options()
 
     def run(self):
         # Make sure the metadata has the conda attributes, even if the
@@ -190,7 +177,7 @@ class bdist_conda(install):
         # This is similar logic from conda skeleton pypi
         entry_points = getattr(self.distribution, 'entry_points', [])
         if entry_points:
-            if isinstance(entry_points, string_types):
+            if isinstance(entry_points, str):
                 # makes sure it is left-shifted
                 newstr = "\n".join(x.strip() for x in
                     entry_points.splitlines())
@@ -230,8 +217,8 @@ class bdist_conda(install):
                 if len(cs + gs) != 0:
                     d['build']['entry_points'] = entry_list
                     if metadata.conda_command_tests is True:
-                        d['test']['commands'] = list(map(unicode,
-                                                            pypi.make_entry_tests(entry_list)))
+                        d['test']['commands'] = list(map(str,
+                                                         pypi.make_entry_tests(entry_list)))
 
         if 'setuptools' in d['requirements']['run']:
             d['build']['preserve_egg_dir'] = True
@@ -246,7 +233,7 @@ class bdist_conda(install):
         if (metadata.conda_command_tests and not
                 isinstance(metadata.conda_command_tests,
                 bool)):
-            d['test']['commands'] = list(map(unicode, metadata.conda_command_tests))
+            d['test']['commands'] = list(map(str, metadata.conda_command_tests))
 
         d = dict(d)
         self.config.keep_old_work = True
@@ -260,11 +247,7 @@ class bdist_conda(install):
         self.config = m.config
         # prevent changes in the build ID from here, so that we're working in the same prefix
         # Do the install
-        if not PY3:
-            # Command is an old-style class in Python 2
-            install.run(self)
-        else:
-            super().run()
+        super().run()
         output = api.build(m, post=True, notest=True)[0]
         api.test(output, config=m.config)
         m.config.clean()

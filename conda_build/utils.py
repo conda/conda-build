@@ -3,6 +3,7 @@
 from collections import OrderedDict, defaultdict
 import contextlib
 import fnmatch
+from functools import lru_cache
 import hashlib
 from itertools import filterfalse
 import json
@@ -45,10 +46,7 @@ except Exception:
 from conda.api import PackageCacheData # noqa
 
 from .conda_interface import hashsum_file, md5_file, unix_path_to_win, win_path_to_unix # noqa
-from .conda_interface import PY3, iteritems # noqa
 from .conda_interface import root_dir, pkgs_dirs # noqa
-from .conda_interface import string_types # noqa
-from .conda_interface import memoized # noqa
 from .conda_interface import StringIO # noqa
 from .conda_interface import VersionOrder, MatchSpec # noqa
 from .conda_interface import cc_conda_build # noqa
@@ -60,31 +58,21 @@ from conda_build.conda_interface import rm_rf as _rm_rf # noqa
 from conda_build.exceptions import BuildLockError # noqa
 from conda_build.os_utils import external # noqa
 
-if PY3:
-    from glob import glob as glob_glob
+import urllib.parse as urlparse
+import urllib.request as urllib
 
-    # stdlib glob is less feature-rich but considerably faster than glob2
-    def glob(pathname, recursive=True):
-        return glob_glob(pathname, recursive=recursive)
+from glob import glob as glob_glob
 
-    import urllib.parse as urlparse
-    import urllib.request as urllib
-    # NOQA because it is not used in this file.
-    from contextlib import ExitStack  # NOQA
-    PermissionError = PermissionError  # NOQA
-    FileNotFoundError = FileNotFoundError
-else:
-    from glob2 import glob as glob2_glob
 
-    def glob(pathname, recursive=True):
-        return glob2_glob(pathname, recursive=recursive)
+# stdlib glob is less feature-rich but considerably faster than glob2
+def glob(pathname, recursive=True):
+    return glob_glob(pathname, recursive=recursive)
 
-    import urlparse
-    import urllib
-    # NOQA because it is not used in this file.
-    from contextlib2 import ExitStack  # NOQA
-    PermissionError = OSError
-    FileNotFoundError = OSError
+
+# NOQA because it is not used in this file.
+from contextlib import ExitStack  # NOQA
+PermissionError = PermissionError  # NOQA
+FileNotFoundError = FileNotFoundError
 
 on_win = (sys.platform == 'win32')
 
@@ -142,7 +130,7 @@ except ImportError:
     from scandir import walk
 
 
-@memoized
+@lru_cache(maxsize=None)
 def stat_file(path):
     return os.stat(path)
 
@@ -449,9 +437,6 @@ def get_recipe_abspath(recipe):
     Returns the absolute path, and a boolean flag that is true if a tarball has been extracted
     and needs cleanup.
     """
-    # Don't use byte literals for paths in Python 2
-    if not PY3:
-        recipe = recipe.decode(getpreferredencoding() or 'utf-8')
     if isfile(recipe):
         if recipe.lower().endswith(decompressible_exts) or recipe.lower().endswith(CONDA_PACKAGE_EXTENSIONS):
             recipe_dir = tempfile.mkdtemp()
@@ -779,15 +764,7 @@ uncompress (or gunzip) is required to unarchive .z source files.
 """)
         check_call_env([uncompress, '-f', tarball])
         tarball = tarball[:-2]
-    if not PY3 and tarball.lower().endswith('.tar.xz'):
-        unxz = external.find_executable('unxz')
-        if not unxz:
-            sys.exit("""\
-unxz is required to unarchive .xz source files.
-""")
 
-        check_call_env([unxz, '-f', '-k', tarball])
-        tarball = tarball[:-3]
     t = tarfile.open(tarball, mode)
     members = t.getmembers()
     for i, member in enumerate(members, 0):
@@ -800,10 +777,7 @@ unxz is required to unarchive .xz source files.
             sys.exit("tarball contains unsafe path: " + member.name + " cwd is: " + cwd)
         members[i] = member
 
-    if not PY3:
-        t.extractall(path=dir_path.encode(codec))
-    else:
-        t.extractall(path=dir_path)
+    t.extractall(path=dir_path)
     t.close()
 
 
@@ -896,10 +870,7 @@ def safe_print_unicode(*args, **kwargs):
     sep = kwargs.pop('sep', ' ')
     end = kwargs.pop('end', '\n')
     errors = kwargs.pop('errors', 'replace')
-    if PY3:
-        func = sys.stdout.buffer.write
-    else:
-        func = sys.stdout.write
+    func = sys.stdout.buffer.write
     line = sep.join(args) + end
     encoding = sys.stdout.encoding or 'utf8'
     func(line.encode(encoding, errors))
@@ -932,10 +903,7 @@ def rec_glob(path, patterns, ignores=None):
 def convert_unix_path_to_win(path):
     if external.find_executable('cygpath'):
         cmd = f"cygpath -w {path}"
-        if PY3:
-            path = subprocess.getoutput(cmd)
-        else:
-            path = subprocess.check_output(cmd.split()).rstrip().rstrip("\\")
+        path = subprocess.getoutput(cmd)
 
     else:
         path = unix_path_to_win(path)
@@ -945,10 +913,7 @@ def convert_unix_path_to_win(path):
 def convert_win_path_to_unix(path):
     if external.find_executable('cygpath'):
         cmd = f"cygpath -u {path}"
-        if PY3:
-            path = subprocess.getoutput(cmd)
-        else:
-            path = subprocess.check_output(cmd.split()).rstrip().rstrip("\\")
+        path = subprocess.getoutput(cmd)
 
     else:
         path = win_path_to_unix(path)
@@ -985,11 +950,10 @@ def get_build_folders(croot):
 
 
 def prepend_bin_path(env, prefix, prepend_prefix=False):
-    # bin_dirname takes care of bin on *nix, Scripts on win
-    env['PATH'] = join(prefix, bin_dirname) + os.pathsep + env['PATH']
+    env['PATH'] = join(prefix, "bin") + os.pathsep + env['PATH']
     if sys.platform == "win32":
         env['PATH'] = join(prefix, "Library", "mingw-w64", "bin") + os.pathsep + \
-                      join(prefix, "Library", "usr", "bin") + os.pathsep + os.pathsep + \
+                      join(prefix, "Library", "usr", "bin") + os.pathsep + \
                       join(prefix, "Library", "bin") + os.pathsep + \
                       join(prefix, "Scripts") + os.pathsep + \
                       env['PATH']
@@ -1020,9 +984,10 @@ def sys_path_prepended(prefix):
 
 
 @contextlib.contextmanager
-def path_prepended(prefix):
+def path_prepended(prefix, prepend_prefix=True):
+    # FIXME: Unclear why prepend_prefix=True for all platforms.
     old_path = os.environ['PATH']
-    os.environ['PATH'] = prepend_bin_path(os.environ.copy(), prefix, True)['PATH']
+    os.environ['PATH'] = prepend_bin_path(os.environ.copy(), prefix, prepend_prefix)['PATH']
     try:
         yield
     finally:
@@ -1180,7 +1145,7 @@ def islist(arg, uniform=False, include_dict=True):
     :return: Whether `arg` is a `list`
     :rtype: bool
     """
-    if isinstance(arg, string_types) or not hasattr(arg, '__iter__'):
+    if isinstance(arg, str) or not hasattr(arg, '__iter__'):
         # str and non-iterables are not lists
         return False
     elif not include_dict and isinstance(arg, dict):
@@ -1306,7 +1271,7 @@ class LoggingContext:
 
     def __enter__(self):
         for logger in self.loggers:
-            if isinstance(logger, string_types):
+            if isinstance(logger, str):
                 log = logging.getLogger(logger)
             self.old_levels[logger] = log.level
             log.setLevel(self.level if ('install' not in logger or
@@ -1346,7 +1311,7 @@ def _convert_lists_to_sets(_dict):
     for k, v in _dict.items():
         if hasattr(v, 'keys'):
             _dict[k] = HashableDict(_convert_lists_to_sets(v))
-        elif hasattr(v, '__iter__') and not isinstance(v, string_types):
+        elif hasattr(v, '__iter__') and not isinstance(v, str):
             try:
                 _dict[k] = sorted(list(set(v)))
             except TypeError:
@@ -1654,7 +1619,7 @@ def get_logger(name, level=logging.INFO, dedupe=True, add_stdout_stderr_handlers
 
 def _equivalent(base_value, value, path):
     equivalent = value == base_value
-    if isinstance(value, string_types) and isinstance(base_value, string_types):
+    if isinstance(value, str) and isinstance(base_value, str):
         if not os.path.isabs(base_value):
             base_value = os.path.abspath(os.path.normpath(os.path.join(path, base_value)))
         if not os.path.isabs(value):
@@ -1674,7 +1639,7 @@ def merge_or_update_dict(base, new, path="", merge=True, raise_on_clobber=False,
                 base_value = merge_or_update_dict(base_value, value, path, merge,
                                                 raise_on_clobber=raise_on_clobber)
                 base[key] = base_value
-            elif hasattr(value, '__iter__') and not isinstance(value, string_types):
+            elif hasattr(value, '__iter__') and not isinstance(value, str):
                 if merge:
                     if base_value != value:
                         try:
@@ -1844,7 +1809,7 @@ def insert_variant_versions(requirements_dict, variant, env):
             for i, x in enumerate(matches):
                 if x and (env in ('build', 'host') or x.group(1) in build_deps):
                     del reqs[i]
-                    if not isinstance(val, string_types):
+                    if not isinstance(val, str):
                         val = val[0]
                     reqs.insert(i, ensure_valid_spec(' '.join((x.group(1), val))))
 

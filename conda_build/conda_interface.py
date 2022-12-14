@@ -68,8 +68,8 @@ from conda.exports import ArgumentParser  # NOQA
 from conda.exports import (is_linked, linked, linked_data, prefix_placeholder,  # NOQA
                            rm_rf, symlink_conda, package_cache)  # NOQA
 from conda.exports import CondaSession  # NOQA
-from conda.exports import (PY3,  StringIO, input, iteritems, lchmod, string_types,  # NOQA
-                          text_type, TemporaryDirectory)  # NOQA
+from conda.exports import (StringIO, input, lchmod,  # NOQA
+                           TemporaryDirectory)  # NOQA
 from conda.exports import VersionOrder  # NOQA
 
 
@@ -83,8 +83,8 @@ add_parser_channels, add_parser_prefix = add_parser_channels, add_parser_prefix
 specs_from_args, spec_from_line, specs_from_url = specs_from_args, spec_from_line, specs_from_url
 is_linked, linked, linked_data, prefix_placeholder = is_linked, linked, linked_data, prefix_placeholder # NOQA
 rm_rf, symlink_conda, package_cache = rm_rf, symlink_conda, package_cache
-PY3, input, iteritems, lchmod, string_types = PY3, input, iteritems, lchmod, string_types
-text_type, TemporaryDirectory = text_type, TemporaryDirectory
+input, lchmod = input, lchmod
+TemporaryDirectory = TemporaryDirectory
 ArgumentParser, CondaSession, VersionOrder = ArgumentParser, CondaSession, VersionOrder
 
 
@@ -94,10 +94,7 @@ from conda.models.dist import Dist, IndexRecord  # NOQA
 ProgressiveFetchExtract = ProgressiveFetchExtract
 Dist, IndexRecord = Dist, IndexRecord
 
-if PY3:
-    import configparser  # NOQA
-else:
-    import ConfigParser as configparser  # NOQA
+import configparser  # NOQA
 configparser = configparser
 
 
@@ -124,7 +121,6 @@ get_conda_build_local_url = try_exports("conda.models.channel", "get_conda_build
 
 binstar_upload = context.binstar_upload
 bits = context.bits
-conda_private = context.conda_private
 default_python = context.default_python
 envs_dirs = context.envs_dirs
 pkgs_dirs = list(context.pkgs_dirs)

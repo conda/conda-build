@@ -1,13 +1,16 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 import argparse
+from glob2 import glob
+from itertools import chain
+import logging
+from os.path import abspath, expanduser, expandvars
+from pathlib import Path
+import sys
 import warnings
 
-from glob2 import glob
-import logging
-import os
-import sys
-
+from conda.auxlib.ish import dals
+from conda.common.io import dashlist
 import filelock
 
 import conda_build.api as api
@@ -20,21 +23,19 @@ from conda_build.cli.actions import KeyValueAction
 import conda_build.source as source
 from conda_build.utils import LoggingContext
 from conda_build.config import Config, zstd_compression_level_default, get_channel_urls
-from os.path import abspath, expanduser, expandvars
-
-on_win = (sys.platform == 'win32')
-
-logging.basicConfig(level=logging.INFO)
 
 
 def parse_args(args):
     p = get_render_parser()
-    p.description = """
-Tool for building conda packages. A conda package is a binary tarball
-containing system-level libraries, Python modules, executable programs, or
-other components. conda keeps track of dependencies between packages and
-platform specifics, making it simple to create working environments from
-different sets of packages."""
+    p.description = dals(
+        """
+        Tool for building conda packages. A conda package is a binary tarball
+        containing system-level libraries, Python modules, executable programs, or
+        other components. conda keeps track of dependencies between packages and
+        platform specifics, making it simple to create working environments from
+        different sets of packages.
+        """
+    )
     p.add_argument(
         "--check",
         action="store_true",
@@ -157,10 +158,11 @@ different sets of packages."""
     p.add_argument(
         "--zstd-compression-level",
         help=("When building v2 packages, set the compression level used by "
-              "conda-package-handling. Defaults to the maximum."),
+              "conda-package-handling. "
+              f"Defaults to {zstd_compression_level_default}."),
         type=int,
-        choices=range(1, 22),
-        default=zstd_compression_level_default,
+        choices=range(1, 23),
+        default=cc_conda_build.get('zstd_compression_level', zstd_compression_level_default),
     )
     pypi_grp = p.add_argument_group("PyPI upload parameters (twine)")
     pypi_grp.add_argument(
@@ -383,13 +385,14 @@ def check_recipe(path_list):
 
     :param path_list: list of paths to recipes
     """
-    for recipe in path_list:
-        if os.path.isfile(recipe) \
-                and os.path.basename(recipe) in ["meta.yaml", "conda.yaml"]:
+    for recipe in map(Path, path_list):
+        if recipe.is_file() and recipe.name in utils.VALID_METAS:
             warnings.warn(
-                "RECIPE_PATH received is a file. File: {}\n"
-                "It should be a path to a folder. \n"
-                "Forcing conda-build to use the recipe file.".format(recipe),
+                (
+                    f"RECIPE_PATH received is a file ({recipe}).\n"
+                    "It should be a path to a folder.\n"
+                    "Forcing conda-build to use the recipe file."
+                ),
                 UserWarning
             )
 
@@ -436,29 +439,22 @@ def execute(args):
         config.clean_pkgs()
         return
 
-    action = None
     outputs = None
     if args.output:
-        action = output_action
         config.verbose = False
         config.quiet = True
         config.debug = False
+        outputs = [output_action(recipe, config) for recipe in args.recipe]
     elif args.test:
-        action = test_action
-    elif args.source:
-        action = source_action
-    elif args.check:
-        action = check_action
-
-    if action == test_action:
+        outputs = []
         failed_recipes = []
-        recipes = [item for sublist in
-                   [glob(os.path.abspath(recipe)) if '*' in recipe
-                                                  else [recipe] for recipe in args.recipe]
-                   for item in sublist]
+        recipes = chain.from_iterable(
+            glob(abspath(recipe)) if "*" in recipe else [recipe]
+            for recipe in args.recipe
+        )
         for recipe in recipes:
             try:
-                action(recipe, config)
+                test_action(recipe, config)
             except:
                 if not args.keep_going:
                     raise
@@ -467,19 +463,27 @@ def execute(args):
                     continue
         if failed_recipes:
             print("Failed recipes:")
-            for recipe in failed_recipes:
-                print("  - %s" % recipe)
+            dashlist(failed_recipes)
             sys.exit(len(failed_recipes))
         else:
             print("All tests passed")
-        outputs = []
-
-    elif action:
-        outputs = [action(recipe, config) for recipe in args.recipe]
+    elif args.source:
+        outputs = [source_action(recipe, config) for recipe in args.recipe]
+    elif args.check:
+        outputs = [check_action(recipe, config) for recipe in args.recipe]
     else:
-        outputs = api.build(args.recipe, post=args.post, test_run_post=args.test_run_post,
-                            build_only=args.build_only, notest=args.notest, already_built=None, config=config,
-                            verify=args.verify, variants=args.variants, cache_dir=args.cache_dir)
+        outputs = api.build(
+            args.recipe,
+            post=args.post,
+            test_run_post=args.test_run_post,
+            build_only=args.build_only,
+            notest=args.notest,
+            already_built=None,
+            config=config,
+            verify=args.verify,
+            variants=args.variants,
+            cache_dir=args.cache_dir,
+        )
 
     if not args.output and len(utils.get_build_folders(config.croot)) > 0:
         build.print_build_intermediate_warning(config)

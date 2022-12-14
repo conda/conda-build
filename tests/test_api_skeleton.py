@@ -443,7 +443,7 @@ def test_pypi_section_order_preserved(testing_workdir):
 
 
 @pytest.mark.slow
-@pytest.mark.flaky(max_runs=5)
+@pytest.mark.flaky(rerun=5, reruns_delay=2)
 @pytest.mark.skipif(not external.find_executable("shellcheck"), reason="requires shellcheck >=0.7.0")
 @pytest.mark.parametrize(
     "package, repo", [("r-rmarkdown", "cran"), ("Perl::Lint", "cpan"), ("screen", "rpm")]

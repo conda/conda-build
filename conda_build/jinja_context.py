@@ -15,10 +15,8 @@ import jinja2
 import toml
 import yaml
 
-from .conda_interface import PY3
 from .environ import get_dict as get_environ
-from .utils import (get_installed_packages, apply_pin_expressions, get_logger, HashableDict,
-                    string_types)
+from .utils import get_installed_packages, apply_pin_expressions, get_logger, HashableDict
 from .render import get_env_dependencies
 from .utils import copy_into, check_call_env, rm_rf, ensure_valid_spec
 from .variants import DEFAULT_COMPILERS
@@ -165,8 +163,7 @@ def load_setuptools(m, setup_file='setup.py', from_recipe_dir=False, recipe_dir=
 
 
 def load_npm():
-    # json module expects bytes in Python 2 and str in Python 3.
-    mode_dict = {'mode': 'r', 'encoding': 'utf-8'} if PY3 else {'mode': 'rb'}
+    mode_dict = {'mode': 'r', 'encoding': 'utf-8'}
     with open('package.json', **mode_dict) as pkg:
         return json.load(pkg)
 
@@ -245,7 +242,7 @@ def pin_compatible(m, package_name, lower_bound=None, upper_bound=None, min_pin=
             else:
                 version = lower_bound or versions.get(package_name)
                 if version:
-                    if hasattr(version, '__iter__') and not isinstance(version, string_types):
+                    if hasattr(version, '__iter__') and not isinstance(version, str):
                         version = version[0]
                     else:
                         version = str(version)

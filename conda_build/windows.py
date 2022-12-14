@@ -250,6 +250,9 @@ def write_build_scripts(m, env, bld_bat):
 
 
 def build(m, bld_bat, stats, provision_only=False):
+    # TODO: Prepending the prefixes here should probably be guarded by
+    #         if not m.activate_build_script:
+    #       Leaving it as is, for now, since we need a quick, non-disruptive patch release.
     with path_prepended(m.config.host_prefix):
         with path_prepended(m.config.build_prefix):
             env = environ.get_dict(m=m)

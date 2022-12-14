@@ -42,7 +42,7 @@ cran_packages = [
 
 @pytest.mark.slow
 @pytest.mark.parametrize("package, license_id, license_family, license_files", cran_packages)
-@pytest.mark.flaky(max_runs=5)
+@pytest.mark.flaky(rerun=5, reruns_delay=2)
 def test_cran_license(package, license_id, license_family, license_files, testing_workdir, testing_config):
     api.skeletonize(packages=package, repo='cran', output_dir=testing_workdir,
                     config=testing_config)
@@ -66,6 +66,7 @@ cran_os_type_pkgs = [
 
 
 @pytest.mark.parametrize("package, skip_text", cran_os_type_pkgs)
+@pytest.mark.flaky(rerun=5, reruns_delay=2)
 def test_cran_os_type(package, skip_text, testing_workdir, testing_config):
     api.skeletonize(packages=package, repo='cran', output_dir=testing_workdir,
                     config=testing_config)
@@ -75,6 +76,7 @@ def test_cran_os_type(package, skip_text, testing_workdir, testing_config):
 
 
 # Test cran skeleton argument --no-comments
+@pytest.mark.flaky(rerun=5, reruns_delay=2)
 def test_cran_no_comments(testing_workdir, testing_config):
     package = "data.table"
     meta_yaml_comment = '  # This is required to make R link correctly on Linux.'
