@@ -12,6 +12,10 @@ from conda_build.utils import on_win, package_has_file, get_site_packages
 from .utils import add_mangling, metadata_dir
 
 
+@pytest.mark.skipif(
+    sys.version_info >= (3, 10),
+    reason="Python 3.10+, py_compile terminates once it finds an invalid file",
+)
 def test_compile_missing_pyc(testing_workdir):
     good_files = ['f1.py', 'f3.py']
     bad_file = 'f2_bad.py'

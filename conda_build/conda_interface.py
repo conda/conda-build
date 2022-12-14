@@ -5,9 +5,9 @@ import os
 from os import lstat
 from importlib import import_module
 
-from pkg_resources import parse_version
-
 from conda import __version__ as CONDA_VERSION
+
+CONDA_VERSION = CONDA_VERSION
 
 
 def try_exports(module, attr):
@@ -27,13 +27,14 @@ except ImportError:
     # no need to patch if it doesn't exist
     pass
 
-conda_43 = parse_version(CONDA_VERSION) >= parse_version("4.3.0a0")
-conda_44 = parse_version(CONDA_VERSION) >= parse_version("4.4.0a0")
-conda_45 = parse_version(CONDA_VERSION) >= parse_version("4.5.0a0")
-conda_46 = parse_version(CONDA_VERSION) >= parse_version("4.6.0a0")
-conda_47 = parse_version(CONDA_VERSION) >= parse_version("4.7.0a0")
-conda_48 = parse_version(CONDA_VERSION) >= parse_version("4.8.0a0")
-conda_411 = parse_version(CONDA_VERSION) >= parse_version("4.11.0a0")
+# All of these conda's are older than our minimum dependency
+conda_43 = True
+conda_44 = True
+conda_45 = True
+conda_46 = True
+conda_47 = True
+conda_48 = True
+conda_411 = True
 
 if conda_44:
     from conda.exports import display_actions, execute_actions, execute_plan, install_actions
@@ -43,17 +44,12 @@ else:
 display_actions, execute_actions, execute_plan = display_actions, execute_actions, execute_plan
 install_actions = install_actions
 
-try:
-    # Conda 4.4+
-    from conda.exports import _toposort
-except ImportError:
-    from conda.toposort import _toposort
+from conda.exports import _toposort  # NOQA
+
 _toposort = _toposort
 
-if conda_411:
-    from conda.auxlib.packaging import _get_version_from_git_tag
-else:
-    from conda._vendor.auxlib.packaging import _get_version_from_git_tag
+from conda.auxlib.packaging import _get_version_from_git_tag  # NOQA
+
 get_version_from_git_tag = _get_version_from_git_tag
 
 from conda.exports import TmpDownload, download, handle_proxy_407  # NOQA
@@ -134,10 +130,7 @@ get_rc_urls = lambda: list(context.channels)
 get_prefix = partial(context_get_prefix, context)
 cc_conda_build = context.conda_build if hasattr(context, 'conda_build') else {}
 
-try:
-    from conda.exports import Channel
-except:
-    from conda.models.channel import Channel
+from conda.exports import Channel  # NOQA
 get_conda_channel = Channel.from_value
 
 # disallow softlinks.  This avoids a lot of dumb issues, at the potential cost of disk space.

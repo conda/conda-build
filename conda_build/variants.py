@@ -19,8 +19,8 @@ from conda_build.conda_interface import cc_conda_build
 from conda_build.utils import ensure_list, get_logger, islist, on_win, trim_empty_keys
 
 DEFAULT_VARIANTS = {
-    'python': f'{sys.version_info.major}.{sys.version_info.minor}',
-    'numpy': '1.16',
+    "python": f"{sys.version_info.major}.{sys.version_info.minor}",
+    "numpy": "1.21",
     # this one actually needs to be pretty specific.  The reason is that cpan skeleton uses the
     #    version to say what's in their standard library.
     'perl': '5.26.2',
