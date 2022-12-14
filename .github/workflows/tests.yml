@@ -404,6 +404,11 @@ jobs:
         with:
           paths: ./test-results-${{ github.sha }}-**/test-report*.xml
 
+      - run: |
+          cat <<HEREDOC
+          ${{ toJSON(github.event) }}
+          HEREDOC
+
       - name: Decide whether the needed jobs succeeded or failed
         uses: re-actors/alls-green@release/v1
         with:

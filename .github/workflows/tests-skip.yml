@@ -43,4 +43,8 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
+      - run: |
+          cat <<HEREDOC
+          ${{ toJSON(github.event) }}
+          HEREDOC
       - run: 'echo "No source changes and skipping `test.yml`"'
