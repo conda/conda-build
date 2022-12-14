@@ -468,6 +468,10 @@ def test_requirements_txt_for_run_reqs(testing_workdir, testing_config):
     api.build(os.path.join(metadata_dir, "_requirements_txt_run_reqs"), config=testing_config)
 
 
+@pytest.mark.skipif(
+    sys.version_info >= (3, 10),
+    reason="Python 3.10+, py_compile terminates once it finds an invalid file",
+)
 def test_compileall_compiles_all_good_files(testing_workdir, testing_config):
     output = api.build(os.path.join(metadata_dir, "_compile-test"), config=testing_config)[0]
     good_files = ['f1.py', 'f3.py']
