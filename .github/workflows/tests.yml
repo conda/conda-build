@@ -45,7 +45,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.9', '3.10']
+        # test lower and upper bounds
+        python-version: ['3.7', '3.10']
         conda-version: [release]
         test-type: [serial, parallel]
         include:
@@ -294,7 +295,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.9', '3.10']
+        # test lower and upper bounds
+        python-version: ['3.7', '3.10']
         conda-version: [canary]
         test-type: [serial, parallel]
       max-parallel: 10
