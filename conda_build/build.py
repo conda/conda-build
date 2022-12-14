@@ -42,7 +42,6 @@ from .conda_interface import EntityEncoder
 from .conda_interface import get_rc_urls
 from .conda_interface import url_path
 from .conda_interface import root_dir
-from .conda_interface import conda_private
 from .conda_interface import MatchSpec
 from .conda_interface import reset_context
 from .conda_interface import context
@@ -1127,8 +1126,9 @@ def write_link_json(m):
     package_metadata = OrderedDict()
     noarch_type = m.get_value('build/noarch')
     if noarch_type:
-        noarch_dict = OrderedDict(type=noarch_type)
-        if noarch_type.lower() == "python":
+        noarch_type_str = str(noarch_type)
+        noarch_dict = OrderedDict(type=noarch_type_str)
+        if noarch_type_str.lower() == "python":
             entry_points = m.get_value('build/entry_points')
             if entry_points:
                 noarch_dict['entry_points'] = entry_points
@@ -1136,7 +1136,7 @@ def write_link_json(m):
 
     preferred_env = m.get_value("build/preferred_env")
     if preferred_env:
-        preferred_env_dict = OrderedDict(name=preferred_env)
+        preferred_env_dict = OrderedDict(name=str(preferred_env))
         executable_paths = m.get_value("build/preferred_env_executable_paths")
         if executable_paths:
             preferred_env_dict["executable_paths"] = executable_paths
@@ -1172,11 +1172,6 @@ def write_about_json(m):
         evars = ['CIO_TEST']
 
         d['env_vars'] = {ev: os.getenv(ev, '<not set>') for ev in evars}
-        # this information will only be present in conda 4.2.10+
-        try:
-            d['conda_private'] = conda_private
-        except (KeyError, AttributeError):
-            pass
         # Adding this to extra since its arbitrary info
         extra = m.get_section('extra')
         # Add burn-in information to extra
@@ -1821,7 +1816,7 @@ def _write_sh_activation_text(file_handle, m):
                             cygpath_suffix))
 
     if conda_46:
-        py_flags = '-m' if m.config.debug else '-I -m'
+        py_flags = '-I -m' if os.environ.get("_CONDA_BUILD_ISOLATED_ACTIVATION") else '-m'
         file_handle.write(
             f"""eval "$('{sys.executable}' {py_flags} conda shell.bash hook)"\n"""
         )
@@ -2589,8 +2584,11 @@ def construct_metadata_for_test(recipedir_or_package, config):
 
 
 def write_build_scripts(m, script, build_file):
-    with utils.path_prepended(m.config.host_prefix):
-        with utils.path_prepended(m.config.build_prefix):
+    # TODO: Prepending the prefixes here should probably be guarded by
+    #         if not m.activate_build_script:
+    #       Leaving it as is, for now, since we need a quick, non-disruptive patch release.
+    with utils.path_prepended(m.config.host_prefix, False):
+        with utils.path_prepended(m.config.build_prefix, False):
             env = environ.get_dict(m=m)
     env["CONDA_BUILD_STATE"] = "BUILD"
 
@@ -2738,12 +2736,12 @@ def write_test_scripts(metadata, env_vars, py_files, pl_files, lua_files, r_file
                         '&& set _CE_CONDA=conda\n'.format(
                             sys.prefix,
                             '--dev' if metadata.config.debug else '',
-                            '' if metadata.config.debug else '-I',
+                            "-i" if os.environ.get("_CONDA_BUILD_ISOLATED_ACTIVATION") else "",
                             python_exe=sys.executable
                         )
                     )
                 else:
-                    py_flags = '-m' if metadata.config.debug else '-I -m'
+                    py_flags = '-I -m' if os.environ.get("_CONDA_BUILD_ISOLATED_ACTIVATION") else '-m'
                     tf.write(
                         f"""eval "$('{sys.executable}' {py_flags} conda shell.bash hook)"\n"""
                     )

@@ -1,3 +1,6 @@
+# this is the sibling workflow to tests-skip.yml, it is required to work around
+# the skipped but required checks issue:
+#   https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/defining-the-mergeability-of-pull-requests/troubleshooting-required-status-checks#handling-skipped-but-required-checks
 name: Tests
 
 on:
@@ -7,10 +10,22 @@ on:
     branches:
       - main
       - feature/**
+    paths:  # run if src/tests/recipe are modified
+      - conda_build/**
+      - tests/**
+      - '*.py'
+      - recipe/**
+      - .github/workflows/tests.yml
 
   # NOTE: github.event context is pull_request payload:
   # https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#pull_request
   pull_request:
+    paths:
+      - conda_build/**
+      - tests/**
+      - '*.py'
+      - recipe/**
+      - .github/workflows/tests.yml
 
 concurrency:
   # Concurrency group that uses the workflow name and PR number if available
@@ -30,14 +45,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.7', '3.8']
+        # test lower and upper bounds
+        python-version: ['3.7', '3.10']
         conda-version: [release]
         test-type: [serial, parallel]
         include:
-          - python-version: '3.9'
+          - python-version: '3.10'
             conda-version: canary
             test-type: serial
-          - python-version: '3.9'
+          - python-version: '3.10'
             conda-version: canary
             test-type: parallel
     env:
@@ -70,8 +86,8 @@ jobs:
           source ci/github/install_conda_build_test_deps
           pip install allure-pytest
           pip install -e .
+          pip install allure-pytest
           conda info -a
-          mkdir ./pytest-replay
 
       - name: Run Serial tests
         if: matrix.test-type == 'serial'
@@ -85,7 +101,8 @@ jobs:
               --cov conda_build \
               --cov-report xml \
               -m "serial" tests \
-              ${{ env.pytest-replay }}
+              ${{ env.pytest-replay }} \
+              --alluredir=allure-results
           tar -zcf allure-results.tar.gz allure-results
 
       - name: Run Parallel tests
@@ -101,14 +118,9 @@ jobs:
               --cov-append \
               --cov-report xml \
               -m "not serial" tests \
-              ${{ env.pytest-replay }}
+              ${{ env.pytest-replay }} \
+              --alluredir=allure-results
           tar -zcf allure-results.tar.gz allure-results
-
-      - name: Upload Allure test logs
-        uses: actions/upload-artifact@v2
-        with:
-          name: allure-Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type  }}
-          path: allure-results.tar.gz
 
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v2
@@ -121,7 +133,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.7', '3.8']
+        python-version: ['3.7', '3.8', '3.9', '3.10']
         conda-version: [release]
         test-type: [serial, parallel]
         include:
@@ -223,6 +235,7 @@ jobs:
           python -c "import struct; print(struct.calcsize('P') * 8)"
           pip install allure-pytest
           pip install --no-deps .
+          pip install allure-pytest
           conda-build --version
           pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd
           mkdir %UserProfile%\cbtmp_serial
@@ -232,9 +245,9 @@ jobs:
           call conda create -n blarg -yq --download-only python=2.7||exit 1
           call conda create -n blarg -yq --download-only python=3.8||exit 1
           call conda create -n blarg -yq --download-only python cmake||exit 1
-          mkdir ${{ github.workspace }}\\pytest-replay
           set "PYTEST_REPLAY_OPTIONS=--replay-record-dir=${{ github.workspace }}\\pytest-replay --replay-base-name=Win-%CONDA_VERSION%-Py%PYTHON_VERSION%"
           echo "##vso[task.setvariable variable=PYTEST_REPLAY_OPTIONS]%PYTEST_REPLAY_OPTIONS%"
+
         shell: cmd
 
       - name: Run Serial Tests
@@ -248,8 +261,9 @@ jobs:
           set PERL=
           set LUA=
           set R=
-          pytest --alluredir=allure-results --color=yes -vv -n 0 --basetemp %UserProfile%\cbtmp_serial --cov conda_build --cov-report xml -m "serial" ${{ env.pytest-replay }}
+          pytest --color=yes -vv -n 0 --basetemp %UserProfile%\cbtmp_serial --cov conda_build --cov-report xml -m "serial" ${{ env.pytest-replay }} --alluredir=allure-results
           tar -zcf allure-results.tar.gz allure-results
+
         shell: cmd
 
       - name: Run Parallel Tests
@@ -263,7 +277,7 @@ jobs:
           set PERL=
           set LUA=
           set R=
-          pytest --alluredir=allure-results --color=yes -vv -n auto --basetemp %UserProfile%\cbtmp --cov conda_build --cov-append --cov-report xml -m "not serial" ${{ env.pytest-replay }}
+          pytest --color=yes -vv -n auto --basetemp %UserProfile%\cbtmp --cov conda_build --cov-append --cov-report xml -m "not serial" ${{ env.pytest-replay }} --alluredir=allure-results
           tar -zcf allure-results.tar.gz allure-results
         shell: cmd
         env:
@@ -291,7 +305,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.9']
+        # test lower and upper bounds
+        python-version: ['3.7', '3.10']
         conda-version: [canary]
         test-type: [serial, parallel]
       max-parallel: 10
@@ -335,8 +350,9 @@ jobs:
           conda config --set auto_update_conda False
           conda info
           source ci/github/install_conda_build_test_deps
-          pip install allure-pytest
           pip install -e .
+          echo "Installing Support Libraries"
+          pip install allure-pytest
           conda info -a
           conda list --show-channel-urls
 
@@ -346,7 +362,7 @@ jobs:
           set -e -u
           source ci/github/activate_conda "${{ github.workspace }}/miniconda/bin/python"
           conda install conda-verify -y
-          pytest --alluredir=allure-results --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
+          pytest --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}" --alluredir=allure-results
           tar -zcf allure-results.tar.gz allure-results
 
       - name: Run Parallel Tests
@@ -361,7 +377,7 @@ jobs:
           conda create -n blarg1 -yq python=2.7
           conda create -n blarg3 -yq python=3.7
           conda create -n blarg4 -yq python nomkl numpy pandas svn
-          pytest --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}"
+          pytest --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}" --alluredir=allure-results
           tar -zcf allure-results.tar.gz allure-results
 
       - name: Upload Allure test logs
@@ -377,8 +393,9 @@ jobs:
           name: macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type  }}
         if: always()
 
+  # required check
   analyze:
-    name: Analyze test results
+    name: Analyze results
     needs: [windows, linux, macos]
     if: always()
     runs-on: ubuntu-latest

@@ -60,18 +60,24 @@ def test_repo(prefix, repo, package, version, testing_workdir, testing_config):
 
 @pytest.mark.slow
 def test_name_with_version_specified(testing_workdir, testing_config):
-    api.skeletonize(packages='sympy', repo='pypi', version='0.7.5',
-                    config=testing_config)
-    m = api.render('sympy/meta.yaml')[0][0]
-    assert m.version() == "0.7.5"
+    api.skeletonize(
+        packages="sympy",
+        repo="pypi",
+        version="1.10",
+        config=testing_config,
+    )
+    m = api.render("sympy/meta.yaml")[0][0]
+    assert m.version() == "1.10"
 
 
 def test_pypi_url(testing_workdir, testing_config):
-    api.skeletonize('https://pypi.python.org/packages/source/s/sympy/'
-                    'sympy-0.7.5.tar.gz#md5=7de1adb49972a15a3dd975e879a2bea9',
-                    repo='pypi', config=testing_config)
-    m = api.render('sympy/meta.yaml')[0][0]
-    assert m.version() == "0.7.5"
+    api.skeletonize(
+        packages="https://pypi.python.org/packages/source/s/sympy/sympy-1.10.tar.gz#md5=b3f5189ad782bbcb1bedc1ec2ca12f29",
+        repo="pypi",
+        config=testing_config,
+    )
+    m = api.render("sympy/meta.yaml")[0][0]
+    assert m.version() == "1.10"
 
 
 @pytest.fixture
@@ -443,7 +449,7 @@ def test_pypi_section_order_preserved(testing_workdir):
 
 
 @pytest.mark.slow
-@pytest.mark.flaky(max_runs=5)
+@pytest.mark.flaky(rerun=5, reruns_delay=2)
 @pytest.mark.skipif(not external.find_executable("shellcheck"), reason="requires shellcheck >=0.7.0")
 @pytest.mark.parametrize(
     "package, repo", [("r-rmarkdown", "cran"), ("Perl::Lint", "cpan"), ("screen", "rpm")]

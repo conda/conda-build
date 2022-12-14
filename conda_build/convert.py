@@ -85,8 +85,8 @@ def retrieve_python_version(file_path):
         to the source tar file itself, or the file path to the
         temporary directory containing the extracted source package contents
     """
-    if 'python' in file_path:
-        pattern = re.compile(r'python\d\.\d')
+    if "python" in file_path:
+        pattern = re.compile(r"python\d\.\d+")
         matched = pattern.search(file_path)
 
         if matched:

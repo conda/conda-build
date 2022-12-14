@@ -5,8 +5,11 @@ import sys
 from collections import defaultdict
 
 import pytest
+
+import conda_build.config
 from conda_build.config import (
     Config,
+    get_or_merge_config,
     _src_cache_root_default,
     conda_pkg_format_default,
     enable_static_default,
@@ -90,7 +93,7 @@ def testing_homedir(tmpdir, request):
 @pytest.fixture(scope="function")
 def testing_config(testing_workdir):
     def boolify(v):
-        return True if "v" == "true" else False
+        return v == "true"
 
     result = Config(
         croot=testing_workdir,
@@ -118,6 +121,27 @@ def testing_config(testing_workdir):
     assert result.src_cache_root == testing_workdir
     assert result.noarch_python_build_age == 0
     return result
+
+
+@pytest.fixture(scope="function", autouse=True)
+def default_testing_config(testing_config, monkeypatch, request):
+    """Monkeypatch get_or_merge_config to use testing_config by default
+
+    This requests fixture testing_config, thus implicitly testing_workdir, too.
+    """
+
+    # Allow single tests to disable this fixture even if outer scope adds it.
+    if "no_default_testing_config" in request.keywords:
+        return
+
+    def get_or_merge_testing_config(config, variant=None, **kwargs):
+        return get_or_merge_config(config or testing_config, variant, **kwargs)
+
+    monkeypatch.setattr(
+        conda_build.config,
+        "get_or_merge_config",
+        get_or_merge_testing_config,
+    )
 
 
 @pytest.fixture(scope="function")
