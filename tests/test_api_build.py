@@ -99,7 +99,7 @@ def test_recipe_builds(recipe, testing_config, testing_workdir, monkeypatch):
     # so they can be checked within build scripts
     testing_config.activate = True
     monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
-    monkeypatch.setenv("CONDA_TEST_VAR_3", "conda_test_3")
+    monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
     api.build(recipe, config=testing_config)
 
 
@@ -115,7 +115,7 @@ def test_ignore_prefix_files(testing_config, monkeypatch):
     recipe = os.path.join(metadata_dir, "_ignore_prefix_files")
     testing_config.activate = True
     monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
-    monkeypatch.setenv("CONDA_TEST_VAR_3", "conda_test_3")
+    monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
     api.build(recipe, config=testing_config)
 
 
@@ -132,7 +132,7 @@ def test_ignore_some_prefix_files(testing_config, monkeypatch):
     recipe = os.path.join(metadata_dir, "_ignore_some_prefix_files")
     testing_config.activate = True
     monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
-    monkeypatch.setenv("CONDA_TEST_VAR_3", "conda_test_3")
+    monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
     api.build(recipe, config=testing_config)
 
 
