@@ -37,7 +37,31 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # detect whether any code changes are included in this PR
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+    - uses: dorny/paths-filter@v2
+      id: filter
+      with:
+        filters: |
+          code:
+            - 'conda_build/**'
+            - 'tests/**'
+            - '*.py'
+            - 'recipe/**'
+            - '.github/workflows/tests.yml'
+
+  # linux test suite
   linux:
+    # only run test suite if there are code changes
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -125,7 +149,12 @@ jobs:
           name: Linux_replay-py-${{ matrix.python-version }}_${{ matrix.conda-version }}_${{ matrix.test-type }}
           path: pytest-replay/
 
+  # windows test suite
   windows:
+    # only run test suite if there are code changes
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+
     runs-on: windows-2019
     strategy:
       fail-fast: false
@@ -287,7 +316,12 @@ jobs:
           name: Win-${{ env.CONDA_VERSION }}-Python${{ matrix.python-version }}-${{ env. parameters.serial_or_parallel  }}
         if: always()
 
+  # macos test suite
   macos:
+    # only run test suite if there are code changes
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+
     runs-on: macos-11
     defaults:
       run:
@@ -406,6 +440,7 @@ jobs:
         with:
           jobs: ${{ toJSON(needs) }}
 
+  # canary builds
   build:
     name: Canary Build
     needs: [analyze]
