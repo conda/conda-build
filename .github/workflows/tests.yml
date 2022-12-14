@@ -84,7 +84,6 @@ jobs:
       - name: Source Scripts
         run: |
           source ci/github/install_conda_build_test_deps
-          pip install allure-pytest
           pip install -e .
           pip install allure-pytest
           conda info -a
@@ -93,7 +92,6 @@ jobs:
         if: matrix.test-type == 'serial'
         run: |
           pytest \
-              --alluredir=allure-results \
               --color=yes \
               -vv \
               -n 0 \
@@ -109,7 +107,6 @@ jobs:
         if: matrix.test-type == 'parallel'
         run: |
           pytest \
-              --alluredir=allure-results \
               --color=yes \
               -vv \
               -n auto \
@@ -233,7 +230,6 @@ jobs:
           call conda install -q py-lief||exit 1
           python --version
           python -c "import struct; print(struct.calcsize('P') * 8)"
-          pip install allure-pytest
           pip install --no-deps .
           pip install allure-pytest
           conda-build --version
