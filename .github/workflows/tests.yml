@@ -61,7 +61,7 @@ jobs:
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
       REPLAY_NAME: Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
       REPLAY_DIR: ${{ github.workspace }}/pytest-replay/
-      ALLURE_DIR: ./allure-results/
+      ALLURE_DIR: ${{ github.workspace }}/allure-results/
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
       PYTEST_NUMPROCESSES: ${{ matrix.test-type == 'serial' && 0 || 'auto' }}
 
@@ -317,7 +317,7 @@ jobs:
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
       REPLAY_NAME: macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
       REPLAY_DIR: ${{ github.workspace }}/pytest-replay/
-      ALLURE_DIR: ./allure-results/
+      ALLURE_DIR: ${{ github.workspace }}/allure-results/
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
       PYTEST_NUMPROCESSES: ${{ matrix.test-type == 'serial' && 0 || 'auto' }}
 
