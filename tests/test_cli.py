@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: © 2012 Continuum Analytics, Inc. <http://continuum.io>
+# SPDX-FileCopyrightText: © 2017 Anaconda, Inc. <https://www.anaconda.com>
+# SPDX-License-Identifier: BSD-3-Clause
 # For the most part, all functionality should be tested with the api tests,
 #   because they actually provide coverage.  These tests are here to make
 #   sure that the CLI still works.
