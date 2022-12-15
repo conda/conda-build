@@ -1,5 +1,3 @@
-# Copyright (C) 2014 Anaconda, Inc
-# SPDX-License-Identifier: BSD-3-Clause
 from . import _version
 __version__ = _version.get_versions()['version']
 

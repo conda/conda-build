@@ -1,5 +1,3 @@
-# Copyright (C) 2014 Anaconda, Inc
-# SPDX-License-Identifier: BSD-3-Clause
 """This file handles the parsing of feature specifications from files,
 ending up with a configuration matrix"""
 

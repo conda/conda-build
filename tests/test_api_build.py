@@ -1,5 +1,3 @@
-# Copyright (C) 2014 Anaconda, Inc
-# SPDX-License-Identifier: BSD-3-Clause
 """
 This module tests the build API.  These are high-level integration tests.
 """

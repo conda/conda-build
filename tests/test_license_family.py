@@ -1,5 +1,3 @@
-# Copyright (C) 2014 Anaconda, Inc
-# SPDX-License-Identifier: BSD-3-Clause
 from conda_build.license_family import guess_license_family, allowed_license_families, ensure_valid_license_family
 import pytest
 

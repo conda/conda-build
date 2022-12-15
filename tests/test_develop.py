@@ -1,5 +1,3 @@
-# Copyright (C) 2014 Anaconda, Inc
-# SPDX-License-Identifier: BSD-3-Clause
 '''
 Simple tests for testing functions in develop module - lower level than going through API.
 '''

@@ -1,5 +1,3 @@
-# Copyright (C) 2014 Anaconda, Inc
-# SPDX-License-Identifier: BSD-3-Clause
 from collections import OrderedDict, defaultdict
 from functools import lru_cache
 import json

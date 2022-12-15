@@ -1,5 +1,3 @@
-# Copyright (C) 2014 Anaconda, Inc
-# SPDX-License-Identifier: BSD-3-Clause
 # For the most part, all functionality should be tested with the api tests,
 #   because they actually provide coverage.  These tests are here to make
 #   sure that the CLI still works.

@@ -1,5 +1,3 @@
-# Copyright (C) 2014 Anaconda, Inc
-# SPDX-License-Identifier: BSD-3-Clause
 """This file is an example of the structure that any add-on module for a new language should have.
 
 You can have structure beyond this, but this is a minimum of what conda-build will look for."""

@@ -1,5 +1,3 @@
-# Copyright (C) 2014 Anaconda, Inc
-# SPDX-License-Identifier: BSD-3-Clause
 """
 This file tests the build.py module.  It sits lower in the stack than the API tests,
 and is more unit-test oriented.

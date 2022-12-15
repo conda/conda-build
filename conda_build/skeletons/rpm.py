@@ -1,5 +1,3 @@
-# Copyright (C) 2014 Anaconda, Inc
-# SPDX-License-Identifier: BSD-3-Clause
 import argparse
 from conda_build.source import download_to_cache
 from conda_build.license_family import guess_license_family

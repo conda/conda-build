@@ -1,5 +1,3 @@
-# Copyright (C) 2014 Anaconda, Inc
-# SPDX-License-Identifier: BSD-3-Clause
 from collections import defaultdict
 from conda_build.config import Config
 from conda_build.metadata import MetaData

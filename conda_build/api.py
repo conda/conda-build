@@ -1,5 +1,3 @@
-# Copyright (C) 2014 Anaconda, Inc
-# SPDX-License-Identifier: BSD-3-Clause
 """
 This file defines the public API for conda-build.  Adding or removing functions,
 or Changing arguments to anything in here should also mean changing the major
