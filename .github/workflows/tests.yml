@@ -274,9 +274,9 @@ jobs:
             --basetemp "${{ runner.temp }}\${{ matrix.test-type}}" ^
             --cov conda_build ^
             --cov-report xml ^
-            --replay-record-dir="${{ env.REPLAY_DIR }}" ^
-            --replay-base-name="${{ env.REPLAY_NAME }}" ^
-            --alluredir="${{ env.ALLURE_DIR }}" ^
+            "--replay-record-dir=${{ env.REPLAY_DIR }}" ^
+            "--replay-base-name=${{ env.REPLAY_NAME }}" ^
+            "--alluredir=${{ env.ALLURE_DIR }}" ^
             -m "serial" ^
             .\tests\
           tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
@@ -301,9 +301,9 @@ jobs:
             --cov conda_build ^
             --cov-append ^
             --cov-report xml ^
-            --replay-record-dir="${{ env.REPLAY_DIR }}" ^
-            --replay-base-name="${{ env.REPLAY_NAME }}" ^
-            --alluredir="${{ env.ALLURE_DIR }}" ^
+            "--replay-record-dir=${{ env.REPLAY_DIR }}" ^
+            "--replay-base-name=${{ env.REPLAY_NAME }}" ^
+            "--alluredir=${{ env.ALLURE_DIR }}" ^
             -m "not serial" ^
             .\tests\
           tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
