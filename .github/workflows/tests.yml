@@ -119,6 +119,12 @@ jobs:
               --alluredir=allure-results
           tar -zcf allure-results.tar.gz allure-results
 
+      - name: Upload Allure test logs
+        uses: actions/upload-artifact@v2
+        with:
+          name: allure-Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type  }}
+          path: allure-results.tar.gz
+
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v2
         with:
