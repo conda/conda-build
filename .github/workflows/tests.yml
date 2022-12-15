@@ -103,6 +103,7 @@ jobs:
 
       - name: Setup environment
         run: |
+          conda list
           conda install -q -y -c defaults \
             --file tests/requirements.txt \
             --file tests/requirements-linux.txt \
@@ -369,6 +370,7 @@ jobs:
 
       - name: Setup environment
         run: |
+          conda list
           conda install -q -y -c defaults \
             --file tests/requirements.txt \
             --file tests/requirements-macos.txt \
