@@ -32,7 +32,7 @@ import yaml
 import conda_package_handling.api
 
 # used to get version
-from .conda_interface import env_path_backup_var_exists, conda_45, conda_46
+from .conda_interface import env_path_backup_var_exists, conda_46
 from .conda_interface import prefix_placeholder
 from .conda_interface import TemporaryDirectory
 from .conda_interface import VersionOrder
@@ -3414,13 +3414,5 @@ def is_package_built(metadata, env, include_local=True):
 
     spec = MatchSpec(name=metadata.name(), version=metadata.version(), build=metadata.build_id())
 
-    if conda_45:
-        from conda.api import SubdirData
-        return bool(SubdirData.query_all(spec, channels=urls, subdirs=(subdir, "noarch")))
-    else:
-        index, _, _ = get_build_index(subdir=subdir, bldpkgs_dir=metadata.config.bldpkgs_dir,
-                                      output_folder=metadata.config.output_folder, channel_urls=urls,
-                                      debug=metadata.config.debug, verbose=metadata.config.verbose,
-                                      locking=metadata.config.locking, timeout=metadata.config.timeout,
-                                      clear_cache=True)
-        return any(spec.match(prec) for prec in index.values())
+    from conda.api import SubdirData
+    return bool(SubdirData.query_all(spec, channels=urls, subdirs=(subdir, "noarch")))
