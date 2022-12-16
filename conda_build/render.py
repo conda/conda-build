@@ -67,11 +67,12 @@ def bldpkg_path(m):
 
 
 def actions_to_pins(actions):
-    specs = []
-    spec_name = lambda x: x.dist_name
-    if 'LINK' in actions:
-        specs = [' '.join(spec_name(spec).split()[0].rsplit('-', 2)) for spec in actions['LINK']]
-    return specs
+    if "LINK" not in actions:
+        return [
+            " ".join(spec.dist_name.split()[0].rsplit("-", 2))
+            for spec in actions["LINK"]
+        ]
+    return []
 
 
 def _categorize_deps(m, specs, exclude_pattern, variant):

@@ -1800,18 +1800,17 @@ def match_peer_job(target_matchspec, other_m, this_m=None):
     """target_matchspec comes from the recipe.  target_variant is the variant from the recipe whose
     deps we are matching.  m is the peer job, which must satisfy conda and also have matching keys
     for any keys that are shared between target_variant and m.config.variant"""
-    match_dict = {'name': other_m.name(),
-                'version': other_m.version(),
-                'build': '', }
-    match_dict = Dist(name=match_dict['name'],
-                          dist_name='-'.join((match_dict['name'],
-                                              match_dict['version'],
-                                              match_dict['build'])),
-                          version=match_dict['version'],
-                          build_string=match_dict['build'],
-                          build_number=other_m.build_number(),
-                          channel=None)
-    matchspec_matches = target_matchspec.match(match_dict)
+    name, version, build = other_m.name(), other_m.version(), ""
+    matchspec_matches = target_matchspec.match(
+        Dist(
+            name=name,
+            dist_name=f"{name}-{version}-{build}",
+            version=version,
+            build_string=build,
+            build_number=other_m.build_number(),
+            channel=None,
+        )
+    )
 
     variant_matches = True
     if this_m:
@@ -1848,9 +1847,7 @@ def sha256_checksum(filename, buffersize=65536):
 
 
 def write_bat_activation_text(file_handle, m):
-    file_handle.write('call "{conda_root}\\..\\condabin\\conda_hook.bat"\n'.format(
-        conda_root=root_script_dir,
-    ))
+    file_handle.write(f'call "{root_script_dir}\\..\\condabin\\conda_hook.bat"\n')
     if m.is_cross:
         # HACK: we need both build and host envs "active" - i.e. on PATH,
         #     and with their activate.d scripts sourced. Conda only
@@ -1874,16 +1871,14 @@ def write_bat_activation_text(file_handle, m):
                 os.makedirs(dirname(history_file))
             open(history_file, 'a').close()
 
-        file_handle.write('call "{conda_root}\\..\\condabin\\conda.bat" activate "{prefix}"\n'.format(
-            conda_root=root_script_dir,
-            prefix=m.config.host_prefix,
-        ))
+        file_handle.write(
+            f'call "{root_script_dir}\\..\\condabin\\conda.bat" activate "{m.config.host_prefix}"\n'
+        )
 
     # Write build prefix activation AFTER host prefix, so that its executables come first
-    file_handle.write('call "{conda_root}\\..\\condabin\\conda.bat" activate --stack "{prefix}"\n'.format(
-        conda_root=root_script_dir,
-        prefix=m.config.build_prefix,
-    ))
+    file_handle.write(
+        f'call "{root_script_dir}\\..\\condabin\\conda.bat" activate --stack "{m.config.build_prefix}"\n'
+    )
     from conda_build.os_utils.external import find_executable
     ccache = find_executable('ccache', m.config.build_prefix, False)
     if ccache:
