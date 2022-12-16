@@ -76,8 +76,8 @@ jobs:
     env:
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
       REPLAY_NAME: Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
-      REPLAY_DIR: ${{ github.workspace }}/pytest-replay/
-      ALLURE_DIR: ${{ github.workspace }}/allure-results/
+      REPLAY_DIR: ${{ github.workspace }}/pytest-replay
+      ALLURE_DIR: ${{ github.workspace }}/allure-results
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
       PYTEST_NUMPROCESSES: ${{ matrix.test-type == 'serial' && 0 || 'auto' }}
 
@@ -105,8 +105,8 @@ jobs:
         run: |
           conda list
           conda install -q -y -c defaults \
-            --file tests/requirements.txt \
-            --file tests/requirements-linux.txt \
+            --file ./tests/requirements.txt \
+            --file ./tests/requirements-linux.txt \
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
           pip install -e .
           pip install allure-pytest
@@ -130,7 +130,7 @@ jobs:
             --replay-base-name="${{ env.REPLAY_NAME }}" \
             --alluredir="${{ env.ALLURE_DIR }}" \
             -m "${{ env.PYTEST_MARKER }}" \
-            ./tests/
+            ./tests
           tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
 
       - name: Upload pytest replay
@@ -163,8 +163,8 @@ jobs:
     timeout-minutes: 120
     env:
       REPLAY_NAME: Win-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
-      REPLAY_DIR: .\pytest-replay\
-      ALLURE_DIR: .\allure-results\
+      REPLAY_DIR: .\pytest-replay
+      ALLURE_DIR: .\allure-results
 
     steps:
       - name: Checkout repository
@@ -275,11 +275,11 @@ jobs:
             --basetemp "${{ runner.temp }}\${{ matrix.test-type}}" ^
             --cov conda_build ^
             --cov-report xml ^
-            "--replay-record-dir=${{ env.REPLAY_DIR }}" ^
-            "--replay-base-name=${{ env.REPLAY_NAME }}" ^
-            "--alluredir=${{ env.ALLURE_DIR }}" ^
+            --replay-record-dir="${{ env.REPLAY_DIR }}" ^
+            --replay-base-name="${{ env.REPLAY_NAME }}" ^
+            --alluredir="${{ env.ALLURE_DIR }}" ^
             -m "serial" ^
-            .\tests\
+            .\tests
           tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
         shell: cmd
 
@@ -302,9 +302,9 @@ jobs:
             --cov conda_build ^
             --cov-append ^
             --cov-report xml ^
-            "--replay-record-dir=${{ env.REPLAY_DIR }}" ^
-            "--replay-base-name=${{ env.REPLAY_NAME }}" ^
-            "--alluredir=${{ env.ALLURE_DIR }}" ^
+            --replay-record-dir="${{ env.REPLAY_DIR }}" ^
+            --replay-base-name="${{ env.REPLAY_NAME }}" ^
+            --alluredir="${{ env.ALLURE_DIR }}" ^
             -m "not serial" ^
             .\tests\
           tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
@@ -343,8 +343,8 @@ jobs:
     env:
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
       REPLAY_NAME: macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
-      REPLAY_DIR: ${{ github.workspace }}/pytest-replay/
-      ALLURE_DIR: ${{ github.workspace }}/allure-results/
+      REPLAY_DIR: ${{ github.workspace }}/pytest-replay
+      ALLURE_DIR: ${{ github.workspace }}/allure-results
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
       PYTEST_NUMPROCESSES: ${{ matrix.test-type == 'serial' && 0 || 'auto' }}
 
@@ -372,8 +372,8 @@ jobs:
         run: |
           conda list
           conda install -q -y -c defaults \
-            --file tests/requirements.txt \
-            --file tests/requirements-macos.txt \
+            --file ./tests/requirements.txt \
+            --file ./tests/requirements-macos.txt \
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
           pip install -e .
           pip install allure-pytest
@@ -398,7 +398,7 @@ jobs:
             --replay-base-name="${{ env.REPLAY_NAME }}" \
             --alluredir="${{ env.ALLURE_DIR }}" \
             -m "${{ env.PYTEST_MARKER }}" \
-            ./tests/
+            ./tests
           tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
 
       - name: Upload pytest replay
