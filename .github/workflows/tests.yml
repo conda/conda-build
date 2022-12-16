@@ -152,9 +152,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10']
-        conda-version: [release]
-        test-type: [serial, parallel]
+        # python-version: ['3.7'], '3.8', '3.9', '3.10']
+        # conda-version: [release]
+        # test-type: [serial, parallel]
         include:
           - python-version: '3.9'
             conda-version: canary
@@ -320,13 +320,50 @@ jobs:
           ${{ toJSON(runner) }}
           HEREDOC
 
+      - name: Debug github
+        if: always()
+        run: |
+          cat <<HEREDOC
+          ${{ toJSON(steps) }}
+          HEREDOC
+
       - name: Tar Allure Results (quoted)
         if: always()
         run: tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
 
-      - name: Tar Allure Results 2 (unquoted)
+      - name: Tar Allure Results (unquoted)
         if: always()
         run: tar -zcf ${{ env.ALLURE_DIR }}2.tar.gz ${{ env.ALLURE_DIR }}
+
+      - name: Tar Allure Results (quoted + pwsh)
+        if: always()
+        run: tar -zcf "${{ env.ALLURE_DIR }}3.tar.gz" "${{ env.ALLURE_DIR }}"
+        shell: pwsh
+
+      - name: Tar Allure Results (unquoted + pwsh)
+        if: always()
+        run: tar -zcf ${{ env.ALLURE_DIR }}4.tar.gz ${{ env.ALLURE_DIR }}
+        shell: pwsh
+
+      - name: Tar Allure Results (quoted + cmd)
+        if: always()
+        run: tar -zcf "${{ env.ALLURE_DIR }}5.tar.gz" "${{ env.ALLURE_DIR }}"
+        shell: cmd
+
+      - name: Tar Allure Results 2 (unquoted + cmd)
+        if: always()
+        run: tar -zcf ${{ env.ALLURE_DIR }}6.tar.gz ${{ env.ALLURE_DIR }}
+        shell: cmd
+
+      - name: Tar Allure Results (quoted + bash)
+        if: always()
+        run: tar -zcf "${{ env.ALLURE_DIR }}7.tar.gz" "${{ env.ALLURE_DIR }}"
+        shell: bash
+
+      - name: Tar Allure Results 2 (unquoted + bash)
+        if: always()
+        run: tar -zcf ${{ env.ALLURE_DIR }}8.tar.gz ${{ env.ALLURE_DIR }}
+        shell: bash
 
       - name: Upload pytest replay
         if: always()
