@@ -50,7 +50,7 @@ from .conda_interface import root_dir, pkgs_dirs # noqa
 from .conda_interface import StringIO # noqa
 from .conda_interface import VersionOrder, MatchSpec # noqa
 from .conda_interface import cc_conda_build # noqa
-from .conda_interface import conda_43, conda_46, Dist # noqa
+from .conda_interface import conda_46, Dist # noqa
 from .conda_interface import context # noqa
 from .conda_interface import download, TemporaryDirectory, get_conda_channel, CondaHTTPError # noqa
 # NOQA because it is not used in this file.
@@ -1832,8 +1832,7 @@ def match_peer_job(target_matchspec, other_m, this_m=None):
     match_dict = {'name': other_m.name(),
                 'version': other_m.version(),
                 'build': '', }
-    if conda_43:
-        match_dict = Dist(name=match_dict['name'],
+    match_dict = Dist(name=match_dict['name'],
                           dist_name='-'.join((match_dict['name'],
                                               match_dict['version'],
                                               match_dict['build'])),
