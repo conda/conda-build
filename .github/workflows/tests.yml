@@ -137,7 +137,7 @@ jobs:
         run: tar -zcf allure-results.tar.gz allure-results
 
       - name: Upload Pytest Replay
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: Linux_replay-py-${{ matrix.python-version }}_${{ matrix.conda-version }}_${{ matrix.test-type }}
           path: pytest-replay/
@@ -303,7 +303,7 @@ jobs:
         run: tar -zcf allure-results.tar.gz allure-results
 
       - name: Upload Pytest Replay
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           path: ${{ github.workspace }}/pytest-replay
           name: Win-${{ env.CONDA_VERSION }}-Python${{ matrix.python-version }}-${{ env. parameters.serial_or_parallel  }}
@@ -399,7 +399,7 @@ jobs:
         run: tar -zcf allure-results.tar.gz allure-results
 
       - name: Upload Pytest Replay
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           path: ${{ github.workspace }}/pytest-replay
           name: macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ env. parameters.serial_or_parallel  }}
