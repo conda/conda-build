@@ -36,10 +36,7 @@ conda_47 = True
 conda_48 = True
 conda_411 = True
 
-if conda_44:
-    from conda.exports import display_actions, execute_actions, execute_plan, install_actions
-else:
-    from conda.plan import display_actions, execute_actions, execute_plan, install_actions
+from conda.exports import display_actions, execute_actions, execute_plan, install_actions
 
 display_actions, execute_actions, execute_plan = display_actions, execute_actions, execute_plan
 install_actions = install_actions
