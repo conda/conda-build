@@ -117,7 +117,6 @@ jobs:
               -m "serial" tests \
               ${{ env.pytest-replay }} \
               --alluredir=allure-results
-          tar -zcf allure-results.tar.gz allure-results
 
       - name: Run Parallel tests
         if: matrix.test-type == 'parallel'
@@ -133,7 +132,9 @@ jobs:
               -m "not serial" tests \
               ${{ env.pytest-replay }} \
               --alluredir=allure-results
-          tar -zcf allure-results.tar.gz allure-results
+
+      - name: Tar Allure Results
+        run: tar -zcf allure-results.tar.gz allure-results
 
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v2
@@ -279,8 +280,6 @@ jobs:
           set LUA=
           set R=
           pytest --color=yes -vv -n 0 --basetemp %UserProfile%\cbtmp_serial --cov conda_build --cov-report xml -m "serial" ${{ env.pytest-replay }} --alluredir=allure-results
-          tar -zcf allure-results.tar.gz allure-results
-
         shell: cmd
 
       - name: Run Parallel Tests
@@ -295,11 +294,13 @@ jobs:
           set LUA=
           set R=
           pytest --color=yes -vv -n auto --basetemp %UserProfile%\cbtmp --cov conda_build --cov-append --cov-report xml -m "not serial" ${{ env.pytest-replay }} --alluredir=allure-results
-          tar -zcf allure-results.tar.gz allure-results
         shell: cmd
         env:
           VS90COMNTOOLS: C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC\bin
           LIB:
+
+      - name: Tar Allure Results
+        run: tar -zcf allure-results.tar.gz allure-results
 
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v2
@@ -379,7 +380,6 @@ jobs:
           source ci/github/activate_conda "${{ github.workspace }}/miniconda/bin/python"
           conda install conda-verify -y
           pytest --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}" --alluredir=allure-results
-          tar -zcf allure-results.tar.gz allure-results
 
       - name: Run Parallel Tests
         if: matrix.test-type == 'parallel'
@@ -394,7 +394,9 @@ jobs:
           conda create -n blarg3 -yq python=3.7
           conda create -n blarg4 -yq python nomkl numpy pandas svn
           pytest --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}" --alluredir=allure-results
-          tar -zcf allure-results.tar.gz allure-results
+
+      - name: Tar Allure Results
+        run: tar -zcf allure-results.tar.gz allure-results
 
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v2
