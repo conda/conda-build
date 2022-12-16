@@ -281,7 +281,7 @@ jobs:
             --replay-base-name="${{ env.REPLAY_NAME }}" ^
             --alluredir="${{ env.ALLURE_DIR }}" ^
             -m "serial" ^
-            .\tests
+            .\tests\test_utils.py -k "test_logger"
         shell: cmd
 
       - name: Run Parallel Tests
@@ -307,7 +307,7 @@ jobs:
             --replay-base-name="${{ env.REPLAY_NAME }}" ^
             --alluredir="${{ env.ALLURE_DIR }}" ^
             -m "not serial" ^
-            .\tests
+            .\tests\test_utils.py -k "test_logger"
         shell: cmd
         env:
           VS90COMNTOOLS: C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC\bin
