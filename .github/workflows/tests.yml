@@ -131,7 +131,9 @@ jobs:
             --alluredir="${{ env.ALLURE_DIR }}" \
             -m "${{ env.PYTEST_MARKER }}" \
             ./tests
-          tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
+
+      - name: Tar Allure Results
+        run: tar -zcf allure-results.tar.gz allure-results
 
       - name: Upload pytest replay
         if: always()
@@ -280,7 +282,6 @@ jobs:
             --alluredir="${{ env.ALLURE_DIR }}" ^
             -m "serial" ^
             .\tests
-          tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
         shell: cmd
 
       - name: Run Parallel Tests
@@ -307,11 +308,13 @@ jobs:
             --alluredir="${{ env.ALLURE_DIR }}" ^
             -m "not serial" ^
             .\tests\
-          tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
         shell: cmd
         env:
           VS90COMNTOOLS: C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC\bin
           LIB:
+
+      - name: Tar Allure Results
+        run: tar -zcf allure-results.tar.gz allure-results
 
       - name: Upload pytest replay
         if: always()
@@ -399,7 +402,9 @@ jobs:
             --alluredir="${{ env.ALLURE_DIR }}" \
             -m "${{ env.PYTEST_MARKER }}" \
             ./tests
-          tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
+
+      - name: Tar Allure Results
+        run: tar -zcf allure-results.tar.gz allure-results
 
       - name: Upload pytest replay
         if: always()
