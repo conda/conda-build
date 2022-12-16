@@ -313,9 +313,12 @@ jobs:
           VS90COMNTOOLS: C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC\bin
           LIB:
 
-      - name: List Allure Results
+      - name: Debug runner
         if: always()
-        run: dir "${{ env.ALLURE_DIR }}"
+        run: |
+          cat <<HEREDOC
+          ${{ toJSON(runner) }}
+          HEREDOC
 
       - name: Tar Allure Results (quoted)
         if: always()
