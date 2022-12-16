@@ -50,7 +50,7 @@ from .conda_interface import root_dir, pkgs_dirs # noqa
 from .conda_interface import StringIO # noqa
 from .conda_interface import VersionOrder, MatchSpec # noqa
 from .conda_interface import cc_conda_build # noqa
-from .conda_interface import conda_46, Dist # noqa
+from .conda_interface import Dist # noqa
 from .conda_interface import context # noqa
 from .conda_interface import download, TemporaryDirectory, get_conda_channel, CondaHTTPError # noqa
 # NOQA because it is not used in this file.
@@ -1504,36 +1504,7 @@ def filter_info_files(files_list, prefix):
 
 
 def rm_rf(path, config=None):
-    if conda_46:
-        return _rm_rf(path)
-    if os.path.isdir(path):
-        try:
-            # subprocessing to delete large folders can be quite a bit faster
-            if on_win:
-                subprocess.check_call(f'rd /s /q {path}', shell=True)
-            else:
-                try:
-                    os.makedirs('.empty')
-                except:
-                    pass
-                del_dir_cmd = 'rsync -a --delete .empty {}/'
-                subprocess.check_call(del_dir_cmd.format(path).split())
-                try:
-                    shutil.rmtree('.empty')
-                except:
-                    pass
-        # we don't really care about errors that much. People can and should
-        #     clean out their folders once in a while with "purge"
-        except:
-            pass
-
-    conda_log_level = logging.WARN
-    if config and config.debug:
-        conda_log_level = logging.DEBUG
-    with LoggingContext(conda_log_level):
-        # this clears out the path from conda's cache, which otherwise thinks
-        #    that things are still installed here
-        _rm_rf(path)
+    return _rm_rf(path)
 
 
 # https://stackoverflow.com/a/31459386/1170370
@@ -1877,10 +1848,9 @@ def sha256_checksum(filename, buffersize=65536):
 
 
 def write_bat_activation_text(file_handle, m):
-    if conda_46:
-        file_handle.write('call "{conda_root}\\..\\condabin\\conda_hook.bat"\n'.format(
-            conda_root=root_script_dir,
-        ))
+    file_handle.write('call "{conda_root}\\..\\condabin\\conda_hook.bat"\n'.format(
+        conda_root=root_script_dir,
+    ))
     if m.is_cross:
         # HACK: we need both build and host envs "active" - i.e. on PATH,
         #     and with their activate.d scripts sourced. Conda only
@@ -1904,29 +1874,16 @@ def write_bat_activation_text(file_handle, m):
                 os.makedirs(dirname(history_file))
             open(history_file, 'a').close()
 
-        if conda_46:
-            file_handle.write('call "{conda_root}\\..\\condabin\\conda.bat" activate "{prefix}"\n'.format(
-                conda_root=root_script_dir,
-                prefix=m.config.host_prefix,
-            ))
-        else:
-            file_handle.write('call "{conda_root}\\activate.bat" "{prefix}"\n'.format(
-                conda_root=root_script_dir,
-                prefix=m.config.host_prefix))
-            # removing this placeholder should make conda double-activate with conda 4.3
-            file_handle.write('set "PATH=%PATH:CONDA_PATH_PLACEHOLDER;=%"\n')
-            file_handle.write('set CONDA_MAX_SHLVL=2\n')
+        file_handle.write('call "{conda_root}\\..\\condabin\\conda.bat" activate "{prefix}"\n'.format(
+            conda_root=root_script_dir,
+            prefix=m.config.host_prefix,
+        ))
 
     # Write build prefix activation AFTER host prefix, so that its executables come first
-    if conda_46:
-        file_handle.write('call "{conda_root}\\..\\condabin\\conda.bat" activate --stack "{prefix}"\n'.format(
-            conda_root=root_script_dir,
-            prefix=m.config.build_prefix,
-        ))
-    else:
-        file_handle.write('call "{conda_root}\\activate.bat" "{prefix}"\n'.format(
-            conda_root=root_script_dir,
-            prefix=m.config.build_prefix))
+    file_handle.write('call "{conda_root}\\..\\condabin\\conda.bat" activate --stack "{prefix}"\n'.format(
+        conda_root=root_script_dir,
+        prefix=m.config.build_prefix,
+    ))
     from conda_build.os_utils.external import find_executable
     ccache = find_executable('ccache', m.config.build_prefix, False)
     if ccache:
