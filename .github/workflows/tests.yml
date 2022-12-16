@@ -133,7 +133,7 @@ jobs:
             ./tests
 
       - name: Tar Allure Results
-        run: tar -zcf allure-results.tar.gz allure-results
+        run: tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
 
       - name: Upload pytest replay
         if: always()
@@ -314,7 +314,7 @@ jobs:
           LIB:
 
       - name: Tar Allure Results
-        run: tar -zcf allure-results.tar.gz allure-results
+        run: tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
 
       - name: Upload pytest replay
         if: always()
@@ -404,7 +404,7 @@ jobs:
             ./tests
 
       - name: Tar Allure Results
-        run: tar -zcf allure-results.tar.gz allure-results
+        run: tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
 
       - name: Upload pytest replay
         if: always()
