@@ -36,7 +36,12 @@ conda_47 = True
 conda_48 = True
 conda_411 = True
 
-from conda.exports import display_actions, execute_actions, execute_plan, install_actions
+from conda.exports import (  # noqa: E402
+    display_actions,
+    execute_actions,
+    execute_plan,
+    install_actions,
+)
 
 display_actions, execute_actions, execute_plan = display_actions, execute_actions, execute_plan
 install_actions = install_actions

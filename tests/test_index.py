@@ -1139,17 +1139,17 @@ def test_current_index_reduces_space():
     # .conda files will replace .tar.bz2 files.  Older packages that are necessary for satisfiability will remain
     assert set(trimmed_repodata["packages"].keys()) == tar_bz2_keys
     assert set(trimmed_repodata["packages.conda"].keys()) == {
-            "one-gets-filtered-1.3.10-h7b6447c_3.conda"
-        }
+        "one-gets-filtered-1.3.10-h7b6447c_3.conda"
+    }
 
     # we can keep more than one version series using a collection of keys
     trimmed_repodata = conda_build.index._build_current_repodata(
         "linux-64", repodata, {"one-gets-filtered": ["1.2", "1.3"]}
     )
     assert set(trimmed_repodata["packages.conda"].keys()) == {
-            "one-gets-filtered-1.2.11-h7b6447c_3.conda",
-            "one-gets-filtered-1.3.10-h7b6447c_3.conda",
-        }
+        "one-gets-filtered-1.2.11-h7b6447c_3.conda",
+        "one-gets-filtered-1.3.10-h7b6447c_3.conda",
+    }
 
 
 def test_current_index_version_keys_keep_older_packages(testing_workdir):

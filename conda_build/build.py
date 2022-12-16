@@ -1811,9 +1811,6 @@ bundlers = {
 def _write_sh_activation_text(file_handle, m):
     cygpath_prefix = "$(cygpath -u " if utils.on_win else ""
     cygpath_suffix = " )" if utils.on_win else ""
-    activate_path = ''.join((cygpath_prefix,
-                            os.path.join(utils.root_script_dir, 'activate').replace('\\', '\\\\'),
-                            cygpath_suffix))
 
     py_flags = '-I -m' if os.environ.get("_CONDA_BUILD_ISOLATED_ACTIVATION") else '-m'
     file_handle.write(
@@ -2714,7 +2711,6 @@ def write_test_scripts(metadata, env_vars, py_files, pl_files, lua_files, r_file
         if not utils.on_win:
             tf.write(f'set {trace}-e\n')
         if metadata.config.activate and not metadata.name() == 'conda':
-            ext = ".bat" if utils.on_win else ""
             if utils.on_win:
                 tf.write(
                     'set "CONDA_SHLVL=" '
