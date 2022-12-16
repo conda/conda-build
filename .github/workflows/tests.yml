@@ -52,7 +52,7 @@ jobs:
   linux:
     # only run test suite if there are code changes
     needs: changes
-    if: false
+    if: needs.changes.outputs.code == 'true'
 
     runs-on: ubuntu-latest
     defaults:
@@ -307,24 +307,17 @@ jobs:
             --replay-base-name="${{ env.REPLAY_NAME }}" ^
             --alluredir="${{ env.ALLURE_DIR }}" ^
             -m "not serial" ^
-            .\tests\test_utils.py -k "test_logger"
+            .\tests
         shell: cmd
         env:
           VS90COMNTOOLS: C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC\bin
           LIB:
 
-      - name: Debug Tar (pwsh)
-        if: always()
-        run: tar --version
-
-      - name: Debug Tar (cmd)
-        if: always()
-        run: tar --version
-        shell: cmd
-
       - name: Tar Allure Results
         if: always()
         run: tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
+        # windows-2019/powershell ships with GNU tar 1.28 which struggles with Windows paths
+        # window-2019/cmd ships with bsdtar 3.5.2 which doesn't have this problem
         shell: cmd
 
       - name: Upload pytest replay
@@ -338,7 +331,7 @@ jobs:
   macos:
     # only run test suite if there are code changes
     needs: changes
-    if: false
+    if: needs.changes.outputs.code == 'true'
 
     runs-on: macos-11
     defaults:
