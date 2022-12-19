@@ -1187,11 +1187,13 @@ def test_failed_recipe_leaves_folders(testing_config, testing_workdir):
         if os.path.isfile(lock.lock_file):
             any_locks = True
             dest_path = base64.b64decode(os.path.basename(lock.lock_file))
-            if hasattr(dest_path, 'decode'):
-                dest_path = dest_path.decode(sys.getfilesystemencoding(), errors='backslashreplace')
+            if hasattr(dest_path, "decode"):
+                dest_path = dest_path.decode(errors="backslashreplace")
             locks_list.add((lock.lock_file, dest_path))
-    assert not any_locks, "remaining locks:\n{}".format('\n'.join('->'.join((l, r))
-                                                                for (l, r) in locks_list))
+    assert not any_locks, "\n".join(
+        "remaining locks:",
+        *(f"{lock} -> {path}" for lock, path in locks_list),
+    )
 
 
 @pytest.mark.sanity
