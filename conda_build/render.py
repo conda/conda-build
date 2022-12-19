@@ -67,7 +67,7 @@ def bldpkg_path(m):
 
 
 def actions_to_pins(actions):
-    if "LINK" not in actions:
+    if "LINK" in actions:
         return [
             " ".join(spec.dist_name.split()[0].rsplit("-", 2))
             for spec in actions["LINK"]
