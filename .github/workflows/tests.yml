@@ -84,13 +84,13 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           path: ./src
           fetch-depth: 0
 
       - name: Checkout test recipe
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: conda/conda_build_test_recipe
           path: ./conda_build_test_recipe
@@ -138,7 +138,7 @@ jobs:
 
       - name: Upload Pytest Replay
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ env.REPLAY_NAME }}-${{ matrix.test-type }}
           path: ${{ env.REPLAY_DIR }}
@@ -177,13 +177,13 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           path: .\src
           fetch-depth: 0
 
       - name: Checkout test recipe
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: conda/conda_build_test_recipe
           path: .\conda_build_test_recipe
@@ -237,7 +237,7 @@ jobs:
 
       - name: Upload Pytest Replay
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           path: ${{ env.REPLAY_DIR }}
           name: ${{ env.REPLAY_NAME }}-${{ matrix.test-type }}
@@ -272,13 +272,13 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           path: ./src
           fetch-depth: 0
 
       - name: Checkout test recipe
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: conda/conda_build_test_recipe
           path: ./conda_build_test_recipe
@@ -327,7 +327,7 @@ jobs:
 
       - name: Upload Pytest Replay
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: ${{ env.REPLAY_NAME }}-${{ matrix.test-type  }}
           path: ${{ env.REPLAY_DIR }}
