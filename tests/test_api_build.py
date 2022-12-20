@@ -1167,7 +1167,7 @@ def test_unknown_selectors(testing_config):
     api.build(recipe, config=testing_config)
 
 
-# the locks are very flaky on GitHub Windows Runners
+# the locks can be very flaky on GitHub Windows Runners
 @pytest.mark.flaky(rerun=5, reruns_delay=2)
 def test_failed_recipe_leaves_folders(testing_config, testing_workdir):
     recipe = os.path.join(fail_dir, 'recursive-build')
@@ -1180,7 +1180,6 @@ def test_failed_recipe_leaves_folders(testing_config, testing_workdir):
 
     # make sure that it does not leave lock files, though, as these cause permission errors on
     #    centralized installations
-    print(locks)
     locks = {lock.lock_file for lock in locks if os.path.isfile(lock.lock_file)}
     assert not locks, "\n".join(
         "remaining locks:",
