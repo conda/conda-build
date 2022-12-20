@@ -3,9 +3,6 @@
 """
 This module tests the build API.  These are high-level integration tests.
 """
-
-import base64
-import locale
 from collections import OrderedDict
 from glob import glob
 import logging
@@ -1180,21 +1177,14 @@ def test_failed_recipe_leaves_folders(testing_config, testing_workdir):
         api.build(m)
     assert os.path.isdir(m.config.build_folder), 'build folder was removed'
     assert os.listdir(m.config.build_folder), 'build folder has no files'
+
     # make sure that it does not leave lock files, though, as these cause permission errors on
     #    centralized installations
-    any_locks = False
-    locks_list = set()
-    locale.getpreferredencoding(False)
-    for lock in locks:
-        if os.path.isfile(lock.lock_file):
-            any_locks = True
-            dest_path = base64.b64decode(os.path.basename(lock.lock_file))
-            if hasattr(dest_path, "decode"):
-                dest_path = dest_path.decode(errors="backslashreplace")
-            locks_list.add((lock.lock_file, dest_path))
-    assert not any_locks, "\n".join(
+    print(locks)
+    locks = {lock.lock_file for lock in locks if os.path.isfile(lock.lock_file)}
+    assert not locks, "\n".join(
         "remaining locks:",
-        *(f"{lock} -> {path}" for lock, path in locks_list),
+        *(f"  {lock}" for lock in locks.items()),
     )
 
 

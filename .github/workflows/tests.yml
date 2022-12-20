@@ -52,7 +52,7 @@ jobs:
   linux:
     # only run test suite if there are code changes
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: false  # needs.changes.outputs.code == 'true'
 
     runs-on: ubuntu-latest
     defaults:
@@ -154,14 +154,14 @@ jobs:
       matrix:
         python-version: ['3.7', '3.8', '3.9', '3.10']
         conda-version: [release]
-        test-type: [serial, parallel]
-        include:
-          - python-version: '3.9'
-            conda-version: canary
-            test-type: serial
-          - python-version: '3.9'
-            conda-version: canary
-            test-type: parallel
+        test-type: [parallel]  # [serial, parallel]
+        # include:
+        #   - python-version: '3.9'
+        #     conda-version: canary
+        #     test-type: serial
+        #   - python-version: '3.9'
+        #     conda-version: canary
+        #     test-type: parallel
     timeout-minutes: 120
     env:
       serial_or_parallel: ''
@@ -281,7 +281,7 @@ jobs:
           set PERL=
           set LUA=
           set R=
-          pytest --color=yes -vv -n auto --basetemp "${{ runner.temp }}\${{ matrix.test-type }}" --cov conda_build --cov-append --cov-report xml -m "not serial" ${{ env.pytest-replay }} --alluredir=allure-results
+          pytest --color=yes -vv -n auto --basetemp "${{ runner.temp }}\${{ matrix.test-type }}" --cov conda_build --cov-append --cov-report xml -m "not serial" ${{ env.pytest-replay }} --alluredir=allure-results .\tests\test_api_build.py
         shell: cmd
         env:
           VS90COMNTOOLS: C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC\bin
@@ -301,7 +301,7 @@ jobs:
   macos:
     # only run test suite if there are code changes
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: false  # needs.changes.outputs.code == 'true'
 
     runs-on: macos-11
     defaults:
