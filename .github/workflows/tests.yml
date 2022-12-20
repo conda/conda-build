@@ -58,7 +58,7 @@ jobs:
     defaults:
       run:
         shell: bash -l {0}
-        working-directory: ./src/
+        working-directory: ./src
     strategy:
       fail-fast: false
       matrix:
@@ -73,6 +73,7 @@ jobs:
           - python-version: '3.10'
             conda-version: canary
             test-type: parallel
+    timeout-minutes: 120
     env:
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
       REPLAY_NAME: Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
@@ -85,14 +86,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
         with:
-          path: ./src/
+          path: ./src
           fetch-depth: 0
 
       - name: Checkout test recipe
         uses: actions/checkout@v2
         with:
           repository: conda/conda_build_test_recipe
-          path: ./conda_build_test_recipe/
+          path: ./conda_build_test_recipe
           fetch-depth: 0
 
       - name: Setup miniconda
@@ -135,7 +136,7 @@ jobs:
       - name: Tar Allure Results
         run: tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
 
-      - name: Upload pytest replay
+      - name: Upload Pytest Replay
         if: always()
         uses: actions/upload-artifact@v2
         with:
@@ -149,6 +150,9 @@ jobs:
     if: needs.changes.outputs.code == 'true'
 
     runs-on: windows-2019
+    defaults:
+      run:
+        working-directory: .\src
     strategy:
       fail-fast: false
       matrix:
@@ -156,149 +160,63 @@ jobs:
         conda-version: [release]
         test-type: [serial, parallel]
         include:
-          - python-version: '3.9'
+          - python-version: '3.10'
             conda-version: canary
             test-type: serial
-          - python-version: '3.9'
+          - python-version: '3.10'
             conda-version: canary
             test-type: parallel
     timeout-minutes: 120
     env:
+      CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
       REPLAY_NAME: Win-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
-      REPLAY_DIR: .\pytest-replay
-      ALLURE_DIR: .\allure-results
+      REPLAY_DIR: ${{ github.workspace }}\pytest-replay
+      ALLURE_DIR: ${{ github.workspace }}\allure-results
+      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
+      PYTEST_NUMPROCESSES: ${{ matrix.test-type == 'serial' && 0 || 'auto' }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
         with:
+          path: .\src
           fetch-depth: 0
 
-      - name: Setup Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v1
+      - name: Checkout test recipe
+        uses: actions/checkout@v2
         with:
+          repository: conda/conda_build_test_recipe
+          path: .\conda_build_test_recipe
+          fetch-depth: 0
+
+      - name: Setup miniconda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          condarc-file: .\src\ci\github\.condarc
           python-version: ${{ matrix.python-version }}
 
-      - name: Install vcpython27.msi
+      - name: Setup environment
         run: |
-          $wc = New-Object net.webclient
-          $wc.Downloadfile("https://github.com/GeoNode/geonode-win-installer/raw/ffb76c7cbf1d6b4970c6c25f79c3c7682a3aa035/VCForPython27.msi", "VCForPython27.msi")
-          Start-Process "VCForPython27.msi" /qn -Wait
-        shell: pwsh
-
-      - name: Install miniconda
-        run: |
-          rmdir C:\Strawberry /s /q
-          choco install wget visualstudio2017-workload-vctools
-          wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe
-          start /wait "" Miniconda3-latest-Windows-x86_64.exe /InstallationType=JustMe /S /D=%UserProfile%\Miniconda3
-          "%UserProfile%\Miniconda3\condabin\conda.bat" init
-          conda info -a
-        shell: cmd
-
-      - name: Patch vs2008
-        run: |
-          Set-PSDebug -Trace 1
-          $batchcontent = @"
-          ECHO ON
-          SET vcpython=C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0
-          DIR "%vcpython%"
-          CALL "%vcpython%\vcvarsall.bat" %*
-          "@
-          $batchDir = "C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC"
-          $batchPath = "$batchDir" + "\vcvarsall.bat"
-          New-Item -Path $batchPath -ItemType "file" -Force
-          Set-Content -Value $batchcontent -Path $batchPath
-          Get-ChildItem -Path $batchDir
-          Get-ChildItem -Path ($batchDir + '\..')
-          set LIB
-        shell: pwsh
-
-      - name: conda init
-        run: |
-          echo on
-          set PATH
-          doskey conda="call %UserProfile%\Miniconda3\condabin\conda.bat" $*
-          doskey /macros
-          call "%UserProfile%\Miniconda3\condabin\conda.bat" init
-          set PATH
-        shell: cmd
-
-      - name: Configuration
-        run: |
-          echo on
-          set PATH
-          call %UserProfile%\Miniconda3\condabin\activate.bat base||exit 1
-          set PATH
-          call conda install python="%PYTHON_VERSION%" -y||exit 1
-          if "%CONDA_VERSION%" == "canary" (call conda update -c conda-canary/label/dev conda||exit 1) else (call conda update -q conda||exit 1)
-          call conda config --set always_yes yes
-          call conda config --set auto_update_conda no
-          call conda info
-          python -c "import sys; print(sys.version)"
-          python -c "import sys; print(sys.executable)"
-          python -c "import sys; print(sys.prefix)"
-          call conda update -q --all||exit 1
-          call conda install -q pip python-libarchive-c pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling||exit 1
-          call conda install pytest-replay pytest-rerunfailures -y||exit 1
-          echo safety_checks: disabled >> %UserProfile%\.condarc
-          echo local_repodata_ttl: 1800 >> %UserProfile%\.condarc
-          call conda install -q py-lief||exit 1
-          python --version
-          python -c "import struct; print(struct.calcsize('P') * 8)"
-          pip install --no-deps .
+          conda list
+          conda install -q -y -c defaults \
+            --file .\tests\requirements.txt \
+            --file .\tests\requirements-linux.txt \
+            ${{ env.CONDA_CHANNEL_LABEL }}::conda
+          pip install -e .
           pip install allure-pytest
-          conda-build --version
-          pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd
-          mkdir %UserProfile%\cbtmp_serial
-          mkdir %UserProfile%\cbtmp
-          for /d %%F in (%UserProfile%\cbtmp_serial\*) do rd /s /q "%%F"
-          for /d %%F in (%UserProfile%\cbtmp\*) do rd /s /q "%%F"
-          call conda create -n blarg -yq --download-only python=2.7||exit 1
-          call conda create -n blarg -yq --download-only python=3.8||exit 1
-          call conda create -n blarg -yq --download-only python cmake||exit 1
-        shell: cmd
+
+      - name: Show info
+        run: |
+          conda info -a
+          conda list --show-channel-urls
 
       - name: Run Serial Tests
         if: matrix.test-type == 'serial'
         run: |
-          echo on
-          set PATH
-          call %UserProfile%\Miniconda3\condabin\activate.bat base||exit 1
-          set PATH
-          call conda install -y conda-verify||exit 1
-          set PERL=
-          set LUA=
-          set R=
           pytest ^
             --color=yes ^
-            -vv ^
-            -n 0 ^
-            --basetemp "${{ runner.temp }}\${{ matrix.test-type}}" ^
-            --cov conda_build ^
-            --cov-report xml ^
-            --replay-record-dir="${{ env.REPLAY_DIR }}" ^
-            --replay-base-name="${{ env.REPLAY_NAME }}" ^
-            --alluredir="${{ env.ALLURE_DIR }}" ^
-            -m "serial" ^
-            .\tests\test_utils.py -k "test_logger"
-        shell: cmd
-
-      - name: Run Parallel Tests
-        if: matrix.test-type == 'parallel'
-        run: |
-          echo on
-          set PATH
-          call %UserProfile%\Miniconda3\condabin\activate.bat base||exit 1
-          set PATH
-          :: call conda remove -y conda-verify||exit 1
-          set PERL=
-          set LUA=
-          set R=
-          pytest ^
-            --color=yes ^
-            -vv ^
-            -n auto ^
+            -v ^
+            -n "${{ env.PYTEST_NUMPROCESSES }}" \
             --basetemp "${{ runner.temp }}\${{ matrix.test-type}}" ^
             --cov conda_build ^
             --cov-append ^
@@ -306,12 +224,9 @@ jobs:
             --replay-record-dir="${{ env.REPLAY_DIR }}" ^
             --replay-base-name="${{ env.REPLAY_NAME }}" ^
             --alluredir="${{ env.ALLURE_DIR }}" ^
-            -m "not serial" ^
-            .\tests
+            -m "${{ env.PYTEST_MARKER }}" \
+            ./tests
         shell: cmd
-        env:
-          VS90COMNTOOLS: C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC\bin
-          LIB:
 
       - name: Tar Allure Results
         if: always()
@@ -320,7 +235,7 @@ jobs:
         # window-2019/cmd ships with bsdtar 3.5.2 which doesn't have this problem
         shell: cmd
 
-      - name: Upload pytest replay
+      - name: Upload Pytest Replay
         if: always()
         uses: actions/upload-artifact@v2
         with:
@@ -337,7 +252,7 @@ jobs:
     defaults:
       run:
         shell: bash -l {0}
-        working-directory: ./src/
+        working-directory: ./src
     strategy:
       fail-fast: false
       matrix:
@@ -359,14 +274,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
         with:
-          path: ./src/
+          path: ./src
           fetch-depth: 0
 
       - name: Checkout test recipe
         uses: actions/checkout@v2
         with:
           repository: conda/conda_build_test_recipe
-          path: ./conda_build_test_recipe/
+          path: ./conda_build_test_recipe
           fetch-depth: 0
 
       - name: Setup miniconda
@@ -410,7 +325,7 @@ jobs:
       - name: Tar Allure Results
         run: tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
 
-      - name: Upload pytest replay
+      - name: Upload Pytest Replay
         if: always()
         uses: actions/upload-artifact@v2
         with:
