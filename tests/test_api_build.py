@@ -1170,6 +1170,8 @@ def test_unknown_selectors(testing_config):
     api.build(recipe, config=testing_config)
 
 
+# the locks are very flaky on GitHub Windows Runners
+@pytest.mark.flaky(rerun=5, reruns_delay=2)
 def test_failed_recipe_leaves_folders(testing_config, testing_workdir):
     recipe = os.path.join(fail_dir, 'recursive-build')
     m = api.render(recipe, config=testing_config)[0][0]
