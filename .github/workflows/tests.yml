@@ -210,8 +210,7 @@ jobs:
           conda info -a
           conda list --show-channel-urls
 
-      - name: Run Serial Tests
-        if: matrix.test-type == 'serial'
+      - name: Run tests
         run: |
           pytest `
             --color=yes `
