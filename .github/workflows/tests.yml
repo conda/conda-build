@@ -196,6 +196,7 @@ jobs:
 
       - name: Setup environment
         run: |
+          choco install visualstudio2019-workload-vctools
           conda install -q -y -c defaults `
             --file .\tests\requirements.txt `
             --file .\tests\requirements-windows.txt `
