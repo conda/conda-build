@@ -224,6 +224,10 @@ jobs:
             -m "${{ env.PYTEST_MARKER }}" `
             .\tests -k cmake
 
+      - name: Setup tmate session
+        if: always()
+        uses: mxschmitt/action-tmate@v3
+
       - name: Tar Allure Results
         if: always()
         run: tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
