@@ -52,7 +52,7 @@ jobs:
   linux:
     # only run test suite if there are code changes
     needs: changes
-    if: false # needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.code == 'true'
 
     runs-on: ubuntu-latest
     defaults:
@@ -155,13 +155,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # python-version: ['3.7', '3.8', '3.9', '3.10']
-        # conda-version: [release]
-        # test-type: [serial, parallel]
+        python-version: ['3.7', '3.8', '3.9', '3.10']
+        conda-version: [release]
+        test-type: [serial, parallel]
         include:
-          # - python-version: '3.10'
-          #   conda-version: canary
-          #   test-type: serial
+          - python-version: '3.10'
+            conda-version: canary
+            test-type: serial
           - python-version: '3.10'
             conda-version: canary
             test-type: parallel
@@ -223,11 +223,7 @@ jobs:
             --replay-base-name="${{ env.REPLAY_NAME }}" `
             --alluredir="${{ env.ALLURE_DIR }}" `
             -m "${{ env.PYTEST_MARKER }}" `
-            .\tests -k cmake
-
-      - name: Setup tmate session
-        if: always()
-        uses: mxschmitt/action-tmate@v3
+            .\tests
 
       - name: Tar Allure Results
         if: always()
@@ -247,7 +243,7 @@ jobs:
   macos:
     # only run test suite if there are code changes
     needs: changes
-    if: false # needs.changes.outputs.code == 'true'
+    if: needs.changes.outputs.code == 'true'
 
     runs-on: macos-11
     defaults:
