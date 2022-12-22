@@ -1180,11 +1180,7 @@ def test_failed_recipe_leaves_folders(testing_config, testing_workdir):
 
     # make sure that it does not leave lock files, though, as these cause permission errors on
     #    centralized installations
-    locks = {lock.lock_file for lock in locks if os.path.isfile(lock.lock_file)}
-    assert not locks, "\n".join(
-        "remaining locks:",
-        *(f"  {lock}" for lock in locks.items()),
-    )
+    assert not {lock.lock_file for lock in locks if os.path.isfile(lock.lock_file)}
 
 
 @pytest.mark.sanity
