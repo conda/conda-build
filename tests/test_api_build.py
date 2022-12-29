@@ -36,7 +36,6 @@ from conda_build.exceptions import (DependencyNeedsBuildingError, CondaBuildExce
                                     OverLinkingError, OverDependingError)
 from conda_build.conda_interface import reset_context
 from conda.exceptions import ClobberError, CondaMultiError
-from conda_build.conda_interface import conda_47
 
 from .utils import is_valid_dir, metadata_dir, fail_dir, add_mangling, numpy_installed
 
@@ -776,15 +775,6 @@ def test_noarch_python_1(testing_config):
     assert 'entry_points' in extra['noarch']
     assert 'type' in extra['noarch']
     assert 'package_metadata_version' in extra
-
-
-@pytest.mark.sanity
-@pytest.mark.xfail(conda_47, reason="parallel verify/execute in conda 4.7 breaks legacy noarch, which depends on having the env files present before pre-link scripts are run.")
-def test_legacy_noarch_python(testing_config):
-    output = api.build(os.path.join(metadata_dir, "_legacy_noarch_python"),
-                       config=testing_config)[0]
-    # make sure that the package is going into the noarch folder
-    assert os.path.basename(os.path.dirname(output)) == 'noarch'
 
 
 @pytest.mark.sanity
