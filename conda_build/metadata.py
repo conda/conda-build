@@ -1591,6 +1591,7 @@ class MetaData:
         run_reqs = self.meta.get("requirements", {}).get("run", [])
         virtual_pkgs = [req for req in run_reqs if req.startswith("__")]
 
+        # add name -> match spec mapping for virtual packages
         hash_contents.update({pkg.split(" ")[0]: pkg for pkg in virtual_pkgs})
         return hash_contents
 
