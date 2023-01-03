@@ -20,7 +20,6 @@ from .conda_interface import (UnsatisfiableError, ProgressiveFetchExtract,
                               TemporaryDirectory)
 from .conda_interface import execute_actions
 from .conda_interface import pkgs_dirs
-from .conda_interface import conda_43
 from .conda_interface import specs_from_url
 from .utils import CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2
 
@@ -68,14 +67,12 @@ def bldpkg_path(m):
 
 
 def actions_to_pins(actions):
-    specs = []
-    if conda_43:
-        spec_name = lambda x: x.dist_name
-    else:
-        spec_name = lambda x: str(x)
-    if 'LINK' in actions:
-        specs = [' '.join(spec_name(spec).split()[0].rsplit('-', 2)) for spec in actions['LINK']]
-    return specs
+    if "LINK" in actions:
+        return [
+            " ".join(spec.dist_name.split()[0].rsplit("-", 2))
+            for spec in actions["LINK"]
+        ]
+    return []
 
 
 def _categorize_deps(m, specs, exclude_pattern, variant):
@@ -310,7 +307,7 @@ def execute_download_actions(m, actions, env, package_subset=None, require_files
         # ran through all pkgs_dirs, and did not find package or folder.  Download it.
         # TODO: this is a vile hack reaching into conda's internals. Replace with
         #    proper conda API when available.
-        if not pkg_loc and conda_43:
+        if not pkg_loc:
             try:
                 pkg_record = [_ for _ in index if _.dist_name == pkg_dist][0]
                 # the conda 4.4 API uses a single `link_prefs` kwarg

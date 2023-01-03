@@ -13,7 +13,7 @@ from os.path import dirname, isdir, isfile, join
 import conda_package_handling.api
 import pytest
 from unittest import mock
-from conda_build.conda_interface import conda_47, context
+from conda_build.conda_interface import context
 from conda_build.utils import copy_into, rm_rf
 
 import conda_build.api
@@ -1134,29 +1134,22 @@ def test_current_index_reduces_space():
         "one-gets-filtered-1.3.10-h7b6447c_3.tar.bz2",
     }
     # conda 4.7 removes .tar.bz2 files in favor of .conda files
-    if conda_47:
-        tar_bz2_keys.remove("one-gets-filtered-1.3.10-h7b6447c_3.tar.bz2")
+    tar_bz2_keys.remove("one-gets-filtered-1.3.10-h7b6447c_3.tar.bz2")
 
     # .conda files will replace .tar.bz2 files.  Older packages that are necessary for satisfiability will remain
     assert set(trimmed_repodata["packages"].keys()) == tar_bz2_keys
-    if conda_47:
-        assert set(trimmed_repodata["packages.conda"].keys()) == {
-            "one-gets-filtered-1.3.10-h7b6447c_3.conda"
-        }
+    assert set(trimmed_repodata["packages.conda"].keys()) == {
+        "one-gets-filtered-1.3.10-h7b6447c_3.conda"
+    }
 
     # we can keep more than one version series using a collection of keys
     trimmed_repodata = conda_build.index._build_current_repodata(
         "linux-64", repodata, {"one-gets-filtered": ["1.2", "1.3"]}
     )
-    if conda_47:
-        assert set(trimmed_repodata["packages.conda"].keys()) == {
-            "one-gets-filtered-1.2.11-h7b6447c_3.conda",
-            "one-gets-filtered-1.3.10-h7b6447c_3.conda",
-        }
-    else:
-        assert set(trimmed_repodata["packages"].keys()) == tar_bz2_keys | {
-            "one-gets-filtered-1.2.11-h7b6447c_3.tar.bz2"
-        }
+    assert set(trimmed_repodata["packages.conda"].keys()) == {
+        "one-gets-filtered-1.2.11-h7b6447c_3.conda",
+        "one-gets-filtered-1.3.10-h7b6447c_3.conda",
+    }
 
 
 def test_current_index_version_keys_keep_older_packages(testing_workdir):

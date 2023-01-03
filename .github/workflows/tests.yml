@@ -111,7 +111,7 @@ jobs:
               --color=yes \
               -vv \
               -n 0 \
-              --basetemp /tmp/cb_serial \
+              --basetemp "${{ runner.temp }}/${{ matrix.test-type }}" \
               --cov conda_build \
               --cov-report xml \
               -m "serial" tests \
@@ -125,7 +125,7 @@ jobs:
               --color=yes \
               -vv \
               -n auto \
-              --basetemp /tmp/cb \
+              --basetemp "${{ runner.temp }}/${{ matrix.test-type }}" \
               --cov conda_build \
               --cov-append \
               --cov-report xml \
@@ -180,14 +180,6 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-
-      - name: Set temp dirs correctly
-        shell: cmd
-        # https://github.com/actions/virtual-environments/issues/712
-        run: |
-          echo "TMPDIR=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
-          echo "TEMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
-          echo "TMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
 
       - name: Setup Python ${{ matrix.python-version }}
         uses: actions/setup-python@v1
@@ -265,10 +257,6 @@ jobs:
           pip install allure-pytest
           conda-build --version
           pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd
-          mkdir %UserProfile%\cbtmp_serial
-          mkdir %UserProfile%\cbtmp
-          for /d %%F in (%UserProfile%\cbtmp_serial\*) do rd /s /q "%%F"
-          for /d %%F in (%UserProfile%\cbtmp\*) do rd /s /q "%%F"
           call conda create -n blarg -yq --download-only python=2.7||exit 1
           call conda create -n blarg -yq --download-only python=3.8||exit 1
           call conda create -n blarg -yq --download-only python cmake||exit 1
@@ -288,7 +276,7 @@ jobs:
           set PERL=
           set LUA=
           set R=
-          pytest --color=yes -vv -n 0 --basetemp %UserProfile%\cbtmp_serial --cov conda_build --cov-report xml -m "serial" ${{ env.pytest-replay }} --alluredir=allure-results
+          pytest --color=yes -vv -n 0 --basetemp "${{ runner.temp }}\${{ matrix.test-type }}" --cov conda_build --cov-report xml -m "serial" ${{ env.pytest-replay }} --alluredir=allure-results
         shell: cmd
 
       - name: Run Parallel Tests
@@ -302,7 +290,7 @@ jobs:
           set PERL=
           set LUA=
           set R=
-          pytest --color=yes -vv -n auto --basetemp %UserProfile%\cbtmp --cov conda_build --cov-append --cov-report xml -m "not serial" ${{ env.pytest-replay }} --alluredir=allure-results
+          pytest --color=yes -vv -n auto --basetemp "${{ runner.temp }}\${{ matrix.test-type }}" --cov conda_build --cov-append --cov-report xml -m "not serial" ${{ env.pytest-replay }} --alluredir=allure-results
         shell: cmd
         env:
           VS90COMNTOOLS: C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC\bin
@@ -396,7 +384,7 @@ jobs:
           set -e -u
           source ci/github/activate_conda "${{ github.workspace }}/miniconda/bin/python"
           conda install conda-verify -y
-          pytest --color=yes -v -n 0 --basetemp /tmp/cb_serial --cov conda_build --cov-report xml -m "serial" tests "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}" --alluredir=allure-results
+          pytest --color=yes -v -n 0 --basetemp "${{ runner.temp }}/${{ matrix.test-type }}" --cov conda_build --cov-report xml -m "serial" tests "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}" --alluredir=allure-results
 
       - name: Run Parallel Tests
         if: matrix.test-type == 'parallel'
@@ -410,7 +398,7 @@ jobs:
           conda create -n blarg1 -yq python=2.7
           conda create -n blarg3 -yq python=3.7
           conda create -n blarg4 -yq python nomkl numpy pandas svn
-          pytest --color=yes -v -n auto --basetemp /tmp/cb --cov conda_build --cov-append --cov-report xml -m "not serial" tests "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}" --alluredir=allure-results
+          pytest --color=yes -v -n auto --basetemp "${{ runner.temp }}/${{ matrix.test-type }}" --cov conda_build --cov-append --cov-report xml -m "not serial" tests "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}" --alluredir=allure-results
 
       - name: Tar Allure Results
         if: always()
