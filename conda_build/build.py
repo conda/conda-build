@@ -32,7 +32,7 @@ import yaml
 import conda_package_handling.api
 
 # used to get version
-from .conda_interface import env_path_backup_var_exists, conda_45, conda_46
+from .conda_interface import env_path_backup_var_exists
 from .conda_interface import prefix_placeholder
 from .conda_interface import TemporaryDirectory
 from .conda_interface import VersionOrder
@@ -1811,15 +1811,11 @@ bundlers = {
 def _write_sh_activation_text(file_handle, m):
     cygpath_prefix = "$(cygpath -u " if utils.on_win else ""
     cygpath_suffix = " )" if utils.on_win else ""
-    activate_path = ''.join((cygpath_prefix,
-                            os.path.join(utils.root_script_dir, 'activate').replace('\\', '\\\\'),
-                            cygpath_suffix))
 
-    if conda_46:
-        py_flags = '-I -m' if os.environ.get("_CONDA_BUILD_ISOLATED_ACTIVATION") else '-m'
-        file_handle.write(
-            f"""eval "$('{sys.executable}' {py_flags} conda shell.bash hook)"\n"""
-        )
+    py_flags = '-I -m' if os.environ.get("_CONDA_BUILD_ISOLATED_ACTIVATION") else '-m'
+    file_handle.write(
+        f"""eval "$('{sys.executable}' {py_flags} conda shell.bash hook)"\n"""
+    )
 
     if m.is_cross:
         # HACK: we need both build and host envs "active" - i.e. on PATH,
@@ -1846,24 +1842,16 @@ def _write_sh_activation_text(file_handle, m):
         host_prefix_path = ''.join((cygpath_prefix,
                                    m.config.host_prefix.replace('\\', '\\\\'),
                                    cygpath_suffix))
-        if conda_46:
-            file_handle.write(f"conda activate \"{host_prefix_path}\"\n")
-        else:
-            file_handle.write('source "{}" "{}"\n' .format(activate_path, host_prefix_path))
-            file_handle.write('unset CONDA_PATH_BACKUP\n')
-            file_handle.write('export CONDA_MAX_SHLVL=2\n')
+        file_handle.write(f"conda activate \"{host_prefix_path}\"\n")
 
     # Write build prefix activation AFTER host prefix, so that its executables come first
     build_prefix_path = ''.join((cygpath_prefix,
                                 m.config.build_prefix.replace('\\', '\\\\'),
                                 cygpath_suffix))
 
-    if conda_46:
-        # Do not stack against base env when not cross.
-        stack = '--stack' if m.is_cross else ''
-        file_handle.write(f"conda activate {stack} \"{build_prefix_path}\"\n")
-    else:
-        file_handle.write(f'source "{activate_path}" "{build_prefix_path}"\n')
+    # Do not stack against base env when not cross.
+    stack = '--stack' if m.is_cross else ''
+    file_handle.write(f"conda activate {stack} \"{build_prefix_path}\"\n")
 
     from conda_build.os_utils.external import find_executable
     ccache = find_executable('ccache', m.config.build_prefix, False)
@@ -2723,35 +2711,27 @@ def write_test_scripts(metadata, env_vars, py_files, pl_files, lua_files, r_file
         if not utils.on_win:
             tf.write(f'set {trace}-e\n')
         if metadata.config.activate and not metadata.name() == 'conda':
-            ext = ".bat" if utils.on_win else ""
-            if conda_46:
-                if utils.on_win:
-                    tf.write(
-                        'set "CONDA_SHLVL=" '
-                        '&& @CALL {}\\condabin\\conda_hook.bat {}'
-                        '&& set CONDA_EXE={python_exe}'
-                        '&& set CONDA_PYTHON_EXE={python_exe}'
-                        '&& set _CE_I={}'
-                        '&& set _CE_M=-m'
-                        '&& set _CE_CONDA=conda\n'.format(
-                            sys.prefix,
-                            '--dev' if metadata.config.debug else '',
-                            "-i" if os.environ.get("_CONDA_BUILD_ISOLATED_ACTIVATION") else "",
-                            python_exe=sys.executable
-                        )
+            if utils.on_win:
+                tf.write(
+                    'set "CONDA_SHLVL=" '
+                    '&& @CALL {}\\condabin\\conda_hook.bat {}'
+                    '&& set CONDA_EXE={python_exe}'
+                    '&& set CONDA_PYTHON_EXE={python_exe}'
+                    '&& set _CE_I={}'
+                    '&& set _CE_M=-m'
+                    '&& set _CE_CONDA=conda\n'.format(
+                        sys.prefix,
+                        '--dev' if metadata.config.debug else '',
+                        "-i" if os.environ.get("_CONDA_BUILD_ISOLATED_ACTIVATION") else "",
+                        python_exe=sys.executable
                     )
-                else:
-                    py_flags = '-I -m' if os.environ.get("_CONDA_BUILD_ISOLATED_ACTIVATION") else '-m'
-                    tf.write(
-                        f"""eval "$('{sys.executable}' {py_flags} conda shell.bash hook)"\n"""
-                    )
-                tf.write(f'conda activate "{metadata.config.test_prefix}"\n')
+                )
             else:
-                tf.write('{source} "{conda_root}activate{ext}" "{test_env}"\n'.format(
-                    conda_root=utils.root_script_dir + os.path.sep,
-                    source="call" if utils.on_win else "source",
-                    ext=ext,
-                    test_env=metadata.config.test_prefix))
+                py_flags = '-I -m' if os.environ.get("_CONDA_BUILD_ISOLATED_ACTIVATION") else '-m'
+                tf.write(
+                    f"""eval "$('{sys.executable}' {py_flags} conda shell.bash hook)"\n"""
+                )
+            tf.write(f'conda activate "{metadata.config.test_prefix}"\n')
             if utils.on_win:
                 tf.write("IF %ERRORLEVEL% NEQ 0 exit /B 1\n")
         # In-case people source this, it's essential errors are not fatal in an interactive shell.
@@ -3414,13 +3394,5 @@ def is_package_built(metadata, env, include_local=True):
 
     spec = MatchSpec(name=metadata.name(), version=metadata.version(), build=metadata.build_id())
 
-    if conda_45:
-        from conda.api import SubdirData
-        return bool(SubdirData.query_all(spec, channels=urls, subdirs=(subdir, "noarch")))
-    else:
-        index, _, _ = get_build_index(subdir=subdir, bldpkgs_dir=metadata.config.bldpkgs_dir,
-                                      output_folder=metadata.config.output_folder, channel_urls=urls,
-                                      debug=metadata.config.debug, verbose=metadata.config.verbose,
-                                      locking=metadata.config.locking, timeout=metadata.config.timeout,
-                                      clear_cache=True)
-        return any(spec.match(prec) for prec in index.values())
+    from conda.api import SubdirData
+    return bool(SubdirData.query_all(spec, channels=urls, subdirs=(subdir, "noarch")))
