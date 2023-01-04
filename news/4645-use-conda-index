@@ -1,0 +1,20 @@
+### Enhancements
+
+* Depend on standalone conda-index instead of bundled indexing code.
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* `conda-build index --file` is no longer supported.
+* `conda-build index --hotfix-source-repo` is removed.
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>
