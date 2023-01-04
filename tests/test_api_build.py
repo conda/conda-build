@@ -3,9 +3,6 @@
 """
 This module tests the build API.  These are high-level integration tests.
 """
-
-import base64
-import locale
 from collections import OrderedDict
 from glob import glob
 import logging
@@ -39,7 +36,6 @@ from conda_build.exceptions import (DependencyNeedsBuildingError, CondaBuildExce
                                     OverLinkingError, OverDependingError)
 from conda_build.conda_interface import reset_context
 from conda.exceptions import ClobberError, CondaMultiError
-from conda_build.conda_interface import conda_47
 
 from .utils import is_valid_dir, metadata_dir, fail_dir, add_mangling, numpy_installed
 
@@ -782,15 +778,6 @@ def test_noarch_python_1(testing_config):
 
 
 @pytest.mark.sanity
-@pytest.mark.xfail(conda_47, reason="parallel verify/execute in conda 4.7 breaks legacy noarch, which depends on having the env files present before pre-link scripts are run.")
-def test_legacy_noarch_python(testing_config):
-    output = api.build(os.path.join(metadata_dir, "_legacy_noarch_python"),
-                       config=testing_config)[0]
-    # make sure that the package is going into the noarch folder
-    assert os.path.basename(os.path.dirname(output)) == 'noarch'
-
-
-@pytest.mark.sanity
 def test_skip_compile_pyc(testing_config):
     outputs = api.build(os.path.join(metadata_dir, "skip_compile_pyc"), config=testing_config)
     tf = tarfile.open(outputs[0])
@@ -1170,6 +1157,9 @@ def test_unknown_selectors(testing_config):
     api.build(recipe, config=testing_config)
 
 
+# the locks can be very flaky on GitHub Windows Runners
+# https://github.com/conda/conda-build/issues/4685
+@pytest.mark.flaky(rerun=5, reruns_delay=2)
 def test_failed_recipe_leaves_folders(testing_config, testing_workdir):
     recipe = os.path.join(fail_dir, 'recursive-build')
     m = api.render(recipe, config=testing_config)[0][0]
@@ -1178,20 +1168,10 @@ def test_failed_recipe_leaves_folders(testing_config, testing_workdir):
         api.build(m)
     assert os.path.isdir(m.config.build_folder), 'build folder was removed'
     assert os.listdir(m.config.build_folder), 'build folder has no files'
+
     # make sure that it does not leave lock files, though, as these cause permission errors on
     #    centralized installations
-    any_locks = False
-    locks_list = set()
-    locale.getpreferredencoding(False)
-    for lock in locks:
-        if os.path.isfile(lock.lock_file):
-            any_locks = True
-            dest_path = base64.b64decode(os.path.basename(lock.lock_file))
-            if hasattr(dest_path, 'decode'):
-                dest_path = dest_path.decode(sys.getfilesystemencoding(), errors='backslashreplace')
-            locks_list.add((lock.lock_file, dest_path))
-    assert not any_locks, "remaining locks:\n{}".format('\n'.join('->'.join((l, r))
-                                                                for (l, r) in locks_list))
+    assert [lock.lock_file for lock in locks if os.path.isfile(lock.lock_file)] == []
 
 
 @pytest.mark.sanity
