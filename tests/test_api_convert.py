@@ -13,6 +13,7 @@ from conda_build import api
 from conda_build.utils import package_has_file, on_win
 
 from .utils import metadata_dir, assert_package_consistency
+
 """These test cases will get deprecated based conda-build team decision about the free channel package
 A SPIKE ticket has been created to decide on the deprecation of the channel itself..
 https://github.com/conda/conda-build/issues/4687  """
@@ -131,7 +132,7 @@ def test_c_extension_error(testing_workdir, base_platform, package):
 
 
 @pytest.mark.parametrize('base_platform', ['linux', 'win', 'osx'])
-@pytest.mark.parametrize('package', [('cryptography-1.8.1')])
+@pytest.mark.parametrize('package', [('cryptography-1.8.1', '__about__.py')])
 def test_c_extension_conversion(testing_workdir, base_platform, package):
     package_name, example_file = package
     platforms = ['osx-64', 'win-64', 'win-32', 'linux-64', 'linux-32']
@@ -142,7 +143,8 @@ def test_c_extension_conversion(testing_workdir, base_platform, package):
         if platform == source_platform:
             platforms.remove(platform)
 
-    f = 'http://repo.anaconda.com/pkgs/free/{}-64/{}-py*.tar.bz2'.format(base_platform,package_name)
+    f = 'http://repo.anaconda.com/pkgs/free/{}-64/{}-py36_0.tar.bz2'.format(base_platform,
+                                                                            package_name)
     fn = f"{package_name}-py36_0.tar.bz2"
     download(f, fn)
 
@@ -158,7 +160,7 @@ def test_c_extension_conversion(testing_workdir, base_platform, package):
 def test_convert_platform_to_others(testing_workdir, base_platform, package):
     package_name, example_file = package
     subdir = f'{base_platform}-64'
-    f = 'http://repo.anaconda.com/pkgs/free/{}/{}-py*.tar.bz2'.format(subdir,
+    f = 'http://repo.anaconda.com/pkgs/free/{}/{}-py27_0.tar.bz2'.format(subdir,
                                                                          package_name)
     fn = f"{package_name}-py27_0.tar.bz2"
     download(f, fn)
@@ -228,10 +230,6 @@ def test_convert_from_unix_to_win_creates_entry_points(testing_config):
 @pytest.mark.parametrize('base_platform', ['linux', 'win', 'osx'])
 @pytest.mark.parametrize('package', [('anaconda-4.4.0', 'version.txt')])
 def test_convert_dependencies(testing_workdir, base_platform, package):
-    """This test only finds dependencies from the free package repo
-       http://repo.anaconda.com/pkgs/free these packages are not longer updated to the latest versions"""
-
-
     package_name, example_file = package
     subdir = f'{base_platform}-64'
     f = 'http://repo.anaconda.com/pkgs/free/{}/{}-np112py36_0.tar.bz2'.format(subdir,
