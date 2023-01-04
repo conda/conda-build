@@ -6,9 +6,9 @@ import sys
 
 from conda_build.conda_interface import ArgumentParser
 
-from conda_build import api
-from conda_build.index import MAX_THREADS_DEFAULT
-from conda_build.utils import DEFAULT_SUBDIRS
+from conda_index import api
+from conda_index.index import MAX_THREADS_DEFAULT
+from conda_index.utils import DEFAULT_SUBDIRS
 
 logging.basicConfig(level=logging.INFO)
 
@@ -77,7 +77,7 @@ def parse_args(args):
     )
     p.add_argument(
         "-f", "--file",
-        help="A file that contains a new line separated list of packages to add to repodata.",
+        help="A file that contains a new line separated list of packages to add to repodata.  Deprecated, will be removed in a future version of conda build",
         action="store"
     )
 
@@ -90,8 +90,8 @@ def execute(args):
 
     api.update_index(args.dir, check_md5=args.check_md5, channel_name=args.channel_name,
                      threads=args.threads, subdir=args.subdir, patch_generator=args.patch_generator,
-                     verbose=args.verbose, progress=args.progress, hotfix_source_repo=args.hotfix_source_repo,
-                     current_index_versions=args.current_index_versions_file, index_file=args.file)
+                     verbose=args.verbose, progress=args.progress,
+                     current_index_versions=args.current_index_versions_file)
 
 
 def main():

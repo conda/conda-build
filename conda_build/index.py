@@ -12,10 +12,9 @@ from itertools import groupby
 import json
 from numbers import Number
 import os
-from os.path import abspath, basename, getmtime, getsize, isdir, isfile, join, splitext, dirname
+from os.path import abspath, basename, getmtime, getsize, isdir, isfile, join, splitext
 import subprocess
 import sys
-import time
 from uuid import uuid4
 
 # Lots of conda internals here.  Should refactor to use exports.
@@ -31,7 +30,6 @@ from yaml.scanner import ScannerError
 from yaml.reader import ReaderError
 
 import fnmatch
-from functools import partial
 import logging
 import conda_package_handling.api
 from conda_package_handling.api import InvalidArchiveError
@@ -43,9 +41,9 @@ from concurrent.futures import Executor
 from conda.core.subdir_data import SubdirData
 from conda.models.channel import Channel
 
-from conda_build import conda_interface, utils
+from conda_build import utils
 from .conda_interface import MatchSpec, VersionOrder, human_bytes, context
-from .conda_interface import CondaError, CondaHTTPError, get_index, url_path
+from .conda_interface import CondaError
 from .conda_interface import TemporaryDirectory
 from .conda_interface import Resolve
 from .utils import (CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2,
@@ -108,124 +106,15 @@ LOCKFILE_NAME = ".lock"
 # TODO: this is to make sure that the index doesn't leak tokens.  It breaks use of private channels, though.
 # os.environ['CONDA_ADD_ANACONDA_TOKEN'] = "false"
 
+from . import build_index
+
 
 def get_build_index(subdir, bldpkgs_dir, output_folder=None, clear_cache=False,
                     omit_defaults=False, channel_urls=None, debug=False, verbose=True,
-                    **kwargs):
-    global local_index_timestamp
-    global local_subdir
-    global local_output_folder
-    global cached_index
-    global cached_channels
-    global channel_data
-    mtime = 0
-
-    channel_urls = list(utils.ensure_list(channel_urls))
-
-    if not output_folder:
-        output_folder = dirname(bldpkgs_dir)
-
-    # check file modification time - this is the age of our local index.
-    index_file = os.path.join(output_folder, subdir, 'repodata.json')
-    if os.path.isfile(index_file):
-        mtime = os.path.getmtime(index_file)
-
-    if (clear_cache or
-            not os.path.isfile(index_file) or
-            local_subdir != subdir or
-            local_output_folder != output_folder or
-            mtime > local_index_timestamp or
-            cached_channels != channel_urls):
-
-        # priority: (local as either croot or output_folder IF NOT EXPLICITLY IN CHANNEL ARGS),
-        #     then channels passed as args (if local in this, it remains in same order),
-        #     then channels from condarc.
-        urls = list(channel_urls)
-
-        loggers = utils.LoggingContext.default_loggers + [__name__]
-        if debug:
-            log_context = partial(utils.LoggingContext, logging.DEBUG, loggers=loggers)
-        elif verbose:
-            log_context = partial(utils.LoggingContext, logging.WARN, loggers=loggers)
-        else:
-            log_context = partial(utils.LoggingContext, logging.CRITICAL + 1, loggers=loggers)
-        with log_context():
-            # this is where we add the "local" channel.  It's a little smarter than conda, because
-            #     conda does not know about our output_folder when it is not the default setting.
-            if os.path.isdir(output_folder):
-                local_path = url_path(output_folder)
-                # replace local with the appropriate real channel.  Order is maintained.
-                urls = [url if url != 'local' else local_path for url in urls]
-                if local_path not in urls:
-                    urls.insert(0, local_path)
-            _ensure_valid_channel(output_folder, subdir)
-            update_index(output_folder, verbose=debug)
-
-            # replace noarch with native subdir - this ends up building an index with both the
-            #      native content and the noarch content.
-
-            if subdir == 'noarch':
-                subdir = conda_interface.subdir
-            try:
-                cached_index = get_index(channel_urls=urls,
-                                         prepend=not omit_defaults,
-                                         use_local=False,
-                                         use_cache=context.offline,
-                                         platform=subdir)
-            # HACK: defaults does not have the many subfolders we support.  Omit it and
-            #          try again.
-            except CondaHTTPError:
-                if 'defaults' in urls:
-                    urls.remove('defaults')
-                cached_index = get_index(channel_urls=urls,
-                                         prepend=omit_defaults,
-                                         use_local=False,
-                                         use_cache=context.offline,
-                                         platform=subdir)
-
-            expanded_channels = {rec.channel for rec in cached_index.values()}
-
-            superchannel = {}
-            # we need channeldata.json too, as it is a more reliable source of run_exports data
-            for channel in expanded_channels:
-                if channel.scheme == "file":
-                    location = channel.location
-                    if utils.on_win:
-                        location = location.lstrip("/")
-                    elif (not os.path.isabs(channel.location) and
-                            os.path.exists(os.path.join(os.path.sep, channel.location))):
-                        location = os.path.join(os.path.sep, channel.location)
-                    channeldata_file = os.path.join(location, channel.name, 'channeldata.json')
-                    retry = 0
-                    max_retries = 1
-                    if os.path.isfile(channeldata_file):
-                        while retry < max_retries:
-                            try:
-                                with open(channeldata_file, "r+") as f:
-                                    channel_data[channel.name] = json.load(f)
-                                break
-                            except (OSError, JSONDecodeError):
-                                time.sleep(0.2)
-                                retry += 1
-                else:
-                    # download channeldata.json for url
-                    if not context.offline:
-                        try:
-                            channel_data[channel.name] = utils.download_channeldata(channel.base_url + '/channeldata.json')
-                        except CondaHTTPError:
-                            continue
-                # collapse defaults metachannel back into one superchannel, merging channeldata
-                if channel.base_url in context.default_channels and channel_data.get(channel.name):
-                    packages = superchannel.get('packages', {})
-                    packages.update(channel_data[channel.name])
-                    superchannel['packages'] = packages
-            channel_data['defaults'] = superchannel
-        local_index_timestamp = os.path.getmtime(index_file)
-        local_subdir = subdir
-        local_output_folder = output_folder
-        cached_channels = channel_urls
-    return cached_index, local_index_timestamp, channel_data
-
+                    locking=None, timeout=None):
+    return build_index.get_build_index(subdir, bldpkgs_dir, output_folder, clear_cache,
+                    omit_defaults, channel_urls, debug, verbose, locking=locking, timeout=timeout
+                    )
 
 def _ensure_valid_channel(local_folder, subdir):
     for folder in {subdir, 'noarch'}:
@@ -237,33 +126,9 @@ def _ensure_valid_channel(local_folder, subdir):
 def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=None, threads=MAX_THREADS_DEFAULT,
                  verbose=False, progress=False, hotfix_source_repo=None, subdirs=None, warn=True,
                  current_index_versions=None, debug=False, index_file=None):
-    """
-    If dir_path contains a directory named 'noarch', the path tree therein is treated
-    as though it's a full channel, with a level of subdirs, each subdir having an update
-    to repodata.json.  The full channel will also have a channeldata.json file.
-
-    If dir_path does not contain a directory named 'noarch', but instead contains at least
-    one '*.tar.bz2' file, the directory is assumed to be a standard subdir, and only repodata.json
-    information will be updated.
-
-    """
-    base_path, dirname = os.path.split(dir_path)
-    if dirname in utils.DEFAULT_SUBDIRS:
-        if warn:
-            log.warn("The update_index function has changed to index all subdirs at once.  You're pointing it at a single subdir.  "
-                    "Please update your code to point it at the channel root, rather than a subdir.")
-        return update_index(base_path, check_md5=check_md5, channel_name=channel_name,
-                            threads=threads, verbose=verbose, progress=progress,
-                            hotfix_source_repo=hotfix_source_repo,
-                            current_index_versions=current_index_versions)
-    return ChannelIndex(dir_path, channel_name, subdirs=subdirs, threads=threads,
-                        deep_integrity_check=check_md5, debug=debug).index(
-                            patch_generator=patch_generator, verbose=verbose,
-                            progress=progress,
-                            hotfix_source_repo=hotfix_source_repo,
-                            current_index_versions=current_index_versions,
-                            index_file=index_file)
-
+    return build_index.update_index(dir_path, check_md5, channel_name, patch_generator, threads,
+                 verbose, progress, hotfix_source_repo, subdirs, warn,
+                 current_index_versions, debug, index_file)
 
 def _determine_namespace(info):
     if info.get('namespace'):

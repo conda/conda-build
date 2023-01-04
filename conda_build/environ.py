@@ -22,10 +22,9 @@ from .conda_interface import pkgs_dirs, root_dir, create_default_packages
 from .conda_interface import reset_context
 from .conda_interface import get_version_from_git_tag
 
-from conda_build import utils
+from conda_build import utils, build_index
 from conda_build.exceptions import BuildLockError, DependencyNeedsBuildingError
 from conda_build.features import feature_list
-from conda_build.index import get_build_index
 from conda_build.os_utils import external
 from conda_build.utils import ensure_list, prepend_bin_path, env_var
 from conda_build.variants import get_default_variant
@@ -776,9 +775,10 @@ def get_install_actions(prefix, specs, env, retries=0, subdir=None,
 
     bldpkgs_dirs = ensure_list(bldpkgs_dirs)
 
-    index, index_ts, _ = get_build_index(subdir, list(bldpkgs_dirs)[0], output_folder=output_folder,
-                                      channel_urls=channel_urls, debug=debug, verbose=verbose,
-                                      locking=locking, timeout=timeout)
+    bldpkgs_dir = list(bldpkgs_dirs)[0]
+    index, index_ts, _ = build_index.get_build_index(subdir, bldpkgs_dir, output_folder, False,
+                                                     False, channel_urls, debug, verbose, locking=locking, timeout=timeout
+                                                     )
     specs = tuple(utils.ensure_valid_spec(spec) for spec in specs if not str(spec).endswith('@'))
 
     if ((specs, env, subdir, channel_urls, disable_pip) in cached_actions and
@@ -889,14 +889,9 @@ def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, 
                                                         channel_urls=tuple(config.channel_urls))
                     else:
                         actions = specs_or_actions
-                    index, _, _ = get_build_index(subdir=subdir,
-                                                    bldpkgs_dir=config.bldpkgs_dir,
-                                                    output_folder=config.output_folder,
-                                                    channel_urls=config.channel_urls,
-                                                    debug=config.debug,
-                                                    verbose=config.verbose,
-                                                    locking=config.locking,
-                                                    timeout=config.timeout)
+                    index, _, _ = build_index.get_build_index(subdir, config.bldpkgs_dir, config.output_folder, False,
+                                                              False, config.channel_urls, config.debug, config.verbose, locking=config.locking, timeout=config.timeout
+                                                              )
                     utils.trim_empty_keys(actions)
                     display_actions(actions, index)
                     if utils.on_win:
