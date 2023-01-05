@@ -134,13 +134,22 @@ jobs:
               --alluredir=allure-results
 
       - name: Tar Allure Results
+        if: always()
         run: tar -zcf allure-results.tar.gz allure-results
+
+      - name: Upload Allure Results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: allure-Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type }}
+          path: allure-results.tar.gz
 
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v3
         with:
           name: Linux_replay-py-${{ matrix.python-version }}_${{ matrix.conda-version }}_${{ matrix.test-type }}
           path: pytest-replay/
+        if: always()
 
   # windows test suite
   windows:
@@ -288,7 +297,15 @@ jobs:
           LIB:
 
       - name: Tar Allure Results
+        if: always()
         run: tar -zcf allure-results.tar.gz allure-results
+
+      - name: Upload Allure Results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: allure-Win-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type }}
+          path: allure-results.tar.gz
 
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v3
@@ -384,7 +401,15 @@ jobs:
           pytest --color=yes -v -n auto --basetemp "${{ runner.temp }}/${{ matrix.test-type }}" --cov conda_build --cov-append --cov-report xml -m "not serial" tests "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}" --alluredir=allure-results
 
       - name: Tar Allure Results
+        if: always()
         run: tar -zcf allure-results.tar.gz allure-results
+
+      - name: Upload Allure Results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: allure-macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type }}
+          path: allure-results.tar.gz
 
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v3
