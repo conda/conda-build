@@ -440,10 +440,16 @@ def svn_source(source_dict, src_dir, svn_cache, verbose=True, timeout=900, locki
         os.makedirs(svn_cache)
     svn_dn = svn_url.split(':', 1)[-1].replace('/', '_').replace(':', '_')
     cache_repo = join(svn_cache, svn_dn)
+    extra_args = []
     if svn_ignore_externals:
-        extra_args = ['--ignore-externals']
-    else:
-        extra_args = []
+        extra_args.append('--ignore-externals')
+    if 'svn_username' in source_dict and 'svn_password' in source_dict:
+        extra_args.extend([
+            '--non-interactive',
+            '--no-auth-cache',
+            '--username', source_dict.get('svn_username'),
+            '--password', source_dict.get('svn_password')
+        ])
     if isdir(cache_repo):
         check_call_env(['svn', 'up', '-r', svn_revision] + extra_args, cwd=cache_repo,
                        stdout=stdout, stderr=stderr)
