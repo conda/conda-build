@@ -316,6 +316,7 @@ jobs:
             ./tests
 
       - name: Tar Allure Results
+        if: always()
         run: tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
 
       - name: Upload Pytest Replay
