@@ -73,7 +73,6 @@ jobs:
           - python-version: '3.10'
             conda-version: canary
             test-type: parallel
-    timeout-minutes: 120
     env:
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
       REPLAY_NAME: Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
@@ -166,7 +165,6 @@ jobs:
           - python-version: '3.10'
             conda-version: canary
             test-type: parallel
-    timeout-minutes: 120
     env:
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
       REPLAY_NAME: Win-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
@@ -258,8 +256,6 @@ jobs:
         python-version: ['3.7', '3.10']
         conda-version: [canary]
         test-type: [serial, parallel]
-      max-parallel: 10
-    timeout-minutes: 120
     env:
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
       REPLAY_NAME: macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
