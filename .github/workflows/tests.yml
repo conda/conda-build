@@ -161,14 +161,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10']
+        python-version: ['3.7', '3.10']
         conda-version: [release]
         test-type: [serial, parallel]
         include:
-          - python-version: '3.9'
+          - python-version: '3.10'
             conda-version: canary
             test-type: serial
-          - python-version: '3.9'
+          - python-version: '3.10'
             conda-version: canary
             test-type: parallel
     timeout-minutes: 120
@@ -182,10 +182,11 @@ jobs:
           fetch-depth: 0
 
       - name: Setup Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
 
+      # is vc for python 2.7 still relevant?
       - name: Install vcpython27.msi
         run: |
           $wc = New-Object net.webclient
@@ -193,11 +194,12 @@ jobs:
           Start-Process "VCForPython27.msi" /qn -Wait
         shell: pwsh
 
+      # would be great to cache this
       - name: Install miniconda
         run: |
           rmdir C:\Strawberry /s /q
           choco install wget visualstudio2017-workload-vctools
-          wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe
+          wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe
           start /wait "" Miniconda3-latest-Windows-x86_64.exe /InstallationType=JustMe /S /D=%UserProfile%\Miniconda3
           "%UserProfile%\Miniconda3\condabin\conda.bat" init
           conda info -a
@@ -242,11 +244,9 @@ jobs:
           call conda config --set always_yes yes
           call conda config --set auto_update_conda no
           call conda info
-          python -c "import sys; print(sys.version)"
-          python -c "import sys; print(sys.executable)"
-          python -c "import sys; print(sys.prefix)"
+          python -c "import sys; print(sys.version); print(sys.executable); print(sys.prefix)"
           call conda update -q --all||exit 1
-          call conda install -q pip python-libarchive-c pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling||exit 1
+          call conda install -q pip pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling conda-index||exit 1
           call conda install pytest-replay pytest-rerunfailures -y||exit 1
           echo safety_checks: disabled >> %UserProfile%\.condarc
           echo local_repodata_ttl: 1800 >> %UserProfile%\.condarc
@@ -258,7 +258,7 @@ jobs:
           conda-build --version
           pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd
           call conda create -n blarg -yq --download-only python=2.7||exit 1
-          call conda create -n blarg -yq --download-only python=3.8||exit 1
+          call conda create -n blarg -yq --download-only python=3.10||exit 1
           call conda create -n blarg -yq --download-only python cmake||exit 1
           set "PYTEST_REPLAY_OPTIONS=--replay-record-dir=${{ github.workspace }}\\pytest-replay --replay-base-name=Win-%CONDA_VERSION%-Py%PYTHON_VERSION%"
           echo "##vso[task.setvariable variable=PYTEST_REPLAY_OPTIONS]%PYTEST_REPLAY_OPTIONS%"
