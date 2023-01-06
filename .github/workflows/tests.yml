@@ -146,6 +146,13 @@ jobs:
         if: always()
         run: tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
 
+      - name: Upload Allure Results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: allure-Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type }}
+          path: allure-results.tar.gz
+
       - name: Upload Pytest Replay
         if: always()
         uses: actions/upload-artifact@v3
@@ -181,7 +188,7 @@ jobs:
       REPLAY_NAME: Win-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
       REPLAY_DIR: ${{ github.workspace }}\pytest-replay
       ALLURE_DIR: ${{ github.workspace }}\allure-results
-      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
+      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial and not slow' }}
       PYTEST_NUMPROCESSES: ${{ matrix.test-type == 'serial' && 0 || 'auto' }}
 
     steps:
@@ -252,6 +259,13 @@ jobs:
         # windows-2019/powershell ships with GNU tar 1.28 which struggles with Windows paths
         # window-2019/cmd ships with bsdtar 3.5.2 which doesn't have this problem
         shell: cmd
+
+      - name: Upload Allure Results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: allure-Win-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type  }}
+          path: allure-results.tar.gz
 
       - name: Upload Pytest Replay
         if: always()
@@ -351,6 +365,13 @@ jobs:
       - name: Tar Allure Results
         if: always()
         run: tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
+
+      - name: Upload Allure Results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: allure-macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type }}
+          path: allure-results.tar.gz
 
       - name: Upload Pytest Replay
         if: always()
