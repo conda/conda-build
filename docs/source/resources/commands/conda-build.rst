@@ -181,7 +181,8 @@ conda-build
 
           <B>--zstd-compression-level</B> {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22}
                  When building v2 packages, set the compression level used by
-                 conda-package-handling. Defaults to the maximum.
+                 conda-package-handling. Defaults to 19. Note that using levels
+                 above 19 is not advised due to high memory consumption.
 
           <B>--no-activate</B>
                  do not activate the build and test envs; just prepend to PATH
