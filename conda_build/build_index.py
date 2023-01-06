@@ -31,8 +31,6 @@ class DummyExecutor(Executor):
                 yield func(thing)
 
 
-from conda.base.constants import NAMESPACE_PACKAGE_NAMES, NAMESPACES_MAP
-
 local_index_timestamp = 0
 cached_index = None
 local_subdir = ""

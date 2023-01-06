@@ -24,6 +24,7 @@ from uuid import uuid4
 import conda_package_handling.api
 import pytz
 import yaml
+from conda.base.constants import NAMESPACE_PACKAGE_NAMES, NAMESPACES_MAP
 
 # Lots of conda internals here.  Should refactor to use exports.
 from conda.common.compat import ensure_binary
@@ -71,8 +72,6 @@ class DummyExecutor(Executor):
             for thing in iterable:
                 yield func(thing)
 
-
-from conda.base.constants import NAMESPACE_PACKAGE_NAMES, NAMESPACES_MAP
 
 local_index_timestamp = 0
 cached_index = None
