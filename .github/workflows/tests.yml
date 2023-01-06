@@ -100,6 +100,7 @@ jobs:
         with:
           condarc-file: ./src/ci/github/.condarc
           python-version: ${{ matrix.python-version }}
+          run-post: false  # skip post cleanup
 
       - name: Setup environment
         run: |
@@ -192,6 +193,7 @@ jobs:
         with:
           condarc-file: .\src\ci\github\.condarc
           python-version: ${{ matrix.python-version }}
+          run-post: false  # skip post cleanup
 
       - name: Setup environment
         run: |
@@ -283,6 +285,7 @@ jobs:
         with:
           condarc-file: ./src/ci/github/.condarc
           python-version: ${{ matrix.python-version }}
+          run-post: false  # skip post cleanup
 
       - name: Setup environment
         run: |
