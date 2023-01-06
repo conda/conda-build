@@ -95,6 +95,16 @@ jobs:
           path: ./conda_build_test_recipe
           fetch-depth: 0
 
+      - name: Timestamp
+        run: echo "TIMESTAMP=$(date -u "+%Y%m")" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Cache conda
+        uses: actions/cache@v2
+        with:
+          path: ~/conda_pkgs_dir
+          key: ${{ runner.os }}-conda-${{ env.TIMESTAMP }}
+
       - name: Setup miniconda
         uses: conda-incubator/setup-miniconda@v2
         with:
@@ -188,6 +198,16 @@ jobs:
           path: .\conda_build_test_recipe
           fetch-depth: 0
 
+      - name: Timestamp
+        run: echo "TIMESTAMP=$(date -u "+%Y%m")" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Cache conda
+        uses: actions/cache@v2
+        with:
+          path: ~/conda_pkgs_dir
+          key: ${{ runner.os }}-conda-${{ env.TIMESTAMP }}
+
       - name: Setup miniconda
         uses: conda-incubator/setup-miniconda@v2
         with:
@@ -279,6 +299,16 @@ jobs:
           repository: conda/conda_build_test_recipe
           path: ./conda_build_test_recipe
           fetch-depth: 0
+
+      - name: Timestamp
+        run: echo "TIMESTAMP=$(date -u "+%Y%m")" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Cache conda
+        uses: actions/cache@v2
+        with:
+          path: ~/conda_pkgs_dir
+          key: ${{ runner.os }}-conda-${{ env.TIMESTAMP }}
 
       - name: Setup miniconda
         uses: conda-incubator/setup-miniconda@v2
