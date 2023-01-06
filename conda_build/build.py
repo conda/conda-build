@@ -3379,6 +3379,8 @@ def clean_build(config, folders=None):
 
 
 def is_package_built(metadata, env, include_local=True):
+    # bldpkgs_dirs is typically {'$ENVIRONMENT/conda-bld/noarch', '$ENVIRONMENT/conda-bld/osx-arm64'}
+    # could pop subdirs (last path element) and call update_index() once
     for d in metadata.config.bldpkgs_dirs:
         if not os.path.isdir(d):
             os.makedirs(d)
