@@ -134,13 +134,22 @@ jobs:
               --alluredir=allure-results
 
       - name: Tar Allure Results
+        if: always()
         run: tar -zcf allure-results.tar.gz allure-results
+
+      - name: Upload Allure Results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: allure-Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type }}
+          path: allure-results.tar.gz
 
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v3
         with:
-          name: Linux_replay-py-${{ matrix.python-version }}_${{ matrix.conda-version }}_${{ matrix.test-type }}
+          name: Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type  }}
           path: pytest-replay/
+        if: always()
 
   # windows test suite
   windows:
@@ -272,6 +281,7 @@ jobs:
 
       - name: Run Parallel Tests
         if: matrix.test-type == 'parallel'
+        # coverage disabled to decrease runtime
         run: |
           echo on
           set PATH
@@ -281,20 +291,28 @@ jobs:
           set PERL=
           set LUA=
           set R=
-          pytest --color=yes -vv -n auto --basetemp "${{ runner.temp }}\${{ matrix.test-type }}" --cov conda_build --cov-append --cov-report xml -m "not serial" ${{ env.pytest-replay }} --alluredir=allure-results
+          pytest --color=yes -vv -n auto --basetemp "${{ runner.temp }}\${{ matrix.test-type }}" -m "not serial and not slow" ${{ env.pytest-replay }} --alluredir=allure-results
         shell: cmd
         env:
           VS90COMNTOOLS: C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC\bin
           LIB:
 
       - name: Tar Allure Results
+        if: always()
         run: tar -zcf allure-results.tar.gz allure-results
+
+      - name: Upload Allure Results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: allure-Win-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type  }}
+          path: allure-results.tar.gz
 
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v3
         with:
           path: ${{ github.workspace }}/pytest-replay
-          name: Win-${{ env.CONDA_VERSION }}-Python${{ matrix.python-version }}-${{ env. parameters.serial_or_parallel  }}
+          name: Win-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type  }}
         if: always()
 
   # macos test suite
@@ -384,13 +402,21 @@ jobs:
           pytest --color=yes -v -n auto --basetemp "${{ runner.temp }}/${{ matrix.test-type }}" --cov conda_build --cov-append --cov-report xml -m "not serial" tests "${PYTEST_REPLAY_OPTIONS[@]+"${PYTEST_REPLAY_OPTIONS[@]}"}" --alluredir=allure-results
 
       - name: Tar Allure Results
+        if: always()
         run: tar -zcf allure-results.tar.gz allure-results
+
+      - name: Upload Allure Results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: allure-macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type }}
+          path: allure-results.tar.gz
 
       - name: Upload Pytest Replay
         uses: actions/upload-artifact@v3
         with:
           path: ${{ github.workspace }}/pytest-replay
-          name: macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ env. parameters.serial_or_parallel  }}
+          name: macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type  }}
         if: always()
 
   # aggregate and upload
