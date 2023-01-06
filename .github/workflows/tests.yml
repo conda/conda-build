@@ -281,6 +281,7 @@ jobs:
 
       - name: Run Parallel Tests
         if: matrix.test-type == 'parallel'
+        # coverage disabled to decrease runtime
         run: |
           echo on
           set PATH
@@ -290,7 +291,7 @@ jobs:
           set PERL=
           set LUA=
           set R=
-          pytest --color=yes -vv -n auto --basetemp "${{ runner.temp }}\${{ matrix.test-type }}" --cov conda_build --cov-append --cov-report xml -m "not serial" ${{ env.pytest-replay }} --alluredir=allure-results
+          pytest --color=yes -vv -n auto --basetemp "${{ runner.temp }}\${{ matrix.test-type }}" --no-cov -m "not serial" ${{ env.pytest-replay }} --alluredir=allure-results
         shell: cmd
         env:
           VS90COMNTOOLS: C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC\bin
