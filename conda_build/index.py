@@ -72,30 +72,7 @@ class DummyExecutor(Executor):
                 yield func(thing)
 
 
-try:
-    from conda.base.constants import NAMESPACE_PACKAGE_NAMES, NAMESPACES_MAP
-except ImportError:
-    NAMESPACES_MAP = {  # base package name, namespace
-        "python": "python",
-        "r": "r",
-        "r-base": "r",
-        "mro-base": "r",
-        "mro-base_impl": "r",
-        "erlang": "erlang",
-        "java": "java",
-        "openjdk": "java",
-        "julia": "julia",
-        "latex": "latex",
-        "lua": "lua",
-        "nodejs": "js",
-        "perl": "perl",
-        "php": "php",
-        "ruby": "ruby",
-        "m2-base": "m2",
-        "msys2-conda-epoch": "m2w64",
-    }
-    NAMESPACE_PACKAGE_NAMES = frozenset(NAMESPACES_MAP)
-    NAMESPACES = frozenset(NAMESPACES_MAP.values())
+from conda.base.constants import NAMESPACE_PACKAGE_NAMES, NAMESPACES_MAP
 
 local_index_timestamp = 0
 cached_index = None

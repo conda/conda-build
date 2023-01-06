@@ -4,28 +4,21 @@
 conda-build's use of conda-index, delegated to now-separate conda-index package.
 """
 
-import conda_index.index
-
 import json
+import logging
 import os
-from os.path import (
-    dirname,
-)
 import sys
 import time
-
-from functools import partial
-import logging
-
 from concurrent.futures import Executor
+from functools import partial
+from os.path import dirname
+
+import conda_index.index
 
 from conda_build import conda_interface, utils
-from .conda_interface import context
-from .conda_interface import CondaHTTPError, get_index, url_path
-from .utils import (
-    JSONDecodeError,
-    get_logger,
-)
+
+from .conda_interface import CondaHTTPError, context, get_index, url_path
+from .utils import JSONDecodeError, get_logger
 
 log = get_logger(__name__)
 
@@ -38,30 +31,7 @@ class DummyExecutor(Executor):
                 yield func(thing)
 
 
-try:
-    from conda.base.constants import NAMESPACES_MAP, NAMESPACE_PACKAGE_NAMES
-except ImportError:
-    NAMESPACES_MAP = {  # base package name, namespace
-        "python": "python",
-        "r": "r",
-        "r-base": "r",
-        "mro-base": "r",
-        "mro-base_impl": "r",
-        "erlang": "erlang",
-        "java": "java",
-        "openjdk": "java",
-        "julia": "julia",
-        "latex": "latex",
-        "lua": "lua",
-        "nodejs": "js",
-        "perl": "perl",
-        "php": "php",
-        "ruby": "ruby",
-        "m2-base": "m2",
-        "msys2-conda-epoch": "m2w64",
-    }
-    NAMESPACE_PACKAGE_NAMES = frozenset(NAMESPACES_MAP)
-    NAMESPACES = frozenset(NAMESPACES_MAP.values())
+from conda.base.constants import NAMESPACE_PACKAGE_NAMES, NAMESPACES_MAP
 
 local_index_timestamp = 0
 cached_index = None
