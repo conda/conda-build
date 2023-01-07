@@ -213,7 +213,7 @@ def update_index(
     check_md5=False,
     channel_name=None,
     patch_generator=None,
-    threads=MAX_THREADS_DEFAULT,
+    threads=1,
     verbose=False,
     progress=False,
     hotfix_source_repo=None,

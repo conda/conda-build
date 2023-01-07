@@ -118,6 +118,7 @@ def test_no_filename_hash(testing_workdir, testing_metadata, capfd):
 
 
 def test_render_output_build_path(testing_workdir, testing_metadata, capfd, caplog):
+    # Note these will fail if conda-build is configured to produce .conda by default
     api.output_yaml(testing_metadata, 'meta.yaml')
     args = ['--output', testing_workdir]
     main_render.execute(args)

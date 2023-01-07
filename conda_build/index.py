@@ -150,7 +150,6 @@ def update_index(
         dir_path = parent_path
         subdirs = [dirname]
 
-
     return build_index.update_index(
         dir_path,
         check_md5,
