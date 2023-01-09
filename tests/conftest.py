@@ -211,7 +211,17 @@ def no_numpy_version():
 
 @pytest.fixture(
     scope="function",
-    params=[{}, {"MACOSX_DEPLOYMENT_TARGET": ["10.9"]}] if on_mac else [{}],
+    params=[
+        pytest.param({}, id="default MACOSX_DEPLOYMENT_TARGET"),
+        pytest.param(
+            {"MACOSX_DEPLOYMENT_TARGET": ["10.9"]},
+            id="override MACOSX_DEPLOYMENT_TARGET",
+        ),
+    ]
+    if on_mac
+    else [
+        pytest.param({}, id="no MACOSX_DEPLOYMENT_TARGET"),
+    ],
 )
 def variants_conda_build_sysroot(monkeypatch, request):
     if not on_mac:
