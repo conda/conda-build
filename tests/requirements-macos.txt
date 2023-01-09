@@ -1,0 +1,4 @@
+# conda-build supplemental test dependencies
+# run as 'conda install -c defaults --file tests/requirements-macos.txt'
+patch
+shellcheck
