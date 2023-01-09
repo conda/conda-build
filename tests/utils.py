@@ -7,7 +7,7 @@ import sys
 
 import pytest
 from conda_build.metadata import MetaData
-from conda_build.utils import on_win
+from conda_build.utils import on_win, glob
 from conda_build.conda_interface import linked
 
 
@@ -27,6 +27,42 @@ metadata_dir = os.path.join(thisdir, "test-recipes", "metadata")
 subpackage_dir = os.path.join(thisdir, "test-recipes", "split-packages")
 fail_dir = os.path.join(thisdir, "test-recipes", "fail")
 archive_dir = os.path.join(thisdir, "archives")
+
+#Moved From test_api_debug.py file
+recipe_path = os.path.join(metadata_dir, "_debug_pkg")
+ambiguous_recipe_path = os.path.join(metadata_dir, "_debug_pkg_multiple_outputs")
+tarball_path = os.path.join(thisdir, "archives", "test_debug_pkg-1.0-0.tar.bz2")
+
+def switch_between_shell_and_bash():
+	if on_win:
+		shell_cmd = ["cmd.exe", "/d", "/c"]
+	else:
+		shell_cmd = ["bash", "-c"]
+	return shell_cmd
+
+
+def assert_correct_folders(work_dir, build=True):
+	base_dir = os.path.dirname(work_dir)
+	build_set = "_b*", "_h*"
+	test_set = "_t*", "test_tmp"
+	for prefix in build_set:
+		assert bool(glob(os.path.join(base_dir, prefix))) == build
+	for prefix in test_set:
+		assert bool(glob(os.path.join(base_dir, prefix))) != build
+
+
+def check_build_files_present(work_dir, build=True):
+	if on_win:
+		assert os.path.exists(os.path.join(work_dir, "bld.bat")) == build
+	else:
+		assert os.path.exists(os.path.join(work_dir, "conda_build.sh")) == build
+
+
+def check_test_files_present(work_dir, test=True):
+	if on_win:
+		assert os.path.exists(os.path.join(work_dir, "conda_test_runner.bat")) == test
+	else:
+		assert os.path.exists(os.path.join(work_dir, "conda_test_runner.sh")) == test
 
 
 def is_valid_dir(parent_dir, dirname):
