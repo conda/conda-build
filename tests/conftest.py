@@ -188,11 +188,6 @@ def testing_env(testing_workdir, request, monkeypatch):
     return env_path
 
 
-@pytest.fixture(scope="function")
-def no_numpy_version():
-    return {"python": ["2.7.*", "3.5.*"]}
-
-
 @pytest.fixture(
     scope="function",
     params=[{}, {"MACOSX_DEPLOYMENT_TARGET": ["10.9"]}] if on_mac else [{}],

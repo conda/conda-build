@@ -43,39 +43,48 @@ def test_spec_priority_overriding(variants):
     assert combined == expected
 
 
-def test_get_package_variants_from_file(
-    testing_workdir, testing_config, no_numpy_version
-):
-    variants_path = Path(testing_workdir, "variant_example.yaml")
-    variants_path.write_text(yaml.dump(no_numpy_version, default_flow_style=False))
+@pytest.mark.parametrize(
+    "as_yaml",
+    [
+        pytest.param(True, id="yaml"),
+        pytest.param(False, id="dict"),
+    ],
+)
+def test_python_variants(testing_workdir, testing_config, as_yaml):
+    """Python variants are treated differently in conda recipes. Instead of being pinned against a
+    specific version they are converted into version ranges. E.g.:
 
-    testing_config.variant_config_files = [str(variants_path)]
+    python 3.5 -> python >=3.5,<3.6.0a0
+    otherPackages 3.5 -> otherPackages 3.5
+    """
+    variants = {"python": ["3.9", "3.10"]}
     testing_config.ignore_system_config = True
 
+    # write variants to disk
+    if as_yaml:
+        variants_path = Path(testing_workdir, "variant_example.yaml")
+        variants_path.write_text(yaml.dump(variants, default_flow_style=False))
+        testing_config.variant_config_files = [str(variants_path)]
+
+    # render the metadata
     metadata = api.render(
         os.path.join(variants_dir, "variant_recipe"),
         no_download_source=False,
         config=testing_config,
+        # if variants were written to disk then don't pass it along
+        variants=None if as_yaml else variants,
     )
 
-    # one for each Python version.  Numpy is not strictly pinned and should present only 1 dimension
+    # we should have one package/metadata per python version
     assert len(metadata) == 2
-    assert (
-        sum(
-            "python >=2.7,<2.8" in req
-            for (m, _, _) in metadata
-            for req in m.meta["requirements"]["run"]
-        )
-        == 1
-    )
-    assert (
-        sum(
-            "python >=3.5,<3.6" in req
-            for (m, _, _) in metadata
-            for req in m.meta["requirements"]["run"]
-        )
-        == 1
-    )
+    # there should only be one run requirement for each package/metadata
+    assert len(metadata[0][0].meta["requirements"]["run"]) == 1
+    assert len(metadata[1][0].meta["requirements"]["run"]) == 1
+    # the run requirements should be python ranges
+    assert {
+        *metadata[0][0].meta["requirements"]["run"],
+        *metadata[1][0].meta["requirements"]["run"],
+    } == {"python >=3.9,<3.10.0a0", "python >=3.10,<3.11.0a0"}
 
 
 def test_use_selectors_in_variants(testing_workdir, testing_config):
@@ -83,36 +92,6 @@ def test_use_selectors_in_variants(testing_workdir, testing_config):
         os.path.join(variants_dir, "selector_conda_build_config.yaml")
     ]
     get_package_variants(testing_workdir, testing_config)
-
-
-def test_get_package_variants_from_dictionary_of_lists(testing_config, no_numpy_version):
-    testing_config.ignore_system_config = True
-
-    metadata = api.render(
-        os.path.join(variants_dir, "variant_recipe"),
-        no_download_source=False,
-        config=testing_config,
-        variants=no_numpy_version,
-    )
-
-    # one for each Python version.  Numpy is not strictly pinned and should present only 1 dimension
-    assert len(metadata) == 2, metadata
-    assert (
-        sum(
-            "python >=2.7,<2.8" in req
-            for (m, _, _) in metadata
-            for req in m.meta["requirements"]["run"]
-        )
-        == 1
-    )
-    assert (
-        sum(
-            "python >=3.5,<3.6" in req
-            for (m, _, _) in metadata
-            for req in m.meta["requirements"]["run"]
-        )
-        == 1
-    )
 
 
 @pytest.mark.xfail(
