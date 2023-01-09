@@ -188,17 +188,6 @@ def testing_env(testing_workdir, request, monkeypatch):
     return env_path
 
 
-# these are functions so that they get regenerated each time we use them.
-#    They could be fixtures, I guess.
-@pytest.fixture(scope="function")
-def numpy_version_ignored():
-    return {
-        "python": ["2.7.*", "3.5.*"],
-        "numpy": ["1.10.*", "1.11.*"],
-        "ignore_version": ["numpy"],
-    }
-
-
 @pytest.fixture(scope="function")
 def no_numpy_version():
     return {"python": ["2.7.*", "3.5.*"]}

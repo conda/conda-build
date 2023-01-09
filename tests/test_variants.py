@@ -115,16 +115,26 @@ def test_get_package_variants_from_dictionary_of_lists(testing_config, no_numpy_
     )
 
 
-@pytest.mark.xfail(reason="Strange failure 7/19/2017.  Can't reproduce locally.  Test runs fine "
-                   "with parallelism and everything.  Test fails reproducibly on CI, but logging "
-                   "into appveyor after failed run, test passes.  =(")
-def test_variant_with_ignore_numpy_version_reduces_matrix(numpy_version_ignored):
-    # variants are defined in yaml file in this folder
-    # there are two python versions and two numpy versions.  However, because numpy is not pinned,
-    #    the numpy dimensions should get collapsed.
-    recipe = os.path.join(variants_dir, "03_numpy_matrix")
-    metadata = api.render(recipe, variants=numpy_version_ignored, finalize=False)
-    assert len(metadata) == 2, metadata
+@pytest.mark.xfail(
+    reason=(
+        "7/19/2017 Strange failure. Can't reproduce locally. Test runs fine "
+        "with parallelism and everything. Test fails reproducibly on CI, but logging "
+        "into appveyor after failed run, test passes."
+        "1/9/2023 ignore_version doesn't work as advertised."
+    )
+)
+def test_variant_with_ignore_version_reduces_matrix():
+    metadata = api.render(
+        os.path.join(variants_dir, "03_ignore_version_reduces_matrix"),
+        variants={
+            "packageA": ["1.2", "3.4"],
+            "packageB": ["5.6", "7.8"],
+            # packageB is ignored so that dimension should get collapsed
+            "ignore_version": "packageB",
+        },
+        finalize=False,
+    )
+    assert len(metadata) == 2
 
 
 def test_variant_with_numpy_pinned_has_matrix():
