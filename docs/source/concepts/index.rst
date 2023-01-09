@@ -23,8 +23,8 @@ What is a “package”?
 
 * You can use conda-build to build a conda package.
 
-What about channels
--------------------
+What about channels?
+--------------------
 
 * Channels contain packages.
 

@@ -52,7 +52,7 @@ Canonical name
 ==============
 
 The package name, version, and build string joined together by
-hyphens---name-version-buildstring. In usage documentation, these
+hyphens: name-version-buildstring. In usage documentation, these
 are referred to by ``canonical_name``.
 
 .. _filename:
@@ -65,7 +65,7 @@ Filename
 Conda package filenames are canonical names, plus the suffix
 ``.tar.bz2`` or ``.conda``.
 
-The following figure compares a canonical name to a filename:
+The following figure compares a canonical name to a file name:
 
 .. figure:: /img/conda_names.png
    :align:  center
@@ -76,8 +76,7 @@ The following figure compares a canonical name to a filename:
 
 Conda supports both ``.conda`` and ``.tar.bz2`` package extensions. The ``.conda``
 format is generally smaller and more efficient than ``.tar.bz2`` packages.
-Read our `blog post <https://www.anaconda.com/understanding-and-improving-condas-performance/>`_
-about it to learn more.
+Read our `blog post`_ about it to learn more.
 
 The build string is created as the package is built. Things that
 contribute to it are the variants specified either by the command
@@ -93,13 +92,16 @@ then the build string is the build number that is specified in the recipe.
 Package specification
 =====================
 
-A package name together with a package version---which may be
-partial or absent---joined by an equal sign.
+A package name together with a package version — which may be
+partial or absent — joined by an equal sign.
 
-EXAMPLES:
+Examples:
 
 * ``python=2.7.3``
 * ``python=2.7``
 * ``python``
 
 In usage documentation, these are referred to by ``package_spec``.
+
+
+.. _`blog post`: https://www.anaconda.com/understanding-and-improving-condas-performance/
