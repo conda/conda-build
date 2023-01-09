@@ -1163,7 +1163,7 @@ def test_unknown_selectors(testing_config):
 
 # the locks can be very flaky on GitHub Windows Runners
 # https://github.com/conda/conda-build/issues/4685
-@flaky(max_runs=5, min_passes=2)
+@pytest.mark.flaky(reruns=5, reruns_delay=2)
 def test_failed_recipe_leaves_folders(testing_config, testing_workdir):
     recipe = os.path.join(fail_dir, 'recursive-build')
     m = api.render(recipe, config=testing_config)[0][0]
