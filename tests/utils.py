@@ -12,6 +12,7 @@ from typing import Generator
 import pytest
 from conda.common.compat import on_mac, on_win
 from conda_build.metadata import MetaData
+from conda_build.utils import on_win, glob
 from conda_build.conda_interface import linked
 
 
@@ -51,6 +52,35 @@ def is_valid_dir(*parts: Path | str) -> bool:
         # exclude macOS-only recipes
         and (path.name not in ["osx_is_app"] or on_mac)
     )
+
+recipe_path = os.path.join(metadata_dir, "_debug_pkg")
+ambiguous_recipe_path = os.path.join(metadata_dir, "_debug_pkg_multiple_outputs")
+tarball_path = os.path.join(thisdir, "archives", "test_debug_pkg-1.0-0.tar.bz2")
+
+SHELL_CMD = ("cmd.exe", "/d", "/c") if on_win else ("bash", "-c")
+
+def assert_correct_folders(work_dir, build=True):
+	base_dir = os.path.dirname(work_dir)
+	build_set = "_b*", "_h*"
+	test_set = "_t*", "test_tmp"
+	for prefix in build_set:
+		assert bool(glob(os.path.join(base_dir, prefix))) == build
+	for prefix in test_set:
+		assert bool(glob(os.path.join(base_dir, prefix))) != build
+
+
+def check_build_files_present(work_dir, build=True):
+	if on_win:
+		assert os.path.exists(os.path.join(work_dir, "bld.bat")) == build
+	else:
+		assert os.path.exists(os.path.join(work_dir, "conda_build.sh")) == build
+
+
+def check_test_files_present(work_dir, test=True):
+	if on_win:
+		assert os.path.exists(os.path.join(work_dir, "conda_test_runner.bat")) == test
+	else:
+		assert os.path.exists(os.path.join(work_dir, "conda_test_runner.sh")) == test
 
 
 def get_valid_recipes(*parts: Path | str) -> Generator[Path, None, None]:
