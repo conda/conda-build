@@ -200,11 +200,6 @@ def numpy_version_ignored():
 
 
 @pytest.fixture(scope="function")
-def single_version():
-    return {"python": "2.7.*", "numpy": "1.11.*"}
-
-
-@pytest.fixture(scope="function")
 def no_numpy_version():
     return {"python": ["2.7.*", "3.5.*"]}
 

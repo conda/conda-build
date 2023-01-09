@@ -1,6 +1,5 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-from collections import OrderedDict
 import json
 import os
 from pathlib import Path
@@ -10,29 +9,38 @@ import sys
 import pytest
 import yaml
 
-from conda_build import api, exceptions, variants
-from conda_build.utils import package_has_file
+from conda_build import api, exceptions
+from conda_build.variants import (
+    combine_specs,
+    dict_of_lists_to_list_of_dicts,
+    get_package_variants,
+    validate_spec,
+)
+from conda_build.utils import ensure_list, package_has_file
 
 from .utils import variants_dir
 
 
-def test_later_spec_priority(single_version, no_numpy_version):
-    # override a single key
-    specs = OrderedDict()
-    specs['no_numpy'] = no_numpy_version
-    specs['single_ver'] = single_version
+@pytest.mark.parametrize(
+    "variants",
+    [
+        (["1.2", "3.4"], "5.6"),
+        ("1.2", ["3.4", "5.6"]),
+    ],
+)
+def test_spec_priority_overriding(variants):
+    name = "package"
 
-    combined_spec = variants.combine_specs(specs)
-    assert len(combined_spec) == 2
-    assert combined_spec["python"] == ["2.7.*"]
+    first, second = variants
+    ordered_specs = {
+        "first": {name: first},
+        "second": {name: second},
+    }
 
-    # keep keys that are not overwritten
-    specs = OrderedDict()
-    specs['single_ver'] = single_version
-    specs['no_numpy'] = no_numpy_version
-    combined_spec = variants.combine_specs(specs)
-    assert len(combined_spec) == 2
-    assert len(combined_spec["python"]) == 2
+    combined = combine_specs(ordered_specs)[name]
+    expected = ensure_list(second)
+    assert len(combined) == len(expected)
+    assert combined == expected
 
 
 def test_get_package_variants_from_file(
@@ -74,7 +82,7 @@ def test_use_selectors_in_variants(testing_workdir, testing_config):
     testing_config.variant_config_files = [
         os.path.join(variants_dir, "selector_conda_build_config.yaml")
     ]
-    variants.get_package_variants(testing_workdir, testing_config)
+    get_package_variants(testing_workdir, testing_config)
 
 
 def test_get_package_variants_from_dictionary_of_lists(testing_config, no_numpy_version):
@@ -152,7 +160,7 @@ def test_no_satisfiable_variants_raises_error():
 def test_zip_fields():
     """Zipping keys together allows people to tie different versions as sets of combinations."""
     v = {'python': ['2.7', '3.5'], 'vc': ['9', '14'], 'zip_keys': [('python', 'vc')]}
-    ld = variants.dict_of_lists_to_list_of_dicts(v)
+    ld = dict_of_lists_to_list_of_dicts(v)
     assert len(ld) == 2
     assert ld[0]['python'] == '2.7'
     assert ld[0]['vc'] == '9'
@@ -161,7 +169,7 @@ def test_zip_fields():
 
     # allow duplication of values, but lengths of lists must always match
     v = {'python': ['2.7', '2.7'], 'vc': ['9', '14'], 'zip_keys': [('python', 'vc')]}
-    ld = variants.dict_of_lists_to_list_of_dicts(v)
+    ld = dict_of_lists_to_list_of_dicts(v)
     assert len(ld) == 2
     assert ld[0]['python'] == '2.7'
     assert ld[0]['vc'] == '9'
@@ -189,33 +197,33 @@ def test_validate_spec():
         "corge": 42,
     }
     # valid spec
-    variants.validate_spec("spec", spec)
+    validate_spec("spec", spec)
 
     spec2 = dict(spec)
     spec2["bad-char"] = "bad-char"
     # invalid characters
     with pytest.raises(ValueError):
-        variants.validate_spec("spec[bad_char]", spec2)
+        validate_spec("spec[bad_char]", spec2)
 
     spec3 = dict(spec, zip_keys="bad_zip_keys")
     # bad zip_keys
     with pytest.raises(ValueError):
-        variants.validate_spec("spec[bad_zip_keys]", spec3)
+        validate_spec("spec[bad_zip_keys]", spec3)
 
     spec4 = dict(spec, zip_keys=[["bar", "baz"], ["qux", "quux"], ["quuz", "missing"]])
     # zip_keys' zip_group has key missing from spec
     with pytest.raises(ValueError):
-        variants.validate_spec("spec[missing_key]", spec4)
+        validate_spec("spec[missing_key]", spec4)
 
     spec5 = dict(spec, zip_keys=[["bar", "baz"], ["qux", "quux", "quuz"], ["quuz"]])
     # zip_keys' zip_group has duplicate key
     with pytest.raises(ValueError):
-        variants.validate_spec("spec[duplicate_key]", spec5)
+        validate_spec("spec[duplicate_key]", spec5)
 
     spec6 = dict(spec, baz=[4, 6])
     # zip_keys' zip_group key fields have same length
     with pytest.raises(ValueError):
-        variants.validate_spec("spec[duplicate_key]", spec6)
+        validate_spec("spec[duplicate_key]", spec6)
 
 
 def test_cross_compilers():
@@ -261,7 +269,7 @@ def test_variant_input_with_zip_keys_keeps_zip_keys_list():
         'zip_keys': ['sqlite', 'zlib', 'xz'],
         'pin_run_as_build': {'python': {'min_pin': 'x.x', 'max_pin': 'x.x'}}
     }
-    vrnts = variants.dict_of_lists_to_list_of_dicts(spec)
+    vrnts = dict_of_lists_to_list_of_dicts(spec)
     assert len(vrnts) == 2
     assert vrnts[0].get("zip_keys") == spec["zip_keys"]
 
