@@ -53,7 +53,7 @@ This happens because ``conda-build`` will consider the directory ``./example/`` 
 
 There are several ways to resolve this issue.
 
-#. Use the url of the desired channel:
+#. Use the URL of the desired channel:
 
     .. code-block:: bash
 
