@@ -266,7 +266,8 @@ EXAMPLE:
         - python
         - numpy     x.x
 
-Notice that there are two types of requirements, ``host`` and ``run``.
+Notice that there are two types of requirements, ``host`` and ``run``
+(``build`` is another valid parameter but is not shown in this example).
 ``host`` represents packages that need to be specific to the target
 platform when the target platform is not necessarily the same as
 the native build platform. ``run`` represents the dependencies that
