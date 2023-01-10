@@ -17,9 +17,9 @@ SEP and GDAL. Additional Windows-specific instructions are provided in the
 The final built packages from this tutorial are available on
 `anaconda.org`_ (formerly known as Anaconda Cloud):
 
-* `SEP`_
+* `SEP <https://anaconda.org/wwarner/sep/files>`_
 
-* `GDAL`_
+* `GDAL <https://anaconda.org/conda-forge/gdal/files>`_
 
 This tutorial also describes writing recipes. You can see the
 final `SEP recipe`_

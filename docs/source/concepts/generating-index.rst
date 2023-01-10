@@ -113,17 +113,19 @@ For each subdir:
 * For all packages that need to be added/updated:
 
   * Extract the package to access metadata, including full package name,
-    file modification time (``mtime``), size, and ``index.json``.
+    mtime &&&&&& ???, size, and index.json.
 
   * Aggregate package metadata to repodata collection.
 
 * Apply repodata hotfixes (patches).
 
 * Compute and save the reduced ``current_index.json`` index.
+* Compute and save the reduced ``current_index.json`` index.
 
 Example: Building a channel
 ---------------------------
 
+To build a local channel and put a package in it, follow the directions below:
 To build a local channel and put a package in it, follow the directions below:
 
 #. Make the channel directory.
@@ -133,6 +135,7 @@ To build a local channel and put a package in it, follow the directions below:
         $ mkdir local-channel
         $ cd local-channel
 
+#. Now, download your favorite package.  We'll use SciPy in our example.  The next steps depend on your platform:
 #. Now, download your favorite package.  We'll use SciPy in our example.  The next steps depend on your platform:
 
     #. Windows
@@ -158,6 +161,7 @@ To build a local channel and put a package in it, follow the directions below:
 
                     $ conda install curl
 
+        #. Create a local copy of the package you want to include in your channel:
         #. Create a local copy of the package you want to include in your channel:
 
             .. code-block:: bash
@@ -206,27 +210,36 @@ Caching package metadata
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 Caching utilizes the existing ``repodata.json`` file if it exists. Indexing checks
+Caching utilizes the existing ``repodata.json`` file if it exists. Indexing checks
 which files to update based on which files are new, removed, or changed since
 the last ``repodata.json`` was created. When a package is new or changed, its
+the last ``repodata.json`` was created. When a package is new or changed, its
 metadata is extracted and cached in the subdir to which the package belongs. The
+subfolder is the ``.cache`` folder. This folder has one file of interest:
+``stat.json``, which contains results from the ``stat`` command for each file. This
 subfolder is the ``.cache`` folder. This folder has one file of interest:
 ``stat.json``, which contains results from the ``stat`` command for each file. This
 is used for understanding when a file has changed and needs to be updated. In
 each of the other subfolders, the extracted metadata file for each package is
 saved as the original package name, plus a ``.json`` extension. Having these
+saved as the original package name, plus a ``.json`` extension. Having these
 already extracted can save a lot of time in fully re-creating the index, should
 that be necessary.
 
 An aside: one design goal of the ``.conda`` package format was to make indexing as
+An aside: one design goal of the ``.conda`` package format was to make indexing as
 fast as possible. To achieve this, the .conda format separates metadata from the
+actual package contents. Where the old ``.tar.bz2`` container required extracting
 actual package contents. Where the old ``.tar.bz2`` container required extracting
 the entire package to obtain the metadata, the new package format allows
 extraction of metadata without touching the package contents. This allows
+indexing speed to be independent of the package size. Large ``.tar.bz2`` packages
 indexing speed to be independent of the package size. Large ``.tar.bz2`` packages
 can take a very long time to extract and index.
 
 It is generally never necessary to manually alter the cache. To force an
 update/rescan of all cached packages, you can delete the .cache folder, or you
+can delete just the ``.cache/stat.json`` file. Ideally, you could remove only one
 can delete just the ``.cache/stat.json`` file. Ideally, you could remove only one
 package of interest from the cache, but that functionality does not currently
 exist.
@@ -251,6 +264,7 @@ packages that have been added since the patch python file was last committed
 will be picked up and will have hotfixes applied to them where appropriate.
 
 Anaconda applies hotfixes by providing a python file to ``conda index`` that has
+Anaconda applies hotfixes by providing a python file to ``conda index`` that has
 logic on how to alter metadata. Anaconda's repository of hotfixes is at
 https://github.com/AnacondaRecipes/repodata-hotfixes
 
@@ -261,14 +275,17 @@ Unfortunately, you can't always run your python code directly - other people who
 host your patches may not allow you to run code. What you can do instead is
 package the patches as .json files. These will clobber the entries in the
 ``repodata.json`` when they are applied.
+``repodata.json`` when they are applied.
 
 This is the approach that conda-forge has to take, for example. Their patch
 creation code is here:
 https://github.com/conda-forge/conda-forge-repodata-patches-feedstock/tree/main/recipe
 
 What that code does is to download the current ``repodata.json``, then runs their
+What that code does is to download the current ``repodata.json``, then runs their
 python logic to generate the patch JSON file. Those patches are placed into a
 location where Anaconda's mirroring tools will find them and apply them to
+conda-forge's ``repodata.json`` at mirroring time.
 conda-forge's ``repodata.json`` at mirroring time.
 
 The downside here is that this JSON file is only as new as the last time that
@@ -285,20 +302,29 @@ having to do more and more work. To slow down this growth, in conda 4.7, we
 added the ability to have alternate ``repodata.json`` files that may represent a
 subset of the normal ``repodata.json``. One in particular is
 ``current_repodata.json``, which represents:
+added the ability to have alternate ``repodata.json`` files that may represent a
+subset of the normal ``repodata.json``. One in particular is
+``current_repodata.json``, which represents:
 
 1. the latest version of each package
 2. any earlier versions of dependencies needed to make the latest versions satisfiable
 
 ``current_repodata.json`` also keeps only one file type: ``.conda`` where it is
 available, and ``.tar.bz2`` where only ``.tar.bz2`` is available.
+``current_repodata.json`` also keeps only one file type: ``.conda`` where it is
+available, and ``.tar.bz2`` where only ``.tar.bz2`` is available.
 
 For Anaconda's defaults "main" channel, the current_repodata.json file is
+approximately 1/7 the size of ``repodata.json``. This makes downloading the repodata
 approximately 1/7 the size of ``repodata.json``. This makes downloading the repodata
 faster, and it also makes loading the repodata into its python representation
 faster.
 
 For those interested in how this is achieved, please refer to the code at
 https://github.com/conda/conda-build/blob/90a6de55d8b9e36fc4a8c471b566d356e07436c7/conda_build/index.py#L695-L737
+
+
+.. _`Anaconda Packages file list for SciPy`: https://anaconda.org/anaconda/scipy/files
 
 
 .. _`Anaconda Packages file list for SciPy`: https://anaconda.org/anaconda/scipy/files
