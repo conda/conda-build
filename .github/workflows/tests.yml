@@ -63,7 +63,7 @@ jobs:
       fail-fast: false
       matrix:
         # test lower and upper bounds
-        python-version: ['3.7', '3.10']
+        python-version: ['3.7', '3.8' , '3.9' , '3.10']
         conda-version: [release]
         test-type: [serial, parallel]
         include:
@@ -128,6 +128,7 @@ jobs:
 
       - name: Run tests
         run: |
+          pytest --cache-clear && \
           pytest \
             --color=yes \
             -v \
@@ -140,6 +141,7 @@ jobs:
             --replay-base-name="${{ env.REPLAY_NAME }}" \
             --alluredir="${{ env.ALLURE_DIR }}" \
             -m "${{ env.PYTEST_MARKER }}" \
+            --ff
             ./tests
 
       - name: Tar Allure Results
@@ -173,7 +175,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10']
+        python-version: ['3.7', '3.10']
         conda-version: [release]
         test-type: [serial, parallel]
         include:
@@ -239,6 +241,7 @@ jobs:
 
       - name: Run tests
         run: |
+          pytest --cache-clear && \
           pytest `
             --color=yes `
             -v `
@@ -251,6 +254,7 @@ jobs:
             --replay-base-name="${{ env.REPLAY_NAME }}" `
             --alluredir="${{ env.ALLURE_DIR }}" `
             -m "${{ env.PYTEST_MARKER }}" `
+            --ff
             .\tests
 
       - name: Tar Allure Results
@@ -348,6 +352,7 @@ jobs:
 
       - name: Run tests
         run: |
+          pytest --cache-clear && \
           pytest \
             --color=yes \
             -v \
@@ -360,6 +365,7 @@ jobs:
             --replay-base-name="${{ env.REPLAY_NAME }}" \
             --alluredir="${{ env.ALLURE_DIR }}" \
             -m "${{ env.PYTEST_MARKER }}" \
+            --ff
             ./tests
 
       - name: Tar Allure Results
