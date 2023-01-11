@@ -1397,6 +1397,9 @@ def test_provides_features_metadata(testing_config):
     assert index['provides_features'] == {'test2': 'also_ok'}
 
 
+# using different MACOSX_DEPLOYMENT_TARGET in parallel causes some SDK race condition
+# https://github.com/conda/conda-build/issues/4708
+@pytest.mark.serial
 def test_overlinking_detection(testing_config, variants_conda_build_sysroot):
     testing_config.activate = True
     testing_config.error_overlinking = True
@@ -1415,6 +1418,9 @@ def test_overlinking_detection(testing_config, variants_conda_build_sysroot):
     rm_rf(dest_bat)
 
 
+# using different MACOSX_DEPLOYMENT_TARGET in parallel causes some SDK race condition
+# https://github.com/conda/conda-build/issues/4708
+@pytest.mark.serial
 def test_overlinking_detection_ignore_patterns(
     testing_config, variants_conda_build_sysroot
 ):
