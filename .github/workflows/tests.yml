@@ -141,7 +141,6 @@ jobs:
             --replay-base-name="${{ env.REPLAY_NAME }}" \
             --alluredir="${{ env.ALLURE_DIR }}" \
             -m "${{ env.PYTEST_MARKER }}" \
-            --ff
             ./tests
 
       - name: Tar Allure Results
@@ -254,7 +253,6 @@ jobs:
             --replay-base-name="${{ env.REPLAY_NAME }}" `
             --alluredir="${{ env.ALLURE_DIR }}" `
             -m "${{ env.PYTEST_MARKER }}" `
-            --ff
             .\tests
 
       - name: Tar Allure Results
@@ -365,7 +363,6 @@ jobs:
             --replay-base-name="${{ env.REPLAY_NAME }}" \
             --alluredir="${{ env.ALLURE_DIR }}" \
             -m "${{ env.PYTEST_MARKER }}" \
-            --ff
             ./tests
 
       - name: Tar Allure Results
