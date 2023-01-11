@@ -1395,6 +1395,7 @@ def test_provides_features_metadata(testing_config):
     assert index['requires_features'] == {'test': 'ok'}
     assert 'provides_features' in index
     assert index['provides_features'] == {'test2': 'also_ok'}
+
 @pytest.mark.serial
 @pytest.mark.flaky(reruns=5, reruns_delay=2)
 def test_overlinking_detection(testing_config, variants_conda_build_sysroot):
