@@ -149,8 +149,9 @@ Python 3.
 Installing only one makes it easier to keep track of
 the builds, but it is possible to have both installed on the same
 system at the same time. If you have both installed, use the
-``where`` command on Windows, or ``which`` command on Linux to
-see which version comes first on ``PATH`` since this is the one you will be using::
+``where`` command on Windows, or the ``which`` command on macOS or
+Linux, to see which version comes first on ``PATH``, since this is
+the one you will be using::
 
   $ where python
 
@@ -267,7 +268,7 @@ EXAMPLE:
         - numpy     x.x
 
 Notice that there are two types of requirements, ``host`` and ``run``
-(``build`` is another valid parameter but is not shown in this example).
+(``build`` is another valid parameter, but is not shown in this example).
 ``host`` represents packages that need to be specific to the target
 platform when the target platform is not necessarily the same as
 the native build platform. ``run`` represents the dependencies that
@@ -362,15 +363,17 @@ To build a GDAL package:
 
 #. Install Visual Studio:
 
-   * For Python 3, install `Visual Studio 2017`_.
-   * Choose "Custom install".
-   * Under "Programming Languages", select workloads that come from Visual Studio so that you can choose the Desktop Development with C++ and
-     Universal Platform C.
+   * For Python 3, install `Visual Studio 2017`_:
 
-   * For Python 2, install `Visual Studio 2008`_.
-   * Choose "Custom install".
-   * Choose to install X64 Compilers and Tools.
-   * Install Visual Studio 2008 Service Pack 1.
+    * Choose "Custom install".
+    * Under "Programming Languages", select workloads that come from Visual
+      Studio so that you can choose the Desktop Development with C++ and
+      Universal Platform C.
+
+   * For Python 2, install `Visual Studio 2008`_:
+     * Choose "Custom install".
+     * Choose to install X64 Compilers and Tools.
+     * Install Visual Studio 2008 Service Pack 1.
 
 #. Install Git.
    Because the GDAL package sources are retrieved from GitHub
@@ -418,14 +421,15 @@ of the patch entries. For more about selectors, see
 :ref:`preprocess-selectors`.
 
 In the ``requirements`` section, notice how there are both a ``build`` and
-``host``(??) set of requirements. For this recipe, all the compilers required to
+``host`` set of requirements (``run`` is another valid parameter, but is
+not shown in this example). For this recipe, all the compilers required to
 build the package are listed in the ``build`` requirements.
 Normally, this section will list out packages required to build the package.
 GDAL requires CMake on Windows, as well as C compilers.
 Notice that the C compilers are pulled into the recipe using the syntax
 ``{{ compiler('c') }}``. Since conda-build 3, conda-build defines a jinja2
 function ``compiler()`` to specify compiler packages dynamically. So, using
-the ``compiler(‘c’)`` function in a conda recipe will pull in the correct
+the ``compiler('c')`` function in a conda recipe will pull in the correct
 compiler for any build platform. For more information about compilers with
 conda-build see :ref:`compiler-tools<compiler-tools>`.
 
