@@ -371,9 +371,10 @@ To build a GDAL package:
       Universal Platform C.
 
    * For Python 2, install `Visual Studio 2008`_:
-     * Choose "Custom install".
-     * Choose to install X64 Compilers and Tools.
-     * Install Visual Studio 2008 Service Pack 1.
+
+    * Choose "Custom install".
+    * Choose to install X64 Compilers and Tools.
+    * Install Visual Studio 2008 Service Pack 1.
 
 #. Install Git.
    Because the GDAL package sources are retrieved from GitHub
