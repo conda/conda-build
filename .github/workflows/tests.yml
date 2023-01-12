@@ -131,7 +131,7 @@ jobs:
           pytest --cache-clear && \
           pytest \
             --color=yes \
-            -v \
+            -vv \
             -n "${{ env.PYTEST_NUMPROCESSES }}" \
             --basetemp "${{ runner.temp }}/${{ matrix.test-type }}" \
             --cov conda_build \
@@ -244,7 +244,7 @@ jobs:
           pytest --cache-clear && \
           pytest `
             --color=yes `
-            -v `
+            -vv `
             -n "${{ env.PYTEST_NUMPROCESSES }}" `
             --basetemp "${{ runner.temp }}\${{ matrix.test-type}}" `
             --cov conda_build `
@@ -361,7 +361,7 @@ jobs:
           pytest --cache-clear && \
           pytest \
             --color=yes \
-            -v \
+            -vv \
             -n "${{ env.PYTEST_NUMPROCESSES }}" \
             --basetemp "${{ runner.temp }}/${{ matrix.test-type }}" \
             --cov conda_build \
