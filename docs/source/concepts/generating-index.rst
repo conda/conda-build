@@ -113,7 +113,7 @@ For each subdir:
 * For all packages that need to be added/updated:
 
   * Extract the package to access metadata, including full package name,
-    mtime &&&&&& ???, size, and index.json.
+    file modification time (``mtime``), size, and ``index.json``.
 
   * Aggregate package metadata to repodata collection.
 

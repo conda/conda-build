@@ -38,11 +38,3 @@ What about channels?
 
 * conda is able to install from channels and uses the indexes in the channel to
   solve for requirements and dependencies.
-
-Building Anaconda installers
-----------------------------
-
-* Anaconda(/Miniconda) installers are built with a modified version of constructor.
-
-* The idea is to build an Anaconda metapackage and bundle it together with some
-  other packages to build an Anaconda installer.
