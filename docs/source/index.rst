@@ -3,8 +3,8 @@
 Conda-build documentation
 =========================
 
-Conda-build contains commands and tools to use conda to build your
-own packages.
+Conda-build contains commands and tools to build your own
+conda packages.
 It also provides helpful tools to constrain or pin
 versions in recipes. Building a conda package requires
 :doc:`installing conda-build <install-conda-build>` and
