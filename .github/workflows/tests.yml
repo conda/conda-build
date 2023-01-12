@@ -65,21 +65,22 @@ jobs:
         # test all lower versions (w/ stable conda) and upper version (w/ canary conda)
         python-version: ['3.7', '3.8', '3.9']
         conda-version: [release]
-        test-type: [serial, parallel]
+        test-group: [1, 2, 3]
         include:
           - python-version: '3.10'
             conda-version: canary
-            test-type: serial
+            test-group: 1
           - python-version: '3.10'
             conda-version: canary
-            test-type: parallel
+            test-group: 2
+          - python-version: '3.10'
+            conda-version: canary
+            test-group: 3
     env:
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
       REPLAY_NAME: Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
       REPLAY_DIR: ${{ github.workspace }}/pytest-replay
       ALLURE_DIR: ${{ github.workspace }}/allure-results
-      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
-      PYTEST_NUMPROCESSES: ${{ matrix.test-type == 'serial' && 0 || 'auto' }}
 
     steps:
       - name: Checkout repository
@@ -130,16 +131,16 @@ jobs:
         run: |
           pytest \
             --color=yes \
-            -v \
-            -n "${{ env.PYTEST_NUMPROCESSES }}" \
-            --basetemp "${{ runner.temp }}/${{ matrix.test-type }}" \
+            -vv \
+            --splits=3 \
+            --group=${{ matrix.test-group }} \
+            --basetemp "${{ runner.temp }}/${{ matrix.test-group }}" \
             --cov conda_build \
             --cov-append \
             --cov-report xml \
             --replay-record-dir="${{ env.REPLAY_DIR }}" \
             --replay-base-name="${{ env.REPLAY_NAME }}" \
             --alluredir="${{ env.ALLURE_DIR }}" \
-            -m "${{ env.PYTEST_MARKER }}" \
             ./tests
 
       - name: Tar Allure Results
@@ -150,14 +151,14 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: allure-Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type }}
+          name: allure-Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-group }}
           path: allure-results.tar.gz
 
       - name: Upload Pytest Replay
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ env.REPLAY_NAME }}-${{ matrix.test-type }}
+          name: ${{ env.REPLAY_NAME }}-${{ matrix.test-group }}
           path: ${{ env.REPLAY_DIR }}
 
   # windows test suite
@@ -176,21 +177,22 @@ jobs:
         # test lower version (w/ stable conda) and upper version (w/ canary conda)
         python-version: ['3.7']
         conda-version: [release]
-        test-type: [serial, parallel]
+        test-group: [1, 2, 3]
         include:
           - python-version: '3.10'
             conda-version: canary
-            test-type: serial
+            test-group: 1
           - python-version: '3.10'
             conda-version: canary
-            test-type: parallel
+            test-group: 2
+          - python-version: '3.10'
+            conda-version: canary
+            test-group: 3
     env:
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
       REPLAY_NAME: Win-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
       REPLAY_DIR: ${{ github.workspace }}\pytest-replay
       ALLURE_DIR: ${{ github.workspace }}\allure-results
-      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial and not slow' }}
-      PYTEST_NUMPROCESSES: ${{ matrix.test-type == 'serial' && 0 || 'auto' }}
 
     steps:
       - name: Checkout repository
@@ -242,16 +244,16 @@ jobs:
         run: |
           pytest `
             --color=yes `
-            -v `
-            -n "${{ env.PYTEST_NUMPROCESSES }}" `
-            --basetemp "${{ runner.temp }}\${{ matrix.test-type}}" `
+            -vv `
+            --splits=3 `
+            --group=${{ matrix.test-group }} `
+            --basetemp "${{ runner.temp }}\${{ matrix.test-group }}" `
             --cov conda_build `
             --cov-append `
             --cov-report xml `
             --replay-record-dir="${{ env.REPLAY_DIR }}" `
             --replay-base-name="${{ env.REPLAY_NAME }}" `
             --alluredir="${{ env.ALLURE_DIR }}" `
-            -m "${{ env.PYTEST_MARKER }}" `
             .\tests
 
       - name: Tar Allure Results
@@ -265,7 +267,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: allure-Win-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type  }}
+          name: allure-Win-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-group  }}
           path: allure-results.tar.gz
 
       - name: Upload Pytest Replay
@@ -273,7 +275,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           path: ${{ env.REPLAY_DIR }}
-          name: ${{ env.REPLAY_NAME }}-${{ matrix.test-type }}
+          name: ${{ env.REPLAY_NAME }}-${{ matrix.test-group }}
 
   # macos test suite
   macos:
@@ -292,21 +294,22 @@ jobs:
         # test lower version (w/ stable conda) and upper version (w/ canary conda)
         python-version: ['3.7']
         conda-version: [release]
-        test-type: [serial, parallel]
+        test-group: [1, 2, 3]
         include:
           - python-version: '3.10'
             conda-version: canary
-            test-type: serial
+            test-group: 1
           - python-version: '3.10'
             conda-version: canary
-            test-type: parallel
+            test-group: 2
+          - python-version: '3.10'
+            conda-version: canary
+            test-group: 3
     env:
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
       REPLAY_NAME: macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
       REPLAY_DIR: ${{ github.workspace }}/pytest-replay
       ALLURE_DIR: ${{ github.workspace }}/allure-results
-      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
-      PYTEST_NUMPROCESSES: ${{ matrix.test-type == 'serial' && 0 || 'auto' }}
 
     steps:
       - name: Checkout repository
@@ -358,16 +361,16 @@ jobs:
         run: |
           pytest \
             --color=yes \
-            -v \
-            -n "${{ env.PYTEST_NUMPROCESSES }}" \
-            --basetemp "${{ runner.temp }}/${{ matrix.test-type }}" \
+            -vv \
+            --splits=3 \
+            --group=${{ matrix.test-group }} \
+            --basetemp "${{ runner.temp }}/${{ matrix.test-group }}" \
             --cov conda_build \
             --cov-append \
             --cov-report xml \
             --replay-record-dir="${{ env.REPLAY_DIR }}" \
             --replay-base-name="${{ env.REPLAY_NAME }}" \
             --alluredir="${{ env.ALLURE_DIR }}" \
-            -m "${{ env.PYTEST_MARKER }}" \
             ./tests
 
       - name: Tar Allure Results
@@ -378,14 +381,14 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: allure-macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type }}
+          name: allure-macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-group }}
           path: allure-results.tar.gz
 
       - name: Upload Pytest Replay
         if: always()
         uses: actions/upload-artifact@v3
         with:
-          name: ${{ env.REPLAY_NAME }}-${{ matrix.test-type  }}
+          name: ${{ env.REPLAY_NAME }}-${{ matrix.test-group  }}
           path: ${{ env.REPLAY_DIR }}
 
   # aggregate and upload

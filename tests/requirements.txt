@@ -4,6 +4,7 @@ anaconda-client
 beautifulsoup4
 chardet
 conda
+conda-forge::pytest-split
 conda-package-handling
 conda-verify
 contextlib2
