@@ -11,7 +11,7 @@ package:
   version: {{ data.get('version') }}
 
 source:
-  git_url: ../../../../../conda_build_test_recipe
+  git_url: ../../../conda_build_test_recipe
   git_tag: 1.21.0
 
 build:

@@ -10,4 +10,4 @@ build:
   string: {{ environ.get('GIT_BUILD_STR', '') }}
 
 source:
-  git_url: ../../../../../conda_build_test_recipe
+  git_url: ../../../conda_build_test_recipe

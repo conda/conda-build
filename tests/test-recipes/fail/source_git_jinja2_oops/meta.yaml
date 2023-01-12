@@ -3,7 +3,7 @@ package:
   version: {{ GIT_DSECRIBE_TAG }}
 
 source:
-  git_url: ../../../../../conda_build_test_recipe
+  git_url: ../../../conda_build_test_recipe
   git_tag: 1.20.2
 
 requirements:

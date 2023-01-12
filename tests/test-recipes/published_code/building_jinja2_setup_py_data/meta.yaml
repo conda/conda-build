@@ -7,7 +7,7 @@ package:
 # source will be downloaded prior to filling in jinja templates
 # Example assumes that this folder has setup.py in it
 source:
-  git_url: ../../../../../conda_build_test_recipe
+  git_url: ../../../conda_build_test_recipe
   git_tag: 1.21.0
 
 requirements:

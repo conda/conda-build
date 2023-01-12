@@ -37,7 +37,14 @@ from conda_build.exceptions import (DependencyNeedsBuildingError, CondaBuildExce
 from conda_build.conda_interface import reset_context
 from conda.exceptions import ClobberError, CondaMultiError
 
-from .utils import is_valid_dir, metadata_dir, fail_dir, add_mangling, numpy_installed
+from .utils import (
+    is_valid_dir,
+    metadata_dir,
+    fail_dir,
+    add_mangling,
+    numpy_installed,
+    thisdir,
+)
 
 # define a few commonly used recipes - use os.path.join(metadata_dir, recipe) elsewhere
 empty_sections = os.path.join(metadata_dir, "empty_sections")
@@ -275,8 +282,7 @@ def test_binary_has_prefix_files_non_utf8(testing_workdir, testing_config):
 def test_relative_path_git_versioning(testing_workdir, testing_config):
     # conda_build_test_recipe is a manual step.  Clone it at the same level as
     #    your conda-build source.
-    cwd = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..',
-                                       'conda_build_test_recipe'))
+    cwd = os.path.join(thisdir, "conda_build_test_recipe")
     tag = describe_root(cwd)
     output = api.get_output_file_path(os.path.join(metadata_dir,
                                                    "_source_git_jinja2_relative_path"),
@@ -285,8 +291,7 @@ def test_relative_path_git_versioning(testing_workdir, testing_config):
 
 
 def test_relative_git_url_git_versioning(testing_workdir, testing_config):
-    cwd = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..',
-                                       'conda_build_test_recipe'))
+    cwd = os.path.join(thisdir, "conda_build_test_recipe")
     tag = describe_root(cwd)
     recipe = os.path.join(metadata_dir, "_source_git_jinja2_relative_git_url")
     output = api.get_output_file_path(recipe, config=testing_config)[0]

@@ -3,7 +3,7 @@ package:
   version: 1.0
 
 source:
-  - path: ../../../../../conda_build_test_recipe
+  - path: ../../../conda_build_test_recipe
 
   - git_url: https://github.com/conda/conda_build_test_recipe
     git_tag: 1.20.2
