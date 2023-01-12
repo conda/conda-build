@@ -58,7 +58,6 @@ jobs:
     defaults:
       run:
         shell: bash -l {0}
-        working-directory: ./src
     strategy:
       fail-fast: false
       matrix:
@@ -85,15 +84,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          path: ./src
           fetch-depth: 0
-
-      - name: Checkout test recipe
-        uses: actions/checkout@v3
-        with:
-          repository: conda/conda_build_test_recipe
-          path: ./conda_build_test_recipe
-          fetch-depth: 0
+          submodules: true
 
       - name: Timestamp
         run: echo "TIMESTAMP=$(date -u "+%Y%m")" >> $GITHUB_ENV
@@ -108,7 +100,7 @@ jobs:
       - name: Setup miniconda
         uses: conda-incubator/setup-miniconda@v2
         with:
-          condarc-file: ./src/ci/github/.condarc
+          condarc-file: ./ci/github/.condarc
           python-version: ${{ matrix.python-version }}
           run-post: false  # skip post cleanup
 
@@ -167,9 +159,6 @@ jobs:
     if: needs.changes.outputs.code == 'true'
 
     runs-on: windows-2019
-    defaults:
-      run:
-        working-directory: .\src
     strategy:
       fail-fast: false
       matrix:
@@ -196,15 +185,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          path: .\src
           fetch-depth: 0
-
-      - name: Checkout test recipe
-        uses: actions/checkout@v3
-        with:
-          repository: conda/conda_build_test_recipe
-          path: .\conda_build_test_recipe
-          fetch-depth: 0
+          submodules: true
 
       - name: Timestamp
         run: echo "TIMESTAMP=$(date -u "+%Y%m")" >> $GITHUB_ENV
@@ -219,7 +201,7 @@ jobs:
       - name: Setup miniconda
         uses: conda-incubator/setup-miniconda@v2
         with:
-          condarc-file: .\src\ci\github\.condarc
+          condarc-file: .\ci\github\.condarc
           python-version: ${{ matrix.python-version }}
           run-post: false  # skip post cleanup
 
@@ -285,7 +267,6 @@ jobs:
     defaults:
       run:
         shell: bash -l {0}
-        working-directory: ./src
     strategy:
       fail-fast: false
       matrix:
@@ -312,15 +293,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          path: ./src
           fetch-depth: 0
-
-      - name: Checkout test recipe
-        uses: actions/checkout@v3
-        with:
-          repository: conda/conda_build_test_recipe
-          path: ./conda_build_test_recipe
-          fetch-depth: 0
+          submodules: true
 
       - name: Timestamp
         run: echo "TIMESTAMP=$(date -u "+%Y%m")" >> $GITHUB_ENV
@@ -335,7 +309,7 @@ jobs:
       - name: Setup miniconda
         uses: conda-incubator/setup-miniconda@v2
         with:
-          condarc-file: ./src/ci/github/.condarc
+          condarc-file: ./ci/github/.condarc
           python-version: ${{ matrix.python-version }}
           run-post: false  # skip post cleanup
 
@@ -457,8 +431,6 @@ jobs:
       # which needs env vars GIT_DESCRIBE_TAG and GIT_BUILD_STR:
       - uses: actions/checkout@v3
         with:
-          ref: ${{ github.ref }}
-          clean: true
           fetch-depth: 0
 
       - name: Create and upload canary build
