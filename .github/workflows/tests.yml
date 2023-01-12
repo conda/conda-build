@@ -62,8 +62,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # test lower and upper bounds
-        python-version: ['3.7', '3.8' , '3.9' , '3.10']
+        # test all lower versions (w/ stable conda) and upper version (w/ canary conda)
+        python-version: ['3.7', '3.8', '3.9']
         conda-version: [release]
         test-type: [serial, parallel]
         include:
@@ -174,7 +174,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.7', '3.10']
+        # test lower version (w/ stable conda) and upper version (w/ canary conda)
+        python-version: ['3.7']
         conda-version: [release]
         test-type: [serial, parallel]
         include:
