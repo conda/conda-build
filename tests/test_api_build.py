@@ -689,9 +689,13 @@ def test_disable_pip(testing_config, testing_metadata):
 @pytest.mark.sanity
 @pytest.mark.skipif(sys.platform.startswith('win'),
                     reason="rpath fixup not done on Windows.")
-def test_rpath_unix(testing_config):
+def test_rpath_unix(testing_config, variants_conda_build_sysroot):
     testing_config.activate = True
-    api.build(os.path.join(metadata_dir, "_rpath"), config=testing_config)
+    api.build(
+        os.path.join(metadata_dir, "_rpath"),
+        config=testing_config,
+        variants=variants_conda_build_sysroot,
+    )
 
 
 def test_noarch_none_value(testing_workdir, testing_config):
@@ -1159,7 +1163,7 @@ def test_unknown_selectors(testing_config):
 
 # the locks can be very flaky on GitHub Windows Runners
 # https://github.com/conda/conda-build/issues/4685
-@pytest.mark.flaky(rerun=5, reruns_delay=2)
+@pytest.mark.flaky(reruns=5, reruns_delay=2)
 def test_failed_recipe_leaves_folders(testing_config, testing_workdir):
     recipe = os.path.join(fail_dir, 'recursive-build')
     m = api.render(recipe, config=testing_config)[0][0]
@@ -1393,7 +1397,11 @@ def test_provides_features_metadata(testing_config):
     assert index['provides_features'] == {'test2': 'also_ok'}
 
 
-def test_overlinking_detection(testing_config):
+# using different MACOSX_DEPLOYMENT_TARGET in parallel causes some SDK race condition
+# https://github.com/conda/conda-build/issues/4708
+@pytest.mark.serial
+@pytest.mark.flaky(reruns=5, reruns_delay=2)
+def test_overlinking_detection(testing_config, variants_conda_build_sysroot):
     testing_config.activate = True
     testing_config.error_overlinking = True
     testing_config.verify = False
@@ -1402,16 +1410,22 @@ def test_overlinking_detection(testing_config):
     dest_bat = os.path.join(recipe, 'bld.bat')
     copy_into(os.path.join(recipe, 'build_scripts', 'default.sh'), dest_sh, clobber=True)
     copy_into(os.path.join(recipe, 'build_scripts', 'default.bat'), dest_bat, clobber=True)
-    api.build(recipe, config=testing_config)
+    api.build(recipe, config=testing_config, variants=variants_conda_build_sysroot)
     copy_into(os.path.join(recipe, 'build_scripts', 'no_as_needed.sh'), dest_sh, clobber=True)
     copy_into(os.path.join(recipe, 'build_scripts', 'with_bzip2.bat'), dest_bat, clobber=True)
     with pytest.raises(OverLinkingError):
-        api.build(recipe, config=testing_config)
+        api.build(recipe, config=testing_config, variants=variants_conda_build_sysroot)
     rm_rf(dest_sh)
     rm_rf(dest_bat)
 
 
-def test_overlinking_detection_ignore_patterns(testing_config):
+# using different MACOSX_DEPLOYMENT_TARGET in parallel causes some SDK race condition
+# https://github.com/conda/conda-build/issues/4708
+@pytest.mark.serial
+@pytest.mark.flaky(reruns=5, reruns_delay=2)
+def test_overlinking_detection_ignore_patterns(
+    testing_config, variants_conda_build_sysroot
+):
     testing_config.activate = True
     testing_config.error_overlinking = True
     testing_config.verify = False
@@ -1420,38 +1434,37 @@ def test_overlinking_detection_ignore_patterns(testing_config):
     dest_bat = os.path.join(recipe, 'bld.bat')
     copy_into(os.path.join(recipe, 'build_scripts', 'default.sh'), dest_sh, clobber=True)
     copy_into(os.path.join(recipe, 'build_scripts', 'default.bat'), dest_bat, clobber=True)
-    api.build(recipe, config=testing_config)
+    api.build(recipe, config=testing_config, variants=variants_conda_build_sysroot)
     copy_into(os.path.join(recipe, 'build_scripts', 'no_as_needed.sh'), dest_sh, clobber=True)
     copy_into(os.path.join(recipe, 'build_scripts', 'with_bzip2.bat'), dest_bat, clobber=True)
-    api.build(recipe, config=testing_config)
+    api.build(recipe, config=testing_config, variants=variants_conda_build_sysroot)
     rm_rf(dest_sh)
     rm_rf(dest_bat)
 
 
-def test_overdepending_detection(testing_config):
+def test_overdepending_detection(testing_config, variants_conda_build_sysroot):
     testing_config.activate = True
     testing_config.error_overlinking = True
     testing_config.error_overdepending = True
     testing_config.verify = False
     recipe = os.path.join(metadata_dir, '_overdepending_detection')
     with pytest.raises(OverDependingError):
-        api.build(recipe, config=testing_config)
+        api.build(recipe, config=testing_config, variants=variants_conda_build_sysroot)
 
 
 @pytest.mark.skipif(sys.platform != "darwin",
                     reason="macOS-only test (at present)")
-def test_macos_tbd_handling(testing_config):
+def test_macos_tbd_handling(testing_config, variants_conda_build_sysroot):
     """
     Test path handling after installation... The test case uses a Hello World
     example in C/C++ for testing the installation of C libraries...
     """
-
     testing_config.activate = True
     testing_config.error_overlinking = True
     testing_config.error_overdepending = True
     testing_config.verify = False
     recipe = os.path.join(metadata_dir, '_macos_tbd_handling')
-    api.build(recipe, config=testing_config)
+    api.build(recipe, config=testing_config, variants=variants_conda_build_sysroot)
 
 
 @pytest.mark.sanity
