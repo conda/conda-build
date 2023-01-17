@@ -1,16 +1,13 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 import os
+import sys
 
 import pytest
 
-import sys
-
-from conda_build import api
+from conda_build.api import build
 from conda_build.utils import check_call_env
-from .utils import metadata_dir, is_valid_dir
-
-published_examples = os.path.join(os.path.dirname(metadata_dir), 'published_code')
+from .utils import published_dir, is_valid_dir
 
 
 @pytest.mark.sanity
@@ -23,15 +20,17 @@ def test_skeleton_pypi(testing_workdir):
     check_call_env(cmd.split())
 
 
-@pytest.fixture(params=[dirname for dirname in os.listdir(published_examples)
-                        if is_valid_dir(published_examples, dirname)])
-def recipe(request):
-    return os.path.join(published_examples, request.param)
-
-
-# This tests any of the folders in the test-recipes/published_code folder that don't start with _
 @pytest.mark.sanity
+@pytest.mark.parametrize(
+    "recipe",
+    [
+        os.path.join(published_dir, dirname)
+        for dirname in os.listdir(published_dir)
+        # tests any recipes in test-recipes/published_code that don't start with _
+        if is_valid_dir(published_dir, dirname)
+    ],
+)
 def test_recipe_builds(recipe, testing_config, testing_workdir):
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
-    api.build(recipe, config=testing_config)
+    build(recipe, config=testing_config)
