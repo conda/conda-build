@@ -10,8 +10,7 @@ exclude: |
       index_data |
       test-cran-skeleton |
       test-recipes |
-      test-skeleton |
-      variant_recipe
+      test-skeleton
     )/ |
     .*\.(patch|diff) |
     versioneer.py |
