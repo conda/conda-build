@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import shlex
 import sys
+from typing import Generator
 
 import pytest
 from conda.common.compat import on_mac, on_win
@@ -46,6 +47,10 @@ def is_valid_dir(*parts: Path | str) -> bool:
         # exclude macOS-only recipes
         and (path.name not in ["osx_is_app"] or on_mac)
     )
+
+
+def get_valid_recipes(*parts: Path | str) -> Generator[Path, None, None]:
+    yield from filter(is_valid_dir, Path(*parts).iterdir())
 
 
 def add_mangling(filename):
