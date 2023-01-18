@@ -25,4 +25,4 @@ def test_skeleton_pypi(testing_workdir):
 def test_recipe_builds(recipe, testing_config, testing_workdir):
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
-    build(recipe, config=testing_config)
+    build(str(recipe), config=testing_config)
