@@ -278,7 +278,7 @@ def test_ensure_valid_spec_on_run_and_test(testing_workdir, testing_config, capl
     assert "Adding .* to spec 'pytest-mock  1.6'" not in text
 
 
-@pytest.mark.skipif(sys.platform == "darwin", reason="Unsatisfiable dependencies for M1 MacOS: {'bzip2=1.0.6'}")
+@pytest.mark.skipif(on_mac and platform.machine() == "arm64", reason="Unsatisfiable dependencies for M1 MacOS: {'bzip2=1.0.6'}")
 def test_serial_builds_have_independent_configs(testing_config):
     recipe = os.path.join(variants_dir, "17_multiple_recipes_independent_config")
     recipes = [os.path.join(recipe, dirname) for dirname in ("a", "b")]
