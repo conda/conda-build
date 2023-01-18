@@ -173,7 +173,7 @@ def test_validate_spec():
     """
     spec = {
         # normal expansions
-        "foo": [3.7, 3.8],
+        "foo": [1.2, 3.4],
         # zip_keys are the values that need to be expanded as a set
         "zip_keys": [["bar", "baz"], ["qux", "quux", "quuz"]],
         "bar": [1, 2, 3],
