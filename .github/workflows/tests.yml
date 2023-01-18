@@ -128,7 +128,6 @@ jobs:
 
       - name: Run tests
         run: |
-          pytest --cache-clear && \
           pytest \
             --color=yes \
             -vv \
@@ -241,7 +240,6 @@ jobs:
 
       - name: Run tests
         run: |
-          pytest --cache-clear && \
           pytest `
             --color=yes `
             -vv `
@@ -358,7 +356,6 @@ jobs:
 
       - name: Run tests
         run: |
-          pytest --cache-clear && \
           pytest \
             --color=yes \
             -vv \
