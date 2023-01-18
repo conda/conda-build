@@ -22,6 +22,7 @@ fail_dir = os.path.join(thisdir, "test-recipes", "fail")
 variants_dir = os.path.join(thisdir, "test-recipes", "variants")
 go_dir = os.path.join(thisdir, "test-recipes", "go-package")
 archive_dir = os.path.join(thisdir, "archives")
+cran_dir = os.path.join(thisdir, "test-cran-skeleton")
 
 
 def is_valid_dir(parent_dir, dirname):

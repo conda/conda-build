@@ -11,9 +11,7 @@ from conda_build.license_family import allowed_license_families
 from conda_build.skeletons.cran import (get_license_info,
                                         read_description_contents,
                                         remove_comments)
-
-
-thisdir = os.path.dirname(os.path.realpath(__file__))
+from .utils import cran_dir
 
 
 @pytest.mark.parametrize(
@@ -118,8 +116,8 @@ def test_get_license_info(license_string, license_id, license_family, license_fi
 
 
 def test_read_description_contents():
-    description = os.path.join(thisdir, 'test-cran-skeleton', 'rpart', 'DESCRIPTION')
-    with open(description, 'rb') as fp:
+    description = os.path.join(cran_dir, "rpart", "DESCRIPTION")
+    with open(description, "rb") as fp:
         contents = read_description_contents(fp)
     assert contents['Package'] == 'rpart'
     assert contents['Priority'] == 'recommended'
