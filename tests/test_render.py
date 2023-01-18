@@ -22,14 +22,16 @@ def test_noarch_output(build, testing_metadata):
 
 
 def test_reduce_duplicate_specs(testing_metadata):
-    reqs = {"build": ["exact", "exact 1.2.3 1", "exact >1.0,<2"], "host": ["exact", "exact 1.2.3 1"]}
-    testing_metadata.meta["requirements"] = reqs
+    testing_metadata.meta["requirements"] = {
+        "build": ["exact", "exact 1.2.3 1", "exact >1.0,<2"],
+        "host": ["exact", "exact 1.2.3 1"],
+    }
     render._simplify_to_exact_constraints(testing_metadata)
-    assert (testing_metadata.meta['requirements']['build'] ==
-            testing_metadata.meta['requirements']['host'])
-    simplified_deps = testing_metadata.meta['requirements']
-    assert len(simplified_deps['build']) == 1
-    assert 'exact 1.2.3 1' in simplified_deps['build']
+    simplified = testing_metadata.meta["requirements"]
+
+    assert simplified["build"] == simplified["host"]
+    assert len(simplified["build"]) == 1
+    assert "exact 1.2.3 1" in simplified["build"]
 
 
 def test_pin_run_as_build_preserve_string(testing_metadata):
