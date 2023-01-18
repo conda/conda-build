@@ -20,6 +20,7 @@ metadata_dir = os.path.join(thisdir, "test-recipes", "metadata")
 subpackage_dir = os.path.join(thisdir, "test-recipes", "split-packages")
 fail_dir = os.path.join(thisdir, "test-recipes", "fail")
 variants_dir = os.path.join(thisdir, "test-recipes", "variants")
+go_dir = os.path.join(thisdir, "test-recipes", "go-package")
 archive_dir = os.path.join(thisdir, "archives")
 
 #Moved From test_api_debug.py file
