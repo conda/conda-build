@@ -8,7 +8,7 @@ import pytest
 from conda.testing.integration import BIN_DIRECTORY
 from conda_build.api import build
 from conda_build.utils import check_call_env
-from .utils import published_path, get_valid_dirs
+from .utils import published_path, get_valid_recipes
 
 
 @pytest.mark.sanity
@@ -21,7 +21,7 @@ def test_skeleton_pypi(testing_workdir):
 
 
 @pytest.mark.sanity
-@pytest.mark.parametrize("recipe", get_valid_dirs(published_path))
+@pytest.mark.parametrize("recipe", get_valid_recipes(published_path))
 def test_recipe_builds(recipe, testing_config, testing_workdir):
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
