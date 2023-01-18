@@ -3,6 +3,7 @@
 import json
 import os
 from pathlib import Path
+import platform
 import re
 import sys
 
@@ -472,7 +473,7 @@ def test_target_platform_looping(testing_config):
     assert len(outputs) == 2
 
 
-@pytest.mark.skipif(sys.platform == "darwin", reason="Unsatisfiable dependencies for M1 MacOS systems: {'numpy=1.16'}")
+@pytest.mark.skipif(on_mac and platform.machine() == "arm64", reason="Unsatisfiable dependencies for M1 MacOS systems: {'numpy=1.16'}")
 # TODO Remove the above skip decorator once https://github.com/conda/conda-build/issues/4717 is resolved
 def test_numpy_used_variable_looping(testing_config):
     outputs = api.get_output_file_paths(os.path.join(variants_dir, "numpy_used"))
@@ -532,7 +533,7 @@ def test_exclusive_config_file(testing_workdir):
     assert variant['abc'] == '123'
 
 
-@pytest.mark.skipif(sys.platform == "darwin", reason="M1 Mac-specific file system error related to this test")
+@pytest.mark.skipif(on_mac and platform.machine() == "arm64", reason="M1 Mac-specific file system error related to this test")
 def test_inner_python_loop_with_output(testing_config):
     outputs = api.get_output_file_paths(
         os.path.join(variants_dir, "test_python_as_subpackage_loop"),
