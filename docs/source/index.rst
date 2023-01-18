@@ -17,7 +17,7 @@ projects, most notably Python. For help packing a Python project,
 see the `packaging.python.org tutorial`_.
 
 OPTIONAL: If you are planning to upload your packages to
-`anaconda.org`_, you will need to make an anaconda.org account
+`anaconda.org`_, you will need to make an anaconda.org account and
 `install the Anaconda client`_.
 
 .. toctree::
