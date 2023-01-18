@@ -7,8 +7,8 @@ import shlex
 import sys
 
 import pytest
+from conda.common.compat import on_mac, on_win
 from conda_build.metadata import MetaData
-from conda_build.utils import on_win
 from conda_build.conda_interface import linked
 
 
@@ -36,11 +36,16 @@ published_dir = str(published_path)
 archive_dir = str(archive_path)
 
 
-def is_valid_dir(parent_dir, dirname):
-    valid = os.path.isdir(os.path.join(parent_dir, dirname))
-    valid &= not dirname.startswith("_")
-    valid &= "osx_is_app" != dirname or sys.platform == "darwin"
-    return valid
+def is_valid_dir(*parts: Path | str) -> bool:
+    path = Path(*parts)
+    return (
+        # only directories are valid recipes
+        path.is_dir()
+        # recipes prefixed with _ are special and shouldn't be run as part of bulk tests
+        and not path.name.startswith("_")
+        # exclude macOS-only recipes
+        and (path.name not in ["osx_is_app"] or on_mac)
+    )
 
 
 def add_mangling(filename):

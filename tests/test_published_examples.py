@@ -8,7 +8,7 @@ import pytest
 from conda.testing.integration import BIN_DIRECTORY
 from conda_build.api import build
 from conda_build.utils import check_call_env
-from .utils import published_dir, is_valid_dir
+from .utils import published_path, is_valid_dir
 
 
 @pytest.mark.sanity
@@ -23,12 +23,7 @@ def test_skeleton_pypi(testing_workdir):
 @pytest.mark.sanity
 @pytest.mark.parametrize(
     "recipe",
-    [
-        os.path.join(published_dir, dirname)
-        for dirname in os.listdir(published_dir)
-        # tests any recipes in test-recipes/published_code that don't start with _
-        if is_valid_dir(published_dir, dirname)
-    ],
+    [path for path in published_path.iterdir() if is_valid_dir(path)],
 )
 def test_recipe_builds(recipe, testing_config, testing_workdir):
     # These variables are defined solely for testing purposes,
