@@ -128,17 +128,20 @@ def test_read_description_contents():
 
 
 def test_remove_comments():
-    example = '''
-#!keep
-# remove
-  # remove
-keep
-keep # keep
-'''
-    expected = '''
-#!keep
-keep
-keep # keep
-'''
-    observed = remove_comments(example)
-    assert observed == expected
+    with_comments = dals(
+        """
+        #!keep
+        # remove
+          # remove
+        keep
+        keep # keep
+        """
+    )
+    without_comments = dals(
+        """
+        #!keep
+        keep
+        keep # keep
+        """
+    )
+    assert remove_comments(with_comments) == without_comments
