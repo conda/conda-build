@@ -1,6 +1,7 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -47,7 +48,7 @@ def test_crossplatform_st_link(tmp_path):
 
     test_file.touch()
     test_file_link.touch()
-    test_file_linked.hardlink_to(test_file_link)
+    os.link(test_file_link, test_file_linked)
 
     assert 1 == CrossPlatformStLink.st_nlink(test_file)
     assert 2 == CrossPlatformStLink.st_nlink(test_file_link)
