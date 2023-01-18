@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import contextlib
 import os
+from pathlib import Path
 import shlex
 import sys
 
@@ -15,14 +16,24 @@ def numpy_installed():
     return any([True for dist in linked(sys.prefix) if dist.name == "numpy"])
 
 
-thisdir = os.path.dirname(__file__)
-metadata_dir = os.path.join(thisdir, "test-recipes", "metadata")
-subpackage_dir = os.path.join(thisdir, "test-recipes", "split-packages")
-fail_dir = os.path.join(thisdir, "test-recipes", "fail")
-variants_dir = os.path.join(thisdir, "test-recipes", "variants")
-go_dir = os.path.join(thisdir, "test-recipes", "go-package")
-published_dir = os.path.join(thisdir, "test-recipes", "published_code")
-archive_dir = os.path.join(thisdir, "archives")
+tests_path = Path(__file__).parent
+metadata_path = tests_path / "test-recipes" / "metadata"
+subpackage_path = tests_path / "test-recipes" / "split-packages"
+fail_path = tests_path / "test-recipes" / "fail"
+variants_path = tests_path / "test-recipes" / "variants"
+go_path = tests_path / "test-recipes" / "go-package"
+published_path = tests_path / "test-recipes" / "published_code"
+archive_path = tests_path / "archives"
+
+# backport
+thisdir = str(tests_path)
+metadata_dir = str(metadata_path)
+subpackage_dir = str(subpackage_path)
+fail_dir = str(fail_path)
+variants_dir = str(variants_path)
+go_dir = str(go_path)
+published_dir = str(published_path)
+archive_dir = str(archive_path)
 
 
 def is_valid_dir(parent_dir, dirname):
