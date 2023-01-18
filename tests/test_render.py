@@ -2,18 +2,21 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import os
 
+import pytest
+
 from conda_build import api
 from conda_build import render
 
 
-def test_output_with_noarch_says_noarch(testing_metadata):
-    testing_metadata.meta['build']['noarch'] = 'python'
-    output = api.get_output_file_path(testing_metadata)
-    assert os.path.sep + "noarch" + os.path.sep in output[0]
-
-
-def test_output_with_noarch_python_says_noarch(testing_metadata):
-    testing_metadata.meta['build']['noarch_python'] = True
+@pytest.mark.parametrize(
+    "build",
+    [
+        pytest.param({"noarch": "python"}, id="noarch"),
+        pytest.param({"noarch_python": True}, id="noarch_python"),
+    ],
+)
+def test_noarch_output(build, testing_metadata):
+    testing_metadata.meta["build"].update(build)
     output = api.get_output_file_path(testing_metadata)
     assert os.path.sep + "noarch" + os.path.sep in output[0]
 
