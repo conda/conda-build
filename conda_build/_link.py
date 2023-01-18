@@ -3,10 +3,12 @@
 """
 This is code that is added to noarch Python packages. See
 conda_build/noarch_python.py.
-
 """
+from __future__ import annotations
+
 import os
 from os.path import dirname, exists, isdir, join, normpath
+from pathlib import Path
 import re
 import sys
 import shutil
@@ -52,12 +54,15 @@ def _unlink(path):
         pass
 
 
-def pyc_f(f, version_info=sys.version_info):
+def pyc_f(path: Path | str, version_info: tuple[int, ...] = sys.version_info) -> str:
+    path = Path(path)
     if version_info[0] == 2:
-        return f + 'c'
-    dn, fn = f.rsplit('/', 1)
-    return '%s/__pycache__/%s.cpython-%d%d.pyc' % (
-              dn, fn[:-3], version_info[0], version_info[1])
+        return str(path.with_suffix(".pyc"))
+    return str(
+        path.parent
+        / "__pycache__"
+        / f"{path.stem}.cpython-{version_info[0]}{version_info[1]}.pyc"
+    )
 
 
 def link_files(src_root, dst_root, files):
