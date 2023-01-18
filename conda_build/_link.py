@@ -54,7 +54,10 @@ def _unlink(path):
         pass
 
 
-def pyc_f(path: Path | str, version_info: tuple[int, ...] = sys.version_info) -> str:
+def pyc_f(
+    path: str | os.PathLike,
+    version_info: tuple[int, ...] = sys.version_info,
+) -> str:
     path = Path(path)
     if version_info[0] == 2:
         return str(path.with_suffix(".pyc"))

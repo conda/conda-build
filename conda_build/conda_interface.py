@@ -1,5 +1,7 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 from functools import partial
 import os
 from importlib import import_module
@@ -149,11 +151,11 @@ PaddingError, UnsatisfiableError = PaddingError, UnsatisfiableError
 
 
 class CrossPlatformStLink:
-    def __call__(self, path):
+    def __call__(self, path: str | os.PathLike) -> int:
         return self.st_nlink(path)
 
     @classmethod
-    def st_nlink(cls, path):
+    def st_nlink(cls, path: str | os.PathLike) -> int:
         warnings.warn(
             "`conda_build.conda_interface.CrossPlatformStLink` is pending deprecation and will be removed in a "
             "future release. Please use `os.stat().st_nlink` instead.",
