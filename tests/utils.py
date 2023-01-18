@@ -21,6 +21,7 @@ subpackage_dir = os.path.join(thisdir, "test-recipes", "split-packages")
 fail_dir = os.path.join(thisdir, "test-recipes", "fail")
 variants_dir = os.path.join(thisdir, "test-recipes", "variants")
 dll_dir = os.path.join(thisdir, "test-recipes", "dll-package")
+go_dir = os.path.join(thisdir, "test-recipes", "go-package")
 archive_dir = os.path.join(thisdir, "archives")
 
 
