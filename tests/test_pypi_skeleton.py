@@ -1,8 +1,8 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-from collections import OrderedDict
 import pytest
 
+from conda.auxlib.ish import dals
 from conda_build.skeletons import pypi
 from conda_build.skeletons.pypi import _print_dict, _formating_value
 
@@ -41,55 +41,48 @@ def test_formating_value(name, value, result):
 
 def test_print_dict():
     recipe_metadata = {
-            "about": OrderedDict(
-                [
-                    ("home", "https://conda.io"),
-                    ("license", "MIT"),
-                    ("license_family", "MIT"),
-                    ("summary", "SUMMARY SUMMARY SUMMARY"),
-                    ("description", "DESCRIPTION DESCRIPTION DESCRIPTION"),
-                ]
-            ),
-            "source": OrderedDict(
-                [
-                    ("sha256", "4d24b03ffa67638a3fa931c09fd9e0273ffa904e95ebebe7d4b1a54c93d7b732"),
-                    ("url", "https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz"),
-                ]
-            ),
-            "package": OrderedDict(
-                [("name", "{{ name|lower }}"), ("version", "{{ version }}")]
-            ),
-            "build": OrderedDict(
-                [
-                    ("number", 0),
-                    ("script", "{{ PYTHON }} -m pip install . -vv"),
-                ]
-            ),
+        "about": {
+            "home": "https://conda.io",
+            "license": "MIT",
+            "license_family": "MIT",
+            "summary": "SUMMARY SUMMARY SUMMARY",
+            "description": "DESCRIPTION DESCRIPTION DESCRIPTION",
+        },
+        "source": {
+            "sha256": "4d24b03ffa67638a3fa931c09fd9e0273ffa904e95ebebe7d4b1a54c93d7b732",
+            "url": "https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz",
+        },
+        "package": {
+            "name": "{{ name|lower }}",
+            "version": "{{ version }}",
+        },
+        "build": {
+            "number": 0,
+            "script": "{{ PYTHON }} -m pip install . -vv",
+        },
     }
+    recipe_order = ["package", "source", "build", "about"]
+    recipe_yaml = dals(
+        """
+        package:
+          name: "{{ name|lower }}"
+          version: "{{ version }}"
 
-    assert (
-        _print_dict(
-            recipe_metadata,
-            order=["package", "source", "build", "about"],
-        )
-        == """package:
-  name: "{{ name|lower }}"
-  version: "{{ version }}"
+        source:
+          sha256: 4d24b03ffa67638a3fa931c09fd9e0273ffa904e95ebebe7d4b1a54c93d7b732
+          url: "https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz"
 
-source:
-  sha256: 4d24b03ffa67638a3fa931c09fd9e0273ffa904e95ebebe7d4b1a54c93d7b732
-  url: "https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz"
+        build:
+          number: 0
+          script: "{{ PYTHON }} -m pip install . -vv"
 
-build:
-  number: 0
-  script: "{{ PYTHON }} -m pip install . -vv"
+        about:
+          home: "https://conda.io"
+          license: MIT
+          license_family: MIT
+          summary: "SUMMARY SUMMARY SUMMARY"
+          description: "DESCRIPTION DESCRIPTION DESCRIPTION"
 
-about:
-  home: "https://conda.io"
-  license: MIT
-  license_family: MIT
-  summary: "SUMMARY SUMMARY SUMMARY"
-  description: "DESCRIPTION DESCRIPTION DESCRIPTION"
-
-"""
+        """  # yes, the trailing extra newline is necessary
     )
+    assert _print_dict(recipe_metadata, order=recipe_order) == recipe_yaml
