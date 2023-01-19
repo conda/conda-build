@@ -176,7 +176,7 @@ def test_convert_platform_to_others(testing_workdir, base_platform, package):
 
 
 @pytest.mark.slow
-@pytest.mark.skipif(on_win, reason="we create the pkg to be converted in *nix; don't run on win.")
+@pytest.mark.skipif(sys.platform == "win32", reason="we create the pkg to be converted in *nix; don't run on win.")
 def test_convert_from_unix_to_win_creates_entry_points(testing_config):
     recipe_dir = os.path.join(metadata_dir, "entry_points")
     fn = api.build(recipe_dir, config=testing_config)[0]
