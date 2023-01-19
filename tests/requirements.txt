@@ -34,4 +34,4 @@ ripgrep
 toml
 tqdm
 # temporary
-setuptools=66
+setuptools>=66
