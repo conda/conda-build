@@ -29,7 +29,6 @@ def test_compile_missing_pyc(testing_workdir):
     assert not os.path.isfile(os.path.join(tmp, add_mangling(bad_file)))
 
 
-@pytest.mark.skipif(on_win, reason="no linking on win")
 def test_hardlinks_to_copies(testing_workdir):
     with open('test1', 'w') as f:
         f.write("\n")
