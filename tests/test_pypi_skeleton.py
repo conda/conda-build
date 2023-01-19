@@ -1,39 +1,42 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 from collections import OrderedDict
+import pytest
 
 from conda_build.skeletons import pypi
 from conda_build.skeletons.pypi import _print_dict, _formating_value
 
 
-def test_version_compare():
-    short_version = '2.2'
-    long_version = '1.4.5'
-    post_version = '2.2.post3'
-    pre_version = '2.2.pre3'
-    alpha_version = '1.4.5a4'
-    beta_version = '1.4.5b4'
-    rc_version = '1.4.5rc4'
-    padding_version_short = '2.2.0'
-    padding_version_long = '1.4.5.0'
-
-    assert pypi.convert_version(short_version) == ' >=2.2,<3'
-    assert pypi.convert_version(long_version) == ' >=1.4.5,<1.5'
-    assert pypi.convert_version(post_version) == ' >=2.2.post3,<3'
-    assert pypi.convert_version(pre_version) == ' >=2.2.pre3,<3'
-    assert pypi.convert_version(alpha_version) == ' >=1.4.5a4,<1.5'
-    assert pypi.convert_version(beta_version) == ' >=1.4.5b4,<1.5'
-    assert pypi.convert_version(rc_version) == ' >=1.4.5rc4,<1.5'
-    assert pypi.convert_version(padding_version_short) == ' >=2.2.0,<2.3'
-    assert pypi.convert_version(padding_version_long) == ' >=1.4.5.0,<1.4.6'
+@pytest.mark.parametrize(
+    "version,version_range",
+    [
+        ("2.2", " >=2.2,<3"),
+        ("1.4.5", " >=1.4.5,<1.5"),
+        ("2.2.post3", " >=2.2.post3,<3"),
+        ("2.2.pre3", " >=2.2.pre3,<3"),
+        ("1.4.5a4", " >=1.4.5a4,<1.5"),
+        ("1.4.5b4", " >=1.4.5b4,<1.5"),
+        ("1.4.5rc4", " >=1.4.5rc4,<1.5"),
+        ("2.2.0", " >=2.2.0,<2.3"),
+        ("1.4.5.0", " >=1.4.5.0,<1.4.6"),
+    ],
+)
+def test_version_compare(version, version_range):
+    assert pypi.convert_version(version) == version_range
 
 
-def test_formating_value():
-    assert _formating_value("summary", "SUMMARY SUMMARY") == " \"SUMMARY SUMMARY\"\n"
-    assert _formating_value("description", "DESCRIPTION DESCRIPTION") == " \"DESCRIPTION DESCRIPTION\"\n"
-    assert _formating_value("script", "SCRIPT VALUE") == " \"SCRIPT VALUE\"\n"
-    assert _formating_value("name", "{{name|lower}}") == " \"{{name|lower}}\"\n"
-    assert _formating_value("name", "NORMAL NAME") == " NORMAL NAME\n"
+@pytest.mark.parametrize(
+    "name,value,result",
+    [
+        ("summary", "SUMMARY SUMMARY", ' "SUMMARY SUMMARY"\n'),
+        ("description", "DESCRIPTION DESCRIPTION", ' "DESCRIPTION DESCRIPTION"\n'),
+        ("script", "SCRIPT VALUE", ' "SCRIPT VALUE"\n'),
+        ("name", "{{name|lower}}", ' "{{name|lower}}"\n'),
+        ("name", "NORMAL NAME", " NORMAL NAME\n"),
+    ],
+)
+def test_formating_value(name, value, result):
+    assert _formating_value(name, value) == result
 
 
 def test_print_dict():
