@@ -10,6 +10,7 @@ import sys
 from typing import Generator
 
 import pytest
+import libarchive
 from conda.common.compat import on_mac, on_win
 from conda_build.metadata import MetaData
 from conda_build.utils import on_win, glob
