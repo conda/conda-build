@@ -24,3 +24,8 @@ conda-build-testing
 rever/
 **/.vscode
 **/_build
+
+# Remove all the `.bat`s and `.sh`s files the recipie folder creates
+
+/test-recipie/*.*/*.bat
+/test-recipie/*.*/*.sh

@@ -23,8 +23,7 @@ def makefile(name, contents=""):
     with open(name, 'w') as f:
         f.write(contents)
 
-
-@pytest.mark.skipif(utils.on_win, reason="only unix has python version in site-packages path")
+@pytest.mark.skipif(sys.platform == "win32", reason="only unix has python version in site-packages path")
 def test_get_site_packages():
     # https://github.com/conda/conda-build/issues/1055#issuecomment-250961576
     # crazy unreal python version that should show up in a second
@@ -385,7 +384,7 @@ def _generate_tmp_tree():
         shutil.rmtree(tmp)
 
 
-@pytest.mark.skipif(on_win, reason="PermissionError: [WinError 5] Access is denied:")
+@pytest.mark.skipif(sys.platform == "win32", reason="PermissionError: [WinError 5] Access is denied:")
 def test_rec_glob():
     with _generate_tmp_tree() as (tmp, _, (f1, f2, f3, f4)):
         assert sorted(utils.rec_glob(tmp, "fileA")) == [f1, f3]
@@ -393,7 +392,7 @@ def test_rec_glob():
         assert sorted(utils.rec_glob(tmp, "fileB", ignores=("dirC",))) == [f2]
 
 
-@pytest.mark.skipif(on_win, reason="PermissionError: [WinError 5] Access is denied:")
+@pytest.mark.skipif(sys.platform == "win32", reason="PermissionError: [WinError 5] Access is denied:")
 def test_find_recipe():
     with _generate_tmp_tree() as (tmp, (dA, dB, dC), (f1, f2, f3, f4)):
         f5 = os.path.join(tmp, "meta.yaml")
@@ -408,7 +407,7 @@ def test_find_recipe():
             os.remove(f)
 
 
-@pytest.mark.skipif(on_win, reason="PermissionError: [WinError 5] Access is denied:")
+@pytest.mark.skipif(sys.platform == "win32", reason="PermissionError: [WinError 5] Access is denied:")
 def test_find_recipe_relative():
     with _generate_tmp_tree() as (tmp, (dA, dB, dC), (f1, f2, f3, f4)):
         f5 = os.path.join(dA, "meta.yaml")
@@ -423,7 +422,7 @@ def test_find_recipe_relative():
         finally:
             os.chdir(saved)
 
-@pytest.mark.skipif(on_win, reason="PermissionError: [WinError 5] Access is denied:")
+@pytest.mark.skipif(sys.platform == "win32", reason="PermissionError: [WinError 5] Access is denied:")
 def test_find_recipe_no_meta():
     with _generate_tmp_tree() as (tmp, _, (f1, f2, f3, f4)):
         # no meta files in tmp
@@ -431,7 +430,7 @@ def test_find_recipe_no_meta():
             utils.find_recipe(tmp)
 
 
-@pytest.mark.skipif(on_win, reason="PermissionError: [WinError 5] Access is denied:")
+@pytest.mark.skipif(sys.platform == "win32", reason="PermissionError: [WinError 5] Access is denied:")
 def test_find_recipe_file():
     with _generate_tmp_tree() as (tmp, _, (f1, f2, f3, f4)):
         f5 = os.path.join(tmp, "meta.yaml")
@@ -439,14 +438,14 @@ def test_find_recipe_file():
         # file provided is valid meta
         assert utils.find_recipe(f5) == f5
 
-@pytest.mark.skipif(on_win, reason="PermissionError: [WinError 5] Access is denied:")
+@pytest.mark.skipif(sys.platform == "win32", reason="PermissionError: [WinError 5] Access is denied:")
 def test_find_recipe_file_bad():
     with _generate_tmp_tree() as (tmp, _, (f1, f2, f3, f4)):
         # file provided is not valid meta
         with pytest.raises(IOError):
             utils.find_recipe(f1)
 
-@pytest.mark.skipif(on_win, reason="PermissionError: [WinError 5] Access is denied:")
+@pytest.mark.skipif(sys.platform == "win32", reason="PermissionError: [WinError 5] Access is denied:")
 def test_find_recipe_multipe_base():
     with _generate_tmp_tree() as (tmp, (dA, dB, dC), (f1, f2, f3, f4)):
         f5 = os.path.join(tmp, "meta.yaml")
@@ -457,7 +456,7 @@ def test_find_recipe_multipe_base():
         # multiple meta files, use the one in base level
         assert utils.find_recipe(tmp) == f5
 
-@pytest.mark.skipif(on_win, reason="PermissionError: [WinError 5] Access is denied:")
+@pytest.mark.skipif(sys.platform == "win32", reason="PermissionError: [WinError 5] Access is denied:")
 def test_find_recipe_multipe_bad():
     with _generate_tmp_tree() as (tmp, (dA, dB, dC), (f1, f2, f3, f4)):
         f5 = os.path.join(dB, "meta.yaml")

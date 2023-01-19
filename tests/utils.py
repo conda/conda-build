@@ -6,6 +6,7 @@ import shlex
 import sys
 
 import pytest
+import libarchive
 from conda_build.metadata import MetaData
 from conda_build.utils import on_win, glob
 from conda_build.conda_interface import linked
