@@ -1443,6 +1443,7 @@ def test_overlinking_detection_ignore_patterns(
 
 
 @pytest.mark.serial
+@pytest.mark.skipif(sys.platform == "linux", reason="PermissionError: [WinError 5] Access is denied:")
 def test_overdepending_detection(testing_config, variants_conda_build_sysroot):
     testing_config.activate = True
     testing_config.error_overlinking = True
