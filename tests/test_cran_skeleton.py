@@ -24,7 +24,7 @@ from .utils import cran_dir
             dals(
                 """
                 license_file:
-                  - '{{ environ["PREFIX"] }}/lib/R/share/licenses/GPL-3'
+                    - '{{ environ["PREFIX"] }}/lib/R/share/licenses/GPL-3'
                 """
             ),
             id="GPL-3",
@@ -36,7 +36,7 @@ from .utils import cran_dir
             dals(
                 """
                 license_file:
-                  - '{{ environ["PREFIX"] }}/lib/R/share/licenses/Artistic-2.0'
+                    - '{{ environ["PREFIX"] }}/lib/R/share/licenses/Artistic-2.0'
                 """
             ),
             id="Artistic-2.0",
@@ -49,8 +49,8 @@ from .utils import cran_dir
             dals(
                 """
                 license_file:
-                  - '{{ environ["PREFIX"] }}/lib/R/share/licenses/MIT'
-                  - LICENSE
+                    - '{{ environ["PREFIX"] }}/lib/R/share/licenses/MIT'
+                    - LICENSE
                 """
             ),
             id="MIT",
@@ -62,8 +62,8 @@ from .utils import cran_dir
             dals(
                 """
                 license_file:
-                  - '{{ environ["PREFIX"] }}/lib/R/share/licenses/BSD_2_clause'
-                  - LICENSE
+                    - '{{ environ["PREFIX"] }}/lib/R/share/licenses/BSD_2_clause'
+                    - LICENSE
                 """
             ),
             id="BSD_2_clause",
@@ -75,8 +75,8 @@ from .utils import cran_dir
             dals(
                 """
                 license_file:
-                  - '{{ environ["PREFIX"] }}/lib/R/share/licenses/GPL-2'
-                  - '{{ environ["PREFIX"] }}/lib/R/share/licenses/GPL-3'
+                    - '{{ environ["PREFIX"] }}/lib/R/share/licenses/GPL-2'
+                    - '{{ environ["PREFIX"] }}/lib/R/share/licenses/GPL-3'
                 """
             ),
             id="GPL-2 | GPL-3",
@@ -88,8 +88,8 @@ from .utils import cran_dir
             dals(
                 """
                 license_file:
-                  - '{{ environ["PREFIX"] }}/lib/R/share/licenses/GPL-3'
-                  - '{{ environ["PREFIX"] }}/lib/R/share/licenses/GPL-2'
+                    - '{{ environ["PREFIX"] }}/lib/R/share/licenses/GPL-3'
+                    - '{{ environ["PREFIX"] }}/lib/R/share/licenses/GPL-2'
                 """
             ),
             id="GPL-3 | GPL-2",
@@ -101,7 +101,7 @@ from .utils import cran_dir
             dals(
                 """
                 license_file:
-                  - '{{ environ["PREFIX"] }}/lib/R/share/licenses/GPL-2'
+                    - '{{ environ["PREFIX"] }}/lib/R/share/licenses/GPL-2'
                 """
             ),
             id="GPL-2",
