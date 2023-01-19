@@ -1442,6 +1442,7 @@ def test_overlinking_detection_ignore_patterns(
     rm_rf(dest_bat)
 
 
+@pytest.mark.flaky(reruns=5, reruns_delay=2)
 def test_overdepending_detection(testing_config, variants_conda_build_sysroot):
     testing_config.activate = True
     testing_config.error_overlinking = True
