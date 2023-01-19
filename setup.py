@@ -26,7 +26,7 @@ deps = [
     "psutil",
     "six",
     "libarchive-c",
-    "setuptools",
+    "setuptools>=66",
     # "conda-package-handling",  # remove comment once released on PyPI
     "glob2",
 ]

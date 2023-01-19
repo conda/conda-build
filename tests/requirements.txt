@@ -33,3 +33,5 @@ requests
 ripgrep
 toml
 tqdm
+# temporary
+setuptools=66
