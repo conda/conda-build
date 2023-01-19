@@ -137,26 +137,27 @@ def test_no_satisfiable_variants_raises_error():
     recipe = os.path.join(variants_dir, "01_basic_templating")
     with pytest.raises(exceptions.DependencyNeedsBuildingError):
         api.render(recipe, permit_unsatisfiable_variants=False)
+    api.render(recipe, permit_unsatisfiable_variants=True)
 
 
 def test_zip_fields():
     """Zipping keys together allows people to tie different versions as sets of combinations."""
-    v = {'python': ['3.7', '3.10'], 'vc': ['9', '14'], 'zip_keys': [('python', 'vc')]}
-    ld = dict_of_lists_to_list_of_dicts(v)
-    assert len(ld) == 2
-    assert ld[0]['python'] == '3.7'
-    assert ld[0]['vc'] == '9'
-    assert ld[1]['python'] == '3.10'
-    assert ld[1]['vc'] == '14'
+    variants = {'packageA': ['1.2', '3.4'], 'packageB': ['5', '6'], 'zip_keys': [('packageA', 'packageB')]}
+    zipped = dict_of_lists_to_list_of_dicts(variants)
+    assert len(zipped) == 2
+    assert zipped[0]['packageA'] == '1.2'
+    assert zipped[0]['packageB'] == '5'
+    assert zipped[1]['packageA'] == '3.4'
+    assert zipped[1]['packageB'] == '6'
 
     # allow duplication of values, but lengths of lists must always match
-    v = {'python': ['3.7', '3.7'], 'vc': ['9', '14'], 'zip_keys': [('python', 'vc')]}
-    ld = dict_of_lists_to_list_of_dicts(v)
-    assert len(ld) == 2
-    assert ld[0]['python'] == '3.7'
-    assert ld[0]['vc'] == '9'
-    assert ld[1]['python'] == '3.7'
-    assert ld[1]['vc'] == '14'
+    variants = {'packageA': ['1.2', '1.2'], 'packageB': ['5', '6'], 'zip_keys': [('packageA', 'packageB')]}
+    zipped = dict_of_lists_to_list_of_dicts(variants)
+    assert len(zipped) == 2
+    assert zipped[0]['packageA'] == '1.2'
+    assert zipped[0]['packageB'] == '5'
+    assert zipped[1]['packageA'] == '1.2'
+    assert zipped[1]['packageB'] == '6'
 
 
 def test_validate_spec():
