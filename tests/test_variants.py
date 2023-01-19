@@ -10,6 +10,7 @@ import sys
 import pytest
 import yaml
 
+from conda.common.compat import on_mac
 from conda_build import api, exceptions
 from conda_build.variants import (
     combine_specs,
@@ -150,7 +151,7 @@ def test_no_satisfiable_variants_raises_error():
 def test_zip_fields():
     """Zipping keys together allows people to tie different versions as sets of combinations."""
     v = {'python': ['3.7', '3.10'], 'vc': ['9', '14'], 'zip_keys': [('python', 'vc')]}
-    ld = variants.dict_of_lists_to_list_of_dicts(v)
+    ld = dict_of_lists_to_list_of_dicts(v)
     assert len(ld) == 2
     assert ld[0]['python'] == '3.7'
     assert ld[0]['vc'] == '9'
@@ -159,7 +160,7 @@ def test_zip_fields():
 
     # allow duplication of values, but lengths of lists must always match
     v = {'python': ['3.7', '3.7'], 'vc': ['9', '14'], 'zip_keys': [('python', 'vc')]}
-    ld = variants.dict_of_lists_to_list_of_dicts(v)
+    ld = dict_of_lists_to_list_of_dicts(v)
     assert len(ld) == 2
     assert ld[0]['python'] == '3.7'
     assert ld[0]['vc'] == '9'
