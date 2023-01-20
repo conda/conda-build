@@ -17,8 +17,8 @@ projects, most notably Python. For help packing a Python project,
 see the `packaging.python.org tutorial`_.
 
 OPTIONAL: If you are planning to upload your packages to
-Anaconda Cloud, you will need an
-`Anaconda Cloud <http://anaconda.org>`_ account and client.
+`anaconda.org`_, you will need to make an anaconda.org account and
+`install the Anaconda client`_.
 
 .. toctree::
    :maxdepth: 1
@@ -32,3 +32,5 @@ Anaconda Cloud, you will need an
 
 
 .. _`packaging.python.org tutorial`: https://packaging.python.org/en/latest/tutorials/packaging-projects
+.. _`anaconda.org`: https://anaconda.org
+.. _`install the Anaconda client`: https://docs.anaconda.com/anaconda/install/
