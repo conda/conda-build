@@ -8,7 +8,6 @@ from copy import copy
 from functools import lru_cache
 from itertools import product
 import os.path
-from packaging.version import Version
 import re
 import sys
 
@@ -16,6 +15,7 @@ import yaml
 
 from conda_build.conda_interface import subdir
 from conda_build.conda_interface import cc_conda_build
+from conda_build.version import _parse as parse_version
 from conda_build.utils import ensure_list, get_logger, islist, on_win, trim_empty_keys
 
 DEFAULT_VARIANTS = {
@@ -87,9 +87,9 @@ SUFFIX_MAP = {'PY': 'python',
 def _get_default_compilers(platform, py_ver):
     compilers = DEFAULT_COMPILERS[platform].copy()
     if platform == 'win':
-        if Version(py_ver) >= Version('3.5'):
+        if parse_version(py_ver) >= parse_version('3.5'):
             py_ver = '3.5'
-        elif Version(py_ver) <= Version('3.2'):
+        elif parse_version(py_ver) <= parse_version('3.2'):
             py_ver = '2.7'
         compilers['c'] = compilers['c'][py_ver]
         compilers['cxx'] = compilers['cxx'][py_ver]
