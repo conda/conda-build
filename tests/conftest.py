@@ -188,30 +188,19 @@ def testing_env(testing_workdir, request, monkeypatch):
     return env_path
 
 
-# these are functions so that they get regenerated each time we use them.
-#    They could be fixtures, I guess.
-@pytest.fixture(scope="function")
-def numpy_version_ignored():
-    return {
-        "python": ["2.7.*", "3.5.*"],
-        "numpy": ["1.10.*", "1.11.*"],
-        "ignore_version": ["numpy"],
-    }
-
-
-@pytest.fixture(scope="function")
-def single_version():
-    return {"python": "2.7.*", "numpy": "1.11.*"}
-
-
-@pytest.fixture(scope="function")
-def no_numpy_version():
-    return {"python": ["2.7.*", "3.5.*"]}
-
-
 @pytest.fixture(
     scope="function",
-    params=[{}, {"MACOSX_DEPLOYMENT_TARGET": ["10.9"]}] if on_mac else [{}],
+    params=[
+        pytest.param({}, id="default MACOSX_DEPLOYMENT_TARGET"),
+        pytest.param(
+            {"MACOSX_DEPLOYMENT_TARGET": ["10.9"]},
+            id="override MACOSX_DEPLOYMENT_TARGET",
+        ),
+    ]
+    if on_mac
+    else [
+        pytest.param({}, id="no MACOSX_DEPLOYMENT_TARGET"),
+    ],
 )
 def variants_conda_build_sysroot(monkeypatch, request):
     if not on_mac:
