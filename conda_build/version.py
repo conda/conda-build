@@ -48,7 +48,6 @@ def _parse(version: str) -> Union["_LegacyVersion", "Version"]:
 
 class _LegacyVersion(_BaseVersion):
 
-
     def __init__(self, version: str) -> None:
         self._version = str(version)
         self._key = _legacy_cmpkey(self._version)
