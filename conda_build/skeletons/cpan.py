@@ -7,7 +7,6 @@ Tools for converting CPAN packages to conda recipes.
 
 import codecs
 import hashlib
-from packaging.version import Version
 from glob import glob
 import gzip
 import json
@@ -28,6 +27,7 @@ from conda_build.conda_interface import CondaHTTPError, CondaError
 from conda_build.config import get_or_merge_config
 from conda_build.utils import on_win, check_call_env
 from conda_build.variants import get_default_variant
+from conda_build.version import _parse as parse_version
 
 import requests
 from conda_build import environ
@@ -231,7 +231,7 @@ def get_build_dependencies_from_src_archive(package_url, sha256, src_cache):
 
 
 def loose_version(ver):
-    return str(Version(str(ver)))
+    return str(parse_version(str(ver)))
 
 
 def get_cpan_api_url(url, colons):
@@ -438,7 +438,7 @@ def skeletonize(packages, output_dir=".", version=None,
             release_data = latest_release_data
         else:
             release_data = get_release_info(meta_cpan_url, cache_dir, core_modules, package,
-                                            Version(version))
+                                            parse_version(version))
 
         # Check if recipe directory already exists
         dir_path = join(output_dir, packagename, release_data['version'])
@@ -566,7 +566,7 @@ def is_core_version(core_version, version):
     if core_version is None:
         return False
     elif core_version is not None and ((version in [None, '']) or
-                                       (core_version >= Version(version))):
+                                       (core_version >= parse_version(version))):
         return True
     else:
         return False
@@ -619,7 +619,7 @@ def latest_pkg_version(pkg):
     except:
         pkg_list = None
     if pkg_list:
-        pkg_version = Version(pkg_list[-1].version)
+        pkg_version = parse_version(pkg_list[-1].version)
     else:
         pkg_version = None
     return pkg_version
@@ -707,7 +707,7 @@ def deps_for_package(package, release_data, output_dir, cache_dir,
                 # There is a dep version and a pkg_version ... why?
                 if dep_dict['version'] in {'', 'undef'}:
                     dep_dict['version'] = '0'
-                dep_version = Version(dep_dict['version'])
+                dep_version = parse_version(dep_dict['version'])
 
                 # Make sure specified version is valid
                 # TODO def valid_release_info
@@ -718,7 +718,7 @@ def deps_for_package(package, release_data, output_dir, cache_dir,
                            'dependency for %s, %s, is not available on MetaCPAN, ' +
                            'so we are just assuming the latest version is ' +
                            'okay.') % (orig_dist, package, str(dep_version)))
-                    dep_version = Version('0')
+                    dep_version = parse_version('0')
 
                 # Add version number to dependency, if it's newer than latest
                 # we have package for.
@@ -991,12 +991,12 @@ def get_release_info(cpan_url, cache_dir, core_modules, package, version):
     if version is not None:
         version_str = str(version)
         rel_version = str(rel_dict['version'])
-        loose_str = str(Version(version_str))
+        loose_str = str(parse_version(version_str))
 
         try:
             version_mismatch = (version is not None) and (
                 loose_version('0') != loose_version(version_str) and
-                Version(rel_version) != loose_version(version_str))
+                parse_version(rel_version) != loose_version(version_str))
             # print(version_mismatch)
         except Exception as e:
             print('We have some strange version mismatches. Please investigate.')
