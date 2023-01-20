@@ -41,6 +41,7 @@ repo_packages = [('', 'pypi', 'pip', '8.1.2'),
                  ]
 
 
+@pytest.mark.flaky(max_runs=5, reruns_delay=2)
 @pytest.mark.parametrize("prefix, repo, package, version", repo_packages)
 def test_repo(prefix, repo, package, version, testing_workdir, testing_config):
     api.skeletonize(package, repo, version=version, output_dir=testing_workdir,
