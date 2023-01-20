@@ -162,8 +162,8 @@ Tools for investigating conda channels.
 
     hash_inputs = subcommand.add_parser(
         "hash-inputs",
-        help="Show data used to compute hash identifier (h????) for package",
-        description="Show data used to compute hash identifier (h????) for package",
+        help="Show data used to compute hash identifier for package",
+        description="Show data used to compute hash identifier for package",
     )
     hash_inputs.add_argument(
         'packages',
