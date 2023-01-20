@@ -1,3 +1,5 @@
+# Copyright (C) Donald Stufft and individual contributors
+# SPDX-License-Identifier: BSD-2-Clause
 """
 This file was partially copied from the packaging.version module before the
 LegacyVersion class was removed to continue to support version parsing in
