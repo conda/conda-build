@@ -36,7 +36,6 @@ from .conda_interface import env_path_backup_var_exists
 from .conda_interface import prefix_placeholder
 from .conda_interface import TemporaryDirectory
 from .conda_interface import VersionOrder
-from .conda_interface import CrossPlatformStLink
 from .conda_interface import PathType, FileMode
 from .conda_interface import EntityEncoder
 from .conda_interface import get_rc_urls
@@ -1412,8 +1411,10 @@ def build_info_files_json_v1(m, prefix, files, files_with_prefix):
         if prefix_placeholder and file_mode:
             file_info["prefix_placeholder"] = prefix_placeholder
             file_info["file_mode"] = file_mode
-        if file_info.get("path_type") == PathType.hardlink and CrossPlatformStLink.st_nlink(
-                path) > 1:
+        if (
+            file_info.get("path_type") == PathType.hardlink
+            and os.stat(path).st_nlink > 1
+        ):
             target_short_path_inode = get_inode(path)
             inode_paths = [files[index] for index, ino in enumerate(files_inodes) if ino == target_short_path_inode]
             file_info["inode_paths"] = inode_paths

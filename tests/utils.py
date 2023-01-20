@@ -15,17 +15,13 @@ def numpy_installed():
     return any([True for dist in linked(sys.prefix) if dist.name == "numpy"])
 
 
-def get_root_dir():
-    import conda_build
-
-    conda_build_dir = os.path.realpath(os.path.dirname(conda_build.__file__))
-    return os.path.abspath(os.path.join(conda_build_dir, ".."))
-
-
-thisdir = os.path.join(get_root_dir(), "tests")
+thisdir = os.path.dirname(__file__)
 metadata_dir = os.path.join(thisdir, "test-recipes", "metadata")
 subpackage_dir = os.path.join(thisdir, "test-recipes", "split-packages")
 fail_dir = os.path.join(thisdir, "test-recipes", "fail")
+variants_dir = os.path.join(thisdir, "test-recipes", "variants")
+dll_dir = os.path.join(thisdir, "test-recipes", "dll-package")
+go_dir = os.path.join(thisdir, "test-recipes", "go-package")
 archive_dir = os.path.join(thisdir, "archives")
 
 
