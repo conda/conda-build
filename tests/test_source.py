@@ -100,7 +100,7 @@ def test_git_repo_with_single_subdir_does_not_enter_subdir(testing_metadata):
 
 
 @pytest.mark.sanity
-def test_source_user_expand(testing_workdir):
+def test_source_user_expand():
     with TemporaryDirectory(dir=os.path.expanduser('~')) as tmp:
         with TemporaryDirectory() as tbz_srcdir:
             file_txt = os.path.join(tbz_srcdir, "file.txt")
@@ -138,7 +138,7 @@ def test_hoist_different_name(testing_workdir):
     assert not os.path.isdir(nesteddir)
 
 
-def test_append_hash_to_fn(testing_metadata, caplog):
+def test_append_hash_to_fn(testing_metadata):
     relative_zip = 'testfn.zip'
     assert source.append_hash_to_fn(relative_zip, '123') == 'testfn_123.zip'
     relative_tar_gz = 'testfn.tar.gz'
@@ -158,7 +158,3 @@ def test_append_hash_to_fn(testing_metadata, caplog):
         {'folder': 'f1', 'url': os.path.join(thisdir, 'archives', 'a.tar.bz2')}]
     reset_deduplicator()
     source.provide(testing_metadata)
-    # TODO: Can't seem to get this to work.  Test passes when run by itself, but fails when run in whole
-    #     serial suite.  Some residual state, somehow.  I suspect the deduplicator logic with the logger,
-    #     but attempts to reset it have not been successful.
-    # assert any("No hash (md5, sha1, sha256) provided." in rec.message for rec in caplog.records)
