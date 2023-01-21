@@ -52,16 +52,17 @@ def conda_pth(site_packages: Path) -> Generator[Path, None, None]:
         path.unlink()
 
 
+DEVELOP_PATHS = ("/path/to/one", "/path/to/two", "/path/to/three")
+
+
 def test_write_to_conda_pth(site_packages: Path, conda_pth: Path):
     """
     `conda develop pkg_path` invokes write_to_conda_pth() to write/append to
     conda.pth
     """
-    paths = ("/path/to/one", "/path/to/two", "/path/to/three")
-
     assert not conda_pth.exists()
 
-    for count, path in enumerate(paths, start=1):
+    for count, path in enumerate(DEVELOP_PATHS, start=1):
         # adding path
         write_to_conda_pth(site_packages, path)
         assert conda_pth.exists()
@@ -81,20 +82,17 @@ def test_uninstall(site_packages: Path, conda_pth: Path):
     `conda develop --uninstall pkg_path` invokes uninstall() to remove path
     from conda.pth
     """
-    paths = ("/path/to/one", "/path/to/two", "/path/to/three")
-    total = len(paths)
-
-    for path in paths:
+    for path in DEVELOP_PATHS:
         write_to_conda_pth(site_packages, path)
 
-    for count, path in enumerate(paths, start=1):
+    for count, path in enumerate(DEVELOP_PATHS, start=1):
         # removing path
         _uninstall(site_packages, path)
         assert conda_pth.exists()
 
         develop_paths = list(filter(None, conda_pth.read_text().split("\n")))
         assert path not in develop_paths
-        assert len(develop_paths) == total - count
+        assert len(develop_paths) == len(DEVELOP_PATHS) - count
 
         # removing path a second time has no effect
         _uninstall(site_packages, path)
