@@ -20,7 +20,7 @@ from tests import utils
 from .utils import metadata_dir, thisdir
 
 
-def test_render_need_download(testing_workdir, testing_config):
+def test_render_need_download(testing_config):
     # first, test that the download/render system renders all it can,
     #    and accurately returns its needs
 
@@ -74,7 +74,7 @@ def test_get_output_file_path_metadata_object(testing_metadata):
                 "test_get_output_file_path_metadata_object-1.0-1.tar.bz2")
 
 
-def test_get_output_file_path_jinja2(testing_workdir, testing_config):
+def test_get_output_file_path_jinja2(testing_config):
     # If this test does not raise, it's an indicator that the workdir is not
     #    being cleaned as it should.
     recipe = os.path.join(metadata_dir, "source_git_jinja2")
@@ -98,7 +98,7 @@ def test_get_output_file_path_jinja2(testing_workdir, testing_config):
 
 
 @mock.patch('conda_build.source')
-def test_output_without_jinja_does_not_download(mock_source, testing_workdir, testing_config):
+def test_output_without_jinja_does_not_download(mock_source, testing_config):
     api.get_output_file_path(os.path.join(metadata_dir, "source_git"), config=testing_config)[0]
     mock_source.provide.assert_not_called()
 
@@ -225,18 +225,18 @@ def test_run_exports_with_pin_compatible_in_subpackages(testing_config):
             assert all(len(export.split()) > 1 for export in run_exports), run_exports
 
 
-def test_ignore_build_only_deps(testing_config):
+def test_ignore_build_only_deps():
     ms = api.render(os.path.join(thisdir, 'test-recipes', 'variants', 'python_in_build_only'),
                     bypass_env_check=True, finalize=False)
     assert len(ms) == 1
 
 
-def test_merge_build_host_build_key(testing_workdir, testing_metadata):
+def test_merge_build_host_build_key():
     m = api.render(os.path.join(metadata_dir, '_no_merge_build_host'))[0][0]
     assert not any('bzip2' in dep for dep in m.meta['requirements']['run'])
 
 
-def test_merge_build_host_empty_host_section(testing_config):
+def test_merge_build_host_empty_host_section():
     m = api.render(os.path.join(metadata_dir, '_empty_host_avoids_merge'))[0][0]
     assert not any('bzip2' in dep for dep in m.meta['requirements']['run'])
 
