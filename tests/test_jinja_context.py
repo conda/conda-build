@@ -115,22 +115,6 @@ def test_resolved_packages(testing_metadata):
     assert any('python' == pkg.split()[0] for pkg in packages)
 
 
-try:
-    try:
-        # Recommended for setuptools 61.0.0+
-        # (though may disappear in the future)
-        from setuptools.config.setupcfg import read_configuration
-    except ImportError:
-        from setuptools.config import read_configuration
-    del read_configuration
-except ImportError:
-    _has_read_configuration = False
-else:
-    _has_read_configuration = True
-
-
-@pytest.mark.skipif(not _has_read_configuration,
-                    reason="setuptools <30.3.0 cannot read metadata / options from 'setup.cfg'")
 def test_load_setup_py_data_from_setup_cfg(testing_metadata, tmpdir):
     setup_py = tmpdir.join('setup.py')
     setup_cfg = tmpdir.join('setup.cfg')
