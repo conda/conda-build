@@ -16,24 +16,22 @@ from conda_build.skeletons.pypi import get_package_metadata, \
 
 from conda_build import api
 from conda_build.exceptions import DependencyNeedsBuildingError
-import conda_build.os_utils.external as external
 from conda_build.utils import on_win
 
 thisdir = os.path.dirname(os.path.realpath(__file__))
 
-repo_packages = [('', 'pypi', 'pip', '8.1.2'),
-                 ('r', 'cran', 'acs', ''),
-                 (
-                     'r', 'cran',
-                     'https://github.com/twitter/AnomalyDetection.git',
-                     ''),
-                 ('perl', 'cpan', 'Moo', ''),
-                 ('', 'rpm', 'libX11-devel', ''),
-                 # ('lua', luarocks', 'LuaSocket', ''),
-                 ]
 
-
-@pytest.mark.parametrize("prefix, repo, package, version", repo_packages)
+@pytest.mark.parametrize(
+    "prefix, repo, package, version",
+    [
+        ("", "pypi", "pip", "8.1.2"),
+        ("r", "cran", "acs", ""),
+        ("r", "cran", "https://github.com/twitter/AnomalyDetection.git", ""),
+        ("perl", "cpan", "Moo", ""),
+        ("", "rpm", "libX11-devel", ""),
+        # ('lua', luarocks', 'LuaSocket', ''),
+    ],
+)
 def test_repo(prefix, repo, package, version, testing_workdir, testing_config):
     api.skeletonize(package, repo, version=version, output_dir=testing_workdir,
                     config=testing_config)
@@ -441,7 +439,7 @@ def test_pypi_section_order_preserved(testing_workdir):
 
 @pytest.mark.slow
 @pytest.mark.flaky(rerun=5, reruns_delay=2)
-@pytest.mark.skipif(not external.find_executable("shellcheck"), reason="requires shellcheck >=0.7.0")
+@pytest.mark.skipif(on_win, reason="shellcheck is only available on Windows")
 @pytest.mark.parametrize(
     "package, repo", [("r-rmarkdown", "cran"), ("Perl::Lint", "cpan"), ("screen", "rpm")]
 )
