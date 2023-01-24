@@ -456,7 +456,7 @@ def test_build_sh_shellcheck_clean(package, repo, testing_workdir, testing_confi
     api.skeletonize(packages=package, repo=repo, output_dir=testing_workdir, config=testing_config)
 
     matches = []
-    for root, filenames in os.walk(testing_workdir):
+    for root, dirnames, filenames in os.walk(testing_workdir):
         for filename in fnmatch.filter(filenames, "build.sh"):
             matches.append(os.path.join(root, filename))
 
