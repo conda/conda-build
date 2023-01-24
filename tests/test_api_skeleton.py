@@ -7,20 +7,12 @@ import sys
 
 from pkg_resources import parse_version
 import pytest
+import ruamel.yaml
 
 from conda_build.skeletons.pypi import get_package_metadata, \
     get_entry_points, is_setuptools_enabled, convert_to_flat_list, \
     get_dependencies, get_import_tests, get_tests_require, get_home, \
     get_summary, get_license_name, clean_license_name
-
-try:
-    import ruamel_yaml
-except ImportError:
-    try:
-        import ruamel.yaml as ruamel_yaml
-    except ImportError:
-        raise ImportError("No ruamel_yaml library available.\n"
-                          "To proceed, conda install ruamel_yaml")
 
 from conda_build import api
 from conda_build.exceptions import DependencyNeedsBuildingError
@@ -434,8 +426,7 @@ def test_pypi_section_order_preserved(testing_workdir):
         lines = [ln for ln in file.readlines() if not ln.startswith("{%")]
 
     # The loader below preserves the order of entries...
-    recipe = ruamel_yaml.load('\n'.join(lines),
-                              Loader=ruamel_yaml.RoundTripLoader)
+    recipe = ruamel.yaml.load("\n".join(lines), Loader=ruamel.yaml.RoundTripLoader)
 
     major_sections = list(recipe.keys())
     # Blank fields are omitted when skeletonizing, so prune any missing ones

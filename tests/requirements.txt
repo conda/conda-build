@@ -31,5 +31,6 @@ python-libarchive-c
 pytz
 requests
 ripgrep
+ruamel.yaml
 toml
 tqdm
