@@ -377,12 +377,8 @@ def test_pypi_with_basic_environment_markers(testing_workdir):
     # should include the right dependencies for the right version
     assert "futures" not in build_reqs
     assert "futures" not in run_reqs
-    if sys.version_info >= (2, 7):
-        assert "pygments" in build_reqs
-        assert "pygments" in run_reqs
-    else:
-        assert "pygments" not in build_reqs
-        assert "pygments" not in run_reqs
+    assert "pygments" in build_reqs
+    assert "pygments" in run_reqs
 
 
 def test_setuptools_test_requirements(testing_workdir):
