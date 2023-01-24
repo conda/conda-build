@@ -1,122 +1,121 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-from collections import OrderedDict
 import json
 import os
 from pathlib import Path
+import platform
 import re
 import sys
 
 import pytest
 import yaml
 
-from conda_build import api, exceptions, variants
-from conda_build.utils import package_has_file
+from conda.common.compat import on_mac
+from conda_build import api, exceptions
+from conda_build.variants import (
+    combine_specs,
+    dict_of_lists_to_list_of_dicts,
+    get_package_variants,
+    validate_spec,
+)
+from conda_build.utils import ensure_list, package_has_file
 
 from .utils import variants_dir
 
 
-def test_later_spec_priority(single_version, no_numpy_version):
-    # override a single key
-    specs = OrderedDict()
-    specs['no_numpy'] = no_numpy_version
-    specs['single_ver'] = single_version
+@pytest.mark.parametrize(
+    "variants",
+    [
+        (["1.2", "3.4"], "5.6"),
+        ("1.2", ["3.4", "5.6"]),
+    ],
+)
+def test_spec_priority_overriding(variants):
+    name = "package"
 
-    combined_spec = variants.combine_specs(specs)
-    assert len(combined_spec) == 2
-    assert combined_spec["python"] == ["2.7.*"]
+    first, second = variants
+    ordered_specs = {
+        "first": {name: first},
+        "second": {name: second},
+    }
 
-    # keep keys that are not overwritten
-    specs = OrderedDict()
-    specs['single_ver'] = single_version
-    specs['no_numpy'] = no_numpy_version
-    combined_spec = variants.combine_specs(specs)
-    assert len(combined_spec) == 2
-    assert len(combined_spec["python"]) == 2
+    combined = combine_specs(ordered_specs)[name]
+    expected = ensure_list(second)
+    assert len(combined) == len(expected)
+    assert combined == expected
 
 
-def test_get_package_variants_from_file(
-    testing_workdir, testing_config, no_numpy_version
-):
-    variants_path = Path(testing_workdir, "variant_example.yaml")
-    variants_path.write_text(yaml.dump(no_numpy_version, default_flow_style=False))
+@pytest.mark.parametrize(
+    "as_yaml",
+    [
+        pytest.param(True, id="yaml"),
+        pytest.param(False, id="dict"),
+    ],
+)
+def test_python_variants(testing_workdir, testing_config, as_yaml):
+    """Python variants are treated differently in conda recipes. Instead of being pinned against a
+    specific version they are converted into version ranges. E.g.:
 
-    testing_config.variant_config_files = [str(variants_path)]
+    python 3.5 -> python >=3.5,<3.6.0a0
+    otherPackages 3.5 -> otherPackages 3.5
+    """
+    variants = {"python": ["3.9", "3.10"]}
     testing_config.ignore_system_config = True
 
+    # write variants to disk
+    if as_yaml:
+        variants_path = Path(testing_workdir, "variant_example.yaml")
+        variants_path.write_text(yaml.dump(variants, default_flow_style=False))
+        testing_config.variant_config_files = [str(variants_path)]
+
+    # render the metadata
     metadata = api.render(
         os.path.join(variants_dir, "variant_recipe"),
         no_download_source=False,
         config=testing_config,
+        # if variants were written to disk then don't pass it along
+        variants=None if as_yaml else variants,
     )
 
-    # one for each Python version.  Numpy is not strictly pinned and should present only 1 dimension
+    # we should have one package/metadata per python version
     assert len(metadata) == 2
-    assert (
-        sum(
-            "python >=2.7,<2.8" in req
-            for (m, _, _) in metadata
-            for req in m.meta["requirements"]["run"]
-        )
-        == 1
-    )
-    assert (
-        sum(
-            "python >=3.5,<3.6" in req
-            for (m, _, _) in metadata
-            for req in m.meta["requirements"]["run"]
-        )
-        == 1
-    )
+    # there should only be one run requirement for each package/metadata
+    assert len(metadata[0][0].meta["requirements"]["run"]) == 1
+    assert len(metadata[1][0].meta["requirements"]["run"]) == 1
+    # the run requirements should be python ranges
+    assert {
+        *metadata[0][0].meta["requirements"]["run"],
+        *metadata[1][0].meta["requirements"]["run"],
+    } == {"python >=3.9,<3.10.0a0", "python >=3.10,<3.11.0a0"}
 
 
 def test_use_selectors_in_variants(testing_workdir, testing_config):
     testing_config.variant_config_files = [
         os.path.join(variants_dir, "selector_conda_build_config.yaml")
     ]
-    variants.get_package_variants(testing_workdir, testing_config)
+    get_package_variants(testing_workdir, testing_config)
 
 
-def test_get_package_variants_from_dictionary_of_lists(testing_config, no_numpy_version):
-    testing_config.ignore_system_config = True
-
+@pytest.mark.xfail(
+    reason=(
+        "7/19/2017 Strange failure. Can't reproduce locally. Test runs fine "
+        "with parallelism and everything. Test fails reproducibly on CI, but logging "
+        "into appveyor after failed run, test passes."
+        "1/9/2023 ignore_version doesn't work as advertised."
+    )
+)
+def test_variant_with_ignore_version_reduces_matrix():
     metadata = api.render(
-        os.path.join(variants_dir, "variant_recipe"),
-        no_download_source=False,
-        config=testing_config,
-        variants=no_numpy_version,
+        os.path.join(variants_dir, "03_ignore_version_reduces_matrix"),
+        variants={
+            "packageA": ["1.2", "3.4"],
+            "packageB": ["5.6", "7.8"],
+            # packageB is ignored so that dimension should get collapsed
+            "ignore_version": "packageB",
+        },
+        finalize=False,
     )
-
-    # one for each Python version.  Numpy is not strictly pinned and should present only 1 dimension
-    assert len(metadata) == 2, metadata
-    assert (
-        sum(
-            "python >=2.7,<2.8" in req
-            for (m, _, _) in metadata
-            for req in m.meta["requirements"]["run"]
-        )
-        == 1
-    )
-    assert (
-        sum(
-            "python >=3.5,<3.6" in req
-            for (m, _, _) in metadata
-            for req in m.meta["requirements"]["run"]
-        )
-        == 1
-    )
-
-
-@pytest.mark.xfail(reason="Strange failure 7/19/2017.  Can't reproduce locally.  Test runs fine "
-                   "with parallelism and everything.  Test fails reproducibly on CI, but logging "
-                   "into appveyor after failed run, test passes.  =(")
-def test_variant_with_ignore_numpy_version_reduces_matrix(numpy_version_ignored):
-    # variants are defined in yaml file in this folder
-    # there are two python versions and two numpy versions.  However, because numpy is not pinned,
-    #    the numpy dimensions should get collapsed.
-    recipe = os.path.join(variants_dir, "03_numpy_matrix")
-    metadata = api.render(recipe, variants=numpy_version_ignored, finalize=False)
-    assert len(metadata) == 2, metadata
+    assert len(metadata) == 2
 
 
 def test_variant_with_numpy_pinned_has_matrix():
@@ -138,35 +137,27 @@ def test_no_satisfiable_variants_raises_error():
     recipe = os.path.join(variants_dir, "01_basic_templating")
     with pytest.raises(exceptions.DependencyNeedsBuildingError):
         api.render(recipe, permit_unsatisfiable_variants=False)
-
-    # the packages are not installable anyway, so this should show a warning that recipe can't
-    #   be finalized
     api.render(recipe, permit_unsatisfiable_variants=True)
-    # out, err = capsys.readouterr()
-    # print(out)
-    # print(err)
-    # print(caplog.text)
-    # assert "Returning non-final recipe; one or more dependencies was unsatisfiable" in err
 
 
 def test_zip_fields():
     """Zipping keys together allows people to tie different versions as sets of combinations."""
-    v = {'python': ['2.7', '3.5'], 'vc': ['9', '14'], 'zip_keys': [('python', 'vc')]}
-    ld = variants.dict_of_lists_to_list_of_dicts(v)
-    assert len(ld) == 2
-    assert ld[0]['python'] == '2.7'
-    assert ld[0]['vc'] == '9'
-    assert ld[1]['python'] == '3.5'
-    assert ld[1]['vc'] == '14'
+    variants = {'packageA': ['1.2', '3.4'], 'packageB': ['5', '6'], 'zip_keys': [('packageA', 'packageB')]}
+    zipped = dict_of_lists_to_list_of_dicts(variants)
+    assert len(zipped) == 2
+    assert zipped[0]['packageA'] == '1.2'
+    assert zipped[0]['packageB'] == '5'
+    assert zipped[1]['packageA'] == '3.4'
+    assert zipped[1]['packageB'] == '6'
 
     # allow duplication of values, but lengths of lists must always match
-    v = {'python': ['2.7', '2.7'], 'vc': ['9', '14'], 'zip_keys': [('python', 'vc')]}
-    ld = variants.dict_of_lists_to_list_of_dicts(v)
-    assert len(ld) == 2
-    assert ld[0]['python'] == '2.7'
-    assert ld[0]['vc'] == '9'
-    assert ld[1]['python'] == '2.7'
-    assert ld[1]['vc'] == '14'
+    variants = {'packageA': ['1.2', '1.2'], 'packageB': ['5', '6'], 'zip_keys': [('packageA', 'packageB')]}
+    zipped = dict_of_lists_to_list_of_dicts(variants)
+    assert len(zipped) == 2
+    assert zipped[0]['packageA'] == '1.2'
+    assert zipped[0]['packageB'] == '5'
+    assert zipped[1]['packageA'] == '1.2'
+    assert zipped[1]['packageB'] == '6'
 
 
 def test_validate_spec():
@@ -176,7 +167,7 @@ def test_validate_spec():
     """
     spec = {
         # normal expansions
-        "foo": [2.7, 3.7, 3.8],
+        "foo": [1.2, 3.4],
         # zip_keys are the values that need to be expanded as a set
         "zip_keys": [["bar", "baz"], ["qux", "quux", "quuz"]],
         "bar": [1, 2, 3],
@@ -189,33 +180,33 @@ def test_validate_spec():
         "corge": 42,
     }
     # valid spec
-    variants.validate_spec("spec", spec)
+    validate_spec("spec", spec)
 
     spec2 = dict(spec)
     spec2["bad-char"] = "bad-char"
     # invalid characters
     with pytest.raises(ValueError):
-        variants.validate_spec("spec[bad_char]", spec2)
+        validate_spec("spec[bad_char]", spec2)
 
     spec3 = dict(spec, zip_keys="bad_zip_keys")
     # bad zip_keys
     with pytest.raises(ValueError):
-        variants.validate_spec("spec[bad_zip_keys]", spec3)
+        validate_spec("spec[bad_zip_keys]", spec3)
 
     spec4 = dict(spec, zip_keys=[["bar", "baz"], ["qux", "quux"], ["quuz", "missing"]])
     # zip_keys' zip_group has key missing from spec
     with pytest.raises(ValueError):
-        variants.validate_spec("spec[missing_key]", spec4)
+        validate_spec("spec[missing_key]", spec4)
 
     spec5 = dict(spec, zip_keys=[["bar", "baz"], ["qux", "quux", "quuz"], ["quuz"]])
     # zip_keys' zip_group has duplicate key
     with pytest.raises(ValueError):
-        variants.validate_spec("spec[duplicate_key]", spec5)
+        validate_spec("spec[duplicate_key]", spec5)
 
     spec6 = dict(spec, baz=[4, 6])
     # zip_keys' zip_group key fields have same length
     with pytest.raises(ValueError):
-        variants.validate_spec("spec[duplicate_key]", spec6)
+        validate_spec("spec[duplicate_key]", spec6)
 
 
 def test_cross_compilers():
@@ -261,7 +252,7 @@ def test_variant_input_with_zip_keys_keeps_zip_keys_list():
         'zip_keys': ['sqlite', 'zlib', 'xz'],
         'pin_run_as_build': {'python': {'min_pin': 'x.x', 'max_pin': 'x.x'}}
     }
-    vrnts = variants.dict_of_lists_to_list_of_dicts(spec)
+    vrnts = dict_of_lists_to_list_of_dicts(spec)
     assert len(vrnts) == 2
     assert vrnts[0].get("zip_keys") == spec["zip_keys"]
 
@@ -281,6 +272,7 @@ def test_ensure_valid_spec_on_run_and_test(testing_workdir, testing_config, capl
     assert "Adding .* to spec 'pytest-mock  1.6'" not in text
 
 
+@pytest.mark.skipif(on_mac and platform.machine() == "arm64", reason="Unsatisfiable dependencies for M1 MacOS: {'bzip2=1.0.6'}")
 def test_serial_builds_have_independent_configs(testing_config):
     recipe = os.path.join(variants_dir, "17_multiple_recipes_independent_config")
     recipes = [os.path.join(recipe, dirname) for dirname in ("a", "b")]
@@ -474,6 +466,8 @@ def test_target_platform_looping(testing_config):
     assert len(outputs) == 2
 
 
+@pytest.mark.skipif(on_mac and platform.machine() == "arm64", reason="Unsatisfiable dependencies for M1 MacOS systems: {'numpy=1.16'}")
+# TODO Remove the above skip decorator once https://github.com/conda/conda-build/issues/4717 is resolved
 def test_numpy_used_variable_looping(testing_config):
     outputs = api.get_output_file_paths(os.path.join(variants_dir, "numpy_used"))
     assert len(outputs) == 4
@@ -532,6 +526,7 @@ def test_exclusive_config_file(testing_workdir):
     assert variant['abc'] == '123'
 
 
+@pytest.mark.skipif(on_mac and platform.machine() == "arm64", reason="M1 Mac-specific file system error related to this test")
 def test_inner_python_loop_with_output(testing_config):
     outputs = api.get_output_file_paths(
         os.path.join(variants_dir, "test_python_as_subpackage_loop"),

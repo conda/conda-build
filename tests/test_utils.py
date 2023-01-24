@@ -287,21 +287,21 @@ root:
 
 def test_ensure_valid_spec():
     assert utils.ensure_valid_spec('python') == 'python'
-    assert utils.ensure_valid_spec('python 2.7') == 'python 2.7.*'
-    assert utils.ensure_valid_spec('python 2.7.2') == 'python 2.7.2.*'
-    assert utils.ensure_valid_spec('python 2.7.12 0') == 'python 2.7.12 0'
-    assert utils.ensure_valid_spec('python >=2.7,<2.8') == 'python >=2.7,<2.8'
+    assert utils.ensure_valid_spec('python 3.8') == 'python 3.8.*'
+    assert utils.ensure_valid_spec('python 3.8.2') == 'python 3.8.2.*'
+    assert utils.ensure_valid_spec('python 3.8.10 0') == 'python 3.8.10 0'
+    assert utils.ensure_valid_spec('python >=3.8,<3.9') == 'python >=3.8,<3.9'
     assert utils.ensure_valid_spec('numpy x.x') == 'numpy x.x'
     assert utils.ensure_valid_spec(utils.MatchSpec('numpy x.x')) == utils.MatchSpec('numpy x.x')
 
 
 def test_insert_variant_versions(testing_metadata):
     testing_metadata.meta['requirements']['build'] = ['python', 'numpy 1.13']
-    testing_metadata.config.variant = {'python': '2.7', 'numpy': '1.11'}
+    testing_metadata.config.variant = {'python': '3.8', 'numpy': '1.11'}
     utils.insert_variant_versions(testing_metadata.meta.get('requirements', {}),
                                   testing_metadata.config.variant, 'build')
     # this one gets inserted
-    assert 'python 2.7.*' in testing_metadata.meta['requirements']['build']
+    assert 'python 3.8.*' in testing_metadata.meta['requirements']['build']
     # this one should not be altered
     assert 'numpy 1.13' in testing_metadata.meta['requirements']['build']
     # the overall length does not change
