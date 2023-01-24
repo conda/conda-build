@@ -18,89 +18,35 @@ from conda_build import api
 from conda_build.exceptions import DependencyNeedsBuildingError
 from conda_build.utils import on_win
 
-thisdir = os.path.dirname(os.path.realpath(__file__))
 
+SYMPY_URL = "https://pypi.python.org/packages/source/s/sympy/sympy-1.10.tar.gz#md5=b3f5189ad782bbcb1bedc1ec2ca12f29"
 
-@pytest.mark.parametrize(
-    "prefix, repo, package, version",
-    [
-        ("", "pypi", "pip", "8.1.2"),
-        ("r", "cran", "acs", ""),
-        ("r", "cran", "https://github.com/twitter/AnomalyDetection.git", ""),
-        ("perl", "cpan", "Moo", ""),
-        ("", "rpm", "libX11-devel", ""),
-        # ('lua', luarocks', 'LuaSocket', ''),
-    ],
-)
-def test_repo(prefix, repo, package, version, testing_workdir, testing_config):
-    api.skeletonize(package, repo, version=version, output_dir=testing_workdir,
-                    config=testing_config)
-    try:
-        base_package, _ = os.path.splitext(os.path.basename(package))
-        package_name = "-".join(
-            [prefix, base_package]) if prefix else base_package
-        contents = os.listdir(testing_workdir)
-        assert len([content for content in contents
-                    if content.startswith(package_name.lower()) and
-                    os.path.isdir(os.path.join(testing_workdir, content))])
-    except:
-        print(os.listdir(testing_workdir))
-        raise
-
-
-@pytest.mark.slow
-def test_name_with_version_specified(testing_workdir, testing_config):
-    api.skeletonize(
-        packages="sympy",
-        repo="pypi",
-        version="1.10",
-        config=testing_config,
-    )
-    m = api.render("sympy/meta.yaml")[0][0]
-    assert m.version() == "1.10"
-
-
-def test_pypi_url(testing_workdir, testing_config):
-    api.skeletonize(
-        packages="https://pypi.python.org/packages/source/s/sympy/sympy-1.10.tar.gz#md5=b3f5189ad782bbcb1bedc1ec2ca12f29",
-        repo="pypi",
-        config=testing_config,
-    )
-    m = api.render("sympy/meta.yaml")[0][0]
-    assert m.version() == "1.10"
+PYLINT_VERSION = "2.3.1"
+PYLINT_HASH_TYPE = "sha256"
+PYLINT_HASH_VALUE = "723e3db49555abaf9bf79dc474c6b9e2935ad82230b10c1138a71ea41ac0fff1"
+PYLINT_FILENAME = f"pylint-{PYLINT_VERSION}.tar.gz"
+PYLINT_URL = f"https://pypi.python.org/packages/source/p/pylint/{PYLINT_FILENAME}#{PYLINT_HASH_TYPE}={PYLINT_HASH_VALUE}"
 
 
 @pytest.fixture
-def url_pylint_package():
-    return "https://pypi.python.org/packages/source/p/pylint/pylint-2.3.1.tar.gz#" \
-           "sha256=723e3db49555abaf9bf79dc474c6b9e2935ad82230b10c1138a71ea41ac0fff1"
-
-
-@pytest.fixture
-def mock_metada_pylint(url_pylint_package):
-    import re
-
-    version, hash_type, hash_value = re.findall(
-        r"pylint-(.*).tar.gz#(.*)=(.*)$", url_pylint_package
-    )[0]
-
+def mock_metadata():
     return {
-        'run_depends': '',
-        'build_depends': '',
-        'entry_points': '',
-        'test_commands': '',
-        'tests_require': '',
-        'version': 'UNKNOWN',
-        'pypiurl': url_pylint_package,
-        'filename': f"black-{version}.tar.gz",
-        'digest': [hash_type, hash_value],
-        'import_tests': '',
-        'summary': ''
+        "run_depends": "",
+        "build_depends": "",
+        "entry_points": "",
+        "test_commands": "",
+        "tests_require": "",
+        "version": "UNKNOWN",
+        "pypiurl": PYLINT_URL,
+        "filename": PYLINT_FILENAME,
+        "digest": [PYLINT_HASH_TYPE, PYLINT_HASH_VALUE],
+        "import_tests": "",
+        "summary": "",
     }
 
 
 @pytest.fixture
-def pkginfo_pylint(url_pylint_package):
+def pylint_pkginfo():
     # Hardcoding it to avoid to use the get_pkginfo because it takes too much time
     return {
         'classifiers': [
@@ -148,15 +94,106 @@ def pkginfo_pylint(url_pylint_package):
     }
 
 
-def test_get_entry_points(testing_workdir, pkginfo_pylint,
-                          result_metadata_pylint):
-    pkginfo = pkginfo_pylint
+@pytest.fixture
+def pylint_metadata():
+    return {
+        "run_depends": ["astroid >=2.2.0,<3", "isort >=4.2.5,<5", "mccabe >=0.6,<0.7"],
+        "build_depends": [
+            "pip",
+            "astroid >=2.2.0,<3",
+            "isort >=4.2.5,<5",
+            "mccabe >=0.6,<0.7",
+        ],
+        "entry_points": [
+            "pylint = pylint:run_pylint",
+            "epylint = pylint:run_epylint",
+            "pyreverse = pylint:run_pyreverse",
+            "symilar = pylint:run_symilar",
+        ],
+        "test_commands": [
+            "pylint --help",
+            "epylint --help",
+            "pyreverse --help",
+            "symilar --help",
+        ],
+        "tests_require": ["pytest"],
+        "version": PYLINT_VERSION,
+        "pypiurl": PYLINT_URL,
+        "filename": PYLINT_FILENAME,
+        "digest": [PYLINT_HASH_TYPE, PYLINT_HASH_VALUE],
+        "import_tests": [
+            "pylint",
+            "pylint.checkers",
+            "pylint.extensions",
+            "pylint.pyreverse",
+            "pylint.reporters",
+            "pylint.reporters.ureports",
+        ],
+        "summary": "python code static checker",
+        "packagename": "pylint",
+        "home": "https://github.com/PyCQA/pylint",
+        "license": "GNU General Public (GPL)",
+        "license_family": "LGPL",
+    }
+
+
+@pytest.mark.parametrize(
+    "prefix, repo, package, version",
+    [
+        ("", "pypi", "pip", "8.1.2"),
+        ("r", "cran", "acs", ""),
+        ("r", "cran", "https://github.com/twitter/AnomalyDetection.git", ""),
+        ("perl", "cpan", "Moo", ""),
+        ("", "rpm", "libX11-devel", ""),
+        # ('lua', luarocks', 'LuaSocket', ''),
+    ],
+)
+def test_repo(prefix, repo, package, version, testing_workdir, testing_config):
+    api.skeletonize(
+        package,
+        repo,
+        version=version,
+        output_dir=testing_workdir,
+        config=testing_config,
+    )
+    try:
+        base_package, _ = os.path.splitext(os.path.basename(package))
+        package_name = "-".join([prefix, base_package]) if prefix else base_package
+        contents = os.listdir(testing_workdir)
+        assert len(
+            [
+                content
+                for content in contents
+                if content.startswith(package_name.lower())
+                and os.path.isdir(os.path.join(testing_workdir, content))
+            ]
+        )
+    except:
+        print(os.listdir(testing_workdir))
+        raise
+
+
+@pytest.mark.parametrize(
+    "package,version",
+    [
+        pytest.param("sympy", "1.10", id="with version"),
+        pytest.param(SYMPY_URL, None, id="with url"),
+    ],
+)
+def test_sympy(package: str, version: str | None, testing_workdir, testing_config):
+    api.skeletonize(
+        packages=package, repo="pypi", version=version, config=testing_config
+    )
+    m = api.render("sympy/meta.yaml")[0][0]
+    assert m.version() == "1.10"
+
+
+def test_get_entry_points(testing_workdir, pylint_pkginfo, pylint_metadata):
+    pkginfo = pylint_pkginfo
     entry_points = get_entry_points(pkginfo)
 
-    assert entry_points["entry_points"] == result_metadata_pylint[
-        "entry_points"]
-    assert entry_points["test_commands"] == result_metadata_pylint[
-        "test_commands"]
+    assert entry_points["entry_points"] == pylint_metadata["entry_points"]
+    assert entry_points["test_commands"] == pylint_metadata["test_commands"]
 
 
 def test_convert_to_flat_list():
@@ -182,51 +219,6 @@ def test_is_setuptools_enabled():
     })
 
 
-@pytest.fixture
-def result_metadata_pylint(url_pylint_package):
-    return {
-        'run_depends': [
-            'astroid >=2.2.0,<3', 'isort >=4.2.5,<5', 'mccabe >=0.6,<0.7'
-        ],
-        'build_depends': [
-            'pip', 'astroid >=2.2.0,<3', 'isort >=4.2.5,<5', 'mccabe >=0.6,<0.7'
-        ],
-        'entry_points': [
-            'pylint = pylint:run_pylint',
-            'epylint = pylint:run_epylint',
-            'pyreverse = pylint:run_pyreverse',
-            'symilar = pylint:run_symilar'
-        ],
-        'test_commands': [
-            'pylint --help',
-            'epylint --help',
-            'pyreverse --help',
-            'symilar --help'
-        ],
-        'tests_require': ['pytest'],
-        'version': '2.3.1',
-        'pypiurl': url_pylint_package,
-        'filename': 'black-2.3.1.tar.gz',
-        'digest': [
-            'sha256',
-            '723e3db49555abaf9bf79dc474c6b9e2935ad82230b10c1138a71ea41ac0fff1'
-        ],
-        'import_tests': [
-            'pylint',
-            'pylint.checkers',
-            'pylint.extensions',
-            'pylint.pyreverse',
-            'pylint.reporters',
-            'pylint.reporters.ureports'
-        ],
-        'summary': 'python code static checker',
-        'packagename': 'pylint',
-        'home': 'https://github.com/PyCQA/pylint',
-        'license': 'GNU General Public (GPL)',
-        'license_family': 'LGPL'
-    }
-
-
 def test_get_dependencies():
     assert get_dependencies(
         ['astroid >=2.2.0,<3  #COMMENTS', 'isort >=4.2.5,<5',
@@ -242,9 +234,8 @@ def test_get_dependencies():
           'mccabe >=0.6,<0.7']
 
 
-def test_get_import_tests(pkginfo_pylint, result_metadata_pylint):
-    assert get_import_tests(pkginfo_pylint) \
-           == result_metadata_pylint["import_tests"]
+def test_get_import_tests(pylint_pkginfo, pylint_metadata):
+    assert get_import_tests(pylint_pkginfo) == pylint_metadata["import_tests"]
 
 
 def test_get_home():
@@ -260,35 +251,29 @@ def test_get_summary():
     assert get_summary({"summary": 'SUMMARY "QUOTES"'}) == r"SUMMARY \"QUOTES\""
 
 
-def test_license_name(url_pylint_package, pkginfo_pylint):
+def test_license_name(pylint_pkginfo):
     license_name = "GNU General Public License (GPL)"
-    assert get_license_name(url_pylint_package, pkginfo_pylint, True, {}) \
-           == license_name
+    assert get_license_name(PYLINT_URL, pylint_pkginfo, True, {}) == license_name
     assert clean_license_name(license_name) == "GNU General Public (GPL)"
     assert clean_license_name("MIT License") == "MIT"
 
 
-def test_get_tests_require(pkginfo_pylint, result_metadata_pylint):
-    assert get_tests_require(pkginfo_pylint) == result_metadata_pylint[
-        "tests_require"]
+def test_get_tests_require(pylint_pkginfo, pylint_metadata):
+    assert get_tests_require(pylint_pkginfo) == pylint_metadata["tests_require"]
 
 
 def test_get_package_metadata(
-        testing_workdir,
-        testing_config,
-        url_pylint_package,
-        mock_metada_pylint,
-        result_metadata_pylint
+    testing_workdir, testing_config, mock_metadata, pylint_metadata
 ):
     get_package_metadata(
-        url_pylint_package,
-        mock_metada_pylint,
+        PYLINT_URL,
+        mock_metadata,
         {},
         ".",
         "3.7",
         False,
         False,
-        [url_pylint_package],
+        [PYLINT_URL],
         False,
         True,
         [],
@@ -296,7 +281,7 @@ def test_get_package_metadata(
         config=testing_config,
         setup_options=[],
     )
-    assert mock_metada_pylint == result_metadata_pylint
+    assert mock_metadata == pylint_metadata
 
 
 @pytest.mark.slow
