@@ -4,12 +4,10 @@
 This module tests the test API.  These are high-level integration tests.  Lower level unit tests
 should go in test_render.py
 """
-
 import os
 import re
 import sys
 
-from unittest import mock
 import pytest
 import yaml
 
@@ -97,10 +95,12 @@ def test_get_output_file_path_jinja2(testing_workdir, testing_config):
                                       "py{}{}_0_g262d444.tar.bz2".format(python, _hash))
 
 
-@mock.patch('conda_build.source')
-def test_output_without_jinja_does_not_download(mock_source, testing_workdir, testing_config):
-    api.get_output_file_path(os.path.join(metadata_dir, "source_git"), config=testing_config)[0]
-    mock_source.provide.assert_not_called()
+def test_output_without_jinja_does_not_download(mocker, testing_config):
+    mock = mocker.patch("conda_build.source")
+    api.get_output_file_path(
+        os.path.join(metadata_dir, "source_git"), config=testing_config
+    )
+    mock.assert_not_called()
 
 
 def test_pin_compatible_semver(testing_config):
