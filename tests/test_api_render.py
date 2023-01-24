@@ -6,16 +6,16 @@ should go in test_render.py
 """
 import os
 import re
-import sys
 
 import pytest
 import yaml
 
+from conda.common.compat import on_win
+
 from conda_build import api, render
 from conda_build.conda_interface import subdir, cc_conda_build
-from tests import utils
 
-from .utils import metadata_dir, thisdir
+from .utils import metadata_dir, variants_dir
 
 
 def test_render_need_download(testing_workdir, testing_config):
@@ -110,12 +110,7 @@ def test_pin_compatible_semver(testing_config):
 
 
 @pytest.mark.slow
-@pytest.mark.skipif(
-    utils.on_win and sys.version_info < (3, 6),
-    reason="Failing tests on CI for Python 2.7"
-)
-@pytest.mark.xfail(sys.platform == "win32",
-                   reason="Defaults channel has conflicting vc packages")
+@pytest.mark.xfail(on_win, reason="Defaults channel has conflicting vc packages")
 def test_resolved_packages_recipe(testing_config):
     recipe_dir = os.path.join(metadata_dir, '_resolved_packages_host_build')
     metadata = api.render(recipe_dir, config=testing_config)[0][0]
@@ -192,8 +187,11 @@ def test_setting_condarc_vars_with_env_var_expansion(testing_workdir):
 
     os.environ['TEST_WORKDIR'] = testing_workdir
     try:
-        m = api.render(os.path.join(thisdir, 'test-recipes', 'variants', '19_used_variables'),
-                    bypass_env_check=True, finalize=False)[0][0]
+        m = api.render(
+            os.path.join(variants_dir, "19_used_variables"),
+            bypass_env_check=True,
+            finalize=False,
+        )[0][0]
         # this one should have gotten clobbered by the values in the recipe
         assert m.config.variant['python'] not in python_versions
         # this confirms that we loaded the config file correctly
@@ -226,8 +224,11 @@ def test_run_exports_with_pin_compatible_in_subpackages(testing_config):
 
 
 def test_ignore_build_only_deps(testing_config):
-    ms = api.render(os.path.join(thisdir, 'test-recipes', 'variants', 'python_in_build_only'),
-                    bypass_env_check=True, finalize=False)
+    ms = api.render(
+        os.path.join(variants_dir, "python_in_build_only"),
+        bypass_env_check=True,
+        finalize=False,
+    )
     assert len(ms) == 1
 
 
@@ -239,16 +240,6 @@ def test_merge_build_host_build_key(testing_workdir, testing_metadata):
 def test_merge_build_host_empty_host_section(testing_config):
     m = api.render(os.path.join(metadata_dir, '_empty_host_avoids_merge'))[0][0]
     assert not any('bzip2' in dep for dep in m.meta['requirements']['run'])
-
-
-@pytest.mark.skipif(sys.platform != "linux2", reason="package on remote end is only on linux")
-@pytest.mark.xfail(reason="It needs to be fixed for Python v2.7. #3681")
-def test_run_exports_from_repo_without_channeldata(testing_config):
-    ms = api.render(os.path.join(metadata_dir, '_run_export_no_channeldata'), config=testing_config)
-    assert ms[0][0].meta['requirements']['build'] == ["exporty"]
-    # these two will be missing if run_exports has failed.
-    assert ms[0][0].meta['requirements']['host'] == ["exporty"]
-    assert ms[0][0].meta['requirements']['run'] == ["exporty"]
 
 
 def test_pin_expression_works_with_prereleases(testing_config):
