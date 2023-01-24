@@ -4,15 +4,11 @@
 This file tests the build.py module.  It sits lower in the stack than the API tests,
 and is more unit-test oriented.
 """
-
 import json
 import os
 import sys
 
-import pytest
-
 from conda_build import build, api
-from conda_build.utils import on_win
 
 from .utils import metadata_dir, get_noarch_python_meta
 
@@ -81,8 +77,6 @@ def test_is_no_link():
     assert build.is_no_link(no_link, "path/nope") is None
 
 
-@pytest.mark.skipif(on_win and sys.version[:3] == "2.7",
-                    reason="os.link is not available so can't setup test")
 def test_sorted_inode_first_path(testing_workdir):
     path_one = os.path.join(testing_workdir, "one")
     path_two = os.path.join(testing_workdir, "two")
@@ -130,8 +124,6 @@ def test_create_info_files_json(testing_workdir, testing_metadata):
         assert output == expected_output
 
 
-@pytest.mark.skipif(on_win and sys.version[:3] == "2.7",
-                    reason="os.symlink is not available so can't setup test")
 def test_create_info_files_json_symlinks(testing_workdir, testing_metadata):
     info_dir = os.path.join(testing_workdir, "info")
     os.mkdir(info_dir)
@@ -194,8 +186,6 @@ def test_create_info_files_json_symlinks(testing_workdir, testing_metadata):
         assert output == expected_output
 
 
-@pytest.mark.skipif(on_win and sys.version[:3] == "2.7",
-                    reason="os.link is not available so can't setup test")
 def test_create_info_files_json_no_inodes(testing_workdir, testing_metadata):
     info_dir = os.path.join(testing_workdir, "info")
     os.mkdir(info_dir)
