@@ -1,5 +1,8 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from pathlib import Path
+from typing import Any
+
 import pytest
 
 from conda_build import jinja_context
@@ -115,37 +118,48 @@ def test_resolved_packages(testing_metadata):
     assert any('python' == pkg.split()[0] for pkg in packages)
 
 
-def test_load_setup_py_data_from_setup_cfg(testing_metadata, tmpdir):
-    setup_py = tmpdir.join('setup.py')
-    setup_cfg = tmpdir.join('setup.cfg')
-    setup_py.write(
+def test_load_setup_py_data_from_setup_cfg(testing_metadata, tmp_path: Path):
+    setup_py = tmp_path / "setup.py"
+    setup_cfg = tmp_path / "setup.cfg"
+    setup_py.write_text(
         'from setuptools import setup\n'
         'setup(name="name_from_setup_py")\n'
     )
-    setup_cfg.write(
+    setup_cfg.write_text(
         '[metadata]\n'
         'name = name_from_setup_cfg\n'
         'version = version_from_setup_cfg\n'
         '[options.extras_require]\n'
         'extra = extra_package\n'
     )
-    setup_file = str(setup_py)
-    setuptools_data = jinja_context.load_setup_py_data(testing_metadata, setup_file)
+    setuptools_data = jinja_context.load_setup_py_data(testing_metadata, str(setup_py))
     # ensure that setup.cfg has priority over setup.py
     assert setuptools_data['name'] == 'name_from_setup_cfg'
     assert setuptools_data['version'] == 'version_from_setup_cfg'
     assert setuptools_data['extras_require'] == {'extra': ['extra_package']}
 
 
-@pytest.mark.parametrize("filename,fmt,data,expected", [
-    ("file.json", None, '{"a": 1}', {"a": 1}),
-    ("json_file", "json", '{"a": 1}', {"a": 1}),
-    ("file.toml", None, '[tbl]\na = 1', {"tbl": {"a": 1}}),
-    ("toml_file", "toml", '[tbl]\na = 1', {"tbl": {"a": 1}}),
-    ("file.yaml", None, 'a: 1\nb:\n  - c: 2', {"a": 1, "b": [{"c": 2}]}),
-])
-def test_load_file_data(tmpdir, filename, fmt, data, expected, testing_metadata):
-    f = tmpdir.join(filename)
-    f.write(data)
-    fn = str(f)
-    assert jinja_context.load_file_data(fn, fmt, config=testing_metadata.config) == expected
+@pytest.mark.parametrize(
+    "filename,fmt,data,expected",
+    [
+        ("file.json", None, '{"a": 1}', {"a": 1}),
+        ("json_file", "json", '{"a": 1}', {"a": 1}),
+        ("file.toml", None, "[tbl]\na = 1", {"tbl": {"a": 1}}),
+        ("toml_file", "toml", "[tbl]\na = 1", {"tbl": {"a": 1}}),
+        ("file.yaml", None, "a: 1\nb:\n  - c: 2", {"a": 1, "b": [{"c": 2}]}),
+    ],
+)
+def test_load_file_data(
+    tmp_path: Path,
+    filename: str,
+    fmt: str | None,
+    data: str,
+    expected: Any,
+    testing_metadata,
+):
+    path = tmp_path / filename
+    path.write_text(data)
+    assert (
+        jinja_context.load_file_data(str(path), fmt, config=testing_metadata.config)
+        == expected
+    )
