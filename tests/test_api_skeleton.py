@@ -59,7 +59,7 @@ def test_repo(prefix, repo, package, version, testing_workdir, testing_config):
 
 
 @pytest.mark.slow
-def test_name_with_version_specified(testing_workdir, testing_config):
+def test_name_with_version_specified(testing_config):
     api.skeletonize(
         packages="sympy",
         repo="pypi",
@@ -70,7 +70,7 @@ def test_name_with_version_specified(testing_workdir, testing_config):
     assert m.version() == "1.10"
 
 
-def test_pypi_url(testing_workdir, testing_config):
+def test_pypi_url(testing_config):
     api.skeletonize(
         packages="https://pypi.python.org/packages/source/s/sympy/sympy-1.10.tar.gz#md5=b3f5189ad782bbcb1bedc1ec2ca12f29",
         repo="pypi",
@@ -110,7 +110,7 @@ def mock_metada_pylint(url_pylint_package):
 
 
 @pytest.fixture
-def pkginfo_pylint(url_pylint_package):
+def pkginfo_pylint():
     # Hardcoding it to avoid to use the get_pkginfo because it takes too much time
     return {
         'classifiers': [
@@ -158,8 +158,7 @@ def pkginfo_pylint(url_pylint_package):
     }
 
 
-def test_get_entry_points(testing_workdir, pkginfo_pylint,
-                          result_metadata_pylint):
+def test_get_entry_points(pkginfo_pylint, result_metadata_pylint):
     pkginfo = pkginfo_pylint
     entry_points = get_entry_points(pkginfo)
 
@@ -284,7 +283,6 @@ def test_get_tests_require(pkginfo_pylint, result_metadata_pylint):
 
 
 def test_get_package_metadata(
-        testing_workdir,
         testing_config,
         url_pylint_package,
         mock_metada_pylint,
@@ -310,7 +308,7 @@ def test_get_package_metadata(
 
 
 @pytest.mark.slow
-def test_pypi_with_setup_options(testing_workdir, testing_config):
+def test_pypi_with_setup_options(testing_config):
     # Use photutils package below because skeleton will fail unless the setup.py is given
     # the flag --offline because of a bootstrapping a helper file that
     # occurs by default.
@@ -325,7 +323,7 @@ def test_pypi_with_setup_options(testing_workdir, testing_config):
     assert '--offline' in m.meta['build']['script']
 
 
-def test_pypi_pin_numpy(testing_workdir, testing_config):
+def test_pypi_pin_numpy(testing_config):
     # The package used here must have a numpy dependence for pin-numpy to have
     # any effect.
     api.skeletonize(packages='msumastro', repo='pypi', version='0.9.0',
@@ -337,7 +335,7 @@ def test_pypi_pin_numpy(testing_workdir, testing_config):
         api.build('msumastro')
 
 
-def test_pypi_version_sorting(testing_workdir, testing_config):
+def test_pypi_version_sorting(testing_config):
     # The package used here must have a numpy dependence for pin-numpy to have
     # any effect.
     api.skeletonize(packages='impyla', repo='pypi', config=testing_config)
@@ -350,12 +348,12 @@ def test_list_skeletons():
     assert set(skeletons) == {'pypi', 'cran', 'cpan', 'luarocks', 'rpm'}
 
 
-def test_pypi_with_entry_points(testing_workdir):
+def test_pypi_with_entry_points():
     api.skeletonize('planemo', repo='pypi', python_version="3.7")
     assert os.path.isdir('planemo')
 
 
-def test_pypi_with_version_arg(testing_workdir):
+def test_pypi_with_version_arg():
     # regression test for https://github.com/conda/conda-build/issues/1442
     api.skeletonize('PrettyTable', 'pypi', version='0.7.2')
     m = api.render('prettytable')[0][0]
@@ -363,7 +361,7 @@ def test_pypi_with_version_arg(testing_workdir):
 
 
 @pytest.mark.slow
-def test_pypi_with_extra_specs(testing_workdir, testing_config):
+def test_pypi_with_extra_specs(testing_config):
     # regression test for https://github.com/conda/conda-build/issues/1697
     # For mpi4py:
     testing_config.channel_urls.append('https://repo.anaconda.com/pkgs/free')
@@ -379,7 +377,7 @@ def test_pypi_with_extra_specs(testing_workdir, testing_config):
 
 
 @pytest.mark.slow
-def test_pypi_with_version_inconsistency(testing_workdir, testing_config):
+def test_pypi_with_version_inconsistency(testing_config):
     # regression test for https://github.com/conda/conda-build/issues/189
     # For mpi4py:
     extra_specs = ['mpi4py']
@@ -392,7 +390,7 @@ def test_pypi_with_version_inconsistency(testing_workdir, testing_config):
     assert parse_version(m.version()) == parse_version("0.0.10")
 
 
-def test_pypi_with_basic_environment_markers(testing_workdir):
+def test_pypi_with_basic_environment_markers():
     # regression test for https://github.com/conda/conda-build/issues/1974
     api.skeletonize('coconut', 'pypi', version='1.2.2')
     m = api.render('coconut')[0][0]
@@ -410,14 +408,14 @@ def test_pypi_with_basic_environment_markers(testing_workdir):
         assert "pygments" not in run_reqs
 
 
-def test_setuptools_test_requirements(testing_workdir):
+def test_setuptools_test_requirements():
     api.skeletonize(packages='hdf5storage', repo='pypi')
     m = api.render('hdf5storage')[0][0]
     assert m.meta['test']['requires'] == ['nose >=1.0']
 
 
 @pytest.mark.skipif(sys.version_info < (3, 8), reason="sympy is python 3.8+")
-def test_pypi_section_order_preserved(testing_workdir):
+def test_pypi_section_order_preserved():
     """
     Test whether sections have been written in the correct order.
     """

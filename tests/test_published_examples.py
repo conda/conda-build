@@ -12,7 +12,7 @@ from .utils import published_path, get_valid_recipes
 
 
 @pytest.mark.sanity
-def test_skeleton_pypi(testing_workdir):
+def test_skeleton_pypi():
     """published in docs at https://docs.conda.io/projects/conda-build/en/latest/user-guide/tutorials/build-pkgs-skeleton.html"""
     conda_path = os.path.join(sys.prefix, BIN_DIRECTORY, "conda")
 
@@ -22,7 +22,7 @@ def test_skeleton_pypi(testing_workdir):
 
 @pytest.mark.sanity
 @pytest.mark.parametrize("recipe", get_valid_recipes(published_path))
-def test_recipe_builds(recipe, testing_config, testing_workdir):
+def test_recipe_builds(recipe, testing_config):
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
     build(str(recipe), config=testing_config)

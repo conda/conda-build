@@ -31,13 +31,3 @@ def test_inspect_objects():
 def test_channel_installable():
     # make sure the default channel is installable as a reference
     assert api.test_installable('conda-team')
-
-#     # create a channel that is not installable to validate function
-
-#     platform = os.path.join(testing_workdir, subdir)
-#     output_file = os.path.join(platform, "empty_sections-0.0-0.tar.bz2")
-
-#     # create the index so conda can find the file
-#     api.update_index(platform)
-
-#     assert not api.test_installable(channel=to_url(testing_workdir))

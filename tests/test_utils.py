@@ -57,7 +57,7 @@ def test_merge_namespace_trees(namespace_setup):
 
 
 @pytest.fixture(scope='function')
-def namespace_setup(testing_workdir, request):
+def namespace_setup(testing_workdir):
     namespace = os.path.join(testing_workdir, 'namespace')
     package = os.path.join(namespace, 'package')
     makefile(os.path.join(package, "module.py"))
@@ -65,7 +65,7 @@ def namespace_setup(testing_workdir, request):
 
 
 @pytest.mark.sanity
-def test_disallow_merge_conflicts(namespace_setup, testing_config):
+def test_disallow_merge_conflicts(namespace_setup):
     duplicate = os.path.join(namespace_setup, 'dupe', 'namespace', 'package', 'module.py')
     makefile(duplicate)
     with pytest.raises(IOError):
@@ -250,7 +250,7 @@ def test_logger_filtering(caplog, capfd):
     log.removeHandler(logging.StreamHandler(sys.stderr))
 
 
-def test_logger_config_from_file(testing_workdir, caplog, capfd, mocker):
+def test_logger_config_from_file(testing_workdir, capfd, mocker):
     test_file = os.path.join(testing_workdir, 'build_log_config.yaml')
     with open(test_file, 'w') as f:
         f.write("""
