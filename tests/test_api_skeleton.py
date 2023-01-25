@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-import fnmatch
 import os
+from pathlib import Path
 import subprocess
 import sys
 
@@ -143,36 +143,37 @@ def pylint_metadata():
     "prefix, repo, package, version",
     [
         ("", "pypi", "pip", "8.1.2"),
-        ("r", "cran", "acs", ""),
-        ("r", "cran", "https://github.com/twitter/AnomalyDetection.git", ""),
-        ("perl", "cpan", "Moo", ""),
-        ("", "rpm", "libX11-devel", ""),
+        ("r-", "cran", "acs", None),
+        ("r-", "cran", "https://github.com/twitter/AnomalyDetection.git", ""),
+        ("perl-", "cpan", "Moo", None),
+        ("", "rpm", "libX11-devel", None),
         # ('lua', luarocks', 'LuaSocket', ''),
     ],
 )
-def test_repo(prefix, repo, package, version, testing_workdir, testing_config):
+def test_repo(
+    prefix: str,
+    repo: str,
+    package: str,
+    version: str | None,
+    tmp_path: Path,
+    testing_config,
+):
     api.skeletonize(
         package,
         repo,
         version=version,
-        output_dir=testing_workdir,
+        output_dir=tmp_path,
         config=testing_config,
     )
-    try:
-        base_package, _ = os.path.splitext(os.path.basename(package))
-        package_name = "-".join([prefix, base_package]) if prefix else base_package
-        contents = os.listdir(testing_workdir)
-        assert len(
-            [
-                content
-                for content in contents
-                if content.startswith(package_name.lower())
-                and os.path.isdir(os.path.join(testing_workdir, content))
-            ]
-        )
-    except:
-        print(os.listdir(testing_workdir))
-        raise
+
+    package_name = f"{prefix}{Path(package).stem}".lower()
+    assert len(
+        [
+            content
+            for content in tmp_path.iterdir()
+            if content.name.startswith(package_name) and content.is_dir()
+        ]
+    )
 
 
 @pytest.mark.parametrize(
@@ -182,15 +183,19 @@ def test_repo(prefix, repo, package, version, testing_workdir, testing_config):
         pytest.param(SYMPY_URL, None, id="with url"),
     ],
 )
-def test_sympy(package: str, version: str | None, testing_workdir, testing_config):
+def test_sympy(package: str, version: str | None, tmp_path: Path, testing_config):
     api.skeletonize(
-        packages=package, repo="pypi", version=version, config=testing_config
+        packages=package,
+        repo="pypi",
+        version=version,
+        config=testing_config,
+        output_dir=tmp_path,
     )
-    m = api.render("sympy/meta.yaml")[0][0]
+    m = api.render(str(tmp_path / "sympy" / "meta.yaml"))[0][0]
     assert m.version() == "1.10"
 
 
-def test_get_entry_points(testing_workdir, pylint_pkginfo, pylint_metadata):
+def test_get_entry_points(pylint_pkginfo, pylint_metadata):
     pkginfo = pylint_pkginfo
     entry_points = get_entry_points(pkginfo)
 
@@ -264,9 +269,7 @@ def test_get_tests_require(pylint_pkginfo, pylint_metadata):
     assert get_tests_require(pylint_pkginfo) == pylint_metadata["tests_require"]
 
 
-def test_get_package_metadata(
-    testing_workdir, testing_config, mock_metadata, pylint_metadata
-):
+def test_get_package_metadata(testing_config, mock_metadata, pylint_metadata):
     get_package_metadata(
         PYLINT_URL,
         mock_metadata,
@@ -287,38 +290,49 @@ def test_get_package_metadata(
 
 
 @pytest.mark.slow
-def test_pypi_with_setup_options(testing_config):
+def test_pypi_with_setup_options(tmp_path: Path, testing_config):
     # Use photutils package below because skeleton will fail unless the setup.py is given
     # the flag --offline because of a bootstrapping a helper file that
     # occurs by default.
 
     # Test that the setup option is used in constructing the skeleton.
-    api.skeletonize(packages='photutils', repo='pypi', version='0.2.2',
-                    setup_options='--offline',
-                    config=testing_config)
+    api.skeletonize(
+        packages="photutils",
+        repo="pypi",
+        version="0.2.2",
+        setup_options="--offline",
+        config=testing_config,
+        output_dir=tmp_path,
+    )
 
     # Check that the setup option occurs in bld.bat and build.sh.
-    m = api.render('photutils')[0][0]
-    assert '--offline' in m.meta['build']['script']
+    m = api.render(str(tmp_path / "photutils"))[0][0]
+    assert "--offline" in m.meta["build"]["script"]
 
 
-def test_pypi_pin_numpy(testing_config):
+def test_pypi_pin_numpy(tmp_path: Path, testing_config):
     # The package used here must have a numpy dependence for pin-numpy to have
     # any effect.
-    api.skeletonize(packages='msumastro', repo='pypi', version='0.9.0',
-                    config=testing_config,
-                    pin_numpy=True)
-    with open(os.path.join('msumastro', 'meta.yaml')) as f:
-        assert f.read().count('numpy x.x') == 2
+    api.skeletonize(
+        packages="msumastro",
+        repo="pypi",
+        version="0.9.0",
+        config=testing_config,
+        pin_numpy=True,
+        output_dir=tmp_path,
+    )
+    assert (tmp_path / "msumastro" / "meta.yaml").read_text().count("numpy x.x") == 2
     with pytest.raises(DependencyNeedsBuildingError):
         api.build('msumastro')
 
 
-def test_pypi_version_sorting(testing_config):
+def test_pypi_version_sorting(tmp_path: Path, testing_config):
     # The package used here must have a numpy dependence for pin-numpy to have
     # any effect.
-    api.skeletonize(packages='impyla', repo='pypi', config=testing_config)
-    m = api.render('impyla')[0][0]
+    api.skeletonize(
+        packages="impyla", repo="pypi", config=testing_config, output_dir=tmp_path
+    )
+    m = api.render(str(tmp_path / "impyla"))[0][0]
     assert parse_version(m.version()) >= parse_version("0.13.8")
 
 
@@ -327,52 +341,66 @@ def test_list_skeletons():
     assert set(skeletons) == {'pypi', 'cran', 'cpan', 'luarocks', 'rpm'}
 
 
-def test_pypi_with_entry_points():
-    api.skeletonize('planemo', repo='pypi', python_version="3.7")
-    assert os.path.isdir('planemo')
+def test_pypi_with_entry_points(tmp_path: Path):
+    api.skeletonize("planemo", repo="pypi", python_version="3.7", output_dir=tmp_path)
+    assert (tmp_path / "planemo").is_dir()
 
 
-def test_pypi_with_version_arg():
+def test_pypi_with_version_arg(tmp_path: Path):
     # regression test for https://github.com/conda/conda-build/issues/1442
-    api.skeletonize('PrettyTable', 'pypi', version='0.7.2')
-    m = api.render('prettytable')[0][0]
+    api.skeletonize("PrettyTable", "pypi", version="0.7.2", output_dir=tmp_path)
+    m = api.render(str(tmp_path / "prettytable"))[0][0]
     assert parse_version(m.version()) == parse_version("0.7.2")
 
 
 @pytest.mark.slow
-def test_pypi_with_extra_specs(testing_config):
+def test_pypi_with_extra_specs(tmp_path: Path, testing_config):
     # regression test for https://github.com/conda/conda-build/issues/1697
     # For mpi4py:
     testing_config.channel_urls.append('https://repo.anaconda.com/pkgs/free')
     extra_specs = ['cython', 'mpi4py']
     if not on_win:
-        extra_specs.append('nomkl')
-    api.skeletonize('bigfile', 'pypi', extra_specs=extra_specs,
-                    version='0.1.24', python="3.6", config=testing_config)
-    m = api.render('bigfile')[0][0]
+        extra_specs.append("nomkl")
+    api.skeletonize(
+        "bigfile",
+        "pypi",
+        extra_specs=extra_specs,
+        version="0.1.24",
+        python="3.6",
+        config=testing_config,
+        output_dir=tmp_path,
+    )
+    m = api.render(str(tmp_path / "bigfile"))[0][0]
     assert parse_version(m.version()) == parse_version("0.1.24")
     assert any('cython' in req for req in m.meta['requirements']['host'])
     assert any('mpi4py' in req for req in m.meta['requirements']['host'])
 
 
 @pytest.mark.slow
-def test_pypi_with_version_inconsistency(testing_config):
+def test_pypi_with_version_inconsistency(tmp_path: Path, testing_config):
     # regression test for https://github.com/conda/conda-build/issues/189
     # For mpi4py:
     extra_specs = ['mpi4py']
     if not on_win:
-        extra_specs.append('nomkl')
-    testing_config.channel_urls.append('https://repo.anaconda.com/pkgs/free')
-    api.skeletonize('mpi4py_test', 'pypi', extra_specs=extra_specs,
-                    version='0.0.10', python="3.6", config=testing_config)
-    m = api.render('mpi4py_test')[0][0]
+        extra_specs.append("nomkl")
+    testing_config.channel_urls.append("https://repo.anaconda.com/pkgs/free")
+    api.skeletonize(
+        "mpi4py_test",
+        "pypi",
+        extra_specs=extra_specs,
+        version="0.0.10",
+        python="3.6",
+        config=testing_config,
+        output_dir=tmp_path,
+    )
+    m = api.render(str(tmp_path / "mpi4py_test"))[0][0]
     assert parse_version(m.version()) == parse_version("0.0.10")
 
 
-def test_pypi_with_basic_environment_markers():
+def test_pypi_with_basic_environment_markers(tmp_path: Path):
     # regression test for https://github.com/conda/conda-build/issues/1974
-    api.skeletonize('coconut', 'pypi', version='1.2.2')
-    m = api.render('coconut')[0][0]
+    api.skeletonize("coconut", "pypi", version="1.2.2", output_dir=tmp_path)
+    m = api.render(tmp_path / "coconut")[0][0]
 
     build_reqs = str(m.meta['requirements']['host'])
     run_reqs = str(m.meta['requirements']['run'])
@@ -383,14 +411,14 @@ def test_pypi_with_basic_environment_markers():
     assert "pygments" in run_reqs
 
 
-def test_setuptools_test_requirements():
-    api.skeletonize(packages='hdf5storage', repo='pypi')
-    m = api.render('hdf5storage')[0][0]
-    assert m.meta['test']['requires'] == ['nose >=1.0']
+def test_setuptools_test_requirements(tmp_path: Path):
+    api.skeletonize(packages="hdf5storage", repo="pypi", output_dir=tmp_path)
+    m = api.render(str(tmp_path / "hdf5storage"))[0][0]
+    assert m.meta["test"]["requires"] == ["nose >=1.0"]
 
 
 @pytest.mark.skipif(sys.version_info < (3, 8), reason="sympy is python 3.8+")
-def test_pypi_section_order_preserved():
+def test_pypi_section_order_preserved(tmp_path: Path):
     """
     Test whether sections have been written in the correct order.
     """
@@ -399,12 +427,15 @@ def test_pypi_section_order_preserved():
                                             REQUIREMENTS_ORDER,
                                             PYPI_META_STATIC)
 
-    api.skeletonize(packages='sympy', repo='pypi')
+    api.skeletonize(packages="sympy", repo="pypi", output_dir=tmp_path)
     # Since we want to check the order of items in the recipe (not whether
     # the metadata values themselves are sensible), read the file as (ordered)
     # yaml, and check the order.
-    with open('sympy/meta.yaml') as file:
-        lines = [ln for ln in file.readlines() if not ln.startswith("{%")]
+    lines = [
+        line
+        for line in (tmp_path / "sympy" / "meta.yaml").read_text().splitlines()
+        if not line.startswith("{%")
+    ]
 
     # The loader below preserves the order of entries...
     recipe = ruamel.yaml.load("\n".join(lines), Loader=ruamel.yaml.RoundTripLoader)
@@ -424,17 +455,29 @@ def test_pypi_section_order_preserved():
 @pytest.mark.flaky(rerun=5, reruns_delay=2)
 @pytest.mark.skipif(on_win, reason="shellcheck is only available on Windows")
 @pytest.mark.parametrize(
-    "package, repo", [("r-rmarkdown", "cran"), ("Perl::Lint", "cpan"), ("screen", "rpm")]
+    "package, repo",
+    [
+        ("r-rmarkdown", "cran"),
+        ("Perl::Lint", "cpan"),
+        ("screen", "rpm"),
+    ],
 )
-def test_build_sh_shellcheck_clean(package, repo, testing_workdir, testing_config):
-    api.skeletonize(packages=package, repo=repo, output_dir=testing_workdir, config=testing_config)
+def test_build_sh_shellcheck_clean(
+    package: str, repo: str, tmp_path: Path, testing_config
+):
+    api.skeletonize(
+        packages=package,
+        repo=repo,
+        output_dir=tmp_path,
+        config=testing_config,
+    )
 
-    matches = []
-    for root, dirnames, filenames in os.walk(testing_workdir):
-        for filename in fnmatch.filter(filenames, "build.sh"):
-            matches.append(os.path.join(root, filename))
-
-    build_sh = matches[0]
+    build_sh = next(
+        Path(root, filename)
+        for root, _, filenames in os.walk(tmp_path)
+        for filename in filenames
+        if filename == "build.sh"
+    )
     cmd = [
         "shellcheck",
         "--enable=all",
@@ -445,7 +488,6 @@ def test_build_sh_shellcheck_clean(package, repo, testing_workdir, testing_confi
     ]
 
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    sc_stdout, _ = p.communicate()
-    findings = sc_stdout.decode(sys.stdout.encoding).replace("\r\n", "\n").splitlines()
-    assert findings == []
+    stdout, _ = p.communicate()
+    assert not stdout
     assert p.returncode == 0
