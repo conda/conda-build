@@ -43,7 +43,7 @@ def test_find_prefix_files(testing_workdir):
     assert len(list(build.have_prefix_files(files, testing_workdir))) == len(files)
 
 
-def test_build_preserves_PATH(testing_workdir, testing_config):
+def test_build_preserves_PATH(testing_config):
     m = api.render(os.path.join(metadata_dir, 'source_git'), config=testing_config)[0][0]
     ref_path = os.environ['PATH']
     build.build(m, stats=None)
@@ -233,7 +233,7 @@ def test_create_info_files_json_no_inodes(testing_workdir, testing_metadata):
         assert output == expected_output
 
 
-def test_rewrite_output(testing_workdir, testing_config, capsys):
+def test_rewrite_output(testing_config, capsys):
     api.build(os.path.join(metadata_dir, "_rewrite_env"), config=testing_config)
     captured = capsys.readouterr()
     stdout = captured.out
