@@ -18,7 +18,7 @@ from conda_build.conda_interface import subdir, cc_conda_build
 from .utils import metadata_dir, variants_dir
 
 
-def test_render_need_download(testing_workdir, testing_config):
+def test_render_need_download(testing_config):
     # first, test that the download/render system renders all it can,
     #    and accurately returns its needs
 
@@ -72,7 +72,7 @@ def test_get_output_file_path_metadata_object(testing_metadata):
                 "test_get_output_file_path_metadata_object-1.0-1.tar.bz2")
 
 
-def test_get_output_file_path_jinja2(testing_workdir, testing_config):
+def test_get_output_file_path_jinja2(testing_config):
     # If this test does not raise, it's an indicator that the workdir is not
     #    being cleaned as it should.
     recipe = os.path.join(metadata_dir, "source_git_jinja2")
@@ -223,7 +223,7 @@ def test_run_exports_with_pin_compatible_in_subpackages(testing_config):
             assert all(len(export.split()) > 1 for export in run_exports), run_exports
 
 
-def test_ignore_build_only_deps(testing_config):
+def test_ignore_build_only_deps():
     ms = api.render(
         os.path.join(variants_dir, "python_in_build_only"),
         bypass_env_check=True,
@@ -232,12 +232,12 @@ def test_ignore_build_only_deps(testing_config):
     assert len(ms) == 1
 
 
-def test_merge_build_host_build_key(testing_workdir, testing_metadata):
+def test_merge_build_host_build_key():
     m = api.render(os.path.join(metadata_dir, '_no_merge_build_host'))[0][0]
     assert not any('bzip2' in dep for dep in m.meta['requirements']['run'])
 
 
-def test_merge_build_host_empty_host_section(testing_config):
+def test_merge_build_host_empty_host_section():
     m = api.render(os.path.join(metadata_dir, '_empty_host_avoids_merge'))[0][0]
     assert not any('bzip2' in dep for dep in m.meta['requirements']['run'])
 
