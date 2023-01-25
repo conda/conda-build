@@ -60,7 +60,7 @@ def test_build_add_channel():
     main_build.execute(args)
 
 
-def test_build_without_channel_fails(testing_workdir):
+def test_build_without_channel_fails():
     # remove the conda forge channel from the arguments and make sure that we fail.  If we don't,
     #    we probably have channels in condarc, and this is not a good test.
     args = ['--no-anaconda-upload', '--no-activate',
@@ -117,7 +117,7 @@ def test_no_filename_hash(testing_workdir, testing_metadata, capfd):
     assert not re.search('test_no_filename_hash.*h[0-9a-f]{%d}' % testing_metadata.config.hash_length, error)
 
 
-def test_render_output_build_path(testing_workdir, testing_metadata, capfd, caplog):
+def test_render_output_build_path(testing_workdir, testing_metadata, capfd):
     api.output_yaml(testing_metadata, 'meta.yaml')
     args = ['--output', testing_workdir]
     main_render.execute(args)
@@ -128,7 +128,7 @@ def test_render_output_build_path(testing_workdir, testing_metadata, capfd, capl
     assert error == ""
 
 
-def test_render_output_build_path_and_file(testing_workdir, testing_metadata, capfd, caplog):
+def test_render_output_build_path_and_file(testing_workdir, testing_metadata, capfd):
     api.output_yaml(testing_metadata, 'meta.yaml')
     rendered_filename = 'out.yaml'
     args = ['--output', '--file', rendered_filename, testing_workdir]
@@ -173,7 +173,7 @@ def test_build_output_build_path_multiple_recipes(testing_workdir, testing_metad
     assert output.rstrip().splitlines() == test_paths, error
 
 
-def test_slash_in_recipe_arg_keeps_build_id(testing_workdir, testing_config):
+def test_slash_in_recipe_arg_keeps_build_id(testing_config):
     args = [os.path.join(metadata_dir, "has_prefix_files"), '--croot', testing_config.croot,
             '--no-anaconda-upload']
     outputs = main_build.execute(args)
@@ -186,7 +186,7 @@ def test_slash_in_recipe_arg_keeps_build_id(testing_workdir, testing_config):
 
 @pytest.mark.sanity
 @pytest.mark.skipif(on_win, reason="prefix is always short on win.")
-def test_build_long_test_prefix_default_enabled(mocker, testing_workdir):
+def test_build_long_test_prefix_default_enabled():
     recipe_path = os.path.join(metadata_dir, '_test_long_test_prefix')
     args = [recipe_path, '--no-anaconda-upload']
     main_build.execute(args)
@@ -196,7 +196,7 @@ def test_build_long_test_prefix_default_enabled(mocker, testing_workdir):
         main_build.execute(args)
 
 
-def test_build_no_build_id(testing_workdir, testing_config):
+def test_build_no_build_id(testing_config):
     args = [os.path.join(metadata_dir, "has_prefix_files"), '--no-build-id',
             '--croot', testing_config.croot, '--no-activate', '--no-anaconda-upload']
     outputs = main_build.execute(args)
@@ -207,7 +207,7 @@ def test_build_no_build_id(testing_workdir, testing_config):
     assert 'has_prefix_files_1' not in data
 
 
-def test_build_multiple_recipes(testing_metadata, testing_workdir, testing_config):
+def test_build_multiple_recipes(testing_metadata):
     """Test that building two recipes in one CLI call separates the build environment for each"""
     os.makedirs('recipe1')
     os.makedirs('recipe2')
@@ -222,7 +222,7 @@ def test_build_multiple_recipes(testing_metadata, testing_workdir, testing_confi
     main_build.execute(args)
 
 
-def test_build_output_folder(testing_workdir, testing_metadata, capfd):
+def test_build_output_folder(testing_workdir, testing_metadata):
     api.output_yaml(testing_metadata, 'meta.yaml')
     with TemporaryDirectory() as tmp:
         out = os.path.join(tmp, 'out')
@@ -234,7 +234,7 @@ def test_build_output_folder(testing_workdir, testing_metadata, capfd):
                                            os.path.basename(output)))
 
 
-def test_build_source(testing_workdir):
+def test_build_source():
     with TemporaryDirectory() as tmp:
         args = [os.path.join(metadata_dir, '_pyyaml_find_header'), '--source', '--no-build-id',
                 '--croot', tmp, '--no-activate', '--no-anaconda-upload', ]
@@ -266,7 +266,7 @@ def test_render_output_build_path_set_python(testing_workdir, testing_metadata, 
 
 
 @pytest.mark.sanity
-def test_skeleton_pypi(testing_workdir, testing_config):
+def test_skeleton_pypi():
     args = ['pypi', 'peppercorn']
     main_skeleton.execute(args)
     assert os.path.isdir('peppercorn')
@@ -276,14 +276,14 @@ def test_skeleton_pypi(testing_workdir, testing_config):
 
 
 @pytest.mark.sanity
-def test_skeleton_pypi_compatible_versions(testing_workdir, testing_config):
+def test_skeleton_pypi_compatible_versions():
     args = ['pypi', 'openshift']
     main_skeleton.execute(args)
     assert os.path.isdir('openshift')
 
 
 @pytest.mark.slow
-def test_skeleton_pypi_arguments_work(testing_workdir):
+def test_skeleton_pypi_arguments_work():
     """
     These checks whether skeleton executes without error when these
     options are specified on the command line AND whether the underlying
@@ -310,7 +310,7 @@ def test_skeleton_pypi_arguments_work(testing_workdir):
     assert m.version() == '0.2.2'
 
 
-def test_metapackage(testing_config, testing_workdir):
+def test_metapackage(testing_config):
     """the metapackage command creates a package with runtime dependencies specified on the CLI"""
     args = ['metapackage_test', '1.0', '-d', 'bzip2', '--no-anaconda-upload']
     main_metapackage.execute(args)
@@ -319,7 +319,7 @@ def test_metapackage(testing_config, testing_workdir):
     assert os.path.isfile(test_path)
 
 
-def test_metapackage_build_number(testing_config, testing_workdir):
+def test_metapackage_build_number(testing_config):
     """the metapackage command creates a package with runtime dependencies specified on the CLI"""
     args = ['metapackage_test_build_number', '1.0', '-d', 'bzip2', '--build-number', '1',
             '--no-anaconda-upload']
@@ -329,7 +329,7 @@ def test_metapackage_build_number(testing_config, testing_workdir):
     assert os.path.isfile(test_path)
 
 
-def test_metapackage_build_string(testing_config, testing_workdir):
+def test_metapackage_build_string(testing_config):
     """the metapackage command creates a package with runtime dependencies specified on the CLI"""
     args = ['metapackage_test_build_string', '1.0', '-d', 'bzip2', '--build-string', 'frank',
             '--no-anaconda-upload']
@@ -339,7 +339,7 @@ def test_metapackage_build_string(testing_config, testing_workdir):
     assert os.path.isfile(test_path)
 
 
-def test_metapackage_metadata(testing_config, testing_workdir):
+def test_metapackage_metadata(testing_config):
     args = ['metapackage_testing_metadata', '1.0', '-d', 'bzip2', "--home", "http://abc.com",
             "--summary", "wee", "--license", "BSD", '--no-anaconda-upload']
     main_metapackage.execute(args)
@@ -354,18 +354,18 @@ def test_metapackage_metadata(testing_config, testing_workdir):
     assert info['summary'] == 'wee'
 
 
-def testing_index(testing_workdir):
+def testing_index():
     args = ['.']
     main_index.execute(args)
     assert os.path.isfile('noarch/repodata.json')
 
 
-def test_inspect_installable(testing_workdir):
+def test_inspect_installable():
     args = ['channels', '--test-installable', 'conda-team']
     main_inspect.execute(args)
 
 
-def test_inspect_linkages(testing_workdir, capfd):
+def test_inspect_linkages(capfd):
     # get a package that has known object output
     args = ['linkages', 'python']
     if sys.platform == 'win32':
@@ -378,7 +378,7 @@ def test_inspect_linkages(testing_workdir, capfd):
         assert 'libncursesw' in output
 
 
-def test_inspect_objects(testing_workdir, capfd):
+def test_inspect_objects(capfd):
     # get a package that has known object output
     args = ['objects', 'python']
     if sys.platform != 'darwin':
@@ -392,7 +392,7 @@ def test_inspect_objects(testing_workdir, capfd):
 
 
 @pytest.mark.skipif(on_win, reason="Windows prefix length doesn't matter (yet?)")
-def test_inspect_prefix_length(testing_workdir, capfd):
+def test_inspect_prefix_length(capfd):
     from conda_build import api
     # build our own known-length package here
     test_base = os.path.expanduser("~/cbtmp")
@@ -447,7 +447,7 @@ def test_develop(testing_env):
 
 
 @pytest.mark.xfail(on_win, reason="This is a flaky test that doesn't seem to be working well on Windows.")
-def test_convert(testing_workdir, testing_config):
+def test_convert(testing_config):
     # download a sample py2.7 package
     f = 'https://repo.anaconda.com/pkgs/free/win-64/affine-2.0.0-py27_0.tar.bz2'
     pkg_name = "affine-2.0.0-py27_0.tar.bz2"
@@ -532,7 +532,7 @@ def test_conda_py_no_period(testing_workdir, testing_metadata, monkeypatch):
     assert any('py36' in output for output in outputs)
 
 
-def test_build_skip_existing(testing_workdir, capfd, mocker):
+def test_build_skip_existing(capfd, mocker):
     # build the recipe first
     empty_sections = os.path.join(metadata_dir, "empty_sections")
     args = ['--no-anaconda-upload', empty_sections]

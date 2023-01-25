@@ -86,7 +86,7 @@ def test_write_to_conda_pth(sp_dir, conda_pth):
             assert len(lines) == exp_num_pths
 
 
-def test_uninstall(sp_dir, conda_pth, request):
+def test_uninstall(sp_dir, conda_pth):
     '''
     `conda develop --uninstall pkg_path` invokes uninstall() to remove path
     from conda.pth - this is a unit test for uninstall
