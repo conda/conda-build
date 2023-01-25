@@ -158,7 +158,7 @@ def test_native_compiler_metadata_win(testing_config, py_ver, mocker):
     assert any(dep.startswith(py_ver[1]) for dep in metadata.meta['requirements']['build'])
 
 
-def test_native_compiler_metadata_linux(testing_config, mocker):
+def test_native_compiler_metadata_linux(testing_config):
     testing_config.platform = 'linux'
     metadata = api.render(os.path.join(metadata_dir, '_compiler_jinja2'),
                           config=testing_config, permit_unsatisfiable_variants=True,
@@ -169,7 +169,7 @@ def test_native_compiler_metadata_linux(testing_config, mocker):
     assert any(dep.startswith('gfortran_linux-' + _64) for dep in metadata.meta['requirements']['build'])
 
 
-def test_native_compiler_metadata_osx(testing_config, mocker):
+def test_native_compiler_metadata_osx(testing_config):
     testing_config.platform = 'osx'
     metadata = api.render(os.path.join(metadata_dir, '_compiler_jinja2'),
                           config=testing_config, permit_unsatisfiable_variants=True,
