@@ -48,12 +48,7 @@ recipe_path = os.path.join(metadata_dir, "_debug_pkg")
 ambiguous_recipe_path = os.path.join(metadata_dir, "_debug_pkg_multiple_outputs")
 tarball_path = os.path.join(thisdir, "archives", "test_debug_pkg-1.0-0.tar.bz2")
 
-def switch_between_shell_and_bash():
-    if on_win:
-        shell_cmd = ["cmd.exe", "/d", "/c"]
-    else:
-        shell_cmd = ["bash", "-c"]
-    return shell_cmd
+SHELL_CMD = ("cmd.exe", "/d", "/c") if on_win else ("bash", "-c")
 
 
 def assert_correct_folders(work_dir, build=True):
