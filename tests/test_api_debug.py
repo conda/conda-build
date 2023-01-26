@@ -92,7 +92,9 @@ def test_debug(
     # recipes and tarballs are installed into different locations
     if recipe.suffixes[-2:] == [".tar", ".bz2"]:
         assert work_path.name == "test_tmp"
-    elif not path:
+    elif path:
+        assert work_path.parent == tmp_path
+    else:
         assert work_path.parent.name.startswith("debug_")
 
     # check build files are present
