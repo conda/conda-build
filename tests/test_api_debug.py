@@ -4,17 +4,10 @@
 This module tests the test API.  These are high-level integration tests.  Lower level unit tests
 should go in test_render.py
 """
-
-import os
-from glob import glob
-
 import pytest
 import subprocess
 
-import sys
-
 from conda_build import api
-from tests import utils
 
 from .utils import (
     recipe_path,
@@ -38,10 +31,6 @@ def test_debug_recipe_default_path(testing_config):
     assert_correct_folders(work_dir)
 
 @pytest.mark.sanity
-@pytest.mark.skipif(
-    utils.on_win and sys.version_info <= (3, 4),
-    reason="Skipping on windows and vc<14"
-)
 def test_debug_package_default_path(testing_config):
     activation_string = api.debug(tarball_path, config=testing_config)
     _, work_dir, _, src_command, env_activation_script = activation_string.split()
