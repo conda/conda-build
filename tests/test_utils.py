@@ -56,7 +56,7 @@ def test_merge_namespace_trees(namespace_setup):
 
 
 @pytest.fixture(scope='function')
-def namespace_setup(testing_workdir, request):
+def namespace_setup(testing_workdir):
     namespace = os.path.join(testing_workdir, 'namespace')
     package = os.path.join(namespace, 'package')
     makefile(os.path.join(package, "module.py"))
@@ -64,7 +64,7 @@ def namespace_setup(testing_workdir, request):
 
 
 @pytest.mark.sanity
-def test_disallow_merge_conflicts(namespace_setup, testing_config):
+def test_disallow_merge_conflicts(namespace_setup):
     duplicate = os.path.join(namespace_setup, 'dupe', 'namespace', 'package', 'module.py')
     makefile(duplicate)
     with pytest.raises(IOError):
@@ -249,7 +249,7 @@ def test_logger_filtering(caplog, capfd):
     log.removeHandler(logging.StreamHandler(sys.stderr))
 
 
-def test_logger_config_from_file(testing_workdir, caplog, capfd, mocker):
+def test_logger_config_from_file(testing_workdir, capfd, mocker):
     test_file = os.path.join(testing_workdir, 'build_log_config.yaml')
     with open(test_file, 'w') as f:
         f.write("""
@@ -286,21 +286,21 @@ root:
 
 def test_ensure_valid_spec():
     assert utils.ensure_valid_spec('python') == 'python'
-    assert utils.ensure_valid_spec('python 2.7') == 'python 2.7.*'
-    assert utils.ensure_valid_spec('python 2.7.2') == 'python 2.7.2.*'
-    assert utils.ensure_valid_spec('python 2.7.12 0') == 'python 2.7.12 0'
-    assert utils.ensure_valid_spec('python >=2.7,<2.8') == 'python >=2.7,<2.8'
+    assert utils.ensure_valid_spec('python 3.8') == 'python 3.8.*'
+    assert utils.ensure_valid_spec('python 3.8.2') == 'python 3.8.2.*'
+    assert utils.ensure_valid_spec('python 3.8.10 0') == 'python 3.8.10 0'
+    assert utils.ensure_valid_spec('python >=3.8,<3.9') == 'python >=3.8,<3.9'
     assert utils.ensure_valid_spec('numpy x.x') == 'numpy x.x'
     assert utils.ensure_valid_spec(utils.MatchSpec('numpy x.x')) == utils.MatchSpec('numpy x.x')
 
 
 def test_insert_variant_versions(testing_metadata):
     testing_metadata.meta['requirements']['build'] = ['python', 'numpy 1.13']
-    testing_metadata.config.variant = {'python': '2.7', 'numpy': '1.11'}
+    testing_metadata.config.variant = {'python': '3.8', 'numpy': '1.11'}
     utils.insert_variant_versions(testing_metadata.meta.get('requirements', {}),
                                   testing_metadata.config.variant, 'build')
     # this one gets inserted
-    assert 'python 2.7.*' in testing_metadata.meta['requirements']['build']
+    assert 'python 3.8.*' in testing_metadata.meta['requirements']['build']
     # this one should not be altered
     assert 'numpy 1.13' in testing_metadata.meta['requirements']['build']
     # the overall length does not change

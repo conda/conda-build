@@ -4,23 +4,21 @@
 This module tests the test API.  These are high-level integration tests.  Lower level unit tests
 should go in test_render.py
 """
-
 import os
 import re
-import sys
 
-from unittest import mock
 import pytest
 import yaml
 
+from conda.common.compat import on_win
+
 from conda_build import api, render
 from conda_build.conda_interface import subdir, cc_conda_build
-from tests import utils
 
-from .utils import metadata_dir, thisdir
+from .utils import metadata_dir, variants_dir
 
 
-def test_render_need_download(testing_workdir, testing_config):
+def test_render_need_download(testing_config):
     # first, test that the download/render system renders all it can,
     #    and accurately returns its needs
 
@@ -74,7 +72,7 @@ def test_get_output_file_path_metadata_object(testing_metadata):
                 "test_get_output_file_path_metadata_object-1.0-1.tar.bz2")
 
 
-def test_get_output_file_path_jinja2(testing_workdir, testing_config):
+def test_get_output_file_path_jinja2(testing_config):
     # If this test does not raise, it's an indicator that the workdir is not
     #    being cleaned as it should.
     recipe = os.path.join(metadata_dir, "source_git_jinja2")
@@ -97,10 +95,12 @@ def test_get_output_file_path_jinja2(testing_workdir, testing_config):
                                       "py{}{}_0_g262d444.tar.bz2".format(python, _hash))
 
 
-@mock.patch('conda_build.source')
-def test_output_without_jinja_does_not_download(mock_source, testing_workdir, testing_config):
-    api.get_output_file_path(os.path.join(metadata_dir, "source_git"), config=testing_config)[0]
-    mock_source.provide.assert_not_called()
+def test_output_without_jinja_does_not_download(mocker, testing_config):
+    mock = mocker.patch("conda_build.source")
+    api.get_output_file_path(
+        os.path.join(metadata_dir, "source_git"), config=testing_config
+    )
+    mock.assert_not_called()
 
 
 def test_pin_compatible_semver(testing_config):
@@ -110,12 +110,7 @@ def test_pin_compatible_semver(testing_config):
 
 
 @pytest.mark.slow
-@pytest.mark.skipif(
-    utils.on_win and sys.version_info < (3, 6),
-    reason="Failing tests on CI for Python 2.7"
-)
-@pytest.mark.xfail(sys.platform == "win32",
-                   reason="Defaults channel has conflicting vc packages")
+@pytest.mark.xfail(on_win, reason="Defaults channel has conflicting vc packages")
 def test_resolved_packages_recipe(testing_config):
     recipe_dir = os.path.join(metadata_dir, '_resolved_packages_host_build')
     metadata = api.render(recipe_dir, config=testing_config)[0][0]
@@ -192,8 +187,11 @@ def test_setting_condarc_vars_with_env_var_expansion(testing_workdir):
 
     os.environ['TEST_WORKDIR'] = testing_workdir
     try:
-        m = api.render(os.path.join(thisdir, 'test-recipes', 'variants', '19_used_variables'),
-                    bypass_env_check=True, finalize=False)[0][0]
+        m = api.render(
+            os.path.join(variants_dir, "19_used_variables"),
+            bypass_env_check=True,
+            finalize=False,
+        )[0][0]
         # this one should have gotten clobbered by the values in the recipe
         assert m.config.variant['python'] not in python_versions
         # this confirms that we loaded the config file correctly
@@ -225,30 +223,23 @@ def test_run_exports_with_pin_compatible_in_subpackages(testing_config):
             assert all(len(export.split()) > 1 for export in run_exports), run_exports
 
 
-def test_ignore_build_only_deps(testing_config):
-    ms = api.render(os.path.join(thisdir, 'test-recipes', 'variants', 'python_in_build_only'),
-                    bypass_env_check=True, finalize=False)
+def test_ignore_build_only_deps():
+    ms = api.render(
+        os.path.join(variants_dir, "python_in_build_only"),
+        bypass_env_check=True,
+        finalize=False,
+    )
     assert len(ms) == 1
 
 
-def test_merge_build_host_build_key(testing_workdir, testing_metadata):
+def test_merge_build_host_build_key():
     m = api.render(os.path.join(metadata_dir, '_no_merge_build_host'))[0][0]
     assert not any('bzip2' in dep for dep in m.meta['requirements']['run'])
 
 
-def test_merge_build_host_empty_host_section(testing_config):
+def test_merge_build_host_empty_host_section():
     m = api.render(os.path.join(metadata_dir, '_empty_host_avoids_merge'))[0][0]
     assert not any('bzip2' in dep for dep in m.meta['requirements']['run'])
-
-
-@pytest.mark.skipif(sys.platform != "linux2", reason="package on remote end is only on linux")
-@pytest.mark.xfail(reason="It needs to be fixed for Python v2.7. #3681")
-def test_run_exports_from_repo_without_channeldata(testing_config):
-    ms = api.render(os.path.join(metadata_dir, '_run_export_no_channeldata'), config=testing_config)
-    assert ms[0][0].meta['requirements']['build'] == ["exporty"]
-    # these two will be missing if run_exports has failed.
-    assert ms[0][0].meta['requirements']['host'] == ["exporty"]
-    assert ms[0][0].meta['requirements']['run'] == ["exporty"]
 
 
 def test_pin_expression_works_with_prereleases(testing_config):

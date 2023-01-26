@@ -1,14 +1,18 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import contextlib
+from glob import glob
 import os
+from pathlib import Path
 import shlex
 import sys
+from typing import Generator
 
 import pytest
-import libarchive
+from conda.common.compat import on_mac, on_win
 from conda_build.metadata import MetaData
-from conda_build.utils import on_win, glob
 from conda_build.conda_interface import linked
 
 
@@ -16,14 +20,28 @@ def numpy_installed():
     return any([True for dist in linked(sys.prefix) if dist.name == "numpy"])
 
 
-thisdir = os.path.dirname(__file__)
-metadata_dir = os.path.join(thisdir, "test-recipes", "metadata")
-subpackage_dir = os.path.join(thisdir, "test-recipes", "split-packages")
-fail_dir = os.path.join(thisdir, "test-recipes", "fail")
-variants_dir = os.path.join(thisdir, "test-recipes", "variants")
-dll_dir = os.path.join(thisdir, "test-recipes", "dll-package")
-go_dir = os.path.join(thisdir, "test-recipes", "go-package")
-archive_dir = os.path.join(thisdir, "archives")
+tests_path = Path(__file__).parent
+metadata_path = tests_path / "test-recipes" / "metadata"
+subpackage_path = tests_path / "test-recipes" / "split-packages"
+fail_path = tests_path / "test-recipes" / "fail"
+variants_path = tests_path / "test-recipes" / "variants"
+dll_path = tests_path / "test-recipes" / "dll-package"
+go_path = tests_path / "test-recipes" / "go-package"
+published_path = tests_path / "test-recipes" / "published_code"
+archive_path = tests_path / "archives"
+cran_path = tests_path / "test-cran-skeleton"
+
+# backport
+thisdir = str(tests_path)
+metadata_dir = str(metadata_path)
+subpackage_dir = str(subpackage_path)
+fail_dir = str(fail_path)
+variants_dir = str(variants_path)
+dll_dir = str(dll_path)
+go_dir = str(go_path)
+published_dir = str(published_path)
+archive_dir = str(archive_path)
+cran_dir = str(cran_path)
 
 #Moved From test_api_debug.py file
 recipe_path = os.path.join(metadata_dir, "_debug_pkg")
@@ -62,11 +80,20 @@ def check_test_files_present(work_dir, test=True):
 		assert os.path.exists(os.path.join(work_dir, "conda_test_runner.sh")) == test
 
 
-def is_valid_dir(parent_dir, dirname):
-    valid = os.path.isdir(os.path.join(parent_dir, dirname))
-    valid &= not dirname.startswith("_")
-    valid &= "osx_is_app" != dirname or sys.platform == "darwin"
-    return valid
+def is_valid_dir(*parts: Path | str) -> bool:
+    path = Path(*parts)
+    return (
+        # only directories are valid recipes
+        path.is_dir()
+        # recipes prefixed with _ are special and shouldn't be run as part of bulk tests
+        and not path.name.startswith("_")
+        # exclude macOS-only recipes
+        and (path.name not in ["osx_is_app"] or on_mac)
+    )
+
+
+def get_valid_recipes(*parts: Path | str) -> Generator[Path, None, None]:
+    yield from filter(is_valid_dir, Path(*parts).iterdir())
 
 
 def add_mangling(filename):

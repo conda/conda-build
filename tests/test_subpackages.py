@@ -91,7 +91,7 @@ def test_subpackage_variant_override(testing_config):
     assert len(outputs) == 3
 
 
-def test_intradependencies(testing_workdir, testing_config):
+def test_intradependencies(testing_config):
     recipe = os.path.join(subpackage_dir, '_intradependencies')
     outputs1 = api.get_output_file_paths(recipe, config=testing_config)
     outputs1_set = {os.path.basename(p) for p in outputs1}
@@ -372,14 +372,3 @@ def test_build_string_does_not_incorrectly_add_hash(testing_config):
     assert len(output_files) == 4
     assert any("clang_variant-1.0-cling.tar.bz2" in f for f in output_files)
     assert any("clang_variant-1.0-default.tar.bz2" in f for f in output_files)
-
-
-# def test_conda_pkg_v2_format(testing_config):
-#     recipe = os.path.join(subpackage_dir, '_alternate_type_conda2')
-#     output_files = api.get_output_file_paths(recipe, config=testing_config)
-#     assert len(output_files) == 1
-#     assert output_files[0].endswith('.conda'), output_files[0]
-
-#     out_files = api.build(recipe, config=testing_config)
-#     assert len(out_files) == 1
-#     assert out_files[0].endswith('.conda'), out_files[0]

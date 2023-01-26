@@ -8,7 +8,7 @@ from .utils import dll_dir
 
 
 @pytest.mark.sanity
-def test_recipe_build(testing_config, testing_workdir, monkeypatch):
+def test_recipe_build(testing_config, monkeypatch):
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
     testing_config.activate = True
