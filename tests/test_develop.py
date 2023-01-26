@@ -24,13 +24,13 @@ def site_packages() -> Generator[Path, None, None]:
     """
     site_packages = Path(thisdir, "site-packages")
     if site_packages.exists():
-        rm_rf(site_packages)
+        rm_rf(str(site_packages))
 
     site_packages.mkdir(exist_ok=True)
 
     yield site_packages
 
-    rm_rf(site_packages)
+    rm_rf(str(site_packages))
 
 
 @pytest.fixture(scope="function")
