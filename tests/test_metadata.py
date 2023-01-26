@@ -1,12 +1,14 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import os
 import subprocess
 
 import pytest
 
 from conda_build.metadata import select_lines, MetaData
-from conda_build import api, conda_interface
+from conda_build import api
 from .utils import thisdir, metadata_dir
 
 from conda_build.utils import DEFAULT_SUBDIRS
@@ -145,39 +147,41 @@ def test_build_bootstrap_env_by_path(testing_metadata):
         subprocess.check_call(cmd.split())
 
 
-@pytest.mark.parametrize('py_ver', [('2.7', 'vs2008_win-x86_64'),
-                                    ('3.4', 'vs2010_win-x86_64'),
-                                    ('3.7', 'vs2017_win-x86_64'), ])
-def test_native_compiler_metadata_win(testing_config, py_ver, mocker):
-    testing_config.platform = 'win'
-    metadata = api.render(os.path.join(metadata_dir, '_compiler_jinja2'), config=testing_config,
-                          variants={'target_platform': 'win-x86_64'},
-                          permit_unsatisfiable_variants=True, finalize=False,
-                          bypass_env_check=True, python=py_ver[0])[0][0]
-    # see parameterization - py_ver[1] is the compiler package name
-    assert any(dep.startswith(py_ver[1]) for dep in metadata.meta['requirements']['build'])
-
-
-def test_native_compiler_metadata_linux(testing_config):
-    testing_config.platform = 'linux'
-    metadata = api.render(os.path.join(metadata_dir, '_compiler_jinja2'),
-                          config=testing_config, permit_unsatisfiable_variants=True,
-                          finalize=False, bypass_env_check=True)[0][0]
-    _64 = '64' if conda_interface.bits == 64 else '32'
-    assert any(dep.startswith('gcc_linux-' + _64) for dep in metadata.meta['requirements']['build'])
-    assert any(dep.startswith('gxx_linux-' + _64) for dep in metadata.meta['requirements']['build'])
-    assert any(dep.startswith('gfortran_linux-' + _64) for dep in metadata.meta['requirements']['build'])
-
-
-def test_native_compiler_metadata_osx(testing_config):
-    testing_config.platform = 'osx'
-    metadata = api.render(os.path.join(metadata_dir, '_compiler_jinja2'),
-                          config=testing_config, permit_unsatisfiable_variants=True,
-                          finalize=False, bypass_env_check=True)[0][0]
-    _64 = '64' if conda_interface.bits == 64 else '32'
-    assert any(dep.startswith('clang_osx-' + _64) for dep in metadata.meta['requirements']['build'])
-    assert any(dep.startswith('clangxx_osx-' + _64) for dep in metadata.meta['requirements']['build'])
-    assert any(dep.startswith('gfortran_osx-' + _64) for dep in metadata.meta['requirements']['build'])
+@pytest.mark.parametrize(
+    "platform,arch,python,compilers",
+    [
+        ("win", "x86_64", "2.7", {"vs2008_win-x86_64"}),
+        ("win", "x86_64", "3.1", {"vs2008_win-x86_64"}),
+        ("win", "x86_64", "3.2", {"vs2008_win-x86_64"}),
+        ("win", "x86_64", "3.3", {"vs2010_win-x86_64"}),
+        ("win", "x86_64", "3.4", {"vs2010_win-x86_64"}),
+        ("win", "x86_64", "3.5", {"vs2017_win-x86_64"}),
+        ("win", "x86_64", "3.6", {"vs2017_win-x86_64"}),
+        ("win", "x86_64", "3.7", {"vs2017_win-x86_64"}),
+        ("win", "x86_64", "3.8", {"vs2017_win-x86_64"}),
+        ("win", "x86_64", "3.9", {"vs2017_win-x86_64"}),
+        ("win", "x86_64", "3.10", {"vs2017_win-x86_64"}),
+        ("win", "x86_64", "3.11", {"vs2017_win-x86_64"}),
+        ("linux", "32", "3.11", {"gcc_linux-32", "gxx_linux-32"}),
+        ("linux", "64", "3.11", {"gcc_linux-64", "gxx_linux-64"}),
+        ("osx", "32", "3.11", {"clang_osx-32", "clangxx_osx-32"}),
+        ("osx", "64", "3.11", {"clang_osx-64", "clangxx_osx-64"}),
+    ],
+)
+def test_native_compiler_metadata(
+    platform: str, arch: str, python: str, compilers: set[str], testing_config, mocker
+):
+    testing_config.platform = platform
+    metadata = api.render(
+        os.path.join(metadata_dir, "_compiler_jinja2"),
+        config=testing_config,
+        variants={"target_platform": f"{platform}-{arch}"},
+        permit_unsatisfiable_variants=True,
+        finalize=False,
+        bypass_env_check=True,
+        python=python,
+    )[0][0]
+    assert compilers <= set(metadata.meta["requirements"]["build"])
 
 
 def test_compiler_metadata_cross_compiler():
