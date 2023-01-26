@@ -28,6 +28,7 @@ dll_path = tests_path / "test-recipes" / "dll-package"
 go_path = tests_path / "test-recipes" / "go-package"
 published_path = tests_path / "test-recipes" / "published_code"
 archive_path = tests_path / "archives"
+cran_path = tests_path / "test-cran-skeleton"
 
 # backport
 thisdir = str(tests_path)
@@ -39,6 +40,7 @@ dll_dir = str(dll_path)
 go_dir = str(go_path)
 published_dir = str(published_path)
 archive_dir = str(archive_path)
+cran_dir = str(cran_path)
 
 
 def is_valid_dir(*parts: Path | str) -> bool:
