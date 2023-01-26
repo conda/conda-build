@@ -918,7 +918,7 @@ def test_remove_workdir_default(testing_config, caplog, set_build_id):
     api.build(metadata, set_build_id=set_build_id)
     assert not glob(os.path.join(metadata.config.work_dir, '*'))
 
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
+
 def test_keep_workdir_and_dirty_reuse(testing_config, capfd):
     recipe = os.path.join(metadata_dir, '_keep_work_dir')
     # make a metadata object - otherwise the build folder is computed within the build, but does
@@ -1442,9 +1442,6 @@ def test_overlinking_detection_ignore_patterns(
     rm_rf(dest_bat)
 
 
-@pytest.mark.serial
-@pytest.mark.skipif(sys.platform == "linux", reason="DID NOT RAISE Over Depending Error")
-@pytest.mark.skipif(sys.platform == "darwin", reason="DID NOT RAISE Over Depending Error")
 def test_overdepending_detection(testing_config, variants_conda_build_sysroot):
     testing_config.activate = True
     testing_config.error_overlinking = True

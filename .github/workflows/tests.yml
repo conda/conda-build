@@ -130,7 +130,7 @@ jobs:
         run: |
           pytest \
             --color=yes \
-            -vv \
+            -v \
             -n "${{ env.PYTEST_NUMPROCESSES }}" \
             --basetemp "${{ runner.temp }}/${{ matrix.test-type }}" \
             --cov conda_build \
@@ -242,7 +242,7 @@ jobs:
         run: |
           pytest `
             --color=yes `
-            -vv `
+            -v `
             -n "${{ env.PYTEST_NUMPROCESSES }}" `
             --basetemp "${{ runner.temp }}\${{ matrix.test-type}}" `
             --cov conda_build `
@@ -358,7 +358,7 @@ jobs:
         run: |
           pytest \
             --color=yes \
-            -vv \
+            -v \
             -n "${{ env.PYTEST_NUMPROCESSES }}" \
             --basetemp "${{ runner.temp }}/${{ matrix.test-type }}" \
             --cov conda_build \
