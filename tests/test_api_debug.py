@@ -17,13 +17,13 @@ from conda_build import api
 from tests import utils
 
 from .utils import (
-	recipe_path,
-	ambiguous_recipe_path,
-	tarball_path,
-	assert_correct_folders,
-	check_build_files_present,
-	check_test_files_present,
-	switch_between_shell_and_bash)
+    recipe_path,
+    ambiguous_recipe_path,
+    tarball_path,
+    assert_correct_folders,
+    check_build_files_present,
+    check_test_files_present,
+    switch_between_shell_and_bash)
 
 @pytest.mark.sanity
 def test_debug_recipe_default_path(testing_config, shell_cmd=switch_between_shell_and_bash()):
