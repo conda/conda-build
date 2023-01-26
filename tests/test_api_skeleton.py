@@ -144,10 +144,12 @@ def pylint_metadata():
     [
         ("", "pypi", "pip", "8.1.2"),
         ("r-", "cran", "acs", None),
-        ("r-", "cran", "https://github.com/twitter/AnomalyDetection.git", ""),
+        ("r-", "cran", "https://github.com/twitter/AnomalyDetection.git", None),
         ("perl-", "cpan", "Moo", None),
         ("", "rpm", "libX11-devel", None),
-        # ('lua', luarocks', 'LuaSocket', ''),
+        # skeleton("luarocks") appears broken and needs work
+        # https://github.com/conda/conda-build/issues/4756
+        # ("lua-", "luarocks", "LuaSocket", None),
     ],
 )
 def test_repo(
@@ -453,7 +455,7 @@ def test_pypi_section_order_preserved(tmp_path: Path):
 
 @pytest.mark.slow
 @pytest.mark.flaky(rerun=5, reruns_delay=2)
-@pytest.mark.skipif(on_win, reason="shellcheck is only available on Windows")
+@pytest.mark.skipif(on_win, reason="shellcheck is not available on Windows")
 @pytest.mark.parametrize(
     "package, repo",
     [
