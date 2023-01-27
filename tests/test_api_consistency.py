@@ -1,4 +1,5 @@
-# Copyright (C) 2014 Anaconda, Inc
+# SPDX-FileCopyrightText: © 2012 Continuum Analytics, Inc. <http://continuum.io>
+# SPDX-FileCopyrightText: © 2017 Anaconda, Inc. <https://www.anaconda.com>
 # SPDX-License-Identifier: BSD-3-Clause
 # This file makes sure that our API has not changed.  Doing so can not be accidental.  Whenever it
 #    happens, we should bump our major build number, because we may have broken someone.
