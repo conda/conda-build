@@ -2,21 +2,15 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-import contextlib
 import os
 from pathlib import Path
 import shlex
 import sys
 from typing import Generator
 
-import pytest
-from conda.common.compat import on_mac, on_win
+from conda.common.compat import on_mac
 from conda_build.metadata import MetaData
 from conda_build.conda_interface import linked
-
-
-def numpy_installed():
-    return any([True for dist in linked(sys.prefix) if dist.name == "numpy"])
 
 
 tests_path = Path(__file__).parent
@@ -41,6 +35,10 @@ go_dir = str(go_path)
 published_dir = str(published_path)
 archive_dir = str(archive_path)
 cran_dir = str(cran_path)
+
+
+def numpy_installed():
+    return any([True for dist in linked(sys.prefix) if dist.name == "numpy"])
 
 
 def is_valid_dir(*parts: Path | str) -> bool:
@@ -146,37 +144,7 @@ def assert_package_consistency(package_path):
     assert len(errors) == 0, "\n".join(errors)
 
 
-@contextlib.contextmanager
-def put_bad_conda_on_path(testing_workdir):
-    path_backup = os.environ["PATH"]
-    # it is easier to add an intentionally bad path than it is to try to scrub any existing path
-    os.environ["PATH"] = os.pathsep.join([testing_workdir, os.environ["PATH"]])
-
-    exe_name = "conda.bat" if on_win else "conda"
-    out_exe = os.path.join(testing_workdir, exe_name)
-    with open(out_exe, "w") as f:
-        f.write("exit 1")
-    st = os.stat(out_exe)
-    os.chmod(out_exe, st.st_mode | 0o111)
-    try:
-        yield
-    except:
-        raise
-    finally:
-        os.environ["PATH"] = path_backup
-
-
 def get_noarch_python_meta(meta):
     d = meta.meta
     d["build"]["noarch"] = "python"
     return MetaData.fromdict(d, config=meta.config)
-
-
-@pytest.fixture(autouse=True)
-def skip_serial(request):
-    if (
-        request.node.get_marker("serial")
-        and getattr(request.config, "slaveinput", {}).get("slaveid", "local") != "local"
-    ):
-        # under xdist and serial
-        pytest.skip("serial")
