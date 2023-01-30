@@ -10,7 +10,6 @@ from typing import Generator
 
 from conda.common.compat import on_mac
 from conda_build.metadata import MetaData
-from conda_build.conda_interface import linked
 
 
 tests_path = Path(__file__).parent
@@ -35,10 +34,6 @@ go_dir = str(go_path)
 published_dir = str(published_path)
 archive_dir = str(archive_path)
 cran_dir = str(cran_path)
-
-
-def numpy_installed():
-    return any([True for dist in linked(sys.prefix) if dist.name == "numpy"])
 
 
 def is_valid_dir(*parts: Path | str) -> bool:

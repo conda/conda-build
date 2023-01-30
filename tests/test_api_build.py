@@ -38,13 +38,7 @@ from conda_build.exceptions import (DependencyNeedsBuildingError, CondaBuildExce
 from conda_build.conda_interface import reset_context
 from conda.exceptions import ClobberError, CondaMultiError
 
-from .utils import (
-    get_valid_recipes,
-    metadata_dir,
-    fail_dir,
-    add_mangling,
-    numpy_installed,
-)
+from .utils import get_valid_recipes, metadata_dir, fail_dir, add_mangling
 
 # define a few commonly used recipes - use os.path.join(metadata_dir, recipe) elsewhere
 empty_sections = os.path.join(metadata_dir, "empty_sections")
@@ -496,7 +490,6 @@ def test_build_metadata_object(testing_metadata):
 
 
 @pytest.mark.serial
-@pytest.mark.skipif(not numpy_installed(), reason="numpy not installed in base environment")
 def test_numpy_setup_py_data(testing_config):
     recipe_path = os.path.join(metadata_dir, '_numpy_setup_py_data')
     # this shows an error that is OK to ignore:
