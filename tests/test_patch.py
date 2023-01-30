@@ -1,6 +1,8 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-import os
+from __future__ import annotations
+
+from pathlib import Path
 from textwrap import dedent
 from types import SimpleNamespace
 from subprocess import CalledProcessError
@@ -15,24 +17,63 @@ from conda_build.source import (
 )
 
 
-def test_patch_strip_level(testing_workdir, monkeypatch):
-    patchfiles = {'some/common/prefix/one.txt',
-                      'some/common/prefix/two.txt',
-                      'some/common/prefix/three.txt'}
-    folders = ('some', 'common', 'prefix')
-    files = ('one.txt', 'two.txt', 'three.txt')
-    os.makedirs(os.path.join(*folders))
-    for file in files:
-        with open(os.path.join(os.path.join(*folders), file), 'w') as f:
-            f.write('hello\n')
-    assert _guess_patch_strip_level(patchfiles, os.getcwd()) == (0, False)
-    monkeypatch.chdir(folders[0])
-    assert _guess_patch_strip_level(patchfiles, os.getcwd()) == (1, False)
-    monkeypatch.chdir(folders[1])
-    assert _guess_patch_strip_level(patchfiles, os.getcwd()) == (2, False)
-    monkeypatch.chdir(folders[2])
-    assert _guess_patch_strip_level(patchfiles, os.getcwd()) == (3, False)
-    monkeypatch.chdir(testing_workdir)
+@pytest.mark.parametrize(
+    "patches,results",
+    [
+        pytest.param(
+            [
+                Path("one.txt"),
+                Path("some", "common", "prefix", "two.txt"),
+                Path("some", "common", "prefix", "three.txt"),
+            ],
+            [(0, False), (0, False), (0, False), (0, False)],
+            id="strip level 0",
+        ),
+        pytest.param(
+            [
+                Path("some", "one.txt"),
+                Path("some", "common", "prefix", "two.txt"),
+                Path("some", "common", "prefix", "three.txt"),
+            ],
+            [(0, False), (1, False), (0, True), (0, True)],
+            id="strip level 1",
+        ),
+        pytest.param(
+            [
+                Path("some", "common", "one.txt"),
+                Path("some", "common", "prefix", "two.txt"),
+                Path("some", "common", "prefix", "three.txt"),
+            ],
+            [(0, False), (1, False), (2, False), (0, True)],
+            id="strip level 2",
+        ),
+        pytest.param(
+            [
+                Path("some", "common", "prefix", "one.txt"),
+                Path("some", "common", "prefix", "two.txt"),
+                Path("some", "common", "prefix", "three.txt"),
+            ],
+            [(0, False), (1, False), (2, False), (3, False)],
+            id="strip level 3",
+        ),
+    ],
+)
+def test_patch_strip_level(
+    patches: Path, results: list[tuple[int, bool]], tmp_path: Path
+):
+    # generate dummy files
+    for patch in patches:
+        (tmp_path / patch).parent.mkdir(parents=True, exist_ok=True)
+        (tmp_path / patch).touch()
+
+    src_dir = tmp_path
+    assert _guess_patch_strip_level(patches, src_dir) == results[0]
+    src_dir = src_dir / "some"
+    assert _guess_patch_strip_level(patches, src_dir) == results[1]
+    src_dir = src_dir / "common"
+    assert _guess_patch_strip_level(patches, src_dir) == results[2]
+    src_dir = src_dir / "prefix"
+    assert _guess_patch_strip_level(patches, src_dir) == results[3]
 
 
 @pytest.fixture
