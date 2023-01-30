@@ -1,5 +1,7 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import locale
 import os
 from os.path import join, isdir, isfile, abspath, basename, exists, normpath, expanduser
@@ -10,7 +12,7 @@ import sys
 import tempfile
 import time
 from pathlib import Path
-from typing import Optional
+from typing import Iterable
 
 from .conda_interface import download, TemporaryDirectory
 from .conda_interface import hashsum_file
@@ -495,7 +497,7 @@ _RE_LF = re.compile(rb"(?<!\r)\n")
 _RE_CRLF = re.compile(rb"\r\n")
 
 
-def _ensure_LF(src: os.PathLike, dst: Optional[os.PathLike] = None) -> Path:
+def _ensure_LF(src: os.PathLike, dst: os.PathLike | None = None) -> Path:
     """Replace windows line endings with Unix.  Return path to modified file."""
     src = Path(src)
     dst = Path(dst or src)  # overwrite src if dst is undefined
@@ -503,7 +505,7 @@ def _ensure_LF(src: os.PathLike, dst: Optional[os.PathLike] = None) -> Path:
     return dst
 
 
-def _ensure_CRLF(src: os.PathLike, dst: Optional[os.PathLike] = None) -> Path:
+def _ensure_CRLF(src: os.PathLike, dst: os.PathLike | None = None) -> Path:
     """Replace unix line endings with win.  Return path to modified file."""
     src = Path(src)
     dst = Path(dst or src)  # overwrite src if dst is undefined
@@ -511,23 +513,21 @@ def _ensure_CRLF(src: os.PathLike, dst: Optional[os.PathLike] = None) -> Path:
     return dst
 
 
-def _guess_patch_strip_level(filesstr, src_dir):
-    """ Determine the patch strip level automatically. """
-    maxlevel = None
-    files = {filestr.encode(errors='ignore') for filestr in filesstr}
-    src_dir = src_dir.encode(errors='ignore')
+def _guess_patch_strip_level(
+    patches: Iterable[str | os.PathLike], src_dir: str | os.PathLike
+) -> tuple[int, bool]:
+    """Determine the patch strip level automatically."""
+    patches = set(map(Path, patches))
+    maxlevel = min(len(patch.parent.parts) for patch in patches)
     guessed = False
-    for file in files:
-        numslash = file.count(b'/')
-        maxlevel = numslash if maxlevel is None else min(maxlevel, numslash)
     if maxlevel == 0:
         patchlevel = 0
     else:
         histo = {i: 0 for i in range(maxlevel + 1)}
-        for file in files:
-            parts = file.split(b'/')
+        for patch in patches:
+            parts = patch.parts
             for level in range(maxlevel + 1):
-                if os.path.exists(join(src_dir, *parts[-len(parts) + level:])):
+                if Path(src_dir, *parts[-len(parts) + level :]).exists():
                     histo[level] += 1
         order = sorted(histo, key=histo.get, reverse=True)
         if histo[order[0]] == histo[order[1]]:
