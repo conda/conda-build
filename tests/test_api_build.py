@@ -7,6 +7,7 @@ from collections import OrderedDict
 from glob import glob
 import logging
 import os
+from pathlib import Path
 import re
 import subprocess
 import sys
@@ -37,7 +38,13 @@ from conda_build.exceptions import (DependencyNeedsBuildingError, CondaBuildExce
 from conda_build.conda_interface import reset_context
 from conda.exceptions import ClobberError, CondaMultiError
 
-from .utils import is_valid_dir, metadata_dir, fail_dir, add_mangling, numpy_installed
+from .utils import (
+    get_valid_recipes,
+    metadata_dir,
+    fail_dir,
+    add_mangling,
+    numpy_installed,
+)
 
 # define a few commonly used recipes - use os.path.join(metadata_dir, recipe) elsewhere
 empty_sections = os.path.join(metadata_dir, "empty_sections")
@@ -77,16 +84,11 @@ def describe_root(cwd=None):
     return tag
 
 
-@pytest.fixture(params=[dirname for dirname in os.listdir(metadata_dir)
-                        if is_valid_dir(metadata_dir, dirname)])
-def recipe(request):
-    return os.path.join(metadata_dir, request.param)
-
-
 # This tests any of the folders in the test-recipes/metadata folder that don't start with _
 @pytest.mark.slow
 @pytest.mark.serial
-def test_recipe_builds(recipe, testing_config, testing_workdir, monkeypatch):
+@pytest.mark.parametrize("recipe", get_valid_recipes(metadata_dir))
+def test_recipe_builds(recipe: Path, testing_config, testing_workdir, monkeypatch):
     # TODO: After we fix #3754 this mark can be removed. This specific test
     #   ``source_setup_py_data_subdir`` reproduces the problem.
     if os.path.basename(recipe) == "source_setup_py_data_subdir":
@@ -96,7 +98,7 @@ def test_recipe_builds(recipe, testing_config, testing_workdir, monkeypatch):
     testing_config.activate = True
     monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
     monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
-    api.build(recipe, config=testing_config)
+    api.build(str(recipe), config=testing_config)
 
 
 @pytest.mark.serial

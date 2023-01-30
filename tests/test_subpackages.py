@@ -3,26 +3,23 @@
 from glob import glob
 import json
 import os
-import pytest
+from pathlib import Path
 import re
 import sys
+
+import pytest
 
 from conda_build.render import finalize_metadata
 from conda_build.conda_interface import subdir
 from conda_build import api, utils
 
-from .utils import subpackage_dir, is_valid_dir
-
-
-@pytest.fixture(params=[dirname for dirname in os.listdir(subpackage_dir)
-                        if is_valid_dir(subpackage_dir, dirname)])
-def recipe(request):
-    return os.path.join(subpackage_dir, request.param)
+from .utils import subpackage_dir, get_valid_recipes
 
 
 @pytest.mark.slow
-def test_subpackage_recipes(recipe, testing_config):
-    api.build(recipe, config=testing_config)
+@pytest.mark.parametrize("recipe", get_valid_recipes(subpackage_dir))
+def test_subpackage_recipes(recipe: Path, testing_config):
+    api.build(str(recipe), config=testing_config)
 
 
 @pytest.mark.sanity
