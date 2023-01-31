@@ -21,7 +21,13 @@ def test_skeleton_pypi():
 
 
 @pytest.mark.sanity
-@pytest.mark.parametrize("recipe", get_valid_recipes(published_path))
+@pytest.mark.parametrize(
+    "recipe",
+    [
+        pytest.param(recipe, id=recipe.name)
+        for recipe in get_valid_recipes(published_path)
+    ],
+)
 def test_recipe_builds(recipe, testing_config):
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts

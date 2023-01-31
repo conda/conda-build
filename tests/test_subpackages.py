@@ -17,7 +17,13 @@ from .utils import subpackage_dir, get_valid_recipes
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize("recipe", get_valid_recipes(subpackage_dir))
+@pytest.mark.parametrize(
+    "recipe",
+    [
+        pytest.param(recipe, id=recipe.name)
+        for recipe in get_valid_recipes(subpackage_dir)
+    ],
+)
 def test_subpackage_recipes(recipe: Path, testing_config):
     api.build(str(recipe), config=testing_config)
 

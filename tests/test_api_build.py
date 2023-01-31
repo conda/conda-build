@@ -81,11 +81,17 @@ def describe_root(cwd=None):
 # This tests any of the folders in the test-recipes/metadata folder that don't start with _
 @pytest.mark.slow
 @pytest.mark.serial
-@pytest.mark.parametrize("recipe", get_valid_recipes(metadata_dir))
+@pytest.mark.parametrize(
+    "recipe",
+    [
+        pytest.param(recipe, id=recipe.name)
+        for recipe in get_valid_recipes(metadata_dir)
+    ],
+)
 def test_recipe_builds(recipe: Path, testing_config, testing_workdir, monkeypatch):
     # TODO: After we fix #3754 this mark can be removed. This specific test
     #   ``source_setup_py_data_subdir`` reproduces the problem.
-    if os.path.basename(recipe) == "source_setup_py_data_subdir":
+    if recipe.name == "source_setup_py_data_subdir":
         pytest.xfail("Issue related to #3754 on conda-build.")
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
