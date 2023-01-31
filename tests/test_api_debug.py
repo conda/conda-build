@@ -4,19 +4,18 @@
 This module tests the test API.  These are high-level integration tests.  Lower level unit tests
 should go in test_render.py
 """
-
 import os
 from glob import glob
-
-import pytest
 import subprocess
-
 import sys
 
-from conda_build import api
-from tests import utils
+import pytest
 
-from .utils import metadata_dir, thisdir, on_win
+
+from conda.common.compat import on_win
+
+from conda_build import api
+from .utils import metadata_dir, thisdir
 
 recipe_path = os.path.join(metadata_dir, "_debug_pkg")
 ambiguous_recipe_path = os.path.join(metadata_dir, "_debug_pkg_multiple_outputs")
@@ -65,8 +64,7 @@ def test_debug_recipe_default_path(testing_config):
 
 
 @pytest.mark.skipif(
-    utils.on_win and sys.version_info <= (3, 4),
-    reason="Skipping on windows and vc<14"
+    on_win and sys.version_info <= (3, 4), reason="Skipping on windows and vc<14"
 )
 def test_debug_package_default_path(testing_config):
     activation_string = api.debug(tarball_path, config=testing_config)
