@@ -22,4 +22,3 @@ Other:
 ------
 
 * <news item>
-
