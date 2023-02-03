@@ -14,7 +14,7 @@ from warnings import warn
 import jinja2
 import ruamel.yaml
 try:
-    import tomllib # Python 3.11
+    import tomllib  # Python 3.11
 except:
     import tomli as tomllib
 
