@@ -5,6 +5,7 @@ package:
 test:
   requires:
     - pyyaml
+    - ruamel.yaml
 
 extra:
   custom: metadata
