@@ -3,12 +3,14 @@
 import json
 import os
 from pathlib import Path
+import platform
 import re
 import sys
 
 import pytest
 import yaml
 
+from conda.common.compat import on_mac
 from conda_build import api, exceptions
 from conda_build.variants import (
     combine_specs,
@@ -135,35 +137,27 @@ def test_no_satisfiable_variants_raises_error():
     recipe = os.path.join(variants_dir, "01_basic_templating")
     with pytest.raises(exceptions.DependencyNeedsBuildingError):
         api.render(recipe, permit_unsatisfiable_variants=False)
-
-    # the packages are not installable anyway, so this should show a warning that recipe can't
-    #   be finalized
     api.render(recipe, permit_unsatisfiable_variants=True)
-    # out, err = capsys.readouterr()
-    # print(out)
-    # print(err)
-    # print(caplog.text)
-    # assert "Returning non-final recipe; one or more dependencies was unsatisfiable" in err
 
 
 def test_zip_fields():
     """Zipping keys together allows people to tie different versions as sets of combinations."""
-    v = {'python': ['2.7', '3.5'], 'vc': ['9', '14'], 'zip_keys': [('python', 'vc')]}
-    ld = dict_of_lists_to_list_of_dicts(v)
-    assert len(ld) == 2
-    assert ld[0]['python'] == '2.7'
-    assert ld[0]['vc'] == '9'
-    assert ld[1]['python'] == '3.5'
-    assert ld[1]['vc'] == '14'
+    variants = {'packageA': ['1.2', '3.4'], 'packageB': ['5', '6'], 'zip_keys': [('packageA', 'packageB')]}
+    zipped = dict_of_lists_to_list_of_dicts(variants)
+    assert len(zipped) == 2
+    assert zipped[0]['packageA'] == '1.2'
+    assert zipped[0]['packageB'] == '5'
+    assert zipped[1]['packageA'] == '3.4'
+    assert zipped[1]['packageB'] == '6'
 
     # allow duplication of values, but lengths of lists must always match
-    v = {'python': ['2.7', '2.7'], 'vc': ['9', '14'], 'zip_keys': [('python', 'vc')]}
-    ld = dict_of_lists_to_list_of_dicts(v)
-    assert len(ld) == 2
-    assert ld[0]['python'] == '2.7'
-    assert ld[0]['vc'] == '9'
-    assert ld[1]['python'] == '2.7'
-    assert ld[1]['vc'] == '14'
+    variants = {'packageA': ['1.2', '1.2'], 'packageB': ['5', '6'], 'zip_keys': [('packageA', 'packageB')]}
+    zipped = dict_of_lists_to_list_of_dicts(variants)
+    assert len(zipped) == 2
+    assert zipped[0]['packageA'] == '1.2'
+    assert zipped[0]['packageB'] == '5'
+    assert zipped[1]['packageA'] == '1.2'
+    assert zipped[1]['packageB'] == '6'
 
 
 def test_validate_spec():
@@ -173,7 +167,7 @@ def test_validate_spec():
     """
     spec = {
         # normal expansions
-        "foo": [2.7, 3.7, 3.8],
+        "foo": [1.2, 3.4],
         # zip_keys are the values that need to be expanded as a set
         "zip_keys": [["bar", "baz"], ["qux", "quux", "quuz"]],
         "bar": [1, 2, 3],
@@ -232,7 +226,7 @@ def test_variants_in_output_names():
     assert len(outputs) == 4
 
 
-def test_variants_in_versions_with_setup_py_data(testing_workdir):
+def test_variants_in_versions_with_setup_py_data():
     recipe = os.path.join(variants_dir, "12_variant_versions")
     outputs = api.get_output_file_paths(recipe)
     assert len(outputs) == 2
@@ -240,7 +234,7 @@ def test_variants_in_versions_with_setup_py_data(testing_workdir):
     assert any(os.path.basename(pkg).startswith('my_package-480.480') for pkg in outputs)
 
 
-def test_git_variables_with_variants(testing_workdir, testing_config):
+def test_git_variables_with_variants(testing_config):
     recipe = os.path.join(variants_dir, "13_git_vars")
     m = api.render(
         recipe, config=testing_config, finalize=False, bypass_env_check=True
@@ -265,7 +259,7 @@ def test_variant_input_with_zip_keys_keeps_zip_keys_list():
 
 @pytest.mark.serial
 @pytest.mark.xfail(sys.platform == "win32", reason="console readout issues on appveyor")
-def test_ensure_valid_spec_on_run_and_test(testing_workdir, testing_config, caplog):
+def test_ensure_valid_spec_on_run_and_test(testing_config, caplog):
     testing_config.debug = True
     testing_config.verbose = True
     recipe = os.path.join(variants_dir, "14_variant_in_run_and_test")
@@ -278,6 +272,7 @@ def test_ensure_valid_spec_on_run_and_test(testing_workdir, testing_config, capl
     assert "Adding .* to spec 'pytest-mock  1.6'" not in text
 
 
+@pytest.mark.skipif(on_mac and platform.machine() == "arm64", reason="Unsatisfiable dependencies for M1 MacOS: {'bzip2=1.0.6'}")
 def test_serial_builds_have_independent_configs(testing_config):
     recipe = os.path.join(variants_dir, "17_multiple_recipes_independent_config")
     recipes = [os.path.join(recipe, dirname) for dirname in ("a", "b")]
@@ -334,7 +329,7 @@ def test_subspace_selection(testing_config):
     assert ms[0][0].config.variant['c'] == 'animal'
 
 
-def test_get_used_loop_vars(testing_config):
+def test_get_used_loop_vars():
     m = api.render(
         os.path.join(variants_dir, "19_used_variables"),
         finalize=False,
@@ -348,7 +343,7 @@ def test_get_used_loop_vars(testing_config):
     assert m.get_used_vars() == {'python', 'some_package', 'zlib', 'pthread_stubs', 'target_platform'}
 
 
-def test_reprovisioning_source(testing_config):
+def test_reprovisioning_source():
     api.render(os.path.join(variants_dir, "20_reprovision_source"))
 
 
@@ -388,7 +383,7 @@ def test_reduced_hashing_behavior(testing_config):
     assert not re.search('h[0-9a-f]{%d}' % testing_config.hash_length, m.build_id())
 
 
-def test_variants_used_in_jinja2_conditionals(testing_config):
+def test_variants_used_in_jinja2_conditionals():
     ms = api.render(
         os.path.join(variants_dir, "21_conditional_sections"),
         finalize=False,
@@ -399,7 +394,7 @@ def test_variants_used_in_jinja2_conditionals(testing_config):
     assert sum(m.config.variant['blas_impl'] == 'openblas' for m, _, _ in ms) == 1
 
 
-def test_build_run_exports_act_on_host(testing_config, caplog):
+def test_build_run_exports_act_on_host(caplog):
     """Regression test for https://github.com/conda/conda-build/issues/2559"""
     api.render(
         os.path.join(variants_dir, "22_run_exports_rerendered_for_other_variants"),
@@ -409,7 +404,7 @@ def test_build_run_exports_act_on_host(testing_config, caplog):
     assert "failed to get install actions, retrying" not in caplog.text
 
 
-def test_detect_variables_in_build_and_output_scripts(testing_config):
+def test_detect_variables_in_build_and_output_scripts():
     ms = api.render(
         os.path.join(variants_dir, "24_test_used_vars_in_scripts"),
         platform="linux",
@@ -462,7 +457,7 @@ def test_detect_variables_in_build_and_output_scripts(testing_config):
             assert 'OUTPUT_VAR' in used_vars
 
 
-def test_target_platform_looping(testing_config):
+def test_target_platform_looping():
     outputs = api.get_output_file_paths(
         os.path.join(variants_dir, "25_target_platform_looping"),
         platform="win",
@@ -471,12 +466,14 @@ def test_target_platform_looping(testing_config):
     assert len(outputs) == 2
 
 
-def test_numpy_used_variable_looping(testing_config):
+@pytest.mark.skipif(on_mac and platform.machine() == "arm64", reason="Unsatisfiable dependencies for M1 MacOS systems: {'numpy=1.16'}")
+# TODO Remove the above skip decorator once https://github.com/conda/conda-build/issues/4717 is resolved
+def test_numpy_used_variable_looping():
     outputs = api.get_output_file_paths(os.path.join(variants_dir, "numpy_used"))
     assert len(outputs) == 4
 
 
-def test_exclusive_config_files(testing_workdir):
+def test_exclusive_config_files():
     with open('conda_build_config.yaml', 'w') as f:
         yaml.dump({'abc': ['someval'], 'cwd': ['someval']}, f, default_flow_style=False)
     os.makedirs('config_dir')
@@ -507,7 +504,7 @@ def test_exclusive_config_files(testing_workdir):
     assert variant['abc'] == '123'
 
 
-def test_exclusive_config_file(testing_workdir):
+def test_exclusive_config_file():
     with open("conda_build_config.yaml", "w") as f:
         yaml.dump({"abc": ["someval"], "cwd": ["someval"]}, f, default_flow_style=False)
     os.makedirs("config_dir")
@@ -529,6 +526,7 @@ def test_exclusive_config_file(testing_workdir):
     assert variant['abc'] == '123'
 
 
+@pytest.mark.skipif(on_mac and platform.machine() == "arm64", reason="M1 Mac-specific file system error related to this test")
 def test_inner_python_loop_with_output(testing_config):
     outputs = api.get_output_file_paths(
         os.path.join(variants_dir, "test_python_as_subpackage_loop"),
@@ -608,7 +606,7 @@ def test_top_level_finalized(testing_config):
     assert '5.2.3' in xzcat_output
 
 
-def test_variant_subkeys_retained(testing_config):
+def test_variant_subkeys_retained():
     m = api.render(
         os.path.join(variants_dir, "31_variant_subkeys"),
         finalize=False,
