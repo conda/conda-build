@@ -1,7 +1,7 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 from functools import partial
-from io import StringIO
+from io import StringIO, TextIOBase
 import json
 import os
 import pathlib
@@ -499,19 +499,26 @@ def resolved_packages(m, env, permit_undefined_jinja=False,
     return package_names
 
 
-def _toml_load(pathname):
+def _toml_load(stream):
     """
     Load .toml from a pathname.
     """
-    with pathlib.Path(pathname).open('rb') as toml:
-        tomllib.load(toml)
+    if isinstance(stream, (TextIOBase, str)):
+        if isinstance(stream, TextIOBase):
+            data = stream.read()
+        else:
+            data = stream
+        return tomllib.loads(data)
+
+    # tomllib prefers binary files
+    return tomllib.load(stream)
 
 
-def _yaml_load(pathname):
+def _yaml_load(stream):
     """
     Load .yaml from a pathname.
     """
-    return ruamel.yaml.load(pathname, ruamel.yaml.SafeLoader)
+    return ruamel.yaml.load(stream, ruamel.yaml.SafeLoader)
 
 
 _file_parsers = {
