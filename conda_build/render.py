@@ -1,10 +1,7 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-from collections import OrderedDict, defaultdict
-from functools import lru_cache
 import json
 import os
-from os.path import isdir, isfile, abspath
 import random
 import re
 import shutil
@@ -13,23 +10,32 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+from collections import OrderedDict, defaultdict
+from functools import lru_cache
+from os.path import abspath, isdir, isfile
 
 import yaml
 
-from .conda_interface import (UnsatisfiableError, ProgressiveFetchExtract,
-                              TemporaryDirectory)
-from .conda_interface import execute_actions
-from .conda_interface import pkgs_dirs
-from .conda_interface import specs_from_url
-from .utils import CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2
-
-from conda_build import exceptions, utils, environ, build_index
-from conda_build.metadata import MetaData, combine_top_level_metadata_with_output
+import conda_build.index
 import conda_build.source as source
-from conda_build.variants import (get_package_variants, list_of_dicts_to_dict_of_lists,
-                                  filter_by_key_value)
+from conda_build import environ, exceptions, utils
 from conda_build.exceptions import DependencyNeedsBuildingError
+from conda_build.metadata import MetaData, combine_top_level_metadata_with_output
+from conda_build.variants import (
+    filter_by_key_value,
+    get_package_variants,
+    list_of_dicts_to_dict_of_lists,
+)
 
+from .conda_interface import (
+    ProgressiveFetchExtract,
+    TemporaryDirectory,
+    UnsatisfiableError,
+    execute_actions,
+    pkgs_dirs,
+    specs_from_url,
+)
+from .utils import CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2
 
 # from conda_build.jinja_context import pin_subpackage_against_outputs
 
@@ -268,7 +274,7 @@ def _read_specs_from_package(pkg_loc, pkg_dist):
 
 def execute_download_actions(m, actions, env, package_subset=None, require_files=False):
     subdir = getattr(m.config, f'{env}_subdir')
-    index, _, _ = build_index.get_build_index(subdir, m.config.bldpkgs_dir, m.config.output_folder, False,
+    index, _, _ = conda_build.index.get_build_index(subdir, m.config.bldpkgs_dir, m.config.output_folder, False,
                                               False, m.config.channel_urls, m.config.debug, m.config.verbose, locking=m.config.locking, timeout=m.config.timeout
                                               )
 

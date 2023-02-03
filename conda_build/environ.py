@@ -14,21 +14,33 @@ from functools import lru_cache
 from glob import glob
 from os.path import join, normpath
 
-from .conda_interface import (CondaError, LinkError, LockError, NoPackagesFoundError,
-                              PaddingError, UnsatisfiableError)
-from .conda_interface import display_actions, execute_actions, execute_plan, install_actions
-from .conda_interface import package_cache, TemporaryDirectory
-from .conda_interface import pkgs_dirs, root_dir, create_default_packages
-from .conda_interface import reset_context
-from .conda_interface import get_version_from_git_tag
-
-from conda_build import utils, build_index
+import conda_build.index
+from conda_build import utils
 from conda_build.exceptions import BuildLockError, DependencyNeedsBuildingError
 from conda_build.features import feature_list
 from conda_build.os_utils import external
-from conda_build.utils import ensure_list, prepend_bin_path, env_var
+from conda_build.utils import ensure_list, env_var, prepend_bin_path
 from conda_build.variants import get_default_variant
 
+from .conda_interface import (
+    CondaError,
+    LinkError,
+    LockError,
+    NoPackagesFoundError,
+    PaddingError,
+    TemporaryDirectory,
+    UnsatisfiableError,
+    create_default_packages,
+    display_actions,
+    execute_actions,
+    execute_plan,
+    get_version_from_git_tag,
+    install_actions,
+    package_cache,
+    pkgs_dirs,
+    reset_context,
+    root_dir,
+)
 
 # these are things that we provide env vars for more explicitly.  This list disables the
 #    pass-through of variant values to env vars for these keys.
@@ -776,7 +788,7 @@ def get_install_actions(prefix, specs, env, retries=0, subdir=None,
     bldpkgs_dirs = ensure_list(bldpkgs_dirs)
 
     bldpkgs_dir = list(bldpkgs_dirs)[0]
-    index, index_ts, _ = build_index.get_build_index(subdir, bldpkgs_dir, output_folder, False,
+    index, index_ts, _ = conda_build.index.get_build_index(subdir, bldpkgs_dir, output_folder, False,
                                                      False, channel_urls, debug, verbose, locking=locking, timeout=timeout
                                                      )
     specs = tuple(utils.ensure_valid_spec(spec) for spec in specs if not str(spec).endswith('@'))
@@ -889,7 +901,7 @@ def create_env(prefix, specs_or_actions, env, config, subdir, clear_cache=True, 
                                                         channel_urls=tuple(config.channel_urls))
                     else:
                         actions = specs_or_actions
-                    index, _, _ = build_index.get_build_index(subdir, config.bldpkgs_dir, config.output_folder, False,
+                    index, _, _ =  conda_build.index.get_build_index(subdir, config.bldpkgs_dir, config.output_folder, False,
                                                               False, config.channel_urls, config.debug, config.verbose, locking=config.locking, timeout=config.timeout
                                                               )
                     utils.trim_empty_keys(actions)
