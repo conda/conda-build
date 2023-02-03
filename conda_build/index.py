@@ -223,6 +223,13 @@ def update_index(
     debug=False,
     index_file=None,
 ):
+    # conda-build calls update_index on a single subdir internally, but
+    # conda-index expects to index every subdir under dir_path
+    parent_path, dirname = os.path.split(dir_path)
+    if dirname in utils.DEFAULT_SUBDIRS:
+        dir_path = parent_path
+        subdirs = [dirname]
+
     return conda_index.index.update_index(
         dir_path,
         check_md5=check_md5,
