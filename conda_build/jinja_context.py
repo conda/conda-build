@@ -12,8 +12,11 @@ from typing import IO, Any, Optional
 from warnings import warn
 
 import jinja2
-import toml
-import yaml
+import ruamel.yaml
+try:
+    import tomllib # Python 3.11
+except:
+    import tomli as tomllib
 
 from .environ import get_dict as get_environ
 from .utils import get_installed_packages, apply_pin_expressions, get_logger, HashableDict
@@ -496,11 +499,26 @@ def resolved_packages(m, env, permit_undefined_jinja=False,
     return package_names
 
 
+def _toml_load(pathname):
+    """
+    Load .toml from a pathname.
+    """
+    with pathlib.Path(pathname).open('rb') as toml:
+        tomllib.load(toml)
+
+
+def _yaml_load(pathname):
+    """
+    Load .yaml from a pathname.
+    """
+    return ruamel.yaml.load(pathname, ruamel.yaml.SafeLoader)
+
+
 _file_parsers = {
     "json": json.load,
-    "yaml": yaml.safe_load,
-    "yml": yaml.safe_load,
-    "toml": toml.load,
+    "yaml": _yaml_load,
+    "yml": _yaml_load,
+    "toml": _toml_load
 }
 
 
