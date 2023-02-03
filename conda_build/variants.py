@@ -12,7 +12,7 @@ from pkg_resources import parse_version
 import re
 import sys
 
-import yaml
+import ruamel.yaml as yaml
 
 from conda_build.conda_interface import subdir
 from conda_build.conda_interface import cc_conda_build

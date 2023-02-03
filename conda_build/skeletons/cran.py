@@ -20,13 +20,9 @@ import requests
 import tarfile
 import zipfile
 import unicodedata
-import yaml
+import ruamel.yaml as yaml
 
-# try to import C dumper
-try:
-    from yaml import CSafeDumper as SafeDumper
-except ImportError:
-    from yaml import SafeDumper
+from ruamel.yaml import SafeDumper
 
 from conda.common.io import dashlist
 from conda_build import source, metadata

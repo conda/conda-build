@@ -5,8 +5,8 @@ import logging
 import sys
 from pprint import pprint
 
-import yaml
-from yaml.parser import ParserError
+import ruamel.yaml as yaml
+from ruamel.yaml.parser import ParserError
 
 from conda_build.conda_interface import (ArgumentParser, add_parser_channels,
                                          cc_conda_build)

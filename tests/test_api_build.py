@@ -24,7 +24,7 @@ import conda_build
 from binstar_client.commands import remove, show
 from binstar_client.errors import NotFound
 import pytest
-import yaml
+import ruamel.yaml as yaml
 import tarfile
 
 from conda_build import api, exceptions, __version__

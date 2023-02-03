@@ -27,7 +27,7 @@ import time
 import encodings.idna  # NOQA
 
 from bs4 import UnicodeDammit
-import yaml
+import ruamel.yaml as yaml
 
 import conda_package_handling.api
 
@@ -747,7 +747,7 @@ def jsonify_info_yamls(m):
                     except:
                         pass
                     with open(file) as i, open(dst, 'w') as o:
-                        import yaml
+                        import ruamel.yaml as yaml
                         yaml = yaml.full_load(i)
                         json.dump(yaml, o, sort_keys=True, indent=2, separators=(',', ': '))
                         res.append(join(os.path.basename(m.config.info_dir), ijd, bn + '.json'))

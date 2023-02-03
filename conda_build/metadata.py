@@ -33,10 +33,10 @@ from conda_build.utils import (
 from conda_build.license_family import ensure_valid_license_family
 
 try:
-    import yaml
+    import ruamel.yaml as yaml
 except ImportError:
     sys.exit(
-        "Error: could not import yaml (required to read meta.yaml "
+        "Error: could not import ruamel.yaml as yaml (required to read meta.yaml "
         "files of conda recipes)"
     )
 

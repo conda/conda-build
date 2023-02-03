@@ -8,7 +8,7 @@ import os
 import re
 
 import pytest
-import yaml
+import ruamel.yaml as yaml
 
 from conda.common.compat import on_win
 

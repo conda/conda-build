@@ -23,7 +23,7 @@ import pkginfo
 import requests
 from requests.packages.urllib3.util.url import parse_url
 from urllib.parse import urljoin, urlsplit
-import yaml
+import ruamel.yaml as yaml
 
 from conda_build.conda_interface import spec_from_line
 from conda_build.conda_interface import input, configparser, StringIO
@@ -102,7 +102,7 @@ diff core.py core.py
 +import io
 +import os.path
 +import sys
-+import yaml
++import ruamel.yaml as yaml
 +from yaml import Loader, SafeLoader
 +
 +# Override the default string handling function to always return unicode

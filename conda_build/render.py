@@ -14,7 +14,7 @@ import sys
 import tarfile
 import tempfile
 
-import yaml
+import ruamel.yaml as yaml
 
 from .conda_interface import (UnsatisfiableError, ProgressiveFetchExtract,
                               TemporaryDirectory)

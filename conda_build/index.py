@@ -24,11 +24,11 @@ from conda.common.compat import ensure_binary
 import pytz
 from jinja2 import Environment, PackageLoader
 from tqdm import tqdm
-import yaml
-from yaml.constructor import ConstructorError
-from yaml.parser import ParserError
-from yaml.scanner import ScannerError
-from yaml.reader import ReaderError
+import ruamel.yaml as yaml
+from ruamel.yaml.constructor import ConstructorError
+from ruamel.yaml.parser import ParserError
+from ruamel.yaml.scanner import ScannerError
+from ruamel.yaml.reader import ReaderError
 
 import fnmatch
 from functools import partial

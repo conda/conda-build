@@ -8,7 +8,7 @@ import re
 import sys
 
 import pytest
-import yaml
+import ruamel.yaml as yaml
 
 from conda.common.compat import on_mac
 from conda_build import api, exceptions

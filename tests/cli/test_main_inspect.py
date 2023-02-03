@@ -3,7 +3,7 @@
 import os
 import re
 import sys
-import yaml
+import ruamel.yaml as yaml
 
 import pytest
 

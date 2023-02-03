@@ -15,7 +15,7 @@ from os.path import (basename, dirname, exists, join, splitext)
 import re
 from textwrap import wrap
 from xml.etree import ElementTree as ET
-from .cran import yaml_quote_string
+from .cran import ruamel.yaml as yaml_quote_string
 
 
 try:

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import os
 import sys
-import yaml
+import ruamel.yaml as yaml
 
 import pytest
 

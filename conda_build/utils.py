@@ -31,7 +31,7 @@ try:
 except ImportError:
     JSONDecodeError = ValueError
 
-import yaml
+import ruamel.yaml as yaml
 
 import filelock
 import conda_package_handling.api
