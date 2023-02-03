@@ -874,8 +874,8 @@ def _unicode_representer(dumper, uni):
 
 
 class _IndentDumper(yaml.Dumper):
-    def increase_indent(self, flow=False, indentless=False):
-        return super().increase_indent(flow, False)
+    def increase_indent(self, flow=False, **kwargs):
+        return super().increase_indent(flow, **kwargs)
 
     def ignore_aliases(self, data):
         return True
