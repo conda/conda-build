@@ -27,7 +27,7 @@ requirements:
     - beautifulsoup4
     - chardet
     - conda  >=4.13
-    - conda-index >=0.2.3
+    - conda-index
     # - conda-verify  >=3.0.2  # optional as of CB 3.12.0
     - contextlib2   # [py<34]
     - enum34        # [py<34]
@@ -52,7 +52,6 @@ requirements:
     - toml
     - tqdm
     - conda-package-handling  >=1.3
-    - python-libarchive-c
 
 test:
   files:
