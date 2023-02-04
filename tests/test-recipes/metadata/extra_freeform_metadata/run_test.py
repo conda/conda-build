@@ -1,7 +1,7 @@
 from glob import glob
 import os
 import json
-import ruamel.yaml as yaml
+import yaml
 
 
 def main():
