@@ -89,6 +89,7 @@ PYPI_META_STATIC = {
     ]),
 }
 
+
 # Note the {} formatting bits here
 DISTUTILS_PATCH = '''\
 diff core.py core.py
@@ -102,8 +103,8 @@ diff core.py core.py
 +import io
 +import os.path
 +import sys
-+import yaml
-+from yaml import Loader, SafeLoader
++import ruamel.yaml as yaml
++from ruamel.yaml import Loader, SafeLoader
 +
 +# Override the default string handling function to always return unicode
 +# objects (taken from StackOverflow)
