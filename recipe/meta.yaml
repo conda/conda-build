@@ -52,6 +52,7 @@ requirements:
     - toml
     - tqdm
     - conda-package-handling  >=1.3
+    - python-libarchive-c
 
 test:
   files:

@@ -14,10 +14,10 @@ from functools import lru_cache
 from glob import glob
 from os.path import join, normpath
 
-import conda_build.index
 from conda_build import utils
 from conda_build.exceptions import BuildLockError, DependencyNeedsBuildingError
 from conda_build.features import feature_list
+from conda_build.index import get_build_index
 from conda_build.os_utils import external
 from conda_build.utils import ensure_list, env_var, prepend_bin_path
 from conda_build.variants import get_default_variant
@@ -866,16 +866,13 @@ def get_install_actions(
 
     bldpkgs_dirs = ensure_list(bldpkgs_dirs)
 
-    bldpkgs_dir = list(bldpkgs_dirs)[0]
-    index, index_ts, _ = conda_build.index.get_build_index(
+    index, index_ts, _ = get_build_index(
         subdir,
-        bldpkgs_dir,
-        output_folder,
-        False,
-        False,
-        channel_urls,
-        debug,
-        verbose,
+        list(bldpkgs_dirs)[0],
+        output_folder=output_folder,
+        channel_urls=channel_urls,
+        debug=debug,
+        verbose=verbose,
         locking=locking,
         timeout=timeout,
     )
@@ -1041,15 +1038,13 @@ def create_env(
                         )
                     else:
                         actions = specs_or_actions
-                    index, _, _ = conda_build.index.get_build_index(
-                        subdir,
-                        config.bldpkgs_dir,
-                        config.output_folder,
-                        False,
-                        False,
-                        config.channel_urls,
-                        config.debug,
-                        config.verbose,
+                    index, _, _ = get_build_index(
+                        subdir=subdir,
+                        bldpkgs_dir=config.bldpkgs_dir,
+                        output_folder=config.output_folder,
+                        channel_urls=config.channel_urls,
+                        debug=config.debug,
+                        verbose=config.verbose,
                         locking=config.locking,
                         timeout=config.timeout,
                     )
