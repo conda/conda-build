@@ -273,10 +273,19 @@ def _read_specs_from_package(pkg_loc, pkg_dist):
 
 
 def execute_download_actions(m, actions, env, package_subset=None, require_files=False):
-    subdir = getattr(m.config, f'{env}_subdir')
-    index, _, _ = conda_build.index.get_build_index(subdir, m.config.bldpkgs_dir, m.config.output_folder, False,
-                                              False, m.config.channel_urls, m.config.debug, m.config.verbose, locking=m.config.locking, timeout=m.config.timeout
-                                              )
+    subdir = getattr(m.config, f"{env}_subdir")
+    index, _, _ = conda_build.index.get_build_index(
+        subdir,
+        m.config.bldpkgs_dir,
+        m.config.output_folder,
+        False,
+        False,
+        m.config.channel_urls,
+        m.config.debug,
+        m.config.verbose,
+        locking=m.config.locking,
+        timeout=m.config.timeout,
+    )
 
     # this should be just downloading packages.  We don't need to extract them -
 

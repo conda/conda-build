@@ -52,9 +52,9 @@ from .conda_interface import get_conda_channel
 from .utils import (CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2,
                     CONDA_PACKAGE_EXTENSIONS, env_var, glob,
                     shutil_move_more_retrying, tmp_chdir)
-from conda_build import environ, source, tarcheck, utils, index
+from conda_build import environ, source, tarcheck, utils
 from conda_build.config import Config
-from conda_build.index import update_index
+from conda_build.index import update_index, get_build_index
 from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse, distribute_variants,
                                 expand_outputs, try_download, execute_download_actions,
                                 add_upstream_pins)
@@ -2376,12 +2376,30 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                     subdir = ('noarch' if (m.noarch or m.noarch_python)
                               else m.config.host_subdir)
                     if m.is_cross:
-                        index.get_build_index(subdir, m.config.bldpkgs_dir, m.config.output_folder, True,
-                                                    False, m.config.channel_urls, m.config.debug, m.config.verbose, locking=m.config.locking, timeout=m.config.timeout
-                                                    )
-                    index.get_build_index(subdir, m.config.bldpkgs_dir, m.config.output_folder, True,
-                                                False, m.config.channel_urls, m.config.debug, m.config.verbose, locking=m.config.locking, timeout=m.config.timeout
-                                                )
+                        get_build_index(
+                            subdir,
+                            m.config.bldpkgs_dir,
+                            m.config.output_folder,
+                            True,
+                            False,
+                            m.config.channel_urls,
+                            m.config.debug,
+                            m.config.verbose,
+                            locking=m.config.locking,
+                            timeout=m.config.timeout,
+                        )
+                    get_build_index(
+                        subdir,
+                        m.config.bldpkgs_dir,
+                        m.config.output_folder,
+                        True,
+                        False,
+                        m.config.channel_urls,
+                        m.config.debug,
+                        m.config.verbose,
+                        locking=m.config.locking,
+                        timeout=m.config.timeout,
+                    )
     else:
         if not provision_only:
             print("STOPPING BUILD BEFORE POST:", m.dist())
