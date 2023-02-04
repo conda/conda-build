@@ -115,7 +115,9 @@ def parse_config_file(path, config):
     with open(path) as f:
         contents = f.read()
     contents = select_lines(contents, ns_cfg(config), variants_in_place=False)
-    content = yaml.load(contents, Loader=yaml.loader.BaseLoader) or {}
+    yml = yaml.YAML(typ="base")
+    yml.allow_duplicate_keys = True
+    content = yaml.load(contents) or {}
     trim_empty_keys(content)
     return content
 
