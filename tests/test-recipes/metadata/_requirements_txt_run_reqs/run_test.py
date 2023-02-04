@@ -1,2 +1,2 @@
-import ruamel.yaml as yaml
+import yaml
 yaml
