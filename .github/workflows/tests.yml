@@ -142,6 +142,10 @@ jobs:
             -m "${{ env.PYTEST_MARKER }}" \
             ./tests
 
+      - uses: codecov/codecov-action@v3
+        with:
+          flags: ${{ matrix.test-type }},${{ matrix.python-version }},linux-64
+
       - name: Tar Allure Results
         if: always()
         run: tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
@@ -253,6 +257,10 @@ jobs:
             --alluredir="${{ env.ALLURE_DIR }}" `
             -m "${{ env.PYTEST_MARKER }}" `
             .\tests
+
+      - uses: codecov/codecov-action@v3
+        with:
+          flags: ${{ matrix.test-type }},${{ matrix.python-version }},win-64
 
       - name: Tar Allure Results
         if: always()
@@ -369,6 +377,10 @@ jobs:
             --alluredir="${{ env.ALLURE_DIR }}" \
             -m "${{ env.PYTEST_MARKER }}" \
             ./tests
+
+      - uses: codecov/codecov-action@v3
+        with:
+          flags: ${{ matrix.test-type }},${{ matrix.python-version }},osx-64
 
       - name: Tar Allure Results
         if: always()
