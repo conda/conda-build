@@ -135,6 +135,7 @@ jobs:
             --basetemp "${{ runner.temp }}/${{ matrix.test-type }}" \
             --cov conda_build \
             --cov-append \
+            --cov-branch \
             --cov-report xml \
             --replay-record-dir="${{ env.REPLAY_DIR }}" \
             --replay-base-name="${{ env.REPLAY_NAME }}" \
@@ -251,6 +252,7 @@ jobs:
             --basetemp "${{ runner.temp }}\${{ matrix.test-type}}" `
             --cov conda_build `
             --cov-append `
+            --cov-branch `
             --cov-report xml `
             --replay-record-dir="${{ env.REPLAY_DIR }}" `
             --replay-base-name="${{ env.REPLAY_NAME }}" `
@@ -371,6 +373,7 @@ jobs:
             --basetemp "${{ runner.temp }}/${{ matrix.test-type }}" \
             --cov conda_build \
             --cov-append \
+            --cov-branch \
             --cov-report xml \
             --replay-record-dir="${{ env.REPLAY_DIR }}" \
             --replay-base-name="${{ env.REPLAY_NAME }}" \
