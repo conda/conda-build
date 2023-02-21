@@ -966,7 +966,7 @@ def test_workdir_removal_warning(testing_config, caplog):
 
 @pytest.mark.sanity
 @pytest.mark.skipif(sys.platform != 'darwin', reason="relevant to mac only")
-def test_append_python_app_osx(testing_config):
+def test_append_python_app_osx(testing_config, conda_build_test_recipe_path: Path):
     """Recipes that use osx_is_app need to have python.app in their runtime requirements.
 
     conda-build will add it if it's missing."""
