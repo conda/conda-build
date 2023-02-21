@@ -107,7 +107,7 @@ def test_intradependencies(testing_config):
                                                                                                        outputs2_set)
 
 
-def test_git_in_output_version(testing_config):
+def test_git_in_output_version(testing_config, conda_build_test_recipe_path: Path):
     recipe = os.path.join(subpackage_dir, '_git_in_output_version')
     outputs = api.render(recipe, config=testing_config, finalize=False, bypass_env_check=True)
     assert len(outputs) == 1

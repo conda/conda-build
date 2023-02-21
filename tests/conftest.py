@@ -247,7 +247,7 @@ def conda_build_test_recipe_path(
     # clone conda_build_test_recipe locally
     repo = tmp_path_factory.mktemp("conda_build_test_recipe", numbered=False)
     subprocess.run(
-        ["git", "clone", "https://github.com/conda/conda_build_test_recipe", repo],
+        ["git", "clone", "https://github.com/conda/conda_build_test_recipe", str(repo)],
         check=True,
     )
 

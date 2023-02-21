@@ -1,6 +1,7 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 import os
+from pathlib import Path
 import sys
 
 import pytest
@@ -28,7 +29,11 @@ def test_skeleton_pypi():
         for recipe in get_valid_recipes(published_path)
     ],
 )
-def test_recipe_builds(recipe, testing_config):
+def test_recipe_builds(
+    recipe: Path,
+    testing_config,
+    conda_build_test_recipe_path: Path,
+):
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
     build(str(recipe), config=testing_config)
