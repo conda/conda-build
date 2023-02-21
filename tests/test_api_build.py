@@ -280,8 +280,8 @@ def test_binary_has_prefix_files_non_utf8(testing_config):
     api.build(os.path.join(metadata_dir, '_binary_has_utf_non_8'), config=testing_config)
 
 
-def test_relative_path_git_versioning(testing_config, conda_build_test_recipe):
-    tag = describe_root(conda_build_test_recipe)
+def test_relative_path_git_versioning(testing_config, conda_build_test_recipe_path):
+    tag = describe_root(conda_build_test_recipe_path)
     output = api.get_output_file_paths(
         metadata_path / "_source_git_jinja2_relative_path",
         config=testing_config,
@@ -289,8 +289,8 @@ def test_relative_path_git_versioning(testing_config, conda_build_test_recipe):
     assert tag in output
 
 
-def test_relative_git_url_git_versioning(testing_config, conda_build_test_recipe):
-    tag = describe_root(conda_build_test_recipe)
+def test_relative_git_url_git_versioning(testing_config, conda_build_test_recipe_path):
+    tag = describe_root(conda_build_test_recipe_path)
     output = api.get_output_file_paths(
         metadata_path / "_source_git_jinja2_relative_git_url",
         config=testing_config,
