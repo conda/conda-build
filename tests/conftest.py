@@ -235,23 +235,25 @@ def monkeysession() -> pytest.MonkeyPatch:
         yield mp
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="function")
 def conda_build_test_recipe_path(
-    tmp_path_factory: pytest.TempPathFactory,
-    monkeysession: pytest.MonkeyPatch,
+    # tmp_path_factory: pytest.TempPathFactory,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> Path:
     """Clone conda_build_test_recipe.
 
     This exposes the special dummy package "source code" used to test various git/svn/local recipe configurations.
     """
     # clone conda_build_test_recipe locally
-    repo = tmp_path_factory.mktemp("conda_build_test_recipe", numbered=False)
+    # repo = tmp_path_factory.mktemp("conda_build_test_recipe", numbered=False)
+    repo = tmp_path / "conda_build_test_recipe"
     subprocess.run(
         ["git", "clone", "https://github.com/conda/conda_build_test_recipe", str(repo)],
         check=True,
     )
 
     # provide cloned repo as envvar
-    monkeysession.setenv("CONDA_BUILD_TEST_RECIPE_PATH", repo)
+    monkeypatch.setenv("CONDA_BUILD_TEST_RECIPE_PATH", repo)
 
     return repo
