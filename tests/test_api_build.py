@@ -46,9 +46,6 @@ from .utils import (
     metadata_path,
 )
 
-# define a few commonly used recipes - use os.path.join(metadata_dir, recipe) elsewhere
-empty_sections = os.path.join(metadata_dir, "empty_sections")
-
 
 def represent_ordereddict(dumper, data):
     value = []
@@ -94,7 +91,12 @@ def describe_root(cwd=None):
         for recipe in get_valid_recipes(metadata_dir)
     ],
 )
-def test_recipe_builds(recipe: Path, testing_config, monkeypatch):
+def test_recipe_builds(
+    recipe: Path,
+    testing_config,
+    monkeypatch: pytest.MonkeyPatch,
+    conda_build_test_recipe_path: Path,
+):
     # TODO: After we fix #3754 this mark can be removed. This specific test
     #   ``source_setup_py_data_subdir`` reproduces the problem.
     if recipe.name == "source_setup_py_data_subdir":
@@ -173,8 +175,13 @@ def test_token_upload(testing_metadata):
 @pytest.mark.sanity
 @pytest.mark.serial
 @pytest.mark.parametrize("service_name", ["binstar", "anaconda"])
-def test_no_anaconda_upload_condarc(service_name, testing_config, capfd):
-    api.build(empty_sections, config=testing_config, notest=True)
+def test_no_anaconda_upload_condarc(
+    service_name: str,
+    testing_config,
+    capfd,
+    conda_build_test_recipe_path: Path,
+):
+    api.build(str(metadata_path / "empty_sections"), config=testing_config, notest=True)
     output, error = capfd.readouterr()
     assert "Automatic uploading is disabled" in output, error
 
@@ -182,9 +189,9 @@ def test_no_anaconda_upload_condarc(service_name, testing_config, capfd):
 @pytest.mark.sanity
 @pytest.mark.serial
 @pytest.mark.parametrize("service_name", ["binstar", "anaconda"])
-def test_offline(service_name, testing_config):
+def test_offline(service_name: str, testing_config, conda_build_test_recipe_path: Path):
     with env_var('CONDA_OFFLINE', 'True', reset_context):
-        api.build(empty_sections, config=testing_config)
+        api.build(str(metadata_path / "empty_sections"), config=testing_config)
 
 
 def test_git_describe_info_on_branch(testing_config):
@@ -417,10 +424,12 @@ def test_jinja_typo(testing_config):
 
 
 @pytest.mark.sanity
-def test_skip_existing(testing_config, capfd):
+def test_skip_existing(testing_config, capfd, conda_build_test_recipe_path: Path):
     # build the recipe first
-    api.build(empty_sections, config=testing_config)
-    api.build(empty_sections, config=testing_config, skip_existing=True)
+    api.build(str(metadata_path / "empty_sections"), config=testing_config)
+    api.build(
+        str(metadata_path / "empty_sections"), config=testing_config, skip_existing=True
+    )
     output, error = capfd.readouterr()
     assert "are already built" in output
 
