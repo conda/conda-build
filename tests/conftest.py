@@ -1,6 +1,7 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 from collections import defaultdict
+from pathlib import Path
 import os
 import subprocess
 import sys
@@ -225,3 +226,27 @@ def variants_conda_build_sysroot(monkeypatch, request):
         ).stdout.strip(),
     )
     return request.param
+
+
+# see https://github.com/pytest-dev/pytest/issues/363#issuecomment-1335631998
+@pytest.fixture(scope="session")
+def monkeysession() -> pytest.MonkeyPatch:
+    with pytest.MonkeyPatch.context() as mp:
+        yield mp
+
+
+@pytest.fixture(scope="session")
+def conda_build_test_recipe(
+    tmp_path_factory: pytest.TempPathFactory, monkeysession: pytest.MonkeyPatch
+) -> Path:
+    # clone conda_build_test_recipe locally
+    repo = tmp_path_factory.mktemp("conda_build_test_recipe", numbered=False)
+    subprocess.run(
+        ["git", "clone", "https://github.com/conda/conda_build_test_recipe", repo],
+        check=True,
+    )
+
+    # provide cloned repo as envvar
+    monkeysession.setenv("CONDA_BUILD_TEST_RECIPE_PATH", repo)
+
+    return repo

@@ -11,7 +11,8 @@ but only use those kwargs in config.  Config must change to support new features
 
 # imports are done locally to keep the api clean and limited strictly
 #    to conda-build's functionality.
-
+from os.path import dirname, expanduser, join
+from pathlib import Path
 import sys as _sys
 
 # make the Config class available in the api namespace
@@ -20,7 +21,6 @@ from conda_build.config import (Config, get_or_merge_config, get_channel_urls,
 from conda_build.utils import ensure_list as _ensure_list
 from conda_build.utils import expand_globs as _expand_globs
 from conda_build.utils import get_logger as _get_logger
-from os.path import dirname, expanduser, join
 
 
 def render(recipe_path, config=None, variants=None, permit_unsatisfiable_variants=True,
@@ -100,7 +100,7 @@ def get_output_file_paths(recipe_path_or_metadata, no_download_source=False, con
             metadata = recipe_path_or_metadata
         else:
             raise ValueError(f"received mixed list of metas: {recipe_path_or_metadata}")
-    elif isinstance(recipe_path_or_metadata, str):
+    elif isinstance(recipe_path_or_metadata, (str, Path)):
         # first, render the parent recipe (potentially multiple outputs, depending on variants).
         metadata = render(recipe_path_or_metadata, no_download_source=no_download_source,
                             variants=variants, config=config, finalize=True, **kwargs)
