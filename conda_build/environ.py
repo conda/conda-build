@@ -22,25 +22,14 @@ from conda_build.os_utils import external
 from conda_build.utils import ensure_list, env_var, prepend_bin_path
 from conda_build.variants import get_default_variant
 
-from .conda_interface import (
-    CondaError,
-    LinkError,
-    LockError,
-    NoPackagesFoundError,
-    PaddingError,
-    TemporaryDirectory,
-    UnsatisfiableError,
-    create_default_packages,
-    display_actions,
-    execute_actions,
-    execute_plan,
-    get_version_from_git_tag,
-    install_actions,
-    package_cache,
-    pkgs_dirs,
-    reset_context,
-    root_dir,
-)
+from .conda_interface import (CondaError, LinkError, LockError,
+                              NoPackagesFoundError, PaddingError,
+                              TemporaryDirectory, UnsatisfiableError,
+                              create_default_packages, display_actions,
+                              execute_actions, execute_plan,
+                              get_version_from_git_tag, install_actions,
+                              package_cache, pkgs_dirs, reset_context,
+                              root_dir)
 
 # these are things that we provide env vars for more explicitly.  This list disables the
 #    pass-through of variant values to env vars for these keys.

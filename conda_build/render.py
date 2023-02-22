@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import json
 import os
+from os.path import isdir, isfile, abspath
+from pathlib import Path
 import random
 import re
 import shutil
@@ -224,9 +226,18 @@ def find_pkg_dir_or_file_in_pkgs_dirs(pkg_dist, m, files_only=False):
             with tarfile.open(pkg_file, 'w:bz2') as archive:
                 for entry in os.listdir(pkg_dir):
                     archive.add(os.path.join(pkg_dir, entry), arcname=entry)
-            pkg_subdir = os.path.join(m.config.croot, m.config.host_subdir)
+
+            # use the package's subdir
+            try:
+                info = json.loads(Path(pkg_dir, "info", "index.json").read_text())
+                subdir = info["subdir"]
+            except (FileNotFoundError, KeyError):
+                subdir = m.config.host_subdir
+
+            pkg_subdir = os.path.join(m.config.croot, subdir)
             pkg_loc = os.path.join(pkg_subdir, os.path.basename(pkg_file))
             shutil.move(pkg_file, pkg_loc)
+            break
     return pkg_loc
 
 
