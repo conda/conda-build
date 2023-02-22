@@ -228,13 +228,6 @@ def variants_conda_build_sysroot(monkeypatch, request):
     return request.param
 
 
-# see https://github.com/pytest-dev/pytest/issues/363#issuecomment-1335631998
-@pytest.fixture(scope="session")
-def monkeysession() -> pytest.MonkeyPatch:
-    with pytest.MonkeyPatch.context() as mp:
-        yield mp
-
-
 @pytest.fixture(scope="session")
 def conda_build_test_recipe_path(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """Clone conda_build_test_recipe.
@@ -253,9 +246,9 @@ def conda_build_test_recipe_path(tmp_path_factory: pytest.TempPathFactory) -> Pa
 @pytest.fixture
 def conda_build_test_recipe_envvar(
     conda_build_test_recipe_path: Path,
-    monkeysession: pytest.MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> str:
     """Exposes the cloned conda_build_test_recipe as an environment variable."""
     name = "CONDA_BUILD_TEST_RECIPE_PATH"
-    monkeysession.setenv(name, conda_build_test_recipe_path)
+    monkeypatch.setenv(name, conda_build_test_recipe_path)
     return name
