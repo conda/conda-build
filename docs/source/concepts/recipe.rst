@@ -166,7 +166,7 @@ Prefix replacement
 When the build environment is created, it is in a placeholder prefix.
 When the package is all bundled up, the prefix is set to a "dummy" prefix.
 When conda is ready to install the package, it rewrites the dummy
-prefix with the correct one.
+prefix with the final one.
 
 
 Testing
@@ -178,7 +178,7 @@ of this prefix is::
 
   <path to conda>/conda-bld/<package name + string>/_test_env_placeholder…
 
-At this point, conda-build has all of the info from ``meta.yaml`` about
+At this point, conda-build has all of the information from ``meta.yaml`` about
 what its runtime dependencies are, so those dependencies are installed
 as well. This generates a test runner script with a reference to the
 testing ``meta.yaml`` that is created. See the :ref:`meta-test` for
@@ -197,15 +197,17 @@ it is installed. Conda reads that metadata when it needs to install.
 
 Running ``conda install`` causes conda to:
 
-  * Reach out to the repo data containing the dependencies
-  * Determine the correct dependencies
-  * Install a list of packages determined by the dependencies calculated in the previous step
-  * Unpack the tarball to look at the info
-  * Verify the file based on metadata in the package
-  * Go through each file in the package and put it in the right location
+#. Reach out to the repodata containing the dependencies
+#. Determine the correct dependencies
+#. Install a list of packages determined by the dependencies calculated in the previous step
+#. Unpack the tarball to look at the information contained within
+#. Verify the file based on metadata in the package
+#. Go through each file in the package and put it in the right location
 
+For additional information on ``conda install``, please visit the conda documentation `deep dive`_ page on that topic.
 
 .. _`conda packages`: https://conda.io/projects/conda/en/latest/user-guide/concepts/packages.html
 .. _`conda-recipes`: https://github.com/continuumio/conda-recipes
 .. _`Conda-forge`: https://anaconda.org/conda-forge
 .. _PyPI: https://pypi.python.org/pypi
+.. _`deep dive`: https://docs.conda.io/projects/conda/en/stable/dev-guide/deep-dives/install.html
