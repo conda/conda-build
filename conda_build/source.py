@@ -230,7 +230,7 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_ca
         try:
             if git_ref != 'HEAD':
                 check_call_env([git, 'fetch'], cwd=mirror_dir, stdout=stdout, stderr=stderr)
-                if repo_uses_git_lfs(git, mirror_dir):
+                if check_git_lfs(git, mirror_dir):
                     git_lfs_fetch(git, mirror_dir, stdout, stderr)
             else:
                 # Unlike 'git clone', fetch doesn't automatically update the cache's HEAD,
@@ -258,7 +258,7 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_ca
             args += ['--depth', str(git_depth)]
         try:
             check_call_env(args + [git_url, git_mirror_dir], stdout=stdout, stderr=stderr)
-            if repo_uses_git_lfs(git, mirror_dir):
+            if check_git_lfs(git, mirror_dir):
                 git_lfs_fetch(git, mirror_dir, stdout, stderr)
         except CalledProcessError:
             # on windows, remote URL comes back to us as cygwin or msys format.  Python doesn't
