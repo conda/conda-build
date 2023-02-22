@@ -263,7 +263,7 @@ the command line with ``conda install``, such as
 ``conda install python=3.4``. Internally, conda translates the
 command line syntax to the spec defined in this section.
 
-EXAMPLE: python=3.4 is translated to python 3.4*.
+EXAMPLE: python=3.4 is translated to python 3.4.*. ``conda search 'python=3.1'`` does NOT bring up Python 3.10, only Python 3.1.*.
 
 Package dependencies are specified using a match specification.
 A match specification is a space-separated string of 1, 2, or 3
@@ -315,7 +315,7 @@ Remember that the version specification cannot contain spaces,
 as spaces are used to delimit the package, version, and build
 string in the whole match specification. ``python >= 2.7`` is an
 invalid match specification. Furthermore, ``python>=2.7`` is
-matched as any version of a package named ``python>=2.7``.
+matched as any version of a package named python 2.7.0 or python 2.7.18.
 
 When using the command line, put double quotes around any package
 version specification that contains the space character or any of
