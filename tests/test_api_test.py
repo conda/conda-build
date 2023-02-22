@@ -4,7 +4,6 @@
 This module tests the test API.  These are high-level integration tests.
 """
 import os
-from pathlib import Path
 
 import pytest
 
@@ -40,7 +39,7 @@ def test_package_test_without_recipe_in_package(testing_metadata):
 def test_package_with_jinja2_does_not_redownload_source(
     testing_config,
     mocker,
-    conda_build_test_recipe_path: Path,
+    conda_build_test_recipe_envvar: str,
 ):
     recipe = os.path.join(metadata_dir, "jinja2_build_str")
     metadata = api.render(recipe, config=testing_config, dirty=True)[0][0]

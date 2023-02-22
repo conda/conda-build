@@ -1,7 +1,6 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 import os
-from pathlib import Path
 import re
 import sys
 
@@ -28,7 +27,7 @@ def _reset_config(search_path=None):
 
 
 @pytest.mark.sanity
-def test_build(conda_build_test_recipe_path: Path):
+def test_build(conda_build_test_recipe_envvar: str):
     args = [
         "--no-anaconda-upload",
         os.path.join(metadata_dir, "empty_sections"),
@@ -299,7 +298,7 @@ def test_build_skip_existing(
     testing_workdir,
     capfd,
     mocker,
-    conda_build_test_recipe_path: Path,
+    conda_build_test_recipe_envvar: str,
 ):
     # build the recipe first
     empty_sections = os.path.join(metadata_dir, "empty_sections")
@@ -318,7 +317,7 @@ def test_build_skip_existing(
 def test_build_skip_existing_croot(
     testing_workdir,
     capfd,
-    conda_build_test_recipe_path: Path,
+    conda_build_test_recipe_envvar: str,
 ):
     # build the recipe first
     empty_sections = os.path.join(metadata_dir, "empty_sections")
@@ -361,7 +360,7 @@ def test_activate_scripts_not_included(testing_workdir):
         assert not package_has_file(out, f)
 
 
-def test_relative_path_croot(conda_build_test_recipe_path: Path):
+def test_relative_path_croot(conda_build_test_recipe_envvar: str):
     # this tries to build a package while specifying the croot with a relative path:
     # conda-build --no-test --croot ./relative/path
 
@@ -374,7 +373,7 @@ def test_relative_path_croot(conda_build_test_recipe_path: Path):
     assert os.path.isfile(outputfile[0])
 
 
-def test_relative_path_test_artifact(conda_build_test_recipe_path: Path):
+def test_relative_path_test_artifact(conda_build_test_recipe_envvar: str):
     # this test builds a package into (cwd)/relative/path and then calls:
     # conda-build --test ./relative/path/{platform}/{artifact}.tar.bz2
 
@@ -396,7 +395,7 @@ def test_relative_path_test_artifact(conda_build_test_recipe_path: Path):
     main_build.execute(args)
 
 
-def test_relative_path_test_recipe(conda_build_test_recipe_path: Path):
+def test_relative_path_test_recipe(conda_build_test_recipe_envvar: str):
     # this test builds a package into (cwd)/relative/path and then calls:
     # conda-build --test --croot ./relative/path/ /abs/path/to/recipe
 

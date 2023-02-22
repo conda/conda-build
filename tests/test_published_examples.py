@@ -32,7 +32,7 @@ def test_skeleton_pypi():
 def test_recipe_builds(
     recipe: Path,
     testing_config,
-    conda_build_test_recipe_path: Path,
+    conda_build_test_recipe_envvar: str,
 ):
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts

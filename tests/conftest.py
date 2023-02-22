@@ -236,10 +236,7 @@ def monkeysession() -> pytest.MonkeyPatch:
 
 
 @pytest.fixture(scope="session")
-def conda_build_test_recipe_path(
-    tmp_path_factory: pytest.TempPathFactory,
-    monkeysession: pytest.MonkeyPatch,
-) -> Path:
+def conda_build_test_recipe_path(tmp_path_factory: pytest.TempPathFactory) -> Path:
     """Clone conda_build_test_recipe.
 
     This exposes the special dummy package "source code" used to test various git/svn/local recipe configurations.
@@ -250,8 +247,15 @@ def conda_build_test_recipe_path(
         ["git", "clone", "https://github.com/conda/conda_build_test_recipe", str(repo)],
         check=True,
     )
-
-    # provide cloned repo as envvar
-    monkeysession.setenv("CONDA_BUILD_TEST_RECIPE_PATH", repo)
-
     return repo
+
+
+@pytest.fixture
+def conda_build_test_recipe_envvar(
+    conda_build_test_recipe_path: Path,
+    monkeysession: pytest.MonkeyPatch,
+) -> str:
+    """Exposes the cloned conda_build_test_recipe as an environment variable."""
+    name = "CONDA_BUILD_TEST_RECIPE_PATH"
+    monkeysession.setenv(name, conda_build_test_recipe_path)
+    return name

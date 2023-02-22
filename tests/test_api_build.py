@@ -95,7 +95,7 @@ def test_recipe_builds(
     recipe: Path,
     testing_config,
     monkeypatch: pytest.MonkeyPatch,
-    conda_build_test_recipe_path: Path,
+    conda_build_test_recipe_envvar: str,
 ):
     # TODO: After we fix #3754 this mark can be removed. This specific test
     #   ``source_setup_py_data_subdir`` reproduces the problem.
@@ -179,7 +179,7 @@ def test_no_anaconda_upload_condarc(
     service_name: str,
     testing_config,
     capfd,
-    conda_build_test_recipe_path: Path,
+    conda_build_test_recipe_envvar: str,
 ):
     api.build(str(metadata_path / "empty_sections"), config=testing_config, notest=True)
     output, error = capfd.readouterr()
@@ -189,8 +189,10 @@ def test_no_anaconda_upload_condarc(
 @pytest.mark.sanity
 @pytest.mark.serial
 @pytest.mark.parametrize("service_name", ["binstar", "anaconda"])
-def test_offline(service_name: str, testing_config, conda_build_test_recipe_path: Path):
-    with env_var('CONDA_OFFLINE', 'True', reset_context):
+def test_offline(
+    service_name: str, testing_config, conda_build_test_recipe_envvar: str
+):
+    with env_var("CONDA_OFFLINE", "True", reset_context):
         api.build(str(metadata_path / "empty_sections"), config=testing_config)
 
 
@@ -287,7 +289,9 @@ def test_binary_has_prefix_files_non_utf8(testing_config):
     api.build(os.path.join(metadata_dir, '_binary_has_utf_non_8'), config=testing_config)
 
 
-def test_relative_path_git_versioning(testing_config, conda_build_test_recipe_path):
+def test_relative_path_git_versioning(
+    testing_config, conda_build_test_recipe_path: Path
+):
     tag = describe_root(conda_build_test_recipe_path)
     output = api.get_output_file_paths(
         metadata_path / "_source_git_jinja2_relative_path",
@@ -296,7 +300,9 @@ def test_relative_path_git_versioning(testing_config, conda_build_test_recipe_pa
     assert tag in output
 
 
-def test_relative_git_url_git_versioning(testing_config, conda_build_test_recipe_path):
+def test_relative_git_url_git_versioning(
+    testing_config, conda_build_test_recipe_path: Path
+):
     tag = describe_root(conda_build_test_recipe_path)
     output = api.get_output_file_paths(
         metadata_path / "_source_git_jinja2_relative_git_url",
@@ -424,7 +430,7 @@ def test_jinja_typo(testing_config):
 
 
 @pytest.mark.sanity
-def test_skip_existing(testing_config, capfd, conda_build_test_recipe_path: Path):
+def test_skip_existing(testing_config, capfd, conda_build_test_recipe_envvar: str):
     # build the recipe first
     api.build(str(metadata_path / "empty_sections"), config=testing_config)
     api.build(
@@ -966,7 +972,7 @@ def test_workdir_removal_warning(testing_config, caplog):
 
 @pytest.mark.sanity
 @pytest.mark.skipif(sys.platform != 'darwin', reason="relevant to mac only")
-def test_append_python_app_osx(testing_config, conda_build_test_recipe_path: Path):
+def test_append_python_app_osx(testing_config, conda_build_test_recipe_envvar: str):
     """Recipes that use osx_is_app need to have python.app in their runtime requirements.
 
     conda-build will add it if it's missing."""
