@@ -171,9 +171,12 @@ def unpack(source_dict, src_dir, cache_folder, recipe_path, croot, verbose=False
             shutil.move(os.path.join(tmpdir, f), os.path.join(src_dir, f))
 
 
-def repo_uses_git_lfs(git, dir):
-    lfs_list_output = check_output_env([git, 'lfs', 'ls-files', '--all'], cwd=dir)
-    return lfs_list_output and lfs_list_output.strip()
+def check_git_lfs(git, cwd):
+    try:
+        lfs_list_output = check_output_env([git, 'lfs', 'ls-files', '--all'], cwd=cwd)
+        return lfs_list_output and lfs_list_output.strip()
+    except CalledProcessError:
+        return False
 
 
 def git_lfs_fetch(git, dir, stdout, stderr):
