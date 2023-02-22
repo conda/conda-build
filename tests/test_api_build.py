@@ -290,7 +290,9 @@ def test_binary_has_prefix_files_non_utf8(testing_config):
 
 
 def test_relative_path_git_versioning(
-    testing_config, conda_build_test_recipe_path: Path
+    testing_config,
+    conda_build_test_recipe_path: Path,
+    conda_build_test_recipe_envvar: str,
 ):
     tag = describe_root(conda_build_test_recipe_path)
     output = api.get_output_file_paths(
@@ -301,7 +303,9 @@ def test_relative_path_git_versioning(
 
 
 def test_relative_git_url_git_versioning(
-    testing_config, conda_build_test_recipe_path: Path
+    testing_config,
+    conda_build_test_recipe_path: Path,
+    conda_build_test_recipe_envvar: str,
 ):
     tag = describe_root(conda_build_test_recipe_path)
     output = api.get_output_file_paths(
