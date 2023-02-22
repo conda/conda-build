@@ -1,11 +1,13 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-import os
-import sys
 from collections import defaultdict
+import os
+import subprocess
+import sys
 
 import pytest
 
+from conda.common.compat import on_mac
 import conda_build.config
 from conda_build.config import (
     Config,
@@ -186,22 +188,40 @@ def testing_env(testing_workdir, request, monkeypatch):
     return env_path
 
 
-# these are functions so that they get regenerated each time we use them.
-#    They could be fixtures, I guess.
-@pytest.fixture(scope="function")
-def numpy_version_ignored():
-    return {
-        "python": ["2.7.*", "3.5.*"],
-        "numpy": ["1.10.*", "1.11.*"],
-        "ignore_version": ["numpy"],
-    }
+@pytest.fixture(
+    scope="function",
+    params=[
+        pytest.param({}, id="default MACOSX_DEPLOYMENT_TARGET"),
+        pytest.param(
+            {"MACOSX_DEPLOYMENT_TARGET": ["10.9"]},
+            id="override MACOSX_DEPLOYMENT_TARGET",
+        ),
+    ]
+    if on_mac
+    else [
+        pytest.param({}, id="no MACOSX_DEPLOYMENT_TARGET"),
+    ],
+)
+def variants_conda_build_sysroot(monkeypatch, request):
+    if not on_mac:
+        return {}
 
-
-@pytest.fixture(scope="function")
-def single_version():
-    return {"python": "2.7.*", "numpy": "1.11.*"}
-
-
-@pytest.fixture(scope="function")
-def no_numpy_version():
-    return {"python": ["2.7.*", "3.5.*"]}
+    monkeypatch.setenv(
+        "CONDA_BUILD_SYSROOT",
+        subprocess.run(
+            ["xcrun", "--sdk", "macosx", "--show-sdk-path"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip(),
+    )
+    monkeypatch.setenv(
+        "MACOSX_DEPLOYMENT_TARGET",
+        subprocess.run(
+            ["xcrun", "--sdk", "macosx", "--show-sdk-version"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip(),
+    )
+    return request.param

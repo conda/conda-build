@@ -5,3 +5,4 @@ changeps1: False
 pkgs_dirs:
 - /usr/share/miniconda/envs/test/pkgs
 always_yes: True
+local_repodata_ttl: 7200

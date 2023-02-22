@@ -497,11 +497,11 @@ def test_file_index_noarch_osx64_1(testing_workdir):
             "werkzeug >=0.7",
         ],
         "license": "BSD",
-        "md5": "f85925da2dc4f3cc2771be01fd644023",
+        "md5": "f53df88de4ba505aadbcf42ff310a18d",
         "name": "flask",
         "noarch": "python",
-        "sha256": "096466b5ff6c243fccbafe75951dc9b1456569f31235882ff29f30064219339c",
-        "size": 30720,
+        "sha256": "20bb13679a48679964cd84571c8dd1aa110f8366565f5d82a8f4efa8dd8b160c",
+        "size": 5334,
         "subdir": "noarch",
         "version": "0.11.1",
     }
@@ -939,7 +939,7 @@ def test_index_of_removed_pkg(testing_metadata):
     assert not repodata["packages"]
 
 
-def test_patch_instructions_with_missing_subdir(testing_workdir):
+def test_patch_instructions_with_missing_subdir():
     os.makedirs("linux-64")
     os.makedirs("zos-z")
     conda_build.api.update_index(".")  # what is the current working directory?
@@ -1152,7 +1152,7 @@ def test_current_index_reduces_space():
     }
 
 
-def test_current_index_version_keys_keep_older_packages(testing_workdir):
+def test_current_index_version_keys_keep_older_packages():
     pkg_dir = os.path.join(os.path.dirname(__file__), "index_data", "packages")
 
     # pass no version file

@@ -6,24 +6,24 @@ Conda-build recipes
    :local:
    :depth: 2
 
-To enable building `conda packages <https://conda.io/projects/conda/en/latest/user-guide/concepts/packages.html>`_, :ref:`install and update conda
+To enable building `conda packages`_, :ref:`install and update conda
 and conda-build <install-conda-build>`.
 
 Building a conda package requires a recipe. A conda-build recipe
 is a flat directory that contains the following files:
 
-* ``meta.yaml``---A file that contains all the metadata in the
+* ``meta.yaml`` — A file that contains all the metadata in the
   recipe. Only ``package/name`` and ``package/version`` are
   required.
 
-* ``build.sh``---The script that installs the files for the
+* ``build.sh`` — The script that installs the files for the
   package on macOS and Linux. It is executed using the ``bash``
   command.
 
-* ``bld.bat``---The build script that installs the files for the
+* ``bld.bat`` — The build script that installs the files for the
   package on Windows. It is executed using ``cmd``.
 
-* ``run_test.[py,pl,sh,bat]``---An optional Python test file, a
+* ``run_test.[py,pl,sh,bat]`` — An optional Python test file, a
   test script that runs automatically if it is part of the recipe.
 
 * Optional patches that are applied to the source.
@@ -34,8 +34,8 @@ is a flat directory that contains the following files:
 
 .. tip::
   When you use the :ref:`conda skeleton <skeleton_ref>` command,
-  the first 3 files---``meta.yaml``, ``build.sh``, and
-  ``bld.bat``---are automatically generated for you.
+  the first 3 files — ``meta.yaml``, ``build.sh``, and
+  ``bld.bat`` — are automatically generated for you.
 
 Conda-build process
 ===================
@@ -60,24 +60,23 @@ Conda-build performs the following steps:
    source directory with environment variables set. The build
    script installs into the build environment.
 
-#. Performs some necessary post-processing steps, such as shebang
-   and rpath.
+#. Performs some necessary post-processing steps, such as adding a shebang
+   and ``rpath``.
 
 #. Creates a conda package containing all the files in the build
    environment that are new from step 5, along with the necessary
    conda package metadata.
 
-#. Tests the new conda package if the recipe includes tests:
+#. Tests the new conda package — if the recipe includes tests — by doing the following:
 
-   #. Deletes the build environment and source directory to ensure that the new conda package does not inadvertantly depend on artifacts not included in the package.
+   * Deletes the build environment and source directory to ensure that the new conda package does not inadvertantly depend on artifacts not included in the package.
 
-   #. Creates a test environment with the package and its
+   * Creates a test environment with the package and its
       dependencies.
 
-   #. Runs the test scripts.
+   * Runs the test scripts.
 
-The `conda-recipes
-<https://github.com/continuumio/conda-recipes>`_ repo
+The `conda-recipes`_ repo
 contains example recipes for many conda packages.
 
 .. caution::
@@ -87,8 +86,7 @@ contains example recipes for many conda packages.
    such as passwords into recipes where it could be made public.
 
 The ``conda skeleton`` command can help to make
-skeleton recipes for common repositories, such as `PyPI
-<https://pypi.python.org/pypi>`_.
+skeleton recipes for common repositories, such as PyPI_.
 
 
 Deep dive
@@ -101,12 +99,12 @@ Templates
 ---------
 
 When you build a conda package, conda-build renders the package
-by reading a template in the meta.yaml. See :ref:`jinja-templates`.
+by reading a template in the ``meta.yaml``. See :ref:`jinja-templates`.
 
-Templates are filled in using your conda-build config,
+Templates are filled in using your ``conda build config``,
 which shows the matrix of things to build against. The
 ``conda build config`` determines how many builds it has to do.
-For example, defining a conda_build_config.yaml of the form
+For example, defining a ``conda_build_config.yaml`` of the form
 and filling it defines a matrix of 4 packages to build::
 
    foo:
@@ -131,7 +129,7 @@ The prefix will take the form::
 
   <path to conda>/conda-bld/<package name and string>/h_env_placeholder…
 
-`Conda-forge <https://anaconda.org/conda-forge>`_ downloads your package source and then builds the conda
+`Conda-forge`_ downloads your package source and then builds the conda
 package in the context of the build environment. For example, you may
 direct it to download from a Git repo or pull down a tarball from
 another source. See the :ref:`source-section` for more information.
@@ -149,16 +147,16 @@ Building
 Once the content is downloaded, conda-build runs the build step.
 See the :ref:`meta-build` for more information.
 The build step runs a script. It can be one that you provided.
-See the :ref:`build-script` section for more information.
+See the :ref:`build-script` section for more information on this topic.
 
 If you do not define the script section, then you can create a
-build.sh or a bld.bat file to be run.
+``build.sh`` or a ``bld.bat`` file to be run.
 
 
 Prefix replacement
 ------------------
 When the build environment is created, it is in a placeholder prefix.
-When the package is all bundled up, the prefix is set to a dummy prefix.
+When the package is all bundled up, the prefix is set to a "dummy" prefix.
 When conda is ready to install the package, it rewrites the dummy
 prefix with the correct one.
 
@@ -172,17 +170,17 @@ of this prefix is::
 
   <path to conda>/conda-bld/<package name + string>/_test_env_placeholder…
 
-At this point, conda-build has all of the info from the meta.yaml about
+At this point, conda-build has all of the info from ``meta.yaml`` about
 what its runtime dependencies are, so those dependencies are installed
 as well. This generates a test runner script with a reference to the
-testing meta.yaml that is created. See the :ref:`meta-test` for
+testing ``meta.yaml`` that is created. See the :ref:`meta-test` for
 more information. That file is run for testing.
 
 Output metadata
 ---------------
 
 After the package is built and tested, conda-build cleans up the
-environments created prior and outputs the metadata. The recipe for
+environments created during prior steps and outputs the metadata. The recipe for
 the package is also added in the output metadata. The metadata directory
 is on the top level of the tarball in the ``info`` directory.
 The metadata contains information about the dependencies of the
@@ -205,8 +203,14 @@ More information
 Review :doc:`../resources/define-metadata` to see a breakdown of the
 components of a recipe, including:
 
-  * Package name.
-  * Package version.
-  * Descriptive metadata.
-  * Where to obtain source code.
-  * How to test the package.
+  * Package name
+  * Package version
+  * Descriptive metadata
+  * Where to obtain source code
+  * How to test the package
+
+
+.. _`conda packages`: https://conda.io/projects/conda/en/latest/user-guide/concepts/packages.html
+.. _`conda-recipes`: https://github.com/continuumio/conda-recipes
+.. _`Conda-forge`: https://anaconda.org/conda-forge
+.. _PyPI: https://pypi.python.org/pypi
