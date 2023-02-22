@@ -179,10 +179,10 @@ def check_git_lfs(git, cwd):
         return False
 
 
-def git_lfs_fetch(git, dir, stdout, stderr):
-    lfs_version = check_output_env([git, 'lfs', 'version'], cwd=dir)
-    print(lfs_version)
-    check_call_env([git, 'lfs', 'fetch', 'origin', '--all'], cwd=dir, stdout=stdout, stderr=stderr)
+def git_lfs_fetch(git, cwd, stdout, stderr):
+    lfs_version = check_output_env([git, 'lfs', 'version'], cwd=cwd)
+    log.info(lfs_version)
+    check_call_env([git, 'lfs', 'fetch', 'origin', '--all'], cwd=cwd, stdout=stdout, stderr=stderr)
 
 
 def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_cache, git_ref=None,
