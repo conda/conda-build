@@ -58,7 +58,6 @@ jobs:
     defaults:
       run:
         shell: bash -l {0}
-        working-directory: ./src
     strategy:
       fail-fast: false
       matrix:
@@ -85,7 +84,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          path: ./src
           fetch-depth: 0
 
       - name: Timestamp
@@ -101,7 +99,7 @@ jobs:
       - name: Setup miniconda
         uses: conda-incubator/setup-miniconda@v2
         with:
-          condarc-file: ./src/ci/github/.condarc
+          condarc-file: ./ci/github/.condarc
           python-version: ${{ matrix.python-version }}
           run-post: false  # skip post cleanup
 
@@ -160,9 +158,6 @@ jobs:
     if: needs.changes.outputs.code == 'true'
 
     runs-on: windows-2019
-    defaults:
-      run:
-        working-directory: .\src
     strategy:
       fail-fast: false
       matrix:
@@ -189,7 +184,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          path: .\src
           fetch-depth: 0
 
       - name: Timestamp
@@ -205,7 +199,7 @@ jobs:
       - name: Setup miniconda
         uses: conda-incubator/setup-miniconda@v2
         with:
-          condarc-file: .\src\ci\github\.condarc
+          condarc-file: .\ci\github\.condarc
           python-version: ${{ matrix.python-version }}
           run-post: false  # skip post cleanup
 
@@ -271,7 +265,6 @@ jobs:
     defaults:
       run:
         shell: bash -l {0}
-        working-directory: ./src
     strategy:
       fail-fast: false
       matrix:
@@ -298,7 +291,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          path: ./src
           fetch-depth: 0
 
       - name: Timestamp
@@ -314,7 +306,7 @@ jobs:
       - name: Setup miniconda
         uses: conda-incubator/setup-miniconda@v2
         with:
-          condarc-file: ./src/ci/github/.condarc
+          condarc-file: ./ci/github/.condarc
           python-version: ${{ matrix.python-version }}
           run-post: false  # skip post cleanup
 
