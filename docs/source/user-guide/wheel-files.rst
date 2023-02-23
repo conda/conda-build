@@ -42,7 +42,7 @@ file does not download or list the .whl file.
    It is important to ``pip install`` only the one desired package. Whenever
    possible, install dependencies with conda and not pip.
 
-You must use the the ``--no-deps`` option in the ``pip install`` command in order
+You must use the ``--no-deps`` option in the ``pip install`` command in order
 to avoid bundling dependencies into your conda-package.
 
 If you run ``pip install`` without the ``--no-deps`` option, pip will often

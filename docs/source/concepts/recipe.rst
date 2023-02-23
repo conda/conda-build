@@ -135,7 +135,7 @@ and install all of the build and run dependencies in that environment.
 Conda-build will indicate where you can successfully build the package.
 The prefix will take the form::
 
-  <path to conda>/conda-bld/<package name and string>/h_env_placeholder…
+  <file path to conda>/conda-bld/<package name and string>/h_env_placeholder…
 
 `Conda-forge`_ downloads your package source and then builds the conda
 package in the context of the build environment. For example, you may
@@ -163,9 +163,9 @@ If you do not define the script section, then you can create a
 
 Prefix replacement
 ------------------
-When the build environment is created, it is in a placeholder prefix.
-When the package is all bundled up, the prefix is set to a "dummy" prefix.
-When conda is ready to install the package, it rewrites the dummy
+The build environment is created in a placeholder prefix.
+When the package is bundled, the prefix is set to a "dummy" prefix.
+Once conda is ready to install the package, it rewrites the dummy
 prefix with the final one.
 
 
@@ -176,7 +176,7 @@ Once a package is built, conda-build has the ability to test it. To do this, it
 creates another environment and installs the conda package. The form
 of this prefix is::
 
-  <path to conda>/conda-bld/<package name + string>/_test_env_placeholder…
+  <file path to conda>/conda-bld/<package name + string>/_test_env_placeholder…
 
 At this point, conda-build has all of the information from ``meta.yaml`` about
 what its runtime dependencies are, so those dependencies are installed
@@ -197,12 +197,13 @@ it is installed. Conda reads that metadata when it needs to install.
 
 Running ``conda install`` causes conda to:
 
-#. Reach out to the repodata containing the dependencies
-#. Determine the correct dependencies
-#. Install a list of packages determined by the dependencies calculated in the previous step
-#. Unpack the tarball to look at the information contained within
-#. Verify the file based on metadata in the package
-#. Go through each file in the package and put it in the right location
+#. Reach out to the repodata containing the dependencies for the package(s) you are installing.
+#. Determine the correct dependencies.
+#. Install a list of additional packages determined by those dependencies.
+#. For each dependency package being installed:
+   #. Unpack the tarball to look at the information contained within.
+   #. Verify the file based on metadata in the package.
+   #. Go through each file in the package and put it in the right location.
 
 For additional information on ``conda install``, please visit the conda documentation `deep dive`_ page on that topic.
 

@@ -42,7 +42,7 @@ def get_render_parser():
         description="""
 Tool for expanding the template meta.yml file (containing Jinja syntax and
 selectors) into the rendered meta.yml files. The template meta.yml file is
-combined with user-specified configurations, stdtic recipe files, and
+combined with user-specified configurations, static recipe files, and
 environment information to generate the rendered meta.yml files.""",
         conflict_handler='resolve'
     )
