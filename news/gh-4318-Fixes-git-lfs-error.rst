@@ -6,7 +6,7 @@ Enhancements:
 Bug fixes:
 ----------
 
-* Fixes the failing git clone when source has LFS files
+* Fixes the failing `git clone` when source has LFS files. (#4318)
 
 Deprecations:
 -------------
