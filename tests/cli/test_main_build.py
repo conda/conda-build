@@ -27,7 +27,7 @@ def _reset_config(search_path=None):
 
 
 @pytest.mark.sanity
-def test_build(conda_build_test_recipe_envvar: str):
+def test_build_empty_sections(conda_build_test_recipe_envvar: str):
     args = [
         "--no-anaconda-upload",
         os.path.join(metadata_dir, "empty_sections"),
