@@ -94,7 +94,6 @@ build:
   # This is needed to suppress a warning about R.dll not being found
   missing_dso_whitelist:
     - '*/R.dll'            # [win]
-
   {script_env}
 {suggests}
 requirements:
