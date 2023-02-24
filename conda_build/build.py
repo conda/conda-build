@@ -54,7 +54,7 @@ from .utils import (CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2,
                     shutil_move_more_retrying, tmp_chdir)
 from conda_build import environ, source, tarcheck, utils
 from conda_build.config import Config
-from conda_build.index import update_index, get_build_index
+from conda_build.index import get_build_index, update_index
 from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse, distribute_variants,
                                 expand_outputs, try_download, execute_download_actions,
                                 add_upstream_pins)

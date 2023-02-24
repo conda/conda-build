@@ -1,6 +1,6 @@
 ### Enhancements
 
-* Depend on standalone conda-index instead of bundled indexing code.
+* Depend on standalone conda-index instead of bundled indexing code. (#4690)
 
 ### Bug fixes
 

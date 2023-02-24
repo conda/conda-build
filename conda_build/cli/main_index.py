@@ -77,7 +77,7 @@ def parse_args(args):
     )
     p.add_argument(
         "-f", "--file",
-        help="A file that contains a new line separated list of packages to add to repodata.  Deprecated, will be removed in a future version of conda build",
+        help="A file that contains a new line separated list of packages to add to repodata.  Deprecated, will be removed in a future version of conda build.",
         action="store"
     )
 

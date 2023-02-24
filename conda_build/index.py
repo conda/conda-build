@@ -43,14 +43,12 @@ channel_data = {}
 #    The new conda format is so much faster that it more than makes up for it.  However, it
 #    would be nice to fix this at some point.
 try:
-    _os_cpu_count = os.cpu_count() or 1  # can be None in rare cases
+    MAX_THREADS_DEFAULT = os.cpu_count() or 1  # can be None in rare cases
 except AttributeError:
-    _os_cpu_count = 1
-MAX_THREADS_DEFAULT = _os_cpu_count
+    MAX_THREADS_DEFAULT = 1
 
-if (
-    sys.platform == "win32"
-):  # see https://github.com/python/cpython/commit/8ea0fd85bc67438f679491fae29dfe0a3961900a
+# see https://github.com/python/cpython/commit/8ea0fd85bc67438f679491fae29dfe0a3961900a
+if sys.platform == "win32":  
     MAX_THREADS_DEFAULT = min(48, MAX_THREADS_DEFAULT)
 LOCK_TIMEOUT_SECS = 3 * 3600
 LOCKFILE_NAME = ".lock"
