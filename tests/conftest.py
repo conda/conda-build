@@ -1,6 +1,7 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 from collections import defaultdict
+from pathlib import Path
 import os
 import subprocess
 import sys
@@ -225,3 +226,29 @@ def variants_conda_build_sysroot(monkeypatch, request):
         ).stdout.strip(),
     )
     return request.param
+
+
+@pytest.fixture(scope="session")
+def conda_build_test_recipe_path(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Clone conda_build_test_recipe.
+
+    This exposes the special dummy package "source code" used to test various git/svn/local recipe configurations.
+    """
+    # clone conda_build_test_recipe locally
+    repo = tmp_path_factory.mktemp("conda_build_test_recipe", numbered=False)
+    subprocess.run(
+        ["git", "clone", "https://github.com/conda/conda_build_test_recipe", str(repo)],
+        check=True,
+    )
+    return repo
+
+
+@pytest.fixture
+def conda_build_test_recipe_envvar(
+    conda_build_test_recipe_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> str:
+    """Exposes the cloned conda_build_test_recipe as an environment variable."""
+    name = "CONDA_BUILD_TEST_RECIPE_PATH"
+    monkeypatch.setenv(name, conda_build_test_recipe_path)
+    return name

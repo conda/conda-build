@@ -32,5 +32,5 @@ pytz
 requests
 ripgrep
 ruamel.yaml
-toml
+tomli
 tqdm
