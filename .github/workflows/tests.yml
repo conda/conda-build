@@ -128,12 +128,17 @@ jobs:
             --basetemp "${{ runner.temp }}/${{ matrix.test-type }}" \
             --cov conda_build \
             --cov-append \
+            --cov-branch \
             --cov-report xml \
             --replay-record-dir="${{ env.REPLAY_DIR }}" \
             --replay-base-name="${{ env.REPLAY_NAME }}" \
             --alluredir="${{ env.ALLURE_DIR }}" \
             -m "${{ env.PYTEST_MARKER }}" \
             ./tests
+
+      - uses: codecov/codecov-action@v3
+        with:
+          flags: ${{ matrix.test-type }},${{ matrix.python-version }},linux-64
 
       - name: Tar Allure Results
         if: always()
@@ -233,12 +238,17 @@ jobs:
             --basetemp "${{ runner.temp }}\${{ matrix.test-type}}" `
             --cov conda_build `
             --cov-append `
+            --cov-branch `
             --cov-report xml `
             --replay-record-dir="${{ env.REPLAY_DIR }}" `
             --replay-base-name="${{ env.REPLAY_NAME }}" `
             --alluredir="${{ env.ALLURE_DIR }}" `
             -m "${{ env.PYTEST_MARKER }}" `
             .\tests
+
+      - uses: codecov/codecov-action@v3
+        with:
+          flags: ${{ matrix.test-type }},${{ matrix.python-version }},win-64
 
       - name: Tar Allure Results
         if: always()
@@ -342,12 +352,17 @@ jobs:
             --basetemp "${{ runner.temp }}/${{ matrix.test-type }}" \
             --cov conda_build \
             --cov-append \
+            --cov-branch \
             --cov-report xml \
             --replay-record-dir="${{ env.REPLAY_DIR }}" \
             --replay-base-name="${{ env.REPLAY_NAME }}" \
             --alluredir="${{ env.ALLURE_DIR }}" \
             -m "${{ env.PYTEST_MARKER }}" \
             ./tests
+
+      - uses: codecov/codecov-action@v3
+        with:
+          flags: ${{ matrix.test-type }},${{ matrix.python-version }},osx-64
 
       - name: Tar Allure Results
         if: always()
