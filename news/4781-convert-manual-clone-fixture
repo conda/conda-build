@@ -16,4 +16,4 @@
 
 ### Other
 
-* Introduce canary and review builds as part of GitHub CI. (#4608)
+* Eliminate test setup's manual clone of https://github.com/conda/conda_build_test_recipe in favor of a session fixture. (#4781)

@@ -13,7 +13,7 @@ from os.path import dirname, isdir, isfile, join
 import conda_package_handling.api
 import pytest
 from unittest import mock
-from conda_build.conda_interface import conda_47, context
+from conda_build.conda_interface import context
 from conda_build.utils import copy_into, rm_rf
 
 import conda_build.api
@@ -497,11 +497,11 @@ def test_file_index_noarch_osx64_1(testing_workdir):
             "werkzeug >=0.7",
         ],
         "license": "BSD",
-        "md5": "f85925da2dc4f3cc2771be01fd644023",
+        "md5": "f53df88de4ba505aadbcf42ff310a18d",
         "name": "flask",
         "noarch": "python",
-        "sha256": "096466b5ff6c243fccbafe75951dc9b1456569f31235882ff29f30064219339c",
-        "size": 30720,
+        "sha256": "20bb13679a48679964cd84571c8dd1aa110f8366565f5d82a8f4efa8dd8b160c",
+        "size": 5334,
         "subdir": "noarch",
         "version": "0.11.1",
     }
@@ -939,7 +939,7 @@ def test_index_of_removed_pkg(testing_metadata):
     assert not repodata["packages"]
 
 
-def test_patch_instructions_with_missing_subdir(testing_workdir):
+def test_patch_instructions_with_missing_subdir():
     os.makedirs("linux-64")
     os.makedirs("zos-z")
     conda_build.api.update_index(".")  # what is the current working directory?
@@ -1134,32 +1134,25 @@ def test_current_index_reduces_space():
         "one-gets-filtered-1.3.10-h7b6447c_3.tar.bz2",
     }
     # conda 4.7 removes .tar.bz2 files in favor of .conda files
-    if conda_47:
-        tar_bz2_keys.remove("one-gets-filtered-1.3.10-h7b6447c_3.tar.bz2")
+    tar_bz2_keys.remove("one-gets-filtered-1.3.10-h7b6447c_3.tar.bz2")
 
     # .conda files will replace .tar.bz2 files.  Older packages that are necessary for satisfiability will remain
     assert set(trimmed_repodata["packages"].keys()) == tar_bz2_keys
-    if conda_47:
-        assert set(trimmed_repodata["packages.conda"].keys()) == {
-            "one-gets-filtered-1.3.10-h7b6447c_3.conda"
-        }
+    assert set(trimmed_repodata["packages.conda"].keys()) == {
+        "one-gets-filtered-1.3.10-h7b6447c_3.conda"
+    }
 
     # we can keep more than one version series using a collection of keys
     trimmed_repodata = conda_build.index._build_current_repodata(
         "linux-64", repodata, {"one-gets-filtered": ["1.2", "1.3"]}
     )
-    if conda_47:
-        assert set(trimmed_repodata["packages.conda"].keys()) == {
-            "one-gets-filtered-1.2.11-h7b6447c_3.conda",
-            "one-gets-filtered-1.3.10-h7b6447c_3.conda",
-        }
-    else:
-        assert set(trimmed_repodata["packages"].keys()) == tar_bz2_keys | {
-            "one-gets-filtered-1.2.11-h7b6447c_3.tar.bz2"
-        }
+    assert set(trimmed_repodata["packages.conda"].keys()) == {
+        "one-gets-filtered-1.2.11-h7b6447c_3.conda",
+        "one-gets-filtered-1.3.10-h7b6447c_3.conda",
+    }
 
 
-def test_current_index_version_keys_keep_older_packages(testing_workdir):
+def test_current_index_version_keys_keep_older_packages():
     pkg_dir = os.path.join(os.path.dirname(__file__), "index_data", "packages")
 
     # pass no version file

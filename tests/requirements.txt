@@ -1,18 +1,36 @@
-# conda-build
-# run as 'conda install --file tests/requirements.txt -c defaults'
+# conda-build test dependencies
+# run as 'conda install -c defaults --file tests/requirements.txt'
 anaconda-client
-bs4
+beautifulsoup4
 chardet
 conda
 conda-package-handling
+conda-verify
+contextlib2
+cytoolz
 filelock
-flaky
+git
 glob2
 jinja2
+numpy
+perl
+pip
 pkginfo
 psutil
+py-lief
+pycrypto
+pyflakes
 pytest
 pytest-cov
+pytest-forked
 pytest-mock
+pytest-replay
+pytest-rerunfailures
+pytest-xdist
 python-libarchive-c
-toml
+pytz
+requests
+ripgrep
+ruamel.yaml
+tomli
+tqdm

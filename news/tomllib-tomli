@@ -8,7 +8,7 @@
 
 ### Deprecations
 
-* Drop cytoolz dependency. (#4556)
+* <news item>
 
 ### Docs
 
@@ -16,4 +16,4 @@
 
 ### Other
 
-* <news item>
+* Use tomllib (Python 3.11+) or tomli for .toml support.

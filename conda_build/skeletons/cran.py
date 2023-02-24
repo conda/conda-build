@@ -28,6 +28,7 @@ try:
 except ImportError:
     from yaml import SafeDumper
 
+from conda.common.io import dashlist
 from conda_build import source, metadata
 from conda_build.config import get_or_merge_config
 from conda_build.conda_interface import TemporaryDirectory, cc_conda_build
@@ -1581,7 +1582,9 @@ def get_license_info(license_text, allowed_license_families):
     license_text = " | ".join(license_texts) or license_text
 
     # Build the license_file entry and ensure it is empty if no license file
-    license_file = "license_file:\n    - " + "\n    - ".join(license_files) if license_files else ""
+    license_file = ""
+    if license_files:
+        license_file = f"license_file:{dashlist(license_files, indent=4)}\n"
 
     # Only one family is allowed, so guessing it once
     license_family = guess_license_family(license_text, allowed_license_families)

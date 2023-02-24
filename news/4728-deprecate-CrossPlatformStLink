@@ -8,7 +8,7 @@
 
 ### Deprecations
 
-* Removed internal usage of the conda memoized decorator
+* `conda_build.conda_interface.CrossPlatformStLink` is pending deprecation in favor of using `os.stat().st_nlink`. (#4728)
 
 ### Docs
 

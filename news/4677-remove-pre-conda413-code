@@ -8,11 +8,11 @@
 
 ### Deprecations
 
-* <news item>
+* Removed conda <4.13 logic. (#4677)
 
 ### Docs
 
-* Add s390x selector missing from docs
+* <news item>
 
 ### Other
 

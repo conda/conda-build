@@ -1,12 +1,18 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-import os
-import sys
 from collections import defaultdict
+from pathlib import Path
+import os
+import subprocess
+import sys
 
 import pytest
+
+from conda.common.compat import on_mac
+import conda_build.config
 from conda_build.config import (
     Config,
+    get_or_merge_config,
     _src_cache_root_default,
     conda_pkg_format_default,
     enable_static_default,
@@ -90,7 +96,7 @@ def testing_homedir(tmpdir, request):
 @pytest.fixture(scope="function")
 def testing_config(testing_workdir):
     def boolify(v):
-        return True if "v" == "true" else False
+        return v == "true"
 
     result = Config(
         croot=testing_workdir,
@@ -118,6 +124,27 @@ def testing_config(testing_workdir):
     assert result.src_cache_root == testing_workdir
     assert result.noarch_python_build_age == 0
     return result
+
+
+@pytest.fixture(scope="function", autouse=True)
+def default_testing_config(testing_config, monkeypatch, request):
+    """Monkeypatch get_or_merge_config to use testing_config by default
+
+    This requests fixture testing_config, thus implicitly testing_workdir, too.
+    """
+
+    # Allow single tests to disable this fixture even if outer scope adds it.
+    if "no_default_testing_config" in request.keywords:
+        return
+
+    def get_or_merge_testing_config(config, variant=None, **kwargs):
+        return get_or_merge_config(config or testing_config, variant, **kwargs)
+
+    monkeypatch.setattr(
+        conda_build.config,
+        "get_or_merge_config",
+        get_or_merge_testing_config,
+    )
 
 
 @pytest.fixture(scope="function")
@@ -162,22 +189,66 @@ def testing_env(testing_workdir, request, monkeypatch):
     return env_path
 
 
-# these are functions so that they get regenerated each time we use them.
-#    They could be fixtures, I guess.
-@pytest.fixture(scope="function")
-def numpy_version_ignored():
-    return {
-        "python": ["2.7.*", "3.5.*"],
-        "numpy": ["1.10.*", "1.11.*"],
-        "ignore_version": ["numpy"],
-    }
+@pytest.fixture(
+    scope="function",
+    params=[
+        pytest.param({}, id="default MACOSX_DEPLOYMENT_TARGET"),
+        pytest.param(
+            {"MACOSX_DEPLOYMENT_TARGET": ["10.9"]},
+            id="override MACOSX_DEPLOYMENT_TARGET",
+        ),
+    ]
+    if on_mac
+    else [
+        pytest.param({}, id="no MACOSX_DEPLOYMENT_TARGET"),
+    ],
+)
+def variants_conda_build_sysroot(monkeypatch, request):
+    if not on_mac:
+        return {}
+
+    monkeypatch.setenv(
+        "CONDA_BUILD_SYSROOT",
+        subprocess.run(
+            ["xcrun", "--sdk", "macosx", "--show-sdk-path"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip(),
+    )
+    monkeypatch.setenv(
+        "MACOSX_DEPLOYMENT_TARGET",
+        subprocess.run(
+            ["xcrun", "--sdk", "macosx", "--show-sdk-version"],
+            check=True,
+            capture_output=True,
+            text=True,
+        ).stdout.strip(),
+    )
+    return request.param
 
 
-@pytest.fixture(scope="function")
-def single_version():
-    return {"python": "2.7.*", "numpy": "1.11.*"}
+@pytest.fixture(scope="session")
+def conda_build_test_recipe_path(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """Clone conda_build_test_recipe.
+
+    This exposes the special dummy package "source code" used to test various git/svn/local recipe configurations.
+    """
+    # clone conda_build_test_recipe locally
+    repo = tmp_path_factory.mktemp("conda_build_test_recipe", numbered=False)
+    subprocess.run(
+        ["git", "clone", "https://github.com/conda/conda_build_test_recipe", str(repo)],
+        check=True,
+    )
+    return repo
 
 
-@pytest.fixture(scope="function")
-def no_numpy_version():
-    return {"python": ["2.7.*", "3.5.*"]}
+@pytest.fixture
+def conda_build_test_recipe_envvar(
+    conda_build_test_recipe_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> str:
+    """Exposes the cloned conda_build_test_recipe as an environment variable."""
+    name = "CONDA_BUILD_TEST_RECIPE_PATH"
+    monkeypatch.setenv(name, conda_build_test_recipe_path)
+    return name

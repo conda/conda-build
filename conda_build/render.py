@@ -5,6 +5,7 @@ from functools import lru_cache
 import json
 import os
 from os.path import isdir, isfile, abspath
+from pathlib import Path
 import random
 import re
 import shutil
@@ -20,7 +21,6 @@ from .conda_interface import (UnsatisfiableError, ProgressiveFetchExtract,
                               TemporaryDirectory)
 from .conda_interface import execute_actions
 from .conda_interface import pkgs_dirs
-from .conda_interface import conda_43
 from .conda_interface import specs_from_url
 from .utils import CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2
 
@@ -68,14 +68,12 @@ def bldpkg_path(m):
 
 
 def actions_to_pins(actions):
-    specs = []
-    if conda_43:
-        spec_name = lambda x: x.dist_name
-    else:
-        spec_name = lambda x: str(x)
-    if 'LINK' in actions:
-        specs = [' '.join(spec_name(spec).split()[0].rsplit('-', 2)) for spec in actions['LINK']]
-    return specs
+    if "LINK" in actions:
+        return [
+            " ".join(spec.dist_name.split()[0].rsplit("-", 2))
+            for spec in actions["LINK"]
+        ]
+    return []
 
 
 def _categorize_deps(m, specs, exclude_pattern, variant):
@@ -220,9 +218,18 @@ def find_pkg_dir_or_file_in_pkgs_dirs(pkg_dist, m, files_only=False):
             with tarfile.open(pkg_file, 'w:bz2') as archive:
                 for entry in os.listdir(pkg_dir):
                     archive.add(os.path.join(pkg_dir, entry), arcname=entry)
-            pkg_subdir = os.path.join(m.config.croot, m.config.host_subdir)
+
+            # use the package's subdir
+            try:
+                info = json.loads(Path(pkg_dir, "info", "index.json").read_text())
+                subdir = info["subdir"]
+            except (FileNotFoundError, KeyError):
+                subdir = m.config.host_subdir
+
+            pkg_subdir = os.path.join(m.config.croot, subdir)
             pkg_loc = os.path.join(pkg_subdir, os.path.basename(pkg_file))
             shutil.move(pkg_file, pkg_loc)
+            break
     return pkg_loc
 
 
@@ -310,7 +317,7 @@ def execute_download_actions(m, actions, env, package_subset=None, require_files
         # ran through all pkgs_dirs, and did not find package or folder.  Download it.
         # TODO: this is a vile hack reaching into conda's internals. Replace with
         #    proper conda API when available.
-        if not pkg_loc and conda_43:
+        if not pkg_loc:
             try:
                 pkg_record = [_ for _ in index if _.dist_name == pkg_dist][0]
                 # the conda 4.4 API uses a single `link_prefs` kwarg

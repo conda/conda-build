@@ -5,9 +5,13 @@
 
 import sys
 
+import pytest
+
 from conda_build import api
 
 from inspect import getfullargspec as getargspec
+
+pytestmark = pytest.mark.no_default_testing_config
 
 
 def test_api_config():

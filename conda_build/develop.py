@@ -141,7 +141,7 @@ Error: environment does not exist: %s
     sp_dir = get_site_packages(prefix, '.'.join((str(sys.version_info.major),
                                                  str(sys.version_info.minor))))
 
-    if type(recipe_dirs) == str:
+    if isinstance(recipe_dirs, str):
         recipe_dirs = [recipe_dirs]
 
     for path in recipe_dirs:

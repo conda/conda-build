@@ -1,13 +1,15 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 from functools import partial
 import os
-from os import lstat
 from importlib import import_module
-
-from pkg_resources import parse_version
+import warnings
 
 from conda import __version__ as CONDA_VERSION
+
+CONDA_VERSION = CONDA_VERSION
 
 
 def try_exports(module, attr):
@@ -27,33 +29,31 @@ except ImportError:
     # no need to patch if it doesn't exist
     pass
 
-conda_43 = parse_version(CONDA_VERSION) >= parse_version("4.3.0a0")
-conda_44 = parse_version(CONDA_VERSION) >= parse_version("4.4.0a0")
-conda_45 = parse_version(CONDA_VERSION) >= parse_version("4.5.0a0")
-conda_46 = parse_version(CONDA_VERSION) >= parse_version("4.6.0a0")
-conda_47 = parse_version(CONDA_VERSION) >= parse_version("4.7.0a0")
-conda_48 = parse_version(CONDA_VERSION) >= parse_version("4.8.0a0")
-conda_411 = parse_version(CONDA_VERSION) >= parse_version("4.11.0a0")
+# All of these conda's are older than our minimum dependency
+conda_43 = True
+conda_44 = True
+conda_45 = True
+conda_46 = True
+conda_47 = True
+conda_48 = True
+conda_411 = True
 
-if conda_44:
-    from conda.exports import display_actions, execute_actions, execute_plan, install_actions
-else:
-    from conda.plan import display_actions, execute_actions, execute_plan, install_actions
+from conda.exports import (  # noqa: E402
+    display_actions,
+    execute_actions,
+    execute_plan,
+    install_actions,
+)
 
 display_actions, execute_actions, execute_plan = display_actions, execute_actions, execute_plan
 install_actions = install_actions
 
-try:
-    # Conda 4.4+
-    from conda.exports import _toposort
-except ImportError:
-    from conda.toposort import _toposort
+from conda.exports import _toposort  # NOQA
+
 _toposort = _toposort
 
-if conda_411:
-    from conda.auxlib.packaging import _get_version_from_git_tag
-else:
-    from conda._vendor.auxlib.packaging import _get_version_from_git_tag
+from conda.auxlib.packaging import _get_version_from_git_tag  # NOQA
+
 get_version_from_git_tag = _get_version_from_git_tag
 
 from conda.exports import TmpDownload, download, handle_proxy_407  # NOQA
@@ -121,7 +121,6 @@ get_conda_build_local_url = try_exports("conda.models.channel", "get_conda_build
 
 binstar_upload = context.binstar_upload
 bits = context.bits
-conda_private = context.conda_private
 default_python = context.default_python
 envs_dirs = context.envs_dirs
 pkgs_dirs = list(context.pkgs_dirs)
@@ -135,10 +134,7 @@ get_rc_urls = lambda: list(context.channels)
 get_prefix = partial(context_get_prefix, context)
 cc_conda_build = context.conda_build if hasattr(context, 'conda_build') else {}
 
-try:
-    from conda.exports import Channel
-except:
-    from conda.models.channel import Channel
+from conda.exports import Channel  # NOQA
 get_conda_channel = Channel.from_value
 
 # disallow softlinks.  This avoids a lot of dumb issues, at the potential cost of disk space.
@@ -154,96 +150,18 @@ LockError, non_x86_linux_machines, NoPackagesFoundError = LockError, non_x86_lin
 PaddingError, UnsatisfiableError = PaddingError, UnsatisfiableError
 
 
-# work-around for python bug on Windows prior to python 3.2
-# https://bugs.python.org/issue10027
-# Adapted from the ntfsutils package, Copyright (c) 2012, the Mozilla Foundation
 class CrossPlatformStLink:
-    _st_nlink = None
-
-    def __call__(self, path):
+    def __call__(self, path: str | os.PathLike) -> int:
         return self.st_nlink(path)
 
     @classmethod
-    def st_nlink(cls, path):
-        if cls._st_nlink is None:
-            cls._initialize()
-        return cls._st_nlink(path)
-
-    @classmethod
-    def _standard_st_nlink(cls, path):
-        return lstat(path).st_nlink
-
-    @classmethod
-    def _windows_st_nlink(cls, path):
-        st_nlink = cls._standard_st_nlink(path)
-        if st_nlink != 0:
-            return st_nlink
-        else:
-            # cannot trust python on Windows when st_nlink == 0
-            # get value using windows libraries to be sure of its true value
-            # Adapted from the ntfsutils package, Copyright (c) 2012, the Mozilla Foundation
-            GENERIC_READ = 0x80000000
-            FILE_SHARE_READ = 0x00000001
-            OPEN_EXISTING = 3
-            hfile = cls.CreateFile(path, GENERIC_READ, FILE_SHARE_READ, None,
-                                   OPEN_EXISTING, 0, None)
-            if hfile is None:
-                from ctypes import WinError
-                raise WinError(
-                    "Could not determine determine number of hardlinks for %s" % path)
-            info = cls.BY_HANDLE_FILE_INFORMATION()
-            rv = cls.GetFileInformationByHandle(hfile, info)
-            cls.CloseHandle(hfile)
-            if rv == 0:
-                from ctypes import WinError
-                raise WinError("Could not determine file information for %s" % path)
-            return info.nNumberOfLinks
-
-    @classmethod
-    def _initialize(cls):
-        if os.name != 'nt':
-            cls._st_nlink = cls._standard_st_nlink
-        else:
-            # http://msdn.microsoft.com/en-us/library/windows/desktop/aa363858
-            import ctypes
-            from ctypes import POINTER
-            from ctypes.wintypes import DWORD, HANDLE, BOOL
-
-            cls.CreateFile = ctypes.windll.kernel32.CreateFileW
-            cls.CreateFile.argtypes = [ctypes.c_wchar_p, DWORD, DWORD, ctypes.c_void_p,
-                                       DWORD, DWORD, HANDLE]
-            cls.CreateFile.restype = HANDLE
-
-            # http://msdn.microsoft.com/en-us/library/windows/desktop/ms724211
-            cls.CloseHandle = ctypes.windll.kernel32.CloseHandle
-            cls.CloseHandle.argtypes = [HANDLE]
-            cls.CloseHandle.restype = BOOL
-
-            class FILETIME(ctypes.Structure):
-                _fields_ = [("dwLowDateTime", DWORD),
-                            ("dwHighDateTime", DWORD)]
-
-            class BY_HANDLE_FILE_INFORMATION(ctypes.Structure):
-                _fields_ = [("dwFileAttributes", DWORD),
-                            ("ftCreationTime", FILETIME),
-                            ("ftLastAccessTime", FILETIME),
-                            ("ftLastWriteTime", FILETIME),
-                            ("dwVolumeSerialNumber", DWORD),
-                            ("nFileSizeHigh", DWORD),
-                            ("nFileSizeLow", DWORD),
-                            ("nNumberOfLinks", DWORD),
-                            ("nFileIndexHigh", DWORD),
-                            ("nFileIndexLow", DWORD)]
-
-            cls.BY_HANDLE_FILE_INFORMATION = BY_HANDLE_FILE_INFORMATION
-
-            # http://msdn.microsoft.com/en-us/library/windows/desktop/aa364952
-            cls.GetFileInformationByHandle = ctypes.windll.kernel32.GetFileInformationByHandle
-            cls.GetFileInformationByHandle.argtypes = [HANDLE,
-                                                       POINTER(BY_HANDLE_FILE_INFORMATION)]
-            cls.GetFileInformationByHandle.restype = BOOL
-
-            cls._st_nlink = cls._windows_st_nlink
+    def st_nlink(cls, path: str | os.PathLike) -> int:
+        warnings.warn(
+            "`conda_build.conda_interface.CrossPlatformStLink` is pending deprecation and will be removed in a "
+            "future release. Please use `os.stat().st_nlink` instead.",
+            PendingDeprecationWarning,
+        )
+        return os.stat(path).st_nlink
 
 
 class SignatureError(Exception):

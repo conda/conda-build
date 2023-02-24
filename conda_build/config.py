@@ -50,7 +50,7 @@ no_rewrite_stdout_env_default = 'false'
 ignore_verify_codes_default = []
 exit_on_verify_error_default = False
 conda_pkg_format_default = None
-zstd_compression_level_default = 22
+zstd_compression_level_default = 19
 
 
 # Python2 silliness:

@@ -1,5 +1,7 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import locale
 import os
 from os.path import join, isdir, isfile, abspath, basename, exists, normpath, expanduser
@@ -10,7 +12,7 @@ import sys
 import tempfile
 import time
 from pathlib import Path
-from typing import Optional
+from typing import Iterable
 
 from .conda_interface import download, TemporaryDirectory
 from .conda_interface import hashsum_file
@@ -171,6 +173,20 @@ def unpack(source_dict, src_dir, cache_folder, recipe_path, croot, verbose=False
             shutil.move(os.path.join(tmpdir, f), os.path.join(src_dir, f))
 
 
+def check_git_lfs(git, cwd):
+    try:
+        lfs_list_output = check_output_env([git, 'lfs', 'ls-files', '--all'], cwd=cwd)
+        return lfs_list_output and lfs_list_output.strip()
+    except CalledProcessError:
+        return False
+
+
+def git_lfs_fetch(git, cwd, stdout, stderr):
+    lfs_version = check_output_env([git, 'lfs', 'version'], cwd=cwd)
+    log.info(lfs_version)
+    check_call_env([git, 'lfs', 'fetch', 'origin', '--all'], cwd=cwd, stdout=stdout, stderr=stderr)
+
+
 def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_cache, git_ref=None,
                                   git_depth=-1, is_top_level=True, verbose=True):
     """ Mirror (and checkout) a Git repository recursively.
@@ -214,6 +230,8 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_ca
         try:
             if git_ref != 'HEAD':
                 check_call_env([git, 'fetch'], cwd=mirror_dir, stdout=stdout, stderr=stderr)
+                if check_git_lfs(git, mirror_dir):
+                    git_lfs_fetch(git, mirror_dir, stdout, stderr)
             else:
                 # Unlike 'git clone', fetch doesn't automatically update the cache's HEAD,
                 # So here we explicitly store the remote HEAD in the cache's local refs/heads,
@@ -240,6 +258,8 @@ def git_mirror_checkout_recursive(git, mirror_dir, checkout_dir, git_url, git_ca
             args += ['--depth', str(git_depth)]
         try:
             check_call_env(args + [git_url, git_mirror_dir], stdout=stdout, stderr=stderr)
+            if check_git_lfs(git, mirror_dir):
+                git_lfs_fetch(git, mirror_dir, stdout, stderr)
         except CalledProcessError:
             # on windows, remote URL comes back to us as cygwin or msys format.  Python doesn't
             # know how to normalize it.  Need to convert it to a windows path.
@@ -495,7 +515,7 @@ _RE_LF = re.compile(rb"(?<!\r)\n")
 _RE_CRLF = re.compile(rb"\r\n")
 
 
-def _ensure_LF(src: os.PathLike, dst: Optional[os.PathLike] = None) -> Path:
+def _ensure_LF(src: os.PathLike, dst: os.PathLike | None = None) -> Path:
     """Replace windows line endings with Unix.  Return path to modified file."""
     src = Path(src)
     dst = Path(dst or src)  # overwrite src if dst is undefined
@@ -503,7 +523,7 @@ def _ensure_LF(src: os.PathLike, dst: Optional[os.PathLike] = None) -> Path:
     return dst
 
 
-def _ensure_CRLF(src: os.PathLike, dst: Optional[os.PathLike] = None) -> Path:
+def _ensure_CRLF(src: os.PathLike, dst: os.PathLike | None = None) -> Path:
     """Replace unix line endings with win.  Return path to modified file."""
     src = Path(src)
     dst = Path(dst or src)  # overwrite src if dst is undefined
@@ -511,23 +531,21 @@ def _ensure_CRLF(src: os.PathLike, dst: Optional[os.PathLike] = None) -> Path:
     return dst
 
 
-def _guess_patch_strip_level(filesstr, src_dir):
-    """ Determine the patch strip level automatically. """
-    maxlevel = None
-    files = {filestr.encode(errors='ignore') for filestr in filesstr}
-    src_dir = src_dir.encode(errors='ignore')
+def _guess_patch_strip_level(
+    patches: Iterable[str | os.PathLike], src_dir: str | os.PathLike
+) -> tuple[int, bool]:
+    """Determine the patch strip level automatically."""
+    patches = set(map(Path, patches))
+    maxlevel = min(len(patch.parent.parts) for patch in patches)
     guessed = False
-    for file in files:
-        numslash = file.count(b'/')
-        maxlevel = numslash if maxlevel is None else min(maxlevel, numslash)
     if maxlevel == 0:
         patchlevel = 0
     else:
         histo = {i: 0 for i in range(maxlevel + 1)}
-        for file in files:
-            parts = file.split(b'/')
+        for patch in patches:
+            parts = patch.parts
             for level in range(maxlevel + 1):
-                if os.path.exists(join(src_dir, *parts[-len(parts) + level:])):
+                if Path(src_dir, *parts[-len(parts) + level :]).exists():
                     histo[level] += 1
         order = sorted(histo, key=histo.get, reverse=True)
         if histo[order[0]] == histo[order[1]]:
