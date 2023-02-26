@@ -38,10 +38,13 @@ from conda_build.exceptions import (DependencyNeedsBuildingError, CondaBuildExce
 from conda_build.conda_interface import reset_context
 from conda.exceptions import ClobberError, CondaMultiError
 
-from .utils import get_valid_recipes, metadata_dir, fail_dir, add_mangling
-
-# define a few commonly used recipes - use os.path.join(metadata_dir, recipe) elsewhere
-empty_sections = os.path.join(metadata_dir, "empty_sections")
+from .utils import (
+    get_valid_recipes,
+    metadata_dir,
+    fail_dir,
+    add_mangling,
+    metadata_path,
+)
 
 
 def represent_ordereddict(dumper, data):
@@ -88,7 +91,12 @@ def describe_root(cwd=None):
         for recipe in get_valid_recipes(metadata_dir)
     ],
 )
-def test_recipe_builds(recipe: Path, testing_config, monkeypatch):
+def test_recipe_builds(
+    recipe: Path,
+    testing_config,
+    monkeypatch: pytest.MonkeyPatch,
+    conda_build_test_recipe_envvar: str,
+):
     # TODO: After we fix #3754 this mark can be removed. This specific test
     #   ``source_setup_py_data_subdir`` reproduces the problem.
     if recipe.name == "source_setup_py_data_subdir":
@@ -167,8 +175,13 @@ def test_token_upload(testing_metadata):
 @pytest.mark.sanity
 @pytest.mark.serial
 @pytest.mark.parametrize("service_name", ["binstar", "anaconda"])
-def test_no_anaconda_upload_condarc(service_name, testing_config, capfd):
-    api.build(empty_sections, config=testing_config, notest=True)
+def test_no_anaconda_upload_condarc(
+    service_name: str,
+    testing_config,
+    capfd,
+    conda_build_test_recipe_envvar: str,
+):
+    api.build(str(metadata_path / "empty_sections"), config=testing_config, notest=True)
     output, error = capfd.readouterr()
     assert "Automatic uploading is disabled" in output, error
 
@@ -176,9 +189,11 @@ def test_no_anaconda_upload_condarc(service_name, testing_config, capfd):
 @pytest.mark.sanity
 @pytest.mark.serial
 @pytest.mark.parametrize("service_name", ["binstar", "anaconda"])
-def test_offline(service_name, testing_config):
-    with env_var('CONDA_OFFLINE', 'True', reset_context):
-        api.build(empty_sections, config=testing_config)
+def test_offline(
+    service_name: str, testing_config, conda_build_test_recipe_envvar: str
+):
+    with env_var("CONDA_OFFLINE", "True", reset_context):
+        api.build(str(metadata_path / "empty_sections"), config=testing_config)
 
 
 def test_git_describe_info_on_branch(testing_config):
@@ -274,24 +289,29 @@ def test_binary_has_prefix_files_non_utf8(testing_config):
     api.build(os.path.join(metadata_dir, '_binary_has_utf_non_8'), config=testing_config)
 
 
-def test_relative_path_git_versioning(testing_config):
-    # conda_build_test_recipe is a manual step.  Clone it at the same level as
-    #    your conda-build source.
-    cwd = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..',
-                                       'conda_build_test_recipe'))
-    tag = describe_root(cwd)
-    output = api.get_output_file_path(os.path.join(metadata_dir,
-                                                   "_source_git_jinja2_relative_path"),
-                                      config=testing_config)[0]
+def test_relative_path_git_versioning(
+    testing_config,
+    conda_build_test_recipe_path: Path,
+    conda_build_test_recipe_envvar: str,
+):
+    tag = describe_root(conda_build_test_recipe_path)
+    output = api.get_output_file_paths(
+        metadata_path / "_source_git_jinja2_relative_path",
+        config=testing_config,
+    )[0]
     assert tag in output
 
 
-def test_relative_git_url_git_versioning(testing_config):
-    cwd = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..',
-                                       'conda_build_test_recipe'))
-    tag = describe_root(cwd)
-    recipe = os.path.join(metadata_dir, "_source_git_jinja2_relative_git_url")
-    output = api.get_output_file_path(recipe, config=testing_config)[0]
+def test_relative_git_url_git_versioning(
+    testing_config,
+    conda_build_test_recipe_path: Path,
+    conda_build_test_recipe_envvar: str,
+):
+    tag = describe_root(conda_build_test_recipe_path)
+    output = api.get_output_file_paths(
+        metadata_path / "_source_git_jinja2_relative_git_url",
+        config=testing_config,
+    )[0]
     assert tag in output
 
 
@@ -414,10 +434,12 @@ def test_jinja_typo(testing_config):
 
 
 @pytest.mark.sanity
-def test_skip_existing(testing_config, capfd):
+def test_skip_existing(testing_config, capfd, conda_build_test_recipe_envvar: str):
     # build the recipe first
-    api.build(empty_sections, config=testing_config)
-    api.build(empty_sections, config=testing_config, skip_existing=True)
+    api.build(str(metadata_path / "empty_sections"), config=testing_config)
+    api.build(
+        str(metadata_path / "empty_sections"), config=testing_config, skip_existing=True
+    )
     output, error = capfd.readouterr()
     assert "are already built" in output
 
@@ -954,7 +976,7 @@ def test_workdir_removal_warning(testing_config, caplog):
 
 @pytest.mark.sanity
 @pytest.mark.skipif(sys.platform != 'darwin', reason="relevant to mac only")
-def test_append_python_app_osx(testing_config):
+def test_append_python_app_osx(testing_config, conda_build_test_recipe_envvar: str):
     """Recipes that use osx_is_app need to have python.app in their runtime requirements.
 
     conda-build will add it if it's missing."""

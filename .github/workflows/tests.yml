@@ -88,13 +88,6 @@ jobs:
           path: ./src
           fetch-depth: 0
 
-      - name: Checkout test recipe
-        uses: actions/checkout@v3
-        with:
-          repository: conda/conda_build_test_recipe
-          path: ./conda_build_test_recipe
-          fetch-depth: 0
-
       - name: Timestamp
         run: echo "TIMESTAMP=$(date -u "+%Y%m")" >> $GITHUB_ENV
         shell: bash
@@ -135,12 +128,17 @@ jobs:
             --basetemp "${{ runner.temp }}/${{ matrix.test-type }}" \
             --cov conda_build \
             --cov-append \
+            --cov-branch \
             --cov-report xml \
             --replay-record-dir="${{ env.REPLAY_DIR }}" \
             --replay-base-name="${{ env.REPLAY_NAME }}" \
             --alluredir="${{ env.ALLURE_DIR }}" \
             -m "${{ env.PYTEST_MARKER }}" \
             ./tests
+
+      - uses: codecov/codecov-action@v3
+        with:
+          flags: ${{ matrix.test-type }},${{ matrix.python-version }},linux-64
 
       - name: Tar Allure Results
         if: always()
@@ -199,13 +197,6 @@ jobs:
           path: .\src
           fetch-depth: 0
 
-      - name: Checkout test recipe
-        uses: actions/checkout@v3
-        with:
-          repository: conda/conda_build_test_recipe
-          path: .\conda_build_test_recipe
-          fetch-depth: 0
-
       - name: Timestamp
         run: echo "TIMESTAMP=$(date -u "+%Y%m")" >> $GITHUB_ENV
         shell: bash
@@ -247,12 +238,17 @@ jobs:
             --basetemp "${{ runner.temp }}\${{ matrix.test-type}}" `
             --cov conda_build `
             --cov-append `
+            --cov-branch `
             --cov-report xml `
             --replay-record-dir="${{ env.REPLAY_DIR }}" `
             --replay-base-name="${{ env.REPLAY_NAME }}" `
             --alluredir="${{ env.ALLURE_DIR }}" `
             -m "${{ env.PYTEST_MARKER }}" `
             .\tests
+
+      - uses: codecov/codecov-action@v3
+        with:
+          flags: ${{ matrix.test-type }},${{ matrix.python-version }},win-64
 
       - name: Tar Allure Results
         if: always()
@@ -315,13 +311,6 @@ jobs:
           path: ./src
           fetch-depth: 0
 
-      - name: Checkout test recipe
-        uses: actions/checkout@v3
-        with:
-          repository: conda/conda_build_test_recipe
-          path: ./conda_build_test_recipe
-          fetch-depth: 0
-
       - name: Timestamp
         run: echo "TIMESTAMP=$(date -u "+%Y%m")" >> $GITHUB_ENV
         shell: bash
@@ -363,12 +352,17 @@ jobs:
             --basetemp "${{ runner.temp }}/${{ matrix.test-type }}" \
             --cov conda_build \
             --cov-append \
+            --cov-branch \
             --cov-report xml \
             --replay-record-dir="${{ env.REPLAY_DIR }}" \
             --replay-base-name="${{ env.REPLAY_NAME }}" \
             --alluredir="${{ env.ALLURE_DIR }}" \
             -m "${{ env.PYTEST_MARKER }}" \
             ./tests
+
+      - uses: codecov/codecov-action@v3
+        with:
+          flags: ${{ matrix.test-type }},${{ matrix.python-version }},osx-64
 
       - name: Tar Allure Results
         if: always()
