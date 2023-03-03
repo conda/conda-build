@@ -84,7 +84,7 @@ from conda.exceptions import (  # noqa: F401
 from conda.base.context import (  # noqa: F401
     non_x86_machines as non_x86_linux_machines,
     context,
-    get_prefix,
+    get_prefix as context_get_prefix,
     reset_context,
 )
 from conda.models.channel import get_conda_build_local_url  # noqa: F401
