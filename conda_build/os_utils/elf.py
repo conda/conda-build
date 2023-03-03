@@ -1,6 +1,5 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-import sys
 from os.path import islink, isfile
 
 
@@ -12,7 +11,6 @@ NO_EXT = (
 )
 
 MAGIC = b'\x7fELF'
-
 
 def is_elf(path):
     if path.endswith(NO_EXT) or islink(path) or not isfile(path):
