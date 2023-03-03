@@ -101,7 +101,7 @@ subdir = context.subdir
 create_default_packages = context.create_default_packages
 
 get_rc_urls = lambda: list(context.channels)
-get_prefix = partial(context_get_prefix, context)  # noqa: F811, F821
+get_prefix = partial(context_get_prefix, context)
 cc_conda_build = context.conda_build if hasattr(context, 'conda_build') else {}
 
 get_conda_channel = Channel.from_value
