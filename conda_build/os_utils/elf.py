@@ -12,6 +12,7 @@ NO_EXT = (
 
 MAGIC = b'\x7fELF'
 
+
 def is_elf(path):
     if path.endswith(NO_EXT) or islink(path) or not isfile(path):
         return False
