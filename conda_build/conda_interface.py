@@ -82,7 +82,7 @@ from conda.exceptions import (  # noqa: F401
     UnsatisfiableError,
 )
 from conda.base.context import (  # noqa: F401
-    non_x86_linux_machines,
+    non_x86_machines as non_x86_linux_machines,
     context,
     get_prefix,
     reset_context,
