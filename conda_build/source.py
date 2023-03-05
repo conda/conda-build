@@ -38,6 +38,9 @@ git_submod_re = re.compile(r'(?:.+)\.(.+)\.(?:.+)\s(.+)')
 ext_re = re.compile(r"(.*?)(\.(?:tar\.)?[^.]+)$")
 
 
+ACCEPTED_HASH_TYPES = ("md5", "sha1", "sha224", "sha256", "sha384", "sha512")
+
+
 def append_hash_to_fn(fn, hash_value):
     return ext_re.sub(fr"\1_{hash_value[:10]}\2", fn)
 
@@ -54,16 +57,19 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
         source_urls = [source_urls]
     unhashed_fn = fn = source_dict['fn'] if 'fn' in source_dict else basename(source_urls[0])
     hash_added = False
-    for hash_type in ('md5', 'sha1', 'sha256'):
+    for hash_type in ACCEPTED_HASH_TYPES:
         if hash_type in source_dict:
             if source_dict[hash_type] in (None, ""):
                 raise ValueError(f'Empty {hash_type} hash provided for {fn}')
             fn = append_hash_to_fn(fn, source_dict[hash_type])
             hash_added = True
-            break
     else:
-        log.warn("No hash (md5, sha1, sha256) provided for {}.  Source download forced.  "
-                 "Add hash to recipe to use source cache.".format(unhashed_fn))
+        log.warn(
+            "No hash {} provided for {}.  Source download forced.  "
+            "Add hash to recipe to use source cache.".format(
+                ACCEPTED_HASH_TYPES, unhashed_fn
+            )
+        )
     path = join(cache_folder, fn)
     if isfile(path):
         if verbose:
@@ -102,15 +108,17 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
             raise RuntimeError("Could not download %s" % url)
 
     hashed = None
-    for tp in ('md5', 'sha1', 'sha256'):
+    for tp in ACCEPTED_HASH_TYPES:
         if tp in source_dict:
             expected_hash = source_dict[tp]
             hashed = hashsum_file(path, tp)
             if expected_hash != hashed:
                 rm_rf(path)
-                raise RuntimeError("%s mismatch: '%s' != '%s'" %
-                           (tp.upper(), hashed, expected_hash))
-            break
+                raise RuntimeError(
+                    "{} mismatch: '{}' != '{}'".format(
+                        tp.upper(), hashed, expected_hash
+                    )
+                )
 
     # this is really a fallback.  If people don't provide the hash, we still need to prevent
     #    collisions in our source cache, but the end user will get no benefit from the cache.
