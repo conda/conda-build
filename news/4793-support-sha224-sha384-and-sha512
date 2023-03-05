@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* If multiple hashing algorithims are used to validated a downloaded source, a `RuntimeError` will now be thrown if **any** of those hashes are incorrect. This is stricter and more consistent than the previous behaviour.
+* If multiple hashing algorithms are used to validate a downloaded source, a `RuntimeError` will now be thrown if **any** of those hashes are incorrect. This is stricter and more consistent than the previous behaviour.
 ### Deprecations
 
 * <news item>
