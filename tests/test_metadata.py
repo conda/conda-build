@@ -169,7 +169,7 @@ def test_build_bootstrap_env_by_path(testing_metadata):
     ],
 )
 def test_native_compiler_metadata(
-    platform: str, arch: str, python: str, compilers: set[str], testing_config, mocker
+    platform: str, arch: str, python: str, compilers: set[str], testing_config
 ):
     testing_config.platform = platform
     metadata = api.render(
