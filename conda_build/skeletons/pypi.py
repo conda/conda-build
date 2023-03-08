@@ -12,7 +12,7 @@ import os
 from os import makedirs, listdir, getcwd, chdir
 from os.path import join, isdir, exists, isfile, abspath
 
-from packaging.version import Version
+from conda_build.version import _parse as parse_version
 import re
 from shutil import copy2
 import subprocess
@@ -277,7 +277,7 @@ def skeletonize(packages, output_dir=".", version=None, recursive=False,
 
             pypi_data = pypi_resp.json()
 
-            versions = sorted(pypi_data["releases"].keys(), key=Version)
+            versions = sorted(pypi_data["releases"].keys(), key=parse_version)
 
             if version_compare:
                 version_compare(versions)
