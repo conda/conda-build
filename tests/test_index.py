@@ -939,7 +939,7 @@ def test_index_of_removed_pkg(testing_metadata):
     assert not repodata["packages"]
 
 
-def test_patch_instructions_with_missing_subdir(testing_workdir):
+def test_patch_instructions_with_missing_subdir():
     os.makedirs("linux-64")
     os.makedirs("zos-z")
     conda_build.api.update_index(".")  # what is the current working directory?
@@ -1152,7 +1152,7 @@ def test_current_index_reduces_space():
     }
 
 
-def test_current_index_version_keys_keep_older_packages(testing_workdir):
+def test_current_index_version_keys_keep_older_packages():
     pkg_dir = os.path.join(os.path.dirname(__file__), "index_data", "packages")
 
     # pass no version file

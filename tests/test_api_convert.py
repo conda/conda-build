@@ -43,7 +43,7 @@ def assert_package_paths_matches_files(package_path):
 
 @pytest.mark.parametrize('base_platform', ['linux', 'win', 'osx'])
 @pytest.mark.parametrize('package', [('cryptography-1.8.1', '__about__.py')])
-def test_show_imports(testing_workdir, base_platform, package, capfd):
+def test_show_imports(base_platform, package, capfd):
     package_name, example_file = package
     platforms = ['osx-64', 'win-64', 'win-32', 'linux-64', 'linux-32']
 
@@ -72,7 +72,7 @@ def test_show_imports(testing_workdir, base_platform, package, capfd):
 
 @pytest.mark.parametrize('base_platform', ['linux', 'win', 'osx'])
 @pytest.mark.parametrize('package', [('itsdangerous-0.24', 'itsdangerous.py')])
-def test_no_imports_found(testing_workdir, base_platform, package, capfd):
+def test_no_imports_found(base_platform, package, capfd):
     package_name, example_file = package
 
     f = 'http://repo.anaconda.com/pkgs/free/{}-64/{}-py36_0.tar.bz2'.format(base_platform,
@@ -89,7 +89,7 @@ def test_no_imports_found(testing_workdir, base_platform, package, capfd):
 
 @pytest.mark.parametrize('base_platform', ['linux', 'win', 'osx'])
 @pytest.mark.parametrize('package', [('cryptography-1.8.1', '__about__.py')])
-def test_no_platform(testing_workdir, base_platform, package):
+def test_no_platform(base_platform, package):
     package_name, example_file = package
 
     f = 'http://repo.anaconda.com/pkgs/free/{}-64/{}-py36_0.tar.bz2'.format(base_platform,
@@ -105,7 +105,7 @@ def test_no_platform(testing_workdir, base_platform, package):
 
 @pytest.mark.parametrize('base_platform', ['linux', 'win', 'osx'])
 @pytest.mark.parametrize('package', [('cryptography-1.8.1', '__about__.py')])
-def test_c_extension_error(testing_workdir, base_platform, package):
+def test_c_extension_error(base_platform, package):
     package_name, example_file = package
     platforms = ['osx-64', 'win-64', 'win-32', 'linux-64', 'linux-32']
 
@@ -130,7 +130,7 @@ def test_c_extension_error(testing_workdir, base_platform, package):
 
 @pytest.mark.parametrize('base_platform', ['linux', 'win', 'osx'])
 @pytest.mark.parametrize('package', [('cryptography-1.8.1', '__about__.py')])
-def test_c_extension_conversion(testing_workdir, base_platform, package):
+def test_c_extension_conversion(base_platform, package):
     package_name, example_file = package
     platforms = ['osx-64', 'win-64', 'win-32', 'linux-64', 'linux-32']
 
@@ -154,7 +154,7 @@ def test_c_extension_conversion(testing_workdir, base_platform, package):
 @pytest.mark.parametrize('base_platform', ['linux', 'win', 'osx'])
 @pytest.mark.parametrize('package', [('itsdangerous-0.24', 'itsdangerous.py'),
                                      ('py-1.4.32', 'py/__init__.py')])
-def test_convert_platform_to_others(testing_workdir, base_platform, package):
+def test_convert_platform_to_others(base_platform, package):
     package_name, example_file = package
     subdir = f'{base_platform}-64'
     f = 'http://repo.anaconda.com/pkgs/free/{}/{}-py27_0.tar.bz2'.format(subdir,
@@ -226,7 +226,7 @@ def test_convert_from_unix_to_win_creates_entry_points(testing_config):
 
 @pytest.mark.parametrize('base_platform', ['linux', 'win', 'osx'])
 @pytest.mark.parametrize('package', [('anaconda-4.4.0', 'version.txt')])
-def test_convert_dependencies(testing_workdir, base_platform, package):
+def test_convert_dependencies(base_platform, package):
     package_name, example_file = package
     subdir = f'{base_platform}-64'
     f = 'http://repo.anaconda.com/pkgs/free/{}/{}-np112py36_0.tar.bz2'.format(subdir,
@@ -259,7 +259,7 @@ def test_convert_dependencies(testing_workdir, base_platform, package):
 
 @pytest.mark.parametrize('base_platform', ['linux', 'win', 'osx'])
 @pytest.mark.parametrize('package', [('anaconda-4.4.0', 'version.txt')])
-def test_convert_no_dependencies(testing_workdir, base_platform, package):
+def test_convert_no_dependencies(base_platform, package):
     package_name, example_file = package
     subdir = f'{base_platform}-64'
     f = 'http://repo.anaconda.com/pkgs/free/{}/{}-np112py36_0.tar.bz2'.format(subdir,
@@ -289,7 +289,7 @@ def test_convert_no_dependencies(testing_workdir, base_platform, package):
 
 @pytest.mark.parametrize('base_platform', ['linux', 'win', 'osx'])
 @pytest.mark.parametrize('package', [('anaconda-4.4.0', 'version.txt')])
-def test_skip_conversion(testing_workdir, base_platform, package, capfd):
+def test_skip_conversion(base_platform, package, capfd):
     package_name, example_file = package
     source_plat_arch = '{}-64' .format(base_platform)
 
@@ -314,7 +314,7 @@ def test_skip_conversion(testing_workdir, base_platform, package, capfd):
 
 @pytest.mark.parametrize('base_platform', ['linux', 'osx'])
 @pytest.mark.parametrize('package', [('sparkmagic-0.12.1', '')])
-def test_renaming_executables(testing_workdir, base_platform, package):
+def test_renaming_executables(base_platform, package):
     """Test that the files in /bin are properly renamed.
 
     When converting the bin/ directory to Scripts/, only scripts

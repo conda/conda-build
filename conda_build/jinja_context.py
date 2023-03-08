@@ -1,7 +1,7 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 from functools import partial
-from io import StringIO
+from io import StringIO, TextIOBase
 import json
 import os
 import pathlib
@@ -12,8 +12,11 @@ from typing import IO, Any, Optional
 from warnings import warn
 
 import jinja2
-import toml
 import yaml
+try:
+    import tomllib  # Python 3.11
+except:
+    import tomli as tomllib
 
 from .environ import get_dict as get_environ
 from .utils import get_installed_packages, apply_pin_expressions, get_logger, HashableDict
@@ -496,11 +499,26 @@ def resolved_packages(m, env, permit_undefined_jinja=False,
     return package_names
 
 
+def _toml_load(stream):
+    """
+    Load .toml from a pathname.
+    """
+    if isinstance(stream, (TextIOBase, str)):
+        if isinstance(stream, TextIOBase):
+            data = stream.read()
+        else:
+            data = stream
+        return tomllib.loads(data)
+
+    # tomllib prefers binary files
+    return tomllib.load(stream)
+
+
 _file_parsers = {
     "json": json.load,
     "yaml": yaml.safe_load,
     "yml": yaml.safe_load,
-    "toml": toml.load,
+    "toml": _toml_load
 }
 
 

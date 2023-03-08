@@ -1,35 +1,55 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-import contextlib
+from __future__ import annotations
+
 import os
+from pathlib import Path
 import shlex
 import sys
+from typing import Generator
 
-import pytest
+from conda.common.compat import on_mac
 from conda_build.metadata import MetaData
-from conda_build.utils import on_win
-from conda_build.conda_interface import linked
 
 
-def numpy_installed():
-    return any([True for dist in linked(sys.prefix) if dist.name == "numpy"])
+tests_path = Path(__file__).parent
+metadata_path = tests_path / "test-recipes" / "metadata"
+subpackage_path = tests_path / "test-recipes" / "split-packages"
+fail_path = tests_path / "test-recipes" / "fail"
+variants_path = tests_path / "test-recipes" / "variants"
+dll_path = tests_path / "test-recipes" / "dll-package"
+go_path = tests_path / "test-recipes" / "go-package"
+published_path = tests_path / "test-recipes" / "published_code"
+archive_path = tests_path / "archives"
+cran_path = tests_path / "test-cran-skeleton"
+
+# backport
+thisdir = str(tests_path)
+metadata_dir = str(metadata_path)
+subpackage_dir = str(subpackage_path)
+fail_dir = str(fail_path)
+variants_dir = str(variants_path)
+dll_dir = str(dll_path)
+go_dir = str(go_path)
+published_dir = str(published_path)
+archive_dir = str(archive_path)
+cran_dir = str(cran_path)
 
 
-thisdir = os.path.dirname(__file__)
-metadata_dir = os.path.join(thisdir, "test-recipes", "metadata")
-subpackage_dir = os.path.join(thisdir, "test-recipes", "split-packages")
-fail_dir = os.path.join(thisdir, "test-recipes", "fail")
-variants_dir = os.path.join(thisdir, "test-recipes", "variants")
-dll_dir = os.path.join(thisdir, "test-recipes", "dll-package")
-go_dir = os.path.join(thisdir, "test-recipes", "go-package")
-archive_dir = os.path.join(thisdir, "archives")
+def is_valid_dir(*parts: Path | str) -> bool:
+    path = Path(*parts)
+    return (
+        # only directories are valid recipes
+        path.is_dir()
+        # recipes prefixed with _ are special and shouldn't be run as part of bulk tests
+        and not path.name.startswith("_")
+        # exclude macOS-only recipes
+        and (path.name not in ["osx_is_app"] or on_mac)
+    )
 
 
-def is_valid_dir(parent_dir, dirname):
-    valid = os.path.isdir(os.path.join(parent_dir, dirname))
-    valid &= not dirname.startswith("_")
-    valid &= "osx_is_app" != dirname or sys.platform == "darwin"
-    return valid
+def get_valid_recipes(*parts: Path | str) -> Generator[Path, None, None]:
+    yield from filter(is_valid_dir, Path(*parts).iterdir())
 
 
 def add_mangling(filename):
@@ -119,37 +139,7 @@ def assert_package_consistency(package_path):
     assert len(errors) == 0, "\n".join(errors)
 
 
-@contextlib.contextmanager
-def put_bad_conda_on_path(testing_workdir):
-    path_backup = os.environ["PATH"]
-    # it is easier to add an intentionally bad path than it is to try to scrub any existing path
-    os.environ["PATH"] = os.pathsep.join([testing_workdir, os.environ["PATH"]])
-
-    exe_name = "conda.bat" if on_win else "conda"
-    out_exe = os.path.join(testing_workdir, exe_name)
-    with open(out_exe, "w") as f:
-        f.write("exit 1")
-    st = os.stat(out_exe)
-    os.chmod(out_exe, st.st_mode | 0o111)
-    try:
-        yield
-    except:
-        raise
-    finally:
-        os.environ["PATH"] = path_backup
-
-
 def get_noarch_python_meta(meta):
     d = meta.meta
     d["build"]["noarch"] = "python"
     return MetaData.fromdict(d, config=meta.config)
-
-
-@pytest.fixture(autouse=True)
-def skip_serial(request):
-    if (
-        request.node.get_marker("serial")
-        and getattr(request.config, "slaveinput", {}).get("slaveid", "local") != "local"
-    ):
-        # under xdist and serial
-        pytest.skip("serial")

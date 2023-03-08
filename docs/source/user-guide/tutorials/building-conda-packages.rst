@@ -15,7 +15,7 @@ SEP and GDAL. Additional Windows-specific instructions are provided in the
 :ref:`toolkit` section.
 
 The final built packages from this tutorial are available on
-`Anaconda Cloud`_:
+`anaconda.org`_ (formerly known as Anaconda Cloud):
 
 * `SEP`_
 
@@ -469,7 +469,7 @@ including how to specify a config file and what can go into it, take a look
 at :ref:`conda-build-variant-config-files`.
 
 
-.. _`Anaconda Cloud`: https://anaconda.org
+.. _`anaconda.org`: https://anaconda.org
 .. _SEP: https://anaconda.org/wwarner/sep/files
 .. _GDAL: https://anaconda.org/conda-forge/gdal/files
 .. _`SEP recipe`: https://github.com/conda-forge/sep-feedstock

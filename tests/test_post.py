@@ -29,7 +29,7 @@ def test_compile_missing_pyc(testing_workdir):
     assert not os.path.isfile(os.path.join(tmp, add_mangling(bad_file)))
 
 
-def test_hardlinks_to_copies(testing_workdir):
+def test_hardlinks_to_copies():
     with open('test1', 'w') as f:
         f.write("\n")
 
@@ -44,7 +44,7 @@ def test_hardlinks_to_copies(testing_workdir):
     assert os.lstat('test2').st_nlink == 1
 
 
-def test_postbuild_files_raise(testing_metadata, testing_workdir):
+def test_postbuild_files_raise(testing_metadata):
     fn = 'buildstr', 'buildnum', 'version'
     for f in fn:
         with open(os.path.join(testing_metadata.config.work_dir,
@@ -55,7 +55,7 @@ def test_postbuild_files_raise(testing_metadata, testing_workdir):
 
 
 @pytest.mark.skipif(on_win, reason="fix_shebang is not executed on win32")
-def test_fix_shebang(testing_config):
+def test_fix_shebang():
     fname = 'test1'
     with open(fname, 'w') as f:
         f.write("\n")

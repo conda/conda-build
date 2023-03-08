@@ -3,26 +3,29 @@
 from glob import glob
 import json
 import os
-import pytest
+from pathlib import Path
 import re
 import sys
+
+import pytest
 
 from conda_build.render import finalize_metadata
 from conda_build.conda_interface import subdir
 from conda_build import api, utils
 
-from .utils import subpackage_dir, is_valid_dir
-
-
-@pytest.fixture(params=[dirname for dirname in os.listdir(subpackage_dir)
-                        if is_valid_dir(subpackage_dir, dirname)])
-def recipe(request):
-    return os.path.join(subpackage_dir, request.param)
+from .utils import subpackage_dir, get_valid_recipes
 
 
 @pytest.mark.slow
-def test_subpackage_recipes(recipe, testing_config):
-    api.build(recipe, config=testing_config)
+@pytest.mark.parametrize(
+    "recipe",
+    [
+        pytest.param(recipe, id=recipe.name)
+        for recipe in get_valid_recipes(subpackage_dir)
+    ],
+)
+def test_subpackage_recipes(recipe: Path, testing_config):
+    api.build(str(recipe), config=testing_config)
 
 
 @pytest.mark.sanity
@@ -91,7 +94,7 @@ def test_subpackage_variant_override(testing_config):
     assert len(outputs) == 3
 
 
-def test_intradependencies(testing_workdir, testing_config):
+def test_intradependencies(testing_config):
     recipe = os.path.join(subpackage_dir, '_intradependencies')
     outputs1 = api.get_output_file_paths(recipe, config=testing_config)
     outputs1_set = {os.path.basename(p) for p in outputs1}
@@ -104,7 +107,7 @@ def test_intradependencies(testing_workdir, testing_config):
                                                                                                        outputs2_set)
 
 
-def test_git_in_output_version(testing_config):
+def test_git_in_output_version(testing_config, conda_build_test_recipe_envvar: str):
     recipe = os.path.join(subpackage_dir, '_git_in_output_version')
     outputs = api.render(recipe, config=testing_config, finalize=False, bypass_env_check=True)
     assert len(outputs) == 1
@@ -372,14 +375,3 @@ def test_build_string_does_not_incorrectly_add_hash(testing_config):
     assert len(output_files) == 4
     assert any("clang_variant-1.0-cling.tar.bz2" in f for f in output_files)
     assert any("clang_variant-1.0-default.tar.bz2" in f for f in output_files)
-
-
-# def test_conda_pkg_v2_format(testing_config):
-#     recipe = os.path.join(subpackage_dir, '_alternate_type_conda2')
-#     output_files = api.get_output_file_paths(recipe, config=testing_config)
-#     assert len(output_files) == 1
-#     assert output_files[0].endswith('.conda'), output_files[0]
-
-#     out_files = api.build(recipe, config=testing_config)
-#     assert len(out_files) == 1
-#     assert out_files[0].endswith('.conda'), out_files[0]
