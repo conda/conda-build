@@ -1404,6 +1404,8 @@ class LoggingContext:
         "conda_build.index",
         "conda_build.noarch_python",
         "urllib3.connectionpool",
+        "conda_index",
+        "conda_index.index",
     ]
 
     def __init__(self, level=logging.WARN, handler=None, close=True, loggers=None):
