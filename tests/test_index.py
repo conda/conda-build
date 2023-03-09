@@ -606,18 +606,13 @@ def _build_test_index(workdir):
     """
     Copy repodata.json, packages to workdir for testing.
     """
-
-    # Python 3.7 workaround "no dirs_exist_ok flag"
     index_hotfix_pkgs = join(here, "index_hotfix_pkgs")
     for path in os.scandir(index_hotfix_pkgs):
-        if path.is_dir():
-            shutil.copytree(
-                join(here, "index_hotfix_pkgs", path.name), join(workdir, path.name)
-            )
-        elif path.is_file():
-            shutil.copyfile(
-                join(here, "index_hotfix_pkgs", path.name), join(workdir, path.name)
-            )
+        shutil.copytree(
+            join(here, "index_hotfix_pkgs", path.name),
+            join(workdir, path.name),
+            dirs_exist_ok=True,
+        )
 
     with open(os.path.join(workdir, TEST_SUBDIR, "repodata.json")) as f:
         original_metadata = json.load(f)
