@@ -1,0 +1,21 @@
+### Enhancements
+
+* Use standalone conda-index instead of bundled indexing code, when
+  automatically indexing packages during a build.
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* Prefer `python -m conda_index` instead of `conda-build index` or `conda
+  index`, to use faster indexing code.
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>
