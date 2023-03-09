@@ -3,7 +3,8 @@
 anaconda-client
 beautifulsoup4
 chardet
-conda
+conda >=4.13
+conda-index >=0.2.3
 conda-package-handling
 conda-verify
 contextlib2

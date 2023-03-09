@@ -13,6 +13,7 @@ if version_dict["error"]:
 
 deps = [
     "conda",
+    "conda-index >=0.2.3",
     "requests",
     "filelock",
     "pyyaml",

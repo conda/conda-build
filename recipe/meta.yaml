@@ -26,8 +26,8 @@ requirements:
   run:
     - beautifulsoup4
     - chardet
-    - conda  >=4.13
-    - conda-index
+    - conda >=4.13
+    - conda-index >=0.2.3
     # - conda-verify  >=3.0.2  # optional as of CB 3.12.0
     - contextlib2   # [py<34]
     - enum34        # [py<34]
