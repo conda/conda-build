@@ -205,7 +205,7 @@ def get_build_dependencies_from_src_archive(package_url, sha256, src_cache):
         need_f = any([f.name.lower().endswith(('.f', '.f90', '.f77', '.f95', '.f03')) for f in tf])
         # Fortran builds use CC to perform the link (they do not call the linker directly).
         need_c = True if need_f else \
-            any([f.name.lower().endswith('.c') for f in tf])
+            any([f.name.lower().endswith(('.c', '.xs')) for f in tf])
         need_cxx = any([f.name.lower().endswith(('.cxx', '.cpp', '.cc', '.c++'))
                         for f in tf])
         need_autotools = any([f.name.lower().endswith('/configure') for f in tf])
@@ -325,7 +325,9 @@ def install_perl_get_core_modules(version):
         with TemporaryDirectory() as tmpdir:
             environ.create_env(tmpdir, [f'perl={version}'], env='host', config=config, subdir=subdirs[0])
             args = [f'{join(tmpdir, *subdirs[1:])}', '-e',
-                    'use Module::CoreList; print join "\n", Module::CoreList->find_modules(qr/.*/);']
+                    'use Module::CoreList; '
+                    'my @modules = grep {Module::CoreList::is_core($_)} Module::CoreList->find_modules(qr/.*/); '
+                    'print join "\n", @modules;']
             from subprocess import check_output
             all_core_modules = check_output(args, shell=False).decode('utf-8').replace('\r\n', '\n').split('\n')
             return all_core_modules

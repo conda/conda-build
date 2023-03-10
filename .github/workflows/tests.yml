@@ -58,7 +58,6 @@ jobs:
     defaults:
       run:
         shell: bash -l {0}
-        working-directory: ./src
     strategy:
       fail-fast: false
       matrix:
@@ -85,14 +84,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          path: ./src
-          fetch-depth: 0
-
-      - name: Checkout test recipe
-        uses: actions/checkout@v3
-        with:
-          repository: conda/conda_build_test_recipe
-          path: ./conda_build_test_recipe
           fetch-depth: 0
 
       - name: Timestamp
@@ -108,7 +99,7 @@ jobs:
       - name: Setup miniconda
         uses: conda-incubator/setup-miniconda@v2
         with:
-          condarc-file: ./src/ci/github/.condarc
+          condarc-file: ./ci/github/.condarc
           python-version: ${{ matrix.python-version }}
           run-post: false  # skip post cleanup
 
@@ -135,12 +126,17 @@ jobs:
             --basetemp "${{ runner.temp }}/${{ matrix.test-type }}" \
             --cov conda_build \
             --cov-append \
+            --cov-branch \
             --cov-report xml \
             --replay-record-dir="${{ env.REPLAY_DIR }}" \
             --replay-base-name="${{ env.REPLAY_NAME }}" \
             --alluredir="${{ env.ALLURE_DIR }}" \
             -m "${{ env.PYTEST_MARKER }}" \
             ./tests
+
+      - uses: codecov/codecov-action@v3
+        with:
+          flags: ${{ matrix.test-type }},${{ matrix.python-version }},linux-64
 
       - name: Tar Allure Results
         if: always()
@@ -167,9 +163,6 @@ jobs:
     if: needs.changes.outputs.code == 'true'
 
     runs-on: windows-2019
-    defaults:
-      run:
-        working-directory: .\src
     strategy:
       fail-fast: false
       matrix:
@@ -196,14 +189,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          path: .\src
-          fetch-depth: 0
-
-      - name: Checkout test recipe
-        uses: actions/checkout@v3
-        with:
-          repository: conda/conda_build_test_recipe
-          path: .\conda_build_test_recipe
           fetch-depth: 0
 
       - name: Timestamp
@@ -219,7 +204,7 @@ jobs:
       - name: Setup miniconda
         uses: conda-incubator/setup-miniconda@v2
         with:
-          condarc-file: .\src\ci\github\.condarc
+          condarc-file: .\ci\github\.condarc
           python-version: ${{ matrix.python-version }}
           run-post: false  # skip post cleanup
 
@@ -247,12 +232,17 @@ jobs:
             --basetemp "${{ runner.temp }}\${{ matrix.test-type}}" `
             --cov conda_build `
             --cov-append `
+            --cov-branch `
             --cov-report xml `
             --replay-record-dir="${{ env.REPLAY_DIR }}" `
             --replay-base-name="${{ env.REPLAY_NAME }}" `
             --alluredir="${{ env.ALLURE_DIR }}" `
             -m "${{ env.PYTEST_MARKER }}" `
             .\tests
+
+      - uses: codecov/codecov-action@v3
+        with:
+          flags: ${{ matrix.test-type }},${{ matrix.python-version }},win-64
 
       - name: Tar Allure Results
         if: always()
@@ -285,7 +275,6 @@ jobs:
     defaults:
       run:
         shell: bash -l {0}
-        working-directory: ./src
     strategy:
       fail-fast: false
       matrix:
@@ -312,14 +301,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          path: ./src
-          fetch-depth: 0
-
-      - name: Checkout test recipe
-        uses: actions/checkout@v3
-        with:
-          repository: conda/conda_build_test_recipe
-          path: ./conda_build_test_recipe
           fetch-depth: 0
 
       - name: Timestamp
@@ -335,7 +316,7 @@ jobs:
       - name: Setup miniconda
         uses: conda-incubator/setup-miniconda@v2
         with:
-          condarc-file: ./src/ci/github/.condarc
+          condarc-file: ./ci/github/.condarc
           python-version: ${{ matrix.python-version }}
           run-post: false  # skip post cleanup
 
@@ -363,12 +344,17 @@ jobs:
             --basetemp "${{ runner.temp }}/${{ matrix.test-type }}" \
             --cov conda_build \
             --cov-append \
+            --cov-branch \
             --cov-report xml \
             --replay-record-dir="${{ env.REPLAY_DIR }}" \
             --replay-base-name="${{ env.REPLAY_NAME }}" \
             --alluredir="${{ env.ALLURE_DIR }}" \
             -m "${{ env.PYTEST_MARKER }}" \
             ./tests
+
+      - uses: codecov/codecov-action@v3
+        with:
+          flags: ${{ matrix.test-type }},${{ matrix.python-version }},osx-64
 
       - name: Tar Allure Results
         if: always()

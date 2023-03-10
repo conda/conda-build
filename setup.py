@@ -22,7 +22,7 @@ deps = [
     "beautifulsoup4",
     "chardet",
     "pytz",
-    "toml",
+    "tomli",
     "tqdm",
     "psutil",
     "six",

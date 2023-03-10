@@ -312,6 +312,22 @@ OR
 
   * package uses {{ compiler() }} jinja2 function
 
+You can also influence which variables are considered for the hash with:
+
+.. code-block:: yaml
+
+   build:
+     force_use_keys:
+       - package_1
+     force_ignore_keys:
+       - package_2
+
+This will ensure that the value of ``package_2`` will *not* be considered for the hash,
+and ``package_1`` *will* be, regardless of what conda-build discovers is used by its inspection.
+
+This may be useful to further split complex multi-output builds, to ensure each package is built,
+or to ensure the right package hash when using more complex templating or scripting.
+
 
 Python entry points
 -------------------

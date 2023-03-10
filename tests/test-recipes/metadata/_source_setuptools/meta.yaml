@@ -13,7 +13,7 @@ package:
   version: {{ data.get('version') }}
 
 source:
-  git_url: ../../../../../conda_build_test_recipe
+  git_url: {{ environ.get('CONDA_BUILD_TEST_RECIPE_PATH') }}
   git_tag: 1.21.0
 
 requirements:
