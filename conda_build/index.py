@@ -177,7 +177,10 @@ def get_build_index(
                 if local_path not in urls:
                     urls.insert(0, local_path)
             _ensure_valid_channel(output_folder, subdir)
-            conda_index.index.update_index(output_folder, verbose=debug)
+            # Use one thread; avoid logging configuration issues across
+            # subprocesses, and we don't expect conda-build to index a huge
+            # number of packages at once:
+            conda_index.index.update_index(output_folder, verbose=debug, threads=1)
 
             # replace noarch with native subdir - this ends up building an index with both the
             #      native content and the noarch content.
@@ -185,6 +188,9 @@ def get_build_index(
             if subdir == "noarch":
                 subdir = conda_interface.subdir
             try:
+                # It's confusing that this function both updates and gets index.
+                # get_index() is like conda reading the index, not conda_index
+                # creating a new index.
                 cached_index = get_index(
                     channel_urls=urls,
                     prepend=not omit_defaults,

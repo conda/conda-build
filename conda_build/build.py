@@ -2376,14 +2376,30 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                     subdir = ('noarch' if (m.noarch or m.noarch_python)
                               else m.config.host_subdir)
                     if m.is_cross:
-                        get_build_index(subdir=subdir, bldpkgs_dir=m.config.bldpkgs_dir,
-                                        output_folder=m.config.output_folder, channel_urls=m.config.channel_urls,
-                                        debug=m.config.debug, verbose=m.config.verbose, locking=m.config.locking,
-                                        timeout=m.config.timeout, clear_cache=True)
-                    get_build_index(subdir=subdir, bldpkgs_dir=m.config.bldpkgs_dir,
-                                    output_folder=m.config.output_folder, channel_urls=m.config.channel_urls,
-                                    debug=m.config.debug, verbose=m.config.verbose, locking=m.config.locking,
-                                    timeout=m.config.timeout, clear_cache=True)
+                        get_build_index(
+                            subdir,
+                            m.config.bldpkgs_dir,
+                            m.config.output_folder,
+                            channel_urls=m.config.channel_urls,
+                            debug=m.config.debug,
+                            verbose=m.config.verbose,
+                            locking=m.config.locking,
+                            timeout=m.config.timeout,
+                            clear_cache=True,
+                            omit_defaults=False,
+                        )
+                    get_build_index(
+                        subdir,
+                        m.config.bldpkgs_dir,
+                        m.config.output_folder,
+                        channel_urls=m.config.channel_urls,
+                        debug=m.config.debug,
+                        verbose=m.config.verbose,
+                        locking=m.config.locking,
+                        timeout=m.config.timeout,
+                        clear_cache=True,
+                        omit_defaults=False,
+                    )
     else:
         if not provision_only:
             print("STOPPING BUILD BEFORE POST:", m.dist())
@@ -3382,6 +3398,8 @@ def clean_build(config, folders=None):
 
 
 def is_package_built(metadata, env, include_local=True):
+    # bldpkgs_dirs is typically {'$ENVIRONMENT/conda-bld/noarch', '$ENVIRONMENT/conda-bld/osx-arm64'}
+    # could pop subdirs (last path element) and call update_index() once
     for d in metadata.config.bldpkgs_dirs:
         if not os.path.isdir(d):
             os.makedirs(d)
