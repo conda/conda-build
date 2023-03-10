@@ -143,7 +143,7 @@ source to try fill in related template variables.",
                    nargs=1,
                    action=ParseYAMLArgument,
                    help=('Variants to extend the build matrix. Must be a valid YAML instance, '
-                         'such as "{python: [3.6, 3.7]}"'))
+                         'such as "{python: [3.8, 3.9]}"'))
     add_parser_channels(p)
     return p
 
