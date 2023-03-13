@@ -67,8 +67,10 @@ Authors are sorted alphabetically.
 * Eli Rykoff
 * Elliot Hughes
 * Eric Dill
+* Ernst Luring
 * Evan Hubinger
 * Evan Klitzke
+* Felix Kühnl
 * Filipe Fernandes
 * Floris Bruynooghe
 * Gabriel Reis
@@ -156,6 +158,7 @@ Authors are sorted alphabetically.
 * Patrick Snape
 * Patrick Sodré
 * Paul Madden
+* Peet Whittaker
 * Peter Williams
 * Phil Elson
 * Phil Reinhold
@@ -187,12 +190,14 @@ Authors are sorted alphabetically.
 * Siu Kwan Lam
 * Sophia Castellarin
 * Sophian Guidara
+* Srivas Venkatesh
 * Stas Bekman
 * Stefan Scherfke
 * Stefan Zimmermann
 * Stephan Hoyer
 * Stephen Palmroth
 * Stuart Berg
+* T Coxon
 * Tadeu Manoel
 * Takafumi Arakaki
 * Teake Nutma
