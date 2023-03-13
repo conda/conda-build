@@ -1,5 +1,52 @@
 [//]: # (current developments)
 
+## 3.24.0 (2023-03-13)
+
+### Bug fixes
+
+* Fix the failing `git clone` when source has LFS files. (#4318)
+* fix many false-positives during the detection of Perl core modules in `conda skeleton cpan`
+* conda skeleton cpan now correctly adds a C compiler as dependency if the distribution contains an `.xs` file
+
+### Deprecations
+
+* Removed conda <4.13 logic. (#4677)
+* `conda_build.conda_interface.CrossPlatformStLink` is pending deprecation in favor of using `os.stat().st_nlink`. (#4728)
+* Drop Python 3.7 support. (#4796)
+
+### Docs
+
+* Updated broken links to example conda recipes and updated link to the now archived conda-recipes, with additional links to AnacondaRecipes aggregated feedstocks and conda-forge feedstocks. (#4580)
+* Replaced two instances of "Anaconda Cloud" with "anaconda.org". (#4719)
+
+### Other
+
+* Update test matrix to run tests on all supported Python versions on Linux. Only run tests on lower & upper Python bounds for Windows and macOS. (#4691)
+* Re-enable code coverage reporting to codecov. (#4767)
+* Eliminate test setup's manual clone of https://github.com/conda/conda_build_test_recipe in favor of a session fixture. (#4781)
+* Use tomllib (Python 3.11+) or tomli for .toml support. (#4783)
+
+### Contributors
+
+* @beeankha
+* @conda-bot
+* @dbast
+* @dholth
+* @ernstluring
+* @xileF1337
+* @jezdez
+* @jakirkham
+* @kathatherine
+* @kenodegard
+* @minrk
+* @peetw
+* @sven6002
+* @tttc3
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
 ## 3.23.3 (2022-12-06)
 
 ### Bug fixes
