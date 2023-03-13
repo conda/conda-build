@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* <news item>
+* Fix the failing `git clone` when source has LFS files. (#4318)
 
 ### Deprecations
 
@@ -16,4 +16,4 @@
 
 ### Other
 
-* Use tomllib (Python 3.11+) or tomli for .toml support.
+* <news item>
