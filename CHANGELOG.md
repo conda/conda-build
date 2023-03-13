@@ -32,19 +32,18 @@
 * @conda-bot
 * @dbast
 * @dholth
-* @ernstluring
-* @xileF1337
+* @ernstluring made their first contribution in https://github.com/conda/conda-build/pull/4318
+* @xileF1337 made their first contribution in https://github.com/conda/conda-build/pull/4592
 * @jezdez
 * @jakirkham
 * @kathatherine
 * @kenodegard
 * @minrk
-* @peetw
-* @sven6002
-* @tttc3
+* @peetw made their first contribution in https://github.com/conda/conda-build/pull/4662
+* @sven6002 made their first contribution in https://github.com/conda/conda-build/pull/4621
+* @tttc3 made their first contribution in https://github.com/conda/conda-build/pull/4580
 * @dependabot[bot]
 * @pre-commit-ci[bot]
-
 
 
 ## 3.23.3 (2022-12-06)
