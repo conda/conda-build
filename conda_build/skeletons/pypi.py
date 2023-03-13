@@ -12,7 +12,7 @@ import os
 from os import makedirs, listdir, getcwd, chdir
 from os.path import join, isdir, exists, isfile, abspath
 
-from pkg_resources import parse_version
+from conda_build.version import _parse as parse_version
 import re
 from shutil import copy2
 import subprocess

@@ -73,3 +73,4 @@ repos:
       - id: insert-license
         files: \.py$
         args: [--license-filepath, .github/disclaimer.txt, --no-extra-eol]
+        exclude: ^conda_build/version.py
