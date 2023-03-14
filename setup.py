@@ -54,8 +54,9 @@ setup(
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10"
+        "Programming Language :: Python :: 3.11"
     ],
-    python_requires=">=3.6",
+    python_requires=">=3.8",
     description="tools for building conda packages",
     long_description=Path("README.md").read_text(),
     packages=[
