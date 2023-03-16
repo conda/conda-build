@@ -56,12 +56,12 @@ repos:
     hooks:
       - id: flake8
   - repo: https://github.com/PyCQA/pylint
-    rev: v2.16.2
+    rev: v2.17.0
     hooks:
       - id: pylint
         args: [--exit-zero]
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.4
+    rev: 1.7.5
     hooks:
       - id: bandit
         args: [--exit-zero]
@@ -73,3 +73,4 @@ repos:
       - id: insert-license
         files: \.py$
         args: [--license-filepath, .github/disclaimer.txt, --no-extra-eol]
+        exclude: ^conda_build/version.py

@@ -606,7 +606,6 @@ def _build_test_index(workdir):
     """
     Copy repodata.json, packages to workdir for testing.
     """
-
     # Python 3.7 workaround "no dirs_exist_ok flag"
     index_hotfix_pkgs = join(here, "index_hotfix_pkgs")
     for path in os.scandir(index_hotfix_pkgs):

@@ -26,7 +26,7 @@ deps = [
     "psutil",
     "six",
     "libarchive-c",
-    "setuptools",
+    "packaging",
     # "conda-package-handling",  # remove comment once released on PyPI
     "glob2",
 ]
@@ -51,8 +51,6 @@ setup(
         "Intended Audience :: Developers",
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10"
