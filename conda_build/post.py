@@ -840,6 +840,11 @@ def _collect_needed_dsos(
     if sysroots_files:
         sysroots = list(sysroots_files.keys())[0]
     for f in files:
+        if f.endswith('.a'):
+            # lief does not (yet) support querying for static libraries;
+            # this used to silently work but surfaced by lief 0.12, see
+            # https://github.com/lief-project/LIEF/issues/873
+            continue
         path = join(run_prefix, f)
         if not codefile_type(path):
             continue
