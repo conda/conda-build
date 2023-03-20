@@ -113,6 +113,7 @@ mmap_PROT_READ = 0 if on_win else mmap.PROT_READ
 mmap_PROT_WRITE = 0 if on_win else mmap.PROT_WRITE
 
 DEFAULT_SUBDIRS = {
+    "emscripten-32",
     "linux-64",
     "linux-32",
     "linux-s390x",
