@@ -1809,11 +1809,11 @@ bundlers = {
 }
 
 
-def _write_sh_activation_text(file_handle, m):
+def _write_sh_activation_text(file_handle, m: MetaData):
     cygpath_prefix = "$(cygpath -u " if utils.on_win else ""
     cygpath_suffix = " )" if utils.on_win else ""
 
-    py_flags = '-I -m' if os.environ.get("_CONDA_BUILD_ISOLATED_ACTIVATION") else '-m'
+    py_flags = "-I -m" if _is_isolated_activation(m) else "-m"
     file_handle.write(
         f"""eval "$('{sys.executable}' {py_flags} conda shell.bash hook)"\n"""
     )
@@ -2690,8 +2690,31 @@ def _write_test_run_script(metadata, test_run_script, test_env_script, py_files,
                                                                             trace=trace))
 
 
-def write_test_scripts(metadata, env_vars, py_files, pl_files, lua_files, r_files, shell_files, trace=""):
-    if not metadata.config.activate or metadata.name() == 'conda':
+def _is_isolated_activation(metadata: MetaData) -> bool:
+    """Check whether or not we want to run conda in isolated mode."""
+    # check if environment variable is set
+    if os.environ.get("_CONDA_BUILD_ISOLATED_ACTIVATION"):
+        return True
+
+    # fallback to environment variable in meta.yaml
+    for var in utils.ensure_list(metadata.get_value("build/script_env")):
+        if "_CONDA_BUILD_ISOLATED_ACTIVATION" == var.split("=", 1)[0]:
+            return True
+
+    return False
+
+
+def write_test_scripts(
+    metadata: MetaData,
+    env_vars,
+    py_files,
+    pl_files,
+    lua_files,
+    r_files,
+    shell_files,
+    trace="",
+):
+    if not metadata.config.activate or metadata.name() == "conda":
         # prepend bin (or Scripts) directory
         env_vars = utils.prepend_bin_path(env_vars, metadata.config.test_prefix, prepend_prefix=True)
         if utils.on_win:
@@ -2723,12 +2746,12 @@ def write_test_scripts(metadata, env_vars, py_files, pl_files, lua_files, r_file
                     '&& set _CE_CONDA=conda\n'.format(
                         sys.prefix,
                         '--dev' if metadata.config.debug else '',
-                        "-i" if os.environ.get("_CONDA_BUILD_ISOLATED_ACTIVATION") else "",
+                        "-i" if _is_isolated_activation(metadata) else "",
                         python_exe=sys.executable
                     )
                 )
             else:
-                py_flags = '-I -m' if os.environ.get("_CONDA_BUILD_ISOLATED_ACTIVATION") else '-m'
+                py_flags = "-I -m" if _is_isolated_activation(metadata) else "-m"
                 tf.write(
                     f"""eval "$('{sys.executable}' {py_flags} conda shell.bash hook)"\n"""
                 )
