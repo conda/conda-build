@@ -8,7 +8,6 @@ from copy import copy
 from functools import lru_cache
 from itertools import product
 import os.path
-from pkg_resources import parse_version
 import re
 import sys
 
@@ -16,6 +15,7 @@ import yaml
 
 from conda_build.conda_interface import subdir
 from conda_build.conda_interface import cc_conda_build
+from conda_build.version import _parse as parse_version
 from conda_build.utils import ensure_list, get_logger, islist, on_win, trim_empty_keys
 
 DEFAULT_VARIANTS = {
