@@ -1,0 +1,8 @@
+{% set pyproject = load_file_data("pyproject.toml") %}
+
+package:
+  name: example
+  version: {{ pyproject['project']['version'] }}
+
+source:
+  path: ./src
