@@ -7,7 +7,7 @@ from pathlib import Path
 import subprocess
 import sys
 
-from pkg_resources import parse_version
+from conda_build.version import _parse as parse_version
 import pytest
 import ruamel.yaml
 
