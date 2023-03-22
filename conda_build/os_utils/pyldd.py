@@ -1024,6 +1024,11 @@ def codefile_class(filename, skip_symlinks=False):
     # Java .class files share 0xCAFEBABE with Mach-O FAT_MAGIC.
     if filename.endswith('.class'):
         return None
+    # lief does not (yet) support querying for static libraries;
+    # this used to silently work but surfaced by lief 0.12, see
+    # https://github.com/lief-project/LIEF/issues/873
+    if filename.endswith('.a'):
+        return None
     if not os.path.exists(filename) or os.path.getsize(filename) < 4:
         return None
     with open(filename, 'rb') as file:
