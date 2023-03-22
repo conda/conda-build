@@ -106,6 +106,7 @@ Authors are sorted alphabetically.
 * John Blischak
 * John Kirkham
 * John Omotani
+* Johnny
 * Jonathan J. Helmus
 * Joseph Crail
 * Joseph Hunkeler
