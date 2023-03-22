@@ -7,6 +7,8 @@
 * Fix the failing `git clone` when source has LFS files. (#4318)
 * fix many false-positives during the detection of Perl core modules in `conda skeleton cpan`
 * conda skeleton cpan now correctly adds a C compiler as dependency if the distribution contains an `.xs` file
+* Install downstream packages in correct subdir. (#4763, #4803)
+* Update supported Python version in setup.py. (#4804)
 
 ### Deprecations
 
@@ -36,6 +38,7 @@
 * @xileF1337 made their first contribution in https://github.com/conda/conda-build/pull/4592
 * @jezdez
 * @jakirkham
+* @johnnynunez made their first contribution in https://github.com/conda/conda-build/pull/4804
 * @kathatherine
 * @kenodegard
 * @minrk
