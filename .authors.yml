@@ -1199,7 +1199,7 @@
   alternate_emails:
   - clee@anaconda.com
 - name: Ken Odegard
-  num_commits: 105
+  num_commits: 106
   email: kodegard@anaconda.com
   first_commit: 2020-09-08 19:53:41
   github: kenodegard
@@ -1222,7 +1222,7 @@
   first_commit: 2020-11-19 10:46:41
 - name: Jannis Leidel
   email: jannis@leidel.info
-  num_commits: 26
+  num_commits: 29
   github: jezdez
   first_commit: 2020-11-19 10:46:41
 - name: Christof Kaufmann
@@ -1237,7 +1237,7 @@
   github: pre-commit-ci[bot]
   aliases:
   - pre-commit-ci[bot]
-  num_commits: 37
+  num_commits: 38
   first_commit: 2021-11-20 01:47:17
 - name: Jacob Walls
   email: jacobtylerwalls@gmail.com
@@ -1259,7 +1259,7 @@
   alternate_emails:
   - ad-team+condabot@anaconda.com
   - 18747875+conda-bot@users.noreply.github.com
-  num_commits: 40
+  num_commits: 42
   first_commit: 2022-01-17 18:09:22
 - name: Uwe L. Korn
   email: xhochy@users.noreply.github.com
@@ -1359,3 +1359,8 @@
   num_commits: 1
   first_commit: 2023-02-24 01:35:43
   github: peetw
+- name: Johnny
+  email: johnnync13@gmail.com
+  num_commits: 1
+  first_commit: 2023-03-22 00:34:22
+  github: johnnynunez
