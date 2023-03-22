@@ -2,30 +2,6 @@
 
 ## 3.24.0 (2023-03-22)
 
-### Contributors
-
-* @beeankha
-* @conda-bot
-* @dbast
-* @dholth
-* @ernstluring
-* @xileF1337
-* @jezdez
-* @jakirkham
-* @johnnynunez
-* @kathatherine
-* @kenodegard
-* @minrk
-* @peetw
-* @sven6002
-* @tttc3
-* @dependabot[bot]
-* @pre-commit-ci[bot]
-
-
-
-## 3.24.0 (2023-03-13)
-
 ### Bug fixes
 
 * Fix the failing `git clone` when source has LFS files. (#4318)
