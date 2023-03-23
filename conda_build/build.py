@@ -1735,6 +1735,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
             utils.copy_into(tmp_path, final_output, metadata.config.timeout,
                             locking=False)
             final_outputs.append(final_output)
+    update_index(os.path.dirname(output_folder), verbose=metadata.config.debug, threads=1)
 
     # clean out host prefix so that this output's files don't interfere with other outputs
     #   We have a backup of how things were before any output scripts ran.  That's
