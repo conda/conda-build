@@ -2,12 +2,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-from collections import OrderedDict, defaultdict
-from functools import lru_cache
 import json
 import os
-from os.path import isdir, isfile, abspath
-from pathlib import Path
 import random
 import re
 import string
@@ -18,6 +14,7 @@ import tempfile
 from collections import OrderedDict, defaultdict
 from functools import lru_cache
 from os.path import abspath, isdir, isfile
+from pathlib import Path
 
 import yaml
 
