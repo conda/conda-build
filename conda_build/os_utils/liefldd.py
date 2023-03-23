@@ -1173,6 +1173,10 @@ class memoized_by_arg0_filehash:
                         if not data:
                             break
                         sha1.update(data)
+                # update with file name, if its a different
+                # file with the same contents, we don't want
+                # to treat it as cached
+                sha1.update(arg)
                 arg = sha1.hexdigest()
             if isinstance(arg, list):
                 newargs.append(tuple(arg))
