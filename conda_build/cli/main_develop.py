@@ -3,7 +3,8 @@
 import logging
 import sys
 
-from conda_build.conda_interface import ArgumentParser, add_parser_prefix, get_prefix
+from conda.base.context import context, determine_target_prefix
+from conda_build.conda_interface import ArgumentParser, add_parser_prefix
 from conda_build import api
 
 
@@ -57,7 +58,7 @@ This works by creating a conda.pth file in site-packages."""
 
 def execute(args):
     _, args = parse_args(args)
-    prefix = get_prefix(args)
+    prefix = determine_target_prefix(context, args)
     api.develop(args.source, prefix=prefix, no_pth_file=args.no_pth_file,
                 build_ext=args.build_ext, clean=args.clean, uninstall=args.uninstall)
 
