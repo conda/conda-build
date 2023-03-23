@@ -9,6 +9,8 @@ Design philosophy: put variability into config.  Make each function here accept 
 but only use those kwargs in config.  Config must change to support new features elsewhere.
 """
 
+import warnings
+
 # imports are done locally to keep the api clean and limited strictly
 #    to conda-build's functionality.
 from os.path import dirname, expanduser, join
@@ -360,6 +362,7 @@ def create_metapackage(name, version, entry_points=(), build_string=None, build_
 def update_index(dir_paths, config=None, force=False, check_md5=False, remove=False, channel_name=None,
                  subdir=None, threads=None, patch_generator=None, verbose=False, progress=False,
                  hotfix_source_repo=None, current_index_versions=None, **kwargs):
+    warnings.warn("Use standalone conda-index instead of conda_build.api.update_index", PendingDeprecationWarning)
     import yaml
     import os
     from conda_build.index import update_index

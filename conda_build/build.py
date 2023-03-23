@@ -6,6 +6,7 @@ Module that does most of the heavy lifting for the ``conda build`` command.
 
 from collections import deque, OrderedDict
 import fnmatch
+from pathlib import Path
 import glob2
 import json
 import os
@@ -54,7 +55,8 @@ from .utils import (CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2,
                     shutil_move_more_retrying, tmp_chdir)
 from conda_build import environ, source, tarcheck, utils
 from conda_build.config import Config
-from conda_build.index import get_build_index, update_index
+from conda_build.index import get_build_index
+from conda_index.index import update_index
 from conda_build.render import (output_yaml, bldpkg_path, render_recipe, reparse, distribute_variants,
                                 expand_outputs, try_download, execute_download_actions,
                                 add_upstream_pins)
@@ -1733,7 +1735,6 @@ def bundle_conda(output, metadata, env, stats, **kw):
             utils.copy_into(tmp_path, final_output, metadata.config.timeout,
                             locking=False)
             final_outputs.append(final_output)
-    update_index(os.path.dirname(output_folder), verbose=metadata.config.debug, threads=1)
 
     # clean out host prefix so that this output's files don't interfere with other outputs
     #   We have a backup of how things were before any output scripts ran.  That's
@@ -2513,14 +2514,14 @@ def _construct_metadata_for_test_from_package(package, config):
         utils.copy_into(package, local_pkg_location)
         local_pkg_location = local_dir
 
-    local_channel = os.path.dirname(local_pkg_location)
+    local_channel = Path(local_pkg_location)
 
     # update indices in the channel
-    update_index(local_channel, verbose=config.debug, threads=1)
+    update_index(local_channel.parents[1], subdirs=[local_channel.parent.name], verbose=config.debug, threads=1)
 
     try:
-        metadata = render_recipe(os.path.join(info_dir, 'recipe'), config=config,
-                                        reset_build_id=False)[0][0]
+        metadata = render_recipe(os.path.join(info_dir, 'recipe'),
+                        config=config, reset_build_id=False)[0][0]  # type: ignore
 
     # no recipe in package.  Fudge metadata
     except (OSError, SystemExit):
@@ -2982,7 +2983,7 @@ def tests_failed(package_or_metadata, move_broken, broken_dir, config):
                     broken_dir))
         except OSError:
             pass
-        update_index(os.path.dirname(os.path.dirname(pkg)), verbose=config.debug, threads=1)
+        update_index(Path(pkg).parents[1], verbose=config.debug, threads=1)
     sys.exit("TESTS FAILED: " + os.path.basename(pkg))
 
 
@@ -3399,11 +3400,15 @@ def clean_build(config, folders=None):
 
 def is_package_built(metadata, env, include_local=True):
     # bldpkgs_dirs is typically {'$ENVIRONMENT/conda-bld/noarch', '$ENVIRONMENT/conda-bld/osx-arm64'}
-    # could pop subdirs (last path element) and call update_index() once
     for d in metadata.config.bldpkgs_dirs:
         if not os.path.isdir(d):
             os.makedirs(d)
-        update_index(d, verbose=metadata.config.debug, warn=False, threads=1)
+    # call update_index once, if possible
+    bldpkgs_paths = [Path(d) for d in metadata.config.bldpkgs_dirs]
+    common_parents = set(path.parent for path in bldpkgs_paths)
+    for parent in common_parents:
+        subdirs = [p.name for p in bldpkgs_paths if p.parent == parent]
+        update_index(parent, subdirs=subdirs, verbose=metadata.config.debug, warn=False, threads=1)
     subdir = getattr(metadata.config, f'{env}_subdir')
 
     urls = [url_path(metadata.config.output_folder), 'local'] if include_local else []

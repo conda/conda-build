@@ -15,6 +15,7 @@ import subprocess
 import sys
 import time
 from uuid import uuid4
+import warnings
 
 # Lots of conda internals here.  Should refactor to use exports.
 from conda.common.compat import ensure_binary
@@ -282,6 +283,7 @@ def update_index(dir_path, check_md5=False, channel_name=None, patch_generator=N
     information will be updated.
 
     """
+    warnings.warn("Use standalone conda-index instead of conda_build.index", PendingDeprecationWarning)
     base_path, dirname = os.path.split(dir_path)
     if dirname in utils.DEFAULT_SUBDIRS:
         if warn:
