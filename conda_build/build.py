@@ -2371,9 +2371,6 @@ def build(m, stats, post=None, need_source_download=True, need_reparse_in_env=Fa
                     for built_package in newly_built_packages:
                         new_pkgs[built_package] = (output_d, m)
 
-                    # must rebuild index because conda has no way to incrementally add our last
-                    #    package to the index.
-
                     subdir = ('noarch' if (m.noarch or m.noarch_python)
                               else m.config.host_subdir)
                     if m.is_cross:
