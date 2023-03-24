@@ -28,8 +28,6 @@ from conda_build.skeletons.cran import CRAN_BUILD_SH_SOURCE, CRAN_META
         ("r-mglm", "GPL-2", "GPL2", {"GPL-2"}),
     ],
 )
-
-@pytest.mark.skip("Use separate grayskull package instead of skeleton.")
 # @pytest.mark.flaky(rerun=5, reruns_delay=2)
 def test_cran_license(
     package: str,
