@@ -138,6 +138,7 @@ def pylint_metadata():
         "license_family": "LGPL",
     }
 
+
 @pytest.mark.skip("Use separate grayskull package instead of skeleton.")
 @pytest.mark.parametrize(
     "prefix, repo, package, version",
