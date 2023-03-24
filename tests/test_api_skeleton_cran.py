@@ -13,6 +13,7 @@ from conda_build import api
 from conda_build.skeletons.cran import CRAN_BUILD_SH_SOURCE, CRAN_META
 
 
+@pytest.mark.skip("Use separate grayskull package instead of skeleton.")
 @pytest.mark.slow
 @pytest.mark.parametrize(
     "package,license_id,license_family,license_files",
@@ -27,6 +28,8 @@ from conda_build.skeletons.cran import CRAN_BUILD_SH_SOURCE, CRAN_META
         ("r-mglm", "GPL-2", "GPL2", {"GPL-2"}),
     ],
 )
+
+@pytest.mark.skip("Use separate grayskull package instead of skeleton.")
 # @pytest.mark.flaky(rerun=5, reruns_delay=2)
 def test_cran_license(
     package: str,
@@ -48,6 +51,7 @@ def test_cran_license(
     } == set(license_files)
 
 
+@pytest.mark.skip("Use separate grayskull package instead of skeleton.")
 @pytest.mark.parametrize(
     "package,skip_text",
     [
