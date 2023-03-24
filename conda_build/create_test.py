@@ -250,7 +250,7 @@ def create_all_test_files(
     if test_dir:
         # this happens when we're finishing the build
         rm_rf(test_dir)
-        os.makedirs(test_dir)
+        os.makedirs(test_dir, exist_ok=True)
         test_requires = ensure_list(m.get_value("test/requires", []))
         if test_requires:
             Path(test_dir, "test_time_dependencies.json").write_text(
@@ -259,7 +259,7 @@ def create_all_test_files(
     else:
         # this happens when we're running a package's tests
         test_dir = m.config.test_dir
-        os.makedirs(test_dir)
+        os.makedirs(test_dir, exist_ok=True)
 
     return (
         create_files(m, Path(test_dir)),
