@@ -84,7 +84,7 @@ from conda.exceptions import (  # noqa: F401
 from conda.base.context import (  # noqa: F401
     non_x86_machines as non_x86_linux_machines,
     context,
-    get_prefix as context_get_prefix,
+    determine_target_prefix,
     reset_context,
 )
 from conda.models.channel import get_conda_build_local_url  # noqa: F401
@@ -101,7 +101,7 @@ subdir = context.subdir
 create_default_packages = context.create_default_packages
 
 get_rc_urls = lambda: list(context.channels)
-get_prefix = partial(context_get_prefix, context)
+get_prefix = partial(determine_target_prefix, context)
 cc_conda_build = context.conda_build if hasattr(context, 'conda_build') else {}
 
 get_conda_channel = Channel.from_value

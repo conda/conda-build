@@ -5,7 +5,8 @@ from os.path import expanduser
 from pprint import pprint
 import sys
 
-from conda_build.conda_interface import ArgumentParser, add_parser_prefix, get_prefix
+from conda.base.context import context, determine_target_prefix
+from conda_build.conda_interface import ArgumentParser, add_parser_prefix
 
 from conda_build import api
 
@@ -187,15 +188,30 @@ def execute(args):
             parser.error("At least one option (--test-installable) is required.")
         else:
             print(api.test_installable(args.channel))
-    elif args.subcommand == 'linkages':
-        print(api.inspect_linkages(args.packages, prefix=get_prefix(args),
-                                   untracked=args.untracked, all_packages=args.all,
-                                   show_files=args.show_files, groupby=args.groupby,
-                                   sysroot=expanduser(args.sysroot)))
-    elif args.subcommand == 'objects':
-        print(api.inspect_objects(args.packages, prefix=get_prefix(args), groupby=args.groupby))
-    elif args.subcommand == 'prefix-lengths':
-        if not api.inspect_prefix_length(args.packages, min_prefix_length=args.min_prefix_length):
+    elif args.subcommand == "linkages":
+        print(
+            api.inspect_linkages(
+                args.packages,
+                prefix=determine_target_prefix(context, args),
+                untracked=args.untracked,
+                all_packages=args.all,
+                show_files=args.show_files,
+                groupby=args.groupby,
+                sysroot=expanduser(args.sysroot),
+            )
+        )
+    elif args.subcommand == "objects":
+        print(
+            api.inspect_objects(
+                args.packages,
+                prefix=determine_target_prefix(context, args),
+                groupby=args.groupby,
+            )
+        )
+    elif args.subcommand == "prefix-lengths":
+        if not api.inspect_prefix_length(
+            args.packages, min_prefix_length=args.min_prefix_length
+        ):
             sys.exit(1)
     elif args.subcommand == 'hash-inputs':
         pprint(api.inspect_hash_inputs(args.packages))

@@ -1,5 +1,53 @@
 [//]: # (current developments)
 
+## 3.24.0 (2023-03-22)
+
+### Bug fixes
+
+* Fix the failing `git clone` when source has LFS files. (#4318)
+* Fix many false-positives during the detection of Perl core modules in `conda skeleton cpan`. (#4592)
+* `conda skeleton cpan` now correctly adds a C compiler as dependency if the distribution contains an `.xs` file. (#4599)
+* Install downstream packages in correct subdir. (#4763, #4803)
+* Update supported Python version in setup.py. (#4804)
+
+### Deprecations
+
+* Removed conda <4.13 logic. (#4677)
+* `conda_build.conda_interface.CrossPlatformStLink` is pending deprecation in favor of using `os.stat().st_nlink`. (#4728)
+* Drop Python 3.7 support. (#4796)
+
+### Docs
+
+* Updated broken links to example conda recipes and updated link to the now archived conda-recipes, with additional links to AnacondaRecipes aggregated feedstocks and conda-forge feedstocks. (#4580)
+* Replaced two instances of "Anaconda Cloud" with "anaconda.org". (#4719)
+
+### Other
+
+* Update test matrix to run tests on all supported Python versions on Linux. Only run tests on lower & upper Python bounds for Windows and macOS. (#4691)
+* Re-enable code coverage reporting to `codecov`. (#4767)
+* Eliminate test setup's manual clone of https://github.com/conda/conda_build_test_recipe in favor of a session fixture. (#4781)
+* Use `tomllib` (Python 3.11+) or `tomli` for `.toml` support. (#4783)
+
+### Contributors
+
+* @beeankha
+* @conda-bot
+* @dbast
+* @dholth
+* @ernstluring made their first contribution in https://github.com/conda/conda-build/pull/4318
+* @xileF1337 made their first contribution in https://github.com/conda/conda-build/pull/4592
+* @jezdez
+* @jakirkham
+* @johnnynunez made their first contribution in https://github.com/conda/conda-build/pull/4804
+* @kathatherine
+* @kenodegard
+* @minrk
+* @peetw made their first contribution in https://github.com/conda/conda-build/pull/4662
+* @sven6002 made their first contribution in https://github.com/conda/conda-build/pull/4621
+* @tttc3 made their first contribution in https://github.com/conda/conda-build/pull/4580
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
 ## 3.23.3 (2022-12-06)
 
 ### Bug fixes
@@ -18,8 +66,6 @@
 * @kenodegard
 * @mbargull
 
-
-
 ## 3.23.2 (2022-11-30)
 
 ### Bug fixes
@@ -31,8 +77,6 @@
 * @kenodegard
 * @mbargull
 * @pre-commit-ci[bot]
-
-
 
 ## 3.23.1 (2022-11-17)
 
