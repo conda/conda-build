@@ -250,5 +250,5 @@ def conda_build_test_recipe_envvar(
 ) -> str:
     """Exposes the cloned conda_build_test_recipe as an environment variable."""
     name = "CONDA_BUILD_TEST_RECIPE_PATH"
-    monkeypatch.setenv(name, conda_build_test_recipe_path)
+    monkeypatch.setenv(name, str(conda_build_test_recipe_path))
     return name
