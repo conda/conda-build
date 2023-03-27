@@ -3403,7 +3403,7 @@ def is_package_built(metadata, env, include_local=True):
             os.makedirs(d)
     # call update_index once, if possible
     bldpkgs_paths = [Path(d) for d in metadata.config.bldpkgs_dirs]
-    common_parents = set(path.parent for path in bldpkgs_paths)
+    common_parents = {path.parent for path in bldpkgs_paths}
     for parent in common_parents:
         subdirs = [p.name for p in bldpkgs_paths if p.parent == parent]
         update_index(parent, subdirs=subdirs, verbose=metadata.config.debug, warn=False, threads=1)
