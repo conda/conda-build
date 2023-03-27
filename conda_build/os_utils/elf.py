@@ -1,6 +1,5 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-import sys
 from os.path import islink, isfile
 
 
@@ -20,9 +19,3 @@ def is_elf(path):
     with open(path, 'rb') as fi:
         head = fi.read(4)
     return bool(head == MAGIC)
-
-
-if __name__ == '__main__':
-    if sys.platform.startswith('linux'):
-        for path in '/usr/bin/ls', '/etc/mtab':
-            print(path, is_elf(path))

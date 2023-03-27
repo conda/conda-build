@@ -1,12 +1,15 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
+from collections import OrderedDict, defaultdict
+from functools import lru_cache
 import json
 import os
 from os.path import isdir, isfile, abspath
 from pathlib import Path
 import random
 import re
-import shutil
 import string
 import subprocess
 import sys
@@ -208,37 +211,36 @@ def _filter_run_exports(specs, ignore_list):
     return filtered_specs
 
 
-def find_pkg_dir_or_file_in_pkgs_dirs(pkg_dist, m, files_only=False):
-    _pkgs_dirs = pkgs_dirs + list(m.config.bldpkgs_dirs)
-    pkg_loc = None
-    for pkgs_dir in _pkgs_dirs:
-        pkg_dir = os.path.join(pkgs_dir, pkg_dist)
-        pkg_file = os.path.join(pkgs_dir, pkg_dist + CONDA_PACKAGE_EXTENSION_V1)
-        if not files_only and os.path.isdir(pkg_dir):
-            pkg_loc = pkg_dir
-            break
-        elif os.path.isfile(pkg_file):
-            pkg_loc = pkg_file
-            break
-        elif files_only and os.path.isdir(pkg_dir):
-            pkg_loc = pkg_file
-            # create the tarball on demand.  This is so that testing on archives works.
-            with tarfile.open(pkg_file, 'w:bz2') as archive:
-                for entry in os.listdir(pkg_dir):
-                    archive.add(os.path.join(pkg_dir, entry), arcname=entry)
+def find_pkg_dir_or_file_in_pkgs_dirs(
+    distribution: str, m: MetaData, files_only: bool = False
+) -> str | None:
+    for cache in map(Path, (*pkgs_dirs, *m.config.bldpkgs_dirs)):
+        package = cache / (distribution + CONDA_PACKAGE_EXTENSION_V1)
+        if package.is_file():
+            return str(package)
 
-            # use the package's subdir
+        directory = cache / distribution
+        if directory.is_dir():
+            if not files_only:
+                return str(directory)
+
+            # get the package's subdir
             try:
-                info = json.loads(Path(pkg_dir, "info", "index.json").read_text())
-                subdir = info["subdir"]
+                subdir = json.loads((directory / "info" / "index.json").read_text())[
+                    "subdir"
+                ]
             except (FileNotFoundError, KeyError):
                 subdir = m.config.host_subdir
 
-            pkg_subdir = os.path.join(m.config.croot, subdir)
-            pkg_loc = os.path.join(pkg_subdir, os.path.basename(pkg_file))
-            shutil.move(pkg_file, pkg_loc)
-            break
-    return pkg_loc
+            # create the tarball on demand so testing on archives works
+            package = Path(
+                m.config.croot, subdir, distribution + CONDA_PACKAGE_EXTENSION_V1
+            )
+            with tarfile.open(package, "w:bz2") as archive:
+                for entry in directory.iterdir():
+                    archive.add(entry, arcname=entry.name)
+
+            return str(package)
 
 
 @lru_cache(maxsize=None)

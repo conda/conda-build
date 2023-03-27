@@ -7,7 +7,7 @@ from pathlib import Path
 import subprocess
 import sys
 
-from pkg_resources import parse_version
+from conda_build.version import _parse as parse_version
 import pytest
 import ruamel.yaml
 
@@ -139,6 +139,7 @@ def pylint_metadata():
     }
 
 
+@pytest.mark.skip("Use separate grayskull package instead of skeleton.")
 @pytest.mark.parametrize(
     "prefix, repo, package, version",
     [
@@ -453,6 +454,7 @@ def test_pypi_section_order_preserved(tmp_path: Path):
         assert list(v.keys()) == list(recipe[k])
 
 
+@pytest.mark.skip("Use separate grayskull package instead of skeleton.")
 @pytest.mark.slow
 @pytest.mark.flaky(rerun=5, reruns_delay=2)
 @pytest.mark.skipif(on_win, reason="shellcheck is not available on Windows")

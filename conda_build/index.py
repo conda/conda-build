@@ -48,7 +48,7 @@ except AttributeError:
     MAX_THREADS_DEFAULT = 1
 
 # see https://github.com/python/cpython/commit/8ea0fd85bc67438f679491fae29dfe0a3961900a
-if sys.platform == "win32":  
+if sys.platform == "win32":
     MAX_THREADS_DEFAULT = min(48, MAX_THREADS_DEFAULT)
 LOCK_TIMEOUT_SECS = 3 * 3600
 LOCKFILE_NAME = ".lock"

@@ -7,7 +7,6 @@ Tools for converting CPAN packages to conda recipes.
 
 import codecs
 import hashlib
-from pkg_resources import parse_version
 from glob import glob
 import gzip
 import json
@@ -28,6 +27,7 @@ from conda_build.conda_interface import CondaHTTPError, CondaError
 from conda_build.config import get_or_merge_config
 from conda_build.utils import on_win, check_call_env
 from conda_build.variants import get_default_variant
+from conda_build.version import _parse as parse_version
 
 import requests
 from conda_build import environ
