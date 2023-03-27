@@ -89,7 +89,6 @@ PYPI_META_STATIC = {
     ]),
 }
 
-
 # Note the {} formatting bits here
 DISTUTILS_PATCH = '''\
 diff core.py core.py
@@ -103,8 +102,8 @@ diff core.py core.py
 +import io
 +import os.path
 +import sys
-+import ruamel.yaml as yaml
-+from ruamel.yaml import Loader, SafeLoader
++import yaml
++from yaml import Loader, SafeLoader
 +
 +# Override the default string handling function to always return unicode
 +# objects (taken from StackOverflow)
@@ -1219,18 +1218,14 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
     :param temp_dir: Temporary directory for doing for storing pkginfo.yaml
     :type temp_dir: str
     '''
+    # TODO: we could make everyone's lives easier if we include packaging here, because setuptools
+    #    needs it in recent versions.  At time of writing, it is not a package in defaults, so this
+    #    actually breaks conda-build right now.  Omit it until packaging is on defaults.
+    # specs = ['python %s*' % python_version, 'pyyaml', 'setuptools', 'six', 'packaging', 'appdirs']
     subdir = config.host_subdir
-    specs = [
-        f"python {python_version}*",
-        "pip",
-        "ruamel.yaml",
-        "setuptools",
-        "packaging",
-    ] + (
-        ["m2-patch", "m2-gcc-libs"]
-        if config.host_subdir.startswith("win")
-        else ["patch"]
-    )
+    specs = [f'python {python_version}*',
+             'pip', 'pyyaml', 'setuptools'] + (['m2-patch', 'm2-gcc-libs'] if config.host_subdir.startswith('win')
+                                                    else ['patch'])
     with open(os.path.join(src_dir, "setup.py")) as setup:
         text = setup.read()
         if 'import numpy' in text or 'from numpy' in text:

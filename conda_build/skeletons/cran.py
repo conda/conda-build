@@ -543,7 +543,7 @@ def yaml_quote_string(string):
 
     Note that this function is NOT general.
     """
-    return yaml.dump(string, indent=True, Dumper=SafeDumper).replace('\n...\n', '').replace('\n', '\n  ').rstrip('\n ')
+    return yaml.dump(string, Dumper=SafeDumper).replace('\n...\n', '').replace('\n', '\n  ').rstrip('\n ')
 
 
 # Due to how we render the metadata there can be significant areas of repeated newlines.
