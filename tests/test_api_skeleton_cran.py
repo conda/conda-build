@@ -18,7 +18,7 @@ from conda_build.skeletons.cran import CRAN_BUILD_SH_SOURCE, CRAN_META
 @pytest.mark.parametrize(
     "package,license_id,license_family,license_files",
     [
-        # ("r-rmarkdown", "GPL-3", "GPL3", {"GPL-3"}),  # fails with connection error
+        ("r-rmarkdown", "GPL-3", "GPL3", {"GPL-3"}),
         ("r-fastdigest", "Artistic-2.0", "OTHER", {"Artistic-2.0"}),
         ("r-tokenizers.bpe", "MPL-2.0", "OTHER", set()),
         ("r-broom", "MIT", "MIT", {"MIT", "LICENSE"}),
