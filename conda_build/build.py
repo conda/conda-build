@@ -35,7 +35,6 @@ import conda_package_handling.api
 from .conda_interface import env_path_backup_var_exists
 from .conda_interface import prefix_placeholder
 from .conda_interface import TemporaryDirectory
-from .conda_interface import VersionOrder
 from .conda_interface import PathType, FileMode
 from .conda_interface import EntityEncoder
 from .conda_interface import get_rc_urls
@@ -1929,9 +1928,6 @@ def create_build_envs(m, notest):
     m.config._merge_build_host = m.build_is_host
 
     if m.is_cross and not m.build_is_host:
-        if VersionOrder(conda_version) < VersionOrder('4.3.2'):
-            raise RuntimeError("Non-native subdir support only in conda >= 4.3.2")
-
         host_actions = environ.get_install_actions(m.config.host_prefix,
                                                     tuple(host_ms_deps), 'host',
                                                     subdir=m.config.host_subdir,
