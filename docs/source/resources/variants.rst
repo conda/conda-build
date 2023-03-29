@@ -49,7 +49,7 @@ meta.yaml contents like:
 
    requirements:
        build:
-           - python {{ python }}
+           - python
        run:
            - python
 
@@ -89,7 +89,7 @@ map for the content below.
 
       requirements:
           build:
-              - boost  {{ boost }}
+              - boost
           run:
               - boost
 
@@ -154,9 +154,9 @@ map for the content below.
 
       requirements:
           build:
-              - numpy  {{ numpy }}
+              - numpy
           run:
-              - numpy  {{ numpy }}
+              - numpy
 
    For legacy compatibility, Python is pinned implicitly without specifying
    ``{{ python }}`` in your recipe. This is generally intractable to extend to
@@ -261,12 +261,12 @@ First, the ``meta.yaml`` file:
        - name: py-xgboost
          requirements:
              - {{ pin_subpackage('libxgboost', exact=True) }}
-             - python  {{ python }}
+             - python
 
        - name: r-xgboost
          requirements:
              - {{ pin_subpackage('libxgboost', exact=True) }}
-             - r-base  {{ r_base }}
+             - r-base
 
 Next, the ``conda_build_config.yaml`` file, specifying our build matrix:
 
@@ -343,9 +343,9 @@ Again, with ``meta.yaml`` contents like:
 
    requirements:
        build:
-           - python {{ python }}
+           - python
        run:
-           - python {{ python }}
+           - python
 
 You could supply a variant to build this recipe like so:
 
@@ -569,7 +569,7 @@ requirements, and a variant that includes 2 NumPy versions:
 
    requirements:
        build:
-           - numpy {{ numpy }}
+           - numpy
        run:
            - numpy
 
@@ -844,7 +844,7 @@ An example variant/recipe is shown here:
 
    requirements:
        build:
-           - boost {{ boost }}
+           - boost
        run:
            - boost
 
@@ -890,7 +890,7 @@ function.
 
    requirements:
        build:
-           - numpy {{ numpy }}
+           - numpy
        run:
            - {{ pin_compatible('numpy', max_pin='x.x') }}
 
@@ -911,7 +911,7 @@ Each can be passed independently of the other. An example of specifying both:
 
    requirements:
        build:
-           - numpy {{ numpy }}
+           - numpy
        run:
            - {{ pin_compatible('numpy', min_pin='x.x', max_pin='x.x') }}
 
@@ -933,7 +933,7 @@ You can also pass the minimum or maximum version directly. These arguments super
 
    requirements:
        build:
-           - numpy {{ numpy }}
+           - numpy
        run:
            - {{ pin_compatible('numpy', lower_bound='1.10', upper_bound='3.0') }}
 
