@@ -1,5 +1,7 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 from collections import OrderedDict
 import contextlib
 import copy
@@ -11,6 +13,7 @@ from os.path import isfile, join
 import re
 import sys
 import time
+import warnings
 
 from bs4 import UnicodeDammit
 
@@ -79,7 +82,18 @@ numpy_compatible_re = re.compile(r"pin_\w+\([\'\"]numpy[\'\"]")
 used_vars_cache = {}
 
 
-def ns_cfg(config):
+def get_selectors(config: Config) -> dict[str, bool]:
+    """Aggregates selectors for use in recipe templating.
+
+    Derives selectors from the config and variants to be injected
+    into the Jinja environment prior to templating.
+
+    Args:
+        config (Config): The config object
+
+    Returns:
+        dict[str, bool]: Dictionary of on/off selectors for Jinja
+    """
     # Remember to update the docs of any of this changes
     plat = config.host_subdir
     d = dict(
@@ -160,6 +174,15 @@ def ns_cfg(config):
                     v = v.lower() == "true"
                 d[k] = v
     return d
+
+
+def ns_cfg(config: Config) -> dict[str, bool]:
+    warnings.warn(
+        "`conda_build.metadata.ns_cfg` is pending deprecation and will be removed in a "
+        "future release. Please use `conda_build.metadata.get_selectors` instead.",
+        PendingDeprecationWarning,
+    )
+    return get_selectors(config)
 
 
 # Selectors must be either:
@@ -384,7 +407,9 @@ def ensure_matching_hashes(output_metadata):
 
 
 def parse(data, config, path=None):
-    data = select_lines(data, ns_cfg(config), variants_in_place=bool(config.variant))
+    data = select_lines(
+        data, get_selectors(config), variants_in_place=bool(config.variant)
+    )
     res = yamlize(data)
     # ensure the result is a dict
     if res is None:
@@ -1833,7 +1858,7 @@ class MetaData:
         loader = FilteredLoader(jinja2.ChoiceLoader(loaders), config=self.config)
         env = jinja2.Environment(loader=loader, undefined=undefined_type)
 
-        env.globals.update(ns_cfg(self.config))
+        env.globals.update(get_selectors(self.config))
         env.globals.update(environ.get_dict(m=self, skip_build_id=skip_build_id))
         env.globals.update({"CONDA_BUILD_STATE": "RENDER"})
         env.globals.update(
@@ -2010,7 +2035,7 @@ class MetaData:
         if apply_selectors:
             recipe_text = select_lines(
                 recipe_text,
-                ns_cfg(self.config),
+                get_selectors(self.config),
                 variants_in_place=bool(self.config.variant),
             )
         return recipe_text.rstrip()
