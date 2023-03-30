@@ -3,46 +3,63 @@
 """
 This module tests the build API.  These are high-level integration tests.
 """
-from collections import OrderedDict
-from glob import glob
+import json
 import logging
 import os
-from pathlib import Path
 import re
 import subprocess
 import sys
-import json
+import tarfile
 import uuid
+from collections import OrderedDict
+from glob import glob
+from pathlib import Path
 
 # for version
 import conda
-
-from conda_build.conda_interface import url_path, LinkError, CondaError, cc_conda_build
-
-import conda_build
-
-from binstar_client.commands import remove, show
-from binstar_client.errors import NotFound
 import pytest
 import yaml
-import tarfile
-
-from conda_build import api, exceptions, __version__
-from conda_build.render import finalize_metadata
-from conda_build.utils import (copy_into, on_win, check_call_env, convert_path_for_cygwin_or_msys2,
-                               package_has_file, check_output_env, get_conda_operation_locks, rm_rf,
-                               prepend_bin_path, walk, env_var, FileNotFoundError)
-from conda_build.os_utils.external import find_executable
-from conda_build.exceptions import (DependencyNeedsBuildingError, CondaBuildException,
-                                    OverLinkingError, OverDependingError)
-from conda_build.conda_interface import reset_context
+from binstar_client.commands import remove, show
+from binstar_client.errors import NotFound
 from conda.exceptions import ClobberError, CondaMultiError
 
+import conda_build
+from conda_build import __version__, api, exceptions
+from conda_build.conda_interface import (
+    CondaError,
+    LinkError,
+    cc_conda_build,
+    reset_context,
+    url_path,
+)
+from conda_build.exceptions import (
+    CondaBuildException,
+    DependencyNeedsBuildingError,
+    OverDependingError,
+    OverLinkingError,
+)
+from conda_build.os_utils.external import find_executable
+from conda_build.render import finalize_metadata
+from conda_build.utils import (
+    FileNotFoundError,
+    check_call_env,
+    check_output_env,
+    convert_path_for_cygwin_or_msys2,
+    copy_into,
+    env_var,
+    get_conda_operation_locks,
+    on_win,
+    package_has_file,
+    prepend_bin_path,
+    rm_rf,
+    walk,
+)
+
 from .utils import (
+    add_mangling,
+    fail_dir,
     get_valid_recipes,
     metadata_dir,
-    fail_dir,
-    add_mangling,
     metadata_path,
 )
 
@@ -56,15 +73,18 @@ def represent_ordereddict(dumper, data):
 
         value.append((node_key, node_value))
 
-    return yaml.nodes.MappingNode('tag:yaml.org,2002:map', value)
+    return yaml.nodes.MappingNode("tag:yaml.org,2002:map", value)
 
 
 yaml.add_representer(OrderedDict, represent_ordereddict)
 
 
 class AnacondaClientArgs:
-    def __init__(self, specs, token=None, site=None, log_level=logging.INFO, force=False):
+    def __init__(
+        self, specs, token=None, site=None, log_level=logging.INFO, force=False
+    ):
         from binstar_client.utils import parse_specs
+
         self.specs = [parse_specs(specs)]
         self.spec = self.specs[0]
         self.token = token
@@ -110,10 +130,12 @@ def test_recipe_builds(
 
 
 @pytest.mark.serial
-@pytest.mark.skipif("CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,
-                    reason="This test does not run on Github Actions yet. We will need to adjust "
-                           "where to look for the pkgs. The github action for setup-miniconda sets "
-                           "pkg_dirs to conda_pkgs_dir.")
+@pytest.mark.skipif(
+    "CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,
+    reason="This test does not run on Github Actions yet. We will need to adjust "
+    "where to look for the pkgs. The github action for setup-miniconda sets "
+    "pkg_dirs to conda_pkgs_dir.",
+)
 # Regardless of the reason for skipping, we should definitely find a better way for tests to look for the packages
 # Rather than assuming they will be at $ROOT/pkgs since that can change and we don't care where they are in terms of the
 # tests.
@@ -126,10 +148,12 @@ def test_ignore_prefix_files(testing_config, monkeypatch):
 
 
 @pytest.mark.serial
-@pytest.mark.skipif("CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,
-                    reason="This test does not run on Github Actions yet. We will need to adjust "
-                           "where to look for the pkgs. The github action for setup-miniconda sets "
-                           "pkg_dirs to conda_pkgs_dir.")
+@pytest.mark.skipif(
+    "CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,
+    reason="This test does not run on Github Actions yet. We will need to adjust "
+    "where to look for the pkgs. The github action for setup-miniconda sets "
+    "pkg_dirs to conda_pkgs_dir.",
+)
 # Regardless of the reason for skipping, we should definitely find a better way for tests to look for the packages
 # Rather than assuming they will be at $ROOT/pkgs since that can change and we don't care where they are in terms of the
 # tests.
@@ -148,14 +172,18 @@ def test_token_upload(testing_metadata):
     folder_uuid = uuid.uuid4().hex
     # generated with conda_test_account user, command:
     #    anaconda auth --create --name CONDA_BUILD_UPLOAD_TEST --scopes 'api repos conda'
-    args = AnacondaClientArgs(specs="conda_build_test/test_token_upload_" + folder_uuid,
-                              token="co-143399b8-276e-48db-b43f-4a3de839a024",
-                              force=True)
+    args = AnacondaClientArgs(
+        specs="conda_build_test/test_token_upload_" + folder_uuid,
+        token="co-143399b8-276e-48db-b43f-4a3de839a024",
+        force=True,
+    )
 
     with pytest.raises(NotFound):
         show.main(args)
 
-    testing_metadata.meta['package']['name'] = '_'.join([testing_metadata.name(), folder_uuid])
+    testing_metadata.meta["package"]["name"] = "_".join(
+        [testing_metadata.name(), folder_uuid]
+    )
     testing_metadata.config.token = args.token
 
     # the folder with the test recipe to upload
@@ -201,8 +229,11 @@ def test_git_describe_info_on_branch(testing_config):
     m = api.render(recipe_path, config=testing_config)[0][0]
     output = api.get_output_file_path(m)[0]
     # missing hash because we set custom build string in meta.yaml
-    test_path = os.path.join(testing_config.croot, testing_config.host_subdir,
-                    "git_describe_number_branch-1.20.2.0-1_g82c6ba6.tar.bz2")
+    test_path = os.path.join(
+        testing_config.croot,
+        testing_config.host_subdir,
+        "git_describe_number_branch-1.20.2.0-1_g82c6ba6.tar.bz2",
+    )
     assert test_path == output
 
 
@@ -215,7 +246,7 @@ def test_no_include_recipe_config_arg(testing_metadata):
 
     # make sure that it is not there when the command line flag is passed
     testing_metadata.config.include_recipe = False
-    testing_metadata.meta['build']['number'] = 2
+    testing_metadata.meta["build"]["number"] = 2
     # We cannot test packages without recipes as we cannot render them
     output_file = api.build(testing_metadata, notest=True)[0]
     assert not package_has_file(output_file, "info/recipe/meta.yaml")
@@ -228,14 +259,18 @@ def test_no_include_recipe_meta_yaml(testing_metadata, testing_config):
     outputs = api.build(testing_metadata, notest=True)
     assert package_has_file(outputs[0], "info/recipe/meta.yaml")
 
-    output_file = api.build(os.path.join(metadata_dir, '_no_include_recipe'),
-                            config=testing_config, notest=True)[0]
+    output_file = api.build(
+        os.path.join(metadata_dir, "_no_include_recipe"),
+        config=testing_config,
+        notest=True,
+    )[0]
     assert not package_has_file(output_file, "info/recipe/meta.yaml")
 
     with pytest.raises(SystemExit):
         # we are testing that even with the recipe excluded, we still get the tests in place
-        output_file = api.build(os.path.join(metadata_dir, '_no_include_recipe'),
-                                config=testing_config)[0]
+        output_file = api.build(
+            os.path.join(metadata_dir, "_no_include_recipe"), config=testing_config
+        )[0]
 
 
 @pytest.mark.serial
@@ -243,7 +278,7 @@ def test_no_include_recipe_meta_yaml(testing_metadata, testing_config):
 def test_early_abort(testing_config, capfd):
     """There have been some problems with conda-build dropping out early.
     Make sure we aren't causing them"""
-    api.build(os.path.join(metadata_dir, '_test_early_abort'), config=testing_config)
+    api.build(os.path.join(metadata_dir, "_test_early_abort"), config=testing_config)
     output, error = capfd.readouterr()
     assert "Hello World" in output
 
@@ -253,40 +288,59 @@ def test_output_build_path_git_source(testing_config):
     m = api.render(recipe_path, config=testing_config)[0][0]
     output = api.get_output_file_paths(m)[0]
     _hash = m.hash_dependencies()
-    test_path = os.path.join(testing_config.croot, testing_config.host_subdir,
-                    "conda-build-test-source-git-jinja2-1.20.2-py{}{}{}_0_g262d444.tar.bz2".format(
-                        sys.version_info.major, sys.version_info.minor, _hash))
+    test_path = os.path.join(
+        testing_config.croot,
+        testing_config.host_subdir,
+        "conda-build-test-source-git-jinja2-1.20.2-py{}{}{}_0_g262d444.tar.bz2".format(
+            sys.version_info.major, sys.version_info.minor, _hash
+        ),
+    )
     assert output == test_path
 
 
 @pytest.mark.sanity
 @pytest.mark.serial
 def test_build_with_no_activate_does_not_activate():
-    api.build(os.path.join(metadata_dir, '_set_env_var_no_activate_build'), activate=False,
-              anaconda_upload=False)
+    api.build(
+        os.path.join(metadata_dir, "_set_env_var_no_activate_build"),
+        activate=False,
+        anaconda_upload=False,
+    )
 
 
 @pytest.mark.sanity
 @pytest.mark.serial
-@pytest.mark.xfail(on_win and len(os.getenv('PATH')) > 1024, reason="Long PATHs make activation fail with obscure messages")
+@pytest.mark.xfail(
+    on_win and len(os.getenv("PATH")) > 1024,
+    reason="Long PATHs make activation fail with obscure messages",
+)
 def test_build_with_activate_does_activate():
-    api.build(os.path.join(metadata_dir, '_set_env_var_activate_build'), activate=True,
-              anaconda_upload=False)
+    api.build(
+        os.path.join(metadata_dir, "_set_env_var_activate_build"),
+        activate=True,
+        anaconda_upload=False,
+    )
 
 
 @pytest.mark.sanity
-@pytest.mark.skipif(sys.platform == "win32",
-                    reason="no binary prefix manipulation done on windows.")
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="no binary prefix manipulation done on windows."
+)
 def test_binary_has_prefix_files(testing_config):
-    api.build(os.path.join(metadata_dir, '_binary_has_prefix_files'), config=testing_config)
+    api.build(
+        os.path.join(metadata_dir, "_binary_has_prefix_files"), config=testing_config
+    )
 
 
 @pytest.mark.xfail
 @pytest.mark.sanity
-@pytest.mark.skipif(sys.platform == "win32",
-                    reason="no binary prefix manipulation done on windows.")
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="no binary prefix manipulation done on windows."
+)
 def test_binary_has_prefix_files_non_utf8(testing_config):
-    api.build(os.path.join(metadata_dir, '_binary_has_utf_non_8'), config=testing_config)
+    api.build(
+        os.path.join(metadata_dir, "_binary_has_utf_non_8"), config=testing_config
+    )
 
 
 def test_relative_path_git_versioning(
@@ -334,15 +388,21 @@ def dummy_executable(folder, exename):
         prefix = "@echo off\n"
     else:
         prefix = "#!/bin/bash\nexec 1>&2\n"
-    with open(dummyfile, 'w') as f:
-        f.write(prefix + """
+    with open(dummyfile, "w") as f:
+        f.write(
+            prefix
+            + """
     echo ******* You have reached the dummy {}. It is likely there is a bug in
     echo ******* conda that makes it not add the _build/bin directory onto the
     echo ******* PATH before running the source checkout tool
     exit -1
-    """.format(exename))
+    """.format(
+                exename
+            )
+        )
     if sys.platform != "win32":
         import stat
+
         st = os.stat(dummyfile)
         os.chmod(dummyfile, st.st_mode | stat.S_IEXEC)
     return exename
@@ -352,14 +412,17 @@ def test_checkout_tool_as_dependency(testing_workdir, testing_config, monkeypatc
     # "hide" svn by putting a known bad one on PATH
     exename = dummy_executable(testing_workdir, "svn")
     monkeypatch.setenv("PATH", testing_workdir, prepend=os.pathsep)
-    FNULL = open(os.devnull, 'w')
+    FNULL = open(os.devnull, "w")
     with pytest.raises(subprocess.CalledProcessError):
-        check_call_env([exename, '--version'], stderr=FNULL)
+        check_call_env([exename, "--version"], stderr=FNULL)
     FNULL.close()
     env = os.environ.copy()
     env["PATH"] = os.pathsep.join([testing_workdir, env["PATH"]])
     testing_config.activate = True
-    api.build(os.path.join(metadata_dir, '_checkout_tool_as_dependency'), config=testing_config)
+    api.build(
+        os.path.join(metadata_dir, "_checkout_tool_as_dependency"),
+        config=testing_config,
+    )
 
 
 platforms = ["64" if sys.maxsize > 2**32 else "32"]
@@ -376,36 +439,31 @@ else:
 @pytest.mark.parametrize("msvc_ver", msvc_vers)
 def test_build_msvc_compiler(msvc_ver, monkeypatch):
     # verify that the correct compiler is available
-    cl_versions = {"9.0": 15,
-                   "10.0": 16,
-                   "11.0": 17,
-                   "12.0": 18,
-                   "14.0": 19}
+    cl_versions = {"9.0": 15, "10.0": 16, "11.0": 17, "12.0": 18, "14.0": 19}
 
-    monkeypatch.setenv('CONDATEST_MSVC_VER', msvc_ver)
-    monkeypatch.setenv('CL_EXE_VERSION', str(cl_versions[msvc_ver]))
+    monkeypatch.setenv("CONDATEST_MSVC_VER", msvc_ver)
+    monkeypatch.setenv("CL_EXE_VERSION", str(cl_versions[msvc_ver]))
 
     try:
         # Always build Python 2.7 - but set MSVC version manually via Jinja template
-        api.build(os.path.join(metadata_dir, '_build_msvc_compiler'), python="2.7")
+        api.build(os.path.join(metadata_dir, "_build_msvc_compiler"), python="2.7")
     except:
         raise
     finally:
-        del os.environ['CONDATEST_MSVC_VER']
-        del os.environ['CL_EXE_VERSION']
+        del os.environ["CONDATEST_MSVC_VER"]
+        del os.environ["CL_EXE_VERSION"]
 
 
 @pytest.mark.sanity
 @pytest.mark.parametrize("platform", platforms)
 @pytest.mark.parametrize("target_compiler", compilers)
 def test_cmake_generator(platform, target_compiler, testing_config):
-    testing_config.variant['python'] = target_compiler
+    testing_config.variant["python"] = target_compiler
     testing_config.activate = True
-    api.build(os.path.join(metadata_dir, '_cmake_generator'), config=testing_config)
+    api.build(os.path.join(metadata_dir, "_cmake_generator"), config=testing_config)
 
 
-@pytest.mark.skipif(sys.platform == "win32",
-                    reason="No windows symlinks")
+@pytest.mark.skipif(sys.platform == "win32", reason="No windows symlinks")
 def test_symlink_fail(testing_config):
     with pytest.raises((SystemExit, FileNotFoundError)):
         api.build(os.path.join(fail_dir, "symlinks"), config=testing_config)
@@ -413,14 +471,18 @@ def test_symlink_fail(testing_config):
 
 @pytest.mark.sanity
 def test_pip_in_meta_yaml_fail(testing_config):
-    with pytest.raises(ValueError, match='environment.yml'):
-        api.build(os.path.join(fail_dir, "pip_reqs_fail_informatively"), config=testing_config)
+    with pytest.raises(ValueError, match="environment.yml"):
+        api.build(
+            os.path.join(fail_dir, "pip_reqs_fail_informatively"), config=testing_config
+        )
 
 
 @pytest.mark.sanity
 def test_recursive_fail(testing_config):
-    with pytest.raises((RuntimeError, exceptions.DependencyNeedsBuildingError),
-                       match="recursive-build2"):
+    with pytest.raises(
+        (RuntimeError, exceptions.DependencyNeedsBuildingError),
+        match="recursive-build2",
+    ):
         api.build(os.path.join(fail_dir, "recursive-build"), config=testing_config)
     # indentation critical here.  If you indent this, and the exception is not raised, then
     #     the exc variable here isn't really completely created and shows really strange errors:
@@ -430,7 +492,9 @@ def test_recursive_fail(testing_config):
 @pytest.mark.sanity
 def test_jinja_typo(testing_config):
     with pytest.raises(SystemExit, match="GIT_DSECRIBE_TAG"):
-        api.build(os.path.join(fail_dir, "source_git_jinja2_oops"), config=testing_config)
+        api.build(
+            os.path.join(fail_dir, "source_git_jinja2_oops"), config=testing_config
+        )
 
 
 @pytest.mark.sanity
@@ -450,7 +514,7 @@ def test_skip_existing_url(testing_metadata, testing_workdir, capfd):
     outputs = api.build(testing_metadata)
 
     # Copy our package into some new folder
-    output_dir = os.path.join(testing_workdir, 'someoutput')
+    output_dir = os.path.join(testing_workdir, "someoutput")
     platform = os.path.join(output_dir, testing_metadata.config.host_subdir)
     os.makedirs(platform)
     copy_into(outputs[0], os.path.join(platform, os.path.basename(outputs[0])))
@@ -470,7 +534,9 @@ def test_skip_existing_url(testing_metadata, testing_workdir, capfd):
 def test_failed_tests_exit_build(testing_config):
     """https://github.com/conda/conda-build/issues/1112"""
     with pytest.raises(SystemExit, match="TESTS FAILED"):
-        api.build(os.path.join(metadata_dir, "_test_failed_test_exits"), config=testing_config)
+        api.build(
+            os.path.join(metadata_dir, "_test_failed_test_exits"), config=testing_config
+        )
 
 
 @pytest.mark.sanity
@@ -484,8 +550,10 @@ def test_requirements_txt_for_run_reqs(testing_config):
     This test attempts to reproduce those conditions: a channel other than defaults with this
     requirements.txt
     """
-    testing_config.channel_urls = ('conda_build_test', )
-    api.build(os.path.join(metadata_dir, "_requirements_txt_run_reqs"), config=testing_config)
+    testing_config.channel_urls = ("conda_build_test",)
+    api.build(
+        os.path.join(metadata_dir, "_requirements_txt_run_reqs"), config=testing_config
+    )
 
 
 @pytest.mark.skipif(
@@ -493,9 +561,11 @@ def test_requirements_txt_for_run_reqs(testing_config):
     reason="Python 3.10+, py_compile terminates once it finds an invalid file",
 )
 def test_compileall_compiles_all_good_files(testing_config):
-    output = api.build(os.path.join(metadata_dir, "_compile-test"), config=testing_config)[0]
-    good_files = ['f1.py', 'f3.py']
-    bad_file = 'f2_bad.py'
+    output = api.build(
+        os.path.join(metadata_dir, "_compile-test"), config=testing_config
+    )[0]
+    good_files = ["f1.py", "f3.py"]
+    bad_file = "f2_bad.py"
     for f in good_files:
         assert package_has_file(output, f)
         # look for the compiled file also
@@ -505,11 +575,13 @@ def test_compileall_compiles_all_good_files(testing_config):
 
 
 @pytest.mark.sanity
-@pytest.mark.skipif(not on_win, reason="only Windows is insane enough to have backslashes in paths")
+@pytest.mark.skipif(
+    not on_win, reason="only Windows is insane enough to have backslashes in paths"
+)
 def test_backslash_in_always_include_files_path():
-    api.build(os.path.join(metadata_dir, '_backslash_in_include_files'))
+    api.build(os.path.join(metadata_dir, "_backslash_in_include_files"))
     with pytest.raises(RuntimeError):
-        api.build(os.path.join(fail_dir, 'backslash_in_include_files'))
+        api.build(os.path.join(fail_dir, "backslash_in_include_files"))
 
 
 @pytest.mark.sanity
@@ -519,22 +591,24 @@ def test_build_metadata_object(testing_metadata):
 
 @pytest.mark.serial
 def test_numpy_setup_py_data(testing_config):
-    recipe_path = os.path.join(metadata_dir, '_numpy_setup_py_data')
+    recipe_path = os.path.join(metadata_dir, "_numpy_setup_py_data")
     # this shows an error that is OK to ignore:
     # (Is this Error still relevant)
 
     # PackagesNotFoundError: The following packages are missing from the target environment:
     #    - cython
-    subprocess.call('conda remove -y cython'.split())
+    subprocess.call("conda remove -y cython".split())
     with pytest.raises(CondaBuildException) as exc_info:
         api.render(recipe_path, config=testing_config, numpy="1.16")[0][0]
     assert exc_info.match("Cython")
     subprocess.check_call(["conda", "install", "-y", "cython"])
     m = api.render(recipe_path, config=testing_config, numpy="1.16")[0][0]
     _hash = m.hash_dependencies()
-    assert os.path.basename(api.get_output_file_path(m)[0]) == \
-                            "load_setup_py_test-0.1.0-np116py{}{}{}_0.tar.bz2".format(
-                                sys.version_info.major, sys.version_info.minor, _hash)
+    assert os.path.basename(
+        api.get_output_file_path(m)[0]
+    ) == "load_setup_py_test-0.1.0-np116py{}{}{}_0.tar.bz2".format(
+        sys.version_info.major, sys.version_info.minor, _hash
+    )
 
 
 @pytest.mark.slow
@@ -552,76 +626,84 @@ def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monke
        functions are using tools from the build env.
     """
 
-    toplevel = os.path.join(testing_workdir, 'toplevel')
+    toplevel = os.path.join(testing_workdir, "toplevel")
     os.mkdir(toplevel)
-    relative_sub = os.path.join(testing_workdir, 'relative_sub')
+    relative_sub = os.path.join(testing_workdir, "relative_sub")
     os.mkdir(relative_sub)
-    absolute_sub = os.path.join(testing_workdir, 'absolute_sub')
+    absolute_sub = os.path.join(testing_workdir, "absolute_sub")
     os.mkdir(absolute_sub)
 
     sys_git_env = os.environ.copy()
-    sys_git_env['GIT_AUTHOR_NAME'] = 'conda-build'
-    sys_git_env['GIT_AUTHOR_EMAIL'] = 'conda@conda-build.org'
-    sys_git_env['GIT_COMMITTER_NAME'] = 'conda-build'
-    sys_git_env['GIT_COMMITTER_EMAIL'] = 'conda@conda-build.org'
+    sys_git_env["GIT_AUTHOR_NAME"] = "conda-build"
+    sys_git_env["GIT_AUTHOR_EMAIL"] = "conda@conda-build.org"
+    sys_git_env["GIT_COMMITTER_NAME"] = "conda-build"
+    sys_git_env["GIT_COMMITTER_EMAIL"] = "conda@conda-build.org"
 
     # Find the git executable before putting our dummy one on PATH.
-    git = find_executable('git')
+    git = find_executable("git")
 
     # Put the broken git on os.environ["PATH"]
-    exename = dummy_executable(testing_workdir, 'git')
+    exename = dummy_executable(testing_workdir, "git")
     monkeypatch.setenv("PATH", testing_workdir, prepend=os.pathsep)
     # .. and ensure it gets run (and fails).
-    FNULL = open(os.devnull, 'w')
+    FNULL = open(os.devnull, "w")
     # Strangely ..
     #   stderr=FNULL suppresses the output from echo on OS X whereas
     #   stdout=FNULL suppresses the output from echo on Windows
     with pytest.raises(subprocess.CalledProcessError):
-        check_call_env([exename, '--version'], stdout=FNULL, stderr=FNULL)
+        check_call_env([exename, "--version"], stdout=FNULL, stderr=FNULL)
     FNULL.close()
 
     for tag in range(2):
         os.chdir(absolute_sub)
         if tag == 0:
-            check_call_env([git, 'init'], env=sys_git_env)
-        with open('absolute', 'w') as f:
+            check_call_env([git, "init"], env=sys_git_env)
+        with open("absolute", "w") as f:
             f.write(str(tag))
-        check_call_env([git, 'add', 'absolute'], env=sys_git_env)
-        check_call_env([git, 'commit', '-m', f'absolute{tag}'],
-                                env=sys_git_env)
+        check_call_env([git, "add", "absolute"], env=sys_git_env)
+        check_call_env([git, "commit", "-m", f"absolute{tag}"], env=sys_git_env)
 
         os.chdir(relative_sub)
         if tag == 0:
-            check_call_env([git, 'init'], env=sys_git_env)
-        with open('relative', 'w') as f:
+            check_call_env([git, "init"], env=sys_git_env)
+        with open("relative", "w") as f:
             f.write(str(tag))
-        check_call_env([git, 'add', 'relative'], env=sys_git_env)
-        check_call_env([git, 'commit', '-m', f'relative{tag}'],
-                                env=sys_git_env)
+        check_call_env([git, "add", "relative"], env=sys_git_env)
+        check_call_env([git, "commit", "-m", f"relative{tag}"], env=sys_git_env)
 
         os.chdir(toplevel)
         if tag == 0:
-            check_call_env([git, 'init'], env=sys_git_env)
-        with open('toplevel', 'w') as f:
+            check_call_env([git, "init"], env=sys_git_env)
+        with open("toplevel", "w") as f:
             f.write(str(tag))
-        check_call_env([git, 'add', 'toplevel'], env=sys_git_env)
-        check_call_env([git, 'commit', '-m', f'toplevel{tag}'],
-                                env=sys_git_env)
+        check_call_env([git, "add", "toplevel"], env=sys_git_env)
+        check_call_env([git, "commit", "-m", f"toplevel{tag}"], env=sys_git_env)
         if tag == 0:
-            check_call_env([git, 'submodule', 'add',
-                            convert_path_for_cygwin_or_msys2(git, absolute_sub), 'absolute'],
-                           env=sys_git_env)
-            check_call_env([git, 'submodule', 'add', '../relative_sub', 'relative'],
-                           env=sys_git_env)
+            check_call_env(
+                [
+                    git,
+                    "submodule",
+                    "add",
+                    convert_path_for_cygwin_or_msys2(git, absolute_sub),
+                    "absolute",
+                ],
+                env=sys_git_env,
+            )
+            check_call_env(
+                [git, "submodule", "add", "../relative_sub", "relative"],
+                env=sys_git_env,
+            )
         else:
             # Once we use a more recent Git for Windows than 2.6.4 on Windows or m2-git we
             # can change this to `git submodule update --recursive`.
-            gits = git.replace('\\', '/')
-            check_call_env([git, 'submodule', 'foreach', gits, 'pull'], env=sys_git_env)
-        check_call_env([git, 'commit', '-am', f'added submodules@{tag}'],
-                              env=sys_git_env)
-        check_call_env([git, 'tag', '-a', str(tag), '-m', f'tag {tag}'],
-                                env=sys_git_env)
+            gits = git.replace("\\", "/")
+            check_call_env([git, "submodule", "foreach", gits, "pull"], env=sys_git_env)
+        check_call_env(
+            [git, "commit", "-am", f"added submodules@{tag}"], env=sys_git_env
+        )
+        check_call_env(
+            [git, "tag", "-a", str(tag), "-m", f"tag {tag}"], env=sys_git_env
+        )
 
         # It is possible to use `Git for Windows` here too, though you *must* not use a different
         # (type of) git than the one used above to add the absolute submodule, because .gitmodules
@@ -629,43 +711,79 @@ def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monke
         #
         # Also, git is set to False here because it needs to be rebuilt with the longer prefix. As
         # things stand, my _b_env folder for this test contains more than 80 characters.
-        requirements = ('requirements', OrderedDict([
-                        ('build',
-                         ['git            # [False]',
-                          'm2-git         # [win]',
-                          'm2-filesystem  # [win]'])]))
+        requirements = (
+            "requirements",
+            OrderedDict(
+                [
+                    (
+                        "build",
+                        [
+                            "git            # [False]",
+                            "m2-git         # [win]",
+                            "m2-filesystem  # [win]",
+                        ],
+                    )
+                ]
+            ),
+        )
 
-        recipe_dir = os.path.join(testing_workdir, 'recipe')
+        recipe_dir = os.path.join(testing_workdir, "recipe")
         if not os.path.exists(recipe_dir):
             os.makedirs(recipe_dir)
-        filename = os.path.join(testing_workdir, 'recipe', 'meta.yaml')
-        data = OrderedDict([
-            ('package', OrderedDict([
-                ('name', 'relative_submodules'),
-                ('version', '{{ GIT_DESCRIBE_TAG }}')])),
-            ('source', OrderedDict([
-                ('git_url', toplevel),
-                ('git_tag', str(tag))])),
-            requirements,
-            ('build', OrderedDict([
-                ('script',
-                 ['git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%%s > '
-                       '%PREFIX%\\summaries.txt  # [win]',
-                  'git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%s > '
-                       '$PREFIX/summaries.txt   # [not win]'])
-            ])),
-            ('test', OrderedDict([
-                ('commands',
-                 ['echo absolute{}relative{} > %PREFIX%\\expected_summaries.txt       # [win]'
-                      .format(tag, tag),
-                  'fc.exe /W %PREFIX%\\expected_summaries.txt %PREFIX%\\summaries.txt # [win]',
-                  'echo absolute{}relative{} > $PREFIX/expected_summaries.txt         # [not win]'
-                      .format(tag, tag),
-                  'diff -wuN ${PREFIX}/expected_summaries.txt ${PREFIX}/summaries.txt # [not win]'])
-            ]))
-        ])
+        filename = os.path.join(testing_workdir, "recipe", "meta.yaml")
+        data = OrderedDict(
+            [
+                (
+                    "package",
+                    OrderedDict(
+                        [
+                            ("name", "relative_submodules"),
+                            ("version", "{{ GIT_DESCRIBE_TAG }}"),
+                        ]
+                    ),
+                ),
+                ("source", OrderedDict([("git_url", toplevel), ("git_tag", str(tag))])),
+                requirements,
+                (
+                    "build",
+                    OrderedDict(
+                        [
+                            (
+                                "script",
+                                [
+                                    "git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%%s > "
+                                    "%PREFIX%\\summaries.txt  # [win]",
+                                    "git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%s > "
+                                    "$PREFIX/summaries.txt   # [not win]",
+                                ],
+                            )
+                        ]
+                    ),
+                ),
+                (
+                    "test",
+                    OrderedDict(
+                        [
+                            (
+                                "commands",
+                                [
+                                    "echo absolute{}relative{} > %PREFIX%\\expected_summaries.txt       # [win]".format(
+                                        tag, tag
+                                    ),
+                                    "fc.exe /W %PREFIX%\\expected_summaries.txt %PREFIX%\\summaries.txt # [win]",
+                                    "echo absolute{}relative{} > $PREFIX/expected_summaries.txt         # [not win]".format(
+                                        tag, tag
+                                    ),
+                                    "diff -wuN ${PREFIX}/expected_summaries.txt ${PREFIX}/summaries.txt # [not win]",
+                                ],
+                            )
+                        ]
+                    ),
+                ),
+            ]
+        )
 
-        with open(filename, 'w') as outfile:
+        with open(filename, "w") as outfile:
             outfile.write(yaml.dump(data, default_flow_style=False, width=999999999))
         # Reset the path because our broken, dummy `git` would cause `render_recipe`
         # to fail, while no `git` will cause the build_dependencies to be installed.
@@ -674,44 +792,46 @@ def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monke
         # build env prepended to os.environ[]
         metadata = api.render(testing_workdir, config=testing_config)[0][0]
         output = api.get_output_file_path(metadata, config=testing_config)[0]
-        assert (f"relative_submodules-{tag}-" in output)
+        assert f"relative_submodules-{tag}-" in output
         api.build(metadata, config=testing_config)
 
 
 def test_noarch(testing_workdir):
-    filename = os.path.join(testing_workdir, 'meta.yaml')
+    filename = os.path.join(testing_workdir, "meta.yaml")
     for noarch in (False, True):
-        data = OrderedDict([
-            ('package', OrderedDict([
-                ('name', 'test'),
-                ('version', '0.0.0')])),
-            ('build', OrderedDict([
-                 ('noarch', noarch)]))
-            ])
-        with open(filename, 'w') as outfile:
+        data = OrderedDict(
+            [
+                ("package", OrderedDict([("name", "test"), ("version", "0.0.0")])),
+                ("build", OrderedDict([("noarch", noarch)])),
+            ]
+        )
+        with open(filename, "w") as outfile:
             outfile.write(yaml.dump(data, default_flow_style=False, width=999999999))
         output = api.get_output_file_path(testing_workdir)[0]
-        assert (os.path.sep + "noarch" + os.path.sep in output or not noarch)
-        assert (os.path.sep + "noarch" + os.path.sep not in output or noarch)
+        assert os.path.sep + "noarch" + os.path.sep in output or not noarch
+        assert os.path.sep + "noarch" + os.path.sep not in output or noarch
 
 
 def test_disable_pip(testing_metadata):
     testing_metadata.config.disable_pip = True
-    testing_metadata.meta['requirements'] = {'host': ['python'],
-                                             'run': ['python']}
-    testing_metadata.meta['build']['script'] = 'python -c "import pip; print(pip.__version__)"'
+    testing_metadata.meta["requirements"] = {"host": ["python"], "run": ["python"]}
+    testing_metadata.meta["build"][
+        "script"
+    ] = 'python -c "import pip; print(pip.__version__)"'
     with pytest.raises(subprocess.CalledProcessError):
         api.build(testing_metadata)
 
-    testing_metadata.meta['build']['script'] = ('python -c "import setuptools; '
-                                                'print(setuptools.__version__)"')
+    testing_metadata.meta["build"]["script"] = (
+        'python -c "import setuptools; ' 'print(setuptools.__version__)"'
+    )
     with pytest.raises(subprocess.CalledProcessError):
         api.build(testing_metadata)
 
 
 @pytest.mark.sanity
-@pytest.mark.skipif(sys.platform.startswith('win'),
-                    reason="rpath fixup not done on Windows.")
+@pytest.mark.skipif(
+    sys.platform.startswith("win"), reason="rpath fixup not done on Windows."
+)
 def test_rpath_unix(testing_config, variants_conda_build_sysroot):
     testing_config.activate = True
     api.build(
@@ -729,23 +849,27 @@ def test_noarch_none_value(testing_config):
 
 @pytest.mark.sanity
 def test_noarch_foo_value(testing_config):
-    outputs = api.build(os.path.join(metadata_dir, "noarch_generic"), config=testing_config)
-    metadata = json.loads(package_has_file(outputs[0], 'info/index.json'))
-    assert metadata['noarch'] == "generic"
+    outputs = api.build(
+        os.path.join(metadata_dir, "noarch_generic"), config=testing_config
+    )
+    metadata = json.loads(package_has_file(outputs[0], "info/index.json"))
+    assert metadata["noarch"] == "generic"
 
 
 def test_about_json_content(testing_metadata):
     outputs = api.build(testing_metadata)
-    about = json.loads(package_has_file(outputs[0], 'info/about.json'))
-    assert 'conda_version' in about and about['conda_version'] == conda.__version__
-    assert 'conda_build_version' in about and about['conda_build_version'] == __version__
-    assert 'channels' in about and about['channels']
-    assert 'tags' in about and about['tags'] == ["a", "b"]
+    about = json.loads(package_has_file(outputs[0], "info/about.json"))
+    assert "conda_version" in about and about["conda_version"] == conda.__version__
+    assert (
+        "conda_build_version" in about and about["conda_build_version"] == __version__
+    )
+    assert "channels" in about and about["channels"]
+    assert "tags" in about and about["tags"] == ["a", "b"]
     # this one comes in as a string - test type coercion
-    assert 'identifiers' in about and about['identifiers'] == ["a"]
-    assert 'env_vars' in about and about['env_vars']
+    assert "identifiers" in about and about["identifiers"] == ["a"]
+    assert "env_vars" in about and about["env_vars"]
 
-    assert 'root_pkgs' in about and about['root_pkgs']
+    assert "root_pkgs" in about and about["root_pkgs"]
 
 
 @pytest.mark.parametrize(
@@ -765,10 +889,18 @@ def test_about_license_file_and_prelink_message(testing_config, name, field):
 
     recipe = os.path.join(base_dir, "dir")
     outputs = api.build(recipe, config=testing_config)
-    assert package_has_file(outputs[0], f"info/{name}s/{name}-dir-from-source/first-{name}.txt")
-    assert package_has_file(outputs[0], f"info/{name}s/{name}-dir-from-source/second-{name}.txt")
-    assert package_has_file(outputs[0], f"info/{name}s/{name}-dir-from-recipe/first-{name}.txt")
-    assert package_has_file(outputs[0], f"info/{name}s/{name}-dir-from-recipe/second-{name}.txt")
+    assert package_has_file(
+        outputs[0], f"info/{name}s/{name}-dir-from-source/first-{name}.txt"
+    )
+    assert package_has_file(
+        outputs[0], f"info/{name}s/{name}-dir-from-source/second-{name}.txt"
+    )
+    assert package_has_file(
+        outputs[0], f"info/{name}s/{name}-dir-from-recipe/first-{name}.txt"
+    )
+    assert package_has_file(
+        outputs[0], f"info/{name}s/{name}-dir-from-recipe/second-{name}.txt"
+    )
 
     recipe = os.path.join(base_dir, "dir-no-slash-suffix")
     assert os.path.isdir(recipe)
@@ -778,10 +910,12 @@ def test_about_license_file_and_prelink_message(testing_config, name, field):
 
 
 @pytest.mark.slow
-@pytest.mark.skipif("CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,
-                    reason="This test does not run on Github Actions yet. We will need to adjust "
-                           "where to look for the pkgs. The github action for setup-miniconda sets "
-                           "pkg_dirs to conda_pkgs_dir.")
+@pytest.mark.skipif(
+    "CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,
+    reason="This test does not run on Github Actions yet. We will need to adjust "
+    "where to look for the pkgs. The github action for setup-miniconda sets "
+    "pkg_dirs to conda_pkgs_dir.",
+)
 # Regardless of the reason for skipping, we should definitely find a better way for tests to look for the packages
 # Rather than assuming they will be at $ROOT/pkgs since that can change and we don't care where they are in terms of the
 # tests.
@@ -789,51 +923,68 @@ def test_noarch_python_with_tests(testing_config):
     recipe = os.path.join(metadata_dir, "_noarch_python_with_tests")
     pkg = api.build(recipe, config=testing_config)[0]
     # noarch recipes with commands should generate both .bat and .sh files.
-    assert package_has_file(pkg, 'info/test/run_test.bat')
-    assert package_has_file(pkg, 'info/test/run_test.sh')
+    assert package_has_file(pkg, "info/test/run_test.bat")
+    assert package_has_file(pkg, "info/test/run_test.sh")
 
 
 @pytest.mark.sanity
 def test_noarch_python_1(testing_config):
-    output = api.build(os.path.join(metadata_dir, "_noarch_python"), config=testing_config)[0]
-    assert package_has_file(output, 'info/files') != ''
-    extra = json.loads(package_has_file(output, 'info/link.json'))
-    assert 'noarch' in extra
-    assert 'entry_points' in extra['noarch']
-    assert 'type' in extra['noarch']
-    assert 'package_metadata_version' in extra
+    output = api.build(
+        os.path.join(metadata_dir, "_noarch_python"), config=testing_config
+    )[0]
+    assert package_has_file(output, "info/files") != ""
+    extra = json.loads(package_has_file(output, "info/link.json"))
+    assert "noarch" in extra
+    assert "entry_points" in extra["noarch"]
+    assert "type" in extra["noarch"]
+    assert "package_metadata_version" in extra
 
 
 @pytest.mark.sanity
 def test_skip_compile_pyc(testing_config):
-    outputs = api.build(os.path.join(metadata_dir, "skip_compile_pyc"), config=testing_config)
+    outputs = api.build(
+        os.path.join(metadata_dir, "skip_compile_pyc"), config=testing_config
+    )
     tf = tarfile.open(outputs[0])
     pyc_count = 0
     for f in tf.getmembers():
         filename = os.path.basename(f.name)
         _, ext = os.path.splitext(filename)
-        basename = filename.split('.', 1)[0]
-        if basename == 'skip_compile_pyc':
-            assert not ext == '.pyc', f"a skip_compile_pyc .pyc was compiled: {filename}"
-        if ext == '.pyc':
-            assert basename == 'compile_pyc', f"an unexpected .pyc was compiled: {filename}"
+        basename = filename.split(".", 1)[0]
+        if basename == "skip_compile_pyc":
+            assert (
+                not ext == ".pyc"
+            ), f"a skip_compile_pyc .pyc was compiled: {filename}"
+        if ext == ".pyc":
+            assert (
+                basename == "compile_pyc"
+            ), f"an unexpected .pyc was compiled: {filename}"
             pyc_count = pyc_count + 1
-    assert pyc_count == 2, f"there should be 2 .pyc files, instead there were {pyc_count}"
+    assert (
+        pyc_count == 2
+    ), f"there should be 2 .pyc files, instead there were {pyc_count}"
 
 
 def test_detect_binary_files_with_prefix(testing_config):
-    outputs = api.build(os.path.join(metadata_dir, "_detect_binary_files_with_prefix"),
-                        config=testing_config)
+    outputs = api.build(
+        os.path.join(metadata_dir, "_detect_binary_files_with_prefix"),
+        config=testing_config,
+    )
     matches = []
     with tarfile.open(outputs[0]) as tf:
-        has_prefix = tf.extractfile('info/has_prefix')
-        contents = [p.strip().decode('utf-8') for p in
-                    has_prefix.readlines()]
+        has_prefix = tf.extractfile("info/has_prefix")
+        contents = [p.strip().decode("utf-8") for p in has_prefix.readlines()]
         has_prefix.close()
-        matches = [entry for entry in contents if entry.endswith('binary-has-prefix') or
-                                                  entry.endswith('"binary-has-prefix"')]
+        matches = [
+            entry
+            for entry in contents
+            if entry.endswith("binary-has-prefix")
+            or entry.endswith('"binary-has-prefix"')
+        ]
     assert len(matches) == 1, "binary-has-prefix not recorded in info/has_prefix"
-    assert ' binary ' in matches[0], "binary-has-prefix not recorded as binary in info/has_prefix"
+    assert (
+        " binary " in matches[0]
+    ), "binary-has-prefix not recorded as binary in info/has_prefix"
 
 
 def test_skip_detect_binary_files_with_prefix(testing_config):
@@ -842,16 +993,21 @@ def test_skip_detect_binary_files_with_prefix(testing_config):
     matches = []
     with tarfile.open(outputs[0]) as tf:
         try:
-            has_prefix = tf.extractfile('info/has_prefix')
-            contents = [p.strip().decode('utf-8') for p in
-                        has_prefix.readlines()]
+            has_prefix = tf.extractfile("info/has_prefix")
+            contents = [p.strip().decode("utf-8") for p in has_prefix.readlines()]
             has_prefix.close()
-            matches = [entry for entry in contents if entry.endswith('binary-has-prefix') or
-                                                      entry.endswith('"binary-has-prefix"')]
+            matches = [
+                entry
+                for entry in contents
+                if entry.endswith("binary-has-prefix")
+                or entry.endswith('"binary-has-prefix"')
+            ]
         except:
             pass
-    assert len(matches) == 0, "binary-has-prefix recorded in info/has_prefix despite:" \
-                              "build/detect_binary_files_with_prefix: false"
+    assert len(matches) == 0, (
+        "binary-has-prefix recorded in info/has_prefix despite:"
+        "build/detect_binary_files_with_prefix: false"
+    )
 
 
 def test_fix_permissions(testing_config):
@@ -859,18 +1015,21 @@ def test_fix_permissions(testing_config):
     outputs = api.build(recipe, config=testing_config)
     with tarfile.open(outputs[0]) as tf:
         for f in tf.getmembers():
-            assert f.mode & 0o444 == 0o444, f"tar member '{f.name}' has invalid (read) mode"
+            assert (
+                f.mode & 0o444 == 0o444
+            ), f"tar member '{f.name}' has invalid (read) mode"
 
 
 @pytest.mark.sanity
 @pytest.mark.skipif(not on_win, reason="windows-only functionality")
-@pytest.mark.parametrize('recipe_name', ["_script_win_creates_exe",
-                                         "_script_win_creates_exe_garbled"])
+@pytest.mark.parametrize(
+    "recipe_name", ["_script_win_creates_exe", "_script_win_creates_exe_garbled"]
+)
 def test_script_win_creates_exe(testing_config, recipe_name):
     recipe = os.path.join(metadata_dir, recipe_name)
     outputs = api.build(recipe, config=testing_config)
-    assert package_has_file(outputs[0], 'Scripts/test-script.exe')
-    assert package_has_file(outputs[0], 'Scripts/test-script-script.py')
+    assert package_has_file(outputs[0], "Scripts/test-script.exe")
+    assert package_has_file(outputs[0], "Scripts/test-script-script.py")
 
 
 @pytest.mark.sanity
@@ -881,25 +1040,36 @@ def test_output_folder_moves_file(testing_metadata, testing_workdir):
 
 
 @pytest.mark.sanity
-@pytest.mark.skipif("CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,
-                    reason="This test does not run on Github Actions yet. We will need to adjust "
-                           "where to look for the pkgs. The github action for setup-miniconda sets "
-                           "pkg_dirs to conda_pkgs_dir.")
+@pytest.mark.skipif(
+    "CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,
+    reason="This test does not run on Github Actions yet. We will need to adjust "
+    "where to look for the pkgs. The github action for setup-miniconda sets "
+    "pkg_dirs to conda_pkgs_dir.",
+)
 def test_info_files_json(testing_config):
-    outputs = api.build(os.path.join(metadata_dir, "_ignore_some_prefix_files"),
-                        config=testing_config)
+    outputs = api.build(
+        os.path.join(metadata_dir, "_ignore_some_prefix_files"), config=testing_config
+    )
     assert package_has_file(outputs[0], "info/paths.json")
     with tarfile.open(outputs[0]) as tf:
-        data = json.loads(tf.extractfile('info/paths.json').read().decode('utf-8'))
-    fields = ["_path", "sha256", "size_in_bytes", "path_type", "file_mode", "no_link",
-              "prefix_placeholder", "inode_paths"]
+        data = json.loads(tf.extractfile("info/paths.json").read().decode("utf-8"))
+    fields = [
+        "_path",
+        "sha256",
+        "size_in_bytes",
+        "path_type",
+        "file_mode",
+        "no_link",
+        "prefix_placeholder",
+        "inode_paths",
+    ]
     for key in data.keys():
-        assert key in ['paths', 'paths_version']
-    for paths in data.get('paths'):
+        assert key in ["paths", "paths_version"]
+    for paths in data.get("paths"):
         for field in paths.keys():
             assert field in fields
-    assert len(data.get('paths')) == 2
-    for file in data.get('paths'):
+    assert len(data.get("paths")) == 2
+    for file in data.get("paths"):
         for key in file.keys():
             assert key in fields
         short_path = file.get("_path")
@@ -914,49 +1084,56 @@ def test_info_files_json(testing_config):
 def test_build_expands_wildcards(mocker):
     build_tree = mocker.patch("conda_build.build.build_tree")
     config = api.Config()
-    files = ['abc', 'acb']
+    files = ["abc", "acb"]
     for f in files:
         os.makedirs(f)
-        with open(os.path.join(f, 'meta.yaml'), 'w') as fh:
-            fh.write('\n')
+        with open(os.path.join(f, "meta.yaml"), "w") as fh:
+            fh.write("\n")
     api.build(["a*"], config=config)
-    output = sorted(os.path.join(os.getcwd(), path, 'meta.yaml') for path in files)
+    output = sorted(os.path.join(os.getcwd(), path, "meta.yaml") for path in files)
 
-    build_tree.assert_called_once_with(output,
-                                       config=mocker.ANY,
-                                       stats=mocker.ANY,
-                                       build_only=False,
-                                       post=None, notest=False,
-                                       variants=None)
+    build_tree.assert_called_once_with(
+        output,
+        config=mocker.ANY,
+        stats=mocker.ANY,
+        build_only=False,
+        post=None,
+        notest=False,
+        variants=None,
+    )
 
 
-@pytest.mark.parametrize('set_build_id', [True, False])
+@pytest.mark.parametrize("set_build_id", [True, False])
 def test_remove_workdir_default(testing_config, caplog, set_build_id):
-    recipe = os.path.join(metadata_dir, '_keep_work_dir')
+    recipe = os.path.join(metadata_dir, "_keep_work_dir")
     # make a metadata object - otherwise the build folder is computed within the build, but does
     #    not alter the config object that is passed in.  This is by design - we always make copies
     #    of the config object rather than edit it in place, so that variants don't clobber one
     #    another
     metadata = api.render(recipe, config=testing_config)[0][0]
     api.build(metadata, set_build_id=set_build_id)
-    assert not glob(os.path.join(metadata.config.work_dir, '*'))
+    assert not glob(os.path.join(metadata.config.work_dir, "*"))
 
 
 def test_keep_workdir_and_dirty_reuse(testing_config, capfd):
-    recipe = os.path.join(metadata_dir, '_keep_work_dir')
+    recipe = os.path.join(metadata_dir, "_keep_work_dir")
     # make a metadata object - otherwise the build folder is computed within the build, but does
     #    not alter the config object that is passed in.  This is by design - we always make copies
     #    of the config object rather than edit it in place, so that variants don't clobber one
     #    another
 
-    metadata = api.render(recipe, config=testing_config, dirty=True, remove_work_dir=False)[0][0]
+    metadata = api.render(
+        recipe, config=testing_config, dirty=True, remove_work_dir=False
+    )[0][0]
     workdir = metadata.config.work_dir
     api.build(metadata)
     out, err = capfd.readouterr()
-    assert glob(os.path.join(metadata.config.work_dir, '*'))
+    assert glob(os.path.join(metadata.config.work_dir, "*"))
 
     # test that --dirty reuses the same old folder
-    metadata = api.render(recipe, config=testing_config, dirty=True, remove_work_dir=False)[0][0]
+    metadata = api.render(
+        recipe, config=testing_config, dirty=True, remove_work_dir=False
+    )[0][0]
     assert workdir == metadata.config.work_dir
 
     # test that without --dirty, we don't reuse the folder
@@ -968,19 +1145,19 @@ def test_keep_workdir_and_dirty_reuse(testing_config, capfd):
 
 @pytest.mark.sanity
 def test_workdir_removal_warning(testing_config, caplog):
-    recipe = os.path.join(metadata_dir, '_test_uses_src_dir')
+    recipe = os.path.join(metadata_dir, "_test_uses_src_dir")
     with pytest.raises(ValueError) as exc:
         api.build(recipe, config=testing_config)
         assert "work dir is removed" in str(exc)
 
 
 @pytest.mark.sanity
-@pytest.mark.skipif(sys.platform != 'darwin', reason="relevant to mac only")
+@pytest.mark.skipif(sys.platform != "darwin", reason="relevant to mac only")
 def test_append_python_app_osx(testing_config, conda_build_test_recipe_envvar: str):
     """Recipes that use osx_is_app need to have python.app in their runtime requirements.
 
     conda-build will add it if it's missing."""
-    recipe = os.path.join(metadata_dir, '_osx_is_app_missing_python_app')
+    recipe = os.path.join(metadata_dir, "_osx_is_app_missing_python_app")
     # tests will fail here if python.app is not added to the run reqs by conda-build, because
     #    without it, pythonw will be missing.
     api.build(recipe, config=testing_config)
@@ -988,168 +1165,218 @@ def test_append_python_app_osx(testing_config, conda_build_test_recipe_envvar: s
 
 @pytest.mark.sanity
 def test_run_exports(testing_metadata, testing_config, testing_workdir):
-    api.build(os.path.join(metadata_dir, '_run_exports'), config=testing_config, notest=True)
-    api.build(os.path.join(metadata_dir, '_run_exports_implicit_weak'), config=testing_config,
-              notest=True)
+    api.build(
+        os.path.join(metadata_dir, "_run_exports"), config=testing_config, notest=True
+    )
+    api.build(
+        os.path.join(metadata_dir, "_run_exports_implicit_weak"),
+        config=testing_config,
+        notest=True,
+    )
 
     # run_exports is tricky.  We mostly only ever want things in "host".  Here are the conditions:
 
     #    1. only build section present (legacy recipe).  Here, use run_exports from build.  Because build and host
     #       will be merged when build subdir == host_subdir, the weak run_exports should be present.
-    testing_metadata.meta['requirements']['build'] = ['test_has_run_exports']
-    api.output_yaml(testing_metadata, 'meta.yaml')
+    testing_metadata.meta["requirements"]["build"] = ["test_has_run_exports"]
+    api.output_yaml(testing_metadata, "meta.yaml")
     m = api.render(testing_workdir, config=testing_config)[0][0]
-    assert 'strong_pinned_package 1.0.*' in m.meta['requirements']['run']
-    assert 'weak_pinned_package 1.0.*' in m.meta['requirements']['run']
+    assert "strong_pinned_package 1.0.*" in m.meta["requirements"]["run"]
+    assert "weak_pinned_package 1.0.*" in m.meta["requirements"]["run"]
 
     #    2. host present.  Use run_exports from host, ignore 'weak' ones from build.  All are
     #           weak by default.
-    testing_metadata.meta['requirements']['build'] = ['test_has_run_exports_implicit_weak',
-                                                      '{{ compiler("c") }}']
-    testing_metadata.meta['requirements']['host'] = ['python']
-    api.output_yaml(testing_metadata, 'host_present_weak/meta.yaml')
-    m = api.render(os.path.join(testing_workdir, 'host_present_weak'), config=testing_config)[0][0]
-    assert 'weak_pinned_package 2.0.*' not in m.meta['requirements'].get('run', [])
+    testing_metadata.meta["requirements"]["build"] = [
+        "test_has_run_exports_implicit_weak",
+        '{{ compiler("c") }}',
+    ]
+    testing_metadata.meta["requirements"]["host"] = ["python"]
+    api.output_yaml(testing_metadata, "host_present_weak/meta.yaml")
+    m = api.render(
+        os.path.join(testing_workdir, "host_present_weak"), config=testing_config
+    )[0][0]
+    assert "weak_pinned_package 2.0.*" not in m.meta["requirements"].get("run", [])
 
     #    3. host present, and deps in build have "strong" run_exports section.  use host, add
     #           in "strong" from build.
-    testing_metadata.meta['requirements']['build'] = ['test_has_run_exports', '{{ compiler("c") }}']
-    testing_metadata.meta['requirements']['host'] = ['test_has_run_exports_implicit_weak']
-    api.output_yaml(testing_metadata, 'host_present_strong/meta.yaml')
-    m = api.render(os.path.join(testing_workdir, 'host_present_strong'),
-                   config=testing_config)[0][0]
-    assert 'strong_pinned_package 1.0 0' in m.meta['requirements']['host']
-    assert 'strong_pinned_package 1.0.*' in m.meta['requirements']['run']
+    testing_metadata.meta["requirements"]["build"] = [
+        "test_has_run_exports",
+        '{{ compiler("c") }}',
+    ]
+    testing_metadata.meta["requirements"]["host"] = [
+        "test_has_run_exports_implicit_weak"
+    ]
+    api.output_yaml(testing_metadata, "host_present_strong/meta.yaml")
+    m = api.render(
+        os.path.join(testing_workdir, "host_present_strong"), config=testing_config
+    )[0][0]
+    assert "strong_pinned_package 1.0 0" in m.meta["requirements"]["host"]
+    assert "strong_pinned_package 1.0.*" in m.meta["requirements"]["run"]
     # weak one from test_has_run_exports should be excluded, since it is a build dep
-    assert 'weak_pinned_package 1.0.*' not in m.meta['requirements']['run']
+    assert "weak_pinned_package 1.0.*" not in m.meta["requirements"]["run"]
     # weak one from test_has_run_exports_implicit_weak should be present, since it is a host dep
-    assert 'weak_pinned_package 2.0.*' in m.meta['requirements']['run']
+    assert "weak_pinned_package 2.0.*" in m.meta["requirements"]["run"]
 
 
 @pytest.mark.sanity
 def test_ignore_run_exports(testing_metadata, testing_config):
     # build the package with run exports for ensuring that we ignore it
-    api.build(os.path.join(metadata_dir, '_run_exports'), config=testing_config,
-              notest=True)
+    api.build(
+        os.path.join(metadata_dir, "_run_exports"), config=testing_config, notest=True
+    )
     # customize our fixture metadata with our desired changes
-    testing_metadata.meta['requirements']['host'] = ['test_has_run_exports']
-    testing_metadata.meta['build']['ignore_run_exports'] = ['downstream_pinned_package']
+    testing_metadata.meta["requirements"]["host"] = ["test_has_run_exports"]
+    testing_metadata.meta["build"]["ignore_run_exports"] = ["downstream_pinned_package"]
     testing_metadata.config.index = None
     m = finalize_metadata(testing_metadata)
-    assert 'downstream_pinned_package 1.0' not in m.meta['requirements'].get('run', [])
+    assert "downstream_pinned_package 1.0" not in m.meta["requirements"].get("run", [])
 
 
 @pytest.mark.sanity
 def test_ignore_run_exports_from(testing_metadata, testing_config):
     # build the package with run exports for ensuring that we ignore it
-    api.build(os.path.join(metadata_dir, '_run_exports'), config=testing_config,
-              notest=True)
+    api.build(
+        os.path.join(metadata_dir, "_run_exports"), config=testing_config, notest=True
+    )
     # customize our fixture metadata with our desired changes
-    testing_metadata.meta['requirements']['host'] = ['test_has_run_exports']
-    testing_metadata.meta['build']['ignore_run_exports_from'] = ['test_has_run_exports']
+    testing_metadata.meta["requirements"]["host"] = ["test_has_run_exports"]
+    testing_metadata.meta["build"]["ignore_run_exports_from"] = ["test_has_run_exports"]
     testing_metadata.config.index = None
     m = finalize_metadata(testing_metadata)
-    assert 'downstream_pinned_package 1.0' not in m.meta['requirements'].get('run', [])
+    assert "downstream_pinned_package 1.0" not in m.meta["requirements"].get("run", [])
 
 
-@pytest.mark.skipif("CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,
-                    reason="This test does not run on Github Actions yet. We will need to adjust "
-                           "where to look for the pkgs. The github action for setup-miniconda sets "
-                           "pkg_dirs to conda_pkgs_dir.")
+@pytest.mark.skipif(
+    "CI" in os.environ and "GITHUB_WORKFLOW" in os.environ,
+    reason="This test does not run on Github Actions yet. We will need to adjust "
+    "where to look for the pkgs. The github action for setup-miniconda sets "
+    "pkg_dirs to conda_pkgs_dir.",
+)
 def test_run_exports_noarch_python(testing_metadata, testing_config):
     # build the package with run exports for ensuring that we ignore it
-    api.build(os.path.join(metadata_dir, '_run_exports_noarch'), config=testing_config,
-              notest=True)
+    api.build(
+        os.path.join(metadata_dir, "_run_exports_noarch"),
+        config=testing_config,
+        notest=True,
+    )
     # customize our fixture metadata with our desired changes
-    testing_metadata.meta['requirements']['host'] = ['python']
-    testing_metadata.meta['requirements']['run'] = ['python']
-    testing_metadata.meta['build']['noarch'] = 'python'
+    testing_metadata.meta["requirements"]["host"] = ["python"]
+    testing_metadata.meta["requirements"]["run"] = ["python"]
+    testing_metadata.meta["build"]["noarch"] = "python"
     testing_metadata.config.index = None
     testing_metadata.config.variant["python"] = "3.8 with_run_exports"
 
     m = finalize_metadata(testing_metadata)
-    assert 'python 3.6 with_run_exports' in m.meta['requirements'].get('host', [])
-    assert 'python 3.6 with_run_exports' not in m.meta['requirements'].get('run', [])
+    assert "python 3.6 with_run_exports" in m.meta["requirements"].get("host", [])
+    assert "python 3.6 with_run_exports" not in m.meta["requirements"].get("run", [])
 
 
 def test_run_exports_constrains(testing_metadata, testing_config, testing_workdir):
-    api.build(os.path.join(metadata_dir, '_run_exports_constrains'), config=testing_config,
-              notest=True)
+    api.build(
+        os.path.join(metadata_dir, "_run_exports_constrains"),
+        config=testing_config,
+        notest=True,
+    )
 
-    testing_metadata.meta['requirements']['build'] = ['run_exports_constrains']
-    testing_metadata.meta['requirements']['host'] = []
-    api.output_yaml(testing_metadata, 'in_build/meta.yaml')
-    m = api.render(os.path.join(testing_workdir, 'in_build'), config=testing_config)[0][0]
-    reqs_set = lambda section: set(m.meta['requirements'].get(section, []))
-    assert {'strong_run_export'} == reqs_set('run')
-    assert {'strong_constrains_export'} == reqs_set('run_constrained')
+    testing_metadata.meta["requirements"]["build"] = ["run_exports_constrains"]
+    testing_metadata.meta["requirements"]["host"] = []
+    api.output_yaml(testing_metadata, "in_build/meta.yaml")
+    m = api.render(os.path.join(testing_workdir, "in_build"), config=testing_config)[0][
+        0
+    ]
+    reqs_set = lambda section: set(m.meta["requirements"].get(section, []))
+    assert {"strong_run_export"} == reqs_set("run")
+    assert {"strong_constrains_export"} == reqs_set("run_constrained")
 
-    testing_metadata.meta['requirements']['build'] = []
-    testing_metadata.meta['requirements']['host'] = ['run_exports_constrains']
-    api.output_yaml(testing_metadata, 'in_host/meta.yaml')
-    m = api.render(os.path.join(testing_workdir, 'in_host'), config=testing_config)[0][0]
-    reqs_set = lambda section: set(m.meta['requirements'].get(section, []))
-    assert {'strong_run_export', 'weak_run_export'} == reqs_set('run')
-    assert {'strong_constrains_export', 'weak_constrains_export'} == reqs_set('run_constrained')
+    testing_metadata.meta["requirements"]["build"] = []
+    testing_metadata.meta["requirements"]["host"] = ["run_exports_constrains"]
+    api.output_yaml(testing_metadata, "in_host/meta.yaml")
+    m = api.render(os.path.join(testing_workdir, "in_host"), config=testing_config)[0][
+        0
+    ]
+    reqs_set = lambda section: set(m.meta["requirements"].get(section, []))
+    assert {"strong_run_export", "weak_run_export"} == reqs_set("run")
+    assert {"strong_constrains_export", "weak_constrains_export"} == reqs_set(
+        "run_constrained"
+    )
 
-    testing_metadata.meta['requirements']['build'] = ['run_exports_constrains_only_weak']
-    testing_metadata.meta['requirements']['host'] = []
-    api.output_yaml(testing_metadata, 'only_weak_in_build/meta.yaml')
-    m = api.render(os.path.join(testing_workdir, 'only_weak_in_build'), config=testing_config)[0][0]
-    reqs_set = lambda section: set(m.meta['requirements'].get(section, []))
-    assert set() == reqs_set('run')
-    assert set() == reqs_set('run_constrained')
+    testing_metadata.meta["requirements"]["build"] = [
+        "run_exports_constrains_only_weak"
+    ]
+    testing_metadata.meta["requirements"]["host"] = []
+    api.output_yaml(testing_metadata, "only_weak_in_build/meta.yaml")
+    m = api.render(
+        os.path.join(testing_workdir, "only_weak_in_build"), config=testing_config
+    )[0][0]
+    reqs_set = lambda section: set(m.meta["requirements"].get(section, []))
+    assert set() == reqs_set("run")
+    assert set() == reqs_set("run_constrained")
 
-    testing_metadata.meta['requirements']['build'] = []
-    testing_metadata.meta['requirements']['host'] = ['run_exports_constrains_only_weak']
-    api.output_yaml(testing_metadata, 'only_weak_in_host/meta.yaml')
-    m = api.render(os.path.join(testing_workdir, 'only_weak_in_host'), config=testing_config)[0][0]
-    reqs_set = lambda section: set(m.meta['requirements'].get(section, []))
-    assert {'weak_run_export'} == reqs_set('run')
-    assert {'weak_constrains_export'} == reqs_set('run_constrained')
+    testing_metadata.meta["requirements"]["build"] = []
+    testing_metadata.meta["requirements"]["host"] = ["run_exports_constrains_only_weak"]
+    api.output_yaml(testing_metadata, "only_weak_in_host/meta.yaml")
+    m = api.render(
+        os.path.join(testing_workdir, "only_weak_in_host"), config=testing_config
+    )[0][0]
+    reqs_set = lambda section: set(m.meta["requirements"].get(section, []))
+    assert {"weak_run_export"} == reqs_set("run")
+    assert {"weak_constrains_export"} == reqs_set("run_constrained")
 
 
 def test_pin_subpackage_exact(testing_config):
-    recipe = os.path.join(metadata_dir, '_pin_subpackage_exact')
+    recipe = os.path.join(metadata_dir, "_pin_subpackage_exact")
     ms = api.render(recipe, config=testing_config)
     assert len(ms) == 2
-    assert any(re.match(r'run_exports_subpkg\ 1\.0\ 0', req)
-              for (m, _, _) in ms for req in m.meta.get('requirements', {}).get('run', []))
+    assert any(
+        re.match(r"run_exports_subpkg\ 1\.0\ 0", req)
+        for (m, _, _) in ms
+        for req in m.meta.get("requirements", {}).get("run", [])
+    )
 
 
 @pytest.mark.sanity
 @pytest.mark.serial
-@pytest.mark.skipif(sys.platform != 'linux', reason="xattr code written here is specific to linux")
+@pytest.mark.skipif(
+    sys.platform != "linux", reason="xattr code written here is specific to linux"
+)
 def test_copy_read_only_file_with_xattr(testing_config, testing_homedir):
     if not testing_homedir:
-        return pytest.xfail("could not create a temporary folder in {} (tmpfs inappropriate for xattrs)".
-            format('${HOME}' if sys.platform != 'win32' else '%UserProfile%'))
-    src_recipe = os.path.join(metadata_dir, '_xattr_copy')
-    recipe = os.path.join(testing_homedir, '_xattr_copy')
+        return pytest.xfail(
+            "could not create a temporary folder in {} (tmpfs inappropriate for xattrs)".format(
+                "${HOME}" if sys.platform != "win32" else "%UserProfile%"
+            )
+        )
+    src_recipe = os.path.join(metadata_dir, "_xattr_copy")
+    recipe = os.path.join(testing_homedir, "_xattr_copy")
     copy_into(src_recipe, recipe)
     # file is r/w for owner, but we change it to 400 after setting the attribute
-    ro_file = os.path.join(recipe, 'mode_400_file')
+    ro_file = os.path.join(recipe, "mode_400_file")
     # tmpfs on modern Linux does not support xattr in general.
     # https://stackoverflow.com/a/46598063
     # tmpfs can support extended attributes if you enable CONFIG_TMPFS_XATTR in Kernel config.
     # But Currently this enables support for the trusted.* and security.* namespaces
     try:
-        subprocess.check_call(f'setfattr -n user.attrib -v somevalue {ro_file}', shell=True)
+        subprocess.check_call(
+            f"setfattr -n user.attrib -v somevalue {ro_file}", shell=True
+        )
     except:
-        return pytest.xfail("setfattr not possible in {}, see https://stackoverflow.com/a/46598063".format(
-            testing_homedir))
-    subprocess.check_call(f'chmod 400 {ro_file}', shell=True)
+        return pytest.xfail(
+            "setfattr not possible in {}, see https://stackoverflow.com/a/46598063".format(
+                testing_homedir
+            )
+        )
+    subprocess.check_call(f"chmod 400 {ro_file}", shell=True)
     api.build(recipe, config=testing_config)
 
 
 @pytest.mark.sanity
 @pytest.mark.serial
 def test_env_creation_fail_exits_build(testing_config):
-    recipe = os.path.join(metadata_dir, '_post_link_exits_after_retry')
+    recipe = os.path.join(metadata_dir, "_post_link_exits_after_retry")
     with pytest.raises((RuntimeError, LinkError, CondaError, KeyError)):
         api.build(recipe, config=testing_config)
 
-    recipe = os.path.join(metadata_dir, '_post_link_exits_tests')
+    recipe = os.path.join(metadata_dir, "_post_link_exits_tests")
     with pytest.raises((RuntimeError, LinkError, CondaError, KeyError)):
         api.build(recipe, config=testing_config)
 
@@ -1159,20 +1386,22 @@ def test_recursion_packages(testing_config):
     """Two packages that need to be built are listed in the recipe
 
     make sure that both get built before the one needing them gets built."""
-    recipe = os.path.join(metadata_dir, '_recursive-build-two-packages')
+    recipe = os.path.join(metadata_dir, "_recursive-build-two-packages")
     api.build(recipe, config=testing_config)
 
 
 @pytest.mark.sanity
 def test_recursion_layers(testing_config):
     """go two 'hops' - try to build a, but a needs b, so build b first, then come back to a"""
-    recipe = os.path.join(metadata_dir, '_recursive-build-two-layers')
+    recipe = os.path.join(metadata_dir, "_recursive-build-two-layers")
     api.build(recipe, config=testing_config)
 
 
 @pytest.mark.sanity
-@pytest.mark.skipif(sys.platform != 'win32', reason=("spaces break openssl prefix "
-                                                     "replacement on *nix"))
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason=("spaces break openssl prefix " "replacement on *nix"),
+)
 def test_croot_with_spaces(testing_metadata, testing_workdir):
     testing_metadata.config.croot = os.path.join(testing_workdir, "space path")
     api.build(testing_metadata)
@@ -1180,7 +1409,7 @@ def test_croot_with_spaces(testing_metadata, testing_workdir):
 
 @pytest.mark.sanity
 def test_unknown_selectors(testing_config):
-    recipe = os.path.join(metadata_dir, 'unknown_selector')
+    recipe = os.path.join(metadata_dir, "unknown_selector")
     api.build(recipe, config=testing_config)
 
 
@@ -1188,13 +1417,13 @@ def test_unknown_selectors(testing_config):
 # https://github.com/conda/conda-build/issues/4685
 @pytest.mark.flaky(reruns=5, reruns_delay=2)
 def test_failed_recipe_leaves_folders(testing_config):
-    recipe = os.path.join(fail_dir, 'recursive-build')
+    recipe = os.path.join(fail_dir, "recursive-build")
     m = api.render(recipe, config=testing_config)[0][0]
     locks = get_conda_operation_locks(m.config)
     with pytest.raises((RuntimeError, exceptions.DependencyNeedsBuildingError)):
         api.build(m)
-    assert os.path.isdir(m.config.build_folder), 'build folder was removed'
-    assert os.listdir(m.config.build_folder), 'build folder has no files'
+    assert os.path.isdir(m.config.build_folder), "build folder was removed"
+    assert os.listdir(m.config.build_folder), "build folder has no files"
 
     # make sure that it does not leave lock files, though, as these cause permission errors on
     #    centralized installations
@@ -1203,141 +1432,144 @@ def test_failed_recipe_leaves_folders(testing_config):
 
 @pytest.mark.sanity
 def test_only_r_env_vars_defined(testing_config):
-    recipe = os.path.join(metadata_dir, '_r_env_defined')
+    recipe = os.path.join(metadata_dir, "_r_env_defined")
     api.build(recipe, config=testing_config)
 
 
 @pytest.mark.sanity
 def test_only_perl_env_vars_defined(testing_config):
-    recipe = os.path.join(metadata_dir, '_perl_env_defined')
+    recipe = os.path.join(metadata_dir, "_perl_env_defined")
     api.build(recipe, config=testing_config)
 
 
 @pytest.mark.sanity
-@pytest.mark.skipif(on_win, reason='no lua package on win')
+@pytest.mark.skipif(on_win, reason="no lua package on win")
 def test_only_lua_env(testing_config):
-    recipe = os.path.join(metadata_dir, '_lua_env_defined')
+    recipe = os.path.join(metadata_dir, "_lua_env_defined")
     testing_config.set_build_id = False
     api.build(recipe, config=testing_config)
 
 
 def test_run_constrained_stores_constrains_info(testing_config):
-    recipe = os.path.join(metadata_dir, '_run_constrained')
+    recipe = os.path.join(metadata_dir, "_run_constrained")
     out_file = api.build(recipe, config=testing_config)[0]
-    info_contents = json.loads(package_has_file(out_file, 'info/index.json'))
-    assert 'constrains' in info_contents
-    assert len(info_contents['constrains']) == 1
-    assert info_contents['constrains'][0] == 'bzip2  1.*'
+    info_contents = json.loads(package_has_file(out_file, "info/index.json"))
+    assert "constrains" in info_contents
+    assert len(info_contents["constrains"]) == 1
+    assert info_contents["constrains"][0] == "bzip2  1.*"
 
 
 @pytest.mark.sanity
 def test_no_locking(testing_config):
-    recipe = os.path.join(metadata_dir, 'source_git_jinja2')
+    recipe = os.path.join(metadata_dir, "source_git_jinja2")
     api.update_index(os.path.join(testing_config.croot))
     api.build(recipe, config=testing_config, locking=False)
 
 
 @pytest.mark.sanity
 def test_test_dependencies(testing_config):
-    recipe = os.path.join(fail_dir, 'check_test_dependencies')
+    recipe = os.path.join(fail_dir, "check_test_dependencies")
 
     with pytest.raises(exceptions.DependencyNeedsBuildingError) as e:
         api.build(recipe, config=testing_config)
 
-    assert 'Unsatisfiable dependencies for platform ' in str(e.value)
-    assert 'pytest-package-does-not-exist' in str(e.value)
+    assert "Unsatisfiable dependencies for platform " in str(e.value)
+    assert "pytest-package-does-not-exist" in str(e.value)
 
 
 @pytest.mark.sanity
 def test_runtime_dependencies(testing_config):
-    recipe = os.path.join(fail_dir, 'check_runtime_dependencies')
+    recipe = os.path.join(fail_dir, "check_runtime_dependencies")
 
     with pytest.raises(exceptions.DependencyNeedsBuildingError) as e:
         api.build(recipe, config=testing_config)
 
-    assert 'Unsatisfiable dependencies for platform ' in str(e.value)
-    assert 'some-nonexistent-package1' in str(e.value)
+    assert "Unsatisfiable dependencies for platform " in str(e.value)
+    assert "some-nonexistent-package1" in str(e.value)
 
 
 @pytest.mark.sanity
 def test_no_force_upload_condarc_setting(mocker, testing_workdir, testing_metadata):
     testing_metadata.config.anaconda_upload = True
-    del testing_metadata.meta['test']
-    api.output_yaml(testing_metadata, 'meta.yaml')
-    call = mocker.patch.object(conda_build.build.subprocess, 'call')
-    cc_conda_build['force_upload'] = False
+    del testing_metadata.meta["test"]
+    api.output_yaml(testing_metadata, "meta.yaml")
+    call = mocker.patch.object(conda_build.build.subprocess, "call")
+    cc_conda_build["force_upload"] = False
     pkg = api.build(testing_workdir)
-    assert call.called_once_with(['anaconda', 'upload', pkg])
-    del cc_conda_build['force_upload']
+    assert call.called_once_with(["anaconda", "upload", pkg])
+    del cc_conda_build["force_upload"]
     pkg = api.build(testing_workdir)
-    assert call.called_once_with(['anaconda', 'upload', '--force', pkg])
+    assert call.called_once_with(["anaconda", "upload", "--force", pkg])
 
 
 @pytest.mark.sanity
 def test_setup_py_data_in_env(testing_config):
-    recipe = os.path.join(metadata_dir, '_setup_py_data_in_env')
+    recipe = os.path.join(metadata_dir, "_setup_py_data_in_env")
     # should pass with any modern python (just not 3.5)
     api.build(recipe, config=testing_config)
     # make sure it fails with our special python logic
     with pytest.raises(subprocess.CalledProcessError):
-        api.build(recipe, config=testing_config, python='3.5')
+        api.build(recipe, config=testing_config, python="3.5")
 
 
 @pytest.mark.sanity
 def test_numpy_xx(testing_config):
-    recipe = os.path.join(metadata_dir, '_numpy_xx')
-    api.render(recipe, config=testing_config, numpy='1.15', python="3.6")
+    recipe = os.path.join(metadata_dir, "_numpy_xx")
+    api.render(recipe, config=testing_config, numpy="1.15", python="3.6")
 
 
 @pytest.mark.sanity
 def test_numpy_xx_host(testing_config):
-    recipe = os.path.join(metadata_dir, '_numpy_xx_host')
-    api.render(recipe, config=testing_config, numpy='1.15', python="3.6")
+    recipe = os.path.join(metadata_dir, "_numpy_xx_host")
+    api.render(recipe, config=testing_config, numpy="1.15", python="3.6")
 
 
 @pytest.mark.sanity
 def test_python_xx(testing_config):
-    recipe = os.path.join(metadata_dir, '_python_xx')
-    api.render(recipe, config=testing_config, python='3.5')
+    recipe = os.path.join(metadata_dir, "_python_xx")
+    api.render(recipe, config=testing_config, python="3.5")
 
 
 @pytest.mark.sanity
 def test_indirect_numpy_dependency(testing_metadata, testing_workdir):
-    testing_metadata.meta['requirements']['build'] = ['pandas']
-    api.output_yaml(testing_metadata, os.path.join(testing_workdir, 'meta.yaml'))
-    api.render(testing_workdir, numpy='1.13', notest=True)
+    testing_metadata.meta["requirements"]["build"] = ["pandas"]
+    api.output_yaml(testing_metadata, os.path.join(testing_workdir, "meta.yaml"))
+    api.render(testing_workdir, numpy="1.13", notest=True)
 
 
 @pytest.mark.sanity
 def test_dependencies_with_notest(testing_config):
-    recipe = os.path.join(metadata_dir, '_test_dependencies')
+    recipe = os.path.join(metadata_dir, "_test_dependencies")
     api.build(recipe, config=testing_config, notest=True)
 
     with pytest.raises(DependencyNeedsBuildingError) as excinfo:
         api.build(recipe, config=testing_config, notest=False)
 
-    assert 'Unsatisfiable dependencies for platform' in str(excinfo.value)
-    assert 'somenonexistentpackage1' in str(excinfo.value)
+    assert "Unsatisfiable dependencies for platform" in str(excinfo.value)
+    assert "somenonexistentpackage1" in str(excinfo.value)
 
 
 @pytest.mark.sanity
 def test_source_cache_build(testing_workdir):
-    recipe = os.path.join(metadata_dir, 'source_git_jinja2')
+    recipe = os.path.join(metadata_dir, "source_git_jinja2")
     config = api.Config(src_cache_root=testing_workdir)
     api.build(recipe, notest=True, config=config)
 
-    git_cache_directory = f'{testing_workdir}/git_cache'
+    git_cache_directory = f"{testing_workdir}/git_cache"
     assert os.path.isdir(git_cache_directory)
 
-    files = [filename for _, _, filenames in walk(git_cache_directory)
-             for filename in filenames]
+    files = [
+        filename
+        for _, _, filenames in walk(git_cache_directory)
+        for filename in filenames
+    ]
 
     assert len(files) > 0
 
 
 @pytest.mark.slow
 def test_copy_test_source_files(testing_config):
-    recipe = os.path.join(metadata_dir, '_test_test_source_files')
+    recipe = os.path.join(metadata_dir, "_test_test_source_files")
     filenames = set()
     for copy in (False, True):
         testing_config.copy_test_source_files = copy
@@ -1351,23 +1583,28 @@ def test_copy_test_source_files(testing_config):
             # nesting of test/test here is because info/test is the main folder
             # for test files, then test is the source_files folder we specify,
             # and text.txt is within that.
-            if f.name == 'info/test/test_files_folder/text.txt':
+            if f.name == "info/test/test_files_folder/text.txt":
                 found = True
                 break
         if found:
-            assert copy, "'info/test/test_files_folder/text.txt' found in tar.bz2 but not copying test source files"
+            assert (
+                copy
+            ), "'info/test/test_files_folder/text.txt' found in tar.bz2 but not copying test source files"
             if copy:
                 api.test(outputs[0])
             else:
                 with pytest.raises(RuntimeError):
                     api.test(outputs[0])
         else:
-            assert not copy, "'info/test/test_files_folder/text.txt' not found in tar.bz2 but copying test source files. File list: %r" % files
+            assert not copy, (
+                "'info/test/test_files_folder/text.txt' not found in tar.bz2 but copying test source files. File list: %r"
+                % files
+            )
 
 
 @pytest.mark.sanity
 def test_copy_test_source_files_deps(testing_config):
-    recipe = os.path.join(metadata_dir, '_test_test_source_files')
+    recipe = os.path.join(metadata_dir, "_test_test_source_files")
     for copy in (False, True):
         testing_config.copy_test_source_files = copy
         # test is that pytest is a dep either way.  Builds will fail if it's not.
@@ -1378,46 +1615,50 @@ def test_pin_depends(testing_config):
     """purpose of 'record' argument is to put a 'requires' file that records pinned run
     dependencies
     """
-    recipe = os.path.join(metadata_dir, '_pin_depends_record')
+    recipe = os.path.join(metadata_dir, "_pin_depends_record")
     m = api.render(recipe, config=testing_config)[0][0]
     # the recipe python is not pinned, and having pin_depends set to record
     # will not show it in record
-    assert not any(re.search(r'python\s+[23]\.', dep) for dep in m.meta['requirements']['run'])
+    assert not any(
+        re.search(r"python\s+[23]\.", dep) for dep in m.meta["requirements"]["run"]
+    )
     output = api.build(m, config=testing_config)[0]
-    requires = package_has_file(output, 'info/requires')
+    requires = package_has_file(output, "info/requires")
     assert requires
-    if hasattr(requires, 'decode'):
+    if hasattr(requires, "decode"):
         requires = requires.decode()
-    assert re.search(r'python\=[23]\.', requires), "didn't find pinned python in info/requires"
+    assert re.search(
+        r"python\=[23]\.", requires
+    ), "didn't find pinned python in info/requires"
 
 
 @pytest.mark.sanity
 def test_failed_patch_exits_build(testing_config):
     with pytest.raises(RuntimeError):
-        api.build(os.path.join(metadata_dir, '_bad_patch'), config=testing_config)
+        api.build(os.path.join(metadata_dir, "_bad_patch"), config=testing_config)
 
 
 @pytest.mark.sanity
 def test_version_mismatch_in_variant_does_not_infinitely_rebuild_folder(testing_config):
     # unsatisfiable; also not buildable (test_a recipe version is 2.0)
-    testing_config.variant['test_a'] = "1.0"
-    recipe = os.path.join(metadata_dir, '_build_deps_no_infinite_loop', 'test_b')
+    testing_config.variant["test_a"] = "1.0"
+    recipe = os.path.join(metadata_dir, "_build_deps_no_infinite_loop", "test_b")
     with pytest.raises(DependencyNeedsBuildingError):
         api.build(recipe, config=testing_config)
     # passes now, because package can be built, or is already built.  Doesn't matter which.
-    testing_config.variant['test_a'] = "2.0"
+    testing_config.variant["test_a"] = "2.0"
     api.build(recipe, config=testing_config)
 
 
 @pytest.mark.sanity
 def test_provides_features_metadata(testing_config):
-    recipe = os.path.join(metadata_dir, '_requires_provides_features')
+    recipe = os.path.join(metadata_dir, "_requires_provides_features")
     out = api.build(recipe, config=testing_config)[0]
-    index = json.loads(package_has_file(out, 'info/index.json'))
-    assert 'requires_features' in index
-    assert index['requires_features'] == {'test': 'ok'}
-    assert 'provides_features' in index
-    assert index['provides_features'] == {'test2': 'also_ok'}
+    index = json.loads(package_has_file(out, "info/index.json"))
+    assert "requires_features" in index
+    assert index["requires_features"] == {"test": "ok"}
+    assert "provides_features" in index
+    assert index["provides_features"] == {"test2": "also_ok"}
 
 
 # using different MACOSX_DEPLOYMENT_TARGET in parallel causes some SDK race condition
@@ -1428,14 +1669,22 @@ def test_overlinking_detection(testing_config, variants_conda_build_sysroot):
     testing_config.activate = True
     testing_config.error_overlinking = True
     testing_config.verify = False
-    recipe = os.path.join(metadata_dir, '_overlinking_detection')
-    dest_sh = os.path.join(recipe, 'build.sh')
-    dest_bat = os.path.join(recipe, 'bld.bat')
-    copy_into(os.path.join(recipe, 'build_scripts', 'default.sh'), dest_sh, clobber=True)
-    copy_into(os.path.join(recipe, 'build_scripts', 'default.bat'), dest_bat, clobber=True)
+    recipe = os.path.join(metadata_dir, "_overlinking_detection")
+    dest_sh = os.path.join(recipe, "build.sh")
+    dest_bat = os.path.join(recipe, "bld.bat")
+    copy_into(
+        os.path.join(recipe, "build_scripts", "default.sh"), dest_sh, clobber=True
+    )
+    copy_into(
+        os.path.join(recipe, "build_scripts", "default.bat"), dest_bat, clobber=True
+    )
     api.build(recipe, config=testing_config, variants=variants_conda_build_sysroot)
-    copy_into(os.path.join(recipe, 'build_scripts', 'no_as_needed.sh'), dest_sh, clobber=True)
-    copy_into(os.path.join(recipe, 'build_scripts', 'with_bzip2.bat'), dest_bat, clobber=True)
+    copy_into(
+        os.path.join(recipe, "build_scripts", "no_as_needed.sh"), dest_sh, clobber=True
+    )
+    copy_into(
+        os.path.join(recipe, "build_scripts", "with_bzip2.bat"), dest_bat, clobber=True
+    )
     with pytest.raises(OverLinkingError):
         api.build(recipe, config=testing_config, variants=variants_conda_build_sysroot)
     rm_rf(dest_sh)
@@ -1452,14 +1701,22 @@ def test_overlinking_detection_ignore_patterns(
     testing_config.activate = True
     testing_config.error_overlinking = True
     testing_config.verify = False
-    recipe = os.path.join(metadata_dir, '_overlinking_detection_ignore_patterns')
-    dest_sh = os.path.join(recipe, 'build.sh')
-    dest_bat = os.path.join(recipe, 'bld.bat')
-    copy_into(os.path.join(recipe, 'build_scripts', 'default.sh'), dest_sh, clobber=True)
-    copy_into(os.path.join(recipe, 'build_scripts', 'default.bat'), dest_bat, clobber=True)
+    recipe = os.path.join(metadata_dir, "_overlinking_detection_ignore_patterns")
+    dest_sh = os.path.join(recipe, "build.sh")
+    dest_bat = os.path.join(recipe, "bld.bat")
+    copy_into(
+        os.path.join(recipe, "build_scripts", "default.sh"), dest_sh, clobber=True
+    )
+    copy_into(
+        os.path.join(recipe, "build_scripts", "default.bat"), dest_bat, clobber=True
+    )
     api.build(recipe, config=testing_config, variants=variants_conda_build_sysroot)
-    copy_into(os.path.join(recipe, 'build_scripts', 'no_as_needed.sh'), dest_sh, clobber=True)
-    copy_into(os.path.join(recipe, 'build_scripts', 'with_bzip2.bat'), dest_bat, clobber=True)
+    copy_into(
+        os.path.join(recipe, "build_scripts", "no_as_needed.sh"), dest_sh, clobber=True
+    )
+    copy_into(
+        os.path.join(recipe, "build_scripts", "with_bzip2.bat"), dest_bat, clobber=True
+    )
     api.build(recipe, config=testing_config, variants=variants_conda_build_sysroot)
     rm_rf(dest_sh)
     rm_rf(dest_bat)
@@ -1470,13 +1727,12 @@ def test_overdepending_detection(testing_config, variants_conda_build_sysroot):
     testing_config.error_overlinking = True
     testing_config.error_overdepending = True
     testing_config.verify = False
-    recipe = os.path.join(metadata_dir, '_overdepending_detection')
+    recipe = os.path.join(metadata_dir, "_overdepending_detection")
     with pytest.raises(OverDependingError):
         api.build(recipe, config=testing_config, variants=variants_conda_build_sysroot)
 
 
-@pytest.mark.skipif(sys.platform != "darwin",
-                    reason="macOS-only test (at present)")
+@pytest.mark.skipif(sys.platform != "darwin", reason="macOS-only test (at present)")
 def test_macos_tbd_handling(testing_config, variants_conda_build_sysroot):
     """
     Test path handling after installation... The test case uses a Hello World
@@ -1486,28 +1742,28 @@ def test_macos_tbd_handling(testing_config, variants_conda_build_sysroot):
     testing_config.error_overlinking = True
     testing_config.error_overdepending = True
     testing_config.verify = False
-    recipe = os.path.join(metadata_dir, '_macos_tbd_handling')
+    recipe = os.path.join(metadata_dir, "_macos_tbd_handling")
     api.build(recipe, config=testing_config, variants=variants_conda_build_sysroot)
 
 
 @pytest.mark.sanity
 def test_empty_package_with_python_in_build_and_host_barfs(testing_config):
-    recipe = os.path.join(metadata_dir, '_empty_pkg_with_python_build_host')
+    recipe = os.path.join(metadata_dir, "_empty_pkg_with_python_build_host")
     with pytest.raises(CondaBuildException):
         api.build(recipe, config=testing_config)
 
 
 @pytest.mark.sanity
 def test_empty_package_with_python_and_compiler_in_build_barfs(testing_config):
-    recipe = os.path.join(metadata_dir, '_compiler_python_build_section')
+    recipe = os.path.join(metadata_dir, "_compiler_python_build_section")
     with pytest.raises(CondaBuildException):
         api.build(recipe, config=testing_config)
 
 
 @pytest.mark.sanity
 def test_downstream_tests(testing_config):
-    upstream = os.path.join(metadata_dir, '_test_downstreams/upstream')
-    downstream = os.path.join(metadata_dir, '_test_downstreams/downstream')
+    upstream = os.path.join(metadata_dir, "_test_downstreams/upstream")
+    downstream = os.path.join(metadata_dir, "_test_downstreams/downstream")
     api.build(downstream, config=testing_config, notest=True)
     with pytest.raises(SystemExit):
         api.build(upstream, config=testing_config)
@@ -1515,35 +1771,48 @@ def test_downstream_tests(testing_config):
 
 @pytest.mark.sanity
 def test_warning_on_file_clobbering(testing_config, capfd):
-    recipe_dir = os.path.join(metadata_dir, '_overlapping_files_warning')
+    recipe_dir = os.path.join(metadata_dir, "_overlapping_files_warning")
 
-    api.build(os.path.join(recipe_dir, 'a', ), config=testing_config)
-    api.build(os.path.join(recipe_dir, 'b', ), config=testing_config)
+    api.build(
+        os.path.join(
+            recipe_dir,
+            "a",
+        ),
+        config=testing_config,
+    )
+    api.build(
+        os.path.join(
+            recipe_dir,
+            "b",
+        ),
+        config=testing_config,
+    )
     # The clobber warning here is raised when creating the test environment for b
     out, err = capfd.readouterr()
     assert "ClobberWarning" in err
     with pytest.raises((ClobberError, CondaMultiError)):
-        with env_var('CONDA_PATH_CONFLICT', 'prevent', reset_context):
-            api.build(os.path.join(recipe_dir, 'b'), config=testing_config)
+        with env_var("CONDA_PATH_CONFLICT", "prevent", reset_context):
+            api.build(os.path.join(recipe_dir, "b"), config=testing_config)
 
 
 @pytest.mark.sanity
 @pytest.mark.skip(reason="conda-verify is deprecated because it is unsupported")
 def test_verify_bad_package(testing_config):
     from conda_verify.errors import PackageError
-    recipe_dir = os.path.join(fail_dir, 'create_bad_folder_for_conda_verify')
+
+    recipe_dir = os.path.join(fail_dir, "create_bad_folder_for_conda_verify")
     api.build(recipe_dir, config=testing_config)
     with pytest.raises(PackageError):
         testing_config.exit_on_verify_error = True
         api.build(recipe_dir, config=testing_config)
     # ignore the error that we know should be raised, and re-run to make sure it is actually ignored
-    testing_config.ignore_verify_codes = ['C1125', 'C1115']
+    testing_config.ignore_verify_codes = ["C1125", "C1115"]
     api.build(recipe_dir, config=testing_config)
 
 
 @pytest.mark.sanity
 def test_ignore_verify_codes(testing_config):
-    recipe_dir = os.path.join(metadata_dir, '_ignore_verify_codes')
+    recipe_dir = os.path.join(metadata_dir, "_ignore_verify_codes")
     testing_config.exit_on_verify_error = True
     # this recipe intentionally has a license error.  If ignore_verify_codes works,
     #    it will build OK.  If not, it will error out.
@@ -1552,26 +1821,26 @@ def test_ignore_verify_codes(testing_config):
 
 @pytest.mark.sanity
 def test_extra_meta(testing_config):
-    recipe_dir = os.path.join(metadata_dir, '_extra_meta')
-    testing_config.extra_meta = {'foo': 'bar'}
+    recipe_dir = os.path.join(metadata_dir, "_extra_meta")
+    testing_config.extra_meta = {"foo": "bar"}
     outputs = api.build(recipe_dir, config=testing_config)
-    about = json.loads(package_has_file(outputs[0], 'info/about.json'))
-    assert 'foo' in about['extra'] and about['extra']['foo'] == 'bar'
+    about = json.loads(package_has_file(outputs[0], "info/about.json"))
+    assert "foo" in about["extra"] and about["extra"]["foo"] == "bar"
 
 
 def test_symlink_dirs_in_always_include_files(testing_config):
-    recipe = os.path.join(metadata_dir, '_symlink_dirs_in_always_include_files')
+    recipe = os.path.join(metadata_dir, "_symlink_dirs_in_always_include_files")
     api.build(recipe, config=testing_config)
 
 
 def test_clean_rpaths(testing_config):
-    recipe = os.path.join(metadata_dir, '_clean_rpaths')
+    recipe = os.path.join(metadata_dir, "_clean_rpaths")
     api.build(recipe, config=testing_config, activate=True)
 
 
 def test_script_env_warnings(testing_config, recwarn):
-    recipe_dir = os.path.join(metadata_dir, '_script_env_warnings')
-    token = 'CONDA_BUILD_PYTEST_SCRIPT_ENV_TEST_TOKEN'
+    recipe_dir = os.path.join(metadata_dir, "_script_env_warnings")
+    token = "CONDA_BUILD_PYTEST_SCRIPT_ENV_TEST_TOKEN"
 
     def assert_keyword(keyword):
         messages = [str(w.message) for w in recwarn.list]
@@ -1579,16 +1848,16 @@ def test_script_env_warnings(testing_config, recwarn):
         recwarn.clear()
 
     api.build(recipe_dir, config=testing_config)
-    assert_keyword('undefined')
+    assert_keyword("undefined")
 
     os.environ[token] = "SECRET"
     try:
         api.build(recipe_dir, config=testing_config)
-        assert_keyword('SECRET')
+        assert_keyword("SECRET")
 
         testing_config.suppress_variables = True
         api.build(recipe_dir, config=testing_config)
-        assert_keyword('<hidden>')
+        assert_keyword("<hidden>")
     finally:
         os.environ.pop(token)
 
