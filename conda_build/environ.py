@@ -14,33 +14,33 @@ from functools import lru_cache
 from glob import glob
 from os.path import join, normpath
 
+from conda_build import utils
+from conda_build.exceptions import BuildLockError, DependencyNeedsBuildingError
+from conda_build.features import feature_list
+from conda_build.index import get_build_index
+from conda_build.os_utils import external
+from conda_build.utils import ensure_list, env_var, prepend_bin_path
+from conda_build.variants import get_default_variant
+
 from .conda_interface import (
     CondaError,
     LinkError,
     LockError,
     NoPackagesFoundError,
     PaddingError,
+    TemporaryDirectory,
     UnsatisfiableError,
-)
-from .conda_interface import (
+    create_default_packages,
     display_actions,
     execute_actions,
     execute_plan,
+    get_version_from_git_tag,
     install_actions,
+    package_cache,
+    pkgs_dirs,
+    reset_context,
+    root_dir,
 )
-from .conda_interface import package_cache, TemporaryDirectory
-from .conda_interface import pkgs_dirs, root_dir, create_default_packages
-from .conda_interface import reset_context
-from .conda_interface import get_version_from_git_tag
-
-from conda_build import utils
-from conda_build.exceptions import BuildLockError, DependencyNeedsBuildingError
-from conda_build.features import feature_list
-from conda_build.index import get_build_index
-from conda_build.os_utils import external
-from conda_build.utils import ensure_list, prepend_bin_path, env_var
-from conda_build.variants import get_default_variant
-
 
 # these are things that we provide env vars for more explicitly.  This list disables the
 #    pass-through of variant values to env vars for these keys.

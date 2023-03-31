@@ -5,7 +5,6 @@ import os
 import pytest
 
 from conda_build import api
-
 from conda_build.cli import main_build, main_skeleton
 
 
