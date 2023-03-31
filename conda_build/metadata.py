@@ -2,38 +2,35 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-from collections import OrderedDict
 import contextlib
 import copy
-from functools import lru_cache
 import hashlib
 import json
 import os
-from os.path import isfile, join
 import re
 import sys
 import time
 import warnings
+from collections import OrderedDict
+from functools import lru_cache
+from os.path import isfile, join
 
 from bs4 import UnicodeDammit
 
-from .conda_interface import md5_file
-from .conda_interface import non_x86_linux_machines
-from .conda_interface import MatchSpec
-from .conda_interface import envs_dirs
-
-from conda_build import exceptions, utils, variants, environ
-from conda_build.features import feature_list
+from conda_build import environ, exceptions, utils, variants
 from conda_build.config import Config, get_or_merge_config
+from conda_build.features import feature_list
+from conda_build.license_family import ensure_valid_license_family
 from conda_build.utils import (
-    ensure_list,
-    find_recipe,
-    expand_globs,
-    get_installed_packages,
     HashableDict,
+    ensure_list,
+    expand_globs,
+    find_recipe,
+    get_installed_packages,
     insert_variant_versions,
 )
-from conda_build.license_family import ensure_valid_license_family
+
+from .conda_interface import MatchSpec, envs_dirs, md5_file, non_x86_linux_machines
 
 try:
     import yaml
@@ -371,8 +368,8 @@ def _variants_equal(metadata, output_metadata):
 def ensure_matching_hashes(output_metadata):
     envs = "build", "host", "run"
     problemos = []
-    for (_, m) in output_metadata.values():
-        for (_, om) in output_metadata.values():
+    for _, m in output_metadata.values():
+        for _, om in output_metadata.values():
             if m != om:
                 run_exports = om.meta.get("build", {}).get("run_exports", [])
                 if hasattr(run_exports, "keys"):
@@ -694,7 +691,6 @@ def build_string_from_metadata(metadata):
             ("mro", "mro-base", 3),
             ("mro", "mro-base_impl", 3),
         ):
-
             for ms in metadata.ms_depends("run"):
                 for name in ensure_list(names):
                     if ms.name == name and name in build_pkg_names:
@@ -1074,7 +1070,6 @@ class MetaData:
     __hash__ = None  # declare as non-hashable to avoid its use with memoization
 
     def __init__(self, path, config=None, variant=None):
-
         self.undefined_jinja_vars = []
         self.config = get_or_merge_config(config, variant=variant)
 
@@ -1826,9 +1821,9 @@ class MetaData:
                 return fd.read()
 
         from conda_build.jinja_context import (
-            context_processor,
-            UndefinedNeverFail,
             FilteredLoader,
+            UndefinedNeverFail,
+            context_processor,
         )
 
         path, filename = os.path.split(self.meta_path)
@@ -2557,7 +2552,7 @@ class MetaData:
                 # Sanity check: if any exact pins of any subpackages, make sure that they match
                 ensure_matching_hashes(conda_packages)
             final_conda_packages = []
-            for (out_d, m) in conda_packages.values():
+            for out_d, m in conda_packages.values():
                 # We arbitrarily mark all output metadata as final, regardless
                 #    of if it truly is or not. This is done to add sane hashes
                 #    to unfinalizable packages, so that they are differentiable

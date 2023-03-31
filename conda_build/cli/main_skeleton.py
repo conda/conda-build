@@ -6,9 +6,8 @@ import os
 import pkgutil
 import sys
 
-from conda_build.conda_interface import ArgumentParser
-
 import conda_build.api as api
+from conda_build.conda_interface import ArgumentParser
 from conda_build.config import Config
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
@@ -27,12 +26,12 @@ options available.
         """,
     )
 
-    repos = p.add_subparsers(
-        dest="repo"
-    )
+    repos = p.add_subparsers(dest="repo")
 
-    skeletons = [name for _, name, _ in
-                 pkgutil.iter_modules([os.path.join(thisdir, '../skeletons')])]
+    skeletons = [
+        name
+        for _, name, _ in pkgutil.iter_modules([os.path.join(thisdir, "../skeletons")])
+    ]
     for skeleton in skeletons:
         if skeleton.startswith("_"):
             continue
@@ -51,13 +50,19 @@ def execute(args):
         parser.print_help()
         sys.exit()
 
-    api.skeletonize(args.packages, args.repo, output_dir=args.output_dir, recursive=args.recursive,
-                    version=args.version, config=config)
+    api.skeletonize(
+        args.packages,
+        args.repo,
+        output_dir=args.output_dir,
+        recursive=args.recursive,
+        version=args.version,
+        config=config,
+    )
 
 
 def main():
     return execute(sys.argv[1:])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

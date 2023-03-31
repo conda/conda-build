@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 
 from conda.common.compat import on_win
+
 from conda_build.os_utils.external import find_executable
 
 
