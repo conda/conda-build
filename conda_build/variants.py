@@ -125,7 +125,7 @@ def get_default_variant(config):
 
 
 def parse_config_file(path, config):
-    from conda_build.metadata import select_lines, get_selectors
+    from conda_build.metadata import get_selectors, select_lines
 
     with open(path) as f:
         contents = f.read()

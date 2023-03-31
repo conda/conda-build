@@ -156,7 +156,7 @@ class FilteredLoader(jinja2.BaseLoader):
 
     def get_source(self, environment, template):
         # we have circular imports here.  Do a local import
-        from .metadata import select_lines, get_selectors
+        from .metadata import get_selectors, select_lines
 
         contents, filename, uptodate = self._unfiltered_loader.get_source(
             environment, template
