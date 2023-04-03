@@ -1,7 +1,8 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-from conda_build.license_family import guess_license_family, ensure_valid_license_family
 import pytest
+
+from conda_build.license_family import ensure_valid_license_family, guess_license_family
 
 LICENSE_FAMILY = {
     # AGPL
@@ -66,8 +67,8 @@ def test_guess_license_family(license, family):
 
 
 def test_ensure_valid_family(testing_metadata):
-    testing_metadata.meta['about']['license_family'] = 'public-domain'
+    testing_metadata.meta["about"]["license_family"] = "public-domain"
     ensure_valid_license_family(testing_metadata.meta)
     with pytest.raises(RuntimeError):
-        testing_metadata.meta['about']['license_family'] = 'local H'
+        testing_metadata.meta["about"]["license_family"] = "local H"
         ensure_valid_license_family(testing_metadata.meta)

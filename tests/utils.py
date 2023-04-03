@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 import shlex
 import sys
+from pathlib import Path
 from typing import Generator
 
 from conda.common.compat import on_mac
-from conda_build.metadata import MetaData
 
+from conda_build.metadata import MetaData
 
 tests_path = Path(__file__).parent
 metadata_path = tests_path / "test-recipes" / "metadata"

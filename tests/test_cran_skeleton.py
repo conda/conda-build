@@ -1,16 +1,20 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-'''
+"""
 Unit tests of the CRAN skeleton utility functions
-'''
+"""
 import os
-import pytest
 
+import pytest
 from conda.auxlib.ish import dals
+
 from conda_build.license_family import allowed_license_families
-from conda_build.skeletons.cran import (get_license_info,
-                                        read_description_contents,
-                                        remove_comments)
+from conda_build.skeletons.cran import (
+    get_license_info,
+    read_description_contents,
+    remove_comments,
+)
+
 from .utils import cran_dir
 
 
@@ -119,12 +123,15 @@ def test_read_description_contents():
     description = os.path.join(cran_dir, "rpart", "DESCRIPTION")
     with open(description, "rb") as fp:
         contents = read_description_contents(fp)
-    assert contents['Package'] == 'rpart'
-    assert contents['Priority'] == 'recommended'
-    assert contents['Title'] == 'Recursive Partitioning and Regression Trees'
-    assert contents['Depends'] == 'R (>= 2.15.0), graphics, stats, grDevices'
-    assert contents['License'] == 'GPL-2 | GPL-3'
-    assert contents['URL'] == 'https://github.com/bethatkinson/rpart, https://cran.r-project.org/package=rpart'
+    assert contents["Package"] == "rpart"
+    assert contents["Priority"] == "recommended"
+    assert contents["Title"] == "Recursive Partitioning and Regression Trees"
+    assert contents["Depends"] == "R (>= 2.15.0), graphics, stats, grDevices"
+    assert contents["License"] == "GPL-2 | GPL-3"
+    assert (
+        contents["URL"]
+        == "https://github.com/bethatkinson/rpart, https://cran.r-project.org/package=rpart"
+    )
 
 
 def test_remove_comments():

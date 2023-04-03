@@ -84,8 +84,8 @@ Conda-build performs the following steps:
 
    * Runs the test scripts.
 
-The `conda-recipes`_ repo
-contains example recipes for many conda packages.
+The archived `conda-recipes`_ repo, `AnacondaRecipes`_ aggregate repo,
+and `conda-forge`_ feedstocks repo contain example recipes for many conda packages.
 
 .. caution::
    All recipe files, including ``meta.yaml`` and build
@@ -137,7 +137,7 @@ The prefix will take the form::
 
   <file path to conda>/conda-bld/<package name and string>/h_env_placeholder…
 
-`Conda-forge`_ downloads your package source and then builds the conda
+Conda-build downloads your package source and then builds the conda
 package in the context of the build environment. For example, you may
 direct it to download from a Git repo or pull down a tarball from
 another source. See the :ref:`source-section` for more information.
@@ -209,6 +209,7 @@ For additional information on ``conda install``, please visit the conda document
 
 .. _`conda packages`: https://conda.io/projects/conda/en/latest/user-guide/concepts/packages.html
 .. _`conda-recipes`: https://github.com/continuumio/conda-recipes
-.. _`Conda-forge`: https://anaconda.org/conda-forge
+.. _`AnacondaRecipes`: https://github.com/AnacondaRecipes/aggregate
+.. _`conda-forge`: https://github.com/conda-forge/feedstocks/tree/main/feedstocks
 .. _PyPI: https://pypi.python.org/pypi
 .. _`deep dive`: https://docs.conda.io/projects/conda/en/stable/dev-guide/deep-dives/install.html
