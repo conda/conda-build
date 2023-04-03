@@ -49,7 +49,7 @@ Tool for expanding the template meta.yml file (containing Jinja syntax and
 selectors) into the rendered meta.yml files. The template meta.yml file is
 combined with user-specified configurations, static recipe files, and
 environment information to generate the rendered meta.yml files.""",
-        conflict_handler='resolve'
+        conflict_handler="resolve",
     )
     p.add_argument(
         "-V",
