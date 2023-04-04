@@ -18,7 +18,7 @@ package naming conventions listed below.
 
 **Build string**
     An arbitrary string that identifies a particular build of a
-    package for conda.  It may contain suggestive mnemonics, but
+    package for conda. It may contain suggestive mnemonics, but
     these are subject to change, and you should not rely on it or try
     to parse it for any specific information.
 

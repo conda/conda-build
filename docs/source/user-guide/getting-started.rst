@@ -21,7 +21,7 @@ Before starting the tutorials, you need to install:
 - Git
 
 The most straightforward way to do this is to install Miniconda or
-Anaconda, which contain conda, and then using conda to install conda-build
+Anaconda, which contain conda, and then use conda to install conda-build
 and Git. Make sure you install these packages into a new environment
 and not your base environment.::
 
