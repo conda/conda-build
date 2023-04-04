@@ -45,11 +45,10 @@ class ParseYAMLArgument(argparse.Action):
 def get_render_parser():
     p = ArgumentParser(
         description="""
-Tool for building conda packages. A conda package is a binary tarball
-containing system-level libraries, Python modules, executable programs, or
-other components. conda keeps track of dependencies between packages and
-platform specifics, making it simple to create working environments from
-        different sets of packages.""",
+Tool for expanding the template meta.yml file (containing Jinja syntax and
+selectors) into the rendered meta.yml files. The template meta.yml file is
+combined with user-specified configurations, static recipe files, and
+environment information to generate the rendered meta.yml files.""",
         conflict_handler="resolve",
     )
     p.add_argument(
