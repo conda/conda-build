@@ -1,15 +1,16 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import pytest
-
 from conda.testing.integration import BIN_DIRECTORY
+
 from conda_build.api import build
 from conda_build.utils import check_call_env
-from .utils import published_path, get_valid_recipes
+
+from .utils import get_valid_recipes, published_path
 
 
 @pytest.mark.sanity

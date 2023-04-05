@@ -2,13 +2,14 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import os
 import sys
-import yaml
 
 import pytest
+import yaml
 
 from conda_build import api
 from conda_build.cli import main_render
 from conda_build.conda_interface import TemporaryDirectory
+
 from ..utils import metadata_dir
 
 

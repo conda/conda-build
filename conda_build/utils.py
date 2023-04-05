@@ -1,56 +1,56 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-from collections import OrderedDict, defaultdict
 import contextlib
 import fnmatch
-from functools import lru_cache
 import hashlib
-from itertools import filterfalse
 import json
-from locale import getpreferredencoding
-import libarchive
 import logging
 import logging.config
 import mmap
 import os
-from os.path import (
-    dirname,
-    getmtime,
-    getsize,
-    isdir,
-    join,
-    isfile,
-    abspath,
-    islink,
-    expanduser,
-    expandvars,
-)
 import re
+import shutil
 import stat
 import subprocess
 import sys
-import shutil
 import tarfile
 import tempfile
-from threading import Thread
 import time
+from collections import OrderedDict, defaultdict
+from functools import lru_cache
+from itertools import filterfalse
+from locale import getpreferredencoding
+from os.path import (
+    abspath,
+    dirname,
+    expanduser,
+    expandvars,
+    getmtime,
+    getsize,
+    isdir,
+    isfile,
+    islink,
+    join,
+)
 from pathlib import Path
+from threading import Thread
+
+import libarchive
 
 try:
     from json.decoder import JSONDecodeError
 except ImportError:
     JSONDecodeError = ValueError
 
-import yaml
-
-import filelock
 import conda_package_handling.api
+import filelock
+import yaml
 
 try:
     from conda.base.constants import (
-        CONDA_PACKAGE_EXTENSIONS,
         CONDA_PACKAGE_EXTENSION_V1,
         CONDA_PACKAGE_EXTENSION_V2,
+        CONDA_PACKAGE_EXTENSIONS,
     )
 except Exception:
     from conda.base.constants import (
@@ -60,36 +60,35 @@ except Exception:
     CONDA_PACKAGE_EXTENSION_V2 = ".conda"
     CONDA_PACKAGE_EXTENSIONS = (CONDA_PACKAGE_EXTENSION_V2, CONDA_PACKAGE_EXTENSION_V1)
 
-from conda.api import PackageCacheData  # noqa
+import urllib.parse as urlparse
+import urllib.request as urllib
+from glob import glob as glob_glob
 
-from .conda_interface import (
-    hashsum_file,
-    md5_file,
-    unix_path_to_win,
-    win_path_to_unix,
-)  # noqa
-from .conda_interface import root_dir, pkgs_dirs  # noqa
-from .conda_interface import StringIO  # noqa
-from .conda_interface import VersionOrder, MatchSpec  # noqa
-from .conda_interface import cc_conda_build  # noqa
-from .conda_interface import Dist  # noqa
-from .conda_interface import context  # noqa
-from .conda_interface import (
-    download,
-    TemporaryDirectory,
-    get_conda_channel,
-    CondaHTTPError,
-)  # noqa
+from conda.api import PackageCacheData  # noqa
 
 # NOQA because it is not used in this file.
 from conda_build.conda_interface import rm_rf as _rm_rf  # noqa
 from conda_build.exceptions import BuildLockError  # noqa
 from conda_build.os_utils import external  # noqa
 
-import urllib.parse as urlparse
-import urllib.request as urllib
-
-from glob import glob as glob_glob
+from .conda_interface import Dist  # noqa
+from .conda_interface import StringIO  # noqa
+from .conda_interface import cc_conda_build  # noqa
+from .conda_interface import context  # noqa
+from .conda_interface import (  # noqa
+    CondaHTTPError,
+    MatchSpec,
+    TemporaryDirectory,
+    VersionOrder,
+    download,
+    get_conda_channel,
+    hashsum_file,
+    md5_file,
+    pkgs_dirs,
+    root_dir,
+    unix_path_to_win,
+    win_path_to_unix,
+)
 
 
 # stdlib glob is less feature-rich but considerably faster than glob2
@@ -1343,7 +1342,8 @@ def find_recipe(path):
 
     Returns full path to meta file to be built.
 
-    If we have a base level meta file and other supplemental (nested) ones, use the base level."""
+    If we have a base level meta file and other supplemental (nested) ones, use the base level.
+    """
     # if initial path is absolute then any path we find (via rec_glob)
     # will also be absolute
     if not os.path.isabs(path):

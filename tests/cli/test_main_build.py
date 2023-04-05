@@ -6,15 +6,19 @@ import sys
 
 import pytest
 
-from conda_build.conda_interface import cc_conda_build, context, reset_context
-
 import conda_build
 from conda_build import api
 from conda_build.cli import main_build, main_render
+from conda_build.conda_interface import (
+    TemporaryDirectory,
+    cc_conda_build,
+    context,
+    reset_context,
+)
 from conda_build.config import Config, zstd_compression_level_default
-from conda_build.utils import on_win, get_build_folders, package_has_file
-from conda_build.conda_interface import TemporaryDirectory
 from conda_build.exceptions import DependencyNeedsBuildingError
+from conda_build.utils import get_build_folders, on_win, package_has_file
+
 from ..utils import metadata_dir
 
 

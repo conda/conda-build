@@ -3,7 +3,6 @@
 """
 conda-build's use of conda-index, delegated to now-separate conda-index package.
 """
-
 import json
 import logging
 import os
@@ -95,7 +94,6 @@ def get_build_index(
         or mtime > local_index_timestamp
         or cached_channels != channel_urls
     ):
-
         # priority: (local as either croot or output_folder IF NOT EXPLICITLY IN CHANNEL ARGS),
         #     then channels passed as args (if local in this, it remains in same order),
         #     then channels from condarc.
