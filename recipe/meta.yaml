@@ -6,7 +6,6 @@ source:
   git_url: ../
 
 build:
-  number: 0
   entry_points:
     - conda-build = conda_build.cli.main_build:main
     - conda-convert = conda_build.cli.main_convert:main
@@ -21,37 +20,36 @@ build:
 requirements:
   build:
     - git
+  host:
     - python
     - setuptools
+    - hatchling >=1.12.2
+    - hatch-vcs >=0.2.0
   run:
     - beautifulsoup4
     - chardet
-    - conda  >=4.13
-    # - conda-verify  >=3.0.2  # optional as of CB 3.12.0
-    - contextlib2   # [py<34]
-    - enum34        # [py<34]
-    - pathlib2      # [py<3]
+    - conda >=4.13
     - filelock
-    - futures       # [py<3]
     - jinja2
     - packaging
-    - patchelf      # [linux]
-    - patch     >=2.6   # [not win]
-    - m2-patch  >=2.6   # [win]
+    - patchelf                     # [linux]
+    - patch >=2.6                  # [not win]
+    - m2-patch >=2.6               # [win]
     - pkginfo
     - psutil
-    - py-lief       # [not win]
+    - py-lief                      # [not win]
     - python
     - pyyaml
     - requests
-    - scandir       # [py<34]
     - six
-    - glob2  >=0.6
+    - glob2 >=0.6
     - pytz
-    - tomli         # [py<311]
+    - tomli                        # [py<311]
     - tqdm
-    - conda-package-handling  >=1.3
+    - conda-package-handling >=1.3
     - python-libarchive-c
+  run_constrained:
+    - conda-verify  >=3.0.2
 
 test:
   files:
@@ -103,10 +101,8 @@ test:
   source_files:
     - tests
 
-outputs:
-  - type: wheel
-  - name: {{ PKG_NAME }}
-
 about:
   home: https://github.com/conda/conda-build
-  license: BSD 3-clause
+  license: BSD-3-Clause
+  license_file: LICENSE
+  summary: Canary release of conda-build
