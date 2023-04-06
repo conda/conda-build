@@ -2,6 +2,7 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 from pathlib import Path
+
 from setuptools import setup
 
 import versioneer
@@ -53,7 +54,7 @@ setup(
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.10"
+        "Programming Language :: Python :: 3.10",
     ],
     python_requires=">=3.8",
     description="tools for building conda packages",

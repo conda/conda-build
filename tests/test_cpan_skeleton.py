@@ -9,8 +9,8 @@ from pathlib import Path
 
 import pytest
 
-from conda_build.variants import get_default_variant
 from conda_build.skeletons.cpan import get_core_modules_for_this_perl_version
+from conda_build.variants import get_default_variant
 
 
 @pytest.mark.slow

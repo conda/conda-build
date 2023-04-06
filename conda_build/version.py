@@ -31,7 +31,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 import re
 from typing import Iterator, List, Tuple, Union
-from packaging.version import _BaseVersion, Version, InvalidVersion
+
+from packaging.version import InvalidVersion, Version, _BaseVersion
 
 LegacyCmpKey = Tuple[int, Tuple[str, ...]]
 
@@ -49,7 +50,6 @@ def _parse(version: str) -> Union["_LegacyVersion", "Version"]:
 
 
 class _LegacyVersion(_BaseVersion):
-
     def __init__(self, version: str) -> None:
         self._version = str(version)
         self._key = _legacy_cmpkey(self._version)
@@ -134,7 +134,6 @@ def _parse_version_parts(s: str) -> Iterator[str]:
 
 
 def _legacy_cmpkey(version: str) -> LegacyCmpKey:
-
     # We hardcode an epoch of -1 here. A PEP 440 version can only have a epoch
     # greater than or equal to 0. This will effectively put the LegacyVersion,
     # which uses the defacto standard originally implemented by setuptools,

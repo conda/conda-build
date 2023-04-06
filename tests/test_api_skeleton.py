@@ -3,23 +3,30 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 import subprocess
 import sys
+from pathlib import Path
 
-from conda_build.version import _parse as parse_version
 import pytest
 import ruamel.yaml
 
-from conda_build.skeletons.pypi import get_package_metadata, \
-    get_entry_points, is_setuptools_enabled, convert_to_flat_list, \
-    get_dependencies, get_import_tests, get_tests_require, get_home, \
-    get_summary, get_license_name, clean_license_name
-
 from conda_build import api
 from conda_build.exceptions import DependencyNeedsBuildingError
+from conda_build.skeletons.pypi import (
+    clean_license_name,
+    convert_to_flat_list,
+    get_dependencies,
+    get_entry_points,
+    get_home,
+    get_import_tests,
+    get_license_name,
+    get_package_metadata,
+    get_summary,
+    get_tests_require,
+    is_setuptools_enabled,
+)
 from conda_build.utils import on_win
-
+from conda_build.version import _parse as parse_version
 
 SYMPY_URL = "https://pypi.python.org/packages/source/s/sympy/sympy-1.10.tar.gz#md5=b3f5189ad782bbcb1bedc1ec2ca12f29"
 
@@ -51,48 +58,54 @@ def mock_metadata():
 def pylint_pkginfo():
     # Hardcoding it to avoid to use the get_pkginfo because it takes too much time
     return {
-        'classifiers': [
-            'Development Status :: 6 - Mature',
-            'Environment :: Console',
-            'Intended Audience :: Developers',
-            'License :: OSI Approved :: GNU General Public License (GPL)',
-            'Operating System :: OS Independent',
-            'Programming Language :: Python',
-            'Programming Language :: Python :: 3',
-            'Programming Language :: Python :: 3.4',
-            'Programming Language :: Python :: 3.5',
-            'Programming Language :: Python :: 3.6',
-            'Programming Language :: Python :: 3.7',
-            'Programming Language :: Python :: 3 :: Only',
-            'Programming Language :: Python :: Implementation :: CPython',
-            'Programming Language :: Python :: Implementation :: PyPy',
-            'Topic :: Software Development :: Debuggers',
-            'Topic :: Software Development :: Quality Assurance',
-            'Topic :: Software Development :: Testing'
+        "classifiers": [
+            "Development Status :: 6 - Mature",
+            "Environment :: Console",
+            "Intended Audience :: Developers",
+            "License :: OSI Approved :: GNU General Public License (GPL)",
+            "Operating System :: OS Independent",
+            "Programming Language :: Python",
+            "Programming Language :: Python :: 3",
+            "Programming Language :: Python :: 3.4",
+            "Programming Language :: Python :: 3.5",
+            "Programming Language :: Python :: 3.6",
+            "Programming Language :: Python :: 3.7",
+            "Programming Language :: Python :: 3 :: Only",
+            "Programming Language :: Python :: Implementation :: CPython",
+            "Programming Language :: Python :: Implementation :: PyPy",
+            "Topic :: Software Development :: Debuggers",
+            "Topic :: Software Development :: Quality Assurance",
+            "Topic :: Software Development :: Testing",
         ],
-        'entry_points': {
-            'console_scripts': [
-                'pylint = pylint:run_pylint',
-                'epylint = pylint:run_epylint',
-                'pyreverse = pylint:run_pyreverse',
-                'symilar = pylint:run_symilar'
+        "entry_points": {
+            "console_scripts": [
+                "pylint = pylint:run_pylint",
+                "epylint = pylint:run_epylint",
+                "pyreverse = pylint:run_pyreverse",
+                "symilar = pylint:run_symilar",
             ]
         },
-        'extras_require': {':sys_platform=="win32"': ['colorama']},
-        'home': 'https://github.com/PyCQA/pylint',
-        'install_requires': [
-            'astroid>=2.2.0,<3', 'isort>=4.2.5,<5', 'mccabe>=0.6,<0.7'
+        "extras_require": {':sys_platform=="win32"': ["colorama"]},
+        "home": "https://github.com/PyCQA/pylint",
+        "install_requires": [
+            "astroid>=2.2.0,<3",
+            "isort>=4.2.5,<5",
+            "mccabe>=0.6,<0.7",
         ],
-        'license': 'GPL',
-        'name': 'pylint',
-        'packages': [
-            'pylint', 'pylint.checkers', 'pylint.pyreverse',
-            'pylint.extensions', 'pylint.reporters', 'pylint.reporters.ureports'
+        "license": "GPL",
+        "name": "pylint",
+        "packages": [
+            "pylint",
+            "pylint.checkers",
+            "pylint.pyreverse",
+            "pylint.extensions",
+            "pylint.reporters",
+            "pylint.reporters.ureports",
         ],
-        'setuptools': True,
-        'summary': 'python code static checker',
-        'tests_require': ['pytest'],
-        'version': '2.3.1'
+        "setuptools": True,
+        "summary": "python code static checker",
+        "tests_require": ["pytest"],
+        "version": "2.3.1",
     }
 
 
@@ -213,35 +226,35 @@ def test_convert_to_flat_list():
 
 def test_is_setuptools_enabled():
     assert not is_setuptools_enabled({"entry_points": "STRING"})
-    assert not is_setuptools_enabled({
-        "entry_points": {
-            "console_scripts": ["CONSOLE"],
-            "gui_scripts": ["GUI"],
+    assert not is_setuptools_enabled(
+        {
+            "entry_points": {
+                "console_scripts": ["CONSOLE"],
+                "gui_scripts": ["GUI"],
+            }
         }
-    })
+    )
 
-    assert is_setuptools_enabled({
-        "entry_points": {
-            "console_scripts": ["CONSOLE"],
-            "gui_scripts": ["GUI"],
-            "foo_scripts": ["SCRIPTS"],
+    assert is_setuptools_enabled(
+        {
+            "entry_points": {
+                "console_scripts": ["CONSOLE"],
+                "gui_scripts": ["GUI"],
+                "foo_scripts": ["SCRIPTS"],
+            }
         }
-    })
+    )
 
 
 def test_get_dependencies():
     assert get_dependencies(
-        ['astroid >=2.2.0,<3  #COMMENTS', 'isort >=4.2.5,<5',
-         'mccabe >=0.6,<0.7'],
-        False
-    ) == ['astroid >=2.2.0,<3', 'isort >=4.2.5,<5', 'mccabe >=0.6,<0.7']
+        ["astroid >=2.2.0,<3  #COMMENTS", "isort >=4.2.5,<5", "mccabe >=0.6,<0.7"],
+        False,
+    ) == ["astroid >=2.2.0,<3", "isort >=4.2.5,<5", "mccabe >=0.6,<0.7"]
 
     assert get_dependencies(
-        ['astroid >=2.2.0,<3  #COMMENTS', 'isort >=4.2.5,<5',
-         'mccabe >=0.6,<0.7'],
-        True
-    ) == ['setuptools', 'astroid >=2.2.0,<3', 'isort >=4.2.5,<5',
-          'mccabe >=0.6,<0.7']
+        ["astroid >=2.2.0,<3  #COMMENTS", "isort >=4.2.5,<5", "mccabe >=0.6,<0.7"], True
+    ) == ["setuptools", "astroid >=2.2.0,<3", "isort >=4.2.5,<5", "mccabe >=0.6,<0.7"]
 
 
 def test_get_import_tests(pylint_pkginfo, pylint_metadata):
@@ -326,7 +339,7 @@ def test_pypi_pin_numpy(tmp_path: Path, testing_config):
     )
     assert (tmp_path / "msumastro" / "meta.yaml").read_text().count("numpy x.x") == 2
     with pytest.raises(DependencyNeedsBuildingError):
-        api.build('msumastro')
+        api.build("msumastro")
 
 
 def test_pypi_version_sorting(tmp_path: Path, testing_config):
@@ -341,7 +354,7 @@ def test_pypi_version_sorting(tmp_path: Path, testing_config):
 
 def test_list_skeletons():
     skeletons = api.list_skeletons()
-    assert set(skeletons) == {'pypi', 'cran', 'cpan', 'luarocks', 'rpm'}
+    assert set(skeletons) == {"pypi", "cran", "cpan", "luarocks", "rpm"}
 
 
 def test_pypi_with_entry_points(tmp_path: Path):
@@ -360,8 +373,8 @@ def test_pypi_with_version_arg(tmp_path: Path):
 def test_pypi_with_extra_specs(tmp_path: Path, testing_config):
     # regression test for https://github.com/conda/conda-build/issues/1697
     # For mpi4py:
-    testing_config.channel_urls.append('https://repo.anaconda.com/pkgs/free')
-    extra_specs = ['cython', 'mpi4py']
+    testing_config.channel_urls.append("https://repo.anaconda.com/pkgs/free")
+    extra_specs = ["cython", "mpi4py"]
     if not on_win:
         extra_specs.append("nomkl")
     api.skeletonize(
@@ -375,15 +388,15 @@ def test_pypi_with_extra_specs(tmp_path: Path, testing_config):
     )
     m = api.render(str(tmp_path / "bigfile"))[0][0]
     assert parse_version(m.version()) == parse_version("0.1.24")
-    assert any('cython' in req for req in m.meta['requirements']['host'])
-    assert any('mpi4py' in req for req in m.meta['requirements']['host'])
+    assert any("cython" in req for req in m.meta["requirements"]["host"])
+    assert any("mpi4py" in req for req in m.meta["requirements"]["host"])
 
 
 @pytest.mark.slow
 def test_pypi_with_version_inconsistency(tmp_path: Path, testing_config):
     # regression test for https://github.com/conda/conda-build/issues/189
     # For mpi4py:
-    extra_specs = ['mpi4py']
+    extra_specs = ["mpi4py"]
     if not on_win:
         extra_specs.append("nomkl")
     testing_config.channel_urls.append("https://repo.anaconda.com/pkgs/free")
@@ -405,8 +418,8 @@ def test_pypi_with_basic_environment_markers(tmp_path: Path):
     api.skeletonize("coconut", "pypi", version="1.2.2", output_dir=tmp_path)
     m = api.render(tmp_path / "coconut")[0][0]
 
-    build_reqs = str(m.meta['requirements']['host'])
-    run_reqs = str(m.meta['requirements']['run'])
+    build_reqs = str(m.meta["requirements"]["host"])
+    run_reqs = str(m.meta["requirements"]["run"])
     # should include the right dependencies for the right version
     assert "futures" not in build_reqs
     assert "futures" not in run_reqs
@@ -426,9 +439,11 @@ def test_pypi_section_order_preserved(tmp_path: Path):
     Test whether sections have been written in the correct order.
     """
     from conda_build.render import FIELDS
-    from conda_build.skeletons.pypi import (ABOUT_ORDER,
-                                            REQUIREMENTS_ORDER,
-                                            PYPI_META_STATIC)
+    from conda_build.skeletons.pypi import (
+        ABOUT_ORDER,
+        PYPI_META_STATIC,
+        REQUIREMENTS_ORDER,
+    )
 
     api.skeletonize(packages="sympy", repo="pypi", output_dir=tmp_path)
     # Since we want to check the order of items in the recipe (not whether
@@ -448,8 +463,8 @@ def test_pypi_section_order_preserved(tmp_path: Path):
     # before comparing.
     pruned_fields = [f for f in FIELDS if f in major_sections]
     assert major_sections == pruned_fields
-    assert list(recipe['about']) == ABOUT_ORDER
-    assert list(recipe['requirements']) == REQUIREMENTS_ORDER
+    assert list(recipe["about"]) == ABOUT_ORDER
+    assert list(recipe["requirements"]) == REQUIREMENTS_ORDER
     for k, v in PYPI_META_STATIC.items():
         assert list(v.keys()) == list(recipe[k])
 
