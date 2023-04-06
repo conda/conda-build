@@ -11,6 +11,7 @@ import re
 import shutil
 import sys
 import time
+import warnings
 from collections import namedtuple
 from os.path import abspath, expanduser, expandvars, join
 
@@ -57,20 +58,20 @@ conda_pkg_format_default = None
 zstd_compression_level_default = 19
 
 
-# Python2 silliness:
 def python2_fs_encode(strin):
-    return (
-        strin.decode(sys.getfilesystemencoding()) if hasattr(strin, "decode") else strin
+    warnings.warn(
+        "`conda_build.config.python2_fs_encode` is pending deprecation and will be removed in a future release.",
+        PendingDeprecationWarning,
     )
+    return strin
 
 
 def _ensure_dir(path):
     # this can fail in parallel operation, depending on timing.  Just try to make the dir,
     #    but don't bail if fail.
-    encpath = python2_fs_encode(path)
-    if not os.path.isdir(encpath):
+    if not os.path.isdir(path):
         try:
-            os.makedirs(encpath)
+            os.makedirs(path)
         except OSError:
             pass
 
@@ -485,7 +486,7 @@ class Config:
                 self._croot = join(root_dir, "conda-bld")
             else:
                 self._croot = abspath(expanduser("~/conda-bld"))
-        return python2_fs_encode(self._croot)
+        return self._croot
 
     @croot.setter
     def croot(self, croot):
@@ -672,7 +673,7 @@ class Config:
             "build_id should not be an absolute path, "
             "to preserve croot during path joins"
         )
-        self._build_id = python2_fs_encode(_build_id)
+        self._build_id = _build_id
 
     @property
     def prefix_length(self):
