@@ -19,21 +19,18 @@ import sys
 
 sys.path.insert(0, os.path.abspath("../.."))
 
+import conda_build  # noqa: E402
 
-os.chdir("../..")
-import versioneer  # noqa: E402
-
-version = versioneer.get_versions()["version"]
-
-os.chdir("docs")
 # -- Project information -----------------------------------------------------
 
 project = "conda-build"
 copyright = "2018, Anaconda, Inc."
 author = "Anaconda, Inc."
 
+# The short X.Y version.
+version = conda_build.__version__ or "dev"
 # The full version, including alpha/beta/rc tags
-release = version
+release = conda_build.__version__ or "dev"
 
 
 # -- General configuration ---------------------------------------------------
