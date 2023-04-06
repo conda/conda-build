@@ -16,7 +16,7 @@ from .utils import copy_into, ensure_list, on_win, rm_rf
 
 def create_files(m: MetaData, test_dir: Path) -> bool:
     """
-    Copies all test files from recipe over into testing directory.
+    Copy all test files from recipe over into testing directory.
 
     :param metadata: The meta.yaml object.
     :param test_dir: The testing directory.
