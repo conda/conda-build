@@ -66,14 +66,19 @@ def python2_fs_encode(strin):
     return strin
 
 
-def _ensure_dir(path):
+def _ensure_dir(path: os.PathLike):
+    """Try to ensure a directory exists
+
+    Args:
+        path (os.PathLike): Path to directory
+    """
     # this can fail in parallel operation, depending on timing.  Just try to make the dir,
     #    but don't bail if fail.
-    if not os.path.isdir(path):
-        try:
-            os.makedirs(path)
-        except OSError:
-            pass
+    warnings.warn(
+        "`conda_build.config._ensure_dir` is pending deprecation and will be removed in a future release. Please use `os.makedirs(path, exist_ok=True)` instead",
+        PendingDeprecationWarning,
+    )
+    os.makedirs(path, exist_ok=True)
 
 
 # we need this to be accessible to the CLI, so it needs to be more static.
@@ -767,7 +772,7 @@ class Config:
     def info_dir(self):
         """Path to the info dir in the build prefix, where recipe metadata is stored"""
         path = join(self.host_prefix, "info")
-        _ensure_dir(path)
+        os.makedirs(path, exist_ok=True)
         return path
 
     @property
@@ -775,21 +780,21 @@ class Config:
         """Path to the conda-meta dir in the build prefix, where package index json files are
         stored"""
         path = join(self.host_prefix, "conda-meta")
-        _ensure_dir(path)
+        os.makedirs(path, exist_ok=True)
         return path
 
     @property
     def broken_dir(self):
         """Where packages that fail the test phase are placed"""
         path = join(self.croot, "broken")
-        _ensure_dir(path)
+        os.makedirs(path, exist_ok=True)
         return path
 
     @property
     def bldpkgs_dir(self):
         """Dir where the package is saved."""
         path = join(self.croot, self.host_subdir)
-        _ensure_dir(path)
+        os.makedirs(path, exist_ok=True)
         return path
 
     @property
@@ -807,41 +812,41 @@ class Config:
     def src_cache(self):
         """Where tarballs and zip files are downloaded and stored"""
         path = join(self.src_cache_root, "src_cache")
-        _ensure_dir(path)
+        os.makedirs(path, exist_ok=True)
         return path
 
     @property
     def git_cache(self):
         """Where local clones of git sources are stored"""
         path = join(self.src_cache_root, "git_cache")
-        _ensure_dir(path)
+        os.makedirs(path, exist_ok=True)
         return path
 
     @property
     def hg_cache(self):
         """Where local clones of hg sources are stored"""
         path = join(self.src_cache_root, "hg_cache")
-        _ensure_dir(path)
+        os.makedirs(path, exist_ok=True)
         return path
 
     @property
     def svn_cache(self):
         """Where local checkouts of svn sources are stored"""
         path = join(self.src_cache_root, "svn_cache")
-        _ensure_dir(path)
+        os.makedirs(path, exist_ok=True)
         return path
 
     @property
     def work_dir(self):
         """Where the source for the build is extracted/copied to."""
         path = join(self.build_folder, "work")
-        _ensure_dir(path)
+        os.makedirs(path, exist_ok=True)
         return path
 
     @property
     def pip_cache_dir(self):
         path = self._pip_cache_dir or join(self.build_folder, "pip_cache")
-        _ensure_dir(path)
+        os.makedirs(path, exist_ok=True)
         return path
 
     @pip_cache_dir.setter
@@ -852,7 +857,7 @@ class Config:
     def test_dir(self):
         """The temporary folder where test files are copied to, and where tests start execution"""
         path = join(self.build_folder, "test_tmp")
-        _ensure_dir(path)
+        os.makedirs(path, exist_ok=True)
         return path
 
     @property
