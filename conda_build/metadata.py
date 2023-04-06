@@ -405,7 +405,9 @@ def ensure_matching_hashes(output_metadata):
 
 def parse(data, config, path=None):
     data = select_lines(
-        data, get_selectors(config), variants_in_place=bool(config.variant)
+        data,
+        get_selectors(config),
+        variants_in_place=bool(config.variant),
     )
     res = yamlize(data)
     # ensure the result is a dict
