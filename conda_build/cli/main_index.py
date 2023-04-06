@@ -3,6 +3,7 @@
 import logging
 import os
 import sys
+import warnings
 
 from conda_index import api
 from conda_index.index import MAX_THREADS_DEFAULT
@@ -96,6 +97,11 @@ def parse_args(args):
 
 def execute(args):
     _, args = parse_args(args)
+
+    if args.file:
+        warnings.warn("--file is no longer implemented.")
+    if args.hotfix_source_repo:
+        warnings.warn("--hotfix-source-repo is no longer implemented.")
 
     api.update_index(
         args.dir,

@@ -10,6 +10,7 @@ but only use those kwargs in config.  Config must change to support new features
 """
 
 import sys as _sys
+import warnings
 
 # imports are done locally to keep the api clean and limited strictly
 #    to conda-build's functionality.
@@ -534,6 +535,11 @@ def update_index(
     current_index_versions=None,
     **kwargs,
 ):
+    warnings.warn(
+        "Use standalone conda-index instead of conda_build.api.update_index",
+        PendingDeprecationWarning,
+    )
+
     import os
 
     import yaml

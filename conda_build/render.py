@@ -318,8 +318,9 @@ def _read_specs_from_package(pkg_loc, pkg_dist):
 
 
 def execute_download_actions(m, actions, env, package_subset=None, require_files=False):
+    subdir = getattr(m.config, f"{env}_subdir")
     index, _, _ = conda_build.index.get_build_index(
-        subdir=getattr(m.config, f"{env}_subdir"),
+        subdir=subdir,
         bldpkgs_dir=m.config.bldpkgs_dir,
         output_folder=m.config.output_folder,
         clear_cache=False,
