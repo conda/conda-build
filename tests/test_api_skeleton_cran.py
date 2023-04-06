@@ -1,9 +1,9 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-'''
+"""
 Integrative tests of the CRAN skeleton that start from
 conda_build.api.skeletonize and check the output files
-'''
+"""
 from pathlib import Path
 from typing import Sequence
 
@@ -13,6 +13,7 @@ from conda_build import api
 from conda_build.skeletons.cran import CRAN_BUILD_SH_SOURCE, CRAN_META
 
 
+@pytest.mark.skip("Use separate grayskull package instead of skeleton.")
 @pytest.mark.slow
 @pytest.mark.parametrize(
     "package,license_id,license_family,license_files",
@@ -48,6 +49,7 @@ def test_cran_license(
     } == set(license_files)
 
 
+@pytest.mark.skip("Use separate grayskull package instead of skeleton.")
 @pytest.mark.parametrize(
     "package,skip_text",
     [
@@ -67,9 +69,9 @@ def test_cran_os_type(package: str, skip_text: str, tmp_path: Path, testing_conf
 @pytest.mark.flaky(rerun=5, reruns_delay=2)
 def test_cran_no_comments(tmp_path: Path, testing_config):
     package = "data.table"
-    meta_yaml_comment = '  # This is required to make R link correctly on Linux.'
-    build_sh_comment = '# Add more build steps here, if they are necessary.'
-    build_sh_shebang = '#!/bin/bash'
+    meta_yaml_comment = "  # This is required to make R link correctly on Linux."
+    build_sh_comment = "# Add more build steps here, if they are necessary."
+    build_sh_shebang = "#!/bin/bash"
 
     # Check that comments are part of the templates
     assert meta_yaml_comment in CRAN_META

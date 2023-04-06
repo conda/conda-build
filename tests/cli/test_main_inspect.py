@@ -3,13 +3,14 @@
 import os
 import re
 import sys
-import yaml
 
 import pytest
+import yaml
 
 from conda_build import api
 from conda_build.cli import main_inspect
 from conda_build.utils import on_win
+
 from ..utils import metadata_dir
 
 

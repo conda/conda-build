@@ -1,18 +1,17 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-from collections import defaultdict
-from pathlib import Path
 import os
 import subprocess
 import sys
+from collections import defaultdict
+from pathlib import Path
 
 import pytest
-
 from conda.common.compat import on_mac
+
 import conda_build.config
 from conda_build.config import (
     Config,
-    get_or_merge_config,
     _src_cache_root_default,
     conda_pkg_format_default,
     enable_static_default,
@@ -20,6 +19,7 @@ from conda_build.config import (
     error_overlinking_default,
     exit_on_verify_error_default,
     filename_hashing_default,
+    get_or_merge_config,
     ignore_verify_codes_default,
     no_rewrite_stdout_env_default,
     noarch_python_build_age_default,
@@ -250,5 +250,5 @@ def conda_build_test_recipe_envvar(
 ) -> str:
     """Exposes the cloned conda_build_test_recipe as an environment variable."""
     name = "CONDA_BUILD_TEST_RECIPE_PATH"
-    monkeypatch.setenv(name, conda_build_test_recipe_path)
+    monkeypatch.setenv(name, str(conda_build_test_recipe_path))
     return name
