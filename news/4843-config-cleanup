@@ -8,9 +8,8 @@
 
 ### Deprecations
 
-* Began deprecation notice for:
-  * `conda_build.config.python2_fs_encode`
-  * `conda_build.config._ensure_dir`
+* Mark `conda_build.config.python2_fs_encode` as pending deprecation. (#4843)
+* Mark `conda_build.config._ensure_dir` as pending deprecation. Use stdlib's `pathlib.Path.mkdir(exist_ok=True)` or `os.makedirs(exist_ok=True)` instead. (#4843)
 
 ### Docs
 
