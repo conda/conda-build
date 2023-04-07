@@ -3,11 +3,13 @@
 import os
 import subprocess
 import sys
+import tempfile
 from collections import defaultdict
 from pathlib import Path
+from typing import Generator
 
 import pytest
-from conda.common.compat import on_mac
+from conda.common.compat import on_mac, on_win
 
 import conda_build.config
 from conda_build.config import (
@@ -58,39 +60,20 @@ def testing_workdir(tmpdir, request):
 
 
 @pytest.fixture(scope="function")
-def testing_homedir(tmpdir, request):
-    """Create a homedir in the users home directory; cd into dir above before test, cd out after
-
-    :param tmpdir: py.test fixture, will be injected
-    :param request: py.test fixture-related, will be injected (see pytest docs)
-    """
-
-    saved_path = os.getcwd()
-    d1 = os.path.basename(tmpdir)
-    d2 = os.path.basename(os.path.dirname(tmpdir))
-    d3 = os.path.basename(os.path.dirname(os.path.dirname(tmpdir)))
-    new_dir = os.path.join(os.path.expanduser("~"), d1, d2, d3, "pytest.conda-build")
-    # While pytest will make sure a folder in unique
-    if os.path.exists(new_dir):
-        import shutil
-
-        try:
-            shutil.rmtree(new_dir)
-        except:
-            pass
+def testing_homedir() -> Generator[Path, None, None]:
+    """Create a temporary testing directory in the users home directory; cd into dir before test, cd out after."""
+    saved = Path.cwd()
     try:
-        os.makedirs(new_dir)
-    except:
-        print(f"Failed to create {new_dir}")
-        return None
-    os.chdir(new_dir)
+        with tempfile.TemporaryDirectory(dir=Path.home(), prefix=".pytest_") as home:
+            os.chdir(home)
 
-    def return_to_saved_path():
-        os.chdir(saved_path)
+            yield home
 
-    request.addfinalizer(return_to_saved_path)
-
-    return str(new_dir)
+            os.chdir(saved)
+    except OSError:
+        pytest.xfail(
+            f"failed to create temporary directory () in {'%HOME%' if on_win else '${HOME}'} (tmpfs inappropriate for xattrs)"
+        )
 
 
 @pytest.fixture(scope="function")
