@@ -17,4 +17,4 @@
 
 ### Other
 
-* Minor code simplification for `conda_build.index.ChannelIndex._ensuredirs`
+* Minor code simplification for `conda_build.index.ChannelIndex._ensuredirs`. (#4843)
