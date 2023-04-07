@@ -1180,7 +1180,7 @@ class ChannelIndex:
         return new_repodata
 
     def _ensure_dirs(self, subdir: str):
-        """Ensure paths for different parts of the cache directories exist within a specific sub directory.
+        """Create cache directories within a subdir.
 
         Args:
             subdir (str): name of the subdirectory
