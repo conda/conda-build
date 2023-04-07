@@ -1187,7 +1187,7 @@ class ChannelIndex:
         """
         # Create all cache directories in the subdir.
         cache_path = Path(self.channel_root, subdir, ".cache")
-        cache_path.mkdir(exist_ok=True)
+        cache_path.mkdir(parents=True, exist_ok=True)
         (cache_path / "index").mkdir(exist_ok=True)
         (cache_path / "about").mkdir(exist_ok=True)
         (cache_path / "paths").mkdir(exist_ok=True)
