@@ -59,7 +59,7 @@ def test_python_variants(testing_workdir, testing_config, as_yaml):
     python 3.5 -> python >=3.5,<3.6.0a0
     otherPackages 3.5 -> otherPackages 3.5
     """
-    variants = {"python": ["3.9", "3.10"]}
+    variants = {"python": ["3.10", "3.11"]}
     testing_config.ignore_system_config = True
 
     # write variants to disk
@@ -86,7 +86,7 @@ def test_python_variants(testing_workdir, testing_config, as_yaml):
     assert {
         *metadata[0][0].meta["requirements"]["run"],
         *metadata[1][0].meta["requirements"]["run"],
-    } == {"python >=3.9,<3.10.0a0", "python >=3.10,<3.11.0a0"}
+    } == {"python >=3.10,<3.11.0a0", "python >=3.11,<3.12.0a0"}
 
 
 def test_use_selectors_in_variants(testing_workdir, testing_config):

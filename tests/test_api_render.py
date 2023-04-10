@@ -185,7 +185,7 @@ def test_cross_info_index_platform(testing_config):
 def test_setting_condarc_vars_with_env_var_expansion(testing_workdir):
     os.makedirs("config")
     # python won't be used - the stuff in the recipe folder will override it
-    python_versions = ["2.6", "3.4", "3.10"]
+    python_versions = ["2.6", "3.4", "3.11"]
     config = {"python": python_versions, "bzip2": ["0.9", "1.0"]}
     with open(os.path.join("config", "conda_build_config.yaml"), "w") as f:
         yaml.dump(config, f, default_flow_style=False)
