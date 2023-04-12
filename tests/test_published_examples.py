@@ -2,13 +2,15 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import os
 import sys
+from pathlib import Path
 
 import pytest
-
 from conda.testing.integration import BIN_DIRECTORY
+
 from conda_build.api import build
 from conda_build.utils import check_call_env
-from .utils import published_path, get_valid_recipes
+
+from .utils import get_valid_recipes, published_path
 
 
 @pytest.mark.sanity
@@ -28,7 +30,11 @@ def test_skeleton_pypi():
         for recipe in get_valid_recipes(published_path)
     ],
 )
-def test_recipe_builds(recipe, testing_config):
+def test_recipe_builds(
+    recipe: Path,
+    testing_config,
+    conda_build_test_recipe_envvar: str,
+):
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
     build(str(recipe), config=testing_config)

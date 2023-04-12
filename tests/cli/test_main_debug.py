@@ -1,13 +1,14 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-from pathlib import Path
 import sys
+from pathlib import Path
 from unittest import mock
 
 import pytest
 from pytest import CaptureFixture, MonkeyPatch
 
-from conda_build.cli import main_debug as debug, validators as valid
+from conda_build.cli import main_debug as debug
+from conda_build.cli import validators as valid
 
 
 def test_main_debug_help_message(capsys: CaptureFixture, monkeypatch: MonkeyPatch):
@@ -47,6 +48,6 @@ def test_main_debug_happy_path(
         debug.main()
 
         captured = capsys.readouterr()
-        assert captured.err == ''
+        assert captured.err == ""
 
         assert len(mock_debug.mock_calls) == 2

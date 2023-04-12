@@ -9,15 +9,15 @@ import shutil
 import tarfile
 from logging import getLogger
 from os.path import dirname, isdir, isfile, join
+from unittest import mock
 
 import conda_package_handling.api
 import pytest
-from unittest import mock
-from conda_build.conda_interface import context
-from conda_build.utils import copy_into, rm_rf
 
 import conda_build.api
 import conda_build.index
+from conda_build.conda_interface import context
+from conda_build.utils import copy_into, rm_rf
 
 from .utils import archive_dir
 
@@ -606,7 +606,6 @@ def _build_test_index(workdir):
     """
     Copy repodata.json, packages to workdir for testing.
     """
-
     # Python 3.7 workaround "no dirs_exist_ok flag"
     index_hotfix_pkgs = join(here, "index_hotfix_pkgs")
     for path in os.scandir(index_hotfix_pkgs):
@@ -901,7 +900,6 @@ def test_patch_from_tarball(testing_workdir):
 
 
 def test_index_of_removed_pkg(testing_metadata):
-
     archive_name = "test_index_of_removed_pkg-1.0-1.tar.bz2"
     archive_destination = os.path.join(
         testing_metadata.config.croot, TEST_SUBDIR, archive_name

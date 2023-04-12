@@ -2,6 +2,7 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 from pathlib import Path
+
 from setuptools import setup
 
 import versioneer
@@ -21,12 +22,12 @@ deps = [
     "beautifulsoup4",
     "chardet",
     "pytz",
-    "toml",
+    "tomli",
     "tqdm",
     "psutil",
     "six",
     "libarchive-c",
-    "setuptools",
+    "packaging",
     # "conda-package-handling",  # remove comment once released on PyPI
     "glob2",
 ]
@@ -51,13 +52,11 @@ setup(
         "Intended Audience :: Developers",
         "Operating System :: OS Independent",
         "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.6",
-        "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.10"
+        "Programming Language :: Python :: 3.10",
     ],
-    python_requires=">=3.6",
+    python_requires=">=3.8",
     description="tools for building conda packages",
     long_description=Path("README.md").read_text(),
     packages=[
