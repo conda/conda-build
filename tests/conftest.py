@@ -5,8 +5,8 @@ import subprocess
 import sys
 import tempfile
 from collections import defaultdict
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Generator
 
 import pytest
 from conda.common.compat import on_mac, on_win
@@ -60,7 +60,7 @@ def testing_workdir(tmpdir, request):
 
 
 @pytest.fixture(scope="function")
-def testing_homedir() -> Generator[Path, None, None]:
+def testing_homedir() -> Iterator[Path]:
     """Create a temporary testing directory in the users home directory; cd into dir before test, cd out after."""
     saved = Path.cwd()
     try:
