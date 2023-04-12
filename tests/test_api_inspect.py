@@ -5,6 +5,7 @@ import os
 import pytest
 
 from conda_build import api
+
 from .utils import metadata_dir
 
 

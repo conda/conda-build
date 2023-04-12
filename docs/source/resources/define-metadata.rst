@@ -1111,7 +1111,8 @@ Test files
 ----------
 
 Test files that are copied from the recipe into the temporary
-test directory and are needed during testing.
+test directory and are needed during testing. If providing a path,
+forward slashes must be used.
 
 .. code-block:: yaml
 
