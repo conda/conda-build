@@ -23,11 +23,11 @@ from os.path import (
     dirname,
     getmtime,
     getsize,
-    isdir,
     isfile,
     join,
     splitext,
 )
+from pathlib import Path
 from uuid import uuid4
 
 import conda_package_handling.api
@@ -1179,20 +1179,24 @@ class ChannelIndex:
                     json.dump(stat_cache, fh)
         return new_repodata
 
-    def _ensure_dirs(self, subdir):
+    def _ensure_dirs(self, subdir: str):
+        """Create cache directories within a subdir.
+
+        Args:
+            subdir (str): name of the subdirectory
+        """
         # Create all cache directories in the subdir.
-        ensure = lambda path: isdir(path) or os.makedirs(path)
-        cache_path = join(self.channel_root, subdir, ".cache")
-        ensure(cache_path)
-        ensure(join(cache_path, "index"))
-        ensure(join(cache_path, "about"))
-        ensure(join(cache_path, "paths"))
-        ensure(join(cache_path, "recipe"))
-        ensure(join(cache_path, "run_exports"))
-        ensure(join(cache_path, "post_install"))
-        ensure(join(cache_path, "icon"))
-        ensure(join(self.channel_root, "icons"))
-        ensure(join(cache_path, "recipe_log"))
+        cache_path = Path(self.channel_root, subdir, ".cache")
+        cache_path.mkdir(parents=True, exist_ok=True)
+        (cache_path / "index").mkdir(exist_ok=True)
+        (cache_path / "about").mkdir(exist_ok=True)
+        (cache_path / "paths").mkdir(exist_ok=True)
+        (cache_path / "recipe").mkdir(exist_ok=True)
+        (cache_path / "run_exports").mkdir(exist_ok=True)
+        (cache_path / "post_install").mkdir(exist_ok=True)
+        (cache_path / "icon").mkdir(exist_ok=True)
+        (cache_path / "recipe_log").mkdir(exist_ok=True)
+        Path(self.channel_root, "icons").mkdir(exist_ok=True)
 
     def _calculate_update_set(
         self,
