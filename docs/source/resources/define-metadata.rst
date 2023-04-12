@@ -173,11 +173,11 @@ To access a restricted SVN repository, specify both ``svn_username`` and ``svn_p
    Storing credentials in plaintext carries risks. Alternatively, consider
    using environment variables:
 
-   ... code-block:: yaml
+   .. code-block:: yaml
 
-       source:
-         svn_username: {{ environ["SVN_USERNAME"] }}
-         svn_password: {{ environ["SVN_PASSWORD"] }}
+      source:
+        svn_username: {{ environ["SVN_USERNAME"] }}
+        svn_password: {{ environ["SVN_PASSWORD"] }}
 
 Source from a local path
 -------------------------
