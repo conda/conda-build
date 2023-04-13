@@ -10,7 +10,7 @@ source:
 build:
   number: 0
   error_overlinking: True
-  error_ocerdepending: True
+  error_overdepending: True
 
 requirements:
   build:
