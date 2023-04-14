@@ -470,6 +470,8 @@ FIELDS = {
         "svn_url": str,
         "svn_rev": None,
         "svn_ignore_externals": None,
+        "svn_username": None,
+        "svn_password": None,
         "folder": None,
         "no_hoist": None,
         "patches": list,
