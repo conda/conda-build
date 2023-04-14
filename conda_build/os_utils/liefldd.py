@@ -28,6 +28,7 @@ codefile_type = codefile_type_pyldd
 have_lief = False
 try:
     import lief
+    lief.logging.disable()
 
     have_lief = True
 except:
