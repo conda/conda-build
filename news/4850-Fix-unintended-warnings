@@ -1,0 +1,3 @@
+### Bug fixes
+
+* Remove "Unknown format" / "Failed to get_static_lib_exports" messages
