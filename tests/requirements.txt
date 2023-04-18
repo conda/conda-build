@@ -18,7 +18,6 @@ pip
 pkginfo
 psutil
 py-lief
-pycrypto
 pyflakes
 pytest
 pytest-cov
