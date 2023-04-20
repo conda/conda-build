@@ -40,6 +40,7 @@ Bradley Dice <bdice@bradleydice.com>
 Bradley Kreider <bkreider@continuum.io>
 Brant Faircloth <brant@faircloth-lab.org>
 Brent Pedersen <bpederse@gmail.com>
+Brett Cannon <brett@python.org>
 Bruno Oliveira <nicoddemus@gmail.com>
 Bruno P. Kinoshita <kinow@users.noreply.github.com>
 Bryan W. Weber <bryan.w.weber@gmail.com>
@@ -57,6 +58,8 @@ Christopher J. Wright <cjwright4242@gmail.com> christopher <cjwright4242@gmail.c
 Christopher Whelan <topherwhelan@gmail.com>
 Conda Bot <18747875+conda-bot@users.noreply.github.com> conda-bot <ad-team+condabot@anaconda.com>
 Conda Bot <18747875+conda-bot@users.noreply.github.com> conda-bot <18747875+conda-bot@users.noreply.github.com>
+Conda Bot <18747875+conda-bot@users.noreply.github.com> conda bot <ad-team+condabot@anaconda.com>
+Conda Bot <18747875+conda-bot@users.noreply.github.com> conda bot <18747875+conda-bot@users.noreply.github.com>
 Connor Martin <connormartin7@gmail.com>
 Crystal Soja <crystal.soja@continuum.io> csoja <crystal.soja@continuum.io>
 Dan Blanchard <dan.blanchard@gmail.com> Daniel Blanchard <dblanchard@ets.org>
@@ -68,6 +71,7 @@ Daniel Bast <2790401+dbast@users.noreply.github.com>
 Daniel Damiani <ddamiani@slac.stanford.edu>
 Daniel Holth <dholth@anaconda.com>
 Darren Dale <dsdale24@gmail.com>
+Dave Clements <tnabtaf@gmail.com>
 Dave Hirschfeld <dhirschfeld@users.noreply.github.com> David Hirschfeld <david.hirschfeld@gazprom-mt.com>
 David Froger <david.froger@mailoo.org>
 David Li <li.davidm96@gmail.com>
@@ -77,10 +81,13 @@ Diogo de Campos <campos@esss.com.br>
 Dougal J. Sutherland <dougal@gmail.com>
 Duncan Macleod <duncan.macleod@ligo.org>
 Ed Campbell <drescampbell@gmail.com>
+Eli Rykoff <erykoff@stanford.edu> erykoff <erykoff@stanford.edu>
 Elliot Hughes <e.hughes@winton.com>
 Eric Dill <edill@bnl.gov>
+Ernst Luring <ernst@ejldigital.com>
 Evan Hubinger <evanjhub@gmail.com>
 Evan Klitzke <evan@eklitzke.org>
+Felix Kühnl <xileF1337@users.noreply.github.com>
 Filipe Fernandes <ocefpaf@gmail.com> ocefpaf <ocefpaf@gmail.com>
 Floris Bruynooghe <flub@devork.be>
 Gabriel Reis <gabriel.reis@gazprom-mt.com>
@@ -100,6 +107,7 @@ Ilan Schnell <ilan@continuum.io> Ilan Schnell <ilanschnell@gmail.com>
 Isuru Fernando <isuruf@gmail.com> Isuru Fernando <isuru.11@cse.mrt.ac.lk>
 Ivan Kalev <ivan.kalev@gmail.com> ikalev <ivan.kalev@gmail.com>
 Jacob Walls <jacobtylerwalls@gmail.com>
+Jaime Rodríguez-Guerra <jaimergp@users.noreply.github.com>
 James Abbott <j.abbott@dundee.ac.uk>
 James Lamb <jaylamb20@gmail.com>
 James Sexton <TwistedLadder@gmail.com>
@@ -119,19 +127,23 @@ John Kirkham <jakirkham@gmail.com> jakirkham <jakirkham@gmail.com>
 John Kirkham <jakirkham@gmail.com> John Kirkham <kirkhamj@janelia.hhmi.org>
 John Kirkham <jakirkham@gmail.com> John Kirkham <jakirkham@gmail.com>
 John Omotani <john.omotani@ukaea.uk>
+Johnny <johnnync13@gmail.com>
 Jonathan J. Helmus <jjhelmus@gmail.com> Jonathan Helmus <jjhelmus@gmail.com>
 Joseph Crail <jbcrail@gmail.com>
 Joseph Hunkeler <jhunkeler@gmail.com>
 Juan Lasheras <juan.lasheras@gmail.com> jlas <juan.lasheras@gmail.com>
 Julian Rüth <julian.rueth@fsfe.org>
 Julien Schueller <schueller@phimeca.com>
+Jürgen Gmach <juergen.gmach@googlemail.com>
 Jędrzej Nowak <pigmej@gmail.com> Jedrzej Nowak <pigmej@gmail.com>
 Kai Tietz <ktietz@anaconda.com> Kai Tietz <47363620+katietz@users.noreply.github.com>
 Kale Franz <kfranz@continuum.io> Kale Franz <kalefranz@users.noreply.github.com>
+Katherine Kinnaman <kkinnaman@anaconda.com>
 Ken Odegard <kodegard@anaconda.com> Ken Odegard <ken.odegard@gmail.com>
 Korijn van Golen <korijn@gmail.com>
 Kurt Schelfthout <kurt.schelfthout@gmail.com>
 Kyle Leaders <remkade@users.noreply.github.com>
+Landon Butterworth <landon.butterworth@thinkboxsoftware.com> landon.butterworth <landon.butterworth@thinkboxsoftware.com>
 Lennart Fricke <lennart@die-frickes.eu>
 Levi Naden <lnaden@vt.edu>
 Lori Burns <lori.burns@gatech.edu>
@@ -177,6 +189,7 @@ Oleksandr Pavlyk <oleksandr.pavlyk@intel.com>
 Patrick Snape <patricksnape@gmail.com> Patrick Snape <patrick.snape08@imperial.ac.uk>
 Patrick Sodré <psodre@gmail.com>
 Paul Madden <maddenp@colorado.edu>
+Peet Whittaker <peet.whittaker@gmail.com>
 Peter Williams <peter@newton.cx>
 Phil Elson <pelson.pub@gmail.com> pelson <pelson.pub@gmail.com>
 Phil Reinhold <pcreinhold@gmail.com>
@@ -210,6 +223,7 @@ Sean Ross-Ross <srossross@gmail.com> Sean <srossross@gmail.com>
 Sean Ross-Ross <srossross@gmail.com> srossross <srossross@gmail.com>
 Sean Yen <seanyen@microsoft.com> seanyen <seanyen@microsoft.com>
 Sergio Oller <sergioller@gmail.com>
+Serhii Kupriienko <79282962+skupr-anaconda@users.noreply.github.com>
 Shaun Walbridge <shaun.walbridge@gmail.com>
 Siu Kwan Lam <michael.lam.sk@gmail.com>
 Sophia Castellarin <scastellarin@anaconda.com> sophia <scastellarin95@gmail.com>
@@ -217,12 +231,14 @@ Sophia Castellarin <scastellarin@anaconda.com> sophia <scastellarin@anaconda.com
 Sophia Castellarin <scastellarin@anaconda.com> soapy1 <scastellarin95@gmail.com>
 Sophia Castellarin <scastellarin@anaconda.com> soapy1 <scastellarin@anaconda.com>
 Sophian Guidara <sophian@gmail.com>
+Srivas Venkatesh <110486050+sven6002@users.noreply.github.com>
 Stas Bekman <stas@stason.org>
 Stefan Scherfke <stefan@sofa-rockers.org>
 Stefan Zimmermann <zimmermann.code@gmail.com>
 Stephan Hoyer <shoyer@climate.com>
 Stephen Palmroth <steve.palmroth@tudor.com> spalmrot-tic <steve.palmroth@tudor.com>
 Stuart Berg <bergs@janelia.hhmi.org>
+T Coxon <97948946+tttc3@users.noreply.github.com>
 Tadeu Manoel <tadeu@esss.com.br> Tadeu Manoel <tadeu@users.noreply.github.com>
 Takafumi Arakaki <aka.tkf@gmail.com>
 Teake Nutma <teake.nutma@gmail.com> Teake Nutma <t.a.nutma@rug.nl>
@@ -251,7 +267,7 @@ Yann <yannpaul@bu.edu>
 Yoav Ram <yoavram+github@gmail.com>
 Yu Feng <rainwoodman@gmail.com>
 Zane Dufour <zane.dufour@gmail.com> zdog234 <zane.dufour@gmail.com>
-landon.butterworth <landon.butterworth@thinkboxsoftware.com>
+dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
 peter1000 <peter.margo@gmx.de>
 pre-commit CI <66853113+pre-commit-ci[bot]@users.noreply.github.com> pre-commit-ci[bot] <66853113+pre-commit-ci[bot]@users.noreply.github.com>
 pwwang <pwwang@pwwang.com>

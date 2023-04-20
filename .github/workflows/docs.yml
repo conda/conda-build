@@ -5,7 +5,7 @@ on:
   # https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#push
   push:
     branches:
-      - master
+      - main
     paths:
       - '.github/workflows/docs.yml'
       - 'docs/**'
@@ -22,7 +22,7 @@ jobs:
     if: '!github.event.repository.fork'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: Setup

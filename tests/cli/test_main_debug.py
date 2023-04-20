@@ -1,38 +1,31 @@
-import io
-import os.path
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 import sys
+from pathlib import Path
 from unittest import mock
 
 import pytest
-from pytest import CaptureFixture
+from pytest import CaptureFixture, MonkeyPatch
 
-from conda_build.cli import main_debug as debug, validators as valid
-
-
-@pytest.fixture(scope='module')
-def main_debug_help() -> str:
-    """Read what the current help message should be and return it as a fixture"""
-    sys.argv = ['conda-debug']
-    parser = debug.get_parser()
-
-    with io.StringIO() as fp:
-        parser.print_usage(file=fp)
-        fp.seek(0)
-        yield fp.read()
-
-    sys.argv = []
+from conda_build.cli import main_debug as debug
+from conda_build.cli import validators as valid
 
 
-def test_main_debug_help_message(capsys: CaptureFixture, main_debug_help: str):
+def test_main_debug_help_message(capsys: CaptureFixture, monkeypatch: MonkeyPatch):
+    monkeypatch.setattr(sys, "argv", ["conda-debug", "-h"])
+    help_blurb = debug.get_parser().format_help()
+
     with pytest.raises(SystemExit):
         debug.main()
 
     captured = capsys.readouterr()
-    assert main_debug_help in captured.err
+    assert help_blurb in captured.out
 
 
-def test_main_debug_file_does_not_exist(capsys: CaptureFixture):
-    sys.argv = ['conda-debug', 'file-does-not-exist']
+def test_main_debug_file_does_not_exist(
+    capsys: CaptureFixture, monkeypatch: MonkeyPatch
+):
+    monkeypatch.setattr(sys, "argv", ["conda-debug", "file-does-not-exist"])
 
     with pytest.raises(SystemExit):
         debug.main()
@@ -41,21 +34,20 @@ def test_main_debug_file_does_not_exist(capsys: CaptureFixture):
     assert valid.CONDA_PKG_OR_RECIPE_ERROR_MESSAGE in captured.err
 
 
-def test_main_debug_happy_path(tmpdir, capsys: CaptureFixture):
+def test_main_debug_happy_path(
+    tmp_path: Path, capsys: CaptureFixture, monkeypatch: MonkeyPatch
+):
     """
     Happy path through the main_debug.main function.
     """
-    with mock.patch("conda_build.api.debug") as mock_debug:
-        fake_pkg_file = os.path.join(tmpdir, "fake-conda-pkg.conda")
-        fp = open(fake_pkg_file, "w")
-        fp.write("text")
-        fp.close()
-        sys.argv = ['conda-debug', fake_pkg_file]
+    fake = tmp_path / "fake-conda-pkg.conda"
+    fake.touch()
+    monkeypatch.setattr(sys, "argv", ["conda-debug", str(fake)])
 
+    with mock.patch("conda_build.api.debug") as mock_debug:
         debug.main()
 
         captured = capsys.readouterr()
-
-        assert captured.err == ''
+        assert captured.err == ""
 
         assert len(mock_debug.mock_calls) == 2

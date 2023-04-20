@@ -1056,7 +1056,7 @@ evaluating ``meta.yaml`` templates:
 
 There are default "native" compilers that are used when no compiler is specified
 in any variant. These are defined in `conda-build's jinja_context.py file
-<https://github.com/conda/conda-build/blob/master/conda_build/jinja_context.py>`_.
+<https://github.com/conda/conda-build/blob/main/conda_build/jinja_context.py>`_.
 Most of the time, users will not need to provide compilers in their variants -
 just leave them empty and conda-build will use the defaults appropriate for
 your system.

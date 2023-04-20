@@ -162,9 +162,22 @@ Source from svn
 
    source:
      svn_url: https://github.com/ilanschnell/bsdiff
-     svn_rev: 1.1.4
+     svn_rev: 1.1.4 # (defaults to head)
      svn_ignore_externals: True # (defaults to False)
+     svn_username: username  # Optional, if set must also have svn_password
+     svn_password: password  # Optional, if set must also have svn_username
 
+To access a restricted SVN repository, specify both ``svn_username`` and ``svn_password``.
+
+.. caution::
+   Storing credentials in plaintext carries risks. Alternatively, consider
+   using environment variables:
+
+   .. code-block:: yaml
+
+      source:
+        svn_username: {{ environ["SVN_USERNAME"] }}
+        svn_password: {{ environ["SVN_PASSWORD"] }}
 
 Source from a local path
 -------------------------
@@ -311,6 +324,22 @@ dependency:
 OR
 
   * package uses {{ compiler() }} jinja2 function
+
+You can also influence which variables are considered for the hash with:
+
+.. code-block:: yaml
+
+   build:
+     force_use_keys:
+       - package_1
+     force_ignore_keys:
+       - package_2
+
+This will ensure that the value of ``package_2`` will *not* be considered for the hash,
+and ``package_1`` *will* be, regardless of what conda-build discovers is used by its inspection.
+
+This may be useful to further split complex multi-output builds, to ensure each package is built,
+or to ensure the right package hash when using more complex templating or scripting.
 
 
 Python entry points
@@ -849,6 +878,25 @@ pinned down to the build string level. This will
 supersede any dynamic or compatible pinning that
 conda-build may otherwise be doing.
 
+Ignoring files in overlinking/overdepending checks
+--------------------------------------------------
+
+The ``overlinking_ignore_patterns`` key in the build section can be used to
+ignore patterns of files for the overlinking and overdepending checks. This
+is sometimes useful to speed up builds that have many files (large repackage jobs)
+or builds where you know only a small fraction of the files should be checked.
+
+Glob patterns are allowed here, but mind your quoting, especially with leading wildcards.
+
+Use this sparingly, as the overlinking checks generally do prevent you from making mistakes.
+
+.. code-block:: yaml
+
+ build:
+   overlinking_ignore_patterns:
+     - "bin/*"
+
+
 Whitelisting shared libraries
 -----------------------------
 
@@ -1076,7 +1124,8 @@ Test files
 ----------
 
 Test files that are copied from the recipe into the temporary
-test directory and are needed during testing.
+test directory and are needed during testing. If providing a path,
+forward slashes must be used.
 
 .. code-block:: yaml
 
@@ -1240,11 +1289,13 @@ Specifying files to include in output
 --------------------------------------
 
 You can specify files to be included in the package in 1 of
-2 ways:
+3 ways:
 
 * Explicit file lists.
 
 * Scripts that move files into the build prefix.
+
+* Both of the above
 
 Explicit file lists are relative paths from the root of the
 build prefix. Explicit file lists support glob expressions.
@@ -1294,6 +1345,8 @@ independent of one another.
    simultaneously. Conda disallows this condition because it
    creates ambiguous runtime conditions.
 
+When both scripts and files are given, the script is first run
+and then only the files in the explicit file list are packaged.
 
 Subpackage requirements
 -----------------------
@@ -1870,6 +1923,9 @@ variables are booleans.
    * - ppc64le
      - True if the platform is Linux and the Python architecture
        is ppc64le.
+   * - s390x
+     - True if the platform is Linux and the Python architecture
+       is s390x.
    * - osx
      - True if the platform is macOS.
    * - arm64

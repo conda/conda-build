@@ -29,6 +29,7 @@ Authors are sorted alphabetically.
 * Bradley Kreider
 * Brant Faircloth
 * Brent Pedersen
+* Brett Cannon
 * Bruno Oliveira
 * Bruno P. Kinoshita
 * Bryan W. Weber
@@ -53,6 +54,7 @@ Authors are sorted alphabetically.
 * Daniel Damiani
 * Daniel Holth
 * Darren Dale
+* Dave Clements
 * Dave Hirschfeld
 * David Froger
 * David Li
@@ -62,10 +64,13 @@ Authors are sorted alphabetically.
 * Dougal J. Sutherland
 * Duncan Macleod
 * Ed Campbell
+* Eli Rykoff
 * Elliot Hughes
 * Eric Dill
+* Ernst Luring
 * Evan Hubinger
 * Evan Klitzke
+* Felix Kühnl
 * Filipe Fernandes
 * Floris Bruynooghe
 * Gabriel Reis
@@ -84,6 +89,7 @@ Authors are sorted alphabetically.
 * Isuru Fernando
 * Ivan Kalev
 * Jacob Walls
+* Jaime Rodríguez-Guerra
 * James Abbott
 * James Lamb
 * James Sexton
@@ -100,19 +106,23 @@ Authors are sorted alphabetically.
 * John Blischak
 * John Kirkham
 * John Omotani
+* Johnny
 * Jonathan J. Helmus
 * Joseph Crail
 * Joseph Hunkeler
 * Juan Lasheras
 * Julian Rüth
 * Julien Schueller
+* Jürgen Gmach
 * Jędrzej Nowak
 * Kai Tietz
 * Kale Franz
+* Katherine Kinnaman
 * Ken Odegard
 * Korijn van Golen
 * Kurt Schelfthout
 * Kyle Leaders
+* Landon Butterworth
 * Lennart Fricke
 * Levi Naden
 * Lori Burns
@@ -149,6 +159,7 @@ Authors are sorted alphabetically.
 * Patrick Snape
 * Patrick Sodré
 * Paul Madden
+* Peet Whittaker
 * Peter Williams
 * Phil Elson
 * Phil Reinhold
@@ -175,16 +186,19 @@ Authors are sorted alphabetically.
 * Sean Ross-Ross
 * Sean Yen
 * Sergio Oller
+* Serhii Kupriienko
 * Shaun Walbridge
 * Siu Kwan Lam
 * Sophia Castellarin
 * Sophian Guidara
+* Srivas Venkatesh
 * Stas Bekman
 * Stefan Scherfke
 * Stefan Zimmermann
 * Stephan Hoyer
 * Stephen Palmroth
 * Stuart Berg
+* T Coxon
 * Tadeu Manoel
 * Takafumi Arakaki
 * Teake Nutma
@@ -212,7 +226,7 @@ Authors are sorted alphabetically.
 * Yoav Ram
 * Yu Feng
 * Zane Dufour
-* landon.butterworth
+* dependabot[bot]
 * peter1000
 * pre-commit CI
 * pwwang

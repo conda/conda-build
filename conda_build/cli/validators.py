@@ -1,10 +1,12 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
 import os
 from argparse import ArgumentError
 
-from conda_build.utils import CONDA_PACKAGE_EXTENSIONS
 from conda_build import utils
+from conda_build.utils import CONDA_PACKAGE_EXTENSIONS
 
 CONDA_PKG_OR_RECIPE_ERROR_MESSAGE = (
     "\nUnable to parse provided recipe directory or package file.\n\n"
