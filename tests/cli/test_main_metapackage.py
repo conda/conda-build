@@ -1,9 +1,9 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-from glob import glob
 import json
 import os
 import sys
+from glob import glob
 
 from conda_build.cli import main_metapackage
 from conda_build.utils import package_has_file

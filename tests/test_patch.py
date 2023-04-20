@@ -3,15 +3,15 @@
 from __future__ import annotations
 
 from pathlib import Path
+from subprocess import CalledProcessError
 from textwrap import dedent
 from types import SimpleNamespace
-from subprocess import CalledProcessError
 
 import pytest
 
 from conda_build.source import (
-    _ensure_LF,
     _ensure_CRLF,
+    _ensure_LF,
     _guess_patch_strip_level,
     apply_patch,
 )

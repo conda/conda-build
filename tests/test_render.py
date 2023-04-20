@@ -9,8 +9,7 @@ from uuid import uuid4
 
 import pytest
 
-from conda_build import api
-from conda_build import render
+from conda_build import api, render
 from conda_build.metadata import MetaData
 from conda_build.utils import CONDA_PACKAGE_EXTENSION_V1
 
@@ -43,15 +42,11 @@ def test_reduce_duplicate_specs(testing_metadata):
 
 def test_pin_run_as_build_preserve_string(testing_metadata):
     m = testing_metadata
-    m.config.variant['pin_run_as_build']['pkg'] = {
-        'max_pin': 'x.x'
-    }
+    m.config.variant["pin_run_as_build"]["pkg"] = {"max_pin": "x.x"}
     dep = render.get_pin_from_build(
-        m,
-        'pkg * somestring*',
-        {'pkg': '1.2.3 somestring_h1234'}
+        m, "pkg * somestring*", {"pkg": "1.2.3 somestring_h1234"}
     )
-    assert dep == 'pkg >=1.2.3,<1.3.0a0 somestring*'
+    assert dep == "pkg >=1.2.3,<1.3.0a0 somestring*"
 
 
 @pytest.mark.parametrize(

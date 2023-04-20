@@ -1,10 +1,10 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 import pytest
-
 from conda.auxlib.ish import dals
+
 from conda_build.skeletons import pypi
-from conda_build.skeletons.pypi import _print_dict, _formating_value
+from conda_build.skeletons.pypi import _formating_value, _print_dict
 
 
 @pytest.mark.parametrize(

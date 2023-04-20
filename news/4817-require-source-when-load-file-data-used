@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* <news item>
+* Require the source when rendering a recipe that uses the load_file_data function (#4817, fixes #4807)
 
 ### Deprecations
 
@@ -16,4 +16,4 @@
 
 ### Other
 
-* Use tomllib (Python 3.11+) or tomli for .toml support.
+* <news item>
