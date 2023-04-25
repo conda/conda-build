@@ -108,7 +108,7 @@ def msvc_env_cmd(bits, config, override=None):
         "If this recipe does not use a compiler, this message is safe to ignore.  "
         "Otherwise, use {{compiler('<language>')}} jinja2 in requirements/build."
     )
-    if bit == "arm64":
+    if bits == "arm64":
         log.warn(
             "The legacy MSVC compiler setup does not support arm64 builds. "
         )
