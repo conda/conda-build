@@ -14,18 +14,12 @@ limitations. The script is limited to the Python version used in
 the build and it is not as reproducible as using a recipe. We
 recommend using a recipe with conda-build.
 
-.. note::
-   If you use Setuptools, you must first import Setuptools and
-   then import ``conda_build.bdist_conda``, because Setuptools
-   monkey patches ``distutils.dist.Distribution``.
-
 EXAMPLE: A minimal ``setup.py`` file using the setup options
 ``name`` and ``version``:
 
 .. code::
 
    from setuptools import setup
-   import conda_build.bdist_conda
 
   setup(
       name="foo",
