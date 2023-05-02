@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from setuptools import setup
 
+import conda_build.bdist_conda
+
 setup(
     name="conda-build-test-project",
     version="1.0",
