@@ -10,8 +10,8 @@ import setuptools  # noqa
 # Leverage the hard work done by setuptools/distutils to find vcvarsall using
 # either the registry or the VS**COMNTOOLS environment variable
 try:
-    from distutils.msvc9compiler import WINSDK_BASE, Reg
-    from distutils.msvc9compiler import find_vcvarsall as distutils_find_vcvarsall
+    from setuptools._distutils.msvc9compiler import WINSDK_BASE, Reg
+    from setuptools._distutils.msvc9compiler import find_vcvarsall as distutils_find_vcvarsall
 except:
     # Allow some imports to work for cross or CONDA_SUBDIR usage.
     pass
