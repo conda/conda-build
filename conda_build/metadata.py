@@ -1,5 +1,7 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import contextlib
 import copy
 import hashlib
@@ -8,6 +10,7 @@ import os
 import re
 import sys
 import time
+import warnings
 from collections import OrderedDict
 from functools import lru_cache
 from os.path import isfile, join
@@ -76,7 +79,18 @@ numpy_compatible_re = re.compile(r"pin_\w+\([\'\"]numpy[\'\"]")
 used_vars_cache = {}
 
 
-def ns_cfg(config):
+def get_selectors(config: Config) -> dict[str, bool]:
+    """Aggregates selectors for use in recipe templating.
+
+    Derives selectors from the config and variants to be injected
+    into the Jinja environment prior to templating.
+
+    Args:
+        config (Config): The config object
+
+    Returns:
+        dict[str, bool]: Dictionary of on/off selectors for Jinja
+    """
     # Remember to update the docs of any of this changes
     plat = config.host_subdir
     d = dict(
@@ -157,6 +171,15 @@ def ns_cfg(config):
                     v = v.lower() == "true"
                 d[k] = v
     return d
+
+
+def ns_cfg(config: Config) -> dict[str, bool]:
+    warnings.warn(
+        "`conda_build.metadata.ns_cfg` is pending deprecation and will be removed in a "
+        "future release. Please use `conda_build.metadata.get_selectors` instead.",
+        PendingDeprecationWarning,
+    )
+    return get_selectors(config)
 
 
 # Selectors must be either:
@@ -381,7 +404,11 @@ def ensure_matching_hashes(output_metadata):
 
 
 def parse(data, config, path=None):
-    data = select_lines(data, ns_cfg(config), variants_in_place=bool(config.variant))
+    data = select_lines(
+        data,
+        get_selectors(config),
+        variants_in_place=bool(config.variant),
+    )
     res = yamlize(data)
     # ensure the result is a dict
     if res is None:
@@ -443,6 +470,8 @@ FIELDS = {
         "svn_url": str,
         "svn_rev": None,
         "svn_ignore_externals": None,
+        "svn_username": None,
+        "svn_password": None,
         "folder": None,
         "no_hoist": None,
         "patches": list,
@@ -1828,7 +1857,7 @@ class MetaData:
         loader = FilteredLoader(jinja2.ChoiceLoader(loaders), config=self.config)
         env = jinja2.Environment(loader=loader, undefined=undefined_type)
 
-        env.globals.update(ns_cfg(self.config))
+        env.globals.update(get_selectors(self.config))
         env.globals.update(environ.get_dict(m=self, skip_build_id=skip_build_id))
         env.globals.update({"CONDA_BUILD_STATE": "RENDER"})
         env.globals.update(
@@ -1925,11 +1954,20 @@ class MetaData:
         return "load_file_regex" in meta_text
 
     @property
+    def uses_load_file_data_in_meta(self):
+        meta_text = ""
+        if self.meta_path:
+            with open(self.meta_path, "rb") as f:
+                meta_text = UnicodeDammit(f.read()).unicode_markup
+        return "load_file_data" in meta_text
+
+    @property
     def needs_source_for_render(self):
         return (
             self.uses_vcs_in_meta
             or self.uses_setup_py_in_meta
             or self.uses_regex_in_meta
+            or self.uses_load_file_data_in_meta
         )
 
     @property
@@ -2005,7 +2043,7 @@ class MetaData:
         if apply_selectors:
             recipe_text = select_lines(
                 recipe_text,
-                ns_cfg(self.config),
+                get_selectors(self.config),
                 variants_in_place=bool(self.config.variant),
             )
         return recipe_text.rstrip()

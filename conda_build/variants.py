@@ -125,11 +125,11 @@ def get_default_variant(config):
 
 
 def parse_config_file(path, config):
-    from conda_build.metadata import ns_cfg, select_lines
+    from conda_build.metadata import get_selectors, select_lines
 
     with open(path) as f:
         contents = f.read()
-    contents = select_lines(contents, ns_cfg(config), variants_in_place=False)
+    contents = select_lines(contents, get_selectors(config), variants_in_place=False)
     content = yaml.load(contents, Loader=yaml.loader.BaseLoader) or {}
     trim_empty_keys(content)
     return content

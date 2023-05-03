@@ -4,6 +4,7 @@ import contextlib
 import os
 import subprocess
 import sys
+from pathlib import Path
 from typing import NamedTuple
 
 import filelock
@@ -11,17 +12,6 @@ import pytest
 
 import conda_build.utils as utils
 from conda_build.exceptions import BuildLockError
-
-
-def makefile(name, contents=""):
-    name = os.path.abspath(name)
-    path = os.path.dirname(name)
-
-    if not os.path.exists(path):
-        os.makedirs(path)
-
-    with open(name, "w") as f:
-        f.write(contents)
 
 
 @pytest.mark.skipif(
@@ -49,10 +39,9 @@ def test_copy_source_tree(namespace_setup):
 
 
 def test_merge_namespace_trees(namespace_setup):
-    dep = os.path.join(
-        namespace_setup, "other_tree", "namespace", "package", "dependency.py"
-    )
-    makefile(dep)
+    dep = Path(namespace_setup, "other_tree", "namespace", "package", "dependency.py")
+    dep.parent.mkdir(parents=True, exist_ok=True)
+    dep.touch()
 
     utils.copy_into(os.path.join(namespace_setup, "other_tree"), namespace_setup)
     assert os.path.isfile(
@@ -62,19 +51,19 @@ def test_merge_namespace_trees(namespace_setup):
 
 
 @pytest.fixture(scope="function")
-def namespace_setup(testing_workdir):
-    namespace = os.path.join(testing_workdir, "namespace")
-    package = os.path.join(namespace, "package")
-    makefile(os.path.join(package, "module.py"))
+def namespace_setup(testing_workdir: os.PathLike) -> os.PathLike:
+    module = Path(testing_workdir, "namespace", "package", "module.py")
+    module.parent.mkdir(parents=True, exist_ok=True)
+    module.touch()
     return testing_workdir
 
 
 @pytest.mark.sanity
-def test_disallow_merge_conflicts(namespace_setup):
-    duplicate = os.path.join(
-        namespace_setup, "dupe", "namespace", "package", "module.py"
-    )
-    makefile(duplicate)
+def test_disallow_merge_conflicts(namespace_setup: os.PathLike):
+    duplicate = Path(namespace_setup, "dupe", "namespace", "package", "module.py")
+    duplicate.parent.mkdir(parents=True, exist_ok=True)
+    duplicate.touch()
+
     with pytest.raises(IOError):
         utils.merge_tree(
             os.path.dirname(duplicate),
@@ -420,7 +409,7 @@ def _generate_tmp_tree():
         f3 = os.path.join(dC, "fileA")
         f4 = os.path.join(dC, "fileB")
         for f in (f1, f2, f3, f4):
-            makefile(f)
+            Path(f).touch()
 
         yield tmp, (dA, dB, dC), (f1, f2, f3, f4)
     finally:
@@ -446,7 +435,7 @@ def test_find_recipe():
 
         # check that each of these are valid recipes
         for f in (f5, f6, f7, f8):
-            makefile(f)
+            Path(f).touch()
             assert utils.find_recipe(tmp) == f
             os.remove(f)
 
@@ -454,7 +443,7 @@ def test_find_recipe():
 def test_find_recipe_relative():
     with _generate_tmp_tree() as (tmp, (dA, dB, dC), (f1, f2, f3, f4)):
         f5 = os.path.join(dA, "meta.yaml")
-        makefile(f5)
+        Path(f5).touch()
 
         # check that even when given a relative recipe path we still return
         # the absolute path
@@ -476,7 +465,8 @@ def test_find_recipe_no_meta():
 def test_find_recipe_file():
     with _generate_tmp_tree() as (tmp, _, (f1, f2, f3, f4)):
         f5 = os.path.join(tmp, "meta.yaml")
-        makefile(f5)
+        Path(f5).touch()
+
         # file provided is valid meta
         assert utils.find_recipe(f5) == f5
 
@@ -494,7 +484,8 @@ def test_find_recipe_multipe_base():
         f6 = os.path.join(dB, "meta.yaml")
         f7 = os.path.join(dC, "conda.yaml")
         for f in (f5, f6, f7):
-            makefile(f)
+            Path(f).touch()
+
         # multiple meta files, use the one in base level
         assert utils.find_recipe(tmp) == f5
 
@@ -504,7 +495,7 @@ def test_find_recipe_multipe_bad():
         f5 = os.path.join(dB, "meta.yaml")
         f6 = os.path.join(dC, "conda.yaml")
         for f in (f5, f6):
-            makefile(f)
+            Path(f).touch()
 
         # nothing in base
         with pytest.raises(IOError):
@@ -513,7 +504,7 @@ def test_find_recipe_multipe_bad():
         f7 = os.path.join(tmp, "meta.yaml")
         f8 = os.path.join(tmp, "conda.yaml")
         for f in (f7, f8):
-            makefile(f)
+            Path(f).touch()
 
         # too many in base
         with pytest.raises(IOError):

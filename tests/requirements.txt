@@ -3,7 +3,7 @@
 anaconda-client
 beautifulsoup4
 chardet
-conda
+conda >= 4.13
 conda-index
 conda-package-handling
 conda-verify
@@ -11,7 +11,7 @@ contextlib2
 cytoolz
 filelock
 git
-glob2
+glob2 >=0.6
 jinja2
 numpy
 perl
@@ -33,5 +33,6 @@ pytz
 requests
 ripgrep
 ruamel.yaml
+setuptools_scm  # needed for devenv version detection
 tomli
 tqdm
