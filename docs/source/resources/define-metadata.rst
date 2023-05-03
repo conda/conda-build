@@ -162,9 +162,22 @@ Source from svn
 
    source:
      svn_url: https://github.com/ilanschnell/bsdiff
-     svn_rev: 1.1.4
+     svn_rev: 1.1.4 # (defaults to head)
      svn_ignore_externals: True # (defaults to False)
+     svn_username: username  # Optional, if set must also have svn_password
+     svn_password: password  # Optional, if set must also have svn_username
 
+To access a restricted SVN repository, specify both ``svn_username`` and ``svn_password``.
+
+.. caution::
+   Storing credentials in plaintext carries risks. Alternatively, consider
+   using environment variables:
+
+   .. code-block:: yaml
+
+      source:
+        svn_username: {{ environ["SVN_USERNAME"] }}
+        svn_password: {{ environ["SVN_PASSWORD"] }}
 
 Source from a local path
 -------------------------

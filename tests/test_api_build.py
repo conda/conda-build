@@ -14,6 +14,7 @@ import uuid
 from collections import OrderedDict
 from glob import glob
 from pathlib import Path
+from shutil import which
 
 # for version
 import conda
@@ -21,6 +22,7 @@ import pytest
 import yaml
 from binstar_client.commands import remove, show
 from binstar_client.errors import NotFound
+from conda.common.compat import on_linux, on_mac, on_win
 from conda.exceptions import ClobberError, CondaMultiError
 
 import conda_build
@@ -32,6 +34,7 @@ from conda_build.conda_interface import (
     reset_context,
     url_path,
 )
+from conda_build.config import Config
 from conda_build.exceptions import (
     CondaBuildException,
     DependencyNeedsBuildingError,
@@ -48,7 +51,6 @@ from conda_build.utils import (
     copy_into,
     env_var,
     get_conda_operation_locks,
-    on_win,
     package_has_file,
     prepend_bin_path,
     rm_rf,
@@ -1336,37 +1338,41 @@ def test_pin_subpackage_exact(testing_config):
 
 @pytest.mark.sanity
 @pytest.mark.serial
-@pytest.mark.skipif(
-    sys.platform != "linux", reason="xattr code written here is specific to linux"
-)
-def test_copy_read_only_file_with_xattr(testing_config, testing_homedir):
-    if not testing_homedir:
-        return pytest.xfail(
-            "could not create a temporary folder in {} (tmpfs inappropriate for xattrs)".format(
-                "${HOME}" if sys.platform != "win32" else "%UserProfile%"
+@pytest.mark.skipif(on_mac and not which("xattr"), reason="`xattr` unavailable")
+@pytest.mark.skipif(on_linux and not which("setfattr"), reason="`setfattr` unavailable")
+@pytest.mark.skipif(on_win, reason="Windows doesn't support xattr")
+def test_copy_read_only_file_with_xattr(testing_config: Config, testing_homedir: Path):
+    recipe = Path(testing_homedir, "_xattr_copy")
+    copy_into(metadata_path / "_xattr_copy", recipe)
+
+    # file is u=rw,go=r (0o644) to start, change it to u=r,go= (0o400) after setting the attribute
+    ro_file = recipe / "mode_400_file"
+
+    # set extended attributes
+    if on_linux:
+        # tmpfs on modern Linux does not support xattr in general.
+        # https://stackoverflow.com/a/46598063
+        # tmpfs can support extended attributes if you enable CONFIG_TMPFS_XATTR in Kernel config.
+        # But Currently this enables support for the trusted.* and security.* namespaces
+        try:
+            subprocess.run(
+                f"setfattr -n user.attrib -v somevalue {ro_file}",
+                shell=True,
+                check=True,
             )
+        except subprocess.CalledProcessError:
+            pytest.xfail("`setfattr` failed, see https://stackoverflow.com/a/46598063")
+    else:
+        subprocess.run(
+            f"xattr -w user.attrib somevalue {ro_file}",
+            shell=True,
+            check=True,
         )
-    src_recipe = os.path.join(metadata_dir, "_xattr_copy")
-    recipe = os.path.join(testing_homedir, "_xattr_copy")
-    copy_into(src_recipe, recipe)
-    # file is r/w for owner, but we change it to 400 after setting the attribute
-    ro_file = os.path.join(recipe, "mode_400_file")
-    # tmpfs on modern Linux does not support xattr in general.
-    # https://stackoverflow.com/a/46598063
-    # tmpfs can support extended attributes if you enable CONFIG_TMPFS_XATTR in Kernel config.
-    # But Currently this enables support for the trusted.* and security.* namespaces
-    try:
-        subprocess.check_call(
-            f"setfattr -n user.attrib -v somevalue {ro_file}", shell=True
-        )
-    except:
-        return pytest.xfail(
-            "setfattr not possible in {}, see https://stackoverflow.com/a/46598063".format(
-                testing_homedir
-            )
-        )
-    subprocess.check_call(f"chmod 400 {ro_file}", shell=True)
-    api.build(recipe, config=testing_config)
+
+    # restrict file permissions
+    ro_file.chmod(0o400)
+
+    api.build(str(recipe), config=testing_config)
 
 
 @pytest.mark.sanity
