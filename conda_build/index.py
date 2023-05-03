@@ -145,6 +145,10 @@ def get_build_index(
     locking=None,
     timeout=None,
 ):
+    """
+    Used during package builds to create/get a channel including any local or
+    newly built packages. This function both updates and gets index data.
+    """
     global local_index_timestamp
     global local_subdir
     global local_output_folder
@@ -203,6 +207,8 @@ def get_build_index(
             if subdir == "noarch":
                 subdir = conda_interface.subdir
             try:
+                # get_index() is like conda reading the index, not conda_index
+                # creating a new index.
                 cached_index = get_index(
                     channel_urls=urls,
                     prepend=not omit_defaults,
