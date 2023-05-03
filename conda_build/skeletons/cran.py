@@ -557,7 +557,7 @@ def yaml_quote_string(string):
     Note that this function is NOT general.
     """
     return (
-        yaml.dump(string, Dumper=SafeDumper)
+        yaml.dump(string, indent=True, Dumper=SafeDumper)
         .replace("\n...\n", "")
         .replace("\n", "\n  ")
         .rstrip("\n ")
