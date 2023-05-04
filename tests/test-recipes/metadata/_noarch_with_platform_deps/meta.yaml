@@ -16,4 +16,5 @@ requirements:
     - __win      # [win]
     - appnope    # [osx]
     - __osx      # [osx]
+    - __archspec * ppc64le  # [ppc64le]
     - __linux    # [linux]

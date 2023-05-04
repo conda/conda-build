@@ -192,9 +192,12 @@ def test_noarch_with_platform_deps(testing_workdir, testing_config):
         )[0][0]
         build_ids[subdir_] = m.build_id()
 
-    assert len(set(build_ids.values())) == 3
+    # one hash for each platform, plus one for the archspec selector
+    assert len(set(build_ids.values())) == 4
     assert build_ids["linux-64"] == build_ids["linux-aarch64"]
-    assert build_ids["linux-64"] == build_ids["linux-ppc64le"]
+    assert (
+        build_ids["linux-64"] != build_ids["linux-ppc64le"]
+    )  # not the same due to archspec
 
 
 def test_noarch_with_no_platform_deps(testing_workdir, testing_config):
