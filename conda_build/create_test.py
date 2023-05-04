@@ -71,23 +71,22 @@ def create_shell_files(m: MetaData, test_dir: os.PathLike) -> list[str]:
                 m.config.timeout,
                 locking=False,
             )
-        if basename(test_dir) != "test_tmp":
-            commands = ensure_list(m.get_value("test/commands", []))
-            if commands:
-                with open(join(dest_file), "a") as f:
-                    f.write("\n\n")
-                    if not status:
-                        f.write("set -ex\n\n")
-                    f.write("\n\n")
-                    for cmd in commands:
-                        f.write(cmd)
-                        f.write("\n")
-                        if status:
-                            f.write("IF %ERRORLEVEL% NEQ 0 exit /B 1\n")
+        commands = ensure_list(m.get_value("test/commands", []))
+        if commands:
+            with open(join(dest_file), "a") as f:
+                f.write("\n\n")
+                if not status:
+                    f.write("set -ex\n\n")
+                f.write("\n\n")
+                for cmd in commands:
+                    f.write(cmd)
+                    f.write("\n")
                     if status:
-                        f.write("exit /B 0\n")
-                    else:
-                        f.write("exit 0\n")
+                        f.write("IF %ERRORLEVEL% NEQ 0 exit /B 1\n")
+                if status:
+                    f.write("exit /B 0\n")
+                else:
+                    f.write("exit 0\n")
         if isfile(dest_file):
             shell_files.append(dest_file)
     return shell_files
