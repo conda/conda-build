@@ -185,9 +185,10 @@ def test_cross_info_index_platform(testing_config):
 def test_noarch_with_platform_deps(testing_workdir, testing_config):
     recipe_path = os.path.join(metadata_dir, "_noarch_with_platform_deps")
     build_ids = {}
-    for subdir in ["linux-64", "linux-aarch64", "linux-ppc64le", "osx-64", "win-64"]:
-        m = api.render(recipe_path, config=testing_config, subdir=subdir)[0][0]
-        build_ids[subdir] = m.build_id()
+    for subdir_ in ["linux-64", "linux-aarch64", "linux-ppc64le", "osx-64", "win-64"]:
+        platform, arch = subdir_.split("-")
+        m = api.render(recipe_path, config=testing_config, platform=platform, arch=arch)[0][0]
+        build_ids[subdir_] = m.build_id()
 
     assert len(set(build_ids.values())) == 3
     assert build_ids["linux-64"] == build_ids["linux-aarch64"]
