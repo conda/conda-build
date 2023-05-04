@@ -2895,14 +2895,14 @@ def build(
                     # must rebuild index because conda has no way to incrementally add our last
                     #    package to the index.
 
-                    subdir = (
+                    index_subdir = (
                         "noarch"
                         if (m.noarch or m.noarch_python)
                         else m.config.host_subdir
                     )
                     if m.is_cross:
                         get_build_index(
-                            subdir=subdir,
+                            subdir=index_subdir,
                             bldpkgs_dir=m.config.bldpkgs_dir,
                             output_folder=m.config.output_folder,
                             channel_urls=m.config.channel_urls,
@@ -2913,7 +2913,7 @@ def build(
                             clear_cache=True,
                         )
                     get_build_index(
-                        subdir=subdir,
+                        subdir=index_subdir,
                         bldpkgs_dir=m.config.bldpkgs_dir,
                         output_folder=m.config.output_folder,
                         channel_urls=m.config.channel_urls,
@@ -3006,8 +3006,7 @@ def _construct_metadata_for_test_from_package(package, config):
     with open(os.path.join(info_dir, "index.json")) as f:
         package_data = json.load(f)
 
-    if package_data["subdir"] != "noarch":
-        config.host_subdir = package_data["subdir"]
+    config.host_subdir = package_data["subdir"]
     # We may be testing an (old) package built without filename hashing.
     hash_input = os.path.join(info_dir, "hash_input.json")
     if os.path.isfile(hash_input):
