@@ -1036,6 +1036,11 @@ def codefile_class(filename, skip_symlinks=False):
             filename = os.path.realpath(filename)
     if os.path.isdir(filename):
         return None
+    if filename.endswith(".a"):
+        # lief does not (yet) support querying for static libraries;
+        # this used to silently work but surfaced by lief 0.12, see
+        # https://github.com/lief-project/LIEF/issues/873
+        return None
     if filename.endswith((".dll", ".pyd")):
         return DLLfile
     if filename.endswith(".exe"):
