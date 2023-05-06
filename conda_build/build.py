@@ -94,7 +94,7 @@ if sys.platform == "win32":
     import conda_build.windows as windows
 
 if "bsd" in sys.platform:
-    shell_path = "/bin/sh"
+    shell_path = "/usr/local/bin/bash"
 elif utils.on_win:
     shell_path = "bash"
 else:
