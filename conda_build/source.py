@@ -879,6 +879,9 @@ def _get_patch_attributes(
                         result[check_name] = False
                         pass
                     else:
+                        if process.returncode:
+                            result[check_name] = False
+                            continue
                         result[check_name] = fmt
                         # Save the first one found.
                         if check_name == "applicable" and not result["args"]:
