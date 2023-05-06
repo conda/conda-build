@@ -78,6 +78,11 @@ DEFAULT_COMPILERS = {
         "cxx": "clangxx",
         "fortran": "gfortran",
     },
+    "freebsd": {
+        "c": "clang",
+        "cxx": "clangxx",
+        "fortran": "gfortran",
+    },
 }
 
 arch_name = subdir.rsplit("-", 1)[-1]
