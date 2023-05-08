@@ -99,10 +99,7 @@ def parse_args(args):
 def execute(args):
     _, args = parse_args(args)
 
-    if args.file:
-        warnings.warn("--file is no longer implemented.")
-    if args.hotfix_source_repo:
-        warnings.warn("--hotfix-source-repo is no longer implemented.")
+    warnings.warn("conda-build index is deprecated. Use standalone conda-index package.")
 
     api.update_index(
         args.dir,
