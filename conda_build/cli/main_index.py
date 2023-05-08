@@ -5,10 +5,10 @@ import os
 import sys
 import warnings
 
-from conda_build import api
 from conda_index.index import MAX_THREADS_DEFAULT
 from conda_index.utils import DEFAULT_SUBDIRS
 
+from conda_build import api
 from conda_build.conda_interface import ArgumentParser
 
 logging.basicConfig(level=logging.INFO)
@@ -99,7 +99,9 @@ def parse_args(args):
 def execute(args):
     _, args = parse_args(args)
 
-    warnings.warn("conda-build index is deprecated. Use standalone conda-index package.")
+    warnings.warn(
+        "conda-build index is deprecated. Use standalone conda-index package."
+    )
 
     api.update_index(
         args.dir,

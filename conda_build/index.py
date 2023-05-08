@@ -327,7 +327,7 @@ def _delegated_update_index(
     )
 
 
-### Everything below is deprecated to maintain API/feature compatibility.
+# Everything below is deprecated to maintain API/feature compatibility.
 
 
 @deprecated("3.25.0", "4.0.0", addendum="Use standalone conda-index.")
@@ -388,7 +388,6 @@ def update_index(
         current_index_versions=current_index_versions,
         index_file=index_file,
     )
-
 
 
 def _determine_namespace(info):

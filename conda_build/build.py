@@ -37,7 +37,7 @@ from conda_build import environ, source, tarcheck, utils
 from conda_build.config import Config
 from conda_build.create_test import create_all_test_files
 from conda_build.exceptions import CondaBuildException, DependencyNeedsBuildingError
-from conda_build.index import get_build_index, _delegated_update_index
+from conda_build.index import _delegated_update_index, get_build_index
 from conda_build.metadata import FIELDS, MetaData
 from conda_build.post import (
     fix_permissions,
