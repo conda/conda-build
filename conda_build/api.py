@@ -24,6 +24,8 @@ from conda_build.utils import ensure_list as _ensure_list
 from conda_build.utils import expand_globs as _expand_globs
 from conda_build.utils import get_logger as _get_logger
 
+from .deprecations import deprecated
+
 
 def render(
     recipe_path,
@@ -519,6 +521,7 @@ def create_metapackage(
     )
 
 
+@deprecated("3.25.0", "4.0.0", addendum="Use standalone conda-index.")
 def update_index(
     dir_paths,
     config=None,
@@ -535,16 +538,11 @@ def update_index(
     current_index_versions=None,
     **kwargs,
 ):
-    warnings.warn(
-        "Use standalone conda-index instead of conda_build.api.update_index",
-        PendingDeprecationWarning,
-    )
-
     import os
 
     import yaml
 
-    from conda_build.index import update_index
+    from conda_build.index import update_index as legacy_update_index
     from conda_build.utils import ensure_list
 
     dir_paths = [os.path.abspath(path) for path in _ensure_list(dir_paths)]
@@ -554,7 +552,7 @@ def update_index(
             current_index_versions = yaml.safe_load(f)
 
     for path in dir_paths:
-        update_index(
+        legacy_update_index(
             path,
             check_md5=check_md5,
             channel_name=channel_name,

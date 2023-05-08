@@ -5,7 +5,7 @@ import os
 import sys
 import warnings
 
-from conda_index import api
+from conda_build import api
 from conda_index.index import MAX_THREADS_DEFAULT
 from conda_index.utils import DEFAULT_SUBDIRS
 
@@ -16,7 +16,8 @@ logging.basicConfig(level=logging.INFO)
 
 def parse_args(args):
     p = ArgumentParser(
-        description="Update package index metadata files in given directories."
+        description="Update package index metadata files in given directories. "
+        "Deprecated; use standalone conda-index."
     )
 
     p.add_argument(
@@ -87,7 +88,7 @@ def parse_args(args):
     p.add_argument(
         "-f",
         "--file",
-        help="A file that contains a new line separated list of packages to add to repodata.  Deprecated, will be removed in a future version of conda build.",
+        help="A file that contains a new line separated list of packages to add to repodata.",
         action="store",
     )
 
