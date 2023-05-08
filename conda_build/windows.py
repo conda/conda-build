@@ -11,7 +11,9 @@ import setuptools  # noqa
 # either the registry or the VS**COMNTOOLS environment variable
 try:
     from setuptools._distutils.msvc9compiler import WINSDK_BASE, Reg
-    from setuptools._distutils.msvc9compiler import find_vcvarsall as distutils_find_vcvarsall
+    from setuptools._distutils.msvc9compiler import (
+        find_vcvarsall as distutils_find_vcvarsall,
+    )
 except:
     # Allow some imports to work for cross or CONDA_SUBDIR usage.
     pass
