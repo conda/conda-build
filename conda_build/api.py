@@ -10,7 +10,6 @@ but only use those kwargs in config.  Config must change to support new features
 """
 
 import sys as _sys
-import warnings
 
 # imports are done locally to keep the api clean and limited strictly
 #    to conda-build's functionality.
