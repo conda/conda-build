@@ -42,9 +42,9 @@ Before you start
 
 Before you start, make sure you have installed:
 
-   * `Conda`_.
-   * :ref:`Conda-build <install-conda-build>`.
-   * Any compilers you want.
+   * `Conda`_
+   * :ref:`Conda-build <install-conda-build>`
+   * Any compilers you want
 
 .. _toolkit:
 

@@ -6,17 +6,16 @@ should go in test_render.py
 """
 from __future__ import annotations
 
+import subprocess
 from contextlib import nullcontext
 from pathlib import Path
-import subprocess
 
-from conda.common.compat import on_win
 import pytest
+from conda.common.compat import on_win
 
 from conda_build.api import debug
 
-from .utils import metadata_path, archive_path
-
+from .utils import archive_path, metadata_path
 
 DEBUG_PKG = metadata_path / "_debug_pkg"
 MULTI_OUT = metadata_path / "_debug_pkg_multiple_outputs"

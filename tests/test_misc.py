@@ -5,8 +5,9 @@ import os
 from pathlib import Path
 
 import pytest
+
 from conda_build._link import pyc_f
-from conda_build.conda_interface import PathType, EntityEncoder, CrossPlatformStLink
+from conda_build.conda_interface import CrossPlatformStLink, EntityEncoder, PathType
 
 
 @pytest.mark.parametrize(
@@ -25,7 +26,7 @@ def test_pyc_f(source, python, compiled):
 def test_pathtype():
     hardlink = PathType("hardlink")
     assert str(hardlink) == "hardlink"
-    assert hardlink.__json__() == 'hardlink'
+    assert hardlink.__json__() == "hardlink"
 
     softlink = PathType("softlink")
     assert str(softlink) == "softlink"
