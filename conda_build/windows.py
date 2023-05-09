@@ -109,9 +109,7 @@ def msvc_env_cmd(bits, config, override=None):
         "Otherwise, use {{compiler('<language>')}} jinja2 in requirements/build."
     )
     if bits == "arm64":
-        log.warn(
-            "The legacy MSVC compiler setup does not support arm64 builds. "
-        )
+        log.warn("The legacy MSVC compiler setup does not support arm64 builds. ")
         return ""
     if override:
         log.warn(
