@@ -6,6 +6,11 @@ name: Tests
 on:
   # NOTE: github.event context is push payload:
   # https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#push
+
+  workflow_dispatch:
+  schedule: # Running this weekly on a Wednesday.
+      - cron: "17 14 * * WED"
+
   push:
     branches:
       - main

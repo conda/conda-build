@@ -1,0 +1,1500 @@
+completed	failure	Fix typo in `error_overdepending` field	Tests	fix_error_overdepending_typo	pull_request	4684466533	1h13m25s	15h
+completed	failure	minor skeleton cleanups	Tests	skeleton-cleanups	pull_request	4681046070	1h43m49s	1d
+completed	success	Enable `xattr` test for macOS	Tests	xattr-test	pull_request	4680316336	1h56m59s	1d
+completed	cancelled	Enable `xattr` test for macOS	Tests	xattr-test	pull_request	4679491004	1h24m38s	1d
+completed	failure	Require the source when rendering if load_file_data is used (#4817)	Tests	main	push	4677691542	2h0m56s	1d
+completed	failure	Convert `setup.py` to `pyproject.toml` using hatch build system (#4840)	Tests	main	push	4676482877	2h31m28s	1d
+completed	failure	Replace makefile with Path.touch (#4844)	Tests	main	push	4675238073	3h16m38s	1d
+completed	success	Add svn source credential support	Tests	svn_credential_patch-1	pull_request	4674642291	1h27m1s	16h
+completed	cancelled	Add svn source credential support	Tests	svn_credential_patch-1	pull_request	4674636961	1m24s	1d
+completed	cancelled	Add svn source credential support	Tests	svn_credential_patch-1	pull_request	4674628184	2m16s	1d
+completed	failure	Deprecate Python 2 silliness and use `os.makedirs(exists_ok=True)` (#…	Tests	main	push	4674548282	1h35m15s	1d
+completed	success	Require the source when rendering if load_file_data is used	Tests	load_toml_from_source	pull_request	4668688474	2h18m22s	1d
+completed	success	Deprecate Python 2 silliness and use `os.makedirs(exists_ok=True)`	Tests	cleanup	pull_request	4641080875	34m6s	5d
+completed	cancelled	Deprecate Python 2 silliness and use `os.makedirs(exists_ok=True)`	Tests	cleanup	pull_request	4640992293	14m3s	6d
+completed	cancelled	Deprecate Python 2 silliness and use `os.makedirs(exists_ok=True)`	Tests	cleanup	pull_request	4640989277	51s	6d
+completed	failure	Rename `ns_cfg()` to `get_selectors()` in `conda_build.metadata` (#4837)	Tests	main	push	4640282855	1h30m17s	6d
+completed	success	Deprecate Python 2 silliness and use `os.makedirs(exists_ok=True)`	Tests	cleanup	pull_request	4639632832	1h33m43s	6d
+completed	cancelled	Deprecate Python 2 silliness and use `os.makedirs(exists_ok=True)`	Tests	cleanup	pull_request	4639630775	51s	6d
+completed	success	Enable `xattr` test for macOS	Tests	xattr-test	pull_request	4635758050	15m40s	1d
+completed	cancelled	Enable `xattr` test for macOS	Tests	xattr-test	pull_request	4635751111	2m8s	6d
+completed	success	Replace `makefile` with `Path.touch`	Tests	remove-makefile	pull_request	4634748400	35m6s	6d
+completed	failure	Deprecate Python 2 silliness and use `os.makedirs(exists_ok=True)`	Tests	cleanup	pull_request	4633151113	2h10m25s	7d
+completed	cancelled	Deprecate Python 2 silliness and use `os.makedirs(exists_ok=True)`	Tests	cleanup	pull_request	4633148283	27s	7d
+completed	cancelled	Deprecate Python 2 silliness and use `os.makedirs(exists_ok=True)`	Tests	cleanup	pull_request	4633072184	11m9s	7d
+completed	success	Deprecate `ns_cfg()` in `metadata.py`	Tests	deprecate_ns_cfg	pull_request	4632943648	1h18m25s	6d
+completed	failure	`create_test.py`: Add type hints and refactor to use pathlib (#4826)	Tests	main	push	4632941813	1h30m15s	7d
+completed	success	Always use the subdir defined in the package	Tests	fix-downstream-test-subdir	pull_request	4631173288	1h17m42s	5d
+completed	cancelled	Deprecate `ns_cfg()` in `metadata.py`	Tests	deprecate_ns_cfg	pull_request	4630755144	1h19m31s	7d
+completed	success	`create_test.py`: Add type hints and refactor to use pathlib	Tests	create_test-typing	pull_request	4630727113	1h21m35s	7d
+completed	cancelled	`create_test.py`: Add type hints and refactor to use pathlib	Tests	create_test-typing	pull_request	4630724231	1m22s	7d
+completed	failure	Conda index helpful changes from other PR	Tests	conda-index-helpful	pull_request	4630378376	1h35m57s	7d
+completed	success	Convert `setup.py` to `pyproject.toml` using hatch build system	Tests	hatchling-build-system	pull_request	4629380852	39m32s	7d
+completed	failure	Convert `setup.py` to `pyproject.toml` using hatch build system	Tests	hatchling-build-system	pull_request	4625459515	20m55s	7d
+completed	failure	Use conda-index dependency instead of obsolete built-in index	Tests	conda-index	pull_request	4625237049	1h53m30s	7d
+completed	failure	Convert `setup.py` to `pyproject.toml` using hatch build system	Tests	hatchling-build-system	pull_request	4625102028	20m34s	7d
+completed	cancelled	Convert `setup.py` to `pyproject.toml` using hatch build system	Tests	hatchling-build-system	pull_request	4625067401	6m55s	7d
+completed	cancelled	Convert `setup.py` to `pyproject.toml` using hatch build system	Tests	hatchling-build-system	pull_request	4625061774	2m10s	7d
+completed	failure	Use conda-index dependency instead of obsolete built-in index	Tests	conda-index	pull_request	4623397781	1h48m17s	7d
+completed	cancelled	Deprecate `ns_cfg()` in `metadata.py`	Tests	deprecate_ns_cfg	pull_request	4613096828	1m52s	7d
+completed	failure	Misc. documentation fixes (#4734)	Tests	main	push	4611790933	1h34m4s	9d
+completed	failure	Deprecate `ns_cfg()` in `metadata.py`	Tests	deprecate_ns_cfg	pull_request	4611558036	1h40m38s	9d
+completed	success	Misc. documentation fixes	Tests	command-doc-edits	pull_request	4608950749	1h10m55s	9d
+completed	cancelled	Misc. documentation fixes	Tests	command-doc-edits	pull_request	4608947219	57s	9d
+completed	success	[pre-commit.ci] pre-commit autoupdate (#4830)	Tests	main	push	4601071532	22s	10d
+completed	success	🔄 synced file(s) with conda/infrastructure (#4827)	Tests	main	push	4601069753	25s	10d
+completed	success	🔄 synced file(s) with conda/infrastructure	Tests	repo-sync/infrastructure/default	pull_request	4600510699	38s	10d
+completed	success	🔄 synced file(s) with conda/infrastructure	Tests	repo-sync/infrastructure/default	pull_request	4600450222	26s	10d
+completed	success	Misc. documentation fixes	Tests	command-doc-edits	pull_request	4599785259	1h45m51s	10d
+completed	cancelled	Misc. documentation fixes	Tests	command-doc-edits	pull_request	4599770480	4m35s	10d
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	4599296669	28s	10d
+completed	failure	Deprecate `ns_cfg()` in `metadata.py`	Tests	deprecate_ns_cfg	pull_request	4578701674	57m43s	12d
+completed	cancelled	Deprecate `ns_cfg()` in `metadata.py`	Tests	deprecate_ns_cfg	pull_request	4578693304	2m11s	13d
+completed	failure	Merge pull request #4836 from kenodegard/black-isort	Tests	main	push	4578010542	2h6m31s	13d
+completed	success	Update Python auto formatting tooling	Tests	black-isort	pull_request	4568933307	1h46m55s	13d
+completed	success	Deprecate `ns_cfg()` in `metadata.py`	Tests	deprecate_ns_cfg	pull_request	4568228611	1h31m48s	13d
+completed	failure	Update Python auto formatting tooling	Tests	black-isort	pull_request	4567232466	2h31m38s	14d
+completed	success	Update Python auto formatting tooling	Tests	black-isort	pull_request	4566973631	22s	14d
+completed	success	Drop extra Jinja w/package names from variants.rst	Tests	drop_xtra_jinja	pull_request	4558071864	29s	15d
+completed	success	🔄 synced file(s) with conda/infrastructure	Tests	repo-sync/infrastructure/default	pull_request	4555426554	1h13m6s	15d
+completed	success	🔄 synced file(s) with conda/infrastructure	Tests	repo-sync/infrastructure/default	pull_request	4544465204	27s	16d
+completed	failure	Drop `conda < 4.3.2` check (#4831)	Tests	main	push	4543014593	1h34m38s	16d
+completed	failure	Always use the subdir defined in the package	Tests	fix-downstream-test-subdir	pull_request	4539033530	45m7s	16d
+completed	success	Drop `conda < 4.3.2` check	Tests	drop-conda-4.3.2-check	pull_request	4537852063	1h54m24s	16d
+completed	failure	Delegate `get_build_index` to external conda-index package	Tests	conda-index-2	pull_request	4536060892	1h15m30s	17d
+completed	success	Use conda-index dependency instead of obsolete built-in index	Tests	conda-index	pull_request	4534696118	2h22m51s	17d
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	4534470492	23s	17d
+completed	success	minor skeleton cleanups	Tests	skeleton-cleanups	pull_request	4533668905	1h41m23s	9d
+completed	failure	Use conda-index dependency instead of obsolete built-in index	Tests	conda-index	pull_request	4533298009	1h40m39s	17d
+completed	cancelled	Use conda-index dependency instead of obsolete built-in index	Tests	conda-index	pull_request	4533227214	7m48s	17d
+completed	cancelled	Use conda-index dependency instead of obsolete built-in index	Tests	conda-index	pull_request	4533177442	5m6s	17d
+completed	action_required	include filename in hash, fixes #4814	Tests	tkp/4814	pull_request	4519593323	0s	19d
+completed	failure	Delegate `get_build_index` to external conda-index package	Tests	conda-index-2	pull_request	4515509037	3h43m37s	20d
+completed	success	`create_test.py`: Add type hints and refactor to use pathlib	Tests	create_test-typing	pull_request	4515362952	1h19m38s	17d
+completed	success	🔄 synced file(s) with conda/infrastructure	Tests	repo-sync/infrastructure/default	pull_request	4514611488	26s	20d
+completed	failure	skip troubled skeleton tests; grayskull is available (#4825)	Tests	main	push	4514553230	4h40m7s	20d
+completed	success	Patch environment variable to str instead of Path (#4823)	Tests	main	push	4514003595	6h40m1s	20d
+completed	failure	`create_test.py`: Add type hints and refactor to use pathlib	Tests	create_test-typing	pull_request	4513494674	3h43m44s	20d
+completed	failure	don't try to run lief on static libraries	Tests	lief	pull_request	4513134963	4h20m23s	20d
+completed	success	skip troubled skeleton tests; grayskull is available	Tests	local-cran	pull_request	4512970525	3h18m46s	20d
+completed	cancelled	skip troubled skeleton tests; grayskull is available	Tests	local-cran	pull_request	4512960441	1m59s	20d
+completed	cancelled	skip troubled skeleton tests; grayskull is available	Tests	local-cran	pull_request	4512954365	1m23s	20d
+completed	success	Patch environment variable to str instead of Path	Tests	setenv-str	pull_request	4511799041	46m33s	20d
+completed	action_required	include filename in hash, fixes #4814	Tests	tkp/4814	pull_request	4511788680	0s	20d
+completed	failure	Delegate `get_build_index` to external conda-index package	Tests	conda-index-2	pull_request	4507066320	1h18m17s	20d
+completed	cancelled	Delegate `get_build_index` to external conda-index package	Tests	conda-index-2	pull_request	4507059967	1m53s	20d
+completed	action_required	include filename in hash, fixes #4814	Tests	tkp/4814	pull_request	4504794433	0s	21d
+completed	failure	Delegate `get_build_index` to external conda-index package	Tests	conda-index-2	pull_request	4504479238	2h7m3s	21d
+completed	cancelled	Delegate `get_build_index` to external conda-index package	Tests	conda-index-2	pull_request	4504452172	4m56s	21d
+completed	cancelled	Delegate `get_build_index` to external conda-index package	Tests	conda-index-2	pull_request	4504439090	2m17s	21d
+completed	cancelled	Delegate `get_build_index` to external conda-index package	Tests	conda-index-2	pull_request	4504170419	34m42s	21d
+completed	failure	Stop using pending deprecation `get_prefix` (#4818)	Tests	main	push	4503080529	1h39m28s	21d
+completed	failure	Don't run lief on UNIX static libraries	Tests	skip-lief-static-libs	pull_request	4491441086	1h33m34s	22d
+completed	success	Release 3.24.0 (#4801)	Tests	main	push	4490723215	30s	22d
+completed	failure	Some minor code cleanup (#4791)	Tests	main	push	4487695850	1h35m59s	22d
+completed	success	Release 3.24.0	Tests	release-3.24.0	pull_request	4487206169	37s	22d
+completed	success	Release 3.24.0	Tests	release-3.24.0	pull_request	4487193194	24s	22d
+completed	success	Release 3.24.0	Tests	release-3.24.0	pull_request	4487187289	24s	22d
+completed	failure	Adding future python 3.11 support	Tests	main	pull_request	4484833047	5h53m57s	22d
+completed	failure	Update supported Python version in setup.py (#4804)	Tests	main	push	4484807905	4h36m59s	22d
+completed	success	Stop using pending deprecation `get_prefix`	Tests	stop-using-deprecated-get_prefix	pull_request	4484315294	1h29m30s	21d
+completed	failure	Require the source when rendering if load_file_data is used	Tests	load_toml_from_source	pull_request	4483303239	2h5m1s	23d
+completed	cancelled	Require the source when rendering if load_file_data is used	Tests	load_toml_from_source	pull_request	4483286457	2m36s	23d
+completed	failure	Support SHA224, SHA384 and SHA512 source hashes.	Tests	main	pull_request	4482393614	2h33m54s	23d
+completed	failure	Add support for defining `_CONDA_BUILD_ISOLATED_ACTIVATION` in `meta.yaml`	Tests	support-isolated-envvar-in-meta	pull_request	4481986885	2h20m10s	23d
+completed	failure	Test CI tests	Tests	test-ci	pull_request	4481116921	3h15m44s	23d
+completed	failure	Delegate `get_build_index` to external conda-index package	Tests	conda-index-2	pull_request	4480925898	2h16m55s	23d
+completed	failure	don't try to run lief on static libraries	Tests	lief	pull_request	4473606194	2h24m2s	21d
+completed	success	Update supported Python version in setup.py	Tests	patch-1	pull_request	4472072598	41m38s	22d
+completed	success	Some minor code cleanup	Tests	cleanup_code	pull_request	4472068112	1h28m1s	22d
+completed	failure	Add tests for #4763 (#4803)	Tests	main	push	4472062935	3h42m18s	22d
+completed	failure	add emscripten-32 support	Tests	emscripten-32	pull_request	4467708665	18m11s	24d
+completed	action_required	Made changes as suggested by Issue #12055	Tests	main	pull_request	4441132779	0s	28d
+completed	failure	don't try to run lief on static libraries	Tests	lief	pull_request	4433873308	1h36m57s	24d
+completed	failure	Update supported Python version in setup.py	Tests	patch-1	pull_request	4416963247	5h27m24s	Mar 14, 2023
+completed	success	Add tests for #4763	Tests	find_pkg_dir_or_file_in_pkgs_dirs-test	pull_request	4416806662	49m0s	29d
+completed	success	[pre-commit.ci] pre-commit autoupdate (#4802)	Tests	main	push	4416401271	31s	Mar 14, 2023
+completed	failure	Add tests for #4763	Tests	find_pkg_dir_or_file_in_pkgs_dirs-test	pull_request	4409887792	2h56m48s	Mar 13, 2023
+completed	cancelled	Add tests for #4763	Tests	find_pkg_dir_or_file_in_pkgs_dirs-test	pull_request	4409851985	13m28s	Mar 13, 2023
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	4407432901	26s	Mar 13, 2023
+completed	success	Release 3.24.0	Tests	release-3.24.0	pull_request	4407241622	26s	Mar 13, 2023
+completed	success	🔄 synced file(s) with conda/infrastructure (#4800)	Tests	main	push	4407207588	25s	Mar 13, 2023
+completed	success	🔄 synced file(s) with conda/infrastructure	Tests	repo-sync/infrastructure/default	pull_request	4407177784	31s	Mar 13, 2023
+completed	failure	Some minor code cleanup	Tests	cleanup_code	pull_request	4406950462	1h57m20s	Mar 13, 2023
+completed	failure	Drop dependency on Setuptools (#4443)	Tests	main	push	4404288630	1h51m14s	Mar 13, 2023
+completed	failure	Support SHA224, SHA384 and SHA512 source hashes.	Tests	main	pull_request	4387878465	3h10m36s	Mar 10, 2023
+completed	failure	Some minor code cleanup	Tests	cleanup_code	pull_request	4387871823	1h31m34s	Mar 11, 2023
+completed	success	Drop dependency on Setuptools	Tests	use_packaging	pull_request	4386529874	1h32m42s	Mar 10, 2023
+completed	failure	Drop Python 3.7 support. (#4797)	Tests	main	push	4386379511	2h51m16s	Mar 10, 2023
+completed	failure	Delegate `get_build_index` to external conda-index package	Tests	conda-index-2	pull_request	4386094293	1h19m45s	23d
+completed	cancelled	Delegate `get_build_index` to external conda-index package	Tests	conda-index-2	pull_request	4385981890	14m33s	Mar 10, 2023
+completed	cancelled	Delegate `get_build_index` to external conda-index package	Tests	conda-index-2	pull_request	4385317082	1h19m16s	Mar 10, 2023
+completed	cancelled	Delegate `get_build_index` to external conda-index package	Tests	conda-index-2	pull_request	4385232647	10m18s	Mar 10, 2023
+completed	success	Drop Python 3.7 support.	Tests	drop-python37	pull_request	4382764955	1h34m18s	Mar 10, 2023
+completed	failure	Delegate `get_build_index` to external conda-index package	Tests	conda-index-2	pull_request	4378633572	2h13m56s	Mar  9, 2023
+completed	failure	Delegate `get_build_index` to external conda-index package	Tests	conda-index-2	pull_request	4376748275	2h13m50s	Mar  9, 2023
+completed	failure	Delegate `get_build_index` to external conda-index package	Tests	conda-index-2	pull_request	4375942125	44m54s	Mar  9, 2023
+completed	failure	Drop Python 3.7 support.	Tests	drop-python37	pull_request	4375414154	1h57m23s	Mar  9, 2023
+completed	cancelled	Drop Python 3.7 support.	Tests	drop-python37	pull_request	4374887324	1h5m5s	Mar  9, 2023
+completed	cancelled	Drop Python 3.7 support.	Tests	drop-python37	pull_request	4374692672	24m17s	Mar  9, 2023
+completed	cancelled	Drop Python 3.7 support.	Tests	drop-python37	pull_request	4374665733	4m8s	Mar  9, 2023
+completed	failure	Drop dependency on Setuptools	Tests	use_packaging	pull_request	4367082055	2h47m54s	Mar  8, 2023
+completed	failure	Drop dependency on Setuptools	Tests	use_packaging	pull_request	4365223594	1h40m50s	Mar  8, 2023
+completed	failure	Drop dependency on Setuptools	Tests	use_packaging	pull_request	4359142760	3h12m26s	Mar  7, 2023
+completed	success	Document build.force_use_keys and build.force_ignore_keys (#4776)	Tests	main	push	4359139146	26s	Mar  7, 2023
+completed	success	🔄 synced file(s) with conda/infrastructure (#4789)	Tests	main	push	4359131329	26s	Mar  7, 2023
+completed	failure	Add C compiler dep when `.xs` files are found. (#4599)	Tests	main	push	4358836462	3h11m43s	Mar  7, 2023
+completed	failure	Remove false-positives in the list of Perl core modules (#4592)	Tests	main	push	4358779484	1h53m54s	Mar  7, 2023
+completed	success	[pre-commit.ci] pre-commit autoupdate (#4794)	Tests	main	push	4346265314	30s	Mar  6, 2023
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	4345849949	5m50s	Mar  6, 2023
+completed	failure	Support SHA224, SHA384 and SHA512 source hashes.	Tests	main	pull_request	4336509594	1h33m9s	Mar  5, 2023
+completed	cancelled	Support SHA224, SHA384 and SHA512 source hashes.	Tests	main	pull_request	4336502493	2m23s	Mar  5, 2023
+completed	cancelled	Support SHA224, SHA384 and SHA512 source hashes.	Tests	main	pull_request	4336450948	13m0s	Mar  5, 2023
+completed	success	🔄 synced file(s) with conda/infrastructure	Tests	repo-sync/infrastructure/default	pull_request	4327412094	27s	Mar  3, 2023
+completed	success	Remove unnecessary reassignments and unused vars (#4790)	Tests	main	push	4327385618	1h51m16s	Mar  3, 2023
+completed	success	Some minor code cleanup	Tests	cleanup_code	pull_request	4326909707	1h23m28s	Mar  7, 2023
+completed	cancelled	Some minor code cleanup	Tests	cleanup_code	pull_request	4326812908	30m3s	Mar  3, 2023
+completed	success	Remove unnecessary reassignments and unused vars	Tests	code_cleanup	pull_request	4325353768	1h17m12s	Mar  3, 2023
+completed	cancelled	Remove unnecessary reassignments and unused vars	Tests	code_cleanup	pull_request	4325352338	14s	Mar  3, 2023
+completed	cancelled	Remove unnecessary reassignments and unused vars	Tests	code_cleanup	pull_request	4325351791	24s	Mar  3, 2023
+completed	success	🔄 synced file(s) with conda/infrastructure	Tests	repo-sync/infrastructure/default	pull_request	4321177243	29s	Mar  3, 2023
+completed	failure	Remove unnecessary reassignments and unused vars	Tests	code_cleanup	pull_request	4318019575	36m6s	Mar  2, 2023
+completed	cancelled	Remove unnecessary reassignments and unused vars	Tests	code_cleanup	pull_request	4317934409	12m34s	Mar  2, 2023
+completed	success	🔄 synced file(s) with conda/infrastructure	Tests	repo-sync/infrastructure/default	pull_request	4316731627	7m20s	Mar  2, 2023
+completed	success	🔄 synced file(s) with conda/infrastructure	Tests	repo-sync/infrastructure/default	pull_request	4316464263	3m14s	Mar  2, 2023
+completed	success	🔄 synced file(s) with conda/infrastructure	Tests	repo-sync/infrastructure/default	pull_request	4316351856	52s	Mar  2, 2023
+completed	success	🔄 synced file(s) with conda/infrastructure	Tests	repo-sync/infrastructure/default	pull_request	4316185058	26s	Mar  2, 2023
+completed	success	Made changes as suggested by Issue #12055	Tests	main	pull_request	4293885201	32s	Mar  3, 2023
+completed	failure	Remove src working directory for CI (#4784)	Tests	main	push	4285103313	1h54m58s	Feb 27, 2023
+completed	failure	Re-enable coverage reporting to codecov (#4767)	Tests	main	push	4265195971	1h29m18s	Feb 24, 2023
+completed	failure	Add R.dll to missing_dso_whitelist on windows	Tests	patch-15	pull_request	4264354758	1h58m24s	Feb 24, 2023
+completed	cancelled	Add R.dll to missing_dso_whitelist on windows	Tests	patch-15	pull_request	4264344187	2m17s	Feb 24, 2023
+completed	failure	Replace bundled conda-index with standalone conda-index package	Tests	conda-index	pull_request	4262945541	1h29m57s	Feb 24, 2023
+completed	success	Re-enable coverage reporting to codecov	Tests	codecov	pull_request	4261212955	37m0s	Feb 24, 2023
+completed	success	🔄 Synced file(s) with conda/infrastructure (#4785)	Tests	main	push	4258892236	35s	Feb 24, 2023
+completed	success	🔄 Synced file(s) with conda/infrastructure	Tests	repo-sync/infrastructure/default	pull_request	4258888617	41s	Feb 24, 2023
+completed	success	🔄 Synced file(s) with conda/infrastructure	Tests	repo-sync/infrastructure/default	pull_request	4258857968	40s	Feb 24, 2023
+completed	failure	Re-enable coverage reporting to codecov	Tests	codecov	pull_request	4258168739	1h52m25s	Feb 24, 2023
+completed	success	Update conda-build.rst with missing args (#4662)	Tests	main	push	4258162675	28s	Feb 24, 2023
+completed	success	Updated broken example recipe links. (#4580)	Tests	main	push	4258153810	25s	Feb 24, 2023
+completed	success	Updated broken example recipe links.	Tests	main	pull_request	4258151191	28s	Feb 24, 2023
+completed	success	Updated broken example recipe links.	Tests	main	pull_request	4258123329	24s	Feb 24, 2023
+completed	success	Remove `src` working directory for CI	Tests	remove-src-working-dir	pull_request	4257540143	1h36m37s	Feb 24, 2023
+completed	success	Convert manual conda_build_test_recipe clone into a fixture (#4781)	Tests	main	push	4257522121	55m17s	Feb 24, 2023
+completed	failure	Use tomli or Python 3.11 tomllib (#4783)	Tests	main	push	4257367925	1h36m57s	Feb 23, 2023
+completed	failure	Misc. documentation fixes	Tests	command-doc-edits	pull_request	4257111851	1h51m18s	Feb 23, 2023
+completed	success	Convert manual conda_build_test_recipe clone into a fixture	Tests	conda_build_test_recipe-fixture	pull_request	4256739607	1h39m37s	Feb 23, 2023
+completed	failure	Fixes the git lfs error by adding git lfs fetching (#4318)	Tests	main	push	4256230902	1h51m6s	Feb 23, 2023
+completed	success	Use tomli or Python 3.11 tomllib	Tests	jinja2-tomllib	pull_request	4255855274	1h25m49s	Feb 23, 2023
+completed	cancelled	Use tomli or Python 3.11 tomllib	Tests	jinja2-tomllib	pull_request	4255847561	1m51s	Feb 23, 2023
+completed	success	Fixes the git lfs error by adding git lfs fetching	Tests	fix/git-lfs-error	pull_request	4255061142	35m44s	Feb 23, 2023
+completed	success	Convert manual conda_build_test_recipe clone into a fixture	Tests	conda_build_test_recipe-fixture	pull_request	4248093157	45m38s	Feb 23, 2023
+completed	success	Fixes the git lfs error by adding git lfs fetching	Tests	fix/git-lfs-error	pull_request	4247826982	1h22m44s	Feb 23, 2023
+completed	success	Document build.force_use_keys and build.force_ignore_keys	Tests	doc-force-use-keys	pull_request	4247638945	25s	Feb 22, 2023
+completed	success	Misc. documentation fixes	Tests	command-doc-edits	pull_request	4247591349	17m18s	Feb 23, 2023
+completed	cancelled	Misc. documentation fixes	Tests	command-doc-edits	pull_request	4247561569	5m43s	Feb 22, 2023
+completed	cancelled	Misc. documentation fixes	Tests	command-doc-edits	pull_request	4247540023	3m45s	Feb 22, 2023
+completed	cancelled	Misc. documentation fixes	Tests	command-doc-edits	pull_request	4247504709	6m58s	Feb 22, 2023
+completed	cancelled	Convert manual conda_build_test_recipe clone into a fixture	Tests	conda_build_test_recipe-fixture	pull_request	4247406525	1h56m48s	Feb 22, 2023
+completed	cancelled	Convert manual conda_build_test_recipe clone into a fixture	Tests	conda_build_test_recipe-fixture	pull_request	4246888949	1h15m37s	Feb 22, 2023
+completed	failure	Replace bundled conda-index with standalone conda-index package	Tests	conda-index	pull_request	4245877323	1h40m4s	Feb 22, 2023
+completed	failure	Fixes the git lfs error by adding git lfs fetching	Tests	fix/git-lfs-error	pull_request	4243844370	1h43m50s	Feb 22, 2023
+completed	cancelled	Fixes the git lfs error by adding git lfs fetching	Tests	fix/git-lfs-error	pull_request	4243843176	11s	Feb 22, 2023
+completed	cancelled	Fixes the git lfs error by adding git lfs fetching	Tests	fix/git-lfs-error	pull_request	4243840824	47s	Feb 22, 2023
+completed	failure	Replace bundled conda-index with standalone conda-index package	Tests	conda-index	pull_request	4243378009	1h36m3s	Feb 22, 2023
+completed	failure	Fixes the git lfs error by adding git lfs fetching	Tests	fix/git-lfs-error	pull_request	4238697698	1h27m28s	Feb 22, 2023
+completed	success	Convert manual conda_build_test_recipe clone into a fixture	Tests	conda_build_test_recipe-fixture	pull_request	4234624022	1h25m55s	Feb 22, 2023
+completed	cancelled	Convert manual conda_build_test_recipe clone into a fixture	Tests	conda_build_test_recipe-fixture	pull_request	4233689385	1h51m11s	Feb 21, 2023
+completed	failure	Convert manual conda_build_test_recipe clone into a fixture	Tests	conda_build_test_recipe-fixture	pull_request	4229696244	1h41m15s	Feb 21, 2023
+completed	cancelled	Convert manual conda_build_test_recipe clone into a fixture	Tests	conda_build_test_recipe-fixture	pull_request	4229660498	9m2s	Feb 21, 2023
+completed	cancelled	Convert manual conda_build_test_recipe clone into a fixture	Tests	conda_build_test_recipe-fixture	pull_request	4229630427	8m8s	Feb 21, 2023
+completed	cancelled	Convert manual conda_build_test_recipe clone into a fixture	Tests	conda_build_test_recipe-fixture	pull_request	4229295834	1h5m22s	Feb 21, 2023
+completed	failure	Convert manual conda_build_test_recipe clone into a fixture	Tests	conda_build_test_recipe-fixture	pull_request	4228322565	1h37m15s	Feb 21, 2023
+completed	cancelled	Convert manual conda_build_test_recipe clone into a fixture	Tests	conda_build_test_recipe-fixture	pull_request	4228229461	19m45s	Feb 21, 2023
+completed	cancelled	Convert manual conda_build_test_recipe clone into a fixture	Tests	conda_build_test_recipe-fixture	pull_request	4228211246	5m20s	Feb 21, 2023
+completed	success	[pre-commit.ci] pre-commit autoupdate (#4772)	Tests	main	push	4225760687	3m20s	Feb 20, 2023
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	4225506350	30s	Feb 20, 2023
+completed	success	Document build.force_use_keys and build.force_ignore_keys	Tests	doc-force-use-keys	pull_request	4203839745	25s	Feb 17, 2023
+completed	failure	Add svn source credential support	Tests	svn_credential_patch-1	pull_request	4190380289	1h58m52s	Feb 20, 2023
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	4165756546	27s	Feb 13, 2023
+completed	cancelled	Misc. documentation fixes	Tests	command-doc-edits	pull_request	4137709617	1h9m40s	Feb 22, 2023
+completed	failure	Also rewrite long prefix paths in `output` scripts $PREFIX, etc.	Tests	rewrite_env-in-outputs	pull_request	4137311489	2h6m47s	Feb  9, 2023
+completed	failure	Fixes the git lfs error by adding git lfs fetching	Tests	fix/git-lfs-error-xhochy	pull_request	4134564845	1h54m8s	Feb  9, 2023
+completed	failure	Install downstream packages in correct `subdir` (#4763)	Tests	main	push	4132992557	2h45m6s	Feb  9, 2023
+completed	failure	Re-enable coverage reporting to codecov	Tests	codecov	pull_request	4132982740	1h26m11s	Feb  9, 2023
+completed	failure	Remove more unused test fixtures (#4769)	Tests	main	push	4126705336	43m40s	Feb  9, 2023
+completed	success	Remove More Unused Test Fixtures	Tests	remove_unused_test_fixtures_pt2	pull_request	4118208961	1h32m32s	Feb  8, 2023
+completed	success	Misc. documentation fixes	Tests	command-doc-edits	pull_request	4116667159	2h9m44s	Feb  7, 2023
+completed	cancelled	Re-enable coverage reporting to codecov	Tests	codecov	pull_request	4113872789	50s	Feb  9, 2023
+completed	cancelled	Re-enable coverage reporting to codecov	Tests	codecov	pull_request	4113858754	2m28s	Feb  7, 2023
+completed	success	[pre-commit.ci] pre-commit autoupdate (#4768)	Tests	main	push	4111545709	25s	Feb  7, 2023
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	4111511217	24s	Feb  7, 2023
+completed	failure	Drop dependency on Setuptools	Tests	use_packaging	pull_request	4107890783	1h34m30s	Feb  6, 2023
+completed	success	Re-enable coverage reporting to codecov	Tests	codecov	pull_request	4105364014	1h41m55s	Feb  6, 2023
+completed	cancelled	Re-enable coverage reporting to codecov	Tests	codecov	pull_request	4105351288	2m12s	Feb  6, 2023
+completed	failure	use stdlib toml when available	Tests	jinja2-toml-parser	pull_request	4093705181	1h35m26s	Feb  4, 2023
+completed	failure	use stdlib toml when available	Tests	jinja2-toml-parser	pull_request	4092704365	1h42m23s	Feb  4, 2023
+completed	cancelled	use stdlib toml when available	Tests	jinja2-toml-parser	pull_request	4092329800	1h52m52s	Feb  4, 2023
+completed	cancelled	use stdlib toml when available	Tests	jinja2-toml-parser	pull_request	4092307163	9m17s	Feb  4, 2023
+completed	failure	use stdlib toml when available	Tests	jinja2-toml-parser	pull_request	4088977753	2h25m9s	Feb  4, 2023
+completed	cancelled	use stdlib toml when available	Tests	jinja2-toml-parser	pull_request	4088725355	48m16s	Feb  3, 2023
+completed	failure	format environ.py with black (#4765)	Tests	main	push	4088474543	2h29m6s	Feb  3, 2023
+completed	cancelled	use stdlib toml when available	Tests	jinja2-toml-parser	pull_request	4087594987	3h18m25s	Feb  3, 2023
+completed	success	format environ.py with black	Tests	format-environ-black	pull_request	4087532172	2h33m4s	Feb  3, 2023
+completed	failure	Replace bundled conda-index with standalone conda-index package	Tests	conda-index	pull_request	4087455589	1h50m58s	Feb  3, 2023
+completed	cancelled	use stdlib toml when available	Tests	jinja2-toml-parser	pull_request	4087431070	26m23s	Feb  3, 2023
+completed	cancelled	use stdlib toml when available	Tests	jinja2-toml-parser	pull_request	4086226025	2h54m55s	Feb  3, 2023
+completed	cancelled	use stdlib toml when available	Tests	jinja2-toml-parser	pull_request	4086217053	1m24s	Feb  3, 2023
+completed	cancelled	use stdlib toml when available	Tests	jinja2-toml-parser	pull_request	4086144125	11m38s	Feb  3, 2023
+completed	cancelled	use stdlib toml when available	Tests	jinja2-toml-parser	pull_request	4086129678	2m36s	Feb  3, 2023
+completed	failure	Replace bundled conda-index with standalone conda-index package	Tests	conda-index	pull_request	4085937362	2h42m7s	Feb  3, 2023
+completed	cancelled	format environ.py with black	Tests	format-environ-black	pull_request	4085752263	36m34s	Feb  3, 2023
+completed	cancelled	format environ.py with black	Tests	format-environ-black	pull_request	4085749033	31s	Feb  3, 2023
+completed	cancelled	format environ.py with black	Tests	format-environ-black	pull_request	4085720729	4m50s	Feb  3, 2023
+completed	cancelled	format environ.py with black	Tests	format-environ-black	pull_request	4085633744	13m54s	Feb  3, 2023
+completed	failure	Replace bundled conda-index with standalone conda-index package	Tests	conda-index	pull_request	4085604298	33m55s	Feb  3, 2023
+completed	cancelled	Replace bundled conda-index with standalone conda-index package	Tests	conda-index	pull_request	4085501553	14m27s	Feb  3, 2023
+completed	failure	Misc. documentation fixes	Tests	command-doc-edits	pull_request	4065428961	2h9m40s	Feb  1, 2023
+completed	failure	Fixes the git lfs error by adding git lfs fetching	Tests	fix/git-lfs-error-xhochy	pull_request	4063706454	2h9m34s	Feb  1, 2023
+completed	cancelled	Fixes the git lfs error by adding git lfs fetching	Tests	fix/git-lfs-error-xhochy	pull_request	4062962973	1h29m38s	Feb  1, 2023
+completed	failure	Remove unnecessary fixtures (#4761)	Tests	main	push	4060825676	2h1m19s	Feb  1, 2023
+completed	success	Remove unnecessary fixtures	Tests	remove-fixtures	pull_request	4057964434	1h41m6s	Feb  1, 2023
+completed	failure	`test_api_debug`: collapse all debug tests into parametrize (#4757)	Tests	main	push	4057907406	5h25m31s	Jan 31, 2023
+completed	success	Install downstream packages in correct `subdir`	Tests	downstream-hacking	pull_request	4057831250	37m53s	Feb  1, 2023
+completed	failure	Remove unnecessary fixtures	Tests	remove-fixtures	pull_request	4049446835	2h22m22s	Jan 31, 2023
+completed	cancelled	Remove unnecessary fixtures	Tests	remove-fixtures	pull_request	4049407750	7m6s	Jan 31, 2023
+completed	cancelled	Remove unnecessary fixtures	Tests	remove-fixtures	pull_request	4049232011	31m57s	Jan 30, 2023
+completed	failure	Add svn source credential support	Tests	svn_credential_patch-1	pull_request	4048910095	1h59m50s	Feb 15, 2023
+completed	failure	Drop dependency on Setuptools	Tests	use_packaging	pull_request	4048255762	2h18m18s	Jan 30, 2023
+completed	success	[pre-commit.ci] pre-commit autoupdate (#4759)	Tests	main	push	4046435737	30s	Jan 30, 2023
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	4046141987	22s	Jan 30, 2023
+completed	failure	Drop dependency on Setuptools	Tests	use_packaging	pull_request	4045731577	2h14m45s	Jan 30, 2023
+completed	failure	`test_cli.py`: split into subcommand specific test files (#4749)	Tests	main	push	4026533487	1h59m33s	Jan 27, 2023
+completed	failure	`test_api_skeleton.py`: Reorg fixtures, remove pre-Python 2.7 conditi…	Tests	main	push	4022480949	3h43m46s	Jan 27, 2023
+completed	failure	`test_develop.py`: Refactor to use pathlib & abstract tests (#4739)	Tests	main	push	4021715115	3h52m56s	Jan 27, 2023
+completed	success	`test_api_debug`: collapse all debug tests into parametrize	Tests	test_api_debug_4647	pull_request	4020045233	3h5m47s	Jan 27, 2023
+completed	success	`test_develop.py`: Refactor to use pathlib & abstract tests	Tests	test_develop	pull_request	4017420274	9h37m55s	Jan 26, 2023
+completed	success	`test_api_skeleton.py`: Reorg fixtures, remove pre-Python 2.7 condition, require `ruamel.yaml`	Tests	test_api_skeleton	pull_request	4017401661	3h48m27s	Jan 27, 2023
+completed	failure	Minor `test_cran_skeleton.py` refactor (#4729)	Tests	main	push	4016034451	11h45m28s	Jan 26, 2023
+completed	failure	`test_patch.py`: Expand patch strip level test to cover more cases (#…	Tests	main	push	4015992267	10h33m17s	Jan 26, 2023
+completed	failure	`test_jinja_context.py`: remove unnecessary `skipif` clause and conve…	Tests	main	push	4015956890	7h23m13s	Jan 26, 2023
+completed	failure	`test_metadata.py`: Combine native compiler metadata tests (#4745)	Tests	main	push	4015941830	9h24m23s	Jan 26, 2023
+completed	failure	`test_build.py`: removed unnecessary `skipif` markers and converted `…	Tests	main	push	4015892417	6h26m32s	Jan 26, 2023
+completed	failure	`test_api_render.py`: remove unused `skipif` and converted `unittest.…	Tests	main	push	4015888247	4h36m41s	Jan 26, 2023
+completed	failure	`test_api_skeleton_cran.py`: Inline parametrize, use pathlib, update …	Tests	main	push	4015800208	3h20m11s	Jan 26, 2023
+completed	success	[pre-commit.ci] pre-commit autoupdate (#4740)	Tests	main	push	4010872605	27s	Jan 25, 2023
+completed	success	`test_cli.py`: split into subcommand specific test files	Tests	split-test_cli	pull_request	4010329784	1h38m28s	Jan 27, 2023
+completed	success	`test_metadata.py`: Combine native compiler metadata tests	Tests	test_metadata	pull_request	4010122497	1h0m43s	Jan 26, 2023
+completed	failure	`test_develop.py`: Refactor to use pathlib & abstract tests	Tests	test_develop	pull_request	4009643982	4h11m53s	Jan 25, 2023
+completed	success	`test_api_skeleton.py`: Reorg fixtures, remove pre-Python 2.7 condition, require `ruamel.yaml`	Tests	test_api_skeleton	pull_request	4009612200	3h41m15s	Jan 25, 2023
+completed	success	`test_api_render.py`: remove unused `skipif` and converted `unittest.mock` to pytest-mocker	Tests	test_api_render	pull_request	4008866486	3h44m37s	Jan 25, 2023
+completed	failure	Remove unused test fixtures (#4742)	Tests	main	push	4008365671	3h6m48s	Jan 25, 2023
+completed	success	Remove unused test fixtures	Tests	remove_unused_test_fixtures	pull_request	4002179093	2h26m17s	Jan 25, 2023
+completed	success	Remove unused test fixtures	Tests	remove_unused_test_fixtures	pull_request	4000031500	5h15m15s	Jan 24, 2023
+completed	failure	`test_cli.py`: split into subcommand specific test files	Tests	split-test_cli	pull_request	3999578231	1h47m50s	Jan 25, 2023
+completed	cancelled	`test_cli.py`: split into subcommand specific test files	Tests	split-test_cli	pull_request	3999018054	1h14m39s	Jan 24, 2023
+completed	failure	Convert tests into parametrized test (#4741)	Tests	main	push	3997834928	3h51m6s	Jan 24, 2023
+completed	success	`test_api_skeleton.py`: Reorg fixtures, remove pre-Python 2.7 condition, require `ruamel.yaml`	Tests	test_api_skeleton	pull_request	3993375514	2h25m38s	Jan 25, 2023
+completed	failure	`test_cli.py`: split into subcommand specific test files	Tests	split-test_cli	pull_request	3993360087	7h0m3s	Jan 24, 2023
+completed	cancelled	`test_api_skeleton.py`: Reorg fixtures, remove pre-Python 2.7 condition, require `ruamel.yaml`	Tests	test_api_skeleton	pull_request	3993159591	1h1m35s	Jan 24, 2023
+completed	success	`test_api_render.py`: remove unused `skipif` and converted `unittest.mock` to pytest-mocker	Tests	test_api_render	pull_request	3992712186	1h52m40s	Jan 24, 2023
+completed	success	`test_metadata.py`: Combine native compiler metadata tests	Tests	test_metadata	pull_request	3992666869	8h26m38s	Jan 24, 2023
+completed	success	`test_build.py`: removed unnecessary `skipif` markers and converted `os.path` to `pathlib`	Tests	test_build	pull_request	3992485694	4h57m1s	Jan 24, 2023
+completed	success	`test_jinja_context.py`: remove unnecessary `skipif` clause and convert `tmpdir` to `tmp_path`	Tests	test_jinja_context	pull_request	3992292773	6h1m50s	Jan 24, 2023
+completed	cancelled	`test_metadata.py`: Combine native compiler metadata tests	Tests	test_metadata	pull_request	3992282010	1h52m11s	Jan 24, 2023
+completed	success	`test_patch.py`: Expand patch strip level test to cover more cases	Tests	test_patch	pull_request	3992099997	41m49s	Jan 24, 2023
+completed	success	Minor `test_cran_skeleton.py` refactor	Tests	test_cran_skeleton	pull_request	3992086845	2h49m6s	Jan 24, 2023
+completed	cancelled	`test_jinja_context.py`: remove unnecessary `skipif` clause and convert `tmpdir` to `tmp_path`	Tests	test_jinja_context	pull_request	3992069435	47m16s	Jan 24, 2023
+completed	failure	Remove unused test fixtures	Tests	remove_unused_test_fixtures	pull_request	3991889019	4h7m28s	Jan 24, 2023
+completed	failure	Refactor `test_published_examples.py` to use test parameterization (#…	Tests	main	push	3991434769	3h43m41s	Jan 23, 2023
+completed	cancelled	Remove unused test fixtures	Tests	remove_unused_test_fixtures	pull_request	3991423114	1h25m6s	Jan 23, 2023
+completed	cancelled	`test_patch.py`: Expand patch strip level test to cover more cases	Tests	test_patch	pull_request	3991408970	2h5m36s	Jan 23, 2023
+completed	cancelled	Remove unused test fixtures	Tests	remove_unused_test_fixtures	pull_request	3990310167	2h45m5s	Jan 23, 2023
+completed	success	`test_create_test.py`: Convert tests into parametrized test	Tests	test_create_test	pull_request	3989169549	2h2m6s	Jan 23, 2023
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	3988579074	26s	Jan 23, 2023
+completed	failure	Update test_source.py file (#4738)	Tests	main	push	3987917559	5h24m5s	Jan 23, 2023
+completed	failure	Update test_subpackages.py (#4737)	Tests	main	push	3987916488	2h22m0s	Jan 23, 2023
+completed	failure	Update test_utils file to use more up-to-date Python versions (#4735)	Tests	main	push	3987915009	1h56m5s	Jan 23, 2023
+completed	failure	`test_develop.py`: Refactor to use pathlib & abstract tests	Tests	test_develop	pull_request	3972246318	2h44m58s	Jan 25, 2023
+completed	cancelled	`test_develop.py`: Refactor to use pathlib & abstract tests	Tests	test_develop	pull_request	3972245586	38s	Jan 21, 2023
+completed	failure	Pruning Test cases for `test_api_debug.py`	Tests	test_api_debug_4647	pull_request	3971438899	8h30m4s	Jan 20, 2023
+completed	success	Misc. documentation fixes	Tests	command-doc-edits	pull_request	3971286022	6h51m34s	Jan 20, 2023
+completed	success	Update `test_source.py` file	Tests	update_test_source	pull_request	3971216122	1h50m37s	Jan 21, 2023
+completed	success	Updating `test_utils.py` file	Tests	update_test_utils	pull_request	3971037754	1h30m49s	Jan 21, 2023
+completed	failure	Prune/update `test_variant.py` file (#4720)	Tests	main	push	3970843546	4h36m34s	Jan 20, 2023
+completed	failure	Replace bundled conda-index with standalone conda-index package	Tests	conda-index	pull_request	3969915773	5h3m54s	Jan 20, 2023
+completed	success	Replaced instances of Anaconda Cloud with anaconda.org. (#4719)	Tests	main	push	3969902345	27s	Jan 20, 2023
+completed	success	Updating `test_subpackages.py`	Tests	update_test_subpackages	pull_request	3969588718	6h19m11s	Jan 20, 2023
+completed	success	`test_api_skeleton_cran.py`: Inline parametrize, use pathlib, update CRAN packages	Tests	test_api_skeleton_cran	pull_request	3969328068	6h19m26s	Jan 20, 2023
+completed	cancelled	Updating `test_utils.py` file	Tests	update_test_utils	pull_request	3969121302	4h43m46s	Jan 20, 2023
+completed	success	Pruning Test cases for `test_api_debug.py`	Tests	test_api_debug_4647	pull_request	3969026308	5h41m52s	Jan 20, 2023
+completed	success	Prune/update `test_variant.py` file	Tests	prune_test_variants	pull_request	3969019500	3h47m1s	Jan 20, 2023
+completed	success	Misc. documentation fixes	Tests	command-doc-edits	pull_request	3968757988	2h39m32s	Jan 20, 2023
+completed	failure	Drop dependency on Setuptools	Tests	use_packaging	pull_request	3968195942	2h48m54s	Jan 20, 2023
+completed	cancelled	Drop dependency on Setuptools	Tests	use_packaging	pull_request	3968145115	8m57s	Jan 20, 2023
+completed	cancelled	Drop dependency on Setuptools	Tests	use_packaging	pull_request	3968092377	7m52s	Jan 20, 2023
+completed	cancelled	Drop dependency on Setuptools	Tests	use_packaging	pull_request	3968039801	8m58s	Jan 20, 2023
+completed	cancelled	Drop dependency on Setuptools	Tests	use_packaging	pull_request	3967722231	43m55s	Jan 20, 2023
+completed	success	Prune/update `test_variant.py` file	Tests	prune_test_variants	pull_request	3963292065	5h50m30s	Jan 19, 2023
+completed	failure	Pruning Test cases for `test_api_debug.py`	Tests	test_api_debug_4647	pull_request	3962848076	7h8m7s	Jan 19, 2023
+completed	cancelled	Prune/update `test_variant.py` file	Tests	prune_test_variants	pull_request	3962609362	1h52m8s	Jan 19, 2023
+completed	cancelled	Pruning Test cases for `test_api_debug.py`	Tests	test_api_debug_4647	pull_request	3961716537	2h50m43s	Jan 19, 2023
+completed	cancelled	Prune/update `test_variant.py` file	Tests	prune_test_variants	pull_request	3961707024	2h16m4s	Jan 19, 2023
+completed	cancelled	Pruning Test cases for `test_api_debug.py`	Tests	test_api_debug_4647	pull_request	3961545254	30m32s	Jan 19, 2023
+completed	success	Refactor `test_published_examples.py` to use test parameterization	Tests	test_published_examples	pull_request	3961405091	2h7m49s	Jan 20, 2023
+completed	success	Linking is possible on Windows (#4730)	Tests	main	push	3961179031	10h46m7s	Jan 19, 2023
+completed	failure	Refactor `test_pypi_skeleton.py` to use parametrize and convert `Orde…	Tests	main	push	3961176790	6h8m11s	Jan 19, 2023
+completed	success	Refactor `test_misc.py` and deprecate `CrossPlatformStLink` (#4728)	Tests	main	push	3961167823	9h40m51s	Jan 19, 2023
+completed	failure	Inline test_api_build_dll_package.py fixture (#4722)	Tests	main	push	3961155732	3h40m52s	Jan 19, 2023
+completed	cancelled	Pruning Test cases for `test_api_debug.py`	Tests	test_api_debug_4647	pull_request	3960706517	1h59m22s	Jan 19, 2023
+completed	cancelled	Pruning Test cases for `test_api_debug.py`	Tests	test_api_debug_4647	pull_request	3960483195	33m49s	Jan 19, 2023
+completed	failure	Prune/update `test_variant.py` file	Tests	prune_test_variants	pull_request	3960370348	2h4m25s	Jan 19, 2023
+completed	failure	Investigate breakage with `setuptools=66` (DNM)	Tests	setuptools-66	pull_request	3958047001	2h12m35s	Jan 19, 2023
+completed	cancelled	Investigate breakage with `setuptools=66` (DNM)	Tests	setuptools-66	pull_request	3958022126	4m8s	Jan 19, 2023
+completed	cancelled	Investigate breakage with `setuptools=66` (DNM)	Tests	setuptools-66	pull_request	3957987686	6m1s	Jan 19, 2023
+completed	success	Minor `test_cran_skeleton.py` refactor	Tests	test_cran_skeleton	pull_request	3955722382	1h38m11s	Jan 23, 2023
+completed	success	Refactor `test_pypi_skeleton.py` to use parametrize and convert `OrderedDict` to `dict`	Tests	test_pypi_skeleton	pull_request	3954258570	5h55m21s	Jan 19, 2023
+completed	cancelled	Minor `test_cran_skeleton.py` refactor	Tests	test_cran_skeleton	pull_request	3954152697	5h18m51s	Jan 19, 2023
+completed	success	`test_post.py`: Linking is possible on Windows	Tests	test_post	pull_request	3954140893	1h55m52s	Jan 19, 2023
+completed	success	Refactor `test_misc.py` and deprecate `CrossPlatformStLink`	Tests	test_misc	pull_request	3953960719	1h0m52s	Jan 19, 2023
+completed	cancelled	Minor `test_cran_skeleton.py` refactor	Tests	test_cran_skeleton	pull_request	3953734151	3h5m32s	Jan 18, 2023
+completed	failure	Inline fixtures in `tests/test_variants.py` (#4714)	Tests	main	push	3953295811	4h52m5s	Jan 18, 2023
+completed	cancelled	Refactor `test_misc.py` and deprecate `CrossPlatformStLink`	Tests	test_misc	pull_request	3953060666	2h28m49s	Jan 18, 2023
+completed	cancelled	Refactor `test_misc.py` and deprecate `CrossPlatformStLink`	Tests	test_misc	pull_request	3953051968	2m1s	Jan 18, 2023
+completed	failure	Prune/update `test_variant.py` file	Tests	prune_test_variants	pull_request	3952856933	5h21m3s	Jan 18, 2023
+completed	cancelled	Prune/update `test_variant.py` file	Tests	prune_test_variants	pull_request	3952853441	41s	Jan 18, 2023
+completed	cancelled	Prune/update `test_variant.py` file	Tests	prune_test_variants	pull_request	3952651036	32m21s	Jan 18, 2023
+completed	cancelled	Prune/update `test_variant.py` file	Tests	prune_test_variants	pull_request	3952640383	2m28s	Jan 18, 2023
+completed	failure	Pruning Test cases for `test_api_debug.py`	Tests	test_api_debug_4647	pull_request	3951718372	8h2m27s	Jan 18, 2023
+completed	success	Refactor `test_published_examples.py` to use test parameterization	Tests	test_published_examples	pull_request	3951388651	2h22m42s	Jan 19, 2023
+completed	cancelled	Refactor `test_published_examples.py` to use test parameterization	Tests	test_published_examples	pull_request	3951001385	48m46s	Jan 18, 2023
+completed	cancelled	Refactor `test_published_examples.py` to use test parameterization	Tests	test_published_examples	pull_request	3950872798	17m53s	Jan 18, 2023
+completed	cancelled	Refactor `test_published_examples.py` to use test parameterization	Tests	test_published_examples	pull_request	3950759513	15m17s	Jan 18, 2023
+completed	cancelled	Refactor `test_published_examples.py` to use test parameterization	Tests	test_published_examples	pull_request	3950616637	17m20s	Jan 18, 2023
+completed	success	Inline `test_api_build_dll_package.py` recipe fixture	Tests	test_api_build_dll_package	pull_request	3950447271	6h22m11s	Jan 18, 2023
+completed	success	Replaced instances of Anaconda Cloud with anaconda.org.	Tests	4706-anaconda-cloud-needs-changed-to-anacondaorg-in-conda-build-docs	pull_request	3950352515	36s	Jan 18, 2023
+completed	cancelled	Replaced instances of Anaconda Cloud with anaconda.org.	Tests	4706-anaconda-cloud-needs-changed-to-anacondaorg-in-conda-build-docs	pull_request	3950350053	31s	Jan 18, 2023
+completed	cancelled	Pruning Test cases for `test_api_debug.py`	Tests	test_api_debug_4647	pull_request	3949648818	4h8m42s	Jan 18, 2023
+completed	success	Bump actions/cache version (#4713)	Tests	main	push	3947736862	14h9m41s	Jan 18, 2023
+completed	failure	Label variants_conda_build_sysroot fixture (#4712)	Tests	main	push	3947734361	8h41m3s	Jan 18, 2023
+completed	failure	Inline test_api_build_go_package.py fixture (#4723)	Tests	main	push	3947510045	7h58m28s	Jan 18, 2023
+completed	failure	Minimize test_find_executable test and add Windows support (#4727)	Tests	main	push	3947502651	6h27m56s	Jan 18, 2023
+completed	failure	Combine `test_render.py` duplicate tests with pytest parametrize (#4726)	Tests	main	push	3947474211	5h33m58s	Jan 18, 2023
+completed	failure	Refactor `test_published_examples.py` to use test parameterization	Tests	test_published_examples	pull_request	3947302514	5h15m48s	Jan 18, 2023
+completed	failure	Remove unused test_api_inspect.py tests & global variable (#4724)	Tests	main	push	3947247574	3h39m4s	Jan 18, 2023
+completed	failure	Inline `test_api_build_dll_package.py` recipe fixture	Tests	test_api_build_dll_package	pull_request	3947179191	2h52m49s	Jan 18, 2023
+completed	failure	Refactor test_api_update_index.py to use pathlib (#4721)	Tests	main	push	3947173288	1h51m8s	Jan 18, 2023
+completed	failure	Refactor `test_published_examples.py` to use test parameterization	Tests	test_published_examples	pull_request	3944871553	5h46m9s	Jan 18, 2023
+completed	success	Inline `test_api_build_go_package.py` fixture	Tests	test_api_build_go_package	pull_request	3944861692	2h19m55s	Jan 18, 2023
+completed	failure	Inline `test_api_build_dll_package.py` recipe fixture	Tests	test_api_build_dll_package	pull_request	3944856715	41m14s	Jan 18, 2023
+completed	success	Minimize `test_os_utils_external.py::test_find_executable` test and add Windows support	Tests	test_os_utils_external	pull_request	3944830806	47m21s	Jan 18, 2023
+completed	success	Combine `test_render.py` duplicate tests with pytest parametrize	Tests	test_render	pull_request	3944478095	3h46m55s	Jan 18, 2023
+completed	cancelled	Refactor `test_published_examples.py` to use test parameterization	Tests	test_published_examples	pull_request	3944399066	2h11m59s	Jan 18, 2023
+completed	success	Remove unused `test_api_inspect.py` tests & global variable	Tests	test_api_inspect	pull_request	3944387133	1h2m0s	Jan 18, 2023
+completed	cancelled	Remove unused `test_api_inspect.py` tests & global variable	Tests	test_api_inspect	pull_request	3944380620	1m5s	Jan 18, 2023
+completed	cancelled	Remove unused `test_api_inspect.py` tests & global variable	Tests	test_api_inspect	pull_request	3944285847	35m26s	Jan 17, 2023
+completed	cancelled	Inline `test_api_build_go_package.py` fixture	Tests	test_api_build_go_package	pull_request	3944270572	1h53m27s	Jan 17, 2023
+completed	cancelled	Inline `test_api_build_dll_package.py` recipe fixture	Tests	test_api_build_dll_package	pull_request	3944240369	2h43m12s	Jan 17, 2023
+completed	success	Refactor `test_api_update_index.py` to use `pathlib.Path`	Tests	test_api_update_index	pull_request	3944178636	38m6s	Jan 18, 2023
+completed	failure	Prune/update `test_variant.py` file	Tests	prune_test_variants	pull_request	3942815650	1h56m22s	Jan 17, 2023
+completed	success	Replaced instances of Anaconda Cloud with anaconda.org.	Tests	4706-anaconda-cloud-needs-changed-to-anacondaorg-in-conda-build-docs	pull_request	3942763254	24s	Jan 17, 2023
+completed	success	Replaced instances of Anaconda Cloud with anaconda.org.	Tests	4706-anaconda-cloud-needs-changed-to-anacondaorg-in-conda-build-docs	pull_request	3942749515	27s	Jan 17, 2023
+completed	success	[pre-commit.ci] pre-commit autoupdate (#4716)	Tests	main	push	3941799695	2m15s	Jan 17, 2023
+completed	failure	Pruning Test cases for `test_api_debug.py`	Tests	test_api_debug_4647	pull_request	3941316967	3h12m11s	Jan 17, 2023
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	3932373734	1m28s	Jan 16, 2023
+completed	success	Inline fixtures in `tests/test_variants.py`	Tests	speedup-test_get_package_variants_phase2	pull_request	3907127926	1h29m38s	Jan 13, 2023
+completed	success	Bump actions/cache version	Tests	bump-cache-version	pull_request	3906995074	3h12m24s	Jan 12, 2023
+completed	success	Label `variants_conda_build_sysroot` fixture	Tests	label-variants_conda_build_sysroot	pull_request	3906984444	42m27s	Jan 13, 2023
+completed	failure	Speedup `test_variants.py::test_get_package_variants*` (#4696)	Tests	main	push	3906241715	3h25m58s	Jan 12, 2023
+completed	failure	Pruning Test cases for `test_api_debug.py`	Tests	test_api_debug_4647	pull_request	3906031341	3h54m7s	Jan 12, 2023
+completed	failure	Switch from test-type to test-group	Tests	switch-test-type-to-groups	pull_request	3904632168	4h39m48s	Jan 12, 2023
+completed	cancelled	Switch from test-type to test-group	Tests	switch-test-type-to-groups	pull_request	3904532036	15m10s	Jan 12, 2023
+completed	cancelled	Switch from test-type to test-group	Tests	switch-test-type-to-groups	pull_request	3904496144	6m21s	Jan 12, 2023
+completed	cancelled	Pruning Test cases for `test_api_debug.py`	Tests	test_api_debug_4647	pull_request	3904366649	19m4s	Jan 12, 2023
+completed	cancelled	Pruning Test cases for `test_api_debug.py`	Tests	test_api_debug_4647	pull_request	3904365097	12s	Jan 12, 2023
+completed	success	Speedup `test_variants.py::test_get_package_variants*`	Tests	speedup-test_get_package_variants	pull_request	3904120486	37m35s	Jan 12, 2023
+completed	failure	Mark flaky test as serial & flaky to avoid macOS SDK race condition (…	Tests	main	push	3904115408	1h51m13s	Jan 12, 2023
+completed	success	Make further changes to conda-build docs (#4704)	Tests	main	push	3903167089	28s	Jan 12, 2023
+completed	failure	Add `conda_build_test_recipe` as a submodule	Tests	action-version-and-submodule	pull_request	3899375443	1h50m54s	Jan 12, 2023
+completed	startup_failure	Add `conda_build_test_recipe` as a submodule	Tests	action-version-and-submodule	pull_request	3899356670	0s	Jan 12, 2023
+completed	failure	Adjust testing matrix (#4691)	Tests	main	push	3899224288	2h0m57s	Jan 12, 2023
+completed	success	Make further changes to conda-build docs	Tests	docs_edits	pull_request	3897656527	29s	Jan 11, 2023
+completed	success	Make further changes to conda-build docs	Tests	docs_edits	pull_request	3897512833	29s	Jan 11, 2023
+completed	success	Mark flaky test as serial & flaky to avoid macOS SDK race condition	Tests	serial-overlinking-detection	pull_request	3896539350	1h52m5s	Jan 12, 2023
+completed	failure	Pruning Test cases for `test_api_debug.py`	Tests	test_api_debug_4647	pull_request	3895958010	3h56m33s	Jan 11, 2023
+completed	cancelled	Mark flaky test as serial & flaky to avoid macOS SDK race condition	Tests	serial-overlinking-detection	pull_request	3895486083	2h32m16s	Jan 11, 2023
+completed	cancelled	Pruning Test cases for `test_api_debug.py`	Tests	test_api_debug_4647	pull_request	3895397900	1h24m21s	Jan 11, 2023
+completed	cancelled	Pruning Test cases for `test_api_debug.py`	Tests	test_api_debug_4647	pull_request	3894069030	31m57s	Jan 12, 2023
+completed	success	Make further changes to conda-build docs	Tests	docs_edits	pull_request	3889094398	28s	Jan 11, 2023
+completed	success	Make further changes to conda-build docs	Tests	docs_edits	pull_request	3887573520	24s	Jan 10, 2023
+completed	success	Make further changes to conda-build docs	Tests	docs_edits	pull_request	3887569498	28s	Jan 10, 2023
+completed	success	Make further changes to conda-build docs	Tests	docs_edits	pull_request	3886746479	34s	Jan 10, 2023
+completed	success	[pre-commit.ci] pre-commit autoupdate (#4699)	Tests	main	push	3881855333	29s	Jan 10, 2023
+completed	success	Add misc. fixes to conda-build documentation (#4702)	Tests	main	push	3881852883	29s	Jan 10, 2023
+completed	success	Add misc. fixes to conda-build documentation	Tests	conda_build_docs_overhaul	pull_request	3878055014	2m29s	Jan  9, 2023
+completed	success	Add misc. fixes to conda-build documentation	Tests	conda_build_docs_overhaul	pull_request	3877982022	27s	Jan  9, 2023
+completed	failure	Pruning Test cases for `test_api_debug.py`	Tests	test_api_debug_4647	pull_request	3877833892	1h50m52s	Jan 10, 2023
+completed	cancelled	Pruning Test cases for `test_api_debug.py`	Tests	test_api_debug_4647	pull_request	3877771564	7m51s	Jan  9, 2023
+completed	failure	Speedup `test_variants.py::test_get_package_variants*`	Tests	speedup-test_get_package_variants	pull_request	3877704137	1h32m46s	Jan 10, 2023
+completed	cancelled	Speedup `test_variants.py::test_get_package_variants*`	Tests	speedup-test_get_package_variants	pull_request	3877699253	37s	Jan  9, 2023
+completed	cancelled	Speedup `test_variants.py::test_get_package_variants*`	Tests	speedup-test_get_package_variants	pull_request	3877518240	30m35s	Jan  9, 2023
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	3875823507	30s	Jan  9, 2023
+completed	success	Adjust testing matrix	Tests	limit-CI-runs	pull_request	3864273288	3h25m59s	Jan 11, 2023
+completed	cancelled	Adjust testing matrix	Tests	limit-CI-runs	pull_request	3864264854	4m29s	Jan  7, 2023
+completed	cancelled	Adjust testing matrix	Tests	limit-CI-runs	pull_request	3864245622	8m1s	Jan  7, 2023
+completed	failure	Cleanup replay/allure variables, use setup-miniconda w/ caching (#4648)	Tests	main	push	3864241894	2h0m36s	Jan  7, 2023
+completed	success	Replace bundled conda-index with standalone conda-index package	Tests	conda-index	pull_request	3862424334	1h22m35s	Jan  7, 2023
+completed	failure	Simplify `test_subpackages.py::test_intradependencies` (#4695)	Tests	main	push	3858372297	4h39m15s	Jan  6, 2023
+completed	failure	Replace bundled conda-index with standalone conda-index package	Tests	conda-index	pull_request	3858213344	1h7m0s	Jan  7, 2023
+completed	success	Update conda-build.rst with missing args	Tests	patch-1	pull_request	3857553592	1h4m21s	Jan 26, 2023
+completed	cancelled	Replace bundled conda-index with standalone conda-index package	Tests	conda-index	pull_request	3856892570	3h40m39s	Jan  6, 2023
+completed	success	Speedup `test_variants.py::test_get_package_variants*`	Tests	speedup-test_get_package_variants	pull_request	3856768694	1h18m44s	Jan  7, 2023
+completed	success	Speedup `test_subpackages.py::test_intradependencies`	Tests	speedup-test_intradependencies	pull_request	3856768108	1h0m46s	Jan  6, 2023
+completed	success	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3856701047	1h50m38s	Jan  7, 2023
+completed	cancelled	Replace bundled conda-index with standalone conda-index package	Tests	conda-index	pull_request	3856342718	1h25m6s	Jan  6, 2023
+completed	cancelled	Replace bundled conda-index with standalone conda-index package	Tests	conda-index	pull_request	3856216340	18m23s	Jan  6, 2023
+completed	cancelled	Replace bundled conda-index with standalone conda-index package	Tests	conda-index	pull_request	3855898607	47m51s	Jan  6, 2023
+completed	cancelled	Replace bundled conda-index with standalone conda-index package	Tests	conda-index	pull_request	3855864053	7m13s	Jan  6, 2023
+completed	cancelled	Replace bundled conda-index with standalone conda-index package	Tests	conda-index	pull_request	3855837831	4m35s	Jan  6, 2023
+completed	success	Bump pillow from 9.0.1 to 9.3.0 in /docs (#4643)	Tests	main	push	3855318728	26s	Jan  6, 2023
+completed	success	Bump pillow from 9.0.1 to 9.3.0 in /docs	Tests	dependabot/pip/docs/pillow-9.3.0	pull_request	3855316437	24s	Jan  6, 2023
+completed	success	[pre-commit.ci] pre-commit autoupdate (#4668)	Tests	main	push	3855312871	24s	Jan  6, 2023
+completed	failure	Recompress .tar.bz2 test archives; skip enough tests to pass before g…	Tests	main	push	3855244460	2h18m41s	Jan  6, 2023
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	3854333859	25s	Jan  6, 2023
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3852651914	2h22m59s	Jan  6, 2023
+completed	cancelled	Speedup `test_variants.py::test_get_package_variants*`	Tests	speedup-test_get_package_variants	pull_request	3852449272	49m2s	Jan  6, 2023
+completed	success	Recompress .tar.bz2 test archives; skip enough tests to pass before getting cancelled.	Tests	windows-no-cov	pull_request	3852367819	2h3m31s	Jan  6, 2023
+completed	cancelled	Speedup `test_subpackages.py::test_intradependencies`	Tests	speedup-test_intradependencies	pull_request	3852230134	1h35m53s	Jan  6, 2023
+completed	failure	Recompress .tar.bz2 test archives; skip enough tests to pass before getting cancelled.	Tests	windows-no-cov	pull_request	3851770810	1h50m59s	Jan  6, 2023
+completed	success	Recompress test .tar.bz2 archives	Tests	fix-test-data	pull_request	3851180271	1h54m26s	Jan  6, 2023
+completed	cancelled	Recompress test .tar.bz2 archives	Tests	fix-test-data	pull_request	3851108877	15m9s	Jan  5, 2023
+completed	failure	Recompress test .tar.bz2 archives	Tests	fix-test-data	pull_request	3849452954	2h1m27s	Jan  5, 2023
+completed	failure	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3849123344	3h3m45s	Jan  5, 2023
+completed	cancelled	Recompress test .tar.bz2 archives	Tests	fix-test-data	pull_request	3848908930	1h29m8s	Jan  5, 2023
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3848811013	46m27s	Jan  5, 2023
+completed	cancelled	Adding the SPIKE ticket as the change	Tests	prune-api-convert-4647	pull_request	3848581728	11m30s	Jan  5, 2023
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3847882640	2h2m10s	Jan  5, 2023
+completed	failure	Adjust testing matrix	Tests	limit-CI-runs	pull_request	3842350142	3h32m50s	Jan  4, 2023
+completed	failure	Replace bundled conda-index with standalone conda-index package	Tests	conda-index	pull_request	3842275406	3h5m7s	Jan  4, 2023
+completed	failure	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3842258019	2h2m57s	Jan  4, 2023
+completed	failure	Replace bundled conda-index with standalone conda-index package	Tests	conda-index	pull_request	3841976439	23m14s	Jan  4, 2023
+completed	cancelled	Replace bundled conda-index with standalone conda-index package	Tests	conda-index	pull_request	3841879205	17m1s	Jan  4, 2023
+completed	cancelled	Replace bundled conda-index with standalone conda-index package	Tests	conda-index	pull_request	3841793242	15m37s	Jan  4, 2023
+completed	failure	Combine license tests into parameterized test (#4683)	Tests	main	push	3841506228	2h1m33s	Jan  4, 2023
+completed	failure	Adding the SPIKE ticket as the change	Tests	prune-api-convert-4647	pull_request	3840855831	1h58m4s	Jan  4, 2023
+completed	cancelled	Adding the SPIKE ticket as the change	Tests	prune-api-convert-4647	pull_request	3840023060	2h0m53s	Jan  4, 2023
+completed	cancelled	Adding the SPIKE ticket as the change	Tests	prune-api-convert-4647	pull_request	3839115481	2h3m28s	Jan  4, 2023
+completed	failure	Upload collected test data as artifacts	Tests	allure-pytest	pull_request	3831403874	1h51m1s	Jan  5, 2023
+completed	success	`test_license_family.py`: combine tests into parameterized test	Tests	test_license_family	pull_request	3831399284	2h0m4s	Jan  4, 2023
+completed	failure	Remove custom temporary directories (#4681)	Tests	main	push	3831291232	2h1m35s	Jan  3, 2023
+completed	failure	include virtual packages in hash contents	Tests	virtual_hash	pull_request	3828748636	2h40m8s	Jan  3, 2023
+completed	failure	Fixes the git lfs error by adding git lfs fetching	Tests	fix/git-lfs-error	pull_request	3828741838	2h15m24s	Jan  3, 2023
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	3823964071	25s	Jan  2, 2023
+completed	success	Remove custom temporary directories	Tests	win-tmpdir	pull_request	3802104385	1h0m37s	Dec 30, 2022
+completed	cancelled	Remove custom temporary directories	Tests	win-tmpdir	pull_request	3801888620	42m1s	Dec 29, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	3782411764	26s	Dec 26, 2022
+completed	success	Remove custom temporary directories	Tests	win-tmpdir	pull_request	3760009411	2h5m19s	Dec 22, 2022
+completed	failure	Remove logic branching for `conda_43`/`conda_44`/`conda_45`/`conda_46…	Tests	main	push	3759863608	1h50m49s	Dec 22, 2022
+completed	cancelled	`test_license_family.py`: combine tests into parameterized test	Tests	test_license_family	pull_request	3754962836	1h50m56s	Jan  3, 2023
+completed	failure	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3754014678	2h1m55s	Dec 22, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3753932486	18m4s	Dec 22, 2022
+completed	failure	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3746656597	2h7m30s	Dec 21, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3746540791	23m31s	Dec 21, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3746524525	9m2s	Dec 21, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3746412571	27m13s	Dec 21, 2022
+completed	failure	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3745768376	2h11m24s	Dec 21, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3745466295	1h10m0s	Dec 21, 2022
+completed	failure	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3745323962	17m10s	Dec 21, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3745273833	10m26s	Dec 21, 2022
+completed	failure	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3745158560	12m24s	Dec 21, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3745097318	14m21s	Dec 20, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3745062483	8m16s	Dec 20, 2022
+completed	failure	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3744324217	2h3m57s	Dec 20, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3744256643	12m57s	Dec 20, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3744189550	11m49s	Dec 20, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3744102251	15m58s	Dec 20, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3744081022	5m37s	Dec 20, 2022
+completed	success	Remove custom temporary directories	Tests	win-tmpdir	pull_request	3744053378	1h50m47s	Dec 20, 2022
+completed	cancelled	Remove custom temporary directories	Tests	win-tmpdir	pull_request	3743741645	49m31s	Dec 20, 2022
+completed	success	Remove custom temporary directories	Tests	win-tmpdir	pull_request	3742691887	1h1m51s	Dec 20, 2022
+completed	cancelled	Remove custom temporary directories	Tests	win-tmpdir	pull_request	3742073253	1h22m46s	Dec 20, 2022
+completed	failure	Remove custom temporary directories	Tests	win-tmpdir	pull_request	3738042429	2h58m31s	Dec 20, 2022
+completed	failure	Upload collected test data as artifacts	Tests	allure-pytest	pull_request	3738029828	1h36m30s	Dec 22, 2022
+completed	failure	Update action versions to avoid Node.js 12 deprecation notices (#4678)	Tests	main	push	3738011589	1h34m54s	Dec 20, 2022
+completed	success	Remove custom temporary directories	Tests	win-tmpdir	pull_request	3735295551	1h51m9s	Dec 20, 2022
+completed	success	Remove custom temporary directories	Tests	win-tmpdir	pull_request	3734663930	16m54s	Dec 19, 2022
+completed	failure	Remove custom temporary directories	Tests	win-tmpdir	pull_request	3733779277	1h57m38s	Dec 19, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	3733372219	29s	Dec 19, 2022
+completed	success	Remove logic branching for `conda_43`/`conda_44`/`conda_45`/`conda_46`/`conda_47`	Tests	deprecate-conda_NN	pull_request	3727885677	1h9m7s	Dec 21, 2022
+completed	success	Update conda-build.rst with missing args	Tests	patch-1	pull_request	3720651450	25s	Jan  6, 2023
+completed	failure	Remove logic branching for `conda_43`/`conda_44`/`conda_45`/`conda_46`/`conda_47`	Tests	deprecate-conda_NN	pull_request	3716783047	1h52m36s	Dec 16, 2022
+completed	failure	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3716690309	2h27m12s	Dec 16, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3716681666	2m18s	Dec 16, 2022
+completed	success	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3716589374	13m19s	Dec 16, 2022
+completed	cancelled	Upload collected test data as artifacts	Tests	allure-pytest	pull_request	3716460346	9m22s	Dec 20, 2022
+completed	failure	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3716410893	16m29s	Dec 16, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3716317668	20m2s	Dec 16, 2022
+completed	failure	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3715087769	2h3m26s	Dec 16, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3714318113	1h51m56s	Dec 16, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3714180152	18m14s	Dec 16, 2022
+completed	cancelled	Remove logic branching for `conda_43`/`conda_44`/`conda_45`/`conda_46`/`conda_47`	Tests	deprecate-conda_NN	pull_request	3711736722	14m51s	Dec 16, 2022
+completed	success	Update action versions to avoid Node.js 12 deprecation notices	Tests	remove-node12-warnings	pull_request	3711735797	1h50m49s	Dec 20, 2022
+completed	failure	Move tar-ing into separate step to avoid shadowing test results (#4679)	Tests	main	push	3711726058	1h58m11s	Dec 16, 2022
+completed	failure	Remove logic branching for `conda_43`/`conda_44`/`conda_45`/`conda_46`/`conda_47`	Tests	deprecate-conda_NN	pull_request	3710338347	3h42m30s	Dec 16, 2022
+completed	failure	Move tar-ing into separate step to avoid shadowing test results	Tests	shadow-tests	pull_request	3710300224	3h15m1s	Dec 16, 2022
+completed	failure	Update action versions to avoid Node.js 12 deprecation notices	Tests	remove-node12-warnings	pull_request	3709927291	3h7m34s	Dec 16, 2022
+completed	cancelled	Remove logic branching for `conda_43`/`conda_44`/`conda_45`/`conda_46`/`conda_47`	Tests	deprecate-conda_NN	pull_request	3709733101	2h18m20s	Dec 16, 2022
+completed	cancelled	Remove logic branching for `conda_43`/`conda_44`/`conda_45`/`conda_46`/`conda_47`	Tests	deprecate-conda_NN	pull_request	3709700299	7m2s	Dec 16, 2022
+completed	failure	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3709487457	2h9m29s	Dec 16, 2022
+completed	success	Update disclaimer/LICENSE to reflect conda-build originally being part of conda	Tests	copyrights	pull_request	3708819897	2h28m43s	Dec 15, 2022
+completed	success	Remove false-positives in the list of Perl core modules	Tests	fix_perl_core_list	pull_request	3707761996	3h13m14s	Dec 15, 2022
+completed	success	Add C compiler dep when `.xs` files are found.	Tests	fix_cpan_xs_detection	pull_request	3707491225	1h37m36s	Dec 16, 2022
+completed	failure	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3707422380	2h19m1s	Dec 15, 2022
+completed	cancelled	Add C compiler dep when `.xs` files are found.	Tests	fix_cpan_xs_detection	pull_request	3707397517	17m22s	Dec 15, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3707165832	39m29s	Dec 15, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3706328670	1h58m15s	Dec 15, 2022
+completed	success	Use GH Action instead of `on` path filtering (#4675)	Tests	main	push	3706135463	3h6m48s	Dec 15, 2022
+completed	cancelled	Upload collected test data as artifacts	Tests	allure-pytest	pull_request	3704985790	3m43s	Dec 16, 2022
+completed	success	Use GH Action instead of `on` path filtering	Tests	one-tests.yml	pull_request	3704953493	2h26m21s	Dec 15, 2022
+completed	cancelled	Use GH Action instead of `on` path filtering	Tests	one-tests.yml	pull_request	3704952366	1m22s	Dec 15, 2022
+completed	cancelled	Upload collected test data as artifacts	Tests	allure-pytest	pull_request	3704811214	21m25s	Dec 15, 2022
+completed	success	Use GH Action instead of `on` path filtering	Tests	one-tests.yml	pull_request	3701228193	1h38m20s	Dec 15, 2022
+completed	failure	Use GH Action instead of `on` path filtering	Tests	one-tests.yml	pull_request	3700729792	1h42m34s	Dec 15, 2022
+completed	cancelled	Use GH Action instead of `on` path filtering	Tests	one-tests.yml	pull_request	3700634853	18m37s	Dec 15, 2022
+completed	cancelled	Use GH Action instead of `on` path filtering	Tests	one-tests.yml	pull_request	3700630358	1m47s	Dec 15, 2022
+completed	startup_failure	Use GH Action instead of `on` path filtering	Tests	one-tests.yml	pull_request	3699404226	1s	Dec 14, 2022
+completed	failure	Use GH Action instead of `on` path filtering	Tests	one-tests.yml	pull_request	3699323196	2h58m14s	Dec 14, 2022
+completed	failure	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3699122652	1h53m39s	Dec 14, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3699049335	11m17s	Dec 14, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3698839367	1s	Dec 14, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3698820593	2s	Dec 14, 2022
+completed	success	Upload collected test data as artifacts	Tests	allure-pytest	pull_request	3698248745	2h19m56s	Dec 14, 2022
+completed	cancelled	Upload collected test data as artifacts	Tests	allure-pytest	pull_request	3698239363	2m10s	Dec 14, 2022
+completed	failure	Add Allure reporting, update Python version test matrix, and prune te…	Tests	main	push	3697825538	1h50m39s	Dec 14, 2022
+completed	success	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3696216818	1h34m39s	Dec 14, 2022
+completed	success	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3692955885	1h53m17s	Dec 14, 2022
+completed	cancelled	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3692935538	3m48s	Dec 14, 2022
+completed	failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3692023968	1h50m40s	Dec 14, 2022
+completed	failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3691453264	1h38m41s	Dec 14, 2022
+completed	failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3690022311	1h36m48s	Dec 13, 2022
+completed	cancelled	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3689969748	10m46s	Dec 13, 2022
+completed	cancelled	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3689939278	5m58s	Dec 13, 2022
+completed	cancelled	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3689918573	4m9s	Dec 13, 2022
+completed	failure	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3688987856	1h50m35s	Dec 14, 2022
+completed	failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3688853028	2h0m20s	Dec 13, 2022
+completed	cancelled	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3688719082	22m27s	Dec 13, 2022
+completed	cancelled	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3688700258	3m21s	Dec 13, 2022
+completed	cancelled	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3688688004	2m42s	Dec 13, 2022
+completed	failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3687497509	1h51m9s	Dec 13, 2022
+completed	failure	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3686678000	2h1m49s	Dec 13, 2022
+completed	failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3649997086	1h53m11s	Dec  8, 2022
+completed	startup_failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3649880814	1s	Dec  8, 2022
+completed	startup_failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3649766977	1s	Dec  8, 2022
+completed	failure	Skip tests for non-code changes (#4664)	Tests	main	push	3635491274	2h6m16s	Dec  7, 2022
+completed	failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3630482496	1h40m2s	Dec  6, 2022
+completed	cancelled	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3630478314	1m4s	Dec  6, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	3622084234	1h36m18s	Dec  5, 2022
+completed	failure	Fix: Build environments not activated (#4665)	Tests	main	push	3621872840	1h34m3s	Dec  5, 2022
+completed	failure	Fix: Build environments not activated	Tests	fix-activation-path	pull_request	3620550262	1h57m27s	Dec  5, 2022
+completed	cancelled	Fix: Build environments not activated	Tests	fix-activation-path	pull_request	3620401753	19m38s	Dec  5, 2022
+completed	success	Fix: Build environments not activated	Tests	fix-activation-path	pull_request	3612991196	1h27m4s	Dec  4, 2022
+completed	failure	Fix: Build environments not activated	Tests	fix-activation-path	pull_request	3612573970	2h0m52s	Dec  4, 2022
+completed	failure	Fix: Build environments not activated	Tests	fix-activation-path	pull_request	3610714213	1h35m9s	Dec  3, 2022
+completed	cancelled	Fix: Build environments not activated	Tests	fix-activation-path	pull_request	3610522397	1h1m22s	Dec  3, 2022
+completed	cancelled	Fix: Build environments not activated	Tests	fix-activation-path	pull_request	3610470037	15m40s	Dec  3, 2022
+completed	failure	Fix: Build environments not activated	Tests	fix-activation-path	pull_request	3609986485	1h39m50s	Dec  3, 2022
+completed	cancelled	Fix: Build environments not activated	Tests	fix-activation-path	pull_request	3609956939	11m39s	Dec  3, 2022
+completed	failure	Fix: Build environments not activated	Tests	fix-activation-path	pull_request	3609613591	1h35m54s	Dec  3, 2022
+completed	success	Skip tests for non-code changes	Tests	skip-testing-non-code	pull_request	3605830902	1h25m27s	Dec  5, 2022
+completed	cancelled	Skip tests for non-code changes	Tests	skip-testing-non-code	pull_request	3605827981	1m14s	Dec  2, 2022
+completed	failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3604360605	1h51m23s	Dec  2, 2022
+completed	cancelled	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3604276283	16m4s	Dec  2, 2022
+completed	failure	Change Zstd compression default to 19 (#4663)	Tests	main	push	3603771658	1h34m6s	Dec  2, 2022
+completed	success	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3603477325	2h10m6s	Dec  2, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3603136447	50m39s	Dec  2, 2022
+completed	success	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3596364140	1h1m33s	Dec  2, 2022
+completed	success	Change Zstd compression default to 19	Tests	zst_def_19	pull_request	3596345036	1h40m50s	Dec  1, 2022
+completed	cancelled	Change Zstd compression default to 19	Tests	zst_def_19	pull_request	3595563075	1h53m21s	Dec  1, 2022
+completed	cancelled	Change Zstd compression default to 19	Tests	zst_def_19	pull_request	3595476028	13m33s	Dec  1, 2022
+completed	failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3594687335	3h0m43s	Dec  1, 2022
+completed	failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3593636072	2h1m13s	Dec  1, 2022
+completed	cancelled	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3593470795	19m57s	Dec  1, 2022
+completed	cancelled	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3593460607	1m46s	Dec  1, 2022
+completed	cancelled	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3593444993	2m31s	Dec  1, 2022
+completed	cancelled	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3593419833	1m1s	Dec  1, 2022
+completed	failure	Release 3.23.2 (#4661)	Tests	main	push	3587833196	3h12m11s	Nov 30, 2022
+completed	success	Release 3.23.2	Tests	release-3.23.2	pull_request	3587204666	4h27m35s	Nov 30, 2022
+completed	failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3587083386	3h21m25s	Nov 30, 2022
+completed	failure	[do not merge] debug ci: Windows, Y U no speed?	Tests	ci-2022-12-dbg-win	pull_request	3587009278	22m10s	Nov 30, 2022
+completed	failure	[do not merge] debug ci: Windows, Y U no speed?	Tests	ci-2022-12-dbg-win	pull_request	3586699666	17m16s	Nov 30, 2022
+completed	success	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3586541309	1h57m4s	Dec  1, 2022
+completed	failure	[do not merge] debug ci: Windows, Y U no speed?	Tests	ci-2022-12-dbg-win	pull_request	3586454957	20m47s	Nov 30, 2022
+completed	cancelled	[do not merge] debug ci: Windows, Y U no speed?	Tests	ci-2022-12-dbg-win	pull_request	3586343020	16m57s	Nov 30, 2022
+completed	failure	[do not merge] debug ci: Windows, Y U no speed?	Tests	ci-2022-12-dbg-win	pull_request	3586066906	21m48s	Nov 30, 2022
+completed	failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3584630031	2h1m35s	Nov 30, 2022
+completed	cancelled	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3584604695	3m31s	Nov 30, 2022
+completed	failure	[do not merge] debug ci: Windows, Y U no speed?	Tests	ci-2022-12-dbg-win	pull_request	3583854312	12m33s	Nov 30, 2022
+completed	failure	[do not merge] debug ci: Windows, Y U no speed?	Tests	ci-2022-12-dbg-win	pull_request	3582973768	16m3s	Nov 30, 2022
+completed	failure	[do not merge] debug ci: Windows, Y U no speed?	Tests	ci-2022-12-dbg-win	pull_request	3582818442	13m21s	Nov 30, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate (#4656)	Tests	main	push	3579257231	3h8m28s	Nov 30, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	3579249414	1h17m15s	Nov 30, 2022
+completed	failure	Remove unnecessary lambda	Tests	remove-unnecessary-lambda	pull_request	3578910629	2h5m45s	Nov 29, 2022
+completed	success	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3578777844	1h50m39s	Nov 30, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3578769498	2m1s	Nov 29, 2022
+completed	cancelled	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	3578765902	1h33m38s	Nov 29, 2022
+completed	failure	Reduce flakiness of CI test runs (#4653)	Tests	main	push	3578761559	1h39m51s	Nov 29, 2022
+completed	success	Pin msumastro to 1.1.6	Tests	pin-msumastro	pull_request	3577262137	1h19m24s	Nov 29, 2022
+completed	failure	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3576737738	1h54m47s	Nov 29, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3576702458	6m5s	Nov 29, 2022
+completed	startup_failure	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3576492517	0s	Nov 29, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3576351524	48m12s	Nov 29, 2022
+completed	failure	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3576217037	14m26s	Nov 29, 2022
+completed	failure	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3575864111	15m41s	Nov 29, 2022
+completed	success	Reduce flakiness of CI test runs	Tests	monkeypatch-api-testing_config	pull_request	3575557489	1h13m41s	Nov 29, 2022
+completed	failure	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3574690512	6m20s	Nov 29, 2022
+completed	failure	conda-build CLI overrode condarc's zstd_compression_level with the de…	Tests	main	push	3574682995	1h39m43s	Nov 29, 2022
+completed	failure	Reduce flakiness of CI test runs	Tests	monkeypatch-api-testing_config	pull_request	3573327631	1h29m55s	Nov 29, 2022
+completed	cancelled	Reduce flakiness of CI test runs	Tests	monkeypatch-api-testing_config	pull_request	3573237497	12m33s	Nov 29, 2022
+completed	cancelled	Reduce flakiness of CI test runs	Tests	monkeypatch-api-testing_config	pull_request	3573168602	9m41s	Nov 29, 2022
+completed	cancelled	Reduce flakiness of CI test runs	Tests	monkeypatch-api-testing_config	pull_request	3573125559	6m18s	Nov 29, 2022
+completed	cancelled	Reduce flakiness of CI test runs	Tests	monkeypatch-api-testing_config	pull_request	3573116224	1m48s	Nov 29, 2022
+completed	failure	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	3566845495	2h1m4s	Nov 28, 2022
+completed	success	Reduce flakiness of CI test runs	Tests	monkeypatch-api-testing_config	pull_request	3554260104	1h57m33s	Nov 26, 2022
+completed	cancelled	Reduce flakiness of CI test runs	Tests	monkeypatch-api-testing_config	pull_request	3553920093	1h51m17s	Nov 26, 2022
+completed	cancelled	Reduce flakiness of CI test runs	Tests	monkeypatch-api-testing_config	pull_request	3553911212	3m12s	Nov 26, 2022
+completed	failure	Reduce flakiness of CI test runs	Tests	monkeypatch-api-testing_config	pull_request	3551366825	1h36m38s	Nov 26, 2022
+completed	failure	Reduce flakiness of CI test runs	Tests	monkeypatch-api-testing_config	pull_request	3550892748	1h50m46s	Nov 25, 2022
+completed	cancelled	Reduce flakiness of CI test runs	Tests	monkeypatch-api-testing_config	pull_request	3550643832	1h7m22s	Nov 25, 2022
+completed	cancelled	Reduce flakiness of CI test runs	Tests	monkeypatch-api-testing_config	pull_request	3550567529	19m26s	Nov 25, 2022
+completed	failure	Reduce flakiness of CI test runs	Tests	test-fixes-2022-11	pull_request	3549730650	1h34m5s	Nov 25, 2022
+completed	failure	Reduce flakiness of CI test runs	Tests	monkeypatch-api-testing_config	pull_request	3549364399	1h26m5s	Nov 25, 2022
+completed	failure	Reduce flakiness of CI test runs	Tests	monkeypatch-api-testing_config	pull_request	3547554832	2h5m4s	Nov 25, 2022
+completed	cancelled	Reduce flakiness of CI test runs	Tests	monkeypatch-api-testing_config	pull_request	3547511672	7m28s	Nov 25, 2022
+completed	failure	Reduce flakiness of CI test runs	Tests	test-fixes-2022-11	pull_request	3545809617	1h33m52s	Nov 25, 2022
+completed	failure	fix: conda-build CLI overrode condarc's zstd_compression_level with the default value	Tests	cli-zstd-level-override	pull_request	3545766066	1h50m38s	Nov 25, 2022
+completed	failure	fix: conda-build CLI overrode condarc's zstd_compression_level with the default value	Tests	cli-zstd-level-override	pull_request	3543051214	1h30m11s	Nov 24, 2022
+completed	failure	fix: conda-build CLI overrode condarc's zstd_compression_level with the default value	Tests	cli-zstd-level-override	pull_request	3542198655	1h38m58s	Nov 24, 2022
+completed	cancelled	fix: conda-build CLI overrode condarc's zstd_compression_level with the default value	Tests	cli-zstd-level-override	pull_request	3542063216	20m39s	Nov 24, 2022
+completed	cancelled	fix: conda-build CLI overrode condarc's zstd_compression_level with the default value	Tests	cli-zstd-level-override	pull_request	3541884616	27m2s	Nov 24, 2022
+completed	cancelled	fix: conda-build CLI overrode condarc's zstd_compression_level with the default value	Tests	cli-zstd-level-override	pull_request	3541454400	1h1m4s	Nov 24, 2022
+completed	cancelled	fix: conda-build CLI overrode condarc's zstd_compression_level with the default value	Tests	cli-zstd-level-override	pull_request	3541426715	4m12s	Nov 24, 2022
+completed	cancelled	fix: conda-build CLI overrode condarc's zstd_compression_level with the default value	Tests	cli-zstd-level-override	pull_request	3540987005	1h1m18s	Nov 24, 2022
+completed	cancelled	fix: conda-build CLI overrode condarc's zstd_compression_level with the default value	Tests	cli-zstd-level-override	pull_request	3540802262	25m36s	Nov 24, 2022
+completed	cancelled	fix: conda-build CLI overrode condarc's zstd_compression_level with the default value	Tests	cli-zstd-level-override	pull_request	3540194556	1h31m6s	Nov 24, 2022
+completed	cancelled	fix: conda-build CLI overrode condarc's zstd_compression_level with the default value	Tests	cli-zstd-level-override	pull_request	3539701165	1h9m57s	Nov 24, 2022
+completed	cancelled	fix: conda-build CLI overrode condarc's zstd_compression_level with the default value	Tests	cli-zstd-level-override	pull_request	3539502909	28m25s	Nov 24, 2022
+completed	cancelled	fix: conda-build CLI overrode condarc's zstd_compression_level with the default value	Tests	cli-zstd-level-override	pull_request	3539177737	46m41s	Nov 24, 2022
+completed	failure	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3538751843	36m20s	Nov 24, 2022
+completed	failure	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3538728426	3m1s	Nov 24, 2022
+completed	failure	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3538662512	5m56s	Nov 24, 2022
+completed	failure	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3538527966	11m17s	Nov 24, 2022
+completed	failure	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3538431088	7m57s	Nov 24, 2022
+completed	failure	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3538205315	8m16s	Nov 24, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3538159132	9m24s	Nov 24, 2022
+completed	failure	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3538113433	7m13s	Nov 24, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3538104318	2m32s	Nov 24, 2022
+completed	failure	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3538058582	8m28s	Nov 24, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3538039001	5m15s	Nov 24, 2022
+completed	startup_failure	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3538036650	0s	Nov 24, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3537792795	1h1m14s	Nov 24, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3537761987	8m4s	Nov 24, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3537725098	9m59s	Nov 24, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3537689916	9m16s	Nov 24, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3537639060	12m24s	Nov 24, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3536329820	33m58s	Nov 24, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3536150120	37m10s	Nov 23, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3536065683	16m11s	Nov 23, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3536019412	8m47s	Nov 23, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3535597381	1h17m30s	Nov 23, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3535559223	7m54s	Nov 23, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3535550263	2m31s	Nov 23, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3535523197	5m2s	Nov 23, 2022
+completed	cancelled	Cleanup replay variables & use setup-miniconda	Tests	cleanup-replay	pull_request	3535282082	39m2s	Nov 23, 2022
+completed	failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3528227238	2h0m56s	Nov 23, 2022
+completed	failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3527529681	2h0m49s	Nov 22, 2022
+completed	success	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3524785825	13m40s	Nov 22, 2022
+completed	failure	Bump pillow from 9.0.1 to 9.3.0 in /docs	Tests	dependabot/pip/docs/pillow-9.3.0	pull_request	3522577204	1h48m58s	Nov 22, 2022
+completed	failure	[pre-commit.ci] pre-commit autoupdate (#4642)	Tests	main	push	3516639250	1h48m19s	Nov 21, 2022
+completed	cancelled	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	3516314338	44m54s	Nov 21, 2022
+completed	failure	Upload collected test data as artifacts	Tests	allure-pytest	pull_request	3514461357	1h38m56s	Nov 21, 2022
+completed	failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3500677252	13m58s	Nov 18, 2022
+completed	success	Release 3.23.1 (#4639)	Tests	main	push	3492784585	1h40m53s	Nov 17, 2022
+completed	success	Release 3.23.1	Tests	release-3.23.1	pull_request	3492156228	1h36m48s	Nov 17, 2022
+completed	cancelled	Release 3.23.1	Tests	release-3.23.1	pull_request	3492146116	2m12s	Nov 17, 2022
+completed	success	Cast metadata values to string (#4637)	Tests	main	push	3492011323	1h39m25s	Nov 17, 2022
+completed	success	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3491615381	14m1s	Nov 17, 2022
+completed	failure	include virtual packages in hash contents	Tests	virtual_hash	pull_request	3491514385	1h31m1s	Nov 17, 2022
+completed	cancelled	include virtual packages in hash contents	Tests	virtual_hash	pull_request	3491511591	24s	Nov 17, 2022
+completed	cancelled	include virtual packages in hash contents	Tests	virtual_hash	pull_request	3491508610	1m5s	Nov 17, 2022
+completed	failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3491441751	15m2s	Nov 17, 2022
+completed	success	Update conda dependency (#4635)	Tests	main	push	3490777021	2h7m53s	Nov 17, 2022
+completed	success	Cast metadata values to string	Tests	string-values	pull_request	3490586255	1h29m31s	Nov 17, 2022
+completed	success	Update conda dependency	Tests	patch-conda	pull_request	3490032269	1h24m45s	Nov 17, 2022
+completed	failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3488982187	15m30s	Nov 17, 2022
+completed	cancelled	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3488978461	38s	Nov 17, 2022
+completed	success	Release 3.23.0 (#4618)	Tests	main	push	3484247838	1h51m48s	Nov 17, 2022
+completed	failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3483175463	15m45s	Nov 16, 2022
+completed	success	Release 3.23.0	Tests	release-3.23.0	pull_request	3483085845	2h14m44s	Nov 16, 2022
+completed	cancelled	Release 3.23.0	Tests	release-3.23.0	pull_request	3483074500	2m12s	Nov 16, 2022
+completed	cancelled	Release 3.23.0	Tests	release-3.23.0	pull_request	3483057753	3m34s	Nov 16, 2022
+completed	success	Point to packaging.python.org instead of setuptools (#4632)	Tests	main	push	3483036775	1h49m5s	Nov 16, 2022
+completed	failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3483007223	14m53s	Nov 16, 2022
+completed	failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3481341628	17m39s	Nov 16, 2022
+completed	failure	Point to packaging.python.org instead of setuptools	Tests	patch-1	pull_request	3474898901	1h54m19s	Nov 16, 2022
+completed	success	Release 3.23.0	Tests	release-3.23.0	pull_request	3473681781	1h38m32s	Nov 16, 2022
+completed	success	Run `conda` in isolated mode only if opted in (#4625)	Tests	main	push	3473519895	2h53m16s	Nov 15, 2022
+completed	cancelled	Run `conda` in isolated mode only if opted in	Tests	isolated-mode-opt-in	pull_request	3472461129	3h6m0s	Nov 15, 2022
+completed	cancelled	🔄 Synced file(s) with conda/infra (#4631)	Tests	main	push	3472085882	3h21m10s	Nov 15, 2022
+completed	cancelled	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	3472035774	3h7m42s	Nov 15, 2022
+completed	cancelled	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	3471883539	19m59s	Nov 15, 2022
+completed	failure	Mark `test_convert` test flaky and switch to pytest-rerunfailures (#4…	Tests	main	push	3471746431	3h12m53s	Nov 15, 2022
+completed	failure	Run `conda` in isolated mode only if opted in	Tests	isolated-mode-opt-in	pull_request	3471598506	1h40m19s	Nov 15, 2022
+completed	failure	Remove deprecated context.conda_private (#4629)	Tests	main	push	3471457124	1h44m31s	Nov 15, 2022
+completed	failure	[pre-commit.ci] pre-commit autoupdate (#4627)	Tests	main	push	3467704825	2h19m47s	Nov 15, 2022
+completed	failure	Remove deprecated `context.conda_private`	Tests	deprecate-private-conda-env	pull_request	3467691600	1h46m39s	Nov 15, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	3463408256	1h16m4s	Nov 15, 2022
+completed	failure	include virtual packages in hash contents	Tests	virtual_hash	pull_request	3447459647	1h22m10s	Nov 11, 2022
+completed	success	Mark `test_convert` test flaky and switch to pytest-rerunfailures	Tests	flaky-test-convert	pull_request	3447451628	1h50m30s	Nov 11, 2022
+completed	failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3438531219	14m41s	Nov 10, 2022
+completed	failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3438404668	13m20s	Nov 10, 2022
+completed	failure	Adding a link in the summary report...	Tests	conda-build-4558	push	3438338725	0s	Nov 10, 2022
+completed	failure	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	3437312010	1h8m51s	Nov 10, 2022
+completed	startup_failure	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	3437247942	1s	Nov 10, 2022
+completed	failure	Mark `test_convert` test flaky and switch to pytest-rerunfailures	Tests	flaky-test-convert	pull_request	3437147423	1h39m40s	Nov 10, 2022
+completed	failure	Upload collected test data as artifacts	Tests	allure-pytest	pull_request	3433669396	1h35m20s	Nov 10, 2022
+completed	failure	Upload collected test data as artifacts	Tests	allure-pytest	pull_request	3432432179	1h50m48s	Nov  9, 2022
+completed	failure	Upload collected test data as artifacts	Tests	allure-pytest	pull_request	3431837534	1h34m9s	Nov  9, 2022
+completed	failure	Run `conda` in isolated mode only if opted in	Tests	isolated-mode-opt-in	pull_request	3431142570	1h24m23s	Nov 10, 2022
+completed	cancelled	Run `conda` in isolated mode only if opted in	Tests	isolated-mode-opt-in	pull_request	3430992589	22m13s	Nov  9, 2022
+completed	cancelled	Run `conda` in isolated mode only if opted in	Tests	isolated-mode-opt-in	pull_request	3430977221	2m50s	Nov  9, 2022
+completed	success	Release 3.23.0	Tests	release-3.23.0	pull_request	3427374832	1h44m43s	Nov 10, 2022
+completed	failure	Upload collected test data as artifacts	Tests	allure-pytest	pull_request	3423423101	1h29m56s	Nov  8, 2022
+completed	success	Update path logic to avoid Windows path sensitivity (#4619)	Tests	main	push	3418336849	2h17m44s	Nov  8, 2022
+completed	failure	Updated broken example recipe links.	Tests	main	pull_request	3397186479	1h34m18s	Nov  4, 2022
+completed	cancelled	Updated broken example recipe links.	Tests	main	pull_request	3396762315	33s	Nov  4, 2022
+completed	failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3396299741	13m14s	Nov  4, 2022
+completed	failure	Flaky path convert test	Tests	flaky-path-convert-test	pull_request	3396257988	1h50m33s	Nov  4, 2022
+completed	failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3396129264	1m25s	Nov  4, 2022
+completed	failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3396116143	1m20s	Nov  4, 2022
+completed	failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3396090696	1m56s	Nov  4, 2022
+completed	failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3396047630	1m30s	Nov  4, 2022
+completed	failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3396004935	1m22s	Nov  4, 2022
+completed	failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3395971893	1m14s	Nov  4, 2022
+completed	failure	Add Allure reporting, update Python version test matrix, and prune test_api_build.py	Tests	conda-build-4558	pull_request	3395868991	1m26s	Nov  4, 2022
+completed	success	Update path logic to avoid Windows path sensitivity	Tests	flaky-path-convert-test	pull_request	3395410223	1h31m58s	Nov  4, 2022
+completed	cancelled	Update path logic to avoid Windows path sensitivity	Tests	flaky-path-convert-test	pull_request	3395009354	1h5m48s	Nov  4, 2022
+completed	cancelled	Update path logic to avoid Windows path sensitivity	Tests	flaky-path-convert-test	pull_request	3394764479	34m32s	Nov  4, 2022
+completed	success	Update path logic to avoid Windows path sensitivity	Tests	flaky-path-convert-test	pull_request	3390301064	1h32m43s	Nov  4, 2022
+completed	failure	Release 3.23.0	Tests	release-3.23.0	pull_request	3389076766	3h5m47s	Nov  3, 2022
+completed	failure	Delete .binstar.yml (#4616)	Tests	main	push	3388870367	1h25m20s	Nov  3, 2022
+completed	failure	Add C compiler dep when `.xs` files are found.	Tests	fix_cpan_xs_detection	pull_request	3388784120	2h24m14s	Nov  3, 2022
+completed	cancelled	Fix `lru_cache` signature (#4615)	Tests	main	push	3388673223	29m28s	Nov  3, 2022
+completed	cancelled	Fix `lru_cache` issues	Tests	fix-lru_cache	pull_request	3388352433	50m58s	Nov  3, 2022
+completed	success	Fix `lru_cache` issues	Tests	fix-lru_cache	pull_request	3387236000	2h13m57s	Nov  3, 2022
+completed	cancelled	Delete `.binstar.yml`	Tests	delete-binstar	pull_request	3387025932	42m59s	Nov  3, 2022
+completed	cancelled	Fix `lru_cache` issues	Tests	fix-lru_cache	pull_request	3386842457	1h6m20s	Nov  3, 2022
+completed	failure	Fix `lru_cache` issues	Tests	fix-lru_cache	pull_request	3386477957	28m58s	Nov  3, 2022
+completed	failure	Changed token name to be specific to canary channel. (#4614)	Tests	main	push	3386020523	27m45s	Nov  3, 2022
+completed	failure	Cleanup of `main_build.py` (#4569)	Tests	main	push	3385323418	28m28s	Nov  3, 2022
+completed	failure	Stop using `@memoized` from conda (#4593)	Tests	main	push	3383738212	2h49m28s	Nov  3, 2022
+completed	success	Cleanup of `main_build.py`	Tests	clean-main_build	pull_request	3383717537	3h53m2s	Nov  3, 2022
+completed	failure	Updated broken example recipe links.	Tests	main	pull_request	3383712352	3h20m27s	Nov  3, 2022
+completed	failure	Stop using `@memoized` from conda	Tests	memoized	pull_request	3383705562	1h27m48s	Nov  3, 2022
+completed	failure	Updated the "Generated an index" example to include more platforms. (…	Tests	main	push	3383694377	2h16m40s	Nov  3, 2022
+completed	cancelled	Changed token name to be specific to canary channel.	Tests	canary-token	pull_request	3383663988	1h32m49s	Nov  3, 2022
+completed	success	Run Python in isolated mode unless in dev mode (#4604)	Tests	main	push	3382158222	47m55s	Nov  3, 2022
+completed	failure	Switch main canary label back to dev (#4613)	Tests	main	push	3380736923	1h58m30s	Nov  2, 2022
+completed	failure	Switch main canary label back to dev	Tests	main-canary-label	pull_request	3379949609	1h44m49s	Nov  2, 2022
+completed	cancelled	Use updated channel label	Tests	rename-label	pull_request	3379503298	1h12m7s	Nov  2, 2022
+completed	failure	Rename recipe dir for consistency (#4584)	Tests	main	push	3379020342	2h16m15s	Nov  2, 2022
+completed	success	Rename recipe dir for consistency with feedstock repositories	Tests	rename-recipe	pull_request	3377901804	1h38m57s	Nov  2, 2022
+completed	failure	Rename recipe dir for consistency with feedstock repositories	Tests	rename-recipe	pull_request	3376815012	1h36m36s	Nov  2, 2022
+completed	failure	Rename recipe dir for consistency with feedstock repositories	Tests	rename-recipe	pull_request	3376811902	29s	Nov  2, 2022
+completed	cancelled	Rename recipe dir for consistency with feedstock repositories	Tests	rename-recipe	pull_request	3374829475	24m50s	Nov  2, 2022
+completed	cancelled	Rename recipe dir for consistency with feedstock repositories	Tests	rename-recipe	pull_request	3374700752	34m8s	Nov  2, 2022
+completed	cancelled	Rename recipe dir for consistency with feedstock repositories	Tests	rename-recipe	pull_request	3374640032	16m9s	Nov  2, 2022
+completed	cancelled	Rename recipe dir for consistency with feedstock repositories	Tests	rename-recipe	pull_request	3374623986	4m32s	Nov  2, 2022
+completed	cancelled	Rename recipe dir for consistency with feedstock repositories	Tests	rename-recipe	pull_request	3373734715	32m7s	Nov  2, 2022
+completed	failure	include virtual packages in hash contents	Tests	virtual_hash	pull_request	3373611460	2h12m35s	Nov  1, 2022
+completed	success	Run Python in isolated mode unless in dev mode	Tests	isolated-conda	pull_request	3373554040	1h33m38s	Nov  2, 2022
+completed	cancelled	Run Python in isolated mode unless in dev mode	Tests	isolated-conda	pull_request	3373528441	5m1s	Nov  1, 2022
+completed	failure	Drop MSVC++ 9.0 test (#4611)	Tests	main	push	3373490080	1h45m43s	Nov  1, 2022
+completed	failure	include virtual packages in hash contents	Tests	virtual_hash	pull_request	3373050429	1h44m47s	Nov  1, 2022
+completed	cancelled	include virtual packages in hash contents	Tests	virtual_hash	pull_request	3373033177	4m1s	Nov  1, 2022
+completed	cancelled	include virtual packages in hash contents	Tests	virtual_hash	pull_request	3373032275	26s	Nov  1, 2022
+completed	success	Drop MSVC++ 9.0 test	Tests	drop-msvc-9	pull_request	3372734071	2h8m28s	Nov  1, 2022
+completed	failure	Workflow doesn't like double quotes (#4610)	Tests	main	push	3372658971	1h43m56s	Nov  1, 2022
+completed	failure	Workflow doesn't like double quotes	Tests	fix-tests-syntax	pull_request	3372565367	1h50m34s	Nov  1, 2022
+completed	startup_failure	Add canary and review builds (#4608)	Tests	main	push	3370964582	0s	Nov  1, 2022
+completed	failure	Run Python in isolated mode unless in dev mode	Tests	isolated-conda	pull_request	3370658189	1h40m33s	Nov  1, 2022
+completed	startup_failure	Add canary and review builds	Tests	canary-builds	pull_request	3370535131	1s	Nov  1, 2022
+completed	startup_failure	Add canary and review builds	Tests	canary-builds	pull_request	3370522855	1s	Nov  1, 2022
+completed	cancelled	Run Python in isolated mode unless in dev mode	Tests	isolated-conda	pull_request	3370200994	1h2m15s	Nov  1, 2022
+completed	startup_failure	Add canary and review builds	Tests	canary-builds	pull_request	3366361980	1s	Nov  1, 2022
+completed	startup_failure	Add canary and review builds	Tests	canary-builds	pull_request	3366355385	1s	Nov  1, 2022
+completed	failure	Updated the "Generated an index" example to include more platforms.	Tests	master	pull_request	3365410451	2h15m20s	Nov  1, 2022
+completed	failure	[pre-commit.ci] pre-commit autoupdate (#4607)	Tests	main	push	3364628683	2h22m47s	Oct 31, 2022
+completed	failure	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	3363078815	1h52m53s	Oct 31, 2022
+completed	failure	include virtual packages in hash contents	Tests	virtual_hash	pull_request	3352926140	1h16m23s	Oct 29, 2022
+completed	failure	Run Python in isolated mode unless in dev mode	Tests	isolated-conda	pull_request	3346228555	1h55m58s	Oct 28, 2022
+completed	failure	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3338296883	1h3m58s	Oct 27, 2022
+completed	failure	🔄 Synced file(s) with conda/infra (#4589)	Tests	main	push	3323865368	2h26m0s	Oct 25, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate (#4597)	Tests	main	push	3323860504	1h35m0s	Oct 25, 2022
+completed	failure	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	3314525373	1h15m45s	Oct 24, 2022
+completed	failure	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3300733442	1h2m3s	Oct 21, 2022
+completed	startup_failure	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3300721807	0s	Oct 21, 2022
+completed	startup_failure	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3300717282	1s	Oct 21, 2022
+completed	startup_failure	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3300708986	1s	Oct 21, 2022
+completed	cancelled	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3300608271	28m35s	Oct 21, 2022
+completed	startup_failure	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3300603051	0s	Oct 21, 2022
+completed	startup_failure	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3300502204	1s	Oct 21, 2022
+completed	failure	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3300443197	30m42s	Oct 21, 2022
+completed	startup_failure	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3300439977	1s	Oct 21, 2022
+completed	startup_failure	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3300436206	1s	Oct 21, 2022
+completed	startup_failure	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3300415060	0s	Oct 21, 2022
+completed	failure	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3285310182	1h13m28s	Oct 19, 2022
+completed	cancelled	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3285136972	34m42s	Oct 19, 2022
+completed	failure	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3285131416	0s	Oct 19, 2022
+completed	failure	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3285121692	0s	Oct 19, 2022
+completed	failure	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3282520897	1h5m34s	Oct 19, 2022
+completed	failure	Run Python in isolated mode unless in dev mode	Tests	isolated-conda	pull_request	3282267422	1h57m24s	Oct 19, 2022
+completed	success	Remove transient dependency on conda vendored six.py, and py2 code. (…	Tests	main	push	3279757564	1h11m3s	Oct 19, 2022
+completed	failure	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3277210205	1h7m27s	Oct 18, 2022
+completed	failure	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3276497101	1h1m31s	Oct 18, 2022
+completed	cancelled	Add C compiler dep when `.xs` files are found.	Tests	fix_cpan_xs_detection	pull_request	3276388226	15s	Nov  3, 2022
+completed	success	Updated the "Generated an index" example to include more platforms.	Tests	master	pull_request	3275767510	1h38m32s	Oct 19, 2022
+completed	failure	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3275625672	1h7m51s	Oct 18, 2022
+completed	failure	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	3266962616	1h39m52s	Oct 17, 2022
+completed	success	Remove transient dependency on conda vendored six.py, and py2 code.	Tests	nosix	pull_request	3265827198	1h10m47s	Oct 18, 2022
+completed	failure	Remove transient dependency on conda vendored six.py, and py2 code.	Tests	nosix	pull_request	3260770541	1h30m16s	Oct 17, 2022
+completed	failure	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3254227531	1h4m14s	Oct 15, 2022
+completed	failure	Add s390x selector missing from docs (#4550)	Tests	main	push	3253584542	3h19m22s	Oct 14, 2022
+completed	failure	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	3253500900	2h47m38s	Oct 14, 2022
+completed	failure	Fixes the git lfs error by adding git lfs fetching	Tests	fix/git-lfs-error	pull_request	3253469115	2h37m15s	Oct 14, 2022
+completed	failure	Cleanup of `main_build.py`	Tests	clean-main_build	pull_request	3253452765	2h44m53s	Oct 14, 2022
+completed	failure	Rename recipe dir for consistency with feedstock repositories	Tests	rename-recipe	pull_request	3253430401	1h51m46s	Oct 14, 2022
+completed	failure	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3253253387	1h12m5s	Oct 14, 2022
+completed	cancelled	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3253239232	4m17s	Oct 14, 2022
+completed	startup_failure	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3253219761	1s	Oct 14, 2022
+completed	failure	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3253210723	0s	Oct 14, 2022
+completed	failure	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3253203309	0s	Oct 14, 2022
+completed	failure	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3253188017	0s	Oct 14, 2022
+completed	failure	Updated the "Generated an index" example to include more platforms.	Tests	master	pull_request	3253087338	4h8m22s	Oct 14, 2022
+completed	failure	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3252702753	1h5m23s	Oct 14, 2022
+completed	failure	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3252295814	1h5m17s	Oct 14, 2022
+completed	cancelled	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3252000649	1h0m17s	Oct 14, 2022
+completed	failure	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3246071770	1h34m55s	Oct 13, 2022
+completed	cancelled	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3245885014	38m15s	Oct 13, 2022
+completed	cancelled	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3245678400	40m1s	Oct 13, 2022
+completed	cancelled	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3245205828	1h22m44s	Oct 13, 2022
+completed	cancelled	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3245057739	26m7s	Oct 13, 2022
+completed	failure	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3243764511	1h33m49s	Oct 13, 2022
+completed	failure	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	3242420077	1h27m57s	Oct 13, 2022
+completed	cancelled	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	3242279266	22m6s	Oct 13, 2022
+completed	failure	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	3242268647	1m41s	Oct 13, 2022
+completed	cancelled	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	3242258000	1m46s	Oct 13, 2022
+completed	failure	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	3242256132	30s	Oct 13, 2022
+completed	failure	Running github actions on gh itself...	Tests	conda-build-4558	pull_request	3237299702	1h22m47s	Oct 12, 2022
+completed	failure	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	3220966806	1h34m27s	Oct 10, 2022
+completed	failure	Updated broken example recipe links.	Tests	main	pull_request	3211654240	1h58m59s	Oct  8, 2022
+completed	failure	Stop using `@memoized` from conda	Tests	memoized	pull_request	3190857827	19m24s	Oct  5, 2022
+completed	cancelled	Stop using `@memoized` from conda	Tests	memoized	pull_request	3190844595	2m42s	Oct  5, 2022
+completed	failure	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	3182739231	1h21m4s	Oct  4, 2022
+completed	failure	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	3181952621	1h43m0s	Oct  4, 2022
+completed	failure	Get stdlib dir searches for py ver	Tests	get_stdlib_dir-searches-for-py_ver	pull_request	3161433015	1h41m9s	Oct  7, 2022
+completed	failure	faster tests from standalone conda-index (#4571)	Tests	main	push	3158814752	1h55m49s	Sep 30, 2022
+completed	failure	faster tests from standalone conda-index	Tests	conda-index-tests	pull_request	3158549639	1h23m49s	Sep 30, 2022
+completed	failure	Get stdlib dir searches for py ver	Tests	get_stdlib_dir-searches-for-py_ver	pull_request	3153688414	1h35m0s	Sep 30, 2022
+completed	failure	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	3146010884	1h38m57s	Sep 28, 2022
+completed	failure	[pre-commit.ci] pre-commit autoupdate (#4583)	Tests	main	push	3136735173	1h50m58s	Sep 27, 2022
+completed	success	faster tests from standalone conda-index	Tests	conda-index-tests	pull_request	3131000924	1h17m24s	Sep 27, 2022
+completed	cancelled	faster tests from standalone conda-index	Tests	conda-index-tests	pull_request	3130979429	4m5s	Sep 26, 2022
+completed	cancelled	faster tests from standalone conda-index	Tests	conda-index-tests	pull_request	3130876214	18m32s	Sep 26, 2022
+completed	failure	Rename recipe dir for consistency with feedstock repositories	Tests	rename-recipe	pull_request	3130783639	1h50m16s	Sep 26, 2022
+completed	failure	🔄 Synced file(s) with conda/infra (#4582)	Tests	main	push	3130753428	1h51m58s	Sep 26, 2022
+completed	cancelled	faster tests from standalone conda-index	Tests	conda-index-tests	pull_request	3130716848	27m45s	Sep 26, 2022
+completed	failure	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	3129496835	1h50m24s	Sep 26, 2022
+completed	failure	Standardize license disclaimer (#4568)	Tests	main	push	3101162337	2h3m45s	Sep 21, 2022
+completed	success	Add overlinking_ignore_patterns build parameter (#4576)	Tests	main	push	3101155979	1h33m46s	Sep 21, 2022
+completed	failure	Rename recipe dir for consistency with feedstock repositories	Tests	rename-recipe	pull_request	3093594129	1h46m2s	Sep 20, 2022
+completed	cancelled	Rename recipe dir for consistency with feedstock repositories	Tests	rename-recipe	pull_request	3093585524	2m3s	Sep 20, 2022
+completed	failure	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	3084109808	1h40m22s	Sep 20, 2022
+completed	failure	Updated broken example recipe links.	Tests	main	pull_request	3076837087	1h24m11s	Sep 18, 2022
+completed	success	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	3069225068	1h38m2s	Sep 20, 2022
+completed	success	add overlinking_ignore_patterns build parameter	Tests	ignore_overlinking_patterns	pull_request	3056437032	1h50m16s	Sep 14, 2022
+completed	failure	[pre-commit.ci] pre-commit autoupdate (#4578)	Tests	main	push	3056385613	1h29m47s	Sep 14, 2022
+completed	failure	Updated broken example recipe links.	Tests	main	pull_request	3054195430	1h57m34s	Sep 14, 2022
+completed	failure	Add `win-arm64` as a recognized platform (#4579)	Tests	main	push	3047158372	1h29m39s	Sep 13, 2022
+completed	success	Add `win-arm64` as a recognized platform	Tests	enable-win-arm64	pull_request	3040423986	1h58m2s	Sep 12, 2022
+completed	cancelled	Add `win-arm64` as a recognized platform	Tests	enable-win-arm64	pull_request	3040412726	2m17s	Sep 12, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	3039001529	1h38m28s	Sep 12, 2022
+completed	success	🔄 Synced file(s) with conda/infra (#4577)	Tests	main	push	3023783295	2h3m0s	Sep  9, 2022
+completed	failure	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	3023278013	1h37m49s	Sep  9, 2022
+completed	cancelled	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	3023037890	36m45s	Sep  9, 2022
+completed	success	Standardize license disclaimer	Tests	disclaimer	pull_request	3003955183	1h23m49s	Sep  7, 2022
+completed	success	add overlinking_ignore_patterns build parameter	Tests	ignore_overlinking_patterns	pull_request	2952703658	1h16m34s	Sep 14, 2022
+completed	failure	add overlinking_ignore_patterns build parameter	Tests	ignore_overlinking_patterns	pull_request	2952207756	1h32m30s	Aug 29, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate (#4574)	Tests	main	push	2950299077	1h47m14s	Aug 29, 2022
+completed	failure	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	2950178687	1h38m27s	Aug 29, 2022
+completed	failure	faster tests from standalone conda-index	Tests	conda-index-tests	pull_request	2935369830	1h50m44s	Aug 26, 2022
+completed	cancelled	faster tests from standalone conda-index	Tests	conda-index-tests	pull_request	2934845812	1h27m6s	Aug 26, 2022
+completed	success	faster tests from standalone conda-index	Tests	conda-index-tests	pull_request	2913515072	1h53m21s	Aug 24, 2022
+completed	failure	faster tests from standalone conda-index	Tests	conda-index-tests	pull_request	2907011979	1h50m54s	Aug 22, 2022
+completed	cancelled	faster tests from standalone conda-index	Tests	conda-index-tests	pull_request	2907005409	1m39s	Aug 22, 2022
+completed	success	Standardize license disclaimer	Tests	disclaimer	pull_request	2892532332	1h50m48s	Aug 19, 2022
+completed	success	Cleanup of `main_build.py`	Tests	clean-main_build	pull_request	2892490554	1h35m47s	Aug 19, 2022
+completed	cancelled	Standardize license disclaimer	Tests	disclaimer	pull_request	2892481476	14m22s	Aug 19, 2022
+completed	failure	Cleanup of `main_build.py`	Tests	clean-main_build	pull_request	2891144485	1h28m47s	Aug 19, 2022
+completed	cancelled	Cleanup of `main_build.py`	Tests	clean-main_build	pull_request	2890806543	1h9m2s	Aug 19, 2022
+completed	cancelled	Cleanup of `main_build.py`	Tests	clean-main_build	pull_request	2890804377	49s	Aug 19, 2022
+completed	failure	Standardize license disclaimer	Tests	disclaimer	pull_request	2890750727	1h27m13s	Aug 19, 2022
+completed	failure	[pre-commit.ci] pre-commit autoupdate (#4554)	Tests	main	push	2886451874	3h0m57s	Aug 19, 2022
+completed	failure	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	2886451139	2h32m16s	Aug 19, 2022
+completed	success	Rework RST into MD (#4563)	Tests	main	push	2886448843	1h56m15s	Aug 19, 2022
+completed	failure	Remove unused config files (#4564)	Tests	main	push	2886446774	2h0m36s	Aug 19, 2022
+completed	failure	Use subprocess.DEVNULL (#4565)	Tests	main	push	2886444689	1h31m10s	Aug 19, 2022
+completed	success	Drop unused AppVeyor codes (#4562)	Tests	main	push	2886037356	1h50m16s	Aug 18, 2022
+completed	success	Use `subprocess.DEVNULL` instead of `os.devnull`	Tests	subprocess-DEVNULL	pull_request	2885416629	2h42m11s	Aug 18, 2022
+completed	success	Remove unused config files	Tests	unused-config	pull_request	2885416291	2h19m18s	Aug 18, 2022
+completed	success	Rework RST into MD	Tests	switch-to-markdown	pull_request	2885415655	1h35m12s	Aug 18, 2022
+completed	success	Drop unused AppVeyor files	Tests	drop-appveyor-code	pull_request	2885414963	1h30m28s	Aug 18, 2022
+completed	success	sympy only supports Python 3.8+ (#4567)	Tests	main	push	2885414154	1h50m20s	Aug 18, 2022
+completed	success	sympy is only Python 3.8+	Tests	sympy	pull_request	2884474790	45m33s	Aug 18, 2022
+completed	cancelled	sympy is only Python 3.8+	Tests	sympy	pull_request	2884060226	1h17m48s	Aug 18, 2022
+completed	failure	Remove unused config files	Tests	unused-config	pull_request	2883201150	2h12m56s	Aug 18, 2022
+completed	failure	Rework RST into MD	Tests	switch-to-markdown	pull_request	2879479903	1h33m18s	Aug 18, 2022
+completed	failure	Use `subprocess.DEVNULL` instead of `os.devnull`	Tests	subprocess-DEVNULL	pull_request	2879201146	1h28m49s	Aug 18, 2022
+completed	cancelled	Remove unused config files	Tests	unused-config	pull_request	2879010979	34h0m49s	Aug 18, 2022
+completed	failure	Rework RST into MD	Tests	switch-to-markdown	pull_request	2878949500	1h35m13s	Aug 17, 2022
+completed	failure	Drop unused AppVeyor files	Tests	drop-appveyor-code	pull_request	2878800612	1h34m14s	Aug 18, 2022
+completed	failure	Support output packages with both script and files (#4281)	Tests	main	push	2833302129	1h59m2s	Aug 10, 2022
+completed	failure	Support output packages with both script and files	Tests	script_and_files	pull_request	2833299722	1h50m25s	Aug 10, 2022
+completed	success	Add sphinx-sitemap to docs.	Tests	sphinx-sitemap	pull_request	2826765286	1h59m57s	Aug  9, 2022
+completed	success	Drop cytoolz usage (#4556)	Tests	main	push	2825113923	1h27m31s	Aug  9, 2022
+completed	success	Drop cytoolz usage	Tests	drop-cytoolz	pull_request	2821796077	1h35m30s	Aug  9, 2022
+completed	failure	Require `toolz`	Tests	use_tlz	pull_request	2821396250	1h17m31s	Aug  8, 2022
+completed	success	Drop cytoolz usage	Tests	drop-cytoolz	pull_request	2821313075	1h32m30s	Aug  8, 2022
+completed	cancelled	Drop cytoolz usage	Tests	drop-cytoolz	pull_request	2821283936	6m42s	Aug  8, 2022
+completed	cancelled	Drop cytoolz usage	Tests	drop-cytoolz	pull_request	2821277847	1m25s	Aug  8, 2022
+completed	cancelled	Require `toolz`	Tests	use_tlz	pull_request	2821259691	30m13s	Aug  8, 2022
+completed	cancelled	Drop cytoolz usage	Tests	drop-cytoolz	pull_request	2820950683	1h11m51s	Aug  8, 2022
+completed	cancelled	Drop cytoolz usage	Tests	drop-cytoolz	pull_request	2820890888	11m57s	Aug  8, 2022
+completed	success	Add sphinx-sitemap to docs.	Tests	sphinx-sitemap	pull_request	2820846122	1h26m59s	Aug  9, 2022
+completed	success	Add sphinx-sitemap to docs.	Tests	sphinx-sitemap	pull_request	2820000744	1h41m16s	Aug  8, 2022
+completed	failure	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	2819491269	1h44m8s	Aug  8, 2022
+completed	success	Add s390x selector missing from docs	Tests	fix_preprocess_selectors_table	pull_request	2805935302	1h50m16s	Aug  5, 2022
+completed	success	Add s390x selector missing from docs	Tests	fix_preprocess_selectors_table	pull_request	2802495877	1h37m51s	Aug  5, 2022
+completed	cancelled	Add s390x selector missing from docs	Tests	fix_preprocess_selectors_table	pull_request	2802465404	5m38s	Aug  5, 2022
+completed	cancelled	Add s390x selector missing from docs	Tests	fix_preprocess_selectors_table	pull_request	2802436848	5m29s	Aug  5, 2022
+completed	cancelled	Add s390x selector missing from docs	Tests	fix_preprocess_selectors_table	pull_request	2802414106	4m20s	Aug  5, 2022
+completed	failure	Release 3.22.0 (#4543)	Tests	main	push	2793197602	1h35m1s	Aug  3, 2022
+completed	success	Release 3.22.0	Tests	release-3.22.0	pull_request	2792298037	46m40s	Aug  3, 2022
+completed	failure	 Use conda-canary/label/dev's conda package for CI tests (#4548)	Tests	main	push	2792279163	1h50m19s	Aug  3, 2022
+completed	failure	Use `conda-canary/label/dev`'s `conda` package for CI tests	Tests	update-canary-ci	pull_request	2791858510	1h22m20s	Aug  3, 2022
+completed	cancelled	Use `conda-canary/label/dev`'s `conda` package for CI tests	Tests	update-canary-ci	pull_request	2791608811	46m14s	Aug  3, 2022
+completed	failure	Use `conda-canary/label/dev`'s `conda` package for CI tests	Tests	update-canary-ci	pull_request	2790685248	1h37m3s	Aug  3, 2022
+completed	success	Release 3.22.0	Tests	release-3.22.0	pull_request	2785137239	1h29m6s	Aug  3, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate (#4545)	Tests	main	push	2778861007	1h46m42s	Aug  2, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	2777675352	1h37m15s	Aug  1, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	2776398814	1h24m53s	Aug  1, 2022
+completed	failure	Rename 'sysroot' variable to avoid overwriting inside nested loop (#4…	Tests	main	push	2775507177	2h48m35s	Aug  1, 2022
+completed	failure	Rename 'sysroot' variable to avoid overwriting inside nested loop	Tests	sysroot-variable-name	pull_request	2775505088	1h55m18s	Aug  1, 2022
+completed	failure	Drop dependency on Setuptools	Tests	use_packaging	pull_request	2775491269	1h37m10s	Aug  1, 2022
+completed	success	Release 3.22.0	Tests	release-3.22.0	pull_request	2756612004	1h35m29s	Jul 28, 2022
+completed	cancelled	Release 3.22.0	Tests	release-3.22.0	pull_request	2756575706	7m31s	Jul 28, 2022
+completed	success	Remove old issue/PR templates (#4541)	Tests	main	push	2748092678	1h23m4s	Jul 27, 2022
+completed	success	Remove old issue/PR templates	Tests	remove-old-templates	pull_request	2748030987	1h40m0s	Jul 27, 2022
+completed	cancelled	Remove old issue/PR templates	Tests	remove-old-templates	pull_request	2748029549	30s	Jul 27, 2022
+completed	success	Rename master to main	Tests	master-to-main	pull_request	2740646829	1h32m35s	Jul 26, 2022
+completed	failure	🔄 Synced file(s) with conda/infra (#4538)	Tests	master	push	2736426333	1h55m38s	Jul 26, 2022
+completed	success	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	2736417353	1h39m38s	Jul 26, 2022
+completed	failure	[pre-commit.ci] pre-commit autoupdate (#4534)	Tests	master	push	2733957657	1h30m35s	Jul 25, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	2733842769	1h31m23s	Jul 25, 2022
+completed	success	Link the "Contributing Guide" to the README and place in the documena…	Tests	master	push	2721320204	1h50m19s	Jul 22, 2022
+completed	failure	Link the "Contributing Guide" to the README and place in the documenation	Tests	add-contributing-guide-to-readme	pull_request	2720909268	1h31m16s	Jul 22, 2022
+completed	success	Link the "Contributing Guide" to the README and place in the documenation	Tests	add-contributing-guide-to-readme	pull_request	2719762535	1h34m11s	Jul 22, 2022
+completed	cancelled	Link the "Contributing Guide" to the README and place in the documenation	Tests	add-contributing-guide-to-readme	pull_request	2719739497	4m47s	Jul 22, 2022
+completed	cancelled	Link the "Contributing Guide" to the README and place in the documenation	Tests	add-contributing-guide-to-readme	pull_request	2719723252	3m43s	Jul 22, 2022
+completed	failure	🔄 Synced file(s) with conda/infra (#4524)	Tests	master	push	2716012545	1h32m26s	Jul 22, 2022
+completed	failure	Link the "Contributing Guide" to the README and place in the documenation	Tests	add-contributing-guide-to-readme	pull_request	2715451906	1h17m10s	Jul 22, 2022
+completed	success	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	2715106312	1h32m3s	Jul 21, 2022
+completed	cancelled	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	2715099112	2m1s	Jul 21, 2022
+completed	success	Rename master to main	Tests	master-to-main	pull_request	2713645701	1h36m18s	Jul 21, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	2692049787	1h23m27s	Jul 18, 2022
+completed	cancelled	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	2692030693	4m13s	Jul 18, 2022
+completed	success	Rename 'sysroot' variable to avoid overwriting inside nested loop	Tests	sysroot-variable-name	pull_request	2676242696	1h27m28s	Jul 15, 2022
+completed	cancelled	Rename 'sysroot' variable to avoid overwriting inside nested loop	Tests	sysroot-variable-name	pull_request	2676032498	41m36s	Jul 15, 2022
+completed	cancelled	Rename 'sysroot' variable to avoid overwriting inside nested loop	Tests	sysroot-variable-name	pull_request	2675991507	8m21s	Jul 15, 2022
+completed	failure	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	2651060340	1h28m3s	Jul 11, 2022
+completed	cancelled	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	2651043112	4m7s	Jul 11, 2022
+completed	success	Changed master to main in all relevant places in docs	Tests	4514-change-master-to-main-in-conda-build-docs	pull_request	2625446600	1h9m26s	Jul  6, 2022
+completed	failure	Make default logger list more complete (#4517)	Tests	master	push	2617554006	1h28m42s	Jul  5, 2022
+completed	success	Make default logger list more complete	Tests	teake/new-default-loggers	pull_request	2616979203	1h35m42s	Jul  5, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate (#4510)	Tests	master	push	2616686873	1h22m1s	Jul  5, 2022
+completed	success	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	2616486305	1h44m56s	Jul  5, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	2611417459	1h30m46s	Jul  4, 2022
+completed	success	🔄 Synced file(s) with conda/infra (#4511)	Tests	master	push	2575873764	1h50m21s	Jun 28, 2022
+completed	success	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	2575535310	1h48m30s	Jun 28, 2022
+completed	failure	Replace `r-cortools` with `r-badger` for "Artistic-2.0" license testi…	Tests	master	push	2575169222	1h44m19s	Jun 28, 2022
+completed	cancelled	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	2575136115	1h10m55s	Jun 28, 2022
+completed	failure	Make default logger list more complete	Tests	teake/new-default-loggers	pull_request	2570133057	1h34m50s	Jun 27, 2022
+completed	success	Replace `r-cortools` with `r-badger` for "Artistic-2.0" license testing	Tests	cortools-archived	pull_request	2557399473	1h25m27s	Jun 24, 2022
+completed	success	Replace `r-cortools` with `r-badger` for "Artistic-2.0" license testing	Tests	cortools-archived	pull_request	2556886400	1h28m28s	Jun 24, 2022
+completed	failure	Changed master to main in all relevant places in docs	Tests	4514-change-master-to-main-in-conda-build-docs	pull_request	2556302932	1h22m40s	Jun 24, 2022
+completed	failure	Changed master to main in all relevant places in docs	Tests	4514-change-master-to-main-in-conda-build-docs	pull_request	2551992156	1h51m59s	Jun 23, 2022
+completed	failure	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	2551950888	1h32m44s	Jun 23, 2022
+completed	failure	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	2543508762	1h41m6s	Jun 22, 2022
+completed	failure	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	2530356611	1h24m18s	Jun 20, 2022
+completed	failure	Also rewrite long prefix paths in `output` scripts $PREFIX, etc.	Tests	rewrite_env-in-outputs	pull_request	2517335921	1h16m20s	Jun 17, 2022
+completed	success	Ensure `test/commands` & `run_test.*` both work	Tests	fix_tst_dir	pull_request	2513899207	1h13m32s	Jun 17, 2022
+completed	failure	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2511183492	56m54s	Jun 16, 2022
+completed	failure	utils.get_stdlib_dir(): Don't select python3.1 symlink; select python…	Tests	master	push	2511181470	1h29m41s	Jun 16, 2022
+completed	success	get_stdlib_dir(): Don't select python3.1 symlink; select python3.10	Tests	fix-sp_dir	pull_request	2509493027	1h20m24s	Jun 16, 2022
+completed	cancelled	get_stdlib_dir(): Don't select python3.1 symlink; select python3.10	Tests	fix-sp_dir	pull_request	2509412179	14m23s	Jun 16, 2022
+completed	success	Remove boards.yml (#4506)	Tests	master	push	2504564928	1h32m54s	Jun 15, 2022
+completed	success	Remove `boards.yml`	Tests	remove-boards.yml	pull_request	2504037540	1h24m17s	Jun 15, 2022
+completed	success	get_stdlib_dir(): Don't select python3.1 symlink; select python3.10	Tests	fix-sp_dir	pull_request	2499481937	1h28m36s	Jun 15, 2022
+completed	cancelled	get_stdlib_dir(): Don't select python3.1 symlink; select python3.10	Tests	fix-sp_dir	pull_request	2499476919	1m42s	Jun 15, 2022
+completed	success	Manually updating doc conf.py copyright.	Tests	updating-doc-copyright	pull_request	2498566748	1h27m10s	Jun 14, 2022
+completed	failure	[pre-commit.ci] pre-commit autoupdate (#4503)	Tests	master	push	2498499252	1h41m46s	Jun 14, 2022
+completed	failure	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	2498498088	1h36m37s	Jun 14, 2022
+completed	failure	4222 fix find executable checks	Tests	4222_fix_find_executable_checks	pull_request	2496609683	2h1m10s	Jun 14, 2022
+completed	failure	Add `patch`/`m2-patch` as a hard dependency (#4495)	Tests	master	push	2490566212	1h32m53s	Jun 13, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	2489795545	1h50m24s	Jun 13, 2022
+completed	success	Add `patch`/`m2-patch` as a hard dependency	Tests	ensure-line-endings	pull_request	2489651385	1h20m22s	Jun 13, 2022
+completed	failure	[pre-commit.ci] pre-commit autoupdate (#4469)	Tests	master	push	2489234111	1h50m33s	Jun 13, 2022
+completed	success	Add `patch`/`m2-patch` as a hard dependency	Tests	ensure-line-endings	pull_request	2488978963	1h16m52s	Jun 13, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	2449054042	1h23m46s	Jun  6, 2022
+completed	failure	[WIP] Try setting `from_recipe_dir` to `True`	Tests	close_3754	pull_request	2438166386	1h27m13s	Jun  4, 2022
+completed	failure	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2436348045	1h9m52s	Jun  3, 2022
+completed	success	[WIP] Try setting `from_recipe_dir` to `True`	Tests	close_3754	pull_request	2432083587	1h29m49s	Jun  3, 2022
+completed	success	Add `patch`/`m2-patch` as a hard dependency	Tests	ensure-line-endings	pull_request	2431225227	1h37m40s	Jun  2, 2022
+completed	success	Add `patch`/`m2-patch` as a hard dependency	Tests	ensure-line-endings	pull_request	2430273366	1h32m47s	Jun  2, 2022
+completed	cancelled	Add `patch`/`m2-patch` as a hard dependency	Tests	ensure-line-endings	pull_request	2430269115	1m8s	Jun  2, 2022
+completed	failure	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2429886464	1h0m37s	Jun  2, 2022
+completed	cancelled	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2429877248	2m50s	Jun  2, 2022
+completed	cancelled	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2429866996	3m7s	Jun  2, 2022
+completed	cancelled	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2429821833	9m47s	Jun  2, 2022
+completed	cancelled	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2429743212	17m25s	Jun  2, 2022
+completed	cancelled	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2429458519	1h1m5s	Jun  2, 2022
+completed	cancelled	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2429406620	9m29s	Jun  2, 2022
+completed	cancelled	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2429198660	38m54s	Jun  2, 2022
+completed	cancelled	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2429182512	3m35s	Jun  2, 2022
+completed	success	Also rewrite long prefix paths in `output` scripts $PREFIX, etc.	Tests	rewrite_env-in-outputs	pull_request	2429143899	1h18m38s	Jun  2, 2022
+completed	failure	Add CLI option for changing the compression settings (#4467)	Tests	master	push	2429101499	1h50m28s	Jun  2, 2022
+completed	failure	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2428556714	1h14m6s	Jun  2, 2022
+completed	cancelled	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2428415767	26m13s	Jun  2, 2022
+completed	cancelled	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2428390141	5m53s	Jun  2, 2022
+completed	cancelled	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2428346372	9m25s	Jun  2, 2022
+completed	cancelled	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2428306514	8m14s	Jun  2, 2022
+completed	cancelled	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2428276028	6m11s	Jun  2, 2022
+completed	cancelled	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2427905726	1h13m54s	Jun  2, 2022
+completed	cancelled	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2427855760	11m3s	Jun  2, 2022
+completed	cancelled	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2427799700	11m39s	Jun  2, 2022
+completed	cancelled	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2427791493	2m27s	Jun  2, 2022
+completed	cancelled	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2427764405	6m3s	Jun  2, 2022
+completed	cancelled	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2427681564	17m44s	Jun  2, 2022
+completed	cancelled	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2427592336	20m1s	Jun  2, 2022
+completed	cancelled	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2427583076	2m43s	Jun  2, 2022
+completed	cancelled	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2427495005	18m9s	Jun  2, 2022
+completed	cancelled	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2427438540	11m52s	Jun  2, 2022
+completed	cancelled	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2427096600	1h5m33s	Jun  2, 2022
+completed	cancelled	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2427068370	6m48s	Jun  2, 2022
+completed	cancelled	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2426985258	17m29s	Jun  2, 2022
+completed	cancelled	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2426935018	10m49s	Jun  2, 2022
+completed	cancelled	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2426899631	7m33s	Jun  2, 2022
+completed	cancelled	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2426883567	3m25s	Jun  2, 2022
+completed	cancelled	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2426785608	20m33s	Jun  2, 2022
+completed	cancelled	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2426590534	42m5s	Jun  2, 2022
+completed	success	Added load_file_data and load_str_data as functions available in meta…	Tests	master	push	2424283469	1h50m30s	Jun  1, 2022
+completed	success	Added load_file_data and load_str_data as functions available in meta.yaml	Tests	cb4465	pull_request	2424266621	1h30m14s	Jun  1, 2022
+completed	success	Added load_file_data and load_str_data as functions available in meta.yaml	Tests	cb4465	pull_request	2423672073	1h23m45s	Jun  1, 2022
+completed	cancelled	Added load_file_data and load_str_data as functions available in meta.yaml	Tests	cb4465	pull_request	2423670501	41s	Jun  1, 2022
+completed	failure	Fix spelling of pytest (#4491)	Tests	master	push	2422852097	1h30m39s	Jun  1, 2022
+completed	failure	Drop dependency on Setuptools	Tests	use_packaging	pull_request	2419725221	1h23m50s	Jun  1, 2022
+completed	failure	Clarify `linux64` & `linux32`	Tests	clarify_linux64	pull_request	2419724318	1h27m5s	Jun  1, 2022
+completed	success	Update badge. (#4489)	Tests	master	push	2417160829	1h19m39s	May 31, 2022
+completed	failure	Fix spelling of pytest	Tests	fix-spelling-of-pytest	pull_request	2416000443	3h28m13s	May 31, 2022
+completed	success	Added load_file_data and load_str_data as functions available in meta.yaml	Tests	cb4465	pull_request	2415617890	3h59m16s	May 31, 2022
+completed	cancelled	Added load_file_data and load_str_data as functions available in meta.yaml	Tests	cb4465	pull_request	2415284601	53m55s	May 31, 2022
+completed	failure	Add concurrency rules for GitHub Actions. (#4487)	Tests	master	push	2415095507	4h53m21s	May 31, 2022
+completed	failure	Add CLI option for changing the compression settings	Tests	change-compression-opts	pull_request	2415093330	4h35m13s	May 31, 2022
+completed	failure	Improve CI runtime	Tests	fix-test_pypi_installer_metadata	pull_request	2414981677	4h42m54s	May 31, 2022
+completed	failure	Drop dependency on Setuptools	Tests	use_packaging	pull_request	2414846923	4h34m47s	May 31, 2022
+completed	success	Delete .landscape.yml	Tests	master	push	2414684147	4h43m2s	May 31, 2022
+completed	failure	Update badge.	Tests	fix-badges	pull_request	2414246094	5h50m26s	May 31, 2022
+completed	failure	Update badge.	Tests	fix-badges	pull_request	2414242835	5h24m7s	May 31, 2022
+completed	failure	Add concurrency rules for GitHub Actions.	Tests	gha-concurrency	pull_request	2414134216	5h15m13s	May 31, 2022
+completed	failure	Another fix to appease pre-commit. (#4488)	Tests	master	push	2414133090	5h1m30s	May 31, 2022
+completed	failure	Another fix to appease pre-commit.	Tests	pre-commit-fix-2	pull_request	2414084491	5h1m9s	May 31, 2022
+completed	failure	Add concurrency rules for GitHub Actions.	Tests	gha-concurrency	pull_request	2414065482	12m47s	May 31, 2022
+completed	failure	Add concurrency rules for GitHub Actions.	Tests	gha-concurrency	pull_request	2414059314	1m23s	May 31, 2022
+completed	failure	Fix pre-commit.	Tests	pre-commit-fix	pull_request	2414041788	4h14m19s	May 31, 2022
+completed	success	Bump pillow from 8.3.2 to 9.0.1 in /docs (#4485)	Tests	master	push	2414040418	3h59m40s	May 31, 2022
+completed	failure	Bump pillow from 8.3.2 to 9.0.1 in /docs	Tests	dependabot/pip/docs/pillow-9.0.1	pull_request	2414029464	3h57m26s	May 31, 2022
+completed	failure	Bump pillow from 8.3.2 to 9.0.1 in /docs	Tests	dependabot/pip/docs/pillow-9.0.1	pull_request	2414018694	3h20m55s	May 31, 2022
+completed	failure	Release 3.21.9 (#4483)	Tests	master	push	2414016075	3h5m5s	May 31, 2022
+completed	failure	Release 3.21.9	Tests	release-3.21.9	pull_request	2414014125	2h32m17s	May 31, 2022
+completed	failure	Fix link to prerequisites for build tutorials	Tests	fix-link-to-tutorial-prerequisites	pull_request	2413975132	1h57m4s	May 31, 2022
+completed	failure	Release 3.21.9	Tests	release-3.21.9	pull_request	2413966624	1h35m40s	May 31, 2022
+completed	failure	cache test packages in memory	Tests	cache-test-packages	pull_request	2413693210	2h27m41s	May 31, 2022
+completed	failure	Release 3.21.9	Tests	release-3.21.9	pull_request	2413649053	1h47m22s	May 31, 2022
+completed	failure	Drop dependency on Setuptools	Tests	use_packaging	pull_request	2413609959	1h26m9s	May 31, 2022
+completed	failure	Clarify `linux64` & `linux32`	Tests	clarify_linux64	pull_request	2413598291	1h18m16s	May 31, 2022
+completed	failure	Support output packages with both script and files	Tests	script_and_files	pull_request	2398770818	1h21m56s	May 27, 2022
+completed	failure	Release 3.21.9	Tests	release-3.21.9	pull_request	2398135198	1h30m10s	May 30, 2022
+completed	failure	Release 3.21.9	Tests	release-3.21.9	pull_request	2397599028	1h17m3s	May 27, 2022
+completed	failure	Fix for conda 4.13.0 Python 2.7 removal (#4482)	Tests	master	push	2397487317	1h22m55s	May 27, 2022
+completed	failure	Fix for conda 4.13.0 Python 2.7 removal	Tests	legacy-removal	pull_request	2394228119	1h36m39s	May 27, 2022
+completed	failure	Fix for conda 4.13.0 Python 2.7 removal	Tests	legacy-removal	pull_request	2394169346	1h13m34s	May 27, 2022
+completed	failure	Added load_file_data and load_str_data as functions available in meta.yaml	Tests	cb4465	pull_request	2393884940	1h9m52s	May 27, 2022
+completed	failure	Added load_file_data and load_str_data as functions available in meta.yaml	Tests	cb4465	pull_request	2393871983	1h16m35s	May 27, 2022
+completed	failure	Added load_file_data and load_str_data as functions available in meta.yaml	Tests	cb4465	pull_request	2393854748	32m12s	May 27, 2022
+completed	success	get_stdlib_dir(): Don't select python3.1 symlink; select python3.10	Tests	fix-sp_dir	pull_request	2379991125	1h27m50s	May 24, 2022
+completed	failure	get_stdlib_dir(): Don't select python3.1 symlink; select python3.10	Tests	fix-sp_dir	pull_request	2379976147	1h24m8s	May 24, 2022
+completed	failure	Fix link to prerequisites for build tutorials	Tests	fix-link-to-tutorial-prerequisites	pull_request	2376780680	1h25m33s	May 31, 2022
+completed	failure	Clarify `linux64` & `linux32`	Tests	clarify_linux64	pull_request	2361261403	1h24m25s	May 21, 2022
+completed	failure	Drop dependency on Setuptools	Tests	use_packaging	pull_request	2356770562	1h20m47s	May 20, 2022
+completed	success	Add CLI option for changing the compression settings	Tests	change-compression-opts	pull_request	2349361151	1h10m56s	May 19, 2022
+completed	failure	Add CLI option for changing the compression settings	Tests	change-compression-opts	pull_request	2349348728	1h36m55s	May 19, 2022
+completed	failure	Add CLI option for changing the compression settings	Tests	change-compression-opts	pull_request	2349334860	15m22s	May 19, 2022
+completed	failure	Add CLI option for changing the compression settings	Tests	change-compression-opts	pull_request	2347848845	1h21m57s	May 18, 2022
+completed	failure	Add CLI option for changing the compression settings	Tests	change-compression-opts	pull_request	2347819247	1h2m50s	May 18, 2022
+completed	failure	reformat index.py with black, move into module	Tests	blacken	pull_request	2334066637	1h19m2s	May 16, 2022
+completed	failure	reformat index.py with black, move into module	Tests	blacken	pull_request	2334001255	15m13s	May 16, 2022
+completed	failure	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	2333344639	1h20m14s	May 16, 2022
+completed	success	Added load_file_data and load_str_data as functions available in meta.yaml	Tests	master	pull_request	2324793232	1h21m0s	May 14, 2022
+completed	success	🔄 Synced file(s) with conda/infra (#4466)	Tests	master	push	2320583681	1h23m54s	May 24, 2022
+completed	failure	Added load_file_data and load_str_data as functions available in meta.yaml	Tests	master	pull_request	2320414376	1h24m44s	May 13, 2022
+completed	failure	Add CLI option for changing the compression settings	Tests	change-compression-opts	pull_request	2319586748	1h26m50s	May 13, 2022
+completed	success	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	2318485695	45m44s	May 13, 2022
+completed	failure	Added load_file_data and load_str_data as functions available in meta.yaml	Tests	master	pull_request	2316652372	1h16m24s	May 12, 2022
+completed	success	Added load_file_data and load_str_data as functions available in meta.yaml	Tests	master	pull_request	2316462055	1h17m49s	May 12, 2022
+completed	failure	Added load_file_data and load_str_data as functions available in meta.yaml	Tests	master	pull_request	2316362904	1h16m7s	May 12, 2022
+completed	failure	Added load_file_data and load_str_data as functions available in meta.yaml	Tests	master	pull_request	2316124649	1h26m23s	May 12, 2022
+completed	failure	Added load_file_data and load_str_data as functions available in meta.yaml	Tests	master	pull_request	2315970330	1h23m53s	May 12, 2022
+completed	failure	Added load_file_data and load_str_data as functions available in meta.yaml	Tests	master	pull_request	2315627519	1h23m54s	May 12, 2022
+completed	failure	Added load_file_data and load_str_data as functions available in meta.yaml	Tests	master	pull_request	2315620789	1h13m17s	May 12, 2022
+completed	success	Fix a CLI argument bug for the conda-debug command (#4448)	Tests	master	push	2312913804	1h22m52s	May 12, 2022
+completed	success	Bugfix: fixes a CLI argument bug for the conda-debug command	Tests	bug/conda-debug-file-path-4404	pull_request	2309909739	1h7m15s	May 11, 2022
+completed	success	🔄 Synced file(s) with conda/infra (#4464)	Tests	master	push	2309833766	2h7m42s	May 11, 2022
+completed	success	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	2309831609	1h37m33s	May 11, 2022
+completed	success	use set for membership queries (#4459)	Tests	master	push	2309757037	1h17m11s	May 11, 2022
+completed	success	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	2309262785	1h28m35s	May 11, 2022
+completed	success	use set for membership queries	Tests	set-queries	pull_request	2309065660	1h23m12s	May 11, 2022
+completed	success	cache test packages in memory	Tests	cache-test-packages	pull_request	2309027484	1h21m45s	May 11, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2308907048	14m16s	May 11, 2022
+completed	failure	cache test packages in memory	Tests	cache-test-packages	pull_request	2308855895	1h18m37s	May 11, 2022
+completed	success	cache test packages in memory	Tests	cache-test-packages	pull_request	2308831537	1h14m2s	May 11, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2308353392	38m42s	May 11, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2308347823	36m58s	May 11, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2308091622	1h22m55s	May 11, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2307925437	1h34m47s	May 11, 2022
+completed	success	🔄 Synced file(s) with conda/infra (#4461)	Tests	master	push	2307711100	2h16m59s	May 11, 2022
+completed	success	use set for membership queries	Tests	set-queries	pull_request	2307514957	1h7m54s	May 11, 2022
+completed	failure	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	2307482096	1h45m8s	May 11, 2022
+completed	failure	use set for membership queries	Tests	set-queries	pull_request	2303524551	1h18m7s	May 10, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2303521225	12m35s	May 10, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2303516376	18m51s	May 10, 2022
+completed	failure	Bugfix: fixes a CLI argument bug for the conda-debug command	Tests	bug/conda-debug-file-path-4404	pull_request	2302335653	1h26m38s	May 10, 2022
+completed	failure	Bugfix: fixes a CLI argument bug for the conda-debug command	Tests	bug/conda-debug-file-path-4404	pull_request	2302319790	1h31m0s	May 10, 2022
+completed	failure	Bugfix: fixes a CLI argument bug for the conda-debug command	Tests	bug/conda-debug-file-path-4404	pull_request	2302246769	1h51m53s	May 10, 2022
+completed	success	Bugfix: fixes a CLI argument bug for the conda-debug command	Tests	bug/conda-debug-file-path-4404	pull_request	2302005122	1h29m23s	May 10, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2301606266	18m35s	May 10, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2301599226	15m32s	May 10, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2300939627	16m41s	May 10, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2300754864	16m59s	May 10, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2300230868	2h0m38s	May 10, 2022
+completed	failure	perf improvement for get_used_loop_vars	Tests	perf	pull_request	2299562395	1h14m57s	May 10, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2297830860	14m57s	May 10, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2296913821	1h47m0s	May  9, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2296885827	1h41m19s	May  9, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2296869259	1h35m30s	May  9, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2296684849	2h2m12s	May  9, 2022
+completed	success	Bugfix: fixes a CLI argument bug for the conda-debug command	Tests	bug/conda-debug-file-path-4404	pull_request	2296278948	1h27m55s	May 10, 2022
+completed	failure	add mips64 loongarch64 support	Tests	master	pull_request	2296267270	3h8m4s	May  9, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate (#4456)	Tests	master	push	2296258281	3h1m0s	May  9, 2022
+completed	failure	Drop dependency on Setuptools	Tests	use_packaging	pull_request	2296257226	2h42m46s	May  9, 2022
+completed	failure	🔄 Synced file(s) with conda/infra (#4458)	Tests	master	push	2296255692	1h45m9s	May  9, 2022
+completed	failure	Drop dependency on Setuptools	Tests	use_packaging	pull_request	2296254669	1h33m18s	May  9, 2022
+completed	failure	Remove xfail markers from MacOS tests now that SDK tools are set up p…	Tests	master	push	2296251706	1h28m38s	May  9, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2296147043	16m48s	May  9, 2022
+completed	success	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	2295904781	1h22m41s	May  9, 2022
+completed	failure	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	2295520697	1h36m10s	May  9, 2022
+completed	failure	Bugfix: fixes a CLI argument bug for the conda-debug command	Tests	bug/conda-debug-file-path-4404	pull_request	2294986340	1h25m48s	May  9, 2022
+completed	failure	Bugfix: fixes a CLI argument bug for the conda-debug command	Tests	bug/conda-debug-file-path-4404	pull_request	2294825209	1h19m20s	May  9, 2022
+completed	failure	Bugfix: fixes a CLI argument bug for the conda-debug command	Tests	bug/conda-debug-file-path-4404	pull_request	2294812937	1h26m42s	May  9, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2294775501	14m34s	May  9, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2294763788	16m1s	May  9, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2294489157	13m30s	May  9, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2294480247	14m6s	May  9, 2022
+completed	success	Remove `xfail` Markers from MacOS CI Tests	Tests	remove_xfail_markers	pull_request	2284626385	1h19m23s	May  7, 2022
+completed	failure	Remove rpaths that occur multiple times (#4287)	Tests	master	push	2284393340	1h14m55s	May  6, 2022
+completed	success	Remove rpaths that occur multiple times	Tests	rpaths	pull_request	2284014438	1h30m4s	May  6, 2022
+completed	failure	[WIP - DNM] Update Xcode Setup for MacOS Test Runs	Tests	fix_macos_xcode_gha	pull_request	2283967039	1h22m29s	May  6, 2022
+completed	failure	[WIP - DNM] Update Xcode Setup for MacOS Test Runs	Tests	fix_macos_xcode_gha	pull_request	2283943799	1h25m24s	May  6, 2022
+completed	failure	[WIP - DNM] Update Xcode Setup for MacOS Test Runs	Tests	fix_macos_xcode_gha	pull_request	2283596609	1h19m4s	May  6, 2022
+completed	failure	[WIP - DNM] Update Xcode Setup for MacOS Test Runs	Tests	fix_macos_xcode_gha	pull_request	2283249379	1h27m57s	May  6, 2022
+completed	cancelled	[WIP - DNM] Update Xcode Setup for MacOS Test Runs	Tests	fix_macos_xcode_gha	pull_request	2283219446	6m52s	May  6, 2022
+completed	failure	[WIP - DNM] Update Xcode Setup for MacOS Test Runs	Tests	fix_macos_xcode_gha	pull_request	2283161887	1h24m28s	May  6, 2022
+completed	success	Bugfix: fixes a CLI argument bug for the conda-debug command	Tests	bug/conda-debug-file-path-4404	pull_request	2281369190	1h19m2s	May  6, 2022
+completed	failure	Bugfix: fixes a CLI argument bug for the conda-debug command	Tests	bug/conda-debug-file-path-4404	pull_request	2281340940	1h21m24s	May  6, 2022
+completed	cancelled	[WIP - DNM] Update Xcode Setup for MacOS Test Runs	Tests	fix_macos_xcode_gha	pull_request	2279645940	1h39m35s	May  6, 2022
+completed	success	[WIP - DNM] Update Xcode Setup for MacOS Test Runs	Tests	fix_macos_xcode_gha	pull_request	2277788265	1h16m23s	May  5, 2022
+completed	failure	[WIP - DNM] Update Xcode Setup for MacOS Test Runs	Tests	fix_macos_xcode_gha	pull_request	2277765569	1h19m19s	May  5, 2022
+completed	failure	[WIP - DNM] Update Xcode Setup for MacOS Test Runs	Tests	fix_macos_xcode_gha	pull_request	2277734691	1h21m44s	May  5, 2022
+completed	failure	[pre-commit.ci] pre-commit autoupdate (#4440)	Tests	master	push	2276731271	1h17m2s	May  5, 2022
+completed	failure	Bugfix: fixes a CLI argument bug for the conda-debug command	Tests	bug/conda-debug-file-path-4404	pull_request	2275231975	1h22m7s	May  5, 2022
+completed	failure	Bugfix: fixes a CLI argument bug for the conda-debug command	Tests	bug/conda-debug-file-path-4404	pull_request	2274882848	2h17m43s	May  5, 2022
+completed	success	Bugfix: fixes a CLI argument bug for the conda-debug command	Tests	bug/conda-debug-file-path-4404	pull_request	2274847921	2h8m18s	May  5, 2022
+completed	failure	Bugfix: fixes a CLI argument bug for the conda-debug command	Tests	bug/conda-debug-file-path-4404	pull_request	2274726169	1h22m44s	May  5, 2022
+completed	failure	Bugfix: fixes a CLI argument bug for the conda-debug command	Tests	bug/conda-debug-file-path-4404	pull_request	2274718901	1h19m19s	May  5, 2022
+completed	failure	Bugfix: fixes a CLI argument bug for the conda-debug command	Tests	bug/conda-debug-file-path-4404	pull_request	2274690703	1h50m8s	May  5, 2022
+completed	failure	Bugfix: fixes a CLI argument bug for the conda-debug command	Tests	bug/conda-debug-file-path-4404	pull_request	2274682553	1h28m20s	May  5, 2022
+completed	failure	Bugfix: fixes a CLI argument bug for the conda-debug command	Tests	bug/conda-debug-file-path-4404	pull_request	2274669613	1h27m27s	May  5, 2022
+completed	failure	Bugfix: fixes a CLI argument bug for the conda-debug command	Tests	bug/conda-debug-file-path-4404	pull_request	2274664830	1h20m44s	May  5, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2273150225	13m28s	May  5, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2273142776	15m20s	May  5, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2272753835	15m8s	May  4, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2272582805	13m41s	May  4, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2272501642	13m27s	May  4, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2272402784	23m30s	May  4, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2272396058	18m51s	May  4, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2272393573	13m24s	May  4, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2272126756	13m50s	May  4, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2271852832	26m34s	May  4, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2271848039	19m38s	May  4, 2022
+completed	failure	convert filesystem-based metadata cache to sqlite	Tests	cache-sqlite	pull_request	2271486833	41m20s	May  4, 2022
+completed	failure	DRAFT: use sqlite for conda-build index .cache directory	Tests	cache-sqlite	pull_request	2271468309	42m56s	May  4, 2022
+completed	failure	DRAFT: use sqlite for conda-build index .cache directory	Tests	cache-sqlite	pull_request	2271467751	35m54s	May  4, 2022
+completed	failure	DRAFT: use sqlite for conda-build index .cache directory	Tests	cache-sqlite	pull_request	2271462200	18m41s	May  4, 2022
+completed	failure	Bugfix: fixes a CLI argument bug for the conda-debug command	Tests	bug/conda-debug-file-path-4404	pull_request	2270205273	1h17m44s	May  4, 2022
+completed	success	Bugfix: fixes a CLI argument bug for the conda-debug command	Tests	bug/conda-debug-file-path-4404	pull_request	2270198376	1h9m26s	May  4, 2022
+completed	failure	Bugfix: fixes a CLI argument bug for the conda-debug command	Tests	bug/conda-debug-file-path-4404	pull_request	2269851484	1h47m12s	May  4, 2022
+completed	failure	Bugfix: fixes a CLI argument bug for the conda-debug command	Tests	bug/conda-debug-file-path-4404	pull_request	2269845724	1h32m38s	May  4, 2022
+completed	failure	Bugfix: fixes a CLI argument bug for the conda-debug command	Tests	bug/conda-debug-file-path-4404	pull_request	2269627675	1h24m27s	May  4, 2022
+completed	failure	Bugfix: fixes a CLI argument bug for the conda-debug command	Tests	bug/conda-debug-file-path-4404	pull_request	2269616123	1h19m6s	May  4, 2022
+completed	failure	Bugfix: fixes a CLI argument bug for the conda-debug command	Tests	bug/conda-debug-file-path-4404	pull_request	2269614792	1h11m46s	May  4, 2022
+completed	failure	Bugfix: fixes a CLI argument bug for the conda-debug command	Tests	bug/conda-debug-file-path-4404	pull_request	2269607887	1h21m41s	May  4, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	2259135516	1h28m39s	May  2, 2022
+completed	failure	Remove rpaths that occur multiple times	Tests	rpaths	pull_request	2254083463	1h6m3s	May  4, 2022
+completed	failure	Remove rpaths that occur multiple times	Tests	rpaths	pull_request	2254080657	1h23m17s	May  1, 2022
+completed	failure	Add --append option to conda-index	Tests	extend-index	pull_request	2246641196	1h22m37s	Apr 29, 2022
+completed	success	Also rewrite long prefix paths in `output` scripts $PREFIX, etc.	Tests	rewrite_env-in-outputs	pull_request	2246522572	1h17m57s	Apr 29, 2022
+completed	success	Use scandir() to avoid separate is_dir() syscall (#4273)	Tests	master	push	2238657446	1h20m19s	Apr 28, 2022
+completed	success	Making tests easier to run (#4425)	Tests	master	push	2226758947	1h22m42s	Apr 26, 2022
+completed	success	Update `import` for Setuptools 61.0.0+ (#4430)	Tests	master	push	2226207372	1h22m30s	Apr 26, 2022
+completed	success	Add `entry_points` to `outputs` in `FIELDS` (#4389)	Tests	master	push	2225656048	1h15m53s	Apr 26, 2022
+completed	failure	Drop dependency on Setuptools	Tests	use_packaging	pull_request	2224157571	1h24m31s	Apr 26, 2022
+completed	success	Add `entry_points` to `outputs` in `FIELDS`	Tests	add_ep_to_op_fields	pull_request	2223473185	1h19m17s	Apr 26, 2022
+completed	success	Ensure `test/commands` & `run_test.*` both work	Tests	fix_tst_dir	pull_request	2223470329	34m0s	Apr 26, 2022
+completed	success	Support Setuptools 61.0.0+	Tests	hdl_new_sp_load	pull_request	2223465886	1h21m14s	Apr 25, 2022
+completed	success	use scandir() to avoid separate is_dir() syscall	Tests	index-scandir	pull_request	2222739870	1h20m4s	Apr 25, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	2221543593	1h7m22s	Apr 26, 2022
+completed	success	Making tests easier to run	Tests	makefile_updates	pull_request	2221288893	1h12m57s	Apr 25, 2022
+completed	success	Making tests easier to run	Tests	makefile_updates	pull_request	2209518282	1h0m24s	Apr 25, 2022
+completed	success	Remove unused Travis CI files/references (#4438)	Tests	master	push	2207708067	1h22m39s	Apr 22, 2022
+completed	success	Making tests easier to run	Tests	makefile_updates	pull_request	2204485185	1h16m50s	Apr 22, 2022
+completed	success	Making tests easier to run	Tests	makefile_updates	pull_request	2204463419	1h20m7s	Apr 21, 2022
+completed	success	Remove Unused Travis CI Files	Tests	remove_travisci_files	pull_request	2204154565	1h16m16s	Apr 21, 2022
+completed	failure	Remove Unused Travis CI Files	Tests	remove_travisci_files	pull_request	2204115959	1h20m35s	Apr 21, 2022
+completed	failure	Remove Azure CI pipeline Files (#4436)	Tests	master	push	2204111976	1h22m9s	Apr 21, 2022
+completed	success	Remove Azure CI pipeline Files	Tests	remove_azure_pipeline	pull_request	2203365351	1h15m3s	Apr 21, 2022
+completed	success	Remove Unused Travis CI Files	Tests	remove_travisci_files	pull_request	2203323015	1h22m53s	Apr 21, 2022
+completed	failure	Remove Unused Travis CI Files	Tests	remove_travisci_files	pull_request	2203319648	1h16m57s	Apr 21, 2022
+completed	success	Remove Azure CI pipeline Files	Tests	remove_azure_pipeline	pull_request	2202011740	1h17m8s	Apr 21, 2022
+completed	failure	Remove Azure CI pipeline Files	Tests	remove_azure_pipeline	pull_request	2202007239	1h24m36s	Apr 21, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate (#4424)	Tests	master	push	2201039500	1h17m3s	Apr 21, 2022
+completed	success	Remove Azure CI pipeline Files	Tests	remove_azure_pipeline	pull_request	2198973941	1h25m48s	Apr 21, 2022
+completed	failure	Remove Azure CI pipeline Files	Tests	remove_azure_pipeline	pull_request	2198972207	1h21m24s	Apr 21, 2022
+completed	success	Making tests easier to run	Tests	makefile_updates	pull_request	2198458468	1h20m45s	Apr 20, 2022
+completed	failure	Remove Azure CI pipeline Files	Tests	remove_azure_pipeline	pull_request	2198368117	1h24m13s	Apr 20, 2022
+completed	success	Migrate MacOS Tests from Azure to GitHub Actions (#4412)	Tests	master	push	2197101837	1h22m55s	Apr 20, 2022
+completed	failure	run tests with conda-libmamba-solver enabled (DNM)	Tests	conda-libmamba-solver-tests	pull_request	2194747706	1h13m33s	Apr 25, 2022
+completed	success	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2191565804	1h19m8s	Apr 19, 2022
+completed	failure	run tests with conda-libmamba-solver enabled (DNM)	Tests	conda-libmamba-solver-tests	pull_request	2190382356	1h31m28s	Apr 19, 2022
+completed	failure	run tests with conda-libmamba-solver enabled (DNM)	Tests	conda-libmamba-solver-tests	pull_request	2190245723	1h33m9s	Apr 19, 2022
+completed	failure	run tests with conda-libmamba-solver enabled (DNM)	Tests	conda-libmamba-solver-tests	pull_request	2190146251	37m53s	Apr 19, 2022
+completed	failure	run tests with conda-libmamba-solver enabled (DNM)	Tests	conda-libmamba-solver-tests	pull_request	2189365317	35m1s	Apr 19, 2022
+completed	failure	run tests with conda-libmamba-solver enabled (DNM)	Tests	conda-libmamba-solver-tests	pull_request	2189200708	22m14s	Apr 19, 2022
+completed	failure	run tests with conda-libmamba-solver enabled (DNM)	Tests	conda-libmamba-solver-tests	pull_request	2186130613	21m57s	Apr 18, 2022
+completed	failure	run tests with conda-libmamba-solver enabled (DNM)	Tests	conda-libmamba-solver-tests	pull_request	2185713274	23m27s	Apr 18, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2185199221	1h17m10s	Apr 18, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2185007849	1h21m40s	Apr 18, 2022
+completed	failure	workaround for #4354 - patch the vendored distutils.core too (#4434)	Tests	master	push	2184991943	15m11s	Apr 18, 2022
+completed	failure	run tests with conda-libmamba-solver enabled (DNM)	Tests	conda-libmamba-solver-tests	pull_request	2184590409	20m37s	Apr 18, 2022
+completed	failure	run tests with conda-libmamba-solver enabled (DNM)	Tests	conda-libmamba-solver-tests	pull_request	2184454095	21m57s	Apr 18, 2022
+completed	failure	run tests with conda-libmamba-solver enabled (DNM)	Tests	conda-libmamba-solver-tests	pull_request	2184300180	21m21s	Apr 18, 2022
+completed	failure	run tests with conda-libmamba-solver enabled (DNM)	Tests	conda-libmamba-solver-tests	pull_request	2184201286	22m27s	Apr 18, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2177264734	1h21m33s	Apr 16, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2174630843	1h20m20s	Apr 15, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2174616142	1h8m1s	Apr 15, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2174601763	1h20m49s	Apr 15, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2174246007	1h22m1s	Apr 15, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2174237428	1h8m57s	Apr 15, 2022
+completed	failure	workaround for #4354 - patch the vendored distutils.core too	Tests	issue-4354-again	pull_request	2174208762	12m13s	Apr 15, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2173912500	1h20m54s	Apr 15, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2173882111	1h17m30s	Apr 15, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2173871283	0s	Apr 15, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2173398774	1h18m58s	Apr 15, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2173381525	1h7m28s	Apr 15, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2173367128	1h18m27s	Apr 15, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2173347304	1h13m43s	Apr 15, 2022
+completed	failure	Making tests easier to run	Tests	makefile_updates	pull_request	2173308139	14m3s	Apr 15, 2022
+completed	failure	run tests with conda-libmamba-solver enabled (DNM)	Tests	conda-libmamba-solver-tests	pull_request	2168896174	19m28s	Apr 14, 2022
+completed	failure	run tests with conda-libmamba-solver enabled (DNM)	Tests	conda-libmamba-solver-tests	pull_request	2168812461	19m1s	Apr 14, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2168517266	1h24m58s	Apr 14, 2022
+completed	failure	Making tests easier to run	Tests	makefile_updates	pull_request	2168384724	22m7s	Apr 14, 2022
+completed	failure	run tests with conda-libmamba-solver enabled (DNM)	Tests	conda-libmamba-solver-tests	pull_request	2168260574	24m25s	Apr 14, 2022
+completed	failure	run tests with conda-libmamba-solver enabled (DNM)	Tests	conda-libmamba-solver-tests	pull_request	2168181062	8m30s	Apr 14, 2022
+completed	failure	run tests with conda-libmamba-solver enabled (DNM)	Tests	conda-libmamba-solver-tests	pull_request	2168106815	10m23s	Apr 14, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2167284867	1h36m59s	Apr 14, 2022
+completed	failure	Support Setuptools 61.0.0+	Tests	hdl_new_sp_load	pull_request	2163564883	14m16s	Apr 13, 2022
+completed	failure	Ensure `test/commands` & `run_test.*` both work	Tests	fix_tst_dir	pull_request	2163405718	13m32s	Apr 13, 2022
+completed	failure	Making tests easier to run	Tests	makefile_updates	pull_request	2162190672	13m27s	Apr 13, 2022
+completed	failure	don't assume 'extras_require' is present in pkginfo dict	Tests	issue-4354	pull_request	2158899958	17m4s	Apr 13, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2157466401	1h16m44s	Apr 12, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2157401127	1h4m1s	Apr 12, 2022
+completed	failure	Making tests easier to run	Tests	makefile_updates	pull_request	2156310645	13m7s	Apr 12, 2022
+completed	failure	Making tests easier to run	Tests	makefile_updates	pull_request	2156076988	13m37s	Apr 12, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2156041607	1h43m38s	Apr 12, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2155700898	1h26m41s	Apr 12, 2022
+completed	failure	Allow redirecting metadata output to another directory	Tests	configurable-metadata-dir	pull_request	2155002431	15m8s	Apr 14, 2022
+completed	failure	Making tests easier to run	Tests	makefile_updates	pull_request	2151977033	14m34s	Apr 12, 2022
+completed	failure	Making tests easier to run	Tests	makefile_updates	pull_request	2151781372	13m43s	Apr 11, 2022
+completed	failure	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	2149889393	14m2s	Apr 11, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2110907893	1h37m3s	Apr  7, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2110902259	1h18m17s	Apr  7, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2110036607	1h14m43s	Apr  7, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2109995738	1h25m1s	Apr  7, 2022
+completed	failure	add mips64 loongarch64 support	Tests	master	pull_request	2108200846	14m6s	Apr  7, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2104496782	1h5m23s	Apr  6, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2103867807	1h0m17s	Apr  6, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2103251635	0s	Apr  6, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2103218071	1h23m36s	Apr  6, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2102989843	1h17m17s	Apr  6, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2099221561	1h25m27s	Apr  5, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2099218300	1h18m38s	Apr  5, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2099208232	1h19m35s	Apr  5, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2099201774	1h28m53s	Apr  5, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2099177744	1h17m10s	Apr  5, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2099176219	1h19m32s	Apr  5, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2099125729	1h24m19s	Apr  5, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2099105293	1h20m18s	Apr  5, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2099070630	1h22m9s	Apr  5, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2098672502	1h24m44s	Apr  5, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2098634192	1h35m22s	Apr  5, 2022
+completed	failure	[pre-commit.ci] pre-commit autoupdate (#4419)	Tests	master	push	2096569547	13m37s	Apr  5, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	2091232417	1h21m29s	Apr  4, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate (#4410)	Tests	master	push	2090646694	1h20m27s	Apr  4, 2022
+completed	failure	Also rewrite long prefix paths in `output` scripts $PREFIX, etc.	Tests	rewrite_env-in-outputs	pull_request	2072674120	1h22m44s	Mar 31, 2022
+completed	failure	Also rewrite long prefix paths in `output` scripts $PREFIX, etc.	Tests	rewrite_env-in-outputs	pull_request	2072392011	1h13m44s	Mar 31, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2061423395	1h22m56s	Mar 29, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2061080163	1h4m21s	Mar 29, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2060535393	44m12s	Mar 29, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2060521331	12m51s	Mar 29, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2060477241	44m23s	Mar 29, 2022
+completed	cancelled	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2060446201	7m1s	Mar 29, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2060252760	1h18m10s	Mar 29, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2060226180	1h34m19s	Mar 29, 2022
+completed	failure	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2059508516	2h0m34s	Mar 29, 2022
+completed	failure	add menuinst JSON file validation	Tests	menuinst-validation	pull_request	2059232379	6h0m36s	Mar 29, 2022
+completed	cancelled	Migrate MacOS Tests from Azure to GitHub Actions	Tests	macos_azure_to_gha	pull_request	2059009350	19m52s	Mar 29, 2022
+completed	failure	add menuinst JSON file validation	Tests	menuinst-validation	pull_request	2058441702	2h0m41s	Mar 29, 2022
+completed	failure	add menuinst JSON file validation	Tests	menuinst-validation	pull_request	2058246310	2h4m17s	Mar 29, 2022
+completed	failure	add menuinst JSON file validation	Tests	menuinst-validation	pull_request	2058004257	2h0m32s	Mar 29, 2022
+completed	failure	add menuinst JSON file validation	Tests	menuinst-validation	pull_request	2057965956	2h0m36s	Mar 29, 2022
+completed	failure	add menuinst JSON file validation	Tests	menuinst-validation	pull_request	2057961608	2h0m37s	Mar 29, 2022
+completed	failure	add menuinst JSON file validation	Tests	menuinst-validation	pull_request	2057903535	2h0m35s	Mar 29, 2022
+completed	failure	add menuinst JSON file validation	Tests	menuinst-validation	pull_request	2057881691	2h0m34s	Mar 29, 2022
+completed	success	Run Tests Against Windows in GitHub Actions (#4353)	Tests	master	push	2054384734	1h22m53s	Mar 28, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	2053599163	40m10s	Mar 28, 2022
+completed	success	Run Tests Against Windows in GitHub Actions	Tests	add-windows-to-github-actions	pull_request	2041115187	1h15m20s	Mar 25, 2022
+completed	success	Update GHA Windows Tests	Tests	update_tests_and_vctools	pull_request	2040676382	1h27m4s	Mar 25, 2022
+completed	failure	Update GHA Windows Tests	Tests	update_tests_and_vctools	pull_request	2040635766	1h37m28s	Mar 25, 2022
+completed	failure	Run Tests Against Windows in GitHub Actions	Tests	add-windows-to-github-actions	pull_request	2037157716	1h23m6s	Mar 24, 2022
+completed	failure	Mark Two Tests with Xfail	Tests	add_xfail_marker	pull_request	2036621240	2h0m29s	Mar 24, 2022
+completed	failure	add menuinst JSON file validation	Tests	menuinst-validation	pull_request	2034491928	37m9s	Mar 24, 2022
+completed	success	🔄 Synced file(s) with conda/infra (#4401)	Tests	master	push	2033701322	37m42s	Mar 24, 2022
+completed	failure	Run Tests Against Windows in GitHub Actions	Tests	add-windows-to-github-actions	pull_request	2024263110	1h17m46s	Mar 22, 2022
+completed	failure	Migrating Windows Tests from Azure Pipeline to GitHub Actions	Tests	azure_to_gha_windows	pull_request	2023401144	1h21m56s	Mar 22, 2022
+completed	cancelled	Migrating Windows Tests from Azure Pipeline to GitHub Actions	Tests	azure_to_gha_windows	pull_request	2023056964	1h0m17s	Mar 22, 2022
+completed	success	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	2021168518	43m57s	Mar 22, 2022
+completed	failure	Migrating Windows Tests from Azure Pipeline to GitHub Actions	Tests	azure_to_gha_windows	pull_request	2019162203	2h0m27s	Mar 21, 2022
+completed	failure	Migrating Windows Tests from Azure Pipeline to GitHub Actions	Tests	azure_to_gha_windows	pull_request	2019103533	36m58s	Mar 21, 2022
+completed	failure	Migrating Windows Tests from Azure Pipeline to GitHub Actions	Tests	azure_to_gha_windows	pull_request	2018125673	2h0m27s	Mar 21, 2022
+completed	cancelled	Migrating Windows Tests from Azure Pipeline to GitHub Actions	Tests	azure_to_gha_windows	pull_request	2017997175	25m56s	Mar 21, 2022
+completed	failure	Migrating Windows Tests from Azure Pipeline to GitHub Actions	Tests	azure_to_gha_windows	pull_request	2016910305	44m7s	Mar 21, 2022
+completed	startup_failure	Migrating Windows Tests from Azure Pipeline to GitHub Actions	Tests	azure_to_gha_windows	pull_request	2016725309	0s	Mar 21, 2022
+completed	startup_failure	Migrating Windows Tests from Azure Pipeline to GitHub Actions	Tests	azure_to_gha_windows	pull_request	2016720725	0s	Mar 21, 2022
+completed	startup_failure	Migrating Windows Tests from Azure Pipeline to GitHub Actions	Tests	azure_to_gha_windows	pull_request	2016711029	0s	Mar 21, 2022
+completed	failure	Migrating Windows Tests from Azure Pipeline to GitHub Actions	Tests	azure_to_gha_windows	pull_request	2016699694	0s	Mar 21, 2022
+completed	failure	Migrating Windows Tests from Azure Pipeline to GitHub Actions	Tests	azure_to_gha_windows	pull_request	2016686127	0s	Mar 21, 2022
+completed	startup_failure	Migrating Windows Tests from Azure Pipeline to GitHub Actions	Tests	azure_to_gha_windows	pull_request	2016664590	0s	Mar 21, 2022
+completed	failure	Run Tests Against Windows in GitHub Actions	Tests	add-windows-to-github-actions	pull_request	1988805905	35m31s	Mar 15, 2022
+completed	failure	Run Tests Against Windows in GitHub Actions	Tests	add-windows-to-github-actions	pull_request	1988801205	39m15s	Mar 15, 2022
+completed	failure	[pre-commit.ci] pre-commit autoupdate (#4394)	Tests	master	push	1986440736	37m9s	Mar 15, 2022
+completed	success	🔄 Synced file(s) with conda/infra (#4393)	Tests	master	push	1986439963	43m45s	Mar 15, 2022
+completed	failure	[pre-commit.ci] auto fixes from pre-commit.com hooks	Tests	add-windows-to-github-actions	push	1982708145	0s	Mar 14, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	1981881427	38m35s	Mar 14, 2022
+completed	success	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	1981710579	44m59s	Mar 14, 2022
+completed	success	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	1965736709	46m8s	Mar 10, 2022
+completed	success	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	1963808664	37m23s	Mar 10, 2022
+completed	success	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	1963792991	41m54s	Mar 10, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate (#4391)	Tests	master	push	1947651922	47m14s	Mar  7, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	1946704601	48m24s	Mar  7, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate (#4382)	Tests	master	push	1929454956	38m10s	Mar  3, 2022
+completed	success	🔄 Synced file(s) with conda/infra (#4383)	Tests	master	push	1929453763	37m46s	Mar  3, 2022
+completed	failure	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	1912726787	49m51s	Feb 28, 2022
+completed	failure	Only run GHAs on non-forks (#4388)	Tests	master	push	1912722759	49m14s	Feb 28, 2022
+completed	failure	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	1911408980	42m35s	Feb 28, 2022
+completed	success	Only run GHAs on non-forks	Tests	no-gha-on-forks	pull_request	1910934983	39m30s	Feb 28, 2022
+completed	success	Add `entry_points` to `outputs` in `FIELDS`	Tests	add_ep_to_op_fields	pull_request	1901499081	43m47s	Feb 26, 2022
+completed	success	Only run GHAs on non-forks	Tests	no-gha-on-forks	pull_request	1900864735	38m19s	Feb 25, 2022
+completed	failure	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	1895787171	49m46s	Feb 24, 2022
+completed	failure	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	1895769659	42m6s	Feb 24, 2022
+completed	success	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	1895619074	44m6s	Feb 24, 2022
+completed	failure	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	1895574499	44m25s	Feb 24, 2022
+completed	failure	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	1895276349	41m1s	Feb 24, 2022
+completed	success	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	1895094056	43m18s	Feb 24, 2022
+completed	success	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	1889930635	43m28s	Feb 23, 2022
+completed	failure	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	1878483431	40m11s	Feb 21, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	1877308961	40m49s	Feb 21, 2022
+completed	failure	Add --append option to conda-index	Tests	extend-index	pull_request	1848936621	41m40s	Feb 15, 2022
+completed	failure	Add --append option to conda-index	Tests	extend-index	pull_request	1848023967	35m38s	Feb 15, 2022
+completed	failure	Add --append option to conda-index	Tests	extend-index	pull_request	1844255483	45m8s	Feb 15, 2022
+completed	failure	Add --append option to conda-index	Tests	extend-index	pull_request	1844244189	43m16s	Feb 15, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate (#4379)	Tests	master	push	1843884012	45m34s	Feb 14, 2022
+completed	failure	Add --append option to conda-index	Tests	extend-index	pull_request	1843512849	41m0s	Feb 14, 2022
+completed	failure	Add --append option to conda-index	Tests	extend-index	pull_request	1843504476	46m4s	Feb 14, 2022
+completed	failure	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	1842248084	37m31s	Feb 14, 2022
+completed	success	[RFC] Add pyupgrade via pre-commit (#4374)	Tests	master	push	1817229076	45m56s	Feb  9, 2022
+completed	success	[RFC] Add pyupgrade via pre-commit	Tests	pyupgrade	pull_request	1813807524	34m39s	Feb  8, 2022
+completed	success	[RFC] Add pyupgrade via pre-commit	Tests	pyupgrade	pull_request	1785009902	45m50s	Feb  2, 2022
+completed	failure	[RFC] Add pyupgrade via pre-commit	Tests	pyupgrade	pull_request	1784757487	35m19s	Feb  2, 2022
+completed	success	[RFC] Add pyupgrade via pre-commit	Tests	pyupgrade	pull_request	1784750969	36m41s	Feb  2, 2022
+completed	success	Add missing dependencies to setup.py. (#4340)	Tests	master	push	1784733860	39m7s	Feb  2, 2022
+completed	success	Add missing dependencies to setup.py.	Tests	deps-update	pull_request	1780403476	34m22s	Feb  1, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate (#4372)	Tests	master	push	1780278485	1h0m14s	Feb  1, 2022
+completed	success	[pre-commit.ci] pre-commit autoupdate	Tests	pre-commit-ci-update-config	pull_request	1773693623	39m27s	Jan 31, 2022
+completed	success	Support bdist_conda also with setuptools >=60.0.0 (#4368)	Tests	master	push	1772846395	41m14s	Jan 31, 2022
+completed	failure	Support bdist_conda also with setuptools >=60.0.0	Tests	bdist_setuptools	pull_request	1762072172	37m10s	Jan 28, 2022
+completed	failure	Support bdist_conda also with setuptools >=60.0.0	Tests	bdist_setuptools	pull_request	1761884214	42m40s	Jan 28, 2022
+completed	success	Support bdist_conda also with setuptools >=60.0.0	Tests	bdist_setuptools	pull_request	1761862577	39m54s	Jan 28, 2022
+completed	success	Support bdist_conda also with setuptools >=60.0.0	Tests	bdist_setuptools	pull_request	1760321153	43m3s	Jan 28, 2022
+completed	success	Support bdist_conda also with setuptools >=60.0.0	Tests	bdist_setuptools	pull_request	1758064219	42m2s	Jan 27, 2022
+completed	success	Support bdist_conda also with setuptools >=60.0.0	Tests	bdist_setuptools	pull_request	1757147318	1h0m13s	Jan 27, 2022
+completed	success	Support bdist_conda also with setuptools >=60.0.0	Tests	bdist_setuptools	pull_request	1757136152	37m39s	Jan 27, 2022
+completed	success	Support bdist_conda also with setuptools >=60.0.0	Tests	bdist_setuptools	pull_request	1751561432	41m49s	Jan 26, 2022
+completed	success	Release preparation for 3.21.8 (#4365)	Tests	master	push	1746104141	38m24s	Jan 25, 2022
+completed	success	Release preparation for 3.21.8	Tests	release	pull_request	1745679487	36m21s	Jan 25, 2022
+completed	success	Update authors (#4364)	Tests	master	push	1740722673	44m24s	Jan 24, 2022
+completed	success	Update authors	Tests	authors	pull_request	1740677889	42m11s	Jan 24, 2022
+completed	success	Updated CHANGELOG for 3.21.8	Tests	master	push	1740490833	38m49s	Jan 24, 2022
+completed	success	🔄 Synced local '.github/workflows/boards.yml' with remote '.github/wo…	Tests	master	push	1724781100	43m13s	Jan 20, 2022
+completed	success	🔄 Synced file(s) with conda/infra	Tests	repo-sync/infra/default	pull_request	1724293661	41m10s	Jan 20, 2022
+completed	failure	Include deprecated labels (#4361)	Tests	master	push	1720860979	51m41s	Jan 20, 2022
+completed	failure	Include deprecated local labels	Tests	local-labels	pull_request	1720852397	45m23s	Jan 19, 2022
+completed	failure	Use host_subdir to get the correct cctools version	Tests	host_cctools	pull_request	1720634767	42m50s	Jan 19, 2022
+completed	failure	Use host_subdir to get the correct cctools version	Tests	host_cctools	pull_request	1720627715	6m32s	Jan 19, 2022
+completed	failure	Use host_subdir to get the correct cctools version	Tests	host_cctools	pull_request	1720605072	6m53s	Jan 19, 2022
