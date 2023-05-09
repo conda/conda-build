@@ -559,7 +559,6 @@ def update_index(
             threads=threads,
             verbose=verbose,
             progress=progress,
-            hotfix_source_repo=hotfix_source_repo,
             subdirs=ensure_list(subdir),
             current_index_versions=current_index_versions,
             index_file=kwargs.get("index_file", None),

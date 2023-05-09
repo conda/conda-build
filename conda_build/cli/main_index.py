@@ -113,6 +113,7 @@ def execute(args):
         verbose=args.verbose,
         progress=args.progress,
         current_index_versions=args.current_index_versions_file,
+        index_file=args.file,
     )
 
 
