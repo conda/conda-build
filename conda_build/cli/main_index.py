@@ -100,7 +100,7 @@ def execute(args):
     _, args = parse_args(args)
 
     warnings.warn(
-        "conda-build index is deprecated. Use standalone conda-index package."
+        "conda-build index is deprecated. Use the standalone conda-index package instead."
     )
 
     api.update_index(

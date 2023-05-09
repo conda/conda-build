@@ -10,8 +10,8 @@
 
 * `conda-build index --file` is no longer supported.
 * `conda-build index --hotfix-source-repo` is removed.
-* Prefer `python -m conda_index`, instead of `conda-build index` or `conda
-  index`, to use faster indexing code.
+* Prefer the [standalone conda-index package](https://conda.github.io/conda-index/),
+  instead of `conda-build index` or `conda index`, to use faster indexing code.
 
 ### Docs
 
