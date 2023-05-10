@@ -1,11 +1,10 @@
-
 ### Enhancements
 
 * <news item>
 
 ### Bug fixes
 
-* fix many false-positives during the detection of Perl core modules in `conda skeleton cpan`
+* Download packages during build into the correct subdir folder. (#4750)
 
 ### Deprecations
 

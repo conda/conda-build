@@ -1,36 +1,36 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-from collections import OrderedDict
+from __future__ import annotations
+
 import contextlib
 import copy
-from functools import lru_cache
 import hashlib
 import json
 import os
-from os.path import isfile, join
 import re
 import sys
 import time
+import warnings
+from collections import OrderedDict
+from functools import lru_cache
+from os.path import isfile, join
 
 from bs4 import UnicodeDammit
 
-from .conda_interface import md5_file
-from .conda_interface import non_x86_linux_machines
-from .conda_interface import MatchSpec
-from .conda_interface import envs_dirs
-
-from conda_build import exceptions, utils, variants, environ
-from conda_build.features import feature_list
+from conda_build import environ, exceptions, utils, variants
 from conda_build.config import Config, get_or_merge_config
+from conda_build.features import feature_list
+from conda_build.license_family import ensure_valid_license_family
 from conda_build.utils import (
-    ensure_list,
-    find_recipe,
-    expand_globs,
-    get_installed_packages,
     HashableDict,
+    ensure_list,
+    expand_globs,
+    find_recipe,
+    get_installed_packages,
     insert_variant_versions,
 )
-from conda_build.license_family import ensure_valid_license_family
+
+from .conda_interface import MatchSpec, envs_dirs, md5_file, non_x86_linux_machines
 
 try:
     import yaml
@@ -79,7 +79,18 @@ numpy_compatible_re = re.compile(r"pin_\w+\([\'\"]numpy[\'\"]")
 used_vars_cache = {}
 
 
-def ns_cfg(config):
+def get_selectors(config: Config) -> dict[str, bool]:
+    """Aggregates selectors for use in recipe templating.
+
+    Derives selectors from the config and variants to be injected
+    into the Jinja environment prior to templating.
+
+    Args:
+        config (Config): The config object
+
+    Returns:
+        dict[str, bool]: Dictionary of on/off selectors for Jinja
+    """
     # Remember to update the docs of any of this changes
     plat = config.host_subdir
     d = dict(
@@ -160,6 +171,15 @@ def ns_cfg(config):
                     v = v.lower() == "true"
                 d[k] = v
     return d
+
+
+def ns_cfg(config: Config) -> dict[str, bool]:
+    warnings.warn(
+        "`conda_build.metadata.ns_cfg` is pending deprecation and will be removed in a "
+        "future release. Please use `conda_build.metadata.get_selectors` instead.",
+        PendingDeprecationWarning,
+    )
+    return get_selectors(config)
 
 
 # Selectors must be either:
@@ -348,8 +368,8 @@ def _variants_equal(metadata, output_metadata):
 def ensure_matching_hashes(output_metadata):
     envs = "build", "host", "run"
     problemos = []
-    for (_, m) in output_metadata.values():
-        for (_, om) in output_metadata.values():
+    for _, m in output_metadata.values():
+        for _, om in output_metadata.values():
             if m != om:
                 run_exports = om.meta.get("build", {}).get("run_exports", [])
                 if hasattr(run_exports, "keys"):
@@ -384,7 +404,11 @@ def ensure_matching_hashes(output_metadata):
 
 
 def parse(data, config, path=None):
-    data = select_lines(data, ns_cfg(config), variants_in_place=bool(config.variant))
+    data = select_lines(
+        data,
+        get_selectors(config),
+        variants_in_place=bool(config.variant),
+    )
     res = yamlize(data)
     # ensure the result is a dict
     if res is None:
@@ -446,6 +470,8 @@ FIELDS = {
         "svn_url": str,
         "svn_rev": None,
         "svn_ignore_externals": None,
+        "svn_username": None,
+        "svn_password": None,
         "folder": None,
         "no_hoist": None,
         "patches": list,
@@ -669,7 +695,6 @@ def build_string_from_metadata(metadata):
             ("mro", "mro-base", 3),
             ("mro", "mro-base_impl", 3),
         ):
-
             for ms in metadata.ms_depends("run"):
                 for name in ensure_list(names):
                     if ms.name == name and name in build_pkg_names:
@@ -1049,7 +1074,6 @@ class MetaData:
     __hash__ = None  # declare as non-hashable to avoid its use with memoization
 
     def __init__(self, path, config=None, variant=None):
-
         self.undefined_jinja_vars = []
         self.config = get_or_merge_config(config, variant=variant)
 
@@ -1559,9 +1583,17 @@ class MetaData:
 
         # if dependencies are only 'target_platform' then ignore that.
         if dependencies == ["target_platform"]:
-            return {}
+            hash_contents = {}
         else:
-            return {key: self.config.variant[key] for key in dependencies}
+            hash_contents = {key: self.config.variant[key] for key in dependencies}
+
+        # include virtual packages in run
+        run_reqs = self.meta.get("requirements", {}).get("run", [])
+        virtual_pkgs = [req for req in run_reqs if req.startswith("__")]
+
+        # add name -> match spec mapping for virtual packages
+        hash_contents.update({pkg.split(" ")[0]: pkg for pkg in virtual_pkgs})
+        return hash_contents
 
     def hash_dependencies(self):
         """With arbitrary pinning, we can't depend on the build string as done in
@@ -1801,9 +1833,9 @@ class MetaData:
                 return fd.read()
 
         from conda_build.jinja_context import (
-            context_processor,
-            UndefinedNeverFail,
             FilteredLoader,
+            UndefinedNeverFail,
+            context_processor,
         )
 
         path, filename = os.path.split(self.meta_path)
@@ -1833,7 +1865,7 @@ class MetaData:
         loader = FilteredLoader(jinja2.ChoiceLoader(loaders), config=self.config)
         env = jinja2.Environment(loader=loader, undefined=undefined_type)
 
-        env.globals.update(ns_cfg(self.config))
+        env.globals.update(get_selectors(self.config))
         env.globals.update(environ.get_dict(m=self, skip_build_id=skip_build_id))
         env.globals.update({"CONDA_BUILD_STATE": "RENDER"})
         env.globals.update(
@@ -1930,11 +1962,20 @@ class MetaData:
         return "load_file_regex" in meta_text
 
     @property
+    def uses_load_file_data_in_meta(self):
+        meta_text = ""
+        if self.meta_path:
+            with open(self.meta_path, "rb") as f:
+                meta_text = UnicodeDammit(f.read()).unicode_markup
+        return "load_file_data" in meta_text
+
+    @property
     def needs_source_for_render(self):
         return (
             self.uses_vcs_in_meta
             or self.uses_setup_py_in_meta
             or self.uses_regex_in_meta
+            or self.uses_load_file_data_in_meta
         )
 
     @property
@@ -2010,7 +2051,7 @@ class MetaData:
         if apply_selectors:
             recipe_text = select_lines(
                 recipe_text,
-                ns_cfg(self.config),
+                get_selectors(self.config),
                 variants_in_place=bool(self.config.variant),
             )
         return recipe_text.rstrip()
@@ -2532,7 +2573,7 @@ class MetaData:
                 # Sanity check: if any exact pins of any subpackages, make sure that they match
                 ensure_matching_hashes(conda_packages)
             final_conda_packages = []
-            for (out_d, m) in conda_packages.values():
+            for out_d, m in conda_packages.values():
                 # We arbitrarily mark all output metadata as final, regardless
                 #    of if it truly is or not. This is done to add sane hashes
                 #    to unfinalizable packages, so that they are differentiable

@@ -4,11 +4,11 @@
 
 ### Bug fixes
 
-* <news item>
+* Require the source when rendering a recipe that uses the load_file_data function (#4817, fixes #4807)
 
 ### Deprecations
 
-* Drop Python 3.7 support. (#4796)
+* <news item>
 
 ### Docs
 

@@ -1,18 +1,19 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-from collections import defaultdict
-from pathlib import Path
 import os
 import subprocess
 import sys
+import tempfile
+from collections import defaultdict
+from pathlib import Path
+from typing import Iterator
 
 import pytest
+from conda.common.compat import on_mac, on_win
 
-from conda.common.compat import on_mac
 import conda_build.config
 from conda_build.config import (
     Config,
-    get_or_merge_config,
     _src_cache_root_default,
     conda_pkg_format_default,
     enable_static_default,
@@ -20,6 +21,7 @@ from conda_build.config import (
     error_overlinking_default,
     exit_on_verify_error_default,
     filename_hashing_default,
+    get_or_merge_config,
     ignore_verify_codes_default,
     no_rewrite_stdout_env_default,
     noarch_python_build_age_default,
@@ -58,39 +60,20 @@ def testing_workdir(tmpdir, request):
 
 
 @pytest.fixture(scope="function")
-def testing_homedir(tmpdir, request):
-    """Create a homedir in the users home directory; cd into dir above before test, cd out after
-
-    :param tmpdir: py.test fixture, will be injected
-    :param request: py.test fixture-related, will be injected (see pytest docs)
-    """
-
-    saved_path = os.getcwd()
-    d1 = os.path.basename(tmpdir)
-    d2 = os.path.basename(os.path.dirname(tmpdir))
-    d3 = os.path.basename(os.path.dirname(os.path.dirname(tmpdir)))
-    new_dir = os.path.join(os.path.expanduser("~"), d1, d2, d3, "pytest.conda-build")
-    # While pytest will make sure a folder in unique
-    if os.path.exists(new_dir):
-        import shutil
-
-        try:
-            shutil.rmtree(new_dir)
-        except:
-            pass
+def testing_homedir() -> Iterator[Path]:
+    """Create a temporary testing directory in the users home directory; cd into dir before test, cd out after."""
+    saved = Path.cwd()
     try:
-        os.makedirs(new_dir)
-    except:
-        print(f"Failed to create {new_dir}")
-        return None
-    os.chdir(new_dir)
+        with tempfile.TemporaryDirectory(dir=Path.home(), prefix=".pytest_") as home:
+            os.chdir(home)
 
-    def return_to_saved_path():
-        os.chdir(saved_path)
+            yield home
 
-    request.addfinalizer(return_to_saved_path)
-
-    return str(new_dir)
+            os.chdir(saved)
+    except OSError:
+        pytest.xfail(
+            f"failed to create temporary directory () in {'%HOME%' if on_win else '${HOME}'} (tmpfs inappropriate for xattrs)"
+        )
 
 
 @pytest.fixture(scope="function")
@@ -250,5 +233,5 @@ def conda_build_test_recipe_envvar(
 ) -> str:
     """Exposes the cloned conda_build_test_recipe as an environment variable."""
     name = "CONDA_BUILD_TEST_RECIPE_PATH"
-    monkeypatch.setenv(name, conda_build_test_recipe_path)
+    monkeypatch.setenv(name, str(conda_build_test_recipe_path))
     return name

@@ -2,23 +2,23 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import json
 import os
-from pathlib import Path
 import platform
 import re
 import sys
+from pathlib import Path
 
 import pytest
 import yaml
-
 from conda.common.compat import on_mac
+
 from conda_build import api, exceptions
+from conda_build.utils import ensure_list, package_has_file
 from conda_build.variants import (
     combine_specs,
     dict_of_lists_to_list_of_dicts,
     get_package_variants,
     validate_spec,
 )
-from conda_build.utils import ensure_list, package_has_file
 
 from .utils import variants_dir
 
@@ -127,9 +127,9 @@ def test_variant_with_numpy_pinned_has_matrix():
 def test_pinning_in_build_requirements():
     recipe = os.path.join(variants_dir, "05_compatible")
     metadata = api.render(recipe)[0][0]
-    build_requirements = metadata.meta['requirements']['build']
+    build_requirements = metadata.meta["requirements"]["build"]
     # make sure that everything in the build deps is exactly pinned
-    assert all(len(req.split(' ')) == 3 for req in build_requirements)
+    assert all(len(req.split(" ")) == 3 for req in build_requirements)
 
 
 @pytest.mark.sanity
@@ -142,22 +142,30 @@ def test_no_satisfiable_variants_raises_error():
 
 def test_zip_fields():
     """Zipping keys together allows people to tie different versions as sets of combinations."""
-    variants = {'packageA': ['1.2', '3.4'], 'packageB': ['5', '6'], 'zip_keys': [('packageA', 'packageB')]}
+    variants = {
+        "packageA": ["1.2", "3.4"],
+        "packageB": ["5", "6"],
+        "zip_keys": [("packageA", "packageB")],
+    }
     zipped = dict_of_lists_to_list_of_dicts(variants)
     assert len(zipped) == 2
-    assert zipped[0]['packageA'] == '1.2'
-    assert zipped[0]['packageB'] == '5'
-    assert zipped[1]['packageA'] == '3.4'
-    assert zipped[1]['packageB'] == '6'
+    assert zipped[0]["packageA"] == "1.2"
+    assert zipped[0]["packageB"] == "5"
+    assert zipped[1]["packageA"] == "3.4"
+    assert zipped[1]["packageB"] == "6"
 
     # allow duplication of values, but lengths of lists must always match
-    variants = {'packageA': ['1.2', '1.2'], 'packageB': ['5', '6'], 'zip_keys': [('packageA', 'packageB')]}
+    variants = {
+        "packageA": ["1.2", "1.2"],
+        "packageB": ["5", "6"],
+        "zip_keys": [("packageA", "packageB")],
+    }
     zipped = dict_of_lists_to_list_of_dicts(variants)
     assert len(zipped) == 2
-    assert zipped[0]['packageA'] == '1.2'
-    assert zipped[0]['packageB'] == '5'
-    assert zipped[1]['packageA'] == '1.2'
-    assert zipped[1]['packageB'] == '6'
+    assert zipped[0]["packageA"] == "1.2"
+    assert zipped[0]["packageB"] == "5"
+    assert zipped[1]["packageA"] == "1.2"
+    assert zipped[1]["packageB"] == "6"
 
 
 def test_validate_spec():
@@ -230,8 +238,12 @@ def test_variants_in_versions_with_setup_py_data():
     recipe = os.path.join(variants_dir, "12_variant_versions")
     outputs = api.get_output_file_paths(recipe)
     assert len(outputs) == 2
-    assert any(os.path.basename(pkg).startswith('my_package-470.470') for pkg in outputs)
-    assert any(os.path.basename(pkg).startswith('my_package-480.480') for pkg in outputs)
+    assert any(
+        os.path.basename(pkg).startswith("my_package-470.470") for pkg in outputs
+    )
+    assert any(
+        os.path.basename(pkg).startswith("my_package-480.480") for pkg in outputs
+    )
 
 
 def test_git_variables_with_variants(testing_config):
@@ -245,12 +257,12 @@ def test_git_variables_with_variants(testing_config):
 
 def test_variant_input_with_zip_keys_keeps_zip_keys_list():
     spec = {
-        'scipy': ['0.17', '0.19'],
-        'sqlite': ['3'],
-        'zlib': ['1.2'],
-        'xz': ['5'],
-        'zip_keys': ['sqlite', 'zlib', 'xz'],
-        'pin_run_as_build': {'python': {'min_pin': 'x.x', 'max_pin': 'x.x'}}
+        "scipy": ["0.17", "0.19"],
+        "sqlite": ["3"],
+        "zlib": ["1.2"],
+        "xz": ["5"],
+        "zip_keys": ["sqlite", "zlib", "xz"],
+        "pin_run_as_build": {"python": {"min_pin": "x.x", "max_pin": "x.x"}},
     }
     vrnts = dict_of_lists_to_list_of_dicts(spec)
     assert len(vrnts) == 2
@@ -272,15 +284,18 @@ def test_ensure_valid_spec_on_run_and_test(testing_config, caplog):
     assert "Adding .* to spec 'pytest-mock  1.6'" not in text
 
 
-@pytest.mark.skipif(on_mac and platform.machine() == "arm64", reason="Unsatisfiable dependencies for M1 MacOS: {'bzip2=1.0.6'}")
+@pytest.mark.skipif(
+    on_mac and platform.machine() == "arm64",
+    reason="Unsatisfiable dependencies for M1 MacOS: {'bzip2=1.0.6'}",
+)
 def test_serial_builds_have_independent_configs(testing_config):
     recipe = os.path.join(variants_dir, "17_multiple_recipes_independent_config")
     recipes = [os.path.join(recipe, dirname) for dirname in ("a", "b")]
     outputs = api.build(recipes, config=testing_config)
-    index_json = json.loads(package_has_file(outputs[0], 'info/index.json'))
-    assert 'bzip2 >=1,<1.0.7.0a0' in index_json['depends']
-    index_json = json.loads(package_has_file(outputs[1], 'info/index.json'))
-    assert 'bzip2 >=1.0.6,<2.0a0' in index_json['depends']
+    index_json = json.loads(package_has_file(outputs[0], "info/index.json"))
+    assert "bzip2 >=1,<1.0.7.0a0" in index_json["depends"]
+    index_json = json.loads(package_has_file(outputs[1], "info/index.json"))
+    assert "bzip2 >=1.0.6,<2.0a0" in index_json["depends"]
 
 
 def test_subspace_selection(testing_config):
@@ -292,41 +307,47 @@ def test_subspace_selection(testing_config):
     # there are two entries with a==coffee, so we should end up with 2 variants
     assert len(ms) == 2
     # ensure that the zipped keys still agree
-    assert sum(m.config.variant['b'] == '123' for m, _, _ in ms) == 1
-    assert sum(m.config.variant['b'] == 'abc' for m, _, _ in ms) == 1
-    assert sum(m.config.variant['b'] == 'concrete' for m, _, _ in ms) == 0
-    assert sum(m.config.variant['c'] == 'mooo' for m, _, _ in ms) == 1
-    assert sum(m.config.variant['c'] == 'baaa' for m, _, _ in ms) == 1
-    assert sum(m.config.variant['c'] == 'woof' for m, _, _ in ms) == 0
+    assert sum(m.config.variant["b"] == "123" for m, _, _ in ms) == 1
+    assert sum(m.config.variant["b"] == "abc" for m, _, _ in ms) == 1
+    assert sum(m.config.variant["b"] == "concrete" for m, _, _ in ms) == 0
+    assert sum(m.config.variant["c"] == "mooo" for m, _, _ in ms) == 1
+    assert sum(m.config.variant["c"] == "baaa" for m, _, _ in ms) == 1
+    assert sum(m.config.variant["c"] == "woof" for m, _, _ in ms) == 0
 
     # test compound selection
-    testing_config.variant = {'a': 'coffee', 'b': '123'}
-    ms = api.render(recipe, config=testing_config, finalize=False, bypass_env_check=True)
+    testing_config.variant = {"a": "coffee", "b": "123"}
+    ms = api.render(
+        recipe, config=testing_config, finalize=False, bypass_env_check=True
+    )
     # there are two entries with a==coffee, but one with both 'coffee' for a, and '123' for b,
     #     so we should end up with 1 variants
     assert len(ms) == 1
     # ensure that the zipped keys still agree
-    assert sum(m.config.variant['b'] == '123' for m, _, _ in ms) == 1
-    assert sum(m.config.variant['b'] == 'abc' for m, _, _ in ms) == 0
-    assert sum(m.config.variant['b'] == 'concrete' for m, _, _ in ms) == 0
-    assert sum(m.config.variant['c'] == 'mooo' for m, _, _ in ms) == 1
-    assert sum(m.config.variant['c'] == 'baaa' for m, _, _ in ms) == 0
-    assert sum(m.config.variant['c'] == 'woof' for m, _, _ in ms) == 0
+    assert sum(m.config.variant["b"] == "123" for m, _, _ in ms) == 1
+    assert sum(m.config.variant["b"] == "abc" for m, _, _ in ms) == 0
+    assert sum(m.config.variant["b"] == "concrete" for m, _, _ in ms) == 0
+    assert sum(m.config.variant["c"] == "mooo" for m, _, _ in ms) == 1
+    assert sum(m.config.variant["c"] == "baaa" for m, _, _ in ms) == 0
+    assert sum(m.config.variant["c"] == "woof" for m, _, _ in ms) == 0
 
     # test when configuration leads to no valid combinations - only c provided, and its value
     #   doesn't match any other existing values of c, so it's then ambiguous which zipped
     #   values to choose
-    testing_config.variant = {'c': 'not an animal'}
+    testing_config.variant = {"c": "not an animal"}
     with pytest.raises(ValueError):
-        ms = api.render(recipe, config=testing_config, finalize=False, bypass_env_check=True)
+        ms = api.render(
+            recipe, config=testing_config, finalize=False, bypass_env_check=True
+        )
 
     # all zipped keys provided by the new variant.  It should clobber the old one.
-    testing_config.variant = {'a': 'some', 'b': 'new', 'c': 'animal'}
-    ms = api.render(recipe, config=testing_config, finalize=False, bypass_env_check=True)
+    testing_config.variant = {"a": "some", "b": "new", "c": "animal"}
+    ms = api.render(
+        recipe, config=testing_config, finalize=False, bypass_env_check=True
+    )
     assert len(ms) == 1
-    assert ms[0][0].config.variant['a'] == 'some'
-    assert ms[0][0].config.variant['b'] == 'new'
-    assert ms[0][0].config.variant['c'] == 'animal'
+    assert ms[0][0].config.variant["a"] == "some"
+    assert ms[0][0].config.variant["b"] == "new"
+    assert ms[0][0].config.variant["c"] == "animal"
 
 
 def test_get_used_loop_vars():
@@ -338,9 +359,15 @@ def test_get_used_loop_vars():
     # conda_build_config.yaml has 4 loop variables defined, but only 3 are used.
     #   python and zlib are both implicitly used (depend on name matching), while
     #   some_package is explicitly used as a jinja2 variable
-    assert m.get_used_loop_vars() == {'python', 'some_package'}
+    assert m.get_used_loop_vars() == {"python", "some_package"}
     # these are all used vars - including those with only one value (and thus not loop vars)
-    assert m.get_used_vars() == {'python', 'some_package', 'zlib', 'pthread_stubs', 'target_platform'}
+    assert m.get_used_vars() == {
+        "python",
+        "some_package",
+        "zlib",
+        "pthread_stubs",
+        "target_platform",
+    }
 
 
 def test_reprovisioning_source():
@@ -380,7 +407,7 @@ def test_reduced_hashing_behavior(testing_config):
         bypass_env_check=True,
     )[0][0]
     assert not m.get_hash_contents()
-    assert not re.search('h[0-9a-f]{%d}' % testing_config.hash_length, m.build_id())
+    assert not re.search("h[0-9a-f]{%d}" % testing_config.hash_length, m.build_id())
 
 
 def test_variants_used_in_jinja2_conditionals():
@@ -390,8 +417,8 @@ def test_variants_used_in_jinja2_conditionals():
         bypass_env_check=True,
     )
     assert len(ms) == 2
-    assert sum(m.config.variant['blas_impl'] == 'mkl' for m, _, _ in ms) == 1
-    assert sum(m.config.variant['blas_impl'] == 'openblas' for m, _, _ in ms) == 1
+    assert sum(m.config.variant["blas_impl"] == "mkl" for m, _, _ in ms) == 1
+    assert sum(m.config.variant["blas_impl"] == "openblas" for m, _, _ in ms) == 1
 
 
 def test_build_run_exports_act_on_host(caplog):
@@ -411,24 +438,24 @@ def test_detect_variables_in_build_and_output_scripts():
         arch="64",
     )
     for m, _, _ in ms:
-        if m.name() == 'test_find_used_variables_in_scripts':
+        if m.name() == "test_find_used_variables_in_scripts":
             used_vars = m.get_used_vars()
             assert used_vars
-            assert 'SELECTOR_VAR' in used_vars
-            assert 'OUTPUT_SELECTOR_VAR' not in used_vars
-            assert 'BASH_VAR1' in used_vars
-            assert 'BASH_VAR2' in used_vars
-            assert 'BAT_VAR' not in used_vars
-            assert 'OUTPUT_VAR' not in used_vars
+            assert "SELECTOR_VAR" in used_vars
+            assert "OUTPUT_SELECTOR_VAR" not in used_vars
+            assert "BASH_VAR1" in used_vars
+            assert "BASH_VAR2" in used_vars
+            assert "BAT_VAR" not in used_vars
+            assert "OUTPUT_VAR" not in used_vars
         else:
             used_vars = m.get_used_vars()
             assert used_vars
-            assert 'SELECTOR_VAR' not in used_vars
-            assert 'OUTPUT_SELECTOR_VAR' in used_vars
-            assert 'BASH_VAR1' not in used_vars
-            assert 'BASH_VAR2' not in used_vars
-            assert 'BAT_VAR' not in used_vars
-            assert 'OUTPUT_VAR' in used_vars
+            assert "SELECTOR_VAR" not in used_vars
+            assert "OUTPUT_SELECTOR_VAR" in used_vars
+            assert "BASH_VAR1" not in used_vars
+            assert "BASH_VAR2" not in used_vars
+            assert "BAT_VAR" not in used_vars
+            assert "OUTPUT_VAR" in used_vars
     # on windows, we find variables in bat scripts as well as shell scripts
     ms = api.render(
         os.path.join(variants_dir, "24_test_used_vars_in_scripts"),
@@ -436,25 +463,25 @@ def test_detect_variables_in_build_and_output_scripts():
         arch="64",
     )
     for m, _, _ in ms:
-        if m.name() == 'test_find_used_variables_in_scripts':
+        if m.name() == "test_find_used_variables_in_scripts":
             used_vars = m.get_used_vars()
             assert used_vars
-            assert 'SELECTOR_VAR' in used_vars
-            assert 'OUTPUT_SELECTOR_VAR' not in used_vars
-            assert 'BASH_VAR1' in used_vars
-            assert 'BASH_VAR2' in used_vars
+            assert "SELECTOR_VAR" in used_vars
+            assert "OUTPUT_SELECTOR_VAR" not in used_vars
+            assert "BASH_VAR1" in used_vars
+            assert "BASH_VAR2" in used_vars
             # bat is in addition to bash, not instead of
-            assert 'BAT_VAR' in used_vars
-            assert 'OUTPUT_VAR' not in used_vars
+            assert "BAT_VAR" in used_vars
+            assert "OUTPUT_VAR" not in used_vars
         else:
             used_vars = m.get_used_vars()
             assert used_vars
-            assert 'SELECTOR_VAR' not in used_vars
-            assert 'OUTPUT_SELECTOR_VAR' in used_vars
-            assert 'BASH_VAR1' not in used_vars
-            assert 'BASH_VAR2' not in used_vars
-            assert 'BAT_VAR' not in used_vars
-            assert 'OUTPUT_VAR' in used_vars
+            assert "SELECTOR_VAR" not in used_vars
+            assert "OUTPUT_SELECTOR_VAR" in used_vars
+            assert "BASH_VAR1" not in used_vars
+            assert "BASH_VAR2" not in used_vars
+            assert "BAT_VAR" not in used_vars
+            assert "OUTPUT_VAR" in used_vars
 
 
 def test_target_platform_looping():
@@ -466,7 +493,10 @@ def test_target_platform_looping():
     assert len(outputs) == 2
 
 
-@pytest.mark.skipif(on_mac and platform.machine() == "arm64", reason="Unsatisfiable dependencies for M1 MacOS systems: {'numpy=1.16'}")
+@pytest.mark.skipif(
+    on_mac and platform.machine() == "arm64",
+    reason="Unsatisfiable dependencies for M1 MacOS systems: {'numpy=1.16'}",
+)
 # TODO Remove the above skip decorator once https://github.com/conda/conda-build/issues/4717 is resolved
 def test_numpy_used_variable_looping():
     outputs = api.get_output_file_paths(os.path.join(variants_dir, "numpy_used"))
@@ -474,18 +504,24 @@ def test_numpy_used_variable_looping():
 
 
 def test_exclusive_config_files():
-    with open('conda_build_config.yaml', 'w') as f:
-        yaml.dump({'abc': ['someval'], 'cwd': ['someval']}, f, default_flow_style=False)
-    os.makedirs('config_dir')
-    with open(os.path.join('config_dir', 'config-0.yaml'), 'w') as f:
-        yaml.dump({'abc': ['super_0'], 'exclusive_0': ['0'], 'exclusive_both': ['0']},
-                  f, default_flow_style=False)
-    with open(os.path.join('config_dir', 'config-1.yaml'), 'w') as f:
-        yaml.dump({'abc': ['super_1'], 'exclusive_1': ['1'], 'exclusive_both': ['1']},
-                  f, default_flow_style=False)
+    with open("conda_build_config.yaml", "w") as f:
+        yaml.dump({"abc": ["someval"], "cwd": ["someval"]}, f, default_flow_style=False)
+    os.makedirs("config_dir")
+    with open(os.path.join("config_dir", "config-0.yaml"), "w") as f:
+        yaml.dump(
+            {"abc": ["super_0"], "exclusive_0": ["0"], "exclusive_both": ["0"]},
+            f,
+            default_flow_style=False,
+        )
+    with open(os.path.join("config_dir", "config-1.yaml"), "w") as f:
+        yaml.dump(
+            {"abc": ["super_1"], "exclusive_1": ["1"], "exclusive_both": ["1"]},
+            f,
+            default_flow_style=False,
+        )
     exclusive_config_files = (
-        os.path.join('config_dir', 'config-0.yaml'),
-        os.path.join('config_dir', 'config-1.yaml'),
+        os.path.join("config_dir", "config-0.yaml"),
+        os.path.join("config_dir", "config-1.yaml"),
     )
     output = api.render(
         os.path.join(variants_dir, "exclusive_config_file"),
@@ -493,15 +529,15 @@ def test_exclusive_config_files():
     )[0][0]
     variant = output.config.variant
     # is cwd ignored?
-    assert 'cwd' not in variant
+    assert "cwd" not in variant
     # did we load the exclusive configs?
-    assert variant['exclusive_0'] == '0'
-    assert variant['exclusive_1'] == '1'
+    assert variant["exclusive_0"] == "0"
+    assert variant["exclusive_1"] == "1"
     # does later exclusive config override initial one?
-    assert variant['exclusive_both'] == '1'
+    assert variant["exclusive_both"] == "1"
     # does recipe config override exclusive?
-    assert 'unique_to_recipe' in variant
-    assert variant['abc'] == '123'
+    assert "unique_to_recipe" in variant
+    assert variant["abc"] == "123"
 
 
 def test_exclusive_config_file():
@@ -518,15 +554,18 @@ def test_exclusive_config_file():
     )[0][0]
     variant = output.config.variant
     # is cwd ignored?
-    assert 'cwd' not in variant
+    assert "cwd" not in variant
     # did we load the exclusive config
-    assert 'exclusive' in variant
+    assert "exclusive" in variant
     # does recipe config override exclusive?
-    assert 'unique_to_recipe' in variant
-    assert variant['abc'] == '123'
+    assert "unique_to_recipe" in variant
+    assert variant["abc"] == "123"
 
 
-@pytest.mark.skipif(on_mac and platform.machine() == "arm64", reason="M1 Mac-specific file system error related to this test")
+@pytest.mark.skipif(
+    on_mac and platform.machine() == "arm64",
+    reason="M1 Mac-specific file system error related to this test",
+)
 def test_inner_python_loop_with_output(testing_config):
     outputs = api.get_output_file_paths(
         os.path.join(variants_dir, "test_python_as_subpackage_loop"),
@@ -534,9 +573,9 @@ def test_inner_python_loop_with_output(testing_config):
     )
     outputs = [os.path.basename(out) for out in outputs]
     assert len(outputs) == 5
-    assert len([out for out in outputs if out.startswith('tbb-2018')]) == 1
-    assert len([out for out in outputs if out.startswith('tbb-devel-2018')]) == 1
-    assert len([out for out in outputs if out.startswith('tbb4py-2018')]) == 3
+    assert len([out for out in outputs if out.startswith("tbb-2018")]) == 1
+    assert len([out for out in outputs if out.startswith("tbb-devel-2018")]) == 1
+    assert len([out for out in outputs if out.startswith("tbb4py-2018")]) == 3
 
     testing_config.variant_config_files = [
         os.path.join(
@@ -549,9 +588,9 @@ def test_inner_python_loop_with_output(testing_config):
     )
     outputs = [os.path.basename(out) for out in outputs]
     assert len(outputs) == 5
-    assert len([out for out in outputs if out.startswith('tbb-2018')]) == 1
-    assert len([out for out in outputs if out.startswith('tbb-devel-2018')]) == 1
-    assert len([out for out in outputs if out.startswith('tbb4py-2018')]) == 3
+    assert len([out for out in outputs if out.startswith("tbb-2018")]) == 1
+    assert len([out for out in outputs if out.startswith("tbb-devel-2018")]) == 1
+    assert len([out for out in outputs if out.startswith("tbb4py-2018")]) == 3
 
     testing_config.variant_config_files = [
         os.path.join(
@@ -566,9 +605,9 @@ def test_inner_python_loop_with_output(testing_config):
     )
     outputs = [os.path.basename(out) for out in outputs]
     assert len(outputs) == 5
-    assert len([out for out in outputs if out.startswith('tbb-2018')]) == 1
-    assert len([out for out in outputs if out.startswith('tbb-devel-2018')]) == 1
-    assert len([out for out in outputs if out.startswith('tbb4py-2018')]) == 3
+    assert len([out for out in outputs if out.startswith("tbb-2018")]) == 1
+    assert len([out for out in outputs if out.startswith("tbb-devel-2018")]) == 1
+    assert len([out for out in outputs if out.startswith("tbb4py-2018")]) == 3
 
 
 def test_variant_as_dependency_name(testing_config):
@@ -597,13 +636,15 @@ def test_different_git_vars():
     assert "1.21.11" in versions
 
 
-@pytest.mark.skipif(sys.platform != "linux", reason="recipe uses a unix specific script")
+@pytest.mark.skipif(
+    sys.platform != "linux", reason="recipe uses a unix specific script"
+)
 def test_top_level_finalized(testing_config):
     # see https://github.com/conda/conda-build/issues/3618
     recipe = os.path.join(variants_dir, "30_top_level_finalized")
     outputs = api.build(recipe, config=testing_config)
-    xzcat_output = package_has_file(outputs[0], 'xzcat_output')
-    assert '5.2.3' in xzcat_output
+    xzcat_output = package_has_file(outputs[0], "xzcat_output")
+    assert "5.2.3" in xzcat_output
 
 
 def test_variant_subkeys_retained():
@@ -614,6 +655,7 @@ def test_variant_subkeys_retained():
     )[0][0]
     found_replacements = False
     from conda_build.build import get_all_replacements
+
     for variant in m.config.variants:
         found_replacements = get_all_replacements(variant)
     assert len(found_replacements), "Did not find replacements"

@@ -8,7 +8,7 @@
 
 ### Deprecations
 
-* Removed conda <4.13 logic. (#4677)
+* <news item>
 
 ### Docs
 
@@ -16,4 +16,4 @@
 
 ### Other
 
-* <news item>
+* Enable `xattr` test on macOS. (#4845)

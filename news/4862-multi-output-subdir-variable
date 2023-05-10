@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* conda skeleton cpan now correctly adds a C compiler as dependency if the distribution contains an `.xs` file
+* Use a unique subdir variable name when rebuilding the index for multi-output builds (#4862, fixes #4855)
 
 ### Deprecations
 
