@@ -1,10 +1,14 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-import re
+from __future__ import annotations
 import string
 
 from conda_build import exceptions
 from conda_build.utils import comma_join
+from typing import TYPE_CHECKING, Any, List, Optional
+
+if TYPE_CHECKING:
+    from re import Match
 
 allowed_license_families = """
 AGPL
@@ -32,12 +36,12 @@ cc_regex = re.compile(r"CC\w+")  # match CC
 punk_regex = re.compile("[%s]" % re.escape(string.punctuation))  # removes punks
 
 
-def match_gpl3(family):
+def match_gpl3(family: str) -> Optional[re.Match]:
     """True if family matches GPL3 or GPL >= 2, else False"""
     return gpl23_regex.search(family) or gpl3_regex.search(family)
 
 
-def normalize(s):
+def normalize(s: str) -> str:
     """Set to ALL CAPS, replace common GPL patterns, and strip"""
     s = s.upper()
     s = re.sub("GENERAL PUBLIC LICENSE", "GPL", s)
@@ -46,7 +50,7 @@ def normalize(s):
     return s.strip()
 
 
-def remove_special_characters(s):
+def remove_special_characters(s: str) -> str:
     """Remove punctuation, spaces, tabs, and line feeds"""
     s = punk_regex.sub(" ", s)
     s = re.sub(r"\s+", "", s)
@@ -67,7 +71,7 @@ def guess_license_family_from_index(index=None, recognized=allowed_license_famil
     return guess_license_family(license_name, recognized)
 
 
-def guess_license_family(license_name=None, recognized=allowed_license_families):
+def guess_license_family(license_name: Optional[str]=None, recognized: List[str]=allowed_license_families) -> str:
     """Return best guess of license_family from the conda package index.
 
     Note: Logic here is simple, and focuses on existing set of allowed families
@@ -98,7 +102,7 @@ def guess_license_family(license_name=None, recognized=allowed_license_families)
     return "OTHER"
 
 
-def ensure_valid_license_family(meta):
+def ensure_valid_license_family(meta: Any) -> None:
     try:
         license_family = meta["about"]["license_family"]
     except KeyError:

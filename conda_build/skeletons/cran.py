@@ -3,31 +3,18 @@
 """
 Tools for converting Cran packages to conda recipes.
 """
-
-
-import argparse
+from __future__ import annotations
 import copy
 import hashlib
 import re
 import subprocess
 import sys
-import tarfile
 import unicodedata
 import zipfile
 from itertools import chain
 from os import environ, listdir, makedirs, sep
 from os.path import (
-    basename,
-    commonprefix,
-    exists,
-    isabs,
-    isdir,
-    isfile,
-    join,
-    normpath,
-    realpath,
-    relpath,
-)
+    basename, commonprefix, exists, isabs, isdir, isfile, join, normpath, realpath, relpath)
 
 import requests
 import yaml
@@ -46,6 +33,14 @@ from conda_build.config import get_or_merge_config
 from conda_build.license_family import allowed_license_families, guess_license_family
 from conda_build.utils import ensure_list, rm_rf
 from conda_build.variants import DEFAULT_VARIANTS, get_package_variants
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
+
+if TYPE_CHECKING:
+    from argparse import _SubParsersAction
+    from conda_build.config import Config
+    from io import BufferedReader
+    from requests.sessions import Session
+    from tarfile import ExFileObject
 
 SOURCE_META = """\
   {archive_keys}
@@ -317,7 +312,7 @@ def package_exists(package_name):
     #                     "chooseCRANmirror(ind=2);install.packages('{}')".format(package_name)])
 
 
-def add_parser(repos):
+def add_parser(repos: argparse._SubParsersAction) -> None:
     # for loading default variant info
     cran = repos.add_parser(
         "cran",
@@ -465,7 +460,7 @@ def add_parser(repos):
     )
 
 
-def dict_from_cran_lines(lines):
+def dict_from_cran_lines(lines: List[str]) -> Dict[str, Union[str, List[str]]]:
     d = {}
     for line in lines:
         if not line:
@@ -487,7 +482,7 @@ def dict_from_cran_lines(lines):
     return d
 
 
-def remove_package_line_continuations(chunk):
+def remove_package_line_continuations(chunk: List[str]) -> List[str]:
     """
     >>> chunk = [
         'Package: A3',
@@ -546,7 +541,7 @@ def remove_package_line_continuations(chunk):
     return chunk
 
 
-def yaml_quote_string(string):
+def yaml_quote_string(string: str) -> str:
     """
     Quote a string for use in YAML.
 
@@ -566,7 +561,7 @@ def yaml_quote_string(string):
 
 # Due to how we render the metadata there can be significant areas of repeated newlines.
 # This collapses them and also strips any trailing spaces.
-def clear_whitespace(string):
+def clear_whitespace(string: str) -> str:
     lines = []
     last_line = ""
     for line in string.splitlines():
@@ -577,7 +572,7 @@ def clear_whitespace(string):
     return "\n".join(lines)
 
 
-def read_description_contents(fp):
+def read_description_contents(fp: Union[BufferedReader, tarfile.ExFileObject]) -> Dict[str, Union[str, List[str]]]:
     bytes = fp.read()
     text = bytes.decode("utf-8", errors="replace")
     text = clear_whitespace(text)
@@ -585,7 +580,7 @@ def read_description_contents(fp):
     return dict_from_cran_lines(lines)
 
 
-def get_archive_metadata(path, verbose=True):
+def get_archive_metadata(path: str, verbose: bool=True) -> Dict[str, Union[str, List[str]]]:
     if verbose:
         print("Reading package metadata from %s" % path)
     if basename(path) == "DESCRIPTION":
@@ -637,7 +632,7 @@ def get_latest_git_tag(config):
     return tags[-1]
 
 
-def _ssl_no_verify():
+def _ssl_no_verify() -> bool:
     """Gets whether the SSL_NO_VERIFY environment variable is set to 1 or True.
 
     This provides a workaround for users in some corporate environments where
@@ -646,7 +641,7 @@ def _ssl_no_verify():
     return environ.get("SSL_NO_VERIFY", "").strip().lower() in ("1", "true")
 
 
-def get_session(output_dir, verbose=True):
+def get_session(output_dir: str, verbose: bool=True) -> Session:
     session = requests.Session()
     session.verify = _ssl_no_verify()
     try:
@@ -686,7 +681,7 @@ def get_cran_archive_versions(cran_url, session, package, verbose=True):
     return [v for dt, v in sorted(versions, reverse=True)]
 
 
-def get_cran_index(cran_url, session, verbose=True):
+def get_cran_index(cran_url: str, session: Session, verbose: bool=True) -> Dict[str, Union[Tuple[str, str], Tuple[str, None]]]:
     if verbose:
         print("Fetching main index from %s" % cran_url)
     r = session.get(cran_url + "/src/contrib/")
@@ -717,7 +712,7 @@ def make_array(m, key, allow_empty=False):
     return result
 
 
-def existing_recipe_dir(output_dir, output_suffix, package, version):
+def existing_recipe_dir(output_dir: str, output_suffix: str, package: str, version: None) -> None:
     result = None
     if version:
         package = package + "-" + version.replace("-", "_")
@@ -730,13 +725,13 @@ def existing_recipe_dir(output_dir, output_suffix, package, version):
     return result
 
 
-def strip_end(string, end):
+def strip_end(string: str, end: str) -> str:
     if string.endswith(end):
         return string[: -len(end)]
     return string
 
 
-def package_to_inputs_dict(output_dir, output_suffix, git_tag, package, version=None):
+def package_to_inputs_dict(output_dir: str, output_suffix: str, git_tag: None, package: str, version: None=None) -> Dict[str, Optional[str]]:
     """
     Converts `package` (*) into a tuple of:
 
@@ -846,7 +841,7 @@ def get_available_binaries(cran_url, details):
             details["binaries"].setdefault(pkg, []).append((ver, url + filename))
 
 
-def remove_comments(template):
+def remove_comments(template: str) -> str:
     re_comment = re.compile(r"^\s*#\s")
     lines = template.split("\n")
     lines_no_comments = [line for line in lines if not re_comment.match(line)]
@@ -854,28 +849,28 @@ def remove_comments(template):
 
 
 def skeletonize(
-    in_packages,
-    output_dir=".",
-    output_suffix="",
-    add_maintainer=None,
-    version=None,
-    git_tag=None,
-    cran_url=None,
-    recursive=False,
-    archive=True,
-    version_compare=False,
-    update_policy="",
-    r_interp="r-base",
-    use_binaries_ver=None,
-    use_noarch_generic=False,
-    use_when_no_binary="src",
-    use_rtools_win=False,
-    config=None,
-    variant_config_files=None,
-    allow_archived=False,
-    add_cross_r_base=False,
-    no_comments=False,
-):
+    in_packages: List[str],
+    output_dir: str=".",
+    output_suffix: str="",
+    add_maintainer: None=None,
+    version: None=None,
+    git_tag: None=None,
+    cran_url: None=None,
+    recursive: bool=False,
+    archive: bool=True,
+    version_compare: bool=False,
+    update_policy: str="",
+    r_interp: str="r-base",
+    use_binaries_ver: None=None,
+    use_noarch_generic: bool=False,
+    use_when_no_binary: str="src",
+    use_rtools_win: bool=False,
+    config: Optional[Config]=None,
+    variant_config_files: Optional[List[Any]]=None,
+    allow_archived: bool=False,
+    add_cross_r_base: bool=False,
+    no_comments: bool=False,
+) -> None:
     if (
         use_when_no_binary != "error"
         and use_when_no_binary != "src"
@@ -1772,7 +1767,7 @@ def up_to_date(cran_index, package):
     return True
 
 
-def get_license_info(license_text, allowed_license_families):
+def get_license_info(license_text: str, allowed_license_families: List[str]) -> Tuple[str, str, str]:
     """
     Most R packages on CRAN do not include a license file. Instead, to avoid
     duplication, R base ships with common software licenses:

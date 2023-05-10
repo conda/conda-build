@@ -1,6 +1,8 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-import argparse
+from typing import TYPE_CHECKING
+
+from __future__ import annotations
 from copy import copy
 
 from conda_build.license_family import guess_license_family
@@ -20,6 +22,9 @@ from textwrap import wrap
 from xml.etree import ElementTree as ET
 
 from .cran import yaml_quote_string
+
+if TYPE_CHECKING:
+    from argparse import _SubParsersAction
 
 try:
     from urllib.request import urlopen
@@ -742,7 +747,9 @@ def skeletonize(
     )
 
 
-def add_parser(repos):
+def add_parser(repos: from typing import TYPE_CHECKING
+
+argparse._SubParsersAction) -> None:
     rpm = repos.add_parser(
         "rpm",
         help="""

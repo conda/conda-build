@@ -1,20 +1,22 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-import argparse
+from __future__ import annotations
 import logging
 import sys
 
 from conda_build import api
 from conda_build.conda_interface import (
-    ArgumentParser,
-    add_parser_channels,
-    binstar_upload,
-)
+    ArgumentParser, add_parser_channels, binstar_upload)
+from typing import TYPE_CHECKING, List, Tuple
+
+if TYPE_CHECKING:
+    from argparse import Namespace
+    from conda.cli.conda_argparse import ArgumentParser
 
 logging.basicConfig(level=logging.INFO)
 
 
-def parse_args(args):
+def parse_args(args: List[str]) -> Tuple[conda.cli.conda_argparse.ArgumentParser, argparse.Namespace]:
     p = ArgumentParser(
         description="""
 Tool for building conda metapackages.  A metapackage is a package with no
@@ -108,7 +110,7 @@ command line with the conda metapackage command.
     return p, args
 
 
-def execute(args):
+def execute(args: List[str]) -> None:
     _, args = parse_args(args)
     channel_urls = args.__dict__.get("channel") or args.__dict__.get("channels") or ()
     api.create_metapackage(channel_urls=channel_urls, **args.__dict__)

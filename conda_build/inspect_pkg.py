@@ -1,5 +1,6 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
 import json
 import os
 import re
@@ -12,36 +13,26 @@ from operator import itemgetter
 from os.path import abspath, basename, dirname, exists, join, normcase
 
 from conda_build.conda_interface import (
-    display_actions,
-    get_index,
-    install_actions,
-    is_linked,
-    linked_data,
-    specs_from_args,
-)
+    display_actions, get_index, install_actions, is_linked, linked_data, specs_from_args)
 from conda_build.os_utils.ldd import (
-    get_linkages,
-    get_package_obj_files,
-    get_untracked_obj_files,
-)
+    get_linkages, get_package_obj_files, get_untracked_obj_files)
 from conda_build.os_utils.liefldd import codefile_type
 from conda_build.os_utils.macho import get_rpaths, human_filetype
 from conda_build.utils import (
-    comma_join,
-    ensure_list,
-    get_logger,
-    package_has_file,
-    rm_rf,
-)
+    comma_join, ensure_list, get_logger, package_has_file, rm_rf)
+from typing import TYPE_CHECKING, Any, DefaultDict, Dict, Iterator, List, Set, Tuple, Union
+
+if TYPE_CHECKING:
+    from conda.models.dist import Dist
 
 
 @lru_cache(maxsize=None)
-def dist_files(prefix, dist):
+def dist_files(prefix: str, dist: Dist) -> Set[str]:
     meta = is_linked(prefix, dist)
     return set(meta["files"]) if meta else set()
 
 
-def which_package(in_prefix_path, prefix, avoid_canonical_channel_name=False):
+def which_package(in_prefix_path: str, prefix: str, avoid_canonical_channel_name: bool=False) -> Iterator[Dist]:
     """
     given the path of a conda installed file iterate over
     the conda packages the file came from.  Usually the iteration yields
@@ -62,7 +53,7 @@ def which_package(in_prefix_path, prefix, avoid_canonical_channel_name=False):
             yield dist
 
 
-def print_object_info(info, key):
+def print_object_info(info: List[Dict[str, str]], key: str) -> str:
     output_string = ""
     for header, group in groupby(sorted(info, key=itemgetter(key)), itemgetter(key)):
         output_string += header + "\n"
@@ -106,7 +97,7 @@ def check_install(
     return None
 
 
-def print_linkages(depmap, show_files=False):
+def print_linkages(depmap: DefaultDict[Union[str, Dist], List[Union[Any, Tuple[str, str, str]]]], show_files: bool=False) -> str:
     # Print system and not found last
     dist_depmap = {}
     for k, v in depmap.items():
@@ -130,7 +121,7 @@ def print_linkages(depmap, show_files=False):
     return output_string
 
 
-def replace_path(binary, path, prefix):
+def replace_path(binary: str, path: str, prefix: str) -> str:
     if sys.platform.startswith("linux"):
         return abspath(path)
     elif sys.platform.startswith("darwin"):
@@ -155,7 +146,7 @@ def replace_path(binary, path, prefix):
         return "not found"
 
 
-def test_installable(channel="defaults"):
+def test_installable(channel: str="defaults") -> bool:
     success = True
     log = get_logger(__name__)
     has_py = re.compile(r"py(\d)(\d)")
@@ -214,25 +205,25 @@ def test_installable(channel="defaults"):
     return success
 
 
-def _installed(prefix):
+def _installed(prefix: str) -> Dict[str, Dist]:
     installed = linked_data(prefix)
     installed = {rec["name"]: dist for dist, rec in installed.items()}
     return installed
 
 
-def _underlined_text(text):
+def _underlined_text(text: str) -> str:
     return str(text) + "\n" + "-" * len(str(text)) + "\n\n"
 
 
 def inspect_linkages(
-    packages,
-    prefix=sys.prefix,
-    untracked=False,
-    all_packages=False,
-    show_files=False,
-    groupby="package",
-    sysroot="",
-):
+    packages: List[str],
+    prefix: str=sys.prefix,
+    untracked: bool=False,
+    all_packages: bool=False,
+    show_files: bool=False,
+    groupby: str="package",
+    sysroot: str="",
+) -> str:
     pkgmap = {}
 
     installed = _installed(prefix)
@@ -330,7 +321,7 @@ def inspect_linkages(
     return output_string
 
 
-def inspect_objects(packages, prefix=sys.prefix, groupby="package"):
+def inspect_objects(packages: List[str], prefix: str=sys.prefix, groupby: str="package") -> str:
     installed = _installed(prefix)
 
     output_string = ""
@@ -369,7 +360,7 @@ def inspect_objects(packages, prefix=sys.prefix, groupby="package"):
     return output_string
 
 
-def get_hash_input(packages):
+def get_hash_input(packages: List[Union[str, Any]]) -> Dict[str, Union[Dict[str, Dict[str, str]], Dict[str, Dict[Any, Any]], str]]:
     hash_inputs = {}
     for pkg in ensure_list(packages):
         pkgname = os.path.basename(pkg)[:-8]

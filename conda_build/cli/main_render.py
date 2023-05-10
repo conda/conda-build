@@ -1,6 +1,6 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-import argparse
+from __future__ import annotations
 import logging
 import sys
 from pprint import pprint
@@ -10,13 +10,15 @@ from yaml.parser import ParserError
 
 from conda_build import __version__, api
 from conda_build.conda_interface import (
-    ArgumentParser,
-    add_parser_channels,
-    cc_conda_build,
-)
+    ArgumentParser, add_parser_channels, cc_conda_build)
 from conda_build.config import get_channel_urls, get_or_merge_config
 from conda_build.utils import LoggingContext
 from conda_build.variants import get_package_variants, set_language_env_vars
+from typing import TYPE_CHECKING, List, Optional, Tuple
+
+if TYPE_CHECKING:
+    from argparse import Namespace
+    from conda.cli.conda_argparse import ArgumentParser
 
 on_win = sys.platform == "win32"
 log = logging.getLogger(__name__)
@@ -24,7 +26,7 @@ log = logging.getLogger(__name__)
 
 # see: https://stackoverflow.com/questions/29986185/python-argparse-dict-arg
 class ParseYAMLArgument(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
+    def __call__(self, parser:     conda.cli.conda_argparse.ArgumentParser, namespace:     argparse.Namespace, values: List[str], option_string: Optional[str]=None) -> None:
         if len(values) != 1:
             raise RuntimeError("This switch requires exactly one argument")
 
@@ -42,7 +44,7 @@ class ParseYAMLArgument(argparse.Action):
             )
 
 
-def get_render_parser():
+def get_render_parser() -> conda.cli.conda_argparse.ArgumentParser:
     p = ArgumentParser(
         description="""
 Tool for expanding the template meta.yml file (containing Jinja syntax and
@@ -166,7 +168,7 @@ source to try fill in related template variables.",
     return p
 
 
-def parse_args(args):
+def parse_args(args: List[str]) -> Tuple[conda.cli.conda_argparse.ArgumentParser, argparse.Namespace]:
     p = get_render_parser()
     p.add_argument(
         "-f",
@@ -190,7 +192,7 @@ def parse_args(args):
     return p, args
 
 
-def execute(args, print_results=True):
+def execute(args: List[str], print_results: bool=True) -> None:
     p, args = parse_args(args)
 
     config = get_or_merge_config(None, **args.__dict__)

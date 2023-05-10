@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 """This file handles the parsing of feature specifications from files,
 ending up with a configuration matrix"""
+from __future__ import annotations
 
 import os.path
 import re
@@ -16,6 +17,10 @@ import yaml
 from conda_build.conda_interface import cc_conda_build, subdir
 from conda_build.utils import ensure_list, get_logger, islist, on_win, trim_empty_keys
 from conda_build.version import _parse as parse_version
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Union
+
+if TYPE_CHECKING:
+    from conda_build.metadata import MetaData
 
 DEFAULT_VARIANTS = {
     "python": f"{sys.version_info.major}.{sys.version_info.minor}",
@@ -92,7 +97,7 @@ SUFFIX_MAP = {
 
 
 @lru_cache(maxsize=None)
-def _get_default_compilers(platform, py_ver):
+def _get_default_compilers(platform: str, py_ver: str) -> Dict[str, str]:
     compilers = DEFAULT_COMPILERS[platform].copy()
     if platform == "win":
         if parse_version(py_ver) >= parse_version("3.5"):
@@ -112,7 +117,7 @@ def _get_default_compilers(platform, py_ver):
     return compilers
 
 
-def get_default_variant(config):
+def get_default_variant(config: Config) -> Dict[str, Union[OrderedDict, List[str], str]]:
     base = DEFAULT_VARIANTS.copy()
     base["target_platform"] = config.subdir
     python = (
@@ -124,7 +129,7 @@ def get_default_variant(config):
     return base
 
 
-def parse_config_file(path, config):
+def parse_config_file(path: str, config: Config) -> Dict[str, Any]:
     from conda_build.metadata import get_selectors, select_lines
 
     with open(path) as f:
@@ -135,7 +140,7 @@ def parse_config_file(path, config):
     return content
 
 
-def validate_spec(src, spec):
+def validate_spec(src: str, spec: Dict[str, Any]) -> None:
     errors = []
 
     # check for invalid characters
@@ -189,7 +194,7 @@ def validate_spec(src, spec):
         )
 
 
-def find_config_files(metadata_or_path, config):
+def find_config_files(metadata_or_path: Union[str, MetaData], config: Config) -> List[Union[Any, str]]:
     """
     Find config files to load. Config files are stacked in the following order:
         1. exclusive config files (see config.exclusive_config_files)
@@ -239,8 +244,8 @@ def find_config_files(metadata_or_path, config):
 
 
 def _combine_spec_dictionaries(
-    specs, extend_keys=None, filter_keys=None, zip_keys=None, log_output=True
-):
+    specs: Union[Dict[str, Union[Dict[str, List[str]], Dict[str, str]]], OrderedDict], extend_keys: Optional[List[str]]=None, filter_keys: Optional[List[str]]=None, zip_keys: Optional[List[List[str]]]=None, log_output: bool=True
+) -> Dict[str, Union[List[str], OrderedDict, List[List[str]], Dict[str, List[Dict[str, Union[str, List[str]]]]]]]:
     # each spec is a dictionary.  Each subsequent spec replaces the previous one.
     #     Only the last one with the key stays.
     values = {}
@@ -349,7 +354,7 @@ def _combine_spec_dictionaries(
     return values
 
 
-def combine_specs(specs, log_output=True):
+def combine_specs(specs: Union[Dict[str, Union[Dict[str, List[str]], Dict[str, str]]], OrderedDict], log_output: bool=True) -> Dict[str, Union[List[str], OrderedDict, List[List[str]], Dict[str, List[Dict[str, Union[str, List[str]]]]]]]:
     """With arbitrary sets of sources, combine into a single aggregate spec.
 
     Later specs in the input set have priority and overwrite duplicate entries.
@@ -380,7 +385,7 @@ def combine_specs(specs, log_output=True):
     return values
 
 
-def set_language_env_vars(variant):
+def set_language_env_vars(variant: Union[Dict[str, Union[OrderedDict, List[str], str]], Dict[str, str], Dict[str, Union[OrderedDict, Set[str], str]], List[Dict[str, Union[OrderedDict, List[str], str]]], List[Dict[str, Union[List[str], List[List[str]], OrderedDict, str]]]]) -> Dict[str, str]:
     """Given args passed into conda command, set language env vars to be made available.
 
     Search terms: CONDA_PY, CONDA_R, CONDA_PERL, CONDA_LUA, CONDA_NPY
@@ -397,7 +402,7 @@ def set_language_env_vars(variant):
     return env
 
 
-def _get_zip_keys(spec):
+def _get_zip_keys(spec: Any) -> Set[frozenset]:
     """
     Extracts 'zip_keys' from `spec` and standardizes value into a list of zip_groups
     (tuples of keys (string)).
@@ -421,7 +426,7 @@ def _get_zip_keys(spec):
     raise ValueError("'zip_keys' expect list of string or list of lists of string")
 
 
-def _get_extend_keys(spec, include_defaults=True):
+def _get_extend_keys(spec: Any, include_defaults: bool=True) -> Set[str]:
     """
     Extracts 'extend_keys' from `spec`.
 
@@ -438,7 +443,7 @@ def _get_extend_keys(spec, include_defaults=True):
     return extend_keys.union(ensure_list(spec.get("extend_keys")))
 
 
-def _get_passthru_keys(spec, zip_keys=None, extend_keys=None):
+def _get_passthru_keys(spec: Any, zip_keys: Optional[Set[frozenset]]=None, extend_keys: None=None) -> Set[str]:
     """
     Keys in `spec` that are not exploded and are simply carried over from the `spec`
     into the variants without modification.
@@ -460,7 +465,7 @@ def _get_passthru_keys(spec, zip_keys=None, extend_keys=None):
     return passthru_keys.union(extend_keys).difference(*zip_keys).intersection(spec)
 
 
-def _get_explode_keys(spec, passthru_keys=None, zip_keys=None, extend_keys=None):
+def _get_explode_keys(spec: Any, passthru_keys: Optional[Set[str]]=None, zip_keys: None=None, extend_keys: None=None) -> Set[str]:
     """
     Keys in `spec` that are that are exploding into the variants.
 
@@ -483,7 +488,7 @@ def _get_explode_keys(spec, passthru_keys=None, zip_keys=None, extend_keys=None)
     return set(spec).difference(passthru_keys)
 
 
-def filter_by_key_value(variants, key, values, source_name):
+def filter_by_key_value(variants: List[Dict[str, Union[Dict[str, List[Dict[str, Union[str, List[str]]]]], List[str], OrderedDict, str, List[List[str]]]]], key: str, values: Union[str, Dict[str, List[Dict[str, Union[str, List[str]]]]], List[str]], source_name: str) -> List[Union[Any, Dict[str, Union[Dict[str, List[Dict[str, Union[str, List[str]]]]], List[str], OrderedDict, str]], Dict[str, Union[OrderedDict, List[str], str]], Dict[str, Union[List[str], List[List[str]], OrderedDict, str]]]]:
     """variants is the exploded out list of dicts, with one value per key in each dict.
     key and values come from subsequent variants before they are exploded out."""
     reduced_variants = []
@@ -513,7 +518,7 @@ def _split_str(string, char):
     return string.split(char)
 
 
-def explode_variants(spec):
+def explode_variants(spec: Any) -> List[Dict[str, Any]]:
     """
     Helper function to explode spec into all of the variants.
 
@@ -588,7 +593,7 @@ def explode_variants(spec):
 dict_of_lists_to_list_of_dicts = explode_variants
 
 
-def list_of_dicts_to_dict_of_lists(list_of_dicts):
+def list_of_dicts_to_dict_of_lists(list_of_dicts: List[Dict[str, Union[Dict[str, List[Dict[str, Union[str, List[str]]]]], List[str], OrderedDict, str, List[List[str]]]]]) -> OrderedDict:
     """Opposite of dict_of_lists_to_list_of_dicts function.
 
     Take broken out collection of variants, and squish it into a dict, where each value is a list.
@@ -638,7 +643,7 @@ def list_of_dicts_to_dict_of_lists(list_of_dicts):
     return squished
 
 
-def get_package_combined_spec(recipedir_or_metadata, config=None, variants=None):
+def get_package_combined_spec(recipedir_or_metadata: Union[str, MetaData], config: Optional[Config]=None, variants: Optional[Union[Dict[str, List[str]], Dict[str, str], Dict[str, Union[str, List[str]]]]]=None) -> Union[Tuple[Dict[str, Union[List[str], OrderedDict, List[List[str]]]], OrderedDict], Tuple[Dict[str, Union[OrderedDict, List[str]]], OrderedDict], Tuple[Dict[str, Union[List[str], OrderedDict, Dict[str, List[Dict[str, Union[str, List[str]]]]]]], OrderedDict]]:
     # outputs a tuple of (combined_spec_dict_of_lists, used_spec_file_dict)
     #
     # The output of this function is order preserving, unlike get_package_variants
@@ -670,7 +675,7 @@ def get_package_combined_spec(recipedir_or_metadata, config=None, variants=None)
     return combined_spec, specs
 
 
-def filter_combined_spec_to_used_keys(combined_spec, specs):
+def filter_combined_spec_to_used_keys(combined_spec: Dict[str, Union[List[str], OrderedDict, List[List[str]], Dict[str, List[Dict[str, Union[str, List[str]]]]]]], specs: OrderedDict) -> List[Dict[str, Union[Dict[str, List[Dict[str, Union[str, List[str]]]]], List[str], OrderedDict, str, List[List[str]]]]]:
     extend_keys = _get_extend_keys(combined_spec)
 
     # delete the default specs, so that they don't unnecessarily limit the matrix
@@ -692,14 +697,14 @@ def filter_combined_spec_to_used_keys(combined_spec, specs):
     return combined_spec
 
 
-def get_package_variants(recipedir_or_metadata, config=None, variants=None):
+def get_package_variants(recipedir_or_metadata: Union[str, MetaData], config: Optional[Config]=None, variants: Optional[Union[Dict[str, List[str]], Dict[str, str], Dict[str, Union[str, List[str]]]]]=None) -> List[Dict[str, Union[Dict[str, List[Dict[str, Union[str, List[str]]]]], List[str], OrderedDict, str, List[List[str]]]]]:
     combined_spec, specs = get_package_combined_spec(
         recipedir_or_metadata, config=config, variants=variants
     )
     return filter_combined_spec_to_used_keys(combined_spec, specs=specs)
 
 
-def get_vars(variants, loop_only=False):
+def get_vars(variants: List[Dict[str, Union[Dict[str, List[Dict[str, Union[str, List[str]]]]], List[str], OrderedDict, str, List[List[str]]]]], loop_only: bool=False) -> List[Union[Any, str]]:
     """For purposes of naming/identifying, provide a way of identifying which variables contribute
     to the matrix dimensionality"""
     special_keys = {"pin_run_as_build", "zip_keys", "ignore_version"}
@@ -717,7 +722,7 @@ def get_vars(variants, loop_only=False):
 
 
 @lru_cache(maxsize=None)
-def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
+def find_used_variables_in_text(variant: Tuple[str, Ellipsis], recipe_text: str, selectors_only: bool=False) -> Set[str]:
     used_variables = set()
     recipe_lines = recipe_text.splitlines()
     for v in variant:
@@ -761,7 +766,7 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
     return used_variables
 
 
-def find_used_variables_in_shell_script(variant, file_path):
+def find_used_variables_in_shell_script(variant: Dict[str, Union[OrderedDict, List[str], str, List[List[str]], Set[str]]], file_path: str) -> Set[str]:
     with open(file_path) as f:
         text = f.read()
     used_variables = set()
@@ -772,7 +777,7 @@ def find_used_variables_in_shell_script(variant, file_path):
     return used_variables
 
 
-def find_used_variables_in_batch_script(variant, file_path):
+def find_used_variables_in_batch_script(variant: Dict[str, Union[OrderedDict, List[str], str, Set[str]]], file_path: str) -> Set[str]:
     with open(file_path) as f:
         text = f.read()
     used_variables = set()

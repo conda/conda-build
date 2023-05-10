@@ -1,13 +1,18 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
 import json
 import tarfile
 from os.path import basename, normpath
 
 from conda_build.utils import codec, filter_info_files
+from typing import TYPE_CHECKING, Dict, List
+
+if TYPE_CHECKING:
+    from conda_build.config import Config
 
 
-def dist_fn(fn):
+def dist_fn(fn: str) -> str:
     if fn.endswith(".tar"):
         return fn[:-4]
     elif fn.endswith(".tar.bz2"):
@@ -17,7 +22,7 @@ def dist_fn(fn):
 
 
 class TarCheck:
-    def __init__(self, path, config):
+    def __init__(self, path: str, config: Config) -> None:
         self.t = tarfile.open(path)
         self.paths = {m.path for m in self.t.getmembers()}
         self.dist = dist_fn(basename(path))
@@ -26,13 +31,13 @@ class TarCheck:
         )
         self.config = config
 
-    def __enter__(self):
+    def __enter__(self) -> "TarCheck":
         return self
 
-    def __exit__(self, e_type, e_value, traceback):
+    def __exit__(self, e_type: None, e_value: None, traceback: None) -> None:
         self.t.close()
 
-    def info_files(self):
+    def info_files(self) -> None:
         lista = [
             normpath(p.strip().decode("utf-8"))
             for p in self.t.extractfile("info/files").readlines()
@@ -56,7 +61,7 @@ class TarCheck:
                 print("%r not in tarball" % p)
         raise Exception("info/files")
 
-    def index_json(self):
+    def index_json(self) -> None:
         info = json.loads(self.t.extractfile("info/index.json").read().decode("utf-8"))
         for varname in "name", "version":
             if info[varname] != getattr(self, varname):
@@ -67,7 +72,7 @@ class TarCheck:
                 )
         assert isinstance(info["build_number"], int)
 
-    def prefix_length(self):
+    def prefix_length(self) -> int:
         prefix_length = None
         if "info/has_prefix" in self.t.getnames():
             prefix_files = self.t.extractfile("info/has_prefix").readlines()
@@ -84,7 +89,7 @@ class TarCheck:
                     break
         return prefix_length
 
-    def correct_subdir(self):
+    def correct_subdir(self) -> None:
         info = json.loads(self.t.extractfile("info/index.json").read().decode("utf-8"))
         assert info["subdir"] in [
             self.config.host_subdir,
@@ -96,7 +101,7 @@ class TarCheck:
         )
 
 
-def check_all(path, config):
+def check_all(path: str, config: Config) -> None:
     x = TarCheck(path, config)
     x.info_files()
     x.index_json()
@@ -104,7 +109,7 @@ def check_all(path, config):
     x.t.close()
 
 
-def check_prefix_lengths(files, config):
+def check_prefix_lengths(files: List[str], config: Config) -> Dict[str, int]:
     lengths = {}
     for f in files:
         length = TarCheck(f, config).prefix_length()

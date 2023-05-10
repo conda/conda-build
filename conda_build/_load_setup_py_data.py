@@ -1,17 +1,19 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
 import logging
 import os
 import sys
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
 
 def load_setup_py_data(
-    setup_file,
-    from_recipe_dir=False,
-    recipe_dir=None,
-    work_dir=None,
-    permit_undefined_jinja=True,
-):
+    setup_file: str,
+    from_recipe_dir: bool=False,
+    recipe_dir: Optional[str]=None,
+    work_dir: Optional[str]=None,
+    permit_undefined_jinja: bool=True,
+) -> Dict[str, Union[List[str], str, Dict[str, str], Dict[str, List[str]]]]:
     _setuptools_data = {}
     log = logging.getLogger(__name__)
 

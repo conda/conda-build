@@ -1,5 +1,6 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
 import os
 import stat
 import sys
@@ -8,9 +9,10 @@ from os.path import expanduser, isfile, join
 from glob2 import glob
 
 from conda_build.conda_interface import root_dir
+from typing import TYPE_CHECKING, List, Optional, Union
 
 
-def find_executable(executable, prefix=None, all_matches=False):
+def find_executable(executable: str, prefix: Optional[str]=None, all_matches: bool=False) -> Union[List[str], str]:
     # dir_paths is referenced as a module-level variable
     #  in other code
     global dir_paths
@@ -68,8 +70,8 @@ def find_executable(executable, prefix=None, all_matches=False):
 
 
 def find_preferably_prefixed_executable(
-    executable, build_prefix=None, all_matches=False
-):
+    executable: str, build_prefix: Optional[str]=None, all_matches: bool=False
+) -> List[str]:
     found = find_executable("*" + executable, build_prefix, all_matches)
     if not found:
         # It is possible to force non-prefixed exes by passing os.sep as the

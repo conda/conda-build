@@ -1,6 +1,7 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 
+from __future__ import annotations
 import bz2
 import copy
 import fnmatch
@@ -18,15 +19,7 @@ from functools import partial
 from itertools import groupby
 from numbers import Number
 from os.path import (
-    abspath,
-    basename,
-    dirname,
-    getmtime,
-    getsize,
-    isfile,
-    join,
-    splitext,
-)
+    abspath, basename, dirname, getmtime, getsize, isfile, join, splitext)
 from pathlib import Path
 from uuid import uuid4
 
@@ -51,33 +44,22 @@ from yaml.scanner import ScannerError
 from conda_build import conda_interface, utils
 
 from .conda_interface import (
-    CondaError,
-    CondaHTTPError,
-    MatchSpec,
-    Resolve,
-    TemporaryDirectory,
-    VersionOrder,
-    context,
-    get_index,
-    human_bytes,
-    url_path,
-)
+    CondaError, CondaHTTPError, MatchSpec, Resolve, TemporaryDirectory, VersionOrder, context, get_index, human_bytes, url_path)
 from .utils import (
-    CONDA_PACKAGE_EXTENSION_V1,
-    CONDA_PACKAGE_EXTENSION_V2,
-    CONDA_PACKAGE_EXTENSIONS,
-    FileNotFoundError,
-    JSONDecodeError,
-    get_logger,
-    glob,
-)
+    CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2, CONDA_PACKAGE_EXTENSIONS, FileNotFoundError, JSONDecodeError, get_logger, glob)
+from typing import TYPE_CHECKING, Any, Dict, Iterator, List, Optional, Set, Tuple, Union
+
+if TYPE_CHECKING:
+    from conda.models.records import PackageRecord
+    from conda.resolve import Resolve
+    from jinja2.environment import Environment
 
 log = get_logger(__name__)
 
 
 # use this for debugging, because ProcessPoolExecutor isn't pdb/ipdb friendly
 class DummyExecutor(Executor):
-    def map(self, func, *iterables):
+    def map(self, func:     functools.partial, *iterables) -> Iterator[Union[Tuple[str, float, int, Dict[str, Union[str, int, List[str]]]], Tuple[str, float, int, Dict[str, Union[str, int]]], Tuple[str, float, int, Dict[str, Union[str, int, Dict[str, str]]]]]]:
         for iterable in iterables:
             for thing in iterable:
                 yield func(thing)
@@ -134,16 +116,16 @@ LOCKFILE_NAME = ".lock"
 
 
 def get_build_index(
-    subdir,
-    bldpkgs_dir,
-    output_folder=None,
-    clear_cache=False,
-    omit_defaults=False,
-    channel_urls=None,
-    debug=False,
-    verbose=True,
+    subdir: str,
+    bldpkgs_dir: str,
+    output_folder: Optional[str]=None,
+    clear_cache: bool=False,
+    omit_defaults: bool=False,
+    channel_urls: Optional[Union[Tuple[str], List[str], Tuple[()], Tuple[str, str]]]=None,
+    debug: bool=False,
+    verbose: bool=True,
     **kwargs,
-):
+) -> Any:
     global local_index_timestamp
     global local_subdir
     global local_output_folder
@@ -273,7 +255,7 @@ def get_build_index(
     return cached_index, local_index_timestamp, channel_data
 
 
-def _ensure_valid_channel(local_folder, subdir):
+def _ensure_valid_channel(local_folder: str, subdir: str) -> None:
     for folder in {subdir, "noarch"}:
         path = os.path.join(local_folder, folder)
         if not os.path.isdir(path):
@@ -281,20 +263,20 @@ def _ensure_valid_channel(local_folder, subdir):
 
 
 def update_index(
-    dir_path,
-    check_md5=False,
-    channel_name=None,
-    patch_generator=None,
-    threads=MAX_THREADS_DEFAULT,
-    verbose=False,
-    progress=False,
-    hotfix_source_repo=None,
-    subdirs=None,
-    warn=True,
-    current_index_versions=None,
-    debug=False,
-    index_file=None,
-):
+    dir_path: str,
+    check_md5: bool=False,
+    channel_name: Optional[str]=None,
+    patch_generator: Optional[str]=None,
+    threads: Optional[int]=MAX_THREADS_DEFAULT,
+    verbose: bool=False,
+    progress: bool=False,
+    hotfix_source_repo: None=None,
+    subdirs: None=None,
+    warn: bool=True,
+    current_index_versions: Optional[Union[Dict[str, List[float]], Dict[str, List[str]]]]=None,
+    debug: bool=False,
+    index_file: Optional[str]=None,
+) -> None:
     """
     If dir_path contains a directory named 'noarch', the path tree therein is treated
     as though it's a full channel, with a level of subdirs, each subdir having an update
@@ -365,7 +347,7 @@ def _determine_namespace(info):
     return namespace, info.get("name_in_channel", info["name"]), info["name"]
 
 
-def _make_seconds(timestamp):
+def _make_seconds(timestamp: int) -> int:
     timestamp = int(timestamp)
     if timestamp > 253402300799:  # 9999-12-31
         timestamp //= (
@@ -414,7 +396,7 @@ CHANNELDATA_FIELDS = (
 )
 
 
-def _clear_newline_chars(record, field_name):
+def _clear_newline_chars(record: Dict[str, Any], field_name: str) -> None:
     if field_name in record:
         try:
             record[field_name] = record[field_name].strip().replace("\n", " ")
@@ -423,7 +405,7 @@ def _clear_newline_chars(record, field_name):
             record[field_name] = record[field_name][0].strip().replace("\n", " ")
 
 
-def _apply_instructions(subdir, repodata, instructions):
+def _apply_instructions(subdir: str, repodata: Dict[str, Any], instructions: Dict[str, Union[int, Dict[str, Union[Dict[str, None], Dict[str, Optional[List[str]]]]], List[str], Dict[str, Union[Dict[str, List[str]], Dict[str, None], Dict[str, Optional[List[str]]]]]]]) -> Dict[str, Any]:
     repodata.setdefault("removed", [])
     utils.merge_or_update_dict(
         repodata.get("packages", {}),
@@ -471,7 +453,7 @@ def _apply_instructions(subdir, repodata, instructions):
     return repodata
 
 
-def _get_jinja2_environment():
+def _get_jinja2_environment() -> jinja2.environment.Environment:
     def _filter_strftime(dt, dt_format):
         if isinstance(dt, Number):
             if dt > 253402300799:  # 9999-12-31
@@ -500,7 +482,7 @@ def _get_jinja2_environment():
     return environment
 
 
-def _maybe_write(path, content, write_newline_end=False, content_is_binary=False):
+def _maybe_write(path: str, content: Union[str, bytes], write_newline_end: bool=False, content_is_binary: bool=False) -> bool:
     # Create the temp file next "path" so that we can use an atomic move, see
     # https://github.com/conda/conda-build/issues/3833
     temp_path = f"{path}.{uuid4()}"
@@ -564,7 +546,7 @@ def _warn_on_missing_dependencies(missing_dependencies, patched_repodata):
         log.warn("\n".join(builder))
 
 
-def _cache_post_install_details(paths_cache_path, post_install_cache_path):
+def _cache_post_install_details(paths_cache_path: str, post_install_cache_path: str) -> None:
     post_install_details_json = {
         "binary_prefix": False,
         "text_prefix": False,
@@ -602,7 +584,7 @@ def _cache_post_install_details(paths_cache_path, post_install_cache_path):
         json.dump(post_install_details_json, fh)
 
 
-def _cache_recipe(tmpdir, recipe_cache_path):
+def _cache_recipe(tmpdir: str, recipe_cache_path: str) -> Dict[str, Any]:
     recipe_path_search_order = (
         "info/recipe/meta.yaml.rendered",
         "info/recipe/meta.yaml",
@@ -631,7 +613,7 @@ def _cache_recipe(tmpdir, recipe_cache_path):
     return recipe_json
 
 
-def _cache_run_exports(tmpdir, run_exports_cache_path):
+def _cache_run_exports(tmpdir: str, run_exports_cache_path: str) -> None:
     run_exports = {}
     try:
         with open(os.path.join(tmpdir, "info", "run_exports.json")) as f:
@@ -646,7 +628,7 @@ def _cache_run_exports(tmpdir, run_exports_cache_path):
         json.dump(run_exports, fh)
 
 
-def _cache_icon(tmpdir, recipe_json, icon_cache_path):
+def _cache_icon(tmpdir: str, recipe_json: Dict[str, Any], icon_cache_path: str) -> None:
     # If a conda package contains an icon, also extract and cache that in an .icon/
     # directory.  The icon file name is the name of the package, plus the extension
     # of the icon file as indicated by the meta.yaml `app/icon` key.
@@ -662,7 +644,7 @@ def _cache_icon(tmpdir, recipe_json, icon_cache_path):
             utils.move_with_fallback(icon_path, icon_cache_path)
 
 
-def _make_subdir_index_html(channel_name, subdir, repodata_packages, extra_paths):
+def _make_subdir_index_html(channel_name: str, subdir: str, repodata_packages: Dict[str, Union[Dict[str, Union[str, int]], Dict[str, Union[str, int, List[str], bool]], Dict[str, Union[str, int, List[str]]], Dict[str, Union[str, int, Dict[str, str]]]]], extra_paths: OrderedDict) -> str:
     environment = _get_jinja2_environment()
     template = environment.get_template("subdir-index.html.j2")
     rendered_html = template.render(
@@ -674,7 +656,7 @@ def _make_subdir_index_html(channel_name, subdir, repodata_packages, extra_paths
     return rendered_html
 
 
-def _make_channeldata_index_html(channel_name, channeldata):
+def _make_channeldata_index_html(channel_name: str, channeldata: Dict[str, Union[int, Dict[str, Union[Dict[str, Optional[Union[str, bool, List[str], int]]], Dict[str, Optional[Union[bool, Dict[str, Dict[str, List[str]]], List[str], int, str]]]]], List[str], Dict[str, Dict[str, Optional[Union[bool, Dict[str, Dict[str, List[str]]], List[str], int, str]]]], Dict[str, Dict[str, Optional[Union[str, bool, List[str], int]]]]]]) -> str:
     environment = _get_jinja2_environment()
     template = environment.get_template("channeldata-index.html.j2")
     rendered_html = template.render(
@@ -708,13 +690,13 @@ def _get_source_repo_git_info(path):
     return commits
 
 
-def _cache_info_file(tmpdir, info_fn, cache_path):
+def _cache_info_file(tmpdir: str, info_fn: str, cache_path: str) -> None:
     info_path = os.path.join(tmpdir, "info", info_fn)
     if os.path.lexists(info_path):
         utils.move_with_fallback(info_path, cache_path)
 
 
-def _alternate_file_extension(fn):
+def _alternate_file_extension(fn: str) -> str:
     cache_fn = fn
     for ext in CONDA_PACKAGE_EXTENSIONS:
         cache_fn = cache_fn.replace(ext, "")
@@ -722,7 +704,7 @@ def _alternate_file_extension(fn):
     return cache_fn + next(iter(other_ext))
 
 
-def _get_resolve_object(subdir, file_path=None, precs=None, repodata=None):
+def _get_resolve_object(subdir: str, file_path: None=None, precs: Optional[List[PackageRecord]]=None, repodata: Optional[Any]=None) -> Resolve:
     packages = {}
     conda_packages = {}
     if file_path:
@@ -771,7 +753,7 @@ def _get_newest_versions(r, pins={}):
     return [pkg for group in groups.values() for pkg in group]
 
 
-def _add_missing_deps(new_r, original_r):
+def _add_missing_deps(new_r: Resolve, original_r: Resolve) -> List[Union[PackageRecord, Any]]:
     """For each package in new_r, if any deps are not satisfiable, backfill them from original_r."""
 
     expanded_groups = copy.deepcopy(new_r.groups)
@@ -795,7 +777,7 @@ def _add_missing_deps(new_r, original_r):
     return [pkg for group in expanded_groups.values() for pkg in group]
 
 
-def _add_prev_ver_for_features(new_r, orig_r):
+def _add_prev_ver_for_features(new_r: Resolve, orig_r: Resolve) -> List[Union[PackageRecord, Any]]:
     expanded_groups = copy.deepcopy(new_r.groups)
     for g_name in new_r.groups:
         if not any(m.track_features or m.features for m in new_r.groups[g_name]):
@@ -823,7 +805,7 @@ def _add_prev_ver_for_features(new_r, orig_r):
     return [pkg for group in expanded_groups.values() for pkg in group]
 
 
-def _shard_newest_packages(subdir, r, pins=None):
+def _shard_newest_packages(subdir: str, r: Resolve, pins: Optional[Union[Dict[str, List[float]], Dict[str, List[str]]]]=None) -> Set[PackageRecord]:
     """Captures only the newest versions of software in the resolve object.
 
     For things where more than one version is supported simultaneously (like Python),
@@ -855,7 +837,7 @@ def _shard_newest_packages(subdir, r, pins=None):
     return set(_add_prev_ver_for_features(new_r, r))
 
 
-def _build_current_repodata(subdir, repodata, pins):
+def _build_current_repodata(subdir: str, repodata: Dict[str, Any], pins: Optional[Union[Dict[str, List[float]], Dict[str, List[str]]]]) -> Dict[str, Any]:
     r = _get_resolve_object(subdir, repodata=repodata)
     keep_pkgs = _shard_newest_packages(subdir, r, pins)
     new_repodata = {
@@ -885,13 +867,13 @@ def _build_current_repodata(subdir, repodata, pins):
 class ChannelIndex:
     def __init__(
         self,
-        channel_root,
-        channel_name,
-        subdirs=None,
-        threads=MAX_THREADS_DEFAULT,
-        deep_integrity_check=False,
-        debug=False,
-    ):
+        channel_root: str,
+        channel_name: Optional[str],
+        subdirs: None=None,
+        threads: Optional[int]=MAX_THREADS_DEFAULT,
+        deep_integrity_check: bool=False,
+        debug: bool=False,
+    ) -> None:
         self.channel_root = abspath(channel_root)
         self.channel_name = channel_name or basename(channel_root.rstrip("/"))
         self._subdirs = subdirs
@@ -904,13 +886,13 @@ class ChannelIndex:
 
     def index(
         self,
-        patch_generator,
-        hotfix_source_repo=None,
-        verbose=False,
-        progress=False,
-        current_index_versions=None,
-        index_file=None,
-    ):
+        patch_generator: Optional[str],
+        hotfix_source_repo: None=None,
+        verbose: bool=False,
+        progress: bool=False,
+        current_index_versions: Optional[Union[Dict[str, List[float]], Dict[str, List[str]]]]=None,
+        index_file: Optional[str]=None,
+    ) -> None:
         if verbose:
             level = logging.DEBUG
         else:
@@ -1008,7 +990,7 @@ class ChannelIndex:
                 self._write_channeldata_index_html(channel_data)
                 self._write_channeldata(channel_data)
 
-    def index_subdir(self, subdir, index_file=None, verbose=False, progress=False):
+    def index_subdir(self, subdir: str, index_file: Optional[str]=None, verbose: bool=False, progress: bool=False) -> Dict[str, Any]:
         subdir_path = join(self.channel_root, subdir)
         self._ensure_dirs(subdir)
         repodata_json_path = join(subdir_path, REPODATA_FROM_PKGS_JSON_FN)
@@ -1179,7 +1161,7 @@ class ChannelIndex:
                     json.dump(stat_cache, fh)
         return new_repodata
 
-    def _ensure_dirs(self, subdir: str):
+    def _ensure_dirs(self, subdir: str) -> None:
         """Create cache directories within a subdir.
 
         Args:
@@ -1200,13 +1182,13 @@ class ChannelIndex:
 
     def _calculate_update_set(
         self,
-        subdir,
-        fns_in_subdir,
-        old_repodata_fns,
-        stat_cache,
-        verbose=False,
-        progress=True,
-    ):
+        subdir: str,
+        fns_in_subdir: Set[str],
+        old_repodata_fns: Set[str],
+        stat_cache: Dict[str, Dict[str, int]],
+        verbose: bool=False,
+        progress: bool=True,
+    ) -> Set[str]:
         # Determine the packages that already exist in repodata, but need to be updated.
         # We're not using md5 here because it takes too long.
         candidate_fns = fns_in_subdir & old_repodata_fns
@@ -1231,7 +1213,7 @@ class ChannelIndex:
         return update_set
 
     @staticmethod
-    def _extract_to_cache(channel_root, subdir, fn, second_try=False):
+    def _extract_to_cache(channel_root: str, subdir: str, fn: str, second_try: bool=False) -> Union[Tuple[str, float, int, Dict[str, Union[str, int, List[str]]]], Tuple[str, float, int, Dict[str, Union[str, int]]], Tuple[str, float, int, Dict[str, Union[str, int, Dict[str, str]]]]]:
         # This method WILL reread the tarball. Probably need another one to exit early if
         # there are cases where it's fine not to reread.  Like if we just rebuild repodata
         # from the cached files, but don't use the existing repodata.json as a starting point.
@@ -1373,7 +1355,7 @@ class ChannelIndex:
         return fn, index_json
 
     @staticmethod
-    def _load_all_from_cache(channel_root, subdir, fn):
+    def _load_all_from_cache(channel_root: str, subdir: str, fn: str) -> Dict[str, Any]:
         subdir_path = join(channel_root, subdir)
         try:
             mtime = getmtime(join(subdir_path, fn))
@@ -1442,7 +1424,7 @@ class ChannelIndex:
             data["run_exports"] = {}
         return data
 
-    def _write_repodata(self, subdir, repodata, json_filename):
+    def _write_repodata(self, subdir: str, repodata: Dict[str, Any], json_filename: str) -> bool:
         repodata_json_path = join(self.channel_root, subdir, json_filename)
         new_repodata_binary = (
             json.dumps(
@@ -1462,7 +1444,7 @@ class ChannelIndex:
             _maybe_write(repodata_bz2_path, bz2_content, content_is_binary=True)
         return write_result
 
-    def _write_subdir_index_html(self, subdir, repodata):
+    def _write_subdir_index_html(self, subdir: str, repodata: Dict[str, Any]) -> bool:
         repodata_packages = repodata["packages"]
         subdir_path = join(self.channel_root, subdir)
 
@@ -1490,12 +1472,12 @@ class ChannelIndex:
         index_path = join(subdir_path, "index.html")
         return _maybe_write(index_path, rendered_html)
 
-    def _write_channeldata_index_html(self, channeldata):
+    def _write_channeldata_index_html(self, channeldata: Dict[str, Union[int, Dict[str, Union[Dict[str, Optional[Union[str, bool, List[str], int]]], Dict[str, Optional[Union[bool, Dict[str, Dict[str, List[str]]], List[str], int, str]]]]], List[str], Dict[str, Dict[str, Optional[Union[str, bool, List[str], int]]]], Dict[str, Dict[str, Optional[Union[bool, Dict[str, Dict[str, List[str]]], List[str], int, str]]]]]]) -> None:
         rendered_html = _make_channeldata_index_html(self.channel_name, channeldata)
         index_path = join(self.channel_root, "index.html")
         _maybe_write(index_path, rendered_html)
 
-    def _update_channeldata(self, channel_data, repodata, subdir):
+    def _update_channeldata(self, channel_data: Dict[str, Union[int, Dict[str, Union[Dict[str, Optional[Union[str, bool, List[str], int]]], Dict[str, Optional[Union[bool, Dict[str, Dict[str, List[str]]], List[str], int, str]]]]], List[str], Dict[str, Dict[str, Optional[Union[str, bool, List[str], int]]]], Dict[str, Dict[str, Optional[Union[bool, Dict[str, Dict[str, List[str]]], List[str], int, str]]]]]], repodata: Dict[str, Any], subdir: str) -> None:
         legacy_packages = repodata["packages"]
         conda_packages = repodata["packages.conda"]
 
@@ -1622,7 +1604,7 @@ class ChannelIndex:
             }
         )
 
-    def _write_channeldata(self, channeldata):
+    def _write_channeldata(self, channeldata: Dict[str, Union[int, Dict[str, Union[Dict[str, Optional[Union[str, bool, List[str], int]]], Dict[str, Optional[Union[bool, Dict[str, Dict[str, List[str]]], List[str], int, str]]]]], List[str], Dict[str, Dict[str, Optional[Union[str, bool, List[str], int]]]], Dict[str, Dict[str, Optional[Union[bool, Dict[str, Dict[str, List[str]]], List[str], int, str]]]]]]) -> None:
         # trim out commits, as they can take up a ton of space.  They're really only for the RSS feed.
         for _pkg, pkg_dict in channeldata.get("packages", {}).items():
             if "commits" in pkg_dict:
@@ -1633,7 +1615,7 @@ class ChannelIndex:
         )
         _maybe_write(channeldata_path, content, True)
 
-    def _load_patch_instructions_tarball(self, subdir, patch_generator):
+    def _load_patch_instructions_tarball(self, subdir: str, patch_generator: str) -> Dict[str, Union[int, Dict[str, Union[Dict[str, None], Dict[str, Optional[List[str]]]]], List[str], Dict[str, Union[Dict[str, List[str]], Dict[str, None], Dict[str, Optional[List[str]]]]]]]:
         instructions = {}
         with TemporaryDirectory() as tmpdir:
             conda_package_handling.api.extract(patch_generator, dest_dir=tmpdir)
@@ -1643,7 +1625,7 @@ class ChannelIndex:
                     instructions = json.load(f)
         return instructions
 
-    def _create_patch_instructions(self, subdir, repodata, patch_generator=None):
+    def _create_patch_instructions(self, subdir: str, repodata: Dict[str, Any], patch_generator: Optional[str]=None) -> Dict[str, Union[int, Dict[str, Union[Dict[str, None], Dict[str, Optional[List[str]]]]], List[str]]]:
         gen_patch_path = patch_generator or join(self.channel_root, "gen_patch.py")
         if isfile(gen_patch_path):
             log.debug(f"using patch generator {gen_patch_path} for {subdir}")
@@ -1678,7 +1660,7 @@ class ChannelIndex:
                 )
             return {}
 
-    def _write_patch_instructions(self, subdir, instructions):
+    def _write_patch_instructions(self, subdir: str, instructions: Dict[str, Union[int, Dict[str, Union[Dict[str, None], Dict[str, Optional[List[str]]]]], List[str], Dict[str, Union[Dict[str, List[str]], Dict[str, None], Dict[str, Optional[List[str]]]]]]]) -> None:
         new_patch = json.dumps(instructions, indent=2, sort_keys=True).replace(
             "':'", "': '"
         )
@@ -1687,7 +1669,7 @@ class ChannelIndex:
         )
         _maybe_write(patch_instructions_path, new_patch, True)
 
-    def _load_instructions(self, subdir):
+    def _load_instructions(self, subdir: str) -> Dict[str, Union[int, Dict[str, Union[Dict[str, None], Dict[str, Optional[List[str]]]]], List[str]]]:
         patch_instructions_path = join(
             self.channel_root, subdir, "patch_instructions.json"
         )
@@ -1700,7 +1682,7 @@ class ChannelIndex:
                 return instructions
         return {}
 
-    def _patch_repodata(self, subdir, repodata, patch_generator=None):
+    def _patch_repodata(self, subdir: str, repodata: Dict[str, Any], patch_generator: Optional[str]=None) -> Any:
         if patch_generator and any(
             patch_generator.endswith(ext) for ext in CONDA_PACKAGE_EXTENSIONS
         ):
