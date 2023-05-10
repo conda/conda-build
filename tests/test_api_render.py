@@ -182,6 +182,34 @@ def test_cross_info_index_platform(testing_config):
     assert metadata.config.host_platform == info_index["platform"]
 
 
+def test_noarch_with_platform_deps(testing_workdir, testing_config):
+    recipe_path = os.path.join(metadata_dir, "_noarch_with_platform_deps")
+    build_ids = {}
+    for subdir_ in ["linux-64", "linux-aarch64", "linux-ppc64le", "osx-64", "win-64"]:
+        platform, arch = subdir_.split("-")
+        m = api.render(
+            recipe_path, config=testing_config, platform=platform, arch=arch
+        )[0][0]
+        build_ids[subdir_] = m.build_id()
+
+    # one hash for each platform, plus one for the archspec selector
+    assert len(set(build_ids.values())) == 4
+    assert build_ids["linux-64"] == build_ids["linux-aarch64"]
+    assert (
+        build_ids["linux-64"] != build_ids["linux-ppc64le"]
+    )  # not the same due to archspec
+
+
+def test_noarch_with_no_platform_deps(testing_workdir, testing_config):
+    recipe_path = os.path.join(metadata_dir, "_noarch_with_no_platform_deps")
+    build_ids = set()
+    for platform in ["osx", "linux", "win"]:
+        m = api.render(recipe_path, config=testing_config, platform=platform)[0][0]
+        build_ids.add(m.build_id())
+
+    assert len(build_ids) == 1
+
+
 def test_setting_condarc_vars_with_env_var_expansion(testing_workdir):
     os.makedirs("config")
     # python won't be used - the stuff in the recipe folder will override it
