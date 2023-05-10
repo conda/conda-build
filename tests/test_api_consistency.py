@@ -3,8 +3,8 @@
 # This file makes sure that our API has not changed.  Doing so can not be accidental.  Whenever it
 #    happens, we should bump our major build number, because we may have broken someone.
 
-import sys
 import inspect
+import sys
 from inspect import getfullargspec as getargspec
 
 import pytest
