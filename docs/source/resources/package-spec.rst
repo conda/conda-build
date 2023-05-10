@@ -314,10 +314,10 @@ parts:
 Remember that the version specification cannot contain spaces,
 as spaces are used to delimit the package, version, and build
 string in the whole match specification. ``python >= 2.7`` is an
-invalid match specification. Furthermore,"``python >= 2.7``" with double quotes is
+invalid match specification. Furthermore,"``python >= 2.7``" with double or single quotes is
 matched as any version of a package named ``python>=2.7``.
 
-When using the command line, put double quotes around any package
+When using the command line, put double or single quotes around any package
 version specification that contains the space character or any of
 the following characters: <, >, \*, or \|.
 
