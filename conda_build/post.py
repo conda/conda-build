@@ -1,6 +1,9 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 import locale
+from __future__ import annotations
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Union
+
 import os
 import re
 import shutil
@@ -13,20 +16,7 @@ from fnmatch import fnmatch
 from fnmatch import translate as fnmatch_translate
 from functools import partial
 from os.path import (
-    basename,
-    dirname,
-    exists,
-    isabs,
-    isdir,
-    isfile,
-    islink,
-    join,
-    normpath,
-    realpath,
-    relpath,
-    sep,
-    splitext,
-)
+    basename, dirname, exists, isabs, isdir, isfile, islink, join, normpath, realpath, relpath, sep, splitext)
 from subprocess import CalledProcessError, call, check_output
 
 try:
@@ -36,24 +26,19 @@ except ImportError:
 
 from conda_build import utils
 from conda_build.conda_interface import (
-    TemporaryDirectory,
-    lchmod,
-    md5_file,
-    walk_prefix,
-)
+    TemporaryDirectory, lchmod, md5_file, walk_prefix)
 from conda_build.exceptions import OverDependingError, OverLinkingError, RunPathError
 from conda_build.inspect_pkg import which_package
 from conda_build.os_utils import external, macho
 from conda_build.os_utils.ldd import get_package_files, get_package_obj_files
 from conda_build.os_utils.liefldd import (
-    get_exports_memoized,
-    get_linkages_memoized,
-    get_rpaths_raw,
-    get_runpaths_raw,
-    have_lief,
-    set_rpath,
-)
+    get_exports_memoized, get_linkages_memoized, get_rpaths_raw, get_runpaths_raw, have_lief, set_rpath)
 from conda_build.os_utils.pyldd import codefile_type
+
+if TYPE_CHECKING:
+    from conda.models.dist import Dist
+    from conda_build.config import Config
+    from conda_build.metadata import MetaData
 
 filetypes_for_platform = {
     "win": ("DLLfile", "EXEfile"),
@@ -62,7 +47,7 @@ filetypes_for_platform = {
 }
 
 
-def fix_shebang(f, prefix, build_python, osx_is_app=False):
+def fix_shebang(f: str, prefix: str, build_python: str, osx_is_app: bool=False) -> None:
     path = join(prefix, f)
     if codefile_type(path):
         return
@@ -132,7 +117,7 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
             fo.write(new_data.decode())
 
 
-def write_pth(egg_path, config):
+def write_pth(egg_path: str, config: Config) -> None:
     fn = basename(egg_path)
     py_ver = ".".join(config.variant["python"].split(".")[:2])
     with open(
@@ -145,7 +130,7 @@ def write_pth(egg_path, config):
         fo.write("./%s\n" % fn)
 
 
-def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
+def remove_easy_install_pth(files: List[Union[str, Any]], prefix: str, config: Config, preserve_egg_dir: bool=False) -> None:
     """
     remove the need for easy-install.pth and finally remove easy-install.pth
     itself
@@ -212,7 +197,7 @@ def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
     utils.rm_rf(join(sp_dir, "easy-install.pth"))
 
 
-def rm_py_along_so(prefix):
+def rm_py_along_so(prefix: str) -> None:
     """remove .py (.pyc) files alongside .so or .pyd files"""
 
     files = list(os.scandir(prefix))
@@ -225,7 +210,7 @@ def rm_py_along_so(prefix):
                     os.unlink(name + ext)
 
 
-def rm_pyo(files, prefix):
+def rm_pyo(files: List[Union[str, Any]], prefix: str) -> None:
     """pyo considered harmful: https://www.python.org/dev/peps/pep-0488/
 
     The build may have proceeded with:
@@ -240,21 +225,21 @@ def rm_pyo(files, prefix):
             os.unlink(join(prefix, fn))
 
 
-def rm_pyc(files, prefix):
+def rm_pyc(files: List[Union[str, Any]], prefix: str) -> None:
     re_pyc = re.compile(r".*(?:\.pyc$)")
     for fn in files:
         if re_pyc.match(fn):
             os.unlink(join(prefix, fn))
 
 
-def rm_share_info_dir(files, prefix):
+def rm_share_info_dir(files: List[Union[str, Any]], prefix: str) -> None:
     if "share/info/dir" in files:
         fn = join(prefix, "share", "info", "dir")
         if isfile(fn):
             os.unlink(fn)
 
 
-def compile_missing_pyc(files, cwd, python_exe, skip_compile_pyc=()):
+def compile_missing_pyc(files: List[Union[str, Any]], cwd: str, python_exe: str, skip_compile_pyc: Union[Tuple[()], List[str]]=()) -> None:
     if not isfile(python_exe):
         return
     compile_files = []
@@ -312,7 +297,7 @@ def compile_missing_pyc(files, cwd, python_exe, skip_compile_pyc=()):
                 call(args + group, cwd=cwd)
 
 
-def check_dist_info_version(name, version, files):
+def check_dist_info_version(name: str, version: Union[str, float, int], files: List[Union[str, Any]]) -> None:
     for f in files:
         if f.endswith(".dist-info" + os.sep + "METADATA"):
             f_lower = basename(dirname(f).lower())
@@ -329,15 +314,15 @@ def check_dist_info_version(name, version, files):
 
 
 def post_process(
-    name,
-    version,
-    files,
-    prefix,
-    config,
-    preserve_egg_dir=False,
-    noarch=False,
-    skip_compile_pyc=(),
-):
+    name: str,
+    version: Union[str, float, int],
+    files: List[Union[str, Any]],
+    prefix: str,
+    config: Config,
+    preserve_egg_dir: bool=False,
+    noarch: Union[str, bool]=False,
+    skip_compile_pyc: List[Union[str, Any]]=(),
+) -> None:
     rm_pyo(files, prefix)
     if noarch:
         rm_pyc(files, prefix)
@@ -354,7 +339,7 @@ def post_process(
     check_dist_info_version(name, version, files)
 
 
-def find_lib(link, prefix, files, path=None):
+def find_lib(link: str, prefix: str, files: Set[str], path: Optional[str]=None) -> None:
     if link.startswith(prefix):
         link = normpath(link[len(prefix) + 1 :])
         if not any(link == normpath(w) for w in files):
@@ -396,7 +381,7 @@ def find_lib(link, prefix, files, path=None):
     print("Don't know how to find %s, skipping" % link)
 
 
-def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
+def osx_ch_link(path: str, link_dict: Dict[str, Union[str, int]], host_prefix: str, build_prefix: str, files: Set[str]) -> None:
     link = link_dict["name"]
     if build_prefix != host_prefix and link.startswith(build_prefix):
         link = link.replace(build_prefix, host_prefix)
@@ -453,7 +438,7 @@ def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
     return ret
 
 
-def mk_relative_osx(path, host_prefix, m, files, rpaths=("lib",)):
+def mk_relative_osx(path: str, host_prefix: str, m: MetaData, files: Set[str], rpaths: List[str]=("lib",)) -> None:
     base_prefix = m.config.build_folder
     assert base_prefix == dirname(host_prefix)
     build_prefix = m.config.build_prefix
@@ -641,7 +626,7 @@ def mk_relative_linux(f, prefix, rpaths=("lib",), method=None):
         call([patchelf, "--force-rpath", "--set-rpath", rpath, elf])
 
 
-def assert_relative_osx(path, host_prefix, build_prefix):
+def assert_relative_osx(path: str, host_prefix: str, build_prefix: str) -> None:
     tools_prefix = build_prefix if exists(build_prefix) else host_prefix
     for name in macho.get_dylibs(path, tools_prefix):
         for prefix in (host_prefix, build_prefix):
@@ -652,8 +637,8 @@ def assert_relative_osx(path, host_prefix, build_prefix):
 
 
 def determine_package_nature(
-    pkg, prefix, subdir, bldpkgs_dir, output_folder, channel_urls
-):
+    pkg: Union[FakeDist, Dist], prefix: str, subdir: str, bldpkgs_dir: str, output_folder: str, channel_urls: List[str]
+) -> Union[Tuple[List[Any], None, bool], Tuple[List[Any], Dict[str, List[str]], bool]]:
     run_exports = None
     lib_prefix = pkg.name.startswith("lib")
     codefiles = get_package_obj_files(pkg, prefix)
@@ -677,7 +662,7 @@ def determine_package_nature(
     return (dsos, run_exports, lib_prefix)
 
 
-def library_nature(pkg, prefix, subdir, bldpkgs_dirs, output_folder, channel_urls):
+def library_nature(pkg: Union[FakeDist, Dist], prefix: str, subdir: str, bldpkgs_dirs: str, output_folder: str, channel_urls: List[str]) -> str:
     """
     Result :: "non-library",
               "interpreted library (Python|R|Python,R)",
@@ -725,7 +710,7 @@ def library_nature(pkg, prefix, subdir, bldpkgs_dirs, output_folder, channel_url
     return "non-library"
 
 
-def dists_from_names(names, prefix):
+def dists_from_names(names: List[Union[str, Any]], prefix: str) -> List[Union[Dist, Any]]:
     results = []
     from conda_build.utils import linked_data_no_multichannels
 
@@ -738,7 +723,7 @@ def dists_from_names(names, prefix):
 
 
 class FakeDist:
-    def __init__(self, name, version, build_number, build_str, channel, files):
+    def __init__(self, name: str, version: str, build_number: Optional[str], build_str: str, channel: str, files: List[str]) -> None:
         self.name = name
         self.quad = [name]
         self.version = version
@@ -747,7 +732,7 @@ class FakeDist:
         self.channel = channel
         self.files = files
 
-    def get(self, name):
+    def get(self, name: str) -> List[str]:
         if name == "files":
             return self.files
 
@@ -827,13 +812,13 @@ DEFAULT_WIN_WHITELIST = [
 
 
 def _collect_needed_dsos(
-    sysroots_files,
-    files,
-    run_prefix,
-    sysroot_substitution,
-    build_prefix,
-    build_prefix_substitution,
-):
+    sysroots_files: OrderedDict,
+    files: List[str],
+    run_prefix: str,
+    sysroot_substitution: str,
+    build_prefix: str,
+    build_prefix_substitution: str,
+) -> Tuple[Set[str], Dict[str, Dict[str, Dict[str, Union[str, List[str]]]]]]:
     all_needed_dsos = set()
     needed_dsos_for_file = dict()
     sysroots = ""
@@ -876,15 +861,15 @@ def _collect_needed_dsos(
 
 
 def _map_file_to_package(
-    files,
-    run_prefix,
-    build_prefix,
-    all_needed_dsos,
-    pkg_vendored_dist,
-    ignore_list_syms,
-    sysroot_substitution,
-    enable_static,
-):
+    files: List[str],
+    run_prefix: str,
+    build_prefix: str,
+    all_needed_dsos: Set[str],
+    pkg_vendored_dist: FakeDist,
+    ignore_list_syms: List[str],
+    sysroot_substitution: str,
+    enable_static: bool,
+) -> Union[Tuple[Dict[str, Dict[str, List[Dist]]], Dict[Dist, bool], Dict[Dist, bool], Dict[str, Dict[str, Set[str]]]], Tuple[Dict[str, Dict[str, List[Dist]]], Dict[Any, Any], Dict[Dist, bool], Dict[str, Dict[str, Set[str]]]]]:
     # Form a mapping of file => package
 
     prefix_owners = {}
@@ -968,7 +953,7 @@ def _map_file_to_package(
     return prefix_owners, contains_dsos, contains_static_libs, all_lib_exports
 
 
-def _get_fake_pkg_dist(pkg_name, pkg_version, build_str, build_number, channel, files):
+def _get_fake_pkg_dist(pkg_name: str, pkg_version: str, build_str: str, build_number: Optional[str], channel: str, files: List[str]) -> Tuple[FakeDist, str]:
     pkg_vendoring_name = pkg_name
     pkg_vendoring_version = str(pkg_version)
     pkg_vendoring_build_str = build_str
@@ -990,7 +975,7 @@ def _get_fake_pkg_dist(pkg_name, pkg_version, build_str, build_number, channel, 
     )
 
 
-def _print_msg(errors, text, verbose):
+def _print_msg(errors: List[Union[str, Any]], text: str, verbose: bool) -> None:
     if text.startswith("  ERROR"):
         errors.append(text)
     if verbose:
@@ -1009,17 +994,17 @@ def caseless_sepless_fnmatch(paths, pat):
 
 
 def _lookup_in_sysroots_and_whitelist(
-    errors,
-    whitelist,
-    needed_dso,
-    sysroots_files,
-    msg_prelude,
-    info_prelude,
-    sysroot_prefix,
-    sysroot_substitution,
-    subdir,
-    verbose,
-):
+    errors: List[Union[str, Any]],
+    whitelist: List[str],
+    needed_dso: str,
+    sysroots_files: OrderedDict,
+    msg_prelude: str,
+    info_prelude: str,
+    sysroot_prefix: str,
+    sysroot_substitution: str,
+    subdir: str,
+    verbose: bool,
+) -> None:
     # A system or ignored dependency. We should be able to find it in one of the CDT or
     # compiler packages on linux or in a sysroot folder on other OSes. These usually
     # start with '$RPATH/' which indicates pyldd did not find them, so remove that now.
@@ -1109,19 +1094,19 @@ def _lookup_in_sysroots_and_whitelist(
 
 
 def _lookup_in_prefix_packages(
-    errors,
-    needed_dso,
-    files,
-    run_prefix,
-    whitelist,
-    info_prelude,
-    msg_prelude,
-    warn_prelude,
-    verbose,
-    requirements_run,
-    lib_packages,
-    lib_packages_used,
-):
+    errors: List[Any],
+    needed_dso: str,
+    files: List[str],
+    run_prefix: str,
+    whitelist: List[str],
+    info_prelude: str,
+    msg_prelude: str,
+    warn_prelude: str,
+    verbose: bool,
+    requirements_run: List[Any],
+    lib_packages: Set[FakeDist],
+    lib_packages_used: Set[FakeDist],
+) -> None:
     in_prefix_dso = normpath(needed_dso)
     n_dso_p = "Needed DSO {}".format(in_prefix_dso.replace("\\", "/"))
     and_also = " (and also in this package)" if in_prefix_dso in files else ""
@@ -1188,24 +1173,24 @@ def _lookup_in_prefix_packages(
 
 
 def _show_linking_messages(
-    files,
-    errors,
-    needed_dsos_for_file,
-    build_prefix,
-    run_prefix,
-    pkg_name,
-    error_overlinking,
-    runpath_whitelist,
-    verbose,
-    requirements_run,
-    lib_packages,
-    lib_packages_used,
-    whitelist,
-    sysroots,
-    sysroot_prefix,
-    sysroot_substitution,
-    subdir,
-):
+    files: List[str],
+    errors: List[Any],
+    needed_dsos_for_file: Dict[str, Dict[str, Dict[str, Union[str, List[str]]]]],
+    build_prefix: str,
+    run_prefix: str,
+    pkg_name: str,
+    error_overlinking: bool,
+    runpath_whitelist: List[Any],
+    verbose: bool,
+    requirements_run: List[Union[str, Any]],
+    lib_packages: Union[Set[FakeDist], Set[Union[Dist, FakeDist]]],
+    lib_packages_used: Set[FakeDist],
+    whitelist: List[str],
+    sysroots: OrderedDict,
+    sysroot_prefix: str,
+    sysroot_substitution: str,
+    subdir: str,
+) -> None:
     if len(sysroots):
         for sysroot, sr_files in sysroots.items():
             _print_msg(
@@ -1287,30 +1272,30 @@ def _show_linking_messages(
 
 
 def check_overlinking_impl(
-    pkg_name,
-    pkg_version,
-    build_str,
-    build_number,
-    subdir,
-    ignore_run_exports,
-    requirements_run,
-    requirements_build,
-    requirements_host,
-    run_prefix,
-    build_prefix,
-    missing_dso_whitelist,
-    runpath_whitelist,
-    error_overlinking,
-    error_overdepending,
-    verbose,
-    exception_on_error,
-    files,
-    bldpkgs_dirs,
-    output_folder,
-    channel_urls,
-    enable_static=False,
-    variants={},
-):
+    pkg_name: str,
+    pkg_version: Union[str, float, int],
+    build_str: str,
+    build_number: Optional[Union[str, int]],
+    subdir: str,
+    ignore_run_exports: List[Union[str, Any]],
+    requirements_run: List[Union[str, Any]],
+    requirements_build: List[Union[str, Any]],
+    requirements_host: List[Union[str, Any]],
+    run_prefix: str,
+    build_prefix: str,
+    missing_dso_whitelist: List[Any],
+    runpath_whitelist: List[Any],
+    error_overlinking: bool,
+    error_overdepending: bool,
+    verbose: bool,
+    exception_on_error: bool,
+    files: List[Union[str, Any]],
+    bldpkgs_dirs: str,
+    output_folder: str,
+    channel_urls: List[str],
+    enable_static: bool=False,
+    variants: Dict[str, Union[OrderedDict, Set[str], str]]={},
+) -> Dict[Any, Any]:
     verbose = True
     errors = []
 
@@ -1589,7 +1574,7 @@ def check_overlinking_impl(
         return dict()
 
 
-def check_overlinking(m, files, host_prefix=None):
+def check_overlinking(m: MetaData, files: List[Union[str, Any]], host_prefix: Optional[str]=None) -> Dict[Any, Any]:
     if not host_prefix:
         host_prefix = m.config.host_prefix
 
@@ -1629,7 +1614,7 @@ def check_overlinking(m, files, host_prefix=None):
     )
 
 
-def post_process_shared_lib(m, f, files, host_prefix=None):
+def post_process_shared_lib(m: MetaData, f: str, files: Set[str], host_prefix: Optional[str]=None) -> None:
     if not host_prefix:
         host_prefix = m.config.host_prefix
     path = join(host_prefix, f)
@@ -1655,7 +1640,7 @@ def post_process_shared_lib(m, f, files, host_prefix=None):
         mk_relative_osx(path, host_prefix, m, files=files, rpaths=rpaths)
 
 
-def fix_permissions(files, prefix):
+def fix_permissions(files: Set[str], prefix: str) -> None:
     print("Fixing permissions")
     for path in os.scandir(prefix):
         if path.is_dir():
@@ -1686,7 +1671,7 @@ def fix_permissions(files, prefix):
                 log.warn(str(e))
 
 
-def post_build(m, files, build_python, host_prefix=None, is_already_linked=False):
+def post_build(m: MetaData, files: List[Union[str, Any]], build_python: str, host_prefix: None=None, is_already_linked: bool=False) -> None:
     print("number of files:", len(files))
 
     if not host_prefix:
@@ -1721,7 +1706,7 @@ def post_build(m, files, build_python, host_prefix=None, is_already_linked=False
     check_overlinking(m, files, host_prefix)
 
 
-def check_symlinks(files, prefix, croot):
+def check_symlinks(files: List[Union[str, Any]], prefix: str, croot: str) -> None:
     if readlink is False:
         return  # Not on Unix system
     msgs = []
@@ -1765,7 +1750,7 @@ def check_symlinks(files, prefix, croot):
         sys.exit(1)
 
 
-def make_hardlink_copy(path, prefix):
+def make_hardlink_copy(path: str, prefix: str) -> None:
     """Hardlinks create invalid packages.  Copy files to break the link.
     Symlinks are OK, and unaffected here."""
     if not isabs(path):
@@ -1783,7 +1768,7 @@ def make_hardlink_copy(path, prefix):
             utils.copy_into(join(dest, fn), path)
 
 
-def get_build_metadata(m):
+def get_build_metadata(m: MetaData) -> None:
     src_dir = m.config.work_dir
     if exists(join(src_dir, "__conda_version__.txt")):
         raise ValueError(

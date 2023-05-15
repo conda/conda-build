@@ -7,6 +7,7 @@ from argparse import ArgumentError
 
 from conda_build import utils
 from conda_build.utils import CONDA_PACKAGE_EXTENSIONS
+from typing import TYPE_CHECKING
 
 CONDA_PKG_OR_RECIPE_ERROR_MESSAGE = (
     "\nUnable to parse provided recipe directory or package file.\n\n"

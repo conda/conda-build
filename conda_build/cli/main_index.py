@@ -1,5 +1,6 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
 import logging
 import os
 import sys
@@ -8,11 +9,16 @@ from conda_build import api
 from conda_build.conda_interface import ArgumentParser
 from conda_build.index import MAX_THREADS_DEFAULT
 from conda_build.utils import DEFAULT_SUBDIRS
+from typing import TYPE_CHECKING, List, Tuple
+
+if TYPE_CHECKING:
+    from argparse import Namespace
+    from conda.cli.conda_argparse import ArgumentParser
 
 logging.basicConfig(level=logging.INFO)
 
 
-def parse_args(args):
+def parse_args(args: List[str]) -> Tuple[conda.cli.conda_argparse.ArgumentParser, Namespace]:
     p = ArgumentParser(
         description="Update package index metadata files in given directories."
     )
@@ -93,7 +99,7 @@ def parse_args(args):
     return p, args
 
 
-def execute(args):
+def execute(args: List[str]) -> None:
     _, args = parse_args(args)
 
     api.update_index(

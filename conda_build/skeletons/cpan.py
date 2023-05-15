@@ -3,6 +3,7 @@
 """
 Tools for converting CPAN packages to conda recipes.
 """
+from __future__ import annotations
 
 
 import codecs
@@ -23,18 +24,16 @@ import requests
 
 from conda_build import environ
 from conda_build.conda_interface import (
-    CondaError,
-    CondaHTTPError,
-    MatchSpec,
-    Resolve,
-    TmpDownload,
-    download,
-    get_index,
-)
+    CondaError, CondaHTTPError, MatchSpec, Resolve, TmpDownload, download, get_index)
 from conda_build.config import get_or_merge_config
 from conda_build.utils import check_call_env, on_win
 from conda_build.variants import get_default_variant
 from conda_build.version import _parse as parse_version
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Union
+
+if TYPE_CHECKING:
+    from argparse import _SubParsersAction
+    from packaging.version import Version
 
 CPAN_META = """\
 {{% set name = "{packagename}" %}}
@@ -165,7 +164,7 @@ class PerlTmpDownload(TmpDownload):
     Critical on win.
     """
 
-    def __enter__(self):
+    def __enter__(self) -> str:
         if "://" not in self.url:
             # if we provide the file itself, no tmp dir is created
             self.tmp_dir = None
@@ -202,7 +201,7 @@ class PerlTmpDownload(TmpDownload):
             return dst
 
 
-def get_build_dependencies_from_src_archive(package_url, sha256, src_cache):
+def get_build_dependencies_from_src_archive(package_url: str, sha256: str, src_cache: str) -> List[str]:
     import tarfile
 
     from conda_build import source
@@ -253,11 +252,11 @@ def get_build_dependencies_from_src_archive(package_url, sha256, src_cache):
     return result
 
 
-def loose_version(ver):
+def loose_version(ver: str) -> str:
     return str(parse_version(str(ver)))
 
 
-def get_cpan_api_url(url, colons):
+def get_cpan_api_url(url: str, colons: bool) -> Dict[str, Any]:
     if not colons:
         url = url.replace("::", "-")
     with PerlTmpDownload(url) as json_path:
@@ -289,7 +288,7 @@ def package_exists(package_name):
     return in_repo
 
 
-def md5d_file_and_other(filename, other_hashed):
+def md5d_file_and_other(filename: str, other_hashed: Union[Tuple[()], Tuple[str]]) -> str:
     sha1 = hashlib.md5()
     with open(filename, "rb") as f:
         while True:
@@ -302,12 +301,12 @@ def md5d_file_and_other(filename, other_hashed):
     return sha1.hexdigest()
 
 
-def get_pickle_file_path(cache_dir, filename_prefix, other_hashed=()):
+def get_pickle_file_path(cache_dir: str, filename_prefix: str, other_hashed: Union[Tuple[()], Tuple[str]]=()) -> str:
     h = "h" + md5d_file_and_other(__file__, other_hashed)[2:10]
     return os.path.join(cache_dir, filename_prefix.replace("::", "-") + "." + h + ".p")
 
 
-def load_or_pickle(filename_prefix, base_folder, data_partial, key):
+def load_or_pickle(filename_prefix: str, base_folder: str, data_partial: partial, key: str) -> List[str]:
     # It might be nice to hash the entire code tree of data_partial
     # along with all the args to it via hashlib instead but that's
     # difficult.
@@ -332,7 +331,7 @@ def load_or_pickle(filename_prefix, base_folder, data_partial, key):
     return result
 
 
-def install_perl_get_core_modules(version):
+def install_perl_get_core_modules(version: str) -> List[str]:
     try:
         from conda_build.conda_interface import TemporaryDirectory
         from conda_build.config import Config
@@ -381,7 +380,7 @@ def install_perl_get_core_modules(version):
     return []
 
 
-def get_core_modules_for_this_perl_version(version, cache_dir):
+def get_core_modules_for_this_perl_version(version: str, cache_dir: str) -> List[str]:
     return load_or_pickle(
         "perl-core-modules",
         base_folder=cache_dir,
@@ -392,15 +391,15 @@ def get_core_modules_for_this_perl_version(version, cache_dir):
 
 # meta_cpan_url="http://api.metacpan.org",
 def skeletonize(
-    packages,
-    output_dir=".",
-    version=None,
-    meta_cpan_url="https://fastapi.metacpan.org/v1",
-    recursive=False,
-    force=False,
-    config=None,
-    write_core=False,
-):
+    packages: List[str],
+    output_dir: str=".",
+    version: Optional[str]=None,
+    meta_cpan_url: str="https://fastapi.metacpan.org/v1",
+    recursive: bool=False,
+    force: bool=False,
+    config: Optional[Config]=None,
+    write_core: bool=False,
+) -> None:
     """
     Loops over packages, outputting conda recipes converted from CPAN metata.
     """
@@ -659,7 +658,7 @@ def is_core_version(core_version, version):
         return False
 
 
-def add_parser(repos):
+def add_parser(repos: _SubParsersAction) -> None:
     cpan = repos.add_parser(
         "cpan",
         help="""
@@ -721,8 +720,8 @@ def latest_pkg_version(pkg):
 
 
 def deps_for_package(
-    package, release_data, output_dir, cache_dir, meta_cpan_url, recursive, core_modules
-):
+    package: str, release_data: Dict[str, Any], output_dir: str, cache_dir: str, meta_cpan_url: str, recursive: bool, core_modules: List[str]
+) -> Tuple[Dict[str, Dict[str, Set[Any]]], Set[Any]]:
     """
     Build the sets of dependencies and packages we need recipes for. This should
     only be called for non-core modules/distributions, as dependencies are
@@ -899,7 +898,7 @@ def deps_for_package(
     return deps, packages_to_append
 
 
-def dist_for_module(cpan_url, cache_dir, core_modules, module):
+def dist_for_module(cpan_url: str, cache_dir: str, core_modules: List[str], module: str) -> str:
     """
     Given a name that could be a module or a distribution, return the
     distribution.
@@ -930,7 +929,7 @@ def dist_for_module(cpan_url, cache_dir, core_modules, module):
     return distribution
 
 
-def release_module_dict_direct(cpan_url, cache_dir, module):
+def release_module_dict_direct(cpan_url: str, cache_dir: str, module: str) -> Dict[str, Any]:
     if "Dist-Zilla-Plugin-Git" in module:
         print(f"debug {module}")
     elif "Dist::Zilla::Plugin::Git" in module:
@@ -976,7 +975,7 @@ def release_module_dict_direct(cpan_url, cache_dir, module):
     return rel_dict
 
 
-def release_module_dict(cpan_url, cache_dir, module):
+def release_module_dict(cpan_url: str, cache_dir: str, module: str) -> Dict[str, Any]:
     if "Regexp-Common" in module:
         print("debug")
     rel_dict = release_module_dict_direct(cpan_url, cache_dir, module)
@@ -1047,14 +1046,14 @@ def core_module_dict_old(cpan_url, module):
     return mod_dict
 
 
-def core_module_dict(core_modules, module):
+def core_module_dict(core_modules: List[str], module: str) -> Optional[Dict[str, str]]:
     if module in core_modules:
         return {"distribution": "perl"}
     return None
 
 
 @lru_cache(maxsize=None)
-def metacpan_api_is_core_version(cpan_url, module):
+def metacpan_api_is_core_version(cpan_url: str, module: str) -> bool:
     if "FindBin" in module:
         print("debug")
     url = f"{cpan_url}/release/{module}"
@@ -1088,7 +1087,7 @@ def metacpan_api_get_core_version(core_modules, module):
     return version
 
 
-def get_release_info(cpan_url, cache_dir, core_modules, package, version):
+def get_release_info(cpan_url: str, cache_dir: str, core_modules: List[str], package: str, version: Union[Version, str]) -> Dict[str, Any]:
     """
     Return a dictionary of the JSON information stored at cpan.metacpan.org
     corresponding to the given package/dist/module.
@@ -1155,7 +1154,7 @@ def get_release_info(cpan_url, cache_dir, core_modules, package, version):
     return rel_dict
 
 
-def get_checksum_and_size(download_url):
+def get_checksum_and_size(download_url: str) -> Tuple[str, str]:
     """
     Looks in the CHECKSUMS file in the same directory as the file specified
     at download_url and returns the sha256 hash and file size.
@@ -1183,6 +1182,6 @@ def get_checksum_and_size(download_url):
     return sha256, size
 
 
-def perl_to_conda(name):
+def perl_to_conda(name: str) -> str:
     """Sanitizes a Perl package name for use as a conda package name."""
     return "perl-" + name.replace("::", "-").lower()

@@ -1,5 +1,6 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
 import json
 import locale
 import logging
@@ -7,11 +8,15 @@ import os
 import shutil
 import sys
 from os.path import basename, dirname, isdir, isfile, join
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+
+if TYPE_CHECKING:
+    from conda_build.metadata import MetaData
 
 ISWIN = sys.platform.startswith("win")
 
 
-def _force_dir(dirname):
+def _force_dir(dirname: str) -> None:
     if not isdir(dirname):
         os.makedirs(dirname)
 
@@ -20,7 +25,7 @@ def _error_exit(exit_message):
     sys.exit("[noarch_python] %s" % exit_message)
 
 
-def rewrite_script(fn, prefix):
+def rewrite_script(fn: str, prefix: str) -> str:
     """Take a file from the bin directory and rewrite it into the python-scripts
     directory with the same permissions after it passes some sanity checks for
     noarch pacakges"""
@@ -53,7 +58,7 @@ def rewrite_script(fn, prefix):
     return fn
 
 
-def handle_file(f, d, prefix):
+def handle_file(f: str, d: Dict[str, Union[str, List[str]]], prefix: str) -> None:
     """Process a file for inclusion in a noarch python package."""
     path = join(prefix, f)
 
@@ -95,7 +100,7 @@ def handle_file(f, d, prefix):
         log.debug("Don't know how to handle file: %s.  Including it as-is." % f)
 
 
-def populate_files(m, files, prefix, entry_point_scripts=None):
+def populate_files(m: MetaData, files: List[Union[str, Any]], prefix: str, entry_point_scripts: Optional[List[Union[str, Any]]]=None) -> Dict[str, Union[str, List[str]]]:
     d = {"dist": m.dist(), "site-packages": [], "python-scripts": [], "Examples": []}
 
     # Populate site-package, python-scripts, and Examples into above

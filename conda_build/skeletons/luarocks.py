@@ -3,6 +3,7 @@
 """
 Tools for converting luarocks packages to conda recipes.
 """
+from __future__ import annotations
 
 # TODO:
 # - mingw32 support (really any windows support, completely untested)
@@ -14,6 +15,10 @@ import subprocess
 import tempfile
 from glob import glob
 from sys import platform as _platform
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from argparse import _SubParsersAction
 
 INDENT = "\n    - "
 
@@ -136,7 +141,7 @@ $PREFIX/bin/luarocks remove {rockname}
 """
 
 
-def add_parser(repos):
+def add_parser(repos: _SubParsersAction) -> None:
     luarocks = repos.add_parser(
         "luarocks",
         help="""

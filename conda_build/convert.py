@@ -3,6 +3,7 @@
 """
 Tools for converting conda packages
 """
+from __future__ import annotations
 import glob
 import hashlib
 import json
@@ -15,9 +16,10 @@ import tempfile
 from pathlib import Path
 
 from conda_build.utils import filter_info_files, walk
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Set, Tuple, Union
 
 
-def retrieve_c_extensions(file_path, show_imports=False):
+def retrieve_c_extensions(file_path: str, show_imports: bool=False) -> List[Union[str, Any]]:
     """Check tarfile for compiled C files with '.pyd' or '.so' suffixes.
 
     If a file ends in either .pyd or .so, it is a compiled C file.
@@ -47,7 +49,7 @@ def retrieve_c_extensions(file_path, show_imports=False):
     return imports
 
 
-def retrieve_package_platform(file_path):
+def retrieve_package_platform(file_path: str) -> Tuple[str, str, str]:
     """Retrieve the platform and architecture of the source package.
 
     Positional arguments:
@@ -73,7 +75,7 @@ def retrieve_package_platform(file_path):
         raise RuntimeError("Package platform not recognized.")
 
 
-def retrieve_python_version(file_path):
+def retrieve_python_version(file_path: str) -> str:
     """Retrieve the python version from a path.
 
     This function is overloaded to handle three separate cases:
@@ -118,7 +120,7 @@ def retrieve_python_version(file_path):
         )
 
 
-def extract_temporary_directory(file_path):
+def extract_temporary_directory(file_path: str) -> str:
     """Extract the source tar archive contents to a temporary directory.
 
     Positional arguments:
@@ -133,7 +135,7 @@ def extract_temporary_directory(file_path):
     return temporary_directory
 
 
-def update_dependencies(new_dependencies, existing_dependencies):
+def update_dependencies(new_dependencies: List[str], existing_dependencies: List[str]) -> List[str]:
     """Update the source package's existing dependencies.
 
     When a user passes additional dependencies from the command line,
@@ -164,7 +166,7 @@ def update_dependencies(new_dependencies, existing_dependencies):
     return existing_dependencies
 
 
-def update_index_file(temp_dir, target_platform, dependencies, verbose):
+def update_index_file(temp_dir: str, target_platform: str, dependencies: Optional[List[str]], verbose: bool) -> str:
     """Update the source package's index file with the target platform's information.
 
     Positional arguments:
@@ -225,7 +227,7 @@ def update_index_file(temp_dir, target_platform, dependencies, verbose):
     return index_file
 
 
-def update_lib_path(path, target_platform, temp_dir=None):
+def update_lib_path(path: str, target_platform: str, temp_dir: Optional[str]=None) -> str:
     """Update the lib path found in the source package's paths.json file.
 
     For conversions from unix to windows, the 'lib/pythonx.y/' paths are
@@ -253,7 +255,7 @@ def update_lib_path(path, target_platform, temp_dir=None):
     return os.path.normpath(renamed_lib_path)
 
 
-def update_lib_contents(lib_directory, temp_dir, target_platform, file_path):
+def update_lib_contents(lib_directory: str, temp_dir: str, target_platform: str, file_path: str) -> None:
     """Update the source package's 'lib' directory.
 
     When converting from unix to windows, the 'lib' directory is renamed to
@@ -312,7 +314,7 @@ def update_lib_contents(lib_directory, temp_dir, target_platform, file_path):
             lib_file.rename(py_folder / lib_file.name)
 
 
-def update_executable_path(temp_dir, file_path, target_platform):
+def update_executable_path(temp_dir: str, file_path: str, target_platform: str) -> str:
     """Update the name of the executable files found in the paths.json file.
 
     When converting from unix to windows, executables are renamed with a '-script.py'
@@ -339,7 +341,7 @@ def update_executable_path(temp_dir, file_path, target_platform):
     return renamed_executable_path
 
 
-def update_executable_sha(package_directory, executable_path):
+def update_executable_sha(package_directory: str, executable_path: str) -> str:
     """Update the sha of executable scripts.
 
     When moving from windows to linux, a shebang line is removed/added from
@@ -351,7 +353,7 @@ def update_executable_sha(package_directory, executable_path):
         return hashlib.sha256(script_file_contents).hexdigest()
 
 
-def update_executable_size(temp_dir, executable):
+def update_executable_size(temp_dir: str, executable: str) -> int:
     """Update the size of the converted executable files.
 
     Positional arguments:
@@ -365,7 +367,7 @@ def update_executable_size(temp_dir, executable):
     return os.path.getsize(os.path.join(temp_dir, executable))
 
 
-def add_new_windows_path(executable_directory, executable):
+def add_new_windows_path(executable_directory: str, executable: str) -> Dict[str, Union[str, int]]:
     """Add a new path to the paths.json file.
 
     When an executable is renamed during a unix to windows conversion, a
@@ -389,7 +391,7 @@ def add_new_windows_path(executable_directory, executable):
     return new_path
 
 
-def update_paths_file(temp_dir, target_platform):
+def update_paths_file(temp_dir: str, target_platform: str) -> None:
     """Update the paths.json file when converting between platforms.
 
     Positional arguments:
@@ -450,7 +452,7 @@ def update_paths_file(temp_dir, target_platform):
             json.dump(paths, file, indent=2)
 
 
-def retrieve_executable_name(executable):
+def retrieve_executable_name(executable: str) -> str:
     """Retrieve the name of the executable to rename.
 
     When converting between unix and windows, we need to be careful
@@ -462,7 +464,7 @@ def retrieve_executable_name(executable):
     return os.path.splitext(os.path.basename(executable))[0]
 
 
-def is_binary_file(directory, executable):
+def is_binary_file(directory: str, executable: str) -> bool:
     """Read a file's contents to check whether it is a binary file.
 
     When converting files, we need to check that binary files are not
@@ -489,7 +491,7 @@ def is_binary_file(directory, executable):
     return False
 
 
-def rename_executable(directory, executable, target_platform):
+def rename_executable(directory: str, executable: str, target_platform: str) -> None:
     """Rename an executable file when converting between platforms.
 
     When converting from unix to windows, each file inside the 'bin' directory
@@ -550,7 +552,7 @@ def remove_executable(directory, executable):
         os.remove(script)
 
 
-def create_exe_file(directory, executable, target_platform):
+def create_exe_file(directory: str, executable: str, target_platform: str) -> None:
     """Create an exe file for each executable during a unix to windows conversion.
 
     Positional arguments:
@@ -571,7 +573,7 @@ def create_exe_file(directory, executable, target_platform):
     shutil.copyfile(executable_file, renamed_executable_file)
 
 
-def update_prefix_file(temp_dir, prefixes):
+def update_prefix_file(temp_dir: str, prefixes: Set[str]) -> None:
     """Update the source package's 'has_prefix' file.
 
     Each file in the 'bin' or 'Scripts' folder will be written
@@ -589,7 +591,7 @@ def update_prefix_file(temp_dir, prefixes):
             prefix_file.write(prefix)
 
 
-def update_files_file(temp_dir, verbose):
+def update_files_file(temp_dir: str, verbose: bool) -> None:
     """Update the source package's 'files' file.
 
     The file path to each file that will be in the target archive is
@@ -616,7 +618,7 @@ def update_files_file(temp_dir, verbose):
             files.write(file_path + "\n")
 
 
-def create_target_archive(file_path, temp_dir, platform, output_dir):
+def create_target_archive(file_path: str, temp_dir: str, platform: str, output_dir: str) -> None:
     """Create the converted package's tar file.
 
     Positional arguments:
@@ -642,8 +644,8 @@ def create_target_archive(file_path, temp_dir, platform, output_dir):
 
 
 def convert_between_unix_platforms(
-    file_path, output_dir, platform, dependencies, verbose
-):
+    file_path: str, output_dir: str, platform: str, dependencies: Optional[List[str]], verbose: bool
+) -> None:
     """Convert package between unix platforms.
 
     Positional arguments:
@@ -664,8 +666,8 @@ def convert_between_unix_platforms(
 
 
 def convert_between_windows_architechtures(
-    file_path, output_dir, platform, dependencies, verbose
-):
+    file_path: str, output_dir: str, platform: str, dependencies: Optional[List[str]], verbose: bool
+) -> None:
     """Convert package between windows architectures.
 
     Positional arguments:
@@ -686,8 +688,8 @@ def convert_between_windows_architechtures(
 
 
 def convert_from_unix_to_windows(
-    file_path, output_dir, platform, dependencies, verbose
-):
+    file_path: str, output_dir: str, platform: str, dependencies: Optional[List[str]], verbose: bool
+) -> None:
     """Convert a package from a unix platform to windows.
 
     Positional arguments:
@@ -738,8 +740,8 @@ def convert_from_unix_to_windows(
 
 
 def convert_from_windows_to_unix(
-    file_path, output_dir, platform, dependencies, verbose
-):
+    file_path: str, output_dir: str, platform: str, dependencies: Optional[List[str]], verbose: bool
+) -> None:
     """Convert a package from windows to a unix platform.
 
     Positional arguments:
@@ -785,16 +787,16 @@ def convert_from_windows_to_unix(
 
 
 def conda_convert(
-    file_path,
-    output_dir=".",
-    show_imports=False,
-    platforms=None,
-    force=False,
-    dependencies=None,
-    verbose=False,
-    quiet=False,
-    dry_run=False,
-):
+    file_path: str,
+    output_dir: str=".",
+    show_imports: bool=False,
+    platforms: Optional[List[Union[str, Any]]]=None,
+    force: bool=False,
+    dependencies: Optional[List[str]]=None,
+    verbose: bool=False,
+    quiet: bool=False,
+    dry_run: bool=False,
+) -> None:
     """Convert a conda package between different platforms and architectures.
 
     Positional arguments:

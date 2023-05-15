@@ -1,6 +1,11 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
 import textwrap
+from typing import TYPE_CHECKING, List, Optional
+
+if TYPE_CHECKING:
+    from conda.exceptions import ResolvePackageNotFound
 
 SEPARATOR = "-" * 70
 
@@ -71,8 +76,8 @@ class VerifyError(CondaBuildException):
 
 class DependencyNeedsBuildingError(CondaBuildException):
     def __init__(
-        self, conda_exception=None, packages=None, subdir=None, *args, **kwargs
-    ):
+        self, conda_exception: Optional[ResolvePackageNotFound]=None, packages: None=None, subdir: Optional[str]=None, *args, **kwargs
+    ) -> None:
         self.subdir = subdir
         self.matchspecs = []
         if packages:
@@ -92,11 +97,11 @@ class DependencyNeedsBuildingError(CondaBuildException):
                 " {}".format(str(conda_exception))
             )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.message
 
     @property
-    def message(self):
+    def message(self) -> str:
         return "Unsatisfiable dependencies for platform {}: {}".format(
             self.subdir, set(self.matchspecs)
         )
@@ -111,14 +116,14 @@ class BuildLockError(CondaBuildException):
 
 
 class OverLinkingError(RuntimeError):
-    def __init__(self, error, *args):
+    def __init__(self, error: List[str], *args) -> None:
         self.error = error
         self.msg = "overlinking check failed \n%s" % (error)
         super().__init__(self.msg)
 
 
 class OverDependingError(RuntimeError):
-    def __init__(self, error, *args):
+    def __init__(self, error: List[str], *args) -> None:
         self.error = error
         self.msg = "overdepending check failed \n%s" % (error)
         super().__init__(self.msg)

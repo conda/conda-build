@@ -3,6 +3,7 @@
 """
 Tools for converting PyPI packages to conda recipes.
 """
+from __future__ import annotations
 
 
 import keyword
@@ -24,16 +25,7 @@ import yaml
 from requests.packages.urllib3.util.url import parse_url
 
 from conda_build.conda_interface import (
-    StringIO,
-    configparser,
-    default_python,
-    download,
-    hashsum_file,
-    human_bytes,
-    input,
-    normalized_version,
-    spec_from_line,
-)
+    StringIO, configparser, default_python, download, hashsum_file, human_bytes, input, normalized_version, spec_from_line)
 from conda_build.config import Config
 from conda_build.environ import create_env
 from conda_build.license_family import allowed_license_families, guess_license_family
@@ -41,13 +33,12 @@ from conda_build.metadata import MetaData
 from conda_build.render import FIELDS as EXPECTED_SECTION_ORDER
 from conda_build.source import apply_patch
 from conda_build.utils import (
-    check_call_env,
-    decompressible_exts,
-    ensure_list,
-    rm_rf,
-    tar_xf,
-)
+    check_call_env, decompressible_exts, ensure_list, rm_rf, tar_xf)
 from conda_build.version import _parse as parse_version
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
+
+if TYPE_CHECKING:
+    from argparse import _SubParsersAction
 
 pypi_example = """
 Examples:
@@ -163,7 +154,7 @@ diff core.py core.py
 INDENT = "\n    - "
 
 
-def _ssl_no_verify():
+def _ssl_no_verify() -> bool:
     """Gets whether the SSL_NO_VERIFY environment variable is set to 1 or True.
 
     This provides a workaround for users in some corporate environments where
@@ -180,14 +171,14 @@ def package_exists(package_name, pypi_url=None):
     return r.status_code != 404
 
 
-def __print_with_indent(line, prefix="", suffix="", level=0, newline=True):
+def __print_with_indent(line: str, prefix: str="", suffix: str="", level: int=0, newline: bool=True) -> str:
     output = ""
     if level:
         output = " " * level
     return output + prefix + line + suffix + ("\n" if newline else "")
 
 
-def _print_dict(recipe_metadata, order=None, level=0, indent=2):
+def _print_dict(recipe_metadata: Dict[str, Dict[str, Union[str, int]]], order: Optional[List[str]]=None, level: int=0, indent: int=2) -> str:
     """Free function responsible to get the metadata which represents the
     recipe and convert it to the yaml format.
 
@@ -235,7 +226,7 @@ def _print_dict(recipe_metadata, order=None, level=0, indent=2):
     return rendered_recipe
 
 
-def _formating_value(attribute_name, attribute_value):
+def _formating_value(attribute_name: str, attribute_value: Union[str, int]) -> str:
     """Format the value of the yaml file. This function will quote the
     attribute value if needed.
 
@@ -254,22 +245,22 @@ def _formating_value(attribute_name, attribute_value):
 
 
 def skeletonize(
-    packages,
-    output_dir=".",
-    version=None,
-    recursive=False,
-    all_urls=False,
-    pypi_url="https://pypi.io/pypi/",
-    noprompt=True,
-    version_compare=False,
-    python_version=None,
-    manual_url=False,
-    all_extras=False,
-    noarch_python=False,
-    config=None,
-    setup_options=None,
-    extra_specs=[],
-    pin_numpy=False,
+    packages: List[str],
+    output_dir: str=".",
+    version: Optional[str]=None,
+    recursive: bool=False,
+    all_urls: bool=False,
+    pypi_url: str="https://pypi.io/pypi/",
+    noprompt: bool=True,
+    version_compare: bool=False,
+    python_version: Optional[str]=None,
+    manual_url: bool=False,
+    all_extras: bool=False,
+    noarch_python: bool=False,
+    config: Optional[Config]=None,
+    setup_options: Optional[str]=None,
+    extra_specs: List[Union[Any, str]]=[],
+    pin_numpy: bool=False,
 ):
     package_dicts = {}
 
@@ -491,7 +482,7 @@ def skeletonize(
             f.write(rendered_recipe)
 
 
-def add_parser(repos):
+def add_parser(repos: _SubParsersAction) -> None:
     """Modify repos in place, adding the PyPI option"""
     pypi = repos.add_parser(
         "pypi",
@@ -606,8 +597,8 @@ def add_parser(repos):
 
 
 def get_download_data(
-    pypi_data, package, version, is_url, all_urls, noprompt, manual_url
-):
+    pypi_data: Dict[str, Any], package: str, version: str, is_url: bool, all_urls: bool, noprompt: bool, manual_url: bool
+) -> Union[Tuple[Dict[str, Optional[Union[str, List[str], Dict[str, int], Dict[str, str], bool]]], str, str, Tuple[str, str]], Tuple[Dict[Any, Any], str, str, List[str]], Tuple[Dict[str, Optional[Union[str, Dict[str, int], Dict[str, str], bool]]], str, str, Tuple[str, str]]]:
     """
     Get at least one valid *source* download URL or fail.
 
@@ -727,7 +718,7 @@ def version_compare(package, versions):
         sys.exit()
 
 
-def convert_version(version):
+def convert_version(version: str) -> str:
     """Convert version into a pin-compatible format according to PEP440."""
     version_parts = version.split(".")
     suffixes = ("post", "pre")
@@ -797,7 +788,7 @@ def env_mark_lookup(env_mark_name, env_mark_constraint):
     return "  # [ " + marker + " ]"
 
 
-def parse_dep_with_env_marker(dep_str):
+def parse_dep_with_env_marker(dep_str: str) -> Tuple[str, str]:
     match = MARKER_RE.match(dep_str)
     name = match.group("name")
     if match.group("constraint"):
@@ -811,20 +802,20 @@ def parse_dep_with_env_marker(dep_str):
 
 
 def get_package_metadata(
-    package,
-    metadata,
-    data,
-    output_dir,
-    python_version,
-    all_extras,
-    recursive,
-    created_recipes,
-    noarch_python,
-    no_prompt,
-    packages,
-    extra_specs,
-    config,
-    setup_options,
+    package: str,
+    metadata: Dict[str, Union[str, Tuple[str, str], List[str]]],
+    data: Dict[str, Any],
+    output_dir: str,
+    python_version: str,
+    all_extras: bool,
+    recursive: bool,
+    created_recipes: List[str],
+    noarch_python: bool,
+    no_prompt: bool,
+    packages: List[Any],
+    extra_specs: List[Union[Any, str]],
+    config: Config,
+    setup_options: List[Union[Any, str]],
 ):
     print("Downloading %s" % package)
     print("PyPI URL: ", metadata["pypiurl"])
@@ -897,7 +888,7 @@ def get_recursive_deps(created_recipes, list_deps, output_dir):
     return recursive_deps
 
 
-def get_dependencies(requires, setuptools_enabled=True):
+def get_dependencies(requires: List[str], setuptools_enabled: bool=True) -> List[str]:
     """Return the whole dependencies of the specified package
     :param list requires: List of requirements
     :param Bool setuptools_enabled: True if setuptools is enabled and False otherwise
@@ -990,7 +981,7 @@ def get_dependencies(requires, setuptools_enabled=True):
     return list_deps
 
 
-def get_import_tests(pkginfo, import_tests_metada=""):
+def get_import_tests(pkginfo: Dict[str, Union[List[str], Dict[str, List[str]], str, bool]], import_tests_metada: str="") -> List[str]:
     """Return the section import in tests
 
     :param dict pkginfo: Package information
@@ -1006,11 +997,11 @@ def get_import_tests(pkginfo, import_tests_metada=""):
     return sorted(set(olddeps) | set(pkginfo["packages"]))
 
 
-def get_tests_require(pkginfo):
+def get_tests_require(pkginfo: Dict[str, Union[List[str], Dict[str, List[str]], str, bool]]) -> List[str]:
     return sorted(spec_from_line(pkg) for pkg in ensure_list(pkginfo["tests_require"]))
 
 
-def get_home(pkginfo, data=None):
+def get_home(pkginfo: Dict[str, str], data: Optional[Dict[str, str]]=None) -> str:
     default_home = "The package home page"
     if pkginfo.get("home"):
         return pkginfo["home"]
@@ -1019,11 +1010,11 @@ def get_home(pkginfo, data=None):
     return default_home
 
 
-def get_summary(pkginfo):
+def get_summary(pkginfo: Dict[str, str]) -> str:
     return pkginfo.get("summary", "Summary of the package").replace('"', r"\"")
 
 
-def get_license_name(package, pkginfo, no_prompt=False, data=None):
+def get_license_name(package: str, pkginfo: Dict[str, Union[List[str], Dict[str, List[str]], str, bool]], no_prompt: bool=False, data: Optional[Dict[Any, Any]]=None) -> str:
     """Responsible to return the license name
     :param str package: Package's name
     :param dict pkginfo:Package information
@@ -1075,7 +1066,7 @@ def get_license_name(package, pkginfo, no_prompt=False, data=None):
     return license_name
 
 
-def clean_license_name(license_name):
+def clean_license_name(license_name: str) -> str:
     """Remove the word ``license`` from the license
     :param str license_name: Receives the license name
     :return str: Return a string without the word ``license``
@@ -1083,7 +1074,7 @@ def clean_license_name(license_name):
     return re.subn(r"(.*)\s+license", r"\1", license_name, flags=re.IGNORECASE)[0]
 
 
-def get_entry_points(pkginfo):
+def get_entry_points(pkginfo: Dict[str, Union[List[str], Dict[str, List[str]], str, bool]]) -> Dict[str, List[str]]:
     """Look at the entry_points and construct console_script and gui_scripts entry_points for conda
     :param pkginfo:
     :return dict:
@@ -1128,7 +1119,7 @@ def get_entry_points(pkginfo):
     return {}
 
 
-def convert_to_flat_list(var_scripts):
+def convert_to_flat_list(var_scripts: Union[List[str], str, List[List[str]]]) -> List[Union[Any, str]]:
     """Convert a string to a list.
     If the first element of the list is a nested list this function will
     convert it to a flat list.
@@ -1147,7 +1138,7 @@ def convert_to_flat_list(var_scripts):
     return var_scripts
 
 
-def is_setuptools_enabled(pkginfo):
+def is_setuptools_enabled(pkginfo: Dict[str, Union[str, Dict[str, List[str]]]]) -> bool:
     """Function responsible to inspect if skeleton requires setuptools
     :param dict pkginfo: Dict which holds the package information
     :return Bool: Return True if it is enabled or False otherwise
@@ -1170,14 +1161,14 @@ def valid(name):
         return ""
 
 
-def unpack(src_path, tempdir):
+def unpack(src_path: str, tempdir: str) -> None:
     if src_path.lower().endswith(decompressible_exts):
         tar_xf(src_path, tempdir)
     else:
         raise Exception("not a valid source: %s" % src_path)
 
 
-def get_dir(tempdir):
+def get_dir(tempdir: str) -> str:
     lst = [
         fn
         for fn in listdir(tempdir)
@@ -1249,14 +1240,14 @@ def get_requirements(package, pkginfo, all_extras=True):
 
 
 def get_pkginfo(
-    package,
-    filename,
-    pypiurl,
-    digest,
-    python_version,
-    extra_specs,
-    config,
-    setup_options,
+    package: str,
+    filename: str,
+    pypiurl: str,
+    digest: Union[List[str], Tuple[str, str]],
+    python_version: str,
+    extra_specs: List[Union[Any, str]],
+    config: Config,
+    setup_options: List[Union[Any, str]],
 ):
     # Unfortunately, two important pieces of metadata are only stored in
     # the package itself: the dependencies, and the entry points (if the
@@ -1326,7 +1317,7 @@ def get_pkginfo(
     return pkg_info
 
 
-def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_options):
+def run_setuppy(src_dir: str, temp_dir: str, python_version: str, extra_specs: List[Union[Any, str]], config: Config, setup_options: List[Union[Any, str]]):
     """
     Patch distutils and then run setup.py in a subprocess.
 
@@ -1425,7 +1416,7 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
         chdir(cwd)
 
 
-def make_entry_tests(entry_list):
+def make_entry_tests(entry_list: List[str]) -> List[str]:
     tests = []
     for entry_point in entry_list:
         entry = entry_point.partition("=")[0].strip()

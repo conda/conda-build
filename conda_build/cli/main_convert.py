@@ -1,11 +1,17 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
 import logging
 import sys
 from os.path import abspath, expanduser
 
 from conda_build import api
 from conda_build.conda_interface import ArgumentParser
+from typing import TYPE_CHECKING, List, Tuple
+
+if TYPE_CHECKING:
+    from argparse import Namespace
+    from conda.cli.conda_argparse import ArgumentParser
 
 logging.basicConfig(level=logging.INFO)
 
@@ -34,7 +40,7 @@ install on Mac OS X):
 """
 
 
-def parse_args(args):
+def parse_args(args: List[str]) -> Tuple[conda.cli.conda_argparse.ArgumentParser, Namespace]:
     p = ArgumentParser(
         description="""
 Various tools to convert conda packages. Takes a pure Python package build for
@@ -117,7 +123,7 @@ all.""",
     return p, args
 
 
-def execute(args):
+def execute(args: List[str]) -> None:
     _, args = parse_args(args)
     files = args.files
     del args.__dict__["files"]
