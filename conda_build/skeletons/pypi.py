@@ -23,7 +23,7 @@ import requests
 import yaml
 from requests.packages.urllib3.util.url import parse_url
 
-from conda_build.conda_interface import (
+from ..conda_interface import (
     StringIO,
     configparser,
     default_python,
@@ -34,20 +34,21 @@ from conda_build.conda_interface import (
     normalized_version,
     spec_from_line,
 )
-from conda_build.config import Config
-from conda_build.environ import create_env
-from conda_build.license_family import allowed_license_families, guess_license_family
-from conda_build.metadata import MetaData
-from conda_build.render import FIELDS as EXPECTED_SECTION_ORDER
-from conda_build.source import apply_patch
-from conda_build.utils import (
+from ..config import Config
+from ..deprecations import deprecated
+from ..environ import create_env
+from ..license_family import allowed_license_families, guess_license_family
+from ..metadata import MetaData
+from ..render import FIELDS as EXPECTED_SECTION_ORDER
+from ..source import apply_patch
+from ..utils import (
     check_call_env,
     decompressible_exts,
     ensure_list,
     rm_rf,
     tar_xf,
 )
-from conda_build.version import _parse as parse_version
+from ..version import _parse as parse_version
 
 pypi_example = """
 Examples:
@@ -253,6 +254,7 @@ def _formating_value(attribute_name, attribute_value):
     return " " + str(attribute_value) + "\n"
 
 
+@deprecated("3.25.0", "4.0.0", addendum="Use `grayskull` instead.")
 def skeletonize(
     packages,
     output_dir=".",

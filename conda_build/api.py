@@ -300,6 +300,7 @@ def test(
     return test_result
 
 
+@deprecated("3.25.0", "4.0.0", addendum="Use `grayskull` instead.")
 def list_skeletons():
     """List available skeletons for generating conda recipes from external sources.
 
@@ -315,6 +316,7 @@ def list_skeletons():
     return files
 
 
+@deprecated("3.25.0", "4.0.0", addendum="Use `grayskull` instead.")
 def skeletonize(
     packages, repo, output_dir=".", version=None, recursive=False, config=None, **kwargs
 ):
