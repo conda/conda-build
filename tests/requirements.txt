@@ -18,6 +18,7 @@ perl
 pip
 pkginfo
 psutil
+py  # https://github.com/ContinuumIO/anaconda-issues/issues/13198
 py-lief
 pycrypto
 pyflakes
