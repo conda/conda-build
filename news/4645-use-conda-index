@@ -8,7 +8,7 @@
 
 ### Deprecations
 
-* `conda-build index` is deprecated. `conda-build` still provides the
+* `conda-build index` is pending deprecation. `conda-build` still provides the
   `conda-build index` a.k.a. `conda index` CLI, but uses standalone
   `conda-index` during builds.
 * Prefer the [standalone conda-index package](https://conda.github.io/conda-index/),
