@@ -40,7 +40,7 @@ except ImportError:
 
 from conda.common.io import dashlist
 
-from . import metadata, source
+from .. import metadata, source
 from ..conda_interface import TemporaryDirectory, cc_conda_build
 from ..config import get_or_merge_config
 from ..deprecations import deprecated

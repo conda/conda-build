@@ -21,7 +21,7 @@ from os.path import basename, dirname, exists, join
 
 import requests
 
-from . import environ
+from .. import environ
 from ..conda_interface import (
     CondaError,
     CondaHTTPError,
