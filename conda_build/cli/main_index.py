@@ -5,11 +5,12 @@ import os
 import sys
 import warnings
 
+from conda_index.index import MAX_THREADS_DEFAULT
+from conda_index.utils import DEFAULT_SUBDIRS
+
 from .. import api
 from ..conda_interface import ArgumentParser
 from ..deprecations import deprecated
-from ..index import MAX_THREADS_DEFAULT
-from ..utils import DEFAULT_SUBDIRS
 
 logging.basicConfig(level=logging.INFO)
 
