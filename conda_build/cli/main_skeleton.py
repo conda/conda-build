@@ -5,7 +5,6 @@ import logging
 import os
 import pkgutil
 import sys
-import warnings
 
 from .. import api
 from ..conda_interface import ArgumentParser
