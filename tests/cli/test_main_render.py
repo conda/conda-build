@@ -44,27 +44,26 @@ def test_render_add_channel():
         ), f"Expected version number 1.0 on successful rendering, but got {required_package_details[1]}"
 
 
-def test_render_without_channel_fails():
+def test_render_without_channel_fails(tmp_path):
     # do make extra channel available, so the required package should not be found
-    with TemporaryDirectory() as tmpdir:
-        rendered_filename = os.path.join(tmpdir, "out.yaml")
-        args = [
-            "--override-channels",
-            os.path.join(metadata_dir, "_recipe_requiring_external_channel"),
-            "--file",
-            rendered_filename,
-        ]
-        main_render.execute(args)
-        with open(rendered_filename) as rendered_file:
-            rendered_meta = yaml.safe_load(rendered_file)
-        required_package_string = [
-            pkg
-            for pkg in rendered_meta.get("requirements", {}).get("build", [])
-            if "conda_build_test_requirement" in pkg
-        ][0]
-        assert (
-            required_package_string == "conda_build_test_requirement"
-        ), f"Expected to get only base package name because it should not be found, but got :{required_package_string}"
+    rendered_filename = tmp_path / "out.yaml"
+    args = [
+        "--override-channels",
+        os.path.join(metadata_dir, "_recipe_requiring_external_channel"),
+        "--file",
+        str(rendered_filename),
+    ]
+    main_render.execute(args)
+    with open(rendered_filename) as rendered_file:
+        rendered_meta = yaml.safe_load(rendered_file)
+    required_package_string = [
+        pkg
+        for pkg in rendered_meta.get("requirements", {}).get("build", [])
+        if "conda_build_test_requirement" in pkg
+    ][0]
+    assert (
+        required_package_string == "conda_build_test_requirement"
+    ), f"Expected to get only base package name because it should not be found, but got :{required_package_string}"
 
 
 def test_render_output_build_path(testing_workdir, testing_metadata, capfd, caplog):

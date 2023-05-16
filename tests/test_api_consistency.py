@@ -3,6 +3,7 @@
 # This file makes sure that our API has not changed.  Doing so can not be accidental.  Whenever it
 #    happens, we should bump our major build number, because we may have broken someone.
 
+import inspect
 import sys
 from inspect import getfullargspec as getargspec
 
@@ -185,8 +186,9 @@ def test_api_create_metapackage():
 
 
 def test_api_update_index():
-    argspec = getargspec(api.update_index)
-    assert argspec.args == [
+    # getfullargspec() isn't friends with functools.wraps
+    argspec = inspect.signature(api.update_index)
+    assert list(argspec.parameters) == [
         "dir_paths",
         "config",
         "force",
@@ -200,8 +202,10 @@ def test_api_update_index():
         "progress",
         "hotfix_source_repo",
         "current_index_versions",
+        "kwargs",
     ]
-    assert argspec.defaults == (
+    assert tuple(parameter.default for parameter in argspec.parameters.values()) == (
+        inspect._empty,
         None,
         False,
         False,
@@ -214,4 +218,5 @@ def test_api_update_index():
         False,
         None,
         None,
+        inspect._empty,
     )
