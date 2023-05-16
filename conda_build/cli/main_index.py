@@ -103,7 +103,7 @@ def execute(args):
     deprecated.topic(
         "3.25.0",
         "4.0.0",
-        topic="`conda-build index` and `conda index`",
+        topic="`conda index` and `conda-index`",
         addendum="Use the `conda-index` project instead.",
     )
 
