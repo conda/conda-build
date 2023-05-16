@@ -8,8 +8,8 @@
 
 ### Deprecations
 
-* `conda-build skeleton` is pending deprecation. `conda-build` still provides the
-  `conda-build skeleton` a.k.a. `conda skeleton` CLI for now, but will remove
+* `conda skeleton` is pending deprecation. `conda-build` still provides
+  `conda-skeleton` a.k.a. `conda skeleton` CLI for now, but will remove
   it eventually.
 * Prefer the [standalone grayskull package](https://conda.github.io/grayskull/),
   instead of `conda-build skeleton` or `conda skeleton`.
