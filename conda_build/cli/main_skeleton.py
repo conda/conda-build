@@ -52,7 +52,7 @@ def execute(args):
     deprecated.topic(
         "3.25.0",
         "4.0.0",
-        topic="`conda-build skeleton` and `conda skeleton`",
+        topic="`conda skeleton` and `conda-skeleton`",
         addendum="Use the `grayskull` project instead.",
     )
 
