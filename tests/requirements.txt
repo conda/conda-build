@@ -18,6 +18,7 @@ perl
 pip
 pkginfo
 psutil
+py
 py-lief
 pycrypto
 pyflakes
