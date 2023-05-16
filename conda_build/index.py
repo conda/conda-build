@@ -1,6 +1,5 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-
 import bz2
 import copy
 import fnmatch
@@ -40,6 +39,7 @@ from conda.common.compat import ensure_binary
 #  BAD BAD BAD - conda internals
 from conda.core.subdir_data import SubdirData
 from conda.models.channel import Channel
+from conda_index.index import update_index as _update_index
 from conda_package_handling.api import InvalidArchiveError
 from jinja2 import Environment, PackageLoader
 from tqdm import tqdm
@@ -62,6 +62,7 @@ from .conda_interface import (
     human_bytes,
     url_path,
 )
+from .deprecations import deprecated
 from .utils import (
     CONDA_PACKAGE_EXTENSION_V1,
     CONDA_PACKAGE_EXTENSION_V2,
@@ -142,8 +143,13 @@ def get_build_index(
     channel_urls=None,
     debug=False,
     verbose=True,
-    **kwargs,
+    locking=None,
+    timeout=None,
 ):
+    """
+    Used during package builds to create/get a channel including any local or
+    newly built packages. This function both updates and gets index data.
+    """
     global local_index_timestamp
     global local_subdir
     global local_output_folder
@@ -194,7 +200,7 @@ def get_build_index(
                 if local_path not in urls:
                     urls.insert(0, local_path)
             _ensure_valid_channel(output_folder, subdir)
-            update_index(output_folder, verbose=debug)
+            _delegated_update_index(output_folder, verbose=debug)
 
             # replace noarch with native subdir - this ends up building an index with both the
             #      native content and the noarch content.
@@ -202,6 +208,8 @@ def get_build_index(
             if subdir == "noarch":
                 subdir = conda_interface.subdir
             try:
+                # get_index() is like conda reading the index, not conda_index
+                # creating a new index.
                 cached_index = get_index(
                     channel_urls=urls,
                     prepend=not omit_defaults,
@@ -280,6 +288,49 @@ def _ensure_valid_channel(local_folder, subdir):
             os.makedirs(path)
 
 
+def _delegated_update_index(
+    dir_path,
+    check_md5=False,
+    channel_name=None,
+    patch_generator=None,
+    threads=1,
+    verbose=False,
+    progress=False,
+    subdirs=None,
+    warn=True,
+    current_index_versions=None,
+    debug=False,
+):
+    """
+    update_index as called by conda-build, delegating to standalone conda-index.
+    Needed to allow update_index calls on single subdir.
+    """
+    # conda-build calls update_index on a single subdir internally, but
+    # conda-index expects to index every subdir under dir_path
+    parent_path, dirname = os.path.split(dir_path)
+    if dirname in utils.DEFAULT_SUBDIRS:
+        dir_path = parent_path
+        subdirs = [dirname]
+
+    return _update_index(
+        dir_path,
+        check_md5=check_md5,
+        channel_name=channel_name,
+        patch_generator=patch_generator,
+        threads=threads,
+        verbose=verbose,
+        progress=progress,
+        subdirs=subdirs,
+        warn=warn,
+        current_index_versions=current_index_versions,
+        debug=debug,
+    )
+
+
+# Everything below is deprecated to maintain API/feature compatibility.
+
+
+@deprecated("3.25.0", "4.0.0", addendum="Use standalone conda-index.")
 def update_index(
     dir_path,
     check_md5=False,

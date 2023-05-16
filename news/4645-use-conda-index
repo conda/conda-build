@@ -1,0 +1,23 @@
+### Enhancements
+
+* Depend on standalone conda-index instead of bundled indexing code. (#4690)
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* `conda-build index` is deprecated. `conda-build` still provides the
+  `conda-build index` a.k.a. `conda index` CLI, but uses standalone
+  `conda-index` during builds.
+* Prefer the [standalone conda-index package](https://conda.github.io/conda-index/),
+  instead of `conda-build index` or `conda index`, to use faster indexing code.
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>

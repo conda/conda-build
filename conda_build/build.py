@@ -37,7 +37,7 @@ from conda_build import environ, source, tarcheck, utils
 from conda_build.config import Config
 from conda_build.create_test import create_all_test_files
 from conda_build.exceptions import CondaBuildException, DependencyNeedsBuildingError
-from conda_build.index import get_build_index, update_index
+from conda_build.index import _delegated_update_index, get_build_index
 from conda_build.metadata import FIELDS, MetaData
 from conda_build.post import (
     fix_permissions,
@@ -2105,7 +2105,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
                 tmp_path, final_output, metadata.config.timeout, locking=False
             )
             final_outputs.append(final_output)
-    update_index(
+    _delegated_update_index(
         os.path.dirname(output_folder), verbose=metadata.config.debug, threads=1
     )
 
@@ -2911,6 +2911,7 @@ def build(
                             locking=m.config.locking,
                             timeout=m.config.timeout,
                             clear_cache=True,
+                            omit_defaults=False,
                         )
                     get_build_index(
                         subdir=index_subdir,
@@ -2922,6 +2923,7 @@ def build(
                         locking=m.config.locking,
                         timeout=m.config.timeout,
                         clear_cache=True,
+                        omit_defaults=False,
                     )
     else:
         if not provision_only:
@@ -3052,7 +3054,7 @@ def _construct_metadata_for_test_from_package(package, config):
     local_channel = os.path.dirname(local_pkg_location)
 
     # update indices in the channel
-    update_index(local_channel, verbose=config.debug, threads=1)
+    _delegated_update_index(local_channel, verbose=config.debug, threads=1)
 
     try:
         metadata = render_recipe(
@@ -3670,7 +3672,7 @@ def tests_failed(package_or_metadata, move_broken, broken_dir, config):
             )
         except OSError:
             pass
-        update_index(
+        _delegated_update_index(
             os.path.dirname(os.path.dirname(pkg)), verbose=config.debug, threads=1
         )
     sys.exit("TESTS FAILED: " + os.path.basename(pkg))
@@ -4191,10 +4193,12 @@ def clean_build(config, folders=None):
 
 
 def is_package_built(metadata, env, include_local=True):
+    # bldpkgs_dirs is typically {'$ENVIRONMENT/conda-bld/noarch', '$ENVIRONMENT/conda-bld/osx-arm64'}
+    # could pop subdirs (last path element) and call update_index() once
     for d in metadata.config.bldpkgs_dirs:
         if not os.path.isdir(d):
             os.makedirs(d)
-        update_index(d, verbose=metadata.config.debug, warn=False, threads=1)
+        _delegated_update_index(d, verbose=metadata.config.debug, warn=False, threads=1)
     subdir = getattr(metadata.config, f"{env}_subdir")
 
     urls = [url_path(metadata.config.output_folder), "local"] if include_local else []
