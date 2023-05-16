@@ -3,7 +3,6 @@
 import logging
 import os
 import sys
-import warnings
 
 from conda_index.index import MAX_THREADS_DEFAULT
 from conda_index.utils import DEFAULT_SUBDIRS
