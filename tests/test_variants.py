@@ -493,11 +493,6 @@ def test_target_platform_looping():
     assert len(outputs) == 2
 
 
-@pytest.mark.skipif(
-    on_mac and platform.machine() == "arm64",
-    reason="Unsatisfiable dependencies for M1 MacOS systems: {'numpy=1.16'}",
-)
-# TODO Remove the above skip decorator once https://github.com/conda/conda-build/issues/4717 is resolved
 def test_numpy_used_variable_looping():
     outputs = api.get_output_file_paths(os.path.join(variants_dir, "numpy_used"))
     assert len(outputs) == 4
