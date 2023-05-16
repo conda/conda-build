@@ -17,7 +17,6 @@ from sys import platform as _platform
 
 from ..deprecations import deprecated
 
-
 INDENT = "\n    - "
 
 rockspec_parser = """
