@@ -21,8 +21,8 @@ from os.path import basename, dirname, exists, join
 
 import requests
 
-from conda_build import environ
-from conda_build.conda_interface import (
+from . import environ
+from ..conda_interface import (
     CondaError,
     CondaHTTPError,
     MatchSpec,
@@ -31,10 +31,11 @@ from conda_build.conda_interface import (
     download,
     get_index,
 )
-from conda_build.config import get_or_merge_config
-from conda_build.utils import check_call_env, on_win
-from conda_build.variants import get_default_variant
-from conda_build.version import _parse as parse_version
+from ..config import get_or_merge_config
+from ..deprecations import deprecated
+from ..utils import check_call_env, on_win
+from ..variants import get_default_variant
+from ..version import _parse as parse_version
 
 CPAN_META = """\
 {{% set name = "{packagename}" %}}
@@ -390,7 +391,7 @@ def get_core_modules_for_this_perl_version(version, cache_dir):
     )
 
 
-# meta_cpan_url="http://api.metacpan.org",
+@deprecated("3.25.0", "4.0.0", addendum="Use grayskull instead.")
 def skeletonize(
     packages,
     output_dir=".",

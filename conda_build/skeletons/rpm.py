@@ -3,9 +3,6 @@
 import argparse
 from copy import copy
 
-from conda_build.license_family import guess_license_family
-from conda_build.source import download_to_cache
-
 try:
     import cPickle as pickle
 except:
@@ -19,6 +16,9 @@ from os.path import basename, dirname, exists, join, splitext
 from textwrap import wrap
 from xml.etree import ElementTree as ET
 
+from ..deprecations import deprecated
+from ..license_family import guess_license_family
+from ..source import download_to_cache
 from .cran import yaml_quote_string
 
 try:
@@ -719,6 +719,7 @@ def write_conda_recipe(
         )
 
 
+@deprecated("3.25.0", "4.0.0", addendum="Use `grayskull` instead.")
 def skeletonize(
     packages,
     output_dir=".",

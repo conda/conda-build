@@ -5,10 +5,13 @@ import logging
 import os
 import pkgutil
 import sys
+import warnings
 
-import conda_build.api as api
-from conda_build.conda_interface import ArgumentParser
-from conda_build.config import Config
+from .. import api
+from ..conda_interface import ArgumentParser
+from ..config import Config
+from ..deprecations import deprecated
+
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
 logging.basicConfig(level=logging.INFO)
@@ -19,6 +22,7 @@ def parse_args(args):
         description="""
 Generates a boilerplate/skeleton recipe, which you can then edit to create a
 full recipe. Some simple skeleton recipes may not even need edits.
+Pending deprecation, please use the standalone project 'grayskull'."
         """,
         epilog="""
 Run --help on the subcommands like 'conda skeleton pypi --help' to see the
@@ -45,6 +49,13 @@ options available.
 def execute(args):
     parser, args = parse_args(args)
     config = Config(**args.__dict__)
+
+    deprecated.topic(
+        "3.25.0",
+        "4.0.0",
+        topic="`conda-build skeleton` and `conda skeleton`",
+        addendum="Use the `grayskull` project instead.",
+    )
 
     if not args.repo:
         parser.print_help()
