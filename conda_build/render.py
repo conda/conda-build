@@ -18,10 +18,10 @@ from pathlib import Path
 
 import yaml
 
+import conda_build.index
 import conda_build.source as source
 from conda_build import environ, exceptions, utils
 from conda_build.exceptions import DependencyNeedsBuildingError
-from conda_build.index import get_build_index
 from conda_build.metadata import MetaData, combine_top_level_metadata_with_output
 from conda_build.variants import (
     filter_by_key_value,
@@ -318,10 +318,13 @@ def _read_specs_from_package(pkg_loc, pkg_dist):
 
 
 def execute_download_actions(m, actions, env, package_subset=None, require_files=False):
-    index, _, _ = get_build_index(
-        getattr(m.config, f"{env}_subdir"),
+    subdir = getattr(m.config, f"{env}_subdir")
+    index, _, _ = conda_build.index.get_build_index(
+        subdir=subdir,
         bldpkgs_dir=m.config.bldpkgs_dir,
         output_folder=m.config.output_folder,
+        clear_cache=False,
+        omit_defaults=False,
         channel_urls=m.config.channel_urls,
         debug=m.config.debug,
         verbose=m.config.verbose,
