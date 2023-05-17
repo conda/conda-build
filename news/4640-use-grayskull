@@ -12,7 +12,7 @@
   `conda-skeleton` a.k.a. `conda skeleton` CLI for now, but will remove
   it eventually.
 * Prefer the [standalone grayskull package](https://conda.github.io/grayskull/),
-  instead of `conda-build skeleton` or `conda skeleton`.
+  instead of `conda skeleton` or `conda-skeleton`.
 
 ### Docs
 
