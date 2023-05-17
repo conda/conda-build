@@ -5,6 +5,7 @@
 
 import inspect
 import sys
+
 import pytest
 
 from conda_build import api
