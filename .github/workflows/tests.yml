@@ -9,7 +9,7 @@ on:
 
   workflow_dispatch:
   schedule: # Running this weekly on a Wednesday.
-      - cron: "17 14 * * WED"
+      - cron: "18 37 * * *"
   push:
     branches:
       - main
