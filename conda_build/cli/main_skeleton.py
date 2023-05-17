@@ -11,7 +11,6 @@ from ..conda_interface import ArgumentParser
 from ..config import Config
 from ..deprecations import deprecated
 
-
 thisdir = os.path.dirname(os.path.abspath(__file__))
 logging.basicConfig(level=logging.INFO)
 

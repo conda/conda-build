@@ -41,13 +41,7 @@ from ..license_family import allowed_license_families, guess_license_family
 from ..metadata import MetaData
 from ..render import FIELDS as EXPECTED_SECTION_ORDER
 from ..source import apply_patch
-from ..utils import (
-    check_call_env,
-    decompressible_exts,
-    ensure_list,
-    rm_rf,
-    tar_xf,
-)
+from ..utils import check_call_env, decompressible_exts, ensure_list, rm_rf, tar_xf
 from ..version import _parse as parse_version
 
 pypi_example = """
