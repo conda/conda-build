@@ -5,13 +5,15 @@
 
 import inspect
 import sys
-from inspect import getfullargspec as getargspec
-
 import pytest
 
 from conda_build import api
 
 pytestmark = pytest.mark.no_default_testing_config
+
+
+def argspec_defaults(argspec):
+    return tuple(parameter.default for parameter in argspec.parameters.values())
 
 
 def test_api_config():
@@ -20,50 +22,78 @@ def test_api_config():
 
 
 def test_api_get_or_merge_config():
-    argspec = getargspec(api.get_or_merge_config)
-    assert argspec.args == ["config", "variant"]
-    assert argspec.defaults == (None,)
+    argspec = inspect.signature(api.get_or_merge_config)
+    assert list(argspec.parameters) == ["config", "variant", "kwargs"]
+    assert argspec_defaults(argspec) == (inspect._empty, None, inspect._empty)
 
 
 def test_api_render():
-    argspec = getargspec(api.render)
-    assert argspec.args == [
+    argspec = inspect.signature(api.render)
+    assert list(argspec.parameters) == [
         "recipe_path",
         "config",
         "variants",
         "permit_unsatisfiable_variants",
         "finalize",
         "bypass_env_check",
+        "kwargs",
     ]
-    assert argspec.defaults == (None, None, True, True, False)
+    assert argspec_defaults(argspec) == (
+        inspect._empty,
+        None,
+        None,
+        True,
+        True,
+        False,
+        inspect._empty,
+    )
 
 
 def test_api_output_yaml():
-    argspec = getargspec(api.output_yaml)
-    assert argspec.args == ["metadata", "file_path", "suppress_outputs"]
-    assert argspec.defaults == (None, False)
+    argspec = inspect.signature(api.output_yaml)
+    assert list(argspec.parameters) == ["metadata", "file_path", "suppress_outputs"]
+    assert argspec_defaults(argspec) == (inspect._empty, None, False)
 
 
 def test_api_get_output_file_path():
-    argspec = getargspec(api.get_output_file_path)
-    assert argspec.args == [
+    argspec = inspect.signature(api.get_output_file_path)
+    assert list(argspec.parameters) == [
         "recipe_path_or_metadata",
         "no_download_source",
         "config",
         "variants",
+        "kwargs",
     ]
-    assert argspec.defaults == (False, None, None)
+    assert argspec_defaults(argspec) == (
+        inspect._empty,
+        False,
+        None,
+        None,
+        inspect._empty,
+    )
 
 
 def test_api_check():
-    argspec = getargspec(api.check)
-    assert argspec.args == ["recipe_path", "no_download_source", "config", "variants"]
-    assert argspec.defaults == (False, None, None)
+    argspec = inspect.signature(api.check)
+    assert list(argspec.parameters) == [
+        "recipe_path",
+        "no_download_source",
+        "config",
+        "variants",
+        "kwargs",
+    ]
+    assert argspec_defaults(argspec) == (
+        inspect._empty,
+        False,
+        None,
+        None,
+        inspect._empty,
+    )
 
 
 def test_api_build():
-    argspec = getargspec(api.build)
-    assert argspec.args == [
+    argspec = inspect.signature(api.build)
+    assert list(argspec.parameters) == [
         "recipe_paths_or_metadata",
         "post",
         "need_source_download",
@@ -72,43 +102,70 @@ def test_api_build():
         "config",
         "variants",
         "stats",
+        "kwargs",
     ]
-    assert argspec.defaults == (None, True, False, False, None, None, None)
+    assert argspec_defaults(argspec) == (
+        inspect._empty,
+        None,
+        True,
+        False,
+        False,
+        None,
+        None,
+        None,
+        inspect._empty,
+    )
 
 
 def test_api_test():
-    argspec = getargspec(api.test)
-    assert argspec.args == [
+    argspec = inspect.signature(api.test)
+    assert list(argspec.parameters) == [
         "recipedir_or_package_or_metadata",
         "move_broken",
         "config",
         "stats",
+        "kwargs",
     ]
-    assert argspec.defaults == (True, None, None)
+    assert argspec_defaults(argspec) == (
+        inspect._empty,
+        True,
+        None,
+        None,
+        inspect._empty,
+    )
 
 
 def test_api_list_skeletons():
-    argspec = getargspec(api.list_skeletons)
-    assert argspec.args == []
-    assert argspec.defaults is None
+    argspec = inspect.signature(api.list_skeletons)
+    assert list(argspec.parameters) == []
+    assert argspec_defaults(argspec) == ()
 
 
 def test_api_skeletonize():
-    argspec = getargspec(api.skeletonize)
-    assert argspec.args == [
+    argspec = inspect.signature(api.skeletonize)
+    assert list(argspec.parameters) == [
         "packages",
         "repo",
         "output_dir",
         "version",
         "recursive",
         "config",
+        "kwargs",
     ]
-    assert argspec.defaults == (".", None, False, None)
+    assert argspec_defaults(argspec) == (
+        inspect._empty,
+        inspect._empty,
+        ".",
+        None,
+        False,
+        None,
+        inspect._empty,
+    )
 
 
 def test_api_develop():
-    argspec = getargspec(api.develop)
-    assert argspec.args == [
+    argspec = inspect.signature(api.develop)
+    assert list(argspec.parameters) == [
         "recipe_dir",
         "prefix",
         "no_pth_file",
@@ -116,12 +173,19 @@ def test_api_develop():
         "clean",
         "uninstall",
     ]
-    assert argspec.defaults == (sys.prefix, False, False, False, False)
+    assert argspec_defaults(argspec) == (
+        inspect._empty,
+        sys.prefix,
+        False,
+        False,
+        False,
+        False,
+    )
 
 
 def test_api_convert():
-    argspec = getargspec(api.convert)
-    assert argspec.args == [
+    argspec = inspect.signature(api.convert)
+    assert list(argspec.parameters) == [
         "package_file",
         "output_dir",
         "show_imports",
@@ -132,18 +196,28 @@ def test_api_convert():
         "quiet",
         "dry_run",
     ]
-    assert argspec.defaults == (".", False, None, False, None, False, True, False)
+    assert argspec_defaults(argspec) == (
+        inspect._empty,
+        ".",
+        False,
+        None,
+        False,
+        None,
+        False,
+        True,
+        False,
+    )
 
 
 def test_api_installable():
-    argspec = getargspec(api.test_installable)
-    assert argspec.args == ["channel"]
-    assert argspec.defaults == ("defaults",)
+    argspec = inspect.signature(api.test_installable)
+    assert list(argspec.parameters) == ["channel"]
+    assert argspec_defaults(argspec) == ("defaults",)
 
 
 def test_api_inspect_linkages():
-    argspec = getargspec(api.inspect_linkages)
-    assert argspec.args == [
+    argspec = inspect.signature(api.inspect_linkages)
+    assert list(argspec.parameters) == [
         "packages",
         "prefix",
         "untracked",
@@ -152,25 +226,33 @@ def test_api_inspect_linkages():
         "groupby",
         "sysroot",
     ]
-    assert argspec.defaults == (sys.prefix, False, False, False, "package", "")
+    assert argspec_defaults(argspec) == (
+        inspect._empty,
+        sys.prefix,
+        False,
+        False,
+        False,
+        "package",
+        "",
+    )
 
 
 def test_api_inspect_objects():
-    argspec = getargspec(api.inspect_objects)
-    assert argspec.args == ["packages", "prefix", "groupby"]
-    assert argspec.defaults == (sys.prefix, "filename")
+    argspec = inspect.signature(api.inspect_objects)
+    assert list(argspec.parameters) == ["packages", "prefix", "groupby"]
+    assert argspec_defaults(argspec) == (inspect._empty, sys.prefix, "filename")
 
 
 def test_api_inspect_prefix_length():
-    argspec = getargspec(api.inspect_prefix_length)
-    assert argspec.args == ["packages", "min_prefix_length"]
+    argspec = inspect.signature(api.inspect_prefix_length)
+    assert list(argspec.parameters) == ["packages", "min_prefix_length"]
     # hard-coded prefix length as intentional check here
-    assert argspec.defaults == (255,)
+    assert argspec_defaults(argspec) == (inspect._empty, 255)
 
 
 def test_api_create_metapackage():
-    argspec = getargspec(api.create_metapackage)
-    assert argspec.args == [
+    argspec = inspect.signature(api.create_metapackage)
+    assert list(argspec.parameters) == [
         "name",
         "version",
         "entry_points",
@@ -181,8 +263,21 @@ def test_api_create_metapackage():
         "license_name",
         "summary",
         "config",
+        "kwargs",
     ]
-    assert argspec.defaults == ((), None, 0, (), None, None, None, None)
+    assert argspec_defaults(argspec) == (
+        inspect._empty,
+        inspect._empty,
+        (),
+        None,
+        0,
+        (),
+        None,
+        None,
+        None,
+        None,
+        inspect._empty,
+    )
 
 
 def test_api_update_index():
