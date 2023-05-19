@@ -63,14 +63,14 @@ jobs:
       fail-fast: false
       matrix:
         # test all lower versions (w/ stable conda) and upper version (w/ canary conda)
-        python-version: ['3.8', '3.9']
+        python-version: ['3.8', '3.9', '3.10']
         conda-version: [release]
         test-type: [serial, parallel]
         include:
-          - python-version: '3.10'
+          - python-version: '3.11'
             conda-version: canary
             test-type: serial
-          - python-version: '3.10'
+          - python-version: '3.11'
             conda-version: canary
             test-type: parallel
     env:
@@ -172,10 +172,10 @@ jobs:
         conda-version: [release]
         test-type: [serial, parallel]
         include:
-          - python-version: '3.10'
+          - python-version: '3.11'
             conda-version: canary
             test-type: serial
-          - python-version: '3.10'
+          - python-version: '3.11'
             conda-version: canary
             test-type: parallel
     env:
@@ -284,10 +284,10 @@ jobs:
         conda-version: [release]
         test-type: [serial, parallel]
         include:
-          - python-version: '3.10'
+          - python-version: '3.11'
             conda-version: canary
             test-type: serial
-          - python-version: '3.10'
+          - python-version: '3.11'
             conda-version: canary
             test-type: parallel
     env:
@@ -379,7 +379,7 @@ jobs:
   aggregate:
     # only aggregate test suite if there are code changes
     needs: [changes, linux, windows, macos]
-    if: needs.changes.outputs.code == 'true' && always()
+    if: always() && needs.changes.outputs.code == 'true'
 
     runs-on: ubuntu-latest
     steps:
@@ -423,7 +423,7 @@ jobs:
     # - this is the main repo, and
     # - we are on the main, feature, or release branch
     if: >-
-      success()
+      always()
       && !github.event.repository.fork
       && (
         github.ref_name == 'main'
