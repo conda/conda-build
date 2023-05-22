@@ -38,16 +38,15 @@
 * @conda-bot
 * @dholth
 * @duncanmmacleod
-* @ffirmanff
+* @ffirmanff made their first contribution in https://github.com/conda/conda-build/pull/4692
 * @isuruf
 * @jezdez
 * @jakirkham
 * @jjhelmus
 * @kenodegard
-* @rishabh11336
-* @ryanskeith
+* @rishabh11336 made their first contribution in https://github.com/conda/conda-build/pull/4782
+* @ryanskeith made their first contribution in https://github.com/conda/conda-build/pull/4843
 * @pre-commit-ci[bot]
-
 
 
 ## 3.24.0 (2023-03-22)
