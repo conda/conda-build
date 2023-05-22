@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Ensure that `tests/commands` get run also in the presence of `run_test.*` (#4427)
+* Ensure `tests/commands` are also run in the presence of `run_test.*` (#4429)
 
 ### Deprecations
 

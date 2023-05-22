@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Download packages during build into the correct subdir folder. (#4750)
+* Download packages during build into the correct subdir folder. (#4832)
 
 ### Deprecations
 
