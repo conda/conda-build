@@ -1364,3 +1364,16 @@
   num_commits: 1
   first_commit: 2023-03-22 00:34:22
   github: johnnynunez
+- name: Ryan Keith
+  email: rkeith@anaconda.com
+  aliases:
+    - Ryan
+  github: ryanskeith
+- name: Rishabh Singh
+  email: 67859818+rishabh11336@users.noreply.github.com
+  aliases:
+    - rishabh11336
+  github: rishabh11336
+- name: Ferry Firmansjah
+  email: 103191403+ffirmanff@users.noreply.github.com
+  github: ffirmanff
