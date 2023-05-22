@@ -1,0 +1,21 @@
+### Enhancements
+
+* Noarch packages that use virtual packages have the virtual packages added to the hash contents of the package.
+  This facilitates the building of noarch packages multiple times for different platforms with platform
+  specific dependencies. (#4606)
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* <news item>
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>
