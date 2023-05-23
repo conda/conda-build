@@ -2,6 +2,6 @@ name: foo
 channels:
   - defaults
 dependencies:
-  - python=3.10
+  - python
   - tqdm
 prefix: /home/abraham/.conda/envs/foo
