@@ -23,7 +23,7 @@
 * Prefer the [standalone conda-index package](https://conda.github.io/conda-index/), instead of `conda-build index` or `conda index`, to use faster indexing code. (#4828)
 * Mark `conda_build.metadata.ns_cfg` as pending deprecation. Use `conda_build.get_selectors.get_selectors` instead. (#4837)
 * Mark `conda_build.config.python2_fs_encode` as pending deprecation. (#4843)
-* Mark `conda_build.config._ensure_dir` as pending deprecation. Use stdlib's `pathlib.Path.mkdir(exist_ok=True)` or `os.makedirs(exist_ok=True)` instead. (#4843)
+* Mark `conda_build.config._ensure_dir` as pending deprecation. Use `stdlib`'s `pathlib.Path.mkdir(exist_ok=True)` or `os.makedirs(exist_ok=True)` instead. (#4843)
 
 ### Other
 
