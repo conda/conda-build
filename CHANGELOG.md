@@ -5,7 +5,7 @@
 ### Enhancements
 
 * Noarch packages that use virtual packages have the virtual packages added to the hash contents of the package. This facilitates the building of noarch packages multiple times for different platforms with platform specific dependencies. (#4606)
-* Add support for svn source credentials (`svn_username` and `svn_password`). (#4692)
+* Add support for `svn` source credentials (`svn_username` and `svn_password`). (#4692)
 * Depend on standalone `conda-index` instead of bundled indexing code. (#4828)
 * Switch from `setup.py` to `pyproject.toml` and use [Hatchling](https://pypi.org/project/hatchling/) for our build system. (#4840)
 * Add Python 3.11 support. (#4852)
