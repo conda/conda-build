@@ -13,7 +13,7 @@
 ### Bug fixes
 
 * Ensure `tests/commands` are also run in the presence of `run_test.*` (#4429)
-* Require the source when rendering a recipe that uses the `load_file_data` function (#4817)
+* Require the source when rendering a recipe that uses the `load_file_data` function. (#4817)
 * Download packages during build into the correct subdir folder. (#4832)
 * Use a unique subdir variable name when rebuilding the index for multi-output builds (#4862)
 
