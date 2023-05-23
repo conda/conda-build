@@ -2,7 +2,7 @@ linkify-it-py==1.0.1
 myst-parser==0.15.2
 Pillow==9.3.0
 PyYAML==5.4.1
-requests==2.26.0
+requests==2.31.0
 ruamel.yaml==0.17.16
 Sphinx==4.2.0
 sphinx-argparse==0.3.1
