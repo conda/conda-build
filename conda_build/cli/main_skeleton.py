@@ -20,7 +20,8 @@ def parse_args(args):
         description="""
 Generates a boilerplate/skeleton recipe, which you can then edit to create a
 full recipe. Some simple skeleton recipes may not even need edits.
-Pending deprecation, please use the standalone project 'grayskull'."
+Pending deprecation, please use the standalone project 'grayskull':
+https://github.com/conda/grayskull"
         """,
         epilog="""
 Run --help on the subcommands like 'conda skeleton pypi --help' to see the
