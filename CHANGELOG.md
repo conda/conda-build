@@ -27,8 +27,8 @@
 
 ### Other
 
-* Format with black and replaced pre-commit's darker hook with black. (#4836)
-* Format with isort and add pre-commit isort hook. (#4836)
+* Format with `black` and replaced pre-commit's `darker` hook with `black`. (#4836)
+* Format with `isort` and add pre-commit `isort` hook. (#4836)
 * Minor code simplification for `conda_build.index.ChannelIndex._ensuredirs`. (#4843)
 * Enable `xattr` test on macOS. (#4845)
 
