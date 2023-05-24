@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Fixed handling of static libraries with newer (py)lief versions.
+* Fixed handling of static libraries with newer (py)lief versions. (#4808)
 
 ### Deprecations
 
