@@ -30,6 +30,7 @@ dependencies = [
   "beautifulsoup4",
   "chardet",
   "conda >=4.13",
+  "conda-index",
   "conda-package-handling >=1.3",
   "filelock",
   "glob2 >=0.6",
