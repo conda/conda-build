@@ -21,36 +21,37 @@ build:
 
 requirements:
   build:
-    - git
+    - git  # for source/git_url above
   host:
     - python
     - pip
     - hatchling >=1.12.2
     - hatch-vcs >=0.2.0
+    - wheel
   run:
     - beautifulsoup4
     - chardet
     - conda >=4.13
     - conda-index
+    - conda-package-handling >=1.3
     - filelock
+    - glob2 >=0.6
     - jinja2
-    - packaging
-    - patchelf                     # [linux]
-    - patch >=2.6                  # [not win]
     - m2-patch >=2.6               # [win]
+    - packaging
+    - patch >=2.6                  # [not win]
+    - patchelf                     # [linux]
     - pkginfo
     - psutil
     - py-lief                      # [not win]
     - python
+    - python-libarchive-c
+    - pytz
     - pyyaml
     - requests
     - six
-    - glob2 >=0.6
-    - pytz
     - tomli                        # [py<311]
     - tqdm
-    - conda-package-handling >=1.3
-    - python-libarchive-c
   run_constrained:
     - conda-verify  >=3.0.2
 
@@ -58,7 +59,7 @@ test:
   imports:
     # high-level import
     - conda_build
-    # updated submodules (can be dropped after 1-2 releases)
+    # new/updated submodules (can be dropped after 1-2 releases)
     - conda_build.index
   files:
     - test_bdist_conda_setup.py
