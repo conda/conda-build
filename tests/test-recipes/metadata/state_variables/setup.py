@@ -1,6 +1,5 @@
 import os
 from setuptools import setup
-# from distutils.core import setup
 
 if not os.getenv("CONDA_BUILD_STATE") == "RENDER":
     raise ValueError("Conda build state not set correctly")

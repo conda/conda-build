@@ -29,6 +29,7 @@ requirements:
     - beautifulsoup4
     - chardet
     - conda >=4.13
+    - conda-index
     - filelock
     - jinja2
     - packaging

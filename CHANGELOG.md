@@ -1,5 +1,54 @@
 [//]: # (current developments)
 
+## 3.25.0 (2023-05-22)
+
+### Enhancements
+
+* Noarch packages that use virtual packages have the virtual packages added to the hash contents of the package. This facilitates the building of noarch packages multiple times for different platforms with platform specific dependencies. (#4606)
+* Add support for `svn` source credentials (`svn_username` and `svn_password`). (#4692)
+* Depend on standalone `conda-index` instead of bundled indexing code. (#4828)
+* Switch from `setup.py` to `pyproject.toml` and use [Hatchling](https://pypi.org/project/hatchling/) for our build system. (#4840)
+* Add Python 3.11 support. (#4852)
+
+### Bug fixes
+
+* Ensure `tests/commands` are also run in the presence of `run_test.*` (#4429)
+* Require the source when rendering a recipe that uses the `load_file_data` function. (#4817)
+* Download packages during build into the correct `subdir` folder. (#4832)
+* Use a unique `subdir` variable name when rebuilding the index for multi-output builds. (#4862)
+
+### Deprecations
+
+* Inline `conda index` logic is pending deprecation. `conda-build` still provides `conda-index` a.k.a. `conda index` CLI, but uses standalone `conda-index` during builds. (#4828)
+* Prefer the [standalone conda-index package](https://conda.github.io/conda-index/), instead of `conda-build index` or `conda index`, to use faster indexing code. (#4828)
+* Mark `conda_build.metadata.ns_cfg` as pending deprecation. Use `conda_build.get_selectors.get_selectors` instead. (#4837)
+* Mark `conda_build.config.python2_fs_encode` as pending deprecation. (#4843)
+* Mark `conda_build.config._ensure_dir` as pending deprecation. Use `stdlib`'s `pathlib.Path.mkdir(exist_ok=True)` or `os.makedirs(exist_ok=True)` instead. (#4843)
+
+### Other
+
+* Format with `black` and replaced pre-commit's `darker` hook with `black`. (#4836)
+* Format with `isort` and add pre-commit `isort` hook. (#4836)
+* Minor code simplification for `conda_build.index.ChannelIndex._ensuredirs`. (#4843)
+* Enable `xattr` test on macOS. (#4845)
+
+### Contributors
+
+* @beeankha
+* @conda-bot
+* @dholth
+* @duncanmmacleod
+* @ffirmanff made their first contribution in https://github.com/conda/conda-build/pull/4692
+* @isuruf
+* @jezdez
+* @jakirkham
+* @jjhelmus
+* @kenodegard
+* @rishabh11336 made their first contribution in https://github.com/conda/conda-build/pull/4782
+* @ryanskeith made their first contribution in https://github.com/conda/conda-build/pull/4843
+* @pre-commit-ci[bot]
+
+
 ## 3.24.0 (2023-03-22)
 
 ### Bug fixes

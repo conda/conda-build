@@ -19,7 +19,7 @@ from conda_build.version import _parse as parse_version
 
 DEFAULT_VARIANTS = {
     "python": f"{sys.version_info.major}.{sys.version_info.minor}",
-    "numpy": "1.21",
+    "numpy": "1.22",
     # this one actually needs to be pretty specific.  The reason is that cpan skeleton uses the
     #    version to say what's in their standard library.
     "perl": "5.26.2",
