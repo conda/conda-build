@@ -346,7 +346,7 @@ def _get_path_dirs(prefix):
 def get_uniqueness_key(file):
     binary = ensure_binary(file)
     if not binary:
-        return "unkown"
+        return lief.EXE_FORMATS.UNKNOWN
     elif binary.format == lief.EXE_FORMATS.MACHO:
         return binary.name
     elif binary.format == lief.EXE_FORMATS.ELF and (  # noqa
