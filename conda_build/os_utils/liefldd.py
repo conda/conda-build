@@ -232,6 +232,8 @@ def get_runpaths_or_rpaths_raw(file):
 
 def set_rpath(old_matching, new_rpath, file):
     binary = ensure_binary(file)
+    if not binary:
+        return
     if binary.format == lief.EXE_FORMATS.ELF and (
         binary.type == lief.ELF.ELF_CLASS.CLASS32
         or binary.type == lief.ELF.ELF_CLASS.CLASS64
@@ -343,7 +345,9 @@ def _get_path_dirs(prefix):
 
 def get_uniqueness_key(file):
     binary = ensure_binary(file)
-    if binary.format == lief.EXE_FORMATS.MACHO:
+    if not binary:
+        return "unkown"
+    elif binary.format == lief.EXE_FORMATS.MACHO:
         return binary.name
     elif binary.format == lief.EXE_FORMATS.ELF and (  # noqa
         binary.type == lief.ELF.ELF_CLASS.CLASS32
@@ -463,7 +467,9 @@ def inspect_linkages_lief(
     sysroot = _trim_sysroot(sysroot)
 
     default_paths = []
-    if binary.format == lief.EXE_FORMATS.ELF:
+    if not binary:
+        default_paths = []
+    elif binary.format == lief.EXE_FORMATS.ELF:
         if binary.type == lief.ELF.ELF_CLASS.CLASS64:
             default_paths = [
                 "$SYSROOT/lib64",
@@ -491,6 +497,8 @@ def inspect_linkages_lief(
             filename2 = element[0]
             binary = element[1]
             uniqueness_key = get_uniqueness_key(binary)
+            if not binary:
+                continue
             if uniqueness_key not in already_seen:
                 parent_exe_dirname = None
                 if binary.format == lief.EXE_FORMATS.PE:
