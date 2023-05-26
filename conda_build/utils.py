@@ -1746,7 +1746,11 @@ def get_logger(name, level=logging.INFO, dedupe=True, add_stdout_stderr_handlers
         log.addFilter(dedupe_filter)
 
     # these are defaults.  They can be overridden by configuring a log config yaml file.
-    if not log.handlers and add_stdout_stderr_handlers:
+    top_pkg = name.split(".")[0]
+    top_pkg_logger = logging.getLogger(top_pkg)
+    if top_pkg == "conda_build":
+        top_pkg_logger.propagate = False
+    if add_stdout_stderr_handlers and not log.handlers:
         stdout_handler = logging.StreamHandler(sys.stdout)
         stderr_handler = logging.StreamHandler(sys.stderr)
         stdout_handler.addFilter(info_debug_stdout_filter)
