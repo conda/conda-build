@@ -1447,7 +1447,7 @@ def write_about_json(m):
         if m.config.extra_meta:
             log = utils.get_logger(__name__)
             log.info(
-                f"Adding the following extra-meta data to about.json: {m.config.extra_meta}"
+                "Adding the following extra-meta data to about.json: %s", m.config.extra_meta
             )
             extra.update(m.config.extra_meta)
         env = environ.Environment(root_dir)
