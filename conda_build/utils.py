@@ -1750,7 +1750,7 @@ def get_logger(name, level=logging.INFO, dedupe=True, add_stdout_stderr_handlers
     top_pkg = name.split(".")[0]
     if top_pkg == "conda_build":
         logging.getLogger(top_pkg).propagate = False
-    if add_stdout_stderr_handlers and not log.hasHandlers():
+    if add_stdout_stderr_handlers and not log.handlers:
         stdout_handler = logging.StreamHandler(sys.stdout)
         stderr_handler = logging.StreamHandler(sys.stderr)
         stdout_handler.addFilter(info_debug_stdout_filter)
