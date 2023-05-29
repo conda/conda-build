@@ -1749,7 +1749,9 @@ def get_logger(name, level=logging.INFO, dedupe=True, add_stdout_stderr_handlers
     # these are defaults.  They can be overridden by configuring a log config yaml file.
     top_pkg = name.split(".")[0]
     if top_pkg == "conda_build":
-        logging.getLogger(top_pkg).propagate = False
+        # we don't want propagation in CLI, but we do want it in tests
+        # this is a pytest limitation: https://github.com/pytest-dev/pytest/issues/3697
+        logging.getLogger(top_pkg).propagate = "PYTEST_CURRENT_TEST" in os.environ
     if add_stdout_stderr_handlers and not log.handlers:
         stdout_handler = logging.StreamHandler(sys.stdout)
         stderr_handler = logging.StreamHandler(sys.stderr)
