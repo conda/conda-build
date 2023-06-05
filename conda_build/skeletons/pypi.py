@@ -248,7 +248,7 @@ def _formating_value(attribute_name, attribute_value):
     return " " + str(attribute_value) + "\n"
 
 
-@deprecated("3.25.0", "4.0.0", addendum="Use `grayskull` instead.")
+@deprecated("3.25.6", "4.0.0", addendum="Use `grayskull` instead.")
 def skeletonize(
     packages,
     output_dir=".",
