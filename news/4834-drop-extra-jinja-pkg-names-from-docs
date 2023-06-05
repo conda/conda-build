@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Ensure that `tests/commands` get run also in the presence of `run_test.*` (#4427)
+* <news item>
 
 ### Deprecations
 
@@ -12,7 +12,7 @@
 
 ### Docs
 
-* <news item>
+* Package name variables in Jinja are not necessary, dropping this from variants.rst docs file. (#4834)
 
 ### Other
 

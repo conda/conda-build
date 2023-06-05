@@ -29,6 +29,7 @@ have_lief = False
 try:
     import lief
 
+    lief.logging.disable()
     have_lief = True
 except:
     pass

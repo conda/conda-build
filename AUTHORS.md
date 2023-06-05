@@ -71,6 +71,7 @@ Authors are sorted alphabetically.
 * Evan Hubinger
 * Evan Klitzke
 * Felix Kühnl
+* Ferry Firmansjah
 * Filipe Fernandes
 * Floris Bruynooghe
 * Gabriel Reis
@@ -172,6 +173,7 @@ Authors are sorted alphabetically.
 * Richard Frank
 * Richard Hattersley
 * Rick Izzo
+* Rishabh Singh
 * Robert Coop
 * Robert Langlois
 * Robert T. McGibbon
@@ -180,6 +182,7 @@ Authors are sorted alphabetically.
 * Ruben Vorderman
 * Ryan Dale
 * Ryan Grout
+* Ryan Keith
 * Rylan Chord
 * Satoshi Yagi
 * Scheah

@@ -4,17 +4,23 @@
 name: Tests
 
 on:
-  # NOTE: github.event context is push payload:
-  # https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#push
+  # https://docs.github.com/en/webhooks-and-events/webhooks/webhook-events-and-payloads#push
   push:
     branches:
       - main
       - feature/**
       - '[0-9].*.x'  # e.g., 3.24.x
 
-  # NOTE: github.event context is pull_request payload:
-  # https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#pull_request
+  # https://docs.github.com/en/webhooks-and-events/webhooks/webhook-events-and-payloads#pull_request
   pull_request:
+
+  # https://docs.github.com/en/webhooks-and-events/webhooks/webhook-events-and-payloads#workflow_dispatch
+  workflow_dispatch:
+
+  # no payload
+  schedule:
+      # https://crontab.guru/#37_18_*_*_*
+      - cron: 37 18 * * *
 
 concurrency:
   # Concurrency group that uses the workflow name and PR number if available
