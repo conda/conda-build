@@ -4,6 +4,7 @@ import json
 import locale
 import logging
 import os
+import re
 import shutil
 import sys
 from os.path import basename, dirname, isdir, isfile, join
@@ -44,9 +45,8 @@ def rewrite_script(fn, prefix):
         fn = fn[:-10]
 
     # Rewrite the file to the python-scripts directory
-    dst_dir = join(prefix, "python-scripts")
-    _force_dir(dst_dir)
-    dst = join(dst_dir, fn)
+    dst = join(prefix, "python-scripts", fn)
+    _force_dir(dirname(dst))
     with open(dst, "w") as fo:
         fo.write(data)
     os.chmod(dst, src_mode)
@@ -80,7 +80,8 @@ def handle_file(f, d, prefix):
 
     # Treat scripts specially with the logic from above
     elif f.startswith(("bin/", "Scripts")):
-        fn = basename(path)
+        *_, fn = re.split("(bin|Scripts)", path)
+        fn = fn.split(os.sep, 1)[1]
         fn = rewrite_script(fn, prefix)
         d["python-scripts"].append(fn)
 
