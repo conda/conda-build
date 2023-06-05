@@ -1826,12 +1826,17 @@ def test_ignore_verify_codes(testing_config):
 
 
 @pytest.mark.sanity
-def test_extra_meta(testing_config):
+def test_extra_meta(testing_config, caplog):
     recipe_dir = os.path.join(metadata_dir, "_extra_meta")
-    testing_config.extra_meta = {"foo": "bar"}
+    extra_meta_data = {"foo": "bar"}
+    testing_config.extra_meta = extra_meta_data
     outputs = api.build(recipe_dir, config=testing_config)
     about = json.loads(package_has_file(outputs[0], "info/about.json"))
     assert "foo" in about["extra"] and about["extra"]["foo"] == "bar"
+    assert (
+        f"Adding the following extra-meta data to about.json: {extra_meta_data}"
+        in caplog.text
+    )
 
 
 def test_symlink_dirs_in_always_include_files(testing_config):

@@ -1,0 +1,19 @@
+### Enhancements
+
+* Log extra-meta data to make it easier to verify that the right extra-meta data is burned into packages (also helps to co-relate packages and their build-log). The feature was first introduced in #4303 and is now improved via the logging call. (#4901)
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* <news item>
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>

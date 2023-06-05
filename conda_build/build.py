@@ -1445,6 +1445,11 @@ def write_about_json(m):
         extra = m.get_section("extra")
         # Add burn-in information to extra
         if m.config.extra_meta:
+            log = utils.get_logger(__name__)
+            log.info(
+                "Adding the following extra-meta data to about.json: %s",
+                m.config.extra_meta,
+            )
             extra.update(m.config.extra_meta)
         env = environ.Environment(root_dir)
         d["root_pkgs"] = env.package_specs()
