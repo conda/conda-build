@@ -391,7 +391,7 @@ def get_core_modules_for_this_perl_version(version, cache_dir):
     )
 
 
-@deprecated("3.26.0", "4.0.0", addendum="Use grayskull instead.")
+@deprecated("3.26.0", "4.0.0", addendum="Use `grayskull` instead.")
 def skeletonize(
     packages,
     output_dir=".",
