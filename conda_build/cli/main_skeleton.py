@@ -50,7 +50,7 @@ def execute(args):
     config = Config(**args.__dict__)
 
     deprecated.topic(
-        "3.25.0",
+        "3.26.0",
         "4.0.0",
         topic="`conda skeleton` and `conda-skeleton`",
         addendum="Use the `grayskull` project instead.",
