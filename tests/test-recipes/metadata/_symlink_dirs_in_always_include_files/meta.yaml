@@ -1,0 +1,27 @@
+package:
+  name: symlink_dirs_in_always_include_files
+  version: 0.0.1
+
+build:
+  number: 0
+  skip: True  # [win]
+
+outputs:
+  - name: symlink_dirs_in_always_include_files_foo
+    script: create_symlinks.sh
+    test:
+      commands:
+        - test -f $PREFIX/sysroot/lib/empty
+        - test -f $PREFIX/sysroot/lib64/empty
+
+  - name: symlink_dirs_in_always_include_files_bar
+    requirements:
+      host:
+        - symlink_dirs_in_always_include_files_foo
+    build:
+      always_include_files:
+        - sysroot/
+    test:
+      commands:
+        - test -f $PREFIX/sysroot/lib/empty
+        - test -f $PREFIX/sysroot/lib64/empty

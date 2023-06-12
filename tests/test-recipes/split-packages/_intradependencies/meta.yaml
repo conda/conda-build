@@ -4,43 +4,42 @@ package:
 
 requirements:
   build:
-    # the purpose of these dependencies is to disallow empty requirements from making the tests
-    #    pass when they would otherwise fail.  Empty requirements hide lack of finalization.
-    - posix  # [win]
-    - git    # [not win]
+    # the purpose of this dependency is to disallow empty requirements from making the tests
+    # pass when they would otherwise fail, empty requirements hide lack of finalization
+    - ca-certificates
 
 outputs:
-  - name: abc
-    version: {{ abc }}
-  - name: foo
-    version: {{ foo }}
+  - name: dep1
+    version: {{ DEP1 }}
+  - name: dep2
+    version: {{ DEP2 }}
 
-  - name: lib1intradependencies
-    script: install-lib1intradependencies.sh
+  - name: lib1
+    script: install-lib1.sh
 
-  - name: py1-intradependencies
+  - name: py1
     requirements:
-      - {{ pin_subpackage('lib1intradependencies', exact=True) }}
-      - abc {{ abc }}
-    script: install-py1-intradependencies.sh
+      - {{ pin_subpackage('lib1', exact=True) }}
+      - dep1 {{ DEP1 }}
+    script: install-py1.sh
 
-  - name: r1-intradependencies
+  - name: r1
     requirements:
-      - {{ pin_subpackage('lib1intradependencies', exact=True) }}
-      - foo {{ foo }}
-    script: install-r1-intradependencies.sh
+      - {{ pin_subpackage('lib1', exact=True) }}
+      - dep2 {{ DEP2 }}
+    script: install-r1.sh
 
-  - name: lib2intradependencies
-    script: install-lib2intradependencies.sh
+  - name: lib2
+    script: install-lib2.sh
 
-  - name: py2-intradependencies
+  - name: py2
     requirements:
-      - {{ pin_subpackage('lib2intradependencies', exact=True) }}
-      - abc {{ abc }}
-    script: install-py2-intradependencies.sh
+      - {{ pin_subpackage('lib2', exact=True) }}
+      - dep1 {{ DEP1 }}
+    script: install-py2.sh
 
-  - name: r2-intradependencies
+  - name: r2
     requirements:
-      - {{ pin_subpackage('lib2intradependencies', exact=True) }}
-      - foo {{ foo }}
-    script: install-r2-intradependencies.sh
+      - {{ pin_subpackage('lib2', exact=True) }}
+      - dep2 {{ DEP2 }}
+    script: install-r2.sh

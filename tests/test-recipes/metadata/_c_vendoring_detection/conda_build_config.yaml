@@ -33,8 +33,6 @@ rust_compiler:
   - rust
 rust_compiler_version:
   - 1.29.0
-CONDA_BUILD_SYSROOT:
-  - /opt/MacOSX10.10.sdk        # [osx]
 VERBOSE_AT:
   - V=1
 VERBOSE_CM:
@@ -155,8 +153,6 @@ macos_min_version:
   - 10.9
 macos_machine:
   - x86_64-apple-darwin13.4.0
-MACOSX_DEPLOYMENT_TARGET:
-  - 10.9
 mkl:
   - 2019
 mpfr:
@@ -169,7 +165,7 @@ nodejs:
 #    1.11 seems to be the oldest on win that works with scipy 0.19.  Compiler errors otherwise.
 #    also 1.9 fails tests on Python 3.7
 numpy:
-  - 1.11
+  - 1.16
 openblas:
   - 0.3.3
 openjpeg:
@@ -188,8 +184,8 @@ libprotobuf:
   - 3.6.0
 python:
   - 2.7
-  - 3.6
-  - 3.7
+  - 3.8
+  - 3.9
 r_version:
   - 3.5.0
 r_implementation:

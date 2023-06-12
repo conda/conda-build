@@ -11,7 +11,7 @@ package:
   version: {{ data.get('version') }}
 
 source:
-  git_url: ../../../../../conda_build_test_recipe
+  git_url: {{ environ.get('CONDA_BUILD_TEST_RECIPE_PATH') }}
   git_tag: 1.21.0
 
 build:
@@ -24,3 +24,4 @@ requirements:
     # cython inclusion here is to test https://github.com/conda/conda-build/issues/149
     # cython chosen because it is implicated somehow in setup.py complications.  Numpy would also work.
     - cython
+    - setuptools

@@ -1,22 +1,16 @@
-# (c) Continuum Analytics, Inc. / http://continuum.io
-# All Rights Reserved
-#
-# conda is distributed under the terms of the BSD 3-clause license.
-# Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
+from .__version__ import __version__
 
-from ._version import get_versions
-__version__ = get_versions()['version']
-del get_versions
-
+__all__ = ["__version__"]
 
 # Sub commands added by conda-build to the conda command
 sub_commands = [
-    'build',
-    'convert',
-    'develop',
-    'index',
-    'inspect',
-    'metapackage',
-    'render'
-    'skeleton',
+    "build",
+    "convert",
+    "develop",
+    "index",
+    "inspect",
+    "metapackage",
+    "render" "skeleton",
 ]

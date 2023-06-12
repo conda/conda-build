@@ -1,0 +1,36 @@
+{% set name = "gcc_impl" %}
+{% set version = "7.5.0" %}
+
+package:
+  name: gcc_compilers
+  version: {{ version }}
+
+build:
+  number: 0
+
+outputs:
+  - name: gcc_impl_{{ cross_target_platform }}
+    requirements:
+      build:
+        - gcc_impl_{{ target_platform }}   # [build_platform != target_platform]
+        - gxx_impl_{{ target_platform }}   # [build_platform != target_platform]
+        - gcc_impl_{{ cross_target_platform }}   # [build_platform != target_platform]
+        - gxx_impl_{{ cross_target_platform }}   # [build_platform != target_platform]
+        - sysroot_{{ cross_target_platform }}
+      host:
+        - sysroot_{{ cross_target_platform }}
+      run:
+        - sysroot_{{ cross_target_platform }}
+
+  - name: gxx_impl_{{ cross_target_platform }}
+    requirements:
+      build:
+        - gcc_impl_{{ target_platform }}   # [build_platform != target_platform]
+        - gxx_impl_{{ target_platform }}   # [build_platform != target_platform]
+        - gcc_impl_{{ cross_target_platform }}   # [build_platform != target_platform]
+        - gxx_impl_{{ cross_target_platform }}   # [build_platform != target_platform]
+        - sysroot_{{ cross_target_platform }}
+      host:
+        - sysroot_{{ cross_target_platform }}
+      run:
+        - sysroot_{{ cross_target_platform }}

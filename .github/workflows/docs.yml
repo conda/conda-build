@@ -1,0 +1,34 @@
+name: CI docs
+
+on:
+  # NOTE: github.event context is push payload:
+  # https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#push
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/docs.yml'
+      - 'docs/**'
+
+  # NOTE: github.event context is pull_request payload:
+  # https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#pull_request
+  pull_request:
+    paths:
+      - '.github/workflows/docs.yml'
+      - 'docs/**'
+
+jobs:
+  docs:
+    if: '!github.event.repository.fork'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Setup
+        run : |
+          make env-docs
+      - name: Build the docs
+        run : |
+          cd docs
+          conda run --name conda-build-docs make html

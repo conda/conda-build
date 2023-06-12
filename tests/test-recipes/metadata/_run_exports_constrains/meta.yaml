@@ -1,0 +1,29 @@
+package:
+  name: test_run_exports_constrains
+  version: 1.0
+
+outputs:
+  - name: run_exports_constrains
+    build:
+      run_exports:
+        strong:
+          - strong_run_export
+        weak:
+          - weak_run_export
+        strong_constrains:
+          - strong_constrains_export
+        weak_constrains:
+          - weak_constrains_export
+
+  - name: run_exports_constrains_only_weak
+    build:
+      run_exports:
+        weak:
+          - weak_run_export
+        weak_constrains:
+          - weak_constrains_export
+
+  - name: strong_run_export
+  - name: weak_run_export
+  - name: strong_constrains_export
+  - name: weak_constrains_export

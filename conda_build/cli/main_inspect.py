@@ -1,32 +1,28 @@
-# (c) Continuum Analytics, Inc. / http://continuum.io
-# All Rights Reserved
-#
-# conda is distributed under the terms of the BSD 3-clause license.
-# Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
-
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 import logging
+import sys
 from os.path import expanduser
 from pprint import pprint
-import sys
 
-from conda_build.conda_interface import ArgumentParser, add_parser_prefix, get_prefix
+from conda.base.context import context, determine_target_prefix
 
 from conda_build import api
+from conda_build.conda_interface import ArgumentParser, add_parser_prefix
 
 logging.basicConfig(level=logging.INFO)
 
 
 def parse_args(args):
     p = ArgumentParser(
-        description='Tools for inspecting conda packages.',
+        description="Tools for inspecting conda packages.",
         epilog="""
 Run --help on the subcommands like 'conda inspect linkages --help' to see the
 options available.
         """,
-
     )
     subcommand = p.add_subparsers(
-        dest='subcommand',
+        dest="subcommand",
     )
 
     linkages_help = """
@@ -43,39 +39,39 @@ libraries that ought to be dependent conda packages.  """
         description=linkages_help,
     )
     linkages.add_argument(
-        'packages',
-        action='store',
-        nargs='*',
-        help='Conda packages to inspect.',
+        "packages",
+        action="store",
+        nargs="*",
+        help="Conda packages to inspect.",
     )
     linkages.add_argument(
-        '--untracked',
-        action='store_true',
+        "--untracked",
+        action="store_true",
         help="""Inspect the untracked files in the environment. This is useful when used in
         conjunction with conda build --build-only.""",
     )
     linkages.add_argument(
-        '--show-files',
+        "--show-files",
         action="store_true",
         help="Show the files in the package that link to each library",
     )
     linkages.add_argument(
-        '--groupby',
-        action='store',
-        default='package',
-        choices=('package', 'dependency'),
+        "--groupby",
+        action="store",
+        default="package",
+        choices=("package", "dependency"),
         help="""Attribute to group by (default: %(default)s). Useful when used
         in conjunction with --all.""",
     )
     linkages.add_argument(
-        '--sysroot',
-        action='store',
-        help='System root in which to look for system libraries.',
-        default='',
+        "--sysroot",
+        action="store",
+        help="System root in which to look for system libraries.",
+        default="",
     )
     linkages.add_argument(
-        '--all',
-        action='store_true',
+        "--all",
+        action="store_true",
         help="Generate a report for all packages in the environment.",
     )
     add_parser_prefix(linkages)
@@ -92,28 +88,28 @@ package.
         description=objects_help,
     )
     objects.add_argument(
-        'packages',
-        action='store',
-        nargs='*',
-        help='Conda packages to inspect.',
+        "packages",
+        action="store",
+        nargs="*",
+        help="Conda packages to inspect.",
     )
     objects.add_argument(
-        '--untracked',
-        action='store_true',
+        "--untracked",
+        action="store_true",
         help="""Inspect the untracked files in the environment. This is useful when used
         in conjunction with conda build --build-only.""",
     )
     # TODO: Allow groupby to include the package (like for --all)
     objects.add_argument(
-        '--groupby',
-        action='store',
-        default='filename',
-        choices=('filename', 'filetype', 'rpath'),
-        help='Attribute to group by (default: %(default)s).',
+        "--groupby",
+        action="store",
+        default="filename",
+        choices=("filename", "filetype", "rpath"),
+        help="Attribute to group by (default: %(default)s).",
     )
     objects.add_argument(
-        '--all',
-        action='store_true',
+        "--all",
+        action="store_true",
         help="Generate a report for all packages in the environment.",
     )
     add_parser_prefix(objects)
@@ -127,22 +123,23 @@ Tools for investigating conda channels.
         description=channels_help,
     )
     channels.add_argument(
-        '--verbose',
-        action='store_true',
+        "--verbose",
+        action="store_true",
         help="""Show verbose output. Note that error output to stderr will
         always be shown regardless of this flag. """,
     )
     channels.add_argument(
-        '--test-installable', '-t',
-        action='store_true',
+        "--test-installable",
+        "-t",
+        action="store_true",
         help="""Test every package in the channel to see if it is installable
         by conda.""",
     )
     channels.add_argument(
         "channel",
-        nargs='?',
+        nargs="?",
         default="defaults",
-        help="The channel to test. The default is %(default)s."
+        help="The channel to test. The default is %(default)s.",
     )
 
     prefix_lengths = subcommand.add_parser(
@@ -152,28 +149,29 @@ Tools for investigating conda channels.
         description=linkages_help,
     )
     prefix_lengths.add_argument(
-        'packages',
-        action='store',
-        nargs='+',
-        help='Conda packages to inspect.',
+        "packages",
+        action="store",
+        nargs="+",
+        help="Conda packages to inspect.",
     )
     prefix_lengths.add_argument(
-        '--min-prefix-length', '-m',
-        help='Minimum length.  Only packages with prefixes below this are shown.',
+        "--min-prefix-length",
+        "-m",
+        help="Minimum length.  Only packages with prefixes below this are shown.",
         default=api.Config().prefix_length,
         type=int,
     )
 
     hash_inputs = subcommand.add_parser(
         "hash-inputs",
-        help="Show data used to compute hash identifier (h????) for package",
-        description="Show data used to compute hash identifier (h????) for package",
+        help="Show data used to compute hash identifier for package",
+        description="Show data used to compute hash identifier for package",
     )
     hash_inputs.add_argument(
-        'packages',
-        action='store',
-        nargs='*',
-        help='Conda packages to inspect.',
+        "packages",
+        action="store",
+        nargs="*",
+        help="Conda packages to inspect.",
     )
     args = p.parse_args(args)
     return p, args
@@ -186,25 +184,40 @@ def execute(args):
         parser.print_help()
         exit()
 
-    elif args.subcommand == 'channels':
+    elif args.subcommand == "channels":
         if not args.test_installable:
             parser.error("At least one option (--test-installable) is required.")
         else:
             print(api.test_installable(args.channel))
-    elif args.subcommand == 'linkages':
-        print(api.inspect_linkages(args.packages, prefix=get_prefix(args),
-                                   untracked=args.untracked, all_packages=args.all,
-                                   show_files=args.show_files, groupby=args.groupby,
-                                   sysroot=expanduser(args.sysroot)))
-    elif args.subcommand == 'objects':
-        print(api.inspect_objects(args.packages, prefix=get_prefix(args), groupby=args.groupby))
-    elif args.subcommand == 'prefix-lengths':
-        if not api.inspect_prefix_length(args.packages, min_prefix_length=args.min_prefix_length):
+    elif args.subcommand == "linkages":
+        print(
+            api.inspect_linkages(
+                args.packages,
+                prefix=determine_target_prefix(context, args),
+                untracked=args.untracked,
+                all_packages=args.all,
+                show_files=args.show_files,
+                groupby=args.groupby,
+                sysroot=expanduser(args.sysroot),
+            )
+        )
+    elif args.subcommand == "objects":
+        print(
+            api.inspect_objects(
+                args.packages,
+                prefix=determine_target_prefix(context, args),
+                groupby=args.groupby,
+            )
+        )
+    elif args.subcommand == "prefix-lengths":
+        if not api.inspect_prefix_length(
+            args.packages, min_prefix_length=args.min_prefix_length
+        ):
             sys.exit(1)
-    elif args.subcommand == 'hash-inputs':
+    elif args.subcommand == "hash-inputs":
         pprint(api.inspect_hash_inputs(args.packages))
     else:
-        raise ValueError("Unrecognized subcommand: {0}.".format(args.subcommand))
+        raise ValueError(f"Unrecognized subcommand: {args.subcommand}.")
 
 
 def main():

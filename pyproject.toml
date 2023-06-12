@@ -1,0 +1,86 @@
+[build-system]
+requires = [
+  "hatchling >=1.12.2",
+  "hatch-vcs >=0.2.0",
+]
+build-backend = "hatchling.build"
+
+[project]
+name = "conda-build"
+description="tools for building conda packages"
+readme = "README.md"
+authors = [{name = "Anaconda, Inc.", email = "conda@continuum.io"}]
+license = {file = "LICENSE"}
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "License :: OSI Approved :: BSD License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy"
+]
+requires-python = ">=3.8"
+dependencies = [
+  "beautifulsoup4",
+  "chardet",
+  "conda >=4.13",
+  "conda-index",
+  "conda-package-handling >=1.3",
+  "filelock",
+  "glob2 >=0.6",
+  "jinja2",
+  "libarchive-c",
+  "packaging",
+  "pkginfo",
+  "psutil",
+  "pytz",
+  "pyyaml",
+  "requests",
+  "six",
+  "tomli ; python_version<'3.11'",
+  "tqdm",
+]
+dynamic = ["version"]
+
+[project.urls]
+documentation = "https://docs.conda.io/projects/conda-build/en/stable/"
+repository = "https://github.com/conda/conda-build"
+changelog = "https://github.com/conda/conda-build/blob/main/CHANGELOG.md"
+
+[project.scripts]
+conda-build = "conda_build.cli.main_build:main"
+conda-convert = "conda_build.cli.main_convert:main"
+conda-develop = "conda_build.cli.main_develop:main"
+conda-index = "conda_build.cli.main_index:main"
+conda-inspect = "conda_build.cli.main_inspect:main"
+conda-metapackage = "conda_build.cli.main_metapackage:main"
+conda-render = "conda_build.cli.main_render:main"
+conda-skeleton = "conda_build.cli.main_skeleton:main"
+conda-debug = "conda_build.cli.main_debug:main"
+
+[project.entry-points."distutils.commands"]
+bdist_conda = "conda_build.bdist_conda:bdist_conda"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.version.raw-options]
+local_scheme = "dirty-tag"
+
+[tool.hatch.build]
+include = ["conda_build", "conda_build/templates/*", "conda_build/cli-*.exe"]
+
+[tool.hatch.build.hooks.vcs]
+version-file = "conda_build/__version__.py"
+
+[tool.black]
+target-version = ['py38', 'py39', 'py310']
+
+[tool.isort]
+profile = "black"

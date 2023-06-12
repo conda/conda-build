@@ -1,0 +1,16 @@
+package:
+  name: foo
+  version: 3.10.0.rc1
+
+outputs:
+  - name: foo
+  - name: bar
+    requirements:
+      host:
+        - foo
+      run:
+        - foo
+    test:
+      commands:
+        - echo "hello world"
+

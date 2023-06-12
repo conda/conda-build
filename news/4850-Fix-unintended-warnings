@@ -1,0 +1,5 @@
+### Bug fixes
+
+* Disabling LIEF logging to remove "Unknown format" warning message.
+* Revert `enable_static` default value in `conda_build.config` to remove
+  "Failed to get_static_lib_exports" warning messages.

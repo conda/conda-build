@@ -1,13 +1,14 @@
-import io
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 import json
 import locale
 import logging
 import os
-from os.path import basename, dirname, isdir, join, isfile
 import shutil
 import sys
+from os.path import basename, dirname, isdir, isfile, join
 
-ISWIN = sys.platform.startswith('win')
+ISWIN = sys.platform.startswith("win")
 
 
 def _force_dir(dirname):
@@ -25,12 +26,12 @@ def rewrite_script(fn, prefix):
     noarch pacakges"""
 
     # Load and check the source file for not being a binary
-    src = join(prefix, 'Scripts' if ISWIN else 'bin', fn)
+    src = join(prefix, "Scripts" if ISWIN else "bin", fn)
     encoding = locale.getpreferredencoding()
     # if default locale is ascii, allow UTF-8 (a reasonably modern ASCII extension)
     if encoding == "ANSI_X3.4-1968":
         encoding = "UTF-8"
-    with io.open(src, encoding=encoding) as fi:
+    with open(src, encoding=encoding) as fi:
         try:
             data = fi.read()
         except UnicodeDecodeError:  # file is binary
@@ -39,52 +40,53 @@ def rewrite_script(fn, prefix):
     os.unlink(src)
 
     # Get rid of '-script.py' suffix on Windows
-    if ISWIN and fn.endswith('-script.py'):
+    if ISWIN and fn.endswith("-script.py"):
         fn = fn[:-10]
 
     # Rewrite the file to the python-scripts directory
-    dst_dir = join(prefix, 'python-scripts')
+    dst_dir = join(prefix, "python-scripts")
     _force_dir(dst_dir)
     dst = join(dst_dir, fn)
-    with open(dst, 'w') as fo:
+    with open(dst, "w") as fo:
         fo.write(data)
     os.chmod(dst, src_mode)
     return fn
 
 
 def handle_file(f, d, prefix):
-    """Process a file for inclusion in a noarch python package.
-    """
+    """Process a file for inclusion in a noarch python package."""
     path = join(prefix, f)
 
     # Ignore egg-info and pyc files.
-    if f.endswith(('.egg-info', '.pyc', '.pyo')):
+    if f.endswith((".egg-info", ".pyc", ".pyo")):
         os.unlink(path)
 
-    elif f.endswith('.exe') and (isfile(os.path.join(prefix, f[:-4] + '-script.py')) or
-                               basename(f[:-4]) in d['python-scripts']):
+    elif f.endswith(".exe") and (
+        isfile(os.path.join(prefix, f[:-4] + "-script.py"))
+        or basename(f[:-4]) in d["python-scripts"]
+    ):
         os.unlink(path)  # this is an entry point with a matching xx-script.py
 
-    elif 'site-packages' in f:
-        nsp = join(prefix, 'site-packages')
+    elif "site-packages" in f:
+        nsp = join(prefix, "site-packages")
         _force_dir(nsp)
 
-        g = f[f.find('site-packages'):]
+        g = f[f.find("site-packages") :]
         dst = join(prefix, g)
         dst_dir = dirname(dst)
         _force_dir(dst_dir)
         shutil.move(path, dst)
-        d['site-packages'].append(g[14:])
+        d["site-packages"].append(g[14:])
 
     # Treat scripts specially with the logic from above
-    elif f.startswith(('bin/', 'Scripts')):
+    elif f.startswith(("bin/", "Scripts")):
         fn = basename(path)
         fn = rewrite_script(fn, prefix)
-        d['python-scripts'].append(fn)
+        d["python-scripts"].append(fn)
 
     # Include examples in the metadata doc
-    elif f.startswith(('Examples/', 'Examples\\')):
-        d['Examples'].append(f[9:])
+    elif f.startswith(("Examples/", "Examples\\")):
+        d["Examples"].append(f[9:])
     # No special treatment for other files
     # leave them as-is
     else:
@@ -94,10 +96,7 @@ def handle_file(f, d, prefix):
 
 
 def populate_files(m, files, prefix, entry_point_scripts=None):
-    d = {'dist': m.dist(),
-         'site-packages': [],
-         'python-scripts': [],
-         'Examples': []}
+    d = {"dist": m.dist(), "site-packages": [], "python-scripts": [], "Examples": []}
 
     # Populate site-package, python-scripts, and Examples into above
     for f in files:
@@ -105,9 +104,9 @@ def populate_files(m, files, prefix, entry_point_scripts=None):
 
     # Windows path conversion
     if ISWIN:
-        for fns in (d['site-packages'], d['Examples']):
+        for fns in (d["site-packages"], d["Examples"]):
             for i, fn in enumerate(fns):
-                fns[i] = fn.replace('\\', '/')
+                fns[i] = fn.replace("\\", "/")
 
     if entry_point_scripts:
         for entry_point in entry_point_scripts:
@@ -119,28 +118,36 @@ def populate_files(m, files, prefix, entry_point_scripts=None):
 
 
 def transform(m, files, prefix):
-    bin_dir = join(prefix, 'bin')
+    bin_dir = join(prefix, "bin")
     _force_dir(bin_dir)
 
-    scripts_dir = join(prefix, 'Scripts')
+    scripts_dir = join(prefix, "Scripts")
     _force_dir(scripts_dir)
 
     name = m.name()
 
     # Create *nix prelink script
     # Note: it's important to use LF newlines or it wont work if we build on Win
-    with open(join(bin_dir, '.%s-pre-link.sh' % name), 'wb') as fo:
-        fo.write('''\
+    with open(join(bin_dir, ".%s-pre-link.sh" % name), "wb") as fo:
+        fo.write(
+            b"""\
     #!/bin/bash
     $PREFIX/bin/python $SOURCE_DIR/link.py
-    '''.encode('utf-8'))
+    """
+        )
 
     # Create windows prelink script (be nice and use Windows newlines)
-    with open(join(scripts_dir, '.%s-pre-link.bat' % name), 'wb') as fo:
-        fo.write('''\
+    with open(join(scripts_dir, ".%s-pre-link.bat" % name), "wb") as fo:
+        fo.write(
+            """\
     @echo off
     "%PREFIX%\\python.exe" "%SOURCE_DIR%\\link.py"
-    '''.replace('\n', '\r\n').encode('utf-8'))
+    """.replace(
+                "\n", "\r\n"
+            ).encode(
+                "utf-8"
+            )
+        )
 
     d = populate_files(m, files, prefix)
 
@@ -148,17 +155,17 @@ def transform(m, files, prefix):
     this_dir = dirname(__file__)
 
     # copy in windows exe shims if there are any python-scripts
-    if d['python-scripts']:
-        for fn in 'cli-32.exe', 'cli-64.exe':
+    if d["python-scripts"]:
+        for fn in "cli-32.exe", "cli-64.exe":
             shutil.copyfile(join(this_dir, fn), join(prefix, fn))
 
     # Read the local _link.py
-    with open(join(this_dir, '_link.py')) as fi:
+    with open(join(this_dir, "_link.py")) as fi:
         link_code = fi.read()
 
     # Write the package metadata, and bumper with code for linking
-    with open(join(prefix, 'link.py'), 'w') as fo:
-        fo.write('DATA = ')
+    with open(join(prefix, "link.py"), "w") as fo:
+        fo.write("DATA = ")
         json.dump(d, fo, indent=2, sort_keys=True)
-        fo.write('\n## END DATA\n\n')
+        fo.write("\n## END DATA\n\n")
         fo.write(link_code)

@@ -1,6 +1,6 @@
 python:
   - 2.7
-  - 3.5
+  - 3.9
 unused_var:
   - abc
   - 123

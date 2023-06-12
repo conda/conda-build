@@ -1,0 +1,89 @@
+package:
+  name: conda-build
+  version: {{ GIT_DESCRIBE_TAG }}.{{ GIT_BUILD_STR }}
+
+source:
+  # git_url only captures committed code
+  git_url: ../
+
+build:
+  script: {{ PYTHON }} -m pip install . --no-deps --no-build-isolation -vv
+  entry_points:
+    - conda-build = conda_build.cli.main_build:main
+    - conda-convert = conda_build.cli.main_convert:main
+    - conda-debug = conda_build.cli.main_debug:main
+    - conda-develop = conda_build.cli.main_develop:main
+    - conda-index = conda_build.cli.main_index:main
+    - conda-inspect = conda_build.cli.main_inspect:main
+    - conda-metapackage = conda_build.cli.main_metapackage:main
+    - conda-render = conda_build.cli.main_render:main
+    - conda-skeleton = conda_build.cli.main_skeleton:main
+
+requirements:
+  build:
+    - git  # for source/git_url above
+  host:
+    - python
+    - pip
+    - hatchling >=1.12.2
+    - hatch-vcs >=0.2.0
+    - wheel
+  run:
+    - beautifulsoup4
+    - chardet
+    - conda >=4.13
+    - conda-index
+    - conda-package-handling >=1.3
+    - filelock
+    - glob2 >=0.6
+    - jinja2
+    - m2-patch >=2.6               # [win]
+    - packaging
+    - patch >=2.6                  # [not win]
+    - patchelf                     # [linux]
+    - pkginfo
+    - psutil
+    - py-lief                      # [not win]
+    - python
+    - python-libarchive-c
+    - pytz
+    - pyyaml
+    - requests
+    - six
+    - tomli                        # [py<311]
+    - tqdm
+  run_constrained:
+    - conda-verify  >=3.0.2
+
+test:
+  imports:
+    # high-level import
+    - conda_build
+    # new/updated submodules (can be dropped after 1-2 releases)
+    - conda_build.index
+  files:
+    - test_bdist_conda_setup.py
+  commands:
+    # builtin subcommands
+    - conda --help
+    - conda build --help
+    - conda convert --help
+    - conda develop --help
+    - conda index --help
+    - conda inspect --help
+    - conda inspect linkages --help  # [unix]
+    - conda inspect objects --help  # [osx]
+    - conda metapackage --help
+    - conda render --help
+    - conda skeleton --help
+    - conda debug --help
+    # bdist_conda
+    - python test_bdist_conda_setup.py bdist_conda --help
+
+about:
+  home: https://conda.org
+  license: BSD-3-Clause
+  license_file: LICENSE
+  summary: Canary release of conda-build
+  doc_url: https://conda.io/projects/conda-build/en/latest/
+  dev_url: https://github.com/conda/conda-build

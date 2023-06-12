@@ -1,8 +1,0 @@
-python:
-  - 2.7
-  - 3.5
-numpy:
-  - 1.10
-  - 1.11
-ignore_version:
-  - numpy

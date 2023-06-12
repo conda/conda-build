@@ -1,3 +1,5 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 """This file is an example of the structure that any add-on module for a new language should have.
 
 You can have structure beyond this, but this is a minimum of what conda-build will look for."""
@@ -29,11 +31,13 @@ def add_parser(repos):
         "my_repo",
         help="""
     Create recipe skeleton for packages hosted on my-repo.org
-        """,)
+        """,
+    )
     my_repo.add_argument(
         "packages",
-        nargs='+',
-        help="my-repo packages to create recipe skeletons for.",)
+        nargs="+",
+        help="my-repo packages to create recipe skeletons for.",
+    )
 
     # Add any additional parser arguments here
 

@@ -4,8 +4,8 @@ c_compiler:
   - vs2015                     # [win]
 python:
   - 2.7
-  - 3.5
-  - 3.6
+  - 3.8
+  - 3.9
 zip_keys:
   -                             # [win]
     - c_compiler                # [win]

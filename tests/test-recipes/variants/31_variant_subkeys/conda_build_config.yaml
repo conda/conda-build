@@ -1,3 +1,5 @@
+some_package:
+  - some_package
 replacements:
   all_replacements:
     - tag: 'pkg-config build metadata'

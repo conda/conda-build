@@ -1,0 +1,11 @@
+package:
+  name: ignore_version_reduces_matrix
+  version: 1.0
+
+requirements:
+  build:
+    - packageA
+    - packageB  { packageB }
+  run:
+    - packageA
+    - packageB

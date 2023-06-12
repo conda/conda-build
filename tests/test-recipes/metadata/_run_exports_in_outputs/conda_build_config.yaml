@@ -34,8 +34,6 @@ rust_compiler:
   - rust
 rust_compiler_version:
   - 1.32.0
-CONDA_BUILD_SYSROOT:
-  - /opt/MacOSX10.10.sdk        # [osx]
 VERBOSE_AT:
   - V=1
 VERBOSE_CM:
@@ -160,8 +158,6 @@ macos_min_version:
   - 10.9
 macos_machine:
   - x86_64-apple-darwin13.4.0
-MACOSX_DEPLOYMENT_TARGET:
-  - 10.9
 mkl:
   - 2019
 mpfr:
@@ -193,8 +189,8 @@ libprotobuf:
   - 3.6.0
 python:
   - 2.7
-  - 3.6
-  - 3.7
+  - 3.8
+  - 3.9
 r_version:
   - 3.5.0
 r_implementation:

@@ -1,0 +1,4 @@
+target_platform:
+  - linux-32
+cross_target_platform:
+  - linux-32

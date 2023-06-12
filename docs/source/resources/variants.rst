@@ -49,7 +49,7 @@ meta.yaml contents like:
 
    requirements:
        build:
-           - python {{ python }}
+           - python
        run:
            - python
 
@@ -89,7 +89,7 @@ map for the content below.
 
       requirements:
           build:
-              - boost  {{ boost }}
+              - boost
           run:
               - boost
 
@@ -154,9 +154,9 @@ map for the content below.
 
       requirements:
           build:
-              - numpy  {{ numpy }}
+              - numpy
           run:
-              - numpy  {{ numpy }}
+              - numpy
 
    For legacy compatibility, Python is pinned implicitly without specifying
    ``{{ python }}`` in your recipe. This is generally intractable to extend to
@@ -261,12 +261,12 @@ First, the ``meta.yaml`` file:
        - name: py-xgboost
          requirements:
              - {{ pin_subpackage('libxgboost', exact=True) }}
-             - python  {{ python }}
+             - python
 
        - name: r-xgboost
          requirements:
              - {{ pin_subpackage('libxgboost', exact=True) }}
-             - r-base  {{ r_base }}
+             - r-base
 
 Next, the ``conda_build_config.yaml`` file, specifying our build matrix:
 
@@ -294,7 +294,7 @@ Creating conda-build variant config files
 Variant input files are yaml files. Search order for these files is the following:
 
 #. A file named ``conda_build_config.yaml`` in the user's HOME folder (or an arbitrarily
-   named file specified as the value for the ``conda_build/config_file`` key in your 
+   named file specified as the value for the ``conda_build/config_file`` key in your
    .condarc file).
 #. A file named ``conda_build_config.yaml`` in the current working directory.
 #. A file named ``conda_build_config.yaml`` in the same folder as ``meta.yaml``
@@ -343,15 +343,15 @@ Again, with ``meta.yaml`` contents like:
 
    requirements:
        build:
-           - python {{ python }}
+           - python
        run:
-           - python {{ python }}
+           - python
 
 You could supply a variant to build this recipe like so:
 
 .. code-block:: python
 
-   variants = {'python': ['2.7', '3.5']}
+   variants = {"python": ["2.7", "3.5"]}
    api.build(path_to_recipe, variants=variants)
 
 
@@ -561,7 +561,7 @@ requirements, and a variant that includes 2 NumPy versions:
 
 .. code-block:: python
 
-    variants = [{'numpy': ['1.10', '1.11'], 'ignore_version': ['numpy']}]
+    variants = [{"numpy": ["1.10", "1.11"], "ignore_version": ["numpy"]}]
 
 ``meta.yaml``:
 
@@ -569,7 +569,7 @@ requirements, and a variant that includes 2 NumPy versions:
 
    requirements:
        build:
-           - numpy {{ numpy }}
+           - numpy
        run:
            - numpy
 
@@ -658,16 +658,16 @@ For example, general input for ``variants`` could be something like:
 
 .. code-block:: python
 
-    a = {'python': ['2.7', '3.5'], 'numpy': ['1.10', '1.11']}
+    a = {"python": ["2.7", "3.5"], "numpy": ["1.10", "1.11"]}
     # values can be strings or lists.  Strings are converted to one-element lists internally.
-    b = {'python': ['3.4', '3.5'], 'numpy': '1.11'}
+    b = {"python": ["3.4", "3.5"], "numpy": "1.11"}
 
 Here, let's say ``b`` is found after ``a``, and thus has priority over ``a``. Merging these
 2 variants yields:
 
 .. code-block:: python
 
-    merged = {'python': ['3.4', '3.5'], 'numpy': ['1.11']}
+    merged = {"python": ["3.4", "3.5"], "numpy": ["1.11"]}
 
 ``b``'s values for ``python`` have overwritten ``a``'s. From here, we compute the
 Cartesian product of all input variables. The end result is a collection of
@@ -675,7 +675,7 @@ dicts, each with a string for each value. Output would be something like:
 
 .. code-block:: python
 
-    variants = [{'python': '3.4', 'numpy': '1.11'}, {'python': '3.5', 'numpy': '1.11'}]
+    variants = [{"python": "3.4", "numpy": "1.11"}, {"python": "3.5", "numpy": "1.11"}]
 
 conda-build would loop over these variants where appropriate, such as when
 building, outputting package output names, and so on.
@@ -685,8 +685,12 @@ variants: 2 variants for ``python``, *times* 2 variants for ``numpy``:
 
 .. code-block:: python
 
-    variants = [{'python': '3.4', 'numpy': '1.11'}, {'python': '3.5', 'numpy': '1.11'},
-                {'python': '3.4', 'numpy': '1.10'}, {'python': '3.5', 'numpy': '1.10'}]
+    variants = [
+        {"python": "3.4", "numpy": "1.11"},
+        {"python": "3.5", "numpy": "1.11"},
+        {"python": "3.4", "numpy": "1.10"},
+        {"python": "3.5", "numpy": "1.10"},
+    ]
 
 
 Bootstrapping pins based on an existing environment
@@ -786,7 +790,7 @@ upper bounds.
 .. code-block:: python
 
     # produces pins like >=1.11.2,<1.12
-    variants = [{'numpy': '1.11', 'pin_run_as_build': {'numpy': {'max_pin': 'x.x'}}}]
+    variants = [{"numpy": "1.11", "pin_run_as_build": {"numpy": {"max_pin": "x.x"}}}]
 
 Note that the final pin may be more specific than your initial spec. Here, the
 spec is 1.11, but the produced pin could be 1.11.2, the exact version of NumPy
@@ -795,7 +799,13 @@ that was used at build time.
 .. code-block:: python
 
     # produces pins like >=1.11,<2
-    variants = [{'numpy': '1.11', 'pin_run_as_build': {'numpy': {'min_pin': 'x.x', 'max_pin': 'x'}}}]
+    variants = [
+        {"numpy": "1.11", "pin_run_as_build": {"numpy": {"min_pin": "x.x", "max_pin": "x"}}}
+    ]
+
+Note that for pre-release versions ``min_pin`` will be ignored and substituted
+with the exact input version since pre-releases can never match ``>=x.x`` (see
+:ref:`build-version-spec` for details on pre-release version matching).
 
 
 Pinning at the variant level
@@ -834,7 +844,7 @@ An example variant/recipe is shown here:
 
    requirements:
        build:
-           - boost {{ boost }}
+           - boost
        run:
            - boost
 
@@ -872,7 +882,7 @@ function.
 
 .. code-block:: python
 
-    variants = [{'numpy': '1.11'}]
+    variants = [{"numpy": "1.11"}]
 
 ``meta.yaml``:
 
@@ -880,7 +890,7 @@ function.
 
    requirements:
        build:
-           - numpy {{ numpy }}
+           - numpy
        run:
            - {{ pin_compatible('numpy', max_pin='x.x') }}
 
@@ -893,7 +903,7 @@ Each can be passed independently of the other. An example of specifying both:
 
 .. code-block:: python
 
-    variants = [{'numpy': '1.11'}]
+    variants = [{"numpy": "1.11"}]
 
 ``meta.yaml``:
 
@@ -901,7 +911,7 @@ Each can be passed independently of the other. An example of specifying both:
 
    requirements:
        build:
-           - numpy {{ numpy }}
+           - numpy
        run:
            - {{ pin_compatible('numpy', min_pin='x.x', max_pin='x.x') }}
 
@@ -915,7 +925,7 @@ You can also pass the minimum or maximum version directly. These arguments super
 
 .. code-block:: python
 
-    variants = [{'numpy': '1.11'}]
+    variants = [{"numpy": "1.11"}]
 
 ``meta.yaml``:
 
@@ -923,7 +933,7 @@ You can also pass the minimum or maximum version directly. These arguments super
 
    requirements:
        build:
-           - numpy {{ numpy }}
+           - numpy
        run:
            - {{ pin_compatible('numpy', lower_bound='1.10', upper_bound='3.0') }}
 
@@ -1046,7 +1056,7 @@ evaluating ``meta.yaml`` templates:
 
 There are default "native" compilers that are used when no compiler is specified
 in any variant. These are defined in `conda-build's jinja_context.py file
-<https://github.com/conda/conda-build/blob/master/conda_build/jinja_context.py>`_.
+<https://github.com/conda/conda-build/blob/main/conda_build/jinja_context.py>`_.
 Most of the time, users will not need to provide compilers in their variants -
 just leave them empty and conda-build will use the defaults appropriate for
 your system.
@@ -1192,7 +1202,10 @@ Using a cross-compiler in a recipe would look like the following:
 
 .. code-block:: python
 
-   variants = {'cxx_compiler': ['g++'], 'target_platform': ['linux-cos5-x86_64', 'linux-aarch64']}
+   variants = {
+       "cxx_compiler": ["g++"],
+       "target_platform": ["linux-cos5-x86_64", "linux-aarch64"],
+   }
 
 and a ``meta.yaml`` file:
 
@@ -1231,7 +1244,7 @@ Given these guidelines, consider a system of recipes using a variant like this:
 
 .. code-block:: python
 
-   variants = {'cxx_compiler': ['vs2015']}
+   variants = {"cxx_compiler": ["vs2015"]}
 
 The recipes include a compiler ``meta.yaml`` like this:
 
