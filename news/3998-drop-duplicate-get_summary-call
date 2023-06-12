@@ -17,4 +17,3 @@
 ### Other
 
 * Drop duplicate `get_summary` call. (#3998)
-
