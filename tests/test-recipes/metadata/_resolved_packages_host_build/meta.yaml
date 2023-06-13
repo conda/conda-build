@@ -6,8 +6,10 @@ requirements:
   build:
     - numpy
     - nomkl    # [unix]
+    - openssl
   host:
     - curl
+    - {{ pin_compatible('openssl', exact=True) }}
   run:
   {% for package in resolved_packages('build') %}
     - {{ package }}
