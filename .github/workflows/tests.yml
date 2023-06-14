@@ -59,7 +59,7 @@ jobs:
   linux:
     # only run test suite if there are code changes
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: github.event_name == "schedule" || needs.changes.outputs.code == 'true'
 
     runs-on: ubuntu-latest
     defaults:
@@ -167,7 +167,7 @@ jobs:
   windows:
     # only run test suite if there are code changes
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: github.event_name == "schedule" || needs.changes.outputs.code == 'true'
 
     runs-on: windows-2019
     strategy:
@@ -276,7 +276,7 @@ jobs:
   macos:
     # only run test suite if there are code changes
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: github.event_name == "schedule" || needs.changes.outputs.code == 'true'
 
     runs-on: macos-11
     defaults:
@@ -385,7 +385,7 @@ jobs:
   aggregate:
     # only aggregate test suite if there are code changes
     needs: [changes, linux, windows, macos]
-    if: always() && needs.changes.outputs.code == 'true'
+    if: always() && (github.event_name == "schedule" || needs.changes.outputs.code == 'true')
 
     runs-on: ubuntu-latest
     steps:
