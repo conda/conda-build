@@ -400,7 +400,15 @@ def git_mirror_checkout_recursive(
         # Now that all relative-URL-specified submodules are locally mirrored to
         # relatively the same place we can go ahead and checkout the submodules.
         check_call_env(
-            [git, "submodule", "update", "--init", "--recursive"],
+            [
+                git,
+                # CVE-2022-39253
+                *("-c", "protocol.file.allow=always"),
+                "submodule",
+                "update",
+                "--init",
+                "--recursive",
+            ],
             cwd=checkout_dir,
             stdout=stdout,
             stderr=stderr,
