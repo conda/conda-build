@@ -1912,25 +1912,21 @@ variables are booleans.
      - True if the platform is Linux and the Python architecture
        is 64-bit and uses x86.
    * - armv6l
-     - True if the platform is Linux and the Python architecture
-       is armv6l.
+     - True if the Python architecture is armv6l.
    * - armv7l
-     - True if the platform is Linux and the Python architecture
-       is armv7l.
+     - True if the Python architecture is armv7l.
    * - aarch64
-     - True if the platform is Linux and the Python architecture
-       is aarch64.
+     - True if the Python architecture is aarch64. Note that this
+       is not used for macOS or Windows where arm64 is used.
    * - ppc64le
-     - True if the platform is Linux and the Python architecture
-       is ppc64le.
+     - True if the Python architecture is ppc64le.
    * - s390x
-     - True if the platform is Linux and the Python architecture
-       is s390x.
+     - True if the Python architecture is s390x.
    * - osx
      - True if the platform is macOS.
    * - arm64
-     - True if the platform is macOS and the Python architecture
-       is arm64.
+     - True if the Python architecture is arm64. Note that this
+       is not used for Linux where arm64 is used.
    * - unix
      - True if the platform is either macOS or Linux.
    * - win
