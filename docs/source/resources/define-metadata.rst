@@ -1906,37 +1906,33 @@ variables are booleans.
    * - linux
      - True if the platform is Linux.
    * - linux32
-     - True if the platform is Linux and the Python architecture
-       is 32-bit and uses x86.
+     - True if the platform is Linux and the system architecture is 32-bit and uses x86.
    * - linux64
-     - True if the platform is Linux and the Python architecture
-       is 64-bit and uses x86.
+     - True if the platform is Linux and the system architecture is 64-bit and uses x86.
    * - armv6l
-     - True if the Python architecture is armv6l.
+     - True if the system architecture is armv6l.
    * - armv7l
-     - True if the Python architecture is armv7l.
+     - True if the system architecture is armv7l.
    * - aarch64
-     - True if the Python architecture is aarch64. Note that this
-       is not used for macOS or Windows where arm64 is used.
+     - True if the system architecture is aarch64.
+       Note that this is not used for macOS or Windows where arm64 is used as reported by the OS.
    * - ppc64le
-     - True if the Python architecture is ppc64le.
+     - True if the system architecture is ppc64le.
    * - s390x
-     - True if the Python architecture is s390x.
+     - True if the system architecture is s390x.
    * - osx
      - True if the platform is macOS.
    * - arm64
-     - True if the Python architecture is arm64. Note that this
-       is not used for Linux where arm64 is used.
+     - True if the system architecture is arm64.
+       Note that this is not used for Linux where aarch64 is used as reported by the OS.
    * - unix
      - True if the platform is either macOS or Linux.
    * - win
      - True if the platform is Windows.
    * - win32
-     - True if the platform is Windows and the Python
-       architecture is 32-bit.
+     - True if the platform is Windows and the system architecture is 32-bit.
    * - win64
-     - True if the platform is Windows and the Python
-       architecture is 64-bit.
+     - True if the platform is Windows and the system architecture is 64-bit.
    * - py
      - The Python version as an int, such as ``27`` or ``36``.
        See the CONDA_PY :ref:`environment variable <build-envs>`.
