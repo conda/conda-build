@@ -6,9 +6,10 @@ import os
 import pkgutil
 import sys
 
-import conda_build.api as api
-from conda_build.conda_interface import ArgumentParser
-from conda_build.config import Config
+from .. import api
+from ..conda_interface import ArgumentParser
+from ..config import Config
+from ..deprecations import deprecated
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
 logging.basicConfig(level=logging.INFO)
@@ -16,6 +17,7 @@ logging.basicConfig(level=logging.INFO)
 
 def parse_args(args):
     p = ArgumentParser(
+        prog="conda skeleton",
         description="""
 Generates a boilerplate/skeleton recipe, which you can then edit to create a
 full recipe. Some simple skeleton recipes may not even need edits.
@@ -60,6 +62,7 @@ def execute(args):
     )
 
 
+@deprecated("3.26.0", "4.0.0", addendum="Use `conda skeleton` instead.")
 def main():
     return execute(sys.argv[1:])
 

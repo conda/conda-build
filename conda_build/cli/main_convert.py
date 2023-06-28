@@ -4,8 +4,9 @@ import logging
 import sys
 from os.path import abspath, expanduser
 
-from conda_build import api
-from conda_build.conda_interface import ArgumentParser
+from .. import api
+from ..conda_interface import ArgumentParser
+from ..deprecations import deprecated
 
 logging.basicConfig(level=logging.INFO)
 
@@ -36,6 +37,7 @@ install on Mac OS X):
 
 def parse_args(args):
     p = ArgumentParser(
+        prog="conda convert",
         description="""
 Various tools to convert conda packages. Takes a pure Python package build for
 one platform and converts it to work on one or more other platforms, or
@@ -127,5 +129,10 @@ def execute(args):
         api.convert(f, **args.__dict__)
 
 
+@deprecated("3.26.0", "4.0.0", addendum="Use `conda convert` instead.")
 def main():
     return execute(sys.argv[1:])
+
+
+if __name__ == "__main__":
+    main()

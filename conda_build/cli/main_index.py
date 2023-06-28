@@ -16,8 +16,9 @@ logging.basicConfig(level=logging.INFO)
 
 def parse_args(args):
     p = ArgumentParser(
+        prog="conda index",
         description="Update package index metadata files in given directories. "
-        "Pending deprecated, please use the standalone conda-index project."
+        "Pending deprecated, please use the standalone conda-index project.",
     )
 
     p.add_argument(
@@ -120,5 +121,10 @@ def execute(args):
     )
 
 
+@deprecated("3.26.0", "4.0.0", addendum="Use `conda index` instead.")
 def main():
     return execute(sys.argv[1:])
+
+
+if __name__ == "__main__":
+    main()
