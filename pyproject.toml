@@ -68,7 +68,7 @@ conda-debug = "conda_build.cli.main_debug:main"
 bdist_conda = "conda_build.bdist_conda:bdist_conda"
 
 [project.entry-points.conda]
-conda-build = "conda_build.cli.plugins"
+conda-build = "conda_build.plugin"
 
 [tool.hatch.version]
 source = "vcs"
