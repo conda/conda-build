@@ -121,7 +121,3 @@ def execute(args):
 @deprecated("3.26.0", "4.0.0", addendum="Use `conda debug` instead.")
 def main():
     return execute(sys.argv[1:])
-
-
-if __name__ == "__main__":
-    main()
