@@ -2,15 +2,15 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import conda.plugins
 
-from .main_build import execute as build
-from .main_convert import execute as convert
-from .main_debug import execute as debug
-from .main_develop import execute as develop
-from .main_index import execute as index
-from .main_inspect import execute as inspect
-from .main_metapackage import execute as metapackage
-from .main_render import execute as render
-from .main_skeleton import execute as skeleton
+from .cli.main_build import execute as build
+from .cli.main_convert import execute as convert
+from .cli.main_debug import execute as debug
+from .cli.main_develop import execute as develop
+from .cli.main_index import execute as index
+from .cli.main_inspect import execute as inspect
+from .cli.main_metapackage import execute as metapackage
+from .cli.main_render import execute as render
+from .cli.main_skeleton import execute as skeleton
 
 
 @conda.plugins.hookimpl
