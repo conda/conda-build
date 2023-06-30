@@ -28,6 +28,7 @@ pytest-replay
 pytest-rerunfailures
 pytest-xdist
 python-libarchive-c
+conda-forge::allure-pytest
 pytz
 requests
 ripgrep
