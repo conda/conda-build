@@ -50,7 +50,7 @@ conda package is composed of the first 3 values, as in:
 ``<name>-<version>-<build>.tar.bz2``.
 
 .. list-table::
-   :widths: 15 15 70
+   :widths: 15 15 45
 
    * - **Key**
      - **Type**
@@ -64,8 +64,7 @@ conda package is composed of the first 3 values, as in:
    * - version
      - string
      - The package version. May not contain "-". Conda
-       acknowledges `PEP 440
-       <https://www.python.org/dev/peps/pep-0440/>`_.
+       acknowledges `PEP 440 <https://www.python.org/dev/peps/pep-0440/>`_.
 
    * - build
      - string
@@ -88,9 +87,9 @@ conda package is composed of the first 3 values, as in:
        the package.
 
        Unlike the build string, the ``build_number`` is inspected by
-       conda. Conda uses it to sort packages that have otherwise
-       identical names and versions to determine the latest one.
-       This is important because new builds that contain bug
+       conda. Conda uses |br| it to sort packages that have otherwise
+       identical names and versions |br| to determine the latest one.
+       This is important because new builds that |br| contain bug
        fixes for the way a package is built may be added to a
        repository.
 
@@ -114,7 +113,7 @@ conda package is composed of the first 3 values, as in:
        EXAMPLE: ``osx``
 
        Conda currently does not use this key. Packages for a
-       specific architecture and platform are usually
+       specific architecture and platform are |br| usually
        distinguished by the repository subdirectory that contains
        them---see :ref:`repo-si`.
 
@@ -278,7 +277,7 @@ parts:
   3 parts, the second part must be the exact version.
 
 .. list-table:: Version Special Characters
-   :widths: 15 40 35
+   :widths: 10, 40, 40
    :header-rows: 1
 
    * - Symbol
@@ -286,7 +285,7 @@ parts:
      - Example
 
    * - <, >, <=, >=
-     - Relational operators on versions, which are compared using `PEP-440 <https://www.python.org/dev/peps/pep-0440/>`_.
+     - Relational operators on versions, |br| which are compared using `PEP-440 <https://www.python.org/dev/peps/pep-0440/>`_.
      - ``<=1.0`` matches 0.9, 0.9.1, and 1.0, but not 1.0.1.
 
    * - ==, and !=
@@ -298,12 +297,12 @@ parts:
      - ``1.0|1.2`` matches version 1.0 or 1.2.
 
    * - \*
-     - Matches 0 or more characters in the version string. In terms of regular expressions, it is the same as ``r'.*'``.
+     - Matches 0 or more characters in the version string. |br| In terms of regular expressions, it is the same as ``r'.*'``.
      - ``1.0|1.4*`` matches 1.0, 1.4 and 1.4.1b2, but not 1.2.
 
    * - ,
      - AND
-     - ``>=2,<3`` matches all packages in the 2 series. 2.0, 2.1, and 2.9 all match, but 3.0 and 1.0 do not.
+     - ``>=2,<3`` matches all packages in the 2 series. |br| 2.0, 2.1, and 2.9 all match, but 3.0 and 1.0 do not.
 
 .. note::
    ``,`` has higher precedence than \|, so >=1,<2|>3 means greater than or equal to 1 AND less than 2 or greater than 3, which matches 1, 1.3 and 3.0, but not 2.2.
@@ -374,3 +373,7 @@ numpy-1.8.1-py27_0:
 * numpy >=1.8,<2|1.9
 * numpy 1.8.1 py27_0
 * numpy=1.8.1=py27_0
+
+.. |br| raw:: html
+
+      <br>
