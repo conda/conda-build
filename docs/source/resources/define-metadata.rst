@@ -1778,7 +1778,7 @@ to load data from other files. These are ``load_setup_py_data``, ``load_file_reg
 * ``load_file_regex``: Searches a file for a regular expression and returns the
   first match as a Python ``re.Match object``. For example::
 
-    {% set readme_heading = load_file_regex(load_file='README.rst', regex_pattern=r'^# (\S+)') %}
+    {% set readme_heading = load_file_regex(load_file='README.rst', regex_pattern='^# (\S+)') %}
     package:
       name: {{ readme_heading.string }}
 
