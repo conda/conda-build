@@ -116,7 +116,6 @@ jobs:
             --file ./tests/requirements.txt \
             --file ./tests/requirements-linux.txt \
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
-          pip install allure-pytest
           pip install -e .
 
       - name: Show info
@@ -222,7 +221,6 @@ jobs:
             --file .\tests\requirements.txt `
             --file .\tests\requirements-windows.txt `
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
-          pip install allure-pytest
           pip install -e .
 
       - name: Show info
@@ -334,7 +332,6 @@ jobs:
             --file ./tests/requirements.txt \
             --file ./tests/requirements-macos.txt \
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
-          pip install allure-pytest
           pip install -e .
 
       - name: Show info
