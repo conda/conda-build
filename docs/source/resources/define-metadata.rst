@@ -1560,7 +1560,8 @@ information displays in the Anaconda.org channel.
 
   about:
     home: https://github.com/ilanschnell/bsdiff4
-    license: BSD
+    license: BSD-3-Clause
+    license_family: BSD
     license_file: LICENSE
     summary: binary diff and patch using the BSDIFF4-format
 
@@ -1584,6 +1585,8 @@ contents will be unconditionally and recursively added).
     license_file:
       - LICENSE
       - vendor-licenses/
+
+Additional details on allowed licenses can be seen in the `example feedstock <https://github.com/conda-forge/staged-recipes/blob/5eddbd7fc9d1502169089da06c3688d9759be978/recipes/example/meta.yaml#L64-L73>`_.
 
 
 Prelink Message File
