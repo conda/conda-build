@@ -41,9 +41,9 @@ jobs:
       code: ${{ steps.filter.outputs.code }}
     steps:
       - uses: actions/checkout@v3
-        # dorny/paths-filter needs git clone for push events
+        # dorny/paths-filter needs git clone for non-PR events
         # https://github.com/marketplace/actions/paths-changes-filter#supported-workflows
-        if: github.event_name == 'push'
+        if: github.event_name != 'pull_request'
       - uses: dorny/paths-filter@4512585405083f25c027a35db413c2b3b9006d50
         id: filter
         with:
@@ -59,7 +59,7 @@ jobs:
   linux:
     # only run test suite if there are code changes
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
 
     runs-on: ubuntu-latest
     defaults:
@@ -116,7 +116,6 @@ jobs:
             --file ./tests/requirements.txt \
             --file ./tests/requirements-linux.txt \
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
-          pip install allure-pytest
           pip install -e .
 
       - name: Show info
@@ -167,7 +166,7 @@ jobs:
   windows:
     # only run test suite if there are code changes
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
 
     runs-on: windows-2019
     strategy:
@@ -222,7 +221,6 @@ jobs:
             --file .\tests\requirements.txt `
             --file .\tests\requirements-windows.txt `
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
-          pip install allure-pytest
           pip install -e .
 
       - name: Show info
@@ -276,7 +274,7 @@ jobs:
   macos:
     # only run test suite if there are code changes
     needs: changes
-    if: needs.changes.outputs.code == 'true'
+    if: github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
 
     runs-on: macos-11
     defaults:
@@ -334,7 +332,6 @@ jobs:
             --file ./tests/requirements.txt \
             --file ./tests/requirements-macos.txt \
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
-          pip install allure-pytest
           pip install -e .
 
       - name: Show info
@@ -385,7 +382,7 @@ jobs:
   aggregate:
     # only aggregate test suite if there are code changes
     needs: [changes, linux, windows, macos]
-    if: always() && needs.changes.outputs.code == 'true'
+    if: always() && (github.event_name == 'schedule' || needs.changes.outputs.code == 'true')
 
     runs-on: ubuntu-latest
     steps:
@@ -455,11 +452,31 @@ jobs:
           clean: true
           fetch-depth: 0
 
+      - name: Detect label
+        shell: python
+        run: |
+          from pathlib import Path
+          from re import match
+
+          if "${{ github.ref_name }}" == "main":
+              # main branch commits are uploaded to the dev label
+              label = "dev"
+          elif "${{ github.ref_name }}".startswith("feature/"):
+              # feature branch commits are uploaded to a custom label
+              label = "${{ github.ref_name }}"
+          else:
+              # release branch commits are added to the rc label
+              # see https://github.com/conda/infrastructure/issues/760
+              _, name = "${{ github.repository }}".split("/")
+              label = f"rc-{name}-${{ github.ref_name }}"
+
+          Path("${{ env.GITHUB_ENV }}").write_text(f"ANACONDA_ORG_LABEL={label}")
+
       - name: Create and upload canary build
         uses: conda/actions/canary-release@v22.10.0
         with:
           package-name: ${{ github.event.repository.name }}
           subdir: ${{ matrix.subdir }}
           anaconda-org-channel: conda-canary
-          anaconda-org-label: ${{ github.ref_name == 'main' && 'dev' || github.ref_name }}
+          anaconda-org-label: ${{ env.ANACONDA_ORG_LABEL }}
           anaconda-org-token: ${{ secrets.ANACONDA_ORG_CONDA_CANARY_TOKEN }}
