@@ -4,13 +4,11 @@ import logging
 import sys
 from argparse import ArgumentParser
 
-from conda_build import api
-from conda_build.cli import validators as valid
-
-# we extend the render parser because we basically need to render the recipe before
-#       we can say what env to create.  This is not really true for debugging tests, but meh...
-from conda_build.cli.main_render import get_render_parser
-from conda_build.utils import on_win
+from .. import api
+from ..deprecations import deprecated
+from ..utils import on_win
+from . import validators as valid
+from .main_render import get_render_parser
 
 logging.basicConfig(level=logging.INFO)
 
@@ -18,6 +16,7 @@ logging.basicConfig(level=logging.INFO)
 def get_parser() -> ArgumentParser:
     """Returns a parser object for this command"""
     p = get_render_parser()
+    p.prog = "conda debug"
     p.description = """
 
 Set up environments and activation scripts to debug your build or test phase.
@@ -87,9 +86,9 @@ Set up environments and activation scripts to debug your build or test phase.
     return p
 
 
-def execute():
+def execute(args):
     parser = get_parser()
-    args = parser.parse_args()
+    args = parser.parse_args(args)
 
     try:
         activation_string = api.debug(
@@ -119,5 +118,6 @@ def execute():
         sys.exit(1)
 
 
+@deprecated("3.26.0", "4.0.0", addendum="Use `conda debug` instead.")
 def main():
-    return execute()
+    return execute(sys.argv[1:])
