@@ -1710,6 +1710,7 @@ class DuplicateFilter(logging.Filter):
 dedupe_filter = DuplicateFilter()
 info_debug_stdout_filter = LessThanFilter(logging.WARNING)
 warning_error_stderr_filter = GreaterThanFilter(logging.INFO)
+level_formatter = logging.Formatter("%(levelname)s: %(message)s")
 
 # set filelock's logger to only show warnings by default
 logging.getLogger("filelock").setLevel(logging.WARN)
@@ -1746,11 +1747,17 @@ def get_logger(name, level=logging.INFO, dedupe=True, add_stdout_stderr_handlers
         log.addFilter(dedupe_filter)
 
     # these are defaults.  They can be overridden by configuring a log config yaml file.
-    if not log.handlers and add_stdout_stderr_handlers:
+    top_pkg = name.split(".")[0]
+    if top_pkg == "conda_build":
+        # we don't want propagation in CLI, but we do want it in tests
+        # this is a pytest limitation: https://github.com/pytest-dev/pytest/issues/3697
+        logging.getLogger(top_pkg).propagate = "PYTEST_CURRENT_TEST" in os.environ
+    if add_stdout_stderr_handlers and not log.handlers:
         stdout_handler = logging.StreamHandler(sys.stdout)
         stderr_handler = logging.StreamHandler(sys.stderr)
         stdout_handler.addFilter(info_debug_stdout_filter)
         stderr_handler.addFilter(warning_error_stderr_filter)
+        stderr_handler.setFormatter(level_formatter)
         stdout_handler.setLevel(level)
         stderr_handler.setLevel(level)
         log.addHandler(stdout_handler)
