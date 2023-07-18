@@ -1268,25 +1268,24 @@ def islist(arg, uniform=False, include_dict=True):
     :return: Whether `arg` is a `list`
     :rtype: bool
     """
-    if isinstance(arg, str) or not hasattr(arg, "__iter__"):
-        # str and non-iterables are not lists
+    if isinstance(arg, str):
+        # strs are not sequences
+        return False
+    elif not isinstance(arg, Iterable):
+        # non-iterables are not sequences
+        return False
+    elif not include_dict and isinstance(arg, dict):
+        # do not treat dict as a sequence
         return False
 
-    try:
-        iter(arg)
-    except TypeError:
-        # non-iterables are not lists
-        return False
-
-    if not include_dict and isinstance(arg, dict):
-        # do not treat dict as a list
-        return False
+    # found a valid sequence!
 
     if not uniform:
         # short circuit for non-uniformity
         return True
 
     # NOTE: not checking for Falsy arg since arg may be a generator
+    # WARNING: if uniform != False and arg is a generator then arg will be consumed
 
     if uniform is True:
         arg = iter(arg)
