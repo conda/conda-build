@@ -1,7 +1,5 @@
 #!/usr/bin/env python
-# -*- encoding: utf-8 -*-
 # flake8: noqa
-from __future__ import print_function
 
 import io
 from os import path
@@ -13,7 +11,7 @@ here = path.abspath(path.dirname(__file__))
 
 
 def read(*names, **kwargs):
-    return io.open(
+    return open(
         path.join(here, *names),
         encoding=kwargs.get('encoding', 'utf8')
     ).read()

@@ -1,0 +1,6 @@
+package:
+  name: test_extra_info
+  version: 1.0
+
+source:
+  path: ../../test-package

@@ -6,7 +6,7 @@ import json
 def main():
     prefix = os.environ['PREFIX']
     info_file = glob(os.path.join(prefix, 'conda-meta', 'conda-build-test-nested-recipe-1.0*.json'))[0]
-    with open(info_file, 'r') as fh:
+    with open(info_file) as fh:
         info = json.load(fh)
     assert info['build_number'] == 1
 

@@ -1,55 +1,43 @@
-import sys
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 import os
-import os.path
+from pathlib import Path
+
+from conda.common.compat import on_win
 
 from conda_build.os_utils.external import find_executable
 
 
 def test_find_executable(testing_workdir, monkeypatch):
-    if sys.platform != "win32":
-        import stat
+    search_path = []
 
-        path_components = []
+    def touch(target, searchable=True, executable=True, alternative=False):
+        path = Path(
+            testing_workdir,
+            "alt" if alternative else "not",
+            "exec" if executable else "not",
+            "search" if searchable else "not",
+            target,
+        )
+        if on_win:
+            path = path.with_suffix(".bat")
+        path.parent.mkdir(parents=True, exist_ok=True)
 
-        def create_file(unix_path, put_on_path, executable):
-            localized_path = os.path.join(testing_workdir, *unix_path.split('/'))
-            # empty prefix by default - extra bit at beginning of file
-            if sys.platform == "win32":
-                localized_path = localized_path + ".bat"
+        path.touch(0o100 if executable else 0o666)
 
-            dirname = os.path.split(localized_path)[0]
-            if not os.path.isdir(dirname):
-                os.makedirs(dirname)
+        if searchable:
+            search_path.append(str(path.parent))
 
-            if sys.platform == "win32":
-                prefix = "@echo off\n"
-            else:
-                prefix = "#!/bin/bash\nexec 1>&2\n"
-            with open(localized_path, 'w') as f:
-                f.write(prefix + """
-            echo ******* You have reached the dummy {}. It is likely there is a bug in
-            echo ******* conda that makes it not add the _build/bin directory onto the
-            echo ******* PATH before running the source checkout tool
-            exit -1
-            """.format(localized_path))
+        return str(path)
 
-            if put_on_path:
-                path_components.append(dirname)
+    touch("target", searchable=False)
+    # Windows doesn't have an execute bit so this is the path found
+    win_expected = touch("target", executable=False)
+    touch("not_target")
+    nix_expected = touch("target")
+    touch("target", alternative=True)
+    expected = win_expected if on_win else nix_expected
 
-            if executable:
-                st = os.stat(localized_path)
-                os.chmod(localized_path, st.st_mode | stat.S_IEXEC)
+    monkeypatch.setenv("PATH", os.pathsep.join(search_path))
 
-            return localized_path
-
-        create_file('executable/not/on/path/with/target_name', put_on_path=False, executable=True)
-        create_file('non_executable/on/path/with/target_name', put_on_path=True, executable=False)
-        create_file('executable/on/path/with/non_target_name', put_on_path=True, executable=True)
-        target_path = create_file('executable/on/path/with/target_name', put_on_path=True, executable=True)
-        create_file('another/executable/later/on/path/with/target_name', put_on_path=True, executable=True)
-
-        monkeypatch.setenv('PATH', os.pathsep.join(path_components))
-
-        find = find_executable('target_name')
-
-        assert find == target_path, "Expected to find 'target_name' in '%s', but found it in '%s'" % (target_path, find)
+    assert find_executable("target") == expected

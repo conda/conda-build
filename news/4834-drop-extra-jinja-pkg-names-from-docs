@@ -1,0 +1,19 @@
+### Enhancements
+
+* <news item>
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* <news item>
+
+### Docs
+
+* Package name variables in Jinja are not necessary, dropping this from variants.rst docs file. (#4834)
+
+### Other
+
+* <news item>

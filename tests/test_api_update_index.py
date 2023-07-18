@@ -1,10 +1,12 @@
-import os
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
+from pathlib import Path
 
-from conda_build import api
+from conda_build.api import update_index
 
 
 def test_update_index(testing_workdir):
-    api.update_index(testing_workdir)
-    files = "repodata.json", "repodata.json.bz2"
-    for f in files:
-        assert os.path.isfile(os.path.join(testing_workdir, 'noarch', f))
+    update_index(testing_workdir)
+
+    for name in ("repodata.json", "repodata.json.bz2"):
+        assert Path(testing_workdir, "noarch", name).is_file()

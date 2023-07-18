@@ -1,0 +1,30 @@
+{% set pyproject = load_file_data("pyproject.toml", from_recipe_dir=True) %}
+{% set poetry = pyproject.get("tool").get("poetry") %}
+{% set deps = poetry.get("dependencies") %}
+
+package:
+  name: {{ poetry.get("name") }}
+  version: {{ poetry.get("version") }}
+
+source:
+  path: ../../test-package
+
+requirements:
+  build:
+    - python >={{ deps.get("python").lstrip("^") }}
+    - pip
+
+  run:
+{% for dep in deps -%}
+  {% if deps[dep] == "*" %}
+    - {{ dep }}
+  {% elif deps[dep][0] == "^" %}
+    - {{ dep }} >={{ deps[dep].lstrip("^") }}
+  {% else %}
+    - {{ dep }} =={{ deps[dep] }}
+  {% endif %}
+{% endfor %}
+
+build:
+  script: {{ PYTHON }} -m pip install --no-deps --ignore-installed .
+  noarch: python

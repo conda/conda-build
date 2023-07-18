@@ -6,14 +6,26 @@ Conda package specification
    :local:
    :depth: 1
 
-A conda package is a bzipped tar archive---.tar.bz2---that
-contains:
+A conda package is an archive file that contains:
 
 * Metadata under the ``info/`` directory.
 * A collection of files that are installed directly into an
   install prefix.
 
-The format is identical across platforms and operating systems.
+There are currently two formats of archives that are supported:
+
+.. list-table::
+   :widths: 15 70
+
+   * - **Type**
+     - **Description**
+
+   * - .tar.bz2
+     - The original format of conda packages.  Is the default output of conda-build.
+   * - .conda
+     - 2nd Gen.  This is a more compact and thus faster. Can be outputed from conda-build by setting output in ``.condarc`` file.
+
+The formats are identical across platforms and operating systems.
 During the install process, all files are extracted into the
 install prefix, with the exception of the ones in ``info/``.
 Installing a conda package into an environment is similar to
@@ -47,7 +59,7 @@ file is stored in ``repodata.json``, which is the repository
 index file, hence the name ``index.json``. The JSON object is a
 dictionary containing the keys shown below. The filename of the
 conda package is composed of the first 3 values, as in:
-``<name>-<version>-<build>.tar.bz2``.
+``<name>-<version>-<build>.tar.bz2`` or ``<name>-<version>-<build>.conda``.
 
 .. list-table::
    :widths: 15 15 70
@@ -263,7 +275,7 @@ the command line with ``conda install``, such as
 ``conda install python=3.4``. Internally, conda translates the
 command line syntax to the spec defined in this section.
 
-EXAMPLE: python=3.4 is translated to python 3.4*.
+EXAMPLE: python=3.4 is translated to python 3.4.*. ``conda search 'python=3.1'`` does NOT bring up Python 3.10, only Python 3.1.*.
 
 Package dependencies are specified using a match specification.
 A match specification is a space-separated string of 1, 2, or 3
@@ -314,10 +326,10 @@ parts:
 Remember that the version specification cannot contain spaces,
 as spaces are used to delimit the package, version, and build
 string in the whole match specification. ``python >= 2.7`` is an
-invalid match specification. Furthermore, ``python>=2.7`` is
+invalid match specification. However, ``"python >= 2.7"`` (with double or single quotes) is
 matched as any version of a package named ``python>=2.7``.
 
-When using the command line, put double quotes around any package
+When using the command line, put double or single quotes around any package
 version specification that contains the space character or any of
 the following characters: <, >, \*, or \|.
 

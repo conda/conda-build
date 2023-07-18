@@ -162,9 +162,22 @@ Source from svn
 
    source:
      svn_url: https://github.com/ilanschnell/bsdiff
-     svn_rev: 1.1.4
+     svn_rev: 1.1.4 # (defaults to head)
      svn_ignore_externals: True # (defaults to False)
+     svn_username: username  # Optional, if set must also have svn_password
+     svn_password: password  # Optional, if set must also have svn_username
 
+To access a restricted SVN repository, specify both ``svn_username`` and ``svn_password``.
+
+.. caution::
+   Storing credentials in plaintext carries risks. Alternatively, consider
+   using environment variables:
+
+   .. code-block:: yaml
+
+      source:
+        svn_username: {{ environ["SVN_USERNAME"] }}
+        svn_password: {{ environ["SVN_PASSWORD"] }}
 
 Source from a local path
 -------------------------
@@ -311,6 +324,22 @@ dependency:
 OR
 
   * package uses {{ compiler() }} jinja2 function
+
+You can also influence which variables are considered for the hash with:
+
+.. code-block:: yaml
+
+   build:
+     force_use_keys:
+       - package_1
+     force_ignore_keys:
+       - package_2
+
+This will ensure that the value of ``package_2`` will *not* be considered for the hash,
+and ``package_1`` *will* be, regardless of what conda-build discovers is used by its inspection.
+
+This may be useful to further split complex multi-output builds, to ensure each package is built,
+or to ensure the right package hash when using more complex templating or scripting.
 
 
 Python entry points
@@ -758,7 +787,7 @@ evaluate to ``>=1.6.34,<1.7``.
 
 If build and link dependencies need to impose constraints on the run environment
 but not necessarily pull in additional packages, then this can be done by
-altering the :ref:`Run_constrained` entries. In addtion to ``weak``/``strong``
+altering the :ref:`Run_constrained` entries. In addition to ``weak``/``strong``
 ``run_exports`` which add to the ``run`` requirements, ``weak_constrains`` and
 ``strong_constrains`` add to the ``run_constrained`` requirements.
 With these, e.g., minimum versions of compatible but not required packages (like
@@ -828,7 +857,7 @@ There are 2 possible behaviors:
 
  build:
    pin_depends: record
- 
+
 With a value of ``record``, conda-build will record all
 requirements exactly as they would be installed in a file
 called info/requires. These pins will not
@@ -840,7 +869,7 @@ package. It is only adding in this new file.
 
  build:
    pin_depends: strict
-  
+
 With a value of ``strict``, conda-build applies the pins
 to the actual metadata. This does affect the output of
 ``conda render`` and also affects the end result
@@ -848,6 +877,25 @@ of the build. The package dependencies will be strictly
 pinned down to the build string level. This will
 supersede any dynamic or compatible pinning that
 conda-build may otherwise be doing.
+
+Ignoring files in overlinking/overdepending checks
+--------------------------------------------------
+
+The ``overlinking_ignore_patterns`` key in the build section can be used to
+ignore patterns of files for the overlinking and overdepending checks. This
+is sometimes useful to speed up builds that have many files (large repackage jobs)
+or builds where you know only a small fraction of the files should be checked.
+
+Glob patterns are allowed here, but mind your quoting, especially with leading wildcards.
+
+Use this sparingly, as the overlinking checks generally do prevent you from making mistakes.
+
+.. code-block:: yaml
+
+ build:
+   overlinking_ignore_patterns:
+     - "bin/*"
+
 
 Whitelisting shared libraries
 -----------------------------
@@ -1028,6 +1076,8 @@ The line in the ``meta.yaml`` file should literally say
    sections with :ref:`run_exports <run_exports>` which are then automatically
    added to the run requirements for you.
 
+.. _Run_constrained:
+
 Run_constrained
 ---------------
 
@@ -1074,7 +1124,8 @@ Test files
 ----------
 
 Test files that are copied from the recipe into the temporary
-test directory and are needed during testing.
+test directory and are needed during testing. If providing a path,
+forward slashes must be used.
 
 .. code-block:: yaml
 
@@ -1238,11 +1289,13 @@ Specifying files to include in output
 --------------------------------------
 
 You can specify files to be included in the package in 1 of
-2 ways:
+3 ways:
 
 * Explicit file lists.
 
 * Scripts that move files into the build prefix.
+
+* Both of the above
 
 Explicit file lists are relative paths from the root of the
 build prefix. Explicit file lists support glob expressions.
@@ -1292,6 +1345,8 @@ independent of one another.
    simultaneously. Conda disallows this condition because it
    creates ambiguous runtime conditions.
 
+When both scripts and files are given, the script is first run
+and then only the files in the explicit file list are packaged.
 
 Subpackage requirements
 -----------------------
@@ -1532,7 +1587,8 @@ contents will be unconditionally and recursively added).
 
 
 Prelink Message File
----------
+--------------------
+
 Similar to the license file, the user can add prelink message files to the conda package.
 
 .. code-block:: yaml
@@ -1703,6 +1759,72 @@ retrieve a fully rendered ``meta.yaml``, use the
 
 .. _extra_jinja2_meta:
 
+Loading data from other files
+-----------------------------
+
+There are several additional functions available to Jinja2 which can be used
+to load data from other files. These are ``load_setup_py_data``, ``load_file_regex``,
+``load_file_data``, and ``load_str_data``.
+
+* ``load_setup_py_data``: Loads data from a ``setup.py`` file. This can be useful to
+  obtain metadata such as the version from a project's ``setup.py`` file. For example::
+
+    {% set data = load_setup_py_data() %}
+    {% set version = data.get('version') %}
+    package:
+      name: foo
+      version: {{ version }}
+
+* ``load_file_regex``: Searches a file for a regular expression and returns the
+  first match as a Python ``re.Match object``. For example::
+
+    {% set readme_heading = load_file_regex(load_file='README.rst', regex_pattern=r'^# (\S+)') %}
+    package:
+      name: {{ readme_heading.string }}
+
+* ``load_file_data``: You can also parse JSON, TOML, or YAML files and load data
+  from them. For example you can use this to load poetry configurations from
+  ``pyproject.toml``. This is especially useful as ``setup.py`` is no longer the
+  only standard way to define project metadata (see
+  `PEP 517 <https://peps.python.org/pep-0517>`_ and
+  `PEP 518 <https://peps.python.org/pep-0518>`_)::
+
+    {% set pyproject = load_file_data('pyproject.toml') %}
+    {% set poetry = pyproject.get('tool', {}).get('poetry') %}
+    package:
+      name: {{ poetry.get('name') }}
+      version: {{ poetry.get('version') }}
+
+* ``load_str_data``: Loads and parses data from a string. This is similar to
+  ``load_file_data``, but it takes a string instead of a file as an argument.
+  This may seem pointless at first, but you can use this to pass more complex
+  data structures by environment variables. For example::
+
+    {% set extra_deps = load_str_data(environ.get("EXTRA_DEPS", []), "json") %}
+    requirements:
+      run:
+        - ...
+        {% for dep in extra_deps %}
+        - {{ dep }}
+        {% endfor %}
+
+  Then you can pass the ``EXTRA_DEPS`` environment variable to the build like so::
+
+    EXTRA_DEPS='["foo =1.0", "bar >=2.0"]' conda build path/to/recipe
+
+The functions ``load_setup_py_data``, ``load_file_regex``, and ``load_file_data``
+all take the parameters ``from_recipe_dir`` and ``recipe_dir``. If
+``from_recipe_dir`` is set to true, then ``recipe_dir`` must also be passed. In
+that case, the file in question will be searched for relative to the recipe
+directory. Otherwise the file is searched for in the source (after it is
+downloaded and extracted, if necessary). If the given file is an
+absolute path, neither of the two directories are searched.
+
+The functions ``load_file_data`` and ``load_str_data`` also accept ``*args`` and
+``**kwargs`` which are passed verbatim to the function used to parse the file.
+For JSON this would be ``json.load``; for TOML, ``toml.load``; and for YAML
+``yaml.safe_load``.
+
 Conda-build specific Jinja2 functions
 -------------------------------------
 
@@ -1733,12 +1855,7 @@ of ``resolved_packages`` is given below:
 
       requirements:
           host:
-              - ca-certificates 2017.08.26 h1d4fec5_0
-              - curl 7.55.1 h78862de_4
-              - libgcc-ng 7.2.0 h7cc24e2_2
-              - libssh2 1.8.0 h9cfc8f7_4
-              - openssl 1.0.2n hb7f436b_0
-              - zlib 1.2.11 ha838bed_2
+              - curl 7.55.1
           run:
               - ca-certificates 2017.08.26 h1d4fec5_0
               - curl 7.55.1 h78862de_4
@@ -1790,10 +1907,10 @@ variables are booleans.
      - True if the platform is Linux.
    * - linux32
      - True if the platform is Linux and the Python architecture
-       is 32-bit.
+       is 32-bit and uses x86.
    * - linux64
      - True if the platform is Linux and the Python architecture
-       is 64-bit.
+       is 64-bit and uses x86.
    * - armv6l
      - True if the platform is Linux and the Python architecture
        is armv6l.
@@ -1806,6 +1923,9 @@ variables are booleans.
    * - ppc64le
      - True if the platform is Linux and the Python architecture
        is ppc64le.
+   * - s390x
+     - True if the platform is Linux and the Python architecture
+       is s390x.
    * - osx
      - True if the platform is macOS.
    * - arm64
@@ -1868,13 +1988,12 @@ logic is possible:
      url: http://path/to/unix/source        # [unix]
      md5: 88510902197cba0d1ab4791e0f41a66e  # [unix]
 
-.. note:: 
+.. note::
    To select multiple operating systems use the ``or`` statement. While it might be tempting
    to use ``skip: True  # [win and osx]``, this will only work if the platform is both
-   windows and osx simultaneously (i.e. never). 
-   
+   windows and osx simultaneously (i.e. never).
+
 .. code-block:: yaml
 
    build:
       skip: True  # [win or osx]
- 

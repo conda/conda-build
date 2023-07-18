@@ -14,7 +14,7 @@ The installed scripts are recommended to be prefixed by the package
 name and a separating -.
 
 Below is some sample code for Unix and
-Windows that will make this install process easier. 
+Windows that will make this install process easier.
 
 In ``build.sh``:
 
@@ -31,7 +31,7 @@ In ``build.sh``:
 In ``build.bat``:
 
 .. code-block:: bat
-    
+
     setlocal EnableDelayedExpansion
 
     :: Copy the [de]activate scripts to %PREFIX%\etc\conda\[de]activate.d.

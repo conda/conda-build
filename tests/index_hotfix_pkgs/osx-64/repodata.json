@@ -1,0 +1,64 @@
+{
+  "info": {
+    "subdir": "osx-64"
+  },
+  "packages": {
+    "hotfix_depends_test-1.0-dummy_0.tar.bz2": {
+      "build": "dummy_0",
+      "build_number": 0,
+      "depends": [
+        "zlib"
+      ],
+      "features": "dummy",
+      "md5": "d99640903b79c93bad0bc71545d9be59",
+      "name": "hotfix_depends_test",
+      "sha256": "fcaf5f4b4f9d322b4cf74fed29526c4fba67ab7c91e4f1857811345fa38503c7",
+      "size": 2422,
+      "subdir": "osx-64",
+      "timestamp": 1652966521286,
+      "version": "1.0"
+    },
+    "remove_test-1.0-0.tar.bz2": {
+      "build": "0",
+      "build_number": 0,
+      "depends": [],
+      "md5": "111e8a5e8f0c01f8d935fcf2b23cb42a",
+      "name": "remove_test",
+      "sha256": "8058335b04bb97ed3fb32a29edd724766c6a9456e6abd0f7b2ac5b9685adc697",
+      "size": 2392,
+      "subdir": "osx-64",
+      "timestamp": 1652966523467,
+      "version": "1.0"
+    },
+    "revoke_test-1.0-0.tar.bz2": {
+      "build": "0",
+      "build_number": 0,
+      "depends": [
+        "zlib"
+      ],
+      "md5": "85b9da56f44a86b92178d4a70478687c",
+      "name": "revoke_test",
+      "sha256": "4d13bdfb2ecdd5808dfe49755dfe3f94365c6a2d2b304ddfd62d67ad0b36b7a9",
+      "size": 2396,
+      "subdir": "osx-64",
+      "timestamp": 1652966525737,
+      "version": "1.0"
+    },
+    "track_features_test-1.0-0.tar.bz2": {
+      "build": "0",
+      "build_number": 0,
+      "depends": [],
+      "md5": "df2dc7428e78bfe57de76815b89dbcba",
+      "name": "track_features_test",
+      "sha256": "c10ec43e7453dfa2d08077d677650f54e2cd196e6cf02a0a5160f0480d1fc37d",
+      "size": 2399,
+      "subdir": "osx-64",
+      "timestamp": 1652966528049,
+      "track_features": "dummy",
+      "version": "1.0"
+    }
+  },
+  "packages.conda": {},
+  "removed": [],
+  "repodata_version": 1
+}

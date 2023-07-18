@@ -1,124 +1,148 @@
-import os
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
 
-from conda_build import create_test as ct
+from pathlib import Path
+from typing import Any
 
+import pytest
 
-def test_create_py_files_with_py_imports(testing_workdir, testing_metadata):
-    testing_metadata.meta['test']['imports'] = ['time', 'datetime']
-    ct.create_py_files(testing_metadata)
-    test_file = os.path.join(testing_metadata.config.test_dir, 'run_test.py')
-    assert os.path.isfile(test_file)
-    with open(test_file) as f:
-        data = f.readlines()
-    assert 'import time\n' in data
-    assert 'import datetime\n' in data
-
-
-def test_create_py_files_in_other_language(testing_workdir, testing_metadata):
-    testing_metadata.meta['test']['imports'] = [{'lang': 'python', 'imports': ['time', 'datetime']}]
-    testing_metadata.meta['package']['name'] = 'perl-conda-test'
-    ct.create_py_files(testing_metadata)
-    test_file = os.path.join(testing_metadata.config.test_dir, 'run_test.py')
-    assert os.path.isfile(test_file)
-    with open(test_file) as f:
-        data = f.readlines()
-    assert 'import time\n' in data
-    assert 'import datetime\n' in data
+from conda_build.create_test import (
+    create_lua_files,
+    create_pl_files,
+    create_py_files,
+    create_r_files,
+)
 
 
-def test_create_py_files_in_other_language_multiple_python_dicts(testing_workdir, testing_metadata):
-    testing_metadata.meta['test']['imports'] = [{'lang': 'python', 'imports': ['time', 'datetime']}]
-    testing_metadata.meta['test']['imports'].append({'lang': 'python',
-                                                     'imports': ['bokeh', 'holoviews']})
-    testing_metadata.meta['package']['name'] = 'perl-conda-test'
-    ct.create_py_files(testing_metadata)
-    test_file = os.path.join(testing_metadata.config.test_dir, 'run_test.py')
-    assert os.path.isfile(test_file)
-    with open(test_file) as f:
-        data = f.readlines()
-    assert 'import time\n' in data
-    assert 'import datetime\n' in data
-    assert 'import bokeh\n' in data
-    assert 'import holoviews\n' in data
+@pytest.mark.parametrize(
+    "name,imports,expected,unexpected",
+    [
+        pytest.param(
+            "name",
+            ["time", "datetime"],
+            {".py": {"import time", "import datetime"}},
+            {".r", ".pl", ".lua"},
+            id="implicit Python imports",
+        ),
+        pytest.param(
+            "r-name",
+            [{"lang": "python", "imports": ["time", "datetime"]}],
+            {".r": set(), ".py": {"import time", "import datetime"}},
+            {".pl", ".lua"},
+            id="explicit Python imports",
+        ),
+        pytest.param(
+            "r-name",
+            [
+                {"lang": "python", "imports": ["time"]},
+                {"lang": "python", "imports": ["datetime"]},
+            ],
+            {".r": set(), ".py": {"import time", "import datetime"}},
+            {".pl", ".lua"},
+            id="multiple explicit Python imports",
+        ),
+        pytest.param(
+            "r-name",
+            ["r-time", "r-datetime"],
+            {".r": {"library(r-time)", "library(r-datetime)"}},
+            {".py", ".pl", ".lua"},
+            id="implicit R imports",
+        ),
+        pytest.param(
+            "perl-name",
+            [{"lang": "r", "imports": ["r-time", "r-datetime"]}],
+            {".pl": set(), ".r": {"library(r-time)", "library(r-datetime)"}},
+            {".py", ".lua"},
+            id="explicit R imports",
+        ),
+        # unsupported syntax, why?
+        # pytest.param(
+        #     "perl-name",
+        #     [
+        #         {"lang": "r", "imports": ["r-time"]},
+        #         {"lang": "r", "imports": ["r-datetime"]},
+        #     ],
+        #     {".r": {"library(r-time)", "library(r-datetime)"}},
+        #     {".py", ".pl", ".lua"},
+        #     id="multiple explicit R imports",
+        # ),
+        pytest.param(
+            "perl-name",
+            ["perl-time", "perl-datetime"],
+            {".pl": {"use perl-time;", "use perl-datetime;"}},
+            {".py", ".r", ".lua"},
+            id="implicit Perl imports",
+        ),
+        pytest.param(
+            "lua-name",
+            [{"lang": "perl", "imports": ["perl-time", "perl-datetime"]}],
+            {".lua": set(), ".pl": {"use perl-time;", "use perl-datetime;"}},
+            {".py", ".r"},
+            id="explicit Perl imports",
+        ),
+        # unsupported syntax, why?
+        # pytest.param(
+        #     "lua-name",
+        #     [
+        #         {"lang": "perl", "imports": ["perl-time"]},
+        #         {"lang": "perl", "imports": ["perl-datetime"]},
+        #     ],
+        #     {".pl": {"use perl-time;", "use perl-datetime;"}},
+        #     {".py", ".r", ".lua"},
+        #     id="multiple explicit Perl imports",
+        # ),
+        pytest.param(
+            "lua-name",
+            ["lua-time", "lua-datetime"],
+            {".lua": {'require "lua-time"', 'require "lua-datetime"'}},
+            {".py", ".r", ".pl"},
+            id="implicit Lua imports",
+        ),
+        # why is this test different from the other explicit imports?
+        pytest.param(
+            "name",
+            [{"lang": "lua", "imports": ["lua-time", "lua-datetime"]}],
+            {".lua": {'require "lua-time"', 'require "lua-datetime"'}},
+            {".py", ".r", ".pl"},
+            id="explicit Lua imports",
+        ),
+        # unsupported syntax, why?
+        # pytest.param(
+        #     "name",
+        #     [
+        #         {"lang": "lua", "imports": ["lua-time"]},
+        #         {"lang": "lua", "imports": ["lua-datetime"]},
+        #     ],
+        #     {".lua": {'require "lua-time"', 'require "lua-datetime"'}},
+        #     {".py", ".r", ".pl"},
+        #     id="multiple explicit Lua imports",
+        # ),
+    ],
+)
+def test_create_run_test(
+    name: str,
+    imports: Any,
+    expected: dict[str, set[str]],
+    unexpected: set[str],
+    testing_metadata,
+):
+    testing_metadata.meta["package"]["name"] = name
+    testing_metadata.meta["test"]["imports"] = imports
+    create_py_files(testing_metadata, testing_metadata.config.test_dir)
+    create_r_files(testing_metadata, testing_metadata.config.test_dir)
+    create_pl_files(testing_metadata, testing_metadata.config.test_dir)
+    create_lua_files(testing_metadata, testing_metadata.config.test_dir)
 
+    # assert expected test file exists
+    for ext, tests in expected.items():
+        test_file = Path(testing_metadata.config.test_dir, "run_test").with_suffix(ext)
+        assert test_file.is_file()
 
-def test_create_r_files(testing_workdir, testing_metadata):
-    testing_metadata.meta['test']['imports'] = ['r-base', 'r-matrix']
-    testing_metadata.meta['package']['name'] = 'r-conda-test'
-    ct.create_r_files(testing_metadata)
-    test_file = os.path.join(testing_metadata.config.test_dir, 'run_test.r')
-    assert os.path.isfile(test_file)
-    with open(test_file) as f:
-        data = f.readlines()
-    assert 'library(r-base)\n' in data
-    assert 'library(r-matrix)\n' in data
+        # ensure all tests (for this language/ext) are present in the test file
+        assert tests <= set(filter(None, test_file.read_text().split("\n")))
 
-
-def test_create_r_files_lang_spec(testing_workdir, testing_metadata):
-    testing_metadata.meta['test']['imports'] = [{'lang': 'r', 'imports': ['r-base', 'r-matrix']}]
-    testing_metadata.meta['package']['name'] = 'conda-test-r'
-    ct.create_r_files(testing_metadata)
-    test_file = os.path.join(testing_metadata.config.test_dir, 'run_test.r')
-    assert os.path.isfile(test_file)
-    with open(test_file) as f:
-        data = f.readlines()
-    assert 'library(r-base)\n' in data
-    assert 'library(r-matrix)\n' in data
-
-
-def test_create_pl_files(testing_workdir, testing_metadata):
-    testing_metadata.meta['test']['imports'] = ['perl-base', 'perl-matrix']
-    testing_metadata.meta['package']['name'] = 'perl-conda-test'
-    ct.create_pl_files(testing_metadata)
-    test_file = os.path.join(testing_metadata.config.test_dir, 'run_test.pl')
-    assert os.path.isfile(test_file)
-    with open(test_file) as f:
-        data = f.readlines()
-    assert 'use perl-base;\n' in data
-    assert 'use perl-matrix;\n' in data
-
-
-def test_non_py_does_not_create_py_files(testing_workdir, testing_metadata):
-    testing_metadata.meta['test']['imports'] = ['perl-base', 'perl-matrix']
-    testing_metadata.meta['package']['name'] = 'perl-conda-test'
-    ct.create_py_files(testing_metadata)
-    py_test_file = os.path.join(testing_metadata.config.test_dir, 'run_test.py')
-    assert not os.path.isfile(py_test_file), "non-python package should not create run_test.py"
-
-
-def test_create_pl_files_lang_spec(testing_workdir, testing_metadata):
-    testing_metadata.meta['test']['imports'] = [{'lang': 'perl', 'imports': ['perl-base',
-                                                                          'perl-matrix']}]
-    testing_metadata.meta['package']['name'] = 'conda-test-perl'
-    ct.create_pl_files(testing_metadata)
-    test_file = os.path.join(testing_metadata.config.test_dir, 'run_test.pl')
-    assert os.path.isfile(test_file)
-    with open(test_file) as f:
-        data = f.readlines()
-    assert 'use perl-base;\n' in data
-    assert 'use perl-matrix;\n' in data
-
-
-def test_create_lua_files(testing_workdir, testing_metadata):
-    testing_metadata.meta['test']['imports'] = ['lua-base', 'lua-matrix']
-    testing_metadata.meta['package']['name'] = 'lua-conda-test'
-    ct.create_lua_files(testing_metadata)
-    test_file = os.path.join(testing_metadata.config.test_dir, 'run_test.lua')
-    assert os.path.isfile(test_file)
-    with open(test_file) as f:
-        data = f.readlines()
-    assert 'require "lua-base"\n' in data
-    assert 'require "lua-matrix"\n' in data
-
-
-def test_create_lua_files_lang_spec(testing_workdir, testing_metadata):
-    testing_metadata.meta['test']['imports'] = [{'lang': 'lua', 'imports': ['lua-base',
-                                                                          'lua-matrix']}]
-    testing_metadata.meta['package']['name'] = 'conda-test-lua'
-    ct.create_lua_files(testing_metadata)
-    test_file = os.path.join(testing_metadata.config.test_dir, 'run_test.lua')
-    assert os.path.isfile(test_file)
-    with open(test_file) as f:
-        data = f.readlines()
-    assert 'require "lua-base"\n' in data
-    assert 'require "lua-matrix"\n' in data
+    # assert unexpected test files do not exist
+    for ext in unexpected:
+        test_file = Path(testing_metadata.config.test_dir, "run_test").with_suffix(ext)
+        assert not test_file.exists()
