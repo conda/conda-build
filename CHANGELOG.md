@@ -1,5 +1,54 @@
 [//]: # (current developments)
 
+## 3.26.0 (2023-07-18)
+
+### Enhancements
+
+* Add `pip` to `env-doc make` command so function works correctly (`pip` is no longer added by default with the python conda package). (#4633)
+* Log extra-meta data to make it easier to verify that the right extra-meta data is burned into packages (also helps to co-relate packages and their build-log). The feature was first introduced in #4303 and is now improved via the logging call. (#4901)
+* Implement subcommands as conda plugins. (#4921)
+
+### Bug fixes
+
+* Fixed handling of unknown binaries with newer `(py)lief` versions. (#4900)
+* Disable `LIEF` logging to remove "Unknown format" warning message. (#4850)
+* Revert `enable_static` default value in `conda_build.config` to remove "Failed to get_static_lib_exports" warning messages. (#4850)
+* Avoid duplicate logging by not propagating the top-level conda-build logger. (#4903)
+* Fix git cloning for repositories with submodules containing local relative paths. (#4914)
+
+### Deprecations
+
+* Mark executable invocations (e.g., `conda-build`) as pending deprecation. (#4921)
+* Mark module based invocations (e.g., `python -m conda_build.cli.main_build`) as pending deprecation. (#4921)
+
+### Docs
+
+* Update `pkg-spec` docs to mention `.conda` package format. (#4633)
+* Drop unnecessary Jinja package name variables from `variants.rst` docs file. (#4834)
+
+### Other
+
+* Drop duplicate `get_summary` call in `conda_build.skeletons.pypi`. (#3998)
+* Fix failing `resolved_packages` test due to recent OpenSSL 3.0.8 release to defaults. (#4912)
+
+### Contributors
+
+* @beeankha
+* @conda-bot
+* @dbast
+* @jaimergp
+* @jakirkham
+* @josegonzalez
+* @katietz
+* @kenodegard
+* @rfezzani
+* @ryanskeith
+* @sven6002
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
 ## 3.25.0 (2023-05-22)
 
 ### Enhancements
