@@ -38,10 +38,10 @@
 * @dbast
 * @jaimergp
 * @jakirkham
-* @josegonzalez
+* @josegonzalez made their first contribution in https://github.com/conda/conda-build/pull/3998
 * @katietz
 * @kenodegard
-* @rfezzani
+* @rfezzani made their first contribution in https://github.com/conda/conda-build/pull/4850
 * @ryanskeith
 * @sven6002
 * @dependabot[bot]
