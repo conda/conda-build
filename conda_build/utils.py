@@ -1268,19 +1268,13 @@ def islist(arg, uniform=False, include_dict=True):
     :return: Whether `arg` is a `list`
     :rtype: bool
     """
-    if isinstance(arg, str):
-        # strs are not sequences
-        return False
-    elif not isinstance(arg, Iterable):
-        # non-iterables are not sequences
+    if isinstance(arg, str) or not isinstance(arg, Iterable):
+        # str and non-iterables are not lists
         return False
     elif not include_dict and isinstance(arg, dict):
-        # do not treat dict as a sequence
+        # do not treat dict as a list
         return False
-
-    # found a valid sequence!
-
-    if not uniform:
+    elif not uniform:
         # short circuit for non-uniformity
         return True
 
