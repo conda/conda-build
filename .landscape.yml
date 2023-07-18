@@ -1,3 +1,0 @@
-ignore-paths:
-  - conda_build/_version.py
-  - versioneer.py

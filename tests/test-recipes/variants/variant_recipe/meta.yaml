@@ -1,0 +1,12 @@
+package:
+  name: test_variants
+  version: 1.0
+
+requirements:
+  build:
+    - python
+  run:
+    - python
+
+about:
+  summary: {{ python }}

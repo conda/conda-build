@@ -280,10 +280,19 @@ If an inherited variable is missing from your shell environment,
 it remains unassigned, but a warning is issued noting that it has
 no value assigned.
 
+Additionally, values can be set by including ``=`` followed by the desired value:
+
+.. code-block:: yaml
+
+     build:
+       script_env:
+        - MY_VAR=some value
+
 .. warning::
    Inheriting environment variables can make it difficult for
    others to reproduce binaries from source with your recipe. Use
-   this feature with caution or avoid it.
+   this feature with caution or explicitly set values using the ``=``
+   syntax.
 
 .. note::
    If you split your build and test phases with ``--no-test`` and ``--test``,

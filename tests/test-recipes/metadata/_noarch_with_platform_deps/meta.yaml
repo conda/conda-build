@@ -1,0 +1,20 @@
+package:
+  name: test-noarch-with-platform-deps
+  version: 0.0.1
+
+build:
+  number: 0
+  noarch: python
+
+requirements:
+  build:
+  host:
+    - python >=3.7
+  run:
+    - python >=3.7
+    - colorama   # [win]
+    - __win      # [win]
+    - appnope    # [osx]
+    - __osx      # [osx]
+    - __archspec * ppc64le  # [ppc64le]
+    - __linux    # [linux]

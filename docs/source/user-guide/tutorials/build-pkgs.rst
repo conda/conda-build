@@ -26,7 +26,7 @@ Prior knowledge of conda-build and conda recipes is helpful.
 Before you start
 ================
 
-* Check the :doc:`prerequisites <index>`.
+* Check the :ref:`prereqs`.
 
 * You should have already completed :doc:`build-pkgs-skeleton`.
 
@@ -317,4 +317,3 @@ More information
 * For more information about all the possible values that can go
   into the ``meta.yaml`` file, see
   :doc:`../../resources/define-metadata`.
-

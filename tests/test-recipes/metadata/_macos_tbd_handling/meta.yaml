@@ -9,13 +9,8 @@ source:
 
 build:
   number: 0
-  # .. this does not work ..
-  # string: {{ CONDA_BUILD_SYSROOT | replace('/', '_') | replace('.', '_') | lower() }}
-  # .. conda-build needs this as a hint, it does not detect the above CONDA_BUILD_SYSROOT | replace ..
-  # as jinja2-variant-fodder (I think).
-  string: {{ CONDA_BUILD_SYSROOT_NAME }}
   error_overlinking: True
-  error_ocerdepending: True
+  error_overdepending: True
 
 requirements:
   build:

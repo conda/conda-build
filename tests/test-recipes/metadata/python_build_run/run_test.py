@@ -1,20 +1,18 @@
 import os
 import json
-import glob
+from pathlib import Path
 
 
 def main():
-    prefix = os.environ['PREFIX']
-    info_files = glob.glob(os.path.join(prefix, 'conda-meta',
-                             'conda-build-test-python-build-run-1.0-py*0.json'))
+    info_files = list(Path(os.environ['PREFIX'], 'conda-meta').glob('conda-build-test-python-build-run-1.0-py*0.json'))
     assert len(info_files) == 1
-    info_file = info_files[0]
-    with open(info_file, 'r') as fh:
-        info = json.load(fh)
 
-    # one without the version, and another with the version
-    assert len(info['depends']) == 1, info['depends']
-    assert info['depends'][0].startswith('python ')
+    info = json.loads(info_files[0].read_text())
+    assert len(info['depends']) == 1
+
+    # python with version pin
+    python, = info['depends']
+    assert python.startswith('python ')
 
 
 if __name__ == '__main__':

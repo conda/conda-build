@@ -24,4 +24,3 @@ documentation.
    add-win-start-menu-items
    style-guide
    tutorial-template
-

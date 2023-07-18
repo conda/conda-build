@@ -2,17 +2,7 @@
 Conda channels
 ==============
 
-The ``conda-build`` options ``-c CHANNEL`` or ``--channel CHANNEL`` configure additional channels to search for packages.
-
-These are URLs searched in the order they are given (including file:// for local directories).
-
-Then, the defaults or channels from ``.condarc`` are searched (unless ``--override-channels`` is given).
-
-You can use 'defaults' to get the default packages for conda, and 'system' to get the system packages, which also takes ``.condarc`` into account.
-
-You can also use any name and the ``.condarc`` ``channel_alias`` value will be prepended. The default ``channel_alias`` is http://conda.anaconda.org/.
-
-The option ``--override-channels`` tells to not search default or ``.condarc`` channels. Requires the ``--channel`` or ``-c`` option.
+Conda-build supports standard `conda channel`_ behavior.
 
 
 Identical channel and package name problem
@@ -49,11 +39,13 @@ will fail with the following error message (the path will be different):
   is empty. please request that the channel administrator create
   `noarch/repodata.json` and associated `noarch/repodata.json.bz2` files.
 
-This happens because ``conda-build`` will consider the directory ``./example/`` in your project as a channel. This is by design due to conda's CI servers, where the build path can be long, complicated, and not predictable prior to build.
+This happens because conda-build will consider the directory ``./example/`` in your project
+as a channel. This is by design due to conda's CI servers, where the build path can be long,
+complicated, and not predictable prior to build.
 
 There are several ways to resolve this issue.
 
-#. Use the url of the desired channel:
+#. Use the URL of the desired channel:
 
     .. code-block:: bash
 
@@ -72,4 +64,7 @@ There are several ways to resolve this issue.
 
      conda-build ./conda/ -c example/label/main
 
-  which technically is the same as ``-c example``, since ``main`` is the default label, but now it won't by mistake find a channel ``example/label/main`` on the local filesystem.
+  which technically is the same as `-c example`, since main is the default label,
+  but now it won't mistakenly find a channel ``example/label/main`` on the local filesystem.
+
+.. _`conda channel`: https://docs.conda.io/projects/conda/en/latest/user-guide/concepts/channels.html
