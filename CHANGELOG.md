@@ -10,7 +10,7 @@
 
 ### Bug fixes
 
-* Fixed handling of unknown binaries with newer `(py)lief` versions. (#4900)
+* Fix handling of unknown binaries with newer `(py)lief` versions. (#4900)
 * Disable `LIEF` logging to remove "Unknown format" warning message. (#4850)
 * Revert `enable_static` default value in `conda_build.config` to remove "Failed to get_static_lib_exports" warning messages. (#4850)
 * Avoid duplicate logging by not propagating the top-level conda-build logger. (#4903)
