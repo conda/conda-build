@@ -1,6 +1,6 @@
 ### Enhancements
 
-* Added pip to env-doc make command so function would work correctly (pip is no longer added by default with python conda package).
+* Add `pip` to `env-doc make` command so function works correctly (`pip` is no longer added by default with the python conda package). (#4633)
 
 ### Bug fixes
 
@@ -12,7 +12,7 @@
 
 ### Docs
 
-* Updated pkg-spec docs to mention .conda package format.
+* Update `pkg-spec` docs to mention `.conda` package format. (#4633)
 
 ### Other
 
