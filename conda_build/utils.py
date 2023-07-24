@@ -34,6 +34,7 @@ from os.path import (
 )
 from pathlib import Path
 from threading import Thread
+from typing import Iterable
 
 import libarchive
 
@@ -941,7 +942,7 @@ def file_info(path):
     }
 
 
-def comma_join(items):
+def comma_join(items: Iterable[str], conjunction: str = "and") -> str:
     """
     Like ', '.join(items) but with and
 
@@ -954,11 +955,10 @@ def comma_join(items):
     >>> comma_join(['a', 'b', 'c'])
     'a, b, and c'
     """
-    return (
-        " and ".join(items)
-        if len(items) <= 2
-        else ", ".join(items[:-1]) + ", and " + items[-1]
-    )
+    items = tuple(items)
+    if len(items) <= 2:
+        return f"{items[0]} {conjunction} {items[1]}"
+    return f"{', '.join(items[:-1])}, {conjunction} {items[-1]}"
 
 
 def safe_print_unicode(*args, **kwargs):
@@ -1268,7 +1268,7 @@ def islist(arg, uniform=False, include_dict=True):
     :return: Whether `arg` is a `list`
     :rtype: bool
     """
-    if isinstance(arg, str) or not hasattr(arg, "__iter__"):
+    if isinstance(arg, str) or not isinstance(arg, Iterable):
         # str and non-iterables are not lists
         return False
     elif not include_dict and isinstance(arg, dict):
@@ -1279,6 +1279,7 @@ def islist(arg, uniform=False, include_dict=True):
         return True
 
     # NOTE: not checking for Falsy arg since arg may be a generator
+    # WARNING: if uniform != False and arg is a generator then arg will be consumed
 
     if uniform is True:
         arg = iter(arg)
