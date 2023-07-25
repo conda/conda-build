@@ -8,15 +8,12 @@ from pprint import pprint
 import yaml
 from yaml.parser import ParserError
 
-from conda_build import __version__, api
-from conda_build.conda_interface import (
-    ArgumentParser,
-    add_parser_channels,
-    cc_conda_build,
-)
-from conda_build.config import get_channel_urls, get_or_merge_config
-from conda_build.utils import LoggingContext
-from conda_build.variants import get_package_variants, set_language_env_vars
+from .. import __version__, api
+from ..conda_interface import ArgumentParser, add_parser_channels, cc_conda_build
+from ..config import get_channel_urls, get_or_merge_config
+from ..deprecations import deprecated
+from ..utils import LoggingContext
+from ..variants import get_package_variants, set_language_env_vars
 
 on_win = sys.platform == "win32"
 log = logging.getLogger(__name__)
@@ -44,6 +41,7 @@ class ParseYAMLArgument(argparse.Action):
 
 def get_render_parser():
     p = ArgumentParser(
+        prog="conda render",
         description="""
 Tool for expanding the template meta.yml file (containing Jinja syntax and
 selectors) into the rendered meta.yml files. The template meta.yml file is
@@ -245,6 +243,7 @@ def execute(args, print_results=True):
         return metadata_tuples
 
 
+@deprecated("3.26.0", "4.0.0", addendum="Use `conda render` instead.")
 def main():
     return execute(sys.argv[1:])
 

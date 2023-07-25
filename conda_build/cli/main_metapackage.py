@@ -4,18 +4,16 @@ import argparse
 import logging
 import sys
 
-from conda_build import api
-from conda_build.conda_interface import (
-    ArgumentParser,
-    add_parser_channels,
-    binstar_upload,
-)
+from .. import api
+from ..conda_interface import ArgumentParser, add_parser_channels, binstar_upload
+from ..deprecations import deprecated
 
 logging.basicConfig(level=logging.INFO)
 
 
 def parse_args(args):
     p = ArgumentParser(
+        prog="conda metapackage",
         description="""
 Tool for building conda metapackages.  A metapackage is a package with no
 files, only metadata.  They are typically used to collect several packages
@@ -114,5 +112,6 @@ def execute(args):
     api.create_metapackage(channel_urls=channel_urls, **args.__dict__)
 
 
+@deprecated("3.26.0", "4.0.0", addendum="Use `conda metapackage` instead.")
 def main():
     return execute(sys.argv[1:])
