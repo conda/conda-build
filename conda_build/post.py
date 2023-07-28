@@ -1415,7 +1415,7 @@ def check_overlinking_impl(
 
     all_needed_dsos, needed_dsos_for_file = _collect_needed_dsos(
         sysroots_files,
-        files,
+        files_to_inspect,
         run_prefix,
         sysroot_substitution,
         build_prefix,
