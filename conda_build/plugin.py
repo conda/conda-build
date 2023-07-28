@@ -2,15 +2,60 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import conda.plugins
 
-from .cli.main_build import execute as build
-from .cli.main_convert import execute as convert
-from .cli.main_debug import execute as debug
-from .cli.main_develop import execute as develop
-from .cli.main_index import execute as index
-from .cli.main_inspect import execute as inspect
-from .cli.main_metapackage import execute as metapackage
-from .cli.main_render import execute as render
-from .cli.main_skeleton import execute as skeleton
+# lazy-import to avoid nasty import-time side effects when not using conda-build
+def build(*args, **kwargs):
+    from .cli.main_build import execute
+
+    execute(*args, **kwargs)
+
+
+def convert(*args, **kwargs):
+    from .cli.main_convert import execute
+
+    execute(*args, **kwargs)
+
+
+def debug(*args, **kwargs):
+    from .cli.main_debug import execute
+
+    execute(*args, **kwargs)
+
+
+def develop(*args, **kwargs):
+    from .cli.main_develop import execute
+
+    execute(*args, **kwargs)
+
+
+def index(*args, **kwargs):
+    # deprecated! use conda-index!
+    from .cli.main_index import execute
+
+    execute(*args, **kwargs)
+
+
+def inspect(*args, **kwargs):
+    from .cli.main_inspect import execute
+
+    execute(*args, **kwargs)
+
+
+def metapackage(*args, **kwargs):
+    from .cli.main_metapackage import execute
+
+    execute(*args, **kwargs)
+
+
+def render(*args, **kwargs):
+    from .cli.main_render import execute
+
+    execute(*args, **kwargs)
+
+
+def skeleton(*args, **kwargs):
+    from .cli.main_skeleton import execute
+
+    execute(*args, **kwargs)
 
 
 @conda.plugins.hookimpl
