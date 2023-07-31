@@ -4,3 +4,9 @@ python:
   version: "3"
   install:
   - requirements: docs/requirements.txt
+
+# Build PDF, ePub and zipped HTML
+formats:
+  - epub
+  - pdf
+  - htmlzip
