@@ -19,7 +19,7 @@ Contributions to `conda-build` are always welcome! Please fork the
 `conda/conda-build` repository, and submit a pull request (PR).
 
 If a PR is a work in progress, please put [WIP] in the title. Contributions are
-expected to pass `flake8` and test suites run on the GitHub Actions/Azure Pipeline. Contributors also
+expected to pass `flake8` and test suites run on the GitHub Actions Pipeline. Contributors also
 need to have signed our [Contributor License Agreement](https://conda.io/en/latest/contributing.html#conda-contributor-license-agreement).
 
 ## Setting Up Your Environment
@@ -30,7 +30,7 @@ with the risk of potentially breaking `conda/conda-build`. The second option is 
 create a development environment where we install `conda/conda-build`, which won't
 impact the functionality of `conda/conda-build` installed in your base environment.
 
-#### Using the Base Environment:
+### Using the Base Environment:
 
 ``` bash
     # activate/install into base env
@@ -46,56 +46,53 @@ impact the functionality of `conda/conda-build` installed in your base environme
     conda-build 3.21.5+17.gcde7b306
 ```
 
-#### Creating a Development Environment:
+### Creating a Development Environment:
 
 ``` bash
     # create/activate standalone dev env
-    $ conda create --name dev --file tests/requirements.txt --channel defaults
-    $ conda activate dev
+    $ CONDA_ENV=conda-build make setup
+    $ conda activate conda-build
 
-    # run tests
-    (dev) $ pytest
+    # Run all tests on Linux and Mac OS X systems (this can take a long time)
+    (conda-build) $ make test
 
     # install as editable so you can play around with it
-    (dev) $ pip install -e .
-    (dev) $ conda-build --version
+    (conda-build) $ pip install -e .
+    (conda-build) $ conda-build --version
     conda-build 3.21.5+17.gcde7b306
 ```
 
 ## Testing
 
-Running our test suite requires cloning one other repo at the same level as `conda-build`:
-https://github.com/conda/conda_build_test_recipe - this is necessary for relative path tests
-outside of `conda-build`'s build tree.
-
 Follow the installation instructions above to properly set up your environment for testing.
 
-The test suite runs with `py.test`. The following are some useful commands for running specific
+The test suite runs with `pytest`. The following are some useful commands for running specific
 tests, assuming you are in the `conda-build` root folder:
 
 ### Run all tests:
-```
-    py.test tests
+```bash
+    # On Linux and Mac OS X
+    make test
 ```
 
 ### Run one test file:
-```
-    py.test tests/test_api_build.py
+```bash
+    pytest tests/test_api_build.py
 ```
 
 ### Run one test function:
-```
-    py.test tests/test_api_build.py::test_early_abort
+```bash
+    pytest tests/test_api_build.py::test_early_abort
 ```
 
 ### Run one parameter of one parametrized test function:
 
 Several tests are parametrized, to run some small change, or build several
 recipe folders. To choose only one of them::
+```bash
+    pytest tests/test_api_build.py::test_recipe_builds.py[entry_points]
 ```
-    py.test tests/test_api_build.py::test_recipe_builds.py[entry_points]
-```
-Note that our tests use `py.test` fixtures extensively. These sometimes trip up IDE
+Note that our tests use `pytest` fixtures extensively. These sometimes trip up IDE
 style checkers about unused or redefined variables. These warnings are safe to
 ignore.
 

@@ -1,0 +1,7 @@
+name: foo
+channels:
+  - defaults
+dependencies:
+  - python
+  - tqdm
+prefix: /home/abraham/.conda/envs/foo
