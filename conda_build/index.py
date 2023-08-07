@@ -53,6 +53,7 @@ from conda_build import conda_interface, utils
 from .conda_interface import (
     CondaError,
     CondaHTTPError,
+    Dist,
     MatchSpec,
     Resolve,
     TemporaryDirectory,
@@ -204,13 +205,27 @@ def get_build_index(
             _delegated_update_index(output_folder, verbose=debug)
 
             if solver == "libmamba":
-                cached_index = dict.fromkeys([*channel_urls, output_folder], {})
+                # This is supposed to be a mapping of conda.models.dist.Dist to 
+                # conda.models.package_record.PackageRecord objects.
+                # However we only want the channel info in conda-libmamba-solver.
+                # So we just mock the Dist -> PackageRecord mapping, once per channel.
+                urls = [*channel_urls, output_folder]
+                dist_kwargs = {
+                    "dist_name": "",
+                    "name": "",
+                    "version": "",
+                    "build_string": "",
+                    "build_number":  0,
+                    "base_url": "",
+                    "platform": "",
+                }
+                dists = [Dist(channel=f"{url}/{subdir}", **dist_kwargs) for url in urls]
+                cached_index = {dist: dist for dist in dists}
+
             else:  # classic
                 # replace noarch with native subdir - this ends up building an index with both the
                 #      native content and the noarch content.
 
-                if subdir == "noarch":
-                    subdir = conda_interface.subdir
                 try:
                     # get_index() is like conda reading the index, not conda_index
                     # creating a new index.
