@@ -77,7 +77,6 @@ from conda.exports import (  # noqa: F401
 )
 from conda.models.channel import get_conda_build_local_url  # noqa: F401
 from conda.models.dist import Dist, IndexRecord  # noqa: F401
-from conda.models.records import PackageRecord  # noqa: F401
 
 # TODO: Go to references of all properties below and import them from `context` instead
 binstar_upload = context.binstar_upload
@@ -87,7 +86,6 @@ pkgs_dirs = list(context.pkgs_dirs)
 cc_platform = context.platform
 root_dir = context.root_dir
 root_writable = context.root_writable
-solver = context.solver
 subdir = context.subdir
 create_default_packages = context.create_default_packages
 

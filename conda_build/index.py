@@ -48,21 +48,18 @@ from yaml.parser import ParserError
 from yaml.reader import ReaderError
 from yaml.scanner import ScannerError
 
-from conda_build import utils
+from conda_build import conda_interface, utils
 
 from .conda_interface import (
     CondaError,
     CondaHTTPError,
-    Dist,
     MatchSpec,
-    PackageRecord,
     Resolve,
     TemporaryDirectory,
     VersionOrder,
     context,
     get_index,
     human_bytes,
-    solver,
     url_path,
 )
 from .deprecations import deprecated
@@ -205,91 +202,79 @@ def get_build_index(
             _ensure_valid_channel(output_folder, subdir)
             _delegated_update_index(output_folder, verbose=debug)
 
-            if solver == "libmamba":
-                # This is supposed to be a mapping of conda.models.dist.Dist to
-                # conda.models.package_record.PackageRecord objects.
-                # However we only want the channel info in conda-libmamba-solver.
-                # So we just mock the Dist -> PackageRecord mapping, once per channel.
-                urls = [*channel_urls, output_folder]
-                prec_kwargs = dict(name="", version="", build="", build_number=0)
-                precs = [
-                    PackageRecord(channel=Channel.from_url(f"{url}/{subdir}"), **prec_kwargs) 
-                    for url in urls
-                ]
-                cached_index = {Dist(prec): prec for prec in precs}
+            # replace noarch with native subdir - this ends up building an index with both the
+            #      native content and the noarch content.
 
-            else:  # classic
-                # replace noarch with native subdir - this ends up building an index with both the
-                #      native content and the noarch content.
+            if subdir == "noarch":
+                subdir = conda_interface.subdir
+            try:
+                # get_index() is like conda reading the index, not conda_index
+                # creating a new index.
+                cached_index = get_index(
+                    channel_urls=urls,
+                    prepend=not omit_defaults,
+                    use_local=False,
+                    use_cache=context.offline,
+                    platform=subdir,
+                )
+            # HACK: defaults does not have the many subfolders we support.  Omit it and
+            #          try again.
+            except CondaHTTPError:
+                if "defaults" in urls:
+                    urls.remove("defaults")
+                cached_index = get_index(
+                    channel_urls=urls,
+                    prepend=omit_defaults,
+                    use_local=False,
+                    use_cache=context.offline,
+                    platform=subdir,
+                )
 
-                try:
-                    # get_index() is like conda reading the index, not conda_index
-                    # creating a new index.
-                    cached_index = get_index(
-                        channel_urls=urls,
-                        prepend=not omit_defaults,
-                        use_local=False,
-                        use_cache=context.offline,
-                        platform=subdir,
-                    )
-                # HACK: defaults does not have the many subfolders we support.  Omit it and
-                #          try again.
-                except CondaHTTPError:
-                    if "defaults" in urls:
-                        urls.remove("defaults")
-                    cached_index = get_index(
-                        channel_urls=urls,
-                        prepend=omit_defaults,
-                        use_local=False,
-                        use_cache=context.offline,
-                        platform=subdir,
-                    )
+            expanded_channels = {rec.channel for rec in cached_index.values()}
 
-                expanded_channels = {rec.channel for rec in cached_index.values()}
-
-                superchannel = {}
-                # we need channeldata.json too, as it is a more reliable source of run_exports data
-                for channel in expanded_channels:
-                    if channel.scheme == "file":
-                        location = channel.location
-                        if utils.on_win:
-                            location = location.lstrip("/")
-                        elif not os.path.isabs(channel.location) and os.path.exists(
-                            os.path.join(os.path.sep, channel.location)
-                        ):
-                            location = os.path.join(os.path.sep, channel.location)
-                        channeldata_file = os.path.join(
-                            location, channel.name, "channeldata.json"
-                        )
-                        retry = 0
-                        max_retries = 1
-                        if os.path.isfile(channeldata_file):
-                            while retry < max_retries:
-                                try:
-                                    with open(channeldata_file, "r+") as f:
-                                        channel_data[channel.name] = json.load(f)
-                                    break
-                                except (OSError, JSONDecodeError):
-                                    time.sleep(0.2)
-                                    retry += 1
-                    else:
-                        # download channeldata.json for url
-                        if not context.offline:
-                            try:
-                                channel_data[channel.name] = utils.download_channeldata(
-                                    channel.base_url + "/channeldata.json"
-                                )
-                            except CondaHTTPError:
-                                continue
-                    # collapse defaults metachannel back into one superchannel, merging channeldata
-                    if (
-                        channel.base_url in context.default_channels
-                        and channel_data.get(channel.name)
+            superchannel = {}
+            # we need channeldata.json too, as it is a more reliable source of run_exports data
+            for channel in expanded_channels:
+                if channel.scheme == "file":
+                    location = channel.location
+                    if utils.on_win:
+                        location = location.lstrip("/")
+                    elif not os.path.isabs(channel.location) and os.path.exists(
+                        os.path.join(os.path.sep, channel.location)
                     ):
-                        packages = superchannel.get("packages", {})
-                        packages.update(channel_data[channel.name])
-                        superchannel["packages"] = packages
-                channel_data["defaults"] = superchannel
+                        location = os.path.join(os.path.sep, channel.location)
+                    channeldata_file = os.path.join(
+                        location, channel.name, "channeldata.json"
+                    )
+                    retry = 0
+                    max_retries = 1
+                    if os.path.isfile(channeldata_file):
+                        while retry < max_retries:
+                            try:
+                                with open(channeldata_file, "r+") as f:
+                                    channel_data[channel.name] = json.load(f)
+                                break
+                            except (OSError, JSONDecodeError):
+                                time.sleep(0.2)
+                                retry += 1
+                else:
+                    # download channeldata.json for url
+                    if not context.offline:
+                        try:
+                            channel_data[channel.name] = utils.download_channeldata(
+                                channel.base_url + "/channeldata.json"
+                            )
+                        except CondaHTTPError:
+                            continue
+                # collapse defaults metachannel back into one superchannel, merging channeldata
+                if (
+                    channel.base_url in context.default_channels
+                    and channel_data.get(channel.name)
+                ):
+                    packages = superchannel.get("packages", {})
+                    packages.update(channel_data[channel.name])
+                    superchannel["packages"] = packages
+            channel_data["defaults"] = superchannel
 
         local_index_timestamp = os.path.getmtime(index_file)
         local_subdir = subdir
