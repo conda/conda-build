@@ -48,7 +48,7 @@ from yaml.parser import ParserError
 from yaml.reader import ReaderError
 from yaml.scanner import ScannerError
 
-from conda_build import conda_interface, utils
+from conda_build import utils
 
 from .conda_interface import (
     CondaError,
@@ -61,8 +61,8 @@ from .conda_interface import (
     context,
     get_index,
     human_bytes,
-    url_path,
     solver,
+    url_path,
 )
 from .deprecations import deprecated
 from .utils import (
@@ -205,7 +205,7 @@ def get_build_index(
             _delegated_update_index(output_folder, verbose=debug)
 
             if solver == "libmamba":
-                # This is supposed to be a mapping of conda.models.dist.Dist to 
+                # This is supposed to be a mapping of conda.models.dist.Dist to
                 # conda.models.package_record.PackageRecord objects.
                 # However we only want the channel info in conda-libmamba-solver.
                 # So we just mock the Dist -> PackageRecord mapping, once per channel.
@@ -215,7 +215,7 @@ def get_build_index(
                     "name": "",
                     "version": "",
                     "build_string": "",
-                    "build_number":  0,
+                    "build_number": 0,
                     "base_url": "",
                     "platform": "",
                 }
@@ -286,8 +286,9 @@ def get_build_index(
                             except CondaHTTPError:
                                 continue
                     # collapse defaults metachannel back into one superchannel, merging channeldata
-                    if channel.base_url in context.default_channels and channel_data.get(
-                        channel.name
+                    if (
+                        channel.base_url in context.default_channels
+                        and channel_data.get(channel.name)
                     ):
                         packages = superchannel.get("packages", {})
                         packages.update(channel_data[channel.name])
