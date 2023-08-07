@@ -55,6 +55,7 @@ from .conda_interface import (
     CondaHTTPError,
     Dist,
     MatchSpec,
+    PackageRecord,
     Resolve,
     TemporaryDirectory,
     VersionOrder,
@@ -210,17 +211,12 @@ def get_build_index(
                 # However we only want the channel info in conda-libmamba-solver.
                 # So we just mock the Dist -> PackageRecord mapping, once per channel.
                 urls = [*channel_urls, output_folder]
-                dist_kwargs = {
-                    "dist_name": "",
-                    "name": "",
-                    "version": "",
-                    "build_string": "",
-                    "build_number": 0,
-                    "base_url": "",
-                    "platform": "",
-                }
-                dists = [Dist(channel=f"{url}/{subdir}", **dist_kwargs) for url in urls]
-                cached_index = {dist: dist for dist in dists}
+                prec_kwargs = dict(name="", version="", build="", build_number=0)
+                precs = [
+                    PackageRecord(channel=Channel.from_url(f"{url}/{subdir}"), **prec_kwargs) 
+                    for url in urls
+                ]
+                cached_index = {Dist(prec): prec for prec in precs}
 
             else:  # classic
                 # replace noarch with native subdir - this ends up building an index with both the

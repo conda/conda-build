@@ -77,6 +77,7 @@ from conda.exports import (  # noqa: F401
 )
 from conda.models.channel import get_conda_build_local_url  # noqa: F401
 from conda.models.dist import Dist, IndexRecord  # noqa: F401
+from conda.models.records import PackageRecord  # noqa: F401
 
 # TODO: Go to references of all properties below and import them from `context` instead
 binstar_upload = context.binstar_upload
