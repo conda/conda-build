@@ -267,9 +267,8 @@ def get_build_index(
                         except CondaHTTPError:
                             continue
                 # collapse defaults metachannel back into one superchannel, merging channeldata
-                if (
-                    channel.base_url in context.default_channels
-                    and channel_data.get(channel.name)
+                if channel.base_url in context.default_channels and channel_data.get(
+                    channel.name
                 ):
                     packages = superchannel.get("packages", {})
                     packages.update(channel_data[channel.name])
