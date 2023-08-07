@@ -86,6 +86,7 @@ pkgs_dirs = list(context.pkgs_dirs)
 cc_platform = context.platform
 root_dir = context.root_dir
 root_writable = context.root_writable
+solver = context.solver
 subdir = context.subdir
 create_default_packages = context.create_default_packages
 
