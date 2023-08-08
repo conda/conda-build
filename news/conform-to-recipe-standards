@@ -1,0 +1,19 @@
+### Enhancements
+
+* <news item>
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* when building new recipes from a pypi packag, the build script `{{ PYTHON }} -m pip install . --vv` is deprecated in favor of `{{ PYTHON }} -m pip install . --vv --no-deps --no-build-isolation`
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>
