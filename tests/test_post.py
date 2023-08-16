@@ -1,9 +1,9 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+import logging
 import os
 import shutil
 import sys
-import logging
 
 import pytest
 
@@ -95,13 +95,13 @@ def test_pypi_installer_metadata(testing_config):
 
 
 def test_menuinst_validation_passes(testing_config):
-    recipe = os.path.join(metadata_dir, 'menu_json_validation')
+    recipe = os.path.join(metadata_dir, "menu_json_validation")
     pkg = api.build(recipe, config=testing_config, notest=True)[0]
-    assert package_has_file(pkg, 'Menu/menu_json_validation.json')
+    assert package_has_file(pkg, "Menu/menu_json_validation.json")
 
 
 def test_menuinst_validation_fails(testing_config, caplog):
-    recipe = os.path.join(metadata_dir, 'menu_json_validation')
+    recipe = os.path.join(metadata_dir, "menu_json_validation")
     original_content = None
 
     try:

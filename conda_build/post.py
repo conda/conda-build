@@ -1693,6 +1693,7 @@ def check_menuinst_json(files, prefix):
 
     try:
         from json import JSONDecodeError
+
         from menuinst.schema import validate
         from pydantic import ValidationError
     except ModuleNotFoundError:
@@ -1707,7 +1708,9 @@ def check_menuinst_json(files, prefix):
             validate(join(prefix, f))
         except (ValidationError, JSONDecodeError) as e:
             log = utils.get_logger(__name__)
-            log.warning("! '%s' is not a valid menuinst JSON file! %s:\n%s", f, type(e), e)
+            log.warning(
+                "! '%s' is not a valid menuinst JSON file! %s:\n%s", f, type(e), e
+            )
 
 
 def post_build(m, files, build_python, host_prefix=None, is_already_linked=False):
