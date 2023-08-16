@@ -1,20 +1,15 @@
-# (c) Continuum Analytics, Inc. / http://continuum.io
-# All Rights Reserved
-#
-# conda is distributed under the terms of the BSD 3-clause license.
-# Consult LICENSE.txt or http://opensource.org/licenses/BSD-3-Clause.
-
-
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 import importlib
 import logging
 import os
 import pkgutil
 import sys
 
-from conda_build.conda_interface import ArgumentParser
-
-import conda_build.api as api
-from conda_build.config import Config
+from .. import api
+from ..conda_interface import ArgumentParser
+from ..config import Config
+from ..deprecations import deprecated
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
 logging.basicConfig(level=logging.INFO)
@@ -22,6 +17,7 @@ logging.basicConfig(level=logging.INFO)
 
 def parse_args(args):
     p = ArgumentParser(
+        prog="conda skeleton",
         description="""
 Generates a boilerplate/skeleton recipe, which you can then edit to create a
 full recipe. Some simple skeleton recipes may not even need edits.
@@ -32,12 +28,12 @@ options available.
         """,
     )
 
-    repos = p.add_subparsers(
-        dest="repo"
-    )
+    repos = p.add_subparsers(dest="repo")
 
-    skeletons = [name for _, name, _ in
-                 pkgutil.iter_modules([os.path.join(thisdir, '../skeletons')])]
+    skeletons = [
+        name
+        for _, name, _ in pkgutil.iter_modules([os.path.join(thisdir, "../skeletons")])
+    ]
     for skeleton in skeletons:
         if skeleton.startswith("_"):
             continue
@@ -56,13 +52,20 @@ def execute(args):
         parser.print_help()
         sys.exit()
 
-    api.skeletonize(args.packages, args.repo, output_dir=args.output_dir, recursive=args.recursive,
-                    version=args.version, config=config)
+    api.skeletonize(
+        args.packages,
+        args.repo,
+        output_dir=args.output_dir,
+        recursive=args.recursive,
+        version=args.version,
+        config=config,
+    )
 
 
+@deprecated("3.26.0", "4.0.0", addendum="Use `conda skeleton` instead.")
 def main():
     return execute(sys.argv[1:])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

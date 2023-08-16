@@ -1,25 +1,66 @@
-name: Run unit and integration tests
+# this is the sibling workflow to tests-skip.yml, it is required to work around
+# the skipped but required checks issue:
+#   https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/defining-the-mergeability-of-pull-requests/troubleshooting-required-status-checks#handling-skipped-but-required-checks
+name: Tests
 
 on:
-  # NOTE: github.event context is push payload:
-  # https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#push
+  # https://docs.github.com/en/webhooks-and-events/webhooks/webhook-events-and-payloads#push
   push:
     branches:
-      - master
-    paths-ignore:
-      - 'docs/**'
+      - main
+      - feature/**
+      - '[0-9].*.x'  # e.g., 3.24.x
 
-  # NOTE: github.event context is pull_request payload:
-  # https://docs.github.com/en/developers/webhooks-and-events/webhooks/webhook-events-and-payloads#pull_request
+  # https://docs.github.com/en/webhooks-and-events/webhooks/webhook-events-and-payloads#pull_request
   pull_request:
-    types:
-      - opened
-      - reopened
-      - synchronize
 
+  # https://docs.github.com/en/webhooks-and-events/webhooks/webhook-events-and-payloads#workflow_dispatch
+  workflow_dispatch:
+
+  # no payload
+  schedule:
+      # https://crontab.guru/#37_18_*_*_*
+      - cron: 37 18 * * *
+
+concurrency:
+  # Concurrency group that uses the workflow name and PR number if available
+  # or commit SHA as a fallback. If a new build is triggered under that
+  # concurrency group while a previous build is running it will be canceled.
+  # Repeated pushes to a PR will cancel all previous builds, while multiple
+  # merges to main will not cancel.
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
 
 jobs:
+  # detect whether any code changes are included in this PR
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - uses: actions/checkout@v3
+        # dorny/paths-filter needs git clone for non-PR events
+        # https://github.com/marketplace/actions/paths-changes-filter#supported-workflows
+        if: github.event_name != 'pull_request'
+      - uses: dorny/paths-filter@4512585405083f25c027a35db413c2b3b9006d50
+        id: filter
+        with:
+          filters: |
+            code:
+              - 'conda_build/**'
+              - 'tests/**'
+              - '*.py'
+              - 'recipe/**'
+              - '.github/workflows/tests.yml'
+
+  # linux test suite
   linux:
+    # only run test suite if there are code changes
+    needs: changes
+    if: github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
+
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -27,243 +68,421 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.7', '3.8']
+        # test all lower versions (w/ stable conda) and upper version (w/ canary conda)
+        python-version: ['3.8', '3.9', '3.10']
         conda-version: [release]
         test-type: [serial, parallel]
         include:
-          - os: ubuntu-latest
-            python-version: '3.9'
+          - python-version: '3.11'
             conda-version: canary
             test-type: serial
-          - os: ubuntu-latest
-            python-version: '3.9'
+          - python-version: '3.11'
             conda-version: canary
             test-type: parallel
     env:
-      pytest-replay: --replay-record-dir=pytest-replay/ --replay-base-name=Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
+      CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
+      REPLAY_NAME: Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
+      REPLAY_DIR: ${{ github.workspace }}/pytest-replay
+      ALLURE_DIR: ${{ github.workspace }}/allure-results
+      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
+      PYTEST_NUMPROCESSES: ${{ matrix.test-type == 'serial' && 0 || 'auto' }}
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: Setup Miniconda
+      - name: Timestamp
+        run: echo "TIMESTAMP=$(date -u "+%Y%m")" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Cache conda
+        uses: actions/cache@v3
+        with:
+          path: ~/conda_pkgs_dir
+          key: ${{ runner.os }}-conda-${{ env.TIMESTAMP }}
+
+      - name: Setup miniconda
         uses: conda-incubator/setup-miniconda@v2
         with:
-          condarc-file:  ci/github/.condarc
+          condarc-file: ./ci/github/.condarc
           python-version: ${{ matrix.python-version }}
+          run-post: false  # skip post cleanup
 
-      - name: Install Conda-Canary if canary version
-        if: matrix.conda-version == 'canary'
+      - name: Setup environment
         run: |
-          conda install -y -c conda-canary conda
-
-      - name: Install default Conda if release version
-        if: matrix.conda-version == 'release'
-        run: |
-          conda install -y conda
-
-      - name: Source Scripts
-        run: |
-          source ci/azurepipelines/install_conda_build_test_deps
+          conda install -q -y -c defaults \
+            --file ./tests/requirements.txt \
+            --file ./tests/requirements-linux.txt \
+            ${{ env.CONDA_CHANNEL_LABEL }}::conda
           pip install -e .
+
+      - name: Show info
+        run: |
           conda info -a
-          mkdir ./pytest-replay
+          conda list --show-channel-urls
 
-      - name: Run Serial tests
-        if: matrix.test-type == 'serial'
+      - name: Run tests
         run: |
           pytest \
-              --color=yes \
-              -vv \
-              -n 0 \
-              --basetemp /tmp/cb_serial \
-              --cov conda_build \
-              --cov-report xml \
-              -m "serial" tests \
-              --test-run-title="Linux-SerialTests" \
-              --test-run-title="Linux-SerialTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}" \
-              ${{ env.pytest-replay }}
+            --color=yes \
+            -v \
+            -n "${{ env.PYTEST_NUMPROCESSES }}" \
+            --basetemp "${{ runner.temp }}/${{ matrix.test-type }}" \
+            --cov conda_build \
+            --cov-append \
+            --cov-branch \
+            --cov-report xml \
+            --replay-record-dir="${{ env.REPLAY_DIR }}" \
+            --replay-base-name="${{ env.REPLAY_NAME }}" \
+            --alluredir="${{ env.ALLURE_DIR }}" \
+            -m "${{ env.PYTEST_MARKER }}" \
+            ./tests
 
-      - name: Run Parallel tests
-        if: matrix.test-type == 'parallel'
-        run: |
-          pytest \
-              --color=yes \
-              -vv \
-              -n auto \
-              --basetemp /tmp/cb \
-              --cov conda_build \
-              --cov-append \
-              --cov-report xml \
-              -m "not serial" tests \
-              --test-run-title="Linux-ParallelTests" \
-              --test-run-title="Linux-ParallelTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}" \
-              ${{ env.pytest-replay }}
+      - uses: codecov/codecov-action@v3
+        with:
+          flags: ${{ matrix.test-type }},${{ matrix.python-version }},linux-64
+
+      - name: Tar Allure Results
+        if: always()
+        run: tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
+
+      - name: Upload Allure Results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: allure-Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type }}
+          path: allure-results.tar.gz
 
       - name: Upload Pytest Replay
-        uses: actions/upload-artifact@v2
+        if: always()
+        uses: actions/upload-artifact@v3
         with:
-          name: Linux_replay-py-${{ matrix.python-version }}_${{ matrix.conda-version }}_${{ matrix.test-type }}
-          path: pytest-replay/
+          name: ${{ env.REPLAY_NAME }}-${{ matrix.test-type }}
+          path: ${{ env.REPLAY_DIR }}
 
-
+  # windows test suite
   windows:
+    # only run test suite if there are code changes
+    needs: changes
+    if: github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
+
     runs-on: windows-2019
     strategy:
       fail-fast: false
       matrix:
-        python-version: [ '3.7', '3.8' ]
-        conda-version: [ release ]
-        test-type: [ serial, parallel ]
+        # test lower version (w/ stable conda) and upper version (w/ canary conda)
+        python-version: ['3.8']
+        conda-version: [release]
+        test-type: [serial, parallel]
         include:
-          - python-version: '3.9'
+          - python-version: '3.11'
             conda-version: canary
             test-type: serial
-          - python-version: '3.9'
+          - python-version: '3.11'
             conda-version: canary
             test-type: parallel
-    # timeout-minutes: 120
     env:
-      serial_or_parallel: ''
+      CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
+      REPLAY_NAME: Win-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
+      REPLAY_DIR: ${{ github.workspace }}\pytest-replay
+      ALLURE_DIR: ${{ github.workspace }}\allure-results
+      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial and not slow' }}
+      PYTEST_NUMPROCESSES: ${{ matrix.test-type == 'serial' && 0 || 'auto' }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      - name: Set temp dirs correctly
-        shell: cmd
-        # https://github.com/actions/virtual-environments/issues/712
-        run: |
-          echo "TMPDIR=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
-          echo "TEMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
-          echo "TMP=$env:USERPROFILE\AppData\Local\Temp" >> $env:GITHUB_ENV
+      - name: Timestamp
+        run: echo "TIMESTAMP=$(date -u "+%Y%m")" >> $GITHUB_ENV
+        shell: bash
 
-      - name: Setup Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v1
+      - name: Cache conda
+        uses: actions/cache@v3
         with:
+          path: ~/conda_pkgs_dir
+          key: ${{ runner.os }}-conda-${{ env.TIMESTAMP }}
+
+      - name: Setup miniconda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          condarc-file: .\ci\github\.condarc
           python-version: ${{ matrix.python-version }}
+          run-post: false  # skip post cleanup
 
-      - name: Install vcpython27.msi
+      - name: Setup environment
         run: |
-          $wc = New-Object net.webclient
-          $wc.Downloadfile("https://github.com/GeoNode/geonode-win-installer/raw/ffb76c7cbf1d6b4970c6c25f79c3c7682a3aa035/VCForPython27.msi", "VCForPython27.msi")
-          Start-Process "VCForPython27.msi" /qn -Wait
-        shell: pwsh
+          choco install visualstudio2017-workload-vctools
+          conda install -q -y -c defaults `
+            --file .\tests\requirements.txt `
+            --file .\tests\requirements-windows.txt `
+            ${{ env.CONDA_CHANNEL_LABEL }}::conda
+          pip install -e .
 
-      - name: Install miniconda
+      - name: Show info
         run: |
-          rmdir C:\Strawberry /s /q
-          choco install wget visualstudio2017-workload-vctools
-          wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe
-          start /wait "" Miniconda3-latest-Windows-x86_64.exe /InstallationType=JustMe /S /D=%UserProfile%\Miniconda3
-          "%UserProfile%\Miniconda3\condabin\conda.bat" init
           conda info -a
-        shell: cmd
+          conda list --show-channel-urls
 
-      - name: Patch vs2008
+      - name: Run tests
         run: |
-          Set-PSDebug -Trace 1
-          $batchcontent = @"
-          ECHO ON
-          SET vcpython=C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0
-          DIR "%vcpython%"
-          CALL "%vcpython%\vcvarsall.bat" %*
-          "@
-          $batchDir = "C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC"
-          $batchPath = "$batchDir" + "\vcvarsall.bat"
-          New-Item -Path $batchPath -ItemType "file" -Force
-          Set-Content -Value $batchcontent -Path $batchPath
-          Get-ChildItem -Path $batchDir
-          Get-ChildItem -Path ($batchDir + '\..')
-          set LIB
-        shell: pwsh
+          pytest `
+            --color=yes `
+            -v `
+            -n "${{ env.PYTEST_NUMPROCESSES }}" `
+            --basetemp "${{ runner.temp }}\${{ matrix.test-type}}" `
+            --cov conda_build `
+            --cov-append `
+            --cov-branch `
+            --cov-report xml `
+            --replay-record-dir="${{ env.REPLAY_DIR }}" `
+            --replay-base-name="${{ env.REPLAY_NAME }}" `
+            --alluredir="${{ env.ALLURE_DIR }}" `
+            -m "${{ env.PYTEST_MARKER }}" `
+            .\tests
 
-      - name: conda init
-        run: |
-          echo on
-          set PATH
-          doskey conda="call %UserProfile%\Miniconda3\condabin\conda.bat" $*
-          doskey /macros
-          call "%UserProfile%\Miniconda3\condabin\conda.bat" init
-          set PATH
-        shell: cmd
-
-      - name: Configuration
-        run: |
-          echo on
-          set PATH
-          call %UserProfile%\Miniconda3\condabin\activate.bat base||exit 1
-          set PATH
-          call conda install python="%PYTHON_VERSION%" -y||exit 1
-          if "%CONDA_VERSION%" == "canary" (call conda update -c conda-canary conda||exit 1) else (call conda update -q conda||exit 1)
-          call conda config --set always_yes yes
-          call conda config --set auto_update_conda no
-          call conda info
-          python -c "import sys; print(sys.version)"
-          python -c "import sys; print(sys.executable)"
-          python -c "import sys; print(sys.prefix)"
-          call conda update -q --all||exit 1
-          call conda install -q pip python-libarchive-c pytest git pytest-cov jinja2 m2-patch flake8 mock requests contextlib2 chardet glob2 perl pyflakes pycrypto posix m2-git anaconda-client numpy beautifulsoup4 pytest-xdist pytest-mock filelock pkginfo psutil pytz tqdm conda-package-handling pytest-azurepipelines||exit 1
-          call conda install pytest-replay pytest-rerunfailures -y||exit 1
-          # TODO: Temporary, remove before merge
-          call conda install pydantic -y||exit 1
-          # This is needed for now because conda 4.12 pins menuinst<2
-          pip install --no-deps https://github.com/jaimergp/menuinst/archive/refs/heads/cep.zip
-          echo safety_checks: disabled >> %UserProfile%\.condarc
-          echo local_repodata_ttl: 1800 >> %UserProfile%\.condarc
-          call conda install -q py-lief||exit 1
-          python --version
-          python -c "import struct; print(struct.calcsize('P') * 8)"
-          pip install --no-deps .
-          conda-build --version
-          pushd .. && git clone https://github.com/conda/conda_build_test_recipe && popd
-          mkdir %UserProfile%\cbtmp_serial
-          mkdir %UserProfile%\cbtmp
-          for /d %%F in (%UserProfile%\cbtmp_serial\*) do rd /s /q "%%F"
-          for /d %%F in (%UserProfile%\cbtmp\*) do rd /s /q "%%F"
-          call conda create -n blarg -yq --download-only python=2.7||exit 1
-          call conda create -n blarg -yq --download-only python=3.8||exit 1
-          call conda create -n blarg -yq --download-only python cmake||exit 1
-          mkdir ${{ github.workspace }}\\pytest-replay
-          set "PYTEST_REPLAY_OPTIONS=--replay-record-dir=${{ github.workspace }}\\pytest-replay --replay-base-name=Win-%CONDA_VERSION%-Py%PYTHON_VERSION%"
-          echo "##vso[task.setvariable variable=PYTEST_REPLAY_OPTIONS]%PYTEST_REPLAY_OPTIONS%"
-        shell: cmd
-
-      - name: Run Serial Tests
-        if: matrix.test-type == 'serial'
-        run: |
-          echo on
-          set PATH
-          call %UserProfile%\Miniconda3\condabin\activate.bat base||exit 1
-          set PATH
-          call conda install -y conda-verify||exit 1
-          set PERL=
-          set LUA=
-          set R=
-          py.test --color=yes -vv -n 0 --basetemp %UserProfile%\cbtmp_serial --cov conda_build --cov-report xml -m "serial" --test-run-title="Windows-SerialTests" --test-run-title="Windows-SerialTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}" ${{ env.pytest-replay }}
-        shell: cmd
-
-      - name: Run Parallel Tests
-        if: matrix.test-type == 'parallel'
-        run: |
-          echo on
-          set PATH
-          call %UserProfile%\Miniconda3\condabin\activate.bat base||exit 1
-          set PATH
-          :: call conda remove -y conda-verify||exit 1
-          set PERL=
-          set LUA=
-          set R=
-          py.test --color=yes -vv -n auto --basetemp %UserProfile%\cbtmp --cov conda_build --cov-append --cov-report xml -m "not serial" --test-run-title="Windows-ParallelTests" --test-run-title="Windows-ParallelTests-${{ matrix.conda-version }}-Py${{ matrix.python-version }}" ${{ env.pytest-replay }}
-        shell: cmd
-        env:
-          VS90COMNTOOLS: C:\Program Files (x86)\Common Files\Microsoft\Visual C++ for Python\9.0\VC\bin
-          LIB:
-      - uses: actions/upload-artifact@v2
+      - uses: codecov/codecov-action@v3
         with:
-          path: ${{ github.workspace }}/pytest-replay
-          name: Win-${{ env.CONDA_VERSION }}-Python${{ matrix.python-version }}-${{ env. parameters.serial_or_parallel  }}
+          flags: ${{ matrix.test-type }},${{ matrix.python-version }},win-64
+
+      - name: Tar Allure Results
         if: always()
+        run: tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
+        # windows-2019/powershell ships with GNU tar 1.28 which struggles with Windows paths
+        # window-2019/cmd ships with bsdtar 3.5.2 which doesn't have this problem
+        shell: cmd
+
+      - name: Upload Allure Results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: allure-Win-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type  }}
+          path: allure-results.tar.gz
+
+      - name: Upload Pytest Replay
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          path: ${{ env.REPLAY_DIR }}
+          name: ${{ env.REPLAY_NAME }}-${{ matrix.test-type }}
+
+  # macos test suite
+  macos:
+    # only run test suite if there are code changes
+    needs: changes
+    if: github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
+
+    runs-on: macos-11
+    defaults:
+      run:
+        shell: bash -l {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        # test lower version (w/ stable conda) and upper version (w/ canary conda)
+        python-version: ['3.8']
+        conda-version: [release]
+        test-type: [serial, parallel]
+        include:
+          - python-version: '3.11'
+            conda-version: canary
+            test-type: serial
+          - python-version: '3.11'
+            conda-version: canary
+            test-type: parallel
+    env:
+      CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
+      REPLAY_NAME: macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
+      REPLAY_DIR: ${{ github.workspace }}/pytest-replay
+      ALLURE_DIR: ${{ github.workspace }}/allure-results
+      PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
+      PYTEST_NUMPROCESSES: ${{ matrix.test-type == 'serial' && 0 || 'auto' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Timestamp
+        run: echo "TIMESTAMP=$(date -u "+%Y%m")" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Cache conda
+        uses: actions/cache@v3
+        with:
+          path: ~/conda_pkgs_dir
+          key: ${{ runner.os }}-conda-${{ env.TIMESTAMP }}
+
+      - name: Setup miniconda
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          condarc-file: ./ci/github/.condarc
+          python-version: ${{ matrix.python-version }}
+          run-post: false  # skip post cleanup
+
+      - name: Setup environment
+        run: |
+          sudo xcode-select --switch /Applications/Xcode_11.7.app
+          conda install -q -y -c defaults \
+            --file ./tests/requirements.txt \
+            --file ./tests/requirements-macos.txt \
+            ${{ env.CONDA_CHANNEL_LABEL }}::conda
+          pip install -e .
+
+      - name: Show info
+        run: |
+          conda info -a
+          conda list --show-channel-urls
+
+      - name: Run tests
+        run: |
+          pytest \
+            --color=yes \
+            -v \
+            -n "${{ env.PYTEST_NUMPROCESSES }}" \
+            --basetemp "${{ runner.temp }}/${{ matrix.test-type }}" \
+            --cov conda_build \
+            --cov-append \
+            --cov-branch \
+            --cov-report xml \
+            --replay-record-dir="${{ env.REPLAY_DIR }}" \
+            --replay-base-name="${{ env.REPLAY_NAME }}" \
+            --alluredir="${{ env.ALLURE_DIR }}" \
+            -m "${{ env.PYTEST_MARKER }}" \
+            ./tests
+
+      - uses: codecov/codecov-action@v3
+        with:
+          flags: ${{ matrix.test-type }},${{ matrix.python-version }},osx-64
+
+      - name: Tar Allure Results
+        if: always()
+        run: tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
+
+      - name: Upload Allure Results
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: allure-macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type }}
+          path: allure-results.tar.gz
+
+      - name: Upload Pytest Replay
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ env.REPLAY_NAME }}-${{ matrix.test-type  }}
+          path: ${{ env.REPLAY_DIR }}
+
+  # aggregate and upload
+  aggregate:
+    # only aggregate test suite if there are code changes
+    needs: [changes, linux, windows, macos]
+    if: always() && (github.event_name == 'schedule' || needs.changes.outputs.code == 'true')
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download test results
+        uses: actions/download-artifact@v3
+
+      - name: Upload combined test results
+        # provides one downloadable archive of all .coverage/test-report.xml files
+        # of all matrix runs for further analysis.
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-results-${{ github.sha }}-all
+          path: test-results-${{ github.sha }}-*
+          retention-days: 90  # default: 90
+
+      - name: Test Summary
+        uses: test-summary/action@v2
+        with:
+          paths: ./test-results-${{ github.sha }}-**/test-report*.xml
+
+  # required check
+  analyze:
+    name: Analyze results
+    needs: [linux, windows, macos, aggregate]
+    if: always()
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Decide whether the needed jobs succeeded or failed
+        uses: re-actors/alls-green@05ac9388f0aebcb5727afa17fcccfecd6f8ec5fe
+        with:
+          allowed-skips: ${{ toJSON(needs) }}
+          jobs: ${{ toJSON(needs) }}
+
+  # canary builds
+  build:
+    name: Canary Build
+    needs: [analyze]
+    # only build canary build if
+    # - prior steps succeeded,
+    # - this is the main repo, and
+    # - we are on the main, feature, or release branch
+    if: >-
+      always()
+      && !github.event.repository.fork
+      && (
+        github.ref_name == 'main'
+        || startsWith(github.ref_name, 'feature/')
+        || endsWith(github.ref_name, '.x')
+      )
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            subdir: linux-64
+          - runner: macos-latest
+            subdir: osx-64
+          - runner: windows-latest
+            subdir: win-64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      # Clean checkout of specific git ref needed for package metadata version
+      # which needs env vars GIT_DESCRIBE_TAG and GIT_BUILD_STR:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref }}
+          clean: true
+          fetch-depth: 0
+
+      # Explicitly use Python 3.11 since each of the OSes has a different default Python
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Detect label
+        shell: python
+        run: |
+          from pathlib import Path
+          from re import match
+          from os import environ
+
+          if "${{ github.ref_name }}" == "main":
+              # main branch commits are uploaded to the dev label
+              label = "dev"
+          elif "${{ github.ref_name }}".startswith("feature/"):
+              # feature branch commits are uploaded to a custom label
+              label = "${{ github.ref_name }}"
+          else:
+              # release branch commits are added to the rc label
+              # see https://github.com/conda/infrastructure/issues/760
+              _, name = "${{ github.repository }}".split("/")
+              label = f"rc-{name}-${{ github.ref_name }}"
+
+          Path(environ["GITHUB_ENV"]).write_text(f"ANACONDA_ORG_LABEL={label}")
+
+      - name: Create and upload canary build
+        uses: conda/actions/canary-release@v23.7.0
+        with:
+          package-name: ${{ github.event.repository.name }}
+          subdir: ${{ matrix.subdir }}
+          anaconda-org-channel: conda-canary
+          anaconda-org-label: ${{ env.ANACONDA_ORG_LABEL }}
+          anaconda-org-token: ${{ secrets.ANACONDA_ORG_CONDA_CANARY_TOKEN }}

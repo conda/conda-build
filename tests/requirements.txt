@@ -1,17 +1,41 @@
-# conda-build
-# run as 'conda install --file tests/requirements.txt -c defaults'
+# conda-build test dependencies
+# run as 'conda install -c defaults --file tests/requirements.txt'
 anaconda-client
-bs4
+beautifulsoup4
 chardet
-conda
+conda >=4.13
+conda-index
 conda-package-handling
+conda-verify
+contextlib2
+cytoolz
 filelock
-flaky
-glob2
+git
+glob2 >=0.6
 jinja2
+numpy
+perl
+pip
 pkginfo
 psutil
+py-lief
+pyflakes
 pytest
 pytest-cov
+pytest-forked
 pytest-mock
+pytest-replay
+pytest-rerunfailures
+pytest-xdist
 python-libarchive-c
+conda-forge::allure-pytest
+pytz
+requests
+ripgrep
+ruamel.yaml
+setuptools_scm  # needed for devenv version detection
+tomli
+tqdm
+# NEW for menuinst validation
+pydantic <2.0a0
+menuinst >=2.0a0

@@ -1,120 +1,113 @@
+# Copyright (C) 2014 Anaconda, Inc
+# SPDX-License-Identifier: BSD-3-Clause
 """
 This module tests the test API.  These are high-level integration tests.  Lower level unit tests
 should go in test_render.py
 """
+from __future__ import annotations
 
-import os
-from glob import glob
+import subprocess
+from contextlib import nullcontext
+from pathlib import Path
 
 import pytest
-import subprocess
+from conda.common.compat import on_win
 
-import sys
+from conda_build.api import debug
 
-from conda_build import api
-from tests import utils
+from .utils import archive_path, metadata_path
 
-from .utils import metadata_dir, thisdir, on_win
-
-recipe_path = os.path.join(metadata_dir, "_debug_pkg")
-ambiguous_recipe_path = os.path.join(metadata_dir, "_debug_pkg_multiple_outputs")
-tarball_path = os.path.join(thisdir, "archives", "test_debug_pkg-1.0-0.tar.bz2")
-
-if on_win:
-    shell_cmd = ["cmd.exe", "/d", "/c"]
-else:
-    shell_cmd = ["bash", "-c"]
+DEBUG_PKG = metadata_path / "_debug_pkg"
+MULTI_OUT = metadata_path / "_debug_pkg_multiple_outputs"
+TARBALL = archive_path / "test_debug_pkg-1.0-0.tar.bz2"
+SHELL_CMD = ("cmd.exe", "/d", "/c") if on_win else ("bash", "-c")
 
 
-def assert_correct_folders(work_dir, build=True):
-    base_dir = os.path.dirname(work_dir)
-    build_set = "_b*", "_h*"
-    test_set = "_t*", "test_tmp"
-    for prefix in build_set:
-        assert bool(glob(os.path.join(base_dir, prefix))) == build
-    for prefix in test_set:
-        assert bool(glob(os.path.join(base_dir, prefix))) != build
-
-
-def check_build_files_present(work_dir, build=True):
-    if on_win:
-        assert os.path.exists(os.path.join(work_dir, "bld.bat")) == build
-    else:
-        assert os.path.exists(os.path.join(work_dir, "conda_build.sh")) == build
-
-
-def check_test_files_present(work_dir, test=True):
-    if on_win:
-        assert os.path.exists(os.path.join(work_dir, "conda_test_runner.bat")) == test
-    else:
-        assert os.path.exists(os.path.join(work_dir, "conda_test_runner.sh")) == test
-
-
-@pytest.mark.slow
-def test_debug_recipe_default_path(testing_config):
-    activation_string = api.debug(recipe_path, config=testing_config)
-    assert activation_string and "debug_1" in activation_string
-    _, work_dir, _, src_command, env_activation_script = activation_string.split()
-    _shell_cmd = shell_cmd + [' '.join((src_command, env_activation_script))]
-    subprocess.check_call(_shell_cmd, cwd=work_dir)
-    check_build_files_present(work_dir, True)
-    check_test_files_present(work_dir, False)
-    assert_correct_folders(work_dir)
-
-
-@pytest.mark.skipif(
-    utils.on_win and sys.version_info <= (3, 4),
-    reason="Skipping on windows and vc<14"
+@pytest.mark.parametrize(
+    "recipe,path,config,output_id,has_error,has_build",
+    [
+        # w/ config
+        pytest.param(DEBUG_PKG, False, True, None, False, True, id="recipe w/ config"),
+        pytest.param(TARBALL, False, True, None, False, False, id="tarball w/ config"),
+        # w/ path
+        pytest.param(DEBUG_PKG, True, False, None, False, True, id="recipe w/ path"),
+        pytest.param(TARBALL, True, False, None, False, False, id="tarball w/ path"),
+        # w/ outputs
+        pytest.param(
+            MULTI_OUT,
+            False,
+            False,
+            "output1*",
+            False,
+            True,
+            id="outputs w/ valid filtering",
+        ),
+        pytest.param(
+            MULTI_OUT,
+            False,
+            False,
+            None,
+            True,
+            False,
+            id="outputs w/ no filtering",
+        ),
+        pytest.param(
+            MULTI_OUT,
+            False,
+            False,
+            "frank",
+            True,
+            False,
+            id="outputs w/ invalid filtering",
+        ),
+    ],
 )
-def test_debug_package_default_path(testing_config):
-    activation_string = api.debug(tarball_path, config=testing_config)
-    _, work_dir, _, src_command, env_activation_script = activation_string.split()
-    _shell_cmd = shell_cmd + [' '.join((src_command, env_activation_script))]
-    subprocess.check_call(_shell_cmd, cwd=work_dir)
-    check_build_files_present(work_dir, False)
-    check_test_files_present(work_dir, True)
-    assert_correct_folders(work_dir, build=False)
+def test_debug(
+    recipe: Path,
+    path: bool,
+    config: bool,
+    output_id: str | None,
+    has_error: bool,
+    has_build: bool,
+    tmp_path: Path,
+    testing_config,
+):
+    with pytest.raises(ValueError) if has_error else nullcontext():
+        activation = debug(
+            str(recipe),
+            path=tmp_path if path else None,
+            config=testing_config if config else None,
+            output_id=output_id,
+        )
 
+    # if we expected an error there wont be anything else to test
+    if has_error:
+        return
 
-@pytest.mark.slow
-def test_debug_recipe_custom_path(testing_workdir):
-    activation_string = api.debug(recipe_path, path=testing_workdir)
-    assert activation_string and "debug_1" not in activation_string
-    _, work_dir, _, src_command, env_activation_script = activation_string.split()
-    _shell_cmd = shell_cmd + [' '.join((src_command, env_activation_script))]
-    subprocess.check_call(_shell_cmd, cwd=work_dir)
-    check_build_files_present(work_dir, True)
-    check_test_files_present(work_dir, False)
-    assert_correct_folders(work_dir)
+    # e.g.: activation = "cd /path/to/work && source /path/to/work/build_env_setup.sh"
+    _, work_dir, _, source, script = activation.split()
+    work_path = Path(work_dir)
 
+    # recipes and tarballs are installed into different locations
+    if recipe.suffixes[-2:] == [".tar", ".bz2"]:
+        assert work_path.name == "test_tmp"
+    elif path:
+        assert work_path.parent == tmp_path
+    else:
+        assert work_path.parent.name.startswith("debug_")
 
-def test_debug_package_custom_path(testing_workdir):
-    activation_string = api.debug(tarball_path, path=testing_workdir)
-    _, work_dir, _, src_command, env_activation_script = activation_string.split()
-    _shell_cmd = shell_cmd + [' '.join((src_command, env_activation_script))]
-    subprocess.check_call(_shell_cmd, cwd=work_dir)
-    check_build_files_present(work_dir, False)
-    check_test_files_present(work_dir, True)
-    assert_correct_folders(work_dir, build=False)
+    # check build files are present
+    name = "bld.bat" if on_win else "conda_build.sh"
+    assert (work_path / name).exists() is has_build
+    for prefix in ("_b*", "_h*"):
+        assert bool(next(work_path.parent.glob(prefix), False)) is has_build
 
+    # check test files are present
+    name = f"conda_test_runner{('.bat' if on_win else '.sh')}"
+    has_test = not has_build
+    assert (work_path / name).exists() is has_test
+    for prefix in ("_t*", "test_tmp"):
+        assert bool(next(work_path.parent.glob(prefix), False)) is has_test
 
-def test_specific_output():
-    activation_string = api.debug(ambiguous_recipe_path, output_id="output1*")
-    _, work_dir, _, src_command, env_activation_script = activation_string.split()
-    _shell_cmd = shell_cmd + [' '.join((src_command, env_activation_script))]
-    subprocess.check_call(_shell_cmd, cwd=work_dir)
-    check_build_files_present(work_dir, True)
-    check_test_files_present(work_dir, False)
-    assert_correct_folders(work_dir, build=True)
-
-
-@pytest.mark.sanity
-def test_error_on_ambiguous_output():
-    with pytest.raises(ValueError):
-        api.debug(ambiguous_recipe_path)
-
-
-@pytest.mark.sanity
-def test_error_on_unmatched_output():
-    with pytest.raises(ValueError):
-        api.debug(ambiguous_recipe_path, output_id="frank")
+    # ensure it's possible to activate the environment
+    subprocess.check_call([*SHELL_CMD, f"{source} {script}"], cwd=work_path)

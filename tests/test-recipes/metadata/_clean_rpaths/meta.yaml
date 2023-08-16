@@ -1,0 +1,32 @@
+package:
+  name: clean_rpaths
+  version: 0.0.1
+
+build:
+  number: 0
+  skip: True  # [not osx]
+  # Inheriting environment variables like this is a bit of an anti-pattern,
+  # but it's the best mechanism we currently have for allowing flexibility
+  # in where the macOS SDK needed for this test is installed.  Assuming or
+  # forcing developers and/or CI systems to put the needed SDK in the same
+  # place just to run this test seems like an even bigger anti-pattern.
+  script_env:
+    - CONDA_BUILD_SYSROOT
+  script:
+    - echo "int main(){}" > hello.c
+    - ${CC} hello.c -Wl,-rpath,${PREFIX}/lib -Wl,-rpath,${PREFIX}/lib -Wl,-rpath,${BUILD_PREFIX}/lib -Wl,-rpath,${SRC_DIR} -o hello
+    - mkdir -p ${PREFIX}/bin
+    - cp hello ${PREFIX}/bin
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+  host:
+  run:
+
+test:
+  requires:
+    - {{ compiler('c') }} 
+  commands:
+    - export CHECK_PREFIX=$(dirname {{ SRC_DIR }})
+    - ${OTOOL} -l ${PREFIX}/bin/hello | grep LC_RPATH -A 3 | grep -v ${CHECK_PREFIX}
