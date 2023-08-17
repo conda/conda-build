@@ -1,5 +1,23 @@
 [//]: # (current developments)
 
+## 3.26.11 (2023-08-17)
+
+### Bug fixes
+
+* Delay imports in conda command plugin until the command is used, avoiding
+  import-time side effects including unwanted logging config. (#4949)
+
+### Contributors
+
+* @beeankha
+* @conda-bot
+* @dholth
+* @jezdez
+* @kenodegard
+* @pre-commit-ci[bot]
+
+
+
 ## 3.26.0 (2023-07-18)
 
 ### Enhancements
