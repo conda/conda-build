@@ -1478,10 +1478,9 @@ explicitly in the script section:
          script: run_test.py
 
 
-Test requirements for subpackages are not supported. Instead,
-subpackage tests install their runtime requirements---but not the
-run requirements for the top-level package---and the test-time
-requirements of the top-level package.
+Test requirements for subpackages can be specified using the optional
+`test/requires` section of subpackage tests. Subpackage tests install
+their runtime requirements during the test as well.
 
 EXAMPLE: In this example, the test for ``subpackage-name``
 installs ``some-test-dep`` and ``subpackage-run-req``, but not
@@ -1493,16 +1492,15 @@ installs ``some-test-dep`` and ``subpackage-run-req``, but not
      run:
        - some-top-level-run-req
 
-   test:
-     requires:
-       - some-test-dep
-
    outputs:
      - name: subpackage-name
        requirements:
          - subpackage-run-req
        test:
          script: run_test.py
+         requires:
+           - some-test-dep
+
 
 
 Output type
