@@ -1749,7 +1749,7 @@ practice means changing the conda-build source code. See the
 <https://github.com/conda/conda-build/issues>`_.
 
 For more information, see the `Jinja2 template
-documentation <http://jinja.pocoo.org/docs/dev/templates/>`_
+documentation <https://jinja.palletsprojects.com/en/latest/templates/>`_
 and :ref:`the list of available environment
 variables <env-vars>`.
 
