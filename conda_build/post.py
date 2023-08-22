@@ -1691,27 +1691,29 @@ def check_menuinst_json(files, prefix):
     if not json_files:
         return
 
+    print("Validating Menu/*.json files")
+    log = utils.get_logger(__name__)
     try:
         from json import JSONDecodeError
 
-        from menuinst.schema import validate
+        from menuinst._schema import validate
         from pydantic import ValidationError
-    except ModuleNotFoundError:
-        print(
-            "Could not import menuinst and/or pydantic! "
-            "The following 'Menu/*.json' files were found but won't be validated!"
-            ", ".join(json_files)
+    except ModuleNotFoundError as exc:
+        log.warning(
+            "Found 'Menu/*.json' files but couldn't validate:%s",
+            ", ".join(json_files),
+            exc_info=exc,
         )
         return
-    for f in json_files:
+    for json_file in json_files:
         try:
-            validate(join(prefix, f))
-        except (ValidationError, JSONDecodeError) as e:
-            log = utils.get_logger(__name__)
+            validate(join(prefix, json_file))
+        except (ValidationError, JSONDecodeError) as exc:
             log.warning(
-                "! '%s' is not a valid menuinst JSON file! %s:\n%s", f, type(e), e
+                "'%s' is not a valid menuinst JSON file!",
+                json_file,
+                exc_info=exc,
             )
-
 
 def post_build(m, files, build_python, host_prefix=None, is_already_linked=False):
     print("number of files:", len(files))
