@@ -1715,6 +1715,7 @@ def check_menuinst_json(files, prefix):
                 exc_info=exc,
             )
 
+
 def post_build(m, files, build_python, host_prefix=None, is_already_linked=False):
     print("number of files:", len(files))
 
