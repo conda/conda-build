@@ -116,7 +116,7 @@ jobs:
             --file ./tests/requirements.txt \
             --file ./tests/requirements-linux.txt \
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
-          pip install -e .
+          pip install -e . --no-deps
 
       - name: Show info
         run: |
@@ -221,7 +221,7 @@ jobs:
             --file .\tests\requirements.txt `
             --file .\tests\requirements-windows.txt `
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
-          pip install -e .
+          pip install -e . --no-deps
 
       - name: Show info
         run: |
@@ -332,7 +332,7 @@ jobs:
             --file ./tests/requirements.txt \
             --file ./tests/requirements-macos.txt \
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
-          pip install -e .
+          pip install -e . --no-deps
 
       - name: Show info
         run: |
