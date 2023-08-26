@@ -13,7 +13,7 @@ CONDA := $(shell which conda)
 
 # Setup env for documents
 env-docs:
-	conda create --name $(DOC_ENV_NAME) --channel defaults python=$(PYTHON_VERSION) --yes
+	conda create --name $(DOC_ENV_NAME) --channel defaults python=$(PYTHON_VERSION) pip --yes
 	$(CONDA) run --name $(DOC_ENV_NAME) pip install -r ./docs/requirements.txt
 
 .PHONY: $(MAKECMDGOALS)

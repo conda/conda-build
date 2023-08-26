@@ -6,14 +6,26 @@ Conda package specification
    :local:
    :depth: 1
 
-A conda package is a bzipped tar archive---.tar.bz2---that
-contains:
+A conda package is an archive file that contains:
 
 * Metadata under the ``info/`` directory.
 * A collection of files that are installed directly into an
   install prefix.
 
-The format is identical across platforms and operating systems.
+There are currently two formats of archives that are supported:
+
+.. list-table::
+   :widths: 15 70
+
+   * - **Type**
+     - **Description**
+
+   * - .tar.bz2
+     - The original format of conda packages.  Is the default output of conda-build.
+   * - .conda
+     - 2nd Gen.  This is a more compact and thus faster. Can be outputed from conda-build by setting output in ``.condarc`` file.
+
+The formats are identical across platforms and operating systems.
 During the install process, all files are extracted into the
 install prefix, with the exception of the ones in ``info/``.
 Installing a conda package into an environment is similar to
@@ -47,7 +59,7 @@ file is stored in ``repodata.json``, which is the repository
 index file, hence the name ``index.json``. The JSON object is a
 dictionary containing the keys shown below. The filename of the
 conda package is composed of the first 3 values, as in:
-``<name>-<version>-<build>.tar.bz2``.
+``<name>-<version>-<build>.tar.bz2`` or ``<name>-<version>-<build>.conda``.
 
 .. list-table::
    :widths: 15 15 45

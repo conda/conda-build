@@ -109,6 +109,7 @@ Authors are sorted alphabetically.
 * John Omotani
 * Johnny
 * Jonathan J. Helmus
+* Jose Diaz-Gonzalez
 * Joseph Crail
 * Joseph Hunkeler
 * Juan Lasheras
@@ -169,6 +170,7 @@ Authors are sorted alphabetically.
 * Rachel Rigdon
 * Ray Donnelly
 * Remi Chateauneu
+* Riadh Fezzani
 * Riccardo Vianello
 * Richard Frank
 * Richard Hattersley

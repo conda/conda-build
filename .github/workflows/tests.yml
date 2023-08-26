@@ -116,7 +116,6 @@ jobs:
             --file ./tests/requirements.txt \
             --file ./tests/requirements-linux.txt \
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
-          pip install allure-pytest
           pip install -e .
 
       - name: Show info
@@ -222,7 +221,6 @@ jobs:
             --file .\tests\requirements.txt `
             --file .\tests\requirements-windows.txt `
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
-          pip install allure-pytest
           pip install -e .
 
       - name: Show info
@@ -334,7 +332,6 @@ jobs:
             --file ./tests/requirements.txt \
             --file ./tests/requirements-macos.txt \
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
-          pip install allure-pytest
           pip install -e .
 
       - name: Show info
@@ -455,11 +452,17 @@ jobs:
           clean: true
           fetch-depth: 0
 
+      # Explicitly use Python 3.11 since each of the OSes has a different default Python
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
       - name: Detect label
         shell: python
         run: |
           from pathlib import Path
           from re import match
+          from os import environ
 
           if "${{ github.ref_name }}" == "main":
               # main branch commits are uploaded to the dev label
@@ -473,10 +476,10 @@ jobs:
               _, name = "${{ github.repository }}".split("/")
               label = f"rc-{name}-${{ github.ref_name }}"
 
-          Path("${{ env.GITHUB_ENV }}").write_text(f"ANACONDA_ORG_LABEL={label}")
+          Path(environ["GITHUB_ENV"]).write_text(f"ANACONDA_ORG_LABEL={label}")
 
       - name: Create and upload canary build
-        uses: conda/actions/canary-release@v22.10.0
+        uses: conda/actions/canary-release@v23.7.0
         with:
           package-name: ${{ github.event.repository.name }}
           subdir: ${{ matrix.subdir }}
