@@ -292,6 +292,10 @@ parts:
      - Exact equality and not equalities.
      - ``==0.5.1`` matches 0.5.1 and not anything else while ``!=0.5.1`` matches everything but.
 
+   * - ~=
+     - Compatibility Release
+     - ``==0.5.1`` matches 0.5.1 and not anything else while ``!=0.5.1`` matches everything but.
+
    * - \|
      - OR
      - ``1.0|1.2`` matches version 1.0 or 1.2.
