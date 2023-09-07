@@ -792,12 +792,14 @@ def context_processor(
             skip_build_id=skip_build_id,
         ),
         compiler=partial(
-            _target, config=config,
+            _target,
+            config=config,
             permit_undefined_jinja=permit_undefined_jinja,
             component="compiler",
         ),
         stdlib=partial(
-            _target, config=config,
+            _target,
+            config=config,
             permit_undefined_jinja=permit_undefined_jinja,
             component="stdlib",
         ),
