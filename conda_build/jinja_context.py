@@ -494,7 +494,7 @@ def native_compiler(language, config):
     return compiler
 
 
-def _target(component, language, config, permit_undefined_jinja=False):
+def _target(language, config, permit_undefined_jinja=False, component="compiler"):
     """Support configuration of compilers/stdlib.  This is somewhat platform specific.
 
     Native compilers/stdlib never list their host - it is always implied.  Generally, they are
