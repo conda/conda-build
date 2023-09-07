@@ -213,7 +213,7 @@ def test_noarch_with_no_platform_deps(testing_workdir, testing_config):
 def test_setting_condarc_vars_with_env_var_expansion(testing_workdir):
     os.makedirs("config")
     # python won't be used - the stuff in the recipe folder will override it
-    python_versions = ["2.6", "3.4", "3.11"]
+    python_versions = ["2.6", "3.4", "3.11", "3.12"]
     config = {"python": python_versions, "bzip2": ["0.9", "1.0"]}
     with open(os.path.join("config", "conda_build_config.yaml"), "w") as f:
         yaml.dump(config, f, default_flow_style=False)
@@ -289,7 +289,7 @@ def test_pin_expression_works_with_prereleases(testing_config):
     ms = api.render(recipe, config=testing_config)
     assert len(ms) == 2
     m = next(m_[0] for m_ in ms if m_[0].meta["package"]["name"] == "bar")
-    assert "foo >=3.10.0.rc1,<3.11.0a0" in m.meta["requirements"]["run"]
+    assert "foo >=3.10.0.rc1,<3.12.0a0" in m.meta["requirements"]["run"]
 
 
 def test_pin_expression_works_with_python_prereleases(testing_config):
@@ -297,4 +297,4 @@ def test_pin_expression_works_with_python_prereleases(testing_config):
     ms = api.render(recipe, config=testing_config)
     assert len(ms) == 2
     m = next(m_[0] for m_ in ms if m_[0].meta["package"]["name"] == "bar")
-    assert "python >=3.10.0rc1,<3.11.0a0" in m.meta["requirements"]["run"]
+    assert "python >=3.10.0rc1,<3.12.0a0" in m.meta["requirements"]["run"]

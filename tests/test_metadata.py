@@ -175,10 +175,11 @@ def test_build_bootstrap_env_by_path(testing_metadata):
         ("win", "x86_64", "3.9", {"vs2017_win-x86_64"}),
         ("win", "x86_64", "3.10", {"vs2017_win-x86_64"}),
         ("win", "x86_64", "3.11", {"vs2017_win-x86_64"}),
-        ("linux", "32", "3.11", {"gcc_linux-32", "gxx_linux-32"}),
-        ("linux", "64", "3.11", {"gcc_linux-64", "gxx_linux-64"}),
-        ("osx", "32", "3.11", {"clang_osx-32", "clangxx_osx-32"}),
-        ("osx", "64", "3.11", {"clang_osx-64", "clangxx_osx-64"}),
+        ("win", "x86_64", "3.12", {"vs2017_win-x86_64"}),
+        ("linux", "32", "3.12", {"gcc_linux-32", "gxx_linux-32"}),
+        ("linux", "64", "3.12", {"gcc_linux-64", "gxx_linux-64"}),
+        ("osx", "32", "3.12", {"clang_osx-32", "clangxx_osx-32"}),
+        ("osx", "64", "3.12", {"clang_osx-64", "clangxx_osx-64"}),
     ],
 )
 def test_native_compiler_metadata(
