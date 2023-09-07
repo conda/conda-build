@@ -524,7 +524,7 @@ def _target(component, language, config, permit_undefined_jinja=False):
     package = f"{package_prefix}_{target_platform}"
     if version:
         package = f"{package} {version}"
-        pacakge = ensure_valid_spec(package, warn=False)
+        package = ensure_valid_spec(package, warn=False)
     return package
 
 
@@ -797,7 +797,7 @@ def context_processor(
             component="compiler",
         ),
         stdlib=partial(
-            _stdlib, config=config,
+            _target, config=config,
             permit_undefined_jinja=permit_undefined_jinja,
             component="stdlib",
         ),
