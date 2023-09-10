@@ -528,6 +528,10 @@ def _target(language, config, permit_undefined_jinja=False, component="compiler"
     return package
 
 
+# ensure we have compiler in namespace
+compiler = partial(_target, component="compiler")
+
+
 def ccache(method, config, permit_undefined_jinja=False):
     config.ccache_method = method
     return "ccache"
