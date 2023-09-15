@@ -306,7 +306,7 @@ parts:
 
    * - ~=
      - Compatibility Release
-     - ``==0.5.1`` matches 0.5.1 and not anything else while ``!=0.5.1`` matches everything but.
+     - ``~=0.5.3`` equivalent to say ``>=0.5.3, <0.6.0a``
 
    * - \|
      - OR
@@ -320,20 +320,11 @@ parts:
      - AND
      - ``>=2,<3`` matches all packages in the 2 series. |br| 2.0, 2.1, and 2.9 all match, but 3.0 and 1.0 do not.
 
-.. note::
+.. hint::
    ``,`` has higher precedence than \|, so >=1,<2|>3 means greater than or equal to 1 AND less than 2 or greater than 3, which matches 1, 1.3 and 3.0, but not 2.2.
 
 .. note::
    For package match specifications, pre-release versioning is also supported such that ``>1.0b4`` will match ``1.0b5`` and ``1.0rc1`` but not ``1.0b4`` or ``1.0a5``.
-
-EXAMPLES::
-  The build string constraint "numpy=1.11.2=*nomkl*" matches the
-  NumPy 1.11.2 packages without MKL but not the normal MKL NumPy
-  1.11.2 packages.
-
-  The build string constraint "numpy=1.11.1|1.11.3=py36_0" matches
-  NumPy 1.11.1 or 1.11.3 built for Python 3.6 but not any versions
-  of NumPy built for Python 3.5 or Python 2.7.
 
 Conda parses the version by splitting it into parts separated
 by \|. If the part begins with <, >, =, or !, it is parsed as a
@@ -346,9 +337,18 @@ string in the whole match specification. ``python >= 2.7`` is an
 invalid match specification. However, ``"python >= 2.7"`` (with double or single quotes) is
 matched as any version of a package named ``python>=2.7``.
 
+Examples of Package Specs
+-------------------------
+
+The build string constraint "numpy=1.11.2=*nomkl*" matches the NumPy 1.11.2 packages without MKL but not the normal MKL NumPy
+1.11.2 packages.
+
+The build string constraint "numpy=1.11.1|1.11.3=py36_0" matches NumPy 1.11.1 or 1.11.3 built for Python 3.6 but not any versions
+of NumPy built for Python 3.5 or Python 2.7.
+
+
 Command Line Match Spec Examples
 --------------------------------
-
 
 When using the command line, put double or single quotes around any package
 version specification that contains the space character or any of
