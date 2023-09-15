@@ -52,8 +52,7 @@ requirements:
     - six
     - tomli                        # [py<311]
     - tqdm
-    # New for JSON validation
-    - menuinst >=2.0a0
+    - menuinst >=2
     - pydantic <2.0a0
   run_constrained:
     - conda-verify  >=3.1.0

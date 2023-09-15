@@ -38,4 +38,4 @@ tomli
 tqdm
 # NEW for menuinst validation
 pydantic <2.0a0
-conda-canary/label/dev::menuinst >=2.0.0a0
+conda-forge::menuinst >=2
