@@ -63,7 +63,10 @@ except Exception:
 
 import urllib.parse as urlparse
 import urllib.request as urllib
-from glob import glob as glob_glob
+
+# NOQA because it is not used in this file.
+from contextlib import ExitStack  # NOQA
+from glob import glob
 
 from conda.api import PackageCacheData  # noqa
 
@@ -90,15 +93,6 @@ from .conda_interface import (  # noqa
     unix_path_to_win,
     win_path_to_unix,
 )
-
-
-# stdlib glob is less feature-rich but considerably faster than glob2
-def glob(pathname, recursive=True):
-    return glob_glob(pathname, recursive=recursive)
-
-
-# NOQA because it is not used in this file.
-from contextlib import ExitStack  # NOQA
 
 PermissionError = PermissionError  # NOQA
 FileNotFoundError = FileNotFoundError
@@ -1035,7 +1029,7 @@ def get_stdlib_dir(prefix, py_ver):
         lib_dir = os.path.join(prefix, "Lib")
     else:
         lib_dir = os.path.join(prefix, "lib")
-        python_folder = glob(os.path.join(lib_dir, "python?.*"))
+        python_folder = glob(os.path.join(lib_dir, "python?.*"), recursive=True)
         python_folder = sorted(filterfalse(islink, python_folder))
         if python_folder:
             lib_dir = os.path.join(lib_dir, python_folder[0])
@@ -1050,7 +1044,7 @@ def get_site_packages(prefix, py_ver):
 
 def get_build_folders(croot):
     # remember, glob is not a regex.
-    return glob(os.path.join(croot, "*" + "[0-9]" * 10 + "*"))
+    return glob(os.path.join(croot, "*" + "[0-9]" * 10 + "*"), recursive=True)
 
 
 def prepend_bin_path(env, prefix, prepend_prefix=False):
@@ -1083,7 +1077,7 @@ def sys_path_prepended(prefix):
         sys.path.insert(1, os.path.join(prefix, "lib", "site-packages"))
     else:
         lib_dir = os.path.join(prefix, "lib")
-        python_dir = glob(os.path.join(lib_dir, r"python[0-9\.]*"))
+        python_dir = glob(os.path.join(lib_dir, r"python[0-9\.]*"), recursive=True)
         if python_dir:
             python_dir = python_dir[0]
             sys.path.insert(1, os.path.join(python_dir, "site-packages"))
@@ -1325,7 +1319,7 @@ def expand_globs(path_list, root_dir):
                         files.append(os.path.join(root, folder))
         else:
             # File compared to the globs use / as separator independently of the os
-            glob_files = glob(path)
+            glob_files = glob(path, recursive=True)
             if not glob_files:
                 log = get_logger(__name__)
                 log.error(f"Glob {path} did not match in root_dir {root_dir}")
@@ -1455,7 +1449,7 @@ def get_installed_packages(path):
     Files are assumed to be in 'index.json' format.
     """
     installed = dict()
-    for filename in glob(os.path.join(path, "conda-meta", "*.json")):
+    for filename in glob(os.path.join(path, "conda-meta", "*.json"), recursive=True):
         with open(filename) as file:
             data = json.load(file)
             installed[data["name"]] = data

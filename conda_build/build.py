@@ -25,7 +25,6 @@ from collections import OrderedDict, deque
 from os.path import dirname, isdir, isfile, islink, join
 
 import conda_package_handling.api
-import glob2
 import yaml
 from bs4 import UnicodeDammit
 from conda import __version__ as conda_version
@@ -1205,10 +1204,7 @@ def get_files_with_prefix(m, replacements, files_in, prefix):
                 files=[
                     f
                     for f in files
-                    if any(
-                        glob2.fnmatch.fnmatch(f, r)
-                        for r in replacement["glob_patterns"]
-                    )
+                    if any(fnmatch.fnmatch(f, r) for r in replacement["glob_patterns"])
                 ],
                 prefix=prefix,
                 tag=replacement["tag"],
