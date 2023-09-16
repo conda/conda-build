@@ -13,6 +13,7 @@ To enable building conda packages:
 
 Way of working
 ==============
+
 For proper functioning, it is strongly recommended to install conda-build in
 the conda ``base`` environment. Not doing so may lead to problems.
 
