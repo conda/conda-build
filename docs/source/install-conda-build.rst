@@ -21,14 +21,14 @@ the conda ``base`` environment. Not doing so may lead to problems.
 With earlier conda / conda-build versions, it was possible to build packages in
 your own defined environment, e.g. ``my_build_env``. This was partly driven by
 the general conda recommendation not to use the ``base`` env for normal work;
-see `Conda Managing Environments`_ for instance. However conda-build is better
+see `Conda Managing Environments`_ for instance. However, conda-build is better
 viewed as part of the conda infrastructure, and not as a normal package. Hence,
 installing it in the ``base`` env makes more sense. More information:
 `Must conda-build be installed in the base envt?`_
 
 **Other considerations**
 
-* An installiion or update of conda-build (in fact, of any package) in the ``base``
+* An installation or update of conda-build (in fact, of any package) in the ``base``
   environment needs to be run from an account with the proper permissions
   (i.e., the same permissions as were used to install conda and the base env in
   the first place via the Miniconda or Anaconda installers). For example, on
@@ -38,8 +38,8 @@ installing it in the ``base`` env makes more sense. More information:
   environment in order to remove some warnings generated when conda-build runs.
 
 * For critical CI/CD projects, you might want to pin to an explicit (but recent)
-  version of conda-build, i.e. only update to a newer version of conda-build,
-  and conda, once they have been first verified 'offline'.
+  version of conda-build, i.e. only update to a newer version of conda-build
+  and conda once they have been first verified "offline".
 
 
 .. _install-conda-build:
