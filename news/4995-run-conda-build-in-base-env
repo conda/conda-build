@@ -12,7 +12,7 @@
 
 ### Docs
 
-* conda-build should be run from the base env (#4995)
+* Add explanation that conda-build should be run from the base env. (#4995)
 
 ### Other
 

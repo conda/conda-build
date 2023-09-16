@@ -17,7 +17,8 @@ Way of working
 For proper functioning, it is strongly recommended to install conda-build in
 the conda ``base`` environment. Not doing so may lead to problems.
 
-**Explanation**
+Explanation
+-----------
 
 With earlier conda / conda-build versions, it was possible to build packages in
 your own defined environment, e.g. ``my_build_env``. This was partly driven by
@@ -27,7 +28,8 @@ viewed as part of the conda infrastructure, and not as a normal package. Hence,
 installing it in the ``base`` env makes more sense. More information:
 `Must conda-build be installed in the base envt?`_
 
-**Other considerations**
+Other considerations
+--------------------
 
 * An installation or update of conda-build (in fact, of any package) in the ``base``
   environment needs to be run from an account with the proper permissions
