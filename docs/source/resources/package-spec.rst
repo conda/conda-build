@@ -286,7 +286,7 @@ parts:
   characters. See table below.
 
 * The third part is always the exact build string. When there are
-  3 parts, the second part must be the exact version.
+  three parts, the second part must be the exact version.
 
 .. list-table:: Version Special Characters
    :widths: 10, 40, 40
