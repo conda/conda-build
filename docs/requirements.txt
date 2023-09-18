@@ -4,7 +4,7 @@ Pillow==9.3.0
 PyYAML==6.0.1
 requests==2.31.0
 ruamel.yaml==0.17.16
-Sphinx==4.2.0
+Sphinx==7.2.6
 sphinx-argparse==0.3.1
 sphinx-autobuild==2021.3.14
 sphinx-rtd-theme==1.0.0
