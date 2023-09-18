@@ -992,9 +992,10 @@ words, a Python package would list ``python`` here and an R package would list
 
 The PREFIX environment variable points to the host prefix. With respect to
 activation during builds, both the host and build environments are activated.
-The build prefix is activated before the host prefix so that the host prefix
-has priority over the build prefix. Executables that don't exist in the host
-prefix should be found in the build prefix.
+The build prefix is activated *after* the host prefix so that the build prefix,
+which always contains native executables for the running platform, has priority
+over the host prefix, which is not guaranteed to provide native executables (e.g.
+when cross-compiling).
 
 As of conda-build 3.1.4, the build and host prefixes are always separate when
 both are defined, or when ``{{ compiler() }}`` Jinja2 functions are used. The
