@@ -127,7 +127,7 @@ conda package is composed of the first 3 values, as in:
        Packages for a specific architecture and platform are usually distinguished by the repository subdirectory that contains
        them.
 
-       --see :ref:`repo-si`.
+       See :ref:`repo-si`.
 
 info/files
 ----------
