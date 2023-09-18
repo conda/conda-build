@@ -283,7 +283,7 @@ parts:
 * The first part is always the exact name of the package.
 
 * The second part refers to the version and may contain special
-  characters.  See table below.
+  characters. See table below.
 
 * The third part is always the exact build string. When there are
   3 parts, the second part must be the exact version.
