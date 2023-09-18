@@ -308,7 +308,7 @@ parts:
 
    * - ~=
      - Compatibility Release
-     - ``~=0.5.3`` equivalent to say ``>=0.5.3, <0.6.0a``
+     - ``~=0.5.3`` is equivalent to ``>=0.5.3, <0.6.0a``
 
    * - \|
      - OR
