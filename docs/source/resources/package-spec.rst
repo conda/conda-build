@@ -95,15 +95,13 @@ conda package is composed of the first 3 values, as in:
 
    * - build_number
      - integer
-     - A non-negative integer representing the build number of
-       the package.
+     - A non-negative integer representing the build number of the package.
 
-       Unlike the build string, the ``build_number`` is inspected by
-       conda. Conda uses |br| it to sort packages that have otherwise
-       identical names and versions |br| to determine the latest one.
-       This is important because new builds that |br| contain bug
-       fixes for the way a package is built may be added to a
-       repository.
+       Unlike the build string, the ``build_number`` is inspected by conda.
+
+       Conda uses it to sort packages that have otherwise identical names and versions to determine the latest one.
+
+       This is important because new builds that contain bug fixes for the way a package is built may be added to a repository.
 
    * - depends
      - list of strings
@@ -124,10 +122,12 @@ conda package is composed of the first 3 values, as in:
 
        EXAMPLE: ``osx``
 
-       Conda currently does not use this key. Packages for a
-       specific architecture and platform are |br| usually
-       distinguished by the repository subdirectory that contains
-       them---see :ref:`repo-si`.
+       Conda currently does not use this key.
+
+       Packages for a specific architecture and platform are usually distinguished by the repository subdirectory that contains
+       them.
+
+       --see :ref:`repo-si`.
 
 info/files
 ----------
@@ -297,7 +297,9 @@ parts:
      - Example
 
    * - <, >, <=, >=
-     - Relational operators on versions, |br| which are compared using `PEP-440 <https://www.python.org/dev/peps/pep-0440/>`_.
+     - Relational operators on versions,
+
+       which are compared using `PEP-440 <https://www.python.org/dev/peps/pep-0440/>`_.
      - ``<=1.0`` matches 0.9, 0.9.1, and 1.0, but not 1.0.1.
 
    * - ==, and !=
@@ -313,12 +315,16 @@ parts:
      - ``1.0|1.2`` matches version 1.0 or 1.2.
 
    * - \*
-     - Matches 0 or more characters in the version string. |br| In terms of regular expressions, it is the same as ``r'.*'``.
+     - Matches 0 or more characters in the version string.
+
+       In terms of regular expressions, it is the same as ``r'.*'``.
      - ``1.0|1.4*`` matches 1.0, 1.4 and 1.4.1b2, but not 1.2.
 
    * - ,
      - AND
-     - ``>=2,<3`` matches all packages in the 2 series. |br| 2.0, 2.1, and 2.9 all match, but 3.0 and 1.0 do not.
+     - ``>=2,<3`` matches all packages in the 2 series.
+
+       2.0, 2.1, and 2.9 all match, but 3.0 and 1.0 do not.
 
 .. hint::
    ``,`` has higher precedence than \|, so >=1,<2|>3 means greater than or equal to 1 AND less than 2 or greater than 3, which matches 1, 1.3 and 3.0, but not 2.2.
@@ -346,6 +352,19 @@ The build string constraint "numpy=1.11.2=*nomkl*" matches the NumPy 1.11.2 pack
 The build string constraint "numpy=1.11.1|1.11.3=py36_0" matches NumPy 1.11.1 or 1.11.3 built for Python 3.6 but not any versions
 of NumPy built for Python 3.5 or Python 2.7.
 
+The following are all valid match specifications for
+numpy-1.8.1-py27_0:
+
+* numpy
+* numpy 1.8*
+* numpy 1.8.1
+* numpy >=1.8
+* numpy ==1.8.1
+* numpy 1.8|1.8*
+* numpy >=1.8,<2
+* numpy >=1.8,<2|1.9
+* numpy 1.8.1 py27_0
+* numpy=1.8.1=py27_0
 
 Command Line Match Spec Examples
 --------------------------------
@@ -375,21 +394,3 @@ the following characters: <, >, \*, or \|.
 
    * - conda install "numpy>=1.8,<2"
      - The AND constraint "numpy>=1.8,<2" matches with 1.8 and 1.9 but not 2.0.
-
-The following are all valid match specifications for
-numpy-1.8.1-py27_0:
-
-* numpy
-* numpy 1.8*
-* numpy 1.8.1
-* numpy >=1.8
-* numpy ==1.8.1
-* numpy 1.8|1.8*
-* numpy >=1.8,<2
-* numpy >=1.8,<2|1.9
-* numpy 1.8.1 py27_0
-* numpy=1.8.1=py27_0
-
-.. |br| raw:: html
-
-      <br>
