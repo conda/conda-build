@@ -349,7 +349,7 @@ Examples of Package Specs
 The build string constraint "numpy=1.11.2=*nomkl*" matches the NumPy 1.11.2 packages without MKL, but not the normal MKL NumPy
 1.11.2 packages.
 
-The build string constraint "numpy=1.11.1|1.11.3=py36_0" matches NumPy 1.11.1 or 1.11.3 built for Python 3.6 but not any versions
+The build string constraint "numpy=1.11.1|1.11.3=py36_0" matches NumPy 1.11.1 or 1.11.3 built for Python 3.6, but not any versions
 of NumPy built for Python 3.5 or Python 2.7.
 
 The following are all valid match specifications for
