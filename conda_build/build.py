@@ -1202,9 +1202,12 @@ def get_files_with_prefix(m, replacements, files_in, prefix):
         for index, replacement in enumerate(replacements):
             all_matches = have_regex_files(
                 files=[
-                    f
-                    for f in files
-                    if any(fnmatch.fnmatch(f, r) for r in replacement["glob_patterns"])
+                    file
+                    for file in files
+                    if any(
+                        fnmatch.fnmatch(file, pattern)
+                        for pattern in replacement["glob_patterns"]
+                    )
                 ],
                 prefix=prefix,
                 tag=replacement["tag"],
