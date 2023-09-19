@@ -64,8 +64,7 @@ except Exception:
 import urllib.parse as urlparse
 import urllib.request as urllib
 
-# NOQA because it is not used in this file.
-from contextlib import ExitStack  # NOQA
+from contextlib import ExitStack  # noqa: F401
 from glob import glob
 
 from conda.api import PackageCacheData  # noqa
