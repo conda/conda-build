@@ -63,7 +63,6 @@ except Exception:
 
 import urllib.parse as urlparse
 import urllib.request as urllib
-
 from contextlib import ExitStack  # noqa: F401
 from glob import glob
 
