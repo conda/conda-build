@@ -28,7 +28,7 @@ from conda_build.skeletons.pypi import (
 from conda_build.utils import on_win
 from conda_build.version import _parse as parse_version
 
-SYMPY_URL = "https://files.pythonhosted.org/packages/7d/23/70fa970c07f0960f7543af982d2554be805e1034b9dcee9cb3082ce80f80/sympy-1.10.tar.gz"
+SYMPY_URL = "https://files.pythonhosted.org/packages/7d/23/70fa970c07f0960f7543af982d2554be805e1034b9dcee9cb3082ce80f80/sympy-1.10.tar.gz#sha256=6cf85a5cfe8fff69553e745b05128de6fc8de8f291965c63871c79701dc6efc9"
 
 PYLINT_VERSION = "2.3.1"
 PYLINT_HASH_TYPE = "sha256"
