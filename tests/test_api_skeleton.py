@@ -33,12 +33,15 @@ SYMPY_URL = "https://files.pythonhosted.org/packages/7d/23/70fa970c07f0960f7543a
 PYLINT_VERSION = "2.3.1"
 PYLINT_HASH_TYPE = "sha256"
 PYLINT_HASH_VALUE = "723e3db49555abaf9bf79dc474c6b9e2935ad82230b10c1138a71ea41ac0fff1"
-PYLINT_HASH_VALUE_BLAKE2 = "018b538911c0ebc2529f15004f4cb07e3ca562bb9aacea5df89cc25b62e01891"
+PYLINT_HASH_VALUE_BLAKE2 = (
+    "018b538911c0ebc2529f15004f4cb07e3ca562bb9aacea5df89cc25b62e01891"
+)
 PYLINT_FILENAME = f"pylint-{PYLINT_VERSION}.tar.gz"
 PYLINT_URL = f"https://files.pythonhosted.org/packages/{PYLINT_HASH_VALUE_BLAKE2[:2]}/{PYLINT_HASH_VALUE_BLAKE2[2:4]}/{PYLINT_HASH_VALUE_BLAKE2[4:]}/{PYLINT_FILENAME}"
 
 # https://files.pythonhosted.org/packages/01/8b/538911c0ebc2529f15004f4cb07e3ca562bb9aacea5df89cc25b62e01891/pylint-2.3.1.tar.gz
 # https://files.pythonhosted.org/packages/01/8/538911c0ebc2529f15004f4cb07e3ca562bb9aacea5df89cc25b62e01891/pylint-2.3.1.tar.gz
+
 
 @pytest.fixture
 def mock_metadata():
