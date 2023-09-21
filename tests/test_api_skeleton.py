@@ -39,9 +39,6 @@ PYLINT_HASH_VALUE_BLAKE2 = (
 PYLINT_FILENAME = f"pylint-{PYLINT_VERSION}.tar.gz"
 PYLINT_URL = f"https://files.pythonhosted.org/packages/{PYLINT_HASH_VALUE_BLAKE2[:2]}/{PYLINT_HASH_VALUE_BLAKE2[2:4]}/{PYLINT_HASH_VALUE_BLAKE2[4:]}/{PYLINT_FILENAME}"
 
-# https://files.pythonhosted.org/packages/01/8b/538911c0ebc2529f15004f4cb07e3ca562bb9aacea5df89cc25b62e01891/pylint-2.3.1.tar.gz
-# https://files.pythonhosted.org/packages/01/8/538911c0ebc2529f15004f4cb07e3ca562bb9aacea5df89cc25b62e01891/pylint-2.3.1.tar.gz
-
 
 @pytest.fixture
 def mock_metadata():
