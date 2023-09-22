@@ -2773,7 +2773,7 @@ https://conda.io/docs/user-guide/tasks/build-packages/define-metadata.html#host
 * pyldd: disambiguate java .class files from Mach-O fat files (same magic number)  #2328
 * fix hash regex for downloaded files in `src_cache`  #2330
 * fix `zip_keys` becoming a loop dimension when variants passed as object rather than loaded from file  #2333
-* fix windows always warning about old compiler activation.  Now only warns if {{ compiler() }} is not used.  #2333
+* fix windows always warning about old compiler activation.  Now only warns if `{{ compiler() }}` is not used.  #2333
 * Add `LD_RUN_PATH` back into Linux variables for now (may remove later, but will have deprecation cycle)  #2334
 
 ### Contributors
