@@ -27,6 +27,7 @@ from conda_build.utils import (
     find_recipe,
     get_installed_packages,
     insert_variant_versions,
+    DEFAULT_SUBDIRS,
 )
 
 from .conda_interface import MatchSpec, envs_dirs, md5_file, non_x86_linux_machines
@@ -121,24 +122,28 @@ def get_selectors(config: Config) -> dict[str, bool]:
     # Remember to update the docs of any of this changes
     plat = config.host_subdir
     d = dict(
-        linux=plat.startswith("linux-"),
         linux32=bool(plat == "linux-32"),
         linux64=bool(plat == "linux-64"),
-        emscripten=plat.startswith("emscripten-"),
-        wasi=plat.startswith("wasi-"),
-        arm=plat.startswith("linux-arm"),
-        osx=plat.startswith("osx-"),
         unix=plat.startswith(("linux-", "osx-", "emscripten-")),
-        win=plat.startswith("win-"),
         win32=bool(plat == "win-32"),
         win64=bool(plat == "win-64"),
-        x86=plat.endswith(("-32", "-64")),
-        x86_64=plat.endswith("-64"),
-        wasm32=bool(plat.endswith("-wasm32")),
         os=os,
         environ=os.environ,
         nomkl=bool(int(os.environ.get("FEATURE_NOMKL", False))),
     )
+
+    subdirs = [subdir for subdir in DEFAULT_SUBDIRS if subdir != "noarch"]
+    subdir_oses = set([subdir.split("-")[0] for subdir in DEFAULT_SUBDIRS])
+    subdir_archs = set([subdir.split("-")[1] for subdir in DEFAULT_SUBDIRS])
+
+    for os in subdir_oses:
+        d[os] = plat.startswith(f"{os}-")
+
+    for arch in subdir_arches:
+        arch_full = ARCH_MAP.get(arch, arch)
+        d[arch_full] = plat.endswith(f"-{arch}")
+        if arch == "32":
+            d["x86"] = plat.endswith(("-32", "-64"))
 
     defaults = variants.get_default_variant(config)
     py = config.variant.get("python", defaults["python"])
