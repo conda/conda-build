@@ -2607,6 +2607,7 @@ def build(
 
         utils.rm_rf(m.config.info_dir)
         files1 = utils.prefix_files(prefix=m.config.host_prefix)
+        os.makedirs(m.config.build_folder, exist_ok=True)
         with open(join(m.config.build_folder, "prefix_files.txt"), "w") as f:
             f.write("\n".join(sorted(list(files1))))
             f.write("\n")
