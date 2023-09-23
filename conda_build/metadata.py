@@ -136,8 +136,8 @@ def get_selectors(config: Config) -> dict[str, bool]:
     subdir_oses = set([subdir.split("-")[0] for subdir in DEFAULT_SUBDIRS])
     subdir_archs = set([subdir.split("-")[1] for subdir in DEFAULT_SUBDIRS])
 
-    for os in subdir_oses:
-        d[os] = plat.startswith(f"{os}-")
+    for subdir_os in subdir_oses:
+        d[subdir_os] = plat.startswith(f"{subdir_os}-")
 
     for arch in subdir_arches:
         arch_full = ARCH_MAP.get(arch, arch)
