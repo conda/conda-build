@@ -61,14 +61,13 @@ except Exception:
     CONDA_PACKAGE_EXTENSION_V2 = ".conda"
     CONDA_PACKAGE_EXTENSIONS = (CONDA_PACKAGE_EXTENSION_V2, CONDA_PACKAGE_EXTENSION_V1)
 
-from conda.base.constants import KNOWN_SUBDIRS
-
 import urllib.parse as urlparse
 import urllib.request as urllib
 from contextlib import ExitStack  # noqa: F401
 from glob import glob
 
 from conda.api import PackageCacheData  # noqa
+from conda.base.constants import KNOWN_SUBDIRS
 
 # NOQA because it is not used in this file.
 from conda_build.conda_interface import rm_rf as _rm_rf  # noqa

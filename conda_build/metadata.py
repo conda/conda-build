@@ -21,13 +21,13 @@ from conda_build.config import Config, get_or_merge_config
 from conda_build.features import feature_list
 from conda_build.license_family import ensure_valid_license_family
 from conda_build.utils import (
+    DEFAULT_SUBDIRS,
     HashableDict,
     ensure_list,
     expand_globs,
     find_recipe,
     get_installed_packages,
     insert_variant_versions,
-    DEFAULT_SUBDIRS,
 )
 
 from .conda_interface import MatchSpec, envs_dirs, md5_file, non_x86_linux_machines
@@ -133,8 +133,8 @@ def get_selectors(config: Config) -> dict[str, bool]:
     )
 
     subdirs = [subdir for subdir in DEFAULT_SUBDIRS if subdir != "noarch"]
-    subdir_oses = set([subdir.split("-")[0] for subdir in subdirs])
-    subdir_archs = set([subdir.split("-")[1] for subdir in subdirs])
+    subdir_oses = {subdir.split("-")[0] for subdir in subdirs}
+    subdir_archs = {subdir.split("-")[1] for subdir in subdirs}
 
     for subdir_os in subdir_oses:
         d[subdir_os] = plat.startswith(f"{subdir_os}-")
