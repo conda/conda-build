@@ -133,13 +133,13 @@ def get_selectors(config: Config) -> dict[str, bool]:
     )
 
     subdirs = [subdir for subdir in DEFAULT_SUBDIRS if subdir != "noarch"]
-    subdir_oses = set([subdir.split("-")[0] for subdir in DEFAULT_SUBDIRS])
-    subdir_archs = set([subdir.split("-")[1] for subdir in DEFAULT_SUBDIRS])
+    subdir_oses = set([subdir.split("-")[0] for subdir in subdirs])
+    subdir_archs = set([subdir.split("-")[1] for subdir in subdirs])
 
     for subdir_os in subdir_oses:
         d[subdir_os] = plat.startswith(f"{subdir_os}-")
 
-    for arch in subdir_arches:
+    for arch in subdir_archs:
         arch_full = ARCH_MAP.get(arch, arch)
         d[arch_full] = plat.endswith(f"-{arch}")
         if arch == "32":
