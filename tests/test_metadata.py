@@ -216,10 +216,10 @@ def test_compiler_metadata_cross_compiler():
 @pytest.mark.parametrize(
     "platform,arch,stdlibs",
     [
-        ("linux", "64", {"sysroot_linux-64 2.12"}),
-        ("linux", "aarch64", {"sysroot_linux-64 2.17"}),
-        ("osx", "64", {"macosx_deployment_target_osx-64 10.13"}),
-        ("osx", "arm64", {"macosx_deployment_target_osx-arm64 11.0"}),
+        ("linux", "64", {"sysroot_linux-64 2.12.*"}),
+        ("linux", "aarch64", {"sysroot_linux-aarch64 2.17.*"}),
+        ("osx", "64", {"macosx_deployment_target_osx-64 10.13.*"}),
+        ("osx", "arm64", {"macosx_deployment_target_osx-arm64 11.0.*"}),
     ],
 )
 def test_native_stdlib_metadata(
