@@ -213,6 +213,31 @@ def test_compiler_metadata_cross_compiler():
     )
 
 
+@pytest.mark.parametrize(
+    "platform,arch,stdlibs",
+    [
+        ("linux", "64", {"sysroot_linux-64 2.12"}),
+        ("linux", "aarch64", {"sysroot_linux-64 2.17"}),
+        ("osx", "64", {"macosx_deployment_target_osx-64 10.13"}),
+        ("osx", "arm64", {"macosx_deployment_target_osx-arm64 11.0"}),
+    ],
+)
+def test_native_stdlib_metadata(
+    platform: str, arch: str, stdlibs: set[str], testing_config
+):
+    testing_config.platform = platform
+    metadata = api.render(
+        os.path.join(metadata_dir, "_stdlib_jinja2"),
+        config=testing_config,
+        variants={"target_platform": f"{platform}-{arch}"},
+        permit_unsatisfiable_variants=True,
+        finalize=False,
+        bypass_env_check=True,
+        python="3.11",  # irrelevant
+    )[0][0]
+    assert stdlibs <= set(metadata.meta["requirements"]["host"])
+
+
 def test_hash_build_id(testing_metadata):
     testing_metadata.config.variant["zlib"] = "1.2"
     testing_metadata.meta["requirements"]["host"] = ["zlib"]
