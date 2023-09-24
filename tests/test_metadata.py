@@ -230,6 +230,8 @@ def test_native_stdlib_metadata(
         os.path.join(metadata_dir, "_stdlib_jinja2"),
         config=testing_config,
         variants={"target_platform": f"{platform}-{arch}"},
+        platform=platform,
+        arch=arch,
         permit_unsatisfiable_variants=True,
         finalize=False,
         bypass_env_check=True,
