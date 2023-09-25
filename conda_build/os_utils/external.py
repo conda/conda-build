@@ -3,9 +3,8 @@
 import os
 import stat
 import sys
+from glob import glob
 from os.path import expanduser, isfile, join
-
-from glob2 import glob
 
 from conda_build.conda_interface import root_dir
 
@@ -55,7 +54,7 @@ def find_executable(executable, prefix=None, all_matches=False):
                         result = path
                         break
         if not result and any([f in executable for f in ("*", "?", ".")]):
-            matches = glob(os.path.join(dir_path, executable))
+            matches = glob(os.path.join(dir_path, executable), recursive=True)
             if matches:
                 if all_matches:
                     all_matches_found.extend(matches)

@@ -4,6 +4,7 @@ import argparse
 import logging
 import sys
 import warnings
+from glob import glob
 from itertools import chain
 from os.path import abspath, expanduser, expandvars
 from pathlib import Path
@@ -11,7 +12,6 @@ from pathlib import Path
 import filelock
 from conda.auxlib.ish import dals
 from conda.common.io import dashlist
-from glob2 import glob
 
 from .. import api, build, source, utils
 from ..conda_interface import add_parser_channels, binstar_upload, cc_conda_build
@@ -542,7 +542,7 @@ def execute(args):
         outputs = []
         failed_recipes = []
         recipes = chain.from_iterable(
-            glob(abspath(recipe)) if "*" in recipe else [recipe]
+            glob(abspath(recipe), recursive=True) if "*" in recipe else [recipe]
             for recipe in args.recipe
         )
         for recipe in recipes:

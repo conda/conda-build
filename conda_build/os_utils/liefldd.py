@@ -11,10 +11,9 @@ import os
 import struct
 import sys
 import threading
+from fnmatch import fnmatch
 from functools import partial
 from subprocess import PIPE, Popen
-
-import glob2
 
 from .external import find_executable
 
@@ -146,7 +145,7 @@ def _set_elf_rpathy_thing(binary, old_matching, new_rpath, set_rpath, set_runpat
         if (
             set_runpath
             and e.tag == lief.ELF.DYNAMIC_TAGS.RUNPATH
-            and glob2.fnmatch.fnmatch(e.runpath, old_matching)
+            and fnmatch(e.runpath, old_matching)
             and e.runpath != new_rpath
         ):
             e.runpath = new_rpath
@@ -154,7 +153,7 @@ def _set_elf_rpathy_thing(binary, old_matching, new_rpath, set_rpath, set_runpat
         elif (
             set_rpath
             and e.tag == lief.ELF.DYNAMIC_TAGS.RPATH
-            and glob2.fnmatch.fnmatch(e.rpath, old_matching)
+            and fnmatch(e.rpath, old_matching)
             and e.rpath != new_rpath
         ):
             e.rpath = new_rpath
