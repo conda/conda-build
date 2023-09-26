@@ -56,6 +56,7 @@ Authors are sorted alphabetically.
 * Darren Dale
 * Dave Clements
 * Dave Hirschfeld
+* Dave Karetnyk
 * David Froger
 * David Li
 * Derek Ludwig
@@ -89,6 +90,7 @@ Authors are sorted alphabetically.
 * Ilan Schnell
 * Isuru Fernando
 * Ivan Kalev
+* Jack Olivieri
 * Jacob Walls
 * Jaime Rodríguez-Guerra
 * James Abbott
@@ -193,6 +195,7 @@ Authors are sorted alphabetically.
 * Sergio Oller
 * Serhii Kupriienko
 * Shaun Walbridge
+* Shaun Walbridge
 * Siu Kwan Lam
 * Sophia Castellarin
 * Sophian Guidara
@@ -226,6 +229,7 @@ Authors are sorted alphabetically.
 * Vlad Frolov
 * Wes Turner
 * Wim Glenn
+* Wolf Vollprecht
 * Wolfgang Ulmer
 * Yann
 * Yoav Ram
