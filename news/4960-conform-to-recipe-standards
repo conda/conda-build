@@ -8,7 +8,7 @@
 
 ### Deprecations
 
-* When templating new recipes from a pypi package, the build script `{{ PYTHON }} -m pip install . -vv` is deprecated in favor of `{{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation`. (#4960)
+* When templating new recipes from a PyPI package, the build script `{{ PYTHON }} -m pip install . -vv` is deprecated in favor of `{{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation`. (#4960)
 
 ### Docs
 

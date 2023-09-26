@@ -4,8 +4,7 @@
 
 ### Bug fixes
 
-* Delay imports in conda command plugin until the command is used, avoiding
-  import-time side effects. (#4949)
+* Delay imports in conda command plugin until the command is used, avoiding import-time side effects. (#4949)
 
 ### Deprecations
 
