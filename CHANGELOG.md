@@ -26,15 +26,15 @@
 * @beeankha
 * @conda-bot
 * @dholth
-* @DaveKaretnyk
-* @boldorider4
+* @DaveKaretnyk made their first contribution in https://github.com/conda/conda-build/pull/5004
+* @boldorider4 made their first contribution in https://github.com/conda/conda-build/pull/4960
 * @jaimergp
 * @jezdez
 * @jugmac00
 * @kenodegard
 * @ryanskeith
-* @scdub
-* @wolfv
+* @scdub made their first contribution in https://github.com/conda/conda-build/pull/4965
+* @wolfv made their first contribution in https://github.com/conda/conda-build/pull/4813
 * @dependabot[bot]
 * @pre-commit-ci[bot]
 
