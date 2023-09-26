@@ -1294,6 +1294,8 @@
   first_commit: 2022-04-18 12:03:05
 - name: Jürgen Gmach
   email: juergen.gmach@googlemail.com
+  alternate_emails:
+  - juergen.gmach@canonical.com
   github: jugmac00
   num_commits: 2
   first_commit: 2022-05-31 07:52:17
@@ -1393,3 +1395,15 @@
   github: josegonzalez
   num_commits: 1
   first_commit: 2023-06-14 16:02:40
+- name: Jack Olivieri
+  email: boldorider4@gmail.com
+  github: boldorider4
+- name: Wolf Vollprecht
+  email: w.vollprecht@gmail.com
+  github: wolfv
+- name: Dave Karetnyk
+  email: Dave.Karetnyk@gmail.com
+  github: DaveKaretnyk
+- name: Shaun Walbridge
+  email: 46331011+scdub@users.noreply.github.com
+  github: scdub
