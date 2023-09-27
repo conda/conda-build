@@ -145,18 +145,18 @@ jobs:
           flags: ${{ matrix.test-type }},${{ matrix.python-version }},linux-64
 
       - name: Tar Allure Results
-        if: always()
+        if: '!canceled()'
         run: tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
 
       - name: Upload Allure Results
-        if: always()
+        if: '!canceled()'
         uses: actions/upload-artifact@v3
         with:
           name: allure-Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type }}
           path: allure-results.tar.gz
 
       - name: Upload Pytest Replay
-        if: always()
+        if: '!canceled()'
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.REPLAY_NAME }}-${{ matrix.test-type }}
@@ -250,21 +250,21 @@ jobs:
           flags: ${{ matrix.test-type }},${{ matrix.python-version }},win-64
 
       - name: Tar Allure Results
-        if: always()
+        if: '!canceled()'
         run: tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
         # windows-2019/powershell ships with GNU tar 1.28 which struggles with Windows paths
         # window-2019/cmd ships with bsdtar 3.5.2 which doesn't have this problem
         shell: cmd
 
       - name: Upload Allure Results
-        if: always()
+        if: '!canceled()'
         uses: actions/upload-artifact@v3
         with:
           name: allure-Win-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type  }}
           path: allure-results.tar.gz
 
       - name: Upload Pytest Replay
-        if: always()
+        if: '!canceled()'
         uses: actions/upload-artifact@v3
         with:
           path: ${{ env.REPLAY_DIR }}
@@ -361,18 +361,18 @@ jobs:
           flags: ${{ matrix.test-type }},${{ matrix.python-version }},osx-64
 
       - name: Tar Allure Results
-        if: always()
+        if: '!canceled()'
         run: tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
 
       - name: Upload Allure Results
-        if: always()
+        if: '!canceled()'
         uses: actions/upload-artifact@v3
         with:
           name: allure-macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type }}
           path: allure-results.tar.gz
 
       - name: Upload Pytest Replay
-        if: always()
+        if: '!canceled()'
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.REPLAY_NAME }}-${{ matrix.test-type  }}
@@ -382,7 +382,12 @@ jobs:
   aggregate:
     # only aggregate test suite if there are code changes
     needs: [changes, linux, windows, macos]
-    if: always() && (github.event_name == 'schedule' || needs.changes.outputs.code == 'true')
+    if: >-
+      !canceled()
+      && (
+        github.event_name == 'schedule'
+        || needs.changes.outputs.code == 'true'
+      )
 
     runs-on: ubuntu-latest
     steps:
@@ -407,7 +412,7 @@ jobs:
   analyze:
     name: Analyze results
     needs: [linux, windows, macos, aggregate]
-    if: always()
+    if: '!canceled()'
 
     runs-on: ubuntu-latest
     steps:
@@ -426,7 +431,7 @@ jobs:
     # - this is the main repo, and
     # - we are on the main, feature, or release branch
     if: >-
-      always()
+      !canceled()
       && !github.event.repository.fork
       && (
         github.ref_name == 'main'
