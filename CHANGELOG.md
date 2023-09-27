@@ -1,5 +1,45 @@
 [//]: # (current developments)
 
+## 3.27.0 (2023-09-26)
+
+### Enhancements
+
+* Remove `glob2` dependency. As of Python 3.5, the '**', operator was available to `glob` when using `recursive=True`. Builtin glob is also much faster. (#5005)
+* Handle `emscripten-wasm32` and `wasi-wasm32` platforms. (#4813)
+
+### Bug fixes
+
+* Delay imports in conda command plugin until the command is used, avoiding import-time side effects. (#4949)
+
+### Deprecations
+
+* When templating new recipes from a PyPI package, the build script `{{ PYTHON }} -m pip install . -vv` is deprecated in favor of `{{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation`. (#4960)
+
+### Docs
+
+* Document `~=` (compatibility release) match spec. (#4553)
+* Clarify that the `build` prefix is activated _after_ the `host` prefix. (#4942)
+* Add explanation that conda-build should be run from the base environment. (#4995)
+
+### Contributors
+
+* @beeankha
+* @conda-bot
+* @dholth
+* @DaveKaretnyk made their first contribution in https://github.com/conda/conda-build/pull/5004
+* @boldorider4 made their first contribution in https://github.com/conda/conda-build/pull/4960
+* @jaimergp
+* @jezdez
+* @jugmac00
+* @kenodegard
+* @ryanskeith
+* @scdub made their first contribution in https://github.com/conda/conda-build/pull/4965
+* @wolfv made their first contribution in https://github.com/conda/conda-build/pull/4813
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
 ## 3.26.1 (2023-08-17)
 
 ### Bug fixes
