@@ -19,7 +19,7 @@
 
 * Document `~=` (compatibility release) match spec. (#4553)
 * Clarify that the `build` prefix is activated _after_ the `host` prefix. (#4942)
-* Add explanation that conda-build should be run from the base env. (#4995)
+* Add explanation that conda-build should be run from the base environment. (#4995)
 
 ### Contributors
 
