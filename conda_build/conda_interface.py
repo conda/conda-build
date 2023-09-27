@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import configparser  # noqa: F401
 import os
-import warnings
 from functools import partial
 from importlib import import_module  # noqa: F401
 
@@ -78,6 +77,8 @@ from conda.exports import (  # noqa: F401
 from conda.models.channel import get_conda_build_local_url  # noqa: F401
 from conda.models.dist import Dist, IndexRecord  # noqa: F401
 
+from .deprecations import deprecated
+
 # TODO: Go to references of all properties below and import them from `context` instead
 binstar_upload = context.binstar_upload
 default_python = context.default_python
@@ -104,21 +105,19 @@ class CrossPlatformStLink:
     def __call__(self, path: str | os.PathLike) -> int:
         return self.st_nlink(path)
 
-    @classmethod
-    def st_nlink(cls, path: str | os.PathLike) -> int:
-        warnings.warn(
-            "`conda_build.conda_interface.CrossPlatformStLink` is pending deprecation and will be removed in a "
-            "future release. Please use `os.stat().st_nlink` instead.",
-            PendingDeprecationWarning,
-        )
+    @staticmethod
+    @deprecated("3.24.0", "4.0.0", addendum="Use `os.stat().st_nlink` instead.")
+    def st_nlink(path: str | os.PathLike) -> int:
         return os.stat(path).st_nlink
 
 
+@deprecated("3.28.0", "4.0.0")
 class SignatureError(Exception):
     # TODO: What is this? 🤔
     pass
 
 
+@deprecated("3.28.0", "4.0.0")
 def which_package(path):
     """
     Given the path (of a (presumably) conda installed file) iterate over
@@ -137,6 +136,7 @@ def which_package(path):
             yield dist
 
 
+@deprecated("3.28.0", "4.0.0")
 def which_prefix(path):
     """
     Given the path (to a (presumably) conda installed file) return the
@@ -159,6 +159,7 @@ def which_prefix(path):
     return prefix
 
 
+@deprecated("3.28.0", "4.0.0")
 def get_installed_version(prefix, pkgs):
     """
     Primarily used by conda-forge, but may be useful in general for checking when
