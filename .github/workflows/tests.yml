@@ -1,6 +1,3 @@
-# this is the sibling workflow to tests-skip.yml, it is required to work around
-# the skipped but required checks issue:
-#   https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/defining-the-mergeability-of-pull-requests/troubleshooting-required-status-checks#handling-skipped-but-required-checks
 name: Tests
 
 on:
@@ -36,6 +33,8 @@ jobs:
   changes:
     runs-on: ubuntu-latest
     permissions:
+      # necessary to detect changes
+      # https://github.com/dorny/paths-filter#supported-workflows
       pull-requests: read
     outputs:
       code: ${{ steps.filter.outputs.code }}
@@ -44,6 +43,7 @@ jobs:
         # dorny/paths-filter needs git clone for non-PR events
         # https://github.com/marketplace/actions/paths-changes-filter#supported-workflows
         if: github.event_name != 'pull_request'
+
       - uses: dorny/paths-filter@4512585405083f25c027a35db413c2b3b9006d50
         id: filter
         with:
@@ -64,32 +64,37 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
+        # https://github.com/conda-incubator/setup-miniconda#use-a-default-shell
         shell: bash -l {0}
     strategy:
       fail-fast: false
       matrix:
         # test all lower versions (w/ stable conda) and upper version (w/ canary conda)
-        python-version: ['3.8', '3.9', '3.10']
-        conda-version: [release]
+        python-version: ['3.8', '3.9', '3.10', '3.11']
+        conda-version: [release, canary]
         test-type: [serial, parallel]
-        include:
-          - python-version: '3.11'
+        test-group: [1, 2, 3]
+        exclude:
+          - python-version: '3.8'
             conda-version: canary
-            test-type: serial
-          - python-version: '3.11'
+          - python-version: '3.9'
             conda-version: canary
-            test-type: parallel
+          - python-version: '3.10'
+            conda-version: canary
+          - python-version: '3.11'
+            conda-version: release
+          - test-type: serial
+            test-group: 3
     env:
-      CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
-      REPLAY_NAME: Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
-      REPLAY_DIR: ${{ github.workspace }}/pytest-replay
       ALLURE_DIR: ${{ github.workspace }}/allure-results
+      CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
       PYTEST_NUMPROCESSES: ${{ matrix.test-type == 'serial' && 0 || 'auto' }}
+      PYTEST_SPLITS: ${{ matrix.test-type == 'serial' && 2 || 3 }}
+      HASH: ${{ runner.os }}-${{ runner.arch }}-${{ matrix.default-channel }}-Py${{ matrix.python-version }}-${{ matrix.test-type }}-${{ matrix.test-group }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -101,18 +106,18 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-conda-${{ env.TIMESTAMP }}
+          key: ${{ env.HASH }}-${{ env.TIMESTAMP }}
 
       - name: Setup miniconda
         uses: conda-incubator/setup-miniconda@v2
         with:
-          condarc-file: ./ci/github/.condarc
+          condarc-file: .github/condarc
           python-version: ${{ matrix.python-version }}
           run-post: false  # skip post cleanup
 
       - name: Setup environment
         run: |
-          conda install -q -y -c defaults \
+          conda install --quiet --yes \
             --file ./tests/requirements.txt \
             --file ./tests/requirements-linux.txt \
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
@@ -120,29 +125,32 @@ jobs:
 
       - name: Show info
         run: |
-          conda info -a
+          conda info --verbose
           conda list --show-channel-urls
 
       - name: Run tests
         run: |
           pytest \
-            --color=yes \
-            -v \
-            -n "${{ env.PYTEST_NUMPROCESSES }}" \
-            --basetemp "${{ runner.temp }}/${{ matrix.test-type }}" \
-            --cov conda_build \
-            --cov-append \
-            --cov-branch \
-            --cov-report xml \
-            --replay-record-dir="${{ env.REPLAY_DIR }}" \
-            --replay-base-name="${{ env.REPLAY_NAME }}" \
             --alluredir="${{ env.ALLURE_DIR }}" \
-            -m "${{ env.PYTEST_MARKER }}" \
-            ./tests
+            --basetemp="${{ runner.temp }}/${{ matrix.test-type }}" \
+            --cov=conda_build \
+            --durations-path="./tools/durations/${{ runner.os }}.json" \
+            --group=${{ matrix.test-group }} \
+            --splits=${{ env.PYTEST_SPLITS }} \
+            -n "${{ env.PYTEST_NUMPROCESSES }}" \
+            -m "${{ env.PYTEST_MARKER }}"
 
       - uses: codecov/codecov-action@v3
         with:
-          flags: ${{ matrix.test-type }},${{ matrix.python-version }},linux-64
+          flags: ${{ runner.os }},${{ runner.arch }},${{ matrix.python-version }},${{ matrix.test-type }}
+
+      - name: Upload durations
+        if: '!cancelled()'
+        uses: actions/upload-artifact@v3
+        with:
+          name: durations-${{ env.HASH }}
+          path: ./tools/durations/${{ runner.os }}.json
+          retention-days: 7  # for durations.yml workflow
 
       - name: Tar Allure Results
         if: '!cancelled()'
@@ -152,15 +160,8 @@ jobs:
         if: '!cancelled()'
         uses: actions/upload-artifact@v3
         with:
-          name: allure-Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type }}
-          path: allure-results.tar.gz
-
-      - name: Upload Pytest Replay
-        if: '!cancelled()'
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ env.REPLAY_NAME }}-${{ matrix.test-type }}
-          path: ${{ env.REPLAY_DIR }}
+          name: allure-${{ env.HASH }}
+          path: ${{ env.ALLURE_DIR }}
 
   # windows test suite
   windows:
@@ -168,32 +169,32 @@ jobs:
     needs: changes
     if: github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
 
-    runs-on: windows-2019
+    runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
         # test lower version (w/ stable conda) and upper version (w/ canary conda)
-        python-version: ['3.8']
-        conda-version: [release]
+        python-version: ['3.8', '3.11']
+        conda-version: [release, canary]
         test-type: [serial, parallel]
-        include:
-          - python-version: '3.11'
+        test-group: [1, 2, 3]
+        exclude:
+          - python-version: '3.8'
             conda-version: canary
-            test-type: serial
           - python-version: '3.11'
-            conda-version: canary
-            test-type: parallel
+            conda-version: release
+          - test-type: serial
+            test-group: 3
     env:
-      CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
-      REPLAY_NAME: Win-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
-      REPLAY_DIR: ${{ github.workspace }}\pytest-replay
       ALLURE_DIR: ${{ github.workspace }}\allure-results
+      CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial and not slow' }}
       PYTEST_NUMPROCESSES: ${{ matrix.test-type == 'serial' && 0 || 'auto' }}
+      PYTEST_SPLITS: ${{ matrix.test-type == 'serial' && 2 || 3 }}
+      HASH: ${{ runner.os }}-${{ runner.arch }}-${{ matrix.default-channel }}-Py${{ matrix.python-version }}-${{ matrix.test-type }}-${{ matrix.test-group }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -205,49 +206,52 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-conda-${{ env.TIMESTAMP }}
+          key: ${{ env.HASH }}-${{ env.TIMESTAMP }}
 
       - name: Setup miniconda
         uses: conda-incubator/setup-miniconda@v2
         with:
-          condarc-file: .\ci\github\.condarc
+          condarc-file: .github\condarc
           python-version: ${{ matrix.python-version }}
           run-post: false  # skip post cleanup
 
       - name: Setup environment
         run: |
           choco install visualstudio2017-workload-vctools
-          conda install -q -y -c defaults `
+          conda install --quiet --yes `
             --file .\tests\requirements.txt `
-            --file .\tests\requirements-windows.txt `
+            --file .\tests\requirements-${{ runner.os }}.txt `
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
           pip install -e .
 
       - name: Show info
         run: |
-          conda info -a
+          conda info --verbose
           conda list --show-channel-urls
 
       - name: Run tests
         run: |
           pytest `
-            --color=yes `
-            -v `
-            -n "${{ env.PYTEST_NUMPROCESSES }}" `
-            --basetemp "${{ runner.temp }}\${{ matrix.test-type}}" `
-            --cov conda_build `
-            --cov-append `
-            --cov-branch `
-            --cov-report xml `
-            --replay-record-dir="${{ env.REPLAY_DIR }}" `
-            --replay-base-name="${{ env.REPLAY_NAME }}" `
             --alluredir="${{ env.ALLURE_DIR }}" `
+            --basetemp="${{ runner.temp }}\${{ matrix.test-type }}" `
+            --cov=conda_build `
+            --durations-path=".\tools\durations\${{ runner.os }}.json" `
+            --group=${{ matrix.test-group }} `
+            --splits=${{ env.PYTEST_SPLITS }} `
             -m "${{ env.PYTEST_MARKER }}" `
-            .\tests
+            -n "${{ env.PYTEST_NUMPROCESSES }}"
 
       - uses: codecov/codecov-action@v3
         with:
-          flags: ${{ matrix.test-type }},${{ matrix.python-version }},win-64
+          flags: ${{ runner.os }},${{ runner.arch }},${{ matrix.python-version }},${{ matrix.test-type }}
+
+      - name: Upload test results
+        if: '!cancelled()'
+        uses: actions/upload-artifact@v3
+        with:
+          name: durations-${{ env.HASH }}
+          path: .\tools\durations\${{ runner.os }}.json
+          retention-days: 7  # for durations.yml workflow
 
       - name: Tar Allure Results
         if: '!cancelled()'
@@ -260,15 +264,8 @@ jobs:
         if: '!cancelled()'
         uses: actions/upload-artifact@v3
         with:
-          name: allure-Win-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type  }}
-          path: allure-results.tar.gz
-
-      - name: Upload Pytest Replay
-        if: '!cancelled()'
-        uses: actions/upload-artifact@v3
-        with:
-          path: ${{ env.REPLAY_DIR }}
-          name: ${{ env.REPLAY_NAME }}-${{ matrix.test-type }}
+          name: allure-${{ env.HASH }}
+          path: "${{ env.ALLURE_DIR }}"
 
   # macos test suite
   macos:
@@ -276,35 +273,34 @@ jobs:
     needs: changes
     if: github.event_name == 'schedule' || needs.changes.outputs.code == 'true'
 
-    runs-on: macos-11
+    runs-on: macos-latest
     defaults:
       run:
+        # https://github.com/conda-incubator/setup-miniconda#use-a-default-shell
         shell: bash -l {0}
     strategy:
       fail-fast: false
       matrix:
         # test lower version (w/ stable conda) and upper version (w/ canary conda)
-        python-version: ['3.8']
-        conda-version: [release]
+        python-version: ['3.8', '3.11']
+        conda-version: [release, canary]
         test-type: [serial, parallel]
-        include:
-          - python-version: '3.11'
+        test-group: [1, 2, 3]
+        exclude:
+          - python-version: '3.8'
             conda-version: canary
-            test-type: serial
           - python-version: '3.11'
-            conda-version: canary
-            test-type: parallel
+            conda-version: release
+          - test-type: serial
+            test-group: 3
     env:
-      CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
-      REPLAY_NAME: macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
-      REPLAY_DIR: ${{ github.workspace }}/pytest-replay
       ALLURE_DIR: ${{ github.workspace }}/allure-results
+      CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
       PYTEST_NUMPROCESSES: ${{ matrix.test-type == 'serial' && 0 || 'auto' }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -316,49 +312,52 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/conda_pkgs_dir
-          key: ${{ runner.os }}-conda-${{ env.TIMESTAMP }}
+          key: ${{ env.HASH }}-${{ env.TIMESTAMP }}
 
       - name: Setup miniconda
         uses: conda-incubator/setup-miniconda@v2
         with:
-          condarc-file: ./ci/github/.condarc
+          condarc-file: .github/condarc
           python-version: ${{ matrix.python-version }}
           run-post: false  # skip post cleanup
 
       - name: Setup environment
         run: |
           sudo xcode-select --switch /Applications/Xcode_11.7.app
-          conda install -q -y -c defaults \
+          conda install --quiet --yes \
             --file ./tests/requirements.txt \
-            --file ./tests/requirements-macos.txt \
+            --file ./tests/requirements-${{ runner.os }}.txt \
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
           pip install -e .
 
       - name: Show info
         run: |
-          conda info -a
+          conda info --verbose
           conda list --show-channel-urls
 
       - name: Run tests
         run: |
           pytest \
-            --color=yes \
-            -v \
-            -n "${{ env.PYTEST_NUMPROCESSES }}" \
-            --basetemp "${{ runner.temp }}/${{ matrix.test-type }}" \
-            --cov conda_build \
-            --cov-append \
-            --cov-branch \
-            --cov-report xml \
-            --replay-record-dir="${{ env.REPLAY_DIR }}" \
-            --replay-base-name="${{ env.REPLAY_NAME }}" \
             --alluredir="${{ env.ALLURE_DIR }}" \
+            --basetemp="${{ runner.temp }}/${{ matrix.test-type }}" \
+            --cov=conda_build \
+            --durations-path=./tools/durations/${{ runner.os }}.json \
+            --group=${{ matrix.test-group }} \
+            --splits=${{ env.PYTEST_SPLITS }} \
             -m "${{ env.PYTEST_MARKER }}" \
-            ./tests
+            -n "${{ env.PYTEST_NUMPROCESSES }}"
 
       - uses: codecov/codecov-action@v3
         with:
-          flags: ${{ matrix.test-type }},${{ matrix.python-version }},osx-64
+          flags: ${{ runner.os }},${{ runner.arch }},${{ matrix.python-version }},${{ matrix.test-type }}
+
+      - name: Upload durations
+        if: '!cancelled()'
+        uses: actions/upload-artifact@v3
+        with:
+          name: durations-${{ env.HASH }}
+          path: ./tools/durations/${{ runner.os }}.json
+          retention-days: 7  # for duration.yml workflow
 
       - name: Tar Allure Results
         if: '!cancelled()'
@@ -368,15 +367,8 @@ jobs:
         if: '!cancelled()'
         uses: actions/upload-artifact@v3
         with:
-          name: allure-macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type }}
-          path: allure-results.tar.gz
-
-      - name: Upload Pytest Replay
-        if: '!cancelled()'
-        uses: actions/upload-artifact@v3
-        with:
-          name: ${{ env.REPLAY_NAME }}-${{ matrix.test-type  }}
-          path: ${{ env.REPLAY_DIR }}
+          name: allure-${{ env.HASH }}
+          path: ${{ env.ALLURE_DIR }}
 
   # aggregate and upload
   aggregate:

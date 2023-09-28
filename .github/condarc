@@ -1,0 +1,10 @@
+always_yes: True
+auto_activate_base: True
+auto_update_conda: False
+changeps1: False
+channels:
+  - defaults
+local_repodata_ttl: 7200
+notify_outdated_conda: False
+pkgs_dirs:
+  - /usr/share/miniconda/envs/test/pkgs
