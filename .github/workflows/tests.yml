@@ -119,7 +119,7 @@ jobs:
         run: |
           conda install --quiet --yes \
             --file tests/requirements.txt \
-            --file tests/requirements-linux.txt \
+            --file tests/requirements-${{ runner.os }}.txt \
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
           pip install -e .
 
