@@ -1,16 +1,15 @@
 anaconda-client
 beautifulsoup4
 chardet
-conda >=4.13
+conda >=22.11.0
 conda-forge::allure-pytest
 conda-forge::pytest-split
 conda-forge::pytest-xprocess
 conda-forge::xdoctest
 conda-index
-conda-package-handling
+conda-package-handling >=1.3
 conda-verify
 contextlib2
-cytoolz
 filelock
 git
 jinja2
