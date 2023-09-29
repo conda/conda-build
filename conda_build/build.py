@@ -25,7 +25,6 @@ from collections import OrderedDict, deque
 from os.path import dirname, isdir, isfile, islink, join
 
 import conda_package_handling.api
-import glob2
 import yaml
 from bs4 import UnicodeDammit
 from conda import __version__ as conda_version
@@ -37,7 +36,7 @@ from conda_build import environ, source, tarcheck, utils
 from conda_build.config import Config
 from conda_build.create_test import create_all_test_files
 from conda_build.exceptions import CondaBuildException, DependencyNeedsBuildingError
-from conda_build.index import get_build_index, update_index
+from conda_build.index import _delegated_update_index, get_build_index
 from conda_build.metadata import FIELDS, MetaData
 from conda_build.post import (
     fix_permissions,
@@ -1203,11 +1202,11 @@ def get_files_with_prefix(m, replacements, files_in, prefix):
         for index, replacement in enumerate(replacements):
             all_matches = have_regex_files(
                 files=[
-                    f
-                    for f in files
+                    file
+                    for file in files
                     if any(
-                        glob2.fnmatch.fnmatch(f, r)
-                        for r in replacement["glob_patterns"]
+                        fnmatch.fnmatch(file, pattern)
+                        for pattern in replacement["glob_patterns"]
                     )
                 ],
                 prefix=prefix,
@@ -1445,6 +1444,11 @@ def write_about_json(m):
         extra = m.get_section("extra")
         # Add burn-in information to extra
         if m.config.extra_meta:
+            log = utils.get_logger(__name__)
+            log.info(
+                "Adding the following extra-meta data to about.json: %s",
+                m.config.extra_meta,
+            )
             extra.update(m.config.extra_meta)
         env = environ.Environment(root_dir)
         d["root_pkgs"] = env.package_specs()
@@ -2105,7 +2109,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
                 tmp_path, final_output, metadata.config.timeout, locking=False
             )
             final_outputs.append(final_output)
-    update_index(
+    _delegated_update_index(
         os.path.dirname(output_folder), verbose=metadata.config.debug, threads=1
     )
 
@@ -2602,6 +2606,7 @@ def build(
 
         utils.rm_rf(m.config.info_dir)
         files1 = utils.prefix_files(prefix=m.config.host_prefix)
+        os.makedirs(m.config.build_folder, exist_ok=True)
         with open(join(m.config.build_folder, "prefix_files.txt"), "w") as f:
             f.write("\n".join(sorted(list(files1))))
             f.write("\n")
@@ -2911,6 +2916,7 @@ def build(
                             locking=m.config.locking,
                             timeout=m.config.timeout,
                             clear_cache=True,
+                            omit_defaults=False,
                         )
                     get_build_index(
                         subdir=index_subdir,
@@ -2922,6 +2928,7 @@ def build(
                         locking=m.config.locking,
                         timeout=m.config.timeout,
                         clear_cache=True,
+                        omit_defaults=False,
                     )
     else:
         if not provision_only:
@@ -3052,7 +3059,7 @@ def _construct_metadata_for_test_from_package(package, config):
     local_channel = os.path.dirname(local_pkg_location)
 
     # update indices in the channel
-    update_index(local_channel, verbose=config.debug, threads=1)
+    _delegated_update_index(local_channel, verbose=config.debug, threads=1)
 
     try:
         metadata = render_recipe(
@@ -3670,7 +3677,7 @@ def tests_failed(package_or_metadata, move_broken, broken_dir, config):
             )
         except OSError:
             pass
-        update_index(
+        _delegated_update_index(
             os.path.dirname(os.path.dirname(pkg)), verbose=config.debug, threads=1
         )
     sys.exit("TESTS FAILED: " + os.path.basename(pkg))
@@ -4191,10 +4198,12 @@ def clean_build(config, folders=None):
 
 
 def is_package_built(metadata, env, include_local=True):
+    # bldpkgs_dirs is typically {'$ENVIRONMENT/conda-bld/noarch', '$ENVIRONMENT/conda-bld/osx-arm64'}
+    # could pop subdirs (last path element) and call update_index() once
     for d in metadata.config.bldpkgs_dirs:
         if not os.path.isdir(d):
             os.makedirs(d)
-        update_index(d, verbose=metadata.config.debug, warn=False, threads=1)
+        _delegated_update_index(d, verbose=metadata.config.debug, warn=False, threads=1)
     subdir = getattr(metadata.config, f"{env}_subdir")
 
     urls = [url_path(metadata.config.output_folder), "local"] if include_local else []

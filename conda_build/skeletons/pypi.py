@@ -431,7 +431,9 @@ def skeletonize(
             if noarch_python:
                 ordered_recipe["build"]["noarch"] = "python"
 
-            recipe_script_cmd = ["{{ PYTHON }} -m pip install . -vv"]
+            recipe_script_cmd = [
+                "{{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation"
+            ]
             ordered_recipe["build"]["script"] = " ".join(
                 recipe_script_cmd + setup_options
             )
@@ -865,7 +867,6 @@ def get_package_metadata(
     metadata["home"] = get_home(pkginfo, data)
 
     if not metadata.get("summary"):
-        metadata["summary"] = get_summary(pkginfo)
         metadata["summary"] = get_summary(pkginfo)
 
     license_name = get_license_name(package, pkginfo, no_prompt, data)

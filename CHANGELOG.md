@@ -1,5 +1,161 @@
 [//]: # (current developments)
 
+## 3.27.0 (2023-09-26)
+
+### Enhancements
+
+* Remove `glob2` dependency. As of Python 3.5, the '**', operator was available to `glob` when using `recursive=True`. Builtin glob is also much faster. (#5005)
+* Handle `emscripten-wasm32` and `wasi-wasm32` platforms. (#4813)
+
+### Bug fixes
+
+* Delay imports in conda command plugin until the command is used, avoiding import-time side effects. (#4949)
+
+### Deprecations
+
+* When templating new recipes from a PyPI package, the build script `{{ PYTHON }} -m pip install . -vv` is deprecated in favor of `{{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation`. (#4960)
+
+### Docs
+
+* Document `~=` (compatibility release) match spec. (#4553)
+* Clarify that the `build` prefix is activated _after_ the `host` prefix. (#4942)
+* Add explanation that conda-build should be run from the base environment. (#4995)
+
+### Contributors
+
+* @beeankha
+* @conda-bot
+* @dholth
+* @DaveKaretnyk made their first contribution in https://github.com/conda/conda-build/pull/5004
+* @boldorider4 made their first contribution in https://github.com/conda/conda-build/pull/4960
+* @jaimergp
+* @jezdez
+* @jugmac00
+* @kenodegard
+* @ryanskeith
+* @scdub made their first contribution in https://github.com/conda/conda-build/pull/4965
+* @wolfv made their first contribution in https://github.com/conda/conda-build/pull/4813
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
+## 3.26.1 (2023-08-17)
+
+### Bug fixes
+
+* Delay imports in conda command plugin until the command is used, avoiding
+  import-time side effects including unwanted logging configuration. (#4949)
+
+### Contributors
+
+* @beeankha
+* @conda-bot
+* @dholth
+* @jezdez
+* @kenodegard
+* @pre-commit-ci[bot]
+
+
+
+## 3.26.0 (2023-07-18)
+
+### Enhancements
+
+* Add `pip` to `env-doc make` command so function works correctly (`pip` is no longer added by default with the python conda package). (#4633)
+* Log extra-meta data to make it easier to verify that the right extra-meta data is burned into packages (also helps to co-relate packages and their build-log). The feature was first introduced in #4303 and is now improved via the logging call. (#4901)
+* Implement subcommands as conda plugins. (#4921)
+
+### Bug fixes
+
+* Fix handling of unknown binaries with newer `(py)lief` versions. (#4900)
+* Disable `LIEF` logging to remove "Unknown format" warning message. (#4850)
+* Revert `enable_static` default value in `conda_build.config` to remove "Failed to get_static_lib_exports" warning messages. (#4850)
+* Avoid duplicate logging by not propagating the top-level conda-build logger. (#4903)
+* Fix git cloning for repositories with submodules containing local relative paths. (#4914)
+
+### Deprecations
+
+* Mark executable invocations (e.g., `conda-build`) as pending deprecation. (#4921)
+* Mark module based invocations (e.g., `python -m conda_build.cli.main_build`) as pending deprecation. (#4921)
+
+### Docs
+
+* Update `pkg-spec` docs to mention `.conda` package format. (#4633)
+* Drop unnecessary Jinja package name variables from `variants.rst` docs file. (#4834)
+
+### Other
+
+* Drop duplicate `get_summary` call in `conda_build.skeletons.pypi`. (#3998)
+* Fix failing `resolved_packages` test due to recent OpenSSL 3.0.8 release to defaults. (#4912)
+
+### Contributors
+
+* @beeankha
+* @conda-bot
+* @dbast
+* @jaimergp
+* @jakirkham
+* @josegonzalez made their first contribution in https://github.com/conda/conda-build/pull/3998
+* @katietz
+* @kenodegard
+* @rfezzani made their first contribution in https://github.com/conda/conda-build/pull/4850
+* @ryanskeith
+* @sven6002
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
+## 3.25.0 (2023-05-22)
+
+### Enhancements
+
+* Noarch packages that use virtual packages have the virtual packages added to the hash contents of the package. This facilitates the building of noarch packages multiple times for different platforms with platform specific dependencies. (#4606)
+* Add support for `svn` source credentials (`svn_username` and `svn_password`). (#4692)
+* Depend on standalone `conda-index` instead of bundled indexing code. (#4828)
+* Switch from `setup.py` to `pyproject.toml` and use [Hatchling](https://pypi.org/project/hatchling/) for our build system. (#4840)
+* Add Python 3.11 support. (#4852)
+
+### Bug fixes
+
+* Ensure `tests/commands` are also run in the presence of `run_test.*` (#4429)
+* Require the source when rendering a recipe that uses the `load_file_data` function. (#4817)
+* Download packages during build into the correct `subdir` folder. (#4832)
+* Use a unique `subdir` variable name when rebuilding the index for multi-output builds. (#4862)
+
+### Deprecations
+
+* Inline `conda index` logic is pending deprecation. `conda-build` still provides `conda-index` a.k.a. `conda index` CLI, but uses standalone `conda-index` during builds. (#4828)
+* Prefer the [standalone conda-index package](https://conda.github.io/conda-index/), instead of `conda-build index` or `conda index`, to use faster indexing code. (#4828)
+* Mark `conda_build.metadata.ns_cfg` as pending deprecation. Use `conda_build.get_selectors.get_selectors` instead. (#4837)
+* Mark `conda_build.config.python2_fs_encode` as pending deprecation. (#4843)
+* Mark `conda_build.config._ensure_dir` as pending deprecation. Use `stdlib`'s `pathlib.Path.mkdir(exist_ok=True)` or `os.makedirs(exist_ok=True)` instead. (#4843)
+
+### Other
+
+* Format with `black` and replaced pre-commit's `darker` hook with `black`. (#4836)
+* Format with `isort` and add pre-commit `isort` hook. (#4836)
+* Minor code simplification for `conda_build.index.ChannelIndex._ensuredirs`. (#4843)
+* Enable `xattr` test on macOS. (#4845)
+
+### Contributors
+
+* @beeankha
+* @conda-bot
+* @dholth
+* @duncanmmacleod
+* @ffirmanff made their first contribution in https://github.com/conda/conda-build/pull/4692
+* @isuruf
+* @jezdez
+* @jakirkham
+* @jjhelmus
+* @kenodegard
+* @rishabh11336 made their first contribution in https://github.com/conda/conda-build/pull/4782
+* @ryanskeith made their first contribution in https://github.com/conda/conda-build/pull/4843
+* @pre-commit-ci[bot]
+
+
 ## 3.24.0 (2023-03-22)
 
 ### Bug fixes
@@ -2657,7 +2813,7 @@ https://conda.io/docs/user-guide/tasks/build-packages/define-metadata.html#host
 * pyldd: disambiguate java .class files from Mach-O fat files (same magic number)  #2328
 * fix hash regex for downloaded files in `src_cache`  #2330
 * fix `zip_keys` becoming a loop dimension when variants passed as object rather than loaded from file  #2333
-* fix windows always warning about old compiler activation.  Now only warns if {{ compiler() }} is not used.  #2333
+* fix windows always warning about old compiler activation.  Now only warns if `{{ compiler() }}` is not used.  #2333
 * Add `LD_RUN_PATH` back into Linux variables for now (may remove later, but will have deprecation cycle)  #2334
 
 ### Contributors

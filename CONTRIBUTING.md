@@ -50,7 +50,7 @@ impact the functionality of `conda/conda-build` installed in your base environme
 
 ``` bash
     # create/activate standalone dev env
-    $ CONDA_ENV=conda-build make setup
+    $ ENV_NAME=conda-build make setup
     $ conda activate conda-build
 
     # Run all tests on Linux and Mac OS X systems (this can take a long time)

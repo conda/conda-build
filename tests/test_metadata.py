@@ -8,7 +8,7 @@ import subprocess
 import pytest
 
 from conda_build import api
-from conda_build.metadata import MetaData, _hash_dependencies, select_lines
+from conda_build.metadata import MetaData, _hash_dependencies, select_lines, yamlize
 from conda_build.utils import DEFAULT_SUBDIRS
 
 from .utils import metadata_dir, thisdir
@@ -260,3 +260,66 @@ def test_config_member_decoupling(testing_metadata):
     b = testing_metadata.copy()
     b.config.some_member = "123"
     assert b.config.some_member != testing_metadata.config.some_member
+
+
+# ensure that numbers are not interpreted as ints or floats, doing so trips up versions
+# with trailing zeros
+def test_yamlize_zero():
+    yml = yamlize(
+        """
+        - 0
+        - 0.
+        - 0.0
+        - .0
+        """
+    )
+
+    assert yml == ["0", "0.", "0.0", ".0"]
+
+
+def test_yamlize_positive():
+    yml = yamlize(
+        """
+        - +1
+        - +1.
+        - +1.2
+        - +.2
+        """
+    )
+
+    assert yml == ["+1", "+1.", "+1.2", "+.2"]
+
+
+def test_yamlize_negative():
+    yml = yamlize(
+        """
+        - -1
+        - -1.
+        - -1.2
+        - -.2
+        """
+    )
+
+    assert yml == ["-1", "-1.", "-1.2", "-.2"]
+
+
+def test_yamlize_numbers():
+    yml = yamlize(
+        """
+        - 1
+        - 1.2
+        """
+    )
+
+    assert yml == ["1", "1.2"]
+
+
+def test_yamlize_versions():
+    yml = yamlize(
+        """
+        - 1.2.3
+        - 1.2.3.4
+        """
+    )
+
+    assert yml == ["1.2.3", "1.2.3.4"]

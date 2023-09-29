@@ -12,5 +12,6 @@ sub_commands = [
     "index",
     "inspect",
     "metapackage",
-    "render" "skeleton",
+    "render",
+    "skeleton",
 ]

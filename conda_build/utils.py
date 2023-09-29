@@ -34,6 +34,7 @@ from os.path import (
 )
 from pathlib import Path
 from threading import Thread
+from typing import Iterable
 
 import libarchive
 
@@ -62,7 +63,8 @@ except Exception:
 
 import urllib.parse as urlparse
 import urllib.request as urllib
-from glob import glob as glob_glob
+from contextlib import ExitStack  # noqa: F401
+from glob import glob
 
 from conda.api import PackageCacheData  # noqa
 
@@ -90,15 +92,6 @@ from .conda_interface import (  # noqa
     win_path_to_unix,
 )
 
-
-# stdlib glob is less feature-rich but considerably faster than glob2
-def glob(pathname, recursive=True):
-    return glob_glob(pathname, recursive=recursive)
-
-
-# NOQA because it is not used in this file.
-from contextlib import ExitStack  # NOQA
-
 PermissionError = PermissionError  # NOQA
 FileNotFoundError = FileNotFoundError
 
@@ -112,6 +105,8 @@ mmap_PROT_READ = 0 if on_win else mmap.PROT_READ
 mmap_PROT_WRITE = 0 if on_win else mmap.PROT_WRITE
 
 DEFAULT_SUBDIRS = {
+    "emscripten-wasm32",
+    "wasi-wasm32",
     "linux-64",
     "linux-32",
     "linux-s390x",
@@ -941,7 +936,7 @@ def file_info(path):
     }
 
 
-def comma_join(items):
+def comma_join(items: Iterable[str], conjunction: str = "and") -> str:
     """
     Like ', '.join(items) but with and
 
@@ -954,11 +949,10 @@ def comma_join(items):
     >>> comma_join(['a', 'b', 'c'])
     'a, b, and c'
     """
-    return (
-        " and ".join(items)
-        if len(items) <= 2
-        else ", ".join(items[:-1]) + ", and " + items[-1]
-    )
+    items = tuple(items)
+    if len(items) <= 2:
+        return f"{items[0]} {conjunction} {items[1]}"
+    return f"{', '.join(items[:-1])}, {conjunction} {items[-1]}"
 
 
 def safe_print_unicode(*args, **kwargs):
@@ -1035,7 +1029,7 @@ def get_stdlib_dir(prefix, py_ver):
         lib_dir = os.path.join(prefix, "Lib")
     else:
         lib_dir = os.path.join(prefix, "lib")
-        python_folder = glob(os.path.join(lib_dir, "python?.*"))
+        python_folder = glob(os.path.join(lib_dir, "python?.*"), recursive=True)
         python_folder = sorted(filterfalse(islink, python_folder))
         if python_folder:
             lib_dir = os.path.join(lib_dir, python_folder[0])
@@ -1050,7 +1044,7 @@ def get_site_packages(prefix, py_ver):
 
 def get_build_folders(croot):
     # remember, glob is not a regex.
-    return glob(os.path.join(croot, "*" + "[0-9]" * 10 + "*"))
+    return glob(os.path.join(croot, "*" + "[0-9]" * 10 + "*"), recursive=True)
 
 
 def prepend_bin_path(env, prefix, prepend_prefix=False):
@@ -1083,7 +1077,7 @@ def sys_path_prepended(prefix):
         sys.path.insert(1, os.path.join(prefix, "lib", "site-packages"))
     else:
         lib_dir = os.path.join(prefix, "lib")
-        python_dir = glob(os.path.join(lib_dir, r"python[0-9\.]*"))
+        python_dir = glob(os.path.join(lib_dir, r"python[0-9\.]*"), recursive=True)
         if python_dir:
             python_dir = python_dir[0]
             sys.path.insert(1, os.path.join(python_dir, "site-packages"))
@@ -1268,7 +1262,7 @@ def islist(arg, uniform=False, include_dict=True):
     :return: Whether `arg` is a `list`
     :rtype: bool
     """
-    if isinstance(arg, str) or not hasattr(arg, "__iter__"):
+    if isinstance(arg, str) or not isinstance(arg, Iterable):
         # str and non-iterables are not lists
         return False
     elif not include_dict and isinstance(arg, dict):
@@ -1279,6 +1273,7 @@ def islist(arg, uniform=False, include_dict=True):
         return True
 
     # NOTE: not checking for Falsy arg since arg may be a generator
+    # WARNING: if uniform != False and arg is a generator then arg will be consumed
 
     if uniform is True:
         arg = iter(arg)
@@ -1288,7 +1283,7 @@ def islist(arg, uniform=False, include_dict=True):
             # StopIteration: list is empty, an empty list is still uniform
             return True
         # check for explicit type match, do not allow the ambiguity of isinstance
-        uniform = lambda e: type(e) == etype
+        uniform = lambda e: type(e) == etype  # noqa: E721
 
     try:
         return all(uniform(e) for e in arg)
@@ -1324,7 +1319,7 @@ def expand_globs(path_list, root_dir):
                         files.append(os.path.join(root, folder))
         else:
             # File compared to the globs use / as separator independently of the os
-            glob_files = glob(path)
+            glob_files = glob(path, recursive=True)
             if not glob_files:
                 log = get_logger(__name__)
                 log.error(f"Glob {path} did not match in root_dir {root_dir}")
@@ -1404,6 +1399,9 @@ class LoggingContext:
         "conda_build.index",
         "conda_build.noarch_python",
         "urllib3.connectionpool",
+        "conda_index",
+        "conda_index.index",
+        "conda_index.index.convert_cache",
     ]
 
     def __init__(self, level=logging.WARN, handler=None, close=True, loggers=None):
@@ -1451,7 +1449,7 @@ def get_installed_packages(path):
     Files are assumed to be in 'index.json' format.
     """
     installed = dict()
-    for filename in glob(os.path.join(path, "conda-meta", "*.json")):
+    for filename in glob(os.path.join(path, "conda-meta", "*.json"), recursive=True):
         with open(filename) as file:
             data = json.load(file)
             installed[data["name"]] = data
@@ -1707,6 +1705,7 @@ class DuplicateFilter(logging.Filter):
 dedupe_filter = DuplicateFilter()
 info_debug_stdout_filter = LessThanFilter(logging.WARNING)
 warning_error_stderr_filter = GreaterThanFilter(logging.INFO)
+level_formatter = logging.Formatter("%(levelname)s: %(message)s")
 
 # set filelock's logger to only show warnings by default
 logging.getLogger("filelock").setLevel(logging.WARN)
@@ -1743,11 +1742,17 @@ def get_logger(name, level=logging.INFO, dedupe=True, add_stdout_stderr_handlers
         log.addFilter(dedupe_filter)
 
     # these are defaults.  They can be overridden by configuring a log config yaml file.
-    if not log.handlers and add_stdout_stderr_handlers:
+    top_pkg = name.split(".")[0]
+    if top_pkg == "conda_build":
+        # we don't want propagation in CLI, but we do want it in tests
+        # this is a pytest limitation: https://github.com/pytest-dev/pytest/issues/3697
+        logging.getLogger(top_pkg).propagate = "PYTEST_CURRENT_TEST" in os.environ
+    if add_stdout_stderr_handlers and not log.handlers:
         stdout_handler = logging.StreamHandler(sys.stdout)
         stderr_handler = logging.StreamHandler(sys.stderr)
         stdout_handler.addFilter(info_debug_stdout_filter)
         stderr_handler.addFilter(warning_error_stderr_filter)
+        stderr_handler.setFormatter(level_formatter)
         stdout_handler.setLevel(level)
         stderr_handler.setLevel(level)
         log.addHandler(stdout_handler)

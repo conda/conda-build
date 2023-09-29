@@ -4,17 +4,21 @@ import logging
 import os
 import sys
 
-from conda_build import api
-from conda_build.conda_interface import ArgumentParser
-from conda_build.index import MAX_THREADS_DEFAULT
-from conda_build.utils import DEFAULT_SUBDIRS
+from conda_index.index import MAX_THREADS_DEFAULT
+from conda_index.utils import DEFAULT_SUBDIRS
+
+from .. import api
+from ..conda_interface import ArgumentParser
+from ..deprecations import deprecated
 
 logging.basicConfig(level=logging.INFO)
 
 
 def parse_args(args):
     p = ArgumentParser(
-        description="Update package index metadata files in given directories."
+        prog="conda index",
+        description="Update package index metadata files in given directories. "
+        "Pending deprecated, please use the standalone conda-index project.",
     )
 
     p.add_argument(
@@ -96,6 +100,13 @@ def parse_args(args):
 def execute(args):
     _, args = parse_args(args)
 
+    deprecated.topic(
+        "3.25.0",
+        "4.0.0",
+        topic="`conda index` and `conda-index`",
+        addendum="Use the `conda-index` project instead.",
+    )
+
     api.update_index(
         args.dir,
         check_md5=args.check_md5,
@@ -105,11 +116,11 @@ def execute(args):
         patch_generator=args.patch_generator,
         verbose=args.verbose,
         progress=args.progress,
-        hotfix_source_repo=args.hotfix_source_repo,
         current_index_versions=args.current_index_versions_file,
         index_file=args.file,
     )
 
 
+@deprecated("3.26.0", "4.0.0", addendum="Use `conda index` instead.")
 def main():
     return execute(sys.argv[1:])

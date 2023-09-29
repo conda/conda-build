@@ -4,13 +4,13 @@ anaconda-client
 beautifulsoup4
 chardet
 conda >=4.13
+conda-index
 conda-package-handling
 conda-verify
 contextlib2
 cytoolz
 filelock
 git
-glob2 >=0.6
 jinja2
 numpy
 perl
@@ -18,7 +18,6 @@ pip
 pkginfo
 psutil
 py-lief
-pycrypto
 pyflakes
 pytest
 pytest-cov
@@ -28,6 +27,7 @@ pytest-replay
 pytest-rerunfailures
 pytest-xdist
 python-libarchive-c
+conda-forge::allure-pytest
 pytz
 requests
 ripgrep

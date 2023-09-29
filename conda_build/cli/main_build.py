@@ -4,6 +4,7 @@ import argparse
 import logging
 import sys
 import warnings
+from glob import glob
 from itertools import chain
 from os.path import abspath, expanduser, expandvars
 from pathlib import Path
@@ -11,25 +12,19 @@ from pathlib import Path
 import filelock
 from conda.auxlib.ish import dals
 from conda.common.io import dashlist
-from glob2 import glob
 
-import conda_build.api as api
-import conda_build.build as build
-import conda_build.source as source
-import conda_build.utils as utils
-from conda_build.cli.actions import KeyValueAction
-from conda_build.cli.main_render import get_render_parser
-from conda_build.conda_interface import (
-    add_parser_channels,
-    binstar_upload,
-    cc_conda_build,
-)
-from conda_build.config import Config, get_channel_urls, zstd_compression_level_default
-from conda_build.utils import LoggingContext
+from .. import api, build, source, utils
+from ..conda_interface import add_parser_channels, binstar_upload, cc_conda_build
+from ..config import Config, get_channel_urls, zstd_compression_level_default
+from ..deprecations import deprecated
+from ..utils import LoggingContext
+from .actions import KeyValueAction
+from .main_render import get_render_parser
 
 
 def parse_args(args):
     p = get_render_parser()
+    p.prog = "conda build"
     p.description = dals(
         """
         Tool for building conda packages. A conda package is a binary tarball
@@ -547,7 +542,7 @@ def execute(args):
         outputs = []
         failed_recipes = []
         recipes = chain.from_iterable(
-            glob(abspath(recipe)) if "*" in recipe else [recipe]
+            glob(abspath(recipe), recursive=True) if "*" in recipe else [recipe]
             for recipe in args.recipe
         )
         for recipe in recipes:
@@ -588,6 +583,7 @@ def execute(args):
     return outputs
 
 
+@deprecated("3.26.0", "4.0.0", addendum="Use `conda build` instead.")
 def main():
     try:
         execute(sys.argv[1:])

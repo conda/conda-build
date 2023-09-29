@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Ensure that `tests/commands` get run also in the presence of `run_test.*` (#4427)
+* <news item>
 
 ### Deprecations
 
@@ -16,4 +16,4 @@
 
 ### Other
 
-* <news item>
+* Use Ruff linter in pre-commit configuration. (#5015)

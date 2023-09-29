@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-import contextlib
 import copy
 import hashlib
 import json
@@ -41,9 +40,37 @@ except ImportError:
     )
 
 try:
-    loader = yaml.CLoader
-except:
-    loader = yaml.Loader
+    Loader = yaml.CLoader
+except AttributeError:
+    Loader = yaml.Loader
+
+
+class StringifyNumbersLoader(Loader):
+    @classmethod
+    def remove_implicit_resolver(cls, tag):
+        if "yaml_implicit_resolvers" not in cls.__dict__:
+            cls.yaml_implicit_resolvers = {
+                k: v[:] for k, v in cls.yaml_implicit_resolvers.items()
+            }
+        for ch in tuple(cls.yaml_implicit_resolvers):
+            resolvers = [(t, r) for t, r in cls.yaml_implicit_resolvers[ch] if t != tag]
+            if resolvers:
+                cls.yaml_implicit_resolvers[ch] = resolvers
+            else:
+                del cls.yaml_implicit_resolvers[ch]
+
+    @classmethod
+    def remove_constructor(cls, tag):
+        if "yaml_constructors" not in cls.__dict__:
+            cls.yaml_constructors = cls.yaml_constructors.copy()
+        if tag in cls.yaml_constructors:
+            del cls.yaml_constructors[tag]
+
+
+StringifyNumbersLoader.remove_implicit_resolver("tag:yaml.org,2002:float")
+StringifyNumbersLoader.remove_implicit_resolver("tag:yaml.org,2002:int")
+StringifyNumbersLoader.remove_constructor("tag:yaml.org,2002:float")
+StringifyNumbersLoader.remove_constructor("tag:yaml.org,2002:int")
 
 on_win = sys.platform == "win32"
 
@@ -97,14 +124,17 @@ def get_selectors(config: Config) -> dict[str, bool]:
         linux=plat.startswith("linux-"),
         linux32=bool(plat == "linux-32"),
         linux64=bool(plat == "linux-64"),
+        emscripten=plat.startswith("emscripten-"),
+        wasi=plat.startswith("wasi-"),
         arm=plat.startswith("linux-arm"),
         osx=plat.startswith("osx-"),
-        unix=plat.startswith(("linux-", "osx-")),
+        unix=plat.startswith(("linux-", "osx-", "emscripten-")),
         win=plat.startswith("win-"),
         win32=bool(plat == "win-32"),
         win64=bool(plat == "win-64"),
         x86=plat.endswith(("-32", "-64")),
         x86_64=plat.endswith("-64"),
+        wasm32=bool(plat.endswith("-wasm32")),
         os=os,
         environ=os.environ,
         nomkl=bool(int(os.environ.get("FEATURE_NOMKL", False))),
@@ -261,9 +291,7 @@ exception:
 
 def yamlize(data):
     try:
-        with stringify_numbers():
-            loaded_data = yaml.load(data, Loader=loader)
-        return loaded_data
+        return yaml.load(data, Loader=StringifyNumbersLoader)
     except yaml.error.YAMLError as e:
         if "{{" in data:
             try:
@@ -1056,23 +1084,7 @@ def _hash_dependencies(hashing_dependencies, hash_length):
     return f"h{hash_.hexdigest()}"[: hash_length + 1]
 
 
-@contextlib.contextmanager
-def stringify_numbers():
-    # ensure that numbers are not interpreted as ints or floats.  That trips up versions
-    #     with trailing zeros.
-    implicit_resolver_backup = loader.yaml_implicit_resolvers.copy()
-    for ch in list("0123456789"):
-        if ch in loader.yaml_implicit_resolvers:
-            del loader.yaml_implicit_resolvers[ch]
-    yield
-    for ch in list("0123456789"):
-        if ch in implicit_resolver_backup:
-            loader.yaml_implicit_resolvers[ch] = implicit_resolver_backup[ch]
-
-
 class MetaData:
-    __hash__ = None  # declare as non-hashable to avoid its use with memoization
-
     def __init__(self, path, config=None, variant=None):
         self.undefined_jinja_vars = []
         self.config = get_or_merge_config(config, variant=variant)
@@ -1583,9 +1595,17 @@ class MetaData:
 
         # if dependencies are only 'target_platform' then ignore that.
         if dependencies == ["target_platform"]:
-            return {}
+            hash_contents = {}
         else:
-            return {key: self.config.variant[key] for key in dependencies}
+            hash_contents = {key: self.config.variant[key] for key in dependencies}
+
+        # include virtual packages in run
+        run_reqs = self.meta.get("requirements", {}).get("run", [])
+        virtual_pkgs = [req for req in run_reqs if req.startswith("__")]
+
+        # add name -> match spec mapping for virtual packages
+        hash_contents.update({pkg.split(" ")[0]: pkg for pkg in virtual_pkgs})
+        return hash_contents
 
     def hash_dependencies(self):
         """With arbitrary pinning, we can't depend on the build string as done in

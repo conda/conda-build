@@ -7,14 +7,16 @@ from pprint import pprint
 
 from conda.base.context import context, determine_target_prefix
 
-from conda_build import api
-from conda_build.conda_interface import ArgumentParser, add_parser_prefix
+from .. import api
+from ..conda_interface import ArgumentParser, add_parser_prefix
+from ..deprecations import deprecated
 
 logging.basicConfig(level=logging.INFO)
 
 
 def parse_args(args):
     p = ArgumentParser(
+        prog="conda inspect",
         description="Tools for inspecting conda packages.",
         epilog="""
 Run --help on the subcommands like 'conda inspect linkages --help' to see the
@@ -220,5 +222,6 @@ def execute(args):
         raise ValueError(f"Unrecognized subcommand: {args.subcommand}.")
 
 
+@deprecated("3.26.0", "4.0.0", addendum="Use `conda inspect` instead.")
 def main():
     return execute(sys.argv[1:])

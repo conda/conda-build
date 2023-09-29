@@ -8,9 +8,10 @@ bdist_conda
 import sys
 import time
 from collections import defaultdict
-from distutils.command.install import install
-from distutils.dist import Distribution
-from distutils.errors import DistutilsGetoptError, DistutilsOptionError
+
+from setuptools.command.install import install
+from setuptools.dist import Distribution
+from setuptools.errors import BaseError, OptionError
 
 from conda_build import api
 from conda_build.build import handle_anaconda_upload
@@ -22,15 +23,16 @@ from conda_build.skeletons import pypi
 # TODO: Add support for all the options that conda build has
 
 
+class GetoptError(BaseError):
+    """The option table provided to 'fancy_getopt()' is bogus."""
+
+
 class CondaDistribution(Distribution):
     """
     Distribution subclass that supports bdist_conda options
 
     This class is required if you want to pass any bdist_conda specific
     options to setup().  To use, set distclass=CondaDistribution in setup().
-
-    **NOTE**: If you use setuptools, you must import setuptools before
-    importing distutils.commands.bdist_conda.
 
     Options that can be passed to setup() (must include
     distclass=CondaDistribution):
@@ -115,7 +117,7 @@ class bdist_conda(install):
     def finalize_options(self):
         opt_dict = self.distribution.get_option_dict("install")
         if self.prefix:
-            raise DistutilsOptionError("--prefix is not allowed")
+            raise OptionError("--prefix is not allowed")
         opt_dict["prefix"] = ("bdist_conda", self.config.host_prefix)
         super().finalize_options()
 
@@ -184,7 +186,7 @@ class bdist_conda(install):
                     c.read_file(StringIO(newstr))
                 except Exception as err:
                     # This seems to be the best error here
-                    raise DistutilsGetoptError(
+                    raise GetoptError(
                         "ERROR: entry-points not understood: "
                         + str(err)
                         + "\nThe string was"
@@ -203,7 +205,7 @@ class bdist_conda(install):
                             entry_points[section] = None
 
             if not isinstance(entry_points, dict):
-                raise DistutilsGetoptError(
+                raise GetoptError(
                     "ERROR: Could not add entry points. They were:\n" + entry_points
                 )
             else:
