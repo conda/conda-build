@@ -1,3 +1,0 @@
-[run]
-parallel=True
-omit=conda_build/skeletons/_example_skeleton.py

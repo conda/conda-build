@@ -82,7 +82,54 @@ include = ["conda_build", "conda_build/templates/*", "conda_build/cli-*.exe"]
 version-file = "conda_build/__version__.py"
 
 [tool.black]
-target-version = ['py38', 'py39', 'py310']
+target-version = ['py38', 'py39', 'py310', 'py311']
 
-[tool.isort]
-profile = "black"
+[tool.coverage.run]
+# store relative paths in coverage information
+relative_files = true
+
+[tool.coverage.report]
+show_missing = true
+sort = "Miss"
+skip_covered = true
+omit = ["conda_build/skeletons/_example_skeleton.py"]
+
+[tool.ruff]
+line-length = 180
+# E, W = pycodestyle errors and warnings
+# F = pyflakes
+# I = isort
+# D = pydocstyle
+select = ["E", "W", "F", "I", "D1"]
+# E402 module level import not at top of file
+# E722 do not use bare 'except'
+# E731 do not assign a lambda expression, use a def
+ignore = ["E402", "E722", "E731"]
+# Use PEP 257-style docstrings.
+pydocstyle = {convention = "pep257"}
+
+[tool.pytest.ini_options]
+minversion = 3.0
+testpaths = ["tests"]
+norecursedirs = ["tests/test-recipes/*"]
+addopts = [
+  "--color=yes",
+  # "--cov=conda_build",   # passed in test runner scripts instead (avoid debugger)
+  "--cov-append",
+  "--cov-branch",
+  "--cov-report=term-missing",
+  "--cov-report=xml",
+  "--durations=16",
+  "--junitxml=junit.xml",
+  "--splitting-algorithm=least_duration",
+  "--store-durations",
+  "--strict-markers",
+  "--tb=native",
+  "-vv",
+]
+markers = [
+    "serial: execute test serially (to avoid race conditions)",
+    "slow: execute the slow tests if active",
+    "sanity: execute the sanity tests",
+    "no_default_testing_config: used internally to disable monkeypatching for testing_config",
+]
