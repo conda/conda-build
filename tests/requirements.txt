@@ -5,6 +5,7 @@ conda >=4.13
 conda-forge::allure-pytest
 conda-forge::pytest-split
 conda-forge::pytest-xprocess
+conda-forge::xdoctest
 conda-index
 conda-package-handling
 conda-verify
