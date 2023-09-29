@@ -44,7 +44,7 @@ jobs:
         # https://github.com/marketplace/actions/paths-changes-filter#supported-workflows
         if: github.event_name != 'pull_request'
 
-      - uses: dorny/paths-filter@4512585405083f25c027a35db413c2b3b9006d50
+      - uses: dorny/paths-filter@v2.11.1
         id: filter
         with:
           filters: |
