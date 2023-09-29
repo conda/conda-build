@@ -118,7 +118,7 @@ addopts = [
   "--cov-report=term-missing",
   "--cov-report=xml",
   "--durations=16",
-  "--junitxml=junit.xml",
+  "--junitxml=test-report.xml",
   "--splitting-algorithm=least_duration",
   "--store-durations",
   "--strict-markers",
