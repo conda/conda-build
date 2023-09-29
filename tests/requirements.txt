@@ -22,7 +22,6 @@ pytest
 pytest-cov
 pytest-forked
 pytest-mock
-pytest-replay
 pytest-rerunfailures
 pytest-xdist
 python-libarchive-c
