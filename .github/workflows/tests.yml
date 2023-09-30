@@ -116,8 +116,7 @@ jobs:
           run-post: false  # skip post cleanup
 
       - name: Setup Environment
-        run: >
-          conda install --quiet --yes
+        run: conda install --quiet --yes
             --file tests/requirements.txt
             --file tests/requirements-${{ runner.os }}.txt
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
@@ -129,16 +128,15 @@ jobs:
           conda list --show-channel-urls
 
       - name: Run Tests
-        run: >
-          pytest
-            --alluredir="${{ env.ALLURE_DIR }}"
-            --basetemp="${{ runner.temp }}/${{ matrix.test-type }}"
-            --cov=conda_build
-            --durations-path="tools/durations/${{ runner.os }}.json"
-            --group=${{ matrix.test-group }}
-            --splits=${{ env.PYTEST_SPLITS }}
-            -n "${{ env.PYTEST_NUMPROCESSES }}"
-            -m "${{ env.PYTEST_MARKER }}"
+        run: pytest
+          --alluredir="${{ env.ALLURE_DIR }}"
+          --basetemp="${{ runner.temp }}/${{ matrix.test-type }}"
+          --cov=conda_build
+          --durations-path="tools/durations/${{ runner.os }}.json"
+          --group=${{ matrix.test-group }}
+          --splits=${{ env.PYTEST_SPLITS }}
+          -n "${{ env.PYTEST_NUMPROCESSES }}"
+          -m "${{ env.PYTEST_MARKER }}"
 
       - name: Upload Coverage
         uses: codecov/codecov-action@v3
@@ -220,8 +218,7 @@ jobs:
           run-post: false  # skip post cleanup
 
       - name: Setup Environment
-        run: >
-          choco install visualstudio2017-workload-vctools
+        run: choco install visualstudio2017-workload-vctools
           && conda install --quiet --yes
             --file tests\requirements.txt
             --file tests\requirements-${{ runner.os }}.txt
@@ -234,16 +231,15 @@ jobs:
           conda list --show-channel-urls
 
       - name: Run Tests
-        run: >
-          pytest
-            --alluredir="${{ env.ALLURE_DIR }}"
-            --basetemp="${{ runner.temp }}\${{ matrix.test-type }}"
-            --cov=conda_build
-            --durations-path="tools\durations\${{ runner.os }}.json"
-            --group=${{ matrix.test-group }}
-            --splits=${{ env.PYTEST_SPLITS }}
-            -m "${{ env.PYTEST_MARKER }}"
-            -n "${{ env.PYTEST_NUMPROCESSES }}"
+        run: pytest
+          --alluredir="${{ env.ALLURE_DIR }}"
+          --basetemp="${{ runner.temp }}\${{ matrix.test-type }}"
+          --cov=conda_build
+          --durations-path="tools\durations\${{ runner.os }}.json"
+          --group=${{ matrix.test-group }}
+          --splits=${{ env.PYTEST_SPLITS }}
+          -m "${{ env.PYTEST_MARKER }}"
+          -n "${{ env.PYTEST_NUMPROCESSES }}"
 
       - name: Upload Coverage
         uses: codecov/codecov-action@v3
@@ -332,8 +328,7 @@ jobs:
           run-post: false  # skip post cleanup
 
       - name: Setup Environment
-        run: >
-          sudo xcode-select --switch /Applications/Xcode_11.7.app
+        run: sudo xcode-select --switch /Applications/Xcode_11.7.app
           && conda install --quiet --yes
             --file tests/requirements.txt
             --file tests/requirements-${{ runner.os }}.txt
@@ -346,16 +341,15 @@ jobs:
           conda list --show-channel-urls
 
       - name: Run Tests
-        run: >
-          pytest
-            --alluredir="${{ env.ALLURE_DIR }}"
-            --basetemp="${{ runner.temp }}/${{ matrix.test-type }}"
-            --cov=conda_build
-            --durations-path=tools/durations/${{ runner.os }}.json
-            --group=${{ matrix.test-group }}
-            --splits=${{ env.PYTEST_SPLITS }}
-            -m "${{ env.PYTEST_MARKER }}"
-            -n "${{ env.PYTEST_NUMPROCESSES }}"
+        run: pytest
+          --alluredir="${{ env.ALLURE_DIR }}"
+          --basetemp="${{ runner.temp }}/${{ matrix.test-type }}"
+          --cov=conda_build
+          --durations-path=tools/durations/${{ runner.os }}.json
+          --group=${{ matrix.test-group }}
+          --splits=${{ env.PYTEST_SPLITS }}
+          -m "${{ env.PYTEST_MARKER }}"
+          -n "${{ env.PYTEST_NUMPROCESSES }}"
 
       - name: Upload Coverage
         uses: codecov/codecov-action@v3
