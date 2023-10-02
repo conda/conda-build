@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Print package file name in get_hash_input (#5021)
+* Print package file name in `get_hash_input`. (#5021)
 
 ### Deprecations
 
