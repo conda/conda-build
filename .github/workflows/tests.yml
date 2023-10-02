@@ -121,7 +121,6 @@ jobs:
             --file tests/requirements.txt
             --file tests/requirements-${{ runner.os }}.txt
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
-          && pip install -e .
 
       - name: Show Info
         run: |
@@ -225,7 +224,6 @@ jobs:
             --file tests\requirements.txt
             --file tests\requirements-${{ runner.os }}.txt
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
-          && pip install -e .
 
       - name: Show Info
         run: |
@@ -336,7 +334,6 @@ jobs:
             --file tests/requirements.txt
             --file tests/requirements-${{ runner.os }}.txt
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
-          && pip install -e .
 
       - name: Show Info
         run: |
