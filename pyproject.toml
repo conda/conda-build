@@ -120,8 +120,8 @@ addopts = [
   "--cov-report=xml",
   "--durations=16",
   "--junitxml=junit.xml",
-  "--splitting-algorithm=least_duration",
-  "--store-durations",
+  # "--splitting-algorithm=least_duration",  # not available yet
+  # "--store-durations",  # not available yet
   "--strict-markers",
   "--tb=native",
   "-vv",
