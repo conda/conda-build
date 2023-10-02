@@ -39,7 +39,7 @@ jobs:
     outputs:
       code: ${{ steps.filter.outputs.code }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         # dorny/paths-filter needs git clone for non-PR events
         # https://github.com/marketplace/actions/paths-changes-filter#supported-workflows
         if: github.event_name != 'pull_request'
@@ -94,7 +94,7 @@ jobs:
 
     steps:
       - name: Checkout Source
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -116,7 +116,8 @@ jobs:
           run-post: false  # skip post cleanup
 
       - name: Setup Environment
-        run: conda install --quiet --yes
+        run: conda install
+            --quiet --yes
             --file tests/requirements.txt
             --file tests/requirements-${{ runner.os }}.txt
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
@@ -196,7 +197,7 @@ jobs:
 
     steps:
       - name: Checkout Source
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -219,7 +220,8 @@ jobs:
 
       - name: Setup Environment
         run: choco install visualstudio2017-workload-vctools
-          && conda install --quiet --yes
+          && conda install
+            --quiet --yes
             --file tests\requirements.txt
             --file tests\requirements-${{ runner.os }}.txt
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
@@ -306,7 +308,7 @@ jobs:
 
     steps:
       - name: Checkout Source
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -329,7 +331,8 @@ jobs:
 
       - name: Setup Environment
         run: sudo xcode-select --switch /Applications/Xcode_11.7.app
-          && conda install --quiet --yes
+          && conda install
+            --quiet --yes
             --file tests/requirements.txt
             --file tests/requirements-${{ runner.os }}.txt
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
@@ -418,6 +421,7 @@ jobs:
       - name: Determine Success
         uses: re-actors/alls-green@v1.2.2
         with:
+          # permit jobs to be skipped if there are no code changes (see changes job)
           allowed-skips: ${{ toJSON(needs) }}
           jobs: ${{ toJSON(needs) }}
 
@@ -450,7 +454,7 @@ jobs:
     steps:
       # Clean checkout of specific git ref needed for package metadata version
       # which needs env vars GIT_DESCRIBE_TAG and GIT_BUILD_STR:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.ref }}
           clean: true
