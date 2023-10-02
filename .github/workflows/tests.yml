@@ -89,8 +89,8 @@ jobs:
       ALLURE_DIR: ${{ github.workspace }}/allure-results
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
-      PYTEST_NUMPROCESSES: ${{ matrix.test-type == 'serial' && 0 || 'auto' }}
-      PYTEST_SPLITS: ${{ matrix.test-type == 'serial' && 2 || 3 }}
+      PYTEST_NUMPROCESSES: ${{ matrix.test-type == 'serial' && '0' || 'auto' }}
+      PYTEST_SPLITS: ${{ matrix.test-type == 'serial' && '2' || '3' }}
 
     steps:
       - name: Checkout Source
@@ -192,8 +192,8 @@ jobs:
       ALLURE_DIR: ${{ github.workspace }}\allure-results
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial and not slow' }}
-      PYTEST_NUMPROCESSES: ${{ matrix.test-type == 'serial' && 0 || 'auto' }}
-      PYTEST_SPLITS: ${{ matrix.test-type == 'serial' && 2 || 3 }}
+      PYTEST_NUMPROCESSES: ${{ matrix.test-type == 'serial' && '0' || 'auto' }}
+      PYTEST_SPLITS: ${{ matrix.test-type == 'serial' && '2' || '3' }}
 
     steps:
       - name: Checkout Source
@@ -303,8 +303,8 @@ jobs:
       ALLURE_DIR: ${{ github.workspace }}/allure-results
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
-      PYTEST_NUMPROCESSES: ${{ matrix.test-type == 'serial' && 0 || 'auto' }}
-      PYTEST_SPLITS: ${{ matrix.test-type == 'serial' && 2 || 3 }}
+      PYTEST_NUMPROCESSES: ${{ matrix.test-type == 'serial' && '0' || 'auto' }}
+      PYTEST_SPLITS: ${{ matrix.test-type == 'serial' && '2' || '3' }}
 
     steps:
       - name: Checkout Source
