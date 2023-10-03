@@ -73,15 +73,15 @@ from conda_build.conda_interface import rm_rf as _rm_rf  # noqa
 from conda_build.exceptions import BuildLockError  # noqa
 from conda_build.os_utils import external  # noqa
 
-from .conda_interface import Dist  # noqa
-from .conda_interface import StringIO  # noqa
-from .conda_interface import cc_conda_build  # noqa
-from .conda_interface import context  # noqa
 from .conda_interface import (  # noqa
     CondaHTTPError,
+    Dist,  # noqa
     MatchSpec,
+    StringIO,  # noqa
     TemporaryDirectory,
     VersionOrder,
+    cc_conda_build,  # noqa
+    context,  # noqa
     download,
     get_conda_channel,
     hashsum_file,
