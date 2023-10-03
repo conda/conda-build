@@ -147,15 +147,16 @@ def get_selectors(config: Config) -> dict[str, bool]:
         py = py[0]
     # go from "3.6 *_cython" -> "36"
     # or from "3.6.9" -> "36"
-    py = int("".join(py.split(" ")[0].split(".")[:2]))
+    py_major, py_minor, *_ = py.split(" ")[0].split(".")
+    py = int(f"{py_major}{py_minor}")
 
     d["build_platform"] = config.build_subdir
 
     d.update(
         dict(
             py=py,
-            py3k=bool(30 <= py < 40),
-            py2k=bool(20 <= py < 30),
+            py3k=bool(py_major == "3"),
+            py2k=bool(py_major == "2"),
             py26=bool(py == 26),
             py27=bool(py == 27),
             py33=bool(py == 33),
