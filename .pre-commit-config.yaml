@@ -12,7 +12,7 @@ exclude: |
       test-recipes |
       test-skeleton
     )/ |
-    .*\.(patch|diff) |
+    .*\.(patch|diff)
   )
 repos:
   # generic verification and formatting

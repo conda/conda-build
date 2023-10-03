@@ -1752,18 +1752,20 @@ class MetaData:
 
     def ignore_prefix_files(self):
         ret = self.get_value("build/ignore_prefix_files", False)
-        if type(ret) not in (list, bool):
+        if not isinstance(ret, (list, bool)):
             raise RuntimeError(
                 "build/ignore_prefix_files should be boolean or a list of paths "
                 "(optionally globs)"
             )
         if sys.platform == "win32":
-            if type(ret) is list and any("\\" in i for i in ret):
+            if isinstance(ret, list) and any("\\" in i for i in ret):
                 raise RuntimeError(
                     "build/ignore_prefix_files paths must use / "
                     "as the path delimiter on Windows"
                 )
-        return expand_globs(ret, self.config.host_prefix) if type(ret) is list else ret
+        return (
+            expand_globs(ret, self.config.host_prefix) if isinstance(ret, list) else ret
+        )
 
     def always_include_files(self):
         files = ensure_list(self.get_value("build/always_include_files", []))
@@ -1782,18 +1784,20 @@ class MetaData:
 
     def binary_relocation(self):
         ret = self.get_value("build/binary_relocation", True)
-        if type(ret) not in (list, bool):
+        if not isinstance(ret, (list, bool)):
             raise RuntimeError(
                 "build/binary_relocation should be boolean or a list of paths "
                 "(optionally globs)"
             )
         if sys.platform == "win32":
-            if type(ret) is list and any("\\" in i for i in ret):
+            if isinstance(ret, list) and any("\\" in i for i in ret):
                 raise RuntimeError(
                     "build/binary_relocation paths must use / "
                     "as the path delimiter on Windows"
                 )
-        return expand_globs(ret, self.config.host_prefix) if type(ret) is list else ret
+        return (
+            expand_globs(ret, self.config.host_prefix) if isinstance(ret, list) else ret
+        )
 
     def include_recipe(self):
         return self.get_value("build/include_recipe", True)
