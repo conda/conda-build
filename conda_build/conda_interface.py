@@ -11,9 +11,8 @@ from conda import __version__ as CONDA_VERSION  # noqa: F401
 from conda.auxlib.packaging import (  # noqa: F401
     _get_version_from_git_tag as get_version_from_git_tag,
 )
-from conda.base.context import context, determine_target_prefix
+from conda.base.context import context, determine_target_prefix, reset_context
 from conda.base.context import non_x86_machines as non_x86_linux_machines  # noqa: F401
-from conda.base.context import reset_context
 from conda.core.package_cache import ProgressiveFetchExtract  # noqa: F401
 from conda.exceptions import (  # noqa: F401
     CondaError,
@@ -24,15 +23,12 @@ from conda.exceptions import (  # noqa: F401
     PaddingError,
     UnsatisfiableError,
 )
-from conda.exports import ArgumentParser  # noqa: F401
-from conda.exports import CondaSession  # noqa: F401
-from conda.exports import EntityEncoder  # noqa: F401
-from conda.exports import VersionOrder  # noqa: F401
-from conda.exports import _toposort  # noqa: F401
-from conda.exports import get_index  # noqa: F401
 from conda.exports import (  # noqa: F401
+    ArgumentParser,  # noqa: F401
     Channel,
     Completer,
+    CondaSession,  # noqa: F401
+    EntityEncoder,  # noqa: F401
     FileMode,
     InstalledPackages,
     MatchSpec,
@@ -43,12 +39,15 @@ from conda.exports import (  # noqa: F401
     TemporaryDirectory,
     TmpDownload,
     Unsatisfiable,
+    VersionOrder,  # noqa: F401
+    _toposort,  # noqa: F401
     add_parser_channels,
     add_parser_prefix,
     display_actions,
     download,
     execute_actions,
     execute_plan,
+    get_index,  # noqa: F401
     handle_proxy_407,
     hashsum_file,
     human_bytes,
