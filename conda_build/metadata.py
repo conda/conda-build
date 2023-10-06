@@ -30,7 +30,7 @@ from conda_build.utils import (
     insert_variant_versions,
 )
 
-from .conda_interface import MatchSpec, envs_dirs, md5_file, non_x86_linux_machines
+from .conda_interface import MatchSpec, envs_dirs, md5_file
 
 try:
     import yaml
@@ -186,9 +186,6 @@ def get_selectors(config: Config) -> dict[str, bool]:
     lua = config.variant.get("lua", defaults["lua"])
     d["lua"] = lua
     d["luajit"] = bool(lua[0] == "2")
-
-    for machine in non_x86_linux_machines:
-        d[machine] = bool(plat.endswith("-%s" % machine))
 
     for feature, value in feature_list:
         d[feature] = value
