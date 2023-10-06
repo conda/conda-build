@@ -398,13 +398,14 @@ Expressing the relation between compiler and its standard library
 =================================================================
 
 For most languages, certainly for "c" and for "cxx", compiling any given
-program _may_ create a run-time dependence on symbols from the respective
+program *may* create a run-time dependence on symbols from the respective
 standard library. For example, the standard library for C on linux is generally
 ``glibc``, and a core component of your operating system. Conda is not able to
 change or supersede this library (it would be too risky to try to). A similar
 situation exists on MacOS and on Windows.
 
 Compiler packages usually have two ways to deal with this dependence:
+
 * assume the package must be there (like ``glibc`` on linux).
 * always add a run-time requirement on the respective stdlib (e.g. ``libcxx``
   on MacOS).
