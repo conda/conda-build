@@ -133,6 +133,10 @@ def get_selectors(config: Config) -> dict[str, bool]:
     )
 
     subdirs = [subdir for subdir in DEFAULT_SUBDIRS if subdir != "noarch"]
+    # Add the current platform to the list as well to enable conda-build
+    # to bootstrap new platforms without a new conda release.
+    subdirs.append(plat)
+
     subdir_oses = {subdir.split("-")[0] for subdir in subdirs}
     subdir_archs = {subdir.split("-")[1] for subdir in subdirs}
 
