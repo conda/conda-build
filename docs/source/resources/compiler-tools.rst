@@ -440,15 +440,18 @@ In the recipe we would then use::
         - {{ stdlib('c') }}
 
 This would then express that the resulting package requires ``sysroot ==2.17``
-(corresponds to ``glibc``) resp. ``macosx_deployment_target ==10.13`` in the
-build environment.  How this translates into a run-time dependence can be
-defined in the metadata of the respective conda (meta-)package which represents
-the standard library (i.e. those defined under ``c_stdlib`` above). In this
-example, ``sysroot 2.17`` would generate a run-export on ``__glibc >=2.17`` and
-``macosx_deployment_target 10.13`` would generate ``__osx >=10.13``. This way,
-we enable packages to define their own expectations about the standard library
-in a unified way, and without implicitly depending on some global assumption
-about what the lower version must on a given platform must be.
+(corresponds to ``glibc``) on linux and ``macosx_deployment_target ==10.13`` on
+MacOS in the build environment, respectively. How this translates into a
+run-time dependence can be defined in the metadata of the respective conda
+(meta-)package which represents the standard library (i.e. those defined under
+``c_stdlib`` above).
+
+In this example, ``sysroot 2.17`` would generate a run-export on
+``__glibc >=2.17`` and ``macosx_deployment_target 10.13`` would similarly
+generate ``__osx >=10.13``. This way, we enable packages to define their own
+expectations about the standard library in a unified way, and without
+implicitly depending on some global assumption about what the lower version
+on a given platform must be.
 
 In principle, this facility would make it possible to also express the
 dependence on separate stdlib implementations (like ``musl`` instead of
