@@ -7,9 +7,9 @@ Building conda packages with conda skeleton
    :local:
    :depth: 1
 
-.. warning::
-   For a better experience with building conda packages from PyPI pacakages, we recommend the usage
-   of `Grayskull <https://github.com/conda/grayskull>`_. Please check out their project page on GitHub
+.. tip::
+   We recommend `Grayskull <https://github.com/conda/grayskull>`_, a newer alternative to conda-skeleton,
+   to generate conda recipes for PyPI packages. Please check out their project page on GitHub
    for more information.
 
 Overview
