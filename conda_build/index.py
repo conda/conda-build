@@ -32,11 +32,8 @@ from uuid import uuid4
 import conda_package_handling.api
 import pytz
 import yaml
-
-# Lots of conda internals here.  Should refactor to use exports.
 from conda.common.compat import ensure_binary
-
-#  BAD BAD BAD - conda internals
+from conda.core.index import get_index
 from conda.core.subdir_data import SubdirData
 from conda.models.channel import Channel
 from conda_index.index import update_index as _update_index
@@ -58,7 +55,6 @@ from .conda_interface import (
     TemporaryDirectory,
     VersionOrder,
     context,
-    get_index,
     human_bytes,
     url_path,
 )

@@ -26,11 +26,9 @@ from conda.exceptions import (  # noqa: F401
 from conda.exports import (  # noqa: F401
     ArgumentParser,  # noqa: F401
     Channel,
-    Completer,
     CondaSession,  # noqa: F401
     EntityEncoder,  # noqa: F401
     FileMode,
-    InstalledPackages,
     MatchSpec,
     NoPackagesFound,
     PathType,
@@ -47,7 +45,6 @@ from conda.exports import (  # noqa: F401
     download,
     execute_actions,
     execute_plan,
-    get_index,  # noqa: F401
     handle_proxy_407,
     hashsum_file,
     human_bytes,
@@ -66,7 +63,6 @@ from conda.exports import (  # noqa: F401
     spec_from_line,
     specs_from_args,
     specs_from_url,
-    symlink_conda,
     unix_path_to_win,
     untracked,
     url_path,

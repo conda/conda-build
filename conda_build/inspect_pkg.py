@@ -11,9 +11,10 @@ from itertools import groupby
 from operator import itemgetter
 from os.path import abspath, basename, dirname, exists, join, normcase
 
+from conda.core.index import get_index
+
 from conda_build.conda_interface import (
     display_actions,
-    get_index,
     install_actions,
     is_linked,
     linked_data,

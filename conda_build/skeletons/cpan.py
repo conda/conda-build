@@ -20,6 +20,7 @@ from os import makedirs
 from os.path import basename, dirname, exists, join
 
 import requests
+from conda.core.index import get_index
 
 from conda_build import environ
 from conda_build.conda_interface import (
@@ -29,7 +30,6 @@ from conda_build.conda_interface import (
     Resolve,
     TmpDownload,
     download,
-    get_index,
 )
 from conda_build.config import get_or_merge_config
 from conda_build.utils import check_call_env, on_win
