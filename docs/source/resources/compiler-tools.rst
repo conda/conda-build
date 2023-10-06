@@ -438,16 +438,16 @@ In the recipe we would then use::
         - {{ compiler('c') }}
         - {{ stdlib('c') }}
 
-This would then express that the resulting package has to have ``glibc >=2.17``
-resp. a ``MACOSX_DEPLOYMENT_TARGET >=10.13`. The exact handling of this can be
+This would then express that the resulting package requires ``glibc >=2.17``
+resp. ``MACOSX_DEPLOYMENT_TARGET >=10.13``. The exact handling of this can be
 expressed in the metadata of the respective conda (meta-)package which defines
-the standard library.
+the standard library (i.e. those defined under ``c_stdlib`` above).
 
 In principle, this facility would make it possible to also express the
 dependence on separate stdlib implementations (like ``musl`` instead of
 ``glibc``), or to remove the need to assume that a C++ compiler always needs to
 add a run-export on the C++ stdlib -- it could then be left up to packages
-themselves whether they need ``{{ compiler('cxx') }}`` or not.
+themselves whether they need ``{{ stdlib('cxx') }}`` or not.
 
 Anaconda compilers implicitly add RPATH pointing to the conda environment
 =========================================================================
