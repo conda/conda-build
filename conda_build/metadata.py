@@ -132,7 +132,7 @@ def get_selectors(config: Config) -> dict[str, bool]:
         nomkl=bool(int(os.environ.get("FEATURE_NOMKL", False))),
     )
 
-    subdirs = [subdir for subdir in DEFAULT_SUBDIRS if subdir != "noarch"]
+    subdirs = [subdir for subdir in DEFAULT_SUBDIRS if "-" not in subdir]
     # Add the current platform to the list as well to enable conda-build
     # to bootstrap new platforms without a new conda release.
     subdirs.append(plat)
