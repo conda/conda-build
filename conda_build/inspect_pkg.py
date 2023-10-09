@@ -1,20 +1,23 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import json
 import os
 import re
 import sys
-import tempfile
 from collections import defaultdict
 from functools import lru_cache
 from itertools import groupby
 from operator import itemgetter
 from os.path import abspath, basename, dirname, exists, join, normcase
+from tempfile import TemporaryDirectory
+from typing import Iterable
+
+from conda.api import Solver
+from conda.core.index import get_index
 
 from conda_build.conda_interface import (
-    display_actions,
-    get_index,
-    install_actions,
     is_linked,
     linked_data,
     specs_from_args,
@@ -31,8 +34,9 @@ from conda_build.utils import (
     ensure_list,
     get_logger,
     package_has_file,
-    rm_rf,
 )
+
+log = get_logger(__name__)
 
 
 @lru_cache(maxsize=None)
@@ -88,22 +92,19 @@ untracked_package = _untracked_package()
 
 
 def check_install(
-    packages, platform=None, channel_urls=(), prepend=True, minimal_hint=False
-):
-    prefix = tempfile.mkdtemp("conda")
-    try:
-        specs = specs_from_args(packages)
-        index = get_index(
-            channel_urls=channel_urls, prepend=prepend, platform=platform, prefix=prefix
-        )
-        actions = install_actions(
-            prefix, index, specs, pinned=False, minimal_hint=minimal_hint
-        )
-        display_actions(actions, index)
-        return actions
-    finally:
-        rm_rf(prefix)
-    return None
+    packages: Iterable[str],
+    subdir: str | None = None,
+    channel_urls: Iterable[str] = (),
+    prepend: bool = True,
+    minimal_hint: bool = False,
+) -> None:
+    with TemporaryDirectory() as prefix:
+        Solver(
+            prefix,
+            channel_urls,
+            [subdir],
+            specs_from_args(packages),
+        ).solve_for_transaction().print_transaction_summary()
 
 
 def print_linkages(depmap, show_files=False):
@@ -155,61 +156,41 @@ def replace_path(binary, path, prefix):
         return "not found"
 
 
-def test_installable(channel="defaults"):
+def test_installable(channel: str = "defaults") -> bool:
     success = True
-    log = get_logger(__name__)
-    has_py = re.compile(r"py(\d)(\d)")
-    for platform in ["osx-64", "linux-32", "linux-64", "win-32", "win-64"]:
-        log.info("######## Testing platform %s ########", platform)
-        channels = [channel]
-        index = get_index(channel_urls=channels, prepend=False, platform=platform)
-        for _, rec in index.items():
-            # If we give channels at the command line, only look at
-            # packages from those channels (not defaults).
-            if channel != "defaults" and rec.get("schannel", "defaults") == "defaults":
-                continue
-            name = rec["name"]
+    for subdir in ["osx-64", "linux-32", "linux-64", "win-32", "win-64"]:
+        log.info("######## Testing subdir %s ########", subdir)
+        for prec in get_index(channel_urls=[channel], prepend=False, platform=subdir):
+            name = prec["name"]
             if name in {"conda", "conda-build"}:
                 # conda can only be installed in the root environment
                 continue
-            if name.endswith("@"):
+            elif name.endswith("@"):
                 # this is a 'virtual' feature record that conda adds to the index for the solver
                 # and should be ignored here
                 continue
-            # Don't fail just because the package is a different version of Python
-            # than the default.  We should probably check depends rather than the
-            # build string.
-            build = rec["build"]
-            match = has_py.search(build)
-            assert match if "py" in build else True, build
-            if match:
-                additional_packages = [f"python={match.group(1)}.{match.group(2)}"]
-            else:
-                additional_packages = []
 
-            version = rec["version"]
+            version = prec["version"]
             log.info("Testing %s=%s", name, version)
 
             try:
-                install_steps = check_install(
-                    [name + "=" + version] + additional_packages,
-                    channel_urls=channels,
+                check_install(
+                    [f"{name}={version}"],
+                    channel_urls=[channel],
                     prepend=False,
-                    platform=platform,
+                    subdir=subdir,
                 )
-                success &= bool(install_steps)
             except KeyboardInterrupt:
                 raise
-            # sys.exit raises an exception that doesn't subclass from Exception
-            except BaseException as e:
+            except BaseException as err:
+                # sys.exit raises an exception that doesn't subclass from Exception
                 success = False
                 log.error(
-                    "FAIL: %s %s on %s with %s (%s)",
+                    "%s=%s on %s: %s",
                     name,
                     version,
-                    platform,
-                    additional_packages,
-                    e,
+                    subdir,
+                    repr(err),
                 )
     return success
 
