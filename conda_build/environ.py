@@ -1215,7 +1215,7 @@ def remove_existing_packages(dirs, fns, config):
                     utils.rm_rf(entry)
 
 
-@deprecated("24.3", "24.9")
+@deprecated("3.28.0", "4.0.0")
 def clean_pkg_cache(dist, config):
     locks = []
 
