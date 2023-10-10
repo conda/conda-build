@@ -186,8 +186,7 @@ def test_installable(channel: str = "defaults") -> bool:
                 )
             except KeyboardInterrupt:
                 raise
-            except BaseException as err:
-                # sys.exit raises an exception that doesn't subclass from Exception
+            except Exception as err:
                 success = False
                 log.error(
                     "[%s/%s::%s=%s] %s",
