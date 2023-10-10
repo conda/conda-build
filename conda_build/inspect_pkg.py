@@ -189,10 +189,11 @@ def test_installable(channel: str = "defaults") -> bool:
                 # sys.exit raises an exception that doesn't subclass from Exception
                 success = False
                 log.error(
-                    "%s=%s on %s: %s",
+                    "[%s/%s::%s=%s] %s",
+                    channel,
+                    subdir,
                     name,
                     version,
-                    subdir,
                     repr(err),
                 )
     return success
