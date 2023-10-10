@@ -107,7 +107,7 @@ def check_install(
             channel_urls,
             [subdir],
             specs_from_args(packages),
-        ).solve_for_transaction().print_transaction_summary()
+        ).solve_for_transaction(ignore_pinned=True).print_transaction_summary()
 
 
 def print_linkages(depmap, show_files=False):
