@@ -184,8 +184,6 @@ def test_installable(channel: str = "defaults") -> bool:
                     prepend=False,
                     subdir=subdir,
                 )
-            except KeyboardInterrupt:
-                raise
             except Exception as err:
                 success = False
                 log.error(
