@@ -36,6 +36,8 @@ from conda_build.utils import (
     package_has_file,
 )
 
+from .deprecations import deprecated
+
 log = get_logger(__name__)
 
 
@@ -91,6 +93,7 @@ class _untracked_package:
 untracked_package = _untracked_package()
 
 
+@deprecated.argument("3.28.0", "4.0.0", "package", rename="subdir")
 def check_install(
     packages: Iterable[str],
     subdir: str | None = None,
