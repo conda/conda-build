@@ -94,12 +94,12 @@ untracked_package = _untracked_package()
 
 
 @deprecated.argument("3.28.0", "4.0.0", "package", rename="subdir")
+@deprecated.argument("3.28.0", "4.0.0", "prepend")
+@deprecated.argument("3.28.0", "4.0.0", "minimal_hint")
 def check_install(
     packages: Iterable[str],
     subdir: str | None = None,
     channel_urls: Iterable[str] = (),
-    prepend: bool = True,
-    minimal_hint: bool = False,
 ) -> None:
     with TemporaryDirectory() as prefix:
         Solver(
