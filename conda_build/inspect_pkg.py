@@ -36,6 +36,7 @@ from conda_build.utils import (
     package_has_file,
 )
 
+from . import conda_interface
 from .deprecations import deprecated
 
 log = get_logger(__name__)
@@ -105,7 +106,7 @@ def check_install(
         Solver(
             prefix,
             channel_urls,
-            [subdir],
+            [subdir or conda_interface.subdir],
             specs_from_args(packages),
         ).solve_for_transaction(ignore_pinned=True).print_transaction_summary()
 
