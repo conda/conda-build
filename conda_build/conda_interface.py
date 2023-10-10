@@ -80,8 +80,8 @@ from conda.models.records import PackageRecord
 from .deprecations import deprecated
 
 deprecated.constant(
-    "24.3",
-    "24.9",
+    "3.28.0",
+    "4.0.0",
     "IndexRecord",
     PackageRecord,
     addendum="Use `conda.models.records.PackageRecord` instead.",
