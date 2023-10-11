@@ -372,7 +372,7 @@ def inspect_objects(packages, prefix=sys.prefix, groupby="package"):
 def get_hash_input(packages):
     hash_inputs = {}
     for pkg in ensure_list(packages):
-        pkgname = os.path.basename(pkg)[:-8]
+        pkgname = os.path.basename(pkg)
         hash_inputs[pkgname] = {}
         hash_input = package_has_file(pkg, "info/hash_input.json")
         if hash_input:
