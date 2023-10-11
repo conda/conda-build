@@ -1,0 +1,19 @@
+### Enhancements
+
+* Remove unnecessary cache clearing from `conda_buidl.build.test`. (#5031)
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* Mark `conda_build.environ.clean_pkg_cache` as pending deprecation. (#5031)
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>
