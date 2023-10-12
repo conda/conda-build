@@ -41,6 +41,7 @@ from .conda_interface import (
     reset_context,
     root_dir,
 )
+from .deprecations import deprecated
 
 # these are things that we provide env vars for more explicitly.  This list disables the
 #    pass-through of variant values to env vars for these keys.
@@ -1214,6 +1215,7 @@ def remove_existing_packages(dirs, fns, config):
                     utils.rm_rf(entry)
 
 
+@deprecated("3.28.0", "4.0.0")
 def clean_pkg_cache(dist, config):
     locks = []
 
