@@ -385,33 +385,34 @@ def test_get_lock(testing_workdir):
 
 def test_rec_glob(tmp_path: Path):
     (dirA := tmp_path / "dirA").mkdir()
-    (dirB := dirA / "dirB").mkdir()
-    (dirC := dirA / "dirC").mkdir()
+    (dirB := tmp_path / "dirB").mkdir()
 
-    (path1 := dirB / "fileA").touch()
-    (path2 := dirB / "fileB").touch()
-    (path3 := dirC / "fileA").touch()
-    (path4 := dirC / "fileB").touch()
+    (path1 := dirA / "fileA").touch()
+    (path2 := dirA / "fileB").touch()
+    (path3 := dirB / "fileA").touch()
+    (path4 := dirB / "fileB").touch()
 
     assert {str(path1), str(path3)} == set(utils.rec_glob(tmp_path, "fileA"))
     assert {str(path3), str(path4)} == set(
         utils.rec_glob(
             tmp_path,
             ("fileA", "fileB"),
-            ignores="dirB",
+            ignores="dirA",
         )
     )
-    assert {str(path2)} == set(utils.rec_glob(tmp_path, "fileB", ignores=["dirC"]))
+    assert {str(path2)} == set(utils.rec_glob(tmp_path, "fileB", ignores=["dirB"]))
 
 
 @pytest.mark.parametrize("file", ["meta.yaml", "meta.yml", "conda.yaml", "conda.yml"])
 def test_find_recipe(tmp_path: Path, file: str):
-    (dirA := tmp_path / "dirA").mkdir()
-    (dirB := dirA / "dirB").mkdir()
-    (dirC := dirA / "dirC").mkdir()
-
     # check that each of these are valid recipes
-    for path in (tmp_path / file, dirA / file, dirB / file, dirC / file):
+    for path in (
+        tmp_path / file,
+        tmp_path / "dirA" / file,
+        tmp_path / "dirA" / "dirB" / file,
+        tmp_path / "dirA" / "dirC" / file,
+    ):
+        path.parent.mkdir(parents=True, exist_ok=True)
         path.touch()
         assert path.samefile(utils.find_recipe(tmp_path))
         path.unlink()
@@ -435,22 +436,19 @@ def test_find_recipe_no_meta(tmp_path: Path):
 
 
 def test_find_recipe_file(tmp_path: Path):
-    (path := tmp_path / "meta.yaml").touch()
-
     # provided recipe is valid
+    (path := tmp_path / "meta.yaml").touch()
     assert path.samefile(utils.find_recipe(path))
 
 
 def test_find_recipe_file_bad(tmp_path: Path):
-    path = tmp_path / "not_a_recipe"
-
     # missing recipe is invalid
+    path = tmp_path / "not_a_recipe"
     with pytest.raises(IOError):
         utils.find_recipe(path)
 
-    path.touch()
-
     # provided recipe is invalid
+    path.touch()
     with pytest.raises(IOError):
         utils.find_recipe(path)
 
