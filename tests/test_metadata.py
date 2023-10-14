@@ -383,10 +383,10 @@ OS_ARCH = (
         ("linux-riscv64", {"unix", "linux", "riscv64"}),
         ("linux-s390x", {"unix", "linux", "s390x"}),
         ("osx-64", {"unix", "osx", "x86", "x86_64"}),
-        ("osx-arm64", {"unix", "osx", "arm", "arm64"}),
+        ("osx-arm64", {"unix", "osx", "arm64"}),
         ("win-32", {"win", "win32", "x86"}),
         ("win-64", {"win", "win64", "x86", "x86_64"}),
-        ("win-arm64", {"win", "arm", "arm64"}),
+        ("win-arm64", {"win", "arm64"}),
         ("zos-z", {"zos", "z"}),
     ],
 )

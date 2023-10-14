@@ -124,7 +124,7 @@ def get_selectors(config: Config) -> dict[str, bool]:
     d = dict(
         linux32=bool(plat == "linux-32"),
         linux64=bool(plat == "linux-64"),
-        arm=plat.startswith(("linux-arm", "osx-arm", "win-arm")),
+        arm=plat.startswith("linux-arm"),
         unix=plat.startswith(("linux-", "osx-", "emscripten-")),
         win32=bool(plat == "win-32"),
         win64=bool(plat == "win-64"),
