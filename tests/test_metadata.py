@@ -342,6 +342,7 @@ OS_ARCH = (
     "armv6l",
     "armv7l",
     "emscripten",
+    "freebsd",
     "linux",
     "linux32",
     "linux64",
@@ -358,6 +359,8 @@ OS_ARCH = (
     "win64",
     "x86",
     "x86_64",
+    "z",
+    "zos",
 )
 
 
@@ -369,7 +372,7 @@ OS_ARCH = (
     [
         ("emscripten-wasm32", {"unix", "emscripten", "wasm32"}),
         ("wasi-wasm32", {"wasi", "wasm32"}),
-        ("freebsd-64", {"x86", "x86_64"}),
+        ("freebsd-64", {"freebsd", "x86", "x86_64"}),
         ("linux-32", {"unix", "linux", "linux32", "x86"}),
         ("linux-64", {"unix", "linux", "linux64", "x86", "x86_64"}),
         ("linux-aarch64", {"unix", "linux", "aarch64"}),
@@ -384,7 +387,7 @@ OS_ARCH = (
         ("win-32", {"win", "win32", "x86"}),
         ("win-64", {"win", "win64", "x86", "x86_64"}),
         ("win-arm64", {"win", "arm64"}),
-        ("zos-z", {}),
+        ("zos-z", {"zos", "z"}),
     ],
 )
 @pytest.mark.parametrize("nomkl", [0, 1])
