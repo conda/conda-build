@@ -1,0 +1,19 @@
+### Enhancements
+
+* <news item>
+
+### Bug fixes
+
+* Avoid clobbering of variants in high priority cbc.yaml entries when they aren't present in lower priority cbc.yamls. (#5039)
+
+### Deprecations
+
+* <news item>
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>
