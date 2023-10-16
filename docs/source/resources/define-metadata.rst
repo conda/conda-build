@@ -1931,7 +1931,10 @@ variables are booleans.
      - True if the platform is either macOS or Windows and the
        Python architecture is arm64.
    * - unix
-     - True if the platform is either macOS or Linux or emscripten.
+     - True if the platform is either macOS or Linux or emscripten
+       or FreeBSD.
+   * - freebsd
+     - True if the platform is FreeBSD.
    * - win
      - True if the platform is Windows.
    * - win32

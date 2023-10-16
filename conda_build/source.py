@@ -934,7 +934,7 @@ def apply_one_patch(src_dir, recipe_dir, rel_path, config, git=None):
         temp_name = os.path.join(
             tempfile.gettempdir(), next(tempfile._get_candidate_names())
         )
-        base_patch_args = ["--no-backup-if-mismatch", "--batch"] + patch_args
+        base_patch_args = ["--posix", "--batch"] + patch_args
         try:
             try_patch_args = base_patch_args[:]
             try_patch_args.append("--dry-run")

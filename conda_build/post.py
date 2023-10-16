@@ -59,6 +59,7 @@ filetypes_for_platform = {
     "win": ("DLLfile", "EXEfile"),
     "osx": ["machofile"],
     "linux": ["elffile"],
+    "freebsd": ["elffile"],
 }
 
 
