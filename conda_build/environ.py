@@ -581,9 +581,7 @@ def get_shlib_ext(host_platform):
         return ".dll"
     elif host_platform in ["osx", "darwin"]:
         return ".dylib"
-    elif host_platform.startswith("linux") or host_platform.endswith("-wasm32"):
-        return ".so"
-    elif host_platform.startswith("freebsd"):
+    elif host_platform.startswith(("linux", "freebsd")) or host_platform.endswith("-wasm32"):
         return ".so"
     elif host_platform == "noarch":
         # noarch packages should not contain shared libraries, use the system
