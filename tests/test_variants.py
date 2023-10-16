@@ -18,6 +18,7 @@ from conda_build.variants import (
     dict_of_lists_to_list_of_dicts,
     get_package_variants,
     validate_spec,
+    filter_combined_spec_to_used_keys,
 )
 
 from .utils import variants_dir
@@ -657,3 +658,28 @@ def test_variant_subkeys_retained():
     m.final = False
     outputs = m.get_output_metadata_set(permit_unsatisfiable_variants=False)
     get_all_replacements(outputs[0][1].config.variant)
+
+@pytest.mark.parametrize(
+    "internal_defaults, low_prio_config, high_prio_config, expected",
+    [
+        (
+            {'pkg_1': '1.0'},
+            {'pkg_1': '1.1'},
+            {'pkg_1': ['1.1', '1.2'],
+             'pkg_2': ['1.1', '1.2'],
+             'zip_keys': [['pkg_1', 'pkg_2']]},
+            [{'pkg_1': '1.1', 'pkg_2': '1.1', 'zip_keys': [['pkg_1', 'pkg_2']]},
+             {'pkg_1': '1.2', 'pkg_2': '1.2', 'zip_keys': [['pkg_1', 'pkg_2']]}]
+        )
+    ]
+)
+def test_zip_key_filtering(internal_defaults, low_prio_config, high_prio_config, expected):
+    from collections import OrderedDict
+    
+    combined_spec = low_prio_config.copy()
+    combined_spec.update(high_prio_config)
+    specs = OrderedDict([('internal_defaults',internal_defaults),
+                         ('low_prio_config',low_prio_config),
+                         ('high_prio_config',high_prio_config)])
+
+    assert filter_combined_spec_to_used_keys(combined_spec, specs=specs) == expected
