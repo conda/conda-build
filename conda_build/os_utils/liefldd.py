@@ -15,6 +15,7 @@ from fnmatch import fnmatch
 from functools import partial
 from subprocess import PIPE, Popen
 
+from ..deprecations import deprecated
 from .external import find_executable
 
 # lief cannot handle files it doesn't know about gracefully
@@ -34,11 +35,9 @@ except:
     pass
 
 
+@deprecated("3.28.0", "4.0.0", addendum="Use `isinstance(value, str)` instead.")
 def is_string(s):
-    try:
-        return isinstance(s, basestring)
-    except NameError:
-        return isinstance(s, str)
+    return isinstance(s, str)
 
 
 # Some functions can operate on either file names
@@ -47,7 +46,7 @@ def is_string(s):
 # should be passed a binary when possible as that
 # will prevent having to parse it multiple times.
 def ensure_binary(file):
-    if not is_string(file):
+    if not isinstance(file, str):
         return file
     else:
         try:
@@ -111,7 +110,9 @@ def get_libraries(file):
         if binary.format == lief.EXE_FORMATS.PE:
             result = binary.libraries
         else:
-            result = [lib if is_string(lib) else lib.name for lib in binary.libraries]
+            result = [
+                lib if isinstance(lib, str) else lib.name for lib in binary.libraries
+            ]
             # LIEF returns LC_ID_DYLIB name @rpath/libbz2.dylib in binary.libraries. Strip that.
             binary_name = None
             if binary.format == lief.EXE_FORMATS.MACHO:
