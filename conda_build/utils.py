@@ -97,9 +97,10 @@ PermissionError = PermissionError  # NOQA
 FileNotFoundError = FileNotFoundError
 
 on_win = sys.platform == "win32"
+on_mac = sys.platform == "darwin"
+on_linux = sys.platform == "linux"
 
 codec = getpreferredencoding() or "utf-8"
-on_win = sys.platform == "win32"
 root_script_dir = os.path.join(root_dir, "Scripts" if on_win else "bin")
 mmap_MAP_PRIVATE = 0 if on_win else mmap.MAP_PRIVATE
 mmap_PROT_READ = 0 if on_win else mmap.PROT_READ
