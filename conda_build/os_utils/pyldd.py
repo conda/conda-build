@@ -1,5 +1,7 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import argparse
 import glob
 import logging
@@ -7,8 +9,11 @@ import os
 import re
 import struct
 import sys
+from pathlib import Path
 
 from conda_build.utils import ensure_list, get_logger
+
+from ..deprecations import deprecated
 
 logging.basicConfig(level=logging.INFO)
 
@@ -1055,11 +1060,9 @@ def codefile_class(filename, skip_symlinks=False):
     return None
 
 
-def is_codefile(filename, skip_symlinks=True):
-    klass = codefile_class(filename, skip_symlinks=skip_symlinks)
-    if not klass:
-        return False
-    return True
+@deprecated.argument("3.28.0", "4.0.0", "filename", rename="path")
+def is_codefile(path: str | os.PathLike | Path, skip_symlinks: bool = True) -> bool:
+    return bool(codefile_class(path, skip_symlinks=skip_symlinks))
 
 
 def codefile_type(filename, skip_symlinks=True):
