@@ -926,9 +926,7 @@ def _map_file_to_package(
                     if not len(owners):
                         if any(rp == normpath(w) for w in files):
                             owners.append(pkg_vendored_dist)
-                    new_pkgs = list(
-                        which_package(rp, prefix, avoid_canonical_channel_name=True)
-                    )
+                    new_pkgs = list(which_package(rp, prefix))
                     # Cannot filter here as this means the DSO (eg libomp.dylib) will not be found in any package
                     # [owners.append(new_pkg) for new_pkg in new_pkgs if new_pkg not in owners
                     #  and not any([fnmatch(new_pkg.name, i) for i in ignore_for_statics])]
@@ -1125,9 +1123,7 @@ def _lookup_in_prefix_packages(
     in_prefix_dso = normpath(needed_dso)
     n_dso_p = "Needed DSO {}".format(in_prefix_dso.replace("\\", "/"))
     and_also = " (and also in this package)" if in_prefix_dso in files else ""
-    pkgs = list(
-        which_package(in_prefix_dso, run_prefix, avoid_canonical_channel_name=True)
-    )
+    pkgs = list(which_package(in_prefix_dso, run_prefix))
     in_pkgs_in_run_reqs = [pkg for pkg in pkgs if pkg.quad[0] in requirements_run]
     # TODO :: metadata build/inherit_child_run_exports (for vc, mro-base-impl).
     for pkg in in_pkgs_in_run_reqs:

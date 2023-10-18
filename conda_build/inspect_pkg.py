@@ -1,5 +1,7 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import json
 import os
 import re
@@ -9,7 +11,12 @@ from collections import defaultdict
 from functools import lru_cache
 from itertools import groupby
 from operator import itemgetter
-from os.path import abspath, basename, dirname, exists, join, normcase
+from os.path import abspath, basename, dirname, exists, join
+from pathlib import Path
+from typing import Iterable
+
+from conda.models.dist import Dist
+from conda.models.records import PackageRecord
 
 from conda_build.conda_interface import (
     display_actions,
@@ -34,32 +41,35 @@ from conda_build.utils import (
     rm_rf,
 )
 
+from .deprecations import deprecated
 
+
+@deprecated("3.28.0", "4.0.0")
 @lru_cache(maxsize=None)
-def dist_files(prefix, dist):
+def dist_files(prefix: str | os.PathLike | Path, dist: Dist) -> set[str]:
     meta = is_linked(prefix, dist)
     return set(meta["files"]) if meta else set()
 
 
-def which_package(in_prefix_path, prefix, avoid_canonical_channel_name=False):
+@deprecated.argument("3.28.0", "4.0.0", "avoid_canonical_channel_name")
+def which_package(
+    path: str | os.PathLike | Path,
+    prefix: str | os.PathLike | Path,
+) -> Iterable[PackageRecord]:
     """
-    given the path of a conda installed file iterate over
+    Given the path (of a (presumably) conda installed file) iterate over
     the conda packages the file came from.  Usually the iteration yields
     only one package.
     """
-    norm_ipp = normcase(in_prefix_path.replace(os.sep, "/"))
-    from conda_build.utils import linked_data_no_multichannels
+    from conda.core.prefix_data import PrefixData
 
-    if avoid_canonical_channel_name:
-        fn = linked_data_no_multichannels
-    else:
-        fn = linked_data
-    for dist in fn(prefix):
-        # dfiles = set(dist.get('files', []))
-        dfiles = dist_files(prefix, dist)
-        # TODO :: This is completely wrong when the env is on a case-sensitive FS!
-        if any(norm_ipp == normcase(w) for w in dfiles):
-            yield dist
+    prefix = Path(prefix)
+    for prec in PrefixData(prefix).iter_records():
+        for file in prec["files"]:
+            # historically, path was relative to prefix just to be safe we append to prefix
+            # (pathlib correctly handles this even if path is absolute)
+            if (prefix / file).samefile(prefix / path):
+                yield prec
 
 
 def print_object_info(info, key):
@@ -278,8 +288,7 @@ def inspect_linkages(
                     else path
                 )
                 if path.startswith(prefix):
-                    in_prefix_path = re.sub("^" + prefix + "/", "", path)
-                    deps = list(which_package(in_prefix_path, prefix))
+                    deps = list(which_package(path, prefix))
                     if len(deps) > 1:
                         deps_str = [str(dep) for dep in deps]
                         get_logger(__name__).warn(
