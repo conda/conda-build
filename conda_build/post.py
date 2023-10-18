@@ -1318,15 +1318,11 @@ def check_overlinking_impl(
     verbose = True
     errors = []
 
-    files_to_inspect = []
-    filesu = []
-    for file in files:
-        path = join(run_prefix, file)
-        codefile = codefile_class(path)
-        if codefile in filetypes_for_platform[subdir.split("-")[0]]:
-            files_to_inspect.append(file)
-        filesu.append(file.replace("\\", "/"))
-
+    filetypes = filetypes_for_platform[subdir.split("-")[0]]
+    files_to_inspect = [
+        file for file in files if codefile_class(join(run_prefix, file)) in filetypes
+    ]
+    filesu = [file.replace("\\", "/") for file in files]
     if not files_to_inspect:
         return {}
 
