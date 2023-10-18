@@ -1222,7 +1222,8 @@ def _show_linking_messages(
             )
     for f in files:
         path = join(run_prefix, f)
-        if codefile_class(path) not in filetypes_for_platform[subdir.split("-")[0]]:
+        codefile = codefile_class(path)
+        if codefile not in filetypes_for_platform[subdir.split("-")[0]]:
             continue
         warn_prelude = "WARNING ({},{})".format(pkg_name, f.replace(os.sep, "/"))
         err_prelude = "  ERROR ({},{})".format(pkg_name, f.replace(os.sep, "/"))
@@ -1318,11 +1319,15 @@ def check_overlinking_impl(
     verbose = True
     errors = []
 
-    filetypes = filetypes_for_platform[subdir.split("-")[0]]
-    files_to_inspect = [
-        file for file in files if codefile_class(join(run_prefix, file)) in filetypes
-    ]
-    filesu = [file.replace("\\", "/") for file in files]
+    files_to_inspect = []
+    filesu = []
+    for file in files:
+        path = join(run_prefix, file)
+        codefile = codefile_class(path)
+        if codefile in filetypes_for_platform[subdir.split("-")[0]]:
+            files_to_inspect.append(file)
+        filesu.append(file.replace("\\", "/"))
+
     if not files_to_inspect:
         return {}
 
@@ -1630,15 +1635,18 @@ def check_overlinking(m, files, host_prefix=None):
 
 
 def post_process_shared_lib(m, f, files, host_prefix=None):
-    if (path := join(host_prefix, f)).endswith(".debug"):
+    if not host_prefix:
+        host_prefix = m.config.host_prefix
+    path = join(host_prefix, f)
+    codefile = codefile_class(path)
+    if not codefile or path.endswith(".debug"):
         return
-    elif not (codefile := codefile_class(path)):
-        return
-    elif codefile == elffile:
+    rpaths = m.get_value("build/rpaths", ["lib"])
+    if codefile == elffile:
         mk_relative_linux(
             f,
-            host_prefix or m.config.host_prefix,
-            rpaths=m.get_value("build/rpaths", ["lib"]),
+            host_prefix,
+            rpaths=rpaths,
             method=m.get_value("build/rpaths_patcher", None),
         )
     elif codefile == machofile:
@@ -1649,13 +1657,7 @@ def post_process_shared_lib(m, f, files, host_prefix=None):
                 path,
             )
             return
-        mk_relative_osx(
-            path,
-            host_prefix or m.config.host_prefix,
-            m,
-            files=files,
-            rpaths=m.get_value("build/rpaths", ["lib"]),
-        )
+        mk_relative_osx(path, host_prefix, m, files=files, rpaths=rpaths)
 
 
 def fix_permissions(files, prefix):
