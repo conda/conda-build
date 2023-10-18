@@ -4,11 +4,21 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
 
 import pytest
+from conda.base.context import context
+from pytest import MonkeyPatch
 
 from conda_build import api
-from conda_build.metadata import MetaData, _hash_dependencies, select_lines, yamlize
+from conda_build.config import Config
+from conda_build.metadata import (
+    MetaData,
+    _hash_dependencies,
+    get_selectors,
+    select_lines,
+    yamlize,
+)
 from conda_build.utils import DEFAULT_SUBDIRS
 
 from .utils import metadata_dir, thisdir
@@ -350,3 +360,96 @@ def test_yamlize_versions():
     )
 
     assert yml == ["1.2.3", "1.2.3.4"]
+
+
+OS_ARCH = (
+    "aarch64",
+    "arm",
+    "arm64",
+    "armv6l",
+    "armv7l",
+    "emscripten",
+    "freebsd",
+    "linux",
+    "linux32",
+    "linux64",
+    "osx",
+    "ppc64",
+    "ppc64le",
+    "riscv64",
+    "s390x",
+    "unix",
+    "wasi",
+    "wasm32",
+    "win",
+    "win32",
+    "win64",
+    "x86",
+    "x86_64",
+    "z",
+    "zos",
+)
+
+
+@pytest.mark.parametrize(
+    (
+        "subdir",  # defined in conda.base.constants.KNOWN_SUBDIRS
+        "expected",  # OS_ARCH keys expected to be True
+    ),
+    [
+        ("emscripten-wasm32", {"unix", "emscripten", "wasm32"}),
+        ("wasi-wasm32", {"wasi", "wasm32"}),
+        ("freebsd-64", {"freebsd", "x86", "x86_64"}),
+        ("linux-32", {"unix", "linux", "linux32", "x86"}),
+        ("linux-64", {"unix", "linux", "linux64", "x86", "x86_64"}),
+        ("linux-aarch64", {"unix", "linux", "aarch64"}),
+        ("linux-armv6l", {"unix", "linux", "arm", "armv6l"}),
+        ("linux-armv7l", {"unix", "linux", "arm", "armv7l"}),
+        ("linux-ppc64", {"unix", "linux", "ppc64"}),
+        ("linux-ppc64le", {"unix", "linux", "ppc64le"}),
+        ("linux-riscv64", {"unix", "linux", "riscv64"}),
+        ("linux-s390x", {"unix", "linux", "s390x"}),
+        ("osx-64", {"unix", "osx", "x86", "x86_64"}),
+        ("osx-arm64", {"unix", "osx", "arm64"}),
+        ("win-32", {"win", "win32", "x86"}),
+        ("win-64", {"win", "win64", "x86", "x86_64"}),
+        ("win-arm64", {"win", "arm64"}),
+        ("zos-z", {"zos", "z"}),
+    ],
+)
+@pytest.mark.parametrize("nomkl", [0, 1])
+def test_get_selectors(
+    monkeypatch: MonkeyPatch,
+    subdir: str,
+    expected: set[str],
+    nomkl: int,
+):
+    monkeypatch.setenv("FEATURE_NOMKL", str(nomkl))
+
+    config = Config(host_subdir=subdir)
+    assert get_selectors(config) == {
+        # defaults
+        "build_platform": context.subdir,
+        "lua": "5",  # see conda_build.variants.DEFAULT_VARIANTS["lua"]
+        "luajit": False,  # lua[0] == 2
+        "np": 122,  # see conda_build.variants.DEFAULT_VARIANTS["numpy"]
+        "os": os,
+        "pl": "5.26.2",  # see conda_build.variants.DEFAULT_VARIANTS["perl"]
+        "py": int(f"{sys.version_info.major}{sys.version_info.minor}"),
+        "py26": sys.version_info.major == 2 and sys.version_info.minor == 6,
+        "py27": sys.version_info.major == 2 and sys.version_info.minor == 7,
+        "py2k": sys.version_info.major == 2,
+        "py33": sys.version_info.major == 3 and sys.version_info.minor == 3,
+        "py34": sys.version_info.major == 3 and sys.version_info.minor == 4,
+        "py35": sys.version_info.major == 3 and sys.version_info.minor == 5,
+        "py36": sys.version_info.major == 3 and sys.version_info.minor == 6,
+        "py3k": sys.version_info.major == 3,
+        "nomkl": bool(nomkl),
+        # default OS/arch values
+        **{key: False for key in OS_ARCH},
+        # environment variables
+        "environ": os.environ,
+        **os.environ,
+        # override with True values
+        **{key: True for key in expected},
+    }
