@@ -1033,40 +1033,55 @@ def codefile(file, arch="any", initial_rpaths_transitive=[]):
         return inscrutablefile(file, list(initial_rpaths_transitive))
 
 
-def codefile_class(filename, skip_symlinks=False):
-    if os.path.islink(filename):
-        if skip_symlinks:
-            return None
-        else:
-            filename = os.path.realpath(filename)
-    if os.path.isdir(filename):
+def codefile_class(
+    path: str | os.PathLike | Path,
+    skip_symlinks: bool = False,
+) -> type[DLLfile | EXEfile | machofile | elffile] | None:
+    # same signature as conda.os_utils.liefldd.codefile_class
+    path = Path(path)
+    if skip_symlinks and path.is_symlink():
         return None
-    if filename.endswith((".dll", ".pyd")):
+    path = path.resolve()
+
+    def _get_magic_bit(path: Path) -> bytes:
+        with path.open("rb") as handle:
+            bit = handle.read(4)
+        return struct.unpack(BIG_ENDIAN + "L", bit)[0]
+
+    if path.is_dir():
+        return None
+    elif path.suffix.lower() in (".dll", ".pyd"):
         return DLLfile
-    if filename.endswith(".exe"):
+    elif path.suffix.lower() == ".exe":
         return EXEfile
-    # Java .class files share 0xCAFEBABE with Mach-O FAT_MAGIC.
-    if filename.endswith(".class"):
+    elif path.suffix.lower() == ".class":
+        # Java .class files share 0xCAFEBABE with Mach-O FAT_MAGIC.
         return None
-    if not os.path.exists(filename) or os.path.getsize(filename) < 4:
+    elif not path.exists() or path.stat().st_size < 4:
         return None
-    with open(filename, "rb") as file:
-        (magic,) = struct.unpack(BIG_ENDIAN + "L", file.read(4))
-        file.seek(0)
-        if magic in (FAT_MAGIC, MH_MAGIC, MH_CIGAM, MH_CIGAM_64):
-            return machofile
-        elif magic == ELF_HDR:
-            return elffile
-    return None
+    elif (magic := _get_magic_bit(path)) == ELF_HDR:
+        return elffile
+    elif magic in (FAT_MAGIC, MH_MAGIC, MH_CIGAM, MH_CIGAM_64):
+        return machofile
+    else:
+        return None
 
 
-@deprecated.argument("3.28.0", "4.0.0", "filename", rename="path")
+@deprecated(
+    "3.28.0",
+    "4.0.0",
+    addendum="Use `conda_build.os_utils.pyldd.codefile_class` instead.",
+)
 def is_codefile(path: str | os.PathLike | Path, skip_symlinks: bool = True) -> bool:
     return bool(codefile_class(path, skip_symlinks=skip_symlinks))
 
 
+@deprecated(
+    "3.28.0",
+    "4.0.0",
+    addendum="Use `conda_build.os_utils.pyldd.codefile_class` instead.",
+)
 def codefile_type(filename, skip_symlinks=True):
-    "Returns None, 'machofile' or 'elffile'"
     klass = codefile_class(filename, skip_symlinks=skip_symlinks)
     if not klass:
         return None
