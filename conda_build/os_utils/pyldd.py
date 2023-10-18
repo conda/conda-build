@@ -1081,11 +1081,12 @@ def is_codefile(path: str | os.PathLike | Path, skip_symlinks: bool = True) -> b
     "4.0.0",
     addendum="Use `conda_build.os_utils.pyldd.codefile_class` instead.",
 )
-def codefile_type(filename, skip_symlinks=True):
-    klass = codefile_class(filename, skip_symlinks=skip_symlinks)
-    if not klass:
-        return None
-    return klass.__name__
+def codefile_type(
+    path: str | os.PathLike | Path,
+    skip_symlinks: bool = True,
+) -> str | None:
+    codefile = codefile_class(path, skip_symlinks=skip_symlinks)
+    return codefile.__name__ if codefile else None
 
 
 def _trim_sysroot(sysroot):
