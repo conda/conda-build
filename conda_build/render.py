@@ -384,7 +384,7 @@ def execute_download_actions(m, actions, env, package_subset=None, require_files
             with utils.LoggingContext():
                 pfe.execute()
             for pkg_dir in pkgs_dirs:
-                _loc = os.path.join(pkg_dir, index[pkg].fn)
+                _loc = os.path.join(pkg_dir, index.get(pkg, pkg).fn)
                 if os.path.isfile(_loc):
                     pkg_loc = _loc
                     break
