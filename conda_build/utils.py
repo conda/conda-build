@@ -38,6 +38,8 @@ from typing import Iterable
 
 import libarchive
 
+from .deprecations import deprecated
+
 try:
     from json.decoder import JSONDecodeError
 except ImportError:
@@ -788,6 +790,11 @@ def get_conda_operation_locks(locking=True, bldpkgs_dirs=None, timeout=900):
     return locks
 
 
+@deprecated(
+    "3.28.0",
+    "4.0.0",
+    addendum="Use `os.path.relpath` or `pathlib.Path.relative_to` instead.",
+)
 def relative(f, d="lib"):
     assert not f.startswith("/"), f
     assert not d.startswith("/"), d
