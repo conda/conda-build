@@ -2168,7 +2168,7 @@ def linked_data_no_multichannels(
     prefix = Path(prefix)
     return {
         Dist.from_string(prec.fn, channel_override=prec.channel.name): prec
-        for prec in PrefixData(prefix)._prefix_records.values()
+        for prec in PrefixData(str(prefix)).iter_records()
     }
 
 

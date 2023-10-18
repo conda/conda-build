@@ -64,7 +64,7 @@ def which_package(
     from conda.core.prefix_data import PrefixData
 
     prefix = Path(prefix)
-    for prec in PrefixData(prefix).iter_records():
+    for prec in PrefixData(str(prefix)).iter_records():
         for file in prec["files"]:
             # historically, path was relative to prefix just to be safe we append to prefix
             # (pathlib correctly handles this even if path is absolute)
