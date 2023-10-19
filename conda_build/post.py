@@ -53,18 +53,24 @@ from conda_build.os_utils.liefldd import (
     have_lief,
     set_rpath,
 )
-from conda_build.os_utils.pyldd import codefile_type
+from conda_build.os_utils.pyldd import (
+    DLLfile,
+    EXEfile,
+    codefile_class,
+    elffile,
+    machofile,
+)
 
 filetypes_for_platform = {
-    "win": ("DLLfile", "EXEfile"),
-    "osx": ["machofile"],
-    "linux": ["elffile"],
+    "win": (DLLfile, EXEfile),
+    "osx": (machofile,),
+    "linux": (elffile,),
 }
 
 
 def fix_shebang(f, prefix, build_python, osx_is_app=False):
     path = join(prefix, f)
-    if codefile_type(path):
+    if codefile_class(path):
         return
     elif islink(path):
         return
@@ -405,7 +411,7 @@ def osx_ch_link(path, link_dict, host_prefix, build_prefix, files):
             ".. seems to be linking to a compiler runtime, replacing build prefix with "
             "host prefix and"
         )
-        if not codefile_type(link):
+        if not codefile_class(link):
             sys.exit(
                 "Error: Compiler runtime library in build prefix not found in host prefix %s"
                 % link
@@ -841,7 +847,7 @@ def _collect_needed_dsos(
         sysroots = list(sysroots_files.keys())[0]
     for f in files:
         path = join(run_prefix, f)
-        if not codefile_type(path):
+        if not codefile_class(path):
             continue
         build_prefix = build_prefix.replace(os.sep, "/")
         run_prefix = run_prefix.replace(os.sep, "/")
@@ -901,10 +907,9 @@ def _map_file_to_package(
             for subdir2, _, filez in os.walk(prefix):
                 for file in filez:
                     fp = join(subdir2, file)
-                    dynamic_lib = (
-                        any(fnmatch(fp, ext) for ext in ("*.so*", "*.dylib*", "*.dll"))
-                        and codefile_type(fp, skip_symlinks=False) is not None
-                    )
+                    dynamic_lib = any(
+                        fnmatch(fp, ext) for ext in ("*.so*", "*.dylib*", "*.dll")
+                    ) and codefile_class(fp, skip_symlinks=False)
                     static_lib = any(fnmatch(fp, ext) for ext in ("*.a", "*.lib"))
                     # Looking at all the files is very slow.
                     if not dynamic_lib and not static_lib:
@@ -947,7 +952,7 @@ def _map_file_to_package(
                             )
                         }
                         all_lib_exports[prefix][rp_po] = exports
-                        # Check codefile_type to filter out linker scripts.
+                        # Check codefile_class to filter out linker scripts.
                         if dynamic_lib:
                             contains_dsos[prefix_owners[prefix][rp_po][0]] = True
                         elif static_lib:
@@ -1217,8 +1222,8 @@ def _show_linking_messages(
             )
     for f in files:
         path = join(run_prefix, f)
-        filetype = codefile_type(path)
-        if not filetype or filetype not in filetypes_for_platform[subdir.split("-")[0]]:
+        codefile = codefile_class(path)
+        if codefile not in filetypes_for_platform[subdir.split("-")[0]]:
             continue
         warn_prelude = "WARNING ({},{})".format(pkg_name, f.replace(os.sep, "/"))
         err_prelude = "  ERROR ({},{})".format(pkg_name, f.replace(os.sep, "/"))
@@ -1316,15 +1321,15 @@ def check_overlinking_impl(
 
     files_to_inspect = []
     filesu = []
-    for f in files:
-        path = join(run_prefix, f)
-        filetype = codefile_type(path)
-        if filetype and filetype in filetypes_for_platform[subdir.split("-")[0]]:
-            files_to_inspect.append(f)
-        filesu.append(f.replace("\\", "/"))
+    for file in files:
+        path = join(run_prefix, file)
+        codefile = codefile_class(path)
+        if codefile in filetypes_for_platform[subdir.split("-")[0]]:
+            files_to_inspect.append(file)
+        filesu.append(file.replace("\\", "/"))
 
     if not files_to_inspect:
-        return dict()
+        return {}
 
     sysroot_substitution = "$SYSROOT"
     build_prefix_substitution = "$PATH"
@@ -1633,18 +1638,18 @@ def post_process_shared_lib(m, f, files, host_prefix=None):
     if not host_prefix:
         host_prefix = m.config.host_prefix
     path = join(host_prefix, f)
-    codefile_t = codefile_type(path)
-    if not codefile_t or path.endswith(".debug"):
+    codefile = codefile_class(path)
+    if not codefile or path.endswith(".debug"):
         return
     rpaths = m.get_value("build/rpaths", ["lib"])
-    if codefile_t == "elffile":
+    if codefile == elffile:
         mk_relative_linux(
             f,
             host_prefix,
             rpaths=rpaths,
             method=m.get_value("build/rpaths_patcher", None),
         )
-    elif codefile_t == "machofile":
+    elif codefile == machofile:
         if m.config.host_platform != "osx":
             log = utils.get_logger(__name__)
             log.warn(
@@ -1734,7 +1739,7 @@ def check_symlinks(files, prefix, croot):
             # symlinks to binaries outside of the same dir don't work.  RPATH stuff gets confused
             #    because ld.so follows symlinks in RPATHS
             #    If condition exists, then copy the file rather than symlink it.
-            if not dirname(link_path) == dirname(real_link_path) and codefile_type(f):
+            if not dirname(link_path) == dirname(real_link_path) and codefile_class(f):
                 os.remove(path)
                 utils.copy_into(real_link_path, path)
             elif real_link_path.startswith(real_build_prefix):
