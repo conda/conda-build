@@ -666,7 +666,7 @@ def test_variant_subkeys_retained():
         (
             {"pkg_1": "1.0"},
             {"pkg_1": "1.1"},
-            {"pkg_1": ["1.1", "1.2"],"pkg_2": ["1.1"]},
+            {"pkg_1": ["1.1", "1.2"], "pkg_2": ["1.1"]},
             [{"pkg_1": "1.1", "pkg_2": "1.1"}, {"pkg_1": "1.2", "pkg_2": "1.1"}],
         ),
         (
@@ -693,9 +693,9 @@ def test_zip_key_filtering(
     combined_spec.update(high_prio_config)
     specs = OrderedDict(
         [
-            ("internal_defaults",internal_defaults),
-            ("low_prio_config",low_prio_config),
-            ("high_prio_config",high_prio_config)
+            ("internal_defaults", internal_defaults),
+            ("low_prio_config", low_prio_config),
+            ("high_prio_config", high_prio_config),
         ]
     )
 
