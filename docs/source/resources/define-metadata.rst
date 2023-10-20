@@ -1928,10 +1928,10 @@ variables are booleans.
    * - osx
      - True if the platform is macOS.
    * - arm64
-     - True if the platform is macOS and the Python architecture
-       is arm64.
+     - True if the platform is either macOS or Windows and the
+       Python architecture is arm64.
    * - unix
-     - True if the platform is either macOS or Linux.
+     - True if the platform is either macOS or Linux or emscripten.
    * - win
      - True if the platform is Windows.
    * - win32
@@ -1964,6 +1964,11 @@ variables are booleans.
 The use of the Python version selectors, `py27`, `py34`, etc. is discouraged in
 favor of the more general comparison operators.  Additional selectors in this
 series will not be added to conda-build.
+
+Note that for each subdir with OS and architecture that `conda` supports,
+two preprocessing selectors are created for the OS and the architecture separately
+except when the architecture is not a valid python expression (`*-32` and `*-64`
+in particular).
 
 Because the selector is any valid Python expression, complicated
 logic is possible:
