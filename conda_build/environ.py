@@ -277,6 +277,8 @@ def get_hg_build_info(repo):
     d = {}
     cmd = [
         "hg",
+        "--config",
+        "defaults.log=",
         "log",
         "--template",
         "{rev}|{node|short}|{latesttag}|{latesttagdistance}|{branch}",
