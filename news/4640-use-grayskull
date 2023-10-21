@@ -1,0 +1,23 @@
+### Enhancements
+
+* <news item>
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* `conda skeleton` is pending deprecation. `conda-build` still provides
+  `conda-skeleton` a.k.a. `conda skeleton` CLI for now, but will remove
+  it eventually.
+* Prefer the [standalone grayskull package](https://conda.github.io/grayskull/),
+  instead of `conda skeleton` or `conda-skeleton`.
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>

@@ -15,6 +15,8 @@ import tempfile
 from glob import glob
 from sys import platform as _platform
 
+from ..deprecations import deprecated
+
 INDENT = "\n    - "
 
 rockspec_parser = """
@@ -224,6 +226,7 @@ def ensure_base_deps(deps):
     return deps
 
 
+@deprecated("3.26.0", "4.0.0", addendum="Use `grayskull` instead.")
 def skeletonize(packages, output_dir=".", version=None, recursive=False):
     # Check that we have Lua installed (any version)
 

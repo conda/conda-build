@@ -21,6 +21,8 @@ def parse_args(args):
         description="""
 Generates a boilerplate/skeleton recipe, which you can then edit to create a
 full recipe. Some simple skeleton recipes may not even need edits.
+Pending deprecation, please use the standalone project 'grayskull':
+https://github.com/conda/grayskull"
         """,
         epilog="""
 Run --help on the subcommands like 'conda skeleton pypi --help' to see the
@@ -47,6 +49,13 @@ options available.
 def execute(args):
     parser, args = parse_args(args)
     config = Config(**args.__dict__)
+
+    deprecated.topic(
+        "3.26.0",
+        "4.0.0",
+        topic="`conda skeleton` and `conda-skeleton`",
+        addendum="Use the `grayskull` project instead.",
+    )
 
     if not args.repo:
         parser.print_help()
