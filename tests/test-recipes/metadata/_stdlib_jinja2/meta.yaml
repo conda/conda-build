@@ -1,0 +1,9 @@
+package:
+  name: stdlib-test
+  version: 1.0
+
+requirements:
+  host:
+    - {{ stdlib('c') }}
+    # - {{ stdlib('cxx') }}
+    # - {{ stdlib('fortran') }}
