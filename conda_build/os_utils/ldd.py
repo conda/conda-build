@@ -8,12 +8,7 @@ from os.path import basename, join
 
 from conda_build.conda_interface import linked_data, untracked
 from conda_build.os_utils.macho import otool
-from conda_build.os_utils.pyldd import (
-    codefile_class,
-    inspect_linkages,
-    is_codefile,
-    machofile,
-)
+from conda_build.os_utils.pyldd import codefile_class, inspect_linkages, machofile
 
 LDD_RE = re.compile(r"\s*(.*?)\s*=>\s*(.*?)\s*\(.*\)")
 LDD_NOT_FOUND_RE = re.compile(r"\s*(.*?)\s*=>\s*not found")
@@ -118,7 +113,7 @@ def get_package_obj_files(dist, prefix):
     files = get_package_files(dist, prefix)
     for f in files:
         path = join(prefix, f)
-        if is_codefile(path):
+        if codefile_class(path):
             res.append(f)
 
     return res
@@ -130,7 +125,7 @@ def get_untracked_obj_files(prefix):
     files = untracked(prefix)
     for f in files:
         path = join(prefix, f)
-        if is_codefile(path):
+        if codefile_class(path):
             res.append(f)
 
     return res

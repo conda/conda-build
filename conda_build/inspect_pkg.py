@@ -31,7 +31,7 @@ from conda_build.os_utils.ldd import (
     get_package_obj_files,
     get_untracked_obj_files,
 )
-from conda_build.os_utils.liefldd import codefile_type
+from conda_build.os_utils.liefldd import codefile_class, machofile
 from conda_build.os_utils.macho import get_rpaths, human_filetype
 from conda_build.utils import (
     comma_join,
@@ -363,14 +363,16 @@ def inspect_objects(packages, prefix=sys.prefix, groupby="package"):
 
         info = []
         for f in obj_files:
-            f_info = {}
             path = join(prefix, f)
-            filetype = codefile_type(path)
-            if filetype == "machofile":
-                f_info["filetype"] = human_filetype(path, None)
-                f_info["rpath"] = ":".join(get_rpaths(path))
-                f_info["filename"] = f
-                info.append(f_info)
+            codefile = codefile_class(path)
+            if codefile == machofile:
+                info.append(
+                    {
+                        "filetype": human_filetype(path, None),
+                        "rpath": ":".join(get_rpaths(path)),
+                        "filename": f,
+                    }
+                )
 
         output_string += print_object_info(info, groupby)
     if hasattr(output_string, "decode"):
