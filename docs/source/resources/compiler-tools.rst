@@ -394,6 +394,71 @@ not available. You'd need to create a metapackage ``m2w64-gcc_win-64`` to
 point at the ``m2w64-gcc`` package, which does exist on the msys2 channel on
 `repo.anaconda.com <https://repo.anaconda.com/>`_.
 
+Expressing the relation between compiler and its standard library
+=================================================================
+
+For most languages, certainly for "c" and for "cxx", compiling any given
+program *may* create a run-time dependence on symbols from the respective
+standard library. For example, the standard library for C on linux is generally
+``glibc``, and a core component of your operating system. Conda is not able to
+change or supersede this library (it would be too risky to try to). A similar
+situation exists on MacOS and on Windows.
+
+Compiler packages usually have two ways to deal with this dependence:
+
+* assume the package must be there (like ``glibc`` on linux).
+* always add a run-time requirement on the respective stdlib (e.g. ``libcxx``
+  on MacOS).
+
+However, even if we assume the package must be there, the information about the
+``glibc`` version is still a highly relevant piece of information, which is
+also why it is reflected in the ``__glibc``
+`virtual package <https://docs.conda.io/projects/conda/en/stable/user-guide/tasks/manage-virtual.html>`_.
+
+For example, newer packages may decide over time to increase the lowest version
+of ``glibc`` that they support. We therefore need a way to express this
+dependence in a way that conda will be able to understand, so that (in
+conjunction with the ``__glibc`` virtual package) the environment resolver will
+not consider those packages on machines whose ``glibc`` version is too old.
+
+The way to do this is to use the Jinja2 function ``{{ stdlib('c') }}``, which
+matches ``{{ compiler('c') }}`` in as many ways as possible. Let's start again
+with the ``conda_build_config.yaml``::
+
+    c_stdlib:
+      - sysroot                     # [linux]
+      - macosx_deployment_target    # [osx]
+    c_stdlib_version:
+      - 2.17                        # [linux]
+      - 10.13                       # [osx]
+
+In the recipe we would then use::
+
+    requirements:
+      build:
+        - {{ compiler('c') }}
+        - {{ stdlib('c') }}
+
+This would then express that the resulting package requires ``sysroot ==2.17``
+(corresponds to ``glibc``) on linux and ``macosx_deployment_target ==10.13`` on
+MacOS in the build environment, respectively. How this translates into a
+run-time dependence can be defined in the metadata of the respective conda
+(meta-)package which represents the standard library (i.e. those defined under
+``c_stdlib`` above).
+
+In this example, ``sysroot 2.17`` would generate a run-export on
+``__glibc >=2.17`` and ``macosx_deployment_target 10.13`` would similarly
+generate ``__osx >=10.13``. This way, we enable packages to define their own
+expectations about the standard library in a unified way, and without
+implicitly depending on some global assumption about what the lower version
+on a given platform must be.
+
+In principle, this facility would make it possible to also express the
+dependence on separate stdlib implementations (like ``musl`` instead of
+``glibc``), or to remove the need to assume that a C++ compiler always needs to
+add a run-export on the C++ stdlib -- it could then be left up to packages
+themselves whether they need ``{{ stdlib('cxx') }}`` or not.
+
 Anaconda compilers implicitly add RPATH pointing to the conda environment
 =========================================================================
 
