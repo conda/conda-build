@@ -387,7 +387,7 @@ def add_parser(repos):
         "--use-noarch-generic",
         action="store_true",
         dest="use_noarch_generic",
-        help=("Mark packages that do not need compilation as `noarch: generic`"),
+        help="Mark packages that do not need compilation as `noarch: generic`",
     )
     cran.add_argument(
         "--use-rtools-win",

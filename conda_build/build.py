@@ -4090,7 +4090,7 @@ def handle_anaconda_upload(paths, config):
         prompter = "$ "
     if not upload or anaconda is None:
         no_upload_message = (
-            "# If you want to upload package(s) to anaconda.org later, type:\n" "\n"
+            "# If you want to upload package(s) to anaconda.org later, type:\n\n"
         )
         no_upload_message += (
             "\n"

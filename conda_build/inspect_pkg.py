@@ -283,7 +283,7 @@ def inspect_linkages(
                     if len(deps) > 1:
                         deps_str = [str(dep) for dep in deps]
                         get_logger(__name__).warn(
-                            "Warning: %s comes from multiple " "packages: %s",
+                            "Warning: %s comes from multiple packages: %s",
                             path,
                             comma_join(deps_str),
                         )

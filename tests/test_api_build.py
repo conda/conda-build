@@ -1398,7 +1398,7 @@ def test_recursion_layers(testing_config):
 @pytest.mark.sanity
 @pytest.mark.skipif(
     sys.platform != "win32",
-    reason=("spaces break openssl prefix " "replacement on *nix"),
+    reason="spaces break openssl prefix replacement on *nix",
 )
 def test_croot_with_spaces(testing_metadata, testing_workdir):
     testing_metadata.config.croot = os.path.join(testing_workdir, "space path")

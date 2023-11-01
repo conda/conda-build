@@ -163,7 +163,6 @@ def directory_size_slow(path):
 
 
 def directory_size(path):
-    """ """
     try:
         if on_win:
             command = 'dir /s "{}"'  # Windows path can have spaces
@@ -716,9 +715,7 @@ def merge_tree(
     existing = [f for f in new_files if isfile(f)]
 
     if existing and not clobber:
-        raise OSError(
-            "Can't merge {} into {}: file exists: " "{}".format(src, dst, existing[0])
-        )
+        raise OSError(f"Can't merge {src} into {dst}: file exists: {existing[0]}")
 
     locks = []
     if locking:

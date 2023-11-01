@@ -319,7 +319,7 @@ def ensure_valid_fields(meta):
     pin_depends = meta.get("build", {}).get("pin_depends", "")
     if pin_depends and pin_depends not in ("", "record", "strict"):
         raise RuntimeError(
-            "build/pin_depends must be 'record' or 'strict' - " "not '%s'" % pin_depends
+            f"build/pin_depends must be 'record' or 'strict' - not '{pin_depends}'"
         )
 
 

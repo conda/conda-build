@@ -414,7 +414,7 @@ def convert(
         )
     elif package_file.endswith(".whl"):
         raise RuntimeError(
-            "Conversion from wheel packages is not " "implemented yet, stay tuned."
+            "Conversion from wheel packages is not implemented yet, stay tuned."
         )
     else:
         raise RuntimeError("cannot convert: %s" % package_file)
