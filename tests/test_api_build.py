@@ -732,21 +732,6 @@ def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monke
         #
         # Also, git is set to False here because it needs to be rebuilt with the longer prefix. As
         # things stand, my _b_env folder for this test contains more than 80 characters.
-        requirements = (
-            "requirements",
-            OrderedDict(
-                [
-                    (
-                        "build",
-                        [
-                            "git            # [False]",
-                            "m2-git         # [win]",
-                            "m2-filesystem  # [win]",
-                        ],
-                    )
-                ]
-            ),
-        )
 
         recipe_dir = os.path.join(testing_workdir, "recipe")
         if not os.path.exists(recipe_dir):
@@ -758,7 +743,13 @@ def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monke
                 "version": "{{ GIT_DESCRIBE_TAG }}",
             },
             "source": {"git_url": toplevel, "git_tag": str(tag)},
-            **requirements,
+            "requirements": {
+                "build": [
+                    "git            # [False]",
+                    "m2-git         # [win]",
+                    "m2-filesystem  # [win]",
+                ],
+            },
             "build": {
                 "script": [
                     "git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%%s > "
