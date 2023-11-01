@@ -631,18 +631,7 @@ def mk_relative_linux(f, prefix, rpaths=("lib",), method=None):
     for rpath in rpaths:
         if rpath != "":
             if not rpath.startswith("/"):
-                # IMHO utils.relative shouldn't exist, but I am too paranoid to remove
-                # it, so instead, make sure that what I think it should be replaced by
-                # gives the same result and assert if not. Yeah, I am a chicken.
-                rel_ours = normpath(utils.relative(f, rpath))
-                rel_stdlib = normpath(relpath(rpath, dirname(f)))
-                if not rel_ours == rel_stdlib:
-                    raise ValueError(
-                        "utils.relative {} and relpath {} disagree for {}, {}".format(
-                            rel_ours, rel_stdlib, f, rpath
-                        )
-                    )
-                rpath = "$ORIGIN/" + rel_stdlib
+                rpath = "$ORIGIN/" + normpath(relpath(rpath, dirname(f)))
             if rpath not in new:
                 new.append(rpath)
     rpath = ":".join(new)

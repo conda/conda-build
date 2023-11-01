@@ -17,7 +17,7 @@ exclude: |
 repos:
   # generic verification and formatting
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v4.5.0
     hooks:
       # standard end of line/end of file cleanup
       - id: mixed-line-ending
