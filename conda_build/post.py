@@ -517,7 +517,14 @@ def check_binary(binary, expected=None):
     print("trying {}".format(binary))
     # import pdb; pdb.set_trace()
     try:
-        txt = check_output([sys.executable, '-c', 'from ctypes import cdll; cdll.LoadLibrary("' + binary + '")'], timeout=2)
+        txt = check_output(
+            [
+                sys.executable,
+                '-c',
+                'from ctypes import cdll; cdll.LoadLibrary("' + binary + '")'
+            ],
+            timeout=2,
+        )
         # mydll = cdll.LoadLibrary(binary)
     except Exception as e:
         print(e)

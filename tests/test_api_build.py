@@ -398,9 +398,7 @@ def dummy_executable(folder, exename):
     echo ******* conda that makes it not add the _build/bin directory onto the
     echo ******* PATH before running the source checkout tool
     exit -1
-    """.format(
-                exename
-            )
+    """.format(exename)
         )
     if sys.platform != "win32":
         import stat
@@ -754,57 +752,30 @@ def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monke
         if not os.path.exists(recipe_dir):
             os.makedirs(recipe_dir)
         filename = os.path.join(testing_workdir, "recipe", "meta.yaml")
-        data = OrderedDict(
-            [
-                (
-                    "package",
-                    OrderedDict(
-                        [
-                            ("name", "relative_submodules"),
-                            ("version", "{{ GIT_DESCRIBE_TAG }}"),
-                        ]
-                    ),
-                ),
-                ("source", OrderedDict([("git_url", toplevel), ("git_tag", str(tag))])),
-                requirements,
-                (
-                    "build",
-                    OrderedDict(
-                        [
-                            (
-                                "script",
-                                [
-                                    "git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%%s > "
-                                    "%PREFIX%\\summaries.txt  # [win]",
-                                    "git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%s > "
-                                    "$PREFIX/summaries.txt   # [not win]",
-                                ],
-                            )
-                        ]
-                    ),
-                ),
-                (
-                    "test",
-                    OrderedDict(
-                        [
-                            (
-                                "commands",
-                                [
-                                    "echo absolute{}relative{} > %PREFIX%\\expected_summaries.txt       # [win]".format(
-                                        tag, tag
-                                    ),
-                                    "fc.exe /W %PREFIX%\\expected_summaries.txt %PREFIX%\\summaries.txt # [win]",
-                                    "echo absolute{}relative{} > $PREFIX/expected_summaries.txt         # [not win]".format(
-                                        tag, tag
-                                    ),
-                                    "diff -wuN ${PREFIX}/expected_summaries.txt ${PREFIX}/summaries.txt # [not win]",
-                                ],
-                            )
-                        ]
-                    ),
-                ),
-            ]
-        )
+        data = {
+            "package": {
+                "name": "relative_submodules",
+                "version": "{{ GIT_DESCRIBE_TAG }}",
+            },
+            "source": {"git_url": toplevel, "git_tag": str(tag)},
+            **requirements,
+            "build": {
+                "script": [
+                    "git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%%s > "
+                    "%PREFIX%\\summaries.txt  # [win]",
+                    "git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%s > "
+                    "$PREFIX/summaries.txt   # [not win]",
+                ],
+            },
+            "test": {
+                "commands": [
+                    f"echo absolute{tag}relative{tag} > %PREFIX%\\expected_summaries.txt # [win]",
+                    "fc.exe /W %PREFIX%\\expected_summaries.txt %PREFIX%\\summaries.txt # [win]",
+                    f"echo absolute{tag}relative{tag} > $PREFIX/expected_summaries.txt # [not win]",
+                    "diff -wuN ${PREFIX}/expected_summaries.txt ${PREFIX}/summaries.txt # [not win]",
+                ],
+            },
+        }
 
         with open(filename, "w") as outfile:
             outfile.write(yaml.dump(data, default_flow_style=False, width=999999999))
@@ -1614,9 +1585,10 @@ def test_copy_test_source_files(testing_config):
                 found = True
                 break
         if found:
-            assert (
-                copy
-            ), "'info/test/test_files_folder/text.txt' found in tar.bz2 but not copying test source files"
+            assert copy, (
+                "'info/test/test_files_folder/text.txt' found in tar.bz2 "
+                "but not copying test source files"
+            )
             if copy:
                 api.test(outputs[0])
             else:
@@ -1624,8 +1596,8 @@ def test_copy_test_source_files(testing_config):
                     api.test(outputs[0])
         else:
             assert not copy, (
-                "'info/test/test_files_folder/text.txt' not found in tar.bz2 but copying test source files. File list: %r"
-                % files
+                "'info/test/test_files_folder/text.txt' not found in tar.bz2 "
+                f"but copying test source files. File list: {files!r}"
             )
 
 

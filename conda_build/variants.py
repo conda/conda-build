@@ -164,7 +164,8 @@ def validate_spec(src, spec):
             "  zip_key entry {} in group {} is a duplicate, keys can only occur "
             "in one group".format(k, zg)
             # include error if key has already been seen, otherwise add to unique keys
-            if k in unique else unique.add(k)
+            if k in unique
+            else unique.add(k)
             for zg in zip_keys
             for k in zg
         )

@@ -72,7 +72,8 @@ def testing_homedir() -> Iterator[Path]:
             os.chdir(saved)
     except OSError:
         pytest.xfail(
-            f"failed to create temporary directory () in {'%HOME%' if on_win else '${HOME}'} (tmpfs inappropriate for xattrs)"
+            f"failed to create temporary directory () in {'%HOME%' if on_win else '${HOME}'} "
+            "(tmpfs inappropriate for xattrs)"
         )
 
 

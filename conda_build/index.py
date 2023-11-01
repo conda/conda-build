@@ -360,7 +360,8 @@ def update_index(
     if dirname in utils.DEFAULT_SUBDIRS:
         if warn:
             log.warn(
-                "The update_index function has changed to index all subdirs at once.  You're pointing it at a single subdir.  "
+                "The update_index function has changed to index all subdirs at once. "
+                "You're pointing it at a single subdir. "
                 "Please update your code to point it at the channel root, rather than a subdir."
             )
         return update_index(

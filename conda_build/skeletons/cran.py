@@ -3,8 +3,6 @@
 """
 Tools for converting Cran packages to conda recipes.
 """
-
-
 import argparse
 import copy
 import hashlib
@@ -198,7 +196,7 @@ else
     popd
   fi
 fi
-"""
+"""  # noqa: E501
 
 CRAN_BUILD_SH_BINARY = """\
 #!/bin/bash
@@ -1299,10 +1297,8 @@ def skeletonize(
                     )
             if not is_github_url:
                 available_details["archive_keys"] = (
-                    "{url_key}{sel}"
-                    "    {cranurl}\n"
-                    "  {hash_entry}{sel}".format(**available_details)
-                )
+                    "{url_key}{sel}    {cranurl}\n  {hash_entry}{sel}"
+                ).format(**available_details)
 
         # Extract the DESCRIPTION data from the source
         if cran_package is None:

@@ -1475,7 +1475,8 @@ class MetaData:
         meta_requirements = ensure_list(self.get_value("requirements/" + typ, []))[:]
         req_names = {req.split()[0] for req in meta_requirements if req}
         extra_reqs = []
-        # this is for the edge case of requirements for top-level being also partially defined in a similarly named output
+        # this is for the edge case of requirements for top-level being
+        # partially defined in a similarly named output
         if not self.is_output:
             matching_output = [
                 out
