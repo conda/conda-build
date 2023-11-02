@@ -112,7 +112,7 @@ jobs:
 
       - name: Setup environment
         run: |
-          conda install -q -y -c defaults --solver=libmamba \
+          conda install -q -y -c defaults \
             --file ./tests/requirements.txt \
             --file ./tests/requirements-linux.txt \
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
@@ -217,7 +217,7 @@ jobs:
       - name: Setup environment
         run: |
           choco install visualstudio2017-workload-vctools || exit 1
-          conda install -q -y -c defaults --solver=libmamba `
+          conda install -q -y -c defaults `
             --file .\tests\requirements.txt `
             --file .\tests\requirements-windows.txt `
             ${{ env.CONDA_CHANNEL_LABEL }}::conda || exit 1
@@ -328,7 +328,7 @@ jobs:
       - name: Setup environment
         run: |
           sudo xcode-select --switch /Applications/Xcode_11.7.app
-          conda install -q -y -c defaults --solver=libmamba \
+          conda install -q -y -c defaults \
             --file ./tests/requirements.txt \
             --file ./tests/requirements-macos.txt \
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
