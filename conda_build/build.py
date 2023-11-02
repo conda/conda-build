@@ -1744,8 +1744,8 @@ def create_info_files_json_v1(m, info_dir, prefix, files, files_with_prefix):
     return checksums
 
 
-def post_process_files(m, initial_prefix_files):
-    package_name = m.get_value("package/name")
+def post_process_files(m: MetaData, initial_prefix_files):
+    package_name = m.name()
     host_prefix = m.config.host_prefix
     missing = []
     for f in initial_prefix_files:
@@ -1775,7 +1775,7 @@ def post_process_files(m, initial_prefix_files):
     )
     post_process(
         package_name,
-        m.get_value("package/version"),
+        m.version(),
         sorted(current_prefix_files - initial_prefix_files),
         prefix=host_prefix,
         config=m.config,
@@ -1836,7 +1836,7 @@ def post_process_files(m, initial_prefix_files):
     return new_files
 
 
-def bundle_conda(output, metadata, env, stats, **kw):
+def bundle_conda(output, metadata: MetaData, env, stats, **kw):
     log = utils.get_logger(__name__)
     log.info("Packaging %s", metadata.dist())
     get_all_replacements(metadata.config)
@@ -1908,7 +1908,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
         env_output["TOP_PKG_NAME"] = env["PKG_NAME"]
         env_output["TOP_PKG_VERSION"] = env["PKG_VERSION"]
         env_output["PKG_VERSION"] = metadata.version()
-        env_output["PKG_NAME"] = metadata.get_value("package/name")
+        env_output["PKG_NAME"] = metadata.name()
         env_output["RECIPE_DIR"] = metadata.path
         env_output["MSYS2_PATH_TYPE"] = "inherit"
         env_output["CHERE_INVOKING"] = "1"
@@ -2126,7 +2126,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
     return final_outputs
 
 
-def bundle_wheel(output, metadata, env, stats):
+def bundle_wheel(output, metadata: MetaData, env, stats):
     ext = ".bat" if utils.on_win else ".sh"
     with TemporaryDirectory() as tmpdir, utils.tmp_chdir(metadata.config.work_dir):
         dest_file = os.path.join(metadata.config.work_dir, "wheel_output" + ext)
@@ -2142,7 +2142,7 @@ def bundle_wheel(output, metadata, env, stats):
         env["TOP_PKG_NAME"] = env["PKG_NAME"]
         env["TOP_PKG_VERSION"] = env["PKG_VERSION"]
         env["PKG_VERSION"] = metadata.version()
-        env["PKG_NAME"] = metadata.get_value("package/name")
+        env["PKG_NAME"] = metadata.name()
         interpreter_and_args = guess_interpreter(dest_file)
 
         bundle_stats = {}

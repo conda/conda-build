@@ -42,6 +42,7 @@ from .conda_interface import (
     root_dir,
 )
 from .deprecations import deprecated
+from .metadata import MetaData
 
 # these are things that we provide env vars for more explicitly.  This list disables the
 #    pass-through of variant values to env vars for these keys.
@@ -484,7 +485,7 @@ def r_vars(metadata, prefix, escape_backslash):
     return vars_
 
 
-def meta_vars(meta, skip_build_id=False):
+def meta_vars(meta: MetaData, skip_build_id=False):
     d = {}
     for var_name in ensure_list(meta.get_value("build/script_env", [])):
         if "=" in var_name:
@@ -546,7 +547,7 @@ def meta_vars(meta, skip_build_id=False):
         d.update(get_hg_build_info(hg_dir))
 
     # use `get_value` to prevent early exit while name is still unresolved during rendering
-    d["PKG_NAME"] = meta.get_value("package/name")
+    d["PKG_NAME"] = meta.name()
     d["PKG_VERSION"] = meta.version()
     d["PKG_BUILDNUM"] = str(meta.build_number())
     if meta.final and not skip_build_id:
