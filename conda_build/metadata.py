@@ -16,7 +16,7 @@ from os.path import isfile, join
 
 from bs4 import UnicodeDammit
 
-from conda_build import environ, exceptions, utils, variants
+from conda_build import exceptions, utils, variants
 from conda_build.config import Config, get_or_merge_config
 from conda_build.features import feature_list
 from conda_build.license_family import ensure_valid_license_family
@@ -1891,8 +1891,10 @@ class MetaData:
         loader = FilteredLoader(jinja2.ChoiceLoader(loaders), config=self.config)
         env = jinja2.Environment(loader=loader, undefined=undefined_type)
 
+        from .environ import get_dict
+
         env.globals.update(get_selectors(self.config))
-        env.globals.update(environ.get_dict(m=self, skip_build_id=skip_build_id))
+        env.globals.update(get_dict(m=self, skip_build_id=skip_build_id))
         env.globals.update({"CONDA_BUILD_STATE": "RENDER"})
         env.globals.update(
             context_processor(
