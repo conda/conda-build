@@ -679,9 +679,9 @@ def filter_combined_spec_to_used_keys(combined_spec, specs):
 
     # TODO: act here?
     combined_spec = explode_variants(combined_spec)
-    seen_keys = (
-        set()
-    )  # seen_keys makes sure that a setting from a lower-priority spec doesn't clobber the same setting that has been redefined in a higher-priority spec.
+    # seen_keys makes sure that a setting from a lower-priority spec doesn't clobber
+    # the same setting that has been redefined in a higher-priority spec.
+    seen_keys = set()
     # The specs are checked from high to low priority order.
     for source, source_specs in reversed(specs.items()):
         for k, vs in source_specs.items():

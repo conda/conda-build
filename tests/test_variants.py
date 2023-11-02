@@ -663,13 +663,14 @@ def test_variant_subkeys_retained():
 @pytest.mark.parametrize(
     "internal_defaults, low_prio_config, high_prio_config, expected",
     [
-        (
+        pytest.param(
             {"pkg_1": "1.0"},
             {"pkg_1": "1.1"},
             {"pkg_1": ["1.1", "1.2"], "pkg_2": ["1.1"]},
             [{"pkg_1": "1.1", "pkg_2": "1.1"}, {"pkg_1": "1.2", "pkg_2": "1.1"}],
+            id="basic",
         ),
-        (
+        pytest.param(
             {"pkg_1": "1.0"},
             {"pkg_1": "1.1"},
             {
@@ -681,22 +682,21 @@ def test_variant_subkeys_retained():
                 {"pkg_1": "1.1", "pkg_2": "1.1", "zip_keys": [["pkg_1", "pkg_2"]]},
                 {"pkg_1": "1.2", "pkg_2": "1.2", "zip_keys": [["pkg_1", "pkg_2"]]},
             ],
+            id="zip_keys",
         ),
     ],
 )
 def test_zip_key_filtering(
     internal_defaults, low_prio_config, high_prio_config, expected
 ):
-    from collections import OrderedDict
-
-    combined_spec = low_prio_config.copy()
-    combined_spec.update(high_prio_config)
-    specs = OrderedDict(
-        [
-            ("internal_defaults", internal_defaults),
-            ("low_prio_config", low_prio_config),
-            ("high_prio_config", high_prio_config),
-        ]
-    )
+    combined_spec = {
+        **low_prio_config,
+        **high_prio_config,
+    }
+    specs = {
+        "internal_defaults": internal_defaults,
+        "low_prio_config": low_prio_config,
+        "high_prio_config": high_prio_config,
+    }
 
     assert filter_combined_spec_to_used_keys(combined_spec, specs=specs) == expected
