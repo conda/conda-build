@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import configparser  # noqa: F401
 import os
-import warnings
 from functools import partial
 from importlib import import_module  # noqa: F401
 
@@ -12,9 +11,8 @@ from conda import __version__ as CONDA_VERSION  # noqa: F401
 from conda.auxlib.packaging import (  # noqa: F401
     _get_version_from_git_tag as get_version_from_git_tag,
 )
-from conda.base.context import context, determine_target_prefix
+from conda.base.context import context, determine_target_prefix, reset_context
 from conda.base.context import non_x86_machines as non_x86_linux_machines  # noqa: F401
-from conda.base.context import reset_context
 from conda.core.package_cache import ProgressiveFetchExtract  # noqa: F401
 from conda.exceptions import (  # noqa: F401
     CondaError,
@@ -25,15 +23,12 @@ from conda.exceptions import (  # noqa: F401
     PaddingError,
     UnsatisfiableError,
 )
-from conda.exports import ArgumentParser  # noqa: F401
-from conda.exports import CondaSession  # noqa: F401
-from conda.exports import EntityEncoder  # noqa: F401
-from conda.exports import VersionOrder  # noqa: F401
-from conda.exports import _toposort  # noqa: F401
-from conda.exports import get_index  # noqa: F401
 from conda.exports import (  # noqa: F401
+    ArgumentParser,  # noqa: F401
     Channel,
     Completer,
+    CondaSession,  # noqa: F401
+    EntityEncoder,  # noqa: F401
     FileMode,
     InstalledPackages,
     MatchSpec,
@@ -44,12 +39,15 @@ from conda.exports import (  # noqa: F401
     TemporaryDirectory,
     TmpDownload,
     Unsatisfiable,
+    VersionOrder,  # noqa: F401
+    _toposort,  # noqa: F401
     add_parser_channels,
     add_parser_prefix,
     display_actions,
     download,
     execute_actions,
     execute_plan,
+    get_index,  # noqa: F401
     handle_proxy_407,
     hashsum_file,
     human_bytes,
@@ -76,7 +74,18 @@ from conda.exports import (  # noqa: F401
     win_path_to_unix,
 )
 from conda.models.channel import get_conda_build_local_url  # noqa: F401
-from conda.models.dist import Dist, IndexRecord  # noqa: F401
+from conda.models.dist import Dist  # noqa: F401
+from conda.models.records import PackageRecord
+
+from .deprecations import deprecated
+
+deprecated.constant(
+    "3.28.0",
+    "4.0.0",
+    "IndexRecord",
+    PackageRecord,
+    addendum="Use `conda.models.records.PackageRecord` instead.",
+)
 
 # TODO: Go to references of all properties below and import them from `context` instead
 binstar_upload = context.binstar_upload
@@ -104,21 +113,19 @@ class CrossPlatformStLink:
     def __call__(self, path: str | os.PathLike) -> int:
         return self.st_nlink(path)
 
-    @classmethod
-    def st_nlink(cls, path: str | os.PathLike) -> int:
-        warnings.warn(
-            "`conda_build.conda_interface.CrossPlatformStLink` is pending deprecation and will be removed in a "
-            "future release. Please use `os.stat().st_nlink` instead.",
-            PendingDeprecationWarning,
-        )
+    @staticmethod
+    @deprecated("3.24.0", "4.0.0", addendum="Use `os.stat().st_nlink` instead.")
+    def st_nlink(path: str | os.PathLike) -> int:
         return os.stat(path).st_nlink
 
 
+@deprecated("3.28.0", "4.0.0")
 class SignatureError(Exception):
     # TODO: What is this? 🤔
     pass
 
 
+@deprecated("3.28.0", "4.0.0")
 def which_package(path):
     """
     Given the path (of a (presumably) conda installed file) iterate over
@@ -137,6 +144,7 @@ def which_package(path):
             yield dist
 
 
+@deprecated("3.28.0", "4.0.0")
 def which_prefix(path):
     """
     Given the path (to a (presumably) conda installed file) return the
@@ -159,6 +167,7 @@ def which_prefix(path):
     return prefix
 
 
+@deprecated("3.28.0", "4.0.0")
 def get_installed_version(prefix, pkgs):
     """
     Primarily used by conda-forge, but may be useful in general for checking when

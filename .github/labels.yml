@@ -26,3 +26,9 @@
 - name: knowledge-medium
   description: "[deprecated]"
   color: "888888"
+
+# Tags
+- name: tag::noarch
+  description: related to noarch builds
+  color: "86C579"
+  aliases: []

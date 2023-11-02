@@ -21,6 +21,7 @@ from conda_build.config import Config, get_or_merge_config
 from conda_build.features import feature_list
 from conda_build.license_family import ensure_valid_license_family
 from conda_build.utils import (
+    DEFAULT_SUBDIRS,
     HashableDict,
     ensure_list,
     expand_globs,
@@ -29,7 +30,7 @@ from conda_build.utils import (
     insert_variant_versions,
 )
 
-from .conda_interface import MatchSpec, envs_dirs, md5_file, non_x86_linux_machines
+from .conda_interface import MatchSpec, envs_dirs, md5_file
 
 try:
     import yaml
@@ -121,21 +122,35 @@ def get_selectors(config: Config) -> dict[str, bool]:
     # Remember to update the docs of any of this changes
     plat = config.host_subdir
     d = dict(
-        linux=plat.startswith("linux-"),
         linux32=bool(plat == "linux-32"),
         linux64=bool(plat == "linux-64"),
         arm=plat.startswith("linux-arm"),
-        osx=plat.startswith("osx-"),
-        unix=plat.startswith(("linux-", "osx-")),
-        win=plat.startswith("win-"),
+        unix=plat.startswith(("linux-", "osx-", "emscripten-")),
         win32=bool(plat == "win-32"),
         win64=bool(plat == "win-64"),
-        x86=plat.endswith(("-32", "-64")),
-        x86_64=plat.endswith("-64"),
         os=os,
         environ=os.environ,
         nomkl=bool(int(os.environ.get("FEATURE_NOMKL", False))),
     )
+
+    # Add the current platform to the list of subdirs to enable conda-build
+    # to bootstrap new platforms without a new conda release.
+    subdirs = list(DEFAULT_SUBDIRS) + [plat]
+
+    # filter out noarch and other weird subdirs
+    subdirs = [subdir for subdir in subdirs if "-" in subdir]
+
+    subdir_oses = {subdir.split("-")[0] for subdir in subdirs}
+    subdir_archs = {subdir.split("-")[1] for subdir in subdirs}
+
+    for subdir_os in subdir_oses:
+        d[subdir_os] = plat.startswith(f"{subdir_os}-")
+
+    for arch in subdir_archs:
+        arch_full = ARCH_MAP.get(arch, arch)
+        d[arch_full] = plat.endswith(f"-{arch}")
+        if arch == "32":
+            d["x86"] = plat.endswith(("-32", "-64"))
 
     defaults = variants.get_default_variant(config)
     py = config.variant.get("python", defaults["python"])
@@ -144,15 +159,16 @@ def get_selectors(config: Config) -> dict[str, bool]:
         py = py[0]
     # go from "3.6 *_cython" -> "36"
     # or from "3.6.9" -> "36"
-    py = int("".join(py.split(" ")[0].split(".")[:2]))
+    py_major, py_minor, *_ = py.split(" ")[0].split(".")
+    py = int(f"{py_major}{py_minor}")
 
     d["build_platform"] = config.build_subdir
 
     d.update(
         dict(
             py=py,
-            py3k=bool(30 <= py < 40),
-            py2k=bool(20 <= py < 30),
+            py3k=bool(py_major == "3"),
+            py2k=bool(py_major == "2"),
             py26=bool(py == 26),
             py27=bool(py == 27),
             py33=bool(py == 33),
@@ -178,9 +194,6 @@ def get_selectors(config: Config) -> dict[str, bool]:
     lua = config.variant.get("lua", defaults["lua"])
     d["lua"] = lua
     d["luajit"] = bool(lua[0] == "2")
-
-    for machine in non_x86_linux_machines:
-        d[machine] = bool(plat.endswith("-%s" % machine))
 
     for feature, value in feature_list:
         d[feature] = value
@@ -1749,18 +1762,20 @@ class MetaData:
 
     def ignore_prefix_files(self):
         ret = self.get_value("build/ignore_prefix_files", False)
-        if type(ret) not in (list, bool):
+        if not isinstance(ret, (list, bool)):
             raise RuntimeError(
                 "build/ignore_prefix_files should be boolean or a list of paths "
                 "(optionally globs)"
             )
         if sys.platform == "win32":
-            if type(ret) is list and any("\\" in i for i in ret):
+            if isinstance(ret, list) and any("\\" in i for i in ret):
                 raise RuntimeError(
                     "build/ignore_prefix_files paths must use / "
                     "as the path delimiter on Windows"
                 )
-        return expand_globs(ret, self.config.host_prefix) if type(ret) is list else ret
+        return (
+            expand_globs(ret, self.config.host_prefix) if isinstance(ret, list) else ret
+        )
 
     def always_include_files(self):
         files = ensure_list(self.get_value("build/always_include_files", []))
@@ -1779,18 +1794,20 @@ class MetaData:
 
     def binary_relocation(self):
         ret = self.get_value("build/binary_relocation", True)
-        if type(ret) not in (list, bool):
+        if not isinstance(ret, (list, bool)):
             raise RuntimeError(
                 "build/binary_relocation should be boolean or a list of paths "
                 "(optionally globs)"
             )
         if sys.platform == "win32":
-            if type(ret) is list and any("\\" in i for i in ret):
+            if isinstance(ret, list) and any("\\" in i for i in ret):
                 raise RuntimeError(
                     "build/binary_relocation paths must use / "
                     "as the path delimiter on Windows"
                 )
-        return expand_globs(ret, self.config.host_prefix) if type(ret) is list else ret
+        return (
+            expand_globs(ret, self.config.host_prefix) if isinstance(ret, list) else ret
+        )
 
     def include_recipe(self):
         return self.get_value("build/include_recipe", True)

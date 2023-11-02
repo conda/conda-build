@@ -25,7 +25,6 @@ from collections import OrderedDict, deque
 from os.path import dirname, isdir, isfile, islink, join
 
 import conda_package_handling.api
-import glob2
 import yaml
 from bs4 import UnicodeDammit
 from conda import __version__ as conda_version
@@ -76,7 +75,6 @@ from .conda_interface import (
     env_path_backup_var_exists,
     get_conda_channel,
     get_rc_urls,
-    pkgs_dirs,
     prefix_placeholder,
     reset_context,
     root_dir,
@@ -1203,11 +1201,11 @@ def get_files_with_prefix(m, replacements, files_in, prefix):
         for index, replacement in enumerate(replacements):
             all_matches = have_regex_files(
                 files=[
-                    f
-                    for f in files
+                    file
+                    for file in files
                     if any(
-                        glob2.fnmatch.fnmatch(f, r)
-                        for r in replacement["glob_patterns"]
+                        fnmatch.fnmatch(file, pattern)
+                        for pattern in replacement["glob_patterns"]
                     )
                 ],
                 prefix=prefix,
@@ -2607,6 +2605,7 @@ def build(
 
         utils.rm_rf(m.config.info_dir)
         files1 = utils.prefix_files(prefix=m.config.host_prefix)
+        os.makedirs(m.config.build_folder, exist_ok=True)
         with open(join(m.config.build_folder, "prefix_files.txt"), "w") as f:
             f.write("\n".join(sorted(list(files1))))
             f.write("\n")
@@ -3419,18 +3418,6 @@ def test(
     # Must download *after* computing build id, or else computing build id will change
     #     folder destination
     _extract_test_files_from_package(metadata)
-
-    # When testing a .tar.bz2 in the pkgs dir, clean_pkg_cache() will remove it.
-    # Prevent this. When https://github.com/conda/conda/issues/5708 gets fixed
-    # I think we can remove this call to clean_pkg_cache().
-    in_pkg_cache = (
-        not hasattr(recipedir_or_package_or_metadata, "config")
-        and os.path.isfile(recipedir_or_package_or_metadata)
-        and recipedir_or_package_or_metadata.endswith(CONDA_PACKAGE_EXTENSIONS)
-        and os.path.dirname(recipedir_or_package_or_metadata) in pkgs_dirs[0]
-    )
-    if not in_pkg_cache:
-        environ.clean_pkg_cache(metadata.dist(), metadata.config)
 
     copy_test_source_files(metadata, metadata.config.test_dir)
     # this is also copying tests/source_files from work_dir to testing workdir

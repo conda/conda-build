@@ -38,6 +38,8 @@ from typing import Iterable
 
 import libarchive
 
+from .deprecations import deprecated
+
 try:
     from json.decoder import JSONDecodeError
 except ImportError:
@@ -63,24 +65,26 @@ except Exception:
 
 import urllib.parse as urlparse
 import urllib.request as urllib
-from glob import glob as glob_glob
+from contextlib import ExitStack  # noqa: F401
+from glob import glob
 
 from conda.api import PackageCacheData  # noqa
+from conda.base.constants import KNOWN_SUBDIRS
 
 # NOQA because it is not used in this file.
 from conda_build.conda_interface import rm_rf as _rm_rf  # noqa
 from conda_build.exceptions import BuildLockError  # noqa
 from conda_build.os_utils import external  # noqa
 
-from .conda_interface import Dist  # noqa
-from .conda_interface import StringIO  # noqa
-from .conda_interface import cc_conda_build  # noqa
-from .conda_interface import context  # noqa
 from .conda_interface import (  # noqa
     CondaHTTPError,
+    Dist,  # noqa
     MatchSpec,
+    StringIO,  # noqa
     TemporaryDirectory,
     VersionOrder,
+    cc_conda_build,  # noqa
+    context,  # noqa
     download,
     get_conda_channel,
     hashsum_file,
@@ -91,44 +95,20 @@ from .conda_interface import (  # noqa
     win_path_to_unix,
 )
 
-
-# stdlib glob is less feature-rich but considerably faster than glob2
-def glob(pathname, recursive=True):
-    return glob_glob(pathname, recursive=recursive)
-
-
-# NOQA because it is not used in this file.
-from contextlib import ExitStack  # NOQA
-
 PermissionError = PermissionError  # NOQA
 FileNotFoundError = FileNotFoundError
 
 on_win = sys.platform == "win32"
+on_mac = sys.platform == "darwin"
+on_linux = sys.platform == "linux"
 
 codec = getpreferredencoding() or "utf-8"
-on_win = sys.platform == "win32"
 root_script_dir = os.path.join(root_dir, "Scripts" if on_win else "bin")
 mmap_MAP_PRIVATE = 0 if on_win else mmap.MAP_PRIVATE
 mmap_PROT_READ = 0 if on_win else mmap.PROT_READ
 mmap_PROT_WRITE = 0 if on_win else mmap.PROT_WRITE
 
-DEFAULT_SUBDIRS = {
-    "linux-64",
-    "linux-32",
-    "linux-s390x",
-    "linux-ppc64",
-    "linux-ppc64le",
-    "linux-armv6l",
-    "linux-armv7l",
-    "linux-aarch64",
-    "win-64",
-    "win-32",
-    "win-arm64",
-    "osx-64",
-    "osx-arm64",
-    "zos-z",
-    "noarch",
-}
+DEFAULT_SUBDIRS = set(KNOWN_SUBDIRS)
 
 RUN_EXPORTS_TYPES = {
     "weak",
@@ -811,6 +791,11 @@ def get_conda_operation_locks(locking=True, bldpkgs_dirs=None, timeout=900):
     return locks
 
 
+@deprecated(
+    "3.28.0",
+    "4.0.0",
+    addendum="Use `os.path.relpath` or `pathlib.Path.relative_to` instead.",
+)
 def relative(f, d="lib"):
     assert not f.startswith("/"), f
     assert not d.startswith("/"), d
@@ -1035,7 +1020,7 @@ def get_stdlib_dir(prefix, py_ver):
         lib_dir = os.path.join(prefix, "Lib")
     else:
         lib_dir = os.path.join(prefix, "lib")
-        python_folder = glob(os.path.join(lib_dir, "python?.*"))
+        python_folder = glob(os.path.join(lib_dir, "python?.*"), recursive=True)
         python_folder = sorted(filterfalse(islink, python_folder))
         if python_folder:
             lib_dir = os.path.join(lib_dir, python_folder[0])
@@ -1050,7 +1035,7 @@ def get_site_packages(prefix, py_ver):
 
 def get_build_folders(croot):
     # remember, glob is not a regex.
-    return glob(os.path.join(croot, "*" + "[0-9]" * 10 + "*"))
+    return glob(os.path.join(croot, "*" + "[0-9]" * 10 + "*"), recursive=True)
 
 
 def prepend_bin_path(env, prefix, prepend_prefix=False):
@@ -1083,7 +1068,7 @@ def sys_path_prepended(prefix):
         sys.path.insert(1, os.path.join(prefix, "lib", "site-packages"))
     else:
         lib_dir = os.path.join(prefix, "lib")
-        python_dir = glob(os.path.join(lib_dir, r"python[0-9\.]*"))
+        python_dir = glob(os.path.join(lib_dir, r"python[0-9\.]*"), recursive=True)
         if python_dir:
             python_dir = python_dir[0]
             sys.path.insert(1, os.path.join(python_dir, "site-packages"))
@@ -1325,7 +1310,7 @@ def expand_globs(path_list, root_dir):
                         files.append(os.path.join(root, folder))
         else:
             # File compared to the globs use / as separator independently of the os
-            glob_files = glob(path)
+            glob_files = glob(path, recursive=True)
             if not glob_files:
                 log = get_logger(__name__)
                 log.error(f"Glob {path} did not match in root_dir {root_dir}")
@@ -1455,7 +1440,7 @@ def get_installed_packages(path):
     Files are assumed to be in 'index.json' format.
     """
     installed = dict()
-    for filename in glob(os.path.join(path, "conda-meta", "*.json")):
+    for filename in glob(os.path.join(path, "conda-meta", "*.json"), recursive=True):
         with open(filename) as file:
             data = json.load(file)
             installed[data["name"]] = data

@@ -4,8 +4,7 @@
 
 ### Bug fixes
 
-* Delay imports in conda command plugin until the command is used, avoiding
-  import-time side effects. (#4949)
+* Fallback to solved record filename to find the downloaded tarball in `get_upstream_pins`. (#4991 via #5037)
 
 ### Deprecations
 

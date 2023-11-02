@@ -1,9 +1,6 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-try:
-    from collections.abc import Hashable
-except ImportError:
-    from collections.abc import Hashable
+from __future__ import annotations
 
 import hashlib
 import json
@@ -11,35 +8,34 @@ import os
 import struct
 import sys
 import threading
+from collections.abc import Hashable
+from fnmatch import fnmatch
 from functools import partial
+from pathlib import Path
 from subprocess import PIPE, Popen
 
-import glob2
-
+from ..deprecations import deprecated
 from .external import find_executable
 
 # lief cannot handle files it doesn't know about gracefully
 # TODO :: Remove all use of pyldd
 # Currently we verify the output of each against the other
-from .pyldd import codefile_type as codefile_type_pyldd
+from .pyldd import DLLfile, EXEfile, elffile, machofile
+from .pyldd import codefile_type as _codefile_type
 from .pyldd import inspect_linkages as inspect_linkages_pyldd
 
-codefile_type = codefile_type_pyldd
-have_lief = False
 try:
     import lief
 
     lief.logging.disable()
     have_lief = True
-except:
-    pass
+except ImportError:
+    have_lief = False
 
 
+@deprecated("3.28.0", "4.0.0", addendum="Use `isinstance(value, str)` instead.")
 def is_string(s):
-    try:
-        return isinstance(s, basestring)
-    except NameError:
-        return isinstance(s, str)
+    return isinstance(s, str)
 
 
 # Some functions can operate on either file names
@@ -47,17 +43,16 @@ def is_string(s):
 # these are to be avoided, or if not avoided they
 # should be passed a binary when possible as that
 # will prevent having to parse it multiple times.
-def ensure_binary(file):
-    if not is_string(file):
+def ensure_binary(file: str | os.PathLike | Path | lief.Binary) -> lief.Binary | None:
+    if isinstance(file, lief.Binary):
         return file
-    else:
-        try:
-            if not os.path.exists(file):
-                return []
-            return lief.parse(file)
-        except:
-            print(f"WARNING: liefldd: failed to ensure_binary({file})")
-    return None
+    elif not Path(file).exists():
+        return None
+    try:
+        return lief.parse(str(file))
+    except BaseException:
+        print(f"WARNING: liefldd: failed to ensure_binary({file})")
+        return None
 
 
 def nm(filename):
@@ -78,25 +73,57 @@ def nm(filename):
         print("No symbols found")
 
 
-def codefile_type_liefldd(file, skip_symlinks=True):
-    binary = ensure_binary(file)
-    result = None
-    if binary:
-        if binary.format == lief.EXE_FORMATS.PE:
-            if lief.PE.DLL_CHARACTERISTICS:
-                if binary.header.characteristics & lief.PE.HEADER_CHARACTERISTICS.DLL:
-                    result = "DLLfile"
-                else:
-                    result = "EXEfile"
-        elif binary.format == lief.EXE_FORMATS.MACHO:
-            result = "machofile"
-        elif binary.format == lief.EXE_FORMATS.ELF:
-            result = "elffile"
-    return result
-
-
 if have_lief:
-    codefile_type = codefile_type_liefldd
+
+    def codefile_class(
+        path: str | os.PathLike | Path,
+        skip_symlinks: bool = False,
+    ) -> type[DLLfile | EXEfile | machofile | elffile] | None:
+        # same signature as conda.os_utils.pyldd.codefile_class
+        if not (binary := ensure_binary(path)):
+            return None
+        elif (
+            binary.format == lief.EXE_FORMATS.PE
+            and lief.PE.HEADER_CHARACTERISTICS.DLL in binary.header.characteristics_list
+        ):
+            return DLLfile
+        elif binary.format == lief.EXE_FORMATS.PE:
+            return EXEfile
+        elif binary.format == lief.EXE_FORMATS.MACHO:
+            return machofile
+        elif binary.format == lief.EXE_FORMATS.ELF:
+            return elffile
+        else:
+            return None
+
+else:
+    from .pyldd import codefile_class
+
+
+@deprecated(
+    "3.28.0",
+    "4.0.0",
+    addendum="Use `conda_build.os_utils.liefldd.codefile_class` instead.",
+)
+def codefile_type_liefldd(*args, **kwargs) -> str | None:
+    codefile = codefile_class(*args, **kwargs)
+    return codefile.__name__ if codefile else None
+
+
+deprecated.constant(
+    "3.28.0",
+    "4.0.0",
+    "codefile_type_pyldd",
+    _codefile_type,
+    addendum="Use `conda_build.os_utils.pyldd.codefile_class` instead.",
+)
+deprecated.constant(
+    "3.28.0",
+    "4.0.0",
+    "codefile_type",
+    _codefile_type,
+    addendum="Use `conda_build.os_utils.liefldd.codefile_class` instead.",
+)
 
 
 def _trim_sysroot(sysroot):
@@ -112,7 +139,9 @@ def get_libraries(file):
         if binary.format == lief.EXE_FORMATS.PE:
             result = binary.libraries
         else:
-            result = [lib if is_string(lib) else lib.name for lib in binary.libraries]
+            result = [
+                lib if isinstance(lib, str) else lib.name for lib in binary.libraries
+            ]
             # LIEF returns LC_ID_DYLIB name @rpath/libbz2.dylib in binary.libraries. Strip that.
             binary_name = None
             if binary.format == lief.EXE_FORMATS.MACHO:
@@ -146,7 +175,7 @@ def _set_elf_rpathy_thing(binary, old_matching, new_rpath, set_rpath, set_runpat
         if (
             set_runpath
             and e.tag == lief.ELF.DYNAMIC_TAGS.RUNPATH
-            and glob2.fnmatch.fnmatch(e.runpath, old_matching)
+            and fnmatch(e.runpath, old_matching)
             and e.runpath != new_rpath
         ):
             e.runpath = new_rpath
@@ -154,7 +183,7 @@ def _set_elf_rpathy_thing(binary, old_matching, new_rpath, set_rpath, set_runpat
         elif (
             set_rpath
             and e.tag == lief.ELF.DYNAMIC_TAGS.RPATH
-            and glob2.fnmatch.fnmatch(e.rpath, old_matching)
+            and fnmatch(e.rpath, old_matching)
             and e.rpath != new_rpath
         ):
             e.rpath = new_rpath
@@ -506,7 +535,7 @@ def inspect_linkages_lief(
                     while tmp_filename:
                         if (
                             not parent_exe_dirname
-                            and codefile_type(tmp_filename) == "EXEfile"
+                            and codefile_class(tmp_filename) == EXEfile
                         ):
                             parent_exe_dirname = os.path.dirname(tmp_filename)
                         tmp_filename = parents_by_filename[tmp_filename]
@@ -596,7 +625,7 @@ def get_linkages(
     result_pyldd = []
     debug = False
     if not have_lief or debug:
-        if codefile_type(filename) not in ("DLLfile", "EXEfile"):
+        if codefile_class(filename) not in (DLLfile, EXEfile):
             result_pyldd = inspect_linkages_pyldd(
                 filename,
                 resolve_filenames=resolve_filenames,
@@ -608,7 +637,7 @@ def get_linkages(
                 return result_pyldd
         else:
             print(
-                f"WARNING: failed to get_linkages, codefile_type('{filename}')={codefile_type(filename)}"
+                f"WARNING: failed to get_linkages, codefile_class('{filename}')={codefile_class(filename)}"
             )
             return {}
     result_lief = inspect_linkages_lief(

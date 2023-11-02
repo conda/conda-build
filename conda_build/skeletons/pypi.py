@@ -431,7 +431,9 @@ def skeletonize(
             if noarch_python:
                 ordered_recipe["build"]["noarch"] = "python"
 
-            recipe_script_cmd = ["{{ PYTHON }} -m pip install . -vv"]
+            recipe_script_cmd = [
+                "{{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation"
+            ]
             ordered_recipe["build"]["script"] = " ".join(
                 recipe_script_cmd + setup_options
             )

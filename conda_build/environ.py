@@ -41,6 +41,7 @@ from .conda_interface import (
     reset_context,
     root_dir,
 )
+from .deprecations import deprecated
 
 # these are things that we provide env vars for more explicitly.  This list disables the
 #    pass-through of variant values to env vars for these keys.
@@ -580,7 +581,7 @@ def get_shlib_ext(host_platform):
         return ".dll"
     elif host_platform in ["osx", "darwin"]:
         return ".dylib"
-    elif host_platform.startswith("linux"):
+    elif host_platform.startswith("linux") or host_platform.endswith("-wasm32"):
         return ".so"
     elif host_platform == "noarch":
         # noarch packages should not contain shared libraries, use the system
@@ -1214,6 +1215,7 @@ def remove_existing_packages(dirs, fns, config):
                     utils.rm_rf(entry)
 
 
+@deprecated("3.28.0", "4.0.0")
 def clean_pkg_cache(dist, config):
     locks = []
 

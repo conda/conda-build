@@ -1,0 +1,21 @@
+### Enhancements
+
+* <news item>
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* Mark `conda_build.os_utils.pyldd.is_string` as pending deprecation. Use `isinstance(value, str)` instead. (#5040)
+* Mark `conda_build.os_utils.pyldd.is_codefile` as pending deprecation. Use `conda_build.os_utils.pyldd.codefile_class` instead. (#5040)
+* Mark `conda_build.os_utils.pyldd.codefile_type` as pending deprecation. Use `conda_build.os_utils.pyldd.codefile_class` instead. (#5040)
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>
