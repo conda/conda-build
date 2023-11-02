@@ -1714,7 +1714,9 @@ def check_menuinst_json(files, prefix):
             with open(join(prefix, json_file)) as f:
                 text = f.read()
             if "$schema" not in text:
-                log.warning("menuinst v1 JSON document '%s' won't be validated.", json_file)
+                log.warning(
+                    "menuinst v1 JSON document '%s' won't be validated.", json_file
+                )
                 continue
             validator.validate(json.loads(text))
         except (jsonschema.ValidationError, json.JSONDecodeError) as exc:

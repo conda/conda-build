@@ -1,8 +1,10 @@
+# NEW for menuinst validation
 anaconda-client
 beautifulsoup4
 chardet
 conda >=4.13
 conda-forge::allure-pytest
+conda-forge::menuinst >=2
 conda-index
 conda-package-handling
 conda-verify
@@ -11,6 +13,7 @@ cytoolz
 filelock
 git
 jinja2
+jsonschema
 numpy
 perl
 pip
@@ -33,6 +36,3 @@ ruamel.yaml
 setuptools_scm  # needed for devenv version detection
 tomli
 tqdm
-# NEW for menuinst validation
-jsonschema
-conda-forge::menuinst >=2
