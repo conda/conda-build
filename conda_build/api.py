@@ -76,8 +76,8 @@ def render(
                                     raise
 
                         # remove outputs section from output objects for simplicity
-                        if not om.path and om.meta.get("outputs"):
-                            om.parent_outputs = om.meta["outputs"]
+                        if not om.path and om.get_section("outputs"):
+                            om.parent_outputs = om.get_section("outputs")
                             del om.meta["outputs"]
 
                         output_metas[

@@ -409,7 +409,7 @@ def ensure_matching_hashes(output_metadata):
     for _, m in output_metadata.values():
         for _, om in output_metadata.values():
             if m != om:
-                run_exports = om.meta.get("build", {}).get("run_exports", [])
+                run_exports = om.get_value("build/run_exports", [])
                 if hasattr(run_exports, "keys"):
                     run_exports_list = []
                     for export_type in utils.RUN_EXPORTS_TYPES:
@@ -2574,7 +2574,7 @@ class MetaData:
                         )
                         output_d["requirements"] = output_d.get("requirements", {})
                         output_d["requirements"]["build"] = build_reqs
-                        m.meta["requirements"] = m.meta.get("requirements", {})
+                        m.meta["requirements"] = m.get_section("requirements")
                         m.meta["requirements"]["build"] = build_reqs
                     non_conda_packages.append((output_d, m))
                 else:
