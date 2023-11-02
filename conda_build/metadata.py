@@ -1439,9 +1439,9 @@ class MetaData:
         check_bad_chrs(name, "package/name")
         return name
 
-    def version(self) -> str:
-        version = self.get_value("package/version")
-        if not version:
+    def version(self, fail_ok: bool = False) -> str:
+        version = self.get_value("package/version", "")
+        if not version and not fail_ok:
             sys.exit("Error: package/version missing in: %r" % self.meta_path)
         version = str(version)
         check_bad_chrs(version, "package/version")

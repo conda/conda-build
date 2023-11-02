@@ -546,11 +546,12 @@ def meta_vars(meta: MetaData, skip_build_id=False):
     ):
         d.update(get_hg_build_info(hg_dir))
 
+    # fail_ok=True to allow failures during initial MetaData parsing
     d["PKG_NAME"] = meta.name(fail_ok=True)
-    d["PKG_VERSION"] = meta.version()
+    d["PKG_VERSION"] = meta.version(fail_ok=True)
     d["PKG_BUILDNUM"] = str(meta.build_number())
     if meta.final and not skip_build_id:
-        d["PKG_BUILD_STRING"] = str(meta.build_id())
+        d["PKG_BUILD_STRING"] = meta.build_id()
         d["PKG_HASH"] = meta.hash_dependencies()
     else:
         d["PKG_BUILD_STRING"] = "placeholder"
