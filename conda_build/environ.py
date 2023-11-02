@@ -389,7 +389,7 @@ def python_vars(metadata, prefix, escape_backslash):
     }
     build_or_host = "host" if metadata.is_cross else "build"
     deps = [str(ms.name) for ms in metadata.ms_depends(build_or_host)]
-    if "python" in deps or metadata.name(fail_ok=True) == "python":
+    if "python" in deps or metadata.name() == "python":
         python_bin = metadata.config.python_bin(prefix, metadata.config.host_subdir)
 
         if utils.on_win and escape_backslash:
@@ -418,7 +418,7 @@ def perl_vars(metadata, prefix, escape_backslash):
     }
     build_or_host = "host" if metadata.is_cross else "build"
     deps = [str(ms.name) for ms in metadata.ms_depends(build_or_host)]
-    if "perl" in deps or metadata.name(fail_ok=True) == "perl":
+    if "perl" in deps or metadata.name() == "perl":
         perl_bin = metadata.config.perl_bin(prefix, metadata.config.host_subdir)
 
         if utils.on_win and escape_backslash:
@@ -465,10 +465,7 @@ def r_vars(metadata, prefix, escape_backslash):
 
     build_or_host = "host" if metadata.is_cross else "build"
     deps = [str(ms.name) for ms in metadata.ms_depends(build_or_host)]
-    if (
-        any(r_pkg in deps for r_pkg in R_PACKAGES)
-        or metadata.name(fail_ok=True) in R_PACKAGES
-    ):
+    if any(r_pkg in deps for r_pkg in R_PACKAGES) or metadata.name() in R_PACKAGES:
         r_bin = metadata.config.r_bin(prefix, metadata.config.host_subdir)
         # set R_USER explicitly to prevent crosstalk with existing R_LIBS_USER packages
         r_user = join(prefix, "Libs", "R")
@@ -546,9 +543,8 @@ def meta_vars(meta: MetaData, skip_build_id=False):
     ):
         d.update(get_hg_build_info(hg_dir))
 
-    # fail_ok=True to allow failures during initial MetaData parsing
-    d["PKG_NAME"] = meta.name(fail_ok=True)
-    d["PKG_VERSION"] = meta.version(fail_ok=True)
+    d["PKG_NAME"] = meta.name()
+    d["PKG_VERSION"] = meta.version()
     d["PKG_BUILDNUM"] = str(meta.build_number())
     if meta.final and not skip_build_id:
         d["PKG_BUILD_STRING"] = meta.build_id()

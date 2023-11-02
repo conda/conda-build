@@ -1174,7 +1174,7 @@ class MetaData:
     @property
     def is_output(self) -> str:
         parent_name = self.get_value("extra/parent_recipe", {}).get("name")
-        return parent_name and parent_name != self.name(fail_ok=True)
+        return parent_name and parent_name != self.name()
 
     def parse_again(
         self,
@@ -1429,9 +1429,9 @@ class MetaData:
                     check_field(key_or_dict, section)
         return True
 
-    def name(self, fail_ok: bool = False) -> str:
+    def name(self) -> str:
         name = self.get_value("package/name", "")
-        if not name and not fail_ok:
+        if not name and self.final:
             sys.exit("Error: package/name missing in: %r" % self.meta_path)
         name = str(name)
         if name != name.lower():
@@ -1439,9 +1439,9 @@ class MetaData:
         check_bad_chrs(name, "package/name")
         return name
 
-    def version(self, fail_ok: bool = False) -> str:
+    def version(self) -> str:
         version = self.get_value("package/version", "")
-        if not version and not fail_ok:
+        if not version and self.final:
             sys.exit("Error: package/version missing in: %r" % self.meta_path)
         version = str(version)
         check_bad_chrs(version, "package/version")
