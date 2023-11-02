@@ -13,6 +13,7 @@ import warnings
 from collections import OrderedDict
 from functools import lru_cache
 from os.path import isfile, join
+from typing import Any, Literal
 
 from bs4 import UnicodeDammit
 
@@ -44,6 +45,8 @@ try:
     Loader = yaml.CLoader
 except AttributeError:
     Loader = yaml.Loader
+
+log = utils.get_logger(__name__)
 
 
 class StringifyNumbersLoader(Loader):
@@ -182,7 +185,7 @@ def get_selectors(config: Config) -> dict[str, bool]:
     if not np:
         np = defaults["numpy"]
         if config.verbose:
-            utils.get_logger(__name__).warn(
+            log.warn(
                 "No numpy version specified in conda_build_config.yaml.  "
                 "Falling back to default numpy value of {}".format(defaults["numpy"])
             )
@@ -256,7 +259,6 @@ def eval_selector(selector_string, namespace, variants_in_place):
     except NameError as e:
         missing_var = parseNameNotFound(e)
         if variants_in_place:
-            log = utils.get_logger(__name__)
             log.debug(
                 "Treating unknown selector '" + missing_var + "' as if it was False."
             )
@@ -324,7 +326,6 @@ def ensure_valid_fields(meta):
 
 
 def _trim_None_strings(meta_dict):
-    log = utils.get_logger(__name__)
     for key, value in meta_dict.items():
         if hasattr(value, "keys"):
             meta_dict[key] = _trim_None_strings(value)
@@ -910,7 +911,6 @@ def finalize_outputs_pass(
         if metadata.skip():
             continue
         try:
-            log = utils.get_logger(__name__)
             # We should reparse the top-level recipe to get all of our dependencies fixed up.
             # we base things on base_metadata because it has the record of the full origin recipe
             if base_metadata.config.verbose:
@@ -967,7 +967,6 @@ def finalize_outputs_pass(
             if not permit_unsatisfiable_variants:
                 raise
             else:
-                log = utils.get_logger(__name__)
                 log.warn(
                     "Could not finalize metadata due to missing dependencies: "
                     "{}".format(e.packages)
@@ -1123,33 +1122,31 @@ class MetaData:
         # establish whether this recipe should squish build and host together
 
     @property
-    def is_cross(self):
-        return bool(self.get_depends_top_and_out("host")) or "host" in self.meta.get(
-            "requirements", {}
+    def is_cross(self) -> bool:
+        return bool(
+            self.get_depends_top_and_out("host")
+            or "host" in self.get_section("requirements")
         )
 
     @property
-    def final(self):
+    def final(self) -> bool:
         return self.get_value("extra/final")
 
     @final.setter
-    def final(self, boolean):
-        extra = self.meta.get("extra", {})
-        extra["final"] = boolean
-        self.meta["extra"] = extra
+    def final(self, value: bool) -> None:
+        self.meta.setdefault("extra", {})["final"] = bool(value)
 
     @property
-    def disable_pip(self):
+    def disable_pip(self) -> bool:
         return self.config.disable_pip or (
             "build" in self.meta and "disable_pip" in self.meta["build"]
         )
 
     @disable_pip.setter
-    def disable_pip(self, value):
-        self.config.disable_pip = value
-        build = self.meta.get("build", {})
-        build["disable_pip"] = value
-        self.meta["build"] = build
+    def disable_pip(self, value: bool) -> None:
+        self.config.disable_pip = self.meta.setdefault("build", {})[
+            "disable_pip"
+        ] = bool(value)
 
     def append_metadata_sections(
         self, sections_file_or_dict, merge, raise_on_clobber=False
@@ -1175,10 +1172,9 @@ class MetaData:
         )
 
     @property
-    def is_output(self):
-        self_name = self.name(fail_ok=True)
-        parent_name = self.meta.get("extra", {}).get("parent_recipe", {}).get("name")
-        return bool(parent_name) and parent_name != self_name
+    def is_output(self) -> str:
+        parent_name = self.get_value("extra/parent_recipe", {}).get("name")
+        return parent_name and parent_name != self.name(fail_ok=True)
 
     def parse_again(
         self,
@@ -1198,7 +1194,6 @@ class MetaData:
         """
         assert not self.final, "modifying metadata after finalization"
 
-        log = utils.get_logger(__name__)
         if kw:
             log.warn(
                 "using unsupported internal conda-build function `parse_again`.  Please use "
@@ -1245,17 +1240,18 @@ class MetaData:
             dependencies = _get_dependencies_from_environment(self.config.bootstrap)
             self.append_metadata_sections(dependencies, merge=True)
 
-        if "error_overlinking" in self.meta.get("build", {}):
-            self.config.error_overlinking = self.meta["build"]["error_overlinking"]
-        if "error_overdepending" in self.meta.get("build", {}):
-            self.config.error_overdepending = self.meta["build"]["error_overdepending"]
+        if "error_overlinking" in self.get_section("build"):
+            self.config.error_overlinking = self.get_value("build/error_overlinking")
+        if "error_overdepending" in self.get_section("build"):
+            self.config.error_overdepending = self.get_value(
+                "build/error_overdepending"
+            )
 
         self.validate_features()
         self.ensure_no_pip_requirements()
 
     def ensure_no_pip_requirements(self):
-        keys = "requirements/build", "requirements/run", "test/requires"
-        for key in keys:
+        for key in ("requirements/build", "requirements/run", "test/requires"):
             if any(hasattr(item, "keys") for item in (self.get_value(key) or [])):
                 raise ValueError(
                     "Dictionaries are not supported as values in requirements sections"
@@ -1265,15 +1261,13 @@ class MetaData:
 
     def append_requirements(self):
         """For dynamic determination of build or run reqs, based on configuration"""
-        reqs = self.meta.get("requirements", {})
-        run_reqs = reqs.get("run", [])
+        run_reqs = self.meta.setdefault("requirements", {}).setdefault("run", [])
         if (
-            bool(self.get_value("build/osx_is_app", False))
+            self.get_value("build/osx_is_app", False)
             and self.config.platform == "osx"
+            and "python.app" not in run_reqs
         ):
-            if "python.app" not in run_reqs:
-                run_reqs.append("python.app")
-        self.meta["requirements"] = reqs
+            run_reqs.append("python.app")
 
     def parse_until_resolved(
         self, allow_no_other_outputs=False, bypass_env_check=False
@@ -1350,10 +1344,10 @@ class MetaData:
 
         return m
 
-    def get_section(self, section):
+    def get_section(self, section: str):
         return self.meta.get(section, {})
 
-    def get_value(self, name, default=None, autotype=True):
+    def get_value(self, name: str, default=None, autotype=True):
         """
         Get a value from a meta.yaml.
         :param field: Field to return, e.g. 'package/name'.
@@ -1387,7 +1381,6 @@ class MetaData:
             # The 'source' section can be written a list, in which case the name
             # is passed in with an index, e.g. get_value('source/0/git_url')
             if index is None:
-                log = utils.get_logger(__name__)
                 log.warn(
                     f"No index specified in get_value('{name}'). Assuming index 0."
                 )
@@ -1436,28 +1429,29 @@ class MetaData:
                     check_field(key_or_dict, section)
         return True
 
-    def name(self, fail_ok=False):
-        res = self.meta.get("package", {}).get("name", "")
-        if not res and not fail_ok:
+    def name(self, fail_ok: bool = False) -> str:
+        name = self.get_value("package/name", "")
+        if not name and not fail_ok:
             sys.exit("Error: package/name missing in: %r" % self.meta_path)
-        res = str(res)
-        if res != res.lower():
-            sys.exit("Error: package/name must be lowercase, got: %r" % res)
-        check_bad_chrs(res, "package/name")
-        return res
+        name = str(name)
+        if name != name.lower():
+            sys.exit("Error: package/name must be lowercase, got: %r" % name)
+        check_bad_chrs(name, "package/name")
+        return name
 
-    def version(self):
-        res = str(self.get_value("package/version"))
-        if res is None:
+    def version(self) -> str:
+        version = self.get_value("package/version")
+        if not version:
             sys.exit("Error: package/version missing in: %r" % self.meta_path)
-        check_bad_chrs(res, "package/version")
-        if self.final and res.startswith("."):
+        version = str(version)
+        check_bad_chrs(version, "package/version")
+        if self.final and version.startswith("."):
             raise ValueError(
-                "Fully-rendered version can't start with period -  got %s", res
+                "Fully-rendered version can't start with period -  got %s", version
             )
-        return res
+        return version
 
-    def build_number(self):
+    def build_number(self) -> int:
         number = self.get_value("build/number")
 
         # build number can come back as None if no setting (or jinja intermediate)
@@ -1633,7 +1627,7 @@ class MetaData:
             return _hash_dependencies(hashing_dependencies, self.config.hash_length)
         return hash_
 
-    def build_id(self):
+    def build_id(self) -> str:
         manual_build_string = self.get_value("build/string")
         # we need the raw recipe for this metadata (possibly an output), so that we can say whether
         #    PKG_HASH is used for anything.
@@ -1669,16 +1663,16 @@ class MetaData:
                     out = re.sub("h[0-9a-f]{%s}" % self.config.hash_length, hash_, out)
         return out
 
-    def dist(self):
+    def dist(self) -> str:
         return f"{self.name()}-{self.version()}-{self.build_id()}"
 
-    def pkg_fn(self):
+    def pkg_fn(self) -> str:
         return "%s.tar.bz2" % self.dist()
 
-    def is_app(self):
+    def is_app(self) -> bool:
         return bool(self.get_value("app/entry"))
 
-    def app_meta(self):
+    def app_meta(self) -> dict[str, Any]:
         d = {"type": "app"}
         if self.get_value("app/icon"):
             d["icon"] = "%s.png" % md5_file(join(self.path, self.get_value("app/icon")))
@@ -1809,8 +1803,8 @@ class MetaData:
             expand_globs(ret, self.config.host_prefix) if isinstance(ret, list) else ret
         )
 
-    def include_recipe(self):
-        return self.get_value("build/include_recipe", True)
+    def include_recipe(self) -> bool:
+        return bool(self.get_value("build/include_recipe", True))
 
     def binary_has_prefix_files(self):
         ret = ensure_list(self.get_value("build/binary_has_prefix_files", []))
@@ -1826,8 +1820,8 @@ class MetaData:
                 )
         return expand_globs(ret, self.config.host_prefix)
 
-    def skip(self):
-        return self.get_value("build/skip", False)
+    def skip(self) -> bool:
+        return bool(self.get_value("build/skip", False))
 
     def _get_contents(
         self,
@@ -1947,34 +1941,39 @@ class MetaData:
         finally:
             if "CONDA_BUILD_STATE" in os.environ:
                 del os.environ["CONDA_BUILD_STATE"]
+
+        log.debug(f"{path=}")
+        log.debug(f"{filename=}")
+        log.debug(f"{rendered=}")
+
         return rendered
 
-    def __unicode__(self):
+    def __unicode__(self) -> str:
         """
         String representation of the MetaData.
         """
         return str(self.__dict__)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.__unicode__()
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """
         String representation of the MetaData.
         """
         return self.__str__()
 
     @property
-    def meta_path(self):
-        meta_path = self._meta_path or self.meta.get("extra", {}).get(
-            "parent_recipe", {}
-        ).get("path", "")
+    def meta_path(self) -> str:
+        meta_path = self._meta_path or self.get_value("extra/parent_recipe", {}).get(
+            "path", ""
+        )
         if meta_path and os.path.basename(meta_path) != self._meta_name:
             meta_path = os.path.join(meta_path, self._meta_name)
         return meta_path
 
     @property
-    def uses_setup_py_in_meta(self):
+    def uses_setup_py_in_meta(self) -> bool:
         meta_text = ""
         if self.meta_path:
             with open(self.meta_path, "rb") as f:
@@ -1982,7 +1981,7 @@ class MetaData:
         return "load_setup_py_data" in meta_text or "load_setuptools" in meta_text
 
     @property
-    def uses_regex_in_meta(self):
+    def uses_regex_in_meta(self) -> bool:
         meta_text = ""
         if self.meta_path:
             with open(self.meta_path, "rb") as f:
@@ -1990,7 +1989,7 @@ class MetaData:
         return "load_file_regex" in meta_text
 
     @property
-    def uses_load_file_data_in_meta(self):
+    def uses_load_file_data_in_meta(self) -> bool:
         meta_text = ""
         if self.meta_path:
             with open(self.meta_path, "rb") as f:
@@ -1998,7 +1997,7 @@ class MetaData:
         return "load_file_data" in meta_text
 
     @property
-    def needs_source_for_render(self):
+    def needs_source_for_render(self) -> bool:
         return (
             self.uses_vcs_in_meta
             or self.uses_setup_py_in_meta
@@ -2007,7 +2006,7 @@ class MetaData:
         )
 
     @property
-    def uses_jinja(self):
+    def uses_jinja(self) -> bool:
         if not self.meta_path:
             return False
         with open(self.meta_path, "rb") as f:
@@ -2016,7 +2015,7 @@ class MetaData:
         return len(matches) > 0
 
     @property
-    def uses_vcs_in_meta(self):
+    def uses_vcs_in_meta(self) -> Literal["git" | "svn" | "mercurial"] | None:
         """returns name of vcs used if recipe contains metadata associated with version control systems.
         If this metadata is present, a download/copy will be forced in parse_or_try_download.
         """
@@ -2028,7 +2027,7 @@ class MetaData:
                 meta_text = UnicodeDammit(f.read()).unicode_markup
                 for _vcs in vcs_types:
                     matches = re.findall(rf"{_vcs.upper()}_[^\.\s\'\"]+", meta_text)
-                    if len(matches) > 0 and _vcs != self.meta["package"]["name"]:
+                    if len(matches) > 0 and _vcs != self.get_value("package/name"):
                         if _vcs == "hg":
                             _vcs = "mercurial"
                         vcs = _vcs
@@ -2036,7 +2035,7 @@ class MetaData:
         return vcs
 
     @property
-    def uses_vcs_in_build(self):
+    def uses_vcs_in_build(self) -> Literal["git" | "svn" | "mercurial"] | None:
         # TODO :: Re-work this. Is it even useful? We can declare any vcs in our build deps.
         build_script = "bld.bat" if on_win else "build.sh"
         build_script = os.path.join(self.path, build_script)
@@ -2063,7 +2062,7 @@ class MetaData:
 
     def get_recipe_text(
         self, extract_pattern=None, force_top_level=False, apply_selectors=True
-    ):
+    ) -> str:
         meta_path = self.meta_path
         if meta_path:
             recipe_text = read_meta_file(meta_path)
@@ -2148,7 +2147,7 @@ class MetaData:
             output = output_matches[output_index] if output_matches else ""
         except ValueError:
             if not self.path and self.meta.get("extra", {}).get("parent_recipe"):
-                utils.get_logger(__name__).warn(
+                log.warn(
                     f"Didn't match any output in raw metadata.  Target value was: {output_name}"
                 )
                 output = ""
@@ -2157,15 +2156,14 @@ class MetaData:
         return output
 
     @property
-    def numpy_xx(self):
+    def numpy_xx(self) -> bool:
         """This is legacy syntax that we need to support for a while.  numpy x.x means
         "pin run as build" for numpy.  It was special-cased to only numpy."""
         text = self.extract_requirements_text()
-        uses_xx = bool(numpy_xx_re.search(text))
-        return uses_xx
+        return bool(numpy_xx_re.search(text))
 
     @property
-    def uses_numpy_pin_compatible_without_xx(self):
+    def uses_numpy_pin_compatible_without_xx(self) -> tuple[bool, bool]:
         text = self.extract_requirements_text()
         compatible_search = numpy_compatible_re.search(text)
         max_pin_search = None
@@ -2199,11 +2197,11 @@ class MetaData:
         return in_reqs or bool(subpackage_pin)
 
     @property
-    def uses_new_style_compiler_activation(self):
+    def uses_new_style_compiler_activation(self) -> bool:
         text = self.extract_requirements_text()
         return bool(re.search(r"\{\{\s*compiler\(.*\)\s*\}\}", text))
 
-    def validate_features(self):
+    def validate_features(self) -> None:
         if any(
             "-" in feature for feature in ensure_list(self.get_value("build/features"))
         ):
@@ -2223,28 +2221,24 @@ class MetaData:
         return new
 
     @property
-    def noarch(self):
+    def noarch(self) -> str | None:
         return self.get_value("build/noarch")
 
     @noarch.setter
-    def noarch(self, value):
-        build = self.meta.get("build", {})
-        build["noarch"] = value
-        self.meta["build"] = build
+    def noarch(self, value: str | None) -> None:
+        self.meta.setdefault("build", {})["noarch"] = value
         if not self.noarch_python and not value:
             self.config.reset_platform()
         elif value:
             self.config.host_platform = "noarch"
 
     @property
-    def noarch_python(self):
-        return self.get_value("build/noarch_python")
+    def noarch_python(self) -> bool:
+        return bool(self.get_value("build/noarch_python"))
 
     @noarch_python.setter
-    def noarch_python(self, value):
-        build = self.meta.get("build", {})
-        build["noarch_python"] = value
-        self.meta["build"] = build
+    def noarch_python(self, value: bool) -> None:
+        self.meta.setdefault("build", {})["noarch_python"] = value
         if not self.noarch and not value:
             self.config.reset_platform()
         elif value:
@@ -2273,11 +2267,11 @@ class MetaData:
         return False
 
     @property
-    def pin_depends(self):
+    def pin_depends(self) -> str:
         return self.get_value("build/pin_depends", "").lower()
 
     @property
-    def source_provided(self):
+    def source_provided(self) -> bool:
         return not bool(self.meta.get("source")) or (
             os.path.isdir(self.config.work_dir)
             and len(os.listdir(self.config.work_dir)) > 0
@@ -2690,11 +2684,11 @@ class MetaData:
         return output
 
     @property
-    def force_ignore_keys(self):
+    def force_ignore_keys(self) -> list[str]:
         return ensure_list(self.get_value("build/force_ignore_keys"))
 
     @property
-    def force_use_keys(self):
+    def force_use_keys(self) -> list[str]:
         return ensure_list(self.get_value("build/force_use_keys"))
 
     def get_used_vars(self, force_top_level=False, force_global=False):
@@ -2876,7 +2870,6 @@ class MetaData:
                     )
                 )
             else:
-                log = utils.get_logger(__name__)
                 log.warn(
                     "Not detecting used variables in output script {}; conda-build only knows "
                     "how to search .sh and .bat files right now.".format(script)
@@ -2886,23 +2879,24 @@ class MetaData:
     def get_variants_as_dict_of_lists(self):
         return variants.list_of_dicts_to_dict_of_lists(self.config.variants)
 
-    def clean(self):
+    def clean(self) -> None:
         """This ensures that clean is called with the correct build id"""
         self.config.clean()
 
     @property
-    def activate_build_script(self):
-        b = self.meta.get("build", {}) or {}
-        should_activate = b.get("activate_in_script") is not False
-        return bool(self.config.activate and should_activate)
+    def activate_build_script(self) -> bool:
+        return bool(
+            self.config.activate
+            and self.get_value("build/activate_in_script") is not False
+        )
 
     @property
-    def build_is_host(self):
+    def build_is_host(self) -> bool:
         manual_overrides = (
-            self.meta.get("build", {}).get("merge_build_host") is True
+            self.get_value("build/merge_build_host") is True
             or self.config.build_is_host
         )
-        manually_disabled = self.meta.get("build", {}).get("merge_build_host") is False
+        manually_disabled = self.get_value("build/merge_build_host") is False
         return manual_overrides or (
             self.config.subdirs_same
             and not manually_disabled

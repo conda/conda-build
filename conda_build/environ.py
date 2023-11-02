@@ -546,8 +546,7 @@ def meta_vars(meta: MetaData, skip_build_id=False):
     ):
         d.update(get_hg_build_info(hg_dir))
 
-    # use `get_value` to prevent early exit while name is still unresolved during rendering
-    d["PKG_NAME"] = meta.name()
+    d["PKG_NAME"] = meta.name(fail_ok=True)
     d["PKG_VERSION"] = meta.version()
     d["PKG_BUILDNUM"] = str(meta.build_number())
     if meta.final and not skip_build_id:
