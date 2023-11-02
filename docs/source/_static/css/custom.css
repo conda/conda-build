@@ -81,3 +81,7 @@ h1, h2, .rst-content .toctree-wrapper p.caption, h3, h4, h5, h6, legend {
     /*color of nav at top when the window is narrow*/
     background: #43B02A;
 }
+
+.wy-table-responsive table td:not(:first-child), .wy-table-responsive table th:not(:first-child) {
+    white-space: normal;
+}
