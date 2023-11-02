@@ -406,7 +406,6 @@ def execute_download_actions(m, actions, env, package_subset=None, require_files
 def get_upstream_pins(m: MetaData, actions, env):
     """Download packages from specs, then inspect each downloaded package for additional
     downstream dependency specs.  Return these additional specs."""
-
     env_specs = m.get_value(f"requirements/{env}", [])
     explicit_specs = [req.split(" ")[0] for req in env_specs] if env_specs else []
     linked_packages = actions.get("LINK", [])
@@ -644,13 +643,9 @@ def finalize_metadata(
             requirements = utils.expand_reqs(output.get("requirements", {}))
             m.meta["requirements"] = requirements
 
-        if m.get_section("requirements"):
-            utils.insert_variant_versions(
-                m.get_section("requirements"), m.config.variant, "build"
-            )
-            utils.insert_variant_versions(
-                m.get_section("requirements"), m.config.variant, "host"
-            )
+        if requirements := m.get_section("requirements"):
+            utils.insert_variant_versions(requirements, m.config.variant, "build")
+            utils.insert_variant_versions(requirements, m.config.variant, "host")
 
         m = parent_metadata.get_output_metadata(m.get_rendered_output(m.name()))
         build_unsat, host_unsat = add_upstream_pins(
