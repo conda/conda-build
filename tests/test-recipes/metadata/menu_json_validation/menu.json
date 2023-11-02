@@ -6,7 +6,6 @@
         {
             "name": "Example",
             "description": "This will install to Windows and Linux with default options. MacOS has a custom option.",
-            "icon": null,
             "command": [
                 "{{ PYTHON }}",
                 "-c",

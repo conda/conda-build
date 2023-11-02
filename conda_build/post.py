@@ -1,5 +1,6 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+import json
 import locale
 import os
 import re
@@ -1688,26 +1689,42 @@ def check_menuinst_json(files, prefix):
     print("Validating Menu/*.json files")
     log = utils.get_logger(__name__)
     try:
-        from json import JSONDecodeError
-
-        from menuinst._schema import validate
-        from pydantic import ValidationError
+        import jsonschema
+        from menuinst.utils import data_path
     except ModuleNotFoundError as exc:
         log.warning(
-            "Found 'Menu/*.json' files but couldn't validate:%s",
+            "Found 'Menu/*.json' files but couldn't validate: %s",
             ", ".join(json_files),
             exc_info=exc,
         )
         return
+
+    try:
+        schema_path = data_path("menuinst.schema.json")
+        with open(schema_path) as f:
+            schema = json.load(f)
+        ValidatorClass = jsonschema.validators.validator_for(schema)
+        validator = ValidatorClass(schema)
+    except (jsonschema.SchemaError, json.JSONDecodeError, OSError) as exc:
+        log.warning("'%s' is not a valid menuinst schema", schema_path, exc_info=exc)
+        return
+
     for json_file in json_files:
         try:
-            validate(join(prefix, json_file))
-        except (ValidationError, JSONDecodeError) as exc:
+            with open(join(prefix, json_file)) as f:
+                text = f.read()
+            if "$schema" not in text:
+                log.warning("menuinst v1 JSON document '%s' won't be validated.", json_file)
+                continue
+            validator.validate(json.loads(text))
+        except (jsonschema.ValidationError, json.JSONDecodeError) as exc:
             log.warning(
-                "'%s' is not a valid menuinst JSON file!",
+                "'%s' is not a valid menuinst JSON document!",
                 json_file,
                 exc_info=exc,
             )
+        else:
+            log.info("'%s' is a valid menuinst JSON document", json_file)
 
 
 def post_build(m, files, build_python, host_prefix=None, is_already_linked=False):

@@ -1,5 +1,6 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+import json
 import logging
 import os
 import shutil
@@ -96,14 +97,18 @@ def test_pypi_installer_metadata(testing_config):
 
 def test_menuinst_validation_passes(testing_config, caplog):
     recipe = os.path.join(metadata_dir, "menu_json_validation")
-    with caplog.at_level(logging.WARNING):
+    with caplog.at_level(logging.INFO):
         pkg = api.build(recipe, config=testing_config, notest=True)[0]
 
+    print(caplog.text)
+    assert "Found 'Menu/*.json' files but couldn't validate:" not in caplog.text
     assert "not a valid menuinst JSON file" not in caplog.text
+    assert "is a valid menuinst JSON document" in caplog.text
     assert package_has_file(pkg, "Menu/menu_json_validation.json")
 
 
-def test_menuinst_validation_fails(testing_config, caplog):
+def test_menuinst_validation_fails_bad_json(testing_config, caplog):
+    "1st check - non-parsable JSON"
     recipe = os.path.join(metadata_dir, "menu_json_validation")
     original_content = None
 
@@ -113,9 +118,40 @@ def test_menuinst_validation_fails(testing_config, caplog):
             f.write("Make this an invalid JSON")
 
         with caplog.at_level(logging.WARNING):
-            api.build(recipe, config=testing_config, notest=True)[0]
-        assert "not a valid menuinst JSON file" in caplog.text
+            api.build(recipe, config=testing_config, notest=True)
 
+        print(caplog.text)
+        assert "Found 'Menu/*.json' files but couldn't validate:" not in caplog.text
+        assert "not a valid menuinst JSON document" in caplog.text
+        assert "JSONDecodeError" in caplog.text
+    finally:
+        if original_content is not None:
+            with open(os.path.join(recipe, "menu.json"), "w") as f:
+                f.write(original_content)
+
+
+def test_menuinst_validation_fails_bad_schema(testing_config, caplog):
+    "2nd check - valid JSON, but invalid content fails schema validation"
+    recipe = os.path.join(metadata_dir, "menu_json_validation")
+    original_content = None
+
+    try:
+        with open(os.path.join(recipe, "menu.json")) as f:
+            original_content = f.read()
+
+        bad_data = json.loads(original_content)
+        bad_data["menu_items"][0]["icon"] = None
+        with open(os.path.join(recipe, "menu.json"), "w") as f:
+            json.dump(bad_data, f)
+
+        with caplog.at_level(logging.WARNING):
+            api.build(recipe, config=testing_config, notest=True)
+
+        print(caplog.text)
+        assert "Found 'Menu/*.json' files but couldn't validate:" not in caplog.text
+        assert "not a valid menuinst JSON document" in caplog.text
+        assert "ValidationError" in caplog.text
+        assert "is a valid menuinst JSON document" not in caplog.text
     finally:
         if original_content is not None:
             with open(os.path.join(recipe, "menu.json"), "w") as f:

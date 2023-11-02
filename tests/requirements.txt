@@ -34,5 +34,5 @@ setuptools_scm  # needed for devenv version detection
 tomli
 tqdm
 # NEW for menuinst validation
-pydantic <2.0a0
+jsonschema
 conda-forge::menuinst >=2
