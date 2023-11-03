@@ -1279,7 +1279,7 @@ def islist(arg, uniform=False, include_dict=True):
             # StopIteration: list is empty, an empty list is still uniform
             return True
         # check for explicit type match, do not allow the ambiguity of isinstance
-        uniform = lambda e: type(e) == etype  # noqa: E721
+        uniform = lambda e: type(e) == etype  # noqa: E731
 
     try:
         return all(uniform(e) for e in arg)

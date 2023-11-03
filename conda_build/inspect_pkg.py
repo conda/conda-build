@@ -15,6 +15,7 @@ from os.path import abspath, basename, dirname, exists, join
 from pathlib import Path
 from typing import Iterable
 
+from conda.core.prefix_data import PrefixData
 from conda.models.dist import Dist
 from conda.models.records import PackageRecord
 
@@ -61,8 +62,6 @@ def which_package(
     the conda packages the file came from.  Usually the iteration yields
     only one package.
     """
-    from conda.core.prefix_data import PrefixData
-
     prefix = Path(prefix)
     for prec in PrefixData(str(prefix)).iter_records():
         for file in prec["files"]:
@@ -224,10 +223,9 @@ def test_installable(channel="defaults"):
     return success
 
 
+@deprecated("3.28.0", "4.0.0")
 def _installed(prefix):
-    installed = linked_data(prefix)
-    installed = {rec["name"]: dist for dist, rec in installed.items()}
-    return installed
+    return {rec["name"]: dist for dist, rec in linked_data(prefix).items()}
 
 
 def _underlined_text(text):

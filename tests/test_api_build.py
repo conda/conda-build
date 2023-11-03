@@ -1691,7 +1691,7 @@ def test_provides_features_metadata(testing_config):
 # using different MACOSX_DEPLOYMENT_TARGET in parallel causes some SDK race condition
 # https://github.com/conda/conda-build/issues/4708
 @pytest.mark.serial
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
+# @pytest.mark.flaky(reruns=5, reruns_delay=2)
 def test_overlinking_detection(testing_config, variants_conda_build_sysroot):
     testing_config.activate = True
     testing_config.error_overlinking = True
