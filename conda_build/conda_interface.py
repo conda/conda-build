@@ -55,7 +55,6 @@ from conda.exports import (  # noqa: F401
     human_bytes,
     input,
     install_actions,
-    is_linked,
     lchmod,
     linked,
     linked_data,
