@@ -4099,7 +4099,7 @@ def handle_anaconda_upload(paths, config):
         print(no_upload_message)
         return
 
-    if anaconda is None:
+    if not anaconda:
         print(no_upload_message)
         sys.exit(
             "Error: cannot locate anaconda command (required for upload)\n"
