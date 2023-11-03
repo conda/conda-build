@@ -151,7 +151,7 @@ def log_stats(stats_dict, descriptor):
     )
 
 
-def create_post_scripts(m):
+def create_post_scripts(m: MetaData):
     """
     Create scripts to run after build step
     """
@@ -162,12 +162,9 @@ def create_post_scripts(m):
         is_output = "package:" not in m.get_recipe_text()
         scriptname = tp
         if is_output:
-            if m.meta.get("build", {}).get(tp, ""):
-                scriptname = m.meta["build"][tp]
-            else:
-                scriptname = m.name() + "-" + tp
+            scriptname = m.get_value(f"build/{tp}", f"{m.name()}-{tp}")
         scriptname += ext
-        dst_name = "." + m.name() + "-" + tp + ext
+        dst_name = f".{m.name()}-{tp}{ext}"
         src = join(m.path, scriptname)
         if isfile(src):
             dst_dir = join(
@@ -1462,12 +1459,12 @@ def write_about_json(m):
         json.dump(d, fo, indent=2, sort_keys=True)
 
 
-def write_info_json(m):
+def write_info_json(m: MetaData):
     info_index = m.info_index()
     if m.pin_depends:
         # Wtih 'strict' depends, we will have pinned run deps during rendering
         if m.pin_depends == "strict":
-            runtime_deps = m.meta.get("requirements", {}).get("run", [])
+            runtime_deps = m.get_value("requirements/run", [])
             info_index["depends"] = runtime_deps
         else:
             runtime_deps = environ.get_pinned_deps(m, "run")
@@ -1514,8 +1511,8 @@ def get_entry_point_script_names(entry_point_scripts):
     return scripts
 
 
-def write_run_exports(m):
-    run_exports = m.meta.get("build", {}).get("run_exports", {})
+def write_run_exports(m: MetaData):
+    run_exports = m.get_value("build/run_exports", {})
     if run_exports:
         with open(os.path.join(m.config.info_dir, "run_exports.json"), "w") as f:
             if not hasattr(run_exports, "keys"):
@@ -1753,8 +1750,8 @@ def create_info_files_json_v1(m, info_dir, prefix, files, files_with_prefix):
     return checksums
 
 
-def post_process_files(m, initial_prefix_files):
-    package_name = m.get_value("package/name")
+def post_process_files(m: MetaData, initial_prefix_files):
+    package_name = m.name()
     host_prefix = m.config.host_prefix
     missing = []
     for f in initial_prefix_files:
@@ -1784,7 +1781,7 @@ def post_process_files(m, initial_prefix_files):
     )
     post_process(
         package_name,
-        m.get_value("package/version"),
+        m.version(),
         sorted(current_prefix_files - initial_prefix_files),
         prefix=host_prefix,
         config=m.config,
@@ -1845,7 +1842,7 @@ def post_process_files(m, initial_prefix_files):
     return new_files
 
 
-def bundle_conda(output, metadata, env, stats, **kw):
+def bundle_conda(output, metadata: MetaData, env, stats, **kw):
     log = utils.get_logger(__name__)
     log.info("Packaging %s", metadata.dist())
     get_all_replacements(metadata.config)
@@ -1917,7 +1914,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
         env_output["TOP_PKG_NAME"] = env["PKG_NAME"]
         env_output["TOP_PKG_VERSION"] = env["PKG_VERSION"]
         env_output["PKG_VERSION"] = metadata.version()
-        env_output["PKG_NAME"] = metadata.get_value("package/name")
+        env_output["PKG_NAME"] = metadata.name()
         env_output["RECIPE_DIR"] = metadata.path
         env_output["MSYS2_PATH_TYPE"] = "inherit"
         env_output["CHERE_INVOKING"] = "1"
@@ -2135,7 +2132,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
     return final_outputs
 
 
-def bundle_wheel(output, metadata, env, stats):
+def bundle_wheel(output, metadata: MetaData, env, stats):
     ext = ".bat" if utils.on_win else ".sh"
     with TemporaryDirectory() as tmpdir, utils.tmp_chdir(metadata.config.work_dir):
         dest_file = os.path.join(metadata.config.work_dir, "wheel_output" + ext)
@@ -2151,7 +2148,7 @@ def bundle_wheel(output, metadata, env, stats):
         env["TOP_PKG_NAME"] = env["PKG_NAME"]
         env["TOP_PKG_VERSION"] = env["PKG_VERSION"]
         env["PKG_VERSION"] = metadata.version()
-        env["PKG_NAME"] = metadata.get_value("package/name")
+        env["PKG_NAME"] = metadata.name()
         interpreter_and_args = guess_interpreter(dest_file)
 
         bundle_stats = {}
@@ -2321,7 +2318,7 @@ def _write_activation_text(script_path, m):
         fh.write(data)
 
 
-def create_build_envs(m, notest):
+def create_build_envs(m: MetaData, notest):
     build_ms_deps = m.ms_depends("build")
     build_ms_deps = [utils.ensure_valid_spec(spec) for spec in build_ms_deps]
     host_ms_deps = m.ms_depends("host")
@@ -2375,11 +2372,12 @@ def create_build_envs(m, notest):
     try:
         if not notest:
             utils.insert_variant_versions(
-                m.meta.get("requirements", {}), m.config.variant, "run"
+                m.get_section("requirements"), m.config.variant, "run"
             )
-            test_run_ms_deps = utils.ensure_list(
-                m.get_value("test/requires", [])
-            ) + utils.ensure_list(m.get_value("requirements/run", []))
+            test_run_ms_deps = [
+                *utils.ensure_list(m.get_value("test/requires", [])),
+                *utils.ensure_list(m.get_value("requirements/run", [])),
+            ]
             # make sure test deps are available before taking time to create build env
             environ.get_install_actions(
                 m.config.test_prefix,
@@ -2428,7 +2426,7 @@ def create_build_envs(m, notest):
 
 
 def build(
-    m,
+    m: MetaData,
     stats,
     post=None,
     need_source_download=True,
@@ -2520,7 +2518,7 @@ def build(
         )
 
         specs = [ms.spec for ms in m.ms_depends("build")]
-        if any(out.get("type") == "wheel" for out in m.meta.get("outputs", [])):
+        if any(out.get("type") == "wheel" for out in m.get_section("outputs")):
             specs.extend(["pip", "wheel"])
 
         # TODO :: This is broken. It does not respect build/script for example and also if you need git
@@ -4103,7 +4101,7 @@ def handle_anaconda_upload(paths, config):
         print(no_upload_message)
         return
 
-    if anaconda is None:
+    if not anaconda:
         print(no_upload_message)
         sys.exit(
             "Error: cannot locate anaconda command (required for upload)\n"

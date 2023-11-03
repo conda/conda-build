@@ -61,6 +61,8 @@ from conda_build.os_utils.pyldd import (
     machofile,
 )
 
+from .metadata import MetaData
+
 filetypes_for_platform = {
     "win": (DLLfile, EXEfile),
     "osx": (machofile,),
@@ -1590,33 +1592,27 @@ def check_overlinking_impl(
         return dict()
 
 
-def check_overlinking(m, files, host_prefix=None):
-    if not host_prefix:
-        host_prefix = m.config.host_prefix
-
-    overlinking_ignore_patterns = m.meta.get("build", {}).get(
-        "overlinking_ignore_patterns"
-    )
-    if overlinking_ignore_patterns:
-        files = [
-            f
-            for f in files
-            if not any([fnmatch(f, p) for p in overlinking_ignore_patterns])
-        ]
+def check_overlinking(m: MetaData, files, host_prefix=None):
+    patterns = m.get_value("build/overlinking_ignore_patterns", [])
+    files = [
+        file
+        for file in files
+        if not any([fnmatch(file, pattern) for pattern in patterns])
+    ]
     return check_overlinking_impl(
-        m.get_value("package/name"),
-        m.get_value("package/version"),
-        m.get_value("build/string"),
-        m.get_value("build/number"),
+        m.name(),
+        m.version(),
+        m.build_id(),
+        m.build_number(),
         m.config.target_subdir,
         m.get_value("build/ignore_run_exports"),
-        [req.split(" ")[0] for req in m.meta.get("requirements", {}).get("run", [])],
-        [req.split(" ")[0] for req in m.meta.get("requirements", {}).get("build", [])],
-        [req.split(" ")[0] for req in m.meta.get("requirements", {}).get("host", [])],
-        host_prefix,
+        [req.split(" ")[0] for req in m.get_value("requirements/run", [])],
+        [req.split(" ")[0] for req in m.get_value("requirements/build", [])],
+        [req.split(" ")[0] for req in m.get_value("requirements/host", [])],
+        host_prefix or m.config.host_prefix,
         m.config.build_prefix,
-        m.meta.get("build", {}).get("missing_dso_whitelist", []),
-        m.meta.get("build", {}).get("runpath_whitelist", []),
+        m.get_value("build/missing_dso_whitelist", []),
+        m.get_value("build/runpath_whitelist", []),
         m.config.error_overlinking,
         m.config.error_overdepending,
         m.config.verbose,
@@ -1624,7 +1620,7 @@ def check_overlinking(m, files, host_prefix=None):
         files,
         m.config.bldpkgs_dir,
         m.config.output_folder,
-        list(m.config.channel_urls) + ["local"],
+        [*m.config.channel_urls, "local"],
         m.config.enable_static,
         m.config.variant,
     )
