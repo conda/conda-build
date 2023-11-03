@@ -64,7 +64,6 @@ from conda_build.os_utils.pyldd import (
 )
 
 from .deprecations import deprecated
-from .exceptions import CondaBuildException
 from .metadata import MetaData
 
 filetypes_for_platform = {
@@ -684,20 +683,28 @@ def get_dsos(prec: PrefixRecord, prefix: str | os.PathLike | Path) -> set[str]:
 
 
 def get_run_exports(
-    prec: PrefixRecord, prefix: str | os.PathLike | Path
+    prec: PrefixRecord,
+    prefix: str | os.PathLike | Path,
 ) -> tuple[str, ...]:
     json_file = Path(
-        prefix, "conda-meta", f"{prec.name}-{prec.version}-{prec.build}.json"
+        prefix,
+        "conda-meta",
+        f"{prec.name}-{prec.version}-{prec.build}.json",
     )
     try:
         json_info = json.loads(json_file.read_text())
     except (FileNotFoundError, IsADirectoryError):
         # FileNotFoundError: path doesn't exist
         # IsADirectoryError: path is a directory
-        raise CondaBuildException(f"Not a file: {json_file}")
+        # raise CondaBuildException(f"Not a file: {json_file}")
+        # is this a "fake" PrefixRecord?
+        # i.e. this is the package being built and hasn't been "installed" to disk?
+        return ()
 
     run_exports_json = Path(
-        json_info["extracted_package_dir"], "info", "run_exports.json"
+        json_info["extracted_package_dir"],
+        "info",
+        "run_exports.json",
     )
     try:
         return tuple(json.loads(run_exports_json.read_text()))
@@ -1188,7 +1195,7 @@ def _lookup_in_prefix_packages(
         _print_msg(
             errors,
             "{}: {} found in {}{}".format(
-                msg_prelude, n_dso_p, [prec.name for prece in precs], and_also
+                msg_prelude, n_dso_p, [prec.name for prec in precs], and_also
             ),
             verbose=verbose,
         )
@@ -1390,7 +1397,7 @@ def check_overlinking_impl(
     package_nature = {prec: library_nature(prec, run_prefix) for prec in precs}
     lib_packages = {
         prec
-        for prec, nature in package_nature
+        for prec, nature in package_nature.items()
         if prec.name not in ignore_list and nature != "non-library"
     }
     lib_packages_used = {pkg_vendored_dist}
