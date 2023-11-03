@@ -77,7 +77,7 @@ from conda.exports import (  # noqa: F401
 )
 from conda.models.channel import get_conda_build_local_url  # noqa: F401
 from conda.models.dist import Dist  # noqa: F401
-from conda.models.records import PackageRecord
+from conda.models.records import PackageRecord, PrefixRecord
 
 from .deprecations import deprecated
 
@@ -132,7 +132,7 @@ class SignatureError(Exception):
     "4.0.0",
     addendum="Use `conda_build.inspect_pkg.which_package` instead.",
 )
-def which_package(path: str | os.PathLike | Path) -> Iterable[PackageRecord]:
+def which_package(path: str | os.PathLike | Path) -> Iterable[PrefixRecord]:
     from .inspect_pkg import which_package
 
     return which_package(path, which_prefix(path))

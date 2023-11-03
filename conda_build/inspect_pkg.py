@@ -13,11 +13,11 @@ from itertools import groupby
 from operator import itemgetter
 from os.path import abspath, basename, dirname, exists, join
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Literal
 
 from conda.core.prefix_data import PrefixData
 from conda.models.dist import Dist
-from conda.models.records import PackageRecord
+from conda.models.records import PrefixRecord
 
 from conda_build.conda_interface import (
     display_actions,
@@ -43,6 +43,7 @@ from conda_build.utils import (
 )
 
 from .deprecations import deprecated
+from .utils import on_mac, on_win
 
 
 @deprecated("3.28.0", "4.0.0")
@@ -56,7 +57,7 @@ def dist_files(prefix: str | os.PathLike | Path, dist: Dist) -> set[str]:
 def which_package(
     path: str | os.PathLike | Path,
     prefix: str | os.PathLike | Path,
-) -> Iterable[PackageRecord]:
+) -> Iterable[PrefixRecord]:
     """
     Given the path (of a (presumably) conda installed file) iterate over
     the conda packages the file came from.  Usually the iteration yields
@@ -233,68 +234,55 @@ def _underlined_text(text):
 
 
 def inspect_linkages(
-    packages,
-    prefix=sys.prefix,
-    untracked=False,
-    all_packages=False,
-    show_files=False,
-    groupby="package",
+    packages: Iterable[str | _untracked_package],
+    prefix: str | os.PathLike | Path = sys.prefix,
+    untracked: bool = False,
+    all_packages: bool = False,
+    show_files: bool = False,
+    groupby: Literal["package" | "dependency"] = "package",
     sysroot="",
 ):
-    pkgmap = {}
-
-    installed = _installed(prefix)
-
     if not packages and not untracked and not all_packages:
-        raise ValueError(
-            "At least one package or --untracked or --all must be provided"
-        )
+        sys.exit("At least one package or --untracked or --all must be provided")
+    elif on_win:
+        sys.exit("Error: conda inspect linkages is only implemented in Linux and OS X")
+
+    prefix = Path(prefix)
+    installed = {prec.name: prec for prec in PrefixData(str(prefix)).iter_records()}
 
     if all_packages:
         packages = sorted(installed.keys())
-
+    packages = ensure_list(packages)
     if untracked:
         packages.append(untracked_package)
 
-    for pkg in ensure_list(packages):
-        if pkg == untracked_package:
-            dist = untracked_package
-        elif pkg not in installed:
-            sys.exit(f"Package {pkg} is not installed in {prefix}")
-        else:
-            dist = installed[pkg]
-
-        if not sys.platform.startswith(("linux", "darwin")):
-            sys.exit(
-                "Error: conda inspect linkages is only implemented in Linux and OS X"
-            )
-
-        if dist == untracked_package:
+    pkgmap: dict[str | _untracked_package, dict[str, list]] = {}
+    for name in packages:
+        if name == untracked_package:
             obj_files = get_untracked_obj_files(prefix)
+        elif name not in installed:
+            sys.exit(f"Package {name} is not installed in {prefix}")
         else:
-            obj_files = get_package_obj_files(dist, prefix)
+            obj_files = get_package_obj_files(installed[name], prefix)
+
         linkages = get_linkages(obj_files, prefix, sysroot)
-        depmap = defaultdict(list)
-        pkgmap[pkg] = depmap
-        depmap["not found"] = []
-        depmap["system"] = []
-        for binary in linkages:
-            for lib, path in linkages[binary]:
+        pkgmap[name] = depmap = defaultdict(list)
+        for binary, paths in linkages.items():
+            for lib, path in paths:
                 path = (
                     replace_path(binary, path, prefix)
                     if path not in {"", "not found"}
                     else path
                 )
                 if path.startswith(prefix):
-                    deps = list(which_package(path, prefix))
-                    if len(deps) > 1:
-                        deps_str = [str(dep) for dep in deps]
+                    precs = list(which_package(path, prefix))
+                    if len(precs) > 1:
                         get_logger(__name__).warn(
-                            "Warning: %s comes from multiple " "packages: %s",
+                            "Warning: %s comes from multiple packages: %s",
                             path,
-                            comma_join(deps_str),
+                            comma_join(map(str, precs)),
                         )
-                    if not deps:
+                    elif not precs:
                         if exists(path):
                             depmap["untracked"].append(
                                 (lib, path.split(prefix + "/", 1)[-1], binary)
@@ -303,8 +291,10 @@ def inspect_linkages(
                             depmap["not found"].append(
                                 (lib, path.split(prefix + "/", 1)[-1], binary)
                             )
-                    for d in deps:
-                        depmap[d].append((lib, path.split(prefix + "/", 1)[-1], binary))
+                    for prec in precs:
+                        depmap[prec].append(
+                            (lib, path.split(prefix + "/", 1)[-1], binary)
+                        )
                 elif path == "not found":
                     depmap["not found"].append((lib, path, binary))
                 else:
@@ -337,27 +327,27 @@ def inspect_linkages(
     return output_string
 
 
-def inspect_objects(packages, prefix=sys.prefix, groupby="package"):
-    installed = _installed(prefix)
+def inspect_objects(
+    packages: Iterable[str],
+    prefix: str | os.PathLike | Path = sys.prefix,
+    groupby: str = "package",
+):
+    if not on_mac:
+        sys.exit("Error: conda inspect objects is only implemented in OS X")
+
+    prefix = Path(prefix)
+    installed = {prec.name: prec for prec in PrefixData(str(prefix)).iter_records()}
 
     output_string = ""
-    for pkg in ensure_list(packages):
-        if pkg == untracked_package:
-            dist = untracked_package
-        elif pkg not in installed:
-            raise ValueError(f"Package {pkg} is not installed in {prefix}")
-        else:
-            dist = installed[pkg]
-
-        output_string += _underlined_text(pkg)
-
-        if not sys.platform.startswith("darwin"):
-            sys.exit("Error: conda inspect objects is only implemented in OS X")
-
-        if dist == untracked_package:
+    for name in ensure_list(packages):
+        if name == untracked_package:
             obj_files = get_untracked_obj_files(prefix)
+        elif name not in installed:
+            raise ValueError(f"Package {name} is not installed in {prefix}")
         else:
-            obj_files = get_package_obj_files(dist, prefix)
+            obj_files = get_package_obj_files(installed[name], prefix)
+
+        output_string += _underlined_text(name)
 
         info = []
         for f in obj_files:

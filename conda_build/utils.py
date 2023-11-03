@@ -74,7 +74,7 @@ from conda.api import PackageCacheData  # noqa
 from conda.base.constants import KNOWN_SUBDIRS
 from conda.core.prefix_data import PrefixData
 from conda.models.dist import Dist
-from conda.models.records import PackageRecord
+from conda.models.records import PrefixRecord
 
 # NOQA because it is not used in this file.
 from conda_build.conda_interface import rm_rf as _rm_rf  # noqa
@@ -2168,7 +2168,7 @@ def download_channeldata(channel_url):
 
 def linked_data_no_multichannels(
     prefix: str | os.PathLike | Path,
-) -> dict[Dist, PackageRecord]:
+) -> dict[Dist, PrefixRecord]:
     """
     Return a dictionary of the linked packages in prefix, with correct channels, hopefully.
     cc @kalefranz.
