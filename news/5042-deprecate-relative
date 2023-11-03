@@ -1,0 +1,19 @@
+### Enhancements
+
+* <news item>
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* Mark `conda_build.utils.relative` as pending deprecation. Use `os.path.relpath` or `pathlib.Path.relative_to` instead. (#5042)
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>
