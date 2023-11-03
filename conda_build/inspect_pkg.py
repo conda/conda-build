@@ -229,8 +229,8 @@ def test_installable(channel="defaults"):
 
 
 @deprecated("3.28.0", "4.0.0")
-def _installed(prefix):
-    return {rec["name"]: dist for dist, rec in linked_data(prefix).items()}
+def _installed(prefix: str | os.PathLike | Path) -> dict[str, Dist]:
+    return {dist.name: dist for dist in linked_data(str(prefix))}
 
 
 def _underlined_text(text):
