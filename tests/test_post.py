@@ -106,7 +106,6 @@ def test_menuinst_validation_ok(testing_config, caplog, tmp_path):
         pkg = api.build(str(recipe_tmp), config=testing_config, notest=True)[0]
 
     captured_text = caplog.text
-    print(captured_text)
     assert "Found 'Menu/*.json' files but couldn't validate:" not in captured_text
     assert "not a valid menuinst JSON file" not in captured_text
     assert "is a valid menuinst JSON document" in captured_text
