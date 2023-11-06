@@ -131,7 +131,6 @@ def test_menuinst_validation_fails_bad_schema(testing_config, caplog, tmp_path):
     assert "Found 'Menu/*.json' files but couldn't validate:" not in captured_text
     assert "not a valid menuinst JSON document" in captured_text
     assert "ValidationError" in captured_text
-    caplog.clear()
 
 
 def test_menuinst_validation_fails_bad_json(testing_config, caplog, tmp_path):
