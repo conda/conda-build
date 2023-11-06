@@ -68,11 +68,20 @@ def which_package(
     only one package.
     """
     prefix = Path(prefix)
+    # historically, path was relative to prefix just to be safe we append to prefix
+    # (pathlib correctly handles this even if path is absolute)
+    path = prefix / path
+
+    def samefile(path1: Path, path2: Path) -> bool:
+        try:
+            return path1.samefile(path2)
+        except FileNotFoundError:
+            # FileNotFoundError: path doesn't exist
+            return path1 == path2
+
     for prec in PrefixData(str(prefix)).iter_records():
         for file in prec["files"]:
-            # historically, path was relative to prefix just to be safe we append to prefix
-            # (pathlib correctly handles this even if path is absolute)
-            if (prefix / file).samefile(prefix / path):
+            if samefile(prefix / file, path):
                 yield prec
 
 
