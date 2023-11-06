@@ -1683,7 +1683,7 @@ def check_menuinst_json(files, prefix):
         return
 
     print("Validating Menu/*.json files")
-    log = utils.get_logger(__name__)
+    log = utils.get_logger(__name__, dedupe=False)
     try:
         import jsonschema
         from menuinst.utils import data_path
@@ -1715,7 +1715,7 @@ def check_menuinst_json(files, prefix):
                 )
                 continue
             validator.validate(json.loads(text))
-        except (jsonschema.ValidationError, json.JSONDecodeError) as exc:
+        except (jsonschema.ValidationError, json.JSONDecodeError, OSError) as exc:
             log.warning(
                 "'%s' is not a valid menuinst JSON document!",
                 json_file,
