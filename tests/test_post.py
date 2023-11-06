@@ -97,7 +97,7 @@ def test_pypi_installer_metadata(testing_config):
 
 
 def test_menuinst_validation_ok(testing_config, caplog, tmp_path):
-    # 1st check - validation passes with recipe as is
+    "1st check - validation passes with recipe as is"
     recipe = Path(metadata_dir, "menu_json_validation")
     recipe_tmp = tmp_path / "menu_json_validation"
     shutil.copytree(recipe, recipe_tmp)
@@ -114,7 +114,7 @@ def test_menuinst_validation_ok(testing_config, caplog, tmp_path):
 
 
 def test_menuinst_validation_fails_bad_schema(testing_config, caplog, tmp_path):
-    # 1st check - valid JSON but invalid content fails validation
+    "2nd check - valid JSON but invalid content fails validation"
     recipe = Path(metadata_dir, "menu_json_validation")
     recipe_tmp = tmp_path / "menu_json_validation"
     shutil.copytree(recipe, recipe_tmp)
@@ -135,7 +135,7 @@ def test_menuinst_validation_fails_bad_schema(testing_config, caplog, tmp_path):
 
 
 def test_menuinst_validation_fails_bad_json(testing_config, caplog, tmp_path):
-    # 2nd check - non-parsable JSON fails validation
+    "3rd check - non-parsable JSON fails validation"
     recipe = Path(metadata_dir, "menu_json_validation")
     recipe_tmp = tmp_path / "menu_json_validation"
     shutil.copytree(recipe, recipe_tmp)
