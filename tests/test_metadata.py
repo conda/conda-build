@@ -7,7 +7,9 @@ import subprocess
 import sys
 
 import pytest
+from conda import __version__ as conda_version
 from conda.base.context import context
+from packaging.version import Version
 from pytest import MonkeyPatch
 
 from conda_build import api
@@ -362,25 +364,20 @@ def test_yamlize_versions():
     assert yml == ["1.2.3", "1.2.3.4"]
 
 
-OS_ARCH = (
+OS_ARCH: tuple[str, ...] = (
     "aarch64",
     "arm",
     "arm64",
     "armv6l",
     "armv7l",
-    "emscripten",
-    "freebsd",
     "linux",
     "linux32",
     "linux64",
     "osx",
     "ppc64",
     "ppc64le",
-    "riscv64",
     "s390x",
     "unix",
-    "wasi",
-    "wasm32",
     "win",
     "win32",
     "win64",
@@ -389,6 +386,15 @@ OS_ARCH = (
     "z",
     "zos",
 )
+
+if Version(conda_version) >= Version("23.3"):
+    OS_ARCH = (*OS_ARCH, "riscv64")
+
+if Version(conda_version) >= Version("23.7"):
+    OS_ARCH = (*OS_ARCH, "freebsd")
+
+if Version(conda_version) >= Version("23.9"):
+    OS_ARCH = (*OS_ARCH, "emscripten", "wasi", "wasm32")
 
 
 @pytest.mark.parametrize(
