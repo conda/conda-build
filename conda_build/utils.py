@@ -38,6 +38,8 @@ from typing import Iterable
 
 import libarchive
 
+from .deprecations import deprecated
+
 try:
     from json.decoder import JSONDecodeError
 except ImportError:
@@ -67,6 +69,7 @@ from contextlib import ExitStack  # noqa: F401
 from glob import glob
 
 from conda.api import PackageCacheData  # noqa
+from conda.base.constants import KNOWN_SUBDIRS
 
 # NOQA because it is not used in this file.
 from conda_build.conda_interface import rm_rf as _rm_rf  # noqa
@@ -96,33 +99,16 @@ PermissionError = PermissionError  # NOQA
 FileNotFoundError = FileNotFoundError
 
 on_win = sys.platform == "win32"
+on_mac = sys.platform == "darwin"
+on_linux = sys.platform == "linux"
 
 codec = getpreferredencoding() or "utf-8"
-on_win = sys.platform == "win32"
 root_script_dir = os.path.join(root_dir, "Scripts" if on_win else "bin")
 mmap_MAP_PRIVATE = 0 if on_win else mmap.MAP_PRIVATE
 mmap_PROT_READ = 0 if on_win else mmap.PROT_READ
 mmap_PROT_WRITE = 0 if on_win else mmap.PROT_WRITE
 
-DEFAULT_SUBDIRS = {
-    "emscripten-wasm32",
-    "wasi-wasm32",
-    "linux-64",
-    "linux-32",
-    "linux-s390x",
-    "linux-ppc64",
-    "linux-ppc64le",
-    "linux-armv6l",
-    "linux-armv7l",
-    "linux-aarch64",
-    "win-64",
-    "win-32",
-    "win-arm64",
-    "osx-64",
-    "osx-arm64",
-    "zos-z",
-    "noarch",
-}
+DEFAULT_SUBDIRS = set(KNOWN_SUBDIRS)
 
 RUN_EXPORTS_TYPES = {
     "weak",
@@ -805,6 +791,11 @@ def get_conda_operation_locks(locking=True, bldpkgs_dirs=None, timeout=900):
     return locks
 
 
+@deprecated(
+    "3.28.0",
+    "4.0.0",
+    addendum="Use `os.path.relpath` or `pathlib.Path.relative_to` instead.",
+)
 def relative(f, d="lib"):
     assert not f.startswith("/"), f
     assert not d.startswith("/"), d

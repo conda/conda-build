@@ -74,9 +74,18 @@ from conda.exports import (  # noqa: F401
     win_path_to_unix,
 )
 from conda.models.channel import get_conda_build_local_url  # noqa: F401
-from conda.models.dist import Dist, IndexRecord  # noqa: F401
+from conda.models.dist import Dist  # noqa: F401
+from conda.models.records import PackageRecord
 
 from .deprecations import deprecated
+
+deprecated.constant(
+    "3.28.0",
+    "4.0.0",
+    "IndexRecord",
+    PackageRecord,
+    addendum="Use `conda.models.records.PackageRecord` instead.",
+)
 
 # TODO: Go to references of all properties below and import them from `context` instead
 binstar_upload = context.binstar_upload
