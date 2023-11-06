@@ -120,25 +120,37 @@ def check_install(
     return None
 
 
-def print_linkages(depmap, show_files=False):
-    # Print system and not found last
-    dist_depmap = {}
-    for k, v in depmap.items():
-        if hasattr(k, "dist_name"):
-            k = k.dist_name
-        dist_depmap[k] = v
+def print_linkages(
+    depmap: dict[
+        PrefixRecord | Literal["not found" | "system" | "untracked"],
+        list[tuple[str, str, str]],
+    ],
+    show_files: bool = False,
+) -> str:
+    # print system, not found, and untracked last
+    sort_order = {
+        # PrefixRecord: (0, PrefixRecord.name),
+        "system": (1, "system"),
+        "not found": (2, "not found"),
+        "untracked": (3, "untracked"),
+        # str: (4, str),
+    }
 
-    depmap = dist_depmap
-    k = sorted(set(depmap.keys()) - {"system", "not found"})
-    all_deps = k if "not found" not in depmap.keys() else k + ["system", "not found"]
     output_string = ""
-    for dep in all_deps:
-        output_string += "%s:\n" % dep
+    for prec, links in sorted(
+        depmap.items(),
+        key=(
+            lambda key: (0, key[0].name)
+            if isinstance(key[0], PrefixRecord)
+            else sort_order.get(key[0], (4, key[0]))
+        ),
+    ):
+        output_string += "%s:\n" % prec
         if show_files:
-            for lib, path, binary in sorted(depmap[dep]):
+            for lib, path, binary in sorted(links):
                 output_string += f"    {lib} ({path}) from {binary}\n"
         else:
-            for lib, path in sorted(set(map(itemgetter(0, 1), depmap[dep]))):
+            for lib, path in sorted(set(map(itemgetter(0, 1), links))):
                 output_string += f"    {lib} ({path})\n"
         output_string += "\n"
     return output_string
@@ -278,8 +290,13 @@ def inspect_linkages(
                     if path not in {"", "not found"}
                     else path
                 )
-                if path.startswith(prefix):
-                    precs = list(which_package(path, prefix))
+                try:
+                    relative = str(Path(path).relative_to(prefix))
+                except ValueError:
+                    # ValueError: path is not relative to prefix
+                    relative = None
+                if relative:
+                    precs = list(which_package(relative, prefix))
                     if len(precs) > 1:
                         get_logger(__name__).warn(
                             "Warning: %s comes from multiple packages: %s",
@@ -288,17 +305,11 @@ def inspect_linkages(
                         )
                     elif not precs:
                         if exists(path):
-                            depmap["untracked"].append(
-                                (lib, path.split(prefix + "/", 1)[-1], binary)
-                            )
+                            depmap["untracked"].append((lib, relative, binary))
                         else:
-                            depmap["not found"].append(
-                                (lib, path.split(prefix + "/", 1)[-1], binary)
-                            )
+                            depmap["not found"].append((lib, relative, binary))
                     for prec in precs:
-                        depmap[prec].append(
-                            (lib, path.split(prefix + "/", 1)[-1], binary)
-                        )
+                        depmap[prec].append((lib, relative, binary))
                 elif path == "not found":
                     depmap["not found"].append((lib, path, binary))
                 else:
