@@ -30,6 +30,7 @@ from conda_build import __version__, api, exceptions
 from conda_build.conda_interface import (
     CondaError,
     LinkError,
+    context,
     cc_conda_build,
     reset_context,
     url_path,
@@ -123,6 +124,9 @@ def test_recipe_builds(
     #   ``source_setup_py_data_subdir`` reproduces the problem.
     if recipe.name == "source_setup_py_data_subdir":
         pytest.xfail("Issue related to #3754 on conda-build.")
+    elif recipe.name == "unicode_all_over" and context.solver == "libmamba":
+        pytest.xfail("Unicode package names not supported in libmamba.")
+
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
     testing_config.activate = True
