@@ -365,6 +365,7 @@ def do_file(file, lc_operation, off_sz, arch, results, *args):
         results.append(do_macho(file, 64, LITTLE_ENDIAN, lc_operation, *args))
 
 
+@deprecated("3.28.0", "4.0.0")
 def mach_o_change(path, arch, what, value):
     """
     Replace a given name (what) in any LC_LOAD_DYLIB command found in
@@ -1139,6 +1140,7 @@ def _inspect_linkages_this(filename, sysroot="", arch="native"):
         return cf.uniqueness_key(), orig_names, resolved_names
 
 
+@deprecated("3.28.0", "4.0.0")
 def inspect_rpaths(
     filename, resolve_dirnames=True, use_os_varnames=True, sysroot="", arch="native"
 ):
@@ -1170,6 +1172,7 @@ def inspect_rpaths(
                 return cf.rpaths_nontransitive
 
 
+@deprecated("3.28.0", "4.0.0")
 def get_runpaths(filename, arch="native"):
     if not os.path.exists(filename):
         return []
@@ -1257,16 +1260,16 @@ def otool(*args):
     return 1
 
 
+@deprecated("3.28.0", "4.0.0")
 def otool_sys(*args):
     import subprocess
 
-    result = subprocess.check_output("/usr/bin/otool", args).decode(encoding="ascii")
-    return result
+    return subprocess.check_output("/usr/bin/otool", args).decode(encoding="ascii")
 
 
+@deprecated("3.28.0", "4.0.0")
 def ldd_sys(*args):
-    result = []
-    return result
+    return []
 
 
 def ldd(*args):
@@ -1297,12 +1300,11 @@ def main(argv):
         elif re.match(r".*otool(?:$|\.exe|\.py)", progname):
             return otool(*argv[2 - idx :])
         elif os.path.isfile(progname):
-            klass = codefile_class(progname)
-            if not klass:
+            if not (codefile := codefile_class(progname)):
                 return 1
-            elif klass == elffile:
+            elif codefile == elffile:
                 return ldd(*argv[1 - idx :])
-            elif klass == machofile:
+            elif codefile == machofile:
                 return otool("-L", *argv[1 - idx :])
     return 1
 

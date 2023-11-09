@@ -22,7 +22,7 @@ def test_inspect_installable(testing_workdir):
 def test_inspect_linkages(testing_workdir, capfd):
     # get a package that has known object output
     args = ["linkages", "python"]
-    if sys.platform == "win32":
+    if on_win:
         with pytest.raises(SystemExit) as exc:
             main_inspect.execute(args)
             assert "conda inspect linkages is only implemented in Linux and OS X" in exc

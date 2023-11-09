@@ -6,6 +6,8 @@ import configparser  # noqa: F401
 import os
 from functools import partial
 from importlib import import_module  # noqa: F401
+from pathlib import Path
+from typing import Iterable
 
 from conda import __version__ as CONDA_VERSION  # noqa: F401
 from conda.auxlib.packaging import (  # noqa: F401
@@ -53,7 +55,6 @@ from conda.exports import (  # noqa: F401
     human_bytes,
     input,
     install_actions,
-    is_linked,
     lchmod,
     linked,
     linked_data,
@@ -75,7 +76,7 @@ from conda.exports import (  # noqa: F401
 )
 from conda.models.channel import get_conda_build_local_url  # noqa: F401
 from conda.models.dist import Dist  # noqa: F401
-from conda.models.records import PackageRecord
+from conda.models.records import PackageRecord, PrefixRecord
 
 from .deprecations import deprecated
 
@@ -125,46 +126,36 @@ class SignatureError(Exception):
     pass
 
 
-@deprecated("3.28.0", "4.0.0")
-def which_package(path):
-    """
-    Given the path (of a (presumably) conda installed file) iterate over
-    the conda packages the file came from.  Usually the iteration yields
-    only one package.
-    """
-    from os.path import abspath, join
+@deprecated(
+    "3.28.0",
+    "4.0.0",
+    addendum="Use `conda_build.inspect_pkg.which_package` instead.",
+)
+def which_package(path: str | os.PathLike | Path) -> Iterable[PrefixRecord]:
+    from .inspect_pkg import which_package
 
-    path = abspath(path)
-    prefix = which_prefix(path)
-    if prefix is None:
-        raise RuntimeError("could not determine conda prefix from: %s" % path)
-    for dist in linked(prefix):
-        meta = is_linked(prefix, dist)
-        if any(abspath(join(prefix, f)) == path for f in meta["files"]):
-            yield dist
+    return which_package(path, which_prefix(path))
 
 
 @deprecated("3.28.0", "4.0.0")
-def which_prefix(path):
+def which_prefix(path: str | os.PathLike | Path) -> Path:
     """
     Given the path (to a (presumably) conda installed file) return the
     environment prefix in which the file in located
     """
-    from os.path import abspath, dirname, isdir, join
+    from conda.gateways.disk.test import is_conda_environment
 
-    prefix = abspath(path)
-    iteration = 0
-    while iteration < 20:
-        if isdir(join(prefix, "conda-meta")):
-            # we found it, so let's return it
-            break
-        if prefix == dirname(prefix):
+    prefix = Path(path)
+    for _ in range(20):
+        if is_conda_environment(prefix):
+            return prefix
+        elif prefix == (parent := prefix.parent):
             # we cannot chop off any more directories, so we didn't find it
-            prefix = None
             break
-        prefix = dirname(prefix)
-        iteration += 1
-    return prefix
+        else:
+            prefix = parent
+
+    raise RuntimeError("could not determine conda prefix from: %s" % path)
 
 
 @deprecated("3.28.0", "4.0.0")

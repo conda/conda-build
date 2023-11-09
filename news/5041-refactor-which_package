@@ -1,0 +1,32 @@
+### Enhancements
+
+* Consolidate `which_package` implementations and replacing `conda.models.dist.Dist` usage in favor of `conda.models.records.PrefixRecords`. (#5041)
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* Mark `conda_build.inspect_pkg.dist_files` as pending deprecation. (#5041)
+* Mark `conda_build.inspect_pkg.which_package(avoid_canonical_channel_name)` as pending deprecation. (#5041)
+* Mark `conda_build.inspect_pkg._installed` as pending deprecation. (#5041)
+* Mark `conda_build.os_utils.ldd.get_package_files` as pending deprecation. (#5041)
+* Mark `conda_build.os_utils.pyldd.mach_o_change` as pending deprecation. (#5041)
+* Mark `conda_build.os_utils.pyldd.inspect_rpath` as pending deprecation. (#5041)
+* Mark `conda_build.os_utils.pyldd.get_runpaths` as pending deprecation. (#5041)
+* Mark `conda_build.os_utils.pyldd.otool_sys` as pending deprecation. (#5041)
+* Mark `conda_build.os_utils.pyldd.ldd_sys` as pending deprecation. (#5041)
+* Mark `conda_build.post.determine_package_nature` as pending deprecation. Use `conda_build.post.get_dsos` and `conda_build.post.get_run_exports` instead. (#5041)
+* Mark `conda_build.post.library_nature(subdir, bldpkgs_dirs, output_folder, channel_urls)` as pending deprecation. (#5041)
+* Mark `conda_build.post.dist_from_names` as pending deprecation. Query `conda.core.prefix_data.PrefixData` instead. (#5041)
+* Mark `conda_build.post.FakeDist` as pending deprecation. Use `conda.models.records.PrefixRecord` instead. (#5041)
+* Mark `conda_build.post._get_fake_pkg_dist` as pending deprecation. Use `conda.models.records.PrefixRecord` instead. (#5041)
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>
