@@ -1,5 +1,8 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
+import json
 import locale
 import os
 import re
@@ -27,12 +30,12 @@ from os.path import (
     sep,
     splitext,
 )
+from pathlib import Path
 from subprocess import CalledProcessError, call, check_output
+from typing import Iterable, Literal
 
-try:
-    from os import readlink
-except ImportError:
-    readlink = False
+from conda.core.prefix_data import PrefixData
+from conda.models.records import PrefixRecord
 
 from conda_build import utils
 from conda_build.conda_interface import (
@@ -44,7 +47,6 @@ from conda_build.conda_interface import (
 from conda_build.exceptions import OverDependingError, OverLinkingError, RunPathError
 from conda_build.inspect_pkg import which_package
 from conda_build.os_utils import external, macho
-from conda_build.os_utils.ldd import get_package_files, get_package_obj_files
 from conda_build.os_utils.liefldd import (
     get_exports_memoized,
     get_linkages_memoized,
@@ -61,6 +63,7 @@ from conda_build.os_utils.pyldd import (
     machofile,
 )
 
+from .deprecations import deprecated
 from .metadata import MetaData
 
 filetypes_for_platform = {
@@ -648,33 +651,88 @@ def assert_relative_osx(path, host_prefix, build_prefix):
                 )
 
 
+@deprecated(
+    "3.28.0",
+    "4.0.0",
+    addendum="Use `conda_build.post.get_dsos` and `conda_build.post.get_run_exports` instead.",
+)
 def determine_package_nature(
-    pkg, prefix, subdir, bldpkgs_dir, output_folder, channel_urls
-):
-    run_exports = None
-    lib_prefix = pkg.name.startswith("lib")
-    codefiles = get_package_obj_files(pkg, prefix)
-    # get_package_obj_files already filters by extension and I'm not sure we need two.
-    dsos = [
-        f for f in codefiles for ext in (".dylib", ".so", ".dll", ".pyd") if ext in f
-    ]
-    # TODO :: Is this package not in a channel somewhere at this point? It would be good not to be special
-    #         casing like this. Clearly we aren't able to get run_exports for starters and that's not good
-    if not isinstance(pkg, FakeDist):
-        # we don't care about the actual run_exports value, just whether or not run_exports are present.
-        json_file = os.path.join(prefix, "conda-meta", pkg.dist_name + ".json")
-        import json
-
-        assert os.path.isfile(json_file), f"conda-meta :: Not a file: {json_file}"
-        json_info = json.loads(open(json_file).read())
-        epd = json_info["extracted_package_dir"]
-        run_exports_json = os.path.join(epd, "info", "run_exports.json")
-        if os.path.isfile(run_exports_json):
-            run_exports = json.loads(open(run_exports_json).read())
-    return (dsos, run_exports, lib_prefix)
+    prec: PrefixRecord,
+    prefix: str | os.PathLike | Path,
+    subdir,
+    bldpkgs_dir,
+    output_folder,
+    channel_urls,
+) -> tuple[set[str], tuple[str, ...], bool]:
+    return (
+        get_dsos(prec, prefix),
+        get_run_exports(prec, prefix),
+        prec.name.startswith("lib"),
+    )
 
 
-def library_nature(pkg, prefix, subdir, bldpkgs_dirs, output_folder, channel_urls):
+def get_dsos(prec: PrefixRecord, prefix: str | os.PathLike | Path) -> set[str]:
+    return {
+        file
+        for file in prec["files"]
+        if codefile_class(Path(prefix, file))
+        # codefile_class already filters by extension/binary type, do we need this second filter?
+        for ext in (".dylib", ".so", ".dll", ".pyd")
+        if ext in file
+    }
+
+
+def get_run_exports(
+    prec: PrefixRecord,
+    prefix: str | os.PathLike | Path,
+) -> tuple[str, ...]:
+    json_file = Path(
+        prefix,
+        "conda-meta",
+        f"{prec.name}-{prec.version}-{prec.build}.json",
+    )
+    try:
+        json_info = json.loads(json_file.read_text())
+    except (FileNotFoundError, IsADirectoryError):
+        # FileNotFoundError: path doesn't exist
+        # IsADirectoryError: path is a directory
+        # raise CondaBuildException(f"Not a file: {json_file}")
+        # is this a "fake" PrefixRecord?
+        # i.e. this is the package being built and hasn't been "installed" to disk?
+        return ()
+
+    run_exports_json = Path(
+        json_info["extracted_package_dir"],
+        "info",
+        "run_exports.json",
+    )
+    try:
+        return tuple(json.loads(run_exports_json.read_text()))
+    except (FileNotFoundError, IsADirectoryError):
+        # FileNotFoundError: path doesn't exist
+        # IsADirectoryError: path is a directory
+        return ()
+
+
+@deprecated.argument("3.28.0", "4.0.0", "subdir")
+@deprecated.argument("3.28.0", "4.0.0", "bldpkgs_dirs")
+@deprecated.argument("3.28.0", "4.0.0", "output_folder")
+@deprecated.argument("3.28.0", "4.0.0", "channel_urls")
+def library_nature(
+    prec: PrefixRecord, prefix: str | os.PathLike | Path
+) -> Literal[
+    "interpreter (Python)"
+    | "interpreter (R)"
+    | "run-exports library"
+    | "dso library"
+    | "plugin library (Python,R)"
+    | "plugin library (Python)"
+    | "plugin library (R)"
+    | "interpreted library (Python,R)"
+    | "interpreted library (Python)"
+    | "interpreted library (R)"
+    | "non-library"
+]:
     """
     Result :: "non-library",
               "interpreted library (Python|R|Python,R)",
@@ -685,55 +743,53 @@ def library_nature(pkg, prefix, subdir, bldpkgs_dirs, output_folder, channel_url
               "interpreter (Python)"
     .. in that order, i.e. if have both dsos and run_exports, it's a run_exports_library.
     """
-    dsos, run_exports, _ = determine_package_nature(
-        pkg, prefix, subdir, bldpkgs_dirs, output_folder, channel_urls
-    )
-    if pkg.name == "python":
+    if prec.name == "python":
         return "interpreter (Python)"
-    elif pkg.name == "r-base":
+    elif prec.name == "r-base":
         return "interpreter (R)"
-    if run_exports:
+    elif get_run_exports(prec, prefix):
         return "run-exports library"
-    elif len(dsos):
+    elif dsos := get_dsos(prec, prefix):
         # If all DSOs are under site-packages or R/lib/
-        python_dsos = [dso for dso in dsos if "site-packages" in dso]
-        r_dsos = [dso for dso in dsos if "lib/R/library" in dso]
-        dsos_without_plugins = [dso for dso in dsos if dso not in r_dsos + python_dsos]
-        if len(dsos_without_plugins):
+        python_dsos = {dso for dso in dsos if "site-packages" in dso}
+        r_dsos = {dso for dso in dsos if "lib/R/library" in dso}
+        if dsos - python_dsos - r_dsos:
             return "dso library"
-        else:
-            if python_dsos and r_dsos:
-                return "plugin library (Python,R)"
-            elif python_dsos:
-                return "plugin library (Python)"
-            elif r_dsos:
-                return "plugin library (R)"
+        elif python_dsos and r_dsos:
+            return "plugin library (Python,R)"
+        elif python_dsos:
+            return "plugin library (Python)"
+        elif r_dsos:
+            return "plugin library (R)"
     else:
-        files = get_package_files(pkg, prefix)
-        python_files = [f for f in files if "site-packages" in f]
-        r_files = [f for f in files if "lib/R/library" in f]
+        python_files = {file for file in prec["files"] if "site-packages" in file}
+        r_files = {file for file in prec["files"] if "lib/R/library" in file}
         if python_files and r_files:
             return "interpreted library (Python,R)"
         elif python_files:
             return "interpreted library (Python)"
         elif r_files:
             return "interpreted library (R)"
-
     return "non-library"
 
 
-def dists_from_names(names, prefix):
-    results = []
+@deprecated(
+    "3.28.0",
+    "4.0.0",
+    addendum="Query `conda.core.prefix_data.PrefixData` instead.",
+)
+def dists_from_names(names: Iterable[str], prefix: str | os.PathLike | Path):
     from conda_build.utils import linked_data_no_multichannels
 
-    pkgs = linked_data_no_multichannels(prefix)
-    for name in names:
-        for pkg in pkgs:
-            if pkg.quad[0] == name:
-                results.append(pkg)
-    return results
+    names = utils.ensure_list(names)
+    return [prec for prec in linked_data_no_multichannels(prefix) if prec.name in names]
 
 
+@deprecated(
+    "3.28.0",
+    "4.0.0",
+    addendum="Use `conda.models.records.PrefixRecord` instead.",
+)
 class FakeDist:
     def __init__(self, name, version, build_number, build_str, channel, files):
         self.name = name
@@ -922,9 +978,7 @@ def _map_file_to_package(
                     if not len(owners):
                         if any(rp == normpath(w) for w in files):
                             owners.append(pkg_vendored_dist)
-                    new_pkgs = list(
-                        which_package(rp, prefix, avoid_canonical_channel_name=True)
-                    )
+                    new_pkgs = list(which_package(rp, prefix))
                     # Cannot filter here as this means the DSO (eg libomp.dylib) will not be found in any package
                     # [owners.append(new_pkg) for new_pkg in new_pkgs if new_pkg not in owners
                     #  and not any([fnmatch(new_pkg.name, i) for i in ignore_for_statics])]
@@ -964,25 +1018,20 @@ def _map_file_to_package(
     return prefix_owners, contains_dsos, contains_static_libs, all_lib_exports
 
 
+@deprecated(
+    "3.28.0", "4.0.0", addendum="Use `conda.models.records.PrefixRecord` instead."
+)
 def _get_fake_pkg_dist(pkg_name, pkg_version, build_str, build_number, channel, files):
-    pkg_vendoring_name = pkg_name
-    pkg_vendoring_version = str(pkg_version)
-    pkg_vendoring_build_str = build_str
-    pkg_vendoring_build_number = build_number
-    pkg_vendoring_key = "-".join(
-        [pkg_vendoring_name, pkg_vendoring_version, pkg_vendoring_build_str]
-    )
-
     return (
         FakeDist(
-            pkg_vendoring_name,
-            pkg_vendoring_version,
-            pkg_vendoring_build_number,
-            pkg_vendoring_build_str,
+            pkg_name,
+            str(pkg_version),
+            build_number,
+            build_str,
             channel,
             files,
         ),
-        pkg_vendoring_key,
+        f"{pkg_name}-{pkg_version}-{build_str}",
     )
 
 
@@ -1121,20 +1170,18 @@ def _lookup_in_prefix_packages(
     in_prefix_dso = normpath(needed_dso)
     n_dso_p = "Needed DSO {}".format(in_prefix_dso.replace("\\", "/"))
     and_also = " (and also in this package)" if in_prefix_dso in files else ""
-    pkgs = list(
-        which_package(in_prefix_dso, run_prefix, avoid_canonical_channel_name=True)
-    )
-    in_pkgs_in_run_reqs = [pkg for pkg in pkgs if pkg.quad[0] in requirements_run]
+    precs = list(which_package(in_prefix_dso, run_prefix))
+    precs_in_reqs = [prec for prec in precs if prec.name in requirements_run]
     # TODO :: metadata build/inherit_child_run_exports (for vc, mro-base-impl).
-    for pkg in in_pkgs_in_run_reqs:
-        if pkg in lib_packages:
-            lib_packages_used.add(pkg)
+    for prec in precs_in_reqs:
+        if prec in lib_packages:
+            lib_packages_used.add(prec)
     in_whitelist = any([fnmatch(in_prefix_dso, w) for w in whitelist])
-    if len(in_pkgs_in_run_reqs) == 1:
+    if len(precs_in_reqs) == 1:
         _print_msg(
             errors,
             "{}: {} found in {}{}".format(
-                info_prelude, n_dso_p, in_pkgs_in_run_reqs[0], and_also
+                info_prelude, n_dso_p, precs_in_reqs[0], and_also
             ),
             verbose=verbose,
         )
@@ -1144,11 +1191,11 @@ def _lookup_in_prefix_packages(
             f"{info_prelude}: {n_dso_p} found in the whitelist",
             verbose=verbose,
         )
-    elif len(in_pkgs_in_run_reqs) == 0 and len(pkgs) > 0:
+    elif len(precs_in_reqs) == 0 and len(precs) > 0:
         _print_msg(
             errors,
             "{}: {} found in {}{}".format(
-                msg_prelude, n_dso_p, [p.quad[0] for p in pkgs], and_also
+                msg_prelude, n_dso_p, [prec.name for prec in precs], and_also
             ),
             verbose=verbose,
         )
@@ -1156,15 +1203,15 @@ def _lookup_in_prefix_packages(
             errors,
             "{}: .. but {} not in reqs/run, (i.e. it is overlinking)"
             " (likely) or a missing dependency (less likely)".format(
-                msg_prelude, [p.quad[0] for p in pkgs]
+                msg_prelude, [prec.name for prec in precs]
             ),
             verbose=verbose,
         )
-    elif len(in_pkgs_in_run_reqs) > 1:
+    elif len(precs_in_reqs) > 1:
         _print_msg(
             errors,
             "{}: {} found in multiple packages in run/reqs: {}{}".format(
-                warn_prelude, in_prefix_dso, in_pkgs_in_run_reqs, and_also
+                warn_prelude, in_prefix_dso, precs_in_reqs, and_also
             ),
             verbose=verbose,
         )
@@ -1283,11 +1330,11 @@ def _show_linking_messages(
 
 
 def check_overlinking_impl(
-    pkg_name,
-    pkg_version,
-    build_str,
-    build_number,
-    subdir,
+    pkg_name: str,
+    pkg_version: str,
+    build_str: str,
+    build_number: int,
+    subdir: str,
     ignore_run_exports,
     requirements_run,
     requirements_build,
@@ -1326,30 +1373,32 @@ def check_overlinking_impl(
     build_prefix_substitution = "$PATH"
     # Used to detect overlinking (finally)
     requirements_run = [req.split(" ")[0] for req in requirements_run]
-    packages = dists_from_names(requirements_run, run_prefix)
+    pd = PrefixData(run_prefix)
+    precs = [prec for req in requirements_run if (prec := pd.get(req, None))]
     local_channel = (
         dirname(bldpkgs_dirs).replace("\\", "/")
         if utils.on_win
         else dirname(bldpkgs_dirs)[1:]
     )
-    pkg_vendored_dist, pkg_vendoring_key = _get_fake_pkg_dist(
-        pkg_name, pkg_version, build_str, build_number, local_channel, files
+    pkg_vendored_dist = PrefixRecord(
+        name=pkg_name,
+        version=str(pkg_version),
+        build=build_str,
+        build_number=build_number,
+        channel=local_channel,
+        files=files,
     )
-    packages.append(pkg_vendored_dist)
+    pkg_vendoring_key = f"{pkg_name}-{pkg_version}-{build_str}"
+    precs.append(pkg_vendored_dist)
     ignore_list = utils.ensure_list(ignore_run_exports)
     if subdir.startswith("linux"):
         ignore_list.append("libgcc-ng")
 
-    package_nature = {
-        package: library_nature(
-            package, run_prefix, subdir, bldpkgs_dirs, output_folder, channel_urls
-        )
-        for package in packages
-    }
+    package_nature = {prec: library_nature(prec, run_prefix) for prec in precs}
     lib_packages = {
-        package
-        for package in packages
-        if package.quad[0] not in ignore_list and [package] != "non-library"
+        prec
+        for prec, nature in package_nature.items()
+        if prec.name not in ignore_list and nature != "non-library"
     }
     lib_packages_used = {pkg_vendored_dist}
 
@@ -1712,14 +1761,12 @@ def post_build(m, files, build_python, host_prefix=None, is_already_linked=False
 
 
 def check_symlinks(files, prefix, croot):
-    if readlink is False:
-        return  # Not on Unix system
     msgs = []
     real_build_prefix = realpath(prefix)
     for f in files:
         path = join(real_build_prefix, f)
         if islink(path):
-            link_path = readlink(path)
+            link_path = os.readlink(path)
             real_link_path = realpath(path)
             # symlinks to binaries outside of the same dir don't work.  RPATH stuff gets confused
             #    because ld.so follows symlinks in RPATHS
