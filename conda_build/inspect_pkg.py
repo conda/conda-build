@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import sys
 from collections import defaultdict
 from functools import lru_cache
@@ -23,10 +22,6 @@ from conda.models.records import PrefixRecord
 from conda.resolve import MatchSpec
 
 from conda_build.conda_interface import (
-    display_actions,
-    get_index,
-    install_actions,
-    is_linked,
     linked_data,
     specs_from_args,
 )
