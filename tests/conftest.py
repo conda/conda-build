@@ -14,6 +14,7 @@ from conda.common.compat import on_mac, on_win
 import conda_build.config
 from conda_build.config import (
     Config,
+    _get_or_merge_config,
     _src_cache_root_default,
     conda_pkg_format_default,
     enable_static_default,
@@ -21,7 +22,6 @@ from conda_build.config import (
     error_overlinking_default,
     exit_on_verify_error_default,
     filename_hashing_default,
-    get_or_merge_config,
     ignore_verify_codes_default,
     no_rewrite_stdout_env_default,
     noarch_python_build_age_default,
@@ -121,11 +121,11 @@ def default_testing_config(testing_config, monkeypatch, request):
         return
 
     def get_or_merge_testing_config(config, variant=None, **kwargs):
-        return get_or_merge_config(config or testing_config, variant, **kwargs)
+        return _get_or_merge_config(config or testing_config, variant, **kwargs)
 
     monkeypatch.setattr(
         conda_build.config,
-        "get_or_merge_config",
+        "_get_or_merge_config",
         get_or_merge_testing_config,
     )
 
