@@ -30,8 +30,8 @@ from conda_build import __version__, api, exceptions
 from conda_build.conda_interface import (
     CondaError,
     LinkError,
-    context,
     cc_conda_build,
+    context,
     reset_context,
     url_path,
 )
