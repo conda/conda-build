@@ -2,11 +2,6 @@
 Building conda packages with conda skeleton
 ===========================================
 
-
-.. contents::
-   :local:
-   :depth: 1
-
 Overview
 ========
 

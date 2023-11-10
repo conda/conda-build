@@ -2,10 +2,6 @@
 Building conda packages
 =======================
 
-.. contents::
-   :local:
-   :depth: 1
-
 Overview
 ========
 
