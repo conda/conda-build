@@ -87,7 +87,6 @@ def testing_config(testing_workdir):
         verbose=True,
         activate=False,
         debug=False,
-        variant=None,
         test_run_post=False,
         # These bits ensure that default values are used instead of any
         # present in ~/.condarc
@@ -102,7 +101,7 @@ def testing_config(testing_workdir):
         exit_on_verify_error=exit_on_verify_error_default,
         conda_pkg_format=conda_pkg_format_default,
     )
-    result = Config(**testing_config_kwargs)
+    result = Config(variant=None, **testing_config_kwargs)
     result._testing_config_kwargs = testing_config_kwargs
     assert result.no_rewrite_stdout_env is False
     assert result._src_cache_root is None
