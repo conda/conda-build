@@ -92,7 +92,7 @@ inherited from the shell environment in which you invoke
      - Inherited from your shell environment and augmented with
        ``$PREFIX/bin``.
    * - PREFIX
-     - Build prefix to which the build script should install.
+     - Host prefix to which the build script should install.
    * - PKG_BUILDNUM
      - Build number of the package being built.
    * - PKG_NAME
@@ -110,11 +110,11 @@ inherited from the shell environment in which you invoke
        is installed only in the host prefix when it is listed as
        a host requirement.
    * - PY3K
-     - ``1`` when Python 3 is installed in the build prefix,
+     - ``1`` when Python 3 is installed in the host prefix,
        otherwise ``0``.
    * - R
-     - Path to the R executable in the build prefix. R is only
-       installed in the build prefix when it is listed as a build
+     - Path to the R executable in the host prefix. R is only
+       installed in the host prefix when it is listed as a build
        requirement.
    * - RECIPE_DIR
      - Directory of the recipe.
@@ -132,7 +132,7 @@ inherited from the shell environment in which you invoke
 
 Unix-style packages on Windows, which are usually statically
 linked to executables, are built in a special ``Library``
-directory under the build prefix. The environment variables
+directory under the host prefix. The environment variables
 listed in the following table are defined only on Windows.
 
 .. list-table::
