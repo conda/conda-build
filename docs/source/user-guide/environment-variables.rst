@@ -53,6 +53,8 @@ inherited from the shell environment in which you invoke
        environment variable and  defaults to the architecture the
        interpreter running conda was
        compiled with.
+   * - BUILD_PREFIX
+     - Build prefix where command line tools are installed.
    * - CMAKE_GENERATOR
      - The CMake generator string for the current build
        environment. On Linux systems, this is always
