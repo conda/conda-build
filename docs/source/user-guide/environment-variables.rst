@@ -142,15 +142,15 @@ listed in the following table are defined only on Windows.
      - Same as PREFIX, but as a Unix-style path, such as
        ``/cygdrive/c/path/to/prefix``.
    * - LIBRARY_BIN
-     - ``<build prefix>\Library\bin``.
+     - ``%PREFIX%\Library\bin``.
    * - LIBRARY_INC
-     - ``<build prefix>\Library\include``.
+     - ``%PREFIX%\Library\include``.
    * - LIBRARY_LIB
-     - ``<build prefix>\Library\lib``.
+     - ``%PREFIX%\Library\lib``.
    * - LIBRARY_PREFIX
-     - ``<build prefix>\Library``.
+     - ``%PREFIX%\Library``.
    * - SCRIPTS
-     - ``<build prefix>\Scripts``.
+     - ``%PREFIX%\Scripts``.
    * - VS_MAJOR
      - The major version number of the Visual Studio version
        activated within the build, such as ``9``.
