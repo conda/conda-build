@@ -66,7 +66,9 @@ def test_render_without_channel_fails(tmp_path):
     ), f"Expected to get only base package name because it should not be found, but got :{required_package_string}"
 
 
-def test_render_output_build_path(testing_workdir, testing_config, testing_metadata, capfd, caplog):
+def test_render_output_build_path(
+    testing_workdir, testing_config, testing_metadata, capfd, caplog
+):
     api.output_yaml(testing_metadata, "meta.yaml")
     args = ["--output", testing_workdir]
     main_render.execute(args)

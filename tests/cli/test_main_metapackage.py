@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import json
 import os
-import sys
 from glob import glob
 
 from conda_build.cli import main_metapackage

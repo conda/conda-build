@@ -15,7 +15,11 @@ from conda.common.io import dashlist
 
 from .. import api, build, source, utils
 from ..conda_interface import add_parser_channels, binstar_upload, cc_conda_build
-from ..config import get_channel_urls, get_or_merge_config, zstd_compression_level_default
+from ..config import (
+    get_channel_urls,
+    get_or_merge_config,
+    zstd_compression_level_default,
+)
 from ..deprecations import deprecated
 from ..utils import LoggingContext
 from .actions import KeyValueAction
