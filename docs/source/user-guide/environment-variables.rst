@@ -196,7 +196,7 @@ defined only on Linux.
    :widths: 20 80
 
    * - LD_RUN_PATH
-     - ``<build prefix>/lib``.
+     - ``$PREFIX/lib``.
 
 
 .. _git-env:
