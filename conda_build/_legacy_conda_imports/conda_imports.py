@@ -28,7 +28,6 @@ from conda.common.iterators import groupby_to_dict
 from conda.common.url import has_platform, is_url, join_url
 from conda.core.index import LAST_CHANNEL_URLS, get_index
 from conda.core.link import PrefixSetup, UnlinkLinkTransaction
-from conda.core.package_cache_data import PackageCacheData
 from conda.core.prefix_data import PrefixData
 from conda.exceptions import ArgumentError
 from conda.models.channel import prioritize_channels

@@ -70,7 +70,6 @@ import urllib.request as urllib
 from contextlib import ExitStack  # noqa: F401
 from glob import glob
 
-from conda.api import PackageCacheData  # noqa
 from conda.base.constants import KNOWN_SUBDIRS
 from conda.core.prefix_data import PrefixData
 from conda.models.records import PrefixRecord

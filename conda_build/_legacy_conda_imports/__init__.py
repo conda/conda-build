@@ -1,5 +1,4 @@
 from .conda_imports import (
-    PackageCacheData as _PackageCacheData,
     PackageType as _PackageType,
     PrefixData as _PrefixData,
     get_index as _get_index,
@@ -39,22 +38,6 @@ def get_index(
         channel_urls, prepend, platform, use_local, use_cache, unknown, prefix
     )
     return {Dist(prec): prec for prec in index.values()}
-
-
-def package_cache():
-    class package_cache:
-        def __contains__(self, dist):
-            return bool(
-                _PackageCacheData.first_writable().get(Dist(dist).to_package_ref(), None)
-            )
-
-        def keys(self):
-            return (Dist(v) for v in _PackageCacheData.first_writable().values())
-
-        def __delitem__(self, dist):
-            _PackageCacheData.first_writable().remove(Dist(dist).to_package_ref())
-
-    return package_cache()
 
 
 def linked_data(prefix, ignore_channels=False):

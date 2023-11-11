@@ -29,6 +29,7 @@ from .conda_interface import (
     LinkError,
     LockError,
     NoPackagesFoundError,
+    PackageCacheData,
     PaddingError,
     TemporaryDirectory,
     UnsatisfiableError,
@@ -37,7 +38,6 @@ from .conda_interface import (
     execute_actions,
     get_version_from_git_tag,
     install_actions,
-    package_cache,
     pkgs_dirs,
     reset_context,
     root_dir,
@@ -1236,6 +1236,17 @@ def clean_pkg_cache(dist, config):
             # Conda does not seem to do a complete cleanup sometimes.  This is supplemental.
             #   Conda's cleanup is still necessary - it keeps track of its own in-memory
             #   list of downloaded things.
+            class package_cache:
+                def __contains__(self, dist):
+                    return bool(
+                        PackageCacheData.first_writable().get(Dist(dist).to_package_ref(), None)
+                    )
+
+                def keys(self):
+                    return (Dist(v) for v in PackageCacheData.first_writable().values())
+
+                def __delitem__(self, dist):
+                    PackageCacheData.first_writable().remove(Dist(dist).to_package_ref())
             for folder in pkgs_dirs:
                 if (
                     os.path.exists(os.path.join(folder, dist))
