@@ -10,7 +10,6 @@ log = getLogger(__name__)
 # op codes
 PREFIX = "PREFIX"
 PRINT = "PRINT"
-UNLINK = "UNLINK"
 LINK = "LINK"
 UNLINKLINKTRANSACTION = "UNLINKLINKTRANSACTION"
 PROGRESSIVEFETCHEXTRACT = "PROGRESSIVEFETCHEXTRACT"
@@ -18,7 +17,6 @@ PROGRESSIVEFETCHEXTRACT = "PROGRESSIVEFETCHEXTRACT"
 OP_ORDER = "op_order"
 
 ACTION_CODES = (
-    UNLINK,
     LINK,
 )
 
@@ -28,7 +26,7 @@ def PREFIX_CMD(state, prefix):
 
 
 def PRINT_CMD(state, arg):  # pragma: no cover
-    if arg.startswith(("Unlinking packages", "Linking packages")):
+    if arg.startswith(("Linking packages",)):
         return
     getLogger("conda.stdout.verbose").info(arg)
 
@@ -48,7 +46,6 @@ def UNLINKLINKTRANSACTION_CMD(state, arg):  # pragma: no cover
 commands = {
     PREFIX: PREFIX_CMD,
     PRINT: PRINT_CMD,
-    UNLINK: None,
     LINK: None,
     UNLINKLINKTRANSACTION: UNLINKLINKTRANSACTION_CMD,
     PROGRESSIVEFETCHEXTRACT: PROGRESSIVEFETCHEXTRACT_CMD,

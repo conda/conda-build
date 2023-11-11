@@ -8,7 +8,6 @@ from .dist import Dist
 from .instructions import (
     LINK,
     PREFIX,
-    UNLINK as _UNLINK,
 )
 from .plan import (
     display_actions as _display_actions,
@@ -22,11 +21,8 @@ def display_actions(
 ):
     if LINK in actions:
         actions[LINK] = [index[d] for d in actions[LINK]]
-    if _UNLINK in actions:
-        actions[_UNLINK] = [index[d] for d in actions[_UNLINK]]
-    index = {prec: prec for prec in index.values()}
     return _display_actions(
-        actions, index, show_channel_urls, specs_to_remove, specs_to_add
+        actions, show_channel_urls, specs_to_remove, specs_to_add
     )
 
 

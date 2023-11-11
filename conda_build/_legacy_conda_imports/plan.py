@@ -45,7 +45,6 @@ from .instructions import (
     PREFIX,
     PRINT,
     PROGRESSIVEFETCHEXTRACT,
-    UNLINK,
     UNLINKLINKTRANSACTION,
     commands,
 )
@@ -56,7 +55,7 @@ log = getLogger(__name__)
 
 
 def display_actions(
-    actions, index, show_channel_urls=None, specs_to_remove=(), specs_to_add=()
+    actions, show_channel_urls=None, specs_to_remove=(), specs_to_add=()
 ):
     prefix = actions.get(PREFIX)
     builder = ["", "## Package Plan ##\n"]
@@ -113,13 +112,6 @@ def display_actions(
         # UnlinkLinkTransaction.verify()
         linktypes[pkg] = LinkType.hardlink
         features[pkg][1] = ",".join(prec.get("features") or ())
-    for prec in actions.get(UNLINK, []):
-        assert isinstance(prec, PackageRecord)
-        pkg = prec["name"]
-        channels[pkg][0] = channel_str(prec)
-        packages[pkg][0] = prec["version"] + "-" + prec["build"]
-        records[pkg][0] = prec
-        features[pkg][0] = ",".join(prec.get("features") or ())
 
     new = {p for p in packages if not packages[p][0]}
     removed = {p for p in packages if not packages[p][1]}
@@ -294,27 +286,19 @@ def _plan_from_actions(actions, index):  # pragma: no cover
 def _inject_UNLINKLINKTRANSACTION(plan, index, prefix):  # pragma: no cover
     # this is only used for conda-build at this point
     first_unlink_link_idx = next(
-        (q for q, p in enumerate(plan) if p[0] in (UNLINK, LINK)), -1
+        (q for q, p in enumerate(plan) if p[0] in (LINK,)), -1
     )
     if first_unlink_link_idx >= 0:
         grouped_instructions = groupby(lambda x: x[0], plan)
-        unlink_dists = tuple(Dist(d[1]) for d in grouped_instructions.get(UNLINK, ()))
         link_dists = tuple(Dist(d[1]) for d in grouped_instructions.get(LINK, ()))
-        unlink_dists, link_dists = _handle_menuinst(unlink_dists, link_dists)
+        link_dists = _handle_menuinst(link_dists)
 
-        if isdir(prefix):
-            unlink_precs = tuple(index[d] for d in unlink_dists)
-        else:
-            # there's nothing to unlink in an environment that doesn't exist
-            # this is a hack for what appears to be a logic error in conda-build
-            # caught in tests/test_subpackages.py::test_subpackage_recipes[python_test_dep]
-            unlink_precs = ()
         link_precs = tuple(index[d] for d in link_dists)
 
         pfe = ProgressiveFetchExtract(link_precs)
         pfe.prepare()
 
-        stp = PrefixSetup(prefix, unlink_precs, link_precs, (), [], ())
+        stp = PrefixSetup(prefix, (), link_precs, (), [], ())
         plan.insert(
             first_unlink_link_idx, (UNLINKLINKTRANSACTION, UnlinkLinkTransaction(stp))
         )
@@ -323,23 +307,12 @@ def _inject_UNLINKLINKTRANSACTION(plan, index, prefix):  # pragma: no cover
     return plan
 
 
-def _handle_menuinst(unlink_dists, link_dists):  # pragma: no cover
+def _handle_menuinst(link_dists):  # pragma: no cover
     if not on_win:
-        return unlink_dists, link_dists
+        return link_dists
 
-    # Always link/unlink menuinst first/last on windows in case a subsequent
+    # Always link menuinst first/last on windows in case a subsequent
     # package tries to import it to create/remove a shortcut
-
-    # unlink
-    menuinst_idx = next(
-        (q for q, d in enumerate(unlink_dists) if d.name == "menuinst"), None
-    )
-    if menuinst_idx is not None:
-        unlink_dists = (
-            *unlink_dists[:menuinst_idx],
-            *unlink_dists[menuinst_idx + 1 :],
-            *unlink_dists[menuinst_idx : menuinst_idx + 1],
-        )
 
     # link
     menuinst_idx = next(
@@ -352,7 +325,7 @@ def _handle_menuinst(unlink_dists, link_dists):  # pragma: no cover
             *link_dists[menuinst_idx + 1 :],
         )
 
-    return unlink_dists, link_dists
+    return link_dists
 
 
 def install_actions(
@@ -408,7 +381,6 @@ def install_actions(
         txn = solver.solve_for_transaction(prune=prune, ignore_pinned=not pinned)
         prefix_setup = txn.prefix_setups[prefix]
         actions = get_blank_actions(prefix)
-        actions[UNLINK].extend(Dist(prec) for prec in prefix_setup.unlink_precs)
         actions[LINK].extend(Dist(prec) for prec in prefix_setup.link_precs)
         return actions
 
@@ -417,7 +389,6 @@ def get_blank_actions(prefix):  # pragma: no cover
     actions = defaultdict(list)
     actions[PREFIX] = prefix
     actions[OP_ORDER] = (
-        UNLINK,
         LINK,
     )
     return actions
