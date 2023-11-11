@@ -38,6 +38,10 @@ from conda_build.variants import (
 )
 
 from .conda_interface import (
+    EXTRACT,
+    FETCH,
+    LINK,
+    PREFIX,
     ProgressiveFetchExtract,
     TemporaryDirectory,
     UnsatisfiableError,
@@ -90,10 +94,10 @@ def bldpkg_path(m):
 
 
 def actions_to_pins(actions):
-    if "LINK" in actions:
+    if LINK in actions:
         return [
             " ".join(spec.dist_name.split()[0].rsplit("-", 2))
-            for spec in actions["LINK"]
+            for spec in actions[LINK]
         ]
     return []
 
@@ -345,15 +349,15 @@ def execute_download_actions(m, actions, env, package_subset=None, require_files
     # this should be just downloading packages.  We don't need to extract them -
 
     download_actions = {
-        k: v for k, v in actions.items() if k in ("FETCH", "EXTRACT", "PREFIX")
+        k: v for k, v in actions.items() if k in (FETCH, EXTRACT, PREFIX)
     }
-    if "FETCH" in actions or "EXTRACT" in actions:
+    if FETCH in actions or EXTRACT in actions:
         # this is to force the download
         execute_actions(download_actions, index, verbose=m.config.debug)
 
     pkg_files = {}
 
-    packages = actions.get("LINK", [])
+    packages = actions.get(LINK, [])
     package_subset = utils.ensure_list(package_subset)
     selected_packages = set()
     if package_subset:
@@ -408,7 +412,7 @@ def get_upstream_pins(m: MetaData, actions, env):
     downstream dependency specs.  Return these additional specs."""
     env_specs = m.get_value(f"requirements/{env}", [])
     explicit_specs = [req.split(" ")[0] for req in env_specs] if env_specs else []
-    linked_packages = actions.get("LINK", [])
+    linked_packages = actions.get(LINK, [])
     linked_packages = [pkg for pkg in linked_packages if pkg.name in explicit_specs]
 
     ignore_pkgs_list = utils.ensure_list(m.get_value("build/ignore_run_exports_from"))

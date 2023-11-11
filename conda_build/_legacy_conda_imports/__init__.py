@@ -2,6 +2,15 @@ from conda.core.index import get_index as _get_index
 from conda.core.package_cache_data import PackageCacheData
 from conda.core.prefix_data import PrefixData
 from conda.models.enums import PackageType
+from conda.instructions import (
+    EXTRACT,
+    FETCH,
+    LINK,
+    PREFIX,
+    RM_EXTRACTED,
+    RM_FETCHED,
+    UNLINK,
+)
 
 from .dist import Dist
 from .plan import (
@@ -15,12 +24,12 @@ from .plan import (
 def display_actions(
     actions, index, show_channel_urls=None, specs_to_remove=(), specs_to_add=()
 ):
-    if "FETCH" in actions:
-        actions["FETCH"] = [index[d] for d in actions["FETCH"]]
-    if "LINK" in actions:
-        actions["LINK"] = [index[d] for d in actions["LINK"]]
-    if "UNLINK" in actions:
-        actions["UNLINK"] = [index[d] for d in actions["UNLINK"]]
+    if FETCH in actions:
+        actions[FETCH] = [index[d] for d in actions[FETCH]]
+    if LINK in actions:
+        actions[LINK] = [index[d] for d in actions[LINK]]
+    if UNLINK in actions:
+        actions[UNLINK] = [index[d] for d in actions[UNLINK]]
     index = {prec: prec for prec in index.values()}
     return _display_actions(
         actions, index, show_channel_urls, specs_to_remove, specs_to_add

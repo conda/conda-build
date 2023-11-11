@@ -23,6 +23,10 @@ from conda_build.utils import ensure_list, env_var, prepend_bin_path
 from conda_build.variants import get_default_variant
 
 from .conda_interface import (
+    LINK,
+    PREFIX,
+    RM_EXTRACTED,
+    RM_FETCHED,
     CondaError,
     LinkError,
     LockError,
@@ -886,8 +890,8 @@ def get_install_actions(
         disable_pip,
     ) in cached_actions and last_index_ts >= index_ts:
         actions = cached_actions[(specs, env, subdir, channel_urls, disable_pip)].copy()
-        if "PREFIX" in actions:
-            actions["PREFIX"] = prefix
+        if PREFIX in actions:
+            actions[PREFIX] = prefix
     elif specs:
         # this is hiding output like:
         #    Fetching package metadata ...........
@@ -969,8 +973,8 @@ def get_install_actions(
                 if not any(
                     re.match(r"^%s(?:$|[\s=].*)" % pkg, str(dep)) for dep in specs
                 ):
-                    actions["LINK"] = [
-                        spec for spec in actions["LINK"] if spec.name != pkg
+                    actions[LINK] = [
+                        spec for spec in actions[LINK] if spec.name != pkg
                     ]
         utils.trim_empty_keys(actions)
         cached_actions[(specs, env, subdir, channel_urls, disable_pip)] = actions.copy()
@@ -1092,7 +1096,7 @@ def create_env(
                         # Set this here and use to create environ
                         #   Setting this here is important because we use it below (symlink)
                         prefix = config.host_prefix if host else config.build_prefix
-                        actions["PREFIX"] = prefix
+                        actions[PREFIX] = prefix
 
                         create_env(
                             prefix,
@@ -1224,8 +1228,8 @@ def clean_pkg_cache(dist, config):
         locks = get_pkg_dirs_locks([config.bldpkgs_dir] + pkgs_dirs, config)
         with utils.try_acquire_locks(locks, timeout=config.timeout):
             rmplan = [
-                "RM_EXTRACTED {0} local::{0}".format(dist),
-                "RM_FETCHED {0} local::{0}".format(dist),
+                f"{RM_EXTRACTED} {dist} local::{dist}",
+                f"{RM_FETCHED} {dist} local::{dist}",
             ]
             execute_plan(rmplan)
 
@@ -1275,6 +1279,6 @@ def get_pinned_deps(m, section):
             channel_urls=tuple(m.config.channel_urls),
         )
     runtime_deps = [
-        " ".join(link.dist_name.rsplit("-", 2)) for link in actions.get("LINK", [])
+        " ".join(link.dist_name.rsplit("-", 2)) for link in actions.get(LINK, [])
     ]
     return runtime_deps

@@ -76,7 +76,7 @@ def print_dists(dists_extras):
 def display_actions(
     actions, index, show_channel_urls=None, specs_to_remove=(), specs_to_add=()
 ):
-    prefix = actions.get("PREFIX")
+    prefix = actions.get(PREFIX)
     builder = ["", "## Package Plan ##\n"]
     if prefix:
         builder.append("  environment location: %s" % prefix)
@@ -279,7 +279,7 @@ def display_actions(
 
     if empty and actions.get(SYMLINK_CONDA):
         print("\nThe following empty environments will be CREATED:\n")
-        print(actions["PREFIX"])
+        print(actions[PREFIX])
 
     print()
 
@@ -301,12 +301,12 @@ def _plan_from_actions(actions, index):  # pragma: no cover
 
     assert PREFIX in actions and actions[PREFIX]
     prefix = actions[PREFIX]
-    plan = [("PREFIX", "%s" % prefix)]
+    plan = [(PREFIX, "%s" % prefix)]
 
-    unlink_link_transaction = actions.get("UNLINKLINKTRANSACTION")
+    unlink_link_transaction = actions.get(UNLINKLINKTRANSACTION)
     if unlink_link_transaction:
         raise RuntimeError()
-        # progressive_fetch_extract = actions.get('PROGRESSIVEFETCHEXTRACT')
+        # progressive_fetch_extract = actions.get(PROGRESSIVEFETCHEXTRACT)
         # if progressive_fetch_extract:
         #     plan.append((PROGRESSIVEFETCHEXTRACT, progressive_fetch_extract))
         # plan.append((UNLINKLINKTRANSACTION, unlink_link_transaction))
@@ -459,8 +459,8 @@ def install_actions(
         txn = solver.solve_for_transaction(prune=prune, ignore_pinned=not pinned)
         prefix_setup = txn.prefix_setups[prefix]
         actions = get_blank_actions(prefix)
-        actions["UNLINK"].extend(Dist(prec) for prec in prefix_setup.unlink_precs)
-        actions["LINK"].extend(Dist(prec) for prec in prefix_setup.link_precs)
+        actions[UNLINK].extend(Dist(prec) for prec in prefix_setup.unlink_precs)
+        actions[LINK].extend(Dist(prec) for prec in prefix_setup.link_precs)
         return actions
 
 
