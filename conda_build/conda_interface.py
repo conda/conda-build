@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
+
 import configparser  # noqa: F401
 import os
 from functools import partial
@@ -45,23 +46,15 @@ from conda.exports import (  # noqa: F401
     _toposort,  # noqa: F401
     add_parser_channels,
     add_parser_prefix,
-    display_actions,
     download,
-    execute_actions,
-    execute_plan,
-    get_index,  # noqa: F401
     handle_proxy_407,
     hashsum_file,
     human_bytes,
     input,
-    install_actions,
     lchmod,
-    linked,
-    linked_data,
     md5_file,
     memoized,
     normalized_version,
-    package_cache,
     prefix_placeholder,
     rm_rf,
     spec_from_line,
@@ -75,7 +68,6 @@ from conda.exports import (  # noqa: F401
     win_path_to_unix,
 )
 from conda.models.channel import get_conda_build_local_url  # noqa: F401
-from conda.models.dist import Dist  # noqa: F401
 from conda.models.records import PackageRecord, PrefixRecord
 
 from .deprecations import deprecated
@@ -182,3 +174,15 @@ def get_installed_version(prefix, pkgs):
 # When deactivating envs (e.g. switching from root to build/test) this env var is used,
 # except the PR that removed this has been reverted (for now) and Windows doesn't need it.
 env_path_backup_var_exists = os.environ.get("CONDA_PATH_BACKUP", None)
+
+from ._legacy_conda_imports import (
+    Dist,
+    display_actions,
+    execute_actions,
+    execute_plan,
+    get_index,
+    install_actions,
+    linked,
+    linked_data,
+    package_cache,
+)

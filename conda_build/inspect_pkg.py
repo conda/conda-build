@@ -16,11 +16,11 @@ from pathlib import Path
 from typing import Iterable, Literal
 
 from conda.core.prefix_data import PrefixData
-from conda.models.dist import Dist
 from conda.models.records import PrefixRecord
 from conda.resolve import MatchSpec
 
 from conda_build.conda_interface import (
+    Dist,
     display_actions,
     get_index,
     install_actions,
