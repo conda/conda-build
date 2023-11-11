@@ -10,7 +10,6 @@ from conda.exports import (
     PackageRecord,
     ProgressiveFetchExtract,
     context,
-    human_bytes,
     on_win,
     normalized_version,
 )

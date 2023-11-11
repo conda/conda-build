@@ -176,16 +176,11 @@ def get_installed_version(prefix, pkgs):
 env_path_backup_var_exists = os.environ.get("CONDA_PATH_BACKUP", None)
 
 from ._legacy_conda_imports import (
-    EXTRACT,
-    FETCH,
     LINK,
     PREFIX,
-    RM_EXTRACTED,
-    RM_FETCHED,
     Dist,
     display_actions,
     execute_actions,
-    execute_plan,
     get_index,
     install_actions,
     linked,

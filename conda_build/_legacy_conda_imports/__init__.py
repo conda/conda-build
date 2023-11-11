@@ -6,18 +6,13 @@ from .conda_imports import (
 )
 from .dist import Dist
 from .instructions import (
-    EXTRACT,
-    FETCH,
     LINK,
     PREFIX,
-    RM_EXTRACTED,
-    RM_FETCHED,
     UNLINK as _UNLINK,
 )
 from .plan import (
     display_actions as _display_actions,
     execute_actions,
-    execute_plan,
     install_actions,
 )
 
@@ -25,8 +20,6 @@ from .plan import (
 def display_actions(
     actions, index, show_channel_urls=None, specs_to_remove=(), specs_to_add=()
 ):
-    if FETCH in actions:
-        actions[FETCH] = [index[d] for d in actions[FETCH]]
     if LINK in actions:
         actions[LINK] = [index[d] for d in actions[LINK]]
     if _UNLINK in actions:

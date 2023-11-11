@@ -18,7 +18,6 @@ from .conda_imports import (
     DEFAULTS_CHANNEL_NAME,
     LAST_CHANNEL_URLS,
     UNKNOWN_CHANNEL,
-    ArgumentError,
     Channel,
     IndexedSet,
     LinkType,
@@ -32,7 +31,6 @@ from .conda_imports import (
     dashlist,
     env_vars,
     groupby_to_dict as groupby,
-    human_bytes,
     normalized_version,
     on_win,
     prioritize_channels,
@@ -42,20 +40,11 @@ from .conda_imports import (
 from .dist import Dist
 from .instructions import (
     ACTION_CODES,
-    CHECK_EXTRACT,
-    CHECK_FETCH,
-    EXTRACT,
-    FETCH,
     LINK,
     OP_ORDER,
     PREFIX,
     PRINT,
-    PROGRESS,
-    PROGRESS_COMMANDS,
     PROGRESSIVEFETCHEXTRACT,
-    RM_EXTRACTED,
-    RM_FETCHED,
-    SYMLINK_CONDA,
     UNLINK,
     UNLINKLINKTRANSACTION,
     commands,
@@ -64,17 +53,6 @@ from .instructions import (
 log = getLogger(__name__)
 
 # TODO: Remove conda/plan.py.  This module should be almost completely deprecated now.
-
-
-def print_dists(dists_extras):
-    fmt = "    %-27s|%17s"
-    print(fmt % ("package", "build"))
-    print(fmt % ("-" * 27, "-" * 17))
-    for prec, extra in dists_extras:
-        line = fmt % (prec.name + "-" + prec.version, prec.build)
-        if extra:
-            line += extra
-        print(line)
 
 
 def display_actions(
@@ -117,24 +95,6 @@ def display_actions(
         if show_channel_urls is None and s == DEFAULTS_CHANNEL_NAME:
             return ""
         return s
-
-    if actions.get(FETCH):
-        print("\nThe following packages will be downloaded:\n")
-
-        disp_lst = []
-        for prec in actions[FETCH]:
-            assert isinstance(prec, PackageRecord)
-            extra = "%15s" % human_bytes(prec["size"])
-            schannel = channel_filt(prec.channel.canonical_name)
-            if schannel:
-                extra += "  " + schannel
-            disp_lst.append((prec, extra))
-        print_dists(disp_lst)
-
-        if index and len(actions[FETCH]) > 1:
-            num_bytes = sum(prec["size"] for prec in actions[FETCH])
-            print(" " * 4 + "-" * 60)
-            print(" " * 43 + "Total: %14s" % human_bytes(num_bytes))
 
     # package -> [oldver-oldbuild, newver-newbuild]
     packages = defaultdict(lambda: list(("", "")))
@@ -281,10 +241,6 @@ def display_actions(
         for pkg in sorted(downgraded):
             print(format(oldfmt[pkg] + arrow + newfmt[pkg], pkg))
 
-    if empty and actions.get(SYMLINK_CONDA):
-        print("\nThe following empty environments will be CREATED:\n")
-        print(actions[PREFIX])
-
     print()
 
 
@@ -316,9 +272,6 @@ def _plan_from_actions(actions, index):  # pragma: no cover
         # plan.append((UNLINKLINKTRANSACTION, unlink_link_transaction))
         # return plan
 
-    axn = actions.get("ACTION") or None
-    specs = actions.get("SPECS", [])
-
     log.debug(f"Adding plans for operations: {op_order}")
     for op in op_order:
         if op not in actions:
@@ -329,22 +282,16 @@ def _plan_from_actions(actions, index):  # pragma: no cover
             continue
         if "_" not in op:
             plan.append((PRINT, "%sing packages ..." % op.capitalize()))
-        elif op.startswith("RM_"):
-            plan.append(
-                (PRINT, "Pruning %s packages from the cache ..." % op[3:].lower())
-            )
-        if op in PROGRESS_COMMANDS:
-            plan.append((PROGRESS, "%d" % len(actions[op])))
         for arg in actions[op]:
             log.debug(f"appending value {arg} for action {op}")
             plan.append((op, arg))
 
-    plan = _inject_UNLINKLINKTRANSACTION(plan, index, prefix, axn, specs)
+    plan = _inject_UNLINKLINKTRANSACTION(plan, index, prefix)
 
     return plan
 
 
-def _inject_UNLINKLINKTRANSACTION(plan, index, prefix, axn, specs):  # pragma: no cover
+def _inject_UNLINKLINKTRANSACTION(plan, index, prefix):  # pragma: no cover
     # this is only used for conda-build at this point
     first_unlink_link_idx = next(
         (q for q, p in enumerate(plan) if p[0] in (UNLINK, LINK)), -1
@@ -367,13 +314,11 @@ def _inject_UNLINKLINKTRANSACTION(plan, index, prefix, axn, specs):  # pragma: n
         pfe = ProgressiveFetchExtract(link_precs)
         pfe.prepare()
 
-        stp = PrefixSetup(prefix, unlink_precs, link_precs, (), specs, ())
+        stp = PrefixSetup(prefix, unlink_precs, link_precs, (), [], ())
         plan.insert(
             first_unlink_link_idx, (UNLINKLINKTRANSACTION, UnlinkLinkTransaction(stp))
         )
         plan.insert(first_unlink_link_idx, (PROGRESSIVEFETCHEXTRACT, pfe))
-    elif axn in ("INSTALL", "CREATE"):
-        plan.insert(0, (UNLINKLINKTRANSACTION, (prefix, (), (), (), specs)))
 
     return plan
 
@@ -472,39 +417,19 @@ def get_blank_actions(prefix):  # pragma: no cover
     actions = defaultdict(list)
     actions[PREFIX] = prefix
     actions[OP_ORDER] = (
-        CHECK_FETCH,
-        RM_FETCHED,
-        FETCH,
-        CHECK_EXTRACT,
-        RM_EXTRACTED,
-        EXTRACT,
         UNLINK,
         LINK,
-        SYMLINK_CONDA,
     )
     return actions
 
 
-def execute_plan(old_plan, index=None, verbose=False):  # pragma: no cover
-    """Deprecated: This should `conda.instructions.execute_instructions` instead."""
-    plan = _update_old_plan(old_plan)
-    execute_instructions(plan, index, verbose)
-
-
-def execute_instructions(
-    plan, index=None, verbose=False, _commands=None
-):  # pragma: no cover
+def execute_instructions(plan, index=None, verbose=False):
     """Execute the instructions in the plan
 
     :param plan: A list of (instruction, arg) tuples
     :param index: The meta-data index
     :param verbose: verbose output
-    :param _commands: (For testing only) dict mapping an instruction to executable if None
-    then the default commands will be used
     """
-    if _commands is None:
-        _commands = commands
-
     log.debug("executing plan %s", plan)
 
     state = {"i": None, "prefix": context.root_prefix, "index": index}
@@ -512,35 +437,7 @@ def execute_instructions(
     for instruction, arg in plan:
         log.debug(" %s(%r)", instruction, arg)
 
-        if state["i"] is not None and instruction in PROGRESS_COMMANDS:
-            state["i"] += 1
-            getLogger("progress.update").info((Dist(arg).dist_name, state["i"] - 1))
-        cmd = _commands[instruction]
+        cmd = commands[instruction]
 
         if callable(cmd):
             cmd(state, arg)
-
-        if (
-            state["i"] is not None
-            and instruction in PROGRESS_COMMANDS
-            and state["maxval"] == state["i"]
-        ):
-            state["i"] = None
-            getLogger("progress.stop").info(None)
-
-
-def _update_old_plan(old_plan):  # pragma: no cover
-    """
-    Update an old plan object to work with
-    `conda.instructions.execute_instructions`
-    """
-    plan = []
-    for line in old_plan:
-        if line.startswith("#"):
-            continue
-        if " " not in line:
-            raise ArgumentError(f"The instruction {line!r} takes at least one argument")
-
-        instruction, arg = line.split(" ", 1)
-        plan.append((instruction, arg))
-    return plan

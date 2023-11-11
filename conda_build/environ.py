@@ -25,8 +25,6 @@ from conda_build.variants import get_default_variant
 from .conda_interface import (
     LINK,
     PREFIX,
-    RM_EXTRACTED,
-    RM_FETCHED,
     CondaError,
     LinkError,
     LockError,
@@ -37,7 +35,6 @@ from .conda_interface import (
     create_default_packages,
     display_actions,
     execute_actions,
-    execute_plan,
     get_version_from_git_tag,
     install_actions,
     package_cache,
@@ -1227,11 +1224,14 @@ def clean_pkg_cache(dist, config):
     with utils.LoggingContext(conda_log_level):
         locks = get_pkg_dirs_locks([config.bldpkgs_dir] + pkgs_dirs, config)
         with utils.try_acquire_locks(locks, timeout=config.timeout):
-            rmplan = [
-                f"{RM_EXTRACTED} {dist} local::{dist}",
-                f"{RM_FETCHED} {dist} local::{dist}",
-            ]
-            execute_plan(rmplan)
+            # NOTE: The following out-commented execute_plan was defunct
+            #       (RM_* were no-ops).
+            #
+            # rmplan = [
+            #     f"{RM_EXTRACTED} {dist} local::{dist}",
+            #     f"{RM_FETCHED} {dist} local::{dist}",
+            # ]
+            # execute_plan(rmplan)
 
             # Conda does not seem to do a complete cleanup sometimes.  This is supplemental.
             #   Conda's cleanup is still necessary - it keeps track of its own in-memory

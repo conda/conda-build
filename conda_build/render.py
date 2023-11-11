@@ -38,10 +38,7 @@ from conda_build.variants import (
 )
 
 from .conda_interface import (
-    EXTRACT,
-    FETCH,
     LINK,
-    PREFIX,
     ProgressiveFetchExtract,
     TemporaryDirectory,
     UnsatisfiableError,
@@ -348,12 +345,16 @@ def execute_download_actions(m, actions, env, package_subset=None, require_files
 
     # this should be just downloading packages.  We don't need to extract them -
 
-    download_actions = {
-        k: v for k, v in actions.items() if k in (FETCH, EXTRACT, PREFIX)
-    }
-    if FETCH in actions or EXTRACT in actions:
-        # this is to force the download
-        execute_actions(download_actions, index, verbose=m.config.debug)
+    # NOTE: The following out-commented execute_actions was defunct
+    # (FETCH/EXTRACT were replaced by PROGRESSIVEFETCHEXTRACT).
+    #
+    # download_actions = {
+    #     k: v for k, v in actions.items() if k in (FETCH, EXTRACT, PREFIX)
+    # }
+    # if FETCH in actions or EXTRACT in actions:
+    #     # this is to force the download
+    #     execute_actions(download_actions, index, verbose=m.config.debug)
+
 
     pkg_files = {}
 
