@@ -773,38 +773,6 @@ def library_nature(
     return "non-library"
 
 
-@deprecated(
-    "3.28.0",
-    "4.0.0",
-    addendum="Query `conda.core.prefix_data.PrefixData` instead.",
-)
-def dists_from_names(names: Iterable[str], prefix: str | os.PathLike | Path):
-    from conda_build.utils import linked_data_no_multichannels
-
-    names = utils.ensure_list(names)
-    return [prec for prec in linked_data_no_multichannels(prefix) if prec.name in names]
-
-
-@deprecated(
-    "3.28.0",
-    "4.0.0",
-    addendum="Use `conda.models.records.PrefixRecord` instead.",
-)
-class FakeDist:
-    def __init__(self, name, version, build_number, build_str, channel, files):
-        self.name = name
-        self.quad = [name]
-        self.version = version
-        self.build_number = build_number
-        self.build_string = build_str
-        self.channel = channel
-        self.files = files
-
-    def get(self, name):
-        if name == "files":
-            return self.files
-
-
 # This is really just a small, fixed sysroot and it is rooted at ''. `libcrypto.0.9.8.dylib` should not be in it IMHO.
 DEFAULT_MAC_WHITELIST = [
     "/opt/X11/",
@@ -1016,23 +984,6 @@ def _map_file_to_package(
                             contains_static_libs[prefix_owners[prefix][rp_po][0]] = True
 
     return prefix_owners, contains_dsos, contains_static_libs, all_lib_exports
-
-
-@deprecated(
-    "3.28.0", "4.0.0", addendum="Use `conda.models.records.PrefixRecord` instead."
-)
-def _get_fake_pkg_dist(pkg_name, pkg_version, build_str, build_number, channel, files):
-    return (
-        FakeDist(
-            pkg_name,
-            str(pkg_version),
-            build_number,
-            build_str,
-            channel,
-            files,
-        ),
-        f"{pkg_name}-{pkg_version}-{build_str}",
-    )
 
 
 def _print_msg(errors, text, verbose):

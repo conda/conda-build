@@ -81,7 +81,6 @@ from conda_build.os_utils import external  # noqa
 
 from .conda_interface import (  # noqa
     CondaHTTPError,
-    Dist,  # noqa
     MatchSpec,
     StringIO,  # noqa
     TemporaryDirectory,
@@ -2008,13 +2007,11 @@ def match_peer_job(target_matchspec, other_m, this_m=None):
     for any keys that are shared between target_variant and m.config.variant"""
     name, version, build = other_m.name(), other_m.version(), ""
     matchspec_matches = target_matchspec.match(
-        Dist(
+        PackageRecord(
             name=name,
-            dist_name=f"{name}-{version}-{build}",
             version=version,
-            build_string=build,
+            build=build,
             build_number=other_m.build_number(),
-            channel=None,
         )
     )
 
@@ -2162,20 +2159,6 @@ def download_channeldata(channel_url):
     else:
         data = channeldata_cache[channel_url]
     return data
-
-
-def linked_data_no_multichannels(
-    prefix: str | os.PathLike | Path,
-) -> dict[Dist, PrefixRecord]:
-    """
-    Return a dictionary of the linked packages in prefix, with correct channels, hopefully.
-    cc @kalefranz.
-    """
-    prefix = Path(prefix)
-    return {
-        Dist.from_string(prec.fn, channel_override=prec.channel.name): prec
-        for prec in PrefixData(str(prefix)).iter_records()
-    }
 
 
 def shutil_move_more_retrying(src, dest, debug_name):
