@@ -20,7 +20,6 @@ from conda.models.records import PrefixRecord
 from conda.resolve import MatchSpec
 
 from conda_build.conda_interface import (
-    Dist,
     display_actions,
     get_index,
     install_actions,
@@ -43,17 +42,6 @@ from conda_build.utils import (
 
 from .deprecations import deprecated
 from .utils import on_mac, on_win
-
-
-@deprecated("3.28.0", "4.0.0")
-@lru_cache(maxsize=None)
-def dist_files(prefix: str | os.PathLike | Path, dist: Dist) -> set[str]:
-    if (prec := PrefixData(prefix).get(dist.name, None)) is None:
-        return set()
-    elif MatchSpec(dist).match(prec):
-        return set(prec["files"])
-    else:
-        return set()
 
 
 @deprecated.argument("3.28.0", "4.0.0", "avoid_canonical_channel_name")
