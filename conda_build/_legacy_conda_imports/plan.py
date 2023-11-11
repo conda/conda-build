@@ -14,27 +14,30 @@ from collections import defaultdict
 from logging import getLogger
 from os.path import basename, isdir
 
-try:
-    from boltons.setutils import IndexedSet
-except ImportError:  # pragma: no cover
-    from conda._vendor.boltons.setutils import IndexedSet
-
-from conda.base.constants import DEFAULTS_CHANNEL_NAME, UNKNOWN_CHANNEL
-from conda.base.context import context, stack_context_default
-from conda.common.io import dashlist, env_vars
-from conda.common.iterators import groupby_to_dict as groupby
-from conda.core.index import LAST_CHANNEL_URLS
-from conda.common.compat import on_win
-from conda.core.link import PrefixSetup, UnlinkLinkTransaction
-from conda.core.package_cache_data import ProgressiveFetchExtract
-from conda.core.prefix_data import PrefixData
-from conda.exceptions import ArgumentError
-from conda.models.channel import Channel, prioritize_channels
-from conda.models.enums import LinkType
-from conda.models.records import PackageRecord
-from conda.models.version import normalized_version
-from conda.resolve import MatchSpec
-from conda.utils import human_bytes
+from .conda_imports import (
+    DEFAULTS_CHANNEL_NAME,
+    LAST_CHANNEL_URLS,
+    UNKNOWN_CHANNEL,
+    ArgumentError,
+    Channel,
+    IndexedSet,
+    LinkType,
+    MatchSpec,
+    PackageRecord,
+    PrefixData,
+    PrefixSetup,
+    ProgressiveFetchExtract,
+    UnlinkLinkTransaction,
+    context,
+    dashlist,
+    env_vars,
+    groupby_to_dict as groupby,
+    human_bytes,
+    normalized_version,
+    on_win,
+    prioritize_channels,
+    stack_context_default,
+)
 
 from .dist import Dist
 from .instructions import (

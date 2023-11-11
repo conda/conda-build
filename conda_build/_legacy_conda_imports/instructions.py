@@ -3,8 +3,7 @@
 """Define the instruction set (constants) for conda operations."""
 from logging import getLogger
 
-from conda.core.link import UnlinkLinkTransaction
-from conda.core.package_cache_data import ProgressiveFetchExtract
+from .conda_imports import ProgressiveFetchExtract, UnlinkLinkTransaction
 
 log = getLogger(__name__)
 

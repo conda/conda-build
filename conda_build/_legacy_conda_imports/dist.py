@@ -4,21 +4,26 @@
 import re
 from typing import NamedTuple
 
-from conda import CondaError
-from conda.auxlib.entity import Entity, EntityType, IntegerField, StringField
-from conda.base.constants import (
+from .conda_imports import (
     CONDA_PACKAGE_EXTENSIONS,
     DEFAULTS_CHANNEL_NAME,
+    NULL,
     UNKNOWN_CHANNEL,
+    CondaError,
+    Channel,
+    Entity,
+    EntityType,
+    IntegerField,
+    MatchSpec,
+    PackageInfo,
+    PackageRecord,
+    StringField,
+    context,
+    ensure_text_type,
+    has_platform,
+    is_url,
+    join_url,
 )
-from conda.base.context import context
-from conda.common.compat import ensure_text_type
-from conda.common.constants import NULL
-from conda.common.url import has_platform, is_url, join_url
-from conda.models.channel import Channel
-from conda.models.match_spec import MatchSpec
-from conda.models.package_info import PackageInfo
-from conda.models.records import PackageRecord
 
 
 class DistDetails(NamedTuple):

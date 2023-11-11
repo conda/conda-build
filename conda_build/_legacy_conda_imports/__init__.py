@@ -1,8 +1,9 @@
-from conda.core.index import get_index as _get_index
-from conda.core.package_cache_data import PackageCacheData
-from conda.core.prefix_data import PrefixData
-from conda.models.enums import PackageType
-
+from .conda_imports import (
+    PackageCacheData as _PackageCacheData,
+    PackageType as _PackageType,
+    PrefixData as _PrefixData,
+    get_index as _get_index,
+)
 from .dist import Dist
 from .instructions import (
     EXTRACT,
@@ -11,7 +12,7 @@ from .instructions import (
     PREFIX,
     RM_EXTRACTED,
     RM_FETCHED,
-    UNLINK,
+    UNLINK as _UNLINK,
 )
 from .plan import (
     display_actions as _display_actions,
@@ -28,8 +29,8 @@ def display_actions(
         actions[FETCH] = [index[d] for d in actions[FETCH]]
     if LINK in actions:
         actions[LINK] = [index[d] for d in actions[LINK]]
-    if UNLINK in actions:
-        actions[UNLINK] = [index[d] for d in actions[UNLINK]]
+    if _UNLINK in actions:
+        actions[_UNLINK] = [index[d] for d in actions[_UNLINK]]
     index = {prec: prec for prec in index.values()}
     return _display_actions(
         actions, index, show_channel_urls, specs_to_remove, specs_to_add
@@ -55,21 +56,21 @@ def package_cache():
     class package_cache:
         def __contains__(self, dist):
             return bool(
-                PackageCacheData.first_writable().get(Dist(dist).to_package_ref(), None)
+                _PackageCacheData.first_writable().get(Dist(dist).to_package_ref(), None)
             )
 
         def keys(self):
-            return (Dist(v) for v in PackageCacheData.first_writable().values())
+            return (Dist(v) for v in _PackageCacheData.first_writable().values())
 
         def __delitem__(self, dist):
-            PackageCacheData.first_writable().remove(Dist(dist).to_package_ref())
+            _PackageCacheData.first_writable().remove(Dist(dist).to_package_ref())
 
     return package_cache()
 
 
 def linked_data(prefix, ignore_channels=False):
     """Return a dictionary of the linked packages in prefix."""
-    pd = PrefixData(prefix)
+    pd = _PrefixData(prefix)
     return {
         Dist(prefix_record): prefix_record
         for prefix_record in pd._prefix_records.values()
@@ -78,7 +79,7 @@ def linked_data(prefix, ignore_channels=False):
 
 def linked(prefix, ignore_channels=False):
     """Return the Dists of linked packages in prefix."""
-    conda_package_types = PackageType.conda_package_types()
+    conda_package_types = _PackageType.conda_package_types()
     ld = linked_data(prefix, ignore_channels=ignore_channels).items()
     return {
         dist
