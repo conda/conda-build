@@ -44,6 +44,7 @@ from .instructions import (
     EXTRACT,
     FETCH,
     LINK,
+    OP_ORDER,
     PREFIX,
     PRINT,
     PROGRESS,
@@ -294,8 +295,8 @@ def execute_actions(actions, index, verbose=False):  # pragma: no cover
 
 def _plan_from_actions(actions, index):  # pragma: no cover
 
-    if "op_order" in actions and actions["op_order"]:
-        op_order = actions["op_order"]
+    if OP_ORDER in actions and actions[OP_ORDER]:
+        op_order = actions[OP_ORDER]
     else:
         op_order = ACTION_CODES
 
@@ -467,7 +468,7 @@ def install_actions(
 def get_blank_actions(prefix):  # pragma: no cover
     actions = defaultdict(list)
     actions[PREFIX] = prefix
-    actions["op_order"] = (
+    actions[OP_ORDER] = (
         CHECK_FETCH,
         RM_FETCHED,
         FETCH,
