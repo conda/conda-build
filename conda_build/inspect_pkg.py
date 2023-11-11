@@ -24,7 +24,6 @@ from conda_build.conda_interface import (
     display_actions,
     get_index,
     install_actions,
-    linked_data,
     specs_from_args,
 )
 from conda_build.os_utils.ldd import (
@@ -247,11 +246,6 @@ def test_installable(channel="defaults"):
                     e,
                 )
     return success
-
-
-@deprecated("3.28.0", "4.0.0")
-def _installed(prefix: str | os.PathLike | Path) -> dict[str, Dist]:
-    return {dist.name: dist for dist in linked_data(str(prefix))}
 
 
 def _underlined_text(text):

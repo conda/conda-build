@@ -38,23 +38,3 @@ def get_index(
         channel_urls, prepend, platform, use_local, use_cache, unknown, prefix
     )
     return {Dist(prec): prec for prec in index.values()}
-
-
-def linked_data(prefix, ignore_channels=False):
-    """Return a dictionary of the linked packages in prefix."""
-    pd = _PrefixData(prefix)
-    return {
-        Dist(prefix_record): prefix_record
-        for prefix_record in pd._prefix_records.values()
-    }
-
-
-def linked(prefix, ignore_channels=False):
-    """Return the Dists of linked packages in prefix."""
-    conda_package_types = _PackageType.conda_package_types()
-    ld = linked_data(prefix, ignore_channels=ignore_channels).items()
-    return {
-        dist
-        for dist, prefix_rec in ld
-        if prefix_rec.package_type in conda_package_types
-    }

@@ -151,27 +151,6 @@ def which_prefix(path: str | os.PathLike | Path) -> Path:
     raise RuntimeError("could not determine conda prefix from: %s" % path)
 
 
-@deprecated("3.28.0", "4.0.0")
-def get_installed_version(prefix, pkgs):
-    """
-    Primarily used by conda-forge, but may be useful in general for checking when
-    a package needs to be updated
-    """
-    from conda_build.utils import ensure_list
-
-    pkgs = ensure_list(pkgs)
-    linked_pkgs = linked(prefix)
-    versions = {}
-    for pkg in pkgs:
-        vers_inst = [
-            dist.split("::", 1)[-1].rsplit("-", 2)[1]
-            for dist in linked_pkgs
-            if dist.split("::", 1)[-1].rsplit("-", 2)[0] == pkg
-        ]
-        versions[pkg] = vers_inst[0] if len(vers_inst) == 1 else None
-    return versions
-
-
 # When deactivating envs (e.g. switching from root to build/test) this env var is used,
 # except the PR that removed this has been reverted (for now) and Windows doesn't need it.
 env_path_backup_var_exists = os.environ.get("CONDA_PATH_BACKUP", None)
@@ -184,6 +163,4 @@ from ._legacy_conda_imports import (
     execute_actions,
     get_index,
     install_actions,
-    linked,
-    linked_data,
 )
