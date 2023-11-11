@@ -10,9 +10,9 @@ NOTE:
     module.
 """
 
-import sys
 from collections import defaultdict
 from logging import getLogger
+from os.path import basename, isdir
 
 try:
     from boltons.setutils import IndexedSet
@@ -21,18 +21,35 @@ except ImportError:  # pragma: no cover
 
 from conda.base.constants import DEFAULTS_CHANNEL_NAME, UNKNOWN_CHANNEL
 from conda.base.context import context, stack_context_default
-from conda.common.io import dashlist, env_vars, time_recorder
+from conda.common.io import dashlist, env_vars
 from conda.common.iterators import groupby_to_dict as groupby
-from conda.core.index import LAST_CHANNEL_URLS, _supplement_index_with_prefix
+from conda.core.index import LAST_CHANNEL_URLS
+from conda.common.compat import on_win
 from conda.core.link import PrefixSetup, UnlinkLinkTransaction
-from conda.core.solve import diff_for_unlink_link_precs
-from conda.exceptions import CondaIndexError, PackagesNotFoundError
-from conda.history import History
-from conda.instructions import FETCH, LINK, SYMLINK_CONDA, UNLINK
+from conda.core.package_cache_data import ProgressiveFetchExtract
+from conda.core.prefix_data import PrefixData
+from conda.exceptions import ArgumentError
+from conda.instructions import (
+    ACTION_CODES,
+    CHECK_EXTRACT,
+    CHECK_FETCH,
+    EXTRACT,
+    FETCH,
+    LINK,
+    PREFIX,
+    PRINT,
+    PROGRESS,
+    PROGRESS_COMMANDS,
+    PROGRESSIVEFETCHEXTRACT,
+    RM_EXTRACTED,
+    RM_FETCHED,
+    SYMLINK_CONDA,
+    UNLINK,
+    UNLINKLINKTRANSACTION,
+    commands,
+)
 from conda.models.channel import Channel, prioritize_channels
 from conda.models.enums import LinkType
-from conda.models.match_spec import ChannelMatch
-from conda.models.prefix_graph import PrefixGraph
 from conda.models.records import PackageRecord
 from conda.models.version import normalized_version
 from conda.resolve import MatchSpec
@@ -267,85 +284,15 @@ def display_actions(
     print()
 
 
-def add_unlink(actions, dist):
-    assert isinstance(dist, Dist)
-    if UNLINK not in actions:
-        actions[UNLINK] = []
-    actions[UNLINK].append(dist)
-
-
-# -------------------------------------------------------------------
-
-
-def add_defaults_to_specs(r, linked, specs, update=False, prefix=None):
-    return
-
-
-def _get_best_prec_match(precs):
-    assert precs
-    for chn in context.channels:
-        channel_matcher = ChannelMatch(chn)
-        prec_matches = tuple(
-            prec for prec in precs if channel_matcher.match(prec.channel.name)
-        )
-        if prec_matches:
-            break
-    else:
-        prec_matches = precs
-    log.warn("Multiple packages found:%s", dashlist(prec_matches))
-    return prec_matches[0]
-
-
-def revert_actions(prefix, revision=-1, index=None):
-    # TODO: If revision raise a revision error, should always go back to a safe revision
-    h = History(prefix)
-    # TODO: need a History method to get user-requested specs for revision number
-    #       Doing a revert right now messes up user-requested spec history.
-    #       Either need to wipe out history after ``revision``, or add the correct
-    #       history information to the new entry about to be created.
-    # TODO: This is wrong!!!!!!!!!!
-    user_requested_specs = h.get_requested_specs_map().values()
-    try:
-        target_state = {
-            MatchSpec.from_dist_str(dist_str) for dist_str in h.get_state(revision)
-        }
-    except IndexError:
-        raise CondaIndexError("no such revision: %d" % revision)
-
-    _supplement_index_with_prefix(index, prefix)
-
-    not_found_in_index_specs = set()
-    link_precs = set()
-    for spec in target_state:
-        precs = tuple(prec for prec in index.values() if spec.match(prec))
-        if not precs:
-            not_found_in_index_specs.add(spec)
-        elif len(precs) > 1:
-            link_precs.add(_get_best_prec_match(precs))
-        else:
-            link_precs.add(precs[0])
-
-    if not_found_in_index_specs:
-        raise PackagesNotFoundError(not_found_in_index_specs)
-
-    final_precs = IndexedSet(PrefixGraph(link_precs).graph)  # toposort
-    unlink_precs, link_precs = diff_for_unlink_link_precs(prefix, final_precs)
-    stp = PrefixSetup(prefix, unlink_precs, link_precs, (), user_requested_specs, ())
-    txn = UnlinkLinkTransaction(stp)
-    return txn
-
-
 # ---------------------------- Backwards compat for conda-build --------------------------
 
 
-@time_recorder("execute_actions")
 def execute_actions(actions, index, verbose=False):  # pragma: no cover
     plan = _plan_from_actions(actions, index)
     execute_instructions(plan, index, verbose)
 
 
 def _plan_from_actions(actions, index):  # pragma: no cover
-    from conda.instructions import ACTION_CODES, PREFIX, PRINT, PROGRESS, PROGRESS_COMMANDS
 
     if "op_order" in actions and actions["op_order"]:
         op_order = actions["op_order"]
@@ -394,17 +341,6 @@ def _plan_from_actions(actions, index):  # pragma: no cover
 
 
 def _inject_UNLINKLINKTRANSACTION(plan, index, prefix, axn, specs):  # pragma: no cover
-    from os.path import isdir
-
-    from conda.core.link import PrefixSetup, UnlinkLinkTransaction
-    from conda.core.package_cache_data import ProgressiveFetchExtract
-    from conda.instructions import (
-        LINK,
-        PROGRESSIVEFETCHEXTRACT,
-        UNLINK,
-        UNLINKLINKTRANSACTION,
-    )
-
     # this is only used for conda-build at this point
     first_unlink_link_idx = next(
         (q for q, p in enumerate(plan) if p[0] in (UNLINK, LINK)), -1
@@ -439,8 +375,6 @@ def _inject_UNLINKLINKTRANSACTION(plan, index, prefix, axn, specs):  # pragma: n
 
 
 def _handle_menuinst(unlink_dists, link_dists):  # pragma: no cover
-    from conda.common.compat import on_win
-
     if not on_win:
         return unlink_dists, link_dists
 
@@ -472,7 +406,6 @@ def _handle_menuinst(unlink_dists, link_dists):  # pragma: no cover
     return unlink_dists, link_dists
 
 
-@time_recorder("execute_plan")
 def install_actions(
     prefix,
     index,
@@ -495,10 +428,6 @@ def install_actions(
         },
         stack_callback=stack_context_default,
     ):
-        from os.path import basename
-
-        from conda.models.channel import Channel
-
         if channel_priority_map:
             channel_names = IndexedSet(
                 Channel(url).canonical_name for url in channel_priority_map
@@ -521,8 +450,6 @@ def install_actions(
 
         specs = tuple(MatchSpec(spec) for spec in specs)
 
-        from conda.core.prefix_data import PrefixData
-
         PrefixData._cache_.clear()
 
         solver_backend = context.plugin_manager.get_cached_solver_backend()
@@ -538,21 +465,6 @@ def install_actions(
 
 
 def get_blank_actions(prefix):  # pragma: no cover
-    from collections import defaultdict
-
-    from conda.instructions import (
-        CHECK_EXTRACT,
-        CHECK_FETCH,
-        EXTRACT,
-        FETCH,
-        LINK,
-        PREFIX,
-        RM_EXTRACTED,
-        RM_FETCHED,
-        SYMLINK_CONDA,
-        UNLINK,
-    )
-
     actions = defaultdict(list)
     actions[PREFIX] = prefix
     actions["op_order"] = (
@@ -569,7 +481,6 @@ def get_blank_actions(prefix):  # pragma: no cover
     return actions
 
 
-@time_recorder("execute_plan")
 def execute_plan(old_plan, index=None, verbose=False):  # pragma: no cover
     """Deprecated: This should `conda.instructions.execute_instructions` instead."""
     plan = _update_old_plan(old_plan)
@@ -587,9 +498,6 @@ def execute_instructions(
     :param _commands: (For testing only) dict mapping an instruction to executable if None
     then the default commands will be used
     """
-    from conda.base.context import context
-    from conda.instructions import PROGRESS_COMMANDS, commands
-
     if _commands is None:
         _commands = commands
 
@@ -627,17 +535,8 @@ def _update_old_plan(old_plan):  # pragma: no cover
         if line.startswith("#"):
             continue
         if " " not in line:
-            from conda.exceptions import ArgumentError
-
             raise ArgumentError(f"The instruction {line!r} takes at least one argument")
 
         instruction, arg = line.split(" ", 1)
         plan.append((instruction, arg))
     return plan
-
-
-if __name__ == "__main__":
-    # for testing new revert_actions() only
-    from pprint import pprint
-
-    pprint(dict(revert_actions(sys.prefix, int(sys.argv[1]))))

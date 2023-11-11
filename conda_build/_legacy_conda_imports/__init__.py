@@ -1,4 +1,7 @@
 from conda.core.index import get_index as _get_index
+from conda.core.package_cache_data import PackageCacheData
+from conda.core.prefix_data import PrefixData
+from conda.models.enums import PackageType
 
 from .dist import Dist
 from .plan import (
@@ -40,8 +43,6 @@ def get_index(
 
 
 def package_cache():
-    from conda.core.package_cache_data import PackageCacheData
-
     class package_cache:
         def __contains__(self, dist):
             return bool(
@@ -59,8 +60,6 @@ def package_cache():
 
 def linked_data(prefix, ignore_channels=False):
     """Return a dictionary of the linked packages in prefix."""
-    from conda.core.prefix_data import PrefixData
-
     pd = PrefixData(prefix)
     return {
         Dist(prefix_record): prefix_record
@@ -70,8 +69,6 @@ def linked_data(prefix, ignore_channels=False):
 
 def linked(prefix, ignore_channels=False):
     """Return the Dists of linked packages in prefix."""
-    from conda.models.enums import PackageType
-
     conda_package_types = PackageType.conda_package_types()
     ld = linked_data(prefix, ignore_channels=ignore_channels).items()
     return {

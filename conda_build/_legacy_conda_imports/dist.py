@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 """(Legacy) Low-level implementation of a Channel."""
 import re
-from logging import getLogger
 from typing import NamedTuple
 
 from conda import CondaError
@@ -16,12 +15,10 @@ from conda.base.context import context
 from conda.common.compat import ensure_text_type
 from conda.common.constants import NULL
 from conda.common.url import has_platform, is_url, join_url
-from conda.deprecations import deprecated
 from conda.models.channel import Channel
+from conda.models.match_spec import MatchSpec
 from conda.models.package_info import PackageInfo
 from conda.models.records import PackageRecord
-
-log = getLogger(__name__)
 
 
 class DistDetails(NamedTuple):
@@ -31,15 +28,6 @@ class DistDetails(NamedTuple):
     build_number: str
     dist_name: str
     fmt: str
-
-
-deprecated.constant(
-    "24.3",
-    "24.9",
-    "IndexRecord",
-    PackageRecord,
-    addendum="Use `conda.models.records.PackageRecord` instead.",
-)
 
 
 class DistType(EntityType):
@@ -176,8 +164,6 @@ class Dist(Entity, metaclass=DistType):
         return " ".join(self.quad[:3])
 
     def to_match_spec(self):
-        from conda.match_spec import MatchSpec
-
         base = "=".join(self.quad[:3])
         return MatchSpec(f"{self.channel}::{base}" if self.channel else base)
 
@@ -354,13 +340,3 @@ class Dist(Entity, metaclass=DistType):
     @property
     def fn(self):
         return self.to_filename()
-
-
-def dist_str_to_quad(dist_str):
-    dist_str = strip_extension(dist_str)
-    if "::" in dist_str:
-        channel_str, dist_str = dist_str.split("::", 1)
-    else:
-        channel_str = UNKNOWN_CHANNEL
-    name, version, build = dist_str.rsplit("-", 2)
-    return name, version, build, channel_str
