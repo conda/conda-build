@@ -2,7 +2,9 @@ from conda.core.index import get_index as _get_index
 from conda.core.package_cache_data import PackageCacheData
 from conda.core.prefix_data import PrefixData
 from conda.models.enums import PackageType
-from conda.instructions import (
+
+from .dist import Dist
+from .instructions import (
     EXTRACT,
     FETCH,
     LINK,
@@ -11,8 +13,6 @@ from conda.instructions import (
     RM_FETCHED,
     UNLINK,
 )
-
-from .dist import Dist
 from .plan import (
     display_actions as _display_actions,
     execute_actions,

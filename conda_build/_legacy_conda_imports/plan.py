@@ -29,7 +29,15 @@ from conda.core.link import PrefixSetup, UnlinkLinkTransaction
 from conda.core.package_cache_data import ProgressiveFetchExtract
 from conda.core.prefix_data import PrefixData
 from conda.exceptions import ArgumentError
-from conda.instructions import (
+from conda.models.channel import Channel, prioritize_channels
+from conda.models.enums import LinkType
+from conda.models.records import PackageRecord
+from conda.models.version import normalized_version
+from conda.resolve import MatchSpec
+from conda.utils import human_bytes
+
+from .dist import Dist
+from .instructions import (
     ACTION_CODES,
     CHECK_EXTRACT,
     CHECK_FETCH,
@@ -48,14 +56,6 @@ from conda.instructions import (
     UNLINKLINKTRANSACTION,
     commands,
 )
-from conda.models.channel import Channel, prioritize_channels
-from conda.models.enums import LinkType
-from conda.models.records import PackageRecord
-from conda.models.version import normalized_version
-from conda.resolve import MatchSpec
-from conda.utils import human_bytes
-
-from .dist import Dist
 
 log = getLogger(__name__)
 
