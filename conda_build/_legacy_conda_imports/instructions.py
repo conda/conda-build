@@ -2,13 +2,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 """Define the instruction set (constants) for conda operations."""
 from logging import getLogger
-from os.path import isfile, join
 
 from conda.core.link import UnlinkLinkTransaction
 from conda.core.package_cache_data import ProgressiveFetchExtract
-from conda.deprecations import deprecated
-from conda.exceptions import CondaFileIOError
-from conda.gateways.disk.link import islink
 
 log = getLogger(__name__)
 
@@ -43,7 +39,6 @@ ACTION_CODES = (
 )
 
 
-@deprecated("23.9", "24.3", addendum="Unused.")
 def PREFIX_CMD(state, prefix):
     state["prefix"] = prefix
 
@@ -71,15 +66,6 @@ def UNLINKLINKTRANSACTION_CMD(state, arg):  # pragma: no cover
     unlink_link_transaction = arg
     assert isinstance(unlink_link_transaction, UnlinkLinkTransaction)
     unlink_link_transaction.execute()
-
-
-def check_files_in_package(source_dir, files):
-    for f in files:
-        source_file = join(source_dir, f)
-        if isfile(source_file) or islink(source_file):
-            return True
-        else:
-            raise CondaFileIOError(source_file, "File %s does not exist in tarball" % f)
 
 
 # Map instruction to command (a python function)
