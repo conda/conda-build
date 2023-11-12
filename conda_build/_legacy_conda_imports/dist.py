@@ -6,7 +6,6 @@ from typing import NamedTuple
 
 from .conda_imports import (
     CONDA_PACKAGE_EXTENSIONS,
-    DEFAULTS_CHANNEL_NAME,
     NULL,
     UNKNOWN_CHANNEL,
     CondaError,
@@ -14,15 +13,9 @@ from .conda_imports import (
     Entity,
     EntityType,
     IntegerField,
-    MatchSpec,
-    PackageInfo,
     PackageRecord,
     StringField,
-    context,
-    ensure_text_type,
-    has_platform,
     is_url,
-    join_url,
 )
 
 
@@ -50,7 +43,6 @@ def _split_extension(original_dist):
 def _parse_dist_name(string):
     original_string = string
     try:
-        string = ensure_text_type(string)
         no_fmt_string, fmt = _split_extension(string)
 
         # remove any directory or channel information
@@ -83,10 +75,8 @@ def _parse_dist_name(string):
 
 
 def _as_dict_from_string(string, channel_override=NULL):
-    string = str(string)
-
     if is_url(string) and channel_override == NULL:
-        return _as_dict_from_url(string)
+        raise NotImplementedError()
 
     if string.endswith("@"):
         raise NotImplementedError()
@@ -115,39 +105,6 @@ def _as_dict_from_string(string, channel_override=NULL):
         build_number=dist_details.build_number,
         dist_name=original_dist,
         fmt=fmt,
-    )
-
-
-def _as_dict_from_url(url):
-    assert is_url(url), url
-    if (
-        not any(url.endswith(ext) for ext in CONDA_PACKAGE_EXTENSIONS)
-        and "::" not in url
-    ):
-        raise CondaError("url '%s' is not a conda package" % url)
-
-    dist_details = _parse_dist_name(url)
-    if "::" in url:
-        url_no_tarball = url.rsplit("::", 1)[0]
-        subdir = context.subdir
-        base_url = url_no_tarball.split("::")[0]
-        channel = str(Channel(base_url))
-    else:
-        url_no_tarball = url.rsplit("/", 1)[0]
-        subdir = has_platform(url_no_tarball, context.known_subdirs)
-        base_url = url_no_tarball.rsplit("/", 1)[0] if subdir else url_no_tarball
-        channel = Channel(base_url).canonical_name if subdir else UNKNOWN_CHANNEL
-
-    return dict(
-        channel=channel,
-        name=dist_details.name,
-        version=dist_details.version,
-        build=dist_details.build,
-        build_number=dist_details.build_number,
-        dist_name=dist_details.dist_name,
-        base_url=base_url,
-        subdir=subdir,
-        fmt=dist_details.fmt,
     )
 
 
@@ -224,7 +181,7 @@ class Dist(Entity, metaclass=DistType):
         )
 
     def __str__(self):
-        return f"{self.channel}::{self.dist_name}" if self.channel else self.dist_name
+        raise NotImplementedError()
 
     def __key__(self):
         return self.channel, self.dist_name
@@ -265,9 +222,14 @@ class Dist(Entity, metaclass=DistType):
         raise NotImplementedError()
 
     def __contains__(self, item):
-        item = _strip_extension(ensure_text_type(item))
-        return item in self.__str__()
+        def to_str(x):
+            return f"{x.channel}::{x.dist_name}" if x.channel else x.dist_name
+
+        if isinstance(item, Dist):
+            item = to_str(item)
+        item = _strip_extension(item)
+        return item in to_str(self)
 
     @property
     def fn(self):
-        return self.to_package_ref().fn
+        raise NotImplementedError()
