@@ -6,7 +6,6 @@ from typing import NamedTuple
 
 from .conda_imports import (
     CONDA_PACKAGE_EXTENSIONS,
-    NULL,
     UNKNOWN_CHANNEL,
     CondaError,
     Channel,
@@ -74,8 +73,11 @@ def _parse_dist_name(string):
         )
 
 
-def _as_dict_from_string(string, channel_override=NULL):
-    if is_url(string) and channel_override == NULL:
+_not_set = object()
+
+
+def _as_dict_from_string(string, channel_override=_not_set):
+    if is_url(string) and channel_override == _not_set:
         raise NotImplementedError()
 
     if string.endswith("@"):
@@ -90,7 +92,7 @@ def _as_dict_from_string(string, channel_override=NULL):
 
     original_dist, fmt = _split_extension(original_dist)
 
-    if channel_override != NULL:
+    if channel_override != _not_set:
         channel = channel_override
     if not channel:
         channel = UNKNOWN_CHANNEL

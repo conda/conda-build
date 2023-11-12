@@ -1,8 +1,4 @@
-from .conda_imports import (
-    PackageType as _PackageType,
-    PrefixData as _PrefixData,
-    get_index as _get_index,
-)
+from .conda_imports import get_index as _get_index
 from .dist import Dist
 from .instructions import (
     LINK,
