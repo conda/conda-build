@@ -36,36 +36,31 @@ class DistDetails(NamedTuple):
 
 
 class DistType(EntityType):
-    def __call__(cls, *args, **kwargs):
-        if len(args) == 1 and not kwargs:
-            value = args[0]
-            if value in Dist._cache_:
-                return Dist._cache_[value]
-            elif isinstance(value, Dist):
-                dist = value
-            elif isinstance(value, PackageRecord):
-                dist_kwargs = Dist._as_dict_from_string(
-                    value.fn, channel_override=value.channel.canonical_name
-                )
-                dist = super().__call__(**dist_kwargs)
-            elif hasattr(value, "dist") and isinstance(value.dist, Dist):
-                dist = value.dist
-            elif isinstance(value, PackageInfo):
-                dist_kwargs = Dist._as_dict_from_string(
-                    value.repodata_record.fn,
-                    channel_override=value.channel.canonical_name,
-                )
-                dist = super().__call__(**dist_kwargs)
-            elif isinstance(value, Channel):
-                dist_kwargs = Dist._as_dict_from_url(value.url())
-                dist = super().__call__(**dist_kwargs)
-            else:
-                dist_kwargs = Dist._as_dict_from_string(value)
-                dist = super().__call__(**dist_kwargs)
-            Dist._cache_[value] = dist
-            return dist
+    def __call__(cls, value):
+        if value in Dist._cache_:
+            return Dist._cache_[value]
+        elif isinstance(value, Dist):
+            dist = value
+        elif isinstance(value, PackageRecord):
+            dist_kwargs = Dist._as_dict_from_string(
+                value.fn, channel_override=value.channel.canonical_name
+            )
+            dist = super().__call__(**dist_kwargs)
+        elif hasattr(value, "dist") and isinstance(value.dist, Dist):
+            raise NotImplementedError()
+        elif isinstance(value, PackageInfo):
+            dist_kwargs = Dist._as_dict_from_string(
+                value.repodata_record.fn,
+                channel_override=value.channel.canonical_name,
+            )
+            dist = super().__call__(**dist_kwargs)
+        elif isinstance(value, Channel):
+            raise NotImplementedError()
         else:
-            return super().__call__(*args, **kwargs)
+            dist_kwargs = Dist._as_dict_from_string(value)
+            dist = super().__call__(**dist_kwargs)
+        Dist._cache_[value] = dist
+        return dist
 
 
 def strip_extension(original_dist):
@@ -131,20 +126,12 @@ class Dist(Entity, metaclass=DistType):
         )
 
     @property
-    def full_name(self):
-        return self.__str__()
-
-    @property
     def build(self):
         return self.build_string
 
     @property
     def subdir(self):
         return self.platform
-
-    @property
-    def pair(self):
-        return self.channel or DEFAULTS_CHANNEL_NAME, self.dist_name
 
     @property
     def quad(self):
@@ -154,27 +141,6 @@ class Dist(Entity, metaclass=DistType):
 
     def __str__(self):
         return f"{self.channel}::{self.dist_name}" if self.channel else self.dist_name
-
-    @property
-    def is_feature_package(self):
-        return self.dist_name.endswith("@")
-
-    @property
-    def is_channel(self):
-        return bool(self.base_url and self.platform)
-
-    def to_filename(self, extension=None):
-        if self.is_feature_package:
-            return self.dist_name
-        else:
-            return self.dist_name + self.fmt
-
-    def to_matchspec(self):
-        return " ".join(self.quad[:3])
-
-    def to_match_spec(self):
-        base = "=".join(self.quad[:3])
-        return MatchSpec(f"{self.channel}::{base}" if self.channel else base)
 
     @classmethod
     def _as_dict_from_string(cls, string, channel_override=NULL):
@@ -287,33 +253,23 @@ class Dist(Entity, metaclass=DistType):
             fmt=dist_details.fmt,
         )
 
-    def to_url(self):
-        if not self.base_url:
-            return None
-        filename = self.dist_name + self.fmt
-        return (
-            join_url(self.base_url, self.platform, filename)
-            if self.platform
-            else join_url(self.base_url, filename)
-        )
-
     def __key__(self):
         return self.channel, self.dist_name
 
     def __lt__(self, other):
-        assert isinstance(other, self.__class__)
+        raise NotImplementedError()
         return self.__key__() < other.__key__()
 
     def __gt__(self, other):
-        assert isinstance(other, self.__class__)
+        raise NotImplementedError()
         return self.__key__() > other.__key__()
 
     def __le__(self, other):
-        assert isinstance(other, self.__class__)
+        raise NotImplementedError()
         return self.__key__() <= other.__key__()
 
     def __ge__(self, other):
-        assert isinstance(other, self.__class__)
+        raise NotImplementedError()
         return self.__key__() >= other.__key__()
 
     def __hash__(self):
@@ -339,13 +295,10 @@ class Dist(Entity, metaclass=DistType):
         name = f"{self.channel}::{self.quad[0]}" if self.channel else self.quad[0]
         return name, self.quad[1], self.quad[2]
 
-    def startswith(self, match):
-        return self.dist_name.startswith(match)
-
     def __contains__(self, item):
         item = strip_extension(ensure_text_type(item))
         return item in self.__str__()
 
     @property
     def fn(self):
-        return self.to_filename()
+        return self.to_package_ref().fn
