@@ -44,20 +44,24 @@ class DistType(EntityType):
             elif isinstance(value, Dist):
                 dist = value
             elif isinstance(value, PackageRecord):
-                dist = Dist.from_string(
+                dist_kwargs = Dist._as_dict_from_string(
                     value.fn, channel_override=value.channel.canonical_name
                 )
+                dist = super().__call__(**dist_kwargs)
             elif hasattr(value, "dist") and isinstance(value.dist, Dist):
                 dist = value.dist
             elif isinstance(value, PackageInfo):
-                dist = Dist.from_string(
+                dist_kwargs = Dist._as_dict_from_string(
                     value.repodata_record.fn,
                     channel_override=value.channel.canonical_name,
                 )
+                dist = super().__call__(**dist_kwargs)
             elif isinstance(value, Channel):
-                dist = Dist.from_url(value.url())
+                dist_kwargs = Dist._as_dict_from_url(value.url())
+                dist = super().__call__(**dist_kwargs)
             else:
-                dist = Dist.from_string(value)
+                dist_kwargs = Dist._as_dict_from_string(value)
+                dist = super().__call__(**dist_kwargs)
             Dist._cache_[value] = dist
             return dist
         else:
@@ -173,14 +177,14 @@ class Dist(Entity, metaclass=DistType):
         return MatchSpec(f"{self.channel}::{base}" if self.channel else base)
 
     @classmethod
-    def from_string(cls, string, channel_override=NULL):
+    def _as_dict_from_string(cls, string, channel_override=NULL):
         string = str(string)
 
         if is_url(string) and channel_override == NULL:
-            return cls.from_url(string)
+            return cls._as_dict_from_url(string)
 
         if string.endswith("@"):
-            return cls(
+            return dict(
                 channel="@",
                 name=string,
                 version="",
@@ -205,7 +209,7 @@ class Dist(Entity, metaclass=DistType):
 
         # enforce dist format
         dist_details = cls.parse_dist_name(original_dist)
-        return cls(
+        return dict(
             channel=channel,
             name=dist_details.name,
             version=dist_details.version,
@@ -251,7 +255,7 @@ class Dist(Entity, metaclass=DistType):
             )
 
     @classmethod
-    def from_url(cls, url):
+    def _as_dict_from_url(cls, url):
         assert is_url(url), url
         if (
             not any(url.endswith(ext) for ext in CONDA_PACKAGE_EXTENSIONS)
@@ -271,7 +275,7 @@ class Dist(Entity, metaclass=DistType):
             base_url = url_no_tarball.rsplit("/", 1)[0] if platform else url_no_tarball
             channel = Channel(base_url).canonical_name if platform else UNKNOWN_CHANNEL
 
-        return cls(
+        return dict(
             channel=channel,
             name=dist_details.name,
             version=dist_details.version,
