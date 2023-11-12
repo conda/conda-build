@@ -152,25 +152,23 @@ def _as_dict_from_url(url):
 
 
 class DistType(EntityType):
-    def __call__(cls, value):
-        if value in Dist._cache_:
-            return Dist._cache_[value]
-        elif isinstance(value, Dist):
-            dist = value
-        elif isinstance(value, PackageRecord):
+    def _make_dist(cls, value):
+        if isinstance(value, Dist):
+            return dist
+        if isinstance(value, PackageRecord):
             dist_kwargs = _as_dict_from_string(
                 value.fn, channel_override=value.channel.canonical_name
             )
-            dist = super().__call__(**dist_kwargs)
-        elif hasattr(value, "dist") and isinstance(value.dist, Dist):
-            raise NotImplementedError()
-        elif isinstance(value, PackageInfo):
-            raise NotImplementedError()
-        elif isinstance(value, Channel):
-            raise NotImplementedError()
-        else:
+            return super().__call__(**dist_kwargs)
+        if isinstance(value, str):
             dist_kwargs = _as_dict_from_string(value)
-            dist = super().__call__(**dist_kwargs)
+            return super().__call__(**dist_kwargs)
+        raise NotImplementedError()
+
+    def __call__(cls, value):
+        if value in Dist._cache_:
+            return Dist._cache_[value]
+        dist = cls._make_dist(value)
         Dist._cache_[value] = dist
         return dist
 
