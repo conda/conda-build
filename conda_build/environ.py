@@ -1214,7 +1214,12 @@ def remove_existing_packages(dirs, fns, config):
 
 
 @deprecated("3.28.0", "4.0.0")
-def clean_pkg_cache(dist, config):
+def clean_pkg_cache(dist_string, config):
+    from ._legacy_conda_imports.dist import (
+        dist_string_contains,
+        dist_string_from_package_record,
+        package_ref_from_dist_string,
+    )
     locks = []
 
     conda_log_level = logging.WARN
@@ -1236,40 +1241,35 @@ def clean_pkg_cache(dist, config):
             # Conda does not seem to do a complete cleanup sometimes.  This is supplemental.
             #   Conda's cleanup is still necessary - it keeps track of its own in-memory
             #   list of downloaded things.
-            class package_cache:
-                def __contains__(self, dist):
-                    return bool(
-                        PackageCacheData.first_writable().get(Dist(dist).to_package_ref(), None)
-                    )
-
-                def keys(self):
-                    return (Dist(v) for v in PackageCacheData.first_writable().values())
-
-                def __delitem__(self, dist):
-                    PackageCacheData.first_writable().remove(Dist(dist).to_package_ref())
+            package_cache_data = PackageCacheData.first_writable()
+            package_records = [
+                package_ref_from_dist_string(pkg_id)
+                for pkg_id in [dist_string, "local::" + dist_string]
+            ]
             for folder in pkgs_dirs:
                 if (
-                    os.path.exists(os.path.join(folder, dist))
-                    or os.path.exists(os.path.join(folder, dist + ".tar.bz2"))
+                    os.path.exists(os.path.join(folder, dist_string))
+                    or os.path.exists(os.path.join(folder, dist_string + ".tar.bz2"))
                     or any(
-                        pkg_id in package_cache() for pkg_id in [dist, "local::" + dist]
+                        bool(PackageCacheData.first_writable().get(package_record, None))
+                        for package_record in package_records
                     )
                 ):
                     log = utils.get_logger(__name__)
                     log.debug(
                         "Conda caching error: %s package remains in cache after removal",
-                        dist,
+                        dist_string,
                     )
                     log.debug("manually removing to compensate")
-                    cache = package_cache()
-                    keys = [key for key in cache.keys() if dist in key]
-                    for pkg_id in keys:
-                        if pkg_id in cache:
-                            del cache[pkg_id]
+                    for cache_pkg_id in package_cache_data.values():
+                        cache_pkg_id_dist_string = dist_string_from_package_record(cache_pkg_id)
+                        if dist_string_contains(cache_pkg_id_dist_string, dist_string):
+                            if bool(package_cache_data.get(cache_pkg_id, None)):
+                                package_cache_data.remove(cache_pkg_id)
 
         # Note that this call acquires the relevant locks, so this must be called
         # outside the lock context above.
-        remove_existing_packages(pkgs_dirs, [dist], config)
+        remove_existing_packages(pkgs_dirs, [dist_string], config)
 
 
 def get_pinned_deps(m, section):

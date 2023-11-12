@@ -158,7 +158,6 @@ env_path_backup_var_exists = os.environ.get("CONDA_PATH_BACKUP", None)
 from ._legacy_conda_imports import (
     LINK,
     PREFIX,
-    Dist,
     display_actions,
     execute_actions,
     get_index,

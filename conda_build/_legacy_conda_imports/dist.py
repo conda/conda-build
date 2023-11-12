@@ -110,6 +110,33 @@ def _as_dict_from_string(string, channel_override=_not_set):
     )
 
 
+def package_ref_from_dist_string(dist_string):
+    dist_kwargs = _as_dict_from_string(dist_string)
+    return PackageRecord(
+        channel=dist_kwargs["channel"],
+        name=dist_kwargs["name"],
+        version=dist_kwargs["version"],
+        build=dist_kwargs["build"],
+        build_number=dist_kwargs["build_number"],
+    )
+
+
+def dist_string_contains(containing_dist_string, contained_dist_string):
+    contained_dist_string = _strip_extension(contained_dist_string)
+    return contained_dist_string in containing_dist_string
+
+
+def dist_string_from_package_record(package_record, channel=None):
+    if channel is None:
+        channel = package_record.channel.canonical_name
+    dist_kwargs = _as_dict_from_string(
+        package_record.fn, channel_override=channel
+    )
+    channel = dist_kwargs["channel"]
+    dist_name = dist_kwargs["dist_name"]
+    return f"{channel}::{dist_name}" if channel else dist_name
+
+
 class DistType(EntityType):
     def _make_dist(cls, value):
         if isinstance(value, Dist):
@@ -118,9 +145,6 @@ class DistType(EntityType):
             dist_kwargs = _as_dict_from_string(
                 value.fn, channel_override=value.channel.canonical_name
             )
-            return super().__call__(**dist_kwargs)
-        if isinstance(value, str):
-            dist_kwargs = _as_dict_from_string(value)
             return super().__call__(**dist_kwargs)
         raise NotImplementedError()
 
@@ -172,16 +196,6 @@ class Dist(Entity, metaclass=DistType):
             fmt=fmt,
         )
 
-    def to_package_ref(self):
-        return PackageRecord(
-            channel=self.channel,
-            subdir=self.subdir,
-            name=self.name,
-            version=self.version,
-            build=self.build,
-            build_number=self.build_number,
-        )
-
     def __str__(self):
         raise NotImplementedError()
 
@@ -224,13 +238,7 @@ class Dist(Entity, metaclass=DistType):
         raise NotImplementedError()
 
     def __contains__(self, item):
-        def to_str(x):
-            return f"{x.channel}::{x.dist_name}" if x.channel else x.dist_name
-
-        if isinstance(item, Dist):
-            item = to_str(item)
-        item = _strip_extension(item)
-        return item in to_str(self)
+        raise NotImplementedError()
 
     @property
     def fn(self):
