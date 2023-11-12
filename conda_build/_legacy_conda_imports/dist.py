@@ -35,6 +35,122 @@ class DistDetails(NamedTuple):
     fmt: str
 
 
+def _strip_extension(original_dist):
+    for ext in CONDA_PACKAGE_EXTENSIONS:
+        if original_dist.endswith(ext):
+            original_dist = original_dist[: -len(ext)]
+    return original_dist
+
+
+def _split_extension(original_dist):
+    stripped = _strip_extension(original_dist)
+    return stripped, original_dist[len(stripped) :]
+
+
+def _parse_dist_name(string):
+    original_string = string
+    try:
+        string = ensure_text_type(string)
+        no_fmt_string, fmt = _split_extension(string)
+
+        # remove any directory or channel information
+        if "::" in no_fmt_string:
+            dist_name = no_fmt_string.rsplit("::", 1)[-1]
+        else:
+            dist_name = no_fmt_string.rsplit("/", 1)[-1]
+
+        parts = dist_name.rsplit("-", 2)
+
+        name = parts[0]
+        version = parts[1]
+        build = parts[2] if len(parts) >= 3 else ""
+        build_number_as_string = "".join(
+            filter(
+                lambda x: x.isdigit(),
+                (build.rsplit("_")[-1] if build else "0"),
+            )
+        )
+        build_number = int(build_number_as_string) if build_number_as_string else 0
+
+        return DistDetails(
+            name, version, build, build_number, dist_name, fmt
+        )
+
+    except:
+        raise CondaError(
+            "dist_name is not a valid conda package: %s" % original_string
+        )
+
+
+def _as_dict_from_string(string, channel_override=NULL):
+    string = str(string)
+
+    if is_url(string) and channel_override == NULL:
+        return _as_dict_from_url(string)
+
+    if string.endswith("@"):
+        raise NotImplementedError()
+
+    REGEX_STR = (
+        r"(?:([^\s\[\]]+)::)?"  # optional channel
+        r"([^\s\[\]]+)"  # 3.x dist
+        r"(?:\[([a-zA-Z0-9_-]+)\])?"  # with_features_depends
+    )
+    channel, original_dist, w_f_d = re.search(REGEX_STR, string).groups()
+
+    original_dist, fmt = _split_extension(original_dist)
+
+    if channel_override != NULL:
+        channel = channel_override
+    if not channel:
+        channel = UNKNOWN_CHANNEL
+
+    # enforce dist format
+    dist_details = _parse_dist_name(original_dist)
+    return dict(
+        channel=channel,
+        name=dist_details.name,
+        version=dist_details.version,
+        build=dist_details.build,
+        build_number=dist_details.build_number,
+        dist_name=original_dist,
+        fmt=fmt,
+    )
+
+
+def _as_dict_from_url(url):
+    assert is_url(url), url
+    if (
+        not any(url.endswith(ext) for ext in CONDA_PACKAGE_EXTENSIONS)
+        and "::" not in url
+    ):
+        raise CondaError("url '%s' is not a conda package" % url)
+
+    dist_details = _parse_dist_name(url)
+    if "::" in url:
+        url_no_tarball = url.rsplit("::", 1)[0]
+        subdir = context.subdir
+        base_url = url_no_tarball.split("::")[0]
+        channel = str(Channel(base_url))
+    else:
+        url_no_tarball = url.rsplit("/", 1)[0]
+        subdir = has_platform(url_no_tarball, context.known_subdirs)
+        base_url = url_no_tarball.rsplit("/", 1)[0] if subdir else url_no_tarball
+        channel = Channel(base_url).canonical_name if subdir else UNKNOWN_CHANNEL
+
+    return dict(
+        channel=channel,
+        name=dist_details.name,
+        version=dist_details.version,
+        build=dist_details.build,
+        build_number=dist_details.build_number,
+        dist_name=dist_details.dist_name,
+        base_url=base_url,
+        subdir=subdir,
+        fmt=dist_details.fmt,
+    )
+
+
 class DistType(EntityType):
     def __call__(cls, value):
         if value in Dist._cache_:
@@ -42,7 +158,7 @@ class DistType(EntityType):
         elif isinstance(value, Dist):
             dist = value
         elif isinstance(value, PackageRecord):
-            dist_kwargs = Dist._as_dict_from_string(
+            dist_kwargs = _as_dict_from_string(
                 value.fn, channel_override=value.channel.canonical_name
             )
             dist = super().__call__(**dist_kwargs)
@@ -53,22 +169,10 @@ class DistType(EntityType):
         elif isinstance(value, Channel):
             raise NotImplementedError()
         else:
-            dist_kwargs = Dist._as_dict_from_string(value)
+            dist_kwargs = _as_dict_from_string(value)
             dist = super().__call__(**dist_kwargs)
         Dist._cache_[value] = dist
         return dist
-
-
-def strip_extension(original_dist):
-    for ext in CONDA_PACKAGE_EXTENSIONS:
-        if original_dist.endswith(ext):
-            original_dist = original_dist[: -len(ext)]
-    return original_dist
-
-
-def split_extension(original_dist):
-    stripped = strip_extension(original_dist)
-    return stripped, original_dist[len(stripped) :]
 
 
 class Dist(Entity, metaclass=DistType):
@@ -124,110 +228,6 @@ class Dist(Entity, metaclass=DistType):
     def __str__(self):
         return f"{self.channel}::{self.dist_name}" if self.channel else self.dist_name
 
-    @classmethod
-    def _as_dict_from_string(cls, string, channel_override=NULL):
-        string = str(string)
-
-        if is_url(string) and channel_override == NULL:
-            return cls._as_dict_from_url(string)
-
-        if string.endswith("@"):
-            raise NotImplementedError()
-
-        REGEX_STR = (
-            r"(?:([^\s\[\]]+)::)?"  # optional channel
-            r"([^\s\[\]]+)"  # 3.x dist
-            r"(?:\[([a-zA-Z0-9_-]+)\])?"  # with_features_depends
-        )
-        channel, original_dist, w_f_d = re.search(REGEX_STR, string).groups()
-
-        original_dist, fmt = split_extension(original_dist)
-
-        if channel_override != NULL:
-            channel = channel_override
-        if not channel:
-            channel = UNKNOWN_CHANNEL
-
-        # enforce dist format
-        dist_details = cls.parse_dist_name(original_dist)
-        return dict(
-            channel=channel,
-            name=dist_details.name,
-            version=dist_details.version,
-            build=dist_details.build,
-            build_number=dist_details.build_number,
-            dist_name=original_dist,
-            fmt=fmt,
-        )
-
-    @staticmethod
-    def parse_dist_name(string):
-        original_string = string
-        try:
-            string = ensure_text_type(string)
-            no_fmt_string, fmt = split_extension(string)
-
-            # remove any directory or channel information
-            if "::" in no_fmt_string:
-                dist_name = no_fmt_string.rsplit("::", 1)[-1]
-            else:
-                dist_name = no_fmt_string.rsplit("/", 1)[-1]
-
-            parts = dist_name.rsplit("-", 2)
-
-            name = parts[0]
-            version = parts[1]
-            build = parts[2] if len(parts) >= 3 else ""
-            build_number_as_string = "".join(
-                filter(
-                    lambda x: x.isdigit(),
-                    (build.rsplit("_")[-1] if build else "0"),
-                )
-            )
-            build_number = int(build_number_as_string) if build_number_as_string else 0
-
-            return DistDetails(
-                name, version, build, build_number, dist_name, fmt
-            )
-
-        except:
-            raise CondaError(
-                "dist_name is not a valid conda package: %s" % original_string
-            )
-
-    @classmethod
-    def _as_dict_from_url(cls, url):
-        assert is_url(url), url
-        if (
-            not any(url.endswith(ext) for ext in CONDA_PACKAGE_EXTENSIONS)
-            and "::" not in url
-        ):
-            raise CondaError("url '%s' is not a conda package" % url)
-
-        dist_details = cls.parse_dist_name(url)
-        if "::" in url:
-            url_no_tarball = url.rsplit("::", 1)[0]
-            subdir = context.subdir
-            base_url = url_no_tarball.split("::")[0]
-            channel = str(Channel(base_url))
-        else:
-            url_no_tarball = url.rsplit("/", 1)[0]
-            subdir = has_platform(url_no_tarball, context.known_subdirs)
-            base_url = url_no_tarball.rsplit("/", 1)[0] if subdir else url_no_tarball
-            channel = Channel(base_url).canonical_name if subdir else UNKNOWN_CHANNEL
-
-        return dict(
-            channel=channel,
-            name=dist_details.name,
-            version=dist_details.version,
-            build=dist_details.build,
-            build_number=dist_details.build_number,
-            dist_name=dist_details.dist_name,
-            base_url=base_url,
-            subdir=subdir,
-            fmt=dist_details.fmt,
-        )
-
     def __key__(self):
         return self.channel, self.dist_name
 
@@ -267,7 +267,7 @@ class Dist(Entity, metaclass=DistType):
         raise NotImplementedError()
 
     def __contains__(self, item):
-        item = strip_extension(ensure_text_type(item))
+        item = _strip_extension(ensure_text_type(item))
         return item in self.__str__()
 
     @property
