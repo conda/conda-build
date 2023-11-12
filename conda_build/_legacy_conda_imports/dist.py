@@ -29,7 +29,7 @@ from .conda_imports import (
 class DistDetails(NamedTuple):
     name: str
     version: str
-    build_string: str
+    build: str
     build_number: str
     dist_name: str
     fmt: str
@@ -49,11 +49,7 @@ class DistType(EntityType):
         elif hasattr(value, "dist") and isinstance(value.dist, Dist):
             raise NotImplementedError()
         elif isinstance(value, PackageInfo):
-            dist_kwargs = Dist._as_dict_from_string(
-                value.repodata_record.fn,
-                channel_override=value.channel.canonical_name,
-            )
-            dist = super().__call__(**dist_kwargs)
+            raise NotImplementedError()
         elif isinstance(value, Channel):
             raise NotImplementedError()
         else:
@@ -85,11 +81,11 @@ class Dist(Entity, metaclass=DistType):
     name = StringField(immutable=True)
     fmt = StringField(immutable=True)
     version = StringField(immutable=True)
-    build_string = StringField(immutable=True)
+    build = StringField(immutable=True)
     build_number = IntegerField(immutable=True)
 
     base_url = StringField(required=False, nullable=True, immutable=True)
-    platform = StringField(required=False, nullable=True, immutable=True)
+    subdir = StringField(required=False, nullable=True, immutable=True)
 
     def __init__(
         self,
@@ -97,10 +93,10 @@ class Dist(Entity, metaclass=DistType):
         dist_name=None,
         name=None,
         version=None,
-        build_string=None,
+        build=None,
         build_number=None,
         base_url=None,
-        platform=None,
+        subdir=None,
         fmt=".tar.bz2",
     ):
         super().__init__(
@@ -108,36 +104,22 @@ class Dist(Entity, metaclass=DistType):
             dist_name=dist_name,
             name=name,
             version=version,
-            build_string=build_string,
+            build=build,
             build_number=build_number,
             base_url=base_url,
-            platform=platform,
+            subdir=subdir,
             fmt=fmt,
         )
 
     def to_package_ref(self):
         return PackageRecord(
             channel=self.channel,
-            subdir=self.platform,
+            subdir=self.subdir,
             name=self.name,
             version=self.version,
-            build=self.build_string,
+            build=self.build,
             build_number=self.build_number,
         )
-
-    @property
-    def build(self):
-        return self.build_string
-
-    @property
-    def subdir(self):
-        return self.platform
-
-    @property
-    def quad(self):
-        # returns: name, version, build_string, channel
-        parts = self.dist_name.rsplit("-", 2) + ["", ""]
-        return parts[0], parts[1], parts[2], self.channel or DEFAULTS_CHANNEL_NAME
 
     def __str__(self):
         return f"{self.channel}::{self.dist_name}" if self.channel else self.dist_name
@@ -150,14 +132,7 @@ class Dist(Entity, metaclass=DistType):
             return cls._as_dict_from_url(string)
 
         if string.endswith("@"):
-            return dict(
-                channel="@",
-                name=string,
-                version="",
-                build_string="",
-                build_number=0,
-                dist_name=string,
-            )
+            raise NotImplementedError()
 
         REGEX_STR = (
             r"(?:([^\s\[\]]+)::)?"  # optional channel
@@ -179,7 +154,7 @@ class Dist(Entity, metaclass=DistType):
             channel=channel,
             name=dist_details.name,
             version=dist_details.version,
-            build_string=dist_details.build_string,
+            build=dist_details.build,
             build_number=dist_details.build_number,
             dist_name=original_dist,
             fmt=fmt,
@@ -202,17 +177,17 @@ class Dist(Entity, metaclass=DistType):
 
             name = parts[0]
             version = parts[1]
-            build_string = parts[2] if len(parts) >= 3 else ""
+            build = parts[2] if len(parts) >= 3 else ""
             build_number_as_string = "".join(
                 filter(
                     lambda x: x.isdigit(),
-                    (build_string.rsplit("_")[-1] if build_string else "0"),
+                    (build.rsplit("_")[-1] if build else "0"),
                 )
             )
             build_number = int(build_number_as_string) if build_number_as_string else 0
 
             return DistDetails(
-                name, version, build_string, build_number, dist_name, fmt
+                name, version, build, build_number, dist_name, fmt
             )
 
         except:
@@ -232,24 +207,24 @@ class Dist(Entity, metaclass=DistType):
         dist_details = cls.parse_dist_name(url)
         if "::" in url:
             url_no_tarball = url.rsplit("::", 1)[0]
-            platform = context.subdir
+            subdir = context.subdir
             base_url = url_no_tarball.split("::")[0]
             channel = str(Channel(base_url))
         else:
             url_no_tarball = url.rsplit("/", 1)[0]
-            platform = has_platform(url_no_tarball, context.known_subdirs)
-            base_url = url_no_tarball.rsplit("/", 1)[0] if platform else url_no_tarball
-            channel = Channel(base_url).canonical_name if platform else UNKNOWN_CHANNEL
+            subdir = has_platform(url_no_tarball, context.known_subdirs)
+            base_url = url_no_tarball.rsplit("/", 1)[0] if subdir else url_no_tarball
+            channel = Channel(base_url).canonical_name if subdir else UNKNOWN_CHANNEL
 
         return dict(
             channel=channel,
             name=dist_details.name,
             version=dist_details.version,
-            build_string=dist_details.build_string,
+            build=dist_details.build,
             build_number=dist_details.build_number,
             dist_name=dist_details.dist_name,
             base_url=base_url,
-            platform=platform,
+            subdir=subdir,
             fmt=dist_details.fmt,
         )
 
@@ -286,14 +261,10 @@ class Dist(Entity, metaclass=DistType):
     # ############ conda-build compatibility ################
 
     def split(self, sep=None, maxsplit=-1):
-        assert sep == "::"
-        return [self.channel, self.dist_name] if self.channel else [self.dist_name]
+        raise NotImplementedError()
 
     def rsplit(self, sep=None, maxsplit=-1):
-        assert sep == "-"
-        assert maxsplit == 2
-        name = f"{self.channel}::{self.quad[0]}" if self.channel else self.quad[0]
-        return name, self.quad[1], self.quad[2]
+        raise NotImplementedError()
 
     def __contains__(self, item):
         item = strip_extension(ensure_text_type(item))
