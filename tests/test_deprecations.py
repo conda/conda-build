@@ -5,7 +5,8 @@
 import sys
 
 import pytest
-from conda.deprecations import DeprecatedError, DeprecationHandler
+
+from conda_build.deprecations import DeprecatedError, DeprecationHandler
 
 
 @pytest.fixture(scope="module")

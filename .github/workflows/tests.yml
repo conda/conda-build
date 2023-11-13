@@ -69,10 +69,18 @@ jobs:
       fail-fast: false
       matrix:
         # test all lower versions (w/ stable conda) and upper version (w/ canary conda)
-        python-version: ['3.8', '3.9', '3.10']
+        python-version: ['3.9', '3.10']
         conda-version: [release]
         test-type: [serial, parallel]
         include:
+          # minimum Python/conda combo
+          - python-version: '3.8'
+            conda-version: 22.11.0
+            test-type: serial
+          - python-version: '3.8'
+            conda-version: 22.11.0
+            test-type: parallel
+          # maximum Python/conda combo
           - python-version: '3.11'
             conda-version: canary
             test-type: serial
@@ -81,6 +89,7 @@ jobs:
             test-type: parallel
     env:
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
+      CONDA_VERSION: ${{ contains('canary,release', matrix.conda-version) && 'conda' || format('conda={0}', matrix.conda-version) }}
       REPLAY_NAME: Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
       REPLAY_DIR: ${{ github.workspace }}/pytest-replay
       ALLURE_DIR: ${{ github.workspace }}/allure-results
@@ -115,7 +124,7 @@ jobs:
           conda install -q -y -c defaults \
             --file ./tests/requirements.txt \
             --file ./tests/requirements-linux.txt \
-            ${{ env.CONDA_CHANNEL_LABEL }}::conda
+            ${{ env.CONDA_CHANNEL_LABEL }}::${{ env.CONDA_VERSION }}
           pip install -e .
 
       - name: Show info
