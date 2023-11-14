@@ -21,6 +21,23 @@ def display_actions(
     )
 
 
+class _TemporaryIndexWrapper:
+    def __init__(self, index):
+        self._internal_index = index
+        self._internal_dict = {Dist(prec): prec for prec in index.values()}
+    def __contains__(self, key):
+        raise NotImplementedError()
+    def __iter__(self, key):
+        raise NotImplementedError()
+    def get(self, key, fallback=None):
+        raise NotImplementedError()
+    def __getitem__(self, key):
+        ret = self._internal_dict.__getitem__(key)
+        return ret
+    def values(self):
+        return self._internal_index.values()
+
+
 def get_index(
     channel_urls=(),
     prepend=True,
@@ -33,4 +50,4 @@ def get_index(
     index = _get_index(
         channel_urls, prepend, platform, use_local, use_cache, unknown, prefix
     )
-    return {Dist(prec): prec for prec in index.values()}
+    return _TemporaryIndexWrapper(index)
