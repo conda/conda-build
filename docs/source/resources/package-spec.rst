@@ -2,10 +2,6 @@
 Conda package specification
 ===========================
 
-.. contents::
-   :local:
-   :depth: 1
-
 A conda package is an archive file that contains:
 
 * Metadata under the ``info/`` directory.
@@ -289,7 +285,7 @@ parts:
   three parts, the second part must be the exact version.
 
 .. list-table:: Version Special Characters
-   :widths: 10, 40, 40
+   :widths: 10 40 40
    :header-rows: 1
 
    * - Symbol
@@ -297,9 +293,7 @@ parts:
      - Example
 
    * - <, >, <=, >=
-     - Relational operators on versions,
-
-       which are compared using `PEP-440 <https://www.python.org/dev/peps/pep-0440/>`_.
+     - Relational operators on versions, which are compared using `PEP-440 <https://www.python.org/dev/peps/pep-0440/>`_.
      - ``<=1.0`` matches 0.9, 0.9.1, and 1.0, but not 1.0.1.
 
    * - ==, and !=
@@ -315,16 +309,12 @@ parts:
      - ``1.0|1.2`` matches version 1.0 or 1.2.
 
    * - \*
-     - Matches 0 or more characters in the version string.
-
-       In terms of regular expressions, it is the same as ``r'.*'``.
+     - Matches 0 or more characters in the version string. In terms of regular expressions, it is the same as ``r'.*'``.
      - ``1.0|1.4*`` matches 1.0, 1.4 and 1.4.1b2, but not 1.2.
 
    * - ,
      - AND
-     - ``>=2,<3`` matches all packages in the 2 series.
-
-       2.0, 2.1, and 2.9 all match, but 3.0 and 1.0 do not.
+     - ``>=2,<3`` matches all packages in the 2 series. 2.0, 2.1, and 2.9 all match, but 3.0 and 1.0 do not.
 
 .. hint::
    ``,`` has higher precedence than \|, so >=1,<2|>3 means greater than or equal to 1 AND less than 2 or greater than 3, which matches 1, 1.3 and 3.0, but not 2.2.
@@ -380,17 +370,17 @@ the following characters: <, >, \*, or \|.
    * - Example
      - Meaning
 
-   * - conda install numpy=1.11
+   * - ``conda install numpy=1.11``
      - The fuzzy constraint numpy=1.11 matches 1.11, 1.11.0, 1.11.1, 1.11.2, 1.11.18, and so on.
 
-   * - conda install numpy==1.11
+   * - ``conda install numpy==1.11``
      - The exact constraint numpy==1.11 matches 1.11, 1.11.0, 1.11.0.0, and so on.
 
-   * - conda install "numpy=1.11.1|1.11.3"
+   * - ``conda install "numpy=1.11.1|1.11.3"``
      - The OR constraint "numpy=1.11.1|1.11.3" matches with 1.11.1 or 1.11.3.
 
-   * - conda install "numpy>1.11"
+   * - ``conda install "numpy>1.11"``
      - Any numpy version 1.12.0a or greater.
 
-   * - conda install "numpy>=1.8,<2"
+   * - ``conda install "numpy>=1.8,<2"``
      - The AND constraint "numpy>=1.8,<2" matches with 1.8 and 1.9 but not 2.0.

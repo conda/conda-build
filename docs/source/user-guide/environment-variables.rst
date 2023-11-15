@@ -4,10 +4,6 @@
 Environment variables
 =====================
 
-.. contents::
-   :local:
-   :depth: 1
-
 .. _build-state:
 
 Dynamic behavior based on state of build process
