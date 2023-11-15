@@ -1055,7 +1055,7 @@ def create_env(
                             os.environ[k] = str(v)
                     with env_var("CONDA_QUIET", not config.verbose, reset_context):
                         with env_var("CONDA_JSON", not config.verbose, reset_context):
-                            execute_actions(actions, index)
+                            execute_actions(actions)
             except (
                 SystemExit,
                 PaddingError,

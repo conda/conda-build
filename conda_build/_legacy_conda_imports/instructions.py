@@ -21,22 +21,22 @@ ACTION_CODES = (
 )
 
 
-def PREFIX_CMD(state, prefix):
-    state["prefix"] = prefix
+def PREFIX_CMD(prefix):
+    pass
 
 
-def PRINT_CMD(state, arg):  # pragma: no cover
+def PRINT_CMD(arg):  # pragma: no cover
     if arg.startswith(("Linking packages",)):
         return
     getLogger("conda.stdout.verbose").info(arg)
 
 
-def PROGRESSIVEFETCHEXTRACT_CMD(state, progressive_fetch_extract):  # pragma: no cover
+def PROGRESSIVEFETCHEXTRACT_CMD(progressive_fetch_extract):  # pragma: no cover
     assert isinstance(progressive_fetch_extract, ProgressiveFetchExtract)
     progressive_fetch_extract.execute()
 
 
-def UNLINKLINKTRANSACTION_CMD(state, arg):  # pragma: no cover
+def UNLINKLINKTRANSACTION_CMD(arg):  # pragma: no cover
     unlink_link_transaction = arg
     assert isinstance(unlink_link_transaction, UnlinkLinkTransaction)
     unlink_link_transaction.execute()

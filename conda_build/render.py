@@ -42,7 +42,6 @@ from .conda_interface import (
     ProgressiveFetchExtract,
     TemporaryDirectory,
     UnsatisfiableError,
-    execute_actions,
     pkgs_dirs,
     specs_from_url,
 )

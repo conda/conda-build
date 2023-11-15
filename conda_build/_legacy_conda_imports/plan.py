@@ -238,12 +238,12 @@ def display_actions(
 # ---------------------------- Backwards compat for conda-build --------------------------
 
 
-def execute_actions(actions, index, verbose=False):  # pragma: no cover
-    plan = _plan_from_actions(actions, index)
-    execute_instructions(plan, index, verbose)
+def execute_actions(actions, verbose=False):  # pragma: no cover
+    plan = _plan_from_actions(actions)
+    execute_instructions(plan, verbose)
 
 
-def _plan_from_actions(actions, index):  # pragma: no cover
+def _plan_from_actions(actions):  # pragma: no cover
 
     if OP_ORDER in actions and actions[OP_ORDER]:
         op_order = actions[OP_ORDER]
@@ -277,12 +277,12 @@ def _plan_from_actions(actions, index):  # pragma: no cover
             log.debug(f"appending value {arg} for action {op}")
             plan.append((op, arg))
 
-    plan = _inject_UNLINKLINKTRANSACTION(plan, index, prefix)
+    plan = _inject_UNLINKLINKTRANSACTION(plan, prefix)
 
     return plan
 
 
-def _inject_UNLINKLINKTRANSACTION(plan, index, prefix):  # pragma: no cover
+def _inject_UNLINKLINKTRANSACTION(plan, prefix):  # pragma: no cover
     # this is only used for conda-build at this point
     first_unlink_link_idx = next(
         (q for q, p in enumerate(plan) if p[0] in (LINK,)), -1
@@ -390,16 +390,13 @@ def get_blank_actions(prefix):  # pragma: no cover
     return actions
 
 
-def execute_instructions(plan, index=None, verbose=False):
+def execute_instructions(plan, verbose=False):
     """Execute the instructions in the plan
 
     :param plan: A list of (instruction, arg) tuples
-    :param index: The meta-data index
     :param verbose: verbose output
     """
     log.debug("executing plan %s", plan)
-
-    state = {"i": None, "prefix": context.root_prefix, "index": index}
 
     for instruction, arg in plan:
         log.debug(" %s(%r)", instruction, arg)
@@ -407,4 +404,4 @@ def execute_instructions(plan, index=None, verbose=False):
         cmd = commands[instruction]
 
         if callable(cmd):
-            cmd(state, arg)
+            cmd(arg)
