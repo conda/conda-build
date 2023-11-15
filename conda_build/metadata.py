@@ -233,7 +233,7 @@ def ns_cfg(config: Config) -> dict[str, bool]:
 #                 NON-bracket chars, and capture the contents"
 # - (?(2)[^\(\)]*)$ means "allow trailing characters iff group 2 (#.*) was found."
 #                 Skip markdown link syntax.
-sel_pat = re.compile(r"(.+?)\s*(#.*)?\[([^\[\]]+)\](?(2)[^\(\)]*)$")
+sel_pat = re.compile(r"(.+?)\s*(#.*)\[([^\[\]]+)\](?(2)[^\(\)]*)$")
 
 
 # this function extracts the variable name from a NameError exception, it has the form of:
@@ -1056,8 +1056,8 @@ def trim_build_only_deps(metadata, requirements_used):
     # filter out things that occur only in run requirements.  These don't actually affect the
     #     outcome of the package.
     output_reqs = utils.expand_reqs(metadata.meta.get("requirements", {}))
-    build_reqs = utils.ensure_list(output_reqs.get("build", []))
-    host_reqs = utils.ensure_list(output_reqs.get("host", []))
+    build_reqs = utils.ensure_list(output_reqs.get("build", []), flatten=True)
+    host_reqs = utils.ensure_list(output_reqs.get("host", []), flatten=True)
     run_reqs = output_reqs.get("run", [])
     build_reqs = {req.split()[0].replace("-", "_") for req in build_reqs if req}
     host_reqs = {req.split()[0].replace("-", "_") for req in host_reqs if req}
@@ -1467,7 +1467,7 @@ class MetaData:
             )
 
     def get_depends_top_and_out(self, typ):
-        meta_requirements = ensure_list(self.get_value("requirements/" + typ, []))[:]
+        meta_requirements = ensure_list(self.get_value("requirements/" + typ, []), flatten=True)[:]
         req_names = {req.split()[0] for req in meta_requirements if req}
         extra_reqs = []
         # this is for the edge case of requirements for top-level being also partially defined in a similarly named output

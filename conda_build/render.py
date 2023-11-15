@@ -471,7 +471,7 @@ def add_upstream_pins(m: MetaData, permit_unsatisfiable_variants, exclude_patter
     if m.is_cross:
         # this must come before we read upstream pins, because it will enforce things
         #      like vc version from the compiler.
-        host_reqs = utils.ensure_list(m.get_value("requirements/host"))
+        host_reqs = utils.ensure_list(m.get_value("requirements/host"), flatten=True)
         # ensure host_reqs is present, so in-place modification below is actually in-place
         requirements = m.meta.setdefault("requirements", {})
         requirements["host"] = host_reqs

@@ -5,6 +5,8 @@ from __future__ import annotations
 import contextlib
 import fnmatch
 import hashlib
+import inspect
+import itertools
 import json
 import logging
 import logging.config
@@ -1207,8 +1209,16 @@ def package_has_file(package_path, file_path, refresh_mode="modified"):
             content = False
         return content
 
+def flatten_list(arg):
+    result = []
+    for item in arg:
+        if isinstance(item, list):
+            result.extend(item)
+        else:
+            result.append(item)
+    return result
 
-def ensure_list(arg, include_dict=True):
+def ensure_list(arg, include_dict=True, flatten=True):
     """
     Ensure the object is a list. If not return it in a list.
 
@@ -1219,9 +1229,15 @@ def ensure_list(arg, include_dict=True):
     :return: `arg` as a `list`
     :rtype: list
     """
+    # previous_frame = inspect.currentframe().f_back
+    # (filename, line_number, function_name, lines, index) = inspect.getframeinfo(previous_frame)
+    # print(f"Called from {function_name} at line {filename}:{line_number}")
+
     if arg is None:
         return []
     elif islist(arg, include_dict=include_dict):
+        if flatten:
+            return flatten_list(arg)
         return list(arg)
     else:
         return [arg]
@@ -1974,10 +1990,10 @@ def ensure_valid_spec(spec, warn=False):
 
 
 def insert_variant_versions(requirements_dict, variant, env):
-    build_deps = ensure_list(requirements_dict.get("build")) + ensure_list(
-        requirements_dict.get("host")
+    build_deps = ensure_list(requirements_dict.get("build"), flatten=True) + ensure_list(
+        requirements_dict.get("host"), flatten=True
     )
-    reqs = ensure_list(requirements_dict.get(env))
+    reqs = ensure_list(requirements_dict.get(env), flatten=True)
     for key, val in variant.items():
         regex = re.compile(r"^(%s)(?:\s*$)" % key.replace("_", "[-_]"))
         matches = [regex.match(pkg) for pkg in reqs]
@@ -2031,15 +2047,15 @@ def match_peer_job(target_matchspec, other_m, this_m=None):
 
 def expand_reqs(reqs_entry):
     if not hasattr(reqs_entry, "keys"):
-        original = ensure_list(reqs_entry)[:]
+        original = ensure_list(reqs_entry, flatten=True)[:]
         reqs_entry = (
-            {"host": ensure_list(original), "run": ensure_list(original)}
+            {"host": ensure_list(original), "run": ensure_list(original, flatten=True)}
             if original
             else {}
         )
     else:
         for sec in reqs_entry:
-            reqs_entry[sec] = ensure_list(reqs_entry[sec])
+            reqs_entry[sec] = ensure_list(reqs_entry[sec], flatten=True)
     return reqs_entry
 
 
