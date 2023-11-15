@@ -82,6 +82,7 @@ from conda_build.os_utils import external  # noqa
 from .conda_interface import (  # noqa
     CondaHTTPError,
     MatchSpec,
+    PackageRecord,
     StringIO,  # noqa
     TemporaryDirectory,
     VersionOrder,

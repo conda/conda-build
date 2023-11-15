@@ -9,7 +9,6 @@ from conda.exports import (
     MatchSpec,
     PackageRecord,
     ProgressiveFetchExtract,
-    context,
     on_win,
     normalized_version,
 )
@@ -19,7 +18,7 @@ from conda.base.constants import (
     DEFAULTS_CHANNEL_NAME,
     UNKNOWN_CHANNEL,
 )
-from conda.base.context import stack_context_default
+from conda.base.context import context, stack_context_default
 from conda.common.io import env_vars
 from conda.common.url import is_url
 from conda.core.index import LAST_CHANNEL_URLS, get_index
