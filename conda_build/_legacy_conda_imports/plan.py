@@ -53,30 +53,15 @@ log = getLogger(__name__)
 # TODO: Remove conda/plan.py.  This module should be almost completely deprecated now.
 
 
-def display_actions(
-    actions, show_channel_urls=None, specs_to_remove=(), specs_to_add=()
-):
+def display_actions(actions):
     prefix = actions.get(PREFIX)
     builder = ["", "## Package Plan ##\n"]
     if prefix:
         builder.append("  environment location: %s" % prefix)
         builder.append("")
-    if specs_to_remove:
-        builder.append(
-            "  removed specs: %s"
-            % dashlist(sorted(str(s) for s in specs_to_remove), indent=4)
-        )
-        builder.append("")
-    if specs_to_add:
-        builder.append(
-            "  added / updated specs: %s"
-            % dashlist(sorted(str(s) for s in specs_to_add), indent=4)
-        )
-        builder.append("")
     print("\n".join(builder))
 
-    if show_channel_urls is None:
-        show_channel_urls = context.show_channel_urls
+    show_channel_urls = context.show_channel_urls
 
     def channel_str(rec):
         if rec.get("schannel"):
@@ -94,144 +79,43 @@ def display_actions(
             return ""
         return s
 
-    # package -> [oldver-oldbuild, newver-newbuild]
-    packages = defaultdict(lambda: list(("", "")))
-    features = defaultdict(lambda: list(("", "")))
-    channels = defaultdict(lambda: list(("", "")))
-    records = defaultdict(lambda: list((None, None)))
-    linktypes = {}
+    packages = defaultdict(lambda: "")
+    features = defaultdict(lambda: "")
+    channels = defaultdict(lambda: "")
 
     for prec in actions.get(LINK, []):
         assert isinstance(prec, PackageRecord)
         pkg = prec["name"]
-        channels[pkg][1] = channel_str(prec)
-        packages[pkg][1] = prec["version"] + "-" + prec["build"]
-        records[pkg][1] = prec
-        # TODO: this is a lie; may have to give this report after
-        # UnlinkLinkTransaction.verify()
-        linktypes[pkg] = LinkType.hardlink
-        features[pkg][1] = ",".join(prec.get("features") or ())
+        channels[pkg] = channel_filt(channel_str(prec))
+        packages[pkg] = prec["version"] + "-" + prec["build"]
+        features[pkg] = ",".join(prec.get("features") or ())
 
-    new = {p for p in packages if not packages[p][0]}
-    removed = {p for p in packages if not packages[p][1]}
-    # New packages are actually listed in the left-hand column,
-    # so let's move them over there
-    for pkg in new:
-        for var in (packages, features, channels, records):
-            var[pkg] = var[pkg][::-1]
-
-    updated = set()
-    downgraded = set()
-    channeled = set()
-    oldfmt = {}
-    newfmt = {}
-    empty = True
+    fmt = {}
     if packages:
-        empty = False
         maxpkg = max(len(p) for p in packages) + 1
-        maxoldver = max(len(p[0]) for p in packages.values())
-        maxnewver = max(len(p[1]) for p in packages.values())
-        maxoldfeatures = max(len(p[0]) for p in features.values())
-        maxnewfeatures = max(len(p[1]) for p in features.values())
-        maxoldchannels = max(len(channel_filt(p[0])) for p in channels.values())
-        maxnewchannels = max(len(channel_filt(p[1])) for p in channels.values())
+        maxver = max(len(p) for p in packages.values())
+        maxfeatures = max(len(p) for p in features.values())
+        maxchannels = max(len(p) for p in channels.values())
         for pkg in packages:
             # That's right. I'm using old-style string formatting to generate a
             # string with new-style string formatting.
-            oldfmt[pkg] = f"{{pkg:<{maxpkg}}} {{vers[0]:<{maxoldver}}}"
-            if maxoldchannels:
-                oldfmt[pkg] += " {channels[0]:<%s}" % maxoldchannels
-            if features[pkg][0]:
-                oldfmt[pkg] += " [{features[0]:<%s}]" % maxoldfeatures
+            fmt[pkg] = f"{{pkg:<{maxpkg}}} {{vers:<{maxver}}}"
+            if maxchannels:
+                fmt[pkg] += " {channel:<%s}" % maxchannels
+            if features[pkg]:
+                fmt[pkg] += " [{features:<%s}]" % maxfeatures
 
-            lt = LinkType(linktypes.get(pkg, LinkType.hardlink))
-            lt = "" if lt == LinkType.hardlink else (" (%s)" % lt)
-            if pkg in removed or pkg in new:
-                oldfmt[pkg] += lt
-                continue
-
-            newfmt[pkg] = "{vers[1]:<%s}" % maxnewver
-            if maxnewchannels:
-                newfmt[pkg] += " {channels[1]:<%s}" % maxnewchannels
-            if features[pkg][1]:
-                newfmt[pkg] += " [{features[1]:<%s}]" % maxnewfeatures
-            newfmt[pkg] += lt
-
-            P0 = records[pkg][0]
-            P1 = records[pkg][1]
-            pri0 = P0.get("priority")
-            pri1 = P1.get("priority")
-            if pri0 is None or pri1 is None:
-                pri0 = pri1 = 1
-            try:
-                if str(P1.version) == "custom":
-                    newver = str(P0.version) != "custom"
-                    oldver = not newver
-                else:
-                    # <= here means that unchanged packages will be put in updated
-                    N0 = normalized_version(P0.version)
-                    N1 = normalized_version(P1.version)
-                    newver = N0 < N1
-                    oldver = N0 > N1
-            except TypeError:
-                newver = P0.version < P1.version
-                oldver = P0.version > P1.version
-            oldbld = P0.build_number > P1.build_number
-            newbld = P0.build_number < P1.build_number
-            if (
-                context.channel_priority
-                and pri1 < pri0
-                and (oldver or not newver and not newbld)
-            ):
-                channeled.add(pkg)
-            elif newver:
-                updated.add(pkg)
-            elif pri1 < pri0 and (oldver or not newver and oldbld):
-                channeled.add(pkg)
-            elif oldver:
-                downgraded.add(pkg)
-            elif not oldbld:
-                updated.add(pkg)
-            else:
-                downgraded.add(pkg)
-
-    arrow = " --> "
     lead = " " * 4
 
     def format(s, pkg):
-        chans = [channel_filt(c) for c in channels[pkg]]
         return lead + s.format(
-            pkg=pkg + ":", vers=packages[pkg], channels=chans, features=features[pkg]
+                pkg=pkg + ":", vers=packages[pkg], channel=channels[pkg], features=features[pkg]
         )
 
-    if new:
+    if packages:
         print("\nThe following NEW packages will be INSTALLED:\n")
-        for pkg in sorted(new):
-            # New packages have been moved to the "old" column for display
-            print(format(oldfmt[pkg], pkg))
-
-    if removed:
-        print("\nThe following packages will be REMOVED:\n")
-        for pkg in sorted(removed):
-            print(format(oldfmt[pkg], pkg))
-
-    if updated:
-        print("\nThe following packages will be UPDATED:\n")
-        for pkg in sorted(updated):
-            print(format(oldfmt[pkg] + arrow + newfmt[pkg], pkg))
-
-    if channeled:
-        print(
-            "\nThe following packages will be SUPERSEDED by a higher-priority channel:\n"
-        )
-        for pkg in sorted(channeled):
-            print(format(oldfmt[pkg] + arrow + newfmt[pkg], pkg))
-
-    if downgraded:
-        print("\nThe following packages will be DOWNGRADED:\n")
-        for pkg in sorted(downgraded):
-            print(format(oldfmt[pkg] + arrow + newfmt[pkg], pkg))
-
+        for pkg in sorted(packages):
+            print(format(fmt[pkg], pkg))
     print()
 
 
