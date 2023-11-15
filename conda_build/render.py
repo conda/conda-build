@@ -46,6 +46,7 @@ from .conda_interface import (
     pkgs_dirs,
     specs_from_url,
 )
+from ._legacy_conda_imports.dist import dist_string_from_package_record
 from .utils import CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2
 
 # from conda_build.jinja_context import pin_subpackage_against_outputs
@@ -93,7 +94,7 @@ def bldpkg_path(m):
 def actions_to_pins(actions):
     if LINK in actions:
         return [
-            " ".join(spec.dist_name.split()[0].rsplit("-", 2))
+            " ".join(dist_string_from_package_record(spec).split()[0].rsplit("-", 2))
             for spec in actions[LINK]
         ]
     return []
@@ -359,7 +360,6 @@ def execute_download_actions(m, actions, env, package_subset=None, require_files
     pkg_files = {}
 
     packages = actions.get(LINK, [])
-    package_subset = utils.ensure_list(package_subset)
     selected_packages = set()
     if package_subset:
         for pkg in package_subset:
@@ -375,11 +375,7 @@ def execute_download_actions(m, actions, env, package_subset=None, require_files
         packages = selected_packages
 
     for pkg in packages:
-        if hasattr(pkg, "dist_name"):
-            pkg_dist = pkg.dist_name
-        else:
-            pkg = strip_channel(pkg)
-            pkg_dist = pkg.split(" ")[0]
+        pkg_dist = strip_channel(dist_string_from_package_record(pkg))
         pkg_loc = find_pkg_dir_or_file_in_pkgs_dirs(
             pkg_dist, m, files_only=require_files
         )
@@ -388,14 +384,8 @@ def execute_download_actions(m, actions, env, package_subset=None, require_files
         # TODO: this is a vile hack reaching into conda's internals. Replace with
         #    proper conda API when available.
         if not pkg_loc:
-            try:
-                pkg_record = [_ for _ in index if _.dist_name == pkg_dist][0]
-                # the conda 4.4 API uses a single `link_prefs` kwarg
-                # whereas conda 4.3 used `index` and `link_dists` kwargs
-                pfe = ProgressiveFetchExtract(link_prefs=(index[pkg_record],))
-            except TypeError:
-                # TypeError: __init__() got an unexpected keyword argument 'link_prefs'
-                pfe = ProgressiveFetchExtract(link_dists=[pkg], index=index)
+            pkg_record = [_ for _ in index if strip_channel(dist_string_from_package_record(_)) == pkg_dist][0]
+            pfe = ProgressiveFetchExtract(link_prefs=(index[pkg_record],))
             with utils.LoggingContext():
                 pfe.execute()
             for pkg_dir in pkgs_dirs:
@@ -432,7 +422,7 @@ def get_upstream_pins(m: MetaData, actions, env):
                 run_exports = pkg_data.get("run_exports", {}).get(pkg.version, {})
         if run_exports is None:
             loc, dist = execute_download_actions(
-                m, actions, env=env, package_subset=pkg
+                m, actions, env=env, package_subset=[pkg],
             )[pkg]
             run_exports = _read_specs_from_package(loc, dist)
         specs = _filter_run_exports(run_exports, ignore_list)

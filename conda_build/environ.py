@@ -42,6 +42,7 @@ from .conda_interface import (
     reset_context,
     root_dir,
 )
+from ._legacy_conda_imports.dist import dist_string_from_package_record
 from .deprecations import deprecated
 from .metadata import MetaData
 
@@ -1290,6 +1291,6 @@ def get_pinned_deps(m, section):
             channel_urls=tuple(m.config.channel_urls),
         )
     runtime_deps = [
-        " ".join(link.dist_name.rsplit("-", 2)) for link in actions.get(LINK, [])
+        " ".join(dist_string_from_package_record(link).rsplit("-", 2)) for link in actions.get(LINK, [])
     ]
     return runtime_deps

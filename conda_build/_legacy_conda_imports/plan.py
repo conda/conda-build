@@ -37,7 +37,6 @@ from .conda_imports import (
     stack_context_default,
 )
 
-from .dist import Dist
 from .instructions import (
     ACTION_CODES,
     LINK,
@@ -289,8 +288,7 @@ def _inject_UNLINKLINKTRANSACTION(plan, index, prefix):  # pragma: no cover
         (q for q, p in enumerate(plan) if p[0] in (LINK,)), -1
     )
     if first_unlink_link_idx >= 0:
-        grouped_instructions = groupby(lambda x: x[0], plan)
-        link_dists = tuple(Dist(d[1]) for d in grouped_instructions.get(LINK, ()))
+        link_dists = tuple(dist for action, dist in plan if action == LINK)
         link_dists = _handle_menuinst(link_dists)
 
         link_precs = tuple(index[d] for d in link_dists)
@@ -377,11 +375,11 @@ def install_actions(
         solver_backend = context.plugin_manager.get_cached_solver_backend()
         solver = solver_backend(prefix, channels, subdirs, specs_to_add=specs)
         if index:
-            solver._index = {prec: prec for prec in index.values()}
+            solver._index = index.get_internal_index()
         txn = solver.solve_for_transaction(prune=prune, ignore_pinned=not pinned)
         prefix_setup = txn.prefix_setups[prefix]
         actions = get_blank_actions(prefix)
-        actions[LINK].extend(Dist(prec) for prec in prefix_setup.link_precs)
+        actions[LINK].extend(prec for prec in prefix_setup.link_precs)
         return actions
 
 
