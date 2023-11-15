@@ -525,6 +525,16 @@ def _target(language, config, permit_undefined_jinja=False, component="compiler"
     if version:
         package = f"{package} {version}"
         package = ensure_valid_spec(package, warn=False)
+
+    stdlib_key = f"{language}_stdlib"
+    if config.variant and config.variant.get(stdlib_key):
+        stdlib_package_prefix = config.variant.get(stdlib_key)
+        stdlib_version = config.variant.get(stdlib_key + "_version")
+        stdlib = f"{stdlib_package_prefix}_{target_platform}"
+        if stdlib_version:
+            stdlib = f"{stdlib} {stdlib_version}"
+        return f"[{package}, {stdlib}]"
+
     return package
 
 
