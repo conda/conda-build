@@ -109,7 +109,7 @@ def check_install(
         actions = install_actions(
             prefix, index, specs, pinned=False, minimal_hint=minimal_hint
         )
-        display_actions(actions, index)
+        display_actions(actions)
         return actions
     finally:
         rm_rf(prefix)
@@ -185,7 +185,7 @@ def test_installable(channel="defaults"):
         log.info("######## Testing platform %s ########", platform)
         channels = [channel]
         index = get_index(channel_urls=channels, prepend=False, platform=platform)
-        for _, rec in index.items():
+        for rec in index:
             # If we give channels at the command line, only look at
             # packages from those channels (not defaults).
             if channel != "defaults" and rec.get("schannel", "defaults") == "defaults":

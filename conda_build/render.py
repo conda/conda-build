@@ -385,7 +385,7 @@ def execute_download_actions(m, actions, env, package_subset=None, require_files
         #    proper conda API when available.
         if not pkg_loc:
             pkg_record = [_ for _ in index if strip_channel(dist_string_from_package_record(_)) == pkg_dist][0]
-            pfe = ProgressiveFetchExtract(link_prefs=(index[pkg_record],))
+            pfe = ProgressiveFetchExtract(link_prefs=(pkg_record,))
             with utils.LoggingContext():
                 pfe.execute()
             for pkg_dir in pkgs_dirs:

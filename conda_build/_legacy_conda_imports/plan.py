@@ -288,10 +288,8 @@ def _inject_UNLINKLINKTRANSACTION(plan, index, prefix):  # pragma: no cover
         (q for q, p in enumerate(plan) if p[0] in (LINK,)), -1
     )
     if first_unlink_link_idx >= 0:
-        link_dists = tuple(dist for action, dist in plan if action == LINK)
-        link_dists = _handle_menuinst(link_dists)
-
-        link_precs = tuple(index[d] for d in link_dists)
+        link_precs = tuple(prec for action, prec in plan if action == LINK)
+        link_precs = _handle_menuinst(link_precs)
 
         pfe = ProgressiveFetchExtract(link_precs)
         pfe.prepare()
@@ -305,25 +303,25 @@ def _inject_UNLINKLINKTRANSACTION(plan, index, prefix):  # pragma: no cover
     return plan
 
 
-def _handle_menuinst(link_dists):  # pragma: no cover
+def _handle_menuinst(link_precs):  # pragma: no cover
     if not on_win:
-        return link_dists
+        return link_precs
 
     # Always link menuinst first/last on windows in case a subsequent
     # package tries to import it to create/remove a shortcut
 
     # link
     menuinst_idx = next(
-        (q for q, d in enumerate(link_dists) if d.name == "menuinst"), None
+        (q for q, d in enumerate(link_precs) if d.name == "menuinst"), None
     )
     if menuinst_idx is not None:
-        link_dists = (
-            *link_dists[menuinst_idx : menuinst_idx + 1],
-            *link_dists[:menuinst_idx],
-            *link_dists[menuinst_idx + 1 :],
+        link_precs = (
+            *link_precs[menuinst_idx : menuinst_idx + 1],
+            *link_precs[:menuinst_idx],
+            *link_precs[menuinst_idx + 1 :],
         )
 
-    return link_dists
+    return link_precs
 
 
 def install_actions(
@@ -375,7 +373,7 @@ def install_actions(
         solver_backend = context.plugin_manager.get_cached_solver_backend()
         solver = solver_backend(prefix, channels, subdirs, specs_to_add=specs)
         if index:
-            solver._index = index.get_internal_index()
+            solver._index = index
         txn = solver.solve_for_transaction(prune=prune, ignore_pinned=not pinned)
         prefix_setup = txn.prefix_setups[prefix]
         actions = get_blank_actions(prefix)

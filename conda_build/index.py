@@ -230,7 +230,7 @@ def get_build_index(
                     platform=subdir,
                 )
 
-            expanded_channels = {rec.channel for rec in cached_index.get_internal_index().values()}
+            expanded_channels = {rec.channel for rec in cached_index}
 
             superchannel = {}
             # we need channeldata.json too, as it is a more reliable source of run_exports data

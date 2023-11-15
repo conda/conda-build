@@ -1049,7 +1049,7 @@ def create_env(
                         timeout=config.timeout,
                     )
                     utils.trim_empty_keys(actions)
-                    display_actions(actions, index)
+                    display_actions(actions)
                     if utils.on_win:
                         for k, v in os.environ.items():
                             os.environ[k] = str(v)
