@@ -10,6 +10,7 @@ from typing import Iterator
 
 import pytest
 from conda.common.compat import on_mac, on_win
+from pytest import MonkeyPatch
 
 import conda_build.config
 from conda_build.config import (
@@ -32,31 +33,25 @@ from conda_build.variants import get_default_variant
 
 
 @pytest.fixture(scope="function")
-def testing_workdir(tmpdir, request):
+def testing_workdir(monkeypatch: MonkeyPatch, tmp_path: Path) -> Iterator[str]:
     """Create a workdir in a safe temporary folder; cd into dir above before test, cd out after
 
     :param tmpdir: py.test fixture, will be injected
     :param request: py.test fixture-related, will be injected (see pytest docs)
     """
+    saved_path = Path.cwd()
+    monkeypatch.chdir(tmp_path)
 
-    saved_path = os.getcwd()
-
-    tmpdir.chdir()
     # temporary folder for profiling output, if any
-    tmpdir.mkdir("prof")
+    prof = tmp_path / "prof"
+    prof.mkdir(parents=True)
 
-    def return_to_saved_path():
-        if os.path.isdir(os.path.join(saved_path, "prof")):
-            profdir = tmpdir.join("prof")
-            files = profdir.listdir("*.prof") if profdir.isdir() else []
+    yield str(tmp_path)
 
-            for f in files:
-                copy_into(str(f), os.path.join(saved_path, "prof", f.basename))
-        os.chdir(saved_path)
-
-    request.addfinalizer(return_to_saved_path)
-
-    return str(tmpdir)
+    # if the original CWD has a prof folder, copy any new prof files into it
+    if (saved_path / "prof").is_dir() and prof.is_dir():
+        for file in prof.glob("*.prof"):
+            copy_into(str(file), str(saved_path / "prof" / file.name))
 
 
 @pytest.fixture(scope="function")
