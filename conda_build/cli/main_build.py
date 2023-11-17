@@ -15,7 +15,11 @@ from conda.common.io import dashlist
 
 from .. import api, build, source, utils
 from ..conda_interface import add_parser_channels, binstar_upload, cc_conda_build
-from ..config import Config, get_channel_urls, zstd_compression_level_default
+from ..config import (
+    get_channel_urls,
+    get_or_merge_config,
+    zstd_compression_level_default,
+)
 from ..deprecations import deprecated
 from ..utils import LoggingContext
 from .actions import KeyValueAction
@@ -514,7 +518,7 @@ def check_action(recipe, config):
 
 def execute(args):
     _parser, args = parse_args(args)
-    config = Config(**args.__dict__)
+    config = get_or_merge_config(None, **args.__dict__)
     build.check_external()
 
     # change globals in build module, see comment there as well

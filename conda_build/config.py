@@ -913,8 +913,9 @@ class Config:
             self.clean(remove_folders=False)
 
 
-def get_or_merge_config(config, variant=None, **kwargs):
-    """Always returns a new object - never changes the config that might be passed in."""
+def _get_or_merge_config(config, variant=None, **kwargs):
+    # This function should only ever be called via get_or_merge_config.
+    # It only exists for us to monkeypatch a default config when running tests.
     if not config:
         config = Config(variant=variant)
     else:
@@ -926,6 +927,11 @@ def get_or_merge_config(config, variant=None, **kwargs):
     if variant:
         config.variant.update(variant)
     return config
+
+
+def get_or_merge_config(config, variant=None, **kwargs):
+    """Always returns a new object - never changes the config that might be passed in."""
+    return _get_or_merge_config(config, variant=variant, **kwargs)
 
 
 def get_channel_urls(args):
