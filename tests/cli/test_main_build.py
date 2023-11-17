@@ -197,17 +197,17 @@ def test_build_multiple_recipes(testing_metadata, testing_workdir, testing_confi
     main_build.execute(args)
 
 
-def test_build_output_folder(testing_workdir, testing_metadata, tmp_path: Path):
+def test_build_output_folder(testing_workdir: str, testing_metadata):
     api.output_yaml(testing_metadata, "meta.yaml")
 
-    out = tmp_path / "out"
+    out = Path(testing_workdir, "out")
     out.mkdir(parents=True)
 
     args = [
         testing_workdir,
         "--no-build-id",
         "--croot",
-        str(tmp_path),
+        testing_workdir,
         "--no-activate",
         "--no-anaconda-upload",
         "--output-folder",
@@ -219,18 +219,18 @@ def test_build_output_folder(testing_workdir, testing_metadata, tmp_path: Path):
     ).is_file()
 
 
-def test_build_source(testing_workdir, tmp_path: Path):
+def test_build_source(testing_workdir: str):
     args = [
         os.path.join(metadata_dir, "_pyyaml_find_header"),
         "--source",
         "--no-build-id",
         "--croot",
-        str(tmp_path),
+        testing_workdir,
         "--no-activate",
         "--no-anaconda-upload",
     ]
     main_build.execute(args)
-    assert (tmp_path / "work" / "setup.py").is_file()
+    assert Path(testing_workdir, "work", "setup.py").is_file()
 
 
 @pytest.mark.serial
