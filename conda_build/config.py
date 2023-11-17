@@ -914,6 +914,8 @@ class Config:
 
 
 def _get_or_merge_config(config, variant=None, **kwargs):
+    # This function should only ever be called via get_or_merge_config.
+    # It only exists for us to monkeypatch a default config when running tests.
     if not config:
         config = Config(variant=variant)
     else:
