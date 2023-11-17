@@ -312,19 +312,21 @@ def _delegated_update_index(
         dir_path = parent_path
         subdirs = [dirname]
 
-    return _update_index(
-        dir_path,
-        check_md5=check_md5,
-        channel_name=channel_name,
-        patch_generator=patch_generator,
-        threads=threads,
-        verbose=verbose,
-        progress=progress,
-        subdirs=subdirs,
-        warn=warn,
-        current_index_versions=current_index_versions,
-        debug=debug,
-    )
+    log_level = logging.DEBUG if debug else logging.INFO if verbose else logging.WARNING
+    with utils.LoggingContext(log_level):
+        return _update_index(
+            dir_path,
+            check_md5=check_md5,
+            channel_name=channel_name,
+            patch_generator=patch_generator,
+            threads=threads,
+            verbose=verbose,
+            progress=progress,
+            subdirs=subdirs,
+            warn=warn,
+            current_index_versions=current_index_versions,
+            debug=debug,
+        )
 
 
 # Everything below is deprecated to maintain API/feature compatibility.
