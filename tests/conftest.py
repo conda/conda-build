@@ -15,6 +15,7 @@ from pytest import MonkeyPatch
 import conda_build.config
 from conda_build.config import (
     Config,
+    _get_or_merge_config,
     _src_cache_root_default,
     conda_pkg_format_default,
     enable_static_default,
@@ -22,7 +23,6 @@ from conda_build.config import (
     error_overlinking_default,
     exit_on_verify_error_default,
     filename_hashing_default,
-    get_or_merge_config,
     ignore_verify_codes_default,
     no_rewrite_stdout_env_default,
     noarch_python_build_age_default,
@@ -76,13 +76,12 @@ def testing_config(testing_workdir):
     def boolify(v):
         return v == "true"
 
-    result = Config(
+    testing_config_kwargs = dict(
         croot=testing_workdir,
         anaconda_upload=False,
         verbose=True,
         activate=False,
         debug=False,
-        variant=None,
         test_run_post=False,
         # These bits ensure that default values are used instead of any
         # present in ~/.condarc
@@ -97,6 +96,8 @@ def testing_config(testing_workdir):
         exit_on_verify_error=exit_on_verify_error_default,
         conda_pkg_format=conda_pkg_format_default,
     )
+    result = Config(variant=None, **testing_config_kwargs)
+    result._testing_config_kwargs = testing_config_kwargs
     assert result.no_rewrite_stdout_env is False
     assert result._src_cache_root is None
     assert result.src_cache_root == testing_workdir
@@ -116,11 +117,15 @@ def default_testing_config(testing_config, monkeypatch, request):
         return
 
     def get_or_merge_testing_config(config, variant=None, **kwargs):
-        return get_or_merge_config(config or testing_config, variant, **kwargs)
+        merged_kwargs = {}
+        if not config:
+            merged_kwargs.update(testing_config._testing_config_kwargs)
+        merged_kwargs.update(kwargs)
+        return _get_or_merge_config(config, variant, **merged_kwargs)
 
     monkeypatch.setattr(
         conda_build.config,
-        "get_or_merge_config",
+        "_get_or_merge_config",
         get_or_merge_testing_config,
     )
 

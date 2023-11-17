@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import json
 import os
-import sys
 from glob import glob
 
 from conda_build.cli import main_metapackage
@@ -15,8 +14,7 @@ def test_metapackage(testing_config, testing_workdir):
     main_metapackage.execute(args)
     test_path = glob(
         os.path.join(
-            sys.prefix,
-            "conda-bld",
+            testing_config.croot,
             testing_config.host_subdir,
             "metapackage_test-1.0-0.tar.bz2",
         )
@@ -38,8 +36,7 @@ def test_metapackage_build_number(testing_config, testing_workdir):
     main_metapackage.execute(args)
     test_path = glob(
         os.path.join(
-            sys.prefix,
-            "conda-bld",
+            testing_config.croot,
             testing_config.host_subdir,
             "metapackage_test_build_number-1.0-1.tar.bz2",
         )
@@ -61,8 +58,7 @@ def test_metapackage_build_string(testing_config, testing_workdir):
     main_metapackage.execute(args)
     test_path = glob(
         os.path.join(
-            sys.prefix,
-            "conda-bld",
+            testing_config.croot,
             testing_config.host_subdir,
             "metapackage_test_build_string-1.0-frank*.tar.bz2",
         )
@@ -88,8 +84,7 @@ def test_metapackage_metadata(testing_config, testing_workdir):
 
     test_path = glob(
         os.path.join(
-            sys.prefix,
-            "conda-bld",
+            testing_config.croot,
             testing_config.host_subdir,
             "metapackage_testing_metadata-1.0-0.tar.bz2",
         )
