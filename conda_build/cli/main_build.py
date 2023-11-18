@@ -441,7 +441,7 @@ def parse_args(args):
     )
     p.add_argument(
         "--stats-file",
-        help=("File path to save build statistics to.  Stats are " "in JSON format"),
+        help="File path to save build statistics to.  Stats are in JSON format",
     )
     p.add_argument(
         "--extra-deps",

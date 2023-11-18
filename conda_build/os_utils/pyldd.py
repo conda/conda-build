@@ -709,13 +709,9 @@ class elfheader:
             get_logger(__name__).warning(f"file.tell()={loc} != ehsize={self.ehsize}")
 
     def __str__(self):
-        return "bitness {}, endian {}, version {}, type {}, machine {}, entry {}".format(  # noqa
-            self.bitness,
-            self.endian,
-            self.version,
-            self.type,
-            hex(self.machine),
-            hex(self.entry),
+        return (
+            f"bitness {self.bitness}, endian {self.endian}, version {self.version}, "
+            f"type {self.type}, machine {hex(self.machine)}, entry {hex(self.entry)}"
         )
 
 

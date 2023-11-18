@@ -19,7 +19,7 @@ def parse_args(args):
 
 Install a Python package in 'development mode'.
 
-This works by creating a conda.pth file in site-packages."""
+This works by creating a conda.pth file in site-packages.""",
         # TODO: Use setup.py to determine any entry-points to install.
     )
 

@@ -97,18 +97,8 @@ class UndefinedNeverFail(jinja2.Undefined):
         __call__
     ) = (
         __getitem__
-    ) = (
-        __lt__
-    ) = (
-        __le__
-    ) = (
-        __gt__
-    ) = (
-        __ge__
-    ) = (
-        __complex__
-    ) = __pow__ = __rpow__ = lambda self, *args, **kwargs: self._return_undefined(
-        self._undefined_name
+    ) = __lt__ = __le__ = __gt__ = __ge__ = __complex__ = __pow__ = __rpow__ = (
+        lambda self, *args, **kwargs: self._return_undefined(self._undefined_name)
     )
 
     # Accessing an attribute of an Undefined variable

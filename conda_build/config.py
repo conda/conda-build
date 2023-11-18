@@ -868,11 +868,11 @@ class Config:
                 rm_rf(os.path.join(self.build_folder, "prefix_files"))
         else:
             print(
-                "\nLeaving build/test directories:" "\n  Work:\n",
+                "\nLeaving build/test directories:\n  Work:\n",
                 self.work_dir,
                 "\n  Test:\n",
                 self.test_dir,
-                "\nLeaving build/test environments:" "\n  Test:\nsource activate ",
+                "\nLeaving build/test environments:\n  Test:\nsource activate ",
                 self.test_prefix,
                 "\n  Build:\nsource activate ",
                 self.build_prefix,

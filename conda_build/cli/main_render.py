@@ -66,7 +66,7 @@ source to try fill in related template variables.",
     p.add_argument(
         "--output",
         action="store_true",
-        help="Output the conda package filename which would have been " "created",
+        help="Output the conda package filename which would have been created",
     )
     p.add_argument(
         "--python",

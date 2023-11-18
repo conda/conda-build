@@ -78,12 +78,18 @@ def conda_subcommands():
     )
     yield conda.plugins.CondaSubcommand(
         name="develop",
-        summary="Install a Python package in 'development mode'. Similar to `pip install --editable`.",
+        summary=(
+            "Install a Python package in 'development mode'. "
+            "Similar to `pip install --editable`."
+        ),
         action=develop,
     )
     yield conda.plugins.CondaSubcommand(
         name="index",
-        summary="Update package index metadata files. Pending deprecation, use https://github.com/conda/conda-index instead.",
+        summary=(
+            "Update package index metadata files. Pending deprecation, "
+            "use https://github.com/conda/conda-index instead."
+        ),
         action=index,
     )
     yield conda.plugins.CondaSubcommand(
