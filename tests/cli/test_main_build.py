@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import os
 import re
-import sys
 from pathlib import Path
 
 import pytest
@@ -104,8 +103,7 @@ def test_build_output_build_path(
     args = ["--output", testing_workdir]
     main_build.execute(args)
     test_path = os.path.join(
-        sys.prefix,
-        "conda-bld",
+        testing_config.croot,
         testing_config.host_subdir,
         "test_build_output_build_path-1.0-1.tar.bz2",
     )
@@ -125,7 +123,7 @@ def test_build_output_build_path_multiple_recipes(
     main_build.execute(args)
 
     test_path = lambda pkg: os.path.join(
-        sys.prefix, "conda-bld", testing_config.host_subdir, pkg
+        testing_config.croot, testing_config.host_subdir, pkg
     )
     test_paths = [
         test_path("test_build_output_build_path_multiple_recipes-1.0-1.tar.bz2"),

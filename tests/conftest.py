@@ -118,11 +118,17 @@ def default_testing_config(testing_config, monkeypatch, request):
         return
 
     def get_or_merge_testing_config(config, variant=None, **kwargs):
-        merged_kwargs = {}
         if not config:
-            merged_kwargs.update(testing_config._testing_config_kwargs)
-        merged_kwargs.update(kwargs)
-        return _get_or_merge_config(config, variant, **merged_kwargs)
+            # If no existing config, override kwargs that are None with testing config defaults.
+            # (E.g., "croot" is None if called via "(..., *args.__dict__)" in cli.main_build.)
+            kwargs.update(
+                {
+                    key: value
+                    for key, value in testing_config._testing_config_kwargs.items()
+                    if kwargs.get(key) is None
+                }
+            )
+        return _get_or_merge_config(config, variant, **kwargs)
 
     monkeypatch.setattr(
         conda_build.config,
