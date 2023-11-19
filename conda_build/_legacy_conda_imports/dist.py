@@ -127,6 +127,4 @@ def dist_string_from_package_record(package_record, channel=None):
     dist_kwargs = _as_dict_from_string(
         package_record.fn, channel_override=channel
     )
-    channel = dist_kwargs["channel"]
-    dist_name = dist_kwargs["dist_name"]
-    return f"{channel}::{dist_name}" if channel else dist_name
+    return dist_kwargs["dist_name"]

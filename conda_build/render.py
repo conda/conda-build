@@ -374,7 +374,7 @@ def execute_download_actions(m, actions, env, package_subset=None, require_files
         packages = selected_packages
 
     for pkg in packages:
-        pkg_dist = strip_channel(dist_string_from_package_record(pkg))
+        pkg_dist = dist_string_from_package_record(pkg)
         pkg_loc = find_pkg_dir_or_file_in_pkgs_dirs(
             pkg_dist, m, files_only=require_files
         )
@@ -383,12 +383,12 @@ def execute_download_actions(m, actions, env, package_subset=None, require_files
         # TODO: this is a vile hack reaching into conda's internals. Replace with
         #    proper conda API when available.
         if not pkg_loc:
-            pkg_record = [_ for _ in index if strip_channel(dist_string_from_package_record(_)) == pkg_dist][0]
+            pkg_record = [_ for _ in index if dist_string_from_package_record(_) == pkg_dist][0]
             pfe = ProgressiveFetchExtract(link_prefs=(pkg_record,))
             with utils.LoggingContext():
                 pfe.execute()
             for pkg_dir in pkgs_dirs:
-                _loc = join(pkg_dir, index.get(pkg, pkg).fn)
+                _loc = join(pkg_dir, pkg.fn)
                 if isfile(_loc):
                     pkg_loc = _loc
                     break
