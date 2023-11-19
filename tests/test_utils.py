@@ -293,9 +293,7 @@ loggers:
 root:
   level: DEBUG
   handlers: [console]
-""".format(
-                __name__
-            )
+""".format(__name__)
         )
     cc_conda_build = mocker.patch.object(utils, "cc_conda_build")
     cc_conda_build.get.return_value = test_file

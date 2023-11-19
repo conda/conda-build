@@ -473,8 +473,9 @@ def remap_license(rpm_license):
     }
     l_rpm_license = rpm_license.lower()
     if l_rpm_license in mapping:
-        license, family = mapping[l_rpm_license], guess_license_family(
-            mapping[l_rpm_license]
+        license, family = (
+            mapping[l_rpm_license],
+            guess_license_family(mapping[l_rpm_license]),
         )
     else:
         license, family = rpm_license, guess_license_family(rpm_license)
