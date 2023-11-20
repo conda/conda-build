@@ -226,14 +226,11 @@ jobs:
       - name: Setup environment
         run: |
           choco install visualstudio2017-workload-vctools
-          if %errorlevel% neq 0 exit %errorlevel%
           conda install -q -y -c defaults --solver=libmamba `
             --file .\tests\requirements.txt `
             --file .\tests\requirements-windows.txt `
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
-          if %errorlevel% neq 0 exit %errorlevel%
           pip install -e . --no-deps
-          if %errorlevel% neq 0 exit %errorlevel%
 
       - name: Show info
         run: |
