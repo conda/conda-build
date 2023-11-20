@@ -1655,7 +1655,9 @@ def test_provides_features_metadata(testing_config):
     assert index["provides_features"] == {"test2": "also_ok"}
 
 
-def test_overlinking_detection(testing_config, testing_workdir, variants_conda_build_sysroot):
+def test_overlinking_detection(
+    testing_config, testing_workdir, variants_conda_build_sysroot
+):
     testing_config.activate = True
     testing_config.error_overlinking = True
     testing_config.verify = False

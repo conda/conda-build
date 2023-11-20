@@ -10,7 +10,9 @@ from .utils import metadata_dir
 
 
 @pytest.mark.parametrize("pkg_format,pkg_ext", [(None, ".tar.bz2"), ("2", ".conda")])
-def test_conda_pkg_format(pkg_format, pkg_ext, testing_config, monkeypatch, capfd, request):
+def test_conda_pkg_format(
+    pkg_format, pkg_ext, testing_config, monkeypatch, capfd, request
+):
     """Conda package format "2" builds .conda packages."""
 
     # Build the "entry_points" recipe, which contains a test pass for package.
@@ -24,7 +26,9 @@ def test_conda_pkg_format(pkg_format, pkg_ext, testing_config, monkeypatch, capf
     monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
 
     variants = {"pytest_name": [request.node.name]}
-    (output_file,) = api.get_output_file_paths(recipe, config=testing_config, variants=variants)
+    (output_file,) = api.get_output_file_paths(
+        recipe, config=testing_config, variants=variants
+    )
     assert output_file.endswith(pkg_ext)
 
     api.build(recipe, config=testing_config, variants=variants)
