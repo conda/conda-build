@@ -194,9 +194,12 @@ def test_convert_platform_to_others(base_platform, package):
 @pytest.mark.skipif(
     on_win, reason="we create the pkg to be converted in *nix; don't run on win."
 )
-def test_convert_from_unix_to_win_creates_entry_points(testing_config):
+def test_convert_from_unix_to_win_creates_entry_points(testing_config, request):
     recipe_dir = os.path.join(metadata_dir, "entry_points")
-    fn = api.build(recipe_dir, config=testing_config)[0]
+    # Recipe "entry_points" is used in other test -> add test-specific variant
+    # (change build hash) to avoid clashes in package cache from other tests.
+    variants = {"pytest_name": [request.node.name]}
+    fn = api.build(recipe_dir, config=testing_config, variants=variants)[0]
     for platform in ["win-64", "win-32"]:
         api.convert(fn, platforms=[platform], force=True)
         converted_fn = os.path.join(platform, os.path.basename(fn))

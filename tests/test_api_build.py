@@ -1655,14 +1655,17 @@ def test_provides_features_metadata(testing_config):
     assert index["provides_features"] == {"test2": "also_ok"}
 
 
-# using different MACOSX_DEPLOYMENT_TARGET in parallel causes some SDK race condition
-# https://github.com/conda/conda-build/issues/4708
-@pytest.mark.serial
-def test_overlinking_detection(testing_config, variants_conda_build_sysroot):
+def test_overlinking_detection(
+    testing_config, testing_workdir, variants_conda_build_sysroot
+):
     testing_config.activate = True
     testing_config.error_overlinking = True
     testing_config.verify = False
-    recipe = os.path.join(metadata_dir, "_overlinking_detection")
+    recipe = os.path.join(testing_workdir, "recipe")
+    copy_into(
+        os.path.join(metadata_dir, "_overlinking_detection"),
+        recipe,
+    )
     dest_sh = os.path.join(recipe, "build.sh")
     dest_bat = os.path.join(recipe, "bld.bat")
     copy_into(
@@ -1684,17 +1687,17 @@ def test_overlinking_detection(testing_config, variants_conda_build_sysroot):
     rm_rf(dest_bat)
 
 
-# using different MACOSX_DEPLOYMENT_TARGET in parallel causes some SDK race condition
-# https://github.com/conda/conda-build/issues/4708
-@pytest.mark.serial
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
 def test_overlinking_detection_ignore_patterns(
-    testing_config, variants_conda_build_sysroot
+    testing_config, testing_workdir, variants_conda_build_sysroot
 ):
     testing_config.activate = True
     testing_config.error_overlinking = True
     testing_config.verify = False
-    recipe = os.path.join(metadata_dir, "_overlinking_detection_ignore_patterns")
+    recipe = os.path.join(testing_workdir, "recipe")
+    copy_into(
+        os.path.join(metadata_dir, "_overlinking_detection_ignore_patterns"),
+        recipe,
+    )
     dest_sh = os.path.join(recipe, "build.sh")
     dest_bat = os.path.join(recipe, "bld.bat")
     copy_into(
