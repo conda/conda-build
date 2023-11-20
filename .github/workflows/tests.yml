@@ -118,7 +118,6 @@ jobs:
           condarc-file: ./ci/github/.condarc
           python-version: ${{ matrix.python-version }}
           run-post: false  # skip post cleanup
-          miniconda-version: latest
 
       - name: Setup environment
         run: |
@@ -223,14 +222,13 @@ jobs:
           condarc-file: .\ci\github\.condarc
           python-version: ${{ matrix.python-version }}
           run-post: false  # skip post cleanup
-          miniconda-version: latest
 
       - name: Setup environment
         shell: cmd /C CALL {0}
         run: |
           choco install visualstudio2017-workload-vctools
           if %errorlevel% neq 0 exit 1
-          conda install -q -y -c defaults --solver=libmamba ^
+          conda install -q -y -c defaults ^
             --file .\tests\requirements.txt ^
             --file .\tests\requirements-windows.txt ^
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
@@ -339,7 +337,6 @@ jobs:
           condarc-file: ./ci/github/.condarc
           python-version: ${{ matrix.python-version }}
           run-post: false  # skip post cleanup
-          miniconda-version: latest
 
       - name: Setup environment
         run: |
