@@ -25,6 +25,8 @@ def test_conda_pkg_format(
     monkeypatch.setenv("CONDA_TEST_VAR", "conda_test")
     monkeypatch.setenv("CONDA_TEST_VAR_2", "conda_test_2")
 
+    # Recipe "entry_points" is used in other test -> add test-specific variant
+    # (change build hash) to avoid clashes in package cache from other tests.
     variants = {"pytest_name": [request.node.name]}
     (output_file,) = api.get_output_file_paths(
         recipe, config=testing_config, variants=variants
