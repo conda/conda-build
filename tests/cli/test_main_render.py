@@ -66,13 +66,14 @@ def test_render_without_channel_fails(tmp_path):
     ), f"Expected to get only base package name because it should not be found, but got :{required_package_string}"
 
 
-def test_render_output_build_path(testing_workdir, testing_metadata, capfd, caplog):
+def test_render_output_build_path(
+    testing_workdir, testing_config, testing_metadata, capfd, caplog
+):
     api.output_yaml(testing_metadata, "meta.yaml")
     args = ["--output", testing_workdir]
     main_render.execute(args)
     test_path = os.path.join(
-        sys.prefix,
-        "conda-bld",
+        testing_config.croot,
         testing_metadata.config.host_subdir,
         "test_render_output_build_path-1.0-1.tar.bz2",
     )
@@ -82,15 +83,14 @@ def test_render_output_build_path(testing_workdir, testing_metadata, capfd, capl
 
 
 def test_render_output_build_path_and_file(
-    testing_workdir, testing_metadata, capfd, caplog
+    testing_workdir, testing_config, testing_metadata, capfd, caplog
 ):
     api.output_yaml(testing_metadata, "meta.yaml")
     rendered_filename = "out.yaml"
     args = ["--output", "--file", rendered_filename, testing_workdir]
     main_render.execute(args)
     test_path = os.path.join(
-        sys.prefix,
-        "conda-bld",
+        testing_config.croot,
         testing_metadata.config.host_subdir,
         "test_render_output_build_path_and_file-1.0-1.tar.bz2",
     )

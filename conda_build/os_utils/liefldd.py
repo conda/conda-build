@@ -588,8 +588,14 @@ def inspect_linkages_lief(
                     """
                     if binary.format == lief.EXE_FORMATS.PE:
                         import random
-                        path_fixed = os.path.dirname(path_fixed) + os.sep +  \
-                                     ''.join(random.choice((str.upper, str.lower))(c) for c in os.path.basename(path_fixed))
+                        path_fixed = (
+                            os.path.dirname(path_fixed)
+                            + os.sep
+                            +  ''.join(
+                                random.choice((str.upper, str.lower))(c)
+                                for c in os.path.basename(path_fixed)
+                            )
+                        )
                         if random.getrandbits(1):
                             path_fixed = path_fixed.replace(os.sep + 'lib' + os.sep, os.sep + 'Lib' + os.sep)
                         else:
@@ -650,16 +656,11 @@ def get_linkages(
     )
     if debug and result_pyldd and set(result_lief) != set(result_pyldd):
         print(
-            "WARNING: Disagreement in get_linkages(filename={}, resolve_filenames={}, recurse={}, sysroot={}, envroot={}, arch={}):\n lief: {}\npyldd: {}\n  (using lief)".format(
-                filename,
-                resolve_filenames,
-                recurse,
-                sysroot,
-                envroot,
-                arch,
-                result_lief,
-                result_pyldd,
-            )
+            f"WARNING: Disagreement in get_linkages({filename=}, "
+            f"{resolve_filenames=}, {recurse=}, {sysroot=}, {envroot=}, {arch=}):\n"
+            f" lief: {result_lief}\n"
+            f"pyldd: {result_pyldd}\n"
+            "  (using lief)"
         )
     return result_lief
 
@@ -689,7 +690,7 @@ def is_archive(file):
 
 
 def get_static_lib_exports(file):
-    # file = '/Users/rdonnelly/conda/main-augmented-tmp/osx-64_14354bd0cd1882bc620336d9a69ae5b9/lib/python2.7/config/libpython2.7.a'
+    # file = '/Users/rdonnelly/conda/main-augmented-tmp/osx-64_14354bd0cd1882bc620336d9a69ae5b9/lib/python2.7/config/libpython2.7.a'  # noqa: E501
     # References:
     # https://github.com/bminor/binutils-gdb/tree/master/bfd/archive.c
     # https://en.wikipedia.org/wiki/Ar_(Unix)
@@ -737,7 +738,8 @@ def get_static_lib_exports(file):
             typ = "NORMAL"
         if b"/" in name:
             name = name[: name.find(b"/")]
-        # if debug_static_archives: print("index={}, name={}, ending={}, size={}, type={}".format(index, name, ending, size, typ))
+        # if debug_static_archives:
+        #     print(f"index={index}, name={name}, ending={ending}, size={size}, type={typ}")
         index += header_sz + name_len
         return index, name, name_len, size, typ
 
@@ -813,9 +815,7 @@ def get_static_lib_exports(file):
             (size_string_table,) = struct.unpack(
                 "<" + toc_integers_fmt,
                 content[
-                    index
-                    + toc_integers_sz
-                    + (nsymbols * ranlib_struct_sz) : index
+                    index + toc_integers_sz + (nsymbols * ranlib_struct_sz) : index
                     + 4
                     + 4
                     + (nsymbols * ranlib_struct_sz)
@@ -827,8 +827,7 @@ def get_static_lib_exports(file):
                 ran_off, ran_strx = struct.unpack(
                     "<" + ranlib_struct_field_fmt + ranlib_struct_field_fmt,
                     content[
-                        ranlib_index
-                        + (i * ranlib_struct_sz) : ranlib_index
+                        ranlib_index + (i * ranlib_struct_sz) : ranlib_index
                         + ((i + 1) * ranlib_struct_sz)
                     ],
                 )
@@ -845,8 +844,7 @@ def get_static_lib_exports(file):
                     )
                 )
             string_table = content[
-                ranlib_index
-                + (nsymbols * ranlib_struct_sz) : ranlib_index
+                ranlib_index + (nsymbols * ranlib_struct_sz) : ranlib_index
                 + (nsymbols * ranlib_struct_sz)
                 + size_string_table
             ]
@@ -958,7 +956,7 @@ def get_static_lib_exports_dumpbin(filename):
     > 020 00000000 UNDEF  notype ()    External     | malloc
     > vs
     > 004 00000010 SECT1  notype ()    External     | _ZN3gnu11autosprintfC1EPKcz
-    """
+    """  # noqa: E501
     dumpbin_exe = find_executable("dumpbin")
     if not dumpbin_exe:
         """
@@ -1077,19 +1075,15 @@ def get_exports(filename, arch="native", enable_static=False):
                         print(f"errors: {error_count} (-{len(diff1)}, +{len(diff2)})")
                     if debug_static_archives:
                         print(
-                            "WARNING :: Disagreement regarding static lib exports in {} between nm (nsyms={}) and lielfldd (nsyms={}):".format(
-                                filename, len(exports), len(exports2)
-                            )
+                            "WARNING :: Disagreement regarding static lib exports in "
+                            f"{filename} between nm (nsyms={len(exports)}) and "
+                            "lielfldd (nsyms={len(exports2)}):"
                         )
                     print(
-                        "** nm.diff(liefldd) [MISSING SYMBOLS] **\n{}".format(
-                            "\n".join(diff1)
-                        )
+                        "\n".join(("** nm.diff(liefldd) [MISSING SYMBOLS] **", *diff1))
                     )
                     print(
-                        "** liefldd.diff(nm) [  EXTRA SYMBOLS] **\n{}".format(
-                            "\n".join(diff2)
-                        )
+                        "\n".join(("** liefldd.diff(nm) [  EXTRA SYMBOLS] **", *diff2))
                     )
 
     if not result:

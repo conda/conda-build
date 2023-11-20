@@ -3,6 +3,7 @@
 import os
 import re
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -196,41 +197,40 @@ def test_build_multiple_recipes(testing_metadata, testing_workdir, testing_confi
     main_build.execute(args)
 
 
-def test_build_output_folder(testing_workdir, testing_metadata, capfd):
+def test_build_output_folder(testing_workdir: str, testing_metadata):
     api.output_yaml(testing_metadata, "meta.yaml")
-    with TemporaryDirectory() as tmp:
-        out = os.path.join(tmp, "out")
-        args = [
-            testing_workdir,
-            "--no-build-id",
-            "--croot",
-            tmp,
-            "--no-activate",
-            "--no-anaconda-upload",
-            "--output-folder",
-            out,
-        ]
-        output = main_build.execute(args)[0]
-        assert os.path.isfile(
-            os.path.join(
-                out, testing_metadata.config.host_subdir, os.path.basename(output)
-            )
-        )
+
+    out = Path(testing_workdir, "out")
+    out.mkdir(parents=True)
+
+    args = [
+        testing_workdir,
+        "--no-build-id",
+        "--croot",
+        testing_workdir,
+        "--no-activate",
+        "--no-anaconda-upload",
+        "--output-folder",
+        str(out),
+    ]
+    output = main_build.execute(args)[0]
+    assert (
+        out / testing_metadata.config.host_subdir / os.path.basename(output)
+    ).is_file()
 
 
-def test_build_source(testing_workdir):
-    with TemporaryDirectory() as tmp:
-        args = [
-            os.path.join(metadata_dir, "_pyyaml_find_header"),
-            "--source",
-            "--no-build-id",
-            "--croot",
-            tmp,
-            "--no-activate",
-            "--no-anaconda-upload",
-        ]
-        main_build.execute(args)
-        assert os.path.isfile(os.path.join(tmp, "work", "setup.py"))
+def test_build_source(testing_workdir: str):
+    args = [
+        os.path.join(metadata_dir, "_pyyaml_find_header"),
+        "--source",
+        "--no-build-id",
+        "--croot",
+        testing_workdir,
+        "--no-activate",
+        "--no-anaconda-upload",
+    ]
+    main_build.execute(args)
+    assert Path(testing_workdir, "work", "setup.py").is_file()
 
 
 @pytest.mark.serial

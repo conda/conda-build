@@ -83,9 +83,6 @@ include = ["conda_build", "conda_build/templates/*", "conda_build/cli-*.exe"]
 [tool.hatch.build.hooks.vcs]
 version-file = "conda_build/__version__.py"
 
-[tool.black]
-target-version = ['py38', 'py39', 'py310', 'py311']
-
 [tool.coverage.run]
 # store relative paths in coverage information
 relative_files = true
@@ -97,7 +94,7 @@ skip_covered = true
 omit = ["conda_build/skeletons/_example_skeleton.py"]
 
 [tool.ruff]
-line-length = 180
+pycodestyle = {max-line-length = 120}
 # E, W = pycodestyle errors and warnings
 # F = pyflakes
 # I = isort
@@ -106,7 +103,7 @@ select = ["E", "W", "F", "I"]
 # E722 do not use bare 'except'
 # E731 do not assign a lambda expression, use a def
 ignore = ["E402", "E722", "E731"]
-# Use PEP 257-style docstrings.
+target-version = "py38"
 pydocstyle = {convention = "pep257"}
 
 [tool.pytest.ini_options]
