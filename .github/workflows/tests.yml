@@ -118,6 +118,7 @@ jobs:
           condarc-file: ./ci/github/.condarc
           python-version: ${{ matrix.python-version }}
           run-post: false  # skip post cleanup
+          miniconda-version: latest
 
       - name: Setup environment
         run: |
@@ -222,6 +223,7 @@ jobs:
           condarc-file: .\ci\github\.condarc
           python-version: ${{ matrix.python-version }}
           run-post: false  # skip post cleanup
+          miniconda-version: latest
 
       - name: Setup environment
         shell: cmd /C CALL {0}
@@ -337,6 +339,7 @@ jobs:
           condarc-file: ./ci/github/.condarc
           python-version: ${{ matrix.python-version }}
           run-post: false  # skip post cleanup
+          miniconda-version: latest
 
       - name: Setup environment
         run: |
