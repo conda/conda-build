@@ -1,2 +1,4 @@
 patch
 shellcheck
+# TEMP
+conda-forge::menuinst >=2

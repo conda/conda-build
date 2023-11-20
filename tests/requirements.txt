@@ -4,7 +4,8 @@ beautifulsoup4
 chardet
 conda >=4.13
 conda-forge::allure-pytest
-conda-forge::menuinst >=2
+# Can't install on Windows because conda so far pins against menuinst<2
+# conda-forge::menuinst >=2
 conda-index
 conda-package-handling
 conda-verify

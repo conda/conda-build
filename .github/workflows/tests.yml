@@ -233,6 +233,16 @@ jobs:
             --file .\tests\requirements-windows.txt ^
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
           if %errorlevel% neq 0 exit 1
+          # TEMPORARY
+          if "${{ matrix.python-version }}" == "3.8" (
+            conda install https://anaconda.org/conda-forge/menuinst/2.0.0/download/win-64/menuinst-2.0.0-py38hd3f51b4_1.conda
+            if %errorlevel% neq 0 exit 1
+          )
+          if "${{ matrix.python-version }}" == "3.11" (
+            conda install https://anaconda.org/conda-forge/menuinst/2.0.0/download/win-64/menuinst-2.0.0-py311h12c1d0e_1.conda
+            if %errorlevel% neq 0 exit 1
+          )
+          # /TEMPORARY
           pip install -e . --no-deps
           if %errorlevel% neq 0 exit 1
 
