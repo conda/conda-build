@@ -7,4 +7,4 @@ build:
     - mkdir -p "${PREFIX}/Menu" # [unix]
     - cp "${RECIPE_DIR}/menu.json" "${PREFIX}/Menu/menu_json_validation.json" # [unix]
     - md "%PREFIX%\\Menu" # [win]
-    - xcopy "%RECIPE_DIR%\\menu.json" "%PREFIX%\\Menu\\menu_json_validation.json" # [win]
+    - copy /y "%RECIPE_DIR%\\menu.json" "%PREFIX%\\Menu\\menu_json_validation.json" # [win]
