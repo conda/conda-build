@@ -232,10 +232,10 @@ jobs:
             --file .\tests\requirements.txt ^
             --file .\tests\requirements-windows.txt ^
             ${{ env.CONDA_CHANNEL_LABEL }}::conda || exit 1
-          # TEMPORARY
+          :: TEMPORARY
           if "${{ matrix.python-version }}" == "3.8" CALL conda install "https://anaconda.org/conda-forge/menuinst/2.0.0/download/win-64/menuinst-2.0.0-py38hd3f51b4_1.conda" || exit 1
           if "${{ matrix.python-version }}" == "3.11" CALL conda install "https://anaconda.org/conda-forge/menuinst/2.0.0/download/win-64/menuinst-2.0.0-py311h12c1d0e_1.conda" || exit 1
-          # /TEMPORARY
+          :: /TEMPORARY
           CALL pip install -e . --no-deps || exit 1
 
       - name: Show info
