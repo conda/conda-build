@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 """Placeholder for the actual version code injected by hatch-vcs.
 
-The logic here is used during development installs only so keep it simple. Conda-build
-uses SemVer so our development version is simply:
-    MAJOR.MINOR.MICRO.devN+gHASH[.dirty]
+The logic here is used during development installs only so keep it simple.
+Conda-build abides by CEP-8 which specifies using CalVer, so the dev version is:
+    YY.MM.MICRO.devN+gHASH[.dirty]
 """
 try:
     from setuptools_scm import get_version
