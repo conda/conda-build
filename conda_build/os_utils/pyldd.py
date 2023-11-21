@@ -365,7 +365,7 @@ def do_file(file, lc_operation, off_sz, arch, results, *args):
         results.append(do_macho(file, 64, LITTLE_ENDIAN, lc_operation, *args))
 
 
-@deprecated("3.28.0", "4.0.0")
+@deprecated("3.28.0", "24.1.0")
 def mach_o_change(path, arch, what, value):
     """
     Replace a given name (what) in any LC_LOAD_DYLIB command found in
@@ -1066,7 +1066,7 @@ def codefile_class(
 
 @deprecated(
     "3.28.0",
-    "4.0.0",
+    "24.1.0",
     addendum="Use `conda_build.os_utils.pyldd.codefile_class` instead.",
 )
 def is_codefile(path: str | os.PathLike | Path, skip_symlinks: bool = True) -> bool:
@@ -1075,7 +1075,7 @@ def is_codefile(path: str | os.PathLike | Path, skip_symlinks: bool = True) -> b
 
 @deprecated(
     "3.28.0",
-    "4.0.0",
+    "24.1.0",
     addendum="Use `conda_build.os_utils.pyldd.codefile_class` instead.",
 )
 def codefile_type(
@@ -1136,7 +1136,7 @@ def _inspect_linkages_this(filename, sysroot="", arch="native"):
         return cf.uniqueness_key(), orig_names, resolved_names
 
 
-@deprecated("3.28.0", "4.0.0")
+@deprecated("3.28.0", "24.1.0")
 def inspect_rpaths(
     filename, resolve_dirnames=True, use_os_varnames=True, sysroot="", arch="native"
 ):
@@ -1168,7 +1168,7 @@ def inspect_rpaths(
                 return cf.rpaths_nontransitive
 
 
-@deprecated("3.28.0", "4.0.0")
+@deprecated("3.28.0", "24.1.0")
 def get_runpaths(filename, arch="native"):
     if not os.path.exists(filename):
         return []
@@ -1256,14 +1256,14 @@ def otool(*args):
     return 1
 
 
-@deprecated("3.28.0", "4.0.0")
+@deprecated("3.28.0", "24.1.0")
 def otool_sys(*args):
     import subprocess
 
     return subprocess.check_output("/usr/bin/otool", args).decode(encoding="ascii")
 
 
-@deprecated("3.28.0", "4.0.0")
+@deprecated("3.28.0", "24.1.0")
 def ldd_sys(*args):
     return []
 

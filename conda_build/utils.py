@@ -795,7 +795,7 @@ def get_conda_operation_locks(locking=True, bldpkgs_dirs=None, timeout=900):
 
 @deprecated(
     "3.28.0",
-    "4.0.0",
+    "24.1.0",
     addendum="Use `os.path.relpath` or `pathlib.Path.relative_to` instead.",
 )
 def relative(f, d="lib"):

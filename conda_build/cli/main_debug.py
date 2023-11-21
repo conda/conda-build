@@ -118,6 +118,6 @@ def execute(args):
         sys.exit(1)
 
 
-@deprecated("3.26.0", "4.0.0", addendum="Use `conda debug` instead.")
+@deprecated("3.26.0", "24.1.0", addendum="Use `conda debug` instead.")
 def main():
     return execute(sys.argv[1:])

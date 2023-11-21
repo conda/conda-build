@@ -129,6 +129,6 @@ def execute(args):
         api.convert(f, **args.__dict__)
 
 
-@deprecated("3.26.0", "4.0.0", addendum="Use `conda convert` instead.")
+@deprecated("3.26.0", "24.1.0", addendum="Use `conda convert` instead.")
 def main():
     return execute(sys.argv[1:])

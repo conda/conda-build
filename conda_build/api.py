@@ -521,7 +521,7 @@ def create_metapackage(
     )
 
 
-@deprecated("3.25.0", "4.0.0", addendum="Use standalone conda-index.")
+@deprecated("3.25.0", "24.1.0", addendum="Use standalone conda-index.")
 def update_index(
     dir_paths,
     config=None,

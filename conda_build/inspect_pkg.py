@@ -46,7 +46,7 @@ from .deprecations import deprecated
 from .utils import on_mac, on_win
 
 
-@deprecated("3.28.0", "4.0.0")
+@deprecated("3.28.0", "24.1.0")
 @lru_cache(maxsize=None)
 def dist_files(prefix: str | os.PathLike | Path, dist: Dist) -> set[str]:
     if (prec := PrefixData(prefix).get(dist.name, None)) is None:
@@ -57,7 +57,7 @@ def dist_files(prefix: str | os.PathLike | Path, dist: Dist) -> set[str]:
         return set()
 
 
-@deprecated.argument("3.28.0", "4.0.0", "avoid_canonical_channel_name")
+@deprecated.argument("3.28.0", "24.1.0", "avoid_canonical_channel_name")
 def which_package(
     path: str | os.PathLike | Path,
     prefix: str | os.PathLike | Path,
@@ -249,7 +249,7 @@ def test_installable(channel="defaults"):
     return success
 
 
-@deprecated("3.28.0", "4.0.0")
+@deprecated("3.28.0", "24.1.0")
 def _installed(prefix: str | os.PathLike | Path) -> dict[str, Dist]:
     return {dist.name: dist for dist in linked_data(str(prefix))}
 
