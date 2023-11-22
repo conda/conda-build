@@ -1744,7 +1744,7 @@ def check_menuinst_json(files, prefix) -> None:
     We validate at build-time so we don't have to validate at install-time, saving
     `conda` a few dependencies.
     """
-    json_files = fnmatch_filter(files, "[Mm]enu[/\\]*.[Jj][Ss][Oo][Nn]")
+    json_files = fnmatch_filter(files, "[Mm][Ee][Nn][Uu][/\\]*.[Jj][Ss][Oo][Nn]")
     if not json_files:
         return
 
