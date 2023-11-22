@@ -1732,7 +1732,18 @@ def fix_permissions(files, prefix):
                 log.warn(str(e))
 
 
-def check_menuinst_json(files, prefix):
+def check_menuinst_json(files, prefix) -> None:
+    """
+    Check that Menu/*.json files are valid menuinst v2 JSON documents,
+    as defined by the CEP-11 schema. This JSON schema is part of the `menuinst`
+    package.
+
+    Validation can fail if the menu/*.json file is not valid JSON, or if it doesn't
+    comply with the menuinst schema.
+
+    We validate at build-time so we don't have to validate at install-time, saving
+    `conda` a few dependencies.
+    """
     json_files = fnmatch_filter(files, "[Mm]enu[/\\]*.[Jj][Ss][Oo][Nn]")
     if not json_files:
         return
