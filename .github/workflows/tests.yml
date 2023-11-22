@@ -212,7 +212,7 @@ jobs:
 
       - name: Cache conda
         uses: actions/cache@v3
-        # TODO: Extraction is incredibly slow on Windows. 
+        # TODO: Extraction is incredibly slow on Windows.
         # Reenable once fixed. See https://github.com/actions/cache/issues/752
         if: false
         with:
