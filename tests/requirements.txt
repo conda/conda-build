@@ -11,6 +11,7 @@ cytoolz
 filelock
 git
 jinja2
+jsonschema
 numpy
 perl
 pip
