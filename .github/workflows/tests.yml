@@ -133,6 +133,8 @@ jobs:
           conda list --show-channel-urls
 
       - name: Run tests
+        env:
+          CONDA_SOLVER: libmamba
         run: |
           pytest \
             --color=yes \
@@ -244,6 +246,8 @@ jobs:
           conda list --show-channel-urls
 
       - name: Run tests
+        env:
+          CONDA_SOLVER: libmamba
         run: |
           pytest `
             --color=yes `
@@ -355,6 +359,8 @@ jobs:
           conda list --show-channel-urls
 
       - name: Run tests
+        env:
+          CONDA_SOLVER: libmamba
         run: |
           pytest \
             --color=yes \

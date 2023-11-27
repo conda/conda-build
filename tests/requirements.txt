@@ -4,6 +4,7 @@ chardet
 conda >=4.13
 conda-forge::allure-pytest
 conda-index
+conda-libmamba-solver >=23.7.0
 conda-package-handling
 conda-verify
 contextlib2

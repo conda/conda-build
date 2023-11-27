@@ -274,6 +274,7 @@ def get_build_index(
                     packages.update(channel_data[channel.name])
                     superchannel["packages"] = packages
             channel_data["defaults"] = superchannel
+
         local_index_timestamp = os.path.getmtime(index_file)
         local_subdir = subdir
         local_output_folder = output_folder
