@@ -1912,14 +1912,19 @@ def test_add_pip_as_python_dependency_from_condarc_file(
     Test whether settings from .condarc files are heeded.
     ref: https://github.com/conda/conda-libmamba-solver/issues/393
     """
-    if (
-        not add_pip_as_python_dependency
-        and context.solver == "libmamba"
-        and VersionOrder(CONDA_VERSION) <= VersionOrder("23.10.0")
-    ):
-        pytest.xfail(
-            "conda.plan.install_actions from conda<=23.10.0 ignores .condarc files."
-        )
+    if VersionOrder(CONDA_VERSION) <= VersionOrder("23.10.0"):
+        if not add_pip_as_python_dependency and context.solver == "libmamba":
+            pytest.xfail(
+                "conda.plan.install_actions from conda<=23.10.0 ignores .condarc files."
+            )
+        from conda.base.context import context_stack
+        from conda.core.subdir_data import SubdirData
+
+        # SubdirData's cache doesn't distinguish on add_pip_as_python_dependency.
+        SubdirData.clear_cached_local_channel_data()
+        # ContextStack's pop/replace methods don't call self.apply.
+        context_stack.apply()
+
     testing_metadata.meta["build"]["script"] = ['python -c "import pip"']
     testing_metadata.meta["requirements"]["host"] = ["python"]
     del testing_metadata.meta["test"]
@@ -1927,11 +1932,6 @@ def test_add_pip_as_python_dependency_from_condarc_file(
         check_build_fails = nullcontext()
     else:
         check_build_fails = pytest.raises(subprocess.CalledProcessError)
-
-    # For conda<=23.10.0, ContextStack's pop/replace methods don't call self.apply.
-    from conda.base.context import context_stack
-
-    context_stack.apply()
 
     conda_rc = Path(testing_workdir, ".condarc")
     conda_rc.write_text(f"add_pip_as_python_dependency: {add_pip_as_python_dependency}")
