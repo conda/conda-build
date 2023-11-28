@@ -522,7 +522,14 @@ def check_binary(binary, expected=None):
     print("trying {}".format(binary))
     # import pdb; pdb.set_trace()
     try:
-        txt = check_output([sys.executable, '-c', 'from ctypes import cdll; cdll.LoadLibrary("' + binary + '")'], timeout=2)
+        txt = check_output(
+            [
+                sys.executable,
+                '-c',
+                'from ctypes import cdll; cdll.LoadLibrary("' + binary + '")'
+            ],
+            timeout=2,
+        )
         # mydll = cdll.LoadLibrary(binary)
     except Exception as e:
         print(e)
@@ -1725,6 +1732,65 @@ def fix_permissions(files, prefix):
                 log.warn(str(e))
 
 
+def check_menuinst_json(files, prefix) -> None:
+    """
+    Check that Menu/*.json files are valid menuinst v2 JSON documents,
+    as defined by the CEP-11 schema. This JSON schema is part of the `menuinst`
+    package.
+
+    Validation can fail if the menu/*.json file is not valid JSON, or if it doesn't
+    comply with the menuinst schema.
+
+    We validate at build-time so we don't have to validate at install-time, saving
+    `conda` a few dependencies.
+    """
+    json_files = fnmatch_filter(files, "[Mm][Ee][Nn][Uu][/\\]*.[Jj][Ss][Oo][Nn]")
+    if not json_files:
+        return
+
+    print("Validating Menu/*.json files")
+    log = utils.get_logger(__name__, dedupe=False)
+    try:
+        import jsonschema
+        from menuinst.utils import data_path
+    except ModuleNotFoundError as exc:
+        log.warning(
+            "Found 'Menu/*.json' files but couldn't validate: %s",
+            ", ".join(json_files),
+            exc_info=exc,
+        )
+        return
+
+    try:
+        schema_path = data_path("menuinst.schema.json")
+        with open(schema_path) as f:
+            schema = json.load(f)
+        ValidatorClass = jsonschema.validators.validator_for(schema)
+        validator = ValidatorClass(schema)
+    except (jsonschema.SchemaError, json.JSONDecodeError, OSError) as exc:
+        log.warning("'%s' is not a valid menuinst schema", schema_path, exc_info=exc)
+        return
+
+    for json_file in json_files:
+        try:
+            with open(join(prefix, json_file)) as f:
+                text = f.read()
+            if "$schema" not in text:
+                log.warning(
+                    "menuinst v1 JSON document '%s' won't be validated.", json_file
+                )
+                continue
+            validator.validate(json.loads(text))
+        except (jsonschema.ValidationError, json.JSONDecodeError, OSError) as exc:
+            log.warning(
+                "'%s' is not a valid menuinst JSON document!",
+                json_file,
+                exc_info=exc,
+            )
+        else:
+            log.info("'%s' is a valid menuinst JSON document", json_file)
+
+
 def post_build(m, files, build_python, host_prefix=None, is_already_linked=False):
     print("number of files:", len(files))
 
@@ -1758,6 +1824,7 @@ def post_build(m, files, build_python, host_prefix=None, is_already_linked=False
             ):
                 post_process_shared_lib(m, f, prefix_files, host_prefix)
     check_overlinking(m, files, host_prefix)
+    check_menuinst_json(files, host_prefix)
 
 
 def check_symlinks(files, prefix, croot):

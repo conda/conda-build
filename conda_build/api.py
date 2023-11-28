@@ -415,7 +415,7 @@ def convert(
         )
     elif package_file.endswith(".whl"):
         raise RuntimeError(
-            "Conversion from wheel packages is not " "implemented yet, stay tuned."
+            "Conversion from wheel packages is not implemented yet, stay tuned."
         )
     else:
         raise RuntimeError("cannot convert: %s" % package_file)
@@ -656,17 +656,18 @@ def debug(
             ]
             if len(matched_outputs) > 1:
                 raise ValueError(
-                    "Specified --output-id matches more than one output ({}).  Please refine your output id so that only "
-                    "a single output is found.".format(matched_outputs)
+                    f"Specified --output-id matches more than one output ({matched_outputs}). "
+                    "Please refine your output id so that only a single output is found."
                 )
             elif not matched_outputs:
                 raise ValueError(
-                    f"Specified --output-id did not match any outputs.  Available outputs are: {outputs} Please check it and try again"
+                    f"Specified --output-id did not match any outputs. Available outputs are: {outputs} "
+                    "Please check it and try again"
                 )
         if len(matched_outputs) > 1 and not path_is_build_dir:
             raise ValueError(
-                "More than one output found for this recipe ({}).  Please use the --output-id argument to filter down "
-                "to a single output.".format(outputs)
+                f"More than one output found for this recipe ({outputs}). "
+                "Please use the --output-id argument to filter down to a single output."
             )
         else:
             matched_outputs = outputs

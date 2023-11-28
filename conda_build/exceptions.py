@@ -88,8 +88,7 @@ class DependencyNeedsBuildingError(CondaBuildException):
                 self.packages.append(pkg)
         if not self.packages:
             raise RuntimeError(
-                "failed to parse packages from exception:"
-                " {}".format(str(conda_exception))
+                f"failed to parse packages from exception: {conda_exception}"
             )
 
     def __str__(self):

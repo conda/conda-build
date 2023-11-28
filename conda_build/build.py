@@ -498,7 +498,12 @@ def regex_files_py(
                         match_records[file] = {"type": type, "submatches": []}
                     # else:
                     #     if match_records[file]['absolute_offset'] != absolute_offset:
-                    #         print("Dropping match.pos() of {}, neq {}".format(absolute_offset, match_records[file]['absolute_offset']))
+                    #         print(
+                    #             "Dropping match.pos() of {}, neq {}".format(
+                    #                 absolute_offset,
+                    #                 match_records[file]['absolute_offset'],
+                    #             )
+                    #         )
                     g_index = len(match.groups())
                     if g_index == 0:
                         # Complete match.
@@ -636,8 +641,9 @@ def have_regex_files(
         return match_records
     import copy
 
-    match_records_rg, match_records_re = copy.deepcopy(match_records), copy.deepcopy(
-        match_records
+    match_records_rg, match_records_re = (
+        copy.deepcopy(match_records),
+        copy.deepcopy(match_records),
     )
     if not isinstance(regex_re, (bytes, bytearray)):
         regex_re = regex_re.encode("utf-8")
@@ -2254,7 +2260,9 @@ def _write_sh_activation_text(file_handle, m):
             if value:
                 if not done_necessary_env:
                     # file_handle.write(
-                    #     'export CCACHE_SLOPPINESS="pch_defines,time_macros${CCACHE_SLOPPINESS+,$CCACHE_SLOPPINESS}"\n')
+                    #     'export CCACHE_SLOPPINESS="pch_defines,time_macros'
+                    #     '${CCACHE_SLOPPINESS+,$CCACHE_SLOPPINESS}"\n'
+                    # )
                     # file_handle.write('export CCACHE_CPP2=true\n')
                     done_necessary_env = True
                 if method == "symlinks":
@@ -2263,16 +2271,12 @@ def _write_sh_activation_text(file_handle, m):
                     file_handle.write(f"pushd {dirname_ccache_ln_bin}\n")
                     file_handle.write('if [ -n "$CC" ]; then\n')
                     file_handle.write(
-                        "  [ -f {ccache} ] && [ ! -f $(basename $CC) ] && ln -s {ccache} $(basename $CC) || true\n".format(
-                            ccache=ccache
-                        )
+                        f"  [ -f {ccache} ] && [ ! -f $(basename $CC) ] && ln -s {ccache} $(basename $CC) || true\n"
                     )
                     file_handle.write("fi\n")
                     file_handle.write('if [ -n "$CXX" ]; then\n')
                     file_handle.write(
-                        "  [ -f {ccache} ] && [ ! -f $(basename $CXX) ] && ln -s {ccache} $(basename $CXX) || true\n".format(
-                            ccache=ccache
-                        )
+                        f"  [ -f {ccache} ] && [ ! -f $(basename $CXX) ] && ln -s {ccache} $(basename $CXX) || true\n"
                     )
                     file_handle.write("fi\n")
                     file_handle.write("popd\n")
@@ -4084,7 +4088,7 @@ def handle_anaconda_upload(paths, config):
         prompter = "$ "
     if not upload or anaconda is None:
         no_upload_message = (
-            "# If you want to upload package(s) to anaconda.org later, type:\n" "\n"
+            "# If you want to upload package(s) to anaconda.org later, type:\n\n"
         )
         no_upload_message += (
             "\n"

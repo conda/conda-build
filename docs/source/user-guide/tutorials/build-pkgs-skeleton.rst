@@ -2,6 +2,11 @@
 Building conda packages with conda skeleton
 ===========================================
 
+.. tip::
+   We recommend `Grayskull <https://github.com/conda/grayskull>`_, a newer alternative to conda-skeleton,
+   to generate conda recipes for PyPI packages. Please check out their project page on GitHub
+   for more information.
+
 Overview
 ========
 
