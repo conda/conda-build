@@ -2,10 +2,6 @@
 Conda package specification
 ===========================
 
-.. contents::
-   :local:
-   :depth: 1
-
 A conda package is an archive file that contains:
 
 * Metadata under the ``info/`` directory.
