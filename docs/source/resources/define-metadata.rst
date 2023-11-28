@@ -4,11 +4,6 @@
 Defining metadata (meta.yaml)
 =============================
 
-.. contents::
-   :local:
-   :depth: 1
-
-
 All the metadata in the conda-build recipe is specified in the
 ``meta.yaml`` file. See the example below:
 
