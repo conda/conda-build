@@ -2220,3 +2220,12 @@ def is_conda_pkg(pkg_path: str) -> bool:
     return path.is_file() and (
         any(path.name.endswith(ext) for ext in CONDA_PACKAGE_EXTENSIONS)
     )
+
+
+def samefile(path1: Path, path2: Path) -> bool:
+    try:
+        return path1.samefile(path2)
+    except (FileNotFoundError, PermissionError):
+        # FileNotFoundError: path doesn't exist
+        # PermissionError: don't have permissions to read path
+        return path1 == path2
