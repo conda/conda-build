@@ -43,7 +43,7 @@ from conda_build.utils import (
 )
 
 from .deprecations import deprecated
-from .utils import on_mac, on_win
+from .utils import on_mac, on_win, samefile
 
 
 @deprecated("3.28.0", "24.1.0")
@@ -71,13 +71,6 @@ def which_package(
     # historically, path was relative to prefix just to be safe we append to prefix
     # (pathlib correctly handles this even if path is absolute)
     path = prefix / path
-
-    def samefile(path1: Path, path2: Path) -> bool:
-        try:
-            return path1.samefile(path2)
-        except FileNotFoundError:
-            # FileNotFoundError: path doesn't exist
-            return path1 == path2
 
     for prec in PrefixData(str(prefix)).iter_records():
         for file in prec["files"]:

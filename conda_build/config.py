@@ -3,6 +3,8 @@
 """
 Module to store conda build settings.
 """
+from __future__ import annotations
+
 import copy
 import math
 import os
@@ -12,6 +14,7 @@ import sys
 import time
 from collections import namedtuple
 from os.path import abspath, expanduser, expandvars, join
+from pathlib import Path
 
 from .conda_interface import (
     binstar_upload,
@@ -458,7 +461,7 @@ class Config:
         self._src_cache_root = value
 
     @property
-    def croot(self):
+    def croot(self) -> str:
         """This is where source caches and work folders live"""
         if not self._croot:
             _bld_root_env = os.getenv("CONDA_BLD_PATH")
@@ -474,9 +477,9 @@ class Config:
         return self._croot
 
     @croot.setter
-    def croot(self, croot):
+    def croot(self, croot: str | os.PathLike | Path) -> None:
         """Set croot - if None is passed, then the default value will be used"""
-        self._croot = croot
+        self._croot = str(croot) if croot else None
 
     @property
     def output_folder(self):

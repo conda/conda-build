@@ -44,6 +44,8 @@ dependencies = [
   "six",
   "tomli ; python_version<'3.11'",
   "tqdm",
+  "jsonschema >=4.19",
+  "menuinst >=2"
 ]
 dynamic = ["version"]
 

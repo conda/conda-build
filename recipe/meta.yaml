@@ -51,6 +51,8 @@ requirements:
     - six
     - tomli                        # [py<311]
     - tqdm
+    - menuinst >=2
+    - jsonschema >=4.19
   run_constrained:
     - conda-verify  >=3.1.0
 
