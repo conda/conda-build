@@ -1,4 +1,3 @@
-# TEMP
-conda-forge::menuinst >=2
 patch
+py-lief
 shellcheck
