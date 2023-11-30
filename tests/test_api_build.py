@@ -1918,12 +1918,16 @@ def test_add_pip_as_python_dependency_from_condarc_file(
                 "conda.plan.install_actions from conda<=23.10.0 ignores .condarc files."
             )
         from conda.base.context import context_stack
-        from conda.core.subdir_data import SubdirData
 
-        # SubdirData's cache doesn't distinguish on add_pip_as_python_dependency.
-        SubdirData.clear_cached_local_channel_data()
         # ContextStack's pop/replace methods don't call self.apply.
         context_stack.apply()
+
+    # TODO: SubdirData._cache_ clearing might not be needed for future conda versions.
+    #       See https://github.com/conda/conda/pull/13365 for proposed changes.
+    from conda.core.subdir_data import SubdirData
+
+    # SubdirData's cache doesn't distinguish on add_pip_as_python_dependency.
+    SubdirData.clear_cached_local_channel_data()
 
     testing_metadata.meta["build"]["script"] = ['python -c "import pip"']
     testing_metadata.meta["requirements"]["host"] = ["python"]
