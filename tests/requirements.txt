@@ -19,6 +19,7 @@ perl
 pip
 pkginfo
 psutil
+py-lief
 pyflakes
 pytest
 pytest-cov

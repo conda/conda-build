@@ -1,3 +1,2 @@
 patch
-py-lief
 shellcheck

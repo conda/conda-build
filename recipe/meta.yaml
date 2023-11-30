@@ -44,7 +44,7 @@ requirements:
     - patchelf                     # [linux]
     - pkginfo
     - psutil
-    - py-lief                      # [not win]
+    - py-lief
     - python
     - python-libarchive-c
     - pytz
