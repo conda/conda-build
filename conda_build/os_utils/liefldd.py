@@ -33,7 +33,7 @@ except ImportError:
     have_lief = False
 
 
-@deprecated("3.28.0", "4.0.0", addendum="Use `isinstance(value, str)` instead.")
+@deprecated("3.28.0", "24.1.0", addendum="Use `isinstance(value, str)` instead.")
 def is_string(s):
     return isinstance(s, str)
 
@@ -102,7 +102,7 @@ else:
 
 @deprecated(
     "3.28.0",
-    "4.0.0",
+    "24.1.0",
     addendum="Use `conda_build.os_utils.liefldd.codefile_class` instead.",
 )
 def codefile_type_liefldd(*args, **kwargs) -> str | None:
@@ -112,14 +112,14 @@ def codefile_type_liefldd(*args, **kwargs) -> str | None:
 
 deprecated.constant(
     "3.28.0",
-    "4.0.0",
+    "24.1.0",
     "codefile_type_pyldd",
     _codefile_type,
     addendum="Use `conda_build.os_utils.pyldd.codefile_class` instead.",
 )
 deprecated.constant(
     "3.28.0",
-    "4.0.0",
+    "24.1.0",
     "codefile_type",
     _codefile_type,
     addendum="Use `conda_build.os_utils.liefldd.codefile_class` instead.",

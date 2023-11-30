@@ -587,7 +587,7 @@ def execute(args):
     return outputs
 
 
-@deprecated("3.26.0", "4.0.0", addendum="Use `conda build` instead.")
+@deprecated("3.26.0", "24.1.0", addendum="Use `conda build` instead.")
 def main():
     try:
         execute(sys.argv[1:])

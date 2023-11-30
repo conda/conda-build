@@ -1429,7 +1429,7 @@ class MetaData:
                     check_field(key_or_dict, section)
         return True
 
-    @deprecated.argument("3.28.0", "4.0.0", "fail_ok")
+    @deprecated.argument("3.28.0", "24.1.0", "fail_ok")
     def name(self) -> str:
         name = self.get_value("package/name", "")
         if not name and self.final:

@@ -109,7 +109,7 @@ def _get_linkages(
     return linkages
 
 
-@deprecated("3.28.0", "4.0.0")
+@deprecated("3.28.0", "24.1.0")
 @lru_cache(maxsize=None)
 def get_package_files(
     prec: PrefixRecord, prefix: str | os.PathLike | Path

@@ -243,7 +243,7 @@ def execute(args, print_results=True):
         return metadata_tuples
 
 
-@deprecated("3.26.0", "4.0.0", addendum="Use `conda render` instead.")
+@deprecated("3.26.0", "24.1.0", addendum="Use `conda render` instead.")
 def main():
     return execute(sys.argv[1:])
 

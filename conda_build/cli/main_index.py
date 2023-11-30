@@ -102,7 +102,7 @@ def execute(args):
 
     deprecated.topic(
         "3.25.0",
-        "4.0.0",
+        "24.1.0",
         topic="`conda index` and `conda-index`",
         addendum="Use the `conda-index` project instead.",
     )
@@ -121,6 +121,6 @@ def execute(args):
     )
 
 
-@deprecated("3.26.0", "4.0.0", addendum="Use `conda index` instead.")
+@deprecated("3.26.0", "24.1.0", addendum="Use `conda index` instead.")
 def main():
     return execute(sys.argv[1:])

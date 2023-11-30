@@ -660,7 +660,7 @@ def assert_relative_osx(path, host_prefix, build_prefix):
 
 @deprecated(
     "3.28.0",
-    "4.0.0",
+    "24.1.0",
     addendum="Use `conda_build.post.get_dsos` and `conda_build.post.get_run_exports` instead.",
 )
 def determine_package_nature(
@@ -721,10 +721,10 @@ def get_run_exports(
         return ()
 
 
-@deprecated.argument("3.28.0", "4.0.0", "subdir")
-@deprecated.argument("3.28.0", "4.0.0", "bldpkgs_dirs")
-@deprecated.argument("3.28.0", "4.0.0", "output_folder")
-@deprecated.argument("3.28.0", "4.0.0", "channel_urls")
+@deprecated.argument("3.28.0", "24.1.0", "subdir")
+@deprecated.argument("3.28.0", "24.1.0", "bldpkgs_dirs")
+@deprecated.argument("3.28.0", "24.1.0", "output_folder")
+@deprecated.argument("3.28.0", "24.1.0", "channel_urls")
 def library_nature(
     prec: PrefixRecord, prefix: str | os.PathLike | Path
 ) -> Literal[
@@ -782,7 +782,7 @@ def library_nature(
 
 @deprecated(
     "3.28.0",
-    "4.0.0",
+    "24.1.0",
     addendum="Query `conda.core.prefix_data.PrefixData` instead.",
 )
 def dists_from_names(names: Iterable[str], prefix: str | os.PathLike | Path):
@@ -794,7 +794,7 @@ def dists_from_names(names: Iterable[str], prefix: str | os.PathLike | Path):
 
 @deprecated(
     "3.28.0",
-    "4.0.0",
+    "24.1.0",
     addendum="Use `conda.models.records.PrefixRecord` instead.",
 )
 class FakeDist:
@@ -1026,7 +1026,7 @@ def _map_file_to_package(
 
 
 @deprecated(
-    "3.28.0", "4.0.0", addendum="Use `conda.models.records.PrefixRecord` instead."
+    "3.28.0", "24.1.0", addendum="Use `conda.models.records.PrefixRecord` instead."
 )
 def _get_fake_pkg_dist(pkg_name, pkg_version, build_str, build_number, channel, files):
     return (

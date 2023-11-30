@@ -332,7 +332,7 @@ def _delegated_update_index(
 # Everything below is deprecated to maintain API/feature compatibility.
 
 
-@deprecated("3.25.0", "4.0.0", addendum="Use standalone conda-index.")
+@deprecated("3.25.0", "24.1.0", addendum="Use standalone conda-index.")
 def update_index(
     dir_path,
     check_md5=False,
