@@ -1927,7 +1927,7 @@ def test_add_pip_as_python_dependency_from_condarc_file(
     from conda.core.subdir_data import SubdirData
 
     # SubdirData's cache doesn't distinguish on add_pip_as_python_dependency.
-    SubdirData.clear_cached_local_channel_data()
+    SubdirData._cache_.clear()
 
     testing_metadata.meta["build"]["script"] = ['python -c "import pip"']
     testing_metadata.meta["requirements"]["host"] = ["python"]
