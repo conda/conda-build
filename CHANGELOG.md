@@ -2,6 +2,10 @@
 
 ## 3.28.0 (2023-11-30)
 
+### Special announcement
+
+In the next release of conda-build (in January 2024), we will be switching to the [CalVer](https://calver.org/) versioning system and officially adopt [CEP 8](https://github.com/conda-incubator/ceps/blob/main/cep-8.md) for our release schedule and an expedited version of [CEP 9](https://github.com/conda-incubator/ceps/blob/main/cep-8.md) for our deprecation schedule (no pending deprecation phase and only 2 months from deprecation to removal).
+
 ### Enhancements
 
 * Add `stblib` jinja function akin to `compiler` to explicitly define sysroot dependencies. (#4999)
