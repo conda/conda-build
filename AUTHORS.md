@@ -53,6 +53,7 @@ Authors are sorted alphabetically.
 * Daniel Bast
 * Daniel Damiani
 * Daniel Holth
+* Daniel Petry
 * Darren Dale
 * Dave Clements
 * Dave Hirschfeld
@@ -81,6 +82,7 @@ Authors are sorted alphabetically.
 * Greg Brener
 * Guilherme Quentel Melo
 * Guillaume Baty
+* H. Vetinari
 * Harsh Gupta
 * Harun Reşit Zafer
 * Heather Kelly
