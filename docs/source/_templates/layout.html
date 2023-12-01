@@ -2,6 +2,11 @@
 
 {% block footer %}
 {{ super() }}
+
+{# Only embed analytics on production #}
+{% if use_analytics %}
 <script data-goatcounter="https://docs-conda-io.goatcounter.com/count"
         async src="//gc.zgo.at/count.js"></script>
+{% endif %}
+
 {% endblock %}

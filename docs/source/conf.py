@@ -147,6 +147,7 @@ html_context = {
     "github_repo": "conda-build",
     "github_version": "main",
     "doc_path": "docs/source",
+    "use_analytics": "conda.io" in os.getenv("READTHEDOCS_CANONICAL_URL", ""),
 }
 
 html_short_title = "conda-build"
