@@ -4,56 +4,57 @@
 
 ### Special announcement
 
-In the next release of conda-build (in January 2024), we will be switching to the [CalVer](https://calver.org/) versioning system and officially adopt [CEP 8](https://github.com/conda-incubator/ceps/blob/main/cep-8.md) for our release schedule and an expedited version of [CEP 9](https://github.com/conda-incubator/ceps/blob/main/cep-8.md) for our deprecation schedule (no pending deprecation phase and only 2 months from deprecation to removal).
+In the upcoming January 2024 release of conda-build, significant changes are underway. We're set to transition to the [CalVer](https://calver.org/) versioning system. Additionally, we'll be formally embracing [CEP 8](https://github.com/conda-incubator/ceps/blob/main/cep-8.md) to manage our release schedule. Moreover, an expedited version of [CEP 9](https://github.com/conda-incubator/ceps/blob/main/cep-8.md) will be adopted for deprecation handling, omitting the pending deprecation phase and streamlining the period from deprecation to removal to a mere 2 months.
 
 ### Enhancements
 
-* Add `stblib` jinja function akin to `compiler` to explicitly define sysroot dependencies. (#4999)
-* Use subdirs known to conda for selector definitions. This allows conda_build to support new architectures with just a new version of conda. For new OSes, there are more information needed for conda_build to work properly, including whether the new OS is a UNIX-like platform, the shared library prefix, and the binary archive format for the platform. (#5009)
-* Remove unnecessary cache clearing from `conda_buidl.build.test`. (#5031)
-* Consolidate `which_package` implementations and replacing `conda.models.dist.Dist` usage in favor of `conda.models.records.PrefixRecords`. (#5041)
+* Add `stblib` jinja function similar to `compiler` to explicitly define sysroot dependencies. (#4999)
+* Utilize conda-known subdirs for selector definitions, enabling conda_build to support new architectures with only an updated conda version. New OS support requires additional information for proper conda_build functionality, including UNIX-like platform designation, shared library prefix, and binary archive format for the platform. (#5009)
+* Eliminate unnecessary cache clearing from `conda_build.build.test`. (#5031)
+* Consolidate `which_package` implementations and replace `conda.models.dist.Dist` usage with `conda.models.records.PrefixRecords`. (#5041)
 
 ### Bug fixes
 
-* Print package file name in `get_hash_input`. (#5021)
-* Fallback to solved record filename to find the downloaded tarball in `get_upstream_pins`. (#4991 via #5037)
-* Avoid clobbering of variants in high priority cbc.yaml entries when they aren't present in lower priority cbc.yamls. (#5039)
-* Fixes the check for a missing anaconda-client so a useful error message is shown. (#5050)
+* Display package file name in `get_hash_input`. (#5021)
+* Fall back to solved record filename to locate the downloaded tarball in `get_upstream_pins`. (#4991 via #5037)
+* Prevent overwriting of variants in high priority cbc.yaml entries when absent in lower priority cbc.yamls. (#5039)
+* Correct the check for a missing anaconda-client to display a useful error message. (#5050)
 * Fix conda_index.index verbose DEBUG/INFO message logging. (#5066)
 
 ### Deprecations
 
-* Mark `conda_build.environ.clean_pkg_cache` as pending deprecation. (#5031)
+* Mark `conda_build.environ.clean_pkg_cache` for pending deprecation. (#5031)
 * Mark `conda_build.conda_interface.IndexRecord` for pending deprecation. Use `conda.models.records.PackageRecord` instead. (#5032)
-* Mark `conda_build.os_utils.pyldd.is_string` as pending deprecation. Use `isinstance(value, str)` instead. (#5040)
-* Mark `conda_build.os_utils.pyldd.is_codefile` as pending deprecation. Use `conda_build.os_utils.pyldd.codefile_class` instead. (#5040)
-* Mark `conda_build.os_utils.pyldd.codefile_type` as pending deprecation. Use `conda_build.os_utils.pyldd.codefile_class` instead. (#5040)
-* Mark `conda_build.inspect_pkg.dist_files` as pending deprecation. (#5041)
-* Mark `conda_build.inspect_pkg.which_package(avoid_canonical_channel_name)` as pending deprecation. (#5041)
-* Mark `conda_build.inspect_pkg._installed` as pending deprecation. (#5041)
-* Mark `conda_build.os_utils.ldd.get_package_files` as pending deprecation. (#5041)
-* Mark `conda_build.os_utils.pyldd.mach_o_change` as pending deprecation. (#5041)
-* Mark `conda_build.os_utils.pyldd.inspect_rpath` as pending deprecation. (#5041)
-* Mark `conda_build.os_utils.pyldd.get_runpaths` as pending deprecation. (#5041)
-* Mark `conda_build.os_utils.pyldd.otool_sys` as pending deprecation. (#5041)
-* Mark `conda_build.os_utils.pyldd.ldd_sys` as pending deprecation. (#5041)
-* Mark `conda_build.post.determine_package_nature` as pending deprecation. Use `conda_build.post.get_dsos` and `conda_build.post.get_run_exports` instead. (#5041)
-* Mark `conda_build.post.library_nature(subdir, bldpkgs_dirs, output_folder, channel_urls)` as pending deprecation. (#5041)
-* Mark `conda_build.post.dist_from_names` as pending deprecation. Query `conda.core.prefix_data.PrefixData` instead. (#5041)
-* Mark `conda_build.post.FakeDist` as pending deprecation. Use `conda.models.records.PrefixRecord` instead. (#5041)
-* Mark `conda_build.post._get_fake_pkg_dist` as pending deprecation. Use `conda.models.records.PrefixRecord` instead. (#5041)
-* Mark `conda_build.utils.relative` as pending deprecation. Use `os.path.relpath` or `pathlib.Path.relative_to` instead. (#5042)
+* Mark `conda_build.os_utils.pyldd.is_string` for pending deprecation. Use `isinstance(value, str)` instead. (#5040)
+* Mark `conda_build.os_utils.pyldd.is_codefile` for pending deprecation. Use `conda_build.os_utils.pyldd.codefile_class` instead. (#5040)
+* Mark `conda_build.os_utils.pyldd.codefile_type` for pending deprecation. Use `conda_build.os_utils.pyldd.codefile_class` instead. (#5040)
+* Mark `conda_build.inspect_pkg.dist_files` for pending deprecation. (#5041)
+* Mark `conda_build.inspect_pkg.which_package(avoid_canonical_channel_name)` for pending deprecation. (#5041)
+* Mark `conda_build.inspect_pkg._installed` for pending deprecation. (#5041)
+* Mark `conda_build.os_utils.ldd.get_package_files` for pending deprecation. (#5041)
+* Mark `conda_build.os_utils.pyldd.mach_o_change` for pending deprecation. (#5041)
+* Mark `conda_build.os_utils.pyldd.inspect_rpath` for pending deprecation. (#5041)
+* Mark `conda_build.os_utils.pyldd.get_runpaths` for pending deprecation. (#5041)
+* Mark `conda_build.os_utils.pyldd.otool_sys` for pending deprecation. (#5041)
+* Mark `conda_build.os_utils.pyldd.ldd_sys` for pending deprecation. (#5041)
+* Mark `conda_build.post.determine_package_nature` for pending deprecation. Use `conda_build.post.get_dsos` and `conda_build.post.get_run_exports` instead. (#5041)
+* Mark `conda_build.post.library_nature(subdir, bldpkgs_dirs, output_folder, channel_urls)` for pending deprecation. (#5041)
+* Mark `conda_build.post.dist_from_names` for pending deprecation. Query `conda.core.prefix_data.PrefixData` instead. (#5041)
+* Mark `conda_build.post.FakeDist` for pending deprecation. Use `conda.models.records.PrefixRecord` instead. (#5041)
+* Mark `conda_build.post._get_fake_pkg_dist` for pending deprecation. Use `conda.models.records.PrefixRecord` instead. (#5041)
+* Mark `conda_build.utils.relative` for pending deprecation. Use `os.path.relpath` or `pathlib.Path.relative_to` instead. (#5042)
 
 ### Docs
 
-* Adds the conda-sphinx-theme to conda-build documentation. (#5067)
-* Updates some pages to remove redundant TOC. (#5067)
+* Incorporate the conda-sphinx-theme into conda-build documentation. (#5067)
+* Update certain pages to remove redundant TOC entries. (#5067)
 
 ### Other
 
-* Use Ruff linter in pre-commit configuration. (#5015)
-* Replace `black` with `ruff format` in pre-commit. (#5052)
-* Mark Unicode tests as incompatible with `libmamba`. (#5059)
+* Implement Ruff linter in pre-commit configuration. (#5015)
+* Replace `black` with `ruff format` in pre-commit setup. (#5052)
+* Identify Unicode tests as incompatible with `libmamba`. (#5059)
+
 
 ### Contributors
 
