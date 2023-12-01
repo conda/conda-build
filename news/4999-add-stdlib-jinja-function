@@ -1,10 +1,10 @@
 ### Enhancements
 
-* <news item>
+* Add `stblib` jinja function akin to `compiler` to explicitly define sysroot dependencies. (#4999)
 
 ### Bug fixes
 
-* Fixes the check for a missing anaconda-client so a useful error message is shown. (#5050)
+* <news item>
 
 ### Deprecations
 
