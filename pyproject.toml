@@ -36,6 +36,7 @@ dependencies = [
   "jinja2",
   "jsonschema >=4.19",
   "libarchive-c",
+  "lief",
   "menuinst",
   "packaging",
   "pkginfo",
