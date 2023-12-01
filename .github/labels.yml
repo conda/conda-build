@@ -1,3 +1,14 @@
+# Builds
+- name: build::review
+  description: trigger a build for this PR
+  color: "7B4052"
+
+# Tags
+- name: tag::noarch
+  description: related to noarch builds
+  color: "86C579"
+  aliases: []
+
 # Deprecated
 - name: 3_In_Progress
   description: "[deprecated] use milestones/project boards"
@@ -26,9 +37,3 @@
 - name: knowledge-medium
   description: "[deprecated]"
   color: "888888"
-
-# Tags
-- name: tag::noarch
-  description: related to noarch builds
-  color: "86C579"
-  aliases: []
