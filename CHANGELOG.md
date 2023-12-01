@@ -58,9 +58,9 @@ In the next release of conda-build (in January 2024), we will be switching to th
 ### Contributors
 
 * @conda-bot
-* @danpetry
+* @danpetry made their first contribution in https://github.com/conda/conda-build/pull/5039
 * @duncanmmacleod
-* @h-vetinari
+* @h-vetinari made their first contribution in https://github.com/conda/conda-build/pull/4999
 * @isuruf
 * @jaimergp
 * @jakirkham
