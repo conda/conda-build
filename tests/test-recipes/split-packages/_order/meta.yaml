@@ -1,6 +1,6 @@
 package:
   name: toplevel-ab
-  version: 0.0.1
+  version: 1
 
 outputs:
   - name: a
