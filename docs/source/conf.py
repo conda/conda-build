@@ -70,7 +70,7 @@ myst_enable_extensions = [
 
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ["_templates"]
+# templates_path = ["_templates"]
 
 # Leave double dashes as they are in the docs. Don't replace -- with -
 smartquotes = False
