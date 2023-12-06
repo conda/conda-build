@@ -1201,7 +1201,7 @@
   alternate_emails:
   - clee@anaconda.com
 - name: Ken Odegard
-  num_commits: 153
+  num_commits: 152
   email: kodegard@anaconda.com
   first_commit: 2020-09-08 19:53:41
   github: kenodegard
@@ -1270,7 +1270,7 @@
 - name: Daniel Holth
   email: dholth@anaconda.com
   github: dholth
-  num_commits: 12
+  num_commits: 13
   first_commit: 2022-04-28 05:22:14
 - name: Rylan Chord
   email: rchord@users.noreply.github.com
