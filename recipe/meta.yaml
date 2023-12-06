@@ -52,8 +52,6 @@ requirements:
     - requests
     - tomli                        # [py<311]
     - tqdm
-  test:
-    - pip
   run_constrained:
     - conda-verify  >=3.1.0
 
@@ -63,6 +61,9 @@ test:
     - conda_build
     # new/updated submodules (can be dropped after 1-2 releases)
     - conda_build.index
+  requires:
+    - setuptools
+    - pip
   files:
     - test_bdist_conda_setup.py
   commands:
