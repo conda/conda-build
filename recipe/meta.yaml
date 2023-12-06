@@ -61,9 +61,13 @@ test:
     - conda_build
     # new/updated submodules (can be dropped after 1-2 releases)
     - conda_build.index
+  requires:
+    - setuptools
+    - pip
   files:
     - test_bdist_conda_setup.py
   commands:
+    - python -m pip check
     # builtin subcommands
     - conda --help
     - conda build --help
