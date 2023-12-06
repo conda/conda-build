@@ -79,6 +79,7 @@ test:
     - conda debug --help
     # bdist_conda
     - python test_bdist_conda_setup.py bdist_conda --help
+    - python -m pip check
 
 about:
   home: https://conda.org
