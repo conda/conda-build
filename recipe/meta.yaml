@@ -45,6 +45,7 @@ requirements:
     - psutil
     - py-lief                      # [not win]
     - python
+    - python-build
     - python-libarchive-c
     - pytz
     - pyyaml

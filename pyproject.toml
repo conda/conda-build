@@ -45,6 +45,7 @@ dependencies = [
   "six",
   "tomli ; python_version<'3.11'",
   "tqdm",
+  "build",
 ]
 dynamic = ["version"]
 

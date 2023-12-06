@@ -2,10 +2,12 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import datetime
 import json
+import logging
 import os
 import pathlib
 import re
 import time
+from build.util import project_wheel_metadata
 from functools import partial
 from io import StringIO, TextIOBase
 from typing import IO, Any, Optional
@@ -229,6 +231,28 @@ def load_setup_py_data(
     # cleanup: we must leave the source tree empty unless the source code is already present
     rm_rf(os.path.join(m.config.work_dir, "_load_setup_py_data.py"))
     return _setuptools_data if _setuptools_data else {}
+
+
+def load_python_build_metadata(
+    m,
+    directory=".",
+    from_recipe_dir=False,
+    recipe_dir=None,
+):
+    env = get_environ(m)
+    env["CONDA_BUILD_STATE"] = "RENDER"
+
+    # Suppress excessive printing of "Getting metadata for wheel..."
+    build_logger = logging.getLogger("build")
+    build_logger.setLevel(logging.WARNING)
+
+    directory = pathlib.Path(directory)
+    if from_recipe_dir and recipe_dir:
+        directory = pathlib.Path(recipe_dir).absolute() / directory
+
+    metadata = project_wheel_metadata(directory, isolated=False)
+
+    return metadata
 
 
 def load_setuptools(
@@ -799,6 +823,11 @@ def context_processor(
             initial_metadata,
             permit_undefined_jinja=permit_undefined_jinja,
             bypass_env_check=bypass_env_check,
+        ),
+        load_python_build_metadata=partial(
+            load_python_build_metadata,
+            initial_metadata,
+            recipe_dir=recipe_dir,
         ),
         time=time,
         datetime=datetime,
