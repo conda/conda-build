@@ -118,8 +118,8 @@ html_theme_options = {
     "show_prev_next": False,
     # Navbar icon links
     "navbar_start": ["navbar-logo"],
-    "footer_center": ["footer_center"],
     "use_edit_page_button": True,
+    "goatcounter_url": "https://docs-conda-io.goatcounter.com/count",
     "icon_links": [
         {
             "name": "GitHub",
@@ -147,7 +147,7 @@ html_context = {
     "github_repo": "conda-build",
     "github_version": "main",
     "doc_path": "docs/source",
-    "use_analytics": "conda.io" in os.getenv("READTHEDOCS_CANONICAL_URL", ""),
+    "goatcounter_dashboard_url": "https://docs-conda-io.goatcounter.com",
 }
 
 html_short_title = "conda-build"
@@ -157,7 +157,7 @@ html_extra_path = ["robots.txt"]
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ["_static"]
+# html_static_path = ["_static"]
 
 # Custom CSS rules
 # html_style = "css/custom.css"
