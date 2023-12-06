@@ -412,6 +412,9 @@ def dummy_executable(folder, exename):
     return exename
 
 
+@pytest.mark.skip(
+    reason="GitHub discontinued SVN, see https://github.com/conda/conda-build/issues/5098"
+)
 def test_checkout_tool_as_dependency(testing_workdir, testing_config, monkeypatch):
     # "hide" svn by putting a known bad one on PATH
     exename = dummy_executable(testing_workdir, "svn")
