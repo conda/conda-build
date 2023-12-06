@@ -1,5 +1,19 @@
 [//]: # (current developments)
 
+## 3.28.1 (2023-12-06)
+
+### Bug fixes
+
+* Relax `conda_build.metadata.MetaData.version` checks when `outputs` have been defined. (#5096)
+* Remove `lief` from `pyproject.toml` since it causes `pip check` to fail. To be re-added in the future after an update to `py-lief` package. (#5099)
+
+### Contributors
+
+* @dholth
+* @kenodegard
+
+
+
 ## 3.28.0 (2023-11-30)
 
 ### Special announcement
