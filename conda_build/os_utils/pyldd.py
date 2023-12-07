@@ -1,5 +1,7 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import argparse
 import glob
 import logging
@@ -7,8 +9,11 @@ import os
 import re
 import struct
 import sys
+from pathlib import Path
 
 from conda_build.utils import ensure_list, get_logger
+
+from ..deprecations import deprecated
 
 logging.basicConfig(level=logging.INFO)
 
@@ -360,6 +365,7 @@ def do_file(file, lc_operation, off_sz, arch, results, *args):
         results.append(do_macho(file, 64, LITTLE_ENDIAN, lc_operation, *args))
 
 
+@deprecated("3.28.0", "24.1.0")
 def mach_o_change(path, arch, what, value):
     """
     Replace a given name (what) in any LC_LOAD_DYLIB command found in
@@ -703,13 +709,9 @@ class elfheader:
             get_logger(__name__).warning(f"file.tell()={loc} != ehsize={self.ehsize}")
 
     def __str__(self):
-        return "bitness {}, endian {}, version {}, type {}, machine {}, entry {}".format(  # noqa
-            self.bitness,
-            self.endian,
-            self.version,
-            self.type,
-            hex(self.machine),
-            hex(self.entry),
+        return (
+            f"bitness {self.bitness}, endian {self.endian}, version {self.version}, "
+            f"type {self.type}, machine {hex(self.machine)}, entry {hex(self.entry)}"
         )
 
 
@@ -1028,46 +1030,60 @@ def codefile(file, arch="any", initial_rpaths_transitive=[]):
         return inscrutablefile(file, list(initial_rpaths_transitive))
 
 
-def codefile_class(filename, skip_symlinks=False):
-    if os.path.islink(filename):
-        if skip_symlinks:
-            return None
-        else:
-            filename = os.path.realpath(filename)
-    if os.path.isdir(filename):
+def codefile_class(
+    path: str | os.PathLike | Path,
+    skip_symlinks: bool = False,
+) -> type[DLLfile | EXEfile | machofile | elffile] | None:
+    # same signature as conda.os_utils.liefldd.codefile_class
+    path = Path(path)
+    if skip_symlinks and path.is_symlink():
         return None
-    if filename.endswith((".dll", ".pyd")):
+    path = path.resolve()
+
+    def _get_magic_bit(path: Path) -> bytes:
+        with path.open("rb") as handle:
+            bit = handle.read(4)
+        return struct.unpack(BIG_ENDIAN + "L", bit)[0]
+
+    if path.is_dir():
+        return None
+    elif path.suffix.lower() in (".dll", ".pyd"):
         return DLLfile
-    if filename.endswith(".exe"):
+    elif path.suffix.lower() == ".exe":
         return EXEfile
-    # Java .class files share 0xCAFEBABE with Mach-O FAT_MAGIC.
-    if filename.endswith(".class"):
+    elif path.suffix.lower() == ".class":
+        # Java .class files share 0xCAFEBABE with Mach-O FAT_MAGIC.
         return None
-    if not os.path.exists(filename) or os.path.getsize(filename) < 4:
+    elif not path.exists() or path.stat().st_size < 4:
         return None
-    with open(filename, "rb") as file:
-        (magic,) = struct.unpack(BIG_ENDIAN + "L", file.read(4))
-        file.seek(0)
-        if magic in (FAT_MAGIC, MH_MAGIC, MH_CIGAM, MH_CIGAM_64):
-            return machofile
-        elif magic == ELF_HDR:
-            return elffile
-    return None
-
-
-def is_codefile(filename, skip_symlinks=True):
-    klass = codefile_class(filename, skip_symlinks=skip_symlinks)
-    if not klass:
-        return False
-    return True
-
-
-def codefile_type(filename, skip_symlinks=True):
-    "Returns None, 'machofile' or 'elffile'"
-    klass = codefile_class(filename, skip_symlinks=skip_symlinks)
-    if not klass:
+    elif (magic := _get_magic_bit(path)) == ELF_HDR:
+        return elffile
+    elif magic in (FAT_MAGIC, MH_MAGIC, MH_CIGAM, MH_CIGAM_64):
+        return machofile
+    else:
         return None
-    return klass.__name__
+
+
+@deprecated(
+    "3.28.0",
+    "24.1.0",
+    addendum="Use `conda_build.os_utils.pyldd.codefile_class` instead.",
+)
+def is_codefile(path: str | os.PathLike | Path, skip_symlinks: bool = True) -> bool:
+    return bool(codefile_class(path, skip_symlinks=skip_symlinks))
+
+
+@deprecated(
+    "3.28.0",
+    "24.1.0",
+    addendum="Use `conda_build.os_utils.pyldd.codefile_class` instead.",
+)
+def codefile_type(
+    path: str | os.PathLike | Path,
+    skip_symlinks: bool = True,
+) -> str | None:
+    codefile = codefile_class(path, skip_symlinks=skip_symlinks)
+    return codefile.__name__ if codefile else None
 
 
 def _trim_sysroot(sysroot):
@@ -1120,6 +1136,7 @@ def _inspect_linkages_this(filename, sysroot="", arch="native"):
         return cf.uniqueness_key(), orig_names, resolved_names
 
 
+@deprecated("3.28.0", "24.1.0")
 def inspect_rpaths(
     filename, resolve_dirnames=True, use_os_varnames=True, sysroot="", arch="native"
 ):
@@ -1151,6 +1168,7 @@ def inspect_rpaths(
                 return cf.rpaths_nontransitive
 
 
+@deprecated("3.28.0", "24.1.0")
 def get_runpaths(filename, arch="native"):
     if not os.path.exists(filename):
         return []
@@ -1238,16 +1256,16 @@ def otool(*args):
     return 1
 
 
+@deprecated("3.28.0", "24.1.0")
 def otool_sys(*args):
     import subprocess
 
-    result = subprocess.check_output("/usr/bin/otool", args).decode(encoding="ascii")
-    return result
+    return subprocess.check_output("/usr/bin/otool", args).decode(encoding="ascii")
 
 
+@deprecated("3.28.0", "24.1.0")
 def ldd_sys(*args):
-    result = []
-    return result
+    return []
 
 
 def ldd(*args):
@@ -1278,12 +1296,11 @@ def main(argv):
         elif re.match(r".*otool(?:$|\.exe|\.py)", progname):
             return otool(*argv[2 - idx :])
         elif os.path.isfile(progname):
-            klass = codefile_class(progname)
-            if not klass:
+            if not (codefile := codefile_class(progname)):
                 return 1
-            elif klass == elffile:
+            elif codefile == elffile:
                 return ldd(*argv[1 - idx :])
-            elif klass == machofile:
+            elif codefile == machofile:
                 return otool("-L", *argv[1 - idx :])
     return 1
 

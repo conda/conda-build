@@ -16,6 +16,7 @@ from conda_build.utils import ensure_list, package_has_file
 from conda_build.variants import (
     combine_specs,
     dict_of_lists_to_list_of_dicts,
+    filter_combined_spec_to_used_keys,
     get_package_variants,
     validate_spec,
 )
@@ -657,3 +658,45 @@ def test_variant_subkeys_retained():
     m.final = False
     outputs = m.get_output_metadata_set(permit_unsatisfiable_variants=False)
     get_all_replacements(outputs[0][1].config.variant)
+
+
+@pytest.mark.parametrize(
+    "internal_defaults, low_prio_config, high_prio_config, expected",
+    [
+        pytest.param(
+            {"pkg_1": "1.0"},
+            {"pkg_1": "1.1"},
+            {"pkg_1": ["1.1", "1.2"], "pkg_2": ["1.1"]},
+            [{"pkg_1": "1.1", "pkg_2": "1.1"}, {"pkg_1": "1.2", "pkg_2": "1.1"}],
+            id="basic",
+        ),
+        pytest.param(
+            {"pkg_1": "1.0"},
+            {"pkg_1": "1.1"},
+            {
+                "pkg_1": ["1.1", "1.2"],
+                "pkg_2": ["1.1", "1.2"],
+                "zip_keys": [["pkg_1", "pkg_2"]],
+            },
+            [
+                {"pkg_1": "1.1", "pkg_2": "1.1", "zip_keys": [["pkg_1", "pkg_2"]]},
+                {"pkg_1": "1.2", "pkg_2": "1.2", "zip_keys": [["pkg_1", "pkg_2"]]},
+            ],
+            id="zip_keys",
+        ),
+    ],
+)
+def test_zip_key_filtering(
+    internal_defaults, low_prio_config, high_prio_config, expected
+):
+    combined_spec = {
+        **low_prio_config,
+        **high_prio_config,
+    }
+    specs = {
+        "internal_defaults": internal_defaults,
+        "low_prio_config": low_prio_config,
+        "high_prio_config": high_prio_config,
+    }
+
+    assert filter_combined_spec_to_used_keys(combined_spec, specs=specs) == expected

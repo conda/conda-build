@@ -312,25 +312,27 @@ def _delegated_update_index(
         dir_path = parent_path
         subdirs = [dirname]
 
-    return _update_index(
-        dir_path,
-        check_md5=check_md5,
-        channel_name=channel_name,
-        patch_generator=patch_generator,
-        threads=threads,
-        verbose=verbose,
-        progress=progress,
-        subdirs=subdirs,
-        warn=warn,
-        current_index_versions=current_index_versions,
-        debug=debug,
-    )
+    log_level = logging.DEBUG if debug else logging.INFO if verbose else logging.WARNING
+    with utils.LoggingContext(log_level):
+        return _update_index(
+            dir_path,
+            check_md5=check_md5,
+            channel_name=channel_name,
+            patch_generator=patch_generator,
+            threads=threads,
+            verbose=verbose,
+            progress=progress,
+            subdirs=subdirs,
+            warn=warn,
+            current_index_versions=current_index_versions,
+            debug=debug,
+        )
 
 
 # Everything below is deprecated to maintain API/feature compatibility.
 
 
-@deprecated("3.25.0", "4.0.0", addendum="Use standalone conda-index.")
+@deprecated("3.25.0", "24.1.0", addendum="Use standalone conda-index.")
 def update_index(
     dir_path,
     check_md5=False,
@@ -360,7 +362,8 @@ def update_index(
     if dirname in utils.DEFAULT_SUBDIRS:
         if warn:
             log.warn(
-                "The update_index function has changed to index all subdirs at once.  You're pointing it at a single subdir.  "
+                "The update_index function has changed to index all subdirs at once. "
+                "You're pointing it at a single subdir. "
                 "Please update your code to point it at the channel root, rather than a subdir."
             )
         return update_index(

@@ -8,6 +8,7 @@ version number.
 Design philosophy: put variability into config.  Make each function here accept kwargs,
 but only use those kwargs in config.  Config must change to support new features elsewhere.
 """
+from __future__ import annotations
 
 import sys as _sys
 
@@ -76,8 +77,8 @@ def render(
                                     raise
 
                         # remove outputs section from output objects for simplicity
-                        if not om.path and om.meta.get("outputs"):
-                            om.parent_outputs = om.meta["outputs"]
+                        if not om.path and (outputs := om.get_section("outputs")):
+                            om.parent_outputs = outputs
                             del om.meta["outputs"]
 
                         output_metas[
@@ -414,7 +415,7 @@ def convert(
         )
     elif package_file.endswith(".whl"):
         raise RuntimeError(
-            "Conversion from wheel packages is not " "implemented yet, stay tuned."
+            "Conversion from wheel packages is not implemented yet, stay tuned."
         )
     else:
         raise RuntimeError("cannot convert: %s" % package_file)
@@ -520,7 +521,7 @@ def create_metapackage(
     )
 
 
-@deprecated("3.25.0", "4.0.0", addendum="Use standalone conda-index.")
+@deprecated("3.25.0", "24.1.0", addendum="Use standalone conda-index.")
 def update_index(
     dir_paths,
     config=None,
@@ -571,7 +572,7 @@ def debug(
     test=False,
     output_id=None,
     config=None,
-    verbose=True,
+    verbose: bool = True,
     link_source_method="auto",
     **kwargs,
 ):
@@ -586,6 +587,8 @@ def debug(
     from conda_build.build import build as run_build
     from conda_build.build import test as run_test
     from conda_build.utils import CONDA_PACKAGE_EXTENSIONS, LoggingContext, on_win
+
+    from .metadata import MetaData
 
     is_package = False
     default_config = get_or_merge_config(config, **kwargs)
@@ -622,15 +625,13 @@ def debug(
 
     config.channel_urls = get_channel_urls(kwargs)
 
-    metadata_tuples = []
+    metadata_tuples: list[tuple[MetaData, bool, bool]] = []
 
     best_link_source_method = "skip"
     if isinstance(recipe_or_package_path_or_metadata_tuples, str):
         if path_is_build_dir:
             for metadata_conda_debug in metadatas_conda_debug:
                 best_link_source_method = "symlink"
-                from conda_build.metadata import MetaData
-
                 metadata = MetaData(metadata_conda_debug, config, {})
                 metadata_tuples.append((metadata, False, True))
         else:
@@ -655,17 +656,18 @@ def debug(
             ]
             if len(matched_outputs) > 1:
                 raise ValueError(
-                    "Specified --output-id matches more than one output ({}).  Please refine your output id so that only "
-                    "a single output is found.".format(matched_outputs)
+                    f"Specified --output-id matches more than one output ({matched_outputs}). "
+                    "Please refine your output id so that only a single output is found."
                 )
             elif not matched_outputs:
                 raise ValueError(
-                    f"Specified --output-id did not match any outputs.  Available outputs are: {outputs} Please check it and try again"
+                    f"Specified --output-id did not match any outputs. Available outputs are: {outputs} "
+                    "Please check it and try again"
                 )
         if len(matched_outputs) > 1 and not path_is_build_dir:
             raise ValueError(
-                "More than one output found for this recipe ({}).  Please use the --output-id argument to filter down "
-                "to a single output.".format(outputs)
+                f"More than one output found for this recipe ({outputs}). "
+                "Please use the --output-id argument to filter down to a single output."
             )
         else:
             matched_outputs = outputs
@@ -681,10 +683,7 @@ def debug(
                 "local",
                 "src",
                 "conda",
-                "{}-{}".format(
-                    metadata.get_value("package/name"),
-                    metadata.get_value("package/version"),
-                ),
+                f"{metadata.name()}-{metadata.version()}",
             )
             link_target = os.path.dirname(metadata.meta_path)
             try:

@@ -20,3 +20,7 @@ requirements:
     - setuptools
   run:
     - python
+
+# Ensure we get different build strings for concurrently tested packages.
+extra:
+  dummy: '{{ pytest_name is defined }}'

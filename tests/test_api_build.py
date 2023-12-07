@@ -31,6 +31,7 @@ from conda_build.conda_interface import (
     CondaError,
     LinkError,
     cc_conda_build,
+    context,
     reset_context,
     url_path,
 )
@@ -123,6 +124,9 @@ def test_recipe_builds(
     #   ``source_setup_py_data_subdir`` reproduces the problem.
     if recipe.name == "source_setup_py_data_subdir":
         pytest.xfail("Issue related to #3754 on conda-build.")
+    elif recipe.name == "unicode_all_over" and context.solver == "libmamba":
+        pytest.xfail("Unicode package names not supported in libmamba.")
+
     # These variables are defined solely for testing purposes,
     # so they can be checked within build scripts
     testing_config.activate = True
@@ -398,9 +402,7 @@ def dummy_executable(folder, exename):
     echo ******* conda that makes it not add the _build/bin directory onto the
     echo ******* PATH before running the source checkout tool
     exit -1
-    """.format(
-                exename
-            )
+    """.format(exename)
         )
     if sys.platform != "win32":
         import stat
@@ -410,6 +412,9 @@ def dummy_executable(folder, exename):
     return exename
 
 
+@pytest.mark.skip(
+    reason="GitHub discontinued SVN, see https://github.com/conda/conda-build/issues/5098"
+)
 def test_checkout_tool_as_dependency(testing_workdir, testing_config, monkeypatch):
     # "hide" svn by putting a known bad one on PATH
     exename = dummy_executable(testing_workdir, "svn")
@@ -734,77 +739,41 @@ def test_relative_git_url_submodule_clone(testing_workdir, testing_config, monke
         #
         # Also, git is set to False here because it needs to be rebuilt with the longer prefix. As
         # things stand, my _b_env folder for this test contains more than 80 characters.
-        requirements = (
-            "requirements",
-            OrderedDict(
-                [
-                    (
-                        "build",
-                        [
-                            "git            # [False]",
-                            "m2-git         # [win]",
-                            "m2-filesystem  # [win]",
-                        ],
-                    )
-                ]
-            ),
-        )
 
         recipe_dir = os.path.join(testing_workdir, "recipe")
         if not os.path.exists(recipe_dir):
             os.makedirs(recipe_dir)
         filename = os.path.join(testing_workdir, "recipe", "meta.yaml")
-        data = OrderedDict(
-            [
-                (
-                    "package",
-                    OrderedDict(
-                        [
-                            ("name", "relative_submodules"),
-                            ("version", "{{ GIT_DESCRIBE_TAG }}"),
-                        ]
-                    ),
-                ),
-                ("source", OrderedDict([("git_url", toplevel), ("git_tag", str(tag))])),
-                requirements,
-                (
-                    "build",
-                    OrderedDict(
-                        [
-                            (
-                                "script",
-                                [
-                                    "git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%%s > "
-                                    "%PREFIX%\\summaries.txt  # [win]",
-                                    "git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%s > "
-                                    "$PREFIX/summaries.txt   # [not win]",
-                                ],
-                            )
-                        ]
-                    ),
-                ),
-                (
-                    "test",
-                    OrderedDict(
-                        [
-                            (
-                                "commands",
-                                [
-                                    "echo absolute{}relative{} > %PREFIX%\\expected_summaries.txt       # [win]".format(
-                                        tag, tag
-                                    ),
-                                    "fc.exe /W %PREFIX%\\expected_summaries.txt %PREFIX%\\summaries.txt # [win]",
-                                    "echo absolute{}relative{} > $PREFIX/expected_summaries.txt         # [not win]".format(
-                                        tag, tag
-                                    ),
-                                    "diff -wuN ${PREFIX}/expected_summaries.txt ${PREFIX}/summaries.txt # [not win]",
-                                ],
-                            )
-                        ]
-                    ),
-                ),
-            ]
-        )
+        data = {
+            "package": {
+                "name": "relative_submodules",
+                "version": "{{ GIT_DESCRIBE_TAG }}",
+            },
+            "source": {"git_url": toplevel, "git_tag": str(tag)},
+            "requirements": {
+                "build": [
+                    "git            # [False]",
+                    "m2-git         # [win]",
+                    "m2-filesystem  # [win]",
+                ],
+            },
+            "build": {
+                "script": [
+                    "git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%%s > "
+                    "%PREFIX%\\summaries.txt  # [win]",
+                    "git --no-pager submodule --quiet foreach git log -n 1 --pretty=format:%s > "
+                    "$PREFIX/summaries.txt   # [not win]",
+                ],
+            },
+            "test": {
+                "commands": [
+                    f"echo absolute{tag}relative{tag} > %PREFIX%\\expected_summaries.txt # [win]",
+                    "fc.exe /W %PREFIX%\\expected_summaries.txt %PREFIX%\\summaries.txt # [win]",
+                    f"echo absolute{tag}relative{tag} > $PREFIX/expected_summaries.txt # [not win]",
+                    "diff -wuN ${PREFIX}/expected_summaries.txt ${PREFIX}/summaries.txt # [not win]",
+                ],
+            },
+        }
 
         with open(filename, "w") as outfile:
             outfile.write(yaml.dump(data, default_flow_style=False, width=999999999))
@@ -1427,7 +1396,7 @@ def test_recursion_layers(testing_config):
 @pytest.mark.sanity
 @pytest.mark.skipif(
     sys.platform != "win32",
-    reason=("spaces break openssl prefix " "replacement on *nix"),
+    reason="spaces break openssl prefix replacement on *nix",
 )
 def test_croot_with_spaces(testing_metadata, testing_workdir):
     testing_metadata.config.croot = os.path.join(testing_workdir, "space path")
@@ -1614,9 +1583,10 @@ def test_copy_test_source_files(testing_config):
                 found = True
                 break
         if found:
-            assert (
-                copy
-            ), "'info/test/test_files_folder/text.txt' found in tar.bz2 but not copying test source files"
+            assert copy, (
+                "'info/test/test_files_folder/text.txt' found in tar.bz2 "
+                "but not copying test source files"
+            )
             if copy:
                 api.test(outputs[0])
             else:
@@ -1624,8 +1594,8 @@ def test_copy_test_source_files(testing_config):
                     api.test(outputs[0])
         else:
             assert not copy, (
-                "'info/test/test_files_folder/text.txt' not found in tar.bz2 but copying test source files. File list: %r"
-                % files
+                "'info/test/test_files_folder/text.txt' not found in tar.bz2 "
+                f"but copying test source files. File list: {files!r}"
             )
 
 
@@ -1688,15 +1658,17 @@ def test_provides_features_metadata(testing_config):
     assert index["provides_features"] == {"test2": "also_ok"}
 
 
-# using different MACOSX_DEPLOYMENT_TARGET in parallel causes some SDK race condition
-# https://github.com/conda/conda-build/issues/4708
-@pytest.mark.serial
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
-def test_overlinking_detection(testing_config, variants_conda_build_sysroot):
+def test_overlinking_detection(
+    testing_config, testing_workdir, variants_conda_build_sysroot
+):
     testing_config.activate = True
     testing_config.error_overlinking = True
     testing_config.verify = False
-    recipe = os.path.join(metadata_dir, "_overlinking_detection")
+    recipe = os.path.join(testing_workdir, "recipe")
+    copy_into(
+        os.path.join(metadata_dir, "_overlinking_detection"),
+        recipe,
+    )
     dest_sh = os.path.join(recipe, "build.sh")
     dest_bat = os.path.join(recipe, "bld.bat")
     copy_into(
@@ -1718,17 +1690,17 @@ def test_overlinking_detection(testing_config, variants_conda_build_sysroot):
     rm_rf(dest_bat)
 
 
-# using different MACOSX_DEPLOYMENT_TARGET in parallel causes some SDK race condition
-# https://github.com/conda/conda-build/issues/4708
-@pytest.mark.serial
-@pytest.mark.flaky(reruns=5, reruns_delay=2)
 def test_overlinking_detection_ignore_patterns(
-    testing_config, variants_conda_build_sysroot
+    testing_config, testing_workdir, variants_conda_build_sysroot
 ):
     testing_config.activate = True
     testing_config.error_overlinking = True
     testing_config.verify = False
-    recipe = os.path.join(metadata_dir, "_overlinking_detection_ignore_patterns")
+    recipe = os.path.join(testing_workdir, "recipe")
+    copy_into(
+        os.path.join(metadata_dir, "_overlinking_detection_ignore_patterns"),
+        recipe,
+    )
     dest_sh = os.path.join(recipe, "build.sh")
     dest_bat = os.path.join(recipe, "bld.bat")
     copy_into(

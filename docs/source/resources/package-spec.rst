@@ -2,10 +2,6 @@
 Conda package specification
 ===========================
 
-.. contents::
-   :local:
-   :depth: 1
-
 A conda package is an archive file that contains:
 
 * Metadata under the ``info/`` directory.
@@ -62,7 +58,7 @@ conda package is composed of the first 3 values, as in:
 ``<name>-<version>-<build>.tar.bz2`` or ``<name>-<version>-<build>.conda``.
 
 .. list-table::
-   :widths: 15 15 70
+   :widths: 15 15 45
 
    * - **Key**
      - **Type**
@@ -76,8 +72,7 @@ conda package is composed of the first 3 values, as in:
    * - version
      - string
      - The package version. May not contain "-". Conda
-       acknowledges `PEP 440
-       <https://www.python.org/dev/peps/pep-0440/>`_.
+       acknowledges `PEP 440 <https://www.python.org/dev/peps/pep-0440/>`_.
 
    * - build
      - string
@@ -96,15 +91,13 @@ conda package is composed of the first 3 values, as in:
 
    * - build_number
      - integer
-     - A non-negative integer representing the build number of
-       the package.
+     - A non-negative integer representing the build number of the package.
 
-       Unlike the build string, the ``build_number`` is inspected by
-       conda. Conda uses it to sort packages that have otherwise
-       identical names and versions to determine the latest one.
-       This is important because new builds that contain bug
-       fixes for the way a package is built may be added to a
-       repository.
+       Unlike the build string, the ``build_number`` is inspected by conda.
+
+       Conda uses it to sort packages that have otherwise identical names and versions to determine the latest one.
+
+       This is important because new builds that contain bug fixes for the way a package is built may be added to a repository.
 
    * - depends
      - list of strings
@@ -125,10 +118,12 @@ conda package is composed of the first 3 values, as in:
 
        EXAMPLE: ``osx``
 
-       Conda currently does not use this key. Packages for a
-       specific architecture and platform are usually
-       distinguished by the repository subdirectory that contains
-       them---see :ref:`repo-si`.
+       Conda currently does not use this key.
+
+       Packages for a specific architecture and platform are usually distinguished by the repository subdirectory that contains
+       them.
+
+       See :ref:`repo-si`.
 
 info/files
 ----------
@@ -284,44 +279,53 @@ parts:
 * The first part is always the exact name of the package.
 
 * The second part refers to the version and may contain special
-  characters:
-
-  * \| means OR.
-
-    EXAMPLE: ``1.0|1.2`` matches version 1.0 or 1.2.
-
-  * \* matches 0 or more characters in the version string. In
-    terms of regular expressions, it is the same as ``r'.*'``.
-
-    EXAMPLE: 1.0|1.4* matches 1.0, 1.4 and 1.4.1b2, but not 1.2.
-
-  * <, >, <=, >=, ==, and != are relational operators on versions,
-    which are compared using
-    `PEP-440 <https://www.python.org/dev/peps/pep-0440/>`_. For example,
-    ``<=1.0`` matches ``0.9``, ``0.9.1``, and ``1.0``, but not ``1.0.1``.
-    ``==`` and ``!=`` are exact equality.
-
-    Pre-release versioning is also supported such that ``>1.0b4`` will match
-    ``1.0b5`` and ``1.0rc1`` but not ``1.0b4`` or ``1.0a5``.
-
-    EXAMPLE: <=1.0 matches 0.9, 0.9.1, and 1.0, but not 1.0.1.
-
-  * , means AND.
-
-    EXAMPLE: >=2,<3 matches all packages in the 2 series. 2.0,
-    2.1, and 2.9 all match, but 3.0 and 1.0 do not.
-
-  * , has higher precedence than \|, so >=1,<2|>3 means greater
-    than or equal to 1 AND less than 2 or greater than 3, which
-    matches 1, 1.3 and 3.0, but not 2.2.
-
-  Conda parses the version by splitting it into parts separated
-  by \|. If the part begins with <, >, =, or !, it is parsed as a
-  relational operator. Otherwise, it is parsed as a version,
-  possibly containing the "*" operator.
+  characters. See table below.
 
 * The third part is always the exact build string. When there are
-  3 parts, the second part must be the exact version.
+  three parts, the second part must be the exact version.
+
+.. list-table:: Version Special Characters
+   :widths: 10 40 40
+   :header-rows: 1
+
+   * - Symbol
+     - Meaning
+     - Example
+
+   * - <, >, <=, >=
+     - Relational operators on versions, which are compared using `PEP-440 <https://www.python.org/dev/peps/pep-0440/>`_.
+     - ``<=1.0`` matches 0.9, 0.9.1, and 1.0, but not 1.0.1.
+
+   * - ==, and !=
+     - Exact equality and not equalities.
+     - ``==0.5.1`` matches 0.5.1 and not anything else while ``!=0.5.1`` matches everything but.
+
+   * - ~=
+     - Compatibility Release
+     - ``~=0.5.3`` is equivalent to ``>=0.5.3, <0.6.0a``
+
+   * - \|
+     - OR
+     - ``1.0|1.2`` matches version 1.0 or 1.2.
+
+   * - \*
+     - Matches 0 or more characters in the version string. In terms of regular expressions, it is the same as ``r'.*'``.
+     - ``1.0|1.4*`` matches 1.0, 1.4 and 1.4.1b2, but not 1.2.
+
+   * - ,
+     - AND
+     - ``>=2,<3`` matches all packages in the 2 series. 2.0, 2.1, and 2.9 all match, but 3.0 and 1.0 do not.
+
+.. hint::
+   ``,`` has higher precedence than \|, so >=1,<2|>3 means greater than or equal to 1 AND less than 2 or greater than 3, which matches 1, 1.3 and 3.0, but not 2.2.
+
+.. note::
+   For package match specifications, pre-release versioning is also supported such that ``>1.0b4`` will match ``1.0b5`` and ``1.0rc1`` but not ``1.0b4`` or ``1.0a5``.
+
+Conda parses the version by splitting it into parts separated
+by \|. If the part begins with <, >, =, or !, it is parsed as a
+relational operator. Otherwise, it is parsed as a version,
+possibly containing the "*" operator.
 
 Remember that the version specification cannot contain spaces,
 as spaces are used to delimit the package, version, and build
@@ -329,40 +333,13 @@ string in the whole match specification. ``python >= 2.7`` is an
 invalid match specification. However, ``"python >= 2.7"`` (with double or single quotes) is
 matched as any version of a package named ``python>=2.7``.
 
-When using the command line, put double or single quotes around any package
-version specification that contains the space character or any of
-the following characters: <, >, \*, or \|.
+Examples of Package Specs
+-------------------------
 
-EXAMPLE::
-
-  conda install numpy=1.11
-  conda install numpy==1.11
-  conda install "numpy>1.11"
-  conda install "numpy=1.11.1|1.11.3"
-  conda install "numpy>=1.8,<2"
-
-
-Examples
---------
-
-The OR constraint "numpy=1.11.1|1.11.3" matches with 1.11.1 or
-1.11.3.
-
-The AND constraint "numpy>=1.8,<2" matches with 1.8 and 1.9 but
-not 2.0.
-
-The fuzzy constraint numpy=1.11 matches 1.11, 1.11.0, 1.11.1,
-1.11.2, 1.11.18, and so on.
-
-The exact constraint numpy==1.11 matches 1.11, 1.11.0, 1.11.0.0,
-and so on.
-
-The build string constraint "numpy=1.11.2=*nomkl*" matches the
-NumPy 1.11.2 packages without MKL but not the normal MKL NumPy
+The build string constraint "numpy=1.11.2=*nomkl*" matches the NumPy 1.11.2 packages without MKL, but not the normal MKL NumPy
 1.11.2 packages.
 
-The build string constraint "numpy=1.11.1|1.11.3=py36_0" matches
-NumPy 1.11.1 or 1.11.3 built for Python 3.6 but not any versions
+The build string constraint "numpy=1.11.1|1.11.3=py36_0" matches NumPy 1.11.1 or 1.11.3 built for Python 3.6, but not any versions
 of NumPy built for Python 3.5 or Python 2.7.
 
 The following are all valid match specifications for
@@ -378,3 +355,32 @@ numpy-1.8.1-py27_0:
 * numpy >=1.8,<2|1.9
 * numpy 1.8.1 py27_0
 * numpy=1.8.1=py27_0
+
+Command Line Match Spec Examples
+--------------------------------
+
+When using the command line, put double or single quotes around any package
+version specification that contains the space character or any of
+the following characters: <, >, \*, or \|.
+
+.. list-table:: Examples
+   :widths: 30 60
+   :header-rows: 1
+
+   * - Example
+     - Meaning
+
+   * - ``conda install numpy=1.11``
+     - The fuzzy constraint numpy=1.11 matches 1.11, 1.11.0, 1.11.1, 1.11.2, 1.11.18, and so on.
+
+   * - ``conda install numpy==1.11``
+     - The exact constraint numpy==1.11 matches 1.11, 1.11.0, 1.11.0.0, and so on.
+
+   * - ``conda install "numpy=1.11.1|1.11.3"``
+     - The OR constraint "numpy=1.11.1|1.11.3" matches with 1.11.1 or 1.11.3.
+
+   * - ``conda install "numpy>1.11"``
+     - Any numpy version 1.12.0a or greater.
+
+   * - ``conda install "numpy>=1.8,<2"``
+     - The AND constraint "numpy>=1.8,<2" matches with 1.8 and 1.9 but not 2.0.

@@ -25,7 +25,6 @@ from collections import OrderedDict, deque
 from os.path import dirname, isdir, isfile, islink, join
 
 import conda_package_handling.api
-import glob2
 import yaml
 from bs4 import UnicodeDammit
 from conda import __version__ as conda_version
@@ -76,7 +75,6 @@ from .conda_interface import (
     env_path_backup_var_exists,
     get_conda_channel,
     get_rc_urls,
-    pkgs_dirs,
     prefix_placeholder,
     reset_context,
     root_dir,
@@ -153,7 +151,7 @@ def log_stats(stats_dict, descriptor):
     )
 
 
-def create_post_scripts(m):
+def create_post_scripts(m: MetaData):
     """
     Create scripts to run after build step
     """
@@ -164,12 +162,9 @@ def create_post_scripts(m):
         is_output = "package:" not in m.get_recipe_text()
         scriptname = tp
         if is_output:
-            if m.meta.get("build", {}).get(tp, ""):
-                scriptname = m.meta["build"][tp]
-            else:
-                scriptname = m.name() + "-" + tp
+            scriptname = m.get_value(f"build/{tp}", f"{m.name()}-{tp}")
         scriptname += ext
-        dst_name = "." + m.name() + "-" + tp + ext
+        dst_name = f".{m.name()}-{tp}{ext}"
         src = join(m.path, scriptname)
         if isfile(src):
             dst_dir = join(
@@ -503,7 +498,12 @@ def regex_files_py(
                         match_records[file] = {"type": type, "submatches": []}
                     # else:
                     #     if match_records[file]['absolute_offset'] != absolute_offset:
-                    #         print("Dropping match.pos() of {}, neq {}".format(absolute_offset, match_records[file]['absolute_offset']))
+                    #         print(
+                    #             "Dropping match.pos() of {}, neq {}".format(
+                    #                 absolute_offset,
+                    #                 match_records[file]['absolute_offset'],
+                    #             )
+                    #         )
                     g_index = len(match.groups())
                     if g_index == 0:
                         # Complete match.
@@ -641,8 +641,9 @@ def have_regex_files(
         return match_records
     import copy
 
-    match_records_rg, match_records_re = copy.deepcopy(match_records), copy.deepcopy(
-        match_records
+    match_records_rg, match_records_re = (
+        copy.deepcopy(match_records),
+        copy.deepcopy(match_records),
     )
     if not isinstance(regex_re, (bytes, bytearray)):
         regex_re = regex_re.encode("utf-8")
@@ -1203,11 +1204,11 @@ def get_files_with_prefix(m, replacements, files_in, prefix):
         for index, replacement in enumerate(replacements):
             all_matches = have_regex_files(
                 files=[
-                    f
-                    for f in files
+                    file
+                    for file in files
                     if any(
-                        glob2.fnmatch.fnmatch(f, r)
-                        for r in replacement["glob_patterns"]
+                        fnmatch.fnmatch(file, pattern)
+                        for pattern in replacement["glob_patterns"]
                     )
                 ],
                 prefix=prefix,
@@ -1458,12 +1459,12 @@ def write_about_json(m):
         json.dump(d, fo, indent=2, sort_keys=True)
 
 
-def write_info_json(m):
+def write_info_json(m: MetaData):
     info_index = m.info_index()
     if m.pin_depends:
         # Wtih 'strict' depends, we will have pinned run deps during rendering
         if m.pin_depends == "strict":
-            runtime_deps = m.meta.get("requirements", {}).get("run", [])
+            runtime_deps = m.get_value("requirements/run", [])
             info_index["depends"] = runtime_deps
         else:
             runtime_deps = environ.get_pinned_deps(m, "run")
@@ -1510,8 +1511,8 @@ def get_entry_point_script_names(entry_point_scripts):
     return scripts
 
 
-def write_run_exports(m):
-    run_exports = m.meta.get("build", {}).get("run_exports", {})
+def write_run_exports(m: MetaData):
+    run_exports = m.get_value("build/run_exports", {})
     if run_exports:
         with open(os.path.join(m.config.info_dir, "run_exports.json"), "w") as f:
             if not hasattr(run_exports, "keys"):
@@ -1749,8 +1750,8 @@ def create_info_files_json_v1(m, info_dir, prefix, files, files_with_prefix):
     return checksums
 
 
-def post_process_files(m, initial_prefix_files):
-    package_name = m.get_value("package/name")
+def post_process_files(m: MetaData, initial_prefix_files):
+    package_name = m.name()
     host_prefix = m.config.host_prefix
     missing = []
     for f in initial_prefix_files:
@@ -1780,7 +1781,7 @@ def post_process_files(m, initial_prefix_files):
     )
     post_process(
         package_name,
-        m.get_value("package/version"),
+        m.version(),
         sorted(current_prefix_files - initial_prefix_files),
         prefix=host_prefix,
         config=m.config,
@@ -1841,7 +1842,7 @@ def post_process_files(m, initial_prefix_files):
     return new_files
 
 
-def bundle_conda(output, metadata, env, stats, **kw):
+def bundle_conda(output, metadata: MetaData, env, stats, **kw):
     log = utils.get_logger(__name__)
     log.info("Packaging %s", metadata.dist())
     get_all_replacements(metadata.config)
@@ -1913,7 +1914,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
         env_output["TOP_PKG_NAME"] = env["PKG_NAME"]
         env_output["TOP_PKG_VERSION"] = env["PKG_VERSION"]
         env_output["PKG_VERSION"] = metadata.version()
-        env_output["PKG_NAME"] = metadata.get_value("package/name")
+        env_output["PKG_NAME"] = metadata.name()
         env_output["RECIPE_DIR"] = metadata.path
         env_output["MSYS2_PATH_TYPE"] = "inherit"
         env_output["CHERE_INVOKING"] = "1"
@@ -2131,7 +2132,7 @@ def bundle_conda(output, metadata, env, stats, **kw):
     return final_outputs
 
 
-def bundle_wheel(output, metadata, env, stats):
+def bundle_wheel(output, metadata: MetaData, env, stats):
     ext = ".bat" if utils.on_win else ".sh"
     with TemporaryDirectory() as tmpdir, utils.tmp_chdir(metadata.config.work_dir):
         dest_file = os.path.join(metadata.config.work_dir, "wheel_output" + ext)
@@ -2147,7 +2148,7 @@ def bundle_wheel(output, metadata, env, stats):
         env["TOP_PKG_NAME"] = env["PKG_NAME"]
         env["TOP_PKG_VERSION"] = env["PKG_VERSION"]
         env["PKG_VERSION"] = metadata.version()
-        env["PKG_NAME"] = metadata.get_value("package/name")
+        env["PKG_NAME"] = metadata.name()
         interpreter_and_args = guess_interpreter(dest_file)
 
         bundle_stats = {}
@@ -2259,7 +2260,9 @@ def _write_sh_activation_text(file_handle, m):
             if value:
                 if not done_necessary_env:
                     # file_handle.write(
-                    #     'export CCACHE_SLOPPINESS="pch_defines,time_macros${CCACHE_SLOPPINESS+,$CCACHE_SLOPPINESS}"\n')
+                    #     'export CCACHE_SLOPPINESS="pch_defines,time_macros'
+                    #     '${CCACHE_SLOPPINESS+,$CCACHE_SLOPPINESS}"\n'
+                    # )
                     # file_handle.write('export CCACHE_CPP2=true\n')
                     done_necessary_env = True
                 if method == "symlinks":
@@ -2268,16 +2271,12 @@ def _write_sh_activation_text(file_handle, m):
                     file_handle.write(f"pushd {dirname_ccache_ln_bin}\n")
                     file_handle.write('if [ -n "$CC" ]; then\n')
                     file_handle.write(
-                        "  [ -f {ccache} ] && [ ! -f $(basename $CC) ] && ln -s {ccache} $(basename $CC) || true\n".format(
-                            ccache=ccache
-                        )
+                        f"  [ -f {ccache} ] && [ ! -f $(basename $CC) ] && ln -s {ccache} $(basename $CC) || true\n"
                     )
                     file_handle.write("fi\n")
                     file_handle.write('if [ -n "$CXX" ]; then\n')
                     file_handle.write(
-                        "  [ -f {ccache} ] && [ ! -f $(basename $CXX) ] && ln -s {ccache} $(basename $CXX) || true\n".format(
-                            ccache=ccache
-                        )
+                        f"  [ -f {ccache} ] && [ ! -f $(basename $CXX) ] && ln -s {ccache} $(basename $CXX) || true\n"
                     )
                     file_handle.write("fi\n")
                     file_handle.write("popd\n")
@@ -2319,7 +2318,7 @@ def _write_activation_text(script_path, m):
         fh.write(data)
 
 
-def create_build_envs(m, notest):
+def create_build_envs(m: MetaData, notest):
     build_ms_deps = m.ms_depends("build")
     build_ms_deps = [utils.ensure_valid_spec(spec) for spec in build_ms_deps]
     host_ms_deps = m.ms_depends("host")
@@ -2373,11 +2372,12 @@ def create_build_envs(m, notest):
     try:
         if not notest:
             utils.insert_variant_versions(
-                m.meta.get("requirements", {}), m.config.variant, "run"
+                m.get_section("requirements"), m.config.variant, "run"
             )
-            test_run_ms_deps = utils.ensure_list(
-                m.get_value("test/requires", [])
-            ) + utils.ensure_list(m.get_value("requirements/run", []))
+            test_run_ms_deps = [
+                *utils.ensure_list(m.get_value("test/requires", [])),
+                *utils.ensure_list(m.get_value("requirements/run", [])),
+            ]
             # make sure test deps are available before taking time to create build env
             environ.get_install_actions(
                 m.config.test_prefix,
@@ -2426,7 +2426,7 @@ def create_build_envs(m, notest):
 
 
 def build(
-    m,
+    m: MetaData,
     stats,
     post=None,
     need_source_download=True,
@@ -2518,7 +2518,7 @@ def build(
         )
 
         specs = [ms.spec for ms in m.ms_depends("build")]
-        if any(out.get("type") == "wheel" for out in m.meta.get("outputs", [])):
+        if any(out.get("type") == "wheel" for out in m.get_section("outputs")):
             specs.extend(["pip", "wheel"])
 
         # TODO :: This is broken. It does not respect build/script for example and also if you need git
@@ -2607,6 +2607,7 @@ def build(
 
         utils.rm_rf(m.config.info_dir)
         files1 = utils.prefix_files(prefix=m.config.host_prefix)
+        os.makedirs(m.config.build_folder, exist_ok=True)
         with open(join(m.config.build_folder, "prefix_files.txt"), "w") as f:
             f.write("\n".join(sorted(list(files1))))
             f.write("\n")
@@ -3420,18 +3421,6 @@ def test(
     #     folder destination
     _extract_test_files_from_package(metadata)
 
-    # When testing a .tar.bz2 in the pkgs dir, clean_pkg_cache() will remove it.
-    # Prevent this. When https://github.com/conda/conda/issues/5708 gets fixed
-    # I think we can remove this call to clean_pkg_cache().
-    in_pkg_cache = (
-        not hasattr(recipedir_or_package_or_metadata, "config")
-        and os.path.isfile(recipedir_or_package_or_metadata)
-        and recipedir_or_package_or_metadata.endswith(CONDA_PACKAGE_EXTENSIONS)
-        and os.path.dirname(recipedir_or_package_or_metadata) in pkgs_dirs[0]
-    )
-    if not in_pkg_cache:
-        environ.clean_pkg_cache(metadata.dist(), metadata.config)
-
     copy_test_source_files(metadata, metadata.config.test_dir)
     # this is also copying tests/source_files from work_dir to testing workdir
 
@@ -4099,7 +4088,7 @@ def handle_anaconda_upload(paths, config):
         prompter = "$ "
     if not upload or anaconda is None:
         no_upload_message = (
-            "# If you want to upload package(s) to anaconda.org later, type:\n" "\n"
+            "# If you want to upload package(s) to anaconda.org later, type:\n\n"
         )
         no_upload_message += (
             "\n"
@@ -4112,7 +4101,7 @@ def handle_anaconda_upload(paths, config):
         print(no_upload_message)
         return
 
-    if anaconda is None:
+    if not anaconda:
         print(no_upload_message)
         sys.exit(
             "Error: cannot locate anaconda command (required for upload)\n"

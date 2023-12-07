@@ -97,18 +97,8 @@ class UndefinedNeverFail(jinja2.Undefined):
         __call__
     ) = (
         __getitem__
-    ) = (
-        __lt__
-    ) = (
-        __le__
-    ) = (
-        __gt__
-    ) = (
-        __ge__
-    ) = (
-        __complex__
-    ) = __pow__ = __rpow__ = lambda self, *args, **kwargs: self._return_undefined(
-        self._undefined_name
+    ) = __lt__ = __le__ = __gt__ = __ge__ = __complex__ = __pow__ = __rpow__ = (
+        lambda self, *args, **kwargs: self._return_undefined(self._undefined_name)
     )
 
     # Accessing an attribute of an Undefined variable
@@ -494,34 +484,42 @@ def native_compiler(language, config):
     return compiler
 
 
-def compiler(language, config, permit_undefined_jinja=False):
-    """Support configuration of compilers.  This is somewhat platform specific.
+def _target(language, config, permit_undefined_jinja=False, component="compiler"):
+    """Support configuration of compilers/stdlib.  This is somewhat platform specific.
 
-    Native compilers never list their host - it is always implied.  Generally, they are
+    Native compilers/stdlib never list their host - it is always implied.  Generally, they are
     metapackages, pointing at a package that does specify the host.  These in turn may be
     metapackages, pointing at a package where the host is the same as the target (both being the
     native architecture).
     """
 
-    compiler = native_compiler(language, config)
+    if component == "compiler":
+        package_prefix = native_compiler(language, config)
+    else:
+        package_prefix = language
+
     version = None
     if config.variant:
         target_platform = config.variant.get("target_platform", config.subdir)
-        language_compiler_key = f"{language}_compiler"
-        # fall back to native if language-compiler is not explicitly set in variant
-        compiler = config.variant.get(language_compiler_key, compiler)
-        version = config.variant.get(language_compiler_key + "_version")
+        language_key = f"{language}_{component}"
+        # fall back to native if language-key is not explicitly set in variant
+        package_prefix = config.variant.get(language_key, package_prefix)
+        version = config.variant.get(language_key + "_version")
     else:
         target_platform = config.subdir
 
-    # support cross compilers.  A cross-compiler package will have a name such as
+    # support cross components.  A cross package will have a name such as
     #    gcc_target
     #    gcc_linux-cos6-64
-    compiler = "_".join([compiler, target_platform])
+    package = f"{package_prefix}_{target_platform}"
     if version:
-        compiler = " ".join((compiler, version))
-        compiler = ensure_valid_spec(compiler, warn=False)
-    return compiler
+        package = f"{package} {version}"
+        package = ensure_valid_spec(package, warn=False)
+    return package
+
+
+# ensure we have compiler in namespace
+compiler = partial(_target, component="compiler")
 
 
 def ccache(method, config, permit_undefined_jinja=False):
@@ -788,7 +786,16 @@ def context_processor(
             skip_build_id=skip_build_id,
         ),
         compiler=partial(
-            compiler, config=config, permit_undefined_jinja=permit_undefined_jinja
+            _target,
+            config=config,
+            permit_undefined_jinja=permit_undefined_jinja,
+            component="compiler",
+        ),
+        stdlib=partial(
+            _target,
+            config=config,
+            permit_undefined_jinja=permit_undefined_jinja,
+            component="stdlib",
         ),
         cdt=partial(cdt, config=config, permit_undefined_jinja=permit_undefined_jinja),
         ccache=partial(

@@ -4,11 +4,6 @@
 Defining metadata (meta.yaml)
 =============================
 
-.. contents::
-   :local:
-   :depth: 1
-
-
 All the metadata in the conda-build recipe is specified in the
 ``meta.yaml`` file. See the example below:
 
@@ -992,9 +987,10 @@ words, a Python package would list ``python`` here and an R package would list
 
 The PREFIX environment variable points to the host prefix. With respect to
 activation during builds, both the host and build environments are activated.
-The build prefix is activated before the host prefix so that the host prefix
-has priority over the build prefix. Executables that don't exist in the host
-prefix should be found in the build prefix.
+The build prefix is activated *after* the host prefix so that the build prefix,
+which always contains native executables for the running platform, has priority
+over the host prefix, which is not guaranteed to provide native executables (e.g.
+when cross-compiling).
 
 As of conda-build 3.1.4, the build and host prefixes are always separate when
 both are defined, or when ``{{ compiler() }}`` Jinja2 functions are used. The
@@ -1927,10 +1923,10 @@ variables are booleans.
    * - osx
      - True if the platform is macOS.
    * - arm64
-     - True if the platform is macOS and the Python architecture
-       is arm64.
+     - True if the platform is either macOS or Windows and the
+       Python architecture is arm64.
    * - unix
-     - True if the platform is either macOS or Linux.
+     - True if the platform is either macOS or Linux or emscripten.
    * - win
      - True if the platform is Windows.
    * - win32
@@ -1963,6 +1959,11 @@ variables are booleans.
 The use of the Python version selectors, `py27`, `py34`, etc. is discouraged in
 favor of the more general comparison operators.  Additional selectors in this
 series will not be added to conda-build.
+
+Note that for each subdir with OS and architecture that `conda` supports,
+two preprocessing selectors are created for the OS and the architecture separately
+except when the architecture is not a valid python expression (`*-32` and `*-64`
+in particular).
 
 Because the selector is any valid Python expression, complicated
 logic is possible:

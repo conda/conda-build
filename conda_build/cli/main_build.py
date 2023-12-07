@@ -4,6 +4,7 @@ import argparse
 import logging
 import sys
 import warnings
+from glob import glob
 from itertools import chain
 from os.path import abspath, expanduser, expandvars
 from pathlib import Path
@@ -11,11 +12,14 @@ from pathlib import Path
 import filelock
 from conda.auxlib.ish import dals
 from conda.common.io import dashlist
-from glob2 import glob
 
 from .. import api, build, source, utils
 from ..conda_interface import add_parser_channels, binstar_upload, cc_conda_build
-from ..config import Config, get_channel_urls, zstd_compression_level_default
+from ..config import (
+    get_channel_urls,
+    get_or_merge_config,
+    zstd_compression_level_default,
+)
 from ..deprecations import deprecated
 from ..utils import LoggingContext
 from .actions import KeyValueAction
@@ -437,7 +441,7 @@ def parse_args(args):
     )
     p.add_argument(
         "--stats-file",
-        help=("File path to save build statistics to.  Stats are " "in JSON format"),
+        help="File path to save build statistics to.  Stats are in JSON format",
     )
     p.add_argument(
         "--extra-deps",
@@ -514,7 +518,7 @@ def check_action(recipe, config):
 
 def execute(args):
     _parser, args = parse_args(args)
-    config = Config(**args.__dict__)
+    config = get_or_merge_config(None, **args.__dict__)
     build.check_external()
 
     # change globals in build module, see comment there as well
@@ -542,7 +546,7 @@ def execute(args):
         outputs = []
         failed_recipes = []
         recipes = chain.from_iterable(
-            glob(abspath(recipe)) if "*" in recipe else [recipe]
+            glob(abspath(recipe), recursive=True) if "*" in recipe else [recipe]
             for recipe in args.recipe
         )
         for recipe in recipes:
@@ -583,7 +587,7 @@ def execute(args):
     return outputs
 
 
-@deprecated("3.26.0", "4.0.0", addendum="Use `conda build` instead.")
+@deprecated("3.26.0", "24.1.0", addendum="Use `conda build` instead.")
 def main():
     try:
         execute(sys.argv[1:])

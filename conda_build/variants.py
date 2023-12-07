@@ -164,7 +164,8 @@ def validate_spec(src, spec):
             "  zip_key entry {} in group {} is a duplicate, keys can only occur "
             "in one group".format(k, zg)
             # include error if key has already been seen, otherwise add to unique keys
-            if k in unique else unique.add(k)
+            if k in unique
+            else unique.add(k)
             for zg in zip_keys
             for k in zg
         )
@@ -679,9 +680,13 @@ def filter_combined_spec_to_used_keys(combined_spec, specs):
 
     # TODO: act here?
     combined_spec = explode_variants(combined_spec)
+    # seen_keys makes sure that a setting from a lower-priority spec doesn't clobber
+    # the same setting that has been redefined in a higher-priority spec.
+    seen_keys = set()
+    # The specs are checked from high to low priority order.
     for source, source_specs in reversed(specs.items()):
         for k, vs in source_specs.items():
-            if k not in extend_keys:
+            if k not in extend_keys and k not in seen_keys:
                 # when filtering ends up killing off all variants, we just ignore that.  Generally,
                 #    this arises when a later variant config overrides, rather than selects a
                 #    subspace of earlier configs
@@ -689,6 +694,7 @@ def filter_combined_spec_to_used_keys(combined_spec, specs):
                     filter_by_key_value(combined_spec, k, vs, source_name=source)
                     or combined_spec
                 )
+                seen_keys.add(k)
     return combined_spec
 
 

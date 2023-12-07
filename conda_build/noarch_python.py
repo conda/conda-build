@@ -142,11 +142,7 @@ def transform(m, files, prefix):
             """\
     @echo off
     "%PREFIX%\\python.exe" "%SOURCE_DIR%\\link.py"
-    """.replace(
-                "\n", "\r\n"
-            ).encode(
-                "utf-8"
-            )
+    """.replace("\n", "\r\n").encode("utf-8")
         )
 
     d = populate_files(m, files, prefix)

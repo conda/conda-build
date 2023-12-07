@@ -1,5 +1,131 @@
 [//]: # (current developments)
 
+## 3.28.1 (2023-12-06)
+
+### Bug fixes
+
+* Relax `conda_build.metadata.MetaData.version` checks when `outputs` have been defined. (#5096)
+* Remove `lief` from `pyproject.toml` since it causes `pip check` to fail. To be re-added in the future after an update to `py-lief` package. (#5099)
+
+### Contributors
+
+* @dholth
+* @kenodegard
+
+
+
+## 3.28.0 (2023-11-30)
+
+### Special announcement
+
+In the upcoming January 2024 release of conda-build, significant changes are underway. We're set to transition to the [CalVer](https://calver.org/) versioning system. Additionally, we'll be formally embracing [CEP 8](https://github.com/conda-incubator/ceps/blob/main/cep-8.md) to manage our release schedule. Moreover, an expedited version of [CEP 9](https://github.com/conda-incubator/ceps/blob/main/cep-8.md) will be adopted for deprecation handling, omitting the pending deprecation phase and streamlining the period from deprecation to removal to a mere 2 months.
+
+### Enhancements
+
+* Add `stblib` jinja function similar to `compiler` to explicitly define sysroot dependencies. (#4999)
+* Utilize conda-known subdirs for selector definitions, enabling conda_build to support new architectures with only an updated conda version. New OS support requires additional information for proper conda_build functionality, including UNIX-like platform designation, shared library prefix, and binary archive format for the platform. (#5009)
+* Eliminate unnecessary cache clearing from `conda_build.build.test`. (#5031)
+* Consolidate `which_package` implementations and replace `conda.models.dist.Dist` usage with `conda.models.records.PrefixRecords`. (#5041)
+
+### Bug fixes
+
+* Display package file name in `get_hash_input`. (#5021)
+* Fall back to solved record filename to locate the downloaded tarball in `get_upstream_pins`. (#4991 via #5037)
+* Prevent overwriting of variants in high priority cbc.yaml entries when absent in lower priority cbc.yamls. (#5039)
+* Correct the check for a missing anaconda-client to display a useful error message. (#5050)
+* Fix conda_index.index verbose DEBUG/INFO message logging. (#5066)
+
+### Deprecations
+
+* Mark `conda_build.environ.clean_pkg_cache` for pending deprecation. (#5031)
+* Mark `conda_build.conda_interface.IndexRecord` for pending deprecation. Use `conda.models.records.PackageRecord` instead. (#5032)
+* Mark `conda_build.os_utils.pyldd.is_string` for pending deprecation. Use `isinstance(value, str)` instead. (#5040)
+* Mark `conda_build.os_utils.pyldd.is_codefile` for pending deprecation. Use `conda_build.os_utils.pyldd.codefile_class` instead. (#5040)
+* Mark `conda_build.os_utils.pyldd.codefile_type` for pending deprecation. Use `conda_build.os_utils.pyldd.codefile_class` instead. (#5040)
+* Mark `conda_build.inspect_pkg.dist_files` for pending deprecation. (#5041)
+* Mark `conda_build.inspect_pkg.which_package(avoid_canonical_channel_name)` for pending deprecation. (#5041)
+* Mark `conda_build.inspect_pkg._installed` for pending deprecation. (#5041)
+* Mark `conda_build.os_utils.ldd.get_package_files` for pending deprecation. (#5041)
+* Mark `conda_build.os_utils.pyldd.mach_o_change` for pending deprecation. (#5041)
+* Mark `conda_build.os_utils.pyldd.inspect_rpath` for pending deprecation. (#5041)
+* Mark `conda_build.os_utils.pyldd.get_runpaths` for pending deprecation. (#5041)
+* Mark `conda_build.os_utils.pyldd.otool_sys` for pending deprecation. (#5041)
+* Mark `conda_build.os_utils.pyldd.ldd_sys` for pending deprecation. (#5041)
+* Mark `conda_build.post.determine_package_nature` for pending deprecation. Use `conda_build.post.get_dsos` and `conda_build.post.get_run_exports` instead. (#5041)
+* Mark `conda_build.post.library_nature(subdir, bldpkgs_dirs, output_folder, channel_urls)` for pending deprecation. (#5041)
+* Mark `conda_build.post.dist_from_names` for pending deprecation. Query `conda.core.prefix_data.PrefixData` instead. (#5041)
+* Mark `conda_build.post.FakeDist` for pending deprecation. Use `conda.models.records.PrefixRecord` instead. (#5041)
+* Mark `conda_build.post._get_fake_pkg_dist` for pending deprecation. Use `conda.models.records.PrefixRecord` instead. (#5041)
+* Mark `conda_build.utils.relative` for pending deprecation. Use `os.path.relpath` or `pathlib.Path.relative_to` instead. (#5042)
+
+### Docs
+
+* Incorporate the conda-sphinx-theme into conda-build documentation. (#5067)
+* Update certain pages to remove redundant TOC entries. (#5067)
+
+### Other
+
+* Implement Ruff linter in pre-commit configuration. (#5015)
+* Replace `black` with `ruff format` in pre-commit setup. (#5052)
+* Identify Unicode tests as incompatible with `libmamba`. (#5059)
+
+
+### Contributors
+
+* @conda-bot
+* @danpetry made their first contribution in https://github.com/conda/conda-build/pull/5039
+* @duncanmmacleod
+* @h-vetinari made their first contribution in https://github.com/conda/conda-build/pull/4999
+* @isuruf
+* @jaimergp
+* @jakirkham
+* @kenodegard
+* @mbargull
+* @travishathaway
+* @pre-commit-ci[bot]
+
+
+
+## 3.27.0 (2023-09-26)
+
+### Enhancements
+
+* Remove `glob2` dependency. As of Python 3.5, the '**', operator was available to `glob` when using `recursive=True`. Builtin glob is also much faster. (#5005)
+* Handle `emscripten-wasm32` and `wasi-wasm32` platforms. (#4813)
+
+### Bug fixes
+
+* Delay imports in conda command plugin until the command is used, avoiding import-time side effects. (#4949)
+
+### Deprecations
+
+* When templating new recipes from a PyPI package, the build script `{{ PYTHON }} -m pip install . -vv` is deprecated in favor of `{{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation`. (#4960)
+
+### Docs
+
+* Document `~=` (compatibility release) match spec. (#4553)
+* Clarify that the `build` prefix is activated _after_ the `host` prefix. (#4942)
+* Add explanation that conda-build should be run from the base environment. (#4995)
+
+### Contributors
+
+* @beeankha
+* @conda-bot
+* @dholth
+* @DaveKaretnyk made their first contribution in https://github.com/conda/conda-build/pull/5004
+* @boldorider4 made their first contribution in https://github.com/conda/conda-build/pull/4960
+* @jaimergp
+* @jezdez
+* @jugmac00
+* @kenodegard
+* @ryanskeith
+* @scdub made their first contribution in https://github.com/conda/conda-build/pull/4965
+* @wolfv made their first contribution in https://github.com/conda/conda-build/pull/4813
+* @dependabot[bot]
+* @pre-commit-ci[bot]
+
+
+
 ## 3.26.1 (2023-08-17)
 
 ### Bug fixes
@@ -2773,7 +2899,7 @@ https://conda.io/docs/user-guide/tasks/build-packages/define-metadata.html#host
 * pyldd: disambiguate java .class files from Mach-O fat files (same magic number)  #2328
 * fix hash regex for downloaded files in `src_cache`  #2330
 * fix `zip_keys` becoming a loop dimension when variants passed as object rather than loaded from file  #2333
-* fix windows always warning about old compiler activation.  Now only warns if {{ compiler() }} is not used.  #2333
+* fix windows always warning about old compiler activation.  Now only warns if `{{ compiler() }}` is not used.  #2333
 * Add `LD_RUN_PATH` back into Linux variables for now (may remove later, but will have deprecation cycle)  #2334
 
 ### Contributors

@@ -41,6 +41,8 @@ from .conda_interface import (
     reset_context,
     root_dir,
 )
+from .deprecations import deprecated
+from .metadata import MetaData
 
 # these are things that we provide env vars for more explicitly.  This list disables the
 #    pass-through of variant values to env vars for these keys.
@@ -387,7 +389,7 @@ def python_vars(metadata, prefix, escape_backslash):
     }
     build_or_host = "host" if metadata.is_cross else "build"
     deps = [str(ms.name) for ms in metadata.ms_depends(build_or_host)]
-    if "python" in deps or metadata.name(fail_ok=True) == "python":
+    if "python" in deps or metadata.name() == "python":
         python_bin = metadata.config.python_bin(prefix, metadata.config.host_subdir)
 
         if utils.on_win and escape_backslash:
@@ -416,7 +418,7 @@ def perl_vars(metadata, prefix, escape_backslash):
     }
     build_or_host = "host" if metadata.is_cross else "build"
     deps = [str(ms.name) for ms in metadata.ms_depends(build_or_host)]
-    if "perl" in deps or metadata.name(fail_ok=True) == "perl":
+    if "perl" in deps or metadata.name() == "perl":
         perl_bin = metadata.config.perl_bin(prefix, metadata.config.host_subdir)
 
         if utils.on_win and escape_backslash:
@@ -463,10 +465,7 @@ def r_vars(metadata, prefix, escape_backslash):
 
     build_or_host = "host" if metadata.is_cross else "build"
     deps = [str(ms.name) for ms in metadata.ms_depends(build_or_host)]
-    if (
-        any(r_pkg in deps for r_pkg in R_PACKAGES)
-        or metadata.name(fail_ok=True) in R_PACKAGES
-    ):
+    if any(r_pkg in deps for r_pkg in R_PACKAGES) or metadata.name() in R_PACKAGES:
         r_bin = metadata.config.r_bin(prefix, metadata.config.host_subdir)
         # set R_USER explicitly to prevent crosstalk with existing R_LIBS_USER packages
         r_user = join(prefix, "Libs", "R")
@@ -483,7 +482,7 @@ def r_vars(metadata, prefix, escape_backslash):
     return vars_
 
 
-def meta_vars(meta, skip_build_id=False):
+def meta_vars(meta: MetaData, skip_build_id=False):
     d = {}
     for var_name in ensure_list(meta.get_value("build/script_env", [])):
         if "=" in var_name:
@@ -544,12 +543,11 @@ def meta_vars(meta, skip_build_id=False):
     ):
         d.update(get_hg_build_info(hg_dir))
 
-    # use `get_value` to prevent early exit while name is still unresolved during rendering
-    d["PKG_NAME"] = meta.get_value("package/name")
+    d["PKG_NAME"] = meta.name()
     d["PKG_VERSION"] = meta.version()
     d["PKG_BUILDNUM"] = str(meta.build_number())
     if meta.final and not skip_build_id:
-        d["PKG_BUILD_STRING"] = str(meta.build_id())
+        d["PKG_BUILD_STRING"] = meta.build_id()
         d["PKG_HASH"] = meta.hash_dependencies()
     else:
         d["PKG_BUILD_STRING"] = "placeholder"
@@ -580,7 +578,7 @@ def get_shlib_ext(host_platform):
         return ".dll"
     elif host_platform in ["osx", "darwin"]:
         return ".dylib"
-    elif host_platform.startswith("linux"):
+    elif host_platform.startswith("linux") or host_platform.endswith("-wasm32"):
         return ".so"
     elif host_platform == "noarch":
         # noarch packages should not contain shared libraries, use the system
@@ -1214,6 +1212,7 @@ def remove_existing_packages(dirs, fns, config):
                     utils.rm_rf(entry)
 
 
+@deprecated("3.28.0", "24.1.0")
 def clean_pkg_cache(dist, config):
     locks = []
 

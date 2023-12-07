@@ -112,6 +112,6 @@ def execute(args):
     api.create_metapackage(channel_urls=channel_urls, **args.__dict__)
 
 
-@deprecated("3.26.0", "4.0.0", addendum="Use `conda metapackage` instead.")
+@deprecated("3.26.0", "24.1.0", addendum="Use `conda metapackage` instead.")
 def main():
     return execute(sys.argv[1:])
