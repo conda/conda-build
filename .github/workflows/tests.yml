@@ -182,7 +182,7 @@ jobs:
       fail-fast: false
       matrix:
         # test lower version (w/ stable conda) and upper version (w/ canary conda)
-        python-version: ['3.9']
+        python-version: ['3.8']
         conda-version: [release]
         test-type: [serial, parallel]
         include:
@@ -299,7 +299,7 @@ jobs:
       fail-fast: false
       matrix:
         # test lower version (w/ stable conda) and upper version (w/ canary conda)
-        python-version: ['3.9']
+        python-version: ['3.8']
         conda-version: [release]
         test-type: [serial, parallel]
         include:
