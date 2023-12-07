@@ -217,11 +217,11 @@ jobs:
         with:
           # Use faster GNU tar for all runners
           enableCrossOsArchive: true
-          path: ~/conda_pkgs_dir
+          path: D:\conda_pkgs_dir
           key: ${{ runner.os }}-conda-${{ env.TIMESTAMP }}
 
       - name: Setup miniconda
-        uses: conda-incubator/setup-miniconda@v2
+        uses: jezdez/setup-miniconda@windows-cache
         with:
           condarc-file: .\ci\github\.condarc
           python-version: ${{ matrix.python-version }}
@@ -330,11 +330,11 @@ jobs:
         with:
           # Use faster GNU tar for all runners
           enableCrossOsArchive: true
-          path: D:\conda_pkgs_dir
+          path: ~/conda_pkgs_dir
           key: ${{ runner.os }}-conda-${{ env.TIMESTAMP }}
 
       - name: Setup miniconda
-        uses: jezdez/setup-miniconda@windows-cache
+        uses: conda-incubator/setup-miniconda@v2
         with:
           condarc-file: ./ci/github/.condarc
           python-version: ${{ matrix.python-version }}
