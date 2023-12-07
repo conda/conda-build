@@ -110,9 +110,9 @@ class _untracked_package:
 untracked_package = _untracked_package()
 
 
-@deprecated.argument("3.28.0", "4.0.0", "platform", rename="subdir")
-@deprecated.argument("3.28.0", "4.0.0", "prepend")
-@deprecated.argument("3.28.0", "4.0.0", "minimal_hint")
+@deprecated.argument("24.1.0", "24.3.0", "platform", rename="subdir")
+@deprecated.argument("24.1.0", "24.3.0", "prepend")
+@deprecated.argument("24.1.0", "24.3.0", "minimal_hint")
 def check_install(
     packages: Iterable[str],
     subdir: str | None = None,
