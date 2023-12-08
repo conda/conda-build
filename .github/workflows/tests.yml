@@ -221,11 +221,12 @@ jobs:
           key: ${{ runner.os }}-conda-${{ env.TIMESTAMP }}
 
       - name: Setup miniconda
-        uses: jezdez/setup-miniconda@windows-cache
+        uses: jezdez/setup-miniconda@configurable-cache
         with:
           condarc-file: .\ci\github\.condarc
           python-version: ${{ matrix.python-version }}
           run-post: false  # skip post cleanup
+          pkgs-dirs: D:\conda_pkgs_dir
 
       - name: Setup environment
         run: |
