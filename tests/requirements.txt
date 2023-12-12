@@ -12,7 +12,7 @@ filelock
 git
 jinja2
 jsonschema >=4.19
-menuinst
+menuinst >=2
 numpy
 packaging
 perl
