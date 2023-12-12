@@ -1316,9 +1316,8 @@ class MetaData:
     @classmethod
     def fromstring(cls, metadata, config=None, variant=None):
         m = super().__new__(cls)
-        if not config:
-            config = Config()
-        m.meta = parse(metadata, config=config, path="", variant=variant)
+        config = config or Config(variant=variant)
+        m.meta = parse(metadata, config=config, path="")
         m.config = config
         m.parse_again(permit_undefined_jinja=True)
         return m
@@ -1333,14 +1332,10 @@ class MetaData:
         m._meta_path = ""
         m.requirements_path = ""
         m.meta = sanitize(metadata)
-
-        if not config:
-            config = Config(variant=variant)
-
+        config = config or Config(variant=variant)
         m.config = config
         m.undefined_jinja_vars = []
         m.final = False
-
         return m
 
     def get_section(self, section):
