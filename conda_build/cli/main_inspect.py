@@ -134,8 +134,10 @@ Tools for investigating conda channels.
         "--test-installable",
         "-t",
         action="store_true",
-        help="""Test every package in the channel to see if it is installable
-        by conda.""",
+        help=(
+            "DEPRECATED. This is the default (and only) behavior. "
+            "Test every package in the channel to see if it is installable by conda."
+        ),
     )
     channels.add_argument(
         "channel",
@@ -184,13 +186,9 @@ def execute(args):
 
     if not args.subcommand:
         parser.print_help()
-        exit()
-
+        sys.exit(0)
     elif args.subcommand == "channels":
-        if not args.test_installable:
-            parser.error("At least one option (--test-installable) is required.")
-        else:
-            print(api.test_installable(args.channel))
+        print(api.test_installable(args.channel))
     elif args.subcommand == "linkages":
         print(
             api.inspect_linkages(
@@ -219,9 +217,9 @@ def execute(args):
     elif args.subcommand == "hash-inputs":
         pprint(api.inspect_hash_inputs(args.packages))
     else:
-        raise ValueError(f"Unrecognized subcommand: {args.subcommand}.")
+        parser.error(f"Unrecognized subcommand: {args.subcommand}.")
 
 
-@deprecated("3.26.0", "4.0.0", addendum="Use `conda inspect` instead.")
+@deprecated("3.26.0", "24.1.0", addendum="Use `conda inspect` instead.")
 def main():
     return execute(sys.argv[1:])

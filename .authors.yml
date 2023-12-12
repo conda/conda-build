@@ -20,7 +20,7 @@
   email: isuruf@gmail.com
   alternate_emails:
   - isuru.11@cse.mrt.ac.lk
-  num_commits: 83
+  num_commits: 84
   first_commit: 2017-06-16 15:14:34
   github: isuruf
 - name: Dan Blanchard
@@ -611,7 +611,7 @@
   first_commit: 2015-08-30 06:44:37
 - name: Marcel Bargull
   email: marcel.bargull@udo.edu
-  num_commits: 73
+  num_commits: 76
   first_commit: 2016-09-26 11:45:54
   github: mbargull
   alternate_emails:
@@ -754,7 +754,7 @@
   alternate_emails:
   - kirkhamj@janelia.hhmi.org
   - jakirkham@gmail.com
-  num_commits: 73
+  num_commits: 74
   first_commit: 2015-04-21 13:26:39
   github: jakirkham
 - name: Anthony Scopatz
@@ -1060,10 +1060,12 @@
   first_commit: 2019-06-07 02:44:13
   github: dbast
 - name: Duncan Macleod
-  email: duncan.macleod@ligo.org
-  num_commits: 6
+  num_commits: 7
+  email: duncanmmacleod+github@gmail.com
   first_commit: 2019-06-13 08:07:25
   github: duncanmmacleod
+  alternate_emails:
+  - duncan.macleod@ligo.org
 - name: Chris Osborn
   email: csosborn@users.noreply.github.com
   num_commits: 1
@@ -1199,7 +1201,7 @@
   alternate_emails:
   - clee@anaconda.com
 - name: Ken Odegard
-  num_commits: 133
+  num_commits: 152
   email: kodegard@anaconda.com
   first_commit: 2020-09-08 19:53:41
   github: kenodegard
@@ -1237,7 +1239,7 @@
   github: pre-commit-ci[bot]
   aliases:
   - pre-commit-ci[bot]
-  num_commits: 52
+  num_commits: 56
   first_commit: 2021-11-20 01:47:17
 - name: Jacob Walls
   email: jacobtylerwalls@gmail.com
@@ -1259,7 +1261,7 @@
   alternate_emails:
   - ad-team+condabot@anaconda.com
   - 18747875+conda-bot@users.noreply.github.com
-  num_commits: 38
+  num_commits: 42
   first_commit: 2022-01-17 18:09:22
 - name: Uwe L. Korn
   email: xhochy@users.noreply.github.com
@@ -1268,7 +1270,7 @@
 - name: Daniel Holth
   email: dholth@anaconda.com
   github: dholth
-  num_commits: 12
+  num_commits: 13
   first_commit: 2022-04-28 05:22:14
 - name: Rylan Chord
   email: rchord@users.noreply.github.com
@@ -1278,7 +1280,7 @@
 - name: Travis Hathaway
   email: travis.j.hathaway@gmail.com
   github: travishathaway
-  num_commits: 2
+  num_commits: 5
   first_commit: 2022-05-12 05:53:02
 - name: Kyle Leaders
   email: remkade@users.noreply.github.com
@@ -1324,7 +1326,7 @@
 - name: Jaime Rodríguez-Guerra
   email: jaimergp@users.noreply.github.com
   github: jaimergp
-  num_commits: 4
+  num_commits: 7
   first_commit: 2022-11-02 19:34:51
 - name: Dave Clements
   email: tnabtaf@gmail.com
@@ -1415,3 +1417,17 @@
   github: scdub
   num_commits: 2
   first_commit: 2023-08-18 02:53:28
+- name: Daniel Petry
+  email: dpetry@anaconda.com
+  github: danpetry
+  aliases:
+  - danpetry
+  num_commits: 1
+  first_commit: 2023-11-02 13:57:57
+- name: H. Vetinari
+  email: h.vetinari@gmx.com
+  github: h-vetinari
+  aliases:
+  - h-vetinari
+  num_commits: 1
+  first_commit: 2023-10-25 09:33:34

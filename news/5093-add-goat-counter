@@ -12,8 +12,8 @@
 
 ### Docs
 
-* <news item>
+* Add goat counter (https://www.goatcounter.com/) as an analytics tool. (#5093)
 
 ### Other
 
-* Use Ruff linter in pre-commit configuration. (#5015)
+* <news item>

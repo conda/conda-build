@@ -10,10 +10,12 @@ from typing import Iterator
 
 import pytest
 from conda.common.compat import on_mac, on_win
+from pytest import MonkeyPatch
 
 import conda_build.config
 from conda_build.config import (
     Config,
+    _get_or_merge_config,
     _src_cache_root_default,
     conda_pkg_format_default,
     enable_static_default,
@@ -21,7 +23,6 @@ from conda_build.config import (
     error_overlinking_default,
     exit_on_verify_error_default,
     filename_hashing_default,
-    get_or_merge_config,
     ignore_verify_codes_default,
     no_rewrite_stdout_env_default,
     noarch_python_build_age_default,
@@ -32,31 +33,25 @@ from conda_build.variants import get_default_variant
 
 
 @pytest.fixture(scope="function")
-def testing_workdir(tmpdir, request):
+def testing_workdir(monkeypatch: MonkeyPatch, tmp_path: Path) -> Iterator[str]:
     """Create a workdir in a safe temporary folder; cd into dir above before test, cd out after
 
     :param tmpdir: py.test fixture, will be injected
     :param request: py.test fixture-related, will be injected (see pytest docs)
     """
+    saved_path = Path.cwd()
+    monkeypatch.chdir(tmp_path)
 
-    saved_path = os.getcwd()
-
-    tmpdir.chdir()
     # temporary folder for profiling output, if any
-    tmpdir.mkdir("prof")
+    prof = tmp_path / "prof"
+    prof.mkdir(parents=True)
 
-    def return_to_saved_path():
-        if os.path.isdir(os.path.join(saved_path, "prof")):
-            profdir = tmpdir.join("prof")
-            files = profdir.listdir("*.prof") if profdir.isdir() else []
+    yield str(tmp_path)
 
-            for f in files:
-                copy_into(str(f), os.path.join(saved_path, "prof", f.basename))
-        os.chdir(saved_path)
-
-    request.addfinalizer(return_to_saved_path)
-
-    return str(tmpdir)
+    # if the original CWD has a prof folder, copy any new prof files into it
+    if (saved_path / "prof").is_dir() and prof.is_dir():
+        for file in prof.glob("*.prof"):
+            copy_into(str(file), str(saved_path / "prof" / file.name))
 
 
 @pytest.fixture(scope="function")
@@ -72,7 +67,8 @@ def testing_homedir() -> Iterator[Path]:
             os.chdir(saved)
     except OSError:
         pytest.xfail(
-            f"failed to create temporary directory () in {'%HOME%' if on_win else '${HOME}'} (tmpfs inappropriate for xattrs)"
+            f"failed to create temporary directory () in {'%HOME%' if on_win else '${HOME}'} "
+            "(tmpfs inappropriate for xattrs)"
         )
 
 
@@ -81,13 +77,12 @@ def testing_config(testing_workdir):
     def boolify(v):
         return v == "true"
 
-    result = Config(
+    testing_config_kwargs = dict(
         croot=testing_workdir,
         anaconda_upload=False,
         verbose=True,
         activate=False,
         debug=False,
-        variant=None,
         test_run_post=False,
         # These bits ensure that default values are used instead of any
         # present in ~/.condarc
@@ -102,6 +97,8 @@ def testing_config(testing_workdir):
         exit_on_verify_error=exit_on_verify_error_default,
         conda_pkg_format=conda_pkg_format_default,
     )
+    result = Config(variant=None, **testing_config_kwargs)
+    result._testing_config_kwargs = testing_config_kwargs
     assert result.no_rewrite_stdout_env is False
     assert result._src_cache_root is None
     assert result.src_cache_root == testing_workdir
@@ -121,11 +118,21 @@ def default_testing_config(testing_config, monkeypatch, request):
         return
 
     def get_or_merge_testing_config(config, variant=None, **kwargs):
-        return get_or_merge_config(config or testing_config, variant, **kwargs)
+        if not config:
+            # If no existing config, override kwargs that are None with testing config defaults.
+            # (E.g., "croot" is None if called via "(..., *args.__dict__)" in cli.main_build.)
+            kwargs.update(
+                {
+                    key: value
+                    for key, value in testing_config._testing_config_kwargs.items()
+                    if kwargs.get(key) is None
+                }
+            )
+        return _get_or_merge_config(config, variant, **kwargs)
 
     monkeypatch.setattr(
         conda_build.config,
-        "get_or_merge_config",
+        "_get_or_merge_config",
         get_or_merge_testing_config,
     )
 

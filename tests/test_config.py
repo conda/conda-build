@@ -2,22 +2,22 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import os
 import sys
+from pathlib import Path
 
 import pytest
 
-from conda_build.conda_interface import TemporaryDirectory
 from conda_build.config import Config, get_or_merge_config
-from conda_build.utils import on_win
+from conda_build.utils import on_win, samefile
 
 
 @pytest.fixture
-def config():
+def config() -> Config:
     """a tiny bit of a fixture to save us from manually creating a new Config each test"""
     return Config()
 
 
 @pytest.fixture
-def build_id():
+def build_id() -> str:
     """Small support fixture for setting build id's in multiple builds which may need them"""
     return "test123"
 
@@ -34,23 +34,25 @@ def test_set_build_id(config, build_id):
         assert config.host_prefix == long_prefix
 
 
-def test_keep_old_work(config, build_id):
+def test_keep_old_work(config: Config, build_id: str, tmp_path: Path):
     config.keep_old_work = True
-    with TemporaryDirectory() as temp_dir:
-        config.croot = temp_dir
-        config.build_id = build_id
-        work_path = os.path.join(temp_dir, build_id, "work")
-        os.makedirs(work_path)
-        # assert False
-        assert len(os.listdir(config.work_dir)) == 0
-        with open(os.path.join(work_path, "a_touched_file.magic"), "w") as _:
-            # Touch a random file so the "work_dir" is not empty
-            pass
-        assert len(os.listdir(config.work_dir)) > 0
-        config.compute_build_id("a_new_name", reset=True)
-        assert config.work_dir != work_path
-        assert not os.path.exists(work_path)
-        assert len(os.listdir(config.work_dir)) > 0
+    config.croot = tmp_path
+    config.build_id = build_id
+
+    # empty working directory
+    orig_dir = Path(config.work_dir)
+    assert not len(os.listdir(config.work_dir))
+
+    # touch a file so working directory is not empty
+    (orig_dir / "a_touched_file.magic").touch()
+    assert len(os.listdir(config.work_dir))
+
+    config.compute_build_id("a_new_name", reset=True)
+
+    # working directory should still exist and have the touched file
+    assert not samefile(orig_dir, config.work_dir)
+    assert not orig_dir.exists()
+    assert len(os.listdir(config.work_dir))
 
 
 @pytest.mark.skipif(on_win, reason="Windows uses only the short prefix")

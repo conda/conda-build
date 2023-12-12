@@ -1,5 +1,7 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import contextlib
 import fnmatch
 import hashlib
@@ -38,6 +40,8 @@ from typing import Iterable
 
 import libarchive
 
+from .deprecations import deprecated
+
 try:
     from json.decoder import JSONDecodeError
 except ImportError:
@@ -67,21 +71,25 @@ from contextlib import ExitStack  # noqa: F401
 from glob import glob
 
 from conda.api import PackageCacheData  # noqa
+from conda.base.constants import KNOWN_SUBDIRS
+from conda.core.prefix_data import PrefixData
+from conda.models.dist import Dist
+from conda.models.records import PrefixRecord
 
 # NOQA because it is not used in this file.
 from conda_build.conda_interface import rm_rf as _rm_rf  # noqa
 from conda_build.exceptions import BuildLockError  # noqa
 from conda_build.os_utils import external  # noqa
 
-from .conda_interface import Dist  # noqa
-from .conda_interface import StringIO  # noqa
-from .conda_interface import cc_conda_build  # noqa
-from .conda_interface import context  # noqa
 from .conda_interface import (  # noqa
     CondaHTTPError,
+    Dist,  # noqa
     MatchSpec,
+    StringIO,  # noqa
     TemporaryDirectory,
     VersionOrder,
+    cc_conda_build,  # noqa
+    context,  # noqa
     download,
     get_conda_channel,
     hashsum_file,
@@ -96,33 +104,16 @@ PermissionError = PermissionError  # NOQA
 FileNotFoundError = FileNotFoundError
 
 on_win = sys.platform == "win32"
+on_mac = sys.platform == "darwin"
+on_linux = sys.platform == "linux"
 
 codec = getpreferredencoding() or "utf-8"
-on_win = sys.platform == "win32"
 root_script_dir = os.path.join(root_dir, "Scripts" if on_win else "bin")
 mmap_MAP_PRIVATE = 0 if on_win else mmap.MAP_PRIVATE
 mmap_PROT_READ = 0 if on_win else mmap.PROT_READ
 mmap_PROT_WRITE = 0 if on_win else mmap.PROT_WRITE
 
-DEFAULT_SUBDIRS = {
-    "emscripten-wasm32",
-    "wasi-wasm32",
-    "linux-64",
-    "linux-32",
-    "linux-s390x",
-    "linux-ppc64",
-    "linux-ppc64le",
-    "linux-armv6l",
-    "linux-armv7l",
-    "linux-aarch64",
-    "win-64",
-    "win-32",
-    "win-arm64",
-    "osx-64",
-    "osx-arm64",
-    "zos-z",
-    "noarch",
-}
+DEFAULT_SUBDIRS = set(KNOWN_SUBDIRS)
 
 RUN_EXPORTS_TYPES = {
     "weak",
@@ -179,7 +170,6 @@ def directory_size_slow(path):
 
 
 def directory_size(path):
-    """ """
     try:
         if on_win:
             command = 'dir /s "{}"'  # Windows path can have spaces
@@ -732,9 +722,7 @@ def merge_tree(
     existing = [f for f in new_files if isfile(f)]
 
     if existing and not clobber:
-        raise OSError(
-            "Can't merge {} into {}: file exists: " "{}".format(src, dst, existing[0])
-        )
+        raise OSError(f"Can't merge {src} into {dst}: file exists: {existing[0]}")
 
     locks = []
     if locking:
@@ -805,6 +793,11 @@ def get_conda_operation_locks(locking=True, bldpkgs_dirs=None, timeout=900):
     return locks
 
 
+@deprecated(
+    "3.28.0",
+    "24.1.0",
+    addendum="Use `os.path.relpath` or `pathlib.Path.relative_to` instead.",
+)
 def relative(f, d="lib"):
     assert not f.startswith("/"), f
     assert not d.startswith("/"), d
@@ -1283,7 +1276,7 @@ def islist(arg, uniform=False, include_dict=True):
             # StopIteration: list is empty, an empty list is still uniform
             return True
         # check for explicit type match, do not allow the ambiguity of isinstance
-        uniform = lambda e: type(e) == etype  # noqa: E721
+        uniform = lambda e: type(e) == etype  # noqa: E731
 
     try:
         return all(uniform(e) for e in arg)
@@ -2170,17 +2163,17 @@ def download_channeldata(channel_url):
     return data
 
 
-def linked_data_no_multichannels(prefix):
+def linked_data_no_multichannels(
+    prefix: str | os.PathLike | Path,
+) -> dict[Dist, PrefixRecord]:
     """
     Return a dictionary of the linked packages in prefix, with correct channels, hopefully.
     cc @kalefranz.
     """
-    from conda.core.prefix_data import PrefixData
-    from conda.models.dist import Dist
-
+    prefix = Path(prefix)
     return {
         Dist.from_string(prec.fn, channel_override=prec.channel.name): prec
-        for prec in PrefixData(prefix)._prefix_records.values()
+        for prec in PrefixData(str(prefix)).iter_records()
     }
 
 
@@ -2227,3 +2220,12 @@ def is_conda_pkg(pkg_path: str) -> bool:
     return path.is_file() and (
         any(path.name.endswith(ext) for ext in CONDA_PACKAGE_EXTENSIONS)
     )
+
+
+def samefile(path1: Path, path2: Path) -> bool:
+    try:
+        return path1.samefile(path2)
+    except (FileNotFoundError, PermissionError):
+        # FileNotFoundError: path doesn't exist
+        # PermissionError: don't have permissions to read path
+        return path1 == path2

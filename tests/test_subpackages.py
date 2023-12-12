@@ -442,3 +442,20 @@ def test_build_string_does_not_incorrectly_add_hash(testing_config):
     assert len(output_files) == 4
     assert any("clang_variant-1.0-cling.tar.bz2" in f for f in output_files)
     assert any("clang_variant-1.0-default.tar.bz2" in f for f in output_files)
+
+
+def test_multi_outputs_without_package_version(testing_config):
+    # outputs without package/version is allowed
+    recipe = os.path.join(subpackage_dir, "_multi_outputs_without_package_version")
+    outputs = api.build(recipe, config=testing_config)
+    assert len(outputs) == 3
+    assert outputs[0].endswith("a-1-0.tar.bz2")
+    assert outputs[1].endswith("b-2-0.tar.bz2")
+    assert outputs[2].endswith("c-3-0.tar.bz2")
+
+
+def test_empty_outputs_requires_package_version(testing_config):
+    # no outputs means package/version is required
+    recipe = os.path.join(subpackage_dir, "_empty_outputs_requires_package_version")
+    with pytest.raises(SystemExit, match="package/version missing"):
+        api.build(recipe, config=testing_config)

@@ -1,6 +1,5 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-import contextlib
 import os
 import subprocess
 import sys
@@ -9,6 +8,7 @@ from typing import NamedTuple
 
 import filelock
 import pytest
+from pytest import MonkeyPatch
 
 import conda_build.utils as utils
 from conda_build.exceptions import BuildLockError
@@ -293,9 +293,7 @@ loggers:
 root:
   level: DEBUG
   handlers: [console]
-""".format(
-                __name__
-            )
+""".format(__name__)
         )
     cc_conda_build = mocker.patch.object(utils, "cc_conda_build")
     cc_conda_build.get.return_value = test_file
@@ -383,132 +381,112 @@ def test_get_lock(testing_workdir):
     assert lock1.lock_file == lock1_unnormalized.lock_file
 
 
-@contextlib.contextmanager
-def _generate_tmp_tree():
-    # dirA
-    # |\- dirB
-    # |   |\- fileA
-    # |   \-- fileB
-    # \-- dirC
-    #     |\- fileA
-    #     \-- fileB
-    import shutil
-    import tempfile
+def test_rec_glob(tmp_path: Path):
+    (dirA := tmp_path / "dirA").mkdir()
+    (dirB := tmp_path / "dirB").mkdir()
 
-    try:
-        tmp = os.path.realpath(os.path.normpath(tempfile.mkdtemp()))
+    (path1 := dirA / "fileA").touch()
+    (path2 := dirA / "fileB").touch()
+    (path3 := dirB / "fileA").touch()
+    (path4 := dirB / "fileB").touch()
 
-        dA = os.path.join(tmp, "dirA")
-        dB = os.path.join(dA, "dirB")
-        dC = os.path.join(dA, "dirC")
-        for d in (dA, dB, dC):
-            os.mkdir(d)
-
-        f1 = os.path.join(dB, "fileA")
-        f2 = os.path.join(dB, "fileB")
-        f3 = os.path.join(dC, "fileA")
-        f4 = os.path.join(dC, "fileB")
-        for f in (f1, f2, f3, f4):
-            Path(f).touch()
-
-        yield tmp, (dA, dB, dC), (f1, f2, f3, f4)
-    finally:
-        shutil.rmtree(tmp)
+    assert {str(path1), str(path3)} == set(utils.rec_glob(tmp_path, "fileA"))
+    assert {str(path3), str(path4)} == set(
+        utils.rec_glob(
+            tmp_path,
+            ("fileA", "fileB"),
+            ignores="dirA",
+        )
+    )
+    assert {str(path2)} == set(utils.rec_glob(tmp_path, "fileB", ignores=["dirB"]))
 
 
-def test_rec_glob():
-    with _generate_tmp_tree() as (tmp, _, (f1, f2, f3, f4)):
-        assert sorted(utils.rec_glob(tmp, "fileA")) == [f1, f3]
-        assert sorted(utils.rec_glob(tmp, ("fileA", "fileB"), ignores="dirB")) == [
-            f3,
-            f4,
-        ]
-        assert sorted(utils.rec_glob(tmp, "fileB", ignores=("dirC",))) == [f2]
+@pytest.mark.parametrize("file", ["meta.yaml", "meta.yml", "conda.yaml", "conda.yml"])
+def test_find_recipe(tmp_path: Path, file: str):
+    # check that each of these are valid recipes
+    for path in (
+        tmp_path / file,
+        tmp_path / "dirA" / file,
+        tmp_path / "dirA" / "dirB" / file,
+        tmp_path / "dirA" / "dirC" / file,
+    ):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.touch()
+        assert path.samefile(utils.find_recipe(tmp_path))
+        path.unlink()
 
 
-def test_find_recipe():
-    with _generate_tmp_tree() as (tmp, (dA, dB, dC), (f1, f2, f3, f4)):
-        f5 = os.path.join(tmp, "meta.yaml")
-        f6 = os.path.join(dA, "meta.yml")
-        f7 = os.path.join(dB, "conda.yaml")
-        f8 = os.path.join(dC, "conda.yml")
+@pytest.mark.parametrize("file", ["meta.yaml", "meta.yml", "conda.yaml", "conda.yml"])
+def test_find_recipe_relative(tmp_path: Path, monkeypatch: MonkeyPatch, file: str):
+    (dirA := tmp_path / "dirA").mkdir()
+    (path := dirA / file).touch()
 
-        # check that each of these are valid recipes
-        for f in (f5, f6, f7, f8):
-            Path(f).touch()
-            assert utils.find_recipe(tmp) == f
-            os.remove(f)
+    # check that even when given a relative recipe path we still return
+    # the absolute path
+    monkeypatch.chdir(tmp_path)
+    assert path.samefile(utils.find_recipe("dirA"))
 
 
-def test_find_recipe_relative():
-    with _generate_tmp_tree() as (tmp, (dA, dB, dC), (f1, f2, f3, f4)):
-        f5 = os.path.join(dA, "meta.yaml")
-        Path(f5).touch()
-
-        # check that even when given a relative recipe path we still return
-        # the absolute path
-        saved = os.getcwd()
-        os.chdir(tmp)
-        try:
-            assert utils.find_recipe("dirA") == f5
-        finally:
-            os.chdir(saved)
+def test_find_recipe_no_meta(tmp_path: Path):
+    # no recipe in tmp_path
+    with pytest.raises(IOError):
+        utils.find_recipe(tmp_path)
 
 
-def test_find_recipe_no_meta():
-    with _generate_tmp_tree() as (tmp, _, (f1, f2, f3, f4)):
-        # no meta files in tmp
-        with pytest.raises(IOError):
-            utils.find_recipe(tmp)
+def test_find_recipe_file(tmp_path: Path):
+    # provided recipe is valid
+    (path := tmp_path / "meta.yaml").touch()
+    assert path.samefile(utils.find_recipe(path))
 
 
-def test_find_recipe_file():
-    with _generate_tmp_tree() as (tmp, _, (f1, f2, f3, f4)):
-        f5 = os.path.join(tmp, "meta.yaml")
-        Path(f5).touch()
+def test_find_recipe_file_bad(tmp_path: Path):
+    # missing recipe is invalid
+    path = tmp_path / "not_a_recipe"
+    with pytest.raises(IOError):
+        utils.find_recipe(path)
 
-        # file provided is valid meta
-        assert utils.find_recipe(f5) == f5
-
-
-def test_find_recipe_file_bad():
-    with _generate_tmp_tree() as (tmp, _, (f1, f2, f3, f4)):
-        # file provided is not valid meta
-        with pytest.raises(IOError):
-            utils.find_recipe(f1)
+    # provided recipe is invalid
+    path.touch()
+    with pytest.raises(IOError):
+        utils.find_recipe(path)
 
 
-def test_find_recipe_multipe_base():
-    with _generate_tmp_tree() as (tmp, (dA, dB, dC), (f1, f2, f3, f4)):
-        f5 = os.path.join(tmp, "meta.yaml")
-        f6 = os.path.join(dB, "meta.yaml")
-        f7 = os.path.join(dC, "conda.yaml")
-        for f in (f5, f6, f7):
-            Path(f).touch()
+@pytest.mark.parametrize("file", ["meta.yaml", "meta.yml", "conda.yaml", "conda.yml"])
+def test_find_recipe_multipe_base(tmp_path: Path, file: str):
+    (dirA := tmp_path / "dirA").mkdir()
+    (dirB := dirA / "dirB").mkdir()
+    (dirC := dirA / "dirC").mkdir()
 
-        # multiple meta files, use the one in base level
-        assert utils.find_recipe(tmp) == f5
+    (path1 := tmp_path / file).touch()
+    (dirA / file).touch()
+    (dirB / file).touch()
+    (dirC / file).touch()
+
+    # multiple recipe, use the one at the top level
+    assert path1.samefile(utils.find_recipe(tmp_path))
 
 
-def test_find_recipe_multipe_bad():
-    with _generate_tmp_tree() as (tmp, (dA, dB, dC), (f1, f2, f3, f4)):
-        f5 = os.path.join(dB, "meta.yaml")
-        f6 = os.path.join(dC, "conda.yaml")
-        for f in (f5, f6):
-            Path(f).touch()
+@pytest.mark.parametrize("stem", ["meta", "conda"])
+def test_find_recipe_multipe_bad(tmp_path: Path, stem: str):
+    (dirA := tmp_path / "dirA").mkdir()
+    (dirB := dirA / "dirB").mkdir()
+    (dirC := dirA / "dirC").mkdir()
 
-        # nothing in base
-        with pytest.raises(IOError):
-            utils.find_recipe(tmp)
+    # create multiple nested recipes at the same depth
+    (dirB / f"{stem}.yml").touch()
+    (dirC / f"{stem}.yaml").touch()
 
-        f7 = os.path.join(tmp, "meta.yaml")
-        f8 = os.path.join(tmp, "conda.yaml")
-        for f in (f7, f8):
-            Path(f).touch()
+    # too many equal priority recipes found
+    with pytest.raises(IOError):
+        utils.find_recipe(tmp_path)
 
-        # too many in base
-        with pytest.raises(IOError):
-            utils.find_recipe(tmp)
+    # create multiple recipes at the top level
+    (tmp_path / f"{stem}.yml").touch()
+    (tmp_path / f"{stem}.yaml").touch()
+
+    # too many recipes in the top level
+    with pytest.raises(IOError):
+        utils.find_recipe(tmp_path)
 
 
 class IsCondaPkgTestData(NamedTuple):

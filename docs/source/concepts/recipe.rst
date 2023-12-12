@@ -2,10 +2,6 @@
 Conda-build recipes
 ===================
 
-.. contents::
-   :local:
-   :depth: 2
-
 To enable building `conda packages`_, :ref:`install and update conda
 and conda-build <install-conda-build>`.
 

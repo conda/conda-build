@@ -3,7 +3,7 @@
 """
 Tools for converting Cran packages to conda recipes.
 """
-
+from __future__ import annotations
 
 import argparse
 import copy
@@ -28,6 +28,7 @@ from os.path import (
     realpath,
     relpath,
 )
+from typing import Literal
 
 import requests
 import yaml
@@ -40,12 +41,14 @@ except ImportError:
 
 from conda.common.io import dashlist
 
-from conda_build import metadata, source
+from conda_build import source
 from conda_build.conda_interface import TemporaryDirectory, cc_conda_build
 from conda_build.config import get_or_merge_config
 from conda_build.license_family import allowed_license_families, guess_license_family
 from conda_build.utils import ensure_list, rm_rf
 from conda_build.variants import DEFAULT_VARIANTS, get_package_variants
+
+from ..metadata import MetaData
 
 SOURCE_META = """\
   {archive_keys}
@@ -198,7 +201,7 @@ else
     popd
   fi
 fi
-"""
+"""  # noqa: E501
 
 CRAN_BUILD_SH_BINARY = """\
 #!/bin/bash
@@ -389,7 +392,7 @@ def add_parser(repos):
         "--use-noarch-generic",
         action="store_true",
         dest="use_noarch_generic",
-        help=("Mark packages that do not need compilation as `noarch: generic`"),
+        help="Mark packages that do not need compilation as `noarch: generic`",
     )
     cran.add_argument(
         "--use-rtools-win",
@@ -736,7 +739,9 @@ def strip_end(string, end):
     return string
 
 
-def package_to_inputs_dict(output_dir, output_suffix, git_tag, package, version=None):
+def package_to_inputs_dict(
+    output_dir, output_suffix, git_tag, package: str, version=None
+):
     """
     Converts `package` (*) into a tuple of:
 
@@ -802,9 +807,10 @@ def package_to_inputs_dict(output_dir, output_suffix, git_tag, package, version=
         location = existing_location = existing_recipe_dir(
             output_dir, output_suffix, package, version
         )
+    m: MetaData | None
     if existing_location:
         try:
-            m = metadata.MetaData(existing_location)
+            m = MetaData(existing_location)
         except:
             # Happens when the folder exists but contains no recipe.
             m = None
@@ -868,7 +874,7 @@ def skeletonize(
     r_interp="r-base",
     use_binaries_ver=None,
     use_noarch_generic=False,
-    use_when_no_binary="src",
+    use_when_no_binary: Literal["error" | "src" | "old" | "old-src"] = "src",
     use_rtools_win=False,
     config=None,
     variant_config_files=None,
@@ -884,6 +890,9 @@ def skeletonize(
     ):
         print(f"ERROR: --use_when_no_binary={use_when_no_binary} not yet implemented")
         sys.exit(1)
+
+    m: MetaData
+
     output_dir = realpath(output_dir)
     config = get_or_merge_config(config, variant_config_files=variant_config_files)
 
@@ -970,9 +979,7 @@ def skeletonize(
 
         elif is_github_url or is_tarfile:
             rm_rf(config.work_dir)
-            m = metadata.MetaData.fromdict(
-                {"source": {"git_url": location}}, config=config
-            )
+            m = MetaData.fromdict({"source": {"git_url": location}}, config=config)
             source.git_source(
                 m.get_section("source"), m.config.git_cache, m.config.work_dir
             )
@@ -1088,7 +1095,7 @@ def skeletonize(
                 m, "extra/recipe-maintainers", add_maintainer
             )
             if m.version() == d["conda_version"]:
-                build_number = int(m.get_value("build/number", 0))
+                build_number = m.build_number()
                 build_number += 1 if update_policy == "merge-incr-build-num" else 0
         if add_maintainer:
             new_maintainer = "{indent}{add_maintainer}".format(
@@ -1299,10 +1306,8 @@ def skeletonize(
                     )
             if not is_github_url:
                 available_details["archive_keys"] = (
-                    "{url_key}{sel}"
-                    "    {cranurl}\n"
-                    "  {hash_entry}{sel}".format(**available_details)
-                )
+                    "{url_key}{sel}    {cranurl}\n  {hash_entry}{sel}"
+                ).format(**available_details)
 
         # Extract the DESCRIPTION data from the source
         if cran_package is None:
@@ -1695,8 +1700,8 @@ def skeletonize(
                     )
 
 
-def version_compare(recipe_dir, newest_conda_version):
-    m = metadata.MetaData(recipe_dir)
+def version_compare(recipe_dir: str, newest_conda_version):
+    m = MetaData(recipe_dir)
     local_version = m.version()
     package = basename(recipe_dir)
 

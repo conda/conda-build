@@ -140,18 +140,18 @@ if __name__ == "__main__":
     parser.add_argument("setup_file", help="path or filename of setup.py file")
     parser.add_argument(
         "--from-recipe-dir",
-        help=("look for setup.py file in recipe " "dir (as opposed to work dir)"),
+        help="look for setup.py file in recipe dir (as opposed to work dir)",
         default=False,
         action="store_true",
     )
     parser.add_argument(
         "--recipe-dir",
-        help=("(optional) path to recipe dir, where " "setup.py should be found"),
+        help="(optional) path to recipe dir, where setup.py should be found",
     )
 
     parser.add_argument(
         "--permit-undefined-jinja",
-        help=("look for setup.py file in recipe " "dir (as opposed to work dir)"),
+        help="look for setup.py file in recipe dir (as opposed to work dir)",
         default=False,
         action="store_true",
     )

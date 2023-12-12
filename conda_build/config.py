@@ -3,6 +3,8 @@
 """
 Module to store conda build settings.
 """
+from __future__ import annotations
+
 import copy
 import math
 import os
@@ -12,6 +14,7 @@ import sys
 import time
 from collections import namedtuple
 from os.path import abspath, expanduser, expandvars, join
+from pathlib import Path
 
 from .conda_interface import (
     binstar_upload,
@@ -57,14 +60,14 @@ conda_pkg_format_default = None
 zstd_compression_level_default = 19
 
 
-@deprecated("3.25.0", "4.0.0")
+@deprecated("3.25.0", "24.1.0")
 def python2_fs_encode(strin):
     return strin
 
 
 @deprecated(
     "3.25.0",
-    "4.0.0",
+    "24.1.0",
     addendum=(
         "Use `pathlib.Path.mkdir(exist_ok=True)` or `os.makedirs(exist_ok=True)` "
         "instead."
@@ -458,7 +461,7 @@ class Config:
         self._src_cache_root = value
 
     @property
-    def croot(self):
+    def croot(self) -> str:
         """This is where source caches and work folders live"""
         if not self._croot:
             _bld_root_env = os.getenv("CONDA_BLD_PATH")
@@ -474,9 +477,9 @@ class Config:
         return self._croot
 
     @croot.setter
-    def croot(self, croot):
+    def croot(self, croot: str | os.PathLike | Path) -> None:
         """Set croot - if None is passed, then the default value will be used"""
-        self._croot = croot
+        self._croot = str(croot) if croot else None
 
     @property
     def output_folder(self):
@@ -494,56 +497,56 @@ class Config:
 
     # back compat for conda-build-all - expects CONDA_* vars to be attributes of the config object
     @property
-    @deprecated("3.0.28", "4.0.0")
+    @deprecated("3.0.28", "24.1.0")
     def CONDA_LUA(self):
         return self.variant.get("lua", get_default_variant(self)["lua"])
 
     @CONDA_LUA.setter
-    @deprecated("3.0.28", "4.0.0")
+    @deprecated("3.0.28", "24.1.0")
     def CONDA_LUA(self, value):
         self.variant["lua"] = value
 
     @property
-    @deprecated("3.0.28", "4.0.0")
+    @deprecated("3.0.28", "24.1.0")
     def CONDA_PY(self):
         value = self.variant.get("python", get_default_variant(self)["python"])
         return int("".join(value.split(".")))
 
     @CONDA_PY.setter
-    @deprecated("3.0.28", "4.0.0")
+    @deprecated("3.0.28", "24.1.0")
     def CONDA_PY(self, value):
         value = str(value)
         self.variant["python"] = ".".join((value[0], value[1:]))
 
     @property
-    @deprecated("3.0.28", "4.0.0")
+    @deprecated("3.0.28", "24.1.0")
     def CONDA_NPY(self):
         value = self.variant.get("numpy", get_default_variant(self)["numpy"])
         return int("".join(value.split(".")))
 
     @CONDA_NPY.setter
-    @deprecated("3.0.28", "4.0.0")
+    @deprecated("3.0.28", "24.1.0")
     def CONDA_NPY(self, value):
         value = str(value)
         self.variant["numpy"] = ".".join((value[0], value[1:]))
 
     @property
-    @deprecated("3.0.28", "4.0.0")
+    @deprecated("3.0.28", "24.1.0")
     def CONDA_PERL(self):
         return self.variant.get("perl", get_default_variant(self)["perl"])
 
     @CONDA_PERL.setter
-    @deprecated("3.0.28", "4.0.0")
+    @deprecated("3.0.28", "24.1.0")
     def CONDA_PERL(self, value):
         self.variant["perl"] = value
 
     @property
-    @deprecated("3.0.28", "4.0.0")
+    @deprecated("3.0.28", "24.1.0")
     def CONDA_R(self):
         return self.variant.get("r_base", get_default_variant(self)["r_base"])
 
     @CONDA_R.setter
-    @deprecated("3.0.28", "4.0.0")
+    @deprecated("3.0.28", "24.1.0")
     def CONDA_R(self, value):
         self.variant["r_base"] = value
 
@@ -868,11 +871,11 @@ class Config:
                 rm_rf(os.path.join(self.build_folder, "prefix_files"))
         else:
             print(
-                "\nLeaving build/test directories:" "\n  Work:\n",
+                "\nLeaving build/test directories:\n  Work:\n",
                 self.work_dir,
                 "\n  Test:\n",
                 self.test_dir,
-                "\nLeaving build/test environments:" "\n  Test:\nsource activate ",
+                "\nLeaving build/test environments:\n  Test:\nsource activate ",
                 self.test_prefix,
                 "\n  Build:\nsource activate ",
                 self.build_prefix,
@@ -913,8 +916,9 @@ class Config:
             self.clean(remove_folders=False)
 
 
-def get_or_merge_config(config, variant=None, **kwargs):
-    """Always returns a new object - never changes the config that might be passed in."""
+def _get_or_merge_config(config, variant=None, **kwargs):
+    # This function should only ever be called via get_or_merge_config.
+    # It only exists for us to monkeypatch a default config when running tests.
     if not config:
         config = Config(variant=variant)
     else:
@@ -926,6 +930,11 @@ def get_or_merge_config(config, variant=None, **kwargs):
     if variant:
         config.variant.update(variant)
     return config
+
+
+def get_or_merge_config(config, variant=None, **kwargs):
+    """Always returns a new object - never changes the config that might be passed in."""
+    return _get_or_merge_config(config, variant=variant, **kwargs)
 
 
 def get_channel_urls(args):
