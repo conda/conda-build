@@ -1565,8 +1565,6 @@ def create_info_files(m, replacements, files, prefix):
     write_no_link(m, files)
 
     sources = m.get_section("source")
-    if hasattr(sources, "keys"):
-        sources = [sources]
 
     with open(join(m.config.info_dir, "git"), "w", encoding="utf-8") as fo:
         for src in sources:

@@ -13,7 +13,6 @@ import warnings
 from collections import OrderedDict
 from functools import lru_cache
 from os.path import isfile, join
-from typing import Literal
 
 from bs4 import UnicodeDammit
 
@@ -46,6 +45,9 @@ try:
     Loader = yaml.CLoader
 except AttributeError:
     Loader = yaml.Loader
+
+if TYPE_CHECKING := False:
+    from typing import Literal, overload
 
 
 class StringifyNumbersLoader(Loader):
@@ -622,6 +624,7 @@ FIELDS = {
         "prelink_message": None,
         "readme": None,
     },
+    "extra": {},
 }
 
 # Fields that may either be a dictionary or a list of dictionaries.
@@ -1338,8 +1341,40 @@ class MetaData:
         m.final = False
         return m
 
-    def get_section(self, section):
-        return self.meta.get(section, {})
+    @overload
+    def get_section(self, section: Literal["source", "outputs"]) -> list[dict]:
+        ...
+
+    @overload
+    def get_section(
+        self,
+        section: Literal[
+            "package",
+            "build",
+            "requirements",
+            "app",
+            "test",
+            "about",
+            "extra",
+        ],
+    ) -> dict:
+        ...
+
+    def get_section(self, name):
+        section = self.meta.get(name)
+        if name in OPTIONALLY_ITERABLE_FIELDS:
+            if not section:
+                return []
+            elif isinstance(section, dict):
+                return [section]
+            elif not isinstance(section, list):
+                raise ValueError(f"Expected {name} to be a list")
+        else:
+            if not section:
+                return {}
+            elif not isinstance(section, dict):
+                raise ValueError(f"Expected {name} to be a dict")
+        return section
 
     def get_value(self, name, default=None, autotype=True):
         """
@@ -1353,24 +1388,26 @@ class MetaData:
         :return: The named value from meta.yaml
         """
         names = name.split("/")
-        assert len(names) in (2, 3), "Bad field name: " + name
         if len(names) == 2:
             section, key = names
             index = None
         elif len(names) == 3:
             section, index, key = names
-            assert section == "source", "Section is not a list: " + section
+            if section not in OPTIONALLY_ITERABLE_FIELDS:
+                raise ValueError(f"Section is not indexable: {section}")
             index = int(index)
+        else:
+            raise ValueError(f"Bad field name: {name}")
 
         # get correct default
         if autotype and default is None and FIELDS.get(section, {}).get(key):
             default = FIELDS[section][key]()
 
         section_data = self.get_section(section)
-        if isinstance(section_data, dict):
-            assert (
-                not index
-            ), f"Got non-zero index ({index}), but section {section} is not a list."
+        if isinstance(section_data, dict) and not index:
+            raise ValueError(
+                f"Got non-zero index ({index}), but section {section} is not a list."
+            )
         elif isinstance(section_data, list):
             # The 'source' section can be written a list, in which case the name
             # is passed in with an index, e.g. get_value('source/0/git_url')
@@ -1381,13 +1418,12 @@ class MetaData:
                 )
                 index = 0
 
-            if len(section_data) == 0:
+            if not section_data:
                 section_data = {}
             else:
                 section_data = section_data[index]
-                assert isinstance(
-                    section_data, dict
-                ), f"Expected {section}/{index} to be a dict"
+                if not isinstance(section_data, dict):
+                    raise ValueError(f"Expected {name} to be a dict")
 
         value = section_data.get(key, default)
 
@@ -1470,7 +1506,7 @@ class MetaData:
         if not self.is_output:
             matching_output = [
                 out
-                for out in self.meta.get("outputs", [])
+                for out in self.get_section("outputs")
                 if out.get("name") == self.name()
             ]
             if matching_output:
@@ -2266,9 +2302,8 @@ class MetaData:
 
     @property
     def source_provided(self):
-        return not bool(self.meta.get("source")) or (
-            os.path.isdir(self.config.work_dir)
-            and len(os.listdir(self.config.work_dir)) > 0
+        return not self.get_section("source") or (
+            os.path.isdir(self.config.work_dir) and os.listdir(self.config.work_dir)
         )
 
     def reconcile_metadata_with_output_dict(self, output_metadata, output_dict):
