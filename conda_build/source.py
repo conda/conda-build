@@ -1027,13 +1027,11 @@ def provide(metadata):
       - unpack
       - apply patches (if any)
     """
-    dicts = metadata.get_section("source")
-    if not os.path.isdir(metadata.config.build_folder):
-        os.makedirs(metadata.config.build_folder)
+    os.makedirs(metadata.config.build_folder, exist_ok=True)
     git = None
 
     try:
-        for source_dict in dicts:
+        for source_dict in metadata.get_section("source"):
             folder = source_dict.get("folder")
             src_dir = os.path.join(metadata.config.work_dir, folder if folder else "")
             if any(k in source_dict for k in ("fn", "url")):
