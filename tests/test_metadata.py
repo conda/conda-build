@@ -15,6 +15,8 @@ from pytest import MonkeyPatch
 from conda_build import api
 from conda_build.config import Config
 from conda_build.metadata import (
+    FIELDS,
+    OPTIONALLY_ITERABLE_FIELDS,
     MetaData,
     _hash_dependencies,
     get_selectors,
@@ -23,7 +25,7 @@ from conda_build.metadata import (
 )
 from conda_build.utils import DEFAULT_SUBDIRS
 
-from .utils import metadata_dir, thisdir
+from .utils import metadata_dir, metadata_path, thisdir
 
 
 def test_uses_vcs_in_metadata(testing_workdir, testing_metadata):
@@ -459,3 +461,22 @@ def test_get_selectors(
         # override with True values
         **{key: True for key in expected},
     }
+
+
+def test_fromstring():
+    MetaData.fromstring((metadata_path / "source_multiple" / "meta.yaml").read_text())
+
+
+def test_fromdict():
+    MetaData.fromdict(
+        yamlize((metadata_path / "source_multiple" / "meta.yaml").read_text())
+    )
+
+
+def test_get_section(testing_metadata: MetaData):
+    for name in FIELDS:
+        section = testing_metadata.get_section(name)
+        if name in OPTIONALLY_ITERABLE_FIELDS:
+            assert isinstance(section, list)
+        else:
+            assert isinstance(section, dict)

@@ -13,6 +13,7 @@ import warnings
 from collections import OrderedDict
 from functools import lru_cache
 from os.path import isfile, join
+from typing import Literal, overload
 
 from bs4 import UnicodeDammit
 
@@ -45,9 +46,6 @@ try:
     Loader = yaml.CLoader
 except AttributeError:
     Loader = yaml.Loader
-
-if TYPE_CHECKING := False:
-    from typing import Literal, overload
 
 
 class StringifyNumbersLoader(Loader):
@@ -1319,6 +1317,9 @@ class MetaData:
     @classmethod
     def fromstring(cls, metadata, config=None, variant=None):
         m = super().__new__(cls)
+        m.path = ""
+        m._meta_path = ""
+        m.requirements_path = ""
         config = config or Config(variant=variant)
         m.meta = parse(metadata, config=config, path="")
         m.config = config
@@ -1335,8 +1336,7 @@ class MetaData:
         m._meta_path = ""
         m.requirements_path = ""
         m.meta = sanitize(metadata)
-        config = config or Config(variant=variant)
-        m.config = config
+        m.config = config or Config(variant=variant)
         m.undefined_jinja_vars = []
         m.final = False
         return m
@@ -1404,7 +1404,7 @@ class MetaData:
             default = FIELDS[section][key]()
 
         section_data = self.get_section(section)
-        if isinstance(section_data, dict) and not index:
+        if isinstance(section_data, dict) and index:
             raise ValueError(
                 f"Got non-zero index ({index}), but section {section} is not a list."
             )
