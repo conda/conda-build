@@ -1,0 +1,19 @@
+### Enhancements
+
+* Update `conda_build.metadata.MetaData.get_section` to always return lists for "source" and "outputs". (#5112)
+
+### Bug fixes
+
+* Fix finalizing recipes with multiple sources. (#5112)
+
+### Deprecations
+
+* <news item>
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>
