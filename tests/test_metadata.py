@@ -464,12 +464,12 @@ def test_get_selectors(
 
 
 def test_fromstring():
-    MetaData.fromstring((metadata_path / "source_multiple" / "meta.yaml").read_text())
+    MetaData.fromstring((metadata_path / "multiple_sources" / "meta.yaml").read_text())
 
 
 def test_fromdict():
     MetaData.fromdict(
-        yamlize((metadata_path / "source_multiple" / "meta.yaml").read_text())
+        yamlize((metadata_path / "multiple_sources" / "meta.yaml").read_text())
     )
 
 

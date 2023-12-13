@@ -3,7 +3,7 @@ package:
   version: 1.0
 
 source:
-  - path: "{{ environ.get('CONDA_BUILD_TEST_RECIPE_PATH') }}"
+  - path: {{ environ.get('CONDA_BUILD_TEST_RECIPE_PATH') }}
 
   - git_url: https://github.com/conda/conda_build_test_recipe
     git_tag: 1.20.2
