@@ -31,8 +31,6 @@ from conda_build.metadata import MetaData
 from conda_build.utils import check_call_env, copy_into, prepend_bin_path
 from conda_build.variants import get_default_variant
 
-pytest_plugins = ["conda.testing"]
-
 
 @pytest.fixture(scope="function")
 def testing_workdir(monkeypatch: MonkeyPatch, tmp_path: Path) -> Iterator[str]:

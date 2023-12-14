@@ -5,18 +5,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
-from conda import __version__ as conda_version
 from conda.core.prefix_data import PrefixData
-from packaging.version import Version, parse
 
 from conda_build.inspect_pkg import which_package
 
 
-@pytest.mark.skipif(
-    parse(conda_version) < Version("23.5.0"),
-    reason="tmp_env fixture first available in conda 23.5.0",
-)
 def test_which_package(tmp_path: Path):
     # create a dummy environment
     (tmp_path / "conda-meta").mkdir()
