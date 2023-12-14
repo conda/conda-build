@@ -97,4 +97,4 @@ def test_which_package(tmp_path: Path):
 
     precs_shared = list(which_package(tmp_path / "shared", tmp_path))
     assert len(precs_shared) == 2
-    assert precs_shared == [precB, precA]
+    assert set(precs_shared) == {precA, precB}
