@@ -5,6 +5,7 @@
 ### Bug fixes
 
 * Fix `conda_build.inspect_pkg.which_package` so it does not return duplicate package records. (#5108)
+* Fix `conda_build.post._lookup_in_prefix_packages` to display `str(PackageRecord)` instead of `repr(PackageRecord)`. (#5108)
 
 ### Deprecations
 
