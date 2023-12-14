@@ -1388,26 +1388,26 @@ class MetaData:
         :return: The named value from meta.yaml
         """
         names = name.split("/")
+        assert len(names) in (2, 3), "Bad field name: " + name
         if len(names) == 2:
             section, key = names
             index = None
         elif len(names) == 3:
             section, index, key = names
-            if section not in OPTIONALLY_ITERABLE_FIELDS:
-                raise ValueError(f"Section is not indexable: {section}")
+            assert section in OPTIONALLY_ITERABLE_FIELDS, (
+                "Section is not a list: " + section
+            )
             index = int(index)
-        else:
-            raise ValueError(f"Bad field name: {name}")
 
         # get correct default
         if autotype and default is None and FIELDS.get(section, {}).get(key):
             default = FIELDS[section][key]()
 
         section_data = self.get_section(section)
-        if isinstance(section_data, dict) and index:
-            raise ValueError(
-                f"Got non-zero index ({index}), but section {section} is not a list."
-            )
+        if isinstance(section_data, dict):
+            assert (
+                not index
+            ), f"Got non-zero index ({index}), but section {section} is not a list."
         elif isinstance(section_data, list):
             # The 'source' section can be written a list, in which case the name
             # is passed in with an index, e.g. get_value('source/0/git_url')
@@ -1422,8 +1422,9 @@ class MetaData:
                 section_data = {}
             else:
                 section_data = section_data[index]
-                if not isinstance(section_data, dict):
-                    raise ValueError(f"Expected {name} to be a dict")
+                assert isinstance(
+                    section_data, dict
+                ), f"Expected {section}/{index} to be a dict"
 
         value = section_data.get(key, default)
 
