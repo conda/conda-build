@@ -1753,7 +1753,7 @@ def check_menuinst_json(files, prefix) -> None:
     try:
         import jsonschema
         from menuinst.utils import data_path
-    except ModuleNotFoundError as exc:
+    except ImportError as exc:
         log.warning(
             "Found 'Menu/*.json' files but couldn't validate: %s",
             ", ".join(json_files),
