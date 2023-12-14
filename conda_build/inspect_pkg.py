@@ -73,9 +73,8 @@ def which_package(
     path = prefix / path
 
     for prec in PrefixData(str(prefix)).iter_records():
-        for file in prec["files"]:
-            if samefile(prefix / file, path):
-                yield prec
+        if any(samefile(prefix / file, path) for file in prec["files"]):
+            yield prec
 
 
 def print_object_info(info, key):
