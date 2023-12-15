@@ -1,5 +1,25 @@
 [//]: # (current developments)
 
+## 3.28.2 (2023-12-15)
+
+### Enhancements
+
+* Update `conda_build.metadata.MetaData.get_section` to always return lists for "source" and "outputs". (#5112)
+
+### Bug fixes
+
+* Fix `conda_build.inspect_pkg.which_package` so it does not return duplicate package records. (#5108)
+* Fix `conda_build.post._lookup_in_prefix_packages` to display `str(PackageRecord)` instead of `repr(PackageRecord)`. (#5108)
+* Fix finalizing recipes with multiple sources. (#5111 via #5112)
+* Catch the more general `ImportError` instead of `ModuleNotFoundError`, so we do handle the cases where `menuinst 1.x` is found. (#5116)
+
+### Contributors
+
+* @jaimergp
+* @kenodegard
+
+
+
 ## 3.28.1 (2023-12-06)
 
 ### Bug fixes
