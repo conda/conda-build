@@ -721,17 +721,17 @@ def finalize_metadata(
         # if source/path is relative, then the output package makes no sense at all.  The next
         #   best thing is to hard-code the absolute path.  This probably won't exist on any
         #   system other than the original build machine, but at least it will work there.
-        if source_path := m.get_value("source/path"):
-            if not isabs(source_path):
-                m.meta["source"]["path"] = normpath(join(m.path, source_path))
+        for source_dict in m.get_section("source"):
+            if (source_path := source_dict.get("path")) and not isabs(source_path):
+                source_dict["path"] = normpath(join(m.path, source_path))
             elif (
-                (git_url := m.get_value("source/git_url"))
+                (git_url := source_dict.get("git_url"))
                 # absolute paths are not relative paths
                 and not isabs(git_url)
                 # real urls are not relative paths
                 and ":" not in git_url
             ):
-                m.meta["source"]["git_url"] = normpath(join(m.path, git_url))
+                source_dict["git_url"] = normpath(join(m.path, git_url))
 
         m.meta.setdefault("build", {})
 
