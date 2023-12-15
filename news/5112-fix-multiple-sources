@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Fix finalizing recipes with multiple sources. (#5112)
+* Fix finalizing recipes with multiple sources. (#5111 via #5112)
 
 ### Deprecations
 
