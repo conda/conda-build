@@ -4,14 +4,14 @@
 
 ### Enhancements
 
-* Update `conda_build.metadata.MetaData.get_section` to always return lists for "source" and "outputs". (#5112)
+* Update `conda_build.metadata.MetaData.get_section` to consistently return lists for "source" and "outputs". (#5111 via #5112)
 
 ### Bug fixes
 
-* Fix `conda_build.inspect_pkg.which_package` so it does not return duplicate package records. (#5108)
-* Fix `conda_build.post._lookup_in_prefix_packages` to display `str(PackageRecord)` instead of `repr(PackageRecord)`. (#5108)
-* Fix finalizing recipes with multiple sources. (#5111 via #5112)
-* Catch the more general `ImportError` instead of `ModuleNotFoundError`, so we do handle the cases where `menuinst 1.x` is found. (#5116)
+* Resolve duplicate package record issue in `conda_build.inspect_pkg.which_package`. (#5106 via #5108)
+* Ensure `conda_build.post._lookup_in_prefix_packages` displays `str(PackageRecord)` instead of `repr(PackageRecord)`. (#5106 via #5108)
+* Fix finalization of recipes with multiple sources. (#5111 via #5112)
+* Improve handling by catching the more general `ImportError` instead of `ModuleNotFoundError` to cover cases involving `menuinst 1.x`. (#5116)
 
 ### Contributors
 
