@@ -1564,15 +1564,11 @@ def create_info_files(m, replacements, files, prefix):
 
     write_no_link(m, files)
 
-    sources = m.get_section("source")
-    if hasattr(sources, "keys"):
-        sources = [sources]
-
     with open(join(m.config.info_dir, "git"), "w", encoding="utf-8") as fo:
-        for src in sources:
-            if src.get("git_url"):
+        for source_dict in m.get_section("source"):
+            if source_dict.get("git_url"):
                 source.git_info(
-                    os.path.join(m.config.work_dir, src.get("folder", "")),
+                    os.path.join(m.config.work_dir, source_dict.get("folder", "")),
                     m.config.build_prefix,
                     git=None,
                     verbose=m.config.verbose,
