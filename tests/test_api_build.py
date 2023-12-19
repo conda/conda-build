@@ -12,6 +12,7 @@ import sys
 import tarfile
 import uuid
 from collections import OrderedDict
+from contextlib import nullcontext
 from glob import glob
 from pathlib import Path
 from shutil import which
@@ -28,8 +29,10 @@ from conda.exceptions import ClobberError, CondaMultiError
 import conda_build
 from conda_build import __version__, api, exceptions
 from conda_build.conda_interface import (
+    CONDA_VERSION,
     CondaError,
     LinkError,
+    VersionOrder,
     cc_conda_build,
     context,
     reset_context,
@@ -1902,3 +1905,43 @@ def test_activated_prefixes_in_actual_path(testing_metadata):
         if path in expected_paths
     ]
     assert actual_paths == expected_paths
+
+
+@pytest.mark.parametrize("add_pip_as_python_dependency", [False, True])
+def test_add_pip_as_python_dependency_from_condarc_file(
+    testing_metadata, testing_workdir, add_pip_as_python_dependency, monkeypatch
+):
+    """
+    Test whether settings from .condarc files are heeded.
+    ref: https://github.com/conda/conda-libmamba-solver/issues/393
+    """
+    if VersionOrder(CONDA_VERSION) <= VersionOrder("23.10.0"):
+        if not add_pip_as_python_dependency and context.solver == "libmamba":
+            pytest.xfail(
+                "conda.plan.install_actions from conda<=23.10.0 ignores .condarc files."
+            )
+        from conda.base.context import context_stack
+
+        # ContextStack's pop/replace methods don't call self.apply.
+        context_stack.apply()
+
+    # TODO: SubdirData._cache_ clearing might not be needed for future conda versions.
+    #       See https://github.com/conda/conda/pull/13365 for proposed changes.
+    from conda.core.subdir_data import SubdirData
+
+    # SubdirData's cache doesn't distinguish on add_pip_as_python_dependency.
+    SubdirData._cache_.clear()
+
+    testing_metadata.meta["build"]["script"] = ['python -c "import pip"']
+    testing_metadata.meta["requirements"]["host"] = ["python"]
+    del testing_metadata.meta["test"]
+    if add_pip_as_python_dependency:
+        check_build_fails = nullcontext()
+    else:
+        check_build_fails = pytest.raises(subprocess.CalledProcessError)
+
+    conda_rc = Path(testing_workdir, ".condarc")
+    conda_rc.write_text(f"add_pip_as_python_dependency: {add_pip_as_python_dependency}")
+    with env_var("CONDARC", conda_rc, reset_context):
+        with check_build_fails:
+            api.build(testing_metadata)
