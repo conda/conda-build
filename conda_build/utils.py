@@ -18,9 +18,14 @@ import sys
 import tarfile
 import tempfile
 import time
+import urllib.parse as urlparse
+import urllib.request as urllib
 from collections import OrderedDict, defaultdict
+from contextlib import ExitStack  # noqa: F401
 from functools import lru_cache
+from glob import glob
 from itertools import filterfalse
+from json.decoder import JSONDecodeError
 from locale import getpreferredencoding
 from os.path import (
     abspath,
@@ -38,45 +43,19 @@ from pathlib import Path
 from threading import Thread
 from typing import Iterable
 
-import libarchive
-
-from .deprecations import deprecated
-
-try:
-    from json.decoder import JSONDecodeError
-except ImportError:
-    JSONDecodeError = ValueError
-
 import conda_package_handling.api
 import filelock
+import libarchive
 import yaml
-
-try:
-    from conda.base.constants import (
-        CONDA_PACKAGE_EXTENSION_V1,
-        CONDA_PACKAGE_EXTENSION_V2,
-        CONDA_PACKAGE_EXTENSIONS,
-    )
-except Exception:
-    from conda.base.constants import (
-        CONDA_TARBALL_EXTENSION as CONDA_PACKAGE_EXTENSION_V1,
-    )
-
-    CONDA_PACKAGE_EXTENSION_V2 = ".conda"
-    CONDA_PACKAGE_EXTENSIONS = (CONDA_PACKAGE_EXTENSION_V2, CONDA_PACKAGE_EXTENSION_V1)
-
-import urllib.parse as urlparse
-import urllib.request as urllib
-from contextlib import ExitStack  # noqa: F401
-from glob import glob
-
 from conda.api import PackageCacheData  # noqa
-from conda.base.constants import KNOWN_SUBDIRS
+from conda.base.constants import (
+    CONDA_PACKAGE_EXTENSIONS,
+    KNOWN_SUBDIRS,
+)
 from conda.core.prefix_data import PrefixData
 from conda.models.dist import Dist
 from conda.models.records import PrefixRecord
 
-# NOQA because it is not used in this file.
 from conda_build.conda_interface import rm_rf as _rm_rf  # noqa
 from conda_build.exceptions import BuildLockError  # noqa
 from conda_build.os_utils import external  # noqa
@@ -99,6 +78,7 @@ from .conda_interface import (  # noqa
     unix_path_to_win,
     win_path_to_unix,
 )
+from .deprecations import deprecated
 
 PermissionError = PermissionError  # NOQA
 FileNotFoundError = FileNotFoundError
