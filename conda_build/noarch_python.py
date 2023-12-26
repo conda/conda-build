@@ -19,6 +19,7 @@ def _force_dir(dirname):
         os.makedirs(dirname)
 
 
+@deprecated("24.1", "24.3")
 def _error_exit(exit_message):
     sys.exit("[noarch_python] %s" % exit_message)
 
@@ -38,7 +39,7 @@ def rewrite_script(fn, prefix):
         try:
             data = fi.read()
         except UnicodeDecodeError:  # file is binary
-            _error_exit("Noarch package contains binary script: %s" % fn)
+            sys.exit("[noarch_python] Noarch package contains binary script: %s" % fn)
     src_mode = os.stat(src).st_mode
     os.unlink(src)
 
