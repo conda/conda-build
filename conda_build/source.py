@@ -323,7 +323,7 @@ def git_mirror_checkout_recursive(
         except CalledProcessError:
             # on windows, remote URL comes back to us as cygwin or msys format.  Python doesn't
             # know how to normalize it.  Need to convert it to a windows path.
-            if sys.platform == "win32" and git_url.startswith("/"):
+            if on_win and git_url.startswith("/"):
                 git_url = convert_unix_path_to_win(git_url)
 
             if os.path.exists(git_url):
@@ -438,7 +438,7 @@ def git_source(source_dict, git_cache, src_dir, recipe_path=None, verbose=True):
     if git_url.startswith("."):
         # It's a relative path from the conda recipe
         git_url = abspath(normpath(os.path.join(recipe_path, git_url)))
-        if sys.platform == "win32":
+        if on_win:
             git_dn = git_url.replace(":", "_")
         else:
             git_dn = git_url[1:]

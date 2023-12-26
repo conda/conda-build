@@ -6,7 +6,6 @@ import hashlib
 import json
 import os
 import struct
-import sys
 import threading
 from collections.abc import Hashable
 from fnmatch import fnmatch
@@ -23,6 +22,7 @@ from .external import find_executable
 from .pyldd import DLLfile, EXEfile, elffile, machofile
 from .pyldd import codefile_type as _codefile_type
 from .pyldd import inspect_linkages as inspect_linkages_pyldd
+from .utils import on_mac, on_win
 
 try:
     import lief
@@ -923,12 +923,12 @@ def get_static_lib_exports_nope(file):
 
 def get_static_lib_exports_nm(filename):
     nm_exe = find_executable("nm")
-    if sys.platform == "win32" and not nm_exe:
+    if on_win and not nm_exe:
         nm_exe = "C:\\msys64\\mingw64\\bin\\nm.exe"
     if not nm_exe or not os.path.exists(nm_exe):
         return None
     flags = "-Pg"
-    if sys.platform == "darwin":
+    if on_mac:
         flags = "-PgUj"
     try:
         out, _ = Popen(
@@ -1042,7 +1042,7 @@ def get_exports(filename, arch="native", enable_static=False):
             os.path.exists(filename)
             and (filename.endswith(".a") or filename.endswith(".lib"))
             and is_archive(filename)
-        ) and sys.platform != "win32":
+        ) and not on_win:
             # syms = os.system('nm -g {}'.filename)
             # on macOS at least:
             # -PgUj is:
@@ -1050,11 +1050,11 @@ def get_exports(filename, arch="native", enable_static=False):
             # g: global (exported) only
             # U: not undefined
             # j: name only
-            if debug_static_archives or sys.platform == "win32":
+            if debug_static_archives or on_win:
                 exports = get_static_lib_exports_externally(filename)
             # Now, our own implementation which does not require nm and can
             # handle .lib files.
-            if sys.platform == "win32":
+            if on_win:
                 # Sorry, LIEF does not handle COFF (only PECOFF) and object files are COFF.
                 exports2 = exports
             else:

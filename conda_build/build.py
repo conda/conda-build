@@ -88,9 +88,12 @@ from .utils import (
     glob,
     shutil_move_more_retrying,
     tmp_chdir,
+    on_win,
+    on_mac,
+    on_linux,
 )
 
-if sys.platform == "win32":
+if on_win:
     import conda_build.windows as windows
 
 if "bsd" in sys.platform:
@@ -181,7 +184,7 @@ def create_post_scripts(m: MetaData):
 def prefix_replacement_excluded(path):
     if path.endswith((".pyc", ".pyo")) or not isfile(path):
         return True
-    if sys.platform != "darwin" and islink(path):
+    if not on_mac and islink(path):
         # OSX does not allow hard-linking symbolic links, so we cannot
         # skip symbolic links (as we can on Linux)
         return True
@@ -3240,7 +3243,7 @@ def _write_test_run_script(
         if py_files:
             test_python = metadata.config.test_python
             # use pythonw for import tests when osx_is_app is set
-            if metadata.get_value("build/osx_is_app") and sys.platform == "darwin":
+            if metadata.get_value("build/osx_is_app") and on_mac:
                 test_python = test_python + "w"
             tf.write(
                 '"{python}" -s "{test_file}"\n'.format(
@@ -3669,7 +3672,7 @@ def tests_failed(package_or_metadata, move_broken, broken_dir, config):
 
 
 def check_external():
-    if sys.platform.startswith("linux"):
+    if on_linux:
         patchelf = external.find_executable("patchelf")
         if patchelf is None:
             sys.exit(

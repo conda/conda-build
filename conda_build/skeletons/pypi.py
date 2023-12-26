@@ -44,6 +44,7 @@ from conda_build.utils import (
     check_call_env,
     decompressible_exts,
     ensure_list,
+    on_win,
     rm_rf,
     tar_xf,
 )
@@ -1366,7 +1367,7 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
     )
     stdlib_dir = join(
         config.host_prefix,
-        "Lib" if sys.platform == "win32" else "lib/python%s" % python_version,
+        "Lib" if on_win else "lib/python%s" % python_version,
     )
 
     patch = join(temp_dir, "pypi-distutils.patch")

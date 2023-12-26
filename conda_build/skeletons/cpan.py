@@ -32,7 +32,7 @@ from conda_build.conda_interface import (
     get_index,
 )
 from conda_build.config import get_or_merge_config
-from conda_build.utils import check_call_env, on_win
+from conda_build.utils import check_call_env, on_linux, on_win
 from conda_build.variants import get_default_variant
 from conda_build.version import _parse as parse_version
 
@@ -339,9 +339,9 @@ def install_perl_get_core_modules(version):
 
         config = Config()
 
-        if sys.platform.startswith("win"):
+        if on_win:
             subdirs = ("win-64", "Library", "bin", "perl.exe")
-        elif sys.platform.startswith("linux"):
+        elif on_linux:
             subdirs = ("linux-64", "bin", "perl")
         else:
             subdirs = ("osx-64", "bin", "perl")

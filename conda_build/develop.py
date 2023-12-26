@@ -6,7 +6,7 @@ from os.path import abspath, exists, expanduser, isdir, join
 
 from conda_build.os_utils.external import find_executable
 from conda_build.post import mk_relative_osx
-from conda_build.utils import check_call_env, get_site_packages, rec_glob
+from conda_build.utils import check_call_env, get_site_packages, on_mac, rec_glob
 
 
 def relink_sharedobjects(pkg_path, build_prefix):
@@ -24,7 +24,7 @@ def relink_sharedobjects(pkg_path, build_prefix):
     # find binaries in package dir and make them relocatable
     bin_files = rec_glob(pkg_path, [".so"])
     for b_file in bin_files:
-        if sys.platform == "darwin":
+        if on_mac:
             mk_relative_osx(b_file, build_prefix)
         else:
             print("Nothing to do on Linux or Windows.")

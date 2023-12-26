@@ -14,6 +14,7 @@ from pathlib import Path
 from conda_build.utils import ensure_list, get_logger
 
 from ..deprecations import deprecated
+from ..utils import on_linux, on_mac, on_win
 
 logging.basicConfig(level=logging.INFO)
 
@@ -1095,7 +1096,7 @@ def _trim_sysroot(sysroot):
 
 def _get_arch_if_native(arch):
     if arch == "native":
-        if sys.platform == "win32":
+        if on_win:
             arch = "x86_64" if sys.maxsize > 2**32 else "i686"
         else:
             _, _, _, _, arch = os.uname()
@@ -1311,7 +1312,7 @@ def main_maybe_test():
 
         tool = sys.argv[2]
         if tool != "otool" and tool != "ldd":
-            if sys.platform == "darwin":
+            if on_mac:
                 tool = "otool"
             else:
                 tool = "ldd"
@@ -1333,14 +1334,14 @@ def main_maybe_test():
                 resolve_filenames=False,
                 recurse=False,
             )
-            if sys.platform == "darwin":
+            if on_mac:
                 test_that = functools.partial(inspect_linkages_otool)
             SOEXT = "dylib"
         elif tool == "ldd":
             test_this = functools.partial(
                 inspect_linkages, sysroot=sysroot, resolve_filenames=True, recurse=True
             )
-            if sys.platform.startswith("linux"):
+            if on_linux:
                 test_that = functools.partial(inspect_linkages_ldd)
             SOEXT = "so"
         # Find a load of dylibs or elfs and compare

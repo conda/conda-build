@@ -10,6 +10,8 @@ from subprocess import PIPE, STDOUT, CalledProcessError, Popen, check_output
 from conda_build import utils
 from conda_build.os_utils.external import find_preferably_prefixed_executable
 
+from .utils import on_mac
+
 NO_EXT = (
     ".py",
     ".pyc",
@@ -356,6 +358,6 @@ def install_name_change(path, build_prefix, cb_func, dylibs, verbose=False):
 
 
 if __name__ == "__main__":
-    if sys.platform == "darwin":
+    if on_mac:
         for path in "/bin/ls", "/etc/locate.rc":
             print(path, is_macho(path))

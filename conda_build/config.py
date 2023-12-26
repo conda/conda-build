@@ -10,7 +10,6 @@ import math
 import os
 import re
 import shutil
-import sys
 import time
 from collections import namedtuple
 from os.path import abspath, expanduser, expandvars, join
@@ -556,9 +555,7 @@ class Config:
         self.variant["r_base"] = value
 
     def _get_python(self, prefix, platform):
-        if platform.startswith("win") or (
-            platform == "noarch" and sys.platform == "win32"
-        ):
+        if platform.startswith("win") or (platform == "noarch" and on_win):
             if os.path.isfile(os.path.join(prefix, "python_d.exe")):
                 res = join(prefix, "python_d.exe")
             else:
@@ -585,9 +582,7 @@ class Config:
         return res
 
     def _get_r(self, prefix, platform):
-        if platform.startswith("win") or (
-            platform == "noarch" and sys.platform == "win32"
-        ):
+        if platform.startswith("win") or (platform == "noarch" and on_win):
             res = join(prefix, "Scripts", "R.exe")
             # MRO test:
             if not os.path.exists(res):

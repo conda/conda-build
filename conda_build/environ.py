@@ -19,7 +19,13 @@ from conda_build.exceptions import BuildLockError, DependencyNeedsBuildingError
 from conda_build.features import feature_list
 from conda_build.index import get_build_index
 from conda_build.os_utils import external
-from conda_build.utils import ensure_list, env_var, prepend_bin_path
+from conda_build.utils import (
+    ensure_list,
+    env_var,
+    on_mac,
+    on_win,
+    prepend_bin_path,
+)
 from conda_build.variants import get_default_variant
 
 from .conda_interface import (
@@ -149,7 +155,7 @@ def verify_git_repo(
                 stderr=stderr,
             )
         except subprocess.CalledProcessError:
-            if sys.platform == "win32" and cache_dir.startswith("/"):
+            if on_win and cache_dir.startswith("/"):
                 cache_dir = utils.convert_unix_path_to_win(cache_dir)
             remote_details = utils.check_output_env(
                 [git_exe, "--git-dir", cache_dir, "remote", "-v"],
@@ -161,7 +167,7 @@ def verify_git_repo(
 
         # on windows, remote URL comes back to us as cygwin or msys format.  Python doesn't
         # know how to normalize it.  Need to convert it to a windows path.
-        if sys.platform == "win32" and remote_url.startswith("/"):
+        if on_win and remote_url.startswith("/"):
             remote_url = utils.convert_unix_path_to_win(git_url)
 
         if os.path.exists(remote_url):
@@ -518,7 +524,7 @@ def meta_vars(meta: MetaData, skip_build_id=False):
         git_url = meta.get_value("source/0/git_url")
 
         if os.path.exists(git_url):
-            if sys.platform == "win32":
+            if on_win:
                 git_url = utils.convert_unix_path_to_win(git_url)
             # If git_url is a relative path instead of a url, convert it to an abspath
             git_url = normpath(join(meta.path, git_url))
@@ -558,7 +564,7 @@ def meta_vars(meta: MetaData, skip_build_id=False):
 
 @lru_cache(maxsize=None)
 def get_cpu_count():
-    if sys.platform == "darwin":
+    if on_mac:
         # multiprocessing.cpu_count() is not reliable on OSX
         # See issue #645 on github.com/conda/conda-build
         out, _ = subprocess.Popen(
@@ -754,7 +760,7 @@ def os_vars(m, prefix):
     if not m.config.activate:
         d = prepend_bin_path(d, m.config.host_prefix)
 
-    if sys.platform == "win32":
+    if on_win:
         windows_vars(m, get_default, prefix)
     else:
         unix_vars(m, get_default, prefix)

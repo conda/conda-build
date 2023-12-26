@@ -36,6 +36,7 @@ from conda_build.utils import (
     comma_join,
     ensure_list,
     get_logger,
+    on_linux,
     package_has_file,
 )
 
@@ -156,9 +157,9 @@ def print_linkages(
 
 
 def replace_path(binary, path, prefix):
-    if sys.platform.startswith("linux"):
+    if on_linux:
         return abspath(path)
-    elif sys.platform.startswith("darwin"):
+    elif on_mac:
         if path == basename(binary):
             return abspath(join(prefix, binary))
         if "@rpath" in path:

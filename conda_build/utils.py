@@ -210,7 +210,7 @@ def _setup_rewrite_pipe(env):
 
     r_fd, w_fd = os.pipe()
     r = os.fdopen(r_fd, "rt")
-    if sys.platform == "win32":
+    if on_win:
         replacement_t = "%{}%"
     else:
         replacement_t = "${}"
@@ -998,7 +998,7 @@ def path2url(path):
 
 
 def get_stdlib_dir(prefix, py_ver):
-    if sys.platform == "win32":
+    if on_win:
         lib_dir = os.path.join(prefix, "Lib")
     else:
         lib_dir = os.path.join(prefix, "lib")
@@ -1022,7 +1022,7 @@ def get_build_folders(croot):
 
 def prepend_bin_path(env, prefix, prepend_prefix=False):
     env["PATH"] = join(prefix, "bin") + os.pathsep + env["PATH"]
-    if sys.platform == "win32":
+    if on_win:
         env["PATH"] = (
             join(prefix, "Library", "mingw-w64", "bin")
             + os.pathsep
@@ -1073,7 +1073,7 @@ def path_prepended(prefix, prepend_prefix=True):
         os.environ["PATH"] = old_path
 
 
-bin_dirname = "Scripts" if sys.platform == "win32" else "bin"
+bin_dirname = "Scripts" if on_win else "bin"
 
 entry_pat = re.compile(r"\s*([\w\-\.]+)\s*=\s*([\w.]+):([\w.]+)\s*$")
 
@@ -1132,7 +1132,7 @@ _posix_exes_cache = {}
 
 def convert_path_for_cygwin_or_msys2(exe, path):
     "If exe is a Cygwin or MSYS2 executable then filters it through `cygpath -u`"
-    if sys.platform != "win32":
+    if not on_win:
         return path
     if exe not in _posix_exes_cache:
         with open(exe, "rb") as exe_file:

@@ -1779,7 +1779,7 @@ class MetaData:
         ret = ensure_list(self.get_value("build/has_prefix_files", []))
         if not isinstance(ret, list):
             raise RuntimeError("build/has_prefix_files should be a list of paths")
-        if sys.platform == "win32":
+        if on_win:
             if any("\\" in i for i in ret):
                 raise RuntimeError(
                     "build/has_prefix_files paths must use / "
@@ -1794,7 +1794,7 @@ class MetaData:
                 "build/ignore_prefix_files should be boolean or a list of paths "
                 "(optionally globs)"
             )
-        if sys.platform == "win32":
+        if on_win:
             if isinstance(ret, list) and any("\\" in i for i in ret):
                 raise RuntimeError(
                     "build/ignore_prefix_files paths must use / "
@@ -1826,7 +1826,7 @@ class MetaData:
                 "build/binary_relocation should be boolean or a list of paths "
                 "(optionally globs)"
             )
-        if sys.platform == "win32":
+        if on_win:
             if isinstance(ret, list) and any("\\" in i for i in ret):
                 raise RuntimeError(
                     "build/binary_relocation paths must use / "
@@ -1845,7 +1845,7 @@ class MetaData:
             raise RuntimeError(
                 "build/binary_has_prefix_files should be a list of paths"
             )
-        if sys.platform == "win32":
+        if on_win:
             if any("\\" in i for i in ret):
                 raise RuntimeError(
                     "build/binary_has_prefix_files paths must use / "

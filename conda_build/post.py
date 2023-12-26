@@ -65,6 +65,7 @@ from conda_build.os_utils.pyldd import (
 
 from .deprecations import deprecated
 from .metadata import MetaData
+from .utils import on_mac, on_win
 
 filetypes_for_platform = {
     "win": (DLLfile, EXEfile),
@@ -127,7 +128,7 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
 
     py_exec = "#!" + (
         "/bin/bash " + prefix + "/bin/pythonw"
-        if sys.platform == "darwin" and osx_is_app
+        if on_mac and osx_is_app
         else prefix + "/bin/" + basename(build_python)
     )
     if bytes_ and hasattr(py_exec, "encode"):
@@ -276,7 +277,7 @@ def compile_missing_pyc(files, cwd, python_exe, skip_compile_pyc=()):
     unskipped_files = set(files) - skipped_files
     for fn in unskipped_files:
         # omit files in Library/bin, Scripts, and the root prefix - they are not generally imported
-        if sys.platform == "win32":
+        if on_win:
             if any(
                 [
                     fn.lower().startswith(start)
@@ -300,7 +301,7 @@ def compile_missing_pyc(files, cwd, python_exe, skip_compile_pyc=()):
         else:
             print("compiling .pyc files...")
             # We avoid command lines longer than 8190
-            if sys.platform == "win32":
+            if on_win:
                 limit = 8190
             else:
                 limit = 32760
@@ -1440,11 +1441,11 @@ def check_overlinking_impl(
             # .. and in that sysroot there are 3 suddirs in which we may search for DSOs.
             sysroots = ["/usr/lib", "/opt/X11", "/System/Library/Frameworks"]
             whitelist = DEFAULT_MAC_WHITELIST
-            build_is_host = True if sys.platform == "darwin" else False
+            build_is_host = True if on_mac else False
         elif subdir.startswith("win"):
             sysroots = ["C:/Windows"]
             whitelist = DEFAULT_WIN_WHITELIST
-            build_is_host = True if sys.platform == "win-32" else False
+            build_is_host = True if on_win else False
 
     whitelist += missing_dso_whitelist or []
 
