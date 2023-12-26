@@ -26,10 +26,15 @@ from .conda_interface import (
     url_path,
 )
 from .deprecations import deprecated
-from .utils import get_build_folders, get_conda_operation_locks, get_logger, rm_rf
+from .utils import (
+    get_build_folders,
+    get_conda_operation_locks,
+    get_logger,
+    on_win,
+    rm_rf,
+)
 from .variants import get_default_variant
 
-on_win = sys.platform == "win32"
 invocation_time = ""
 
 

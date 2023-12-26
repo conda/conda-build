@@ -9,8 +9,15 @@ import sys
 from os.path import basename, dirname, isdir, isfile, join
 
 from .deprecations import deprecated
+from .utils import on_win
 
-ISWIN = sys.platform.startswith("win")
+deprecated.constant(
+    "24.1",
+    "24.3",
+    "ISWIN",
+    on_win,
+    addendum="Use `conda_build.utils.on_win` instead.",
+)
 
 
 @deprecated("24.1", "24.3", addendum="Use `os.makedirs(exist_ok=True)` instead.")
@@ -30,7 +37,7 @@ def rewrite_script(fn, prefix):
     noarch pacakges"""
 
     # Load and check the source file for not being a binary
-    src = join(prefix, "Scripts" if ISWIN else "bin", fn)
+    src = join(prefix, "Scripts" if on_win else "bin", fn)
     encoding = locale.getpreferredencoding()
     # if default locale is ascii, allow UTF-8 (a reasonably modern ASCII extension)
     if encoding == "ANSI_X3.4-1968":
@@ -44,7 +51,7 @@ def rewrite_script(fn, prefix):
     os.unlink(src)
 
     # Get rid of '-script.py' suffix on Windows
-    if ISWIN and fn.endswith("-script.py"):
+    if on_win and fn.endswith("-script.py"):
         fn = fn[:-10]
 
     # Rewrite the file to the python-scripts directory
@@ -107,7 +114,7 @@ def populate_files(m, files, prefix, entry_point_scripts=None):
         handle_file(f, d, prefix)
 
     # Windows path conversion
-    if ISWIN:
+    if on_win:
         for fns in (d["site-packages"], d["Examples"]):
             for i, fn in enumerate(fns):
                 fns[i] = fn.replace("\\", "/")

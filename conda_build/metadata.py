@@ -33,6 +33,7 @@ from conda_build.utils import (
 
 from .conda_interface import MatchSpec, envs_dirs, md5_file
 from .deprecations import deprecated
+from .utils import on_win
 
 try:
     import yaml
@@ -74,8 +75,6 @@ StringifyNumbersLoader.remove_implicit_resolver("tag:yaml.org,2002:float")
 StringifyNumbersLoader.remove_implicit_resolver("tag:yaml.org,2002:int")
 StringifyNumbersLoader.remove_constructor("tag:yaml.org,2002:float")
 StringifyNumbersLoader.remove_constructor("tag:yaml.org,2002:int")
-
-on_win = sys.platform == "win32"
 
 # arches that don't follow exact names in the subdir need to be mapped here
 ARCH_MAP = {"32": "x86", "64": "x86_64"}

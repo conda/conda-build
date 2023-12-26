@@ -15,7 +15,6 @@ from ..deprecations import deprecated
 from ..utils import LoggingContext
 from ..variants import get_package_variants, set_language_env_vars
 
-on_win = sys.platform == "win32"
 log = logging.getLogger(__name__)
 
 
