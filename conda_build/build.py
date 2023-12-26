@@ -29,8 +29,8 @@ import yaml
 from bs4 import UnicodeDammit
 from conda import __version__ as conda_version
 
-import conda_build.noarch_python as noarch_python
-import conda_build.os_utils.external as external
+from conda_build import noarch_python
+from conda_build.os_utils import external
 from conda_build import __version__ as conda_build_version
 from conda_build import environ, source, tarcheck, utils
 from conda_build.config import Config
