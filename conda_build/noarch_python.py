@@ -8,9 +8,12 @@ import shutil
 import sys
 from os.path import basename, dirname, isdir, isfile, join
 
+from .deprecations import deprecated
+
 ISWIN = sys.platform.startswith("win")
 
 
+@deprecated("24.1", "24.3", addendum="Use `os.makedirs(exist_ok=True)` instead.")
 def _force_dir(dirname):
     if not isdir(dirname):
         os.makedirs(dirname)
@@ -45,7 +48,7 @@ def rewrite_script(fn, prefix):
 
     # Rewrite the file to the python-scripts directory
     dst_dir = join(prefix, "python-scripts")
-    _force_dir(dst_dir)
+    os.makedirs(dst_dir, exist_ok=True)
     dst = join(dst_dir, fn)
     with open(dst, "w") as fo:
         fo.write(data)
@@ -69,12 +72,12 @@ def handle_file(f, d, prefix):
 
     elif "site-packages" in f:
         nsp = join(prefix, "site-packages")
-        _force_dir(nsp)
+        os.makedirs(nsp, exist_ok=True)
 
         g = f[f.find("site-packages") :]
         dst = join(prefix, g)
         dst_dir = dirname(dst)
-        _force_dir(dst_dir)
+        os.makedirs(dst_dir, exist_ok=True)
         shutil.move(path, dst)
         d["site-packages"].append(g[14:])
 
@@ -119,10 +122,10 @@ def populate_files(m, files, prefix, entry_point_scripts=None):
 
 def transform(m, files, prefix):
     bin_dir = join(prefix, "bin")
-    _force_dir(bin_dir)
+    os.makedirs(bin_dir, exist_ok=True)
 
     scripts_dir = join(prefix, "Scripts")
-    _force_dir(scripts_dir)
+    os.makedirs(scripts_dir, exist_ok=True)
 
     name = m.name()
 
