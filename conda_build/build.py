@@ -3944,11 +3944,9 @@ def build_tree(
                                     MatchSpec(matchspec), dep_meta[0], metadata
                                 ):
                                     print(
-                                        (
-                                            "Missing dependency {0}, but found"
-                                            + " recipe directory, so building "
-                                            + "{0} first"
-                                        ).format(pkg)
+                                        f"Missing dependency {pkg}, but found "
+                                        f"recipe directory, so building "
+                                        f"{pkg} first"
                                     )
                                     add_recipes.append(recipe_dir)
                                     available = True

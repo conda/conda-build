@@ -815,9 +815,9 @@ def test_disable_pip(testing_metadata):
     with pytest.raises(subprocess.CalledProcessError):
         api.build(testing_metadata)
 
-    testing_metadata.meta["build"]["script"] = (
-        'python -c "import setuptools; ' 'print(setuptools.__version__)"'
-    )
+    testing_metadata.meta["build"][
+        "script"
+    ] = 'python -c "import setuptools; print(setuptools.__version__)"'
     with pytest.raises(subprocess.CalledProcessError):
         api.build(testing_metadata)
 

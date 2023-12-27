@@ -450,19 +450,15 @@ def skeletonize(
         )
         if package == "perl":
             print(
-                (
-                    "WARNING: {0} is a Perl core module that is not developed "
-                    + "outside of Perl, so we are skipping creating a recipe "
-                    + "for it."
-                ).format(orig_package)
+                f"WARNING: {orig_package} is a Perl core module that is not developed "
+                f"outside of Perl, so we are skipping creating a recipe "
+                f"for it."
             )
             continue
         elif package not in {orig_package, orig_package.replace("::", "-")}:
             print(
-                (
-                    "WARNING: {0} was part of the {1} distribution, so we are "
-                    + "making a recipe for {1} instead."
-                ).format(orig_package, package)
+                f"WARNING: {orig_package} was part of the {package} distribution, so we are "
+                f"making a recipe for {package} instead."
             )
 
         latest_release_data = get_release_info(
@@ -817,13 +813,10 @@ def deps_for_package(
                     )
                 except InvalidReleaseError:
                     print(
-                        (
-                            "WARNING: The version of %s listed as a "
-                            + "dependency for %s, %s, is not available on MetaCPAN, "
-                            + "so we are just assuming the latest version is "
-                            + "okay."
-                        )
-                        % (orig_dist, package, str(dep_version))
+                        f"WARNING: The version of {orig_dist} listed as a "
+                        f"dependency for {package}, {dep_version}, is not available on MetaCPAN, "
+                        f"so we are just assuming the latest version is "
+                        f"okay."
                     )
                     dep_version = parse_version("0")
 
@@ -1095,12 +1088,10 @@ def get_release_info(cpan_url, cache_dir, core_modules, package, version):
         core_version = metacpan_api_is_core_version(cpan_url, package)
         if core_version is not None and (version is None or (version == core_version)):
             print(
-                (
-                    "WARNING: {0} is not available on MetaCPAN, but it's a "
-                    + "core module, so we do not actually need the source file, "
-                    + "and are omitting the URL and MD5 from the recipe "
-                    + "entirely."
-                ).format(orig_package)
+                f"WARNING: {orig_package} is not available on MetaCPAN, but it's a "
+                f"core module, so we do not actually need the source file, "
+                f"and are omitting the URL and MD5 from the recipe "
+                f"entirely."
             )
             rel_dict = {
                 "version": str(core_version),
