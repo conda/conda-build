@@ -345,9 +345,7 @@ def _trim_None_strings(meta_dict):
                 meta_dict[key] = keep
         else:
             log.debug(
-                "found unrecognized data type in dictionary: {}, type: {}".format(
-                    value, type(value)
-                )
+                f"found unrecognized data type in dictionary: {value}, type: {type(value)}"
             )
     return meta_dict
 
@@ -464,14 +462,14 @@ def parse(data, config, path=None):
                 or (hasattr(res[field], "__iter__") and not isinstance(res[field], str))
             ):
                 raise RuntimeError(
-                    "The %s field should be a dict or list of dicts, not "
-                    "%s in file %s." % (field, res[field].__class__.__name__, path)
+                    f"The {field} field should be a dict or list of dicts, not "
+                    f"{res[field].__class__.__name__} in file {path}."
                 )
         else:
             if not isinstance(res[field], dict):
                 raise RuntimeError(
-                    "The %s field should be a dict, not %s in file %s."
-                    % (field, res[field].__class__.__name__, path)
+                    f"The {field} field should be a dict, not "
+                    f"{res[field].__class__.__name__} in file {path}."
                 )
 
     ensure_valid_fields(res)
@@ -971,7 +969,7 @@ def finalize_outputs_pass(
                 log = utils.get_logger(__name__)
                 log.warn(
                     "Could not finalize metadata due to missing dependencies: "
-                    "{}".format(e.packages)
+                    f"{e.packages}"
                 )
                 outputs[
                     (
@@ -1300,8 +1298,8 @@ class MetaData:
                 bypass_env_check=bypass_env_check,
             )
             sys.exit(
-                "Undefined Jinja2 variables remain ({}).  Please enable "
-                "source downloading and try again.".format(self.undefined_jinja_vars)
+                f"Undefined Jinja2 variables remain ({self.undefined_jinja_vars}).  Please enable "
+                "source downloading and try again."
             )
 
         # always parse again at the end, too.
@@ -1560,20 +1558,18 @@ class MetaData:
             for c in "=!@#$%^&*:;\"'\\|<>?/":
                 if c in ms.name:
                     sys.exit(
-                        "Error: bad character '%s' in package name "
-                        "dependency '%s'" % (c, ms.name)
+                        f"Error: bad character '{c}' in package name "
+                        f"dependency '{ms.name}'"
                     )
             parts = spec.split()
             if len(parts) >= 2:
                 if parts[1] in {">", ">=", "=", "==", "!=", "<", "<="}:
                     msg = (
-                        "Error: bad character '%s' in package version "
-                        "dependency '%s'" % (parts[1], ms.name)
+                        f"Error: bad character '{parts[1]}' in package version "
+                        f"dependency '{ms.name}'"
                     )
                     if len(parts) >= 3:
-                        msg += "\nPerhaps you meant '{} {}{}'".format(
-                            ms.name, parts[1], parts[2]
-                        )
+                        msg += f"\nPerhaps you meant '{ms.name} {parts[1]}{parts[2]}'"
                     sys.exit(msg)
             specs[spec] = ms
         return list(specs.values())
@@ -1966,9 +1962,7 @@ class MetaData:
             if "'None' has not attribute" in str(ex):
                 ex = "Failed to run jinja context function"
             sys.exit(
-                "Error: Failed to render jinja template in {}:\n{}".format(
-                    self.meta_path, str(ex)
-                )
+                f"Error: Failed to render jinja template in {self.meta_path}:\n{str(ex)}"
             )
         finally:
             if "CONDA_BUILD_STATE" in os.environ:
@@ -2900,8 +2894,8 @@ class MetaData:
             else:
                 log = utils.get_logger(__name__)
                 log.warn(
-                    "Not detecting used variables in output script {}; conda-build only knows "
-                    "how to search .sh and .bat files right now.".format(script)
+                    f"Not detecting used variables in output script {script}; conda-build only knows "
+                    "how to search .sh and .bat files right now."
                 )
         return used_vars
 

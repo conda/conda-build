@@ -1723,10 +1723,8 @@ class ChannelIndex:
         else:
             if patch_generator:
                 raise ValueError(
-                    "Specified metadata patch file '{}' does not exist.  Please try an absolute "
-                    "path, or examine your relative path carefully with respect to your cwd.".format(
-                        patch_generator
-                    )
+                    f"Specified metadata patch file '{patch_generator}' does not exist.  Please try an absolute "
+                    "path, or examine your relative path carefully with respect to your cwd."
                 )
             return {}
 

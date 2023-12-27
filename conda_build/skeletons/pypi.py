@@ -335,8 +335,7 @@ def skeletonize(
             if version:
                 if version not in versions:
                     sys.exit(
-                        "Error: Version %s of %s is not available on PyPI."
-                        % (version, package)
+                        f"Error: Version {version} of {package} is not available on PyPI."
                     )
                 d["version"] = version
             else:
@@ -1282,9 +1281,9 @@ def get_pkginfo(
             download(pypiurl, join(config.src_cache, filename))
             if hashsum_file(download_path, hash_type) != hash_value:
                 raise RuntimeError(
-                    " Download of {} failed"
-                    " checksum type {} expected value {}. Please"
-                    " try again.".format(package, hash_type, hash_value)
+                    f" Download of {package} failed"
+                    f" checksum type {hash_type} expected value {hash_value}. Please"
+                    " try again."
                 )
         else:
             print("Using cached download")
@@ -1384,7 +1383,7 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
                 stdlib_dir,
                 "distutils",
                 "__pycache__",
-                "core.cpython-%s%s.pyc" % sys.version_info[:2],
+                f"core.cpython-{sys.version_info[0]}{sys.version_info[1]}.pyc",
             )
         )
         rm_rf(
@@ -1392,7 +1391,7 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
                 stdlib_dir,
                 "distutils",
                 "__pycache__",
-                "core.cpython-%s%s.pyo" % sys.version_info[:2],
+                f"core.cpython-{sys.version_info[0]}{sys.version_info[1]}.pyo",
             )
         )
     else:

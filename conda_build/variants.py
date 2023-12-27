@@ -160,8 +160,8 @@ def validate_spec(src, spec):
         # check for duplicate keys
         unique = set()
         errors.extend(
-            "  zip_key entry {} in group {} is a duplicate, keys can only occur "
-            "in one group".format(k, zg)
+            f"  zip_key entry {k} in group {zg} is a duplicate, keys can only occur "
+            "in one group"
             # include error if key has already been seen, otherwise add to unique keys
             if k in unique
             else unique.add(k)
@@ -497,13 +497,8 @@ def filter_by_key_value(variants, key, values, source_name):
             else:
                 log = get_logger(__name__)
                 log.debug(
-                    "Filtering variant with key {key} not matching target value(s) "
-                    "({tgt_vals}) from {source_name}, actual {actual_val}".format(
-                        key=key,
-                        tgt_vals=values,
-                        source_name=source_name,
-                        actual_val=variant.get(key),
-                    )
+                    f"Filtering variant with key {key} not matching target value(s) "
+                    f"({values}) from {source_name}, actual {variant.get(key)}"
                 )
     return reduced_variants
 

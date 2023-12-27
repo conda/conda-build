@@ -73,8 +73,8 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
             break
     else:
         log.warn(
-            "No hash (md5, sha1, sha256) provided for {}.  Source download forced.  "
-            "Add hash to recipe to use source cache.".format(unhashed_fn)
+            f"No hash (md5, sha1, sha256) provided for {unhashed_fn}.  Source download forced.  "
+            "Add hash to recipe to use source cache."
         )
     path = join(cache_folder, fn)
     if isfile(path):
@@ -121,9 +121,7 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
             if expected_hash != hashed:
                 rm_rf(path)
                 raise RuntimeError(
-                    "{} mismatch: '{}' != '{}'".format(
-                        tp.upper(), hashed, expected_hash
-                    )
+                    f"{tp.upper()} mismatch: '{hashed}' != '{expected_hash}'"
                 )
             break
 
@@ -252,8 +250,7 @@ def git_mirror_checkout_recursive(
 
     if not mirror_dir.startswith(git_cache + os.sep):
         sys.exit(
-            "Error: Attempting to mirror to %s which is outside of GIT_CACHE %s"
-            % (mirror_dir, git_cache)
+            f"Error: Attempting to mirror to {mirror_dir} which is outside of GIT_CACHE {git_cache}"
         )
 
     # This is necessary for Cygwin git and m2-git, although it is fixed in newer MSYS2.
@@ -301,7 +298,7 @@ def git_mirror_checkout_recursive(
         except CalledProcessError:
             msg = (
                 "Failed to update local git cache. "
-                "Deleting local cached repo: {} ".format(mirror_dir)
+                f"Deleting local cached repo: {mirror_dir} "
             )
             print(msg)
 

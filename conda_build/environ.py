@@ -501,10 +501,10 @@ def meta_vars(meta: MetaData, skip_build_id=False):
         else:
             d[var_name] = value
             warnings.warn(
-                "The environment variable '%s' is being passed through with value '%s'.  "
+                f"The environment variable '{var_name}' is being passed through with value "
+                f"'{"<hidden>" if meta.config.suppress_variables else value}'.  "
                 "If you are splitting build and test phases with --no-test, please ensure "
-                "that this value is also set similarly at test time."
-                % (var_name, "<hidden>" if meta.config.suppress_variables else value),
+                "that this value is also set similarly at test time.",
                 UserWarning,
             )
 
@@ -1229,8 +1229,8 @@ def clean_pkg_cache(dist, config):
         locks = get_pkg_dirs_locks([config.bldpkgs_dir] + pkgs_dirs, config)
         with utils.try_acquire_locks(locks, timeout=config.timeout):
             rmplan = [
-                "RM_EXTRACTED {0} local::{0}".format(dist),
-                "RM_FETCHED {0} local::{0}".format(dist),
+                f"RM_EXTRACTED {dist} local::{dist}",
+                f"RM_FETCHED {dist} local::{dist}",
             ]
             execute_plan(rmplan)
 

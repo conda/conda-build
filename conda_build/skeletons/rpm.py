@@ -326,9 +326,7 @@ def get_repo_dict(repomd_url, data_type, dict_massager, cdt, src_cache):
             )
             assert (
                 csum == cached_csum
-            ), "Checksum for {} does not match value in {}".format(
-                xmlgz_file, repomd_url
-            )
+            ), f"Checksum for {xmlgz_file} does not match value in {repomd_url}"
             with gzip.open(cached_path, "rb") as gz:
                 xml_content = gz.read()
                 xml_csum = cdt["checksummer"]()
@@ -536,9 +534,7 @@ def write_conda_recipes(
                         depends.append(copy_provides)
             else:
                 print(
-                    "WARNING: Additional dependency of {}, {} not found".format(
-                        package, missing_dep
-                    )
+                    f"WARNING: Additional dependency of {package}, {missing_dep} not found"
                 )
     for depend in depends:
         dep_entry, dep_name, dep_arch = find_repo_entry_and_arch(
@@ -787,9 +783,7 @@ def add_parser(repos):
         "--distro",
         type=distro,
         default=default_distro,
-        help="Distro to use. Applies to all packages, valid values are: {}".format(
-            valid_distros()
-        ),
+        help=f"Distro to use. Applies to all packages, valid values are: {valid_distros()}",
     )
 
     rpm.add_argument(

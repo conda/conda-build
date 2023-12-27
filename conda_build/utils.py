@@ -685,8 +685,8 @@ def merge_tree(
     assert not dst.startswith(src), (
         "Can't merge/copy source into subdirectory of itself.  "
         "Please create separate spaces for these things.\n"
-        "  src: {}\n"
-        "  dst: {}".format(src, dst)
+        f"  src: {src}\n"
+        f"  dst: {dst}"
     )
 
     new_files = copytree(src, dst, symlinks=symlinks, dry_run=True)
@@ -1330,8 +1330,8 @@ def find_recipe(path):
     if len(metas) == 1:
         get_logger(__name__).warn(
             "Multiple meta files found. "
-            "The %s file in the base directory (%s) "
-            "will be used." % (metas[0], path)
+            f"The {metas[0]} file in the base directory ({path}) "
+            "will be used."
         )
         return os.path.join(path, metas[0])
 
@@ -1770,9 +1770,7 @@ def merge_or_update_dict(
                     and raise_on_clobber
                 ):
                     log.debug(
-                        "clobbering key {} (original value {}) with value {}".format(
-                            key, base_value, value
-                        )
+                        f"clobbering key {key} (original value {base_value}) with value {value}"
                     )
                 if value is None and key in base:
                     del base[key]
@@ -1926,14 +1924,12 @@ def ensure_valid_spec(spec, warn=False):
                     if match.group(1) not in ("python", "vc") and warn:
                         log = get_logger(__name__)
                         log.warn(
-                            "Adding .* to spec '{}' to ensure satisfiability.  Please "
+                            f"Adding .* to spec '{spec}' to ensure satisfiability.  Please "
                             "consider putting {{{{ var_name }}}}.* or some relational "
                             "operator (>/</>=/<=) on this spec in meta.yaml, or if req is "
                             "also a build req, using {{{{ pin_compatible() }}}} jinja2 "
                             "function instead.  See "
-                            "https://conda.io/docs/user-guide/tasks/build-packages/variants.html#pinning-at-the-variant-level".format(  # NOQA
-                                spec
-                            )
+                            "https://conda.io/docs/user-guide/tasks/build-packages/variants.html#pinning-at-the-variant-level"
                         )
                     spec = spec_needing_star_re.sub(r"\1 \2.*", spec)
     return spec
@@ -2095,10 +2091,7 @@ def write_bat_activation_text(file_handle, m):
                         file_handle.write(f"mklink gcc-ranlib{ext} {ccache}\n")
                     file_handle.write("popd\n")
                     file_handle.write(
-                        "set PATH={dirname_ccache_ln};{dirname_ccache};%PATH%\n".format(
-                            dirname_ccache_ln=dirname_ccache_ln_bin,
-                            dirname_ccache=os.path.dirname(ccache),
-                        )
+                        f"set PATH={dirname_ccache_ln_bin};{os.path.dirname(ccache)};%PATH%\n"
                     )
                 elif method == "native":
                     pass
@@ -2158,17 +2151,15 @@ def shutil_move_more_retrying(src, dest, debug_name):
             shutil.move(src, dest)
             if attempts_left != 5:
                 log.warning(
-                    "shutil.move({}={}, dest={}) succeeded on attempt number {}".format(
-                        debug_name, src, dest, 6 - attempts_left
-                    )
+                    f"shutil.move({debug_name}={src}, dest={dest}) succeeded on attempt number {6 - attempts_left}"
                 )
             attempts_left = -1
         except:
             attempts_left = attempts_left - 1
         if attempts_left > 0:
             log.warning(
-                "Failed to rename {} directory, check with strace, struss or procmon. "
-                "Will sleep for 3 seconds and try again!".format(debug_name)
+                f"Failed to rename {debug_name} directory, check with strace, struss or procmon. "
+                "Will sleep for 3 seconds and try again!"
             )
             import time
 

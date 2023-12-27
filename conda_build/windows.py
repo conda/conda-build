@@ -203,9 +203,7 @@ def msvc_env_cmd(bits, config, override=None):
             # If the WindowsSDKDir environment variable has not been successfully
             # set then try activating VS2010
             msvc_env_lines.append(
-                'if not "%WindowsSDKDir%" == "{}" ( {} )'.format(
-                    WIN_SDK_71_PATH, build_vcvarsall_cmd(vcvarsall_vs_path)
-                )
+                f'if not "%WindowsSDKDir%" == "{WIN_SDK_71_PATH}" ( {build_vcvarsall_cmd(vcvarsall_vs_path)} )'
             )
         # sdk is not installed.  Fall back to only trying VS 2010
         except KeyError:

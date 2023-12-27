@@ -216,7 +216,7 @@ def execute(args, print_results=True):
     if args.file and len(metadata_tuples) > 1:
         log.warning(
             "Multiple variants rendered. "
-            "Only one will be written to the file you specified ({}).".format(args.file)
+            f"Only one will be written to the file you specified ({args.file})."
         )
 
     if print_results:

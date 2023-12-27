@@ -400,12 +400,12 @@ def dummy_executable(folder, exename):
     with open(dummyfile, "w") as f:
         f.write(
             prefix
-            + """
-    echo ******* You have reached the dummy {}. It is likely there is a bug in
+            + f"""
+    echo ******* You have reached the dummy {exename}. It is likely there is a bug in
     echo ******* conda that makes it not add the _build/bin directory onto the
     echo ******* PATH before running the source checkout tool
     exit -1
-    """.format(exename)
+    """
         )
     if sys.platform != "win32":
         import stat
@@ -614,10 +614,9 @@ def test_numpy_setup_py_data(testing_config):
     subprocess.check_call(["conda", "install", "-y", "cython"])
     m = api.render(recipe_path, config=testing_config, numpy="1.16")[0][0]
     _hash = m.hash_dependencies()
-    assert os.path.basename(
-        api.get_output_file_path(m)[0]
-    ) == "load_setup_py_test-0.1.0-np116py{}{}{}_0.tar.bz2".format(
-        sys.version_info.major, sys.version_info.minor, _hash
+    assert (
+        os.path.basename(api.get_output_file_path(m)[0])
+        == f"load_setup_py_test-0.1.0-np116py{sys.version_info.major}{sys.version_info.minor}{_hash}_0.tar.bz2"
     )
 
 

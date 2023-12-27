@@ -789,9 +789,7 @@ def package_to_inputs_dict(
         commp = commonprefix((package, output_dir))
         if commp != output_dir:
             raise RuntimeError(
-                "package {} specified with abs path outside of output-dir {}".format(
-                    package, output_dir
-                )
+                f"package {package} specified with abs path outside of output-dir {output_dir}"
             )
         location = package
         existing_location = existing_recipe_dir(
@@ -994,8 +992,8 @@ def skeletonize(
             stderr = stderr.decode("utf-8")
             if p.returncode:
                 sys.exit(
-                    "Error: 'git checkout %s' failed (%s).\nInvalid tag?"
-                    % (new_git_tag, stderr.strip())
+                    f"Error: 'git checkout {new_git_tag}' failed ({stderr.strip()}).\n"
+                    "Invalid tag?"
                 )
             if stdout:
                 print(stdout, file=sys.stdout)
@@ -1013,9 +1011,8 @@ def skeletonize(
                     DESCRIPTION = sub_description_name
                 else:
                     sys.exit(
-                        "%s does not appear to be a valid R package "
-                        "(no DESCRIPTION file in %s, %s)"
-                        % (location, sub_description_pkg, sub_description_name)
+                        f"{location} does not appear to be a valid R package "
+                        f"(no DESCRIPTION file in {sub_description_pkg}, {sub_description_name})"
                     )
             cran_package = get_archive_metadata(DESCRIPTION)
 
@@ -1097,9 +1094,7 @@ def skeletonize(
                 build_number = m.build_number()
                 build_number += 1 if update_policy == "merge-incr-build-num" else 0
         if add_maintainer:
-            new_maintainer = "{indent}{add_maintainer}".format(
-                indent=INDENT, add_maintainer=add_maintainer
-            )
+            new_maintainer = f"{INDENT}{add_maintainer}"
             if new_maintainer not in extra_recipe_maintainers:
                 if not len(extra_recipe_maintainers):
                     # We hit this case when there is no existing recipe.
@@ -1197,9 +1192,7 @@ def skeletonize(
                         )
                     except:
                         print(
-                            "logic error, file {} should exist, we found it in a dir listing earlier.".format(
-                                package_url
-                            )
+                            f"logic error, file {package_url} should exist, we found it in a dir listing earlier."
                         )
                         sys.exit(1)
                     if description_path is None or archive_type == "source":
@@ -1386,11 +1379,7 @@ def skeletonize(
         for s in list(chain(imports, depends, links)):
             match = VERSION_DEPENDENCY_REGEX.match(s)
             if not match:
-                sys.exit(
-                    "Could not parse version from dependency of {}: {}".format(
-                        package, s
-                    )
-                )
+                sys.exit(f"Could not parse version from dependency of {package}: {s}")
             name = match.group("name")
             if name in seen:
                 continue
@@ -1405,7 +1394,7 @@ def skeletonize(
             if archs:
                 sys.exit(
                     "Don't know how to handle archs from dependency of "
-                    "package %s: %s" % (package, s)
+                    f"package {package}: {s}"
                 )
 
             dep_dict[name] = f"{relop}{ver}"
@@ -1475,44 +1464,28 @@ def skeletonize(
             if dep_type == "build":
                 if need_c:
                     deps.append(
-                        "{indent}{{{{ compiler('c') }}}}            {sel}".format(
-                            indent=INDENT, sel=sel_src_not_win
-                        )
+                        f"{INDENT}{{{{ compiler('c') }}}}            {sel_src_not_win}"
                     )
                     deps.append(
-                        "{indent}{{{{ compiler('m2w64_c') }}}}      {sel}".format(
-                            indent=INDENT, sel=sel_src_and_win
-                        )
+                        f"{INDENT}{{{{ compiler('m2w64_c') }}}}      {sel_src_and_win}"
                     )
                 if need_cxx:
                     deps.append(
-                        "{indent}{{{{ compiler('cxx') }}}}          {sel}".format(
-                            indent=INDENT, sel=sel_src_not_win
-                        )
+                        f"{INDENT}{{{{ compiler('cxx') }}}}          {sel_src_not_win}"
                     )
                     deps.append(
-                        "{indent}{{{{ compiler('m2w64_cxx') }}}}    {sel}".format(
-                            indent=INDENT, sel=sel_src_and_win
-                        )
+                        f"{INDENT}{{{{ compiler('m2w64_cxx') }}}}    {sel_src_and_win}"
                     )
                 if need_f:
                     deps.append(
-                        "{indent}{{{{ compiler('fortran') }}}}      {sel}".format(
-                            indent=INDENT, sel=sel_src_not_win
-                        )
+                        f"{INDENT}{{{{ compiler('fortran') }}}}      {sel_src_not_win}"
                     )
                     deps.append(
-                        "{indent}{{{{ compiler('m2w64_fortran') }}}}{sel}".format(
-                            indent=INDENT, sel=sel_src_and_win
-                        )
+                        f"{INDENT}{{{{ compiler('m2w64_fortran') }}}}{sel_src_and_win}"
                     )
                 if use_rtools_win:
                     need_c = need_cxx = need_f = need_autotools = need_make = False
-                    deps.append(
-                        "{indent}rtools                   {sel}".format(
-                            indent=INDENT, sel=sel_src_and_win
-                        )
-                    )
+                    deps.append(f"{INDENT}rtools                   {sel_src_and_win}")
                     # extsoft is legacy. R packages will download rwinlib subprojects
                     # as necessary according to Jeroen Ooms. (may need to disable that
                     # for non-MRO builds or maybe switch to Jeroen's toolchain?)
@@ -1520,69 +1493,41 @@ def skeletonize(
                     #     indent=INDENT, sel=sel_src_and_win))
                 if need_autotools or need_make or need_git:
                     deps.append(
-                        "{indent}{{{{ posix }}}}filesystem      {sel}".format(
-                            indent=INDENT, sel=sel_src_and_win
-                        )
+                        f"{INDENT}{{{{ posix }}}}filesystem      {sel_src_and_win}"
                     )
                 if need_git:
                     deps.append(f"{INDENT}{{{{ posix }}}}git")
                 if need_autotools:
                     deps.append(
-                        "{indent}{{{{ posix }}}}sed             {sel}".format(
-                            indent=INDENT, sel=sel_src_and_win
-                        )
+                        f"{INDENT}{{{{ posix }}}}sed             {sel_src_and_win}"
                     )
                     deps.append(
-                        "{indent}{{{{ posix }}}}grep            {sel}".format(
-                            indent=INDENT, sel=sel_src_and_win
-                        )
+                        f"{INDENT}{{{{ posix }}}}grep            {sel_src_and_win}"
+                    )
+                    deps.append(f"{INDENT}{{{{ posix }}}}autoconf        {sel_src}")
+                    deps.append(
+                        f"{INDENT}{{{{ posix }}}}automake        {sel_src_not_win}"
                     )
                     deps.append(
-                        "{indent}{{{{ posix }}}}autoconf        {sel}".format(
-                            indent=INDENT, sel=sel_src
-                        )
-                    )
-                    deps.append(
-                        "{indent}{{{{ posix }}}}automake        {sel}".format(
-                            indent=INDENT, sel=sel_src_not_win
-                        )
-                    )
-                    deps.append(
-                        "{indent}{{{{ posix }}}}automake-wrapper{sel}".format(
-                            indent=INDENT, sel=sel_src_and_win
-                        )
+                        f"{INDENT}{{{{ posix }}}}automake-wrapper{sel_src_and_win}"
                     )
                     deps.append(f"{INDENT}{{{{ posix }}}}pkg-config")
                 if need_make:
-                    deps.append(
-                        "{indent}{{{{ posix }}}}make            {sel}".format(
-                            indent=INDENT, sel=sel_src
-                        )
-                    )
+                    deps.append(f"{INDENT}{{{{ posix }}}}make            {sel_src}")
                     if not need_autotools:
                         deps.append(
-                            "{indent}{{{{ posix }}}}sed             {sel}".format(
-                                indent=INDENT, sel=sel_src_and_win
-                            )
+                            f"{INDENT}{{{{ posix }}}}sed             {sel_src_and_win}"
                         )
                     deps.append(
-                        "{indent}{{{{ posix }}}}coreutils       {sel}".format(
-                            indent=INDENT, sel=sel_src_and_win
-                        )
+                        f"{INDENT}{{{{ posix }}}}coreutils       {sel_src_and_win}"
                     )
-                deps.append(
-                    "{indent}{{{{ posix }}}}zip             {sel}".format(
-                        indent=INDENT, sel=sel_src_and_win
-                    )
-                )
+                deps.append(f"{INDENT}{{{{ posix }}}}zip             {sel_src_and_win}")
                 if add_cross_r_base:
                     deps.append(f"{INDENT}cross-r-base {{{{ r_base }}}}  {sel_cross}")
             elif dep_type == "run":
                 if need_c or need_cxx or need_f:
                     deps.append(
-                        "{indent}{{{{native}}}}gcc-libs       {sel}".format(
-                            indent=INDENT, sel=sel_src_and_win
-                        )
+                        f"{INDENT}{{{{native}}}}gcc-libs       {sel_src_and_win}"
                     )
 
             if dep_type == "host" or dep_type == "run":
@@ -1604,13 +1549,7 @@ def skeletonize(
                         conda_name = "r-" + name.lower()
 
                         if dep_dict[name]:
-                            deps.append(
-                                "{indent}{name} {version}".format(
-                                    name=conda_name,
-                                    version=dep_dict[name],
-                                    indent=INDENT,
-                                )
-                            )
+                            deps.append(f"{INDENT}{conda_name} {dep_dict[name]}")
                         else:
                             deps.append(f"{INDENT}{conda_name}")
                         if recursive:

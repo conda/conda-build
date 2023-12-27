@@ -61,9 +61,7 @@ class TarCheck:
         for varname in "name", "version":
             if info[varname] != getattr(self, varname):
                 raise Exception(
-                    "{}: {!r} != {!r}".format(
-                        varname, info[varname], getattr(self, varname)
-                    )
+                    f"{varname}: {info[varname]!r} != {getattr(self, varname)!r}"
                 )
         assert isinstance(info["build_number"], int)
 

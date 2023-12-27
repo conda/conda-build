@@ -113,9 +113,7 @@ def retrieve_python_version(file_path):
         )
         build_version = re.sub(r"\A.*py\d\d.*\Z", "python", index["build"])
 
-        return "{}{}.{}".format(
-            build_version, build_version_number[0], build_version_number[1]
-        )
+        return f"{build_version}{build_version_number[0]}.{build_version_number[1]}"
 
 
 def extract_temporary_directory(file_path):
@@ -200,11 +198,7 @@ def update_index_file(temp_dir, target_platform, dependencies, verbose):
     if verbose:
         print("Updating platform from {} to {}".format(index["platform"], platform))
         print("Updating subdir from {} to {}".format(index["subdir"], target_platform))
-        print(
-            "Updating architecture from {} to {}".format(
-                source_architecture, architecture
-            )
-        )
+        print(f"Updating architecture from {source_architecture} to {architecture}")
 
     index["platform"] = platform
     index["subdir"] = target_platform
@@ -719,9 +713,7 @@ def convert_from_unix_to_windows(
                     )
 
                     prefixes.add(
-                        "/opt/anaconda1anaconda2anaconda3 text Scripts/{}-script.py\n".format(
-                            retrieve_executable_name(script)
-                        )
+                        f"/opt/anaconda1anaconda2anaconda3 text Scripts/{retrieve_executable_name(script)}-script.py\n"
                     )
 
             new_bin_path = os.path.join(temp_dir, "Scripts")
@@ -766,9 +758,7 @@ def convert_from_windows_to_unix(
                     remove_executable(directory, script)
 
                     prefixes.add(
-                        "/opt/anaconda1anaconda2anaconda3 text bin/{}\n".format(
-                            retrieve_executable_name(script)
-                        )
+                        f"/opt/anaconda1anaconda2anaconda3 text bin/{retrieve_executable_name(script)}\n"
                     )
 
             new_bin_path = os.path.join(temp_dir, "bin")
@@ -824,8 +814,8 @@ def conda_convert(
 
     if len(retrieve_c_extensions(file_path)) > 0 and not force:
         sys.exit(
-            "WARNING: Package {} contains C extensions; skipping conversion. "
-            "Use -f to force conversion.".format(os.path.basename(file_path))
+            f"WARNING: Package {os.path.basename(file_path)} contains C extensions; skipping conversion. "
+            "Use -f to force conversion."
         )
 
     conversion_platform, source_platform, architecture = retrieve_package_platform(
@@ -853,16 +843,14 @@ def conda_convert(
     for platform in platforms:
         if platform == source_platform_architecture:
             print(
-                "Source platform '{}' and target platform '{}' are identical. "
-                "Skipping conversion.".format(source_platform_architecture, platform)
+                f"Source platform '{source_platform_architecture}' and target platform '{platform}' are identical. "
+                "Skipping conversion."
             )
             continue
 
         if not quiet:
             print(
-                "Converting {} from {} to {}".format(
-                    os.path.basename(file_path), source_platform_architecture, platform
-                )
+                f"Converting {os.path.basename(file_path)} from {source_platform_architecture} to {platform}"
             )
 
         if platform.startswith(("osx", "linux")) and conversion_platform == "unix":

@@ -1247,9 +1247,7 @@ def otool(*args):
             args.filename, resolve_filenames=False, recurse=False, arch=args.arch_type
         )
         print(
-            "Shared libs used (non-recursively) by {} are:\n{}".format(
-                args.filename, shared_libs
-            )
+            f"Shared libs used (non-recursively) by {args.filename} are:\n{shared_libs}"
         )
         return 0
     return 1
@@ -1279,11 +1277,7 @@ def ldd(*args):
         shared_libs = inspect_linkages(
             args.filename, resolve_filenames=False, recurse=True
         )
-        print(
-            "Shared libs used (recursively) by {} are:\n{}".format(
-                args.filename, shared_libs
-            )
-        )
+        print(f"Shared libs used (recursively) by {args.filename} are:\n{shared_libs}")
         return 0
     return 1
 
@@ -1362,11 +1356,9 @@ def main_maybe_test():
             else:
                 that = this
             print("\n".join(this))
-            assert set(this) == set(
-                that
-            ), "py-ldd result incorrect for {}, this:\n{}\nvs that:\n{}".format(
-                codefile, set(this), set(that)
-            )
+            assert (
+                set(this) == set(that)
+            ), f"py-ldd result incorrect for {codefile}, this:\n{set(this)}\nvs that:\n{set(that)}"
     else:
         return main(sys.argv)
 

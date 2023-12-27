@@ -737,8 +737,8 @@ def finalize_metadata(
             m.final = False
             log = utils.get_logger(__name__)
             log.warn(
-                "Returning non-final recipe for {}; one or more dependencies "
-                "was unsatisfiable:".format(m.dist())
+                f"Returning non-final recipe for {m.dist()}; one or more dependencies "
+                "was unsatisfiable:"
             )
             if build_unsat:
                 log.warn(f"Build: {build_unsat}")

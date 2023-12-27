@@ -698,15 +698,11 @@ def debug(
                 os.symlink(link_target, debug_source_loc)
             except PermissionError as e:
                 raise Exception(
-                    "You do not have the necessary permissions to create symlinks in {}\nerror: {}".format(
-                        dn, str(e)
-                    )
+                    f"You do not have the necessary permissions to create symlinks in {dn}\nerror: {str(e)}"
                 )
             except Exception as e:
                 raise Exception(
-                    "Unknown error creating symlinks in {}\nerror: {}".format(
-                        dn, str(e)
-                    )
+                    f"Unknown error creating symlinks in {dn}\nerror: {str(e)}"
                 )
     ext = ".bat" if on_win else ".sh"
 

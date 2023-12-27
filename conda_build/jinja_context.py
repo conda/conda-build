@@ -214,7 +214,7 @@ def load_setup_py_data(
             else:
                 raise CondaBuildException(
                     "Could not render recipe - need modules "
-                    'installed in root env.  Import error was "{}"'.format(e)
+                    f'installed in root env.  Import error was "{e}"'
                 )
     # cleanup: we must leave the source tree empty unless the source code is already present
     rm_rf(os.path.join(m.config.work_dir, "_load_setup_py_data.py"))
@@ -349,11 +349,11 @@ def pin_compatible(
                         compatibility = apply_pin_expressions(version, min_pin, max_pin)
 
     if not compatibility and not permit_undefined_jinja and not bypass_env_check:
-        check = re.compile(r"pin_compatible\s*\(\s*[" '"]{}[' '"]'.format(package_name))
+        check = re.compile(r"pin_compatible\s*\(\s*[" f'"]{package_name}[' '"]')
         if check.search(m.extract_requirements_text()):
             raise RuntimeError(
-                "Could not get compatibility information for {} package.  "
-                "Is it one of your host dependencies?".format(package_name)
+                f"Could not get compatibility information for {package_name} package.  "
+                "Is it one of your host dependencies?"
             )
     return (
         " ".join((package_name, compatibility))
@@ -409,10 +409,7 @@ def pin_subpackage_against_outputs(
                         ]
                     )
                 else:
-                    pin = "{} {}".format(
-                        sp_m.name(),
-                        apply_pin_expressions(sp_m.version(), min_pin, max_pin),
-                    )
+                    pin = f"{sp_m.name()} {apply_pin_expressions(sp_m.version(), min_pin, max_pin)}"
         else:
             pin = matching_package_keys[0][0]
     return pin
@@ -463,9 +460,9 @@ def pin_subpackage(
         pin = subpackage_name
         if not permit_undefined_jinja and not allow_no_other_outputs:
             raise ValueError(
-                "Didn't find subpackage version info for '{}', which is used in a"
+                f"Didn't find subpackage version info for '{subpackage_name}', which is used in a"
                 " pin_subpackage expression.  Is it actually a subpackage?  If not, "
-                "you want pin_compatible instead.".format(subpackage_name)
+                "you want pin_compatible instead."
             )
     return pin
 

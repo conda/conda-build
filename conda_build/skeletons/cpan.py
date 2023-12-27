@@ -962,10 +962,8 @@ def release_module_dict_direct(cpan_url, cache_dir, module):
         print(f"INFO :: OK, found 'dependency' in module {module}")
     if not rel_dict or "dependency" not in rel_dict:
         print(
-            "WARNING :: No dependencies found for module {} in distribution {}\n"
-            "WARNING :: Please check {} and {}".format(
-                module, distribution, url_module, url_release
-            )
+            f"WARNING :: No dependencies found for module {module} in distribution {distribution}\n"
+            f"WARNING :: Please check {url_module} and {url_release}"
         )
     return rel_dict
 
@@ -1029,11 +1027,8 @@ def core_module_dict_old(cpan_url, module):
         # If there was an error, report it
     except CondaHTTPError as e:
         sys.exit(
-            (
-                "Error: Could not find module or distribution named"
-                " %s on MetaCPAN. Error was: %s"
-            )
-            % (module, e.message)
+            f"Error: Could not find module or distribution named"
+            f" {module} on MetaCPAN. Error was: {e.message}"
         )
     else:
         mod_dict = {"distribution": "perl"}
