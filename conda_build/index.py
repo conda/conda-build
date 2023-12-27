@@ -48,8 +48,7 @@ from yaml.parser import ParserError
 from yaml.reader import ReaderError
 from yaml.scanner import ScannerError
 
-from conda_build import conda_interface, utils
-
+from . import conda_interface, utils
 from .conda_interface import (
     CondaError,
     CondaHTTPError,

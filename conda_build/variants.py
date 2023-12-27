@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 """This file handles the parsing of feature specifications from files,
 ending up with a configuration matrix"""
-
 import os.path
 import re
 import sys
@@ -13,9 +12,9 @@ from itertools import product
 
 import yaml
 
-from conda_build.conda_interface import cc_conda_build, subdir
-from conda_build.utils import ensure_list, get_logger, islist, on_win, trim_empty_keys
-from conda_build.version import _parse as parse_version
+from .conda_interface import cc_conda_build, subdir
+from .utils import ensure_list, get_logger, islist, on_win, trim_empty_keys
+from .version import _parse as parse_version
 
 DEFAULT_VARIANTS = {
     "python": f"{sys.version_info.major}.{sys.version_info.minor}",
@@ -125,7 +124,7 @@ def get_default_variant(config):
 
 
 def parse_config_file(path, config):
-    from conda_build.metadata import get_selectors, select_lines
+    from .metadata import get_selectors, select_lines
 
     with open(path) as f:
         contents = f.read()
@@ -646,7 +645,7 @@ def get_package_combined_spec(recipedir_or_metadata, config=None, variants=None)
     if hasattr(recipedir_or_metadata, "config"):
         config = recipedir_or_metadata.config
     if not config:
-        from conda_build.config import Config
+        from .config import Config
 
         config = Config()
     files = find_config_files(recipedir_or_metadata, config)

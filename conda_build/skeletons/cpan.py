@@ -3,8 +3,6 @@
 """
 Tools for converting CPAN packages to conda recipes.
 """
-
-
 import codecs
 import gzip
 import hashlib
@@ -21,20 +19,21 @@ from os.path import basename, dirname, exists, join
 
 import requests
 
-from conda_build import environ
-from conda_build.conda_interface import (
+from .. import environ
+from ..conda_interface import (
     CondaError,
     CondaHTTPError,
     MatchSpec,
     Resolve,
+    TemporaryDirectory,
     TmpDownload,
     download,
     get_index,
 )
-from conda_build.config import get_or_merge_config
-from conda_build.utils import check_call_env, on_linux, on_win
-from conda_build.variants import get_default_variant
-from conda_build.version import _parse as parse_version
+from ..config import Config, get_or_merge_config
+from ..utils import check_call_env, on_linux, on_win
+from ..variants import get_default_variant
+from ..version import _parse as parse_version
 
 CPAN_META = """\
 {{% set name = "{packagename}" %}}
@@ -205,7 +204,7 @@ class PerlTmpDownload(TmpDownload):
 def get_build_dependencies_from_src_archive(package_url, sha256, src_cache):
     import tarfile
 
-    from conda_build import source
+    from .. import source
 
     cached_path, _ = source.download_to_cache(
         src_cache, "", {"url": package_url, "sha256": sha256}
@@ -334,9 +333,6 @@ def load_or_pickle(filename_prefix, base_folder, data_partial, key):
 
 def install_perl_get_core_modules(version):
     try:
-        from conda_build.conda_interface import TemporaryDirectory
-        from conda_build.config import Config
-
         config = Config()
 
         if on_win:
@@ -361,10 +357,8 @@ def install_perl_get_core_modules(version):
                 "my @modules = grep {Module::CoreList::is_core($_)} Module::CoreList->find_modules(qr/.*/); "
                 'print join "\n", @modules;',
             ]
-            from subprocess import check_output
-
             all_core_modules = (
-                check_output(args, shell=False)
+                subprocess.check_output(args, shell=False)
                 .decode("utf-8")
                 .replace("\r\n", "\n")
                 .split("\n")

@@ -4,9 +4,9 @@ import shutil
 import sys
 from os.path import abspath, exists, expanduser, isdir, join
 
-from conda_build.os_utils.external import find_executable
-from conda_build.post import mk_relative_osx
-from conda_build.utils import check_call_env, get_site_packages, on_mac, rec_glob
+from .os_utils.external import find_executable
+from .post import mk_relative_osx
+from .utils import check_call_env, get_site_packages, on_mac, rec_glob
 
 
 def relink_sharedobjects(pkg_path, build_prefix):

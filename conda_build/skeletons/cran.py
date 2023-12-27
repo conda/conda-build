@@ -41,14 +41,13 @@ except ImportError:
 
 from conda.common.io import dashlist
 
-from conda_build import source
-from conda_build.conda_interface import TemporaryDirectory, cc_conda_build
-from conda_build.config import get_or_merge_config
-from conda_build.license_family import allowed_license_families, guess_license_family
-from conda_build.utils import ensure_list, rm_rf
-from conda_build.variants import DEFAULT_VARIANTS, get_package_variants
-
+from .. import source
+from ..conda_interface import TemporaryDirectory, cc_conda_build
+from ..config import get_or_merge_config
+from ..license_family import allowed_license_families, guess_license_family
 from ..metadata import MetaData
+from ..utils import ensure_list, rm_rf
+from ..variants import DEFAULT_VARIANTS, get_package_variants
 
 SOURCE_META = """\
   {archive_keys}

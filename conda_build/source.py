@@ -13,14 +13,23 @@ from os.path import abspath, basename, exists, expanduser, isdir, isfile, join, 
 from pathlib import Path
 from subprocess import CalledProcessError
 from typing import Iterable
+from urllib.parse import urljoin
 
-from conda_build.conda_interface import CondaHTTPError, url_path
-from conda_build.os_utils import external
-from conda_build.utils import (
+from .conda_interface import (
+    CondaHTTPError,
+    TemporaryDirectory,
+    download,
+    hashsum_file,
+    url_path,
+)
+from .exceptions import MissingDependency
+from .os_utils import external
+from .utils import (
     LoggingContext,
     check_call_env,
     check_output_env,
     convert_path_for_cygwin_or_msys2,
+    convert_unix_path_to_win,
     copy_into,
     decompressible_exts,
     ensure_list,
@@ -31,17 +40,7 @@ from conda_build.utils import (
     tar_xf,
 )
 
-from .conda_interface import TemporaryDirectory, download, hashsum_file
-from .exceptions import MissingDependency
-
 log = get_logger(__name__)
-if on_win:
-    from conda_build.utils import convert_unix_path_to_win
-
-if sys.version_info[0] == 3:
-    from urllib.parse import urljoin
-else:
-    from urlparse import urljoin
 
 git_submod_re = re.compile(r"(?:.+)\.(.+)\.(?:.+)\s(.+)")
 ext_re = re.compile(r"(.*?)(\.(?:tar\.)?[^.]+)$")

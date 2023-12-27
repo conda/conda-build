@@ -5,8 +5,7 @@ import stat
 from glob import glob
 from os.path import expanduser, isfile, join
 
-from conda_build.conda_interface import root_dir
-
+from ..conda_interface import root_dir
 from ..utils import on_win
 
 

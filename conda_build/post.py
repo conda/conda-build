@@ -37,17 +37,19 @@ from typing import Iterable, Literal
 from conda.core.prefix_data import PrefixData
 from conda.models.records import PrefixRecord
 
-from conda_build import utils
-from conda_build.conda_interface import (
+from . import utils
+from .conda_interface import (
     TemporaryDirectory,
     lchmod,
     md5_file,
     walk_prefix,
 )
-from conda_build.exceptions import OverDependingError, OverLinkingError, RunPathError
-from conda_build.inspect_pkg import which_package
-from conda_build.os_utils import external, macho
-from conda_build.os_utils.liefldd import (
+from .deprecations import deprecated
+from .exceptions import OverDependingError, OverLinkingError, RunPathError
+from .inspect_pkg import which_package
+from .metadata import MetaData
+from .os_utils import external, macho
+from .os_utils.liefldd import (
     get_exports_memoized,
     get_linkages_memoized,
     get_rpaths_raw,
@@ -55,17 +57,14 @@ from conda_build.os_utils.liefldd import (
     have_lief,
     set_rpath,
 )
-from conda_build.os_utils.pyldd import (
+from .os_utils.pyldd import (
     DLLfile,
     EXEfile,
     codefile_class,
     elffile,
     machofile,
 )
-
-from .deprecations import deprecated
-from .metadata import MetaData
-from .utils import on_mac, on_win
+from .utils import linked_data_no_multichannels, on_mac, on_win, prefix_files
 
 filetypes_for_platform = {
     "win": (DLLfile, EXEfile),
@@ -787,8 +786,6 @@ def library_nature(
     addendum="Query `conda.core.prefix_data.PrefixData` instead.",
 )
 def dists_from_names(names: Iterable[str], prefix: str | os.PathLike | Path):
-    from conda_build.utils import linked_data_no_multichannels
-
     names = utils.ensure_list(names)
     return [prec for prec in linked_data_no_multichannels(prefix) if prec.name in names]
 
@@ -1453,8 +1450,6 @@ def check_overlinking_impl(
     # the first sysroot is more important than others.
     sysroots_files = dict()
     for sysroot in sysroots:
-        from conda_build.utils import prefix_files
-
         srs = sysroot if sysroot.endswith("/") else sysroot + "/"
         sysroot_files = prefix_files(sysroot)
         sysroot_files = [p.replace("\\", "/") for p in sysroot_files]

@@ -17,11 +17,13 @@ from typing import Literal, overload
 
 from bs4 import UnicodeDammit
 
-from conda_build import exceptions, utils, variants
-from conda_build.config import Config, get_or_merge_config
-from conda_build.features import feature_list
-from conda_build.license_family import ensure_valid_license_family
-from conda_build.utils import (
+from . import exceptions, utils, variants
+from .conda_interface import MatchSpec, envs_dirs, md5_file
+from .config import Config, get_or_merge_config
+from .deprecations import deprecated
+from .features import feature_list
+from .license_family import ensure_valid_license_family
+from .utils import (
     DEFAULT_SUBDIRS,
     HashableDict,
     ensure_list,
@@ -29,11 +31,8 @@ from conda_build.utils import (
     find_recipe,
     get_installed_packages,
     insert_variant_versions,
+    on_win,
 )
-
-from .conda_interface import MatchSpec, envs_dirs, md5_file
-from .deprecations import deprecated
-from .utils import on_win
 
 try:
     import yaml
@@ -1885,7 +1884,7 @@ class MetaData:
             with open(self.meta_path) as fd:
                 return fd.read()
 
-        from conda_build.jinja_context import (
+        from .jinja_context import (
             FilteredLoader,
             UndefinedNeverFail,
             context_processor,
@@ -2101,7 +2100,7 @@ class MetaData:
                     self.name(), getattr(self, "type", None)
                 )
         else:
-            from conda_build.render import output_yaml
+            from .render import output_yaml
 
             recipe_text = output_yaml(self)
         recipe_text = _filter_recipe_text(recipe_text, extract_pattern)
@@ -2495,7 +2494,7 @@ class MetaData:
         permit_unsatisfiable_variants=False,
         bypass_env_check=False,
     ):
-        from conda_build.source import provide
+        from .source import provide
 
         out_metadata_map = {}
         if self.final:

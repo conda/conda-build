@@ -14,20 +14,7 @@ from functools import lru_cache
 from glob import glob
 from os.path import join, normpath
 
-from conda_build import utils
-from conda_build.exceptions import BuildLockError, DependencyNeedsBuildingError
-from conda_build.features import feature_list
-from conda_build.index import get_build_index
-from conda_build.os_utils import external
-from conda_build.utils import (
-    ensure_list,
-    env_var,
-    on_mac,
-    on_win,
-    prepend_bin_path,
-)
-from conda_build.variants import get_default_variant
-
+from . import utils
 from .conda_interface import (
     CondaError,
     LinkError,
@@ -48,7 +35,19 @@ from .conda_interface import (
     root_dir,
 )
 from .deprecations import deprecated
+from .exceptions import BuildLockError, DependencyNeedsBuildingError
+from .features import feature_list
+from .index import get_build_index
 from .metadata import MetaData
+from .os_utils import external
+from .utils import (
+    ensure_list,
+    env_var,
+    on_mac,
+    on_win,
+    prepend_bin_path,
+)
+from .variants import get_default_variant
 
 # these are things that we provide env vars for more explicitly.  This list disables the
 #    pass-through of variant values to env vars for these keys.

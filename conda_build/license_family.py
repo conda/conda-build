@@ -3,8 +3,8 @@
 import re
 import string
 
-from conda_build import exceptions
-from conda_build.utils import comma_join
+from . import exceptions
+from .utils import comma_join
 
 allowed_license_families = """
 AGPL

@@ -23,39 +23,8 @@ import yaml
 from bs4 import UnicodeDammit
 from conda import __version__ as conda_version
 
-from conda_build import noarch_python
-from conda_build.os_utils import external
-from conda_build import __version__ as conda_build_version
-from conda_build import environ, source, tarcheck, utils
-from conda_build.config import Config
-from conda_build.create_test import create_all_test_files
-from conda_build.exceptions import CondaBuildException, DependencyNeedsBuildingError
-from conda_build.index import _delegated_update_index, get_build_index
-from conda_build.metadata import FIELDS, MetaData
-from conda_build.post import (
-    fix_permissions,
-    get_build_metadata,
-    post_build,
-    post_process,
-)
-from conda_build.render import (
-    add_upstream_pins,
-    bldpkg_path,
-    distribute_variants,
-    execute_download_actions,
-    expand_outputs,
-    output_yaml,
-    render_recipe,
-    reparse,
-    try_download,
-)
-from conda_build.variants import (
-    dict_of_lists_to_list_of_dicts,
-    get_package_variants,
-    set_language_env_vars,
-)
-
-# used to get version
+from . import __version__ as conda_build_version
+from . import environ, noarch_python, source, tarcheck, utils
 from .conda_interface import (
     CondaError,
     EntityEncoder,
@@ -74,21 +43,50 @@ from .conda_interface import (
     root_dir,
     url_path,
 )
+from .config import Config
+from .create_test import create_all_test_files
+from .exceptions import CondaBuildException, DependencyNeedsBuildingError
+from .index import _delegated_update_index, get_build_index
+from .metadata import FIELDS, MetaData
+from .os_utils import external
+from .post import (
+    fix_permissions,
+    get_build_metadata,
+    post_build,
+    post_process,
+)
+from .render import (
+    add_upstream_pins,
+    bldpkg_path,
+    distribute_variants,
+    execute_download_actions,
+    expand_outputs,
+    output_yaml,
+    render_recipe,
+    reparse,
+    try_download,
+)
 from .utils import (
     CONDA_PACKAGE_EXTENSION_V1,
     CONDA_PACKAGE_EXTENSION_V2,
     CONDA_PACKAGE_EXTENSIONS,
     env_var,
     glob,
+    on_linux,
+    on_mac,
+    on_win,
     shutil_move_more_retrying,
     tmp_chdir,
-    on_win,
-    on_mac,
-    on_linux,
+    write_bat_activation_text,
+)
+from .variants import (
+    dict_of_lists_to_list_of_dicts,
+    get_package_variants,
+    set_language_env_vars,
 )
 
 if on_win:
-    import conda_build.windows as windows
+    from . import windows
 
 if "bsd" in sys.platform:
     shell_path = "/bin/sh"
@@ -1790,7 +1788,7 @@ def post_process_files(m: MetaData, initial_prefix_files):
     if m.noarch == 'python' and m.config.subdir == 'win-32':
         # Delete any PIP-created .exe launchers and fix entry_points.txt
         # .. but we need to provide scripts instead here.
-        from conda_build.post import caseless_sepless_fnmatch
+        from .post import caseless_sepless_fnmatch
         exes = caseless_sepless_fnmatch(new_files, 'Scripts/*.exe')
         for ff in exes:
             os.unlink(os.path.join(m.config.host_prefix, ff))
@@ -2236,7 +2234,7 @@ def _write_sh_activation_text(file_handle, m):
     stack = "--stack" if m.is_cross else ""
     file_handle.write(f'conda activate {stack} "{build_prefix_path}"\n')
 
-    from conda_build.os_utils.external import find_executable
+    from .os_utils.external import find_executable
 
     ccache = find_executable("ccache", m.config.build_prefix, False)
     if ccache:
@@ -2297,8 +2295,6 @@ def _write_activation_text(script_path, m):
         data = fh.read()
         fh.seek(0)
         if os.path.splitext(script_path)[1].lower() == ".bat":
-            if m.config.build_subdir.startswith("win"):
-                from conda_build.utils import write_bat_activation_text
             write_bat_activation_text(fh, m)
         elif os.path.splitext(script_path)[1].lower() == ".sh":
             _write_sh_activation_text(fh, m)
@@ -3559,7 +3555,7 @@ def test(
             env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
     if config.test_run_post:
-        from conda_build.utils import get_installed_packages
+        from .utils import get_installed_packages
 
         installed = get_installed_packages(metadata.config.test_prefix)
         files = installed[metadata.meta["package"]["name"]]["files"]
@@ -4009,7 +4005,7 @@ def build_tree(
         handle_pypi_upload(wheels, config=config)
 
     # Print the variant information for each package because it is very opaque and never printed.
-    from conda_build.inspect_pkg import get_hash_input
+    from .inspect_pkg import get_hash_input
 
     hash_inputs = get_hash_input(tarballs)
     print(
@@ -4055,7 +4051,7 @@ def build_tree(
 
 
 def handle_anaconda_upload(paths, config):
-    from conda_build.os_utils.external import find_executable
+    from .os_utils.external import find_executable
 
     paths = utils.ensure_list(paths)
 

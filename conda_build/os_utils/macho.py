@@ -7,10 +7,9 @@ import sys
 from itertools import islice
 from subprocess import PIPE, STDOUT, CalledProcessError, Popen, check_output
 
-from conda_build import utils
-from conda_build.os_utils.external import find_preferably_prefixed_executable
-
-from .utils import on_mac
+from .. import utils
+from ..utils import on_mac
+from .external import find_preferably_prefixed_executable
 
 NO_EXT = (
     ".py",

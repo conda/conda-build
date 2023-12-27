@@ -27,6 +27,7 @@ from glob import glob
 from itertools import filterfalse
 from json.decoder import JSONDecodeError
 from locale import getpreferredencoding
+from os import walk
 from os.path import (
     abspath,
     dirname,
@@ -47,7 +48,7 @@ import conda_package_handling.api
 import filelock
 import libarchive
 import yaml
-from conda.api import PackageCacheData  # noqa
+from conda.api import PackageCacheData  # noqa: F401
 from conda.base.constants import (
     CONDA_PACKAGE_EXTENSIONS,
     KNOWN_SUBDIRS,
@@ -56,19 +57,14 @@ from conda.core.prefix_data import PrefixData
 from conda.models.dist import Dist
 from conda.models.records import PrefixRecord
 
-from conda_build.conda_interface import rm_rf as _rm_rf  # noqa
-from conda_build.exceptions import BuildLockError  # noqa
-from conda_build.os_utils import external  # noqa
-
-from .conda_interface import (  # noqa
+from .conda_interface import (
     CondaHTTPError,
-    Dist,  # noqa
     MatchSpec,
-    StringIO,  # noqa
+    StringIO,
     TemporaryDirectory,
     VersionOrder,
-    cc_conda_build,  # noqa
-    context,  # noqa
+    cc_conda_build,
+    context,
     download,
     get_conda_channel,
     hashsum_file,
@@ -78,10 +74,10 @@ from .conda_interface import (  # noqa
     unix_path_to_win,
     win_path_to_unix,
 )
+from .conda_interface import rm_rf as _rm_rf
 from .deprecations import deprecated
-
-PermissionError = PermissionError  # NOQA
-FileNotFoundError = FileNotFoundError
+from .exceptions import BuildLockError
+from .os_utils import external
 
 on_win = sys.platform == "win32"
 on_mac = sys.platform == "darwin"
@@ -117,11 +113,6 @@ if __name__ == '__main__':
 
 # filenames accepted as recipe meta files
 VALID_METAS = ("meta.yaml", "meta.yml", "conda.yaml", "conda.yml")
-
-try:
-    from os import scandir, walk  # NOQA
-except ImportError:
-    from scandir import walk
 
 
 @lru_cache(maxsize=None)
@@ -843,8 +834,6 @@ uncompress (or gunzip) is required to unarchive .z source files.
 
 
 def tar_xf_file(tarball, entries):
-    from conda_build.utils import ensure_list
-
     entries = ensure_list(entries)
     if not os.path.isabs(tarball):
         tarball = os.path.join(os.getcwd(), tarball)
@@ -2067,9 +2056,8 @@ def write_bat_activation_text(file_handle, m):
     file_handle.write(
         f'call "{root_script_dir}\\..\\condabin\\conda.bat" activate --stack "{m.config.build_prefix}"\n'
     )
-    from conda_build.os_utils.external import find_executable
 
-    ccache = find_executable("ccache", m.config.build_prefix, False)
+    ccache = external.find_executable("ccache", m.config.build_prefix, False)
     if ccache:
         if isinstance(ccache, list):
             ccache = ccache[0]

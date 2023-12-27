@@ -4,7 +4,7 @@ import json
 import tarfile
 from os.path import basename, normpath
 
-from conda_build.utils import codec, filter_info_files
+from .utils import codec, filter_info_files
 
 
 def dist_fn(fn):

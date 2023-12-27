@@ -18,15 +18,15 @@ except:
     # Allow some imports to work for cross or CONDA_SUBDIR usage.
     pass
 
-from conda_build import environ
-from conda_build.utils import (
+from . import environ
+from .utils import (
     check_call_env,
     copy_into,
     get_logger,
     path_prepended,
     write_bat_activation_text,
 )
-from conda_build.variants import get_default_variant, set_language_env_vars
+from .variants import get_default_variant, set_language_env_vars
 
 VS_VERSION_STRING = {
     "8.0": "Visual Studio 8 2005",

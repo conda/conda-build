@@ -14,7 +14,7 @@ import tarfile
 import tempfile
 from pathlib import Path
 
-from conda_build.utils import filter_info_files, walk
+from .utils import filter_info_files, walk
 
 
 def retrieve_c_extensions(file_path, show_imports=False):

@@ -14,6 +14,7 @@ from pathlib import Path
 from subprocess import PIPE, Popen
 
 from ..deprecations import deprecated
+from ..utils import on_mac, on_win, rec_glob
 from .external import find_executable
 
 # lief cannot handle files it doesn't know about gracefully
@@ -22,7 +23,6 @@ from .external import find_executable
 from .pyldd import DLLfile, EXEfile, elffile, machofile
 from .pyldd import codefile_type as _codefile_type
 from .pyldd import inspect_linkages as inspect_linkages_pyldd
-from .utils import on_mac, on_win
 
 try:
     import lief
@@ -971,8 +971,6 @@ def get_static_lib_exports_dumpbin(filename):
         ]
         results = []
         for p in programs:
-            from conda_build.utils import rec_glob
-
             dumpbin = rec_glob(os.path.join(pfx86, p), ("dumpbin.exe",))
             for result in dumpbin:
                 try:
@@ -984,7 +982,7 @@ def get_static_lib_exports_dumpbin(filename):
                     results.append((result, version))
                 except:
                     pass
-        from conda_build.conda_interface import VersionOrder
+        from ..conda_interface import VersionOrder
 
         results = sorted(results, key=lambda x: VersionOrder(x[1]))
         dumpbin_exe = results[-1][0]

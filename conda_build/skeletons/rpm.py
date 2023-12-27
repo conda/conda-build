@@ -1,31 +1,20 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 import argparse
-from copy import copy
-
-from conda_build.license_family import guess_license_family
-from conda_build.source import download_to_cache
-
-try:
-    import cPickle as pickle
-except:
-    import pickle as pickle
-
 import gzip
 import hashlib
+import pickle
 import re
+from copy import copy
 from os import chmod, makedirs
 from os.path import basename, dirname, exists, join, splitext
 from textwrap import wrap
+from urllib.request import urlopen
 from xml.etree import ElementTree as ET
 
+from ..license_family import guess_license_family
+from ..source import download_to_cache
 from .cran import yaml_quote_string
-
-try:
-    from urllib.request import urlopen
-except ImportError:
-    from urllib2 import urlopen
-
 
 # This is used in two places
 default_architecture = "x86_64"

@@ -11,10 +11,8 @@ import struct
 import sys
 from pathlib import Path
 
-from conda_build.utils import ensure_list, get_logger
-
 from ..deprecations import deprecated
-from ..utils import on_linux, on_mac, on_win
+from ..utils import ensure_list, get_logger, on_linux, on_mac, on_win
 
 logging.basicConfig(level=logging.INFO)
 
