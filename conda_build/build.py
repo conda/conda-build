@@ -3,12 +3,6 @@
 """
 Module that does most of the heavy lifting for the ``conda build`` command.
 """
-
-# this is to compensate for a requests idna encoding error.  Conda is a better place to fix,
-#   eventually
-# exception is raises: "LookupError: unknown encoding: idna"
-#    http://stackoverflow.com/a/13057751/1170370
-import encodings.idna  # NOQA
 import fnmatch
 import json
 import os
