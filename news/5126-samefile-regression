@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Use `os.path.normpath` instead of `Path.samefile` to avoid `os.stat` calls. (#5126 via #5130)
+* Update `which_package` to use a cached mapping of files to packages (`O(1)`) instead of relying on `Path.samefile` comparisons (`O(n * m)`). (#5126 via #5130)
 
 ### Deprecations
 
