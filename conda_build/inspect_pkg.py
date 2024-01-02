@@ -67,23 +67,21 @@ def which_package(
     the conda packages the file came from.  Usually the iteration yields
     only one package.
     """
-    prefix = os.fspath(prefix)
+    prefix = Path(prefix)
 
     # historically, path was relative to prefix, just to be safe we append to prefix
-    # (os.path.join correctly handles this even if path is absolute)
-    path = os.path.join(prefix, path)
+    path = (prefix / path).resolve()
 
-    # normalize the path before comparing with the files each package is supposed to provide
-    # we use os.path.normpath here instead of Path.samefile/Path.resolve to avoid expensive
-    # os.stat calls
-    path = os.path.normpath(path)
+    yield from _file_package_mapping(prefix).get(path, ())
 
-    for prec in PrefixData(prefix).iter_records():
-        if any(
-            path == os.path.normpath(os.path.join(prefix, file))
-            for file in prec["files"]
-        ):
-            yield prec
+
+@lru_cache(maxsize=None)
+def _file_package_mapping(prefix: Path) -> dict[Path, set[PrefixRecord]]:
+    mapping: dict[Path, set[PrefixRecord]] = {}
+    for prec in PrefixData(str(prefix)).iter_records():
+        for file in prec["files"]:
+            mapping.setdefault((prefix / file).resolve(), set()).add(prec)
+    return mapping
 
 
 def print_object_info(info, key):
