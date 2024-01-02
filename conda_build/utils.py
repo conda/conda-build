@@ -2222,10 +2222,18 @@ def is_conda_pkg(pkg_path: str) -> bool:
     )
 
 
-def samefile(path1: Path, path2: Path) -> bool:
+@deprecated(
+    "3.28.3",
+    "24.1.0",
+    addendum="Use `os.path.normpath` instead to avoid `os.stat` calls.",
+)
+def samefile(path1: str | os.PathLike | Path, path2: str | os.PathLike | Path) -> bool:
+    """Returns True if both paths point to the same file or directory.
+
+    Avoids calling `os.stat` on the paths, which can be expensive.
+    """
     try:
-        return path1.samefile(path2)
-    except (FileNotFoundError, PermissionError):
-        # FileNotFoundError: path doesn't exist
-        # PermissionError: don't have permissions to read path
-        return path1 == path2
+        return os.path.normpath(path1) == os.path.normpath(path2)
+    except TypeError:
+        # TypeError: path is not a string or path-like object
+        return False

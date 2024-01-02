@@ -43,7 +43,7 @@ from conda_build.utils import (
 )
 
 from .deprecations import deprecated
-from .utils import on_mac, on_win, samefile
+from .utils import on_mac, on_win
 
 
 @deprecated("3.28.0", "24.1.0")
@@ -67,13 +67,22 @@ def which_package(
     the conda packages the file came from.  Usually the iteration yields
     only one package.
     """
-    prefix = Path(prefix)
-    # historically, path was relative to prefix just to be safe we append to prefix
-    # (pathlib correctly handles this even if path is absolute)
-    path = prefix / path
+    prefix = os.fspath(prefix)
 
-    for prec in PrefixData(str(prefix)).iter_records():
-        if any(samefile(prefix / file, path) for file in prec["files"]):
+    # historically, path was relative to prefix, just to be safe we append to prefix
+    # (os.path.join correctly handles this even if path is absolute)
+    path = os.path.join(prefix, path)
+
+    # normalize the path before comparing with the files each package is supposed to provide
+    # we use os.path.normpath here instead of Path.samefile/Path.resolve to avoid expensive
+    # os.stat calls
+    path = os.path.normpath(path)
+
+    for prec in PrefixData(prefix).iter_records():
+        if any(
+            path == os.path.normpath(os.path.join(prefix, file))
+            for file in prec["files"]
+        ):
             yield prec
 
 

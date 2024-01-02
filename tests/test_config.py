@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from conda_build.config import Config, get_or_merge_config
-from conda_build.utils import on_win, samefile
+from conda_build.utils import on_win
 
 
 @pytest.fixture
@@ -39,20 +39,25 @@ def test_keep_old_work(config: Config, build_id: str, tmp_path: Path):
     config.croot = tmp_path
     config.build_id = build_id
 
+    magic = "a_touched_file.magic"
+
     # empty working directory
     orig_dir = Path(config.work_dir)
+    assert orig_dir.exists()
     assert not len(os.listdir(config.work_dir))
 
     # touch a file so working directory is not empty
-    (orig_dir / "a_touched_file.magic").touch()
-    assert len(os.listdir(config.work_dir))
+    (orig_dir / magic).touch()
+    assert orig_dir.exists()
+    assert len(os.listdir(config.work_dir)) == 1
+    assert Path(config.work_dir, magic).exists()
 
     config.compute_build_id("a_new_name", reset=True)
 
-    # working directory should still exist and have the touched file
-    assert not samefile(orig_dir, config.work_dir)
+    # working directory should still exist (in new location) and have the touched file
     assert not orig_dir.exists()
-    assert len(os.listdir(config.work_dir))
+    assert len(os.listdir(config.work_dir)) == 1
+    assert Path(config.work_dir, magic).exists()
 
 
 @pytest.mark.skipif(on_win, reason="Windows uses only the short prefix")
