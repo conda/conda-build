@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Use `os.path.normpath` instead of `Path.samefile` to avoid `os.stat` calls. (#5126 via #)
+* Use `os.path.normpath` instead of `Path.samefile` to avoid `os.stat` calls. (#5126 via #5130)
 
 ### Deprecations
 
