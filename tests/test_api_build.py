@@ -48,7 +48,6 @@ from conda_build.exceptions import (
 from conda_build.os_utils.external import find_executable
 from conda_build.render import finalize_metadata
 from conda_build.utils import (
-    FileNotFoundError,
     check_call_env,
     check_output_env,
     convert_path_for_cygwin_or_msys2,
