@@ -1919,9 +1919,12 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
                 val = var.split("=", 1)[1]
                 var = var.split("=", 1)[0]
             elif var not in os.environ:
-                raise ValueError(
-                    f"env var '{var}' specified in script_env, but is not set."
+                warnings.warn(
+                    "The environment variable '%s' specified in script_env is undefined."
+                    % var,
+                    UserWarning,
                 )
+                val = ""
             else:
                 val = os.environ[var]
             env_output[var] = val
