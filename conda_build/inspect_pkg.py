@@ -73,16 +73,14 @@ def which_package(
     prefix = Path(prefix)
 
     # historically, path was relative to prefix, just to be safe we append to prefix
-    path = prefix / path
-
     # get lstat before calling _file_package_mapping in case path doesn't exist
     try:
-        lstat = path.lstat()
+        lstat = (prefix / path).lstat()
     except FileNotFoundError:
         # FileNotFoundError: path doesn't exist
         return
-
-    yield from _file_package_mapping(prefix).get(lstat, ())
+    else:
+        yield from _file_package_mapping(prefix).get(lstat, ())
 
 
 @lru_cache(maxsize=None)
@@ -94,7 +92,17 @@ def _file_package_mapping(prefix: Path) -> dict[os.stat_result, set[PrefixRecord
     mapping: dict[os.stat_result, set[PrefixRecord]] = {}
     for prec in PrefixData(str(prefix)).iter_records():
         for file in prec["files"]:
-            mapping.setdefault((prefix / file).lstat(), set()).add(prec)
+            # packages are capable of removing files installed by other dependencies from
+            # the build prefix, in those cases lstat will fail, while which_package wont
+            # return the correct package(s) in such a condition we choose to not worry about
+            # it since this file to package lookup exists primarily to detect clobbering
+            try:
+                lstat = (prefix / file).lstat()
+            except FileNotFoundError:
+                # FileNotFoundError: path doesn't exist
+                continue
+            else:
+                mapping.setdefault(lstat, set()).add(prec)
     return mapping
 
 
