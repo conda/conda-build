@@ -1,7 +1,7 @@
 # recipe from conda forge, downloaded 2016/06/03
 # problem report was https://github.com/conda/conda-build/issues/993
 
-{% set version = "3.12" %}
+{% set version = "3.11" %}
 
 
 package:

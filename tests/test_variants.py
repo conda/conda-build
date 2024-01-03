@@ -79,14 +79,16 @@ def test_python_variants(testing_workdir, testing_config, as_yaml):
     )
 
     # we should have one package/metadata per python version
-    assert len(metadata) == 2
+    assert len(metadata) == 3
     # there should only be one run requirement for each package/metadata
     assert len(metadata[0][0].meta["requirements"]["run"]) == 1
     assert len(metadata[1][0].meta["requirements"]["run"]) == 1
+    assert len(metadata[2][0].meta["requirements"]["run"]) == 1
     # the run requirements should be python ranges
     assert {
         *metadata[0][0].meta["requirements"]["run"],
         *metadata[1][0].meta["requirements"]["run"],
+        *metadata[2][0].meta["requirements"]["run"],
     } == {
         "python >=3.10,<3.11.0a0",
         "python >=3.11,<3.12.0a0",
