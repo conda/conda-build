@@ -87,10 +87,7 @@ def test_python_variants(testing_workdir, testing_config, as_yaml):
     assert {
         *metadata[0][0].meta["requirements"]["run"],
         *metadata[1][0].meta["requirements"]["run"],
-    } == {
-        "python >=3.11,<3.12.0a0",
-        "python >=3.12,<3.13.0a0",
-    }
+    } == {"python >=3.11,<3.12.0a0", "python >=3.12,<3.13.0a0"}
 
 
 def test_use_selectors_in_variants(testing_workdir, testing_config):
