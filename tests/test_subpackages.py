@@ -336,6 +336,16 @@ def test_build_script_and_script_env(testing_config):
 
 
 @pytest.mark.sanity
+def test_build_script_and_script_env_warn_empty_script_env(testing_config):
+    recipe = os.path.join(subpackage_dir, "_build_script_missing_var")
+    with pytest.warns(
+        UserWarning,
+        match="The environment variable 'TEST_FN_DOESNT_EXIST' specified in script_env is undefined",
+    ):
+        api.build(recipe, config=testing_config)
+
+
+@pytest.mark.sanity
 @pytest.mark.skipif(sys.platform != "darwin", reason="only implemented for mac")
 def test_strong_run_exports_from_build_applies_to_host(testing_config):
     recipe = os.path.join(

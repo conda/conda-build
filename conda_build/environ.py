@@ -491,7 +491,9 @@ def meta_vars(meta: MetaData, skip_build_id=False):
             value = os.getenv(var_name)
         if value is None:
             warnings.warn(
-                "The environment variable '%s' is undefined." % var_name, UserWarning
+                "The environment variable '%s' specified in script_env is undefined."
+                % var_name,
+                UserWarning,
             )
         else:
             d[var_name] = value
