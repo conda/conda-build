@@ -131,11 +131,20 @@ def test_which_package_battery(tmp_path: Path):
     (tmp_path / "lib").mkdir()
 
     # dummy packages with files
+    removed = []
     for _ in range(100):
         name = f"package_{uuid4().hex}"
+
+        # mock a package with 100 files
         files = [f"lib/{uuid4().hex}" for _ in range(100)]
         for file in files:
             (tmp_path / file).touch()
+
+        # mock a removed file
+        remove = f"lib/{uuid4().hex}"
+        files.append(remove)
+        removed.append(remove)
+
         (tmp_path / "conda-meta" / f"{name}-1-0.json").write_text(
             json.dumps(
                 {
@@ -162,6 +171,11 @@ def test_which_package_battery(tmp_path: Path):
             path = Path(subdir, file)
 
             assert len(list(which_package(path, tmp_path))) == 1
+
+    # removed files should return no packages
+    # this occurs when, e.g., a package removes files installed by another package
+    for file in removed:
+        assert not len(list(which_package(tmp_path / file, tmp_path)))
 
     # missing files should return no packages
     assert not len(list(which_package(tmp_path / "missing", tmp_path)))
