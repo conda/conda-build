@@ -1187,9 +1187,7 @@ def _lookup_in_prefix_packages(
     if len(precs_in_reqs) == 1:
         _print_msg(
             errors,
-            "{}: {} found in {}{}".format(
-                info_prelude, n_dso_p, precs_in_reqs[0], and_also
-            ),
+            f"{info_prelude}: {n_dso_p} found in {precs_in_reqs[0]}{and_also}",
             verbose=verbose,
         )
     elif in_whitelist:
@@ -1201,25 +1199,20 @@ def _lookup_in_prefix_packages(
     elif len(precs_in_reqs) == 0 and len(precs) > 0:
         _print_msg(
             errors,
-            "{}: {} found in {}{}".format(
-                msg_prelude, n_dso_p, [prec.name for prec in precs], and_also
-            ),
+            f"{msg_prelude}: {n_dso_p} found in {[str(prec) for prec in precs]}{and_also}",
             verbose=verbose,
         )
         _print_msg(
             errors,
-            "{}: .. but {} not in reqs/run, (i.e. it is overlinking)"
-            " (likely) or a missing dependency (less likely)".format(
-                msg_prelude, [prec.name for prec in precs]
-            ),
+            f"{msg_prelude}: .. but {[str(prec) for prec in precs]} not in reqs/run, "
+            "(i.e. it is overlinking) (likely) or a missing dependency (less likely)",
             verbose=verbose,
         )
     elif len(precs_in_reqs) > 1:
         _print_msg(
             errors,
-            "{}: {} found in multiple packages in run/reqs: {}{}".format(
-                warn_prelude, in_prefix_dso, precs_in_reqs, and_also
-            ),
+            f"{warn_prelude}: {in_prefix_dso} found in multiple packages in run/reqs: "
+            f"{[str(prec) for prec in precs_in_reqs]}{and_also}",
             verbose=verbose,
         )
     else:
@@ -1753,7 +1746,7 @@ def check_menuinst_json(files, prefix) -> None:
     try:
         import jsonschema
         from menuinst.utils import data_path
-    except ModuleNotFoundError as exc:
+    except ImportError as exc:
         log.warning(
             "Found 'Menu/*.json' files but couldn't validate: %s",
             ", ".join(json_files),

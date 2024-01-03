@@ -13,7 +13,7 @@ import warnings
 from collections import OrderedDict
 from functools import lru_cache
 from os.path import isfile, join
-from typing import Literal
+from typing import Literal, overload
 
 from bs4 import UnicodeDammit
 
@@ -622,6 +622,7 @@ FIELDS = {
         "prelink_message": None,
         "readme": None,
     },
+    "extra": {},
 }
 
 # Fields that may either be a dictionary or a list of dictionaries.
@@ -1316,9 +1317,11 @@ class MetaData:
     @classmethod
     def fromstring(cls, metadata, config=None, variant=None):
         m = super().__new__(cls)
-        if not config:
-            config = Config()
-        m.meta = parse(metadata, config=config, path="", variant=variant)
+        m.path = ""
+        m._meta_path = ""
+        m.requirements_path = ""
+        config = config or Config(variant=variant)
+        m.meta = parse(metadata, config=config, path="")
         m.config = config
         m.parse_again(permit_undefined_jinja=True)
         return m
@@ -1333,18 +1336,45 @@ class MetaData:
         m._meta_path = ""
         m.requirements_path = ""
         m.meta = sanitize(metadata)
-
-        if not config:
-            config = Config(variant=variant)
-
-        m.config = config
+        m.config = config or Config(variant=variant)
         m.undefined_jinja_vars = []
         m.final = False
-
         return m
 
-    def get_section(self, section):
-        return self.meta.get(section, {})
+    @overload
+    def get_section(self, section: Literal["source", "outputs"]) -> list[dict]:
+        ...
+
+    @overload
+    def get_section(
+        self,
+        section: Literal[
+            "package",
+            "build",
+            "requirements",
+            "app",
+            "test",
+            "about",
+            "extra",
+        ],
+    ) -> dict:
+        ...
+
+    def get_section(self, name):
+        section = self.meta.get(name)
+        if name in OPTIONALLY_ITERABLE_FIELDS:
+            if not section:
+                return []
+            elif isinstance(section, dict):
+                return [section]
+            elif not isinstance(section, list):
+                raise ValueError(f"Expected {name} to be a list")
+        else:
+            if not section:
+                return {}
+            elif not isinstance(section, dict):
+                raise ValueError(f"Expected {name} to be a dict")
+        return section
 
     def get_value(self, name, default=None, autotype=True):
         """
@@ -1364,7 +1394,9 @@ class MetaData:
             index = None
         elif len(names) == 3:
             section, index, key = names
-            assert section == "source", "Section is not a list: " + section
+            assert section in OPTIONALLY_ITERABLE_FIELDS, (
+                "Section is not a list: " + section
+            )
             index = int(index)
 
         # get correct default
@@ -1386,7 +1418,7 @@ class MetaData:
                 )
                 index = 0
 
-            if len(section_data) == 0:
+            if not section_data:
                 section_data = {}
             else:
                 section_data = section_data[index]
@@ -1475,7 +1507,7 @@ class MetaData:
         if not self.is_output:
             matching_output = [
                 out
-                for out in self.meta.get("outputs", [])
+                for out in self.get_section("outputs")
                 if out.get("name") == self.name()
             ]
             if matching_output:
@@ -2014,7 +2046,7 @@ class MetaData:
         return len(matches) > 0
 
     @property
-    def uses_vcs_in_meta(self) -> Literal["git" | "svn" | "mercurial"] | None:
+    def uses_vcs_in_meta(self) -> Literal["git", "svn", "mercurial"] | None:
         """returns name of vcs used if recipe contains metadata associated with version control systems.
         If this metadata is present, a download/copy will be forced in parse_or_try_download.
         """
@@ -2034,7 +2066,7 @@ class MetaData:
         return vcs
 
     @property
-    def uses_vcs_in_build(self) -> Literal["git" | "svn" | "mercurial"] | None:
+    def uses_vcs_in_build(self) -> Literal["git", "svn", "mercurial"] | None:
         # TODO :: Re-work this. Is it even useful? We can declare any vcs in our build deps.
         build_script = "bld.bat" if on_win else "build.sh"
         build_script = os.path.join(self.path, build_script)
@@ -2271,9 +2303,8 @@ class MetaData:
 
     @property
     def source_provided(self):
-        return not bool(self.meta.get("source")) or (
-            os.path.isdir(self.config.work_dir)
-            and len(os.listdir(self.config.work_dir)) > 0
+        return not self.get_section("source") or (
+            os.path.isdir(self.config.work_dir) and os.listdir(self.config.work_dir)
         )
 
     def reconcile_metadata_with_output_dict(self, output_metadata, output_dict):
