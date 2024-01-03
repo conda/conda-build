@@ -77,7 +77,6 @@ from .conda_interface import (
 from .conda_interface import rm_rf as _rm_rf
 from .deprecations import deprecated
 from .exceptions import BuildLockError
-from .os_utils import external
 
 on_win = sys.platform == "win32"
 on_mac = sys.platform == "darwin"
@@ -804,10 +803,12 @@ decompressible_exts = (
 
 
 def _tar_xf_fallback(tarball, dir_path, mode="r:*"):
+    from .os_utils.external import find_executable
+
     if tarball.lower().endswith(".tar.z"):
-        uncompress = external.find_executable("uncompress")
+        uncompress = find_executable("uncompress")
         if not uncompress:
-            uncompress = external.find_executable("gunzip")
+            uncompress = find_executable("gunzip")
         if not uncompress:
             sys.exit(
                 """\
@@ -961,7 +962,9 @@ def rec_glob(path, patterns, ignores=None):
 
 
 def convert_unix_path_to_win(path):
-    if external.find_executable("cygpath"):
+    from .os_utils.external import find_executable
+
+    if find_executable("cygpath"):
         cmd = f"cygpath -w {path}"
         path = subprocess.getoutput(cmd)
 
@@ -971,7 +974,9 @@ def convert_unix_path_to_win(path):
 
 
 def convert_win_path_to_unix(path):
-    if external.find_executable("cygpath"):
+    from .os_utils.external import find_executable
+
+    if find_executable("cygpath"):
         cmd = f"cygpath -u {path}"
         path = subprocess.getoutput(cmd)
 
@@ -2020,6 +2025,8 @@ def sha256_checksum(filename, buffersize=65536):
 
 
 def write_bat_activation_text(file_handle, m):
+    from .os_utils.external import find_executable
+
     file_handle.write(f'call "{root_script_dir}\\..\\condabin\\conda_hook.bat"\n')
     if m.is_cross:
         # HACK: we need both build and host envs "active" - i.e. on PATH,
@@ -2053,7 +2060,7 @@ def write_bat_activation_text(file_handle, m):
         f'call "{root_script_dir}\\..\\condabin\\conda.bat" activate --stack "{m.config.build_prefix}"\n'
     )
 
-    ccache = external.find_executable("ccache", m.config.build_prefix, False)
+    ccache = find_executable("ccache", m.config.build_prefix, False)
     if ccache:
         if isinstance(ccache, list):
             ccache = ccache[0]
