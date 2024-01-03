@@ -21,7 +21,6 @@ import time
 import urllib.parse as urlparse
 import urllib.request as urllib
 from collections import OrderedDict, defaultdict
-from contextlib import ExitStack  # noqa: F401
 from functools import lru_cache
 from glob import glob
 from itertools import filterfalse
@@ -48,8 +47,9 @@ import conda_package_handling.api
 import filelock
 import libarchive
 import yaml
-from conda.api import PackageCacheData  # noqa: F401
 from conda.base.constants import (
+    CONDA_PACKAGE_EXTENSION_V1,  # noqa: F401
+    CONDA_PACKAGE_EXTENSION_V2,  # noqa: F401
     CONDA_PACKAGE_EXTENSIONS,
     KNOWN_SUBDIRS,
 )
