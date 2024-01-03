@@ -103,7 +103,7 @@ def test_which_package(tmp_path: Path):
 
     precs_hardlinkA = list(which_package(tmp_path / "hardlinkA", tmp_path))
     assert len(precs_hardlinkA) == 1
-    assert precs_hardlinkA[0] == precA
+    assert set(precs_hardlinkA) == {precA}
 
     precs_shared = list(which_package(tmp_path / "shared", tmp_path))
     assert len(precs_shared) == 2
@@ -111,15 +111,15 @@ def test_which_package(tmp_path: Path):
 
     precs_internal = list(which_package(tmp_path / "internal", tmp_path))
     assert len(precs_internal) == 1
-    assert precs_internal[0] == precA
+    assert set(precs_internal) == {precA}
 
     precs_external = list(which_package(tmp_path / "external", tmp_path))
-    assert len(precs_external) == 2
-    assert set(precs_external) == {precA, precB}
+    assert len(precs_external) == 1
+    assert set(precs_external) == {precA}
 
     precs_hardlinkB = list(which_package(tmp_path / "hardlinkB", tmp_path))
-    assert len(precs_hardlinkB) == 2
-    assert set(precs_hardlinkB) == {precA, precB}
+    assert len(precs_hardlinkB) == 1
+    assert set(precs_hardlinkB) == {precB}
 
 
 @pytest.mark.benchmark

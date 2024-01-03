@@ -49,7 +49,7 @@ from .utils import on_mac, on_win
 @deprecated("3.28.0", "24.1.0")
 @lru_cache(maxsize=None)
 def dist_files(prefix: str | os.PathLike | Path, dist: Dist) -> set[str]:
-    if (prec := PrefixData(prefix).get(dist.name, None)) is None:
+    if (prec := PrefixData(str(prefix)).get(dist.name, None)) is None:
         return set()
     elif MatchSpec(dist).match(prec):
         return set(prec["files"])
@@ -62,25 +62,39 @@ def which_package(
     path: str | os.PathLike | Path,
     prefix: str | os.PathLike | Path,
 ) -> Iterable[PrefixRecord]:
-    """
+    """Detect which package(s) a path belongs to.
+
     Given the path (of a (presumably) conda installed file) iterate over
     the conda packages the file came from.  Usually the iteration yields
     only one package.
+
+    We use lstat since a symlink doesn't clobber the file it points to.
     """
     prefix = Path(prefix)
 
     # historically, path was relative to prefix, just to be safe we append to prefix
-    path = (prefix / path).resolve()
+    path = prefix / path
 
-    yield from _file_package_mapping(prefix).get(path, ())
+    # get lstat before calling _file_package_mapping in case path doesn't exist
+    try:
+        lstat = path.lstat()
+    except FileNotFoundError:
+        # FileNotFoundError: path doesn't exist
+        return
+
+    yield from _file_package_mapping(prefix).get(lstat, ())
 
 
 @lru_cache(maxsize=None)
-def _file_package_mapping(prefix: Path) -> dict[Path, set[PrefixRecord]]:
-    mapping: dict[Path, set[PrefixRecord]] = {}
+def _file_package_mapping(prefix: Path) -> dict[os.stat_result, set[PrefixRecord]]:
+    """Map paths to package records.
+
+    We use lstat since a symlink doesn't clobber the file it points to.
+    """
+    mapping: dict[os.stat_result, set[PrefixRecord]] = {}
     for prec in PrefixData(str(prefix)).iter_records():
         for file in prec["files"]:
-            mapping.setdefault((prefix / file).resolve(), set()).add(prec)
+            mapping.setdefault((prefix / file).lstat(), set()).add(prec)
     return mapping
 
 
