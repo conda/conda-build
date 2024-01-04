@@ -53,8 +53,9 @@ def get_valid_recipes(*parts: Path | str) -> Generator[Path, None, None]:
 
 
 def add_mangling(filename):
-    filename = os.path.splitext(filename)[0] + ".cpython-{}{}.py".format(
-        sys.version_info.major, sys.version_info.minor
+    filename = (
+        os.path.splitext(filename)[0]
+        + f".cpython-{sys.version_info.major}{sys.version_info.minor}.py"
     )
     filename = os.path.join(
         os.path.dirname(filename), "__pycache__", os.path.basename(filename)

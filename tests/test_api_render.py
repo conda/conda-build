@@ -99,9 +99,7 @@ def test_get_output_file_path_jinja2(testing_config):
     assert build_path == os.path.join(
         testing_config.croot,
         testing_config.host_subdir,
-        "conda-build-test-source-git-jinja2-1.20.2-py{}{}_0_g262d444.tar.bz2".format(
-            python, _hash
-        ),
+        f"conda-build-test-source-git-jinja2-1.20.2-py{python}{_hash}_0_g262d444.tar.bz2",
     )
 
 

@@ -21,27 +21,29 @@ from conda.models.dist import Dist
 from conda.models.records import PrefixRecord
 from conda.resolve import MatchSpec
 
-from conda_build.conda_interface import (
+from . import conda_interface
+from .conda_interface import (
     linked_data,
     specs_from_args,
 )
-from conda_build.os_utils.ldd import (
+from .deprecations import deprecated
+from .os_utils.ldd import (
     get_linkages,
     get_package_obj_files,
     get_untracked_obj_files,
 )
-from conda_build.os_utils.liefldd import codefile_class, machofile
-from conda_build.os_utils.macho import get_rpaths, human_filetype
-from conda_build.utils import (
+from .os_utils.liefldd import codefile_class, machofile
+from .os_utils.macho import get_rpaths, human_filetype
+from .utils import (
     comma_join,
     ensure_list,
     get_logger,
+    on_linux,
+    on_mac,
+    on_win,
     package_has_file,
+    samefile,
 )
-
-from . import conda_interface
-from .deprecations import deprecated
-from .utils import on_mac, on_win, samefile
 
 log = get_logger(__name__)
 
@@ -156,9 +158,9 @@ def print_linkages(
 
 
 def replace_path(binary, path, prefix):
-    if sys.platform.startswith("linux"):
+    if on_linux:
         return abspath(path)
-    elif sys.platform.startswith("darwin"):
+    elif on_mac:
         if path == basename(binary):
             return abspath(join(prefix, binary))
         if "@rpath" in path:

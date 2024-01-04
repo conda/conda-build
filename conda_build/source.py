@@ -13,14 +13,23 @@ from os.path import abspath, basename, exists, expanduser, isdir, isfile, join, 
 from pathlib import Path
 from subprocess import CalledProcessError
 from typing import Iterable
+from urllib.parse import urljoin
 
-from conda_build.conda_interface import CondaHTTPError, url_path
-from conda_build.os_utils import external
-from conda_build.utils import (
+from .conda_interface import (
+    CondaHTTPError,
+    TemporaryDirectory,
+    download,
+    hashsum_file,
+    url_path,
+)
+from .exceptions import MissingDependency
+from .os_utils import external
+from .utils import (
     LoggingContext,
     check_call_env,
     check_output_env,
     convert_path_for_cygwin_or_msys2,
+    convert_unix_path_to_win,
     copy_into,
     decompressible_exts,
     ensure_list,
@@ -31,17 +40,7 @@ from conda_build.utils import (
     tar_xf,
 )
 
-from .conda_interface import TemporaryDirectory, download, hashsum_file
-from .exceptions import MissingDependency
-
 log = get_logger(__name__)
-if on_win:
-    from conda_build.utils import convert_unix_path_to_win
-
-if sys.version_info[0] == 3:
-    from urllib.parse import urljoin
-else:
-    from urlparse import urljoin
 
 git_submod_re = re.compile(r"(?:.+)\.(.+)\.(?:.+)\s(.+)")
 ext_re = re.compile(r"(.*?)(\.(?:tar\.)?[^.]+)$")
@@ -74,8 +73,8 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
             break
     else:
         log.warn(
-            "No hash (md5, sha1, sha256) provided for {}.  Source download forced.  "
-            "Add hash to recipe to use source cache.".format(unhashed_fn)
+            f"No hash (md5, sha1, sha256) provided for {unhashed_fn}.  Source download forced.  "
+            "Add hash to recipe to use source cache."
         )
     path = join(cache_folder, fn)
     if isfile(path):
@@ -122,9 +121,7 @@ def download_to_cache(cache_folder, recipe_path, source_dict, verbose=False):
             if expected_hash != hashed:
                 rm_rf(path)
                 raise RuntimeError(
-                    "{} mismatch: '{}' != '{}'".format(
-                        tp.upper(), hashed, expected_hash
-                    )
+                    f"{tp.upper()} mismatch: '{hashed}' != '{expected_hash}'"
                 )
             break
 
@@ -253,8 +250,7 @@ def git_mirror_checkout_recursive(
 
     if not mirror_dir.startswith(git_cache + os.sep):
         sys.exit(
-            "Error: Attempting to mirror to %s which is outside of GIT_CACHE %s"
-            % (mirror_dir, git_cache)
+            f"Error: Attempting to mirror to {mirror_dir} which is outside of GIT_CACHE {git_cache}"
         )
 
     # This is necessary for Cygwin git and m2-git, although it is fixed in newer MSYS2.
@@ -302,7 +298,7 @@ def git_mirror_checkout_recursive(
         except CalledProcessError:
             msg = (
                 "Failed to update local git cache. "
-                "Deleting local cached repo: {} ".format(mirror_dir)
+                f"Deleting local cached repo: {mirror_dir} "
             )
             print(msg)
 
@@ -323,7 +319,7 @@ def git_mirror_checkout_recursive(
         except CalledProcessError:
             # on windows, remote URL comes back to us as cygwin or msys format.  Python doesn't
             # know how to normalize it.  Need to convert it to a windows path.
-            if sys.platform == "win32" and git_url.startswith("/"):
+            if on_win and git_url.startswith("/"):
                 git_url = convert_unix_path_to_win(git_url)
 
             if os.path.exists(git_url):
@@ -438,7 +434,7 @@ def git_source(source_dict, git_cache, src_dir, recipe_path=None, verbose=True):
     if git_url.startswith("."):
         # It's a relative path from the conda recipe
         git_url = abspath(normpath(os.path.join(recipe_path, git_url)))
-        if sys.platform == "win32":
+        if on_win:
             git_dn = git_url.replace(":", "_")
         else:
             git_dn = git_url[1:]
