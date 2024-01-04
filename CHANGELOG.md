@@ -5,7 +5,7 @@
 ### Bug fixes
 
 * Update `conda_build.os_utils.liefldd.ensure_binary` to handle `None` inputs. (#5123 via #5124)
-* Update `which_package` to use a cached mapping of files to packages (`O(1)`) instead of relying on `Path.samefile` comparisons (`O(n * m)`). (#5126 via #5130)
+* Update `conda_build.inspect_pkg.which_package` to use a cached mapping of paths to packages (first call: `O(n)`, subsequent calls: `O(1)`) instead of relying on `Path.samefile` comparisons (`O(n * m)`). (#5126 via #5130)
 
 ### Contributors
 
