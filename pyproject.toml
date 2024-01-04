@@ -129,4 +129,5 @@ markers = [
   "slow: execute the slow tests if active",
   "sanity: execute the sanity tests",
   "no_default_testing_config: used internally to disable monkeypatching for testing_config",
+  "benchmark: execute the benchmark tests",
 ]
