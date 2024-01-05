@@ -274,7 +274,7 @@ def test_logger_config_from_file(testing_workdir, capfd, mocker):
     test_file = os.path.join(testing_workdir, "build_log_config.yaml")
     with open(test_file, "w") as f:
         f.write(
-            """
+            f"""
 version: 1
 formatters:
   simple:
@@ -286,14 +286,14 @@ handlers:
     formatter: simple
     stream: ext://sys.stdout
 loggers:
-  {}:
+  {__name__}:
     level: WARN
     handlers: [console]
     propagate: no
 root:
   level: DEBUG
   handlers: [console]
-""".format(__name__)
+"""
         )
     cc_conda_build = mocker.patch.object(utils, "cc_conda_build")
     cc_conda_build.get.return_value = test_file

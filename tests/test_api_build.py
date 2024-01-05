@@ -12,6 +12,7 @@ import sys
 import tarfile
 import uuid
 from collections import OrderedDict
+from contextlib import nullcontext
 from glob import glob
 from pathlib import Path
 from shutil import which
@@ -28,8 +29,10 @@ from conda.exceptions import ClobberError, CondaMultiError
 import conda_build
 from conda_build import __version__, api, exceptions
 from conda_build.conda_interface import (
+    CONDA_VERSION,
     CondaError,
     LinkError,
+    VersionOrder,
     cc_conda_build,
     context,
     reset_context,
@@ -45,7 +48,6 @@ from conda_build.exceptions import (
 from conda_build.os_utils.external import find_executable
 from conda_build.render import finalize_metadata
 from conda_build.utils import (
-    FileNotFoundError,
     check_call_env,
     check_output_env,
     convert_path_for_cygwin_or_msys2,
@@ -397,12 +399,12 @@ def dummy_executable(folder, exename):
     with open(dummyfile, "w") as f:
         f.write(
             prefix
-            + """
-    echo ******* You have reached the dummy {}. It is likely there is a bug in
+            + f"""
+    echo ******* You have reached the dummy {exename}. It is likely there is a bug in
     echo ******* conda that makes it not add the _build/bin directory onto the
     echo ******* PATH before running the source checkout tool
     exit -1
-    """.format(exename)
+    """
         )
     if sys.platform != "win32":
         import stat
@@ -611,10 +613,9 @@ def test_numpy_setup_py_data(testing_config):
     subprocess.check_call(["conda", "install", "-y", "cython"])
     m = api.render(recipe_path, config=testing_config, numpy="1.16")[0][0]
     _hash = m.hash_dependencies()
-    assert os.path.basename(
-        api.get_output_file_path(m)[0]
-    ) == "load_setup_py_test-0.1.0-np116py{}{}{}_0.tar.bz2".format(
-        sys.version_info.major, sys.version_info.minor, _hash
+    assert (
+        os.path.basename(api.get_output_file_path(m)[0])
+        == f"load_setup_py_test-0.1.0-np116py{sys.version_info.major}{sys.version_info.minor}{_hash}_0.tar.bz2"
     )
 
 
@@ -813,9 +814,9 @@ def test_disable_pip(testing_metadata):
     with pytest.raises(subprocess.CalledProcessError):
         api.build(testing_metadata)
 
-    testing_metadata.meta["build"]["script"] = (
-        'python -c "import setuptools; ' 'print(setuptools.__version__)"'
-    )
+    testing_metadata.meta["build"][
+        "script"
+    ] = 'python -c "import setuptools; print(setuptools.__version__)"'
     with pytest.raises(subprocess.CalledProcessError):
         api.build(testing_metadata)
 
@@ -1902,3 +1903,43 @@ def test_activated_prefixes_in_actual_path(testing_metadata):
         if path in expected_paths
     ]
     assert actual_paths == expected_paths
+
+
+@pytest.mark.parametrize("add_pip_as_python_dependency", [False, True])
+def test_add_pip_as_python_dependency_from_condarc_file(
+    testing_metadata, testing_workdir, add_pip_as_python_dependency, monkeypatch
+):
+    """
+    Test whether settings from .condarc files are heeded.
+    ref: https://github.com/conda/conda-libmamba-solver/issues/393
+    """
+    if VersionOrder(CONDA_VERSION) <= VersionOrder("23.10.0"):
+        if not add_pip_as_python_dependency and context.solver == "libmamba":
+            pytest.xfail(
+                "conda.plan.install_actions from conda<=23.10.0 ignores .condarc files."
+            )
+        from conda.base.context import context_stack
+
+        # ContextStack's pop/replace methods don't call self.apply.
+        context_stack.apply()
+
+    # TODO: SubdirData._cache_ clearing might not be needed for future conda versions.
+    #       See https://github.com/conda/conda/pull/13365 for proposed changes.
+    from conda.core.subdir_data import SubdirData
+
+    # SubdirData's cache doesn't distinguish on add_pip_as_python_dependency.
+    SubdirData._cache_.clear()
+
+    testing_metadata.meta["build"]["script"] = ['python -c "import pip"']
+    testing_metadata.meta["requirements"]["host"] = ["python"]
+    del testing_metadata.meta["test"]
+    if add_pip_as_python_dependency:
+        check_build_fails = nullcontext()
+    else:
+        check_build_fails = pytest.raises(subprocess.CalledProcessError)
+
+    conda_rc = Path(testing_workdir, ".condarc")
+    conda_rc.write_text(f"add_pip_as_python_dependency: {add_pip_as_python_dependency}")
+    with env_var("CONDARC", conda_rc, reset_context):
+        with check_build_fails:
+            api.build(testing_metadata)

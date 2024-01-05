@@ -7,8 +7,9 @@ import sys
 from itertools import islice
 from subprocess import PIPE, STDOUT, CalledProcessError, Popen, check_output
 
-from conda_build import utils
-from conda_build.os_utils.external import find_preferably_prefixed_executable
+from .. import utils
+from ..utils import on_mac
+from .external import find_preferably_prefixed_executable
 
 NO_EXT = (
     ".py",
@@ -76,7 +77,7 @@ def human_filetype(path, build_prefix):
     if not lines[0].startswith((path, "Mach header")):
         raise ValueError(
             "Expected `otool -h` output to start with"
-            " Mach header or {}, got:\n{}".format(path, output)
+            f" Mach header or {path}, got:\n{output}"
         )
     assert lines[0].startswith((path, "Mach header")), path
 
@@ -183,8 +184,8 @@ def find_apple_cctools_executable(name, build_prefix, nofail=False):
                     except Exception as e:
                         log = utils.get_logger(__name__)
                         log.error(
-                            "ERROR :: Found `{}` but is is an Apple Xcode stub executable\n"
-                            "and it returned an error:\n{}".format(tool, e.output)
+                            f"ERROR :: Found `{tool}` but is is an Apple Xcode stub executable\n"
+                            f"and it returned an error:\n{e.output}"
                         )
                         raise e
                     tool = tool_xcr
@@ -356,6 +357,6 @@ def install_name_change(path, build_prefix, cb_func, dylibs, verbose=False):
 
 
 if __name__ == "__main__":
-    if sys.platform == "darwin":
+    if on_mac:
         for path in "/bin/ls", "/etc/locate.rc":
             print(path, is_macho(path))

@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from collections import defaultdict
 
-from conda_build.config import Config
-from conda_build.metadata import MetaData
+from .config import Config
+from .metadata import MetaData
 
 
 def create_metapackage(
@@ -19,7 +19,7 @@ def create_metapackage(
     config=None,
 ):
     # local import to avoid circular import, we provide create_metapackage in api
-    from conda_build.api import build
+    from .api import build
 
     if not config:
         config = Config()

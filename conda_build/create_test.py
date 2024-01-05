@@ -229,16 +229,14 @@ def create_pl_files(m: MetaData, test_dir: os.PathLike) -> bool:
                     # Don't try to print version for complex imports
                     if " " not in name:
                         print(
-                            (
-                                "if (defined {0}->VERSION) {{\n"
-                                + "\tmy $given_version = {0}->VERSION;\n"
-                                + "\t$given_version =~ s/0+$//;\n"
-                                + "\tdie('Expected version ' . $expected_version . ' but"
-                                + " found ' . $given_version) unless ($expected_version "
-                                + "eq $given_version);\n"
-                                + "\tprint('\tusing version ' . {0}->VERSION . '\n');\n"
-                                + "\n}}"
-                            ).format(name),
+                            f"if (defined {name}->VERSION) {{\n"
+                            f"\tmy $given_version = {name}->VERSION;\n"
+                            f"\t$given_version =~ s/0+$//;\n"
+                            f"\tdie('Expected version ' . $expected_version . ' but"
+                            f" found ' . $given_version) unless ($expected_version "
+                            f"eq $given_version);\n"
+                            f"\tprint('\tusing version ' . {name}->VERSION . '\n');\n"
+                            f"\n}}",
                             file=fo,
                         )
     return tf if (tf_exists or imports) else False

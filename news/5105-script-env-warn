@@ -1,0 +1,20 @@
+### Enhancements
+
+* Relax script_env error in outputs when variable referenced in script_env is not defined.
+  This unifies current behavior with the top-level build. (#5105)
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* <news item>
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>

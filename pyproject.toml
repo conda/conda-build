@@ -36,7 +36,7 @@ dependencies = [
   "jinja2",
   "jsonschema >=4.19",
   "libarchive-c",
-  "menuinst",
+  "menuinst >=2",
   "packaging",
   "pkginfo",
   "psutil",
@@ -97,7 +97,10 @@ pycodestyle = {max-line-length = 120}
 # E, W = pycodestyle errors and warnings
 # F = pyflakes
 # I = isort
-select = ["E", "W", "F", "I"]
+# UP = pyupgrade
+# ISC = flake8-implicit-str-concat
+# see also https://docs.astral.sh/ruff/rules/
+select = ["E", "W", "F", "I", "UP", "ISC"]
 # E402 module level import not at top of file
 # E722 do not use bare 'except'
 # E731 do not assign a lambda expression, use a def

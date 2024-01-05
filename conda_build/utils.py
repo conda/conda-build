@@ -18,10 +18,15 @@ import sys
 import tarfile
 import tempfile
 import time
+import urllib.parse as urlparse
+import urllib.request as urllib
 from collections import OrderedDict, defaultdict
 from functools import lru_cache
+from glob import glob
 from itertools import filterfalse
+from json.decoder import JSONDecodeError
 from locale import getpreferredencoding
+from os import walk
 from os.path import (
     abspath,
     dirname,
@@ -38,58 +43,28 @@ from pathlib import Path
 from threading import Thread
 from typing import Iterable
 
-import libarchive
-
-from .deprecations import deprecated
-
-try:
-    from json.decoder import JSONDecodeError
-except ImportError:
-    JSONDecodeError = ValueError
-
 import conda_package_handling.api
 import filelock
+import libarchive
 import yaml
-
-try:
-    from conda.base.constants import (
-        CONDA_PACKAGE_EXTENSION_V1,
-        CONDA_PACKAGE_EXTENSION_V2,
-        CONDA_PACKAGE_EXTENSIONS,
-    )
-except Exception:
-    from conda.base.constants import (
-        CONDA_TARBALL_EXTENSION as CONDA_PACKAGE_EXTENSION_V1,
-    )
-
-    CONDA_PACKAGE_EXTENSION_V2 = ".conda"
-    CONDA_PACKAGE_EXTENSIONS = (CONDA_PACKAGE_EXTENSION_V2, CONDA_PACKAGE_EXTENSION_V1)
-
-import urllib.parse as urlparse
-import urllib.request as urllib
-from contextlib import ExitStack  # noqa: F401
-from glob import glob
-
-from conda.api import PackageCacheData  # noqa
-from conda.base.constants import KNOWN_SUBDIRS
+from conda.base.constants import (
+    CONDA_PACKAGE_EXTENSION_V1,  # noqa: F401
+    CONDA_PACKAGE_EXTENSION_V2,  # noqa: F401
+    CONDA_PACKAGE_EXTENSIONS,
+    KNOWN_SUBDIRS,
+)
 from conda.core.prefix_data import PrefixData
 from conda.models.dist import Dist
 from conda.models.records import PrefixRecord
 
-# NOQA because it is not used in this file.
-from conda_build.conda_interface import rm_rf as _rm_rf  # noqa
-from conda_build.exceptions import BuildLockError  # noqa
-from conda_build.os_utils import external  # noqa
-
-from .conda_interface import (  # noqa
+from .conda_interface import (
     CondaHTTPError,
-    Dist,  # noqa
     MatchSpec,
-    StringIO,  # noqa
+    StringIO,
     TemporaryDirectory,
     VersionOrder,
-    cc_conda_build,  # noqa
-    context,  # noqa
+    cc_conda_build,
+    context,
     download,
     get_conda_channel,
     hashsum_file,
@@ -99,9 +74,9 @@ from .conda_interface import (  # noqa
     unix_path_to_win,
     win_path_to_unix,
 )
-
-PermissionError = PermissionError  # NOQA
-FileNotFoundError = FileNotFoundError
+from .conda_interface import rm_rf as _rm_rf
+from .deprecations import deprecated
+from .exceptions import BuildLockError
 
 on_win = sys.platform == "win32"
 on_mac = sys.platform == "darwin"
@@ -137,11 +112,6 @@ if __name__ == '__main__':
 
 # filenames accepted as recipe meta files
 VALID_METAS = ("meta.yaml", "meta.yml", "conda.yaml", "conda.yml")
-
-try:
-    from os import scandir, walk  # NOQA
-except ImportError:
-    from scandir import walk
 
 
 @lru_cache(maxsize=None)
@@ -230,7 +200,7 @@ def _setup_rewrite_pipe(env):
 
     r_fd, w_fd = os.pipe()
     r = os.fdopen(r_fd, "rt")
-    if sys.platform == "win32":
+    if on_win:
         replacement_t = "%{}%"
     else:
         replacement_t = "${}"
@@ -714,8 +684,8 @@ def merge_tree(
     assert not dst.startswith(src), (
         "Can't merge/copy source into subdirectory of itself.  "
         "Please create separate spaces for these things.\n"
-        "  src: {}\n"
-        "  dst: {}".format(src, dst)
+        f"  src: {src}\n"
+        f"  dst: {dst}"
     )
 
     new_files = copytree(src, dst, symlinks=symlinks, dry_run=True)
@@ -833,10 +803,12 @@ decompressible_exts = (
 
 
 def _tar_xf_fallback(tarball, dir_path, mode="r:*"):
+    from .os_utils.external import find_executable
+
     if tarball.lower().endswith(".tar.z"):
-        uncompress = external.find_executable("uncompress")
+        uncompress = find_executable("uncompress")
         if not uncompress:
-            uncompress = external.find_executable("gunzip")
+            uncompress = find_executable("gunzip")
         if not uncompress:
             sys.exit(
                 """\
@@ -863,8 +835,6 @@ uncompress (or gunzip) is required to unarchive .z source files.
 
 
 def tar_xf_file(tarball, entries):
-    from conda_build.utils import ensure_list
-
     entries = ensure_list(entries)
     if not os.path.isabs(tarball):
         tarball = os.path.join(os.getcwd(), tarball)
@@ -992,7 +962,9 @@ def rec_glob(path, patterns, ignores=None):
 
 
 def convert_unix_path_to_win(path):
-    if external.find_executable("cygpath"):
+    from .os_utils.external import find_executable
+
+    if find_executable("cygpath"):
         cmd = f"cygpath -w {path}"
         path = subprocess.getoutput(cmd)
 
@@ -1002,7 +974,9 @@ def convert_unix_path_to_win(path):
 
 
 def convert_win_path_to_unix(path):
-    if external.find_executable("cygpath"):
+    from .os_utils.external import find_executable
+
+    if find_executable("cygpath"):
         cmd = f"cygpath -u {path}"
         path = subprocess.getoutput(cmd)
 
@@ -1018,7 +992,7 @@ def path2url(path):
 
 
 def get_stdlib_dir(prefix, py_ver):
-    if sys.platform == "win32":
+    if on_win:
         lib_dir = os.path.join(prefix, "Lib")
     else:
         lib_dir = os.path.join(prefix, "lib")
@@ -1042,7 +1016,7 @@ def get_build_folders(croot):
 
 def prepend_bin_path(env, prefix, prepend_prefix=False):
     env["PATH"] = join(prefix, "bin") + os.pathsep + env["PATH"]
-    if sys.platform == "win32":
+    if on_win:
         env["PATH"] = (
             join(prefix, "Library", "mingw-w64", "bin")
             + os.pathsep
@@ -1093,7 +1067,7 @@ def path_prepended(prefix, prepend_prefix=True):
         os.environ["PATH"] = old_path
 
 
-bin_dirname = "Scripts" if sys.platform == "win32" else "bin"
+bin_dirname = "Scripts" if on_win else "bin"
 
 entry_pat = re.compile(r"\s*([\w\-\.]+)\s*=\s*([\w.]+):([\w.]+)\s*$")
 
@@ -1152,7 +1126,7 @@ _posix_exes_cache = {}
 
 def convert_path_for_cygwin_or_msys2(exe, path):
     "If exe is a Cygwin or MSYS2 executable then filters it through `cygpath -u`"
-    if sys.platform != "win32":
+    if not on_win:
         return path
     if exe not in _posix_exes_cache:
         with open(exe, "rb") as exe_file:
@@ -1361,8 +1335,8 @@ def find_recipe(path):
     if len(metas) == 1:
         get_logger(__name__).warn(
             "Multiple meta files found. "
-            "The %s file in the base directory (%s) "
-            "will be used." % (metas[0], path)
+            f"The {metas[0]} file in the base directory ({path}) "
+            "will be used."
         )
         return os.path.join(path, metas[0])
 
@@ -1801,9 +1775,7 @@ def merge_or_update_dict(
                     and raise_on_clobber
                 ):
                     log.debug(
-                        "clobbering key {} (original value {}) with value {}".format(
-                            key, base_value, value
-                        )
+                        f"clobbering key {key} (original value {base_value}) with value {value}"
                     )
                 if value is None and key in base:
                     del base[key]
@@ -1957,14 +1929,12 @@ def ensure_valid_spec(spec, warn=False):
                     if match.group(1) not in ("python", "vc") and warn:
                         log = get_logger(__name__)
                         log.warn(
-                            "Adding .* to spec '{}' to ensure satisfiability.  Please "
+                            f"Adding .* to spec '{spec}' to ensure satisfiability.  Please "
                             "consider putting {{{{ var_name }}}}.* or some relational "
                             "operator (>/</>=/<=) on this spec in meta.yaml, or if req is "
                             "also a build req, using {{{{ pin_compatible() }}}} jinja2 "
                             "function instead.  See "
-                            "https://conda.io/docs/user-guide/tasks/build-packages/variants.html#pinning-at-the-variant-level".format(  # NOQA
-                                spec
-                            )
+                            "https://conda.io/docs/user-guide/tasks/build-packages/variants.html#pinning-at-the-variant-level"
                         )
                     spec = spec_needing_star_re.sub(r"\1 \2.*", spec)
     return spec
@@ -2055,6 +2025,8 @@ def sha256_checksum(filename, buffersize=65536):
 
 
 def write_bat_activation_text(file_handle, m):
+    from .os_utils.external import find_executable
+
     file_handle.write(f'call "{root_script_dir}\\..\\condabin\\conda_hook.bat"\n')
     if m.is_cross:
         # HACK: we need both build and host envs "active" - i.e. on PATH,
@@ -2087,7 +2059,6 @@ def write_bat_activation_text(file_handle, m):
     file_handle.write(
         f'call "{root_script_dir}\\..\\condabin\\conda.bat" activate --stack "{m.config.build_prefix}"\n'
     )
-    from conda_build.os_utils.external import find_executable
 
     ccache = find_executable("ccache", m.config.build_prefix, False)
     if ccache:
@@ -2127,10 +2098,7 @@ def write_bat_activation_text(file_handle, m):
                         file_handle.write(f"mklink gcc-ranlib{ext} {ccache}\n")
                     file_handle.write("popd\n")
                     file_handle.write(
-                        "set PATH={dirname_ccache_ln};{dirname_ccache};%PATH%\n".format(
-                            dirname_ccache_ln=dirname_ccache_ln_bin,
-                            dirname_ccache=os.path.dirname(ccache),
-                        )
+                        f"set PATH={dirname_ccache_ln_bin};{os.path.dirname(ccache)};%PATH%\n"
                     )
                 elif method == "native":
                     pass
@@ -2190,17 +2158,15 @@ def shutil_move_more_retrying(src, dest, debug_name):
             shutil.move(src, dest)
             if attempts_left != 5:
                 log.warning(
-                    "shutil.move({}={}, dest={}) succeeded on attempt number {}".format(
-                        debug_name, src, dest, 6 - attempts_left
-                    )
+                    f"shutil.move({debug_name}={src}, dest={dest}) succeeded on attempt number {6 - attempts_left}"
                 )
             attempts_left = -1
         except:
             attempts_left = attempts_left - 1
         if attempts_left > 0:
             log.warning(
-                "Failed to rename {} directory, check with strace, struss or procmon. "
-                "Will sleep for 3 seconds and try again!".format(debug_name)
+                f"Failed to rename {debug_name} directory, check with strace, struss or procmon. "
+                "Will sleep for 3 seconds and try again!"
             )
             import time
 

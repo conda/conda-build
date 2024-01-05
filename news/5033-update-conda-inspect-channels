@@ -1,0 +1,22 @@
+### Enhancements
+
+* Update `conda inspect channels` to use updated solver/transaction logic. (#5033)
+
+### Bug fixes
+
+* <news item>
+
+### Deprecations
+
+* Mark `conda inspect channels --test-installable` as pending deprecation. (#5033)
+* Mark `conda_build.inspect_pkg.check_install(package)` as pending deprecation in favor of `conda_build.inspect_pkg.check_install(subdir)`. (#5033)
+* Mark `conda_build.inspect_pkg.check_install(prepend)` as pending deprecation. (#5033)
+* Mark `conda_build.inspect_pkg.check_install(minimal_hint)` as pending deprecation. (#5033)
+
+### Docs
+
+* <news item>
+
+### Other
+
+* <news item>
