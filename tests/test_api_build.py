@@ -26,7 +26,6 @@ from binstar_client.errors import NotFound
 from conda.common.compat import on_linux, on_mac, on_win
 from conda.exceptions import ClobberError, CondaMultiError
 
-import conda_build
 from conda_build import __version__, api, exceptions
 from conda_build.conda_interface import (
     CONDA_VERSION,
@@ -1494,13 +1493,13 @@ def test_no_force_upload_condarc_setting(mocker, testing_workdir, testing_metada
     testing_metadata.config.anaconda_upload = True
     del testing_metadata.meta["test"]
     api.output_yaml(testing_metadata, "meta.yaml")
-    call = mocker.patch.object(conda_build.build.subprocess, "call")
+    call = mocker.patch("subprocess.call")
     cc_conda_build["force_upload"] = False
     pkg = api.build(testing_workdir)
-    assert call.called_once_with(["anaconda", "upload", pkg])
+    call.assert_called_once_with(["anaconda", "upload", pkg])
     del cc_conda_build["force_upload"]
     pkg = api.build(testing_workdir)
-    assert call.called_once_with(["anaconda", "upload", "--force", pkg])
+    call.assert_called_once_with(["anaconda", "upload", "--force", pkg])
 
 
 @pytest.mark.sanity

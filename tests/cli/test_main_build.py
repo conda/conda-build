@@ -6,7 +6,6 @@ from pathlib import Path
 
 import pytest
 
-import conda_build
 from conda_build import api
 from conda_build.cli import main_build, main_render
 from conda_build.conda_interface import (
@@ -274,17 +273,17 @@ def test_no_force_upload(mocker, testing_workdir, testing_metadata, request):
     del testing_metadata.meta["test"]
     api.output_yaml(testing_metadata, "meta.yaml")
     args = ["--no-force-upload", testing_workdir]
-    call = mocker.patch.object(conda_build.build.subprocess, "call")
+    call = mocker.patch("subprocess.call")
     request.addfinalizer(_reset_config)
     _reset_config([os.path.join(testing_workdir, ".condarc")])
     main_build.execute(args)
     pkg = api.get_output_file_path(testing_metadata)
-    assert call.called_once_with(["anaconda", "upload", pkg])
+    call.assert_called_once_with(["anaconda", "upload", pkg])
     args = [testing_workdir]
     with open(os.path.join(testing_workdir, ".condarc"), "w") as f:
         f.write("anaconda_upload: True\n")
     main_build.execute(args)
-    assert call.called_once_with(["anaconda", "upload", "--force", pkg])
+    call.assert_called_once_with(["anaconda", "upload", "--force", pkg])
 
 
 @pytest.mark.slow
