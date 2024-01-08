@@ -21,27 +21,28 @@ from conda.models.dist import Dist
 from conda.models.records import PrefixRecord
 from conda.resolve import MatchSpec
 
-from conda_build.conda_interface import (
+from . import conda_interface
+from .conda_interface import (
     linked_data,
     specs_from_args,
 )
-from conda_build.os_utils.ldd import (
+from .deprecations import deprecated
+from .os_utils.ldd import (
     get_linkages,
     get_package_obj_files,
     get_untracked_obj_files,
 )
-from conda_build.os_utils.liefldd import codefile_class, machofile
-from conda_build.os_utils.macho import get_rpaths, human_filetype
-from conda_build.utils import (
+from .os_utils.liefldd import codefile_class, machofile
+from .os_utils.macho import get_rpaths, human_filetype
+from .utils import (
     comma_join,
     ensure_list,
     get_logger,
+    on_linux,
+    on_mac,
+    on_win,
     package_has_file,
 )
-
-from . import conda_interface
-from .deprecations import deprecated
-from .utils import on_mac, on_win, samefile
 
 log = get_logger(__name__)
 
@@ -49,7 +50,7 @@ log = get_logger(__name__)
 @deprecated("3.28.0", "24.1.0")
 @lru_cache(maxsize=None)
 def dist_files(prefix: str | os.PathLike | Path, dist: Dist) -> set[str]:
-    if (prec := PrefixData(prefix).get(dist.name, None)) is None:
+    if (prec := PrefixData(str(prefix)).get(dist.name, None)) is None:
         return set()
     elif MatchSpec(dist).match(prec):
         return set(prec["files"])
@@ -62,19 +63,48 @@ def which_package(
     path: str | os.PathLike | Path,
     prefix: str | os.PathLike | Path,
 ) -> Iterable[PrefixRecord]:
-    """
+    """Detect which package(s) a path belongs to.
+
     Given the path (of a (presumably) conda installed file) iterate over
     the conda packages the file came from.  Usually the iteration yields
     only one package.
+
+    We use lstat since a symlink doesn't clobber the file it points to.
     """
     prefix = Path(prefix)
-    # historically, path was relative to prefix just to be safe we append to prefix
-    # (pathlib correctly handles this even if path is absolute)
-    path = prefix / path
 
+    # historically, path was relative to prefix, just to be safe we append to prefix
+    # get lstat before calling _file_package_mapping in case path doesn't exist
+    try:
+        lstat = (prefix / path).lstat()
+    except FileNotFoundError:
+        # FileNotFoundError: path doesn't exist
+        return
+    else:
+        yield from _file_package_mapping(prefix).get(lstat, ())
+
+
+@lru_cache(maxsize=None)
+def _file_package_mapping(prefix: Path) -> dict[os.stat_result, set[PrefixRecord]]:
+    """Map paths to package records.
+
+    We use lstat since a symlink doesn't clobber the file it points to.
+    """
+    mapping: dict[os.stat_result, set[PrefixRecord]] = {}
     for prec in PrefixData(str(prefix)).iter_records():
-        if any(samefile(prefix / file, path) for file in prec["files"]):
-            yield prec
+        for file in prec["files"]:
+            # packages are capable of removing files installed by other dependencies from
+            # the build prefix, in those cases lstat will fail, while which_package wont
+            # return the correct package(s) in such a condition we choose to not worry about
+            # it since this file to package lookup exists primarily to detect clobbering
+            try:
+                lstat = (prefix / file).lstat()
+            except FileNotFoundError:
+                # FileNotFoundError: path doesn't exist
+                continue
+            else:
+                mapping.setdefault(lstat, set()).add(prec)
+    return mapping
 
 
 def print_object_info(info, key):
@@ -156,9 +186,9 @@ def print_linkages(
 
 
 def replace_path(binary, path, prefix):
-    if sys.platform.startswith("linux"):
+    if on_linux:
         return abspath(path)
-    elif sys.platform.startswith("darwin"):
+    elif on_mac:
         if path == basename(binary):
             return abspath(join(prefix, binary))
         if "@rpath" in path:

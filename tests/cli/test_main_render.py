@@ -37,7 +37,7 @@ def test_render_add_channel():
         required_package_details = required_package_string.split(" ")
         assert len(required_package_details) > 1, (
             "Expected version number on successful "
-            "rendering, but got only {}".format(required_package_details)
+            f"rendering, but got only {required_package_details}"
         )
         assert (
             required_package_details[1] == "1.0"

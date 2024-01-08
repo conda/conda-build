@@ -3,8 +3,6 @@
 """
 Tools for converting PyPI packages to conda recipes.
 """
-
-
 import keyword
 import logging
 import os
@@ -23,7 +21,7 @@ import requests
 import yaml
 from requests.packages.urllib3.util.url import parse_url
 
-from conda_build.conda_interface import (
+from ..conda_interface import (
     StringIO,
     configparser,
     default_python,
@@ -34,20 +32,21 @@ from conda_build.conda_interface import (
     normalized_version,
     spec_from_line,
 )
-from conda_build.config import Config
-from conda_build.environ import create_env
-from conda_build.license_family import allowed_license_families, guess_license_family
-from conda_build.metadata import MetaData
-from conda_build.render import FIELDS as EXPECTED_SECTION_ORDER
-from conda_build.source import apply_patch
-from conda_build.utils import (
+from ..config import Config
+from ..environ import create_env
+from ..license_family import allowed_license_families, guess_license_family
+from ..metadata import MetaData
+from ..render import FIELDS as EXPECTED_SECTION_ORDER
+from ..source import apply_patch
+from ..utils import (
     check_call_env,
     decompressible_exts,
     ensure_list,
+    on_win,
     rm_rf,
     tar_xf,
 )
-from conda_build.version import _parse as parse_version
+from ..version import _parse as parse_version
 
 pypi_example = """
 Examples:
@@ -336,8 +335,7 @@ def skeletonize(
             if version:
                 if version not in versions:
                     sys.exit(
-                        "Error: Version %s of %s is not available on PyPI."
-                        % (version, package)
+                        f"Error: Version {version} of {package} is not available on PyPI."
                     )
                 d["version"] = version
             else:
@@ -1283,9 +1281,9 @@ def get_pkginfo(
             download(pypiurl, join(config.src_cache, filename))
             if hashsum_file(download_path, hash_type) != hash_value:
                 raise RuntimeError(
-                    " Download of {} failed"
-                    " checksum type {} expected value {}. Please"
-                    " try again.".format(package, hash_type, hash_value)
+                    f" Download of {package} failed"
+                    f" checksum type {hash_type} expected value {hash_value}. Please"
+                    " try again."
                 )
         else:
             print("Using cached download")
@@ -1366,7 +1364,7 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
     )
     stdlib_dir = join(
         config.host_prefix,
-        "Lib" if sys.platform == "win32" else "lib/python%s" % python_version,
+        "Lib" if on_win else "lib/python%s" % python_version,
     )
 
     patch = join(temp_dir, "pypi-distutils.patch")
@@ -1385,7 +1383,7 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
                 stdlib_dir,
                 "distutils",
                 "__pycache__",
-                "core.cpython-%s%s.pyc" % sys.version_info[:2],
+                f"core.cpython-{sys.version_info[0]}{sys.version_info[1]}.pyc",
             )
         )
         rm_rf(
@@ -1393,7 +1391,7 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
                 stdlib_dir,
                 "distutils",
                 "__pycache__",
-                "core.cpython-%s%s.pyo" % sys.version_info[:2],
+                f"core.cpython-{sys.version_info[0]}{sys.version_info[1]}.pyo",
             )
         )
     else:

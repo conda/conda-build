@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 """This file handles the parsing of feature specifications from files,
 ending up with a configuration matrix"""
-
 import os.path
 import re
 import sys
@@ -13,9 +12,9 @@ from itertools import product
 
 import yaml
 
-from conda_build.conda_interface import cc_conda_build, subdir
-from conda_build.utils import ensure_list, get_logger, islist, on_win, trim_empty_keys
-from conda_build.version import _parse as parse_version
+from .conda_interface import cc_conda_build, subdir
+from .utils import ensure_list, get_logger, islist, on_win, trim_empty_keys
+from .version import _parse as parse_version
 
 DEFAULT_VARIANTS = {
     "python": f"{sys.version_info.major}.{sys.version_info.minor}",
@@ -130,7 +129,7 @@ def get_default_variant(config):
 
 
 def parse_config_file(path, config):
-    from conda_build.metadata import get_selectors, select_lines
+    from .metadata import get_selectors, select_lines
 
     with open(path) as f:
         contents = f.read()
@@ -166,8 +165,8 @@ def validate_spec(src, spec):
         # check for duplicate keys
         unique = set()
         errors.extend(
-            "  zip_key entry {} in group {} is a duplicate, keys can only occur "
-            "in one group".format(k, zg)
+            f"  zip_key entry {k} in group {zg} is a duplicate, keys can only occur "
+            "in one group"
             # include error if key has already been seen, otherwise add to unique keys
             if k in unique
             else unique.add(k)
@@ -503,13 +502,8 @@ def filter_by_key_value(variants, key, values, source_name):
             else:
                 log = get_logger(__name__)
                 log.debug(
-                    "Filtering variant with key {key} not matching target value(s) "
-                    "({tgt_vals}) from {source_name}, actual {actual_val}".format(
-                        key=key,
-                        tgt_vals=values,
-                        source_name=source_name,
-                        actual_val=variant.get(key),
-                    )
+                    f"Filtering variant with key {key} not matching target value(s) "
+                    f"({values}) from {source_name}, actual {variant.get(key)}"
                 )
     return reduced_variants
 
@@ -651,7 +645,7 @@ def get_package_combined_spec(recipedir_or_metadata, config=None, variants=None)
     if hasattr(recipedir_or_metadata, "config"):
         config = recipedir_or_metadata.config
     if not config:
-        from conda_build.config import Config
+        from .config import Config
 
         config = Config()
     files = find_config_files(recipedir_or_metadata, config)
