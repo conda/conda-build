@@ -2188,6 +2188,7 @@ def is_conda_pkg(pkg_path: str) -> bool:
     )
 
 
+@deprecated("3.28.3", "24.1.0")
 def samefile(path1: Path, path2: Path) -> bool:
     try:
         return path1.samefile(path2)

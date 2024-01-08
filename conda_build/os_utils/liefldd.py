@@ -43,10 +43,12 @@ def is_string(s):
 # these are to be avoided, or if not avoided they
 # should be passed a binary when possible as that
 # will prevent having to parse it multiple times.
-def ensure_binary(file: str | os.PathLike | Path | lief.Binary) -> lief.Binary | None:
+def ensure_binary(
+    file: str | os.PathLike | Path | lief.Binary | None,
+) -> lief.Binary | None:
     if isinstance(file, lief.Binary):
         return file
-    elif not Path(file).exists():
+    elif not file or not Path(file).exists():
         return None
     try:
         return lief.parse(str(file))
@@ -525,9 +527,9 @@ def inspect_linkages_lief(
             todo.pop(0)
             filename2 = element[0]
             binary = element[1]
-            uniqueness_key = get_uniqueness_key(binary)
             if not binary:
                 continue
+            uniqueness_key = get_uniqueness_key(binary)
             if uniqueness_key not in already_seen:
                 parent_exe_dirname = None
                 if binary.format == lief.EXE_FORMATS.PE:
