@@ -599,6 +599,10 @@ def test_build_metadata_object(testing_metadata):
 
 
 @pytest.mark.serial
+@pytest.mark.skipif(
+    sys.version_info >= (3, 12),
+    reason="numpy.distutils deprecated in Python 3.12+",
+)
 def test_numpy_setup_py_data(testing_config):
     recipe_path = os.path.join(metadata_dir, "_numpy_setup_py_data")
     # this shows an error that is OK to ignore:
