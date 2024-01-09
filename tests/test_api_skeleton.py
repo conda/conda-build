@@ -11,7 +11,7 @@ import pytest
 import ruamel.yaml
 
 from conda_build import api
-from conda_build.exceptions import DependencyNeedsBuildingError
+from conda_build.config import Config
 from conda_build.skeletons.pypi import (
     clean_license_name,
     convert_to_flat_list,
@@ -333,30 +333,32 @@ def test_pypi_with_setup_options(tmp_path: Path, testing_config):
     assert "--offline" in m.meta["build"]["script"]
 
 
-def test_pypi_pin_numpy(tmp_path: Path, testing_config):
+def test_pypi_pin_numpy(tmp_path: Path, testing_config: Config):
     # The package used here must have a numpy dependence for pin-numpy to have
     # any effect.
     api.skeletonize(
-        packages="msumastro",
+        packages="fasttext",
         repo="pypi",
-        version="0.9.0",
+        version="0.9.2",
         config=testing_config,
         pin_numpy=True,
         output_dir=tmp_path,
     )
-    assert (tmp_path / "msumastro" / "meta.yaml").read_text().count("numpy x.x") == 2
-    with pytest.raises(DependencyNeedsBuildingError):
-        api.build("msumastro")
+    assert (tmp_path / "fasttext" / "meta.yaml").read_text().count("numpy x.x") == 2
+    api.build("fasttext")
 
 
-def test_pypi_version_sorting(tmp_path: Path, testing_config):
+def test_pypi_version_sorting(tmp_path: Path, testing_config: Config):
     # The package used here must have a numpy dependence for pin-numpy to have
     # any effect.
     api.skeletonize(
-        packages="impyla", repo="pypi", config=testing_config, output_dir=tmp_path
+        packages="fasttext",
+        repo="pypi",
+        config=testing_config,
+        output_dir=tmp_path,
     )
-    m = api.render(str(tmp_path / "impyla"))[0][0]
-    assert parse_version(m.version()) >= parse_version("0.13.8")
+    m = api.render(str(tmp_path / "fasttext"))[0][0]
+    assert parse_version(m.version()) >= parse_version("0.9.2")
 
 
 def test_list_skeletons():
