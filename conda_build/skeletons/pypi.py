@@ -1371,6 +1371,7 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
     with open(patch, "wb") as f:
         f.write(DISTUTILS_PATCH.format(temp_dir.replace("\\", "\\\\")).encode("utf-8"))
 
+    # distutils deprecated in Python 3.10+, removed in Python 3.12+
     distutils = join(stdlib_dir, "distutils")
     if isdir(distutils):
         if exists(join(distutils, "core.py-copy")):
