@@ -12,12 +12,7 @@ from pytest_mock import MockerFixture
 
 from conda_build import api
 from conda_build.cli import main_build, main_render
-from conda_build.conda_interface import (
-    TemporaryDirectory,
-    cc_conda_build,
-    context,
-    reset_context,
-)
+from conda_build.conda_interface import TemporaryDirectory
 from conda_build.config import (
     Config,
     zstd_compression_level_default,
@@ -28,14 +23,7 @@ from conda_build.os_utils.external import find_executable
 from conda_build.utils import get_build_folders, on_win, package_has_file
 
 from ..utils import metadata_dir
-
-
-def _reset_config(search_path=None):
-    reset_context(search_path)
-    cc_conda_build.clear()
-    cc_conda_build.update(
-        context.conda_build if hasattr(context, "conda_build") else {}
-    )
+from ..utils import reset_config as _reset_config
 
 
 @pytest.mark.sanity
@@ -281,6 +269,8 @@ def test_no_force_upload(
     testing_metadata: MetaData,
     request: FixtureRequest,
 ):
+    # this is nearly identical to tests/test_api_build.py::test_no_force_upload
+    # only difference is this tests `conda_build.cli.main_build.execute`
     request.addfinalizer(_reset_config)
     call = mocker.patch("subprocess.call")
     anaconda = find_executable("anaconda")
