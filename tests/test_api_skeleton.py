@@ -321,10 +321,11 @@ def test_pypi_with_setup_options(tmp_path: Path, testing_config):
     api.skeletonize(
         packages="photutils",
         repo="pypi",
-        version="0.2.2",
+        version="1.10.0",
         setup_options="--offline",
         config=testing_config,
         output_dir=tmp_path,
+        extra_specs=["extension-helpers"],
     )
 
     # Check that the setup option occurs in bld.bat and build.sh.
