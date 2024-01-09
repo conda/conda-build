@@ -125,7 +125,7 @@ def test_git_in_output_version(testing_config, conda_build_test_recipe_envvar: s
         recipe, config=testing_config, finalize=False, bypass_env_check=True
     )
     assert len(outputs) == 1
-    assert outputs[0][0].version() == "1.21.11"
+    assert outputs[0][0].version() == "1.22.0"
 
 
 def test_intradep_with_templated_output_name(testing_config):
