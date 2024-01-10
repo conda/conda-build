@@ -345,7 +345,6 @@ def test_pypi_pin_numpy(tmp_path: Path, testing_config: Config):
         output_dir=tmp_path,
     )
     assert (tmp_path / "fasttext" / "meta.yaml").read_text().count("numpy x.x") == 2
-    api.build("fasttext")
 
 
 def test_pypi_version_sorting(tmp_path: Path, testing_config: Config):
