@@ -69,7 +69,7 @@ jobs:
       fail-fast: false
       matrix:
         # test all lower versions (w/ stable conda) and upper version (w/ canary conda)
-        python-version: ['3.9', '3.10']
+        python-version: ['3.9', '3.10', '3.11']
         conda-version: [release]
         test-type: [serial, parallel]
         include:
@@ -81,10 +81,10 @@ jobs:
             conda-version: 22.11.0
             test-type: parallel
           # maximum Python/conda combo
-          - python-version: '3.11'
+          - python-version: '3.12'
             conda-version: canary
             test-type: serial
-          - python-version: '3.11'
+          - python-version: '3.12'
             conda-version: canary
             test-type: parallel
     env:
@@ -173,10 +173,10 @@ jobs:
         conda-version: [release]
         test-type: [serial, parallel]
         include:
-          - python-version: '3.11'
+          - python-version: '3.12'
             conda-version: canary
             test-type: serial
-          - python-version: '3.11'
+          - python-version: '3.12'
             conda-version: canary
             test-type: parallel
     env:
@@ -270,10 +270,10 @@ jobs:
         conda-version: [release]
         test-type: [serial, parallel]
         include:
-          - python-version: '3.11'
+          - python-version: '3.12'
             conda-version: canary
             test-type: serial
-          - python-version: '3.11'
+          - python-version: '3.12'
             conda-version: canary
             test-type: parallel
     env:
@@ -426,10 +426,10 @@ jobs:
           clean: true
           fetch-depth: 0
 
-      # Explicitly use Python 3.11 since each of the OSes has a different default Python
+      # Explicitly use Python 3.12 since each of the OSes has a different default Python
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Detect label
         shell: python

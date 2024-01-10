@@ -558,7 +558,7 @@ def add_parser(repos):
         action="store",
         default=default_python,
         help="""Version of Python to use to run setup.py. Default is %(default)s.""",
-        choices=["2.7", "3.5", "3.6", "3.7", "3.8", "3.9", "3.10", "3.11"],
+        choices=["2.7", "3.5", "3.6", "3.7", "3.8", "3.9", "3.10", "3.11", "3.12"],
     )
 
     pypi.add_argument(
@@ -1371,39 +1371,40 @@ def run_setuppy(src_dir, temp_dir, python_version, extra_specs, config, setup_op
     with open(patch, "wb") as f:
         f.write(DISTUTILS_PATCH.format(temp_dir.replace("\\", "\\\\")).encode("utf-8"))
 
-    if exists(join(stdlib_dir, "distutils", "core.py-copy")):
-        rm_rf(join(stdlib_dir, "distutils", "core.py"))
-        copy2(
-            join(stdlib_dir, "distutils", "core.py-copy"),
-            join(stdlib_dir, "distutils", "core.py"),
-        )
-        # Avoid race conditions. Invalidate the cache.
-        rm_rf(
-            join(
-                stdlib_dir,
-                "distutils",
-                "__pycache__",
-                f"core.cpython-{sys.version_info[0]}{sys.version_info[1]}.pyc",
+    # distutils deprecated in Python 3.10+, removed in Python 3.12+
+    distutils = join(stdlib_dir, "distutils")
+    if isdir(distutils):
+        if exists(join(distutils, "core.py-copy")):
+            rm_rf(join(distutils, "core.py"))
+            copy2(
+                join(distutils, "core.py-copy"),
+                join(distutils, "core.py"),
             )
-        )
-        rm_rf(
-            join(
-                stdlib_dir,
-                "distutils",
-                "__pycache__",
-                f"core.cpython-{sys.version_info[0]}{sys.version_info[1]}.pyo",
+            # Avoid race conditions. Invalidate the cache.
+            rm_rf(
+                join(
+                    distutils,
+                    "__pycache__",
+                    f"core.cpython-{sys.version_info[0]}{sys.version_info[1]}.pyc",
+                )
             )
-        )
-    else:
-        copy2(
-            join(stdlib_dir, "distutils", "core.py"),
-            join(stdlib_dir, "distutils", "core.py-copy"),
-        )
-    apply_patch(join(stdlib_dir, "distutils"), patch, config=config)
+            rm_rf(
+                join(
+                    distutils,
+                    "__pycache__",
+                    f"core.cpython-{sys.version_info[0]}{sys.version_info[1]}.pyo",
+                )
+            )
+        else:
+            copy2(
+                join(distutils, "core.py"),
+                join(distutils, "core.py-copy"),
+            )
+        apply_patch(distutils, patch, config=config)
 
-    vendored = join(stdlib_dir, "site-packages", "setuptools", "_distutils")
-    if os.path.isdir(vendored):
-        apply_patch(vendored, patch, config=config)
+    setuptools = join(stdlib_dir, "site-packages", "setuptools", "_distutils")
+    if isdir(setuptools):
+        apply_patch(setuptools, patch, config=config)
 
     # Save PYTHONPATH for later
     env = os.environ.copy()

@@ -3,6 +3,8 @@
 """
 This module tests the build API.  These are high-level integration tests.
 """
+from __future__ import annotations
+
 import json
 import logging
 import os
@@ -25,15 +27,15 @@ from binstar_client.commands import remove, show
 from binstar_client.errors import NotFound
 from conda.common.compat import on_linux, on_mac, on_win
 from conda.exceptions import ClobberError, CondaMultiError
+from pytest import FixtureRequest, MonkeyPatch
+from pytest_mock import MockerFixture
 
-import conda_build
 from conda_build import __version__, api, exceptions
 from conda_build.conda_interface import (
     CONDA_VERSION,
     CondaError,
     LinkError,
     VersionOrder,
-    cc_conda_build,
     context,
     reset_context,
     url_path,
@@ -45,6 +47,7 @@ from conda_build.exceptions import (
     OverDependingError,
     OverLinkingError,
 )
+from conda_build.metadata import MetaData
 from conda_build.os_utils.external import find_executable
 from conda_build.render import finalize_metadata
 from conda_build.utils import (
@@ -66,6 +69,7 @@ from .utils import (
     get_valid_recipes,
     metadata_dir,
     metadata_path,
+    reset_config,
 )
 
 
@@ -437,7 +441,7 @@ def test_checkout_tool_as_dependency(testing_workdir, testing_config, monkeypatc
 platforms = ["64" if sys.maxsize > 2**32 else "32"]
 if sys.platform == "win32":
     platforms = sorted({"32", *platforms})
-    compilers = ["3.10", "3.11"]
+    compilers = ["3.10", "3.11", "3.12"]
     msvc_vers = ["14.0"]
 else:
     msvc_vers = []
@@ -599,6 +603,10 @@ def test_build_metadata_object(testing_metadata):
 
 
 @pytest.mark.serial
+@pytest.mark.skipif(
+    sys.version_info >= (3, 12),
+    reason="numpy.distutils deprecated in Python 3.12+",
+)
 def test_numpy_setup_py_data(testing_config):
     recipe_path = os.path.join(metadata_dir, "_numpy_setup_py_data")
     # this shows an error that is OK to ignore:
@@ -1486,17 +1494,44 @@ def test_runtime_dependencies(testing_config):
 
 
 @pytest.mark.sanity
-def test_no_force_upload_condarc_setting(mocker, testing_workdir, testing_metadata):
-    testing_metadata.config.anaconda_upload = True
-    del testing_metadata.meta["test"]
+def test_no_force_upload(
+    mocker: MockerFixture,
+    monkeypatch: MonkeyPatch,
+    testing_workdir: str | os.PathLike | Path,
+    testing_metadata: MetaData,
+    request: FixtureRequest,
+):
+    # this is nearly identical to tests/cli/test_main_build.py::test_no_force_upload
+    # only difference is this tests `conda_build.api.build`
+    request.addfinalizer(reset_config)
+    call = mocker.patch("subprocess.call")
+    anaconda = find_executable("anaconda")
+
+    # render recipe
     api.output_yaml(testing_metadata, "meta.yaml")
-    call = mocker.patch.object(conda_build.build.subprocess, "call")
-    cc_conda_build["force_upload"] = False
+
+    # mock Config.set_keys to always set anaconda_upload to True
+    # conda's Context + conda_build's MetaData & Config objects interact in such an
+    # awful way that mocking these configurations is ugly and confusing, all of it
+    # needs major refactoring
+    set_keys = Config.set_keys  # store original method
+    override = {"anaconda_upload": True}
+    monkeypatch.setattr(
+        Config,
+        "set_keys",
+        lambda self, **kwargs: set_keys(self, **{**kwargs, **override}),
+    )
+
+    # check for normal upload
+    override["force_upload"] = False
     pkg = api.build(testing_workdir)
-    assert call.called_once_with(["anaconda", "upload", pkg])
-    del cc_conda_build["force_upload"]
+    call.assert_called_once_with([anaconda, "upload", *pkg])
+    call.reset_mock()
+
+    # check for force upload
+    override["force_upload"] = True
     pkg = api.build(testing_workdir)
-    assert call.called_once_with(["anaconda", "upload", "--force", pkg])
+    call.assert_called_once_with([anaconda, "upload", "--force", *pkg])
 
 
 @pytest.mark.sanity
