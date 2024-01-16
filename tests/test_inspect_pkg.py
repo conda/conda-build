@@ -24,15 +24,27 @@ def test_which_package(tmp_path: Path):
     (tmp_path / "internal").symlink_to(tmp_path / "hardlinkA")  # packageA
     (tmp_path / "external").symlink_to(tmp_path / "hardlinkB")  # packageA
     (tmp_path / "hardlinkB").touch()  # packageB
+    # Files might be deleted from the prefix during the build, but they should
+    # still be recognized since they will be present in the run environment.
+    (tmp_path / "deleted").unlink(missing_ok=True)  # packageA
+    (tmp_path / "deleted_shared").unlink(missing_ok=True)  # packageA & packageB
 
-    # a dummy package with a hardlink file, shared file, internal softlink, and external softlink
+    # a dummy package with a hardlink file, shared file, internal softlink,
+    # external softlink, deleted file, and deleted shared file
     (tmp_path / "conda-meta" / "packageA-1-0.json").write_text(
         json.dumps(
             {
                 "build": "0",
                 "build_number": 0,
                 "channel": "packageA-channel",
-                "files": ["hardlinkA", "shared", "internal", "external"],
+                "files": [
+                    "hardlinkA",
+                    "shared",
+                    "internal",
+                    "external",
+                    "deleted",
+                    "deleted_shared",
+                ],
                 "name": "packageA",
                 "paths_data": {
                     "paths": [
@@ -56,6 +68,16 @@ def test_which_package(tmp_path: Path):
                             "path_type": "softlink",
                             "size_in_bytes": 0,
                         },
+                        {
+                            "_path": "deleted",
+                            "path_type": "hardlink",
+                            "size_in_bytes": 0,
+                        },
+                        {
+                            "_path": "deleted_shared",
+                            "path_type": "hardlink",
+                            "size_in_bytes": 0,
+                        },
                     ],
                     "paths_version": 1,
                 },
@@ -63,14 +85,14 @@ def test_which_package(tmp_path: Path):
             }
         )
     )
-    # a dummy package with a hardlink file and shared file
+    # a dummy package with a hardlink file, shared file, deleted shared file
     (tmp_path / "conda-meta" / "packageB-1-0.json").write_text(
         json.dumps(
             {
                 "build": "0",
                 "build_number": 0,
                 "channel": "packageB-channel",
-                "files": ["hardlinkB", "shared"],
+                "files": ["hardlinkB", "shared", "deleted_shared"],
                 "name": "packageB",
                 "paths_data": {
                     "paths": [
@@ -81,6 +103,11 @@ def test_which_package(tmp_path: Path):
                         },
                         {
                             "_path": "shared",
+                            "path_type": "hardlink",
+                            "size_in_bytes": 0,
+                        },
+                        {
+                            "_path": "deleted_shared",
                             "path_type": "hardlink",
                             "size_in_bytes": 0,
                         },
@@ -120,6 +147,14 @@ def test_which_package(tmp_path: Path):
     precs_hardlinkB = list(which_package(tmp_path / "hardlinkB", tmp_path))
     assert len(precs_hardlinkB) == 1
     assert set(precs_hardlinkB) == {precB}
+
+    precs_deleted = list(which_package(tmp_path / "deleted", tmp_path))
+    assert len(precs_deleted) == 1
+    assert set(precs_deleted) == {precA}
+
+    precs_deleted_shared = list(which_package(tmp_path / "deleted_shared", tmp_path))
+    assert len(precs_deleted_shared) == 2
+    assert set(precs_deleted_shared) == {precA, precB}
 
 
 @pytest.mark.benchmark
