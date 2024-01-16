@@ -212,10 +212,14 @@ def test_which_package_battery(tmp_path: Path):
 
             assert len(list(which_package(path, tmp_path))) == 1
 
-    # removed files should return no packages
-    # this occurs when, e.g., a package removes files installed by another package
+    # removed files should still return a package
+    # this occurs when, e.g., a build script removes files installed by another package
+    # (The opposite case with files really missing from the run environment,
+    # e.g., due to a post-install script removing them, is less likely and not
+    # covered.)
+    #  covered here.)
     for file in removed:
-        assert not len(list(which_package(tmp_path / file, tmp_path)))
+        assert len(list(which_package(tmp_path / file, tmp_path))) == 1
 
     # missing files should return no packages
     assert not len(list(which_package(tmp_path / "missing", tmp_path)))
