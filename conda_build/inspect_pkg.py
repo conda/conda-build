@@ -84,7 +84,7 @@ def which_package(
 
 
 def file_package_mapping(
-    prefix: str | os.PathLike | Path
+    prefix: str | os.PathLike | Path,
 ) -> dict[os.stat_result, set[PrefixRecord]]:
     """Map paths to package records."""
     prefix = Path(prefix)
