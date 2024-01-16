@@ -179,3 +179,70 @@ def test_which_package_battery(tmp_path: Path):
 
     # missing files should return no packages
     assert not len(list(which_package(tmp_path / "missing", tmp_path)))
+
+
+def test_which_package_reuse_env(tmp_path: Path):
+    # create a dummy environment
+    (tmp_path / "conda-meta").mkdir()
+    (tmp_path / "conda-meta" / "history").touch()
+
+    # "install" a dummy package
+    (tmp_path / "fileA").touch()
+    (tmp_path / "conda-meta" / "packageA-1-0.json").write_text(
+        json.dumps(
+            {
+                "build": "0",
+                "build_number": 0,
+                "channel": "packageA-channel",
+                "files": ["fileA"],
+                "name": "packageA",
+                "paths_data": {
+                    "paths": [
+                        {"_path": "fileA", "path_type": "hardlink", "size_in_bytes": 0}
+                    ],
+                    "paths_version": 1,
+                },
+                "version": "1",
+            }
+        )
+    )
+
+    # fetch package records
+    pd = PrefixData(tmp_path)
+    precA = pd.get("packageA")
+
+    # test returned package records given a path
+    assert set(which_package(tmp_path / "fileA", tmp_path)) == {precA}
+
+    # "reuse" environment, mock uninstalling
+    (tmp_path / "fileA").unlink()
+    (tmp_path / "conda-meta" / "packageA-1-0.json").unlink()
+
+    # "install" another package
+    (tmp_path / "fileB").touch()
+    (tmp_path / "conda-meta" / "packageB-1-0.json").write_text(  # reinstall
+        json.dumps(
+            {
+                "build": "0",
+                "build_number": 0,
+                "channel": "packageB-channel",
+                "files": ["fileB", "fileB"],
+                "name": "packageB",
+                "paths_data": {
+                    "paths": [
+                        {"_path": "fileB", "path_type": "hardlink", "size_in_bytes": 0}
+                    ],
+                    "paths_version": 1,
+                },
+                "version": "1",
+            }
+        )
+    )
+
+    # fetch package records
+    PrefixData._cache_.clear()
+    pd = PrefixData(tmp_path)
+    precB = pd.get("packageB")
+
+    # test returned package records given a path
+    assert set(which_package(tmp_path / "fileB", tmp_path)) == {precB}

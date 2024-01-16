@@ -80,14 +80,22 @@ def which_package(
         # FileNotFoundError: path doesn't exist
         return
     else:
-        yield from _file_package_mapping(prefix).get(lstat, ())
+        yield from _file_package_mapping(
+            prefix,
+            (prefix / "conda-meta").lstat().st_mtime,
+        ).get(lstat, ())
 
 
 @lru_cache(maxsize=None)
-def _file_package_mapping(prefix: Path) -> dict[os.stat_result, set[PrefixRecord]]:
+def _file_package_mapping(
+    prefix: Path,
+    mtime: float,
+) -> dict[os.stat_result, set[PrefixRecord]]:
     """Map paths to package records.
 
     We use lstat since a symlink doesn't clobber the file it points to.
+
+    We use mtime to invalidate the cache when packages have been added/removed.
     """
     mapping: dict[os.stat_result, set[PrefixRecord]] = {}
     for prec in PrefixData(str(prefix)).iter_records():
