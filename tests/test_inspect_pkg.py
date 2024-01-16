@@ -226,7 +226,7 @@ def test_which_package_reuse_env(tmp_path: Path):
                 "build": "0",
                 "build_number": 0,
                 "channel": "packageB-channel",
-                "files": ["fileB", "fileB"],
+                "files": ["fileB"],
                 "name": "packageB",
                 "paths_data": {
                     "paths": [
