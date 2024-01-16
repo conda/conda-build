@@ -47,6 +47,7 @@ from .config import Config
 from .create_test import create_all_test_files
 from .exceptions import CondaBuildException, DependencyNeedsBuildingError
 from .index import _delegated_update_index, get_build_index
+from .inspect_pkg import _file_package_mapping
 from .metadata import FIELDS, MetaData
 from .os_utils import external
 from .post import (
@@ -2770,6 +2771,11 @@ def build(
                             "Not creating new env for output - already exists from top-level"
                         )
                     else:
+                        # _file_package_mapping cache must be invalidated when env paths are re-used
+                        log.debug(
+                            "Re-using environment paths - Clearing file_package_mapping cache"
+                        )
+                        _file_package_mapping.cache_clear()
                         m.config._merge_build_host = m.build_is_host
 
                         utils.rm_rf(m.config.host_prefix)
