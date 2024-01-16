@@ -746,14 +746,28 @@ def find_used_variables_in_text(variant, recipe_text, selectors_only=False):
             ]
         else:
             variant_lines = [
-                line for line in recipe_lines if v in line.replace("-", "_")
+                line
+                for line in recipe_lines
+                if v in line.replace("-", "_")
+                or any(v_sel in line for v_sel in PACKAGE_SELECTOR_MAP.get(v, ()))
             ]
         if not variant_lines:
             continue
+
         v_regex = re.escape(v)
+        # Recognize package-dependent selectors: e.g., "py>2" marks "python" as used.
+        v_sel_regex = "|".join(
+            (
+                v_regex,
+                *(re.escape(sel) for sel in PACKAGE_SELECTOR_MAP.get(v, ())),
+            )
+        )
         v_req_regex = "[-_]".join(map(re.escape, v.split("_")))
+
         variant_regex = r"\{\s*(?:pin_[a-z]+\(\s*?['\"])?%s[^'\"]*?\}\}" % v_regex
-        selector_regex = r"^[^#\[]*?\#?\s\[[^\]]*?(?<![_\w\d])%s[=\s<>!\]]" % v_regex
+        selector_regex = (
+            r"^[^#\[]*?\#?\s\[[^\]]*?(?<![_\w\d])(%s)[=\s<>!\]]" % v_sel_regex
+        )
         conditional_regex = (
             r"(?:^|[^\{])\{%\s*(?:el)?if\s*.*" + v_regex + r"\s*(?:[^%]*?)?%\}"
         )
