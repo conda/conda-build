@@ -11,6 +11,7 @@ import pytest
 from conda.core.prefix_data import PrefixData
 
 from conda_build.inspect_pkg import which_package
+from conda_build.utils import on_win
 
 
 def test_which_package(tmp_path: Path):
@@ -128,7 +129,11 @@ def test_which_package(tmp_path: Path):
     precs_missing = list(which_package(tmp_path / "missing", tmp_path))
     assert not precs_missing
 
-    precs_hardlinkA = list(which_package(tmp_path / "hardlinkA", tmp_path))
+    if on_win:
+        # On Windows, be lenient and allow case-insensitive path comparisons.
+        precs_hardlinkA = list(which_package(tmp_path / "Hardlinka", tmp_path))
+    else:
+        precs_hardlinkA = list(which_package(tmp_path / "hardlinkA", tmp_path))
     assert len(precs_hardlinkA) == 1
     assert set(precs_hardlinkA) == {precA}
 
