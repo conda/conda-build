@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
+from itertools import chain
 import os
 import subprocess
 import sys
@@ -24,7 +25,7 @@ from conda_build.metadata import (
     yamlize,
 )
 from conda_build.utils import DEFAULT_SUBDIRS
-from conda_build.variants import DEFAULT_VARIANTS
+from conda_build.variants import DEFAULT_VARIANTS, PACKAGE_SELECTOR_MAP
 
 from .utils import metadata_dir, metadata_path, thisdir
 
@@ -437,7 +438,10 @@ def test_get_selectors(
     monkeypatch.setenv("FEATURE_NOMKL", str(nomkl))
 
     config = Config(host_subdir=subdir)
-    assert get_selectors(config) == {
+    selectors = get_selectors(config)
+    for selector in chain(*PACKAGE_SELECTOR_MAP.values()):
+        assert selector in selectors
+    assert selectors == {
         # defaults
         "build_platform": context.subdir,
         "lua": DEFAULT_VARIANTS["lua"],

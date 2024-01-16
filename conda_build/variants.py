@@ -94,6 +94,13 @@ SUFFIX_MAP = {
     "R": "r_base",
 }
 
+PACKAGE_SELECTOR_MAP = {
+    "python": ("py", "py3k", "py2k", "py26", "py27", "py33", "py34", "py35", "py36"),
+    "numpy": ("np",),
+    "perl": ("pl",),
+    "lua": ("lua", "luajit"),
+}
+
 
 @lru_cache(maxsize=None)
 def _get_default_compilers(platform, py_ver):
