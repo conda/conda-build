@@ -14,6 +14,7 @@ from conda.common.compat import on_mac
 from conda_build import api, exceptions
 from conda_build.utils import ensure_list, package_has_file
 from conda_build.variants import (
+    PACKAGE_SELECTOR_MAP,
     combine_specs,
     dict_of_lists_to_list_of_dicts,
     filter_combined_spec_to_used_keys,
@@ -658,6 +659,19 @@ def test_variant_subkeys_retained():
     m.final = False
     outputs = m.get_output_metadata_set(permit_unsatisfiable_variants=False)
     get_all_replacements(outputs[0][1].config.variant)
+
+
+@pytest.mark.parametrize("with_outputs", [False, True])
+def test_variant_implicit_via_special_selector(with_outputs):
+    ms = api.render(
+        os.path.join(variants_dir, "32_variant_implicit_via_special_selector"),
+        variants={"python": ["2.7", "3.3", "3.4"], "with_outputs": [with_outputs]},
+        finalize=False,
+        bypass_env_check=True,
+    )
+    assert sorted(m.config.variant["python"] for m, _, _ in ms) == ["3.3", "3.4"]
+    for m, _, _ in ms:
+        assert m.get_used_vars().intersection(PACKAGE_SELECTOR_MAP) == {"python"}
 
 
 @pytest.mark.parametrize(

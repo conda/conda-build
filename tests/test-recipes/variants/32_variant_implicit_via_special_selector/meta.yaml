@@ -1,0 +1,13 @@
+package:
+  name: test_variant_implicit_via_special_selector
+  version: 1.0
+
+build:
+  # "python" variant implicitly injected via "py" selector, but not explicit.
+  skip: true  # [py<33]
+
+outputs:                                                         # [with_outputs]
+  - name: test_variant_implicit_via_special_selector_subpackage  # [with_outputs]
+    requirements:                                                # [with_outputs]
+      host:                                                      # [with_outputs]
+        - python                                                 # [with_outputs]

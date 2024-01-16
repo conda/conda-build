@@ -2,10 +2,10 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-from itertools import chain
 import os
 import subprocess
 import sys
+from itertools import chain
 
 import pytest
 from conda import __version__ as conda_version
