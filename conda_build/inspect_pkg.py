@@ -76,7 +76,7 @@ def which_package(
     # On Windows, be lenient and allow case-insensitive path comparisons.
     # NOTE: On macOS, although case-insensitive filesystem is default, still
     #       require case-sensitive matches (i.e., normcase on macOS is a no-op).
-    normcase_path = normcase(str(path).replace(os.sep, "/"))
+    normcase_path = normcase(path)
 
     for prec in PrefixData(str(prefix)).iter_records():
         files = prec["files"]
