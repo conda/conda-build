@@ -86,7 +86,7 @@ def test_which_package(tmp_path: Path):
             }
         )
     )
-    # a dummy package with a hardlink file, shared file, deleted shared file
+    # a dummy package with a hardlink file, shared file, and deleted shared file
     (tmp_path / "conda-meta" / "packageB-1-0.json").write_text(
         json.dumps(
             {
@@ -164,6 +164,44 @@ def test_which_package(tmp_path: Path):
     precs_deleted_shared = list(which_package(tmp_path / "deleted_shared", tmp_path))
     assert len(precs_deleted_shared) == 2
     assert set(precs_deleted_shared) == {precA, precB}
+
+    # reuse environment, regression test for #5136
+    (tmp_path / "conda-meta" / "packageA-1-0.json").unlink()
+    (tmp_path / "conda-meta" / "packageB-1-0.json").unlink()
+
+    # a dummy package with a hardlink file
+    (tmp_path / "conda-meta" / "packageC-1-0.json").write_text(
+        json.dumps(
+            {
+                "build": "0",
+                "build_number": 0,
+                "channel": "packageC-channel",
+                "files": ["hardlinkA"],
+                "name": "packageC",
+                "paths_data": {
+                    "paths": [
+                        {
+                            "_path": "hardlinkA",
+                            "path_type": "hardlink",
+                            "size_in_bytes": 0,
+                        }
+                    ],
+                    "paths_version": 1,
+                },
+                "version": "1",
+            }
+        )
+    )
+
+    # fetch package records
+    PrefixData._cache_.clear()
+    pd = PrefixData(tmp_path)
+    precC = pd.get("packageC")
+
+    # test returned package records given a path
+    precs_reused = list(which_package(tmp_path / "hardlinkA", tmp_path))
+    assert len(precs_reused) == 1
+    assert set(precs_reused) == {precC}
 
 
 @pytest.mark.benchmark
