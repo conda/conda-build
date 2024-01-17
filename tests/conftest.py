@@ -227,7 +227,13 @@ def conda_build_test_recipe_path(tmp_path_factory: pytest.TempPathFactory) -> Pa
     # clone conda_build_test_recipe locally
     repo = tmp_path_factory.mktemp("conda_build_test_recipe", numbered=False)
     subprocess.run(
-        ["git", "clone", "https://github.com/conda/conda_build_test_recipe", str(repo)],
+        [
+            "git",
+            "clone",
+            "https://github.com/conda/conda_build_test_recipe",
+            "--branch=1.21.11",
+            str(repo),
+        ],
         check=True,
     )
     return repo
