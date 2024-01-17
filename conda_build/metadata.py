@@ -13,15 +13,17 @@ import warnings
 from collections import OrderedDict
 from functools import lru_cache
 from os.path import isfile, join
-from typing import Literal
+from typing import Literal, overload
 
 from bs4 import UnicodeDammit
 
-from conda_build import exceptions, utils, variants
-from conda_build.config import Config, get_or_merge_config
-from conda_build.features import feature_list
-from conda_build.license_family import ensure_valid_license_family
-from conda_build.utils import (
+from . import exceptions, utils, variants
+from .conda_interface import MatchSpec, envs_dirs, md5_file
+from .config import Config, get_or_merge_config
+from .deprecations import deprecated
+from .features import feature_list
+from .license_family import ensure_valid_license_family
+from .utils import (
     DEFAULT_SUBDIRS,
     HashableDict,
     ensure_list,
@@ -29,10 +31,8 @@ from conda_build.utils import (
     find_recipe,
     get_installed_packages,
     insert_variant_versions,
+    on_win,
 )
-
-from .conda_interface import MatchSpec, envs_dirs, md5_file
-from .deprecations import deprecated
 
 try:
     import yaml
@@ -74,8 +74,6 @@ StringifyNumbersLoader.remove_implicit_resolver("tag:yaml.org,2002:float")
 StringifyNumbersLoader.remove_implicit_resolver("tag:yaml.org,2002:int")
 StringifyNumbersLoader.remove_constructor("tag:yaml.org,2002:float")
 StringifyNumbersLoader.remove_constructor("tag:yaml.org,2002:int")
-
-on_win = sys.platform == "win32"
 
 # arches that don't follow exact names in the subdir need to be mapped here
 ARCH_MAP = {"32": "x86", "64": "x86_64"}
@@ -347,9 +345,7 @@ def _trim_None_strings(meta_dict):
                 meta_dict[key] = keep
         else:
             log.debug(
-                "found unrecognized data type in dictionary: {}, type: {}".format(
-                    value, type(value)
-                )
+                f"found unrecognized data type in dictionary: {value}, type: {type(value)}"
             )
     return meta_dict
 
@@ -466,14 +462,14 @@ def parse(data, config, path=None):
                 or (hasattr(res[field], "__iter__") and not isinstance(res[field], str))
             ):
                 raise RuntimeError(
-                    "The %s field should be a dict or list of dicts, not "
-                    "%s in file %s." % (field, res[field].__class__.__name__, path)
+                    f"The {field} field should be a dict or list of dicts, not "
+                    f"{res[field].__class__.__name__} in file {path}."
                 )
         else:
             if not isinstance(res[field], dict):
                 raise RuntimeError(
-                    "The %s field should be a dict, not %s in file %s."
-                    % (field, res[field].__class__.__name__, path)
+                    f"The {field} field should be a dict, not "
+                    f"{res[field].__class__.__name__} in file {path}."
                 )
 
     ensure_valid_fields(res)
@@ -622,6 +618,7 @@ FIELDS = {
         "prelink_message": None,
         "readme": None,
     },
+    "extra": {},
 }
 
 # Fields that may either be a dictionary or a list of dictionaries.
@@ -972,7 +969,7 @@ def finalize_outputs_pass(
                 log = utils.get_logger(__name__)
                 log.warn(
                     "Could not finalize metadata due to missing dependencies: "
-                    "{}".format(e.packages)
+                    f"{e.packages}"
                 )
                 outputs[
                     (
@@ -1301,8 +1298,8 @@ class MetaData:
                 bypass_env_check=bypass_env_check,
             )
             sys.exit(
-                "Undefined Jinja2 variables remain ({}).  Please enable "
-                "source downloading and try again.".format(self.undefined_jinja_vars)
+                f"Undefined Jinja2 variables remain ({self.undefined_jinja_vars}).  Please enable "
+                "source downloading and try again."
             )
 
         # always parse again at the end, too.
@@ -1316,9 +1313,11 @@ class MetaData:
     @classmethod
     def fromstring(cls, metadata, config=None, variant=None):
         m = super().__new__(cls)
-        if not config:
-            config = Config()
-        m.meta = parse(metadata, config=config, path="", variant=variant)
+        m.path = ""
+        m._meta_path = ""
+        m.requirements_path = ""
+        config = config or Config(variant=variant)
+        m.meta = parse(metadata, config=config, path="")
         m.config = config
         m.parse_again(permit_undefined_jinja=True)
         return m
@@ -1333,18 +1332,45 @@ class MetaData:
         m._meta_path = ""
         m.requirements_path = ""
         m.meta = sanitize(metadata)
-
-        if not config:
-            config = Config(variant=variant)
-
-        m.config = config
+        m.config = config or Config(variant=variant)
         m.undefined_jinja_vars = []
         m.final = False
-
         return m
 
-    def get_section(self, section):
-        return self.meta.get(section, {})
+    @overload
+    def get_section(self, section: Literal["source", "outputs"]) -> list[dict]:
+        ...
+
+    @overload
+    def get_section(
+        self,
+        section: Literal[
+            "package",
+            "build",
+            "requirements",
+            "app",
+            "test",
+            "about",
+            "extra",
+        ],
+    ) -> dict:
+        ...
+
+    def get_section(self, name):
+        section = self.meta.get(name)
+        if name in OPTIONALLY_ITERABLE_FIELDS:
+            if not section:
+                return []
+            elif isinstance(section, dict):
+                return [section]
+            elif not isinstance(section, list):
+                raise ValueError(f"Expected {name} to be a list")
+        else:
+            if not section:
+                return {}
+            elif not isinstance(section, dict):
+                raise ValueError(f"Expected {name} to be a dict")
+        return section
 
     def get_value(self, name, default=None, autotype=True):
         """
@@ -1364,7 +1390,9 @@ class MetaData:
             index = None
         elif len(names) == 3:
             section, index, key = names
-            assert section == "source", "Section is not a list: " + section
+            assert section in OPTIONALLY_ITERABLE_FIELDS, (
+                "Section is not a list: " + section
+            )
             index = int(index)
 
         # get correct default
@@ -1386,7 +1414,7 @@ class MetaData:
                 )
                 index = 0
 
-            if len(section_data) == 0:
+            if not section_data:
                 section_data = {}
             else:
                 section_data = section_data[index]
@@ -1475,7 +1503,7 @@ class MetaData:
         if not self.is_output:
             matching_output = [
                 out
-                for out in self.meta.get("outputs", [])
+                for out in self.get_section("outputs")
                 if out.get("name") == self.name()
             ]
             if matching_output:
@@ -1530,20 +1558,18 @@ class MetaData:
             for c in "=!@#$%^&*:;\"'\\|<>?/":
                 if c in ms.name:
                     sys.exit(
-                        "Error: bad character '%s' in package name "
-                        "dependency '%s'" % (c, ms.name)
+                        f"Error: bad character '{c}' in package name "
+                        f"dependency '{ms.name}'"
                     )
             parts = spec.split()
             if len(parts) >= 2:
                 if parts[1] in {">", ">=", "=", "==", "!=", "<", "<="}:
                     msg = (
-                        "Error: bad character '%s' in package version "
-                        "dependency '%s'" % (parts[1], ms.name)
+                        f"Error: bad character '{parts[1]}' in package version "
+                        f"dependency '{ms.name}'"
                     )
                     if len(parts) >= 3:
-                        msg += "\nPerhaps you meant '{} {}{}'".format(
-                            ms.name, parts[1], parts[2]
-                        )
+                        msg += f"\nPerhaps you meant '{ms.name} {parts[1]}{parts[2]}'"
                     sys.exit(msg)
             specs[spec] = ms
         return list(specs.values())
@@ -1748,7 +1774,7 @@ class MetaData:
         ret = ensure_list(self.get_value("build/has_prefix_files", []))
         if not isinstance(ret, list):
             raise RuntimeError("build/has_prefix_files should be a list of paths")
-        if sys.platform == "win32":
+        if on_win:
             if any("\\" in i for i in ret):
                 raise RuntimeError(
                     "build/has_prefix_files paths must use / "
@@ -1763,7 +1789,7 @@ class MetaData:
                 "build/ignore_prefix_files should be boolean or a list of paths "
                 "(optionally globs)"
             )
-        if sys.platform == "win32":
+        if on_win:
             if isinstance(ret, list) and any("\\" in i for i in ret):
                 raise RuntimeError(
                     "build/ignore_prefix_files paths must use / "
@@ -1795,7 +1821,7 @@ class MetaData:
                 "build/binary_relocation should be boolean or a list of paths "
                 "(optionally globs)"
             )
-        if sys.platform == "win32":
+        if on_win:
             if isinstance(ret, list) and any("\\" in i for i in ret):
                 raise RuntimeError(
                     "build/binary_relocation paths must use / "
@@ -1814,7 +1840,7 @@ class MetaData:
             raise RuntimeError(
                 "build/binary_has_prefix_files should be a list of paths"
             )
-        if sys.platform == "win32":
+        if on_win:
             if any("\\" in i for i in ret):
                 raise RuntimeError(
                     "build/binary_has_prefix_files paths must use / "
@@ -1854,7 +1880,7 @@ class MetaData:
             with open(self.meta_path) as fd:
                 return fd.read()
 
-        from conda_build.jinja_context import (
+        from .jinja_context import (
             FilteredLoader,
             UndefinedNeverFail,
             context_processor,
@@ -1936,9 +1962,7 @@ class MetaData:
             if "'None' has not attribute" in str(ex):
                 ex = "Failed to run jinja context function"
             sys.exit(
-                "Error: Failed to render jinja template in {}:\n{}".format(
-                    self.meta_path, str(ex)
-                )
+                f"Error: Failed to render jinja template in {self.meta_path}:\n{str(ex)}"
             )
         finally:
             if "CONDA_BUILD_STATE" in os.environ:
@@ -2014,7 +2038,7 @@ class MetaData:
         return len(matches) > 0
 
     @property
-    def uses_vcs_in_meta(self) -> Literal["git" | "svn" | "mercurial"] | None:
+    def uses_vcs_in_meta(self) -> Literal["git", "svn", "mercurial"] | None:
         """returns name of vcs used if recipe contains metadata associated with version control systems.
         If this metadata is present, a download/copy will be forced in parse_or_try_download.
         """
@@ -2034,7 +2058,7 @@ class MetaData:
         return vcs
 
     @property
-    def uses_vcs_in_build(self) -> Literal["git" | "svn" | "mercurial"] | None:
+    def uses_vcs_in_build(self) -> Literal["git", "svn", "mercurial"] | None:
         # TODO :: Re-work this. Is it even useful? We can declare any vcs in our build deps.
         build_script = "bld.bat" if on_win else "build.sh"
         build_script = os.path.join(self.path, build_script)
@@ -2070,7 +2094,7 @@ class MetaData:
                     self.name(), getattr(self, "type", None)
                 )
         else:
-            from conda_build.render import output_yaml
+            from .render import output_yaml
 
             recipe_text = output_yaml(self)
         recipe_text = _filter_recipe_text(recipe_text, extract_pattern)
@@ -2271,9 +2295,8 @@ class MetaData:
 
     @property
     def source_provided(self):
-        return not bool(self.meta.get("source")) or (
-            os.path.isdir(self.config.work_dir)
-            and len(os.listdir(self.config.work_dir)) > 0
+        return not self.get_section("source") or (
+            os.path.isdir(self.config.work_dir) and os.listdir(self.config.work_dir)
         )
 
     def reconcile_metadata_with_output_dict(self, output_metadata, output_dict):
@@ -2465,7 +2488,7 @@ class MetaData:
         permit_unsatisfiable_variants=False,
         bypass_env_check=False,
     ):
-        from conda_build.source import provide
+        from .source import provide
 
         out_metadata_map = {}
         if self.final:
@@ -2871,8 +2894,8 @@ class MetaData:
             else:
                 log = utils.get_logger(__name__)
                 log.warn(
-                    "Not detecting used variables in output script {}; conda-build only knows "
-                    "how to search .sh and .bat files right now.".format(script)
+                    f"Not detecting used variables in output script {script}; conda-build only knows "
+                    "how to search .sh and .bat files right now."
                 )
         return used_vars
 

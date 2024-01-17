@@ -38,7 +38,7 @@ requirements:
     - jinja2
     - jsonschema >=4.19
     - m2-patch >=2.6               # [win]
-    - menuinst
+    - menuinst >=2
     - packaging
     - patch >=2.6                  # [not win]
     - patchelf                     # [linux]

@@ -26,11 +26,11 @@ from conda.exceptions import (  # noqa: F401
     UnsatisfiableError,
 )
 from conda.exports import (  # noqa: F401
-    ArgumentParser,  # noqa: F401
+    ArgumentParser,
     Channel,
     Completer,
-    CondaSession,  # noqa: F401
-    EntityEncoder,  # noqa: F401
+    CondaSession,
+    EntityEncoder,
     FileMode,
     InstalledPackages,
     MatchSpec,
@@ -41,15 +41,15 @@ from conda.exports import (  # noqa: F401
     TemporaryDirectory,
     TmpDownload,
     Unsatisfiable,
-    VersionOrder,  # noqa: F401
-    _toposort,  # noqa: F401
+    VersionOrder,
+    _toposort,
     add_parser_channels,
     add_parser_prefix,
     display_actions,
     download,
     execute_actions,
     execute_plan,
-    get_index,  # noqa: F401
+    get_index,
     handle_proxy_407,
     hashsum_file,
     human_bytes,
@@ -164,7 +164,7 @@ def get_installed_version(prefix, pkgs):
     Primarily used by conda-forge, but may be useful in general for checking when
     a package needs to be updated
     """
-    from conda_build.utils import ensure_list
+    from .utils import ensure_list
 
     pkgs = ensure_list(pkgs)
     linked_pkgs = linked(prefix)

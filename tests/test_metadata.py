@@ -15,6 +15,8 @@ from pytest import MonkeyPatch
 from conda_build import api
 from conda_build.config import Config
 from conda_build.metadata import (
+    FIELDS,
+    OPTIONALLY_ITERABLE_FIELDS,
     MetaData,
     _hash_dependencies,
     get_selectors,
@@ -22,8 +24,9 @@ from conda_build.metadata import (
     yamlize,
 )
 from conda_build.utils import DEFAULT_SUBDIRS
+from conda_build.variants import DEFAULT_VARIANTS
 
-from .utils import metadata_dir, thisdir
+from .utils import metadata_dir, metadata_path, thisdir
 
 
 def test_uses_vcs_in_metadata(testing_workdir, testing_metadata):
@@ -187,10 +190,11 @@ def test_build_bootstrap_env_by_path(testing_metadata):
         ("win", "x86_64", "3.9", {"vs2017_win-x86_64"}),
         ("win", "x86_64", "3.10", {"vs2017_win-x86_64"}),
         ("win", "x86_64", "3.11", {"vs2017_win-x86_64"}),
-        ("linux", "32", "3.11", {"gcc_linux-32", "gxx_linux-32"}),
-        ("linux", "64", "3.11", {"gcc_linux-64", "gxx_linux-64"}),
-        ("osx", "32", "3.11", {"clang_osx-32", "clangxx_osx-32"}),
-        ("osx", "64", "3.11", {"clang_osx-64", "clangxx_osx-64"}),
+        ("win", "x86_64", "3.12", {"vs2017_win-x86_64"}),
+        ("linux", "32", "3.12", {"gcc_linux-32", "gxx_linux-32"}),
+        ("linux", "64", "3.12", {"gcc_linux-64", "gxx_linux-64"}),
+        ("osx", "32", "3.12", {"clang_osx-32", "clangxx_osx-32"}),
+        ("osx", "64", "3.12", {"clang_osx-64", "clangxx_osx-64"}),
     ],
 )
 def test_native_compiler_metadata(
@@ -436,19 +440,19 @@ def test_get_selectors(
     assert get_selectors(config) == {
         # defaults
         "build_platform": context.subdir,
-        "lua": "5",  # see conda_build.variants.DEFAULT_VARIANTS["lua"]
-        "luajit": False,  # lua[0] == 2
-        "np": 122,  # see conda_build.variants.DEFAULT_VARIANTS["numpy"]
+        "lua": DEFAULT_VARIANTS["lua"],
+        "luajit": DEFAULT_VARIANTS["lua"] == 2,
+        "np": int(float(DEFAULT_VARIANTS["numpy"]) * 100),
         "os": os,
-        "pl": "5.26.2",  # see conda_build.variants.DEFAULT_VARIANTS["perl"]
+        "pl": DEFAULT_VARIANTS["perl"],
         "py": int(f"{sys.version_info.major}{sys.version_info.minor}"),
-        "py26": sys.version_info.major == 2 and sys.version_info.minor == 6,
-        "py27": sys.version_info.major == 2 and sys.version_info.minor == 7,
+        "py26": sys.version_info[:2] == (2, 6),
+        "py27": sys.version_info[:2] == (2, 7),
         "py2k": sys.version_info.major == 2,
-        "py33": sys.version_info.major == 3 and sys.version_info.minor == 3,
-        "py34": sys.version_info.major == 3 and sys.version_info.minor == 4,
-        "py35": sys.version_info.major == 3 and sys.version_info.minor == 5,
-        "py36": sys.version_info.major == 3 and sys.version_info.minor == 6,
+        "py33": sys.version_info[:2] == (3, 3),
+        "py34": sys.version_info[:2] == (3, 4),
+        "py35": sys.version_info[:2] == (3, 5),
+        "py36": sys.version_info[:2] == (3, 6),
         "py3k": sys.version_info.major == 3,
         "nomkl": bool(nomkl),
         # default OS/arch values
@@ -459,3 +463,22 @@ def test_get_selectors(
         # override with True values
         **{key: True for key in expected},
     }
+
+
+def test_fromstring():
+    MetaData.fromstring((metadata_path / "multiple_sources" / "meta.yaml").read_text())
+
+
+def test_fromdict():
+    MetaData.fromdict(
+        yamlize((metadata_path / "multiple_sources" / "meta.yaml").read_text())
+    )
+
+
+def test_get_section(testing_metadata: MetaData):
+    for name in FIELDS:
+        section = testing_metadata.get_section(name)
+        if name in OPTIONALLY_ITERABLE_FIELDS:
+            assert isinstance(section, list)
+        else:
+            assert isinstance(section, dict)

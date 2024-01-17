@@ -1,10 +1,5 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-"""
-bdist_conda
-
-"""
-
 import sys
 import time
 from collections import defaultdict
@@ -13,12 +8,12 @@ from setuptools.command.install import install
 from setuptools.dist import Distribution
 from setuptools.errors import BaseError, OptionError
 
-from conda_build import api
-from conda_build.build import handle_anaconda_upload
-from conda_build.conda_interface import StringIO, configparser, spec_from_line
-from conda_build.config import Config
-from conda_build.metadata import MetaData
-from conda_build.skeletons import pypi
+from . import api
+from .build import handle_anaconda_upload
+from .conda_interface import StringIO, configparser, spec_from_line
+from .config import Config
+from .metadata import MetaData
+from .skeletons import pypi
 
 # TODO: Add support for all the options that conda build has
 

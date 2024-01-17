@@ -126,7 +126,7 @@ def test_load_setup_py_data_from_setup_cfg(testing_metadata, tmp_path: Path):
     setup_py = tmp_path / "setup.py"
     setup_cfg = tmp_path / "setup.cfg"
     setup_py.write_text(
-        "from setuptools import setup\n" 'setup(name="name_from_setup_py")\n'
+        'from setuptools import setup\nsetup(name="name_from_setup_py")\n'
     )
     setup_cfg.write_text(
         "[metadata]\n"

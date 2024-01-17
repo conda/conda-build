@@ -1,5 +1,38 @@
 [//]: # (current developments)
 
+## 3.28.3 (2024-01-04)
+
+### Bug fixes
+
+* Update `conda_build.os_utils.liefldd.ensure_binary` to handle `None` inputs. (#5123 via #5124)
+* Update `conda_build.inspect_pkg.which_package` to use a cached mapping of paths to packages (first call: `O(n)`, subsequent calls: `O(1)`) instead of relying on `Path.samefile` comparisons (`O(n * m)`). (#5126 via #5130)
+
+### Contributors
+
+* @kenodegard
+
+
+
+## 3.28.2 (2023-12-15)
+
+### Enhancements
+
+* Update `conda_build.metadata.MetaData.get_section` to consistently return lists for "source" and "outputs". (#5111 via #5112)
+
+### Bug fixes
+
+* Resolve duplicate package record issue in `conda_build.inspect_pkg.which_package`. (#5106 via #5108)
+* Ensure `conda_build.post._lookup_in_prefix_packages` displays `str(PackageRecord)` instead of `repr(PackageRecord)`. (#5106 via #5108)
+* Fix finalization of recipes with multiple sources. (#5111 via #5112)
+* Improve handling by catching the more general `ImportError` instead of `ModuleNotFoundError` to cover cases involving `menuinst 1.x`. (#5116)
+
+### Contributors
+
+* @jaimergp
+* @kenodegard
+
+
+
 ## 3.28.1 (2023-12-06)
 
 ### Bug fixes

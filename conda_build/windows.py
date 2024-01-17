@@ -18,15 +18,15 @@ except:
     # Allow some imports to work for cross or CONDA_SUBDIR usage.
     pass
 
-from conda_build import environ
-from conda_build.utils import (
+from . import environ
+from .utils import (
     check_call_env,
     copy_into,
     get_logger,
     path_prepended,
     write_bat_activation_text,
 )
-from conda_build.variants import get_default_variant, set_language_env_vars
+from .variants import get_default_variant, set_language_env_vars
 
 VS_VERSION_STRING = {
     "8.0": "Visual Studio 8 2005",
@@ -206,9 +206,7 @@ def msvc_env_cmd(bits, config, override=None):
             # If the WindowsSDKDir environment variable has not been successfully
             # set then try activating VS2010
             msvc_env_lines.append(
-                'if not "%WindowsSDKDir%" == "{}" ( {} )'.format(
-                    WIN_SDK_71_PATH, build_vcvarsall_cmd(vcvarsall_vs_path)
-                )
+                f'if not "%WindowsSDKDir%" == "{WIN_SDK_71_PATH}" ( {build_vcvarsall_cmd(vcvarsall_vs_path)} )'
             )
         # sdk is not installed.  Fall back to only trying VS 2010
         except KeyError:

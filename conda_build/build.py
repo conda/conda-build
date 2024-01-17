@@ -3,12 +3,6 @@
 """
 Module that does most of the heavy lifting for the ``conda build`` command.
 """
-
-# this is to compensate for a requests idna encoding error.  Conda is a better place to fix,
-#   eventually
-# exception is raises: "LookupError: unknown encoding: idna"
-#    http://stackoverflow.com/a/13057751/1170370
-import encodings.idna  # NOQA
 import fnmatch
 import json
 import os
@@ -29,39 +23,8 @@ import yaml
 from bs4 import UnicodeDammit
 from conda import __version__ as conda_version
 
-import conda_build.noarch_python as noarch_python
-import conda_build.os_utils.external as external
-from conda_build import __version__ as conda_build_version
-from conda_build import environ, source, tarcheck, utils
-from conda_build.config import Config
-from conda_build.create_test import create_all_test_files
-from conda_build.exceptions import CondaBuildException, DependencyNeedsBuildingError
-from conda_build.index import _delegated_update_index, get_build_index
-from conda_build.metadata import FIELDS, MetaData
-from conda_build.post import (
-    fix_permissions,
-    get_build_metadata,
-    post_build,
-    post_process,
-)
-from conda_build.render import (
-    add_upstream_pins,
-    bldpkg_path,
-    distribute_variants,
-    execute_download_actions,
-    expand_outputs,
-    output_yaml,
-    render_recipe,
-    reparse,
-    try_download,
-)
-from conda_build.variants import (
-    dict_of_lists_to_list_of_dicts,
-    get_package_variants,
-    set_language_env_vars,
-)
-
-# used to get version
+from . import __version__ as conda_build_version
+from . import environ, noarch_python, source, tarcheck, utils
 from .conda_interface import (
     CondaError,
     EntityEncoder,
@@ -80,18 +43,50 @@ from .conda_interface import (
     root_dir,
     url_path,
 )
+from .config import Config
+from .create_test import create_all_test_files
+from .exceptions import CondaBuildException, DependencyNeedsBuildingError
+from .index import _delegated_update_index, get_build_index
+from .metadata import FIELDS, MetaData
+from .os_utils import external
+from .post import (
+    fix_permissions,
+    get_build_metadata,
+    post_build,
+    post_process,
+)
+from .render import (
+    add_upstream_pins,
+    bldpkg_path,
+    distribute_variants,
+    execute_download_actions,
+    expand_outputs,
+    output_yaml,
+    render_recipe,
+    reparse,
+    try_download,
+)
 from .utils import (
     CONDA_PACKAGE_EXTENSION_V1,
     CONDA_PACKAGE_EXTENSION_V2,
     CONDA_PACKAGE_EXTENSIONS,
     env_var,
     glob,
+    on_linux,
+    on_mac,
+    on_win,
     shutil_move_more_retrying,
     tmp_chdir,
+    write_bat_activation_text,
+)
+from .variants import (
+    dict_of_lists_to_list_of_dicts,
+    get_package_variants,
+    set_language_env_vars,
 )
 
-if sys.platform == "win32":
-    import conda_build.windows as windows
+if on_win:
+    from . import windows
 
 if "bsd" in sys.platform:
     shell_path = "/bin/sh"
@@ -181,7 +176,7 @@ def create_post_scripts(m: MetaData):
 def prefix_replacement_excluded(path):
     if path.endswith((".pyc", ".pyo")) or not isfile(path):
         return True
-    if sys.platform != "darwin" and islink(path):
+    if not on_mac and islink(path):
         # OSX does not allow hard-linking symbolic links, so we cannot
         # skip symbolic links (as we can on Linux)
         return True
@@ -746,9 +741,7 @@ def perform_replacements(matches, prefix, verbose=False, diff=None):
                     if match["type"] == "binary":
                         if len(original) < len(new_string):
                             print(
-                                "ERROR :: Cannot replace {} with {} in binary file {}".format(
-                                    original, new_string, filename
-                                )
+                                f"ERROR :: Cannot replace {original} with {new_string} in binary file {filename}"
                             )
                         new_string = new_string.ljust(len(original), b"\0")
                         assert len(new_string) == len(original)
@@ -1041,9 +1034,7 @@ def copy_test_source_files(m, destination):
                     except OSError as e:
                         log = utils.get_logger(__name__)
                         log.warn(
-                            "Failed to copy {} into test files.  Error was: {}".format(
-                                f, str(e)
-                            )
+                            f"Failed to copy {f} into test files.  Error was: {str(e)}"
                         )
                 for ext in ".pyc", ".pyo":
                     for f in utils.get_ext_files(destination, ext):
@@ -1313,9 +1304,9 @@ def record_prefix_files(m, files_with_prefix):
                             and detect_binary_files_with_prefix
                         ):
                             print(
-                                "File {} force-identified as 'binary', "
+                                f"File {fn} force-identified as 'binary', "
                                 "But it is 'binary' anyway, suggest removing it from "
-                                "`build/binary_has_prefix_files`".format(fn)
+                                "`build/binary_has_prefix_files`"
                             )
                     if fn in binary_has_prefix_files:
                         binary_has_prefix_files.remove(fn)
@@ -1328,9 +1319,9 @@ def record_prefix_files(m, files_with_prefix):
                         mode = "text"
                     elif fn in text_has_prefix_files and not len_text_has_prefix_files:
                         print(
-                            "File {} force-identified as 'text', "
+                            f"File {fn} force-identified as 'text', "
                             "But it is 'text' anyway, suggest removing it from "
-                            "`build/has_prefix_files`".format(fn)
+                            "`build/has_prefix_files`"
                         )
                     if fn in text_has_prefix_files:
                         text_has_prefix_files.remove(fn)
@@ -1472,13 +1463,10 @@ def write_info_json(m: MetaData):
             fo.write(
                 "# This file as created when building:\n"
                 "#\n"
-                "#     {}.tar.bz2  (on '{}')\n"
+                f"#     {m.dist()}.tar.bz2  (on '{m.config.build_subdir}')\n"
                 "#\n"
                 "# It can be used to create the runtime environment of this package using:\n"
-                "# $ conda create --name <env> --file <this file>".format(
-                    m.dist(),
-                    m.config.build_subdir,
-                )
+                "# $ conda create --name <env> --file <this file>"
             )
             for dist in sorted(runtime_deps + [" ".join(m.dist().rsplit("-", 2))]):
                 fo.write("%s\n" % "=".join(dist.split()))
@@ -1564,15 +1552,11 @@ def create_info_files(m, replacements, files, prefix):
 
     write_no_link(m, files)
 
-    sources = m.get_section("source")
-    if hasattr(sources, "keys"):
-        sources = [sources]
-
     with open(join(m.config.info_dir, "git"), "w", encoding="utf-8") as fo:
-        for src in sources:
-            if src.get("git_url"):
+        for source_dict in m.get_section("source"):
+            if source_dict.get("git_url"):
                 source.git_info(
-                    os.path.join(m.config.work_dir, src.get("folder", "")),
+                    os.path.join(m.config.work_dir, source_dict.get("folder", "")),
                     m.config.build_prefix,
                     git=None,
                     verbose=m.config.verbose,
@@ -1760,11 +1744,11 @@ def post_process_files(m: MetaData, initial_prefix_files):
     if len(missing):
         log = utils.get_logger(__name__)
         log.warning(
-            "The install/build script(s) for {} deleted the following "
-            "files (from dependencies) from the prefix:\n{}\n"
+            f"The install/build script(s) for {package_name} deleted the following "
+            f"files (from dependencies) from the prefix:\n{missing}\n"
             "This will cause the post-link checks to mis-report. Please "
             "try not to delete and files (DSOs in particular) from the "
-            "prefix".format(package_name, missing)
+            "prefix"
         )
     get_build_metadata(m)
     create_post_scripts(m)
@@ -1797,7 +1781,7 @@ def post_process_files(m: MetaData, initial_prefix_files):
     if m.noarch == 'python' and m.config.subdir == 'win-32':
         # Delete any PIP-created .exe launchers and fix entry_points.txt
         # .. but we need to provide scripts instead here.
-        from conda_build.post import caseless_sepless_fnmatch
+        from .post import caseless_sepless_fnmatch
         exes = caseless_sepless_fnmatch(new_files, 'Scripts/*.exe')
         for ff in exes:
             os.unlink(os.path.join(m.config.host_prefix, ff))
@@ -1810,11 +1794,9 @@ def post_process_files(m: MetaData, initial_prefix_files):
             tuple(f for f in new_files if m.config.meta_dir in join(host_prefix, f)),
         )
         sys.exit(
-            "Error: Untracked file(s) {} found in conda-meta directory. This error usually comes "
+            f"Error: Untracked file(s) {meta_files} found in conda-meta directory. This error usually comes "
             "from using conda in the build script. Avoid doing this, as it can lead to packages "
-            "that include their dependencies.".format(
-                meta_files,
-            )
+            "that include their dependencies."
         )
     post_build(m, new_files, build_python=python)
 
@@ -1923,9 +1905,12 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
                 val = var.split("=", 1)[1]
                 var = var.split("=", 1)[0]
             elif var not in os.environ:
-                raise ValueError(
-                    f"env var '{var}' specified in script_env, but is not set."
+                warnings.warn(
+                    "The environment variable '%s' specified in script_env is undefined."
+                    % var,
+                    UserWarning,
                 )
+                val = ""
             else:
                 val = os.environ[var]
             env_output[var] = val
@@ -1977,11 +1962,11 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
             for dep, env_var_name in dangerous_double_deps.items():
                 if all(dep in pkgs_list for pkgs_list in (build_pkgs, host_pkgs)):
                     raise CondaBuildException(
-                        "Empty package; {0} present in build and host deps.  "
-                        "You probably picked up the build environment's {0} "
+                        f"Empty package; {dep} present in build and host deps.  "
+                        f"You probably picked up the build environment's {dep} "
                         " executable.  You need to alter your recipe to "
-                        " use the {1} env var in your recipe to "
-                        "run that executable.".format(dep, env_var_name)
+                        f" use the {env_var_name} env var in your recipe to "
+                        "run that executable."
                     )
                 elif dep in build_pkgs and metadata.uses_new_style_compiler_activation:
                     link = (
@@ -1989,10 +1974,10 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
                         "define-metadata.html#host"
                     )
                     raise CondaBuildException(
-                        "Empty package; {0} dep present in build but not "
-                        "host requirements.  You need to move your {0} dep "
-                        "to the host requirements section.  See {1} for more "
-                        "info.".format(dep, link)
+                        f"Empty package; {dep} dep present in build but not "
+                        f"host requirements.  You need to move your {dep} dep "
+                        f"to the host requirements section.  See {link} for more "
+                        "info."
                     )
         initial_files = set(utils.prefix_files(metadata.config.host_prefix))
 
@@ -2082,9 +2067,7 @@ def bundle_conda(output, metadata: MetaData, env, stats, **kw):
                 except KeyError as e:
                     log.warn(
                         "Package doesn't have necessary files.  It might be too old to inspect."
-                        "Legacy noarch packages are known to fail.  Full message was {}".format(
-                            e
-                        )
+                        f"Legacy noarch packages are known to fail.  Full message was {e}"
                     )
             try:
                 crossed_subdir = metadata.config.target_subdir
@@ -2243,7 +2226,7 @@ def _write_sh_activation_text(file_handle, m):
     stack = "--stack" if m.is_cross else ""
     file_handle.write(f'conda activate {stack} "{build_prefix_path}"\n')
 
-    from conda_build.os_utils.external import find_executable
+    from .os_utils.external import find_executable
 
     ccache = find_executable("ccache", m.config.build_prefix, False)
     if ccache:
@@ -2304,16 +2287,14 @@ def _write_activation_text(script_path, m):
         data = fh.read()
         fh.seek(0)
         if os.path.splitext(script_path)[1].lower() == ".bat":
-            if m.config.build_subdir.startswith("win"):
-                from conda_build.utils import write_bat_activation_text
             write_bat_activation_text(fh, m)
         elif os.path.splitext(script_path)[1].lower() == ".sh":
             _write_sh_activation_text(fh, m)
         else:
             log = utils.get_logger(__name__)
             log.warn(
-                "not adding activation to {} - I don't know how to do so for "
-                "this file type".format(script_path)
+                f"not adding activation to {script_path} - I don't know how to do so for "
+                "this file type"
             )
         fh.write(data)
 
@@ -2492,11 +2473,9 @@ def build(
             print(
                 "Packages for ",
                 m.path or m.name(),
-                "with variant {} "
+                f"with variant {m.get_hash_contents()} "
                 "are already built and available from your configured channels "
-                "(including local) or are otherwise specified to be skipped.".format(
-                    m.get_hash_contents()
-                ),
+                "(including local) or are otherwise specified to be skipped.",
             )
             return default_return
 
@@ -2761,10 +2740,8 @@ def build(
                 if test_script:
                     if not os.path.isfile(os.path.join(m.path, test_script)):
                         raise ValueError(
-                            "test script specified as {} does not exist.  Please "
-                            "check for typos or create the file and try again.".format(
-                                test_script
-                            )
+                            f"test script specified as {test_script} does not exist.  Please "
+                            "check for typos or create the file and try again."
                         )
                     utils.copy_into(
                         os.path.join(m.path, test_script),
@@ -2957,8 +2934,8 @@ def guess_interpreter(script_filename):
             break
     else:
         raise NotImplementedError(
-            "Don't know how to run {} file.   Please specify "
-            "script_interpreter for {} output".format(file_ext, script_filename)
+            f"Don't know how to run {file_ext} file.   Please specify "
+            f"script_interpreter for {script_filename} output"
         )
     return interpreter_command
 
@@ -3244,7 +3221,7 @@ def _write_test_run_script(
         if py_files:
             test_python = metadata.config.test_python
             # use pythonw for import tests when osx_is_app is set
-            if metadata.get_value("build/osx_is_app") and sys.platform == "darwin":
+            if metadata.get_value("build/osx_is_app") and on_mac:
                 test_python = test_python + "w"
             tf.write(
                 '"{python}" -s "{test_file}"\n'.format(
@@ -3299,11 +3276,7 @@ def _write_test_run_script(
                         )
                 elif os.path.splitext(shell_file)[1] == ".sh":
                     # TODO: Run the test/commands here instead of in run_test.py
-                    tf.write(
-                        '"{shell_path}" {trace}-e "{test_file}"\n'.format(
-                            shell_path=shell_path, test_file=shell_file, trace=trace
-                        )
-                    )
+                    tf.write(f'"{shell_path}" {trace}-e "{shell_file}"\n')
 
 
 def write_test_scripts(
@@ -3566,7 +3539,7 @@ def test(
             env["CONDA_PATH_BACKUP"] = os.environ["CONDA_PATH_BACKUP"]
 
     if config.test_run_post:
-        from conda_build.utils import get_installed_packages
+        from .utils import get_installed_packages
 
         installed = get_installed_packages(metadata.config.test_prefix)
         files = installed[metadata.meta["package"]["name"]]["files"]
@@ -3660,9 +3633,7 @@ def tests_failed(package_or_metadata, move_broken, broken_dir, config):
         try:
             shutil.move(pkg, dest)
             log.warn(
-                "Tests failed for {} - moving package to {}".format(
-                    os.path.basename(pkg), broken_dir
-                )
+                f"Tests failed for {os.path.basename(pkg)} - moving package to {broken_dir}"
             )
         except OSError:
             pass
@@ -3673,17 +3644,15 @@ def tests_failed(package_or_metadata, move_broken, broken_dir, config):
 
 
 def check_external():
-    if sys.platform.startswith("linux"):
+    if on_linux:
         patchelf = external.find_executable("patchelf")
         if patchelf is None:
             sys.exit(
                 "Error:\n"
-                "    Did not find 'patchelf' in: {}\n"
+                f"    Did not find 'patchelf' in: {os.pathsep.join(external.dir_paths)}\n"
                 "    'patchelf' is necessary for building conda packages on Linux with\n"
                 "    relocatable ELF libraries.  You can install patchelf using conda install\n"
-                "    patchelf.\n".format(
-                    os.pathsep.join(external.dir_paths),
-                )
+                "    patchelf.\n"
             )
 
 
@@ -3863,8 +3832,8 @@ def build_tree(
                                     DependencyNeedsBuildingError,
                                 ) as e:
                                     log.warn(
-                                        "Skipping downstream test for spec {}; was "
-                                        "unsatisfiable.  Error was {}".format(dep, e)
+                                        f"Skipping downstream test for spec {dep}; was "
+                                        f"unsatisfiable.  Error was {e}"
                                     )
                                     continue
                                 # make sure to download that package to the local cache if not there
@@ -3937,9 +3906,7 @@ def build_tree(
                 if pkg in to_build_recursive:
                     cfg.clean(remove_folders=False)
                     raise RuntimeError(
-                        "Can't build {} due to environment creation error:\n".format(
-                            recipe
-                        )
+                        f"Can't build {recipe} due to environment creation error:\n"
                         + str(e.message)
                         + "\n"
                         + extra_help
@@ -3980,11 +3947,9 @@ def build_tree(
                                     MatchSpec(matchspec), dep_meta[0], metadata
                                 ):
                                     print(
-                                        (
-                                            "Missing dependency {0}, but found"
-                                            + " recipe directory, so building "
-                                            + "{0} first"
-                                        ).format(pkg)
+                                        f"Missing dependency {pkg}, but found "
+                                        f"recipe directory, so building "
+                                        f"{pkg} first"
                                     )
                                     add_recipes.append(recipe_dir)
                                     available = True
@@ -4016,7 +3981,7 @@ def build_tree(
         handle_pypi_upload(wheels, config=config)
 
     # Print the variant information for each package because it is very opaque and never printed.
-    from conda_build.inspect_pkg import get_hash_input
+    from .inspect_pkg import get_hash_input
 
     hash_inputs = get_hash_input(tarballs)
     print(
@@ -4062,7 +4027,7 @@ def build_tree(
 
 
 def handle_anaconda_upload(paths, config):
-    from conda_build.os_utils.external import find_executable
+    from .os_utils.external import find_executable
 
     paths = utils.ensure_list(paths)
 
@@ -4093,7 +4058,7 @@ def handle_anaconda_upload(paths, config):
         no_upload_message += (
             "\n"
             "# To have conda build upload to anaconda.org automatically, use\n"
-            "# {}conda config --set anaconda_upload yes\n".format(prompter)
+            f"# {prompter}conda config --set anaconda_upload yes\n"
         )
         no_upload_message += f"anaconda upload{joiner}" + joiner.join(paths)
 
@@ -4106,7 +4071,7 @@ def handle_anaconda_upload(paths, config):
         sys.exit(
             "Error: cannot locate anaconda command (required for upload)\n"
             "# Try:\n"
-            "# {}conda install anaconda-client".format(prompter)
+            f"# {prompter}conda install anaconda-client"
         )
     cmd = [
         anaconda,

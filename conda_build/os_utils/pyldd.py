@@ -11,9 +11,8 @@ import struct
 import sys
 from pathlib import Path
 
-from conda_build.utils import ensure_list, get_logger
-
 from ..deprecations import deprecated
+from ..utils import ensure_list, get_logger, on_linux, on_mac, on_win
 
 logging.basicConfig(level=logging.INFO)
 
@@ -1095,7 +1094,7 @@ def _trim_sysroot(sysroot):
 
 def _get_arch_if_native(arch):
     if arch == "native":
-        if sys.platform == "win32":
+        if on_win:
             arch = "x86_64" if sys.maxsize > 2**32 else "i686"
         else:
             _, _, _, _, arch = os.uname()
@@ -1248,9 +1247,7 @@ def otool(*args):
             args.filename, resolve_filenames=False, recurse=False, arch=args.arch_type
         )
         print(
-            "Shared libs used (non-recursively) by {} are:\n{}".format(
-                args.filename, shared_libs
-            )
+            f"Shared libs used (non-recursively) by {args.filename} are:\n{shared_libs}"
         )
         return 0
     return 1
@@ -1280,11 +1277,7 @@ def ldd(*args):
         shared_libs = inspect_linkages(
             args.filename, resolve_filenames=False, recurse=True
         )
-        print(
-            "Shared libs used (recursively) by {} are:\n{}".format(
-                args.filename, shared_libs
-            )
-        )
+        print(f"Shared libs used (recursively) by {args.filename} are:\n{shared_libs}")
         return 0
     return 1
 
@@ -1311,7 +1304,7 @@ def main_maybe_test():
 
         tool = sys.argv[2]
         if tool != "otool" and tool != "ldd":
-            if sys.platform == "darwin":
+            if on_mac:
                 tool = "otool"
             else:
                 tool = "ldd"
@@ -1333,14 +1326,14 @@ def main_maybe_test():
                 resolve_filenames=False,
                 recurse=False,
             )
-            if sys.platform == "darwin":
+            if on_mac:
                 test_that = functools.partial(inspect_linkages_otool)
             SOEXT = "dylib"
         elif tool == "ldd":
             test_this = functools.partial(
                 inspect_linkages, sysroot=sysroot, resolve_filenames=True, recurse=True
             )
-            if sys.platform.startswith("linux"):
+            if on_linux:
                 test_that = functools.partial(inspect_linkages_ldd)
             SOEXT = "so"
         # Find a load of dylibs or elfs and compare
@@ -1363,11 +1356,9 @@ def main_maybe_test():
             else:
                 that = this
             print("\n".join(this))
-            assert set(this) == set(
-                that
-            ), "py-ldd result incorrect for {}, this:\n{}\nvs that:\n{}".format(
-                codefile, set(this), set(that)
-            )
+            assert (
+                set(this) == set(that)
+            ), f"py-ldd result incorrect for {codefile}, this:\n{set(this)}\nvs that:\n{set(that)}"
     else:
         return main(sys.argv)
 
