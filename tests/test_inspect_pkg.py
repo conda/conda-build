@@ -129,11 +129,15 @@ def test_which_package(tmp_path: Path):
     precs_missing = list(which_package(tmp_path / "missing", tmp_path))
     assert not precs_missing
 
+    precs_Hardlinka = list(which_package(tmp_path / "Hardlinka", tmp_path))
     if on_win:
         # On Windows, be lenient and allow case-insensitive path comparisons.
-        precs_hardlinkA = list(which_package(tmp_path / "Hardlinka", tmp_path))
+        assert len(precs_Hardlinka) == 1
+        assert set(precs_Hardlinka) == {precA}
     else:
-        precs_hardlinkA = list(which_package(tmp_path / "hardlinkA", tmp_path))
+        assert not precs_Hardlinka
+
+    precs_hardlinkA = list(which_package(tmp_path / "hardlinkA", tmp_path))
     assert len(precs_hardlinkA) == 1
     assert set(precs_hardlinkA) == {precA}
 
@@ -214,10 +218,8 @@ def test_which_package_battery(tmp_path: Path):
 
     # removed files should still return a package
     # this occurs when, e.g., a build script removes files installed by another package
-    # (The opposite case with files really missing from the run environment,
-    # e.g., due to a post-install script removing them, is less likely and not
-    # covered.)
-    #  covered here.)
+    # (post-install scripts removing files from the run environment is less
+    # likely and not covered)
     for file in removed:
         assert len(list(which_package(tmp_path / file, tmp_path))) == 1
 

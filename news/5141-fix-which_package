@@ -4,7 +4,7 @@
 
 ### Bug fixes
 
-* Fix linking check regressions by restoring pre-3.28 behavior for which_package. (#5141)
+* Fix linking check regressions by restoring pre-3.28 behavior for `conda_build.inspect_pkg.which_package`. (#5141)
 
 ### Deprecations
 

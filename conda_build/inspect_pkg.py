@@ -71,7 +71,7 @@ def which_package(
     try:
         path = Path(path).relative_to(prefix)
     except ValueError:
-        # If path is already relative to prefix, we get a ValueError.
+        # ValueError: path is already relative to prefix
         pass
     # On Windows, be lenient and allow case-insensitive path comparisons.
     # NOTE: On macOS, although case-insensitive filesystem is default, still
@@ -79,8 +79,7 @@ def which_package(
     normcase_path = normcase(path)
 
     for prec in PrefixData(str(prefix)).iter_records():
-        files = prec["files"]
-        if normcase_path in (normcase(file) for file in files):
+        if normcase_path in (normcase(file) for file in prec["files"]):
             yield prec
 
 
