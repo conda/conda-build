@@ -62,7 +62,7 @@ def execute(args):
     )
 
 
-@deprecated("3.26.0", "4.0.0", addendum="Use `conda skeleton` instead.")
+@deprecated("3.26.0", "24.1.0", addendum="Use `conda skeleton` instead.")
 def main():
     return execute(sys.argv[1:])
 

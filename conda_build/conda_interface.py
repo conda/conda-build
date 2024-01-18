@@ -28,11 +28,11 @@ from conda.exceptions import (  # noqa: F401
     UnsatisfiableError,
 )
 from conda.exports import (  # noqa: F401
-    ArgumentParser,  # noqa: F401
+    ArgumentParser,
     Channel,
     Completer,
-    CondaSession,  # noqa: F401
-    EntityEncoder,  # noqa: F401
+    CondaSession,
+    EntityEncoder,
     FileMode,
     InstalledPackages,
     MatchSpec,
@@ -43,8 +43,8 @@ from conda.exports import (  # noqa: F401
     TemporaryDirectory,
     TmpDownload,
     Unsatisfiable,
-    VersionOrder,  # noqa: F401
-    _toposort,  # noqa: F401
+    VersionOrder,
+    _toposort,
     add_parser_channels,
     add_parser_prefix,
     download,
@@ -75,7 +75,7 @@ from .deprecations import deprecated
 
 deprecated.constant(
     "3.28.0",
-    "4.0.0",
+    "24.1.0",
     "IndexRecord",
     PackageRecord,
     addendum="Use `conda.models.records.PackageRecord` instead.",
@@ -108,12 +108,12 @@ class CrossPlatformStLink:
         return self.st_nlink(path)
 
     @staticmethod
-    @deprecated("3.24.0", "4.0.0", addendum="Use `os.stat().st_nlink` instead.")
+    @deprecated("3.24.0", "24.1.0", addendum="Use `os.stat().st_nlink` instead.")
     def st_nlink(path: str | os.PathLike) -> int:
         return os.stat(path).st_nlink
 
 
-@deprecated("3.28.0", "4.0.0")
+@deprecated("3.28.0", "24.1.0")
 class SignatureError(Exception):
     # TODO: What is this? 🤔
     pass
@@ -121,7 +121,7 @@ class SignatureError(Exception):
 
 @deprecated(
     "3.28.0",
-    "4.0.0",
+    "24.1.0",
     addendum="Use `conda_build.inspect_pkg.which_package` instead.",
 )
 def which_package(path: str | os.PathLike | Path) -> Iterable[PrefixRecord]:
@@ -130,7 +130,7 @@ def which_package(path: str | os.PathLike | Path) -> Iterable[PrefixRecord]:
     return which_package(path, which_prefix(path))
 
 
-@deprecated("3.28.0", "4.0.0")
+@deprecated("3.28.0", "24.1.0")
 def which_prefix(path: str | os.PathLike | Path) -> Path:
     """
     Given the path (to a (presumably) conda installed file) return the

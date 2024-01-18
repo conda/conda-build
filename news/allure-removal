@@ -16,4 +16,4 @@
 
 ### Other
 
-* Use Ruff linter in pre-commit configuration. (#5015)
+* Remove unused Allure test report collection.

@@ -37,17 +37,19 @@ from typing import Iterable, Literal
 from conda.core.prefix_data import PrefixData
 from conda.models.records import PrefixRecord
 
-from conda_build import utils
-from conda_build.conda_interface import (
+from . import utils
+from .conda_interface import (
     TemporaryDirectory,
     lchmod,
     md5_file,
     walk_prefix,
 )
-from conda_build.exceptions import OverDependingError, OverLinkingError, RunPathError
-from conda_build.inspect_pkg import which_package
-from conda_build.os_utils import external, macho
-from conda_build.os_utils.liefldd import (
+from .deprecations import deprecated
+from .exceptions import OverDependingError, OverLinkingError, RunPathError
+from .inspect_pkg import which_package
+from .metadata import MetaData
+from .os_utils import external, macho
+from .os_utils.liefldd import (
     get_exports_memoized,
     get_linkages_memoized,
     get_rpaths_raw,
@@ -55,16 +57,14 @@ from conda_build.os_utils.liefldd import (
     have_lief,
     set_rpath,
 )
-from conda_build.os_utils.pyldd import (
+from .os_utils.pyldd import (
     DLLfile,
     EXEfile,
     codefile_class,
     elffile,
     machofile,
 )
-
-from .deprecations import deprecated
-from .metadata import MetaData
+from .utils import on_mac, on_win, prefix_files
 
 filetypes_for_platform = {
     "win": (DLLfile, EXEfile),
@@ -127,7 +127,7 @@ def fix_shebang(f, prefix, build_python, osx_is_app=False):
 
     py_exec = "#!" + (
         "/bin/bash " + prefix + "/bin/pythonw"
-        if sys.platform == "darwin" and osx_is_app
+        if on_mac and osx_is_app
         else prefix + "/bin/" + basename(build_python)
     )
     if bytes_ and hasattr(py_exec, "encode"):
@@ -198,13 +198,11 @@ def remove_easy_install_pth(files, prefix, config, preserve_egg_dir=False):
                         except OSError as e:
                             fn = basename(str(e).split()[-1])
                             raise OSError(
-                                "Tried to merge folder {egg_path} into {sp_dir}, but {fn}"
+                                f"Tried to merge folder {egg_path} into {sp_dir}, but {fn}"
                                 " exists in both locations.  Please either add "
                                 "build/preserve_egg_dir: True to meta.yaml, or manually "
                                 "remove the file during your install process to avoid "
-                                "this conflict.".format(
-                                    egg_path=egg_path, sp_dir=sp_dir, fn=fn
-                                )
+                                "this conflict."
                             )
                     else:
                         shutil.move(join(egg_path, fn), join(sp_dir, fn))
@@ -276,7 +274,7 @@ def compile_missing_pyc(files, cwd, python_exe, skip_compile_pyc=()):
     unskipped_files = set(files) - skipped_files
     for fn in unskipped_files:
         # omit files in Library/bin, Scripts, and the root prefix - they are not generally imported
-        if sys.platform == "win32":
+        if on_win:
             if any(
                 [
                     fn.lower().startswith(start)
@@ -300,7 +298,7 @@ def compile_missing_pyc(files, cwd, python_exe, skip_compile_pyc=()):
         else:
             print("compiling .pyc files...")
             # We avoid command lines longer than 8190
-            if sys.platform == "win32":
+            if on_win:
                 limit = 8190
             else:
                 limit = 32760
@@ -400,8 +398,8 @@ def find_lib(link, prefix, files, path=None):
             else:
                 file_names[link].sort()
                 print(
-                    "Found multiple instances of %s (%s).  "
-                    "Choosing the first one." % (link, file_names[link])
+                    f"Found multiple instances of {link} ({file_names[link]}).  "
+                    "Choosing the first one."
                 )
         return file_names[link][0]
     print("Don't know how to find %s, skipping" % link)
@@ -594,15 +592,11 @@ def mk_relative_linux(f, prefix, rpaths=("lib",), method=None):
         except CalledProcessError:
             if method == "patchelf":
                 print(
-                    "ERROR :: `patchelf --print-rpath` failed for {}, but patchelf was specified".format(
-                        elf
-                    )
+                    f"ERROR :: `patchelf --print-rpath` failed for {elf}, but patchelf was specified"
                 )
             elif method != "LIEF":
                 print(
-                    "WARNING :: `patchelf --print-rpath` failed for {}, will proceed with LIEF (was {})".format(
-                        elf, method
-                    )
+                    f"WARNING :: `patchelf --print-rpath` failed for {elf}, will proceed with LIEF (was {method})"
                 )
             method = "LIEF"
         else:
@@ -612,9 +606,7 @@ def mk_relative_linux(f, prefix, rpaths=("lib",), method=None):
         existing2, _, _ = get_rpaths_raw(elf)
         if existing_pe and existing_pe != existing2:
             print(
-                "WARNING :: get_rpaths_raw()={} and patchelf={} disagree for {} :: ".format(
-                    existing2, existing_pe, elf
-                )
+                f"WARNING :: get_rpaths_raw()={existing2} and patchelf={existing_pe} disagree for {elf} :: "
             )
         # Use LIEF if method is LIEF to get the initial value?
         if method == "LIEF":
@@ -660,7 +652,7 @@ def assert_relative_osx(path, host_prefix, build_prefix):
 
 @deprecated(
     "3.28.0",
-    "4.0.0",
+    "24.1.0",
     addendum="Use `conda_build.post.get_dsos` and `conda_build.post.get_run_exports` instead.",
 )
 def determine_package_nature(
@@ -721,10 +713,10 @@ def get_run_exports(
         return ()
 
 
-@deprecated.argument("3.28.0", "4.0.0", "subdir")
-@deprecated.argument("3.28.0", "4.0.0", "bldpkgs_dirs")
-@deprecated.argument("3.28.0", "4.0.0", "output_folder")
-@deprecated.argument("3.28.0", "4.0.0", "channel_urls")
+@deprecated.argument("3.28.0", "24.1.0", "subdir")
+@deprecated.argument("3.28.0", "24.1.0", "bldpkgs_dirs")
+@deprecated.argument("3.28.0", "24.1.0", "output_folder")
+@deprecated.argument("3.28.0", "24.1.0", "channel_urls")
 def library_nature(
     prec: PrefixRecord, prefix: str | os.PathLike | Path
 ) -> Literal[
@@ -1074,16 +1066,14 @@ def _lookup_in_sysroots_and_whitelist(
                 if len(pkgs):
                     _print_msg(
                         errors,
-                        "{}: {} found in CDT/compiler package {}".format(
-                            info_prelude, n_dso_p, pkgs[0]
-                        ),
+                        f"{info_prelude}: {n_dso_p} found in CDT/compiler package {pkgs[0]}",
                         verbose=verbose,
                     )
                 else:
                     _print_msg(
                         errors,
-                        "{}: {} not found in any CDT/compiler package,"
-                        " nor the whitelist?!".format(msg_prelude, n_dso_p),
+                        f"{msg_prelude}: {n_dso_p} not found in any CDT/compiler package,"
+                        " nor the whitelist?!",
                         verbose=verbose,
                     )
     if not in_sysroots:
@@ -1105,8 +1095,8 @@ def _lookup_in_sysroots_and_whitelist(
     if not in_whitelist and not in_sysroots:
         _print_msg(
             errors,
-            "{}: {} not found in packages, sysroot(s) nor the missing_dso_whitelist.\n"
-            ".. is this binary repackaging?".format(msg_prelude, needed_dso),
+            f"{msg_prelude}: {needed_dso} not found in packages, sysroot(s) nor the missing_dso_whitelist.\n"
+            ".. is this binary repackaging?",
             verbose=verbose,
         )
 
@@ -1138,9 +1128,7 @@ def _lookup_in_prefix_packages(
     if len(precs_in_reqs) == 1:
         _print_msg(
             errors,
-            "{}: {} found in {}{}".format(
-                info_prelude, n_dso_p, precs_in_reqs[0], and_also
-            ),
+            f"{info_prelude}: {n_dso_p} found in {precs_in_reqs[0]}{and_also}",
             verbose=verbose,
         )
     elif in_whitelist:
@@ -1152,25 +1140,20 @@ def _lookup_in_prefix_packages(
     elif len(precs_in_reqs) == 0 and len(precs) > 0:
         _print_msg(
             errors,
-            "{}: {} found in {}{}".format(
-                msg_prelude, n_dso_p, [prec.name for prec in precs], and_also
-            ),
+            f"{msg_prelude}: {n_dso_p} found in {[str(prec) for prec in precs]}{and_also}",
             verbose=verbose,
         )
         _print_msg(
             errors,
-            "{}: .. but {} not in reqs/run, (i.e. it is overlinking)"
-            " (likely) or a missing dependency (less likely)".format(
-                msg_prelude, [prec.name for prec in precs]
-            ),
+            f"{msg_prelude}: .. but {[str(prec) for prec in precs]} not in reqs/run, "
+            "(i.e. it is overlinking) (likely) or a missing dependency (less likely)",
             verbose=verbose,
         )
     elif len(precs_in_reqs) > 1:
         _print_msg(
             errors,
-            "{}: {} found in multiple packages in run/reqs: {}{}".format(
-                warn_prelude, in_prefix_dso, precs_in_reqs, and_also
-            ),
+            f"{warn_prelude}: {in_prefix_dso} found in multiple packages in run/reqs: "
+            f"{[str(prec) for prec in precs_in_reqs]}{and_also}",
             verbose=verbose,
         )
     else:
@@ -1211,9 +1194,7 @@ def _show_linking_messages(
         for sysroot, sr_files in sysroots.items():
             _print_msg(
                 errors,
-                "   INFO: sysroot: '{}' files: '{}'".format(
-                    sysroot, sorted(list(sr_files), reverse=True)[1:5]
-                ),
+                f"   INFO: sysroot: '{sysroot}' files: '{sorted(list(sr_files), reverse=True)[1:5]}'",
                 verbose=verbose,
             )
     for f in files:
@@ -1267,9 +1248,7 @@ def _show_linking_messages(
             elif needed_dso.startswith("$PATH"):
                 _print_msg(
                     errors,
-                    "{}: {} found in build prefix; should never happen".format(
-                        err_prelude, needed_dso
-                    ),
+                    f"{err_prelude}: {needed_dso} found in build prefix; should never happen",
                     verbose=verbose,
                 )
             else:
@@ -1398,11 +1377,11 @@ def check_overlinking_impl(
             # .. and in that sysroot there are 3 suddirs in which we may search for DSOs.
             sysroots = ["/usr/lib", "/opt/X11", "/System/Library/Frameworks"]
             whitelist = DEFAULT_MAC_WHITELIST
-            build_is_host = True if sys.platform == "darwin" else False
+            build_is_host = True if on_mac else False
         elif subdir.startswith("win"):
             sysroots = ["C:/Windows"]
             whitelist = DEFAULT_WIN_WHITELIST
-            build_is_host = True if sys.platform == "win-32" else False
+            build_is_host = True if on_win else False
 
     whitelist += missing_dso_whitelist or []
 
@@ -1410,8 +1389,6 @@ def check_overlinking_impl(
     # the first sysroot is more important than others.
     sysroots_files = dict()
     for sysroot in sysroots:
-        from conda_build.utils import prefix_files
-
         srs = sysroot if sysroot.endswith("/") else sysroot + "/"
         sysroot_files = prefix_files(sysroot)
         sysroot_files = [p.replace("\\", "/") for p in sysroot_files]
@@ -1548,19 +1525,15 @@ def check_overlinking_impl(
             if found_interpreted_and_interpreter:
                 _print_msg(
                     errors,
-                    "{}: Interpreted package '{}' is interpreted by '{}'".format(
-                        info_prelude, pkg_vendored_dist.name, lib.name
-                    ),
+                    f"{info_prelude}: Interpreted package '{pkg_vendored_dist.name}' is interpreted by '{lib.name}'",
                     verbose=verbose,
                 )
             elif package_nature[lib] != "non-library":
                 _print_msg(
                     errors,
-                    "{}: {} package {} in requirements/run but it is not used "
+                    f"{msg_prelude}: {package_nature[lib]} package {lib} in requirements/run but it is not used "
                     "(i.e. it is overdepending or perhaps statically linked? "
-                    "If that is what you want then add it to `build/ignore_run_exports`)".format(
-                        msg_prelude, package_nature[lib], lib
-                    ),
+                    "If that is what you want then add it to `build/ignore_run_exports`)",
                     verbose=verbose,
                 )
     if len(errors):
@@ -1683,6 +1656,65 @@ def fix_permissions(files, prefix):
                 log.warn(str(e))
 
 
+def check_menuinst_json(files, prefix) -> None:
+    """
+    Check that Menu/*.json files are valid menuinst v2 JSON documents,
+    as defined by the CEP-11 schema. This JSON schema is part of the `menuinst`
+    package.
+
+    Validation can fail if the menu/*.json file is not valid JSON, or if it doesn't
+    comply with the menuinst schema.
+
+    We validate at build-time so we don't have to validate at install-time, saving
+    `conda` a few dependencies.
+    """
+    json_files = fnmatch_filter(files, "[Mm][Ee][Nn][Uu][/\\]*.[Jj][Ss][Oo][Nn]")
+    if not json_files:
+        return
+
+    print("Validating Menu/*.json files")
+    log = utils.get_logger(__name__, dedupe=False)
+    try:
+        import jsonschema
+        from menuinst.utils import data_path
+    except ImportError as exc:
+        log.warning(
+            "Found 'Menu/*.json' files but couldn't validate: %s",
+            ", ".join(json_files),
+            exc_info=exc,
+        )
+        return
+
+    try:
+        schema_path = data_path("menuinst.schema.json")
+        with open(schema_path) as f:
+            schema = json.load(f)
+        ValidatorClass = jsonschema.validators.validator_for(schema)
+        validator = ValidatorClass(schema)
+    except (jsonschema.SchemaError, json.JSONDecodeError, OSError) as exc:
+        log.warning("'%s' is not a valid menuinst schema", schema_path, exc_info=exc)
+        return
+
+    for json_file in json_files:
+        try:
+            with open(join(prefix, json_file)) as f:
+                text = f.read()
+            if "$schema" not in text:
+                log.warning(
+                    "menuinst v1 JSON document '%s' won't be validated.", json_file
+                )
+                continue
+            validator.validate(json.loads(text))
+        except (jsonschema.ValidationError, json.JSONDecodeError, OSError) as exc:
+            log.warning(
+                "'%s' is not a valid menuinst JSON document!",
+                json_file,
+                exc_info=exc,
+            )
+        else:
+            log.info("'%s' is a valid menuinst JSON document", json_file)
+
+
 def post_build(m, files, build_python, host_prefix=None, is_already_linked=False):
     print("number of files:", len(files))
 
@@ -1716,6 +1748,7 @@ def post_build(m, files, build_python, host_prefix=None, is_already_linked=False
             ):
                 post_process_shared_lib(m, f, prefix_files, host_prefix)
     check_overlinking(m, files, host_prefix)
+    check_menuinst_json(files, host_prefix)
 
 
 def check_symlinks(files, prefix, croot):
@@ -1750,8 +1783,8 @@ def check_symlinks(files, prefix, croot):
                 # Symlinks to absolute paths on the system (like /usr) are fine.
                 if real_link_path.startswith(croot):
                     msgs.append(
-                        "%s is a symlink to a path that may not "
-                        "exist after the build is completed (%s)" % (f, link_path)
+                        f"{f} is a symlink to a path that may not "
+                        f"exist after the build is completed ({link_path})"
                     )
 
     if msgs:

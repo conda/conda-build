@@ -3,8 +3,8 @@
 import re
 import string
 
-from conda_build import exceptions
-from conda_build.utils import comma_join
+from . import exceptions
+from .utils import comma_join
 
 allowed_license_families = """
 AGPL
@@ -109,7 +109,7 @@ def ensure_valid_license_family(meta):
     if remove_special_characters(normalize(license_family)) not in allowed_families:
         raise RuntimeError(
             exceptions.indent(
-                "about/license_family '%s' not allowed. Allowed families are %s."
-                % (license_family, comma_join(sorted(allowed_license_families)))
+                f"about/license_family '{license_family}' not allowed. "
+                f"Allowed families are {comma_join(sorted(allowed_license_families))}."
             )
         )

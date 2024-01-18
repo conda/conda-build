@@ -12,12 +12,11 @@ from typing import Iterable
 
 from conda.models.records import PrefixRecord
 
-from conda_build.conda_interface import untracked
-from conda_build.os_utils.macho import otool
-from conda_build.os_utils.pyldd import codefile_class, inspect_linkages, machofile
-
+from ..conda_interface import untracked
 from ..deprecations import deprecated
 from ..utils import on_linux, on_mac
+from .macho import otool
+from .pyldd import codefile_class, inspect_linkages, machofile
 
 LDD_RE = re.compile(r"\s*(.*?)\s*=>\s*(.*?)\s*\(.*\)")
 LDD_NOT_FOUND_RE = re.compile(r"\s*(.*?)\s*=>\s*not found")
@@ -109,7 +108,7 @@ def _get_linkages(
     return linkages
 
 
-@deprecated("3.28.0", "4.0.0")
+@deprecated("3.28.0", "24.1.0")
 @lru_cache(maxsize=None)
 def get_package_files(
     prec: PrefixRecord, prefix: str | os.PathLike | Path

@@ -8,14 +8,25 @@ import shutil
 import sys
 from os.path import basename, dirname, isdir, isfile, join
 
-ISWIN = sys.platform.startswith("win")
+from .deprecations import deprecated
+from .utils import on_win
+
+deprecated.constant(
+    "24.1",
+    "24.3",
+    "ISWIN",
+    on_win,
+    addendum="Use `conda_build.utils.on_win` instead.",
+)
 
 
+@deprecated("24.1", "24.3", addendum="Use `os.makedirs(exist_ok=True)` instead.")
 def _force_dir(dirname):
     if not isdir(dirname):
         os.makedirs(dirname)
 
 
+@deprecated("24.1", "24.3")
 def _error_exit(exit_message):
     sys.exit("[noarch_python] %s" % exit_message)
 
@@ -26,7 +37,7 @@ def rewrite_script(fn, prefix):
     noarch pacakges"""
 
     # Load and check the source file for not being a binary
-    src = join(prefix, "Scripts" if ISWIN else "bin", fn)
+    src = join(prefix, "Scripts" if on_win else "bin", fn)
     encoding = locale.getpreferredencoding()
     # if default locale is ascii, allow UTF-8 (a reasonably modern ASCII extension)
     if encoding == "ANSI_X3.4-1968":
@@ -35,17 +46,17 @@ def rewrite_script(fn, prefix):
         try:
             data = fi.read()
         except UnicodeDecodeError:  # file is binary
-            _error_exit("Noarch package contains binary script: %s" % fn)
+            sys.exit("[noarch_python] Noarch package contains binary script: %s" % fn)
     src_mode = os.stat(src).st_mode
     os.unlink(src)
 
     # Get rid of '-script.py' suffix on Windows
-    if ISWIN and fn.endswith("-script.py"):
+    if on_win and fn.endswith("-script.py"):
         fn = fn[:-10]
 
     # Rewrite the file to the python-scripts directory
     dst_dir = join(prefix, "python-scripts")
-    _force_dir(dst_dir)
+    os.makedirs(dst_dir, exist_ok=True)
     dst = join(dst_dir, fn)
     with open(dst, "w") as fo:
         fo.write(data)
@@ -69,12 +80,12 @@ def handle_file(f, d, prefix):
 
     elif "site-packages" in f:
         nsp = join(prefix, "site-packages")
-        _force_dir(nsp)
+        os.makedirs(nsp, exist_ok=True)
 
         g = f[f.find("site-packages") :]
         dst = join(prefix, g)
         dst_dir = dirname(dst)
-        _force_dir(dst_dir)
+        os.makedirs(dst_dir, exist_ok=True)
         shutil.move(path, dst)
         d["site-packages"].append(g[14:])
 
@@ -103,7 +114,7 @@ def populate_files(m, files, prefix, entry_point_scripts=None):
         handle_file(f, d, prefix)
 
     # Windows path conversion
-    if ISWIN:
+    if on_win:
         for fns in (d["site-packages"], d["Examples"]):
             for i, fn in enumerate(fns):
                 fns[i] = fn.replace("\\", "/")
@@ -119,10 +130,10 @@ def populate_files(m, files, prefix, entry_point_scripts=None):
 
 def transform(m, files, prefix):
     bin_dir = join(prefix, "bin")
-    _force_dir(bin_dir)
+    os.makedirs(bin_dir, exist_ok=True)
 
     scripts_dir = join(prefix, "Scripts")
-    _force_dir(scripts_dir)
+    os.makedirs(scripts_dir, exist_ok=True)
 
     name = m.name()
 

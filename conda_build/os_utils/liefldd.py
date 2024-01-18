@@ -6,7 +6,6 @@ import hashlib
 import json
 import os
 import struct
-import sys
 import threading
 from collections.abc import Hashable
 from fnmatch import fnmatch
@@ -15,6 +14,7 @@ from pathlib import Path
 from subprocess import PIPE, Popen
 
 from ..deprecations import deprecated
+from ..utils import on_mac, on_win, rec_glob
 from .external import find_executable
 
 # lief cannot handle files it doesn't know about gracefully
@@ -33,7 +33,7 @@ except ImportError:
     have_lief = False
 
 
-@deprecated("3.28.0", "4.0.0", addendum="Use `isinstance(value, str)` instead.")
+@deprecated("3.28.0", "24.1.0", addendum="Use `isinstance(value, str)` instead.")
 def is_string(s):
     return isinstance(s, str)
 
@@ -43,10 +43,12 @@ def is_string(s):
 # these are to be avoided, or if not avoided they
 # should be passed a binary when possible as that
 # will prevent having to parse it multiple times.
-def ensure_binary(file: str | os.PathLike | Path | lief.Binary) -> lief.Binary | None:
+def ensure_binary(
+    file: str | os.PathLike | Path | lief.Binary | None,
+) -> lief.Binary | None:
     if isinstance(file, lief.Binary):
         return file
-    elif not Path(file).exists():
+    elif not file or not Path(file).exists():
         return None
     try:
         return lief.parse(str(file))
@@ -102,7 +104,7 @@ else:
 
 @deprecated(
     "3.28.0",
-    "4.0.0",
+    "24.1.0",
     addendum="Use `conda_build.os_utils.liefldd.codefile_class` instead.",
 )
 def codefile_type_liefldd(*args, **kwargs) -> str | None:
@@ -112,14 +114,14 @@ def codefile_type_liefldd(*args, **kwargs) -> str | None:
 
 deprecated.constant(
     "3.28.0",
-    "4.0.0",
+    "24.1.0",
     "codefile_type_pyldd",
     _codefile_type,
     addendum="Use `conda_build.os_utils.pyldd.codefile_class` instead.",
 )
 deprecated.constant(
     "3.28.0",
-    "4.0.0",
+    "24.1.0",
     "codefile_type",
     _codefile_type,
     addendum="Use `conda_build.os_utils.liefldd.codefile_class` instead.",
@@ -525,9 +527,9 @@ def inspect_linkages_lief(
             todo.pop(0)
             filename2 = element[0]
             binary = element[1]
-            uniqueness_key = get_uniqueness_key(binary)
             if not binary:
                 continue
+            uniqueness_key = get_uniqueness_key(binary)
             if uniqueness_key not in already_seen:
                 parent_exe_dirname = None
                 if binary.format == lief.EXE_FORMATS.PE:
@@ -923,12 +925,12 @@ def get_static_lib_exports_nope(file):
 
 def get_static_lib_exports_nm(filename):
     nm_exe = find_executable("nm")
-    if sys.platform == "win32" and not nm_exe:
+    if on_win and not nm_exe:
         nm_exe = "C:\\msys64\\mingw64\\bin\\nm.exe"
     if not nm_exe or not os.path.exists(nm_exe):
         return None
     flags = "-Pg"
-    if sys.platform == "darwin":
+    if on_mac:
         flags = "-PgUj"
     try:
         out, _ = Popen(
@@ -971,8 +973,6 @@ def get_static_lib_exports_dumpbin(filename):
         ]
         results = []
         for p in programs:
-            from conda_build.utils import rec_glob
-
             dumpbin = rec_glob(os.path.join(pfx86, p), ("dumpbin.exe",))
             for result in dumpbin:
                 try:
@@ -984,7 +984,7 @@ def get_static_lib_exports_dumpbin(filename):
                     results.append((result, version))
                 except:
                     pass
-        from conda_build.conda_interface import VersionOrder
+        from ..conda_interface import VersionOrder
 
         results = sorted(results, key=lambda x: VersionOrder(x[1]))
         dumpbin_exe = results[-1][0]
@@ -1042,7 +1042,7 @@ def get_exports(filename, arch="native", enable_static=False):
             os.path.exists(filename)
             and (filename.endswith(".a") or filename.endswith(".lib"))
             and is_archive(filename)
-        ) and sys.platform != "win32":
+        ) and not on_win:
             # syms = os.system('nm -g {}'.filename)
             # on macOS at least:
             # -PgUj is:
@@ -1050,11 +1050,11 @@ def get_exports(filename, arch="native", enable_static=False):
             # g: global (exported) only
             # U: not undefined
             # j: name only
-            if debug_static_archives or sys.platform == "win32":
+            if debug_static_archives or on_win:
                 exports = get_static_lib_exports_externally(filename)
             # Now, our own implementation which does not require nm and can
             # handle .lib files.
-            if sys.platform == "win32":
+            if on_win:
                 # Sorry, LIEF does not handle COFF (only PECOFF) and object files are COFF.
                 exports2 = exports
             else:

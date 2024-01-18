@@ -4,10 +4,6 @@
 Environment variables
 =====================
 
-.. contents::
-   :local:
-   :depth: 1
-
 .. _build-state:
 
 Dynamic behavior based on state of build process
@@ -53,6 +49,8 @@ inherited from the shell environment in which you invoke
        environment variable and  defaults to the architecture the
        interpreter running conda was
        compiled with.
+   * - BUILD_PREFIX
+     - Build prefix where command line tools are installed.
    * - CMAKE_GENERATOR
      - The CMake generator string for the current build
        environment. On Linux systems, this is always
@@ -92,7 +90,7 @@ inherited from the shell environment in which you invoke
      - Inherited from your shell environment and augmented with
        ``$PREFIX/bin``.
    * - PREFIX
-     - Build prefix to which the build script should install.
+     - Host prefix to which the build script should install.
    * - PKG_BUILDNUM
      - Build number of the package being built.
    * - PKG_NAME
@@ -110,11 +108,11 @@ inherited from the shell environment in which you invoke
        is installed only in the host prefix when it is listed as
        a host requirement.
    * - PY3K
-     - ``1`` when Python 3 is installed in the build prefix,
+     - ``1`` when Python 3 is installed in the host prefix,
        otherwise ``0``.
    * - R
-     - Path to the R executable in the build prefix. R is only
-       installed in the build prefix when it is listed as a build
+     - Path to the R executable in the host prefix. R is only
+       installed in the host prefix when it is listed as a build
        requirement.
    * - RECIPE_DIR
      - Directory of the recipe.
@@ -132,7 +130,7 @@ inherited from the shell environment in which you invoke
 
 Unix-style packages on Windows, which are usually statically
 linked to executables, are built in a special ``Library``
-directory under the build prefix. The environment variables
+directory under the host prefix. The environment variables
 listed in the following table are defined only on Windows.
 
 .. list-table::
@@ -142,15 +140,15 @@ listed in the following table are defined only on Windows.
      - Same as PREFIX, but as a Unix-style path, such as
        ``/cygdrive/c/path/to/prefix``.
    * - LIBRARY_BIN
-     - ``<build prefix>\Library\bin``.
+     - ``%PREFIX%\Library\bin``.
    * - LIBRARY_INC
-     - ``<build prefix>\Library\include``.
+     - ``%PREFIX%\Library\include``.
    * - LIBRARY_LIB
-     - ``<build prefix>\Library\lib``.
+     - ``%PREFIX%\Library\lib``.
    * - LIBRARY_PREFIX
-     - ``<build prefix>\Library``.
+     - ``%PREFIX%\Library``.
    * - SCRIPTS
-     - ``<build prefix>\Scripts``.
+     - ``%PREFIX%\Scripts``.
    * - VS_MAJOR
      - The major version number of the Visual Studio version
        activated within the build, such as ``9``.
@@ -196,7 +194,7 @@ defined only on Linux.
    :widths: 20 80
 
    * - LD_RUN_PATH
-     - ``<build prefix>/lib``.
+     - ``$PREFIX/lib``.
 
 
 .. _git-env:

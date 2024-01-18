@@ -12,7 +12,7 @@ package:
 
 source:
   git_url: {{ environ.get('CONDA_BUILD_TEST_RECIPE_PATH') }}
-  git_tag: 1.21.0
+  git_tag: 1.22.0
 
 build:
   entry_points:

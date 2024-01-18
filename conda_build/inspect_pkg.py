@@ -4,72 +4,92 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import sys
-import tempfile
 from collections import defaultdict
 from functools import lru_cache
 from itertools import groupby
 from operator import itemgetter
 from os.path import abspath, basename, dirname, exists, join
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Iterable, Literal
 
+from conda.api import Solver
+from conda.core.index import get_index
 from conda.core.prefix_data import PrefixData
 from conda.models.records import PrefixRecord
 from conda.resolve import MatchSpec
 
-from conda_build.conda_interface import (
-    display_actions,
-    get_index,
-    install_actions,
-    specs_from_args,
-)
-from conda_build.os_utils.ldd import (
+from . import conda_interface
+from .conda_interface import specs_from_args
+from .deprecations import deprecated
+from .os_utils.ldd import (
     get_linkages,
     get_package_obj_files,
     get_untracked_obj_files,
 )
-from conda_build.os_utils.liefldd import codefile_class, machofile
-from conda_build.os_utils.macho import get_rpaths, human_filetype
-from conda_build.utils import (
+from .os_utils.liefldd import codefile_class, machofile
+from .os_utils.macho import get_rpaths, human_filetype
+from .utils import (
     comma_join,
     ensure_list,
     get_logger,
+    on_linux,
+    on_mac,
+    on_win,
     package_has_file,
-    rm_rf,
 )
 
-from .deprecations import deprecated
-from .utils import on_mac, on_win
+log = get_logger(__name__)
 
 
-@deprecated.argument("3.28.0", "4.0.0", "avoid_canonical_channel_name")
+@deprecated.argument("3.28.0", "24.1.0", "avoid_canonical_channel_name")
 def which_package(
     path: str | os.PathLike | Path,
     prefix: str | os.PathLike | Path,
 ) -> Iterable[PrefixRecord]:
-    """
+    """Detect which package(s) a path belongs to.
+
     Given the path (of a (presumably) conda installed file) iterate over
     the conda packages the file came from.  Usually the iteration yields
     only one package.
+
+    We use lstat since a symlink doesn't clobber the file it points to.
     """
     prefix = Path(prefix)
-    # historically, path was relative to prefix just to be safe we append to prefix
-    # (pathlib correctly handles this even if path is absolute)
-    path = prefix / path
 
-    def samefile(path1: Path, path2: Path) -> bool:
-        try:
-            return path1.samefile(path2)
-        except FileNotFoundError:
-            # FileNotFoundError: path doesn't exist
-            return path1 == path2
+    # historically, path was relative to prefix, just to be safe we append to prefix
+    # get lstat before calling _file_package_mapping in case path doesn't exist
+    try:
+        lstat = (prefix / path).lstat()
+    except FileNotFoundError:
+        # FileNotFoundError: path doesn't exist
+        return
+    else:
+        yield from _file_package_mapping(prefix).get(lstat, ())
 
+
+@lru_cache(maxsize=None)
+def _file_package_mapping(prefix: Path) -> dict[os.stat_result, set[PrefixRecord]]:
+    """Map paths to package records.
+
+    We use lstat since a symlink doesn't clobber the file it points to.
+    """
+    mapping: dict[os.stat_result, set[PrefixRecord]] = {}
     for prec in PrefixData(str(prefix)).iter_records():
         for file in prec["files"]:
-            if samefile(prefix / file, path):
-                yield prec
+            # packages are capable of removing files installed by other dependencies from
+            # the build prefix, in those cases lstat will fail, while which_package wont
+            # return the correct package(s) in such a condition we choose to not worry about
+            # it since this file to package lookup exists primarily to detect clobbering
+            try:
+                lstat = (prefix / file).lstat()
+            except FileNotFoundError:
+                # FileNotFoundError: path doesn't exist
+                continue
+            else:
+                mapping.setdefault(lstat, set()).add(prec)
+    return mapping
 
 
 def print_object_info(info, key):
@@ -97,23 +117,21 @@ class _untracked_package:
 untracked_package = _untracked_package()
 
 
+@deprecated.argument("24.1.0", "24.3.0", "platform", rename="subdir")
+@deprecated.argument("24.1.0", "24.3.0", "prepend")
+@deprecated.argument("24.1.0", "24.3.0", "minimal_hint")
 def check_install(
-    packages, platform=None, channel_urls=(), prepend=True, minimal_hint=False
-):
-    prefix = tempfile.mkdtemp("conda")
-    try:
-        specs = specs_from_args(packages)
-        index = get_index(
-            channel_urls=channel_urls, prepend=prepend, platform=platform, prefix=prefix
-        )
-        actions = install_actions(
-            prefix, index, specs, pinned=False, minimal_hint=minimal_hint
-        )
-        display_actions(actions)
-        return actions
-    finally:
-        rm_rf(prefix)
-    return None
+    packages: Iterable[str],
+    subdir: str | None = None,
+    channel_urls: Iterable[str] = (),
+) -> None:
+    with TemporaryDirectory() as prefix:
+        Solver(
+            prefix,
+            channel_urls,
+            [subdir or conda_interface.subdir],
+            specs_from_args(packages),
+        ).solve_for_transaction(ignore_pinned=True).print_transaction_summary()
 
 
 def print_linkages(
@@ -153,9 +171,9 @@ def print_linkages(
 
 
 def replace_path(binary, path, prefix):
-    if sys.platform.startswith("linux"):
+    if on_linux:
         return abspath(path)
-    elif sys.platform.startswith("darwin"):
+    elif on_mac:
         if path == basename(binary):
             return abspath(join(prefix, binary))
         if "@rpath" in path:
@@ -177,61 +195,39 @@ def replace_path(binary, path, prefix):
         return "not found"
 
 
-def test_installable(channel="defaults"):
+def test_installable(channel: str = "defaults") -> bool:
     success = True
-    log = get_logger(__name__)
-    has_py = re.compile(r"py(\d)(\d)")
-    for platform in ["osx-64", "linux-32", "linux-64", "win-32", "win-64"]:
-        log.info("######## Testing platform %s ########", platform)
-        channels = [channel]
-        index = get_index(channel_urls=channels, prepend=False, platform=platform)
-        for rec in index:
-            # If we give channels at the command line, only look at
-            # packages from those channels (not defaults).
-            if channel != "defaults" and rec.get("schannel", "defaults") == "defaults":
-                continue
-            name = rec["name"]
+    for subdir in ["osx-64", "linux-32", "linux-64", "win-32", "win-64"]:
+        log.info("######## Testing subdir %s ########", subdir)
+        for prec in get_index(channel_urls=[channel], prepend=False, platform=subdir):
+            name = prec["name"]
             if name in {"conda", "conda-build"}:
                 # conda can only be installed in the root environment
                 continue
-            if name.endswith("@"):
+            elif name.endswith("@"):
                 # this is a 'virtual' feature record that conda adds to the index for the solver
                 # and should be ignored here
                 continue
-            # Don't fail just because the package is a different version of Python
-            # than the default.  We should probably check depends rather than the
-            # build string.
-            build = rec["build"]
-            match = has_py.search(build)
-            assert match if "py" in build else True, build
-            if match:
-                additional_packages = [f"python={match.group(1)}.{match.group(2)}"]
-            else:
-                additional_packages = []
 
-            version = rec["version"]
+            version = prec["version"]
             log.info("Testing %s=%s", name, version)
 
             try:
-                install_steps = check_install(
-                    [name + "=" + version] + additional_packages,
-                    channel_urls=channels,
+                check_install(
+                    [f"{name}={version}"],
+                    channel_urls=[channel],
                     prepend=False,
-                    platform=platform,
+                    subdir=subdir,
                 )
-                success &= bool(install_steps)
-            except KeyboardInterrupt:
-                raise
-            # sys.exit raises an exception that doesn't subclass from Exception
-            except BaseException as e:
+            except Exception as err:
                 success = False
                 log.error(
-                    "FAIL: %s %s on %s with %s (%s)",
+                    "[%s/%s::%s=%s] %s",
+                    channel,
+                    subdir,
                     name,
                     version,
-                    platform,
-                    additional_packages,
-                    e,
+                    repr(err),
                 )
     return success
 

@@ -26,17 +26,7 @@ from pathlib import Path
 
 import yaml
 
-import conda_build.index
-import conda_build.source as source
-from conda_build import environ, exceptions, utils
-from conda_build.exceptions import DependencyNeedsBuildingError
-from conda_build.metadata import MetaData, combine_top_level_metadata_with_output
-from conda_build.variants import (
-    filter_by_key_value,
-    get_package_variants,
-    list_of_dicts_to_dict_of_lists,
-)
-
+from . import environ, exceptions, source, utils
 from .conda_interface import (
     LINK,
     ProgressiveFetchExtract,
@@ -46,9 +36,15 @@ from .conda_interface import (
     specs_from_url,
 )
 from ._legacy_conda_imports.dist import dist_string_from_package_record
+from .exceptions import DependencyNeedsBuildingError
+from .index import get_build_index
+from .metadata import MetaData, combine_top_level_metadata_with_output
 from .utils import CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2
-
-# from conda_build.jinja_context import pin_subpackage_against_outputs
+from .variants import (
+    filter_by_key_value,
+    get_package_variants,
+    list_of_dicts_to_dict_of_lists,
+)
 
 
 def odict_representer(dumper, data):
@@ -330,7 +326,7 @@ def _read_specs_from_package(pkg_loc, pkg_dist):
 
 def execute_download_actions(m, actions, env, package_subset=None, require_files=False):
     subdir = getattr(m.config, f"{env}_subdir")
-    index, _, _ = conda_build.index.get_build_index(
+    index, _, _ = get_build_index(
         subdir=subdir,
         bldpkgs_dir=m.config.bldpkgs_dir,
         output_folder=m.config.output_folder,
@@ -715,17 +711,17 @@ def finalize_metadata(
         # if source/path is relative, then the output package makes no sense at all.  The next
         #   best thing is to hard-code the absolute path.  This probably won't exist on any
         #   system other than the original build machine, but at least it will work there.
-        if source_path := m.get_value("source/path"):
-            if not isabs(source_path):
-                m.meta["source"]["path"] = normpath(join(m.path, source_path))
+        for source_dict in m.get_section("source"):
+            if (source_path := source_dict.get("path")) and not isabs(source_path):
+                source_dict["path"] = normpath(join(m.path, source_path))
             elif (
-                (git_url := m.get_value("source/git_url"))
+                (git_url := source_dict.get("git_url"))
                 # absolute paths are not relative paths
                 and not isabs(git_url)
                 # real urls are not relative paths
                 and ":" not in git_url
             ):
-                m.meta["source"]["git_url"] = normpath(join(m.path, git_url))
+                source_dict["git_url"] = normpath(join(m.path, git_url))
 
         m.meta.setdefault("build", {})
 
@@ -735,8 +731,8 @@ def finalize_metadata(
             m.final = False
             log = utils.get_logger(__name__)
             log.warn(
-                "Returning non-final recipe for {}; one or more dependencies "
-                "was unsatisfiable:".format(m.dist())
+                f"Returning non-final recipe for {m.dist()}; one or more dependencies "
+                "was unsatisfiable:"
             )
             if build_unsat:
                 log.warn(f"Build: {build_unsat}")
@@ -845,7 +841,7 @@ def distribute_variants(
     top_loop = metadata.get_reduced_variant_set(used_variables)
 
     for variant in top_loop:
-        from conda_build.build import get_all_replacements
+        from .build import get_all_replacements
 
         get_all_replacements(variant)
         mv = metadata.copy()
@@ -915,7 +911,7 @@ def expand_outputs(metadata_tuples):
     expanded_outputs = OrderedDict()
 
     for _m, download, reparse in metadata_tuples:
-        from conda_build.build import get_all_replacements
+        from .build import get_all_replacements
 
         get_all_replacements(_m.config)
         from copy import deepcopy

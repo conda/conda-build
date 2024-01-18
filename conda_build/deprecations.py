@@ -1,17 +1,18 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
-# Copyright (C) 2012 Anaconda, Inc
-# SPDX-License-Identifier: BSD-3-Clause
+"""Tools to aid in deprecating code."""
 from __future__ import annotations
 
+import sys
 import warnings
+from argparse import Action
 from functools import wraps
 from types import ModuleType
 from typing import Any, Callable
 
 from packaging.version import Version, parse
 
-from .__version__ import __version__
+from . import __version__
 
 
 class DeprecatedError(RuntimeError):
@@ -40,7 +41,7 @@ class DeprecationHandler:
         *,
         addendum: str | None = None,
         stack: int = 0,
-    ) -> Callable[(Callable), Callable]:
+    ) -> Callable[[Callable], Callable]:
         """Deprecation decorator for functions, methods, & classes.
 
         :param deprecate_in: Version in which code will be marked as deprecated.
@@ -82,7 +83,7 @@ class DeprecationHandler:
         rename: str | None = None,
         addendum: str | None = None,
         stack: int = 0,
-    ) -> Callable[(Callable), Callable]:
+    ) -> Callable[[Callable], Callable]:
         """Deprecation decorator for keyword arguments.
 
         :param deprecate_in: Version in which code will be marked as deprecated.
@@ -126,6 +127,50 @@ class DeprecationHandler:
             return inner
 
         return deprecated_decorator
+
+    def action(
+        self,
+        deprecate_in: str,
+        remove_in: str,
+        action: type[Action],
+        *,
+        addendum: str | None = None,
+        stack: int = 0,
+    ):
+        class DeprecationMixin:
+            def __init__(inner_self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+
+                category, message = self._generate_message(
+                    deprecate_in,
+                    remove_in,
+                    (
+                        # option_string are ordered shortest to longest,
+                        # use the longest as it's the most descriptive
+                        f"`{inner_self.option_strings[-1]}`"
+                        if inner_self.option_strings
+                        # if not a flag/switch, use the destination itself
+                        else f"`{inner_self.dest}`"
+                    ),
+                    addendum=addendum,
+                )
+
+                # alert developer that it's time to remove something
+                if not category:
+                    raise DeprecatedError(message)
+
+                inner_self.category = category
+                inner_self.help = message
+
+            def __call__(inner_self, parser, namespace, values, option_string=None):
+                # alert user that it's time to remove something
+                warnings.warn(
+                    inner_self.help, inner_self.category, stacklevel=7 + stack
+                )
+
+                super().__call__(parser, namespace, values, option_string)
+
+        return type(action.__name__, (DeprecationMixin, action), {})
 
     def module(
         self,
@@ -217,7 +262,10 @@ class DeprecationHandler:
         """
         # detect function name and generate message
         category, message = self._generate_message(
-            deprecate_in, remove_in, topic, addendum
+            deprecate_in,
+            remove_in,
+            topic,
+            addendum,
         )
 
         # alert developer that it's time to remove something
@@ -236,14 +284,22 @@ class DeprecationHandler:
         import inspect  # expensive
 
         try:
-            frame = inspect.stack()[2 + stack]
-            module = inspect.getmodule(frame[0])
-            return (module, module.__name__)
-        except (IndexError, AttributeError):
-            raise DeprecatedError("unable to determine the calling module") from None
+            frame = sys._getframe(2 + stack)
+            module = inspect.getmodule(frame)
+            if module is not None:
+                return (module, module.__name__)
+        except IndexError:
+            # IndexError: 2 + stack is out of range
+            pass
+
+        raise DeprecatedError("unable to determine the calling module")
 
     def _generate_message(
-        self, deprecate_in: str, remove_in: str, prefix: str, addendum: str
+        self,
+        deprecate_in: str,
+        remove_in: str,
+        prefix: str,
+        addendum: str | None,
     ) -> tuple[type[Warning] | None, str]:
         """Deprecation decorator for functions, methods, & classes.
 
@@ -256,6 +312,7 @@ class DeprecationHandler:
         deprecate_version = parse(deprecate_in)
         remove_version = parse(remove_in)
 
+        category: type[Warning] | None
         if self._version < deprecate_version:
             category = PendingDeprecationWarning
             warning = f"is pending deprecation and will be removed in {remove_in}."
