@@ -1,5 +1,17 @@
 [//]: # (current developments)
 
+## 3.28.4 (2024-01-17)
+
+### Bug fixes
+
+* Fix linking check regressions by restoring pre-3.28 behavior for `conda_build.inspect_pkg.which_package`. (#5141)
+
+### Contributors
+
+* @mbargull
+
+
+
 ## 3.28.3 (2024-01-04)
 
 ### Bug fixes
