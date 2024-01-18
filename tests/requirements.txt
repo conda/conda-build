@@ -1,7 +1,8 @@
+anaconda-client
 beautifulsoup4
 chardet
 conda >=22.11.0
-conda-forge::anaconda-client
+conda-forge::xdoctest
 conda-index
 conda-package-handling >=1.3
 conda-verify
@@ -24,7 +25,6 @@ pytest
 pytest-cov
 pytest-forked
 pytest-mock
-pytest-replay
 pytest-rerunfailures
 pytest-xdist
 python-libarchive-c

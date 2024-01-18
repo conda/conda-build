@@ -101,7 +101,7 @@ jobs:
           fetch-depth: 0
 
       - name: Hash + Timestamp
-        run: echo "HASH=${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-${{ matrix.default-channel }}-${{ matrix.test-type }}-${{ matrix.test-group }}-$(date -u "+%Y%m")" >> $GITHUB_ENV
+        run: echo "HASH=${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-conda${{ matrix.conda-version }}-${{ matrix.test-type }}-$(date -u "+%Y%m")" >> $GITHUB_ENV
         shell: bash
 
       - name: Cache Conda
@@ -186,7 +186,7 @@ jobs:
           fetch-depth: 0
 
       - name: Hash + Timestamp
-        run: echo "HASH=${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-${{ matrix.test-type }}-${{ matrix.test-group }}-$(date -u "+%Y%m")" >> $GITHUB_ENV
+        run: echo "HASH=${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-conda${{ matrix.conda-version }}-${{ matrix.test-type }}-$(date -u "+%Y%m")" >> $GITHUB_ENV
         shell: bash
 
       - name: Cache Conda
@@ -277,7 +277,7 @@ jobs:
           fetch-depth: 0
 
       - name: Hash + Timestamp
-        run: echo "HASH=${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-${{ matrix.default-channel }}-${{ matrix.test-type }}-${{ matrix.test-group }}-$(date -u "+%Y%m")" >> $GITHUB_ENV
+        run: echo "HASH=${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-conda${{ matrix.conda-version }}-${{ matrix.test-type }}-$(date -u "+%Y%m")" >> $GITHUB_ENV
         shell: bash
 
       - name: Cache Conda
