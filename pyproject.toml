@@ -114,6 +114,7 @@ minversion = 3.0
 testpaths = ["tests"]
 norecursedirs = ["tests/test-recipes/*"]
 addopts = [
+  "--capture=tee-sys",  # capsys also prints to stdout/stderr
   "--color=yes",
   # "--cov=conda_build",   # passed in test runner scripts instead (avoid debugger)
   "--cov-append",
@@ -121,12 +122,20 @@ addopts = [
   "--cov-report=term-missing",
   "--cov-report=xml",
   "--durations=16",
-  "--junitxml=junit.xml",
+  "--junitxml=test-report.xml",
   # "--splitting-algorithm=least_duration",  # not available yet
   # "--store-durations",  # not available yet
   "--strict-markers",
   "--tb=native",
+  "--xdoctest-modules",
+  "--xdoctest-style=google",
   "-vv",
+]
+doctest_optionflags = [
+  "NORMALIZE_WHITESPACE",
+  "IGNORE_EXCEPTION_DETAIL",
+  "ALLOW_UNICODE",
+  "ELLIPSIS",
 ]
 markers = [
   "serial: execute test serially (to avoid race conditions)",
