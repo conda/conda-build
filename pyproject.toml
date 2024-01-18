@@ -114,7 +114,6 @@ minversion = 3.0
 testpaths = ["tests"]
 norecursedirs = ["tests/test-recipes/*"]
 addopts = [
-  "--capture=tee-sys",  # capsys also prints to stdout/stderr
   "--color=yes",
   # "--cov=conda_build",   # passed in test runner scripts instead (avoid debugger)
   "--cov-append",

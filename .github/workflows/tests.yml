@@ -39,7 +39,7 @@ jobs:
     outputs:
       code: ${{ steps.filter.outputs.code }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         # dorny/paths-filter needs git clone for non-PR events
         # https://github.com/dorny/paths-filter#supported-workflows
         if: github.event_name != 'pull_request'
@@ -89,29 +89,29 @@ jobs:
             conda-version: canary
             test-type: parallel
     env:
-      CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
-      CONDA_VERSION: ${{ contains('canary,release', matrix.conda-version) && 'conda' || format('conda={0}', matrix.conda-version) }}
+      CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev::' || '' }}
+      CONDA_VERSION: ${{ contains('canary|release', matrix.conda-version) && 'conda' || format('conda={0}', matrix.conda-version) }}
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
       PYTEST_NUMPROCESSES: ${{ matrix.test-type == 'serial' && 0 || 'auto' }}
 
     steps:
       - name: Checkout Source
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Hash + Timestamp
-        run: echo "HASH=${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-conda${{ matrix.conda-version }}-${{ matrix.test-type }}-$(date -u "+%Y%m")" >> $GITHUB_ENV
+        run: echo "HASH=${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-${{ matrix.conda-version }}-${{ matrix.test-type }}-$(date -u "+%Y%m")" >> $GITHUB_ENV
         shell: bash
 
       - name: Cache Conda
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/conda_pkgs_dir
           key: cache-${{ env.HASH }}
 
       - name: Setup Miniconda
-        uses: conda-incubator/setup-miniconda@v2
+        uses: conda-incubator/setup-miniconda@v3
         with:
           condarc-file: .github/condarc
           python-version: ${{ matrix.python-version }}
@@ -122,7 +122,7 @@ jobs:
           --yes
           --file tests/requirements.txt
           --file tests/requirements-${{ runner.os }}.txt
-          ${{ env.CONDA_CHANNEL_LABEL }}::${{ env.CONDA_VERSION }}
+          ${{ env.CONDA_CHANNEL_LABEL }}${{ env.CONDA_VERSION }}
 
       - name: Conda Info
         run: conda info --verbose
@@ -186,17 +186,17 @@ jobs:
           fetch-depth: 0
 
       - name: Hash + Timestamp
-        run: echo "HASH=${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-conda${{ matrix.conda-version }}-${{ matrix.test-type }}-$(date -u "+%Y%m")" >> $GITHUB_ENV
+        run: echo "HASH=${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-${{ matrix.conda-version }}-${{ matrix.test-type }}-$(date -u "+%Y%m")" >> $GITHUB_ENV
         shell: bash
 
       - name: Cache Conda
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/conda_pkgs_dir
           key: cache-${{ env.HASH }}
 
       - name: Setup Miniconda
-        uses: conda-incubator/setup-miniconda@v2
+        uses: conda-incubator/setup-miniconda@v3
         with:
           condarc-file: .github\condarc
           python-version: ${{ matrix.python-version }}
@@ -272,22 +272,22 @@ jobs:
 
     steps:
       - name: Checkout Source
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - name: Hash + Timestamp
-        run: echo "HASH=${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-conda${{ matrix.conda-version }}-${{ matrix.test-type }}-$(date -u "+%Y%m")" >> $GITHUB_ENV
+        run: echo "HASH=${{ runner.os }}-${{ runner.arch }}-Py${{ matrix.python-version }}-${{ matrix.conda-version }}-${{ matrix.test-type }}-$(date -u "+%Y%m")" >> $GITHUB_ENV
         shell: bash
 
       - name: Cache Conda
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/conda_pkgs_dir
           key: cache-${{ env.HASH }}
 
       - name: Setup Miniconda
-        uses: conda-incubator/setup-miniconda@v2
+        uses: conda-incubator/setup-miniconda@v3
         with:
           condarc-file: .github/condarc
           python-version: ${{ matrix.python-version }}
@@ -403,7 +403,7 @@ jobs:
       # Clean checkout of specific git ref needed for package metadata version
       # which needs env vars GIT_DESCRIBE_TAG and GIT_BUILD_STR:
       - name: Checkout Source
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.ref }}
           clean: true
