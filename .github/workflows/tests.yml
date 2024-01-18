@@ -124,6 +124,10 @@ jobs:
           --file tests/requirements-${{ runner.os }}.txt
           ${{ env.CONDA_CHANNEL_LABEL }}${{ env.CONDA_VERSION }}
 
+      # TODO: how can we remove this step?
+      - name: Install Self
+        run: pip install -e .
+
       - name: Conda Info
         run: conda info --verbose
 
@@ -211,6 +215,10 @@ jobs:
           --file tests\requirements.txt
           --file tests\requirements-${{ runner.os }}.txt
           ${{ env.CONDA_CHANNEL_LABEL }}::conda
+
+      # TODO: how can we remove this step?
+      - name: Install Self
+        run: pip install -e .
 
       - name: Conda Info
         run: conda info --verbose
@@ -302,6 +310,10 @@ jobs:
           --file tests/requirements.txt
           --file tests/requirements-${{ runner.os }}.txt
           ${{ env.CONDA_CHANNEL_LABEL }}::conda
+
+      # TODO: how can we remove this step?
+      - name: Install Self
+        run: pip install -e .
 
       - name: Conda Info
         run: conda info --verbose
