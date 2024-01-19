@@ -105,26 +105,9 @@ def _as_dict_from_string(string, channel_override=_not_set):
     )
 
 
-def package_ref_from_dist_string(dist_string):
-    dist_kwargs = _as_dict_from_string(dist_string)
-    return PackageRecord(
-        channel=dist_kwargs["channel"],
-        name=dist_kwargs["name"],
-        version=dist_kwargs["version"],
-        build=dist_kwargs["build"],
-        build_number=dist_kwargs["build_number"],
-    )
-
-
-def dist_string_contains(containing_dist_string, contained_dist_string):
-    contained_dist_string = _strip_extension(contained_dist_string)
-    return contained_dist_string in containing_dist_string
-
-
-def dist_string_from_package_record(package_record, channel=None):
-    if channel is None:
-        channel = package_record.channel.canonical_name
+def dist_string_from_package_record(package_record):
     dist_kwargs = _as_dict_from_string(
-        package_record.fn, channel_override=channel
+        package_record.fn,
+        channel_override=package_record.channel.canonical_name,
     )
     return dist_kwargs["dist_name"]
