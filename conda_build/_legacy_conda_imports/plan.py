@@ -33,13 +33,10 @@ from .conda_imports import (
     stack_context_default,
 )
 
-from .instructions import (
-    LINK,
-    PREFIX,
-    PROGRESSIVEFETCHEXTRACT,
-    UNLINKLINKTRANSACTION,
-    commands,
-)
+PREFIX = "PREFIX"
+LINK = "LINK"
+UNLINKLINKTRANSACTION = "UNLINKLINKTRANSACTION"
+PROGRESSIVEFETCHEXTRACT = "PROGRESSIVEFETCHEXTRACT"
 
 log = getLogger(__name__)
 
@@ -117,7 +114,24 @@ def display_actions(actions):
 
 def execute_actions(actions, verbose=False):  # pragma: no cover
     plan = _plan_from_actions(actions)
-    execute_instructions(plan, verbose)
+    log.debug("executing plan %s", plan)
+
+    for instruction, arg in plan:
+        log.debug(" %s(%r)", instruction, arg)
+
+        if instruction in (PREFIX, LINK):
+            continue
+
+        if instruction == PROGRESSIVEFETCHEXTRACT:
+            progressive_fetch_extract = arg
+            assert isinstance(progressive_fetch_extract, ProgressiveFetchExtract)
+            progressive_fetch_extract.execute()
+        elif instruction == UNLINKLINKTRANSACTION:
+            unlink_link_transaction = arg
+            assert isinstance(unlink_link_transaction, UnlinkLinkTransaction)
+            unlink_link_transaction.execute()
+        else:
+            raise KeyError(instruction)
 
 
 def _plan_from_actions(actions):  # pragma: no cover
@@ -246,29 +260,8 @@ def install_actions(
             solver._index = index.copy()
         txn = solver.solve_for_transaction(prune=prune, ignore_pinned=not pinned)
         prefix_setup = txn.prefix_setups[prefix]
-        actions = get_blank_actions(prefix)
-        actions[LINK].extend(prec for prec in prefix_setup.link_precs)
+        actions = {
+            PREFIX: prefix,
+            LINK: [prec for prec in prefix_setup.link_precs],
+        }
         return actions
-
-
-def get_blank_actions(prefix):  # pragma: no cover
-    actions = defaultdict(list)
-    actions[PREFIX] = prefix
-    return actions
-
-
-def execute_instructions(plan, verbose=False):
-    """Execute the instructions in the plan
-
-    :param plan: A list of (instruction, arg) tuples
-    :param verbose: verbose output
-    """
-    log.debug("executing plan %s", plan)
-
-    for instruction, arg in plan:
-        log.debug(" %s(%r)", instruction, arg)
-
-        cmd = commands[instruction]
-
-        if callable(cmd):
-            cmd(arg)
