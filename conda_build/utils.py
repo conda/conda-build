@@ -2180,8 +2180,8 @@ def samefile(path1: Path, path2: Path) -> bool:
         return path1 == path2
 
 
-def dist_string_from_package_record(package_record):
-    string = package_record.fn
+def dist_string_from_package_record(prec):
+    string = prec.fn
 
     if string.endswith("@"):
         raise NotImplementedError()

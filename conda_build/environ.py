@@ -979,7 +979,7 @@ def get_install_actions(
                     re.match(r"^%s(?:$|[\s=].*)" % pkg, str(dep)) for dep in specs
                 ):
                     actions[LINK_ACTION] = [
-                        spec for spec in actions[LINK_ACTION] if spec.name != pkg
+                        prec for prec in actions[LINK_ACTION] if prec.name != pkg
                     ]
         utils.trim_empty_keys(actions)
         cached_actions[(specs, env, subdir, channel_urls, disable_pip)] = actions.copy()
@@ -1239,7 +1239,7 @@ def get_pinned_deps(m, section):
             channel_urls=tuple(m.config.channel_urls),
         )
     runtime_deps = [
-        " ".join(dist_string_from_package_record(link).rsplit("-", 2))
-        for link in actions.get(LINK_ACTION, [])
+        " ".join(dist_string_from_package_record(prec).rsplit("-", 2))
+        for prec in actions.get(LINK_ACTION, [])
     ]
     return runtime_deps
