@@ -34,9 +34,7 @@ from .conda_imports import (
 )
 
 from .instructions import (
-    ACTION_CODES,
     LINK,
-    OP_ORDER,
     PREFIX,
     PRINT,
     PROGRESSIVEFETCHEXTRACT,
@@ -124,12 +122,6 @@ def execute_actions(actions, verbose=False):  # pragma: no cover
 
 
 def _plan_from_actions(actions):  # pragma: no cover
-
-    if OP_ORDER in actions and actions[OP_ORDER]:
-        op_order = actions[OP_ORDER]
-    else:
-        op_order = ACTION_CODES
-
     assert PREFIX in actions and actions[PREFIX]
     prefix = actions[PREFIX]
     plan = [(PREFIX, "%s" % prefix)]
@@ -143,19 +135,16 @@ def _plan_from_actions(actions):  # pragma: no cover
         # plan.append((UNLINKLINKTRANSACTION, unlink_link_transaction))
         # return plan
 
-    log.debug(f"Adding plans for operations: {op_order}")
-    for op in op_order:
-        if op not in actions:
-            log.trace(f"action {op} not in actions")
-            continue
-        if not actions[op]:
-            log.trace(f"action {op} has None value")
-            continue
-        if "_" not in op:
-            plan.append((PRINT, "%sing packages ..." % op.capitalize()))
-        for arg in actions[op]:
-            log.debug(f"appending value {arg} for action {op}")
-            plan.append((op, arg))
+    log.debug(f"Adding plans for operations: {[LINK]}")
+    if LINK not in actions:
+        log.trace(f"action {LINK} not in actions")
+    elif not actions[LINK]:
+        log.trace(f"action {LINK} has None value")
+    else:
+        plan.append((PRINT, "%sing packages ..." % LINK.capitalize()))
+        for arg in actions[LINK]:
+            log.debug(f"appending value {arg} for action {LINK}")
+            plan.append((LINK, arg))
 
     plan = _inject_UNLINKLINKTRANSACTION(plan, prefix)
 
@@ -267,9 +256,6 @@ def install_actions(
 def get_blank_actions(prefix):  # pragma: no cover
     actions = defaultdict(list)
     actions[PREFIX] = prefix
-    actions[OP_ORDER] = (
-        LINK,
-    )
     return actions
 
 
