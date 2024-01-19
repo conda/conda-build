@@ -139,70 +139,31 @@ def _plan_from_actions(actions):  # pragma: no cover
     prefix = actions[PREFIX]
     plan = [(PREFIX, "%s" % prefix)]
 
-    unlink_link_transaction = actions.get(UNLINKLINKTRANSACTION)
-    if unlink_link_transaction:
-        raise RuntimeError()
-        # progressive_fetch_extract = actions.get(PROGRESSIVEFETCHEXTRACT)
-        # if progressive_fetch_extract:
-        #     plan.append((PROGRESSIVEFETCHEXTRACT, progressive_fetch_extract))
-        # plan.append((UNLINKLINKTRANSACTION, unlink_link_transaction))
-        # return plan
-
-    log.debug(f"Adding plans for operations: {[LINK]}")
     if LINK not in actions:
-        log.trace(f"action {LINK} not in actions")
-    elif not actions[LINK]:
-        log.trace(f"action {LINK} has None value")
-    else:
-        for arg in actions[LINK]:
-            log.debug(f"appending value {arg} for action {LINK}")
-            plan.append((LINK, arg))
+        log.debug(f"action {LINK} not in actions")
+        return plan
 
-    plan = _inject_UNLINKLINKTRANSACTION(plan, prefix)
+    link_precs = actions[LINK]
+    if not link_precs:
+        log.debug(f"action {LINK} has None value")
+        return plan
 
-    return plan
-
-
-def _inject_UNLINKLINKTRANSACTION(plan, prefix):  # pragma: no cover
-    # this is only used for conda-build at this point
-    first_unlink_link_idx = next(
-        (q for q, p in enumerate(plan) if p[0] in (LINK,)), -1
-    )
-    if first_unlink_link_idx >= 0:
-        link_precs = tuple(prec for action, prec in plan if action == LINK)
-        link_precs = _handle_menuinst(link_precs)
-
-        pfe = ProgressiveFetchExtract(link_precs)
-        pfe.prepare()
-
-        stp = PrefixSetup(prefix, (), link_precs, (), [], ())
-        plan.insert(
-            first_unlink_link_idx, (UNLINKLINKTRANSACTION, UnlinkLinkTransaction(stp))
-        )
-        plan.insert(first_unlink_link_idx, (PROGRESSIVEFETCHEXTRACT, pfe))
-
-    return plan
-
-
-def _handle_menuinst(link_precs):  # pragma: no cover
-    if not on_win:
-        return link_precs
-
-    # Always link menuinst first/last on windows in case a subsequent
-    # package tries to import it to create/remove a shortcut
-
-    # link
-    menuinst_idx = next(
-        (q for q, d in enumerate(link_precs) if d.name == "menuinst"), None
-    )
-    if menuinst_idx is not None:
+    if on_win:
+        # Always link menuinst first/last on windows in case a subsequent
+        # package tries to import it to create/remove a shortcut
         link_precs = (
-            *link_precs[menuinst_idx : menuinst_idx + 1],
-            *link_precs[:menuinst_idx],
-            *link_precs[menuinst_idx + 1 :],
+            [p for p in link_precs if p.name == "menuinst"] +
+            [p for p in link_precs if p.name != "menuinst"]
         )
 
-    return link_precs
+    pfe = ProgressiveFetchExtract(link_precs)
+    pfe.prepare()
+    plan.append((PROGRESSIVEFETCHEXTRACT, pfe))
+
+    stp = PrefixSetup(prefix, (), link_precs, (), [], ())
+    plan.append((UNLINKLINKTRANSACTION, UnlinkLinkTransaction(stp)))
+
+    return plan
 
 
 def install_actions(
