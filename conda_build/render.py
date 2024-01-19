@@ -28,7 +28,7 @@ import yaml
 
 from . import environ, exceptions, source, utils
 from .conda_interface import (
-    LINK,
+    LINK_ACTION,
     ProgressiveFetchExtract,
     TemporaryDirectory,
     UnsatisfiableError,
@@ -90,10 +90,10 @@ def bldpkg_path(m):
 
 
 def actions_to_pins(actions):
-    if LINK in actions:
+    if LINK_ACTION in actions:
         return [
             " ".join(dist_string_from_package_record(spec).split()[0].rsplit("-", 2))
-            for spec in actions[LINK]
+            for spec in actions[LINK_ACTION]
         ]
     return []
 
@@ -357,7 +357,7 @@ def execute_download_actions(m, actions, env, package_subset=None, require_files
 
     pkg_files = {}
 
-    packages = actions.get(LINK, [])
+    packages = actions.get(LINK_ACTION, [])
     selected_packages = set()
     if package_subset:
         for pkg in package_subset:
@@ -401,7 +401,7 @@ def get_upstream_pins(m: MetaData, actions, env):
     downstream dependency specs.  Return these additional specs."""
     env_specs = m.get_value(f"requirements/{env}", [])
     explicit_specs = [req.split(" ")[0] for req in env_specs] if env_specs else []
-    linked_packages = actions.get(LINK, [])
+    linked_packages = actions.get(LINK_ACTION, [])
     linked_packages = [pkg for pkg in linked_packages if pkg.name in explicit_specs]
 
     ignore_pkgs_list = utils.ensure_list(m.get_value("build/ignore_run_exports_from"))

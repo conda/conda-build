@@ -157,8 +157,8 @@ def which_prefix(path: str | os.PathLike | Path) -> Path:
 env_path_backup_var_exists = os.environ.get("CONDA_PATH_BACKUP", None)
 
 from ._legacy_conda_imports import (
-    LINK,
-    PREFIX,
+    LINK_ACTION,
+    PREFIX_ACTION,
     display_actions,
     execute_actions,
     install_actions,

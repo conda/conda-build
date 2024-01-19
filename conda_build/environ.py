@@ -16,8 +16,8 @@ from os.path import join, normpath
 
 from . import utils
 from .conda_interface import (
-    LINK,
-    PREFIX,
+    LINK_ACTION,
+    PREFIX_ACTION,
     CondaError,
     LinkError,
     LockError,
@@ -895,8 +895,8 @@ def get_install_actions(
         disable_pip,
     ) in cached_actions and last_index_ts >= index_ts:
         actions = cached_actions[(specs, env, subdir, channel_urls, disable_pip)].copy()
-        if PREFIX in actions:
-            actions[PREFIX] = prefix
+        if PREFIX_ACTION in actions:
+            actions[PREFIX_ACTION] = prefix
     elif specs:
         # this is hiding output like:
         #    Fetching package metadata ...........
@@ -978,8 +978,8 @@ def get_install_actions(
                 if not any(
                     re.match(r"^%s(?:$|[\s=].*)" % pkg, str(dep)) for dep in specs
                 ):
-                    actions[LINK] = [
-                        spec for spec in actions[LINK] if spec.name != pkg
+                    actions[LINK_ACTION] = [
+                        spec for spec in actions[LINK_ACTION] if spec.name != pkg
                     ]
         utils.trim_empty_keys(actions)
         cached_actions[(specs, env, subdir, channel_urls, disable_pip)] = actions.copy()
@@ -1101,7 +1101,7 @@ def create_env(
                         # Set this here and use to create environ
                         #   Setting this here is important because we use it below (symlink)
                         prefix = config.host_prefix if host else config.build_prefix
-                        actions[PREFIX] = prefix
+                        actions[PREFIX_ACTION] = prefix
 
                         create_env(
                             prefix,
@@ -1239,6 +1239,7 @@ def get_pinned_deps(m, section):
             channel_urls=tuple(m.config.channel_urls),
         )
     runtime_deps = [
-        " ".join(dist_string_from_package_record(link).rsplit("-", 2)) for link in actions.get(LINK, [])
+        " ".join(dist_string_from_package_record(link).rsplit("-", 2))
+        for link in actions.get(LINK_ACTION, [])
     ]
     return runtime_deps

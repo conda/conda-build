@@ -32,14 +32,14 @@ from .conda_imports import (
     stack_context_default,
 )
 
-PREFIX = "PREFIX"
-LINK = "LINK"
+PREFIX_ACTION = "PREFIX"
+LINK_ACTION = "LINK"
 
 log = getLogger(__name__)
 
 
 def display_actions(actions):
-    prefix = actions.get(PREFIX)
+    prefix = actions.get(PREFIX_ACTION)
     builder = ["", "## Package Plan ##\n"]
     if prefix:
         builder.append("  environment location: %s" % prefix)
@@ -68,7 +68,7 @@ def display_actions(actions):
     features = defaultdict(lambda: "")
     channels = defaultdict(lambda: "")
 
-    for prec in actions.get(LINK, []):
+    for prec in actions.get(LINK_ACTION, []):
         assert isinstance(prec, PackageRecord)
         pkg = prec["name"]
         channels[pkg] = channel_filt(channel_str(prec))
@@ -105,16 +105,16 @@ def display_actions(actions):
 
 
 def execute_actions(actions):
-    assert PREFIX in actions and actions[PREFIX]
-    prefix = actions[PREFIX]
+    assert PREFIX_ACTION in actions and actions[PREFIX_ACTION]
+    prefix = actions[PREFIX_ACTION]
 
-    if LINK not in actions:
-        log.debug(f"action {LINK} not in actions")
+    if LINK_ACTION not in actions:
+        log.debug(f"action {LINK_ACTION} not in actions")
         return
 
-    link_precs = actions[LINK]
+    link_precs = actions[LINK_ACTION]
     if not link_precs:
-        log.debug(f"action {LINK} has None value")
+        log.debug(f"action {LINK_ACTION} has None value")
         return
 
     if on_win:
@@ -172,7 +172,7 @@ def install_actions(prefix, index, specs):
         txn = solver.solve_for_transaction(prune=False, ignore_pinned=False)
         prefix_setup = txn.prefix_setups[prefix]
         actions = {
-            PREFIX: prefix,
-            LINK: [prec for prec in prefix_setup.link_precs],
+            PREFIX_ACTION: prefix,
+            LINK_ACTION: [prec for prec in prefix_setup.link_precs],
         }
         return actions
