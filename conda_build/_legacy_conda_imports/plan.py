@@ -35,8 +35,6 @@ from .conda_imports import (
 
 PREFIX = "PREFIX"
 LINK = "LINK"
-UNLINKLINKTRANSACTION = "UNLINKLINKTRANSACTION"
-PROGRESSIVEFETCHEXTRACT = "PROGRESSIVEFETCHEXTRACT"
 
 log = getLogger(__name__)
 
@@ -112,41 +110,18 @@ def display_actions(actions):
 # ---------------------------- Backwards compat for conda-build --------------------------
 
 
-def execute_actions(actions, verbose=False):  # pragma: no cover
-    plan = _plan_from_actions(actions)
-    log.debug("executing plan %s", plan)
-
-    for instruction, arg in plan:
-        log.debug(" %s(%r)", instruction, arg)
-
-        if instruction in (PREFIX, LINK):
-            continue
-
-        if instruction == PROGRESSIVEFETCHEXTRACT:
-            progressive_fetch_extract = arg
-            assert isinstance(progressive_fetch_extract, ProgressiveFetchExtract)
-            progressive_fetch_extract.execute()
-        elif instruction == UNLINKLINKTRANSACTION:
-            unlink_link_transaction = arg
-            assert isinstance(unlink_link_transaction, UnlinkLinkTransaction)
-            unlink_link_transaction.execute()
-        else:
-            raise KeyError(instruction)
-
-
-def _plan_from_actions(actions):  # pragma: no cover
+def execute_actions(actions, verbose=False):
     assert PREFIX in actions and actions[PREFIX]
     prefix = actions[PREFIX]
-    plan = [(PREFIX, "%s" % prefix)]
 
     if LINK not in actions:
         log.debug(f"action {LINK} not in actions")
-        return plan
+        return
 
     link_precs = actions[LINK]
     if not link_precs:
         log.debug(f"action {LINK} has None value")
-        return plan
+        return
 
     if on_win:
         # Always link menuinst first/last on windows in case a subsequent
@@ -156,14 +131,16 @@ def _plan_from_actions(actions):  # pragma: no cover
             [p for p in link_precs if p.name != "menuinst"]
         )
 
-    pfe = ProgressiveFetchExtract(link_precs)
-    pfe.prepare()
-    plan.append((PROGRESSIVEFETCHEXTRACT, pfe))
+    progressive_fetch_extract = ProgressiveFetchExtract(link_precs)
+    progressive_fetch_extract.prepare()
 
     stp = PrefixSetup(prefix, (), link_precs, (), [], ())
-    plan.append((UNLINKLINKTRANSACTION, UnlinkLinkTransaction(stp)))
+    unlink_link_transaction = UnlinkLinkTransaction(stp)
 
-    return plan
+    log.debug(" %s(%r)", "PROGRESSIVEFETCHEXTRACT", progressive_fetch_extract)
+    progressive_fetch_extract.execute()
+    log.debug(" %s(%r)", "UNLINKLINKTRANSACTION", unlink_link_transaction)
+    unlink_link_transaction.execute()
 
 
 def install_actions(
