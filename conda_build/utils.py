@@ -2180,3 +2180,23 @@ def samefile(path1: Path, path2: Path) -> bool:
         # FileNotFoundError: path doesn't exist
         # PermissionError: don't have permissions to read path
         return path1 == path2
+
+
+def dist_string_from_package_record(package_record):
+    string = package_record.fn
+
+    if string.endswith("@"):
+        raise NotImplementedError()
+
+    REGEX_STR = (
+        r"(?:([^\s\[\]]+)::)?"  # optional channel
+        r"([^\s\[\]]+)"  # 3.x dist
+        r"(?:\[([a-zA-Z0-9_-]+)\])?"  # with_features_depends
+    )
+    channel, original_dist, w_f_d = re.search(REGEX_STR, string).groups()
+
+    stripped = original_dist
+    for ext in CONDA_PACKAGE_EXTENSIONS:
+        if stripped.endswith(ext):
+            stripped = stripped[: -len(ext)]
+    return stripped

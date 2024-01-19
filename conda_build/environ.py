@@ -35,7 +35,6 @@ from .conda_interface import (
     reset_context,
     root_dir,
 )
-from ._legacy_conda_imports.dist import dist_string_from_package_record
 from .deprecations import deprecated
 from .exceptions import BuildLockError, DependencyNeedsBuildingError
 from .features import feature_list
@@ -43,6 +42,7 @@ from .index import get_build_index
 from .metadata import MetaData
 from .os_utils import external
 from .utils import (
+    dist_string_from_package_record,
     ensure_list,
     env_var,
     on_mac,

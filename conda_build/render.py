@@ -35,11 +35,14 @@ from .conda_interface import (
     pkgs_dirs,
     specs_from_url,
 )
-from ._legacy_conda_imports.dist import dist_string_from_package_record
 from .exceptions import DependencyNeedsBuildingError
 from .index import get_build_index
 from .metadata import MetaData, combine_top_level_metadata_with_output
-from .utils import CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2
+from .utils import (
+    CONDA_PACKAGE_EXTENSION_V1,
+    CONDA_PACKAGE_EXTENSION_V2,
+    dist_string_from_package_record
+)
 from .variants import (
     filter_by_key_value,
     get_package_variants,
