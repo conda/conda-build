@@ -253,7 +253,10 @@ def install_actions(
         solver_backend = context.plugin_manager.get_cached_solver_backend()
         solver = solver_backend(prefix, channels, subdirs, specs_to_add=specs)
         if index:
-            solver._index = index
+            # Solver can modify the index (e.g., Solver._prepare adds virtual
+            # package) => Copy index (just outer container, not deep copy)
+            # to conserve it.
+            solver._index = index.copy()
         txn = solver.solve_for_transaction(prune=prune, ignore_pinned=not pinned)
         prefix_setup = txn.prefix_setups[prefix]
         actions = get_blank_actions(prefix)
