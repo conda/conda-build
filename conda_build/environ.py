@@ -904,7 +904,7 @@ def get_install_actions(
         with utils.LoggingContext(conda_log_level):
             with capture():
                 try:
-                    actions = install_actions(prefix, index, specs, force=True)
+                    actions = install_actions(prefix, index, specs)
                 except (NoPackagesFoundError, UnsatisfiableError) as exc:
                     raise DependencyNeedsBuildingError(exc, subdir=subdir)
                 except (

@@ -12,7 +12,6 @@ NOTE:
 
 from collections import defaultdict
 from logging import getLogger
-from os.path import basename, isdir
 
 from .conda_imports import (
     DEFAULTS_CHANNEL_NAME,
@@ -37,8 +36,6 @@ PREFIX = "PREFIX"
 LINK = "LINK"
 
 log = getLogger(__name__)
-
-# TODO: Remove conda/plan.py.  This module should be almost completely deprecated now.
 
 
 def display_actions(actions):
@@ -107,10 +104,7 @@ def display_actions(actions):
     print()
 
 
-# ---------------------------- Backwards compat for conda-build --------------------------
-
-
-def execute_actions(actions, verbose=False):
+def execute_actions(actions):
     assert PREFIX in actions and actions[PREFIX]
     prefix = actions[PREFIX]
 
@@ -143,21 +137,7 @@ def execute_actions(actions, verbose=False):
     unlink_link_transaction.execute()
 
 
-def install_actions(
-    prefix,
-    index,
-    specs,
-    force=False,
-    only_names=None,
-    always_copy=False,
-    pinned=True,
-    update_deps=True,
-    prune=False,
-    channel_priority_map=None,
-    is_update=False,
-    minimal_hint=False,
-):  # pragma: no cover
-    # this is for conda-build
+def install_actions(prefix, index, specs):
     with env_vars(
         {
             "CONDA_ALLOW_NON_CHANNEL_URLS": "true",
@@ -165,25 +145,18 @@ def install_actions(
         },
         stack_callback=stack_context_default,
     ):
-        if channel_priority_map:
-            channel_names = IndexedSet(
-                Channel(url).canonical_name for url in channel_priority_map
-            )
-            channels = IndexedSet(Channel(cn) for cn in channel_names)
-            subdirs = IndexedSet(basename(url) for url in channel_priority_map)
-        else:
-            # a hack for when conda-build calls this function without giving channel_priority_map
-            if LAST_CHANNEL_URLS:
-                channel_priority_map = prioritize_channels(LAST_CHANNEL_URLS)
-                channels = IndexedSet(Channel(url) for url in channel_priority_map)
-                subdirs = (
-                    IndexedSet(
-                        subdir for subdir in (c.subdir for c in channels) if subdir
-                    )
-                    or context.subdirs
+        # a hack since in conda-build we don't track channel_priority_map
+        if LAST_CHANNEL_URLS:
+            channel_priority_map = prioritize_channels(LAST_CHANNEL_URLS)
+            channels = IndexedSet(Channel(url) for url in channel_priority_map)
+            subdirs = (
+                IndexedSet(
+                    subdir for subdir in (c.subdir for c in channels) if subdir
                 )
-            else:
-                channels = subdirs = None
+                or context.subdirs
+            )
+        else:
+            channels = subdirs = None
 
         specs = tuple(MatchSpec(spec) for spec in specs)
 
@@ -196,7 +169,7 @@ def install_actions(
             # package) => Copy index (just outer container, not deep copy)
             # to conserve it.
             solver._index = index.copy()
-        txn = solver.solve_for_transaction(prune=prune, ignore_pinned=not pinned)
+        txn = solver.solve_for_transaction(prune=False, ignore_pinned=False)
         prefix_setup = txn.prefix_setups[prefix]
         actions = {
             PREFIX: prefix,
