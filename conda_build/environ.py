@@ -10,31 +10,46 @@ import re
 import subprocess
 import sys
 import warnings
+from collections import defaultdict
 from functools import lru_cache
 from glob import glob
+from logging import getLogger
 from os.path import join, normpath
+
+try:
+    from boltons.setutils import IndexedSet
+except ImportError:  # pragma: no cover
+    from conda._vendor.boltons.setutils import IndexedSet
+
+from conda.base.constants import (
+    DEFAULTS_CHANNEL_NAME,
+    UNKNOWN_CHANNEL,
+)
+from conda.common.io import env_vars
+from conda.core.index import LAST_CHANNEL_URLS
+from conda.core.link import PrefixSetup, UnlinkLinkTransaction
+from conda.core.prefix_data import PrefixData
+from conda.models.channel import prioritize_channels
 
 from . import utils
 from .conda_interface import (
+    Channel,
     CondaError,
     LinkError,
     LockError,
+    MatchSpec,
     NoPackagesFoundError,
+    PackageRecord,
     PaddingError,
+    ProgressiveFetchExtract,
     TemporaryDirectory,
     UnsatisfiableError,
+    context,
     create_default_packages,
     get_version_from_git_tag,
     pkgs_dirs,
     reset_context,
     root_dir,
-)
-from .environ_actions import (
-    LINK_ACTION,
-    PREFIX_ACTION,
-    display_actions,
-    execute_actions,
-    install_actions,
 )
 from .exceptions import BuildLockError, DependencyNeedsBuildingError
 from .features import feature_list
@@ -50,6 +65,11 @@ from .utils import (
     prepend_bin_path,
 )
 from .variants import get_default_variant
+
+log = getLogger(__name__)
+
+PREFIX_ACTION = "PREFIX"
+LINK_ACTION = "LINK"
 
 # these are things that we provide env vars for more explicitly.  This list disables the
 #    pass-through of variant values to env vars for these keys.
@@ -1240,3 +1260,143 @@ def get_pinned_deps(m, section):
         )
     runtime_deps = [dist_dep_string(prec) for prec in actions.get(LINK_ACTION, [])]
     return runtime_deps
+
+
+def install_actions(prefix, index, specs):
+    with env_vars(
+        {
+            "CONDA_ALLOW_NON_CHANNEL_URLS": "true",
+            "CONDA_SOLVER_IGNORE_TIMESTAMPS": "false",
+        },
+        callback=reset_context,
+    ):
+        # a hack since in conda-build we don't track channel_priority_map
+        if LAST_CHANNEL_URLS:
+            channel_priority_map = prioritize_channels(LAST_CHANNEL_URLS)
+            channels = IndexedSet(Channel(url) for url in channel_priority_map)
+            subdirs = (
+                IndexedSet(subdir for subdir in (c.subdir for c in channels) if subdir)
+                or context.subdirs
+            )
+        else:
+            channels = subdirs = None
+
+        specs = tuple(MatchSpec(spec) for spec in specs)
+
+        PrefixData._cache_.clear()
+
+        solver_backend = context.plugin_manager.get_cached_solver_backend()
+        solver = solver_backend(prefix, channels, subdirs, specs_to_add=specs)
+        if index:
+            # Solver can modify the index (e.g., Solver._prepare adds virtual
+            # package) => Copy index (just outer container, not deep copy)
+            # to conserve it.
+            solver._index = index.copy()
+        txn = solver.solve_for_transaction(prune=False, ignore_pinned=False)
+        prefix_setup = txn.prefix_setups[prefix]
+        actions = {
+            PREFIX_ACTION: prefix,
+            LINK_ACTION: [prec for prec in prefix_setup.link_precs],
+        }
+        return actions
+
+
+def execute_actions(actions):
+    assert PREFIX_ACTION in actions and actions[PREFIX_ACTION]
+    prefix = actions[PREFIX_ACTION]
+
+    if LINK_ACTION not in actions:
+        log.debug(f"action {LINK_ACTION} not in actions")
+        return
+
+    link_precs = actions[LINK_ACTION]
+    if not link_precs:
+        log.debug(f"action {LINK_ACTION} has None value")
+        return
+
+    if on_win:
+        # Always link menuinst first/last on windows in case a subsequent
+        # package tries to import it to create/remove a shortcut
+        link_precs = [p for p in link_precs if p.name == "menuinst"] + [
+            p for p in link_precs if p.name != "menuinst"
+        ]
+
+    progressive_fetch_extract = ProgressiveFetchExtract(link_precs)
+    progressive_fetch_extract.prepare()
+
+    stp = PrefixSetup(prefix, (), link_precs, (), [], ())
+    unlink_link_transaction = UnlinkLinkTransaction(stp)
+
+    log.debug(" %s(%r)", "PROGRESSIVEFETCHEXTRACT", progressive_fetch_extract)
+    progressive_fetch_extract.execute()
+    log.debug(" %s(%r)", "UNLINKLINKTRANSACTION", unlink_link_transaction)
+    unlink_link_transaction.execute()
+
+
+def display_actions(actions):
+    prefix = actions.get(PREFIX_ACTION)
+    builder = ["", "## Package Plan ##\n"]
+    if prefix:
+        builder.append("  environment location: %s" % prefix)
+        builder.append("")
+    print("\n".join(builder))
+
+    show_channel_urls = context.show_channel_urls
+
+    def channel_str(rec):
+        if rec.get("schannel"):
+            return rec["schannel"]
+        if rec.get("url"):
+            return Channel(rec["url"]).canonical_name
+        if rec.get("channel"):
+            return Channel(rec["channel"]).canonical_name
+        return UNKNOWN_CHANNEL
+
+    def channel_filt(s):
+        if show_channel_urls is False:
+            return ""
+        if show_channel_urls is None and s == DEFAULTS_CHANNEL_NAME:
+            return ""
+        return s
+
+    packages = defaultdict(lambda: "")
+    features = defaultdict(lambda: "")
+    channels = defaultdict(lambda: "")
+
+    for prec in actions.get(LINK_ACTION, []):
+        assert isinstance(prec, PackageRecord)
+        pkg = prec["name"]
+        channels[pkg] = channel_filt(channel_str(prec))
+        packages[pkg] = prec["version"] + "-" + prec["build"]
+        features[pkg] = ",".join(prec.get("features") or ())
+
+    fmt = {}
+    if packages:
+        maxpkg = max(len(p) for p in packages) + 1
+        maxver = max(len(p) for p in packages.values())
+        maxfeatures = max(len(p) for p in features.values())
+        maxchannels = max(len(p) for p in channels.values())
+        for pkg in packages:
+            # That's right. I'm using old-style string formatting to generate a
+            # string with new-style string formatting.
+            fmt[pkg] = f"{{pkg:<{maxpkg}}} {{vers:<{maxver}}}"
+            if maxchannels:
+                fmt[pkg] += " {channel:<%s}" % maxchannels
+            if features[pkg]:
+                fmt[pkg] += " [{features:<%s}]" % maxfeatures
+
+    lead = " " * 4
+
+    def format(s, pkg):
+        return lead + s.format(
+            pkg=pkg + ":",
+            vers=packages[pkg],
+            channel=channels[pkg],
+            features=features[pkg],
+        )
+
+    if packages:
+        print("\nThe following NEW packages will be INSTALLED:\n")
+        for pkg in sorted(packages):
+            print(format(fmt[pkg], pkg))
+    print()

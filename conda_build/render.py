@@ -35,7 +35,7 @@ from .conda_interface import (
     pkgs_dirs,
     specs_from_url,
 )
-from .environ_actions import LINK_ACTION
+from .environ import LINK_ACTION
 from .exceptions import DependencyNeedsBuildingError
 from .index import get_build_index
 from .metadata import MetaData, combine_top_level_metadata_with_output
