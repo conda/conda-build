@@ -36,7 +36,6 @@ from .conda_imports import (
 from .instructions import (
     LINK,
     PREFIX,
-    PRINT,
     PROGRESSIVEFETCHEXTRACT,
     UNLINKLINKTRANSACTION,
     commands,
@@ -141,7 +140,6 @@ def _plan_from_actions(actions):  # pragma: no cover
     elif not actions[LINK]:
         log.trace(f"action {LINK} has None value")
     else:
-        plan.append((PRINT, "%sing packages ..." % LINK.capitalize()))
         for arg in actions[LINK]:
             log.debug(f"appending value {arg} for action {LINK}")
             plan.append((LINK, arg))

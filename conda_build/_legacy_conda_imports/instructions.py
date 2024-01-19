@@ -9,7 +9,6 @@ log = getLogger(__name__)
 
 # op codes
 PREFIX = "PREFIX"
-PRINT = "PRINT"
 LINK = "LINK"
 UNLINKLINKTRANSACTION = "UNLINKLINKTRANSACTION"
 PROGRESSIVEFETCHEXTRACT = "PROGRESSIVEFETCHEXTRACT"
@@ -17,12 +16,6 @@ PROGRESSIVEFETCHEXTRACT = "PROGRESSIVEFETCHEXTRACT"
 
 def PREFIX_CMD(prefix):
     pass
-
-
-def PRINT_CMD(arg):  # pragma: no cover
-    if arg.startswith(("Linking packages",)):
-        return
-    getLogger("conda.stdout.verbose").info(arg)
 
 
 def PROGRESSIVEFETCHEXTRACT_CMD(progressive_fetch_extract):  # pragma: no cover
@@ -39,7 +32,6 @@ def UNLINKLINKTRANSACTION_CMD(arg):  # pragma: no cover
 # Map instruction to command (a python function)
 commands = {
     PREFIX: PREFIX_CMD,
-    PRINT: PRINT_CMD,
     LINK: None,
     UNLINKLINKTRANSACTION: UNLINKLINKTRANSACTION_CMD,
     PROGRESSIVEFETCHEXTRACT: PROGRESSIVEFETCHEXTRACT_CMD,
