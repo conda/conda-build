@@ -13,24 +13,29 @@ NOTE:
 from collections import defaultdict
 from logging import getLogger
 
-from .conda_imports import (
+try:
+    from boltons.setutils import IndexedSet
+except ImportError:  # pragma: no cover
+    from conda._vendor.boltons.setutils import IndexedSet
+
+from conda.base.constants import (
     DEFAULTS_CHANNEL_NAME,
-    LAST_CHANNEL_URLS,
     UNKNOWN_CHANNEL,
+)
+from conda.base.context import context, stack_context_default
+from conda.common.io import env_vars
+from conda.core.index import LAST_CHANNEL_URLS
+from conda.core.link import PrefixSetup, UnlinkLinkTransaction
+from conda.core.prefix_data import PrefixData
+from conda.exports import (
     Channel,
-    IndexedSet,
     MatchSpec,
     PackageRecord,
-    PrefixData,
-    PrefixSetup,
     ProgressiveFetchExtract,
-    UnlinkLinkTransaction,
-    context,
-    env_vars,
     on_win,
-    prioritize_channels,
-    stack_context_default,
 )
+
+from conda.models.channel import prioritize_channels
 
 PREFIX_ACTION = "PREFIX"
 LINK_ACTION = "LINK"

@@ -155,11 +155,3 @@ def which_prefix(path: str | os.PathLike | Path) -> Path:
 # When deactivating envs (e.g. switching from root to build/test) this env var is used,
 # except the PR that removed this has been reverted (for now) and Windows doesn't need it.
 env_path_backup_var_exists = os.environ.get("CONDA_PATH_BACKUP", None)
-
-from ._legacy_conda_imports import (
-    LINK_ACTION,
-    PREFIX_ACTION,
-    display_actions,
-    execute_actions,
-    install_actions,
-)

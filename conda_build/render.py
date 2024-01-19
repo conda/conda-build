@@ -28,13 +28,13 @@ import yaml
 
 from . import environ, exceptions, source, utils
 from .conda_interface import (
-    LINK_ACTION,
     ProgressiveFetchExtract,
     TemporaryDirectory,
     UnsatisfiableError,
     pkgs_dirs,
     specs_from_url,
 )
+from .environ_actions import LINK_ACTION
 from .exceptions import DependencyNeedsBuildingError
 from .index import get_build_index
 from .metadata import MetaData, combine_top_level_metadata_with_output

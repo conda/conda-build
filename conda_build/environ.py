@@ -16,8 +16,6 @@ from os.path import join, normpath
 
 from . import utils
 from .conda_interface import (
-    LINK_ACTION,
-    PREFIX_ACTION,
     CondaError,
     LinkError,
     LockError,
@@ -27,15 +25,19 @@ from .conda_interface import (
     TemporaryDirectory,
     UnsatisfiableError,
     create_default_packages,
-    display_actions,
-    execute_actions,
     get_version_from_git_tag,
-    install_actions,
     pkgs_dirs,
     reset_context,
     root_dir,
 )
 from .deprecations import deprecated
+from .environ_actions import (
+    LINK_ACTION,
+    PREFIX_ACTION,
+    display_actions,
+    execute_actions,
+    install_actions,
+)
 from .exceptions import BuildLockError, DependencyNeedsBuildingError
 from .features import feature_list
 from .index import get_build_index
