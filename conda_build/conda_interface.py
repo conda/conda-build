@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-
 import configparser  # noqa: F401
 import os
 from functools import partial
@@ -16,7 +15,7 @@ from conda.auxlib.packaging import (  # noqa: F401
 )
 from conda.base.context import context, determine_target_prefix, reset_context
 from conda.base.context import non_x86_machines as non_x86_linux_machines  # noqa: F401
-from conda.core.index import get_index
+from conda.core.index import get_index  # noqa: F401
 from conda.core.package_cache import ProgressiveFetchExtract  # noqa: F401
 from conda.core.package_cache_data import PackageCacheData  # noqa: F401
 from conda.exceptions import (  # noqa: F401

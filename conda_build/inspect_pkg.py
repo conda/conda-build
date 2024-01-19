@@ -18,7 +18,6 @@ from conda.api import Solver
 from conda.core.index import get_index
 from conda.core.prefix_data import PrefixData
 from conda.models.records import PrefixRecord
-from conda.resolve import MatchSpec
 
 from . import conda_interface
 from .conda_interface import specs_from_args

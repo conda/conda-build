@@ -1,4 +1,4 @@
-# Copyright (C) 2012 Anaconda, Inc
+# Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
 """
 Handle the planning of installs and their execution.
@@ -34,7 +34,6 @@ from conda.exports import (
     ProgressiveFetchExtract,
     on_win,
 )
-
 from conda.models.channel import prioritize_channels
 
 PREFIX_ACTION = "PREFIX"
@@ -99,7 +98,10 @@ def display_actions(actions):
 
     def format(s, pkg):
         return lead + s.format(
-                pkg=pkg + ":", vers=packages[pkg], channel=channels[pkg], features=features[pkg]
+            pkg=pkg + ":",
+            vers=packages[pkg],
+            channel=channels[pkg],
+            features=features[pkg],
         )
 
     if packages:
@@ -125,10 +127,9 @@ def execute_actions(actions):
     if on_win:
         # Always link menuinst first/last on windows in case a subsequent
         # package tries to import it to create/remove a shortcut
-        link_precs = (
-            [p for p in link_precs if p.name == "menuinst"] +
-            [p for p in link_precs if p.name != "menuinst"]
-        )
+        link_precs = [p for p in link_precs if p.name == "menuinst"] + [
+            p for p in link_precs if p.name != "menuinst"
+        ]
 
     progressive_fetch_extract = ProgressiveFetchExtract(link_precs)
     progressive_fetch_extract.prepare()
@@ -155,9 +156,7 @@ def install_actions(prefix, index, specs):
             channel_priority_map = prioritize_channels(LAST_CHANNEL_URLS)
             channels = IndexedSet(Channel(url) for url in channel_priority_map)
             subdirs = (
-                IndexedSet(
-                    subdir for subdir in (c.subdir for c in channels) if subdir
-                )
+                IndexedSet(subdir for subdir in (c.subdir for c in channels) if subdir)
                 or context.subdirs
             )
         else:

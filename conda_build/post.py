@@ -32,7 +32,7 @@ from os.path import (
 )
 from pathlib import Path
 from subprocess import CalledProcessError, call, check_output
-from typing import Iterable, Literal
+from typing import Literal
 
 from conda.core.prefix_data import PrefixData
 from conda.models.records import PrefixRecord

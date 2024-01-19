@@ -41,7 +41,7 @@ from .metadata import MetaData, combine_top_level_metadata_with_output
 from .utils import (
     CONDA_PACKAGE_EXTENSION_V1,
     CONDA_PACKAGE_EXTENSION_V2,
-    dist_string_from_package_record
+    dist_string_from_package_record,
 )
 from .variants import (
     filter_by_key_value,
@@ -354,7 +354,6 @@ def execute_download_actions(m, actions, env, package_subset=None, require_files
     #     # this is to force the download
     #     execute_actions(download_actions, index, verbose=m.config.debug)
 
-
     pkg_files = {}
 
     packages = actions.get(LINK_ACTION, [])
@@ -382,7 +381,9 @@ def execute_download_actions(m, actions, env, package_subset=None, require_files
         # TODO: this is a vile hack reaching into conda's internals. Replace with
         #    proper conda API when available.
         if not pkg_loc:
-            pkg_record = [_ for _ in index if dist_string_from_package_record(_) == pkg_dist][0]
+            pkg_record = [
+                rec for rec in index if dist_string_from_package_record(rec) == pkg_dist
+            ][0]
             pfe = ProgressiveFetchExtract(link_prefs=(pkg_record,))
             with utils.LoggingContext():
                 pfe.execute()
@@ -420,7 +421,10 @@ def get_upstream_pins(m: MetaData, actions, env):
                 run_exports = pkg_data.get("run_exports", {}).get(pkg.version, {})
         if run_exports is None:
             loc, dist = execute_download_actions(
-                m, actions, env=env, package_subset=[pkg],
+                m,
+                actions,
+                env=env,
+                package_subset=[pkg],
             )[pkg]
             run_exports = _read_specs_from_package(loc, dist)
         specs = _filter_run_exports(run_exports, ignore_list)

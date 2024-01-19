@@ -53,8 +53,6 @@ from conda.base.constants import (
     CONDA_PACKAGE_EXTENSIONS,
     KNOWN_SUBDIRS,
 )
-from conda.core.prefix_data import PrefixData
-from conda.models.records import PrefixRecord
 
 from .conda_interface import (
     CondaHTTPError,

@@ -20,7 +20,6 @@ from .conda_interface import (
     LinkError,
     LockError,
     NoPackagesFoundError,
-    PackageCacheData,
     PaddingError,
     TemporaryDirectory,
     UnsatisfiableError,
@@ -30,7 +29,6 @@ from .conda_interface import (
     reset_context,
     root_dir,
 )
-from .deprecations import deprecated
 from .environ_actions import (
     LINK_ACTION,
     PREFIX_ACTION,
