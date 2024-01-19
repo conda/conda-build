@@ -22,7 +22,7 @@ from conda.base.constants import (
     DEFAULTS_CHANNEL_NAME,
     UNKNOWN_CHANNEL,
 )
-from conda.base.context import context, stack_context_default
+from conda.base.context import context, reset_context
 from conda.common.io import env_vars
 from conda.core.index import LAST_CHANNEL_URLS
 from conda.core.link import PrefixSetup, UnlinkLinkTransaction
@@ -149,7 +149,7 @@ def install_actions(prefix, index, specs):
             "CONDA_ALLOW_NON_CHANNEL_URLS": "true",
             "CONDA_SOLVER_IGNORE_TIMESTAMPS": "false",
         },
-        stack_callback=stack_context_default,
+        callback=reset_context,
     ):
         # a hack since in conda-build we don't track channel_priority_map
         if LAST_CHANNEL_URLS:

@@ -32,10 +32,8 @@ from pytest_mock import MockerFixture
 
 from conda_build import __version__, api, exceptions
 from conda_build.conda_interface import (
-    CONDA_VERSION,
     CondaError,
     LinkError,
-    VersionOrder,
     context,
     reset_context,
     url_path,
@@ -1948,16 +1946,6 @@ def test_add_pip_as_python_dependency_from_condarc_file(
     Test whether settings from .condarc files are heeded.
     ref: https://github.com/conda/conda-libmamba-solver/issues/393
     """
-    if VersionOrder(CONDA_VERSION) <= VersionOrder("23.10.0"):
-        if not add_pip_as_python_dependency and context.solver == "libmamba":
-            pytest.xfail(
-                "conda.plan.install_actions from conda<=23.10.0 ignores .condarc files."
-            )
-        from conda.base.context import context_stack
-
-        # ContextStack's pop/replace methods don't call self.apply.
-        context_stack.apply()
-
     # TODO: SubdirData._cache_ clearing might not be needed for future conda versions.
     #       See https://github.com/conda/conda/pull/13365 for proposed changes.
     from conda.core.subdir_data import SubdirData
