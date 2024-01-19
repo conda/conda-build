@@ -28,6 +28,7 @@ import yaml
 
 from . import environ, exceptions, source, utils
 from .conda_interface import (
+    PackageRecord,
     ProgressiveFetchExtract,
     TemporaryDirectory,
     UnsatisfiableError,
@@ -41,7 +42,7 @@ from .metadata import MetaData, combine_top_level_metadata_with_output
 from .utils import (
     CONDA_PACKAGE_EXTENSION_V1,
     CONDA_PACKAGE_EXTENSION_V2,
-    dist_string_from_package_record,
+    dist_dep_string,
 )
 from .variants import (
     filter_by_key_value,
@@ -91,10 +92,7 @@ def bldpkg_path(m):
 
 def actions_to_pins(actions):
     if LINK_ACTION in actions:
-        return [
-            " ".join(dist_string_from_package_record(prec).split()[0].rsplit("-", 2))
-            for prec in actions[LINK_ACTION]
-        ]
+        return [dist_dep_string(prec) for prec in actions[LINK_ACTION]]
     return []
 
 
@@ -373,7 +371,7 @@ def execute_download_actions(m, actions, env, package_subset=None, require_files
         precs = selected_packages
 
     for prec in precs:
-        pkg_dist = dist_string_from_package_record(prec)
+        pkg_dist = "-".join((prec.name, prec.version, prec.build))
         pkg_loc = find_pkg_dir_or_file_in_pkgs_dirs(
             pkg_dist, m, files_only=require_files
         )
@@ -383,7 +381,10 @@ def execute_download_actions(m, actions, env, package_subset=None, require_files
         #    proper conda API when available.
         if not pkg_loc:
             link_prec = [
-                rec for rec in index if dist_string_from_package_record(rec) == pkg_dist
+                rec
+                for rec in index
+                if (rec.name, rec.version, rec.build)
+                == (prec.name, prec.version, prec.build)
             ][0]
             pfe = ProgressiveFetchExtract(link_prefs=(link_prec,))
             with utils.LoggingContext():

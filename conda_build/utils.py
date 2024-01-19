@@ -2180,21 +2180,5 @@ def samefile(path1: Path, path2: Path) -> bool:
         return path1 == path2
 
 
-def dist_string_from_package_record(prec):
-    string = prec.fn
-
-    if string.endswith("@"):
-        raise NotImplementedError()
-
-    REGEX_STR = (
-        r"(?:([^\s\[\]]+)::)?"  # optional channel
-        r"([^\s\[\]]+)"  # 3.x dist
-        r"(?:\[([a-zA-Z0-9_-]+)\])?"  # with_features_depends
-    )
-    channel, original_dist, w_f_d = re.search(REGEX_STR, string).groups()
-
-    stripped = original_dist
-    for ext in CONDA_PACKAGE_EXTENSIONS:
-        if stripped.endswith(ext):
-            stripped = stripped[: -len(ext)]
-    return stripped
+def dist_dep_string(prec: PackageRecord) -> str:
+    return " ".join((prec.name, prec.version, prec.build)).rstrip()
