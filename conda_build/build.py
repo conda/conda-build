@@ -3730,6 +3730,21 @@ def build_tree(
 
                         built_packages.update({pkg: dict_and_meta})
                 else:
+                    # warn about script_env if splitting with --no-test
+                    script_env = utils.ensure_list(
+                        metadata.get_value("build/script_env", [])
+                    )
+                    if script_env:
+                        env_name_list = ", ".join(
+                            [item.partition("=")[0] for item in script_env]
+                        )
+                        warnings.warn(
+                            f"Recipe {metadata.name()} has build.script_env setting environment "
+                            f" variable(s): {env_name_list}, but tests are not run.",
+                            " Please ensure that these are set similarly at test time.",
+                            UserWarning,
+                        )
+
                     built_packages.update(packages_from_this)
 
                 if os.path.exists(metadata.config.work_dir) and not (

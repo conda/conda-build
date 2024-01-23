@@ -1,0 +1,3 @@
+### Enhancements
+
+* Only warn about using build.script_env when `--no-test` is given, rather than unconditionally (#5148)
