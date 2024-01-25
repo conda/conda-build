@@ -53,6 +53,9 @@ from conda.base.constants import (
     CONDA_PACKAGE_EXTENSIONS,
     KNOWN_SUBDIRS,
 )
+from conda.core.prefix_data import PrefixData
+from conda.models.dist import Dist
+from conda.models.records import PrefixRecord
 
 from .conda_interface import (
     CondaHTTPError,
@@ -2125,6 +2128,21 @@ def download_channeldata(channel_url):
     else:
         data = channeldata_cache[channel_url]
     return data
+
+
+@deprecated("24.1.0", "24.3.0")
+def linked_data_no_multichannels(
+    prefix: str | os.PathLike | Path,
+) -> dict[Dist, PrefixRecord]:
+    """
+    Return a dictionary of the linked packages in prefix, with correct channels, hopefully.
+    cc @kalefranz.
+    """
+    prefix = Path(prefix)
+    return {
+        Dist.from_string(prec.fn, channel_override=prec.channel.name): prec
+        for prec in PrefixData(str(prefix)).iter_records()
+    }
 
 
 def shutil_move_more_retrying(src, dest, debug_name):

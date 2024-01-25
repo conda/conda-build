@@ -15,7 +15,6 @@ from conda.auxlib.packaging import (  # noqa: F401
 )
 from conda.base.context import context, determine_target_prefix, reset_context
 from conda.base.context import non_x86_machines as non_x86_linux_machines  # noqa: F401
-from conda.core.index import get_index  # noqa: F401
 from conda.core.package_cache import ProgressiveFetchExtract  # noqa: F401
 from conda.core.package_cache_data import PackageCacheData  # noqa: F401
 from conda.exceptions import (  # noqa: F401
@@ -47,15 +46,23 @@ from conda.exports import (  # noqa: F401
     _toposort,
     add_parser_channels,
     add_parser_prefix,
+    display_actions,
     download,
+    execute_actions,
+    execute_plan,
+    get_index,
     handle_proxy_407,
     hashsum_file,
     human_bytes,
     input,
+    install_actions,
     lchmod,
+    linked,
+    linked_data,
     md5_file,
     memoized,
     normalized_version,
+    package_cache,
     prefix_placeholder,
     rm_rf,
     spec_from_line,
@@ -69,6 +76,7 @@ from conda.exports import (  # noqa: F401
     win_path_to_unix,
 )
 from conda.models.channel import get_conda_build_local_url  # noqa: F401
+from conda.models.dist import Dist
 from conda.models.records import PackageRecord, PrefixRecord
 
 from .deprecations import deprecated
@@ -80,6 +88,14 @@ deprecated.constant(
     PackageRecord,
     addendum="Use `conda.models.records.PackageRecord` instead.",
 )
+deprecated.constant("24.1.0", "24.3.0", "Dist", Dist)
+deprecated.constant("24.1.0", "24.3.0", "display_actions", display_actions)
+deprecated.constant("24.1.0", "24.3.0", "execute_actions", execute_actions)
+deprecated.constant("24.1.0", "24.3.0", "execute_plan", execute_plan)
+deprecated.constant("24.1.0", "24.3.0", "get_index", get_index)
+deprecated.constant("24.1.0", "24.3.0", "install_actions", install_actions)
+deprecated.constant("24.1.0", "24.3.0", "linked", linked)
+deprecated.constant("24.1.0", "24.3.0", "linked_data", linked_data)
 
 # TODO: Go to references of all properties below and import them from `context` instead
 binstar_upload = context.binstar_upload

@@ -15,6 +15,14 @@
 * Removed `conda_build.post.dists_from_names`. (#5074)
 * Removed `conda_build.post.FakeDist`. (#5074)
 * Removed `conda_build.post._get_fake_pkg_dist`. (#5074)
+* Mark `conda_build.conda_interface.Dist` as pending deprecation. (#5074)
+* Mark `conda_build.conda_interface.display_actions` as pending deprecation. (#5074)
+* Mark `conda_build.conda_interface.execute_actions` as pending deprecation. (#5074)
+* Mark `conda_build.conda_interface.execute_plan` as pending deprecation. (#5074)
+* Mark `conda_build.conda_interface.get_index` as pending deprecation. (#5074)
+* Mark `conda_build.conda_interface.install_actions` as pending deprecation. (#5074)
+* Mark `conda_build.conda_interface.linked` as pending deprecation. (#5074)
+* Mark `conda_build.conda_interface.linked_data` as pending deprecation. (#5074)
 
 ### Docs
 
