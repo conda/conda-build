@@ -6,8 +6,6 @@ import configparser  # noqa: F401
 import os
 from functools import partial
 from importlib import import_module  # noqa: F401
-from pathlib import Path
-from typing import Iterable
 
 from conda import __version__ as CONDA_VERSION  # noqa: F401
 from conda.auxlib.packaging import (  # noqa: F401
@@ -76,9 +74,6 @@ from conda.exports import (  # noqa: F401
 )
 from conda.models.channel import get_conda_build_local_url  # noqa: F401
 from conda.models.dist import Dist  # noqa: F401
-from conda.models.records import PrefixRecord
-
-from .deprecations import deprecated
 
 # TODO: Go to references of all properties below and import them from `context` instead
 binstar_upload = context.binstar_upload
@@ -100,76 +95,6 @@ get_conda_channel = Channel.from_value
 # Disallow softlinks. This avoids a lot of dumb issues, at the potential cost of disk space.
 os.environ["CONDA_ALLOW_SOFTLINKS"] = "false"
 reset_context()
-
-
-class CrossPlatformStLink:
-    def __call__(self, path: str | os.PathLike) -> int:
-        return self.st_nlink(path)
-
-    @staticmethod
-    @deprecated("3.24.0", "24.1.0", addendum="Use `os.stat().st_nlink` instead.")
-    def st_nlink(path: str | os.PathLike) -> int:
-        return os.stat(path).st_nlink
-
-
-@deprecated("3.28.0", "24.1.0")
-class SignatureError(Exception):
-    # TODO: What is this? 🤔
-    pass
-
-
-@deprecated(
-    "3.28.0",
-    "24.1.0",
-    addendum="Use `conda_build.inspect_pkg.which_package` instead.",
-)
-def which_package(path: str | os.PathLike | Path) -> Iterable[PrefixRecord]:
-    from .inspect_pkg import which_package
-
-    return which_package(path, which_prefix(path))
-
-
-@deprecated("3.28.0", "24.1.0")
-def which_prefix(path: str | os.PathLike | Path) -> Path:
-    """
-    Given the path (to a (presumably) conda installed file) return the
-    environment prefix in which the file in located
-    """
-    from conda.gateways.disk.test import is_conda_environment
-
-    prefix = Path(path)
-    for _ in range(20):
-        if is_conda_environment(prefix):
-            return prefix
-        elif prefix == (parent := prefix.parent):
-            # we cannot chop off any more directories, so we didn't find it
-            break
-        else:
-            prefix = parent
-
-    raise RuntimeError("could not determine conda prefix from: %s" % path)
-
-
-@deprecated("3.28.0", "24.1.0")
-def get_installed_version(prefix, pkgs):
-    """
-    Primarily used by conda-forge, but may be useful in general for checking when
-    a package needs to be updated
-    """
-    from .utils import ensure_list
-
-    pkgs = ensure_list(pkgs)
-    linked_pkgs = linked(prefix)
-    versions = {}
-    for pkg in pkgs:
-        vers_inst = [
-            dist.split("::", 1)[-1].rsplit("-", 2)[1]
-            for dist in linked_pkgs
-            if dist.split("::", 1)[-1].rsplit("-", 2)[0] == pkg
-        ]
-        versions[pkg] = vers_inst[0] if len(vers_inst) == 1 else None
-    return versions
-
 
 # When deactivating envs (e.g. switching from root to build/test) this env var is used,
 # except the PR that removed this has been reverted (for now) and Windows doesn't need it.
