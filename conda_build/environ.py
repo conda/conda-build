@@ -57,11 +57,11 @@ from .index import get_build_index
 from .metadata import MetaData
 from .os_utils import external
 from .utils import (
-    dist_dep_string,
     ensure_list,
     env_var,
     on_mac,
     on_win,
+    package_record_to_requirement,
     prepend_bin_path,
 )
 from .variants import get_default_variant
@@ -1258,7 +1258,9 @@ def get_pinned_deps(m, section):
             output_folder=m.config.output_folder,
             channel_urls=tuple(m.config.channel_urls),
         )
-    runtime_deps = [dist_dep_string(prec) for prec in actions.get(LINK_ACTION, [])]
+    runtime_deps = [
+        package_record_to_requirement(prec) for prec in actions.get(LINK_ACTION, [])
+    ]
     return runtime_deps
 
 

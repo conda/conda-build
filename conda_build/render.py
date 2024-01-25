@@ -42,7 +42,7 @@ from .metadata import MetaData, combine_top_level_metadata_with_output
 from .utils import (
     CONDA_PACKAGE_EXTENSION_V1,
     CONDA_PACKAGE_EXTENSION_V2,
-    dist_dep_string,
+    package_record_to_requirement,
 )
 from .variants import (
     filter_by_key_value,
@@ -92,7 +92,7 @@ def bldpkg_path(m):
 
 def actions_to_pins(actions):
     if LINK_ACTION in actions:
-        return [dist_dep_string(prec) for prec in actions[LINK_ACTION]]
+        return [package_record_to_requirement(prec) for prec in actions[LINK_ACTION]]
     return []
 
 

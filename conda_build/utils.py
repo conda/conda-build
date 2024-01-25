@@ -2198,5 +2198,5 @@ def samefile(path1: Path, path2: Path) -> bool:
         return path1 == path2
 
 
-def dist_dep_string(prec: PackageRecord) -> str:
+def package_record_to_requirement(prec: PackageRecord) -> str:
     return " ".join((prec.name, prec.version, prec.build)).rstrip()
