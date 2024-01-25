@@ -5,7 +5,7 @@
 ### Enhancements
 
 * Update `conda inspect channels` to use updated solver/transaction logic. (#5033)
-* Relax script_env error in outputs when variable referenced in script_env is not defined.
+* Relax `script_env` error in outputs when variable referenced in `script_env` is not defined.
   This unifies current behavior with the top-level build. (#5105)
 * Add support for Python 3.12. (#4997 via #4998)
 * Adopt calender versioning (CalVer) per CEP-8 for consistency with conda. (#4975)
@@ -20,7 +20,7 @@
 
 ### Docs
 
-* Add goat counter (https://www.goatcounter.com/) as an analytics tool. (#5093)
+* Add GoatCounter (https://www.goatcounter.com/) as an analytics tool. (#5093)
 
 ### Other
 
