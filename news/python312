@@ -1,6 +1,6 @@
 ### Enhancements
 
-* <news item>
+* Add support for Python 3.12. (#4997 via #4998)
 
 ### Bug fixes
 
@@ -16,4 +16,4 @@
 
 ### Other
 
-* Remove unused Allure test report collection. (#5113)
+* <news item>
