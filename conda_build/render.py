@@ -355,6 +355,10 @@ def execute_download_actions(m, actions, env, package_subset=None, require_files
     pkg_files = {}
 
     precs = actions.get(LINK_ACTION, [])
+    if isinstance(package_subset, PackageRecord):
+        package_subset = [package_subset]
+    else:
+        package_subset = utils.ensure_list(package_subset)
     selected_packages = set()
     if package_subset:
         for pkg in package_subset:
