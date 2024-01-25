@@ -58,7 +58,6 @@ def dist_files(prefix: str | os.PathLike | Path, dist: Dist) -> set[str]:
         return set()
 
 
-@deprecated.argument("3.28.0", "24.1.0", "avoid_canonical_channel_name")
 def which_package(
     path: str | os.PathLike | Path,
     prefix: str | os.PathLike | Path,

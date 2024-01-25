@@ -713,10 +713,6 @@ def get_run_exports(
         return ()
 
 
-@deprecated.argument("3.28.0", "24.1.0", "subdir")
-@deprecated.argument("3.28.0", "24.1.0", "bldpkgs_dirs")
-@deprecated.argument("3.28.0", "24.1.0", "output_folder")
-@deprecated.argument("3.28.0", "24.1.0", "channel_urls")
 def library_nature(
     prec: PrefixRecord, prefix: str | os.PathLike | Path
 ) -> Literal[
