@@ -48,8 +48,7 @@ from yaml.parser import ParserError
 from yaml.reader import ReaderError
 from yaml.scanner import ScannerError
 
-from conda_build import conda_interface, utils
-
+from . import conda_interface, utils
 from .conda_interface import (
     CondaError,
     CondaHTTPError,
@@ -67,10 +66,10 @@ from .utils import (
     CONDA_PACKAGE_EXTENSION_V1,
     CONDA_PACKAGE_EXTENSION_V2,
     CONDA_PACKAGE_EXTENSIONS,
-    FileNotFoundError,
     JSONDecodeError,
     get_logger,
     glob,
+    on_win,
 )
 
 log = get_logger(__name__)
@@ -123,9 +122,7 @@ channel_data = {}
 MAX_THREADS_DEFAULT = (
     os.cpu_count() if (hasattr(os, "cpu_count") and os.cpu_count() > 1) else 1
 )
-if (
-    sys.platform == "win32"
-):  # see https://github.com/python/cpython/commit/8ea0fd85bc67438f679491fae29dfe0a3961900a
+if on_win:  # see https://github.com/python/cpython/commit/8ea0fd85bc67438f679491fae29dfe0a3961900a
     MAX_THREADS_DEFAULT = min(48, MAX_THREADS_DEFAULT)
 LOCK_TIMEOUT_SECS = 3 * 3600
 LOCKFILE_NAME = ".lock"
@@ -312,25 +309,27 @@ def _delegated_update_index(
         dir_path = parent_path
         subdirs = [dirname]
 
-    return _update_index(
-        dir_path,
-        check_md5=check_md5,
-        channel_name=channel_name,
-        patch_generator=patch_generator,
-        threads=threads,
-        verbose=verbose,
-        progress=progress,
-        subdirs=subdirs,
-        warn=warn,
-        current_index_versions=current_index_versions,
-        debug=debug,
-    )
+    log_level = logging.DEBUG if debug else logging.INFO if verbose else logging.WARNING
+    with utils.LoggingContext(log_level):
+        return _update_index(
+            dir_path,
+            check_md5=check_md5,
+            channel_name=channel_name,
+            patch_generator=patch_generator,
+            threads=threads,
+            verbose=verbose,
+            progress=progress,
+            subdirs=subdirs,
+            warn=warn,
+            current_index_versions=current_index_versions,
+            debug=debug,
+        )
 
 
 # Everything below is deprecated to maintain API/feature compatibility.
 
 
-@deprecated("3.25.0", "4.0.0", addendum="Use standalone conda-index.")
+@deprecated("3.25.0", "24.1.0", addendum="Use standalone conda-index.")
 def update_index(
     dir_path,
     check_md5=False,
@@ -360,7 +359,8 @@ def update_index(
     if dirname in utils.DEFAULT_SUBDIRS:
         if warn:
             log.warn(
-                "The update_index function has changed to index all subdirs at once.  You're pointing it at a single subdir.  "
+                "The update_index function has changed to index all subdirs at once. "
+                "You're pointing it at a single subdir. "
                 "Please update your code to point it at the channel root, rather than a subdir."
             )
         return update_index(
@@ -1722,10 +1722,8 @@ class ChannelIndex:
         else:
             if patch_generator:
                 raise ValueError(
-                    "Specified metadata patch file '{}' does not exist.  Please try an absolute "
-                    "path, or examine your relative path carefully with respect to your cwd.".format(
-                        patch_generator
-                    )
+                    f"Specified metadata patch file '{patch_generator}' does not exist.  Please try an absolute "
+                    "path, or examine your relative path carefully with respect to your cwd."
                 )
             return {}
 

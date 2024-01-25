@@ -64,26 +64,34 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        shell: bash -l {0}
+        shell: bash -el {0}
     strategy:
       fail-fast: false
       matrix:
         # test all lower versions (w/ stable conda) and upper version (w/ canary conda)
-        python-version: ['3.8', '3.9', '3.10']
+        python-version: ['3.9', '3.10', '3.11']
         conda-version: [release]
         test-type: [serial, parallel]
         include:
-          - python-version: '3.11'
+          # minimum Python/conda combo
+          - python-version: '3.8'
+            conda-version: 22.11.0
+            test-type: serial
+          - python-version: '3.8'
+            conda-version: 22.11.0
+            test-type: parallel
+          # maximum Python/conda combo
+          - python-version: '3.12'
             conda-version: canary
             test-type: serial
-          - python-version: '3.11'
+          - python-version: '3.12'
             conda-version: canary
             test-type: parallel
     env:
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
+      CONDA_VERSION: ${{ contains('canary,release', matrix.conda-version) && 'conda' || format('conda={0}', matrix.conda-version) }}
       REPLAY_NAME: Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
       REPLAY_DIR: ${{ github.workspace }}/pytest-replay
-      ALLURE_DIR: ${{ github.workspace }}/allure-results
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
       PYTEST_NUMPROCESSES: ${{ matrix.test-type == 'serial' && 0 || 'auto' }}
 
@@ -115,8 +123,8 @@ jobs:
           conda install -q -y -c defaults \
             --file ./tests/requirements.txt \
             --file ./tests/requirements-linux.txt \
-            ${{ env.CONDA_CHANNEL_LABEL }}::conda
-          pip install -e .
+            ${{ env.CONDA_CHANNEL_LABEL }}::${{ env.CONDA_VERSION }}
+          pip install -e . --no-deps
 
       - name: Show info
         run: |
@@ -136,7 +144,6 @@ jobs:
             --cov-report xml \
             --replay-record-dir="${{ env.REPLAY_DIR }}" \
             --replay-base-name="${{ env.REPLAY_NAME }}" \
-            --alluredir="${{ env.ALLURE_DIR }}" \
             -m "${{ env.PYTEST_MARKER }}" \
             ./tests
 
@@ -144,19 +151,8 @@ jobs:
         with:
           flags: ${{ matrix.test-type }},${{ matrix.python-version }},linux-64
 
-      - name: Tar Allure Results
-        if: always()
-        run: tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
-
-      - name: Upload Allure Results
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: allure-Linux-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type }}
-          path: allure-results.tar.gz
-
       - name: Upload Pytest Replay
-        if: always()
+        if: '!cancelled()'
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.REPLAY_NAME }}-${{ matrix.test-type }}
@@ -177,17 +173,16 @@ jobs:
         conda-version: [release]
         test-type: [serial, parallel]
         include:
-          - python-version: '3.11'
+          - python-version: '3.12'
             conda-version: canary
             test-type: serial
-          - python-version: '3.11'
+          - python-version: '3.12'
             conda-version: canary
             test-type: parallel
     env:
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
       REPLAY_NAME: Win-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
       REPLAY_DIR: ${{ github.workspace }}\pytest-replay
-      ALLURE_DIR: ${{ github.workspace }}\allure-results
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial and not slow' }}
       PYTEST_NUMPROCESSES: ${{ matrix.test-type == 'serial' && 0 || 'auto' }}
 
@@ -215,13 +210,15 @@ jobs:
           run-post: false  # skip post cleanup
 
       - name: Setup environment
+        shell: cmd /C CALL {0}
         run: |
-          choco install visualstudio2017-workload-vctools
-          conda install -q -y -c defaults `
-            --file .\tests\requirements.txt `
-            --file .\tests\requirements-windows.txt `
-            ${{ env.CONDA_CHANNEL_LABEL }}::conda
-          pip install -e .
+          @echo on
+          CALL choco install visualstudio2017-workload-vctools || exit 1
+          CALL conda install -q -y -c defaults ^
+            --file .\tests\requirements.txt ^
+            --file .\tests\requirements-windows.txt ^
+            ${{ env.CONDA_CHANNEL_LABEL }}::conda || exit 1
+          CALL pip install -e . --no-deps || exit 1
 
       - name: Show info
         run: |
@@ -241,7 +238,6 @@ jobs:
             --cov-report xml `
             --replay-record-dir="${{ env.REPLAY_DIR }}" `
             --replay-base-name="${{ env.REPLAY_NAME }}" `
-            --alluredir="${{ env.ALLURE_DIR }}" `
             -m "${{ env.PYTEST_MARKER }}" `
             .\tests
 
@@ -249,22 +245,8 @@ jobs:
         with:
           flags: ${{ matrix.test-type }},${{ matrix.python-version }},win-64
 
-      - name: Tar Allure Results
-        if: always()
-        run: tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
-        # windows-2019/powershell ships with GNU tar 1.28 which struggles with Windows paths
-        # window-2019/cmd ships with bsdtar 3.5.2 which doesn't have this problem
-        shell: cmd
-
-      - name: Upload Allure Results
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: allure-Win-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type  }}
-          path: allure-results.tar.gz
-
       - name: Upload Pytest Replay
-        if: always()
+        if: '!cancelled()'
         uses: actions/upload-artifact@v3
         with:
           path: ${{ env.REPLAY_DIR }}
@@ -279,7 +261,7 @@ jobs:
     runs-on: macos-11
     defaults:
       run:
-        shell: bash -l {0}
+        shell: bash -el {0}
     strategy:
       fail-fast: false
       matrix:
@@ -288,17 +270,16 @@ jobs:
         conda-version: [release]
         test-type: [serial, parallel]
         include:
-          - python-version: '3.11'
+          - python-version: '3.12'
             conda-version: canary
             test-type: serial
-          - python-version: '3.11'
+          - python-version: '3.12'
             conda-version: canary
             test-type: parallel
     env:
       CONDA_CHANNEL_LABEL: ${{ matrix.conda-version == 'canary' && 'conda-canary/label/dev' || 'defaults' }}
       REPLAY_NAME: macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}
       REPLAY_DIR: ${{ github.workspace }}/pytest-replay
-      ALLURE_DIR: ${{ github.workspace }}/allure-results
       PYTEST_MARKER: ${{ matrix.test-type == 'serial' && 'serial' || 'not serial' }}
       PYTEST_NUMPROCESSES: ${{ matrix.test-type == 'serial' && 0 || 'auto' }}
 
@@ -332,7 +313,7 @@ jobs:
             --file ./tests/requirements.txt \
             --file ./tests/requirements-macos.txt \
             ${{ env.CONDA_CHANNEL_LABEL }}::conda
-          pip install -e .
+          pip install -e . --no-deps
 
       - name: Show info
         run: |
@@ -352,7 +333,6 @@ jobs:
             --cov-report xml \
             --replay-record-dir="${{ env.REPLAY_DIR }}" \
             --replay-base-name="${{ env.REPLAY_NAME }}" \
-            --alluredir="${{ env.ALLURE_DIR }}" \
             -m "${{ env.PYTEST_MARKER }}" \
             ./tests
 
@@ -360,19 +340,8 @@ jobs:
         with:
           flags: ${{ matrix.test-type }},${{ matrix.python-version }},osx-64
 
-      - name: Tar Allure Results
-        if: always()
-        run: tar -zcf "${{ env.ALLURE_DIR }}.tar.gz" "${{ env.ALLURE_DIR }}"
-
-      - name: Upload Allure Results
-        if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: allure-macOS-${{ matrix.conda-version }}-Py${{ matrix.python-version }}-${{ matrix.test-type }}
-          path: allure-results.tar.gz
-
       - name: Upload Pytest Replay
-        if: always()
+        if: '!cancelled()'
         uses: actions/upload-artifact@v3
         with:
           name: ${{ env.REPLAY_NAME }}-${{ matrix.test-type  }}
@@ -382,7 +351,12 @@ jobs:
   aggregate:
     # only aggregate test suite if there are code changes
     needs: [changes, linux, windows, macos]
-    if: always() && (github.event_name == 'schedule' || needs.changes.outputs.code == 'true')
+    if: >-
+      !cancelled()
+      && (
+        github.event_name == 'schedule'
+        || needs.changes.outputs.code == 'true'
+      )
 
     runs-on: ubuntu-latest
     steps:
@@ -407,7 +381,7 @@ jobs:
   analyze:
     name: Analyze results
     needs: [linux, windows, macos, aggregate]
-    if: always()
+    if: '!cancelled()'
 
     runs-on: ubuntu-latest
     steps:
@@ -426,7 +400,7 @@ jobs:
     # - this is the main repo, and
     # - we are on the main, feature, or release branch
     if: >-
-      always()
+      !cancelled()
       && !github.event.repository.fork
       && (
         github.ref_name == 'main'
@@ -452,10 +426,10 @@ jobs:
           clean: true
           fetch-depth: 0
 
-      # Explicitly use Python 3.11 since each of the OSes has a different default Python
+      # Explicitly use Python 3.12 since each of the OSes has a different default Python
       - uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Detect label
         shell: python

@@ -14,14 +14,7 @@ from functools import lru_cache
 from glob import glob
 from os.path import join, normpath
 
-from conda_build import utils
-from conda_build.exceptions import BuildLockError, DependencyNeedsBuildingError
-from conda_build.features import feature_list
-from conda_build.index import get_build_index
-from conda_build.os_utils import external
-from conda_build.utils import ensure_list, env_var, prepend_bin_path
-from conda_build.variants import get_default_variant
-
+from . import utils
 from .conda_interface import (
     CondaError,
     LinkError,
@@ -41,6 +34,20 @@ from .conda_interface import (
     reset_context,
     root_dir,
 )
+from .deprecations import deprecated
+from .exceptions import BuildLockError, DependencyNeedsBuildingError
+from .features import feature_list
+from .index import get_build_index
+from .metadata import MetaData
+from .os_utils import external
+from .utils import (
+    ensure_list,
+    env_var,
+    on_mac,
+    on_win,
+    prepend_bin_path,
+)
+from .variants import get_default_variant
 
 # these are things that we provide env vars for more explicitly.  This list disables the
 #    pass-through of variant values to env vars for these keys.
@@ -147,7 +154,7 @@ def verify_git_repo(
                 stderr=stderr,
             )
         except subprocess.CalledProcessError:
-            if sys.platform == "win32" and cache_dir.startswith("/"):
+            if on_win and cache_dir.startswith("/"):
                 cache_dir = utils.convert_unix_path_to_win(cache_dir)
             remote_details = utils.check_output_env(
                 [git_exe, "--git-dir", cache_dir, "remote", "-v"],
@@ -159,7 +166,7 @@ def verify_git_repo(
 
         # on windows, remote URL comes back to us as cygwin or msys format.  Python doesn't
         # know how to normalize it.  Need to convert it to a windows path.
-        if sys.platform == "win32" and remote_url.startswith("/"):
+        if on_win and remote_url.startswith("/"):
             remote_url = utils.convert_unix_path_to_win(git_url)
 
         if os.path.exists(remote_url):
@@ -387,7 +394,7 @@ def python_vars(metadata, prefix, escape_backslash):
     }
     build_or_host = "host" if metadata.is_cross else "build"
     deps = [str(ms.name) for ms in metadata.ms_depends(build_or_host)]
-    if "python" in deps or metadata.name(fail_ok=True) == "python":
+    if "python" in deps or metadata.name() == "python":
         python_bin = metadata.config.python_bin(prefix, metadata.config.host_subdir)
 
         if utils.on_win and escape_backslash:
@@ -416,7 +423,7 @@ def perl_vars(metadata, prefix, escape_backslash):
     }
     build_or_host = "host" if metadata.is_cross else "build"
     deps = [str(ms.name) for ms in metadata.ms_depends(build_or_host)]
-    if "perl" in deps or metadata.name(fail_ok=True) == "perl":
+    if "perl" in deps or metadata.name() == "perl":
         perl_bin = metadata.config.perl_bin(prefix, metadata.config.host_subdir)
 
         if utils.on_win and escape_backslash:
@@ -463,10 +470,7 @@ def r_vars(metadata, prefix, escape_backslash):
 
     build_or_host = "host" if metadata.is_cross else "build"
     deps = [str(ms.name) for ms in metadata.ms_depends(build_or_host)]
-    if (
-        any(r_pkg in deps for r_pkg in R_PACKAGES)
-        or metadata.name(fail_ok=True) in R_PACKAGES
-    ):
+    if any(r_pkg in deps for r_pkg in R_PACKAGES) or metadata.name() in R_PACKAGES:
         r_bin = metadata.config.r_bin(prefix, metadata.config.host_subdir)
         # set R_USER explicitly to prevent crosstalk with existing R_LIBS_USER packages
         r_user = join(prefix, "Libs", "R")
@@ -483,7 +487,7 @@ def r_vars(metadata, prefix, escape_backslash):
     return vars_
 
 
-def meta_vars(meta, skip_build_id=False):
+def meta_vars(meta: MetaData, skip_build_id=False):
     d = {}
     for var_name in ensure_list(meta.get_value("build/script_env", [])):
         if "=" in var_name:
@@ -492,15 +496,17 @@ def meta_vars(meta, skip_build_id=False):
             value = os.getenv(var_name)
         if value is None:
             warnings.warn(
-                "The environment variable '%s' is undefined." % var_name, UserWarning
+                "The environment variable '%s' specified in script_env is undefined."
+                % var_name,
+                UserWarning,
             )
         else:
             d[var_name] = value
             warnings.warn(
-                "The environment variable '%s' is being passed through with value '%s'.  "
+                f"The environment variable '{var_name}' is being passed through with value "
+                f"'{'<hidden>' if meta.config.suppress_variables else value}'.  "
                 "If you are splitting build and test phases with --no-test, please ensure "
-                "that this value is also set similarly at test time."
-                % (var_name, "<hidden>" if meta.config.suppress_variables else value),
+                "that this value is also set similarly at test time.",
                 UserWarning,
             )
 
@@ -519,7 +525,7 @@ def meta_vars(meta, skip_build_id=False):
         git_url = meta.get_value("source/0/git_url")
 
         if os.path.exists(git_url):
-            if sys.platform == "win32":
+            if on_win:
                 git_url = utils.convert_unix_path_to_win(git_url)
             # If git_url is a relative path instead of a url, convert it to an abspath
             git_url = normpath(join(meta.path, git_url))
@@ -544,12 +550,11 @@ def meta_vars(meta, skip_build_id=False):
     ):
         d.update(get_hg_build_info(hg_dir))
 
-    # use `get_value` to prevent early exit while name is still unresolved during rendering
-    d["PKG_NAME"] = meta.get_value("package/name")
+    d["PKG_NAME"] = meta.name()
     d["PKG_VERSION"] = meta.version()
     d["PKG_BUILDNUM"] = str(meta.build_number())
     if meta.final and not skip_build_id:
-        d["PKG_BUILD_STRING"] = str(meta.build_id())
+        d["PKG_BUILD_STRING"] = meta.build_id()
         d["PKG_HASH"] = meta.hash_dependencies()
     else:
         d["PKG_BUILD_STRING"] = "placeholder"
@@ -560,7 +565,7 @@ def meta_vars(meta, skip_build_id=False):
 
 @lru_cache(maxsize=None)
 def get_cpu_count():
-    if sys.platform == "darwin":
+    if on_mac:
         # multiprocessing.cpu_count() is not reliable on OSX
         # See issue #645 on github.com/conda/conda-build
         out, _ = subprocess.Popen(
@@ -580,7 +585,7 @@ def get_shlib_ext(host_platform):
         return ".dll"
     elif host_platform in ["osx", "darwin"]:
         return ".dylib"
-    elif host_platform.startswith("linux"):
+    elif host_platform.startswith("linux") or host_platform.endswith("-wasm32"):
         return ".so"
     elif host_platform == "noarch":
         # noarch packages should not contain shared libraries, use the system
@@ -756,7 +761,7 @@ def os_vars(m, prefix):
     if not m.config.activate:
         d = prepend_bin_path(d, m.config.host_prefix)
 
-    if sys.platform == "win32":
+    if on_win:
         windows_vars(m, get_default, prefix)
     else:
         unix_vars(m, get_default, prefix)
@@ -1214,6 +1219,7 @@ def remove_existing_packages(dirs, fns, config):
                     utils.rm_rf(entry)
 
 
+@deprecated("3.28.0", "24.1.0")
 def clean_pkg_cache(dist, config):
     locks = []
 
@@ -1225,8 +1231,8 @@ def clean_pkg_cache(dist, config):
         locks = get_pkg_dirs_locks([config.bldpkgs_dir] + pkgs_dirs, config)
         with utils.try_acquire_locks(locks, timeout=config.timeout):
             rmplan = [
-                "RM_EXTRACTED {0} local::{0}".format(dist),
-                "RM_FETCHED {0} local::{0}".format(dist),
+                f"RM_EXTRACTED {dist} local::{dist}",
+                f"RM_FETCHED {dist} local::{dist}",
             ]
             execute_plan(rmplan)
 

@@ -1,5 +1,6 @@
 package:
   name: pkg
+  version: 0.0.1
 
 build:
   merge_build_host: False

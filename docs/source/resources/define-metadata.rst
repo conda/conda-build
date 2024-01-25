@@ -4,11 +4,6 @@
 Defining metadata (meta.yaml)
 =============================
 
-.. contents::
-   :local:
-   :depth: 1
-
-
 All the metadata in the conda-build recipe is specified in the
 ``meta.yaml`` file. See the example below:
 
@@ -992,9 +987,10 @@ words, a Python package would list ``python`` here and an R package would list
 
 The PREFIX environment variable points to the host prefix. With respect to
 activation during builds, both the host and build environments are activated.
-The build prefix is activated before the host prefix so that the host prefix
-has priority over the build prefix. Executables that don't exist in the host
-prefix should be found in the build prefix.
+The build prefix is activated *after* the host prefix so that the build prefix,
+which always contains native executables for the running platform, has priority
+over the host prefix, which is not guaranteed to provide native executables (e.g.
+when cross-compiling).
 
 As of conda-build 3.1.4, the build and host prefixes are always separate when
 both are defined, or when ``{{ compiler() }}`` Jinja2 functions are used. The
@@ -1478,10 +1474,9 @@ explicitly in the script section:
          script: run_test.py
 
 
-Test requirements for subpackages are not supported. Instead,
-subpackage tests install their runtime requirements---but not the
-run requirements for the top-level package---and the test-time
-requirements of the top-level package.
+Test requirements for subpackages can be specified using the optional
+`test/requires` section of subpackage tests. Subpackage tests install
+their runtime requirements during the test as well.
 
 EXAMPLE: In this example, the test for ``subpackage-name``
 installs ``some-test-dep`` and ``subpackage-run-req``, but not
@@ -1493,16 +1488,15 @@ installs ``some-test-dep`` and ``subpackage-run-req``, but not
      run:
        - some-top-level-run-req
 
-   test:
-     requires:
-       - some-test-dep
-
    outputs:
      - name: subpackage-name
        requirements:
          - subpackage-run-req
        test:
          script: run_test.py
+         requires:
+           - some-test-dep
+
 
 
 Output type
@@ -1749,7 +1743,7 @@ practice means changing the conda-build source code. See the
 <https://github.com/conda/conda-build/issues>`_.
 
 For more information, see the `Jinja2 template
-documentation <http://jinja.pocoo.org/docs/dev/templates/>`_
+documentation <https://jinja.palletsprojects.com/en/latest/templates/>`_
 and :ref:`the list of available environment
 variables <env-vars>`.
 
@@ -1929,10 +1923,10 @@ variables are booleans.
    * - osx
      - True if the platform is macOS.
    * - arm64
-     - True if the platform is macOS and the Python architecture
-       is arm64.
+     - True if the platform is either macOS or Windows and the
+       Python architecture is arm64.
    * - unix
-     - True if the platform is either macOS or Linux.
+     - True if the platform is either macOS or Linux or emscripten.
    * - win
      - True if the platform is Windows.
    * - win32
@@ -1965,6 +1959,11 @@ variables are booleans.
 The use of the Python version selectors, `py27`, `py34`, etc. is discouraged in
 favor of the more general comparison operators.  Additional selectors in this
 series will not be added to conda-build.
+
+Note that for each subdir with OS and architecture that `conda` supports,
+two preprocessing selectors are created for the OS and the architecture separately
+except when the architecture is not a valid python expression (`*-32` and `*-64`
+in particular).
 
 Because the selector is any valid Python expression, complicated
 logic is possible:

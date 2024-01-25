@@ -1,33 +1,29 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import os
 import re
-import sys
+from pathlib import Path
 
 import pytest
+from pytest import FixtureRequest, MonkeyPatch
+from pytest_mock import MockerFixture
 
-import conda_build
 from conda_build import api
 from conda_build.cli import main_build, main_render
-from conda_build.conda_interface import (
-    TemporaryDirectory,
-    cc_conda_build,
-    context,
-    reset_context,
+from conda_build.conda_interface import TemporaryDirectory
+from conda_build.config import (
+    Config,
+    zstd_compression_level_default,
 )
-from conda_build.config import Config, zstd_compression_level_default
 from conda_build.exceptions import DependencyNeedsBuildingError
+from conda_build.metadata import MetaData
+from conda_build.os_utils.external import find_executable
 from conda_build.utils import get_build_folders, on_win, package_has_file
 
 from ..utils import metadata_dir
-
-
-def _reset_config(search_path=None):
-    reset_context(search_path)
-    cc_conda_build.clear()
-    cc_conda_build.update(
-        context.conda_build if hasattr(context, "conda_build") else {}
-    )
+from ..utils import reset_config as _reset_config
 
 
 @pytest.mark.sanity
@@ -103,8 +99,7 @@ def test_build_output_build_path(
     args = ["--output", testing_workdir]
     main_build.execute(args)
     test_path = os.path.join(
-        sys.prefix,
-        "conda-bld",
+        testing_config.croot,
         testing_config.host_subdir,
         "test_build_output_build_path-1.0-1.tar.bz2",
     )
@@ -124,7 +119,7 @@ def test_build_output_build_path_multiple_recipes(
     main_build.execute(args)
 
     test_path = lambda pkg: os.path.join(
-        sys.prefix, "conda-bld", testing_config.host_subdir, pkg
+        testing_config.croot, testing_config.host_subdir, pkg
     )
     test_paths = [
         test_path("test_build_output_build_path_multiple_recipes-1.0-1.tar.bz2"),
@@ -196,41 +191,40 @@ def test_build_multiple_recipes(testing_metadata, testing_workdir, testing_confi
     main_build.execute(args)
 
 
-def test_build_output_folder(testing_workdir, testing_metadata, capfd):
+def test_build_output_folder(testing_workdir: str, testing_metadata):
     api.output_yaml(testing_metadata, "meta.yaml")
-    with TemporaryDirectory() as tmp:
-        out = os.path.join(tmp, "out")
-        args = [
-            testing_workdir,
-            "--no-build-id",
-            "--croot",
-            tmp,
-            "--no-activate",
-            "--no-anaconda-upload",
-            "--output-folder",
-            out,
-        ]
-        output = main_build.execute(args)[0]
-        assert os.path.isfile(
-            os.path.join(
-                out, testing_metadata.config.host_subdir, os.path.basename(output)
-            )
-        )
+
+    out = Path(testing_workdir, "out")
+    out.mkdir(parents=True)
+
+    args = [
+        testing_workdir,
+        "--no-build-id",
+        "--croot",
+        testing_workdir,
+        "--no-activate",
+        "--no-anaconda-upload",
+        "--output-folder",
+        str(out),
+    ]
+    output = main_build.execute(args)[0]
+    assert (
+        out / testing_metadata.config.host_subdir / os.path.basename(output)
+    ).is_file()
 
 
-def test_build_source(testing_workdir):
-    with TemporaryDirectory() as tmp:
-        args = [
-            os.path.join(metadata_dir, "_pyyaml_find_header"),
-            "--source",
-            "--no-build-id",
-            "--croot",
-            tmp,
-            "--no-activate",
-            "--no-anaconda-upload",
-        ]
-        main_build.execute(args)
-        assert os.path.isfile(os.path.join(tmp, "work", "setup.py"))
+def test_build_source(testing_workdir: str):
+    args = [
+        os.path.join(metadata_dir, "_pyyaml_find_header"),
+        "--source",
+        "--no-build-id",
+        "--croot",
+        testing_workdir,
+        "--no-activate",
+        "--no-anaconda-upload",
+    ]
+    main_build.execute(args)
+    assert Path(testing_workdir, "work", "setup.py").is_file()
 
 
 @pytest.mark.serial
@@ -268,25 +262,42 @@ def test_purge_all(testing_workdir, testing_metadata):
 
 
 @pytest.mark.serial
-def test_no_force_upload(mocker, testing_workdir, testing_metadata, request):
-    with open(os.path.join(testing_workdir, ".condarc"), "w") as f:
-        f.write("anaconda_upload: True\n")
-        f.write("conda_build:\n")
-        f.write("    force_upload: False\n")
-    del testing_metadata.meta["test"]
-    api.output_yaml(testing_metadata, "meta.yaml")
-    args = ["--no-force-upload", testing_workdir]
-    call = mocker.patch.object(conda_build.build.subprocess, "call")
+def test_no_force_upload(
+    mocker: MockerFixture,
+    monkeypatch: MonkeyPatch,
+    testing_workdir: str | os.PathLike | Path,
+    testing_metadata: MetaData,
+    request: FixtureRequest,
+):
+    # this is nearly identical to tests/test_api_build.py::test_no_force_upload
+    # only difference is this tests `conda_build.cli.main_build.execute`
     request.addfinalizer(_reset_config)
-    _reset_config([os.path.join(testing_workdir, ".condarc")])
-    main_build.execute(args)
+    call = mocker.patch("subprocess.call")
+    anaconda = find_executable("anaconda")
+
+    # render recipe
+    api.output_yaml(testing_metadata, "meta.yaml")
     pkg = api.get_output_file_path(testing_metadata)
-    assert call.called_once_with(["anaconda", "upload", pkg])
-    args = [testing_workdir]
-    with open(os.path.join(testing_workdir, ".condarc"), "w") as f:
-        f.write("anaconda_upload: True\n")
-    main_build.execute(args)
-    assert call.called_once_with(["anaconda", "upload", "--force", pkg])
+
+    # mock Config.set_keys to always set anaconda_upload to True
+    # conda's Context + conda_build's MetaData & Config objects interact in such an
+    # awful way that mocking these configurations is ugly and confusing, all of it
+    # needs major refactoring
+    set_keys = Config.set_keys  # store original method
+    monkeypatch.setattr(
+        Config,
+        "set_keys",
+        lambda self, **kwargs: set_keys(self, **{**kwargs, "anaconda_upload": True}),
+    )
+
+    # check for normal upload
+    main_build.execute(["--no-force-upload", testing_workdir])
+    call.assert_called_once_with([anaconda, "upload", *pkg])
+    call.reset_mock()
+
+    # check for force upload
+    main_build.execute([testing_workdir])
+    call.assert_called_once_with([anaconda, "upload", "--force", *pkg])
 
 
 @pytest.mark.slow

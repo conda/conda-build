@@ -15,7 +15,6 @@ from ..deprecations import deprecated
 from ..utils import LoggingContext
 from ..variants import get_package_variants, set_language_env_vars
 
-on_win = sys.platform == "win32"
 log = logging.getLogger(__name__)
 
 
@@ -66,7 +65,7 @@ source to try fill in related template variables.",
     p.add_argument(
         "--output",
         action="store_true",
-        help="Output the conda package filename which would have been " "created",
+        help="Output the conda package filename which would have been created",
     )
     p.add_argument(
         "--python",
@@ -194,7 +193,7 @@ def execute(args, print_results=True):
     config = get_or_merge_config(None, **args.__dict__)
 
     variants = get_package_variants(args.recipe, config, variants=args.variants)
-    from conda_build.build import get_all_replacements
+    from ..build import get_all_replacements
 
     get_all_replacements(variants)
     set_language_env_vars(variants)
@@ -217,7 +216,7 @@ def execute(args, print_results=True):
     if args.file and len(metadata_tuples) > 1:
         log.warning(
             "Multiple variants rendered. "
-            "Only one will be written to the file you specified ({}).".format(args.file)
+            f"Only one will be written to the file you specified ({args.file})."
         )
 
     if print_results:
@@ -243,7 +242,7 @@ def execute(args, print_results=True):
         return metadata_tuples
 
 
-@deprecated("3.26.0", "4.0.0", addendum="Use `conda render` instead.")
+@deprecated("3.26.0", "24.1.0", addendum="Use `conda render` instead.")
 def main():
     return execute(sys.argv[1:])
 

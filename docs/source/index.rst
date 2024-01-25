@@ -1,5 +1,3 @@
-.. _index:
-
 Conda-build documentation
 =========================
 

@@ -8,7 +8,7 @@ package:
 # Example assumes that this folder has setup.py in it
 source:
   git_url: {{ environ.get('CONDA_BUILD_TEST_RECIPE_PATH') }}
-  git_tag: 1.21.0
+  git_tag: 1.22.0
 
 requirements:
   build:

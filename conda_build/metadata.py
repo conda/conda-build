@@ -13,23 +13,26 @@ import warnings
 from collections import OrderedDict
 from functools import lru_cache
 from os.path import isfile, join
+from typing import Literal, overload
 
 from bs4 import UnicodeDammit
 
-from conda_build import environ, exceptions, utils, variants
-from conda_build.config import Config, get_or_merge_config
-from conda_build.features import feature_list
-from conda_build.license_family import ensure_valid_license_family
-from conda_build.utils import (
+from . import exceptions, utils, variants
+from .conda_interface import MatchSpec, envs_dirs, md5_file
+from .config import Config, get_or_merge_config
+from .deprecations import deprecated
+from .features import feature_list
+from .license_family import ensure_valid_license_family
+from .utils import (
+    DEFAULT_SUBDIRS,
     HashableDict,
     ensure_list,
     expand_globs,
     find_recipe,
     get_installed_packages,
     insert_variant_versions,
+    on_win,
 )
-
-from .conda_interface import MatchSpec, envs_dirs, md5_file, non_x86_linux_machines
 
 try:
     import yaml
@@ -71,8 +74,6 @@ StringifyNumbersLoader.remove_implicit_resolver("tag:yaml.org,2002:float")
 StringifyNumbersLoader.remove_implicit_resolver("tag:yaml.org,2002:int")
 StringifyNumbersLoader.remove_constructor("tag:yaml.org,2002:float")
 StringifyNumbersLoader.remove_constructor("tag:yaml.org,2002:int")
-
-on_win = sys.platform == "win32"
 
 # arches that don't follow exact names in the subdir need to be mapped here
 ARCH_MAP = {"32": "x86", "64": "x86_64"}
@@ -121,21 +122,35 @@ def get_selectors(config: Config) -> dict[str, bool]:
     # Remember to update the docs of any of this changes
     plat = config.host_subdir
     d = dict(
-        linux=plat.startswith("linux-"),
         linux32=bool(plat == "linux-32"),
         linux64=bool(plat == "linux-64"),
         arm=plat.startswith("linux-arm"),
-        osx=plat.startswith("osx-"),
-        unix=plat.startswith(("linux-", "osx-")),
-        win=plat.startswith("win-"),
+        unix=plat.startswith(("linux-", "osx-", "emscripten-")),
         win32=bool(plat == "win-32"),
         win64=bool(plat == "win-64"),
-        x86=plat.endswith(("-32", "-64")),
-        x86_64=plat.endswith("-64"),
         os=os,
         environ=os.environ,
         nomkl=bool(int(os.environ.get("FEATURE_NOMKL", False))),
     )
+
+    # Add the current platform to the list of subdirs to enable conda-build
+    # to bootstrap new platforms without a new conda release.
+    subdirs = list(DEFAULT_SUBDIRS) + [plat]
+
+    # filter out noarch and other weird subdirs
+    subdirs = [subdir for subdir in subdirs if "-" in subdir]
+
+    subdir_oses = {subdir.split("-")[0] for subdir in subdirs}
+    subdir_archs = {subdir.split("-")[1] for subdir in subdirs}
+
+    for subdir_os in subdir_oses:
+        d[subdir_os] = plat.startswith(f"{subdir_os}-")
+
+    for arch in subdir_archs:
+        arch_full = ARCH_MAP.get(arch, arch)
+        d[arch_full] = plat.endswith(f"-{arch}")
+        if arch == "32":
+            d["x86"] = plat.endswith(("-32", "-64"))
 
     defaults = variants.get_default_variant(config)
     py = config.variant.get("python", defaults["python"])
@@ -144,15 +159,16 @@ def get_selectors(config: Config) -> dict[str, bool]:
         py = py[0]
     # go from "3.6 *_cython" -> "36"
     # or from "3.6.9" -> "36"
-    py = int("".join(py.split(" ")[0].split(".")[:2]))
+    py_major, py_minor, *_ = py.split(" ")[0].split(".")
+    py = int(f"{py_major}{py_minor}")
 
     d["build_platform"] = config.build_subdir
 
     d.update(
         dict(
             py=py,
-            py3k=bool(30 <= py < 40),
-            py2k=bool(20 <= py < 30),
+            py3k=bool(py_major == "3"),
+            py2k=bool(py_major == "2"),
             py26=bool(py == 26),
             py27=bool(py == 27),
             py33=bool(py == 33),
@@ -178,9 +194,6 @@ def get_selectors(config: Config) -> dict[str, bool]:
     lua = config.variant.get("lua", defaults["lua"])
     d["lua"] = lua
     d["luajit"] = bool(lua[0] == "2")
-
-    for machine in non_x86_linux_machines:
-        d[machine] = bool(plat.endswith("-%s" % machine))
 
     for feature, value in feature_list:
         d[feature] = value
@@ -306,7 +319,7 @@ def ensure_valid_fields(meta):
     pin_depends = meta.get("build", {}).get("pin_depends", "")
     if pin_depends and pin_depends not in ("", "record", "strict"):
         raise RuntimeError(
-            "build/pin_depends must be 'record' or 'strict' - " "not '%s'" % pin_depends
+            f"build/pin_depends must be 'record' or 'strict' - not '{pin_depends}'"
         )
 
 
@@ -332,9 +345,7 @@ def _trim_None_strings(meta_dict):
                 meta_dict[key] = keep
         else:
             log.debug(
-                "found unrecognized data type in dictionary: {}, type: {}".format(
-                    value, type(value)
-                )
+                f"found unrecognized data type in dictionary: {value}, type: {type(value)}"
             )
     return meta_dict
 
@@ -396,7 +407,7 @@ def ensure_matching_hashes(output_metadata):
     for _, m in output_metadata.values():
         for _, om in output_metadata.values():
             if m != om:
-                run_exports = om.meta.get("build", {}).get("run_exports", [])
+                run_exports = om.get_value("build/run_exports", [])
                 if hasattr(run_exports, "keys"):
                     run_exports_list = []
                     for export_type in utils.RUN_EXPORTS_TYPES:
@@ -451,14 +462,14 @@ def parse(data, config, path=None):
                 or (hasattr(res[field], "__iter__") and not isinstance(res[field], str))
             ):
                 raise RuntimeError(
-                    "The %s field should be a dict or list of dicts, not "
-                    "%s in file %s." % (field, res[field].__class__.__name__, path)
+                    f"The {field} field should be a dict or list of dicts, not "
+                    f"{res[field].__class__.__name__} in file {path}."
                 )
         else:
             if not isinstance(res[field], dict):
                 raise RuntimeError(
-                    "The %s field should be a dict, not %s in file %s."
-                    % (field, res[field].__class__.__name__, path)
+                    f"The {field} field should be a dict, not "
+                    f"{res[field].__class__.__name__} in file {path}."
                 )
 
     ensure_valid_fields(res)
@@ -537,7 +548,7 @@ FIELDS = {
         "provides_features": dict,
         "force_use_keys": list,
         "force_ignore_keys": list,
-        "merge_build_host": bool,
+        "merge_build_host": None,
         "pre-link": str,
         "post-link": str,
         "pre-unlink": str,
@@ -607,6 +618,7 @@ FIELDS = {
         "prelink_message": None,
         "readme": None,
     },
+    "extra": {},
 }
 
 # Fields that may either be a dictionary or a list of dictionaries.
@@ -957,7 +969,7 @@ def finalize_outputs_pass(
                 log = utils.get_logger(__name__)
                 log.warn(
                     "Could not finalize metadata due to missing dependencies: "
-                    "{}".format(e.packages)
+                    f"{e.packages}"
                 )
                 outputs[
                     (
@@ -1110,33 +1122,28 @@ class MetaData:
         # establish whether this recipe should squish build and host together
 
     @property
-    def is_cross(self):
-        return bool(self.get_depends_top_and_out("host")) or "host" in self.meta.get(
-            "requirements", {}
+    def is_cross(self) -> bool:
+        return bool(
+            self.get_depends_top_and_out("host")
+            or "host" in self.get_section("requirements")
         )
 
     @property
-    def final(self):
-        return self.get_value("extra/final")
+    def final(self) -> bool:
+        return bool(self.get_value("extra/final"))
 
     @final.setter
-    def final(self, boolean):
-        extra = self.meta.get("extra", {})
-        extra["final"] = boolean
-        self.meta["extra"] = extra
+    def final(self, value: bool) -> None:
+        self.meta.setdefault("extra", {})["final"] = bool(value)
 
     @property
-    def disable_pip(self):
-        return self.config.disable_pip or (
-            "build" in self.meta and "disable_pip" in self.meta["build"]
-        )
+    def disable_pip(self) -> bool:
+        return bool(self.config.disable_pip or self.get_value("build/disable_pip"))
 
     @disable_pip.setter
-    def disable_pip(self, value):
-        self.config.disable_pip = value
-        build = self.meta.get("build", {})
-        build["disable_pip"] = value
-        self.meta["build"] = build
+    def disable_pip(self, value: bool) -> None:
+        self.config.disable_pip = bool(value)
+        self.meta.setdefault("build", {})["disable_pip"] = bool(value)
 
     def append_metadata_sections(
         self, sections_file_or_dict, merge, raise_on_clobber=False
@@ -1162,10 +1169,9 @@ class MetaData:
         )
 
     @property
-    def is_output(self):
-        self_name = self.name(fail_ok=True)
-        parent_name = self.meta.get("extra", {}).get("parent_recipe", {}).get("name")
-        return bool(parent_name) and parent_name != self_name
+    def is_output(self) -> str:
+        parent_name = self.get_value("extra/parent_recipe", {}).get("name")
+        return parent_name and parent_name != self.name()
 
     def parse_again(
         self,
@@ -1232,17 +1238,16 @@ class MetaData:
             dependencies = _get_dependencies_from_environment(self.config.bootstrap)
             self.append_metadata_sections(dependencies, merge=True)
 
-        if "error_overlinking" in self.meta.get("build", {}):
+        if "error_overlinking" in self.get_section("build"):
             self.config.error_overlinking = self.meta["build"]["error_overlinking"]
-        if "error_overdepending" in self.meta.get("build", {}):
+        if "error_overdepending" in self.get_section("build"):
             self.config.error_overdepending = self.meta["build"]["error_overdepending"]
 
         self.validate_features()
         self.ensure_no_pip_requirements()
 
     def ensure_no_pip_requirements(self):
-        keys = "requirements/build", "requirements/run", "test/requires"
-        for key in keys:
+        for key in ("requirements/build", "requirements/run", "test/requires"):
             if any(hasattr(item, "keys") for item in (self.get_value(key) or [])):
                 raise ValueError(
                     "Dictionaries are not supported as values in requirements sections"
@@ -1252,15 +1257,13 @@ class MetaData:
 
     def append_requirements(self):
         """For dynamic determination of build or run reqs, based on configuration"""
-        reqs = self.meta.get("requirements", {})
-        run_reqs = reqs.get("run", [])
+        run_reqs = self.meta.setdefault("requirements", {}).setdefault("run", [])
         if (
-            bool(self.get_value("build/osx_is_app", False))
+            self.get_value("build/osx_is_app", False)
             and self.config.platform == "osx"
+            and "python.app" not in run_reqs
         ):
-            if "python.app" not in run_reqs:
-                run_reqs.append("python.app")
-        self.meta["requirements"] = reqs
+            run_reqs.append("python.app")
 
     def parse_until_resolved(
         self, allow_no_other_outputs=False, bypass_env_check=False
@@ -1295,8 +1298,8 @@ class MetaData:
                 bypass_env_check=bypass_env_check,
             )
             sys.exit(
-                "Undefined Jinja2 variables remain ({}).  Please enable "
-                "source downloading and try again.".format(self.undefined_jinja_vars)
+                f"Undefined Jinja2 variables remain ({self.undefined_jinja_vars}).  Please enable "
+                "source downloading and try again."
             )
 
         # always parse again at the end, too.
@@ -1310,9 +1313,11 @@ class MetaData:
     @classmethod
     def fromstring(cls, metadata, config=None, variant=None):
         m = super().__new__(cls)
-        if not config:
-            config = Config()
-        m.meta = parse(metadata, config=config, path="", variant=variant)
+        m.path = ""
+        m._meta_path = ""
+        m.requirements_path = ""
+        config = config or Config(variant=variant)
+        m.meta = parse(metadata, config=config, path="")
         m.config = config
         m.parse_again(permit_undefined_jinja=True)
         return m
@@ -1327,18 +1332,45 @@ class MetaData:
         m._meta_path = ""
         m.requirements_path = ""
         m.meta = sanitize(metadata)
-
-        if not config:
-            config = Config(variant=variant)
-
-        m.config = config
+        m.config = config or Config(variant=variant)
         m.undefined_jinja_vars = []
         m.final = False
-
         return m
 
-    def get_section(self, section):
-        return self.meta.get(section, {})
+    @overload
+    def get_section(self, section: Literal["source", "outputs"]) -> list[dict]:
+        ...
+
+    @overload
+    def get_section(
+        self,
+        section: Literal[
+            "package",
+            "build",
+            "requirements",
+            "app",
+            "test",
+            "about",
+            "extra",
+        ],
+    ) -> dict:
+        ...
+
+    def get_section(self, name):
+        section = self.meta.get(name)
+        if name in OPTIONALLY_ITERABLE_FIELDS:
+            if not section:
+                return []
+            elif isinstance(section, dict):
+                return [section]
+            elif not isinstance(section, list):
+                raise ValueError(f"Expected {name} to be a list")
+        else:
+            if not section:
+                return {}
+            elif not isinstance(section, dict):
+                raise ValueError(f"Expected {name} to be a dict")
+        return section
 
     def get_value(self, name, default=None, autotype=True):
         """
@@ -1358,7 +1390,9 @@ class MetaData:
             index = None
         elif len(names) == 3:
             section, index, key = names
-            assert section == "source", "Section is not a list: " + section
+            assert section in OPTIONALLY_ITERABLE_FIELDS, (
+                "Section is not a list: " + section
+            )
             index = int(index)
 
         # get correct default
@@ -1380,7 +1414,7 @@ class MetaData:
                 )
                 index = 0
 
-            if len(section_data) == 0:
+            if not section_data:
                 section_data = {}
             else:
                 section_data = section_data[index]
@@ -1423,26 +1457,28 @@ class MetaData:
                     check_field(key_or_dict, section)
         return True
 
-    def name(self, fail_ok=False):
-        res = self.meta.get("package", {}).get("name", "")
-        if not res and not fail_ok:
+    @deprecated.argument("3.28.0", "24.1.0", "fail_ok")
+    def name(self) -> str:
+        name = self.get_value("package/name", "")
+        if not name and self.final:
             sys.exit("Error: package/name missing in: %r" % self.meta_path)
-        res = str(res)
-        if res != res.lower():
-            sys.exit("Error: package/name must be lowercase, got: %r" % res)
-        check_bad_chrs(res, "package/name")
-        return res
+        name = str(name)
+        if name != name.lower():
+            sys.exit("Error: package/name must be lowercase, got: %r" % name)
+        check_bad_chrs(name, "package/name")
+        return name
 
-    def version(self):
-        res = str(self.get_value("package/version"))
-        if res is None:
+    def version(self) -> str:
+        version = self.get_value("package/version", "")
+        if not version and not self.get_section("outputs") and self.final:
             sys.exit("Error: package/version missing in: %r" % self.meta_path)
-        check_bad_chrs(res, "package/version")
-        if self.final and res.startswith("."):
+        version = str(version)
+        check_bad_chrs(version, "package/version")
+        if self.final and version.startswith("."):
             raise ValueError(
-                "Fully-rendered version can't start with period -  got %s", res
+                "Fully-rendered version can't start with period -  got %s", version
             )
-        return res
+        return version
 
     def build_number(self):
         number = self.get_value("build/number")
@@ -1462,11 +1498,12 @@ class MetaData:
         meta_requirements = ensure_list(self.get_value("requirements/" + typ, []))[:]
         req_names = {req.split()[0] for req in meta_requirements if req}
         extra_reqs = []
-        # this is for the edge case of requirements for top-level being also partially defined in a similarly named output
+        # this is for the edge case of requirements for top-level being
+        # partially defined in a similarly named output
         if not self.is_output:
             matching_output = [
                 out
-                for out in self.meta.get("outputs", [])
+                for out in self.get_section("outputs")
                 if out.get("name") == self.name()
             ]
             if matching_output:
@@ -1521,20 +1558,18 @@ class MetaData:
             for c in "=!@#$%^&*:;\"'\\|<>?/":
                 if c in ms.name:
                     sys.exit(
-                        "Error: bad character '%s' in package name "
-                        "dependency '%s'" % (c, ms.name)
+                        f"Error: bad character '{c}' in package name "
+                        f"dependency '{ms.name}'"
                     )
             parts = spec.split()
             if len(parts) >= 2:
                 if parts[1] in {">", ">=", "=", "==", "!=", "<", "<="}:
                     msg = (
-                        "Error: bad character '%s' in package version "
-                        "dependency '%s'" % (parts[1], ms.name)
+                        f"Error: bad character '{parts[1]}' in package version "
+                        f"dependency '{ms.name}'"
                     )
                     if len(parts) >= 3:
-                        msg += "\nPerhaps you meant '{} {}{}'".format(
-                            ms.name, parts[1], parts[2]
-                        )
+                        msg += f"\nPerhaps you meant '{ms.name} {parts[1]}{parts[2]}'"
                     sys.exit(msg)
             specs[spec] = ms
         return list(specs.values())
@@ -1739,7 +1774,7 @@ class MetaData:
         ret = ensure_list(self.get_value("build/has_prefix_files", []))
         if not isinstance(ret, list):
             raise RuntimeError("build/has_prefix_files should be a list of paths")
-        if sys.platform == "win32":
+        if on_win:
             if any("\\" in i for i in ret):
                 raise RuntimeError(
                     "build/has_prefix_files paths must use / "
@@ -1749,18 +1784,20 @@ class MetaData:
 
     def ignore_prefix_files(self):
         ret = self.get_value("build/ignore_prefix_files", False)
-        if type(ret) not in (list, bool):
+        if not isinstance(ret, (list, bool)):
             raise RuntimeError(
                 "build/ignore_prefix_files should be boolean or a list of paths "
                 "(optionally globs)"
             )
-        if sys.platform == "win32":
-            if type(ret) is list and any("\\" in i for i in ret):
+        if on_win:
+            if isinstance(ret, list) and any("\\" in i for i in ret):
                 raise RuntimeError(
                     "build/ignore_prefix_files paths must use / "
                     "as the path delimiter on Windows"
                 )
-        return expand_globs(ret, self.config.host_prefix) if type(ret) is list else ret
+        return (
+            expand_globs(ret, self.config.host_prefix) if isinstance(ret, list) else ret
+        )
 
     def always_include_files(self):
         files = ensure_list(self.get_value("build/always_include_files", []))
@@ -1779,21 +1816,23 @@ class MetaData:
 
     def binary_relocation(self):
         ret = self.get_value("build/binary_relocation", True)
-        if type(ret) not in (list, bool):
+        if not isinstance(ret, (list, bool)):
             raise RuntimeError(
                 "build/binary_relocation should be boolean or a list of paths "
                 "(optionally globs)"
             )
-        if sys.platform == "win32":
-            if type(ret) is list and any("\\" in i for i in ret):
+        if on_win:
+            if isinstance(ret, list) and any("\\" in i for i in ret):
                 raise RuntimeError(
                     "build/binary_relocation paths must use / "
                     "as the path delimiter on Windows"
                 )
-        return expand_globs(ret, self.config.host_prefix) if type(ret) is list else ret
+        return (
+            expand_globs(ret, self.config.host_prefix) if isinstance(ret, list) else ret
+        )
 
-    def include_recipe(self):
-        return self.get_value("build/include_recipe", True)
+    def include_recipe(self) -> bool:
+        return bool(self.get_value("build/include_recipe", True))
 
     def binary_has_prefix_files(self):
         ret = ensure_list(self.get_value("build/binary_has_prefix_files", []))
@@ -1801,7 +1840,7 @@ class MetaData:
             raise RuntimeError(
                 "build/binary_has_prefix_files should be a list of paths"
             )
-        if sys.platform == "win32":
+        if on_win:
             if any("\\" in i for i in ret):
                 raise RuntimeError(
                     "build/binary_has_prefix_files paths must use / "
@@ -1809,8 +1848,8 @@ class MetaData:
                 )
         return expand_globs(ret, self.config.host_prefix)
 
-    def skip(self):
-        return self.get_value("build/skip", False)
+    def skip(self) -> bool:
+        return bool(self.get_value("build/skip", False))
 
     def _get_contents(
         self,
@@ -1841,7 +1880,7 @@ class MetaData:
             with open(self.meta_path) as fd:
                 return fd.read()
 
-        from conda_build.jinja_context import (
+        from .jinja_context import (
             FilteredLoader,
             UndefinedNeverFail,
             context_processor,
@@ -1874,8 +1913,10 @@ class MetaData:
         loader = FilteredLoader(jinja2.ChoiceLoader(loaders), config=self.config)
         env = jinja2.Environment(loader=loader, undefined=undefined_type)
 
+        from .environ import get_dict
+
         env.globals.update(get_selectors(self.config))
-        env.globals.update(environ.get_dict(m=self, skip_build_id=skip_build_id))
+        env.globals.update(get_dict(m=self, skip_build_id=skip_build_id))
         env.globals.update({"CONDA_BUILD_STATE": "RENDER"})
         env.globals.update(
             context_processor(
@@ -1921,9 +1962,7 @@ class MetaData:
             if "'None' has not attribute" in str(ex):
                 ex = "Failed to run jinja context function"
             sys.exit(
-                "Error: Failed to render jinja template in {}:\n{}".format(
-                    self.meta_path, str(ex)
-                )
+                f"Error: Failed to render jinja template in {self.meta_path}:\n{str(ex)}"
             )
         finally:
             if "CONDA_BUILD_STATE" in os.environ:
@@ -1947,9 +1986,11 @@ class MetaData:
 
     @property
     def meta_path(self):
-        meta_path = self._meta_path or self.meta.get("extra", {}).get(
-            "parent_recipe", {}
-        ).get("path", "")
+        meta_path = (
+            self._meta_path
+            # get the parent recipe path if this is a subpackage
+            or self.get_value("extra/parent_recipe", {}).get("path", "")
+        )
         if meta_path and os.path.basename(meta_path) != self._meta_name:
             meta_path = os.path.join(meta_path, self._meta_name)
         return meta_path
@@ -1997,7 +2038,7 @@ class MetaData:
         return len(matches) > 0
 
     @property
-    def uses_vcs_in_meta(self):
+    def uses_vcs_in_meta(self) -> Literal["git", "svn", "mercurial"] | None:
         """returns name of vcs used if recipe contains metadata associated with version control systems.
         If this metadata is present, a download/copy will be forced in parse_or_try_download.
         """
@@ -2009,7 +2050,7 @@ class MetaData:
                 meta_text = UnicodeDammit(f.read()).unicode_markup
                 for _vcs in vcs_types:
                     matches = re.findall(rf"{_vcs.upper()}_[^\.\s\'\"]+", meta_text)
-                    if len(matches) > 0 and _vcs != self.meta["package"]["name"]:
+                    if len(matches) > 0 and _vcs != self.get_value("package/name"):
                         if _vcs == "hg":
                             _vcs = "mercurial"
                         vcs = _vcs
@@ -2017,7 +2058,7 @@ class MetaData:
         return vcs
 
     @property
-    def uses_vcs_in_build(self):
+    def uses_vcs_in_build(self) -> Literal["git", "svn", "mercurial"] | None:
         # TODO :: Re-work this. Is it even useful? We can declare any vcs in our build deps.
         build_script = "bld.bat" if on_win else "build.sh"
         build_script = os.path.join(self.path, build_script)
@@ -2036,7 +2077,7 @@ class MetaData:
                             build_script,
                             flags=re.IGNORECASE,
                         )
-                        if len(matches) > 0 and vcs != self.meta["package"]["name"]:
+                        if len(matches) > 0 and vcs != self.get_value("package/name"):
                             if vcs == "hg":
                                 vcs = "mercurial"
                             return vcs
@@ -2053,7 +2094,7 @@ class MetaData:
                     self.name(), getattr(self, "type", None)
                 )
         else:
-            from conda_build.render import output_yaml
+            from .render import output_yaml
 
             recipe_text = output_yaml(self)
         recipe_text = _filter_recipe_text(recipe_text, extract_pattern)
@@ -2138,15 +2179,14 @@ class MetaData:
         return output
 
     @property
-    def numpy_xx(self):
+    def numpy_xx(self) -> bool:
         """This is legacy syntax that we need to support for a while.  numpy x.x means
         "pin run as build" for numpy.  It was special-cased to only numpy."""
         text = self.extract_requirements_text()
-        uses_xx = bool(numpy_xx_re.search(text))
-        return uses_xx
+        return bool(numpy_xx_re.search(text))
 
     @property
-    def uses_numpy_pin_compatible_without_xx(self):
+    def uses_numpy_pin_compatible_without_xx(self) -> tuple[bool, bool]:
         text = self.extract_requirements_text()
         compatible_search = numpy_compatible_re.search(text)
         max_pin_search = None
@@ -2208,24 +2248,20 @@ class MetaData:
         return self.get_value("build/noarch")
 
     @noarch.setter
-    def noarch(self, value):
-        build = self.meta.get("build", {})
-        build["noarch"] = value
-        self.meta["build"] = build
+    def noarch(self, value: str | None) -> None:
+        self.meta.setdefault("build", {})["noarch"] = value
         if not self.noarch_python and not value:
             self.config.reset_platform()
         elif value:
             self.config.host_platform = "noarch"
 
     @property
-    def noarch_python(self):
-        return self.get_value("build/noarch_python")
+    def noarch_python(self) -> bool:
+        return bool(self.get_value("build/noarch_python"))
 
     @noarch_python.setter
-    def noarch_python(self, value):
-        build = self.meta.get("build", {})
-        build["noarch_python"] = value
-        self.meta["build"] = build
+    def noarch_python(self, value: bool) -> None:
+        self.meta.setdefault("build", {})["noarch_python"] = value
         if not self.noarch and not value:
             self.config.reset_platform()
         elif value:
@@ -2259,9 +2295,8 @@ class MetaData:
 
     @property
     def source_provided(self):
-        return not bool(self.meta.get("source")) or (
-            os.path.isdir(self.config.work_dir)
-            and len(os.listdir(self.config.work_dir)) > 0
+        return not self.get_section("source") or (
+            os.path.isdir(self.config.work_dir) and os.listdir(self.config.work_dir)
         )
 
     def reconcile_metadata_with_output_dict(self, output_metadata, output_dict):
@@ -2453,7 +2488,7 @@ class MetaData:
         permit_unsatisfiable_variants=False,
         bypass_env_check=False,
     ):
-        from conda_build.source import provide
+        from .source import provide
 
         out_metadata_map = {}
         if self.final:
@@ -2557,7 +2592,7 @@ class MetaData:
                         )
                         output_d["requirements"] = output_d.get("requirements", {})
                         output_d["requirements"]["build"] = build_reqs
-                        m.meta["requirements"] = m.meta.get("requirements", {})
+                        m.meta["requirements"] = m.get_section("requirements")
                         m.meta["requirements"]["build"] = build_reqs
                     non_conda_packages.append((output_d, m))
                 else:
@@ -2859,8 +2894,8 @@ class MetaData:
             else:
                 log = utils.get_logger(__name__)
                 log.warn(
-                    "Not detecting used variables in output script {}; conda-build only knows "
-                    "how to search .sh and .bat files right now.".format(script)
+                    f"Not detecting used variables in output script {script}; conda-build only knows "
+                    "how to search .sh and .bat files right now."
                 )
         return used_vars
 
@@ -2872,18 +2907,19 @@ class MetaData:
         self.config.clean()
 
     @property
-    def activate_build_script(self):
-        b = self.meta.get("build", {}) or {}
-        should_activate = b.get("activate_in_script") is not False
-        return bool(self.config.activate and should_activate)
+    def activate_build_script(self) -> bool:
+        return bool(
+            self.config.activate
+            and self.get_value("build/activate_in_script") is not False
+        )
 
     @property
-    def build_is_host(self):
+    def build_is_host(self) -> bool:
         manual_overrides = (
-            self.meta.get("build", {}).get("merge_build_host") is True
+            self.get_value("build/merge_build_host") is True
             or self.config.build_is_host
         )
-        manually_disabled = self.meta.get("build", {}).get("merge_build_host") is False
+        manually_disabled = self.get_value("build/merge_build_host") is False
         return manual_overrides or (
             self.config.subdirs_same
             and not manually_disabled

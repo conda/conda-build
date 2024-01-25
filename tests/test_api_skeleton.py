@@ -11,7 +11,7 @@ import pytest
 import ruamel.yaml
 
 from conda_build import api
-from conda_build.exceptions import DependencyNeedsBuildingError
+from conda_build.config import Config
 from conda_build.skeletons.pypi import (
     clean_license_name,
     convert_to_flat_list,
@@ -28,13 +28,19 @@ from conda_build.skeletons.pypi import (
 from conda_build.utils import on_win
 from conda_build.version import _parse as parse_version
 
-SYMPY_URL = "https://pypi.python.org/packages/source/s/sympy/sympy-1.10.tar.gz#md5=b3f5189ad782bbcb1bedc1ec2ca12f29"
+SYMPY_URL = (
+    "https://files.pythonhosted.org/packages/7d/23/70fa970c07f0960f7543af982d2554be805e1034b9dcee9cb3082ce80f80/sympy-1.10.tar.gz"
+    "#sha256=6cf85a5cfe8fff69553e745b05128de6fc8de8f291965c63871c79701dc6efc9"
+)
 
 PYLINT_VERSION = "2.3.1"
 PYLINT_HASH_TYPE = "sha256"
 PYLINT_HASH_VALUE = "723e3db49555abaf9bf79dc474c6b9e2935ad82230b10c1138a71ea41ac0fff1"
+PYLINT_HASH_VALUE_BLAKE2 = (
+    "018b538911c0ebc2529f15004f4cb07e3ca562bb9aacea5df89cc25b62e01891"
+)
 PYLINT_FILENAME = f"pylint-{PYLINT_VERSION}.tar.gz"
-PYLINT_URL = f"https://pypi.python.org/packages/source/p/pylint/{PYLINT_FILENAME}#{PYLINT_HASH_TYPE}={PYLINT_HASH_VALUE}"
+PYLINT_URL = f"https://files.pythonhosted.org/packages/{PYLINT_HASH_VALUE_BLAKE2[:2]}/{PYLINT_HASH_VALUE_BLAKE2[2:4]}/{PYLINT_HASH_VALUE_BLAKE2[4:]}/{PYLINT_FILENAME}"
 
 
 @pytest.fixture
@@ -315,10 +321,11 @@ def test_pypi_with_setup_options(tmp_path: Path, testing_config):
     api.skeletonize(
         packages="photutils",
         repo="pypi",
-        version="0.2.2",
+        version="1.10.0",
         setup_options="--offline",
         config=testing_config,
         output_dir=tmp_path,
+        extra_specs=["extension-helpers"],
     )
 
     # Check that the setup option occurs in bld.bat and build.sh.
@@ -326,30 +333,31 @@ def test_pypi_with_setup_options(tmp_path: Path, testing_config):
     assert "--offline" in m.meta["build"]["script"]
 
 
-def test_pypi_pin_numpy(tmp_path: Path, testing_config):
+def test_pypi_pin_numpy(tmp_path: Path, testing_config: Config):
     # The package used here must have a numpy dependence for pin-numpy to have
     # any effect.
     api.skeletonize(
-        packages="msumastro",
+        packages="fasttext",
         repo="pypi",
-        version="0.9.0",
+        version="0.9.2",
         config=testing_config,
         pin_numpy=True,
         output_dir=tmp_path,
     )
-    assert (tmp_path / "msumastro" / "meta.yaml").read_text().count("numpy x.x") == 2
-    with pytest.raises(DependencyNeedsBuildingError):
-        api.build("msumastro")
+    assert (tmp_path / "fasttext" / "meta.yaml").read_text().count("numpy x.x") == 2
 
 
-def test_pypi_version_sorting(tmp_path: Path, testing_config):
+def test_pypi_version_sorting(tmp_path: Path, testing_config: Config):
     # The package used here must have a numpy dependence for pin-numpy to have
     # any effect.
     api.skeletonize(
-        packages="impyla", repo="pypi", config=testing_config, output_dir=tmp_path
+        packages="fasttext",
+        repo="pypi",
+        config=testing_config,
+        output_dir=tmp_path,
     )
-    m = api.render(str(tmp_path / "impyla"))[0][0]
-    assert parse_version(m.version()) >= parse_version("0.13.8")
+    m = api.render(str(tmp_path / "fasttext"))[0][0]
+    assert parse_version(m.version()) >= parse_version("0.9.2")
 
 
 def test_list_skeletons():

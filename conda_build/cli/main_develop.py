@@ -19,7 +19,7 @@ def parse_args(args):
 
 Install a Python package in 'development mode'.
 
-This works by creating a conda.pth file in site-packages."""
+This works by creating a conda.pth file in site-packages.""",
         # TODO: Use setup.py to determine any entry-points to install.
     )
 
@@ -88,6 +88,6 @@ def execute(args):
     )
 
 
-@deprecated("3.26.0", "4.0.0", addendum="Use `conda develop` instead.")
+@deprecated("3.26.0", "24.1.0", addendum="Use `conda develop` instead.")
 def main():
     return execute(sys.argv[1:])

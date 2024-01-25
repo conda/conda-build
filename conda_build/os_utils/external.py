@@ -2,12 +2,11 @@
 # SPDX-License-Identifier: BSD-3-Clause
 import os
 import stat
-import sys
+from glob import glob
 from os.path import expanduser, isfile, join
 
-from glob2 import glob
-
-from conda_build.conda_interface import root_dir
+from ..conda_interface import root_dir
+from ..utils import on_win
 
 
 def find_executable(executable, prefix=None, all_matches=False):
@@ -15,7 +14,7 @@ def find_executable(executable, prefix=None, all_matches=False):
     #  in other code
     global dir_paths
     result = None
-    if sys.platform == "win32":
+    if on_win:
         dir_paths = [
             join(root_dir, "Scripts"),
             join(root_dir, "Library\\mingw-w64\\bin"),
@@ -37,7 +36,7 @@ def find_executable(executable, prefix=None, all_matches=False):
             dir_paths.insert(0, join(prefix, "bin"))
 
     dir_paths.extend(os.environ["PATH"].split(os.pathsep))
-    if sys.platform == "win32":
+    if on_win:
         exts = (".exe", ".bat", "")
     else:
         exts = ("",)
@@ -48,14 +47,14 @@ def find_executable(executable, prefix=None, all_matches=False):
             path = expanduser(join(dir_path, executable + ext))
             if isfile(path):
                 st = os.stat(path)
-                if sys.platform == "win32" or st.st_mode & stat.S_IEXEC:
+                if on_win or st.st_mode & stat.S_IEXEC:
                     if all_matches:
                         all_matches_found.append(path)
                     else:
                         result = path
                         break
         if not result and any([f in executable for f in ("*", "?", ".")]):
-            matches = glob(os.path.join(dir_path, executable))
+            matches = glob(os.path.join(dir_path, executable), recursive=True)
             if matches:
                 if all_matches:
                     all_matches_found.extend(matches)

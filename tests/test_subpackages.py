@@ -116,9 +116,7 @@ def test_intradependencies(testing_config):
     outputs2_set = {os.path.basename(p) for p in outputs2}
     assert (
         outputs1_set == outputs2_set
-    ), "pkgs differ :: get_output_file_paths()={} but build()={}".format(
-        outputs1_set, outputs2_set
-    )
+    ), f"pkgs differ :: get_output_file_paths()={outputs1_set} but build()={outputs2_set}"
 
 
 def test_git_in_output_version(testing_config, conda_build_test_recipe_envvar: str):
@@ -127,7 +125,7 @@ def test_git_in_output_version(testing_config, conda_build_test_recipe_envvar: s
         recipe, config=testing_config, finalize=False, bypass_env_check=True
     )
     assert len(outputs) == 1
-    assert outputs[0][0].version() == "1.21.11"
+    assert outputs[0][0].version() == "1.22.0"
 
 
 def test_intradep_with_templated_output_name(testing_config):
@@ -336,6 +334,16 @@ def test_build_script_and_script_env(testing_config):
 
 
 @pytest.mark.sanity
+def test_build_script_and_script_env_warn_empty_script_env(testing_config):
+    recipe = os.path.join(subpackage_dir, "_build_script_missing_var")
+    with pytest.warns(
+        UserWarning,
+        match="The environment variable 'TEST_FN_DOESNT_EXIST' specified in script_env is undefined",
+    ):
+        api.build(recipe, config=testing_config)
+
+
+@pytest.mark.sanity
 @pytest.mark.skipif(sys.platform != "darwin", reason="only implemented for mac")
 def test_strong_run_exports_from_build_applies_to_host(testing_config):
     recipe = os.path.join(
@@ -442,3 +450,20 @@ def test_build_string_does_not_incorrectly_add_hash(testing_config):
     assert len(output_files) == 4
     assert any("clang_variant-1.0-cling.tar.bz2" in f for f in output_files)
     assert any("clang_variant-1.0-default.tar.bz2" in f for f in output_files)
+
+
+def test_multi_outputs_without_package_version(testing_config):
+    # outputs without package/version is allowed
+    recipe = os.path.join(subpackage_dir, "_multi_outputs_without_package_version")
+    outputs = api.build(recipe, config=testing_config)
+    assert len(outputs) == 3
+    assert outputs[0].endswith("a-1-0.tar.bz2")
+    assert outputs[1].endswith("b-2-0.tar.bz2")
+    assert outputs[2].endswith("c-3-0.tar.bz2")
+
+
+def test_empty_outputs_requires_package_version(testing_config):
+    # no outputs means package/version is required
+    recipe = os.path.join(subpackage_dir, "_empty_outputs_requires_package_version")
+    with pytest.raises(SystemExit, match="package/version missing"):
+        api.build(recipe, config=testing_config)

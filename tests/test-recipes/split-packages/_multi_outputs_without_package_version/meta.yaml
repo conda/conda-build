@@ -1,0 +1,12 @@
+package:
+  name: _multi_outputs_without_package_version
+  # when there are outputs, package/version is not required
+  # version: 0
+
+outputs:
+  - name: a
+    version: 1
+  - name: b
+    version: 2
+  - name: c
+    version: 3

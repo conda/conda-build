@@ -8,22 +8,29 @@ version number.
 Design philosophy: put variability into config.  Make each function here accept kwargs,
 but only use those kwargs in config.  Config must change to support new features elsewhere.
 """
-
-import sys as _sys
+from __future__ import annotations
 
 # imports are done locally to keep the api clean and limited strictly
 #    to conda-build's functionality.
+import os
+import sys
 from os.path import dirname, expanduser, join
 from pathlib import Path
 
 # make the Config class available in the api namespace
-from conda_build.config import DEFAULT_PREFIX_LENGTH as _prefix_length
-from conda_build.config import Config, get_channel_urls, get_or_merge_config
-from conda_build.utils import ensure_list as _ensure_list
-from conda_build.utils import expand_globs as _expand_globs
-from conda_build.utils import get_logger as _get_logger
-
+from .config import DEFAULT_PREFIX_LENGTH as _prefix_length
+from .config import Config, get_channel_urls, get_or_merge_config
 from .deprecations import deprecated
+from .utils import (
+    CONDA_PACKAGE_EXTENSIONS,
+    LoggingContext,
+    ensure_list,
+    expand_globs,
+    find_recipe,
+    get_logger,
+    get_skip_message,
+    on_win,
+)
 
 
 def render(
@@ -41,9 +48,9 @@ def render(
     Returns a list of (metadata, needs_download, needs_reparse in env) tuples"""
     from collections import OrderedDict
 
-    from conda_build.conda_interface import NoPackagesFoundError
-    from conda_build.exceptions import DependencyNeedsBuildingError
-    from conda_build.render import finalize_metadata, render_recipe
+    from .conda_interface import NoPackagesFoundError
+    from .exceptions import DependencyNeedsBuildingError
+    from .render import finalize_metadata, render_recipe
 
     config = get_or_merge_config(config, **kwargs)
 
@@ -76,8 +83,8 @@ def render(
                                     raise
 
                         # remove outputs section from output objects for simplicity
-                        if not om.path and om.meta.get("outputs"):
-                            om.parent_outputs = om.meta["outputs"]
+                        if not om.path and (outputs := om.get_section("outputs")):
+                            om.parent_outputs = outputs
                             del om.meta["outputs"]
 
                         output_metas[
@@ -103,7 +110,7 @@ def render(
 
 def output_yaml(metadata, file_path=None, suppress_outputs=False):
     """Save a rendered recipe in its final form to the path given by file_path"""
-    from conda_build.render import output_yaml
+    from .render import output_yaml
 
     return output_yaml(metadata, file_path, suppress_outputs=suppress_outputs)
 
@@ -120,8 +127,7 @@ def get_output_file_paths(
     Both split packages (recipes with more than one output) and build matrices,
     created with variants, contribute to the list of file paths here.
     """
-    from conda_build.render import bldpkg_path
-    from conda_build.utils import get_skip_message
+    from .render import bldpkg_path
 
     config = get_or_merge_config(config, **kwargs)
 
@@ -175,7 +181,7 @@ def get_output_file_path(
     Both split packages (recipes with more than one output) and build matrices,
     created with variants, contribute to the list of file paths here.
     """
-    log = _get_logger(__name__)
+    log = get_logger(__name__)
     log.warn(
         "deprecation warning: this function has been renamed to get_output_file_paths, "
         "to reflect that potentially multiple paths are returned.  This function will be "
@@ -221,10 +227,7 @@ def build(
 
     If recipe paths are provided, renders recipe before building.
     Tests built packages by default.  notest=True to skip test."""
-    import os
-
-    from conda_build.build import build_tree
-    from conda_build.utils import find_recipe
+    from .build import build_tree
 
     assert post in (None, True, False), (
         "post must be boolean or None.  Remember, you must pass "
@@ -232,9 +235,9 @@ def build(
     )
 
     recipes = []
-    for recipe in _ensure_list(recipe_paths_or_metadata):
+    for recipe in ensure_list(recipe_paths_or_metadata):
         if isinstance(recipe, str):
-            for recipe in _expand_globs(recipe, os.getcwd()):
+            for recipe in expand_globs(recipe, os.getcwd()):
                 try:
                     recipe = find_recipe(recipe)
                 except OSError:
@@ -274,7 +277,7 @@ def test(
 
     For a recipe folder, it renders the recipe enough to know what package to download, and obtains
     it from your currently configuured channels."""
-    from conda_build.build import test
+    from .build import test
 
     if hasattr(recipedir_or_package_or_metadata, "config"):
         config = recipedir_or_package_or_metadata.config
@@ -334,7 +337,7 @@ def skeletonize(
     #    only relevant ones below
     config = get_or_merge_config(config, **kwargs)
     config.compute_build_id("skeleton")
-    packages = _ensure_list(packages)
+    packages = ensure_list(packages)
 
     # This is a little bit of black magic.  The idea is that for any keyword argument that
     #    we inspect from the given module's skeletonize function, we should hoist the argument
@@ -369,7 +372,7 @@ def skeletonize(
 
 def develop(
     recipe_dir,
-    prefix=_sys.prefix,
+    prefix=sys.prefix,
     no_pth_file=False,
     build_ext=False,
     clean=False,
@@ -380,7 +383,7 @@ def develop(
     This works by creating a conda.pth file in site-packages."""
     from .develop import execute
 
-    recipe_dir = _ensure_list(recipe_dir)
+    recipe_dir = ensure_list(recipe_dir)
     return execute(recipe_dir, prefix, no_pth_file, build_ext, clean, uninstall)
 
 
@@ -399,7 +402,7 @@ def convert(
     portable, such as pure python, or header-only C/C++ libraries."""
     from .convert import conda_convert
 
-    platforms = _ensure_list(platforms)
+    platforms = ensure_list(platforms)
     if package_file.endswith("tar.bz2"):
         return conda_convert(
             package_file,
@@ -414,7 +417,7 @@ def convert(
         )
     elif package_file.endswith(".whl"):
         raise RuntimeError(
-            "Conversion from wheel packages is not " "implemented yet, stay tuned."
+            "Conversion from wheel packages is not implemented yet, stay tuned."
         )
     else:
         raise RuntimeError("cannot convert: %s" % package_file)
@@ -430,7 +433,7 @@ def test_installable(channel="defaults"):
 
 def inspect_linkages(
     packages,
-    prefix=_sys.prefix,
+    prefix=sys.prefix,
     untracked=False,
     all_packages=False,
     show_files=False,
@@ -439,7 +442,7 @@ def inspect_linkages(
 ):
     from .inspect_pkg import inspect_linkages
 
-    packages = _ensure_list(packages)
+    packages = ensure_list(packages)
     return inspect_linkages(
         packages,
         prefix=prefix,
@@ -451,18 +454,18 @@ def inspect_linkages(
     )
 
 
-def inspect_objects(packages, prefix=_sys.prefix, groupby="filename"):
+def inspect_objects(packages, prefix=sys.prefix, groupby="filename"):
     from .inspect_pkg import inspect_objects
 
-    packages = _ensure_list(packages)
+    packages = ensure_list(packages)
     return inspect_objects(packages, prefix=prefix, groupby=groupby)
 
 
 def inspect_prefix_length(packages, min_prefix_length=_prefix_length):
-    from conda_build.tarcheck import check_prefix_lengths
+    from .tarcheck import check_prefix_lengths
 
     config = Config(prefix_length=min_prefix_length)
-    packages = _ensure_list(packages)
+    packages = ensure_list(packages)
     prefix_lengths = check_prefix_lengths(packages, config)
     if prefix_lengths:
         print(
@@ -520,7 +523,7 @@ def create_metapackage(
     )
 
 
-@deprecated("3.25.0", "4.0.0", addendum="Use standalone conda-index.")
+@deprecated("3.25.0", "24.1.0", addendum="Use standalone conda-index.")
 def update_index(
     dir_paths,
     config=None,
@@ -537,14 +540,11 @@ def update_index(
     current_index_versions=None,
     **kwargs,
 ):
-    import os
-
     import yaml
 
-    from conda_build.index import update_index as legacy_update_index
-    from conda_build.utils import ensure_list
+    from .index import update_index as legacy_update_index
 
-    dir_paths = [os.path.abspath(path) for path in _ensure_list(dir_paths)]
+    dir_paths = [os.path.abspath(path) for path in ensure_list(dir_paths)]
 
     if isinstance(current_index_versions, str):
         with open(current_index_versions) as f:
@@ -571,7 +571,7 @@ def debug(
     test=False,
     output_id=None,
     config=None,
-    verbose=True,
+    verbose: bool = True,
     link_source_method="auto",
     **kwargs,
 ):
@@ -579,13 +579,12 @@ def debug(
     your package's build or test phase.
     """
     import logging
-    import os
     import time
     from fnmatch import fnmatch
 
-    from conda_build.build import build as run_build
-    from conda_build.build import test as run_test
-    from conda_build.utils import CONDA_PACKAGE_EXTENSIONS, LoggingContext, on_win
+    from .build import build as run_build
+    from .build import test as run_test
+    from .metadata import MetaData
 
     is_package = False
     default_config = get_or_merge_config(config, **kwargs)
@@ -622,15 +621,13 @@ def debug(
 
     config.channel_urls = get_channel_urls(kwargs)
 
-    metadata_tuples = []
+    metadata_tuples: list[tuple[MetaData, bool, bool]] = []
 
     best_link_source_method = "skip"
     if isinstance(recipe_or_package_path_or_metadata_tuples, str):
         if path_is_build_dir:
             for metadata_conda_debug in metadatas_conda_debug:
                 best_link_source_method = "symlink"
-                from conda_build.metadata import MetaData
-
                 metadata = MetaData(metadata_conda_debug, config, {})
                 metadata_tuples.append((metadata, False, True))
         else:
@@ -655,17 +652,18 @@ def debug(
             ]
             if len(matched_outputs) > 1:
                 raise ValueError(
-                    "Specified --output-id matches more than one output ({}).  Please refine your output id so that only "
-                    "a single output is found.".format(matched_outputs)
+                    f"Specified --output-id matches more than one output ({matched_outputs}). "
+                    "Please refine your output id so that only a single output is found."
                 )
             elif not matched_outputs:
                 raise ValueError(
-                    f"Specified --output-id did not match any outputs.  Available outputs are: {outputs} Please check it and try again"
+                    f"Specified --output-id did not match any outputs. Available outputs are: {outputs} "
+                    "Please check it and try again"
                 )
         if len(matched_outputs) > 1 and not path_is_build_dir:
             raise ValueError(
-                "More than one output found for this recipe ({}).  Please use the --output-id argument to filter down "
-                "to a single output.".format(outputs)
+                f"More than one output found for this recipe ({outputs}). "
+                "Please use the --output-id argument to filter down to a single output."
             )
         else:
             matched_outputs = outputs
@@ -681,10 +679,7 @@ def debug(
                 "local",
                 "src",
                 "conda",
-                "{}-{}".format(
-                    metadata.get_value("package/name"),
-                    metadata.get_value("package/version"),
-                ),
+                f"{metadata.name()}-{metadata.version()}",
             )
             link_target = os.path.dirname(metadata.meta_path)
             try:
@@ -703,15 +698,11 @@ def debug(
                 os.symlink(link_target, debug_source_loc)
             except PermissionError as e:
                 raise Exception(
-                    "You do not have the necessary permissions to create symlinks in {}\nerror: {}".format(
-                        dn, str(e)
-                    )
+                    f"You do not have the necessary permissions to create symlinks in {dn}\nerror: {str(e)}"
                 )
             except Exception as e:
                 raise Exception(
-                    "Unknown error creating symlinks in {}\nerror: {}".format(
-                        dn, str(e)
-                    )
+                    f"Unknown error creating symlinks in {dn}\nerror: {str(e)}"
                 )
     ext = ".bat" if on_win else ".sh"
 
