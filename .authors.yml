@@ -4,10 +4,11 @@
   alternate_emails:
   - msarahan@continuum.io
   - msarahan@gmail.com
+  - msarahan@nvidia.com
   aliases:
   - Mike Sarahan
   - Michael Sarahan
-  num_commits: 2000
+  num_commits: 2001
   first_commit: 2015-09-04 21:31:08
 - name: Jonathan J. Helmus
   email: jjhelmus@gmail.com
@@ -1201,7 +1202,7 @@
   alternate_emails:
   - clee@anaconda.com
 - name: Ken Odegard
-  num_commits: 159
+  num_commits: 164
   email: kodegard@anaconda.com
   first_commit: 2020-09-08 19:53:41
   github: kenodegard
@@ -1224,7 +1225,7 @@
   first_commit: 2020-11-19 10:46:41
 - name: Jannis Leidel
   email: jannis@leidel.info
-  num_commits: 30
+  num_commits: 33
   github: jezdez
   first_commit: 2020-11-19 10:46:41
 - name: Christof Kaufmann
@@ -1239,7 +1240,7 @@
   github: pre-commit-ci[bot]
   aliases:
   - pre-commit-ci[bot]
-  num_commits: 56
+  num_commits: 61
   first_commit: 2021-11-20 01:47:17
 - name: Jacob Walls
   email: jacobtylerwalls@gmail.com
@@ -1261,7 +1262,7 @@
   alternate_emails:
   - ad-team+condabot@anaconda.com
   - 18747875+conda-bot@users.noreply.github.com
-  num_commits: 42
+  num_commits: 44
   first_commit: 2022-01-17 18:09:22
 - name: Uwe L. Korn
   email: xhochy@users.noreply.github.com
@@ -1270,7 +1271,7 @@
 - name: Daniel Holth
   email: dholth@anaconda.com
   github: dholth
-  num_commits: 13
+  num_commits: 14
   first_commit: 2022-04-28 05:22:14
 - name: Rylan Chord
   email: rchord@users.noreply.github.com
@@ -1280,7 +1281,7 @@
 - name: Travis Hathaway
   email: travis.j.hathaway@gmail.com
   github: travishathaway
-  num_commits: 5
+  num_commits: 6
   first_commit: 2022-05-12 05:53:02
 - name: Kyle Leaders
   email: remkade@users.noreply.github.com
@@ -1326,7 +1327,7 @@
 - name: Jaime Rodríguez-Guerra
   email: jaimergp@users.noreply.github.com
   github: jaimergp
-  num_commits: 8
+  num_commits: 10
   first_commit: 2022-11-02 19:34:51
 - name: Dave Clements
   email: tnabtaf@gmail.com
@@ -1365,7 +1366,9 @@
   github: peetw
 - name: Johnny
   email: johnnync13@gmail.com
-  num_commits: 1
+  alternate_emails:
+  - johnnynuca14@gmail.com
+  num_commits: 2
   first_commit: 2023-03-22 00:34:22
   github: johnnynunez
 - name: Ryan Keith
