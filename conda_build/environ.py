@@ -924,7 +924,7 @@ def get_install_actions(
         with utils.LoggingContext(conda_log_level):
             with capture():
                 try:
-                    actions = install_actions(prefix, index, specs)
+                    actions = _install_actions(prefix, index, specs)
                 except (NoPackagesFoundError, UnsatisfiableError) as exc:
                     raise DependencyNeedsBuildingError(exc, subdir=subdir)
                 except (
@@ -1076,13 +1076,13 @@ def create_env(
                         timeout=config.timeout,
                     )
                     utils.trim_empty_keys(actions)
-                    display_actions(actions)
+                    _display_actions(actions)
                     if utils.on_win:
                         for k, v in os.environ.items():
                             os.environ[k] = str(v)
                     with env_var("CONDA_QUIET", not config.verbose, reset_context):
                         with env_var("CONDA_JSON", not config.verbose, reset_context):
-                            execute_actions(actions)
+                            _execute_actions(actions)
             except (
                 SystemExit,
                 PaddingError,
@@ -1264,6 +1264,9 @@ def get_pinned_deps(m, section):
     return runtime_deps
 
 
+# NOTE: The function has to retain the "install_actions" name for now since
+#       conda_libmamba_solver.solver.LibMambaSolver._called_from_conda_build
+#       checks for this name in the call stack explicitly.
 def install_actions(prefix, index, specs):
     with env_vars(
         {
@@ -1303,7 +1306,11 @@ def install_actions(prefix, index, specs):
         return actions
 
 
-def execute_actions(actions):
+_install_actions = install_actions
+del install_actions
+
+
+def _execute_actions(actions):
     assert PREFIX_ACTION in actions and actions[PREFIX_ACTION]
     prefix = actions[PREFIX_ACTION]
 
@@ -1335,7 +1342,7 @@ def execute_actions(actions):
     unlink_link_transaction.execute()
 
 
-def display_actions(actions):
+def _display_actions(actions):
     prefix = actions.get(PREFIX_ACTION)
     builder = ["", "## Package Plan ##\n"]
     if prefix:
