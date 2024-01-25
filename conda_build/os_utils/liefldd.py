@@ -21,7 +21,6 @@ from .external import find_executable
 # TODO :: Remove all use of pyldd
 # Currently we verify the output of each against the other
 from .pyldd import DLLfile, EXEfile, elffile, machofile
-from .pyldd import codefile_type as _codefile_type
 from .pyldd import inspect_linkages as inspect_linkages_pyldd
 
 try:
@@ -110,22 +109,6 @@ else:
 def codefile_type_liefldd(*args, **kwargs) -> str | None:
     codefile = codefile_class(*args, **kwargs)
     return codefile.__name__ if codefile else None
-
-
-deprecated.constant(
-    "3.28.0",
-    "24.1.0",
-    "codefile_type_pyldd",
-    _codefile_type,
-    addendum="Use `conda_build.os_utils.pyldd.codefile_class` instead.",
-)
-deprecated.constant(
-    "3.28.0",
-    "24.1.0",
-    "codefile_type",
-    _codefile_type,
-    addendum="Use `conda_build.os_utils.liefldd.codefile_class` instead.",
-)
 
 
 def _trim_sysroot(sysroot):
