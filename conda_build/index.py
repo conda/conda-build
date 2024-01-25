@@ -61,7 +61,6 @@ from .conda_interface import (
     human_bytes,
     url_path,
 )
-from .deprecations import deprecated
 from .utils import (
     CONDA_PACKAGE_EXTENSION_V1,
     CONDA_PACKAGE_EXTENSION_V2,
@@ -327,67 +326,6 @@ def _delegated_update_index(
 
 
 # Everything below is deprecated to maintain API/feature compatibility.
-
-
-@deprecated("3.25.0", "24.1.0", addendum="Use standalone conda-index.")
-def update_index(
-    dir_path,
-    check_md5=False,
-    channel_name=None,
-    patch_generator=None,
-    threads=MAX_THREADS_DEFAULT,
-    verbose=False,
-    progress=False,
-    hotfix_source_repo=None,
-    subdirs=None,
-    warn=True,
-    current_index_versions=None,
-    debug=False,
-    index_file=None,
-):
-    """
-    If dir_path contains a directory named 'noarch', the path tree therein is treated
-    as though it's a full channel, with a level of subdirs, each subdir having an update
-    to repodata.json.  The full channel will also have a channeldata.json file.
-
-    If dir_path does not contain a directory named 'noarch', but instead contains at least
-    one '*.tar.bz2' file, the directory is assumed to be a standard subdir, and only repodata.json
-    information will be updated.
-
-    """
-    base_path, dirname = os.path.split(dir_path)
-    if dirname in utils.DEFAULT_SUBDIRS:
-        if warn:
-            log.warn(
-                "The update_index function has changed to index all subdirs at once. "
-                "You're pointing it at a single subdir. "
-                "Please update your code to point it at the channel root, rather than a subdir."
-            )
-        return update_index(
-            base_path,
-            check_md5=check_md5,
-            channel_name=channel_name,
-            threads=threads,
-            verbose=verbose,
-            progress=progress,
-            hotfix_source_repo=hotfix_source_repo,
-            current_index_versions=current_index_versions,
-        )
-    return ChannelIndex(
-        dir_path,
-        channel_name,
-        subdirs=subdirs,
-        threads=threads,
-        deep_integrity_check=check_md5,
-        debug=debug,
-    ).index(
-        patch_generator=patch_generator,
-        verbose=verbose,
-        progress=progress,
-        hotfix_source_repo=hotfix_source_repo,
-        current_index_versions=current_index_versions,
-        index_file=index_file,
-    )
 
 
 def _determine_namespace(info):
