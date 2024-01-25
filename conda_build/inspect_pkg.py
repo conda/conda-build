@@ -6,7 +6,6 @@ import json
 import os
 import sys
 from collections import defaultdict
-from functools import lru_cache
 from itertools import groupby
 from operator import itemgetter
 from os.path import abspath, basename, dirname, exists, join, normcase
