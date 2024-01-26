@@ -2199,4 +2199,4 @@ def samefile(path1: Path, path2: Path) -> bool:
 
 
 def package_record_to_requirement(prec: PackageRecord) -> str:
-    return f"{prec.name} {prec.version} {prec.build}".rstrip()
+    return f"{prec.name} {prec.version} {prec.build}"
