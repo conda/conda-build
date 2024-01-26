@@ -1263,6 +1263,9 @@ def get_pinned_deps(m, section):
 #       conda_libmamba_solver.solver.LibMambaSolver._called_from_conda_build
 #       checks for this name in the call stack explicitly.
 def install_actions(prefix, index, specs):
+    # This is copied over from https://github.com/conda/conda/blob/23.11.0/conda/plan.py#L471
+    # but reduced to only the functionality actually used within conda-build.
+
     with env_vars(
         {
             "CONDA_ALLOW_NON_CHANNEL_URLS": "true",
@@ -1313,6 +1316,9 @@ del install_actions
 
 
 def _execute_actions(actions):
+    # This is copied over from https://github.com/conda/conda/blob/23.11.0/conda/plan.py#L575
+    # but reduced to only the functionality actually used within conda-build.
+
     assert PREFIX_ACTION in actions and actions[PREFIX_ACTION]
     prefix = actions[PREFIX_ACTION]
 
@@ -1325,12 +1331,11 @@ def _execute_actions(actions):
         log.debug(f"action {LINK_ACTION} has None value")
         return
 
-    if on_win:
-        # Always link menuinst first/last on windows in case a subsequent
-        # package tries to import it to create/remove a shortcut
-        link_precs = [p for p in link_precs if p.name == "menuinst"] + [
-            p for p in link_precs if p.name != "menuinst"
-        ]
+    # Always link menuinst first/last on windows in case a subsequent
+    # package tries to import it to create/remove a shortcut
+    link_precs = [p for p in link_precs if p.name == "menuinst"] + [
+        p for p in link_precs if p.name != "menuinst"
+    ]
 
     progressive_fetch_extract = ProgressiveFetchExtract(link_precs)
     progressive_fetch_extract.prepare()
@@ -1345,6 +1350,9 @@ def _execute_actions(actions):
 
 
 def _display_actions(actions):
+    # This is copied over from https://github.com/conda/conda/blob/23.11.0/conda/plan.py#L58
+    # but reduced to only the functionality actually used within conda-build.
+
     prefix = actions.get(PREFIX_ACTION)
     builder = ["", "## Package Plan ##\n"]
     if prefix:
