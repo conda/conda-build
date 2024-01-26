@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from argparse import Namespace
 from os.path import abspath, expanduser
-from typing import Iterable
+from typing import Sequence
 
 from .. import api
 from ..conda_interface import ArgumentParser
@@ -37,7 +37,7 @@ install on Mac OS X):
 """
 
 
-def parse_args(args: Iterable[str] | None) -> tuple[ArgumentParser, Namespace]:
+def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
     parser = ArgumentParser(
         prog="conda convert",
         description="""
@@ -120,7 +120,7 @@ all.""",
     return parser, parser.parse_args(args)
 
 
-def execute(args: Iterable[str] | None = None):
+def execute(args: Sequence[str] | None = None):
     _, parsed = parse_args(args)
     files = parsed.files
     del parsed.__dict__["files"]
