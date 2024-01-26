@@ -28,13 +28,6 @@ def develop(*args, **kwargs):
     execute(*args, **kwargs)
 
 
-def index(*args, **kwargs):
-    # deprecated! use conda-index!
-    from .cli.main_index import execute
-
-    execute(*args, **kwargs)
-
-
 def inspect(*args, **kwargs):
     from .cli.main_inspect import execute
 
@@ -83,14 +76,6 @@ def conda_subcommands():
             "Similar to `pip install --editable`."
         ),
         action=develop,
-    )
-    yield conda.plugins.CondaSubcommand(
-        name="index",
-        summary=(
-            "Update package index metadata files. Pending deprecation, "
-            "use https://github.com/conda/conda-index instead."
-        ),
-        action=index,
     )
     yield conda.plugins.CondaSubcommand(
         name="inspect",

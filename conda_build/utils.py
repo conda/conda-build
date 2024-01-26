@@ -764,26 +764,6 @@ def get_conda_operation_locks(locking=True, bldpkgs_dirs=None, timeout=900):
     return locks
 
 
-@deprecated(
-    "3.28.0",
-    "24.1.0",
-    addendum="Use `os.path.relpath` or `pathlib.Path.relative_to` instead.",
-)
-def relative(f, d="lib"):
-    assert not f.startswith("/"), f
-    assert not d.startswith("/"), d
-    d = d.strip("/").split("/")
-    if d == ["."]:
-        d = []
-    f = dirname(f).split("/")
-    if f == [""]:
-        f = []
-    while d and f and d[0] == f[0]:
-        d.pop(0)
-        f.pop(0)
-    return "/".join((([".."] * len(f)) if f else ["."]) + d)
-
-
 # This is the lowest common denominator of the formats supported by our libarchive/python-libarchive-c
 # packages across all platforms
 decompressible_exts = (
@@ -2186,16 +2166,6 @@ def is_conda_pkg(pkg_path: str) -> bool:
     return path.is_file() and (
         any(path.name.endswith(ext) for ext in CONDA_PACKAGE_EXTENSIONS)
     )
-
-
-@deprecated("3.28.3", "24.1.0")
-def samefile(path1: Path, path2: Path) -> bool:
-    try:
-        return path1.samefile(path2)
-    except (FileNotFoundError, PermissionError):
-        # FileNotFoundError: path doesn't exist
-        # PermissionError: don't have permissions to read path
-        return path1 == path2
 
 
 def package_record_to_requirement(prec: PackageRecord) -> str:

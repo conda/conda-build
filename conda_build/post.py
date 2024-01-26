@@ -44,7 +44,6 @@ from .conda_interface import (
     md5_file,
     walk_prefix,
 )
-from .deprecations import deprecated
 from .exceptions import OverDependingError, OverLinkingError, RunPathError
 from .inspect_pkg import which_package
 from .metadata import MetaData
@@ -650,26 +649,6 @@ def assert_relative_osx(path, host_prefix, build_prefix):
                 )
 
 
-@deprecated(
-    "3.28.0",
-    "24.1.0",
-    addendum="Use `conda_build.post.get_dsos` and `conda_build.post.get_run_exports` instead.",
-)
-def determine_package_nature(
-    prec: PrefixRecord,
-    prefix: str | os.PathLike | Path,
-    subdir,
-    bldpkgs_dir,
-    output_folder,
-    channel_urls,
-) -> tuple[set[str], tuple[str, ...], bool]:
-    return (
-        get_dsos(prec, prefix),
-        get_run_exports(prec, prefix),
-        prec.name.startswith("lib"),
-    )
-
-
 def get_dsos(prec: PrefixRecord, prefix: str | os.PathLike | Path) -> set[str]:
     return {
         file
@@ -713,10 +692,6 @@ def get_run_exports(
         return ()
 
 
-@deprecated.argument("3.28.0", "24.1.0", "subdir")
-@deprecated.argument("3.28.0", "24.1.0", "bldpkgs_dirs")
-@deprecated.argument("3.28.0", "24.1.0", "output_folder")
-@deprecated.argument("3.28.0", "24.1.0", "channel_urls")
 def library_nature(
     prec: PrefixRecord, prefix: str | os.PathLike | Path
 ) -> Literal[

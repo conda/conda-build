@@ -19,7 +19,9 @@ from conda.core.prefix_data import PrefixData
 from conda.models.records import PrefixRecord
 
 from . import conda_interface
-from .conda_interface import specs_from_args
+from .conda_interface import (
+    specs_from_args,
+)
 from .deprecations import deprecated
 from .os_utils.ldd import (
     get_linkages,
@@ -41,7 +43,6 @@ from .utils import (
 log = get_logger(__name__)
 
 
-@deprecated.argument("3.28.0", "24.1.0", "avoid_canonical_channel_name")
 def which_package(
     path: str | os.PathLike | Path,
     prefix: str | os.PathLike | Path,
