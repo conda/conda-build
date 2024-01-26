@@ -35,6 +35,7 @@ from .conda_interface import (
     pkgs_dirs,
     specs_from_url,
 )
+from .deprecations import deprecated
 from .environ import LINK_ACTION
 from .exceptions import DependencyNeedsBuildingError
 from .index import get_build_index
@@ -90,6 +91,7 @@ def bldpkg_path(m):
     return path
 
 
+@deprecated("24.1.0", "24.3.0")
 def actions_to_pins(actions):
     if LINK_ACTION in actions:
         return [package_record_to_requirement(prec) for prec in actions[LINK_ACTION]]
@@ -182,7 +184,9 @@ def get_env_dependencies(
             else:
                 raise
 
-    specs = actions_to_pins(actions)
+    specs = [
+        package_record_to_requirement(prec) for prec in actions.get(LINK_ACTION, [])
+    ]
     return (
         utils.ensure_list(
             (specs + subpackages + pass_through_deps)
@@ -325,7 +329,8 @@ def _read_specs_from_package(pkg_loc, pkg_dist):
     return specs
 
 
-def execute_download_actions(m, actions, env, package_subset=None, require_files=False):
+@deprecated.argument("24.1.0", "24.3.0", "actions", rename="precs")
+def execute_download_actions(m, precs, env, package_subset=None, require_files=False):
     subdir = getattr(m.config, f"{env}_subdir")
     index, _, _ = get_build_index(
         subdir=subdir,
@@ -354,7 +359,8 @@ def execute_download_actions(m, actions, env, package_subset=None, require_files
 
     pkg_files = {}
 
-    precs = actions.get(LINK_ACTION, [])
+    if hasattr(precs, "keys"):
+        precs = precs.get(LINK_ACTION, [])
     if isinstance(package_subset, PackageRecord):
         package_subset = [package_subset]
     else:
@@ -403,18 +409,20 @@ def execute_download_actions(m, actions, env, package_subset=None, require_files
     return pkg_files
 
 
-def get_upstream_pins(m: MetaData, actions, env):
+@deprecated.argument("24.1.0", "24.3.0", "actions", rename="precs")
+def get_upstream_pins(m: MetaData, precs, env):
     """Download packages from specs, then inspect each downloaded package for additional
     downstream dependency specs.  Return these additional specs."""
     env_specs = m.get_value(f"requirements/{env}", [])
     explicit_specs = [req.split(" ")[0] for req in env_specs] if env_specs else []
-    linked_packages = actions.get(LINK_ACTION, [])
-    linked_packages = [prec for prec in linked_packages if prec.name in explicit_specs]
+    if hasattr(precs, "keys"):
+        precs = precs.get(LINK_ACTION, [])
+    precs = [prec for prec in precs if prec.name in explicit_specs]
 
     ignore_pkgs_list = utils.ensure_list(m.get_value("build/ignore_run_exports_from"))
     ignore_list = utils.ensure_list(m.get_value("build/ignore_run_exports"))
     additional_specs = {}
-    for prec in linked_packages:
+    for prec in precs:
         if any(prec.name in req.split(" ")[0] for req in ignore_pkgs_list):
             continue
         run_exports = None
@@ -428,7 +436,7 @@ def get_upstream_pins(m: MetaData, actions, env):
         if run_exports is None:
             loc, dist = execute_download_actions(
                 m,
-                actions,
+                precs,
                 env=env,
                 package_subset=[prec],
             )[prec]

@@ -61,6 +61,7 @@ from .conda_interface import (
     human_bytes,
     url_path,
 )
+from .deprecations import deprecated
 from .utils import (
     CONDA_PACKAGE_EXTENSION_V1,
     CONDA_PACKAGE_EXTENSION_V2,
@@ -112,7 +113,8 @@ cached_index = None
 local_subdir = ""
 local_output_folder = ""
 cached_channels = []
-channel_data = {}
+_channel_data = {}
+deprecated.constant("24.1.0", "24.3.0", "channel_data", _channel_data)
 
 
 # TODO: support for libarchive seems to have broken ability to use multiple threads here.
@@ -151,7 +153,7 @@ def get_build_index(
     global local_output_folder
     global cached_index
     global cached_channels
-    global channel_data
+    global _channel_data
     mtime = 0
 
     channel_urls = list(utils.ensure_list(channel_urls))
@@ -248,7 +250,7 @@ def get_build_index(
                         while retry < max_retries:
                             try:
                                 with open(channeldata_file, "r+") as f:
-                                    channel_data[channel.name] = json.load(f)
+                                    _channel_data[channel.name] = json.load(f)
                                 break
                             except (OSError, JSONDecodeError):
                                 time.sleep(0.2)
@@ -257,24 +259,24 @@ def get_build_index(
                     # download channeldata.json for url
                     if not context.offline:
                         try:
-                            channel_data[channel.name] = utils.download_channeldata(
+                            _channel_data[channel.name] = utils.download_channeldata(
                                 channel.base_url + "/channeldata.json"
                             )
                         except CondaHTTPError:
                             continue
                 # collapse defaults metachannel back into one superchannel, merging channeldata
-                if channel.base_url in context.default_channels and channel_data.get(
+                if channel.base_url in context.default_channels and _channel_data.get(
                     channel.name
                 ):
                     packages = superchannel.get("packages", {})
-                    packages.update(channel_data[channel.name])
+                    packages.update(_channel_data[channel.name])
                     superchannel["packages"] = packages
-            channel_data["defaults"] = superchannel
+            _channel_data["defaults"] = superchannel
         local_index_timestamp = os.path.getmtime(index_file)
         local_subdir = subdir
         local_output_folder = output_folder
         cached_channels = channel_urls
-    return cached_index, local_index_timestamp, channel_data
+    return cached_index, local_index_timestamp, _channel_data
 
 
 def _ensure_valid_channel(local_folder, subdir):
@@ -366,11 +368,11 @@ def _make_seconds(timestamp):
 # ==========================================================================
 
 
-REPODATA_VERSION = 1
-CHANNELDATA_VERSION = 1
-REPODATA_JSON_FN = "repodata.json"
-REPODATA_FROM_PKGS_JSON_FN = "repodata_from_packages.json"
-CHANNELDATA_FIELDS = (
+_REPODATA_VERSION = 1
+_CHANNELDATA_VERSION = 1
+_REPODATA_JSON_FN = "repodata.json"
+_REPODATA_FROM_PKGS_JSON_FN = "repodata_from_packages.json"
+_CHANNELDATA_FIELDS = (
     "description",
     "dev_url",
     "doc_url",
@@ -401,6 +403,13 @@ CHANNELDATA_FIELDS = (
     "recipe_origin",
     "commits",
 )
+deprecated.constant("24.1.0", "24.3.0", "REPODATA_VERSION", _REPODATA_VERSION)
+deprecated.constant("24.1.0", "24.3.0", "CHANNELDATA_VERSION", _CHANNELDATA_VERSION)
+deprecated.constant("24.1.0", "24.3.0", "REPODATA_JSON_FN", _REPODATA_JSON_FN)
+deprecated.constant(
+    "24.1.0", "24.3.0", "REPODATA_FROM_PKGS_JSON_FN", _REPODATA_FROM_PKGS_JSON_FN
+)
+deprecated.constant("24.1.0", "24.3.0", "CHANNELDATA_FIELDS", _CHANNELDATA_FIELDS)
 
 
 def _clear_newline_chars(record, field_name):
@@ -412,6 +421,9 @@ def _clear_newline_chars(record, field_name):
             record[field_name] = record[field_name][0].strip().replace("\n", " ")
 
 
+@deprecated(
+    "24.1.0", "24.5.0", addendum="Use `conda_index._apply_instructions` instead."
+)
 def _apply_instructions(subdir, repodata, instructions):
     repodata.setdefault("removed", [])
     utils.merge_or_update_dict(
@@ -871,6 +883,7 @@ def _build_current_repodata(subdir, repodata, pins):
     return new_repodata
 
 
+@deprecated("24.1.0", "24.3.0")
 class ChannelIndex:
     def __init__(
         self,
@@ -951,7 +964,7 @@ class ChannelIndex:
                             self._write_repodata(
                                 subdir,
                                 repodata_from_packages,
-                                REPODATA_FROM_PKGS_JSON_FN,
+                                _REPODATA_FROM_PKGS_JSON_FN,
                             )
 
                             # Step 3. Apply patch instructions.
@@ -968,7 +981,7 @@ class ChannelIndex:
                             t2.set_description("Writing patched repodata")
                             t2.update()
                             self._write_repodata(
-                                subdir, patched_repodata, REPODATA_JSON_FN
+                                subdir, patched_repodata, _REPODATA_JSON_FN
                             )
                             t2.set_description("Building current_repodata subset")
                             t2.update()
@@ -1000,7 +1013,7 @@ class ChannelIndex:
     def index_subdir(self, subdir, index_file=None, verbose=False, progress=False):
         subdir_path = join(self.channel_root, subdir)
         self._ensure_dirs(subdir)
-        repodata_json_path = join(subdir_path, REPODATA_FROM_PKGS_JSON_FN)
+        repodata_json_path = join(subdir_path, _REPODATA_FROM_PKGS_JSON_FN)
 
         if verbose:
             log.info("Building repodata for %s" % subdir_path)
@@ -1158,7 +1171,7 @@ class ChannelIndex:
                 "info": {
                     "subdir": subdir,
                 },
-                "repodata_version": REPODATA_VERSION,
+                "repodata_version": _REPODATA_VERSION,
                 "removed": sorted(list(ignore_set)),
             }
         finally:
@@ -1465,11 +1478,11 @@ class ChannelIndex:
                 }
 
         extra_paths = OrderedDict()
-        _add_extra_path(extra_paths, join(subdir_path, REPODATA_JSON_FN))
-        _add_extra_path(extra_paths, join(subdir_path, REPODATA_JSON_FN + ".bz2"))
-        _add_extra_path(extra_paths, join(subdir_path, REPODATA_FROM_PKGS_JSON_FN))
+        _add_extra_path(extra_paths, join(subdir_path, _REPODATA_JSON_FN))
+        _add_extra_path(extra_paths, join(subdir_path, _REPODATA_JSON_FN + ".bz2"))
+        _add_extra_path(extra_paths, join(subdir_path, _REPODATA_FROM_PKGS_JSON_FN))
         _add_extra_path(
-            extra_paths, join(subdir_path, REPODATA_FROM_PKGS_JSON_FN + ".bz2")
+            extra_paths, join(subdir_path, _REPODATA_FROM_PKGS_JSON_FN + ".bz2")
         )
         # _add_extra_path(extra_paths, join(subdir_path, "repodata2.json"))
         _add_extra_path(extra_paths, join(subdir_path, "patch_instructions.json"))
@@ -1603,7 +1616,7 @@ class ChannelIndex:
 
         channel_data.update(
             {
-                "channeldata_version": CHANNELDATA_VERSION,
+                "channeldata_version": _CHANNELDATA_VERSION,
                 "subdirs": sorted(
                     list(set(channel_data.get("subdirs", []) + [subdir]))
                 ),
