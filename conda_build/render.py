@@ -342,7 +342,7 @@ def execute_download_actions(m, actions, env, package_subset=None, require_files
 
     # this should be just downloading packages.  We don't need to extract them -
 
-    # NOTE: The following out-commented execute_actions was defunct
+    # NOTE: The following commented execute_actions is defunct
     # (FETCH/EXTRACT were replaced by PROGRESSIVEFETCHEXTRACT).
     #
     # download_actions = {
