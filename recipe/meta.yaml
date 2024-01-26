@@ -68,12 +68,11 @@ test:
     - test_bdist_conda_setup.py
   commands:
     - python -m pip check
-    # builtin subcommands
+    # subcommands
     - conda --help
     - conda build --help
     - conda convert --help
     - conda develop --help
-    - conda index --help
     - conda inspect --help
     - conda inspect linkages --help  # [unix]
     - conda inspect objects --help  # [osx]
@@ -81,6 +80,17 @@ test:
     - conda render --help
     - conda skeleton --help
     - conda debug --help
+    # entrypoints
+    - conda-build --help
+    - conda-convert --help
+    - conda-develop --help
+    - conda-inspect --help
+    - conda-inspect linkages --help  # [unix]
+    - conda-inspect objects --help  # [osx]
+    - conda-metapackage --help
+    - conda-render --help
+    - conda-skeleton --help
+    - conda-debug --help
     # bdist_conda
     - python test_bdist_conda_setup.py bdist_conda --help
 
