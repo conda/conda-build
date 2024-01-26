@@ -16,11 +16,6 @@ from glob import glob
 from logging import getLogger
 from os.path import join, normpath
 
-try:
-    from boltons.setutils import IndexedSet
-except ImportError:  # pragma: no cover
-    from conda._vendor.boltons.setutils import IndexedSet
-
 from conda.base.constants import (
     DEFAULTS_CHANNEL_NAME,
     UNKNOWN_CHANNEL,
@@ -1278,9 +1273,16 @@ def install_actions(prefix, index, specs):
         # a hack since in conda-build we don't track channel_priority_map
         if LAST_CHANNEL_URLS:
             channel_priority_map = prioritize_channels(LAST_CHANNEL_URLS)
-            channels = IndexedSet(Channel(url) for url in channel_priority_map)
+            # tuple(dict.fromkeys(...)) removes duplicates while preserving input order.
+            channels = tuple(
+                dict.fromkeys(Channel(url) for url in channel_priority_map)
+            )
             subdirs = (
-                IndexedSet(subdir for subdir in (c.subdir for c in channels) if subdir)
+                tuple(
+                    dict.fromkeys(
+                        subdir for subdir in (c.subdir for c in channels) if subdir
+                    )
+                )
                 or context.subdirs
             )
         else:
