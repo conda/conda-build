@@ -17,6 +17,15 @@
 * Mark `conda_build.inspect_pkg.check_install(package)` as pending deprecation in favor of `conda_build.inspect_pkg.check_install(subdir)`. (#5033)
 * Mark `conda_build.inspect_pkg.check_install(prepend)` as pending deprecation. (#5033)
 * Mark `conda_build.inspect_pkg.check_install(minimal_hint)` as pending deprecation. (#5033)
+* Mark `conda_build.conda_interface.Dist` as pending deprecation. (#5074)
+* Mark `conda_build.conda_interface.display_actions` as pending deprecation. (#5074)
+* Mark `conda_build.conda_interface.execute_actions` as pending deprecation. (#5074)
+* Mark `conda_build.conda_interface.execute_plan` as pending deprecation. (#5074)
+* Mark `conda_build.conda_interface.get_index` as pending deprecation. (#5074)
+* Mark `conda_build.conda_interface.install_actions` as pending deprecation. (#5074)
+* Mark `conda_build.conda_interface.linked` as pending deprecation. (#5074)
+* Mark `conda_build.conda_interface.linked_data` as pending deprecation. (#5074)
+* Mark `conda_build.utils.linked_data_no_multichannels` as pending deprecation. (#5074)
 * Remove `conda_build.api.update_index`. (#5151)
 * Remove `conda_build.cli.main_build.main`. (#5151)
 * Remove `conda_build.cli.main_convert.main`. (#5151)
@@ -77,6 +86,9 @@
 ### Other
 
 * Remove unused Allure test report collection. (#5113)
+* Removed dependency on `conda.plan`. (#5074)
+* Removed almost all dependency on `conda.models.dist`. (#5074)
+* Replaced usage of legacy `conda.models.dist.Dist` by `conda.models.records.PackageRecord`. (#5074)
 
 ### Contributors
 
