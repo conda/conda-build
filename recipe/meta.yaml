@@ -9,15 +9,15 @@ source:
 build:
   script: {{ PYTHON }} -m pip install . --no-deps --no-build-isolation -vv
   entry_points:
-    - conda-build = conda_build.cli.main_build:main
-    - conda-convert = conda_build.cli.main_convert:main
-    - conda-debug = conda_build.cli.main_debug:main
-    - conda-develop = conda_build.cli.main_develop:main
+    - conda-build = conda_build.cli.main_build:execute
+    - conda-convert = conda_build.cli.main_convert:execute
+    - conda-debug = conda_build.cli.main_debug:execute
+    - conda-develop = conda_build.cli.main_develop:execute
     - conda-index = conda_build.cli.main_index:main
-    - conda-inspect = conda_build.cli.main_inspect:main
-    - conda-metapackage = conda_build.cli.main_metapackage:main
-    - conda-render = conda_build.cli.main_render:main
-    - conda-skeleton = conda_build.cli.main_skeleton:main
+    - conda-inspect = conda_build.cli.main_inspect:execute
+    - conda-metapackage = conda_build.cli.main_metapackage:execute
+    - conda-render = conda_build.cli.main_render:execute
+    - conda-skeleton = conda_build.cli.main_skeleton:execute
 
 requirements:
   build:
@@ -68,12 +68,11 @@ test:
     - test_bdist_conda_setup.py
   commands:
     - python -m pip check
-    # builtin subcommands
+    # subcommands
     - conda --help
     - conda build --help
     - conda convert --help
     - conda develop --help
-    - conda index --help
     - conda inspect --help
     - conda inspect linkages --help  # [unix]
     - conda inspect objects --help  # [osx]
@@ -81,6 +80,17 @@ test:
     - conda render --help
     - conda skeleton --help
     - conda debug --help
+    # entrypoints
+    - conda-build --help
+    - conda-convert --help
+    - conda-develop --help
+    - conda-inspect --help
+    - conda-inspect linkages --help  # [unix]
+    - conda-inspect objects --help  # [osx]
+    - conda-metapackage --help
+    - conda-render --help
+    - conda-skeleton --help
+    - conda-debug --help
     # bdist_conda
     - python test_bdist_conda_setup.py bdist_conda --help
 

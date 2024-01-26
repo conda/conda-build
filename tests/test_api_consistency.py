@@ -2,8 +2,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 # This file makes sure that our API has not changed.  Doing so can not be accidental.  Whenever it
 #    happens, we should bump our major build number, because we may have broken someone.
-
-import inspect
 import sys
 from inspect import getfullargspec as getargspec
 
@@ -183,40 +181,3 @@ def test_api_create_metapackage():
         "config",
     ]
     assert argspec.defaults == ((), None, 0, (), None, None, None, None)
-
-
-def test_api_update_index():
-    # getfullargspec() isn't friends with functools.wraps
-    argspec = inspect.signature(api.update_index)
-    assert list(argspec.parameters) == [
-        "dir_paths",
-        "config",
-        "force",
-        "check_md5",
-        "remove",
-        "channel_name",
-        "subdir",
-        "threads",
-        "patch_generator",
-        "verbose",
-        "progress",
-        "hotfix_source_repo",
-        "current_index_versions",
-        "kwargs",
-    ]
-    assert tuple(parameter.default for parameter in argspec.parameters.values()) == (
-        inspect._empty,
-        None,
-        False,
-        False,
-        False,
-        None,
-        None,
-        None,
-        None,
-        False,
-        False,
-        None,
-        None,
-        inspect._empty,
-    )
