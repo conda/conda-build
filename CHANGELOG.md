@@ -1,5 +1,45 @@
 [//]: # (current developments)
 
+## 24.1.0 (2024-01-25)
+
+### Enhancements
+
+* Update `conda inspect channels` to use updated solver/transaction logic. (#5033)
+* Relax `script_env` error in outputs when variable referenced in `script_env` is not defined.
+  This unifies current behavior with the top-level build. (#5105)
+* Add support for Python 3.12. (#4997 via #4998)
+* Adopt calender versioning (CalVer) per CEP-8 for consistency with conda. (#4975)
+* Adopt expedited CEP-9 deprecation policy. (#5064)
+
+### Deprecations
+
+* Mark `conda inspect channels --test-installable` as pending deprecation. (#5033)
+* Mark `conda_build.inspect_pkg.check_install(package)` as pending deprecation in favor of `conda_build.inspect_pkg.check_install(subdir)`. (#5033)
+* Mark `conda_build.inspect_pkg.check_install(prepend)` as pending deprecation. (#5033)
+* Mark `conda_build.inspect_pkg.check_install(minimal_hint)` as pending deprecation. (#5033)
+
+### Docs
+
+* Add GoatCounter (https://www.goatcounter.com/) as an analytics tool. (#5093)
+
+### Other
+
+* Remove unused Allure test report collection. (#5113)
+
+### Contributors
+
+* @conda-bot
+* @dholth
+* @jaimergp
+* @jezdez
+* @johnnynunez
+* @kenodegard
+* @msarahan
+* @travishathaway
+* @pre-commit-ci[bot]
+
+
+
 ## 3.28.4 (2024-01-17)
 
 ### Bug fixes
