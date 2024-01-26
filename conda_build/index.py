@@ -37,6 +37,7 @@ import yaml
 from conda.common.compat import ensure_binary
 
 #  BAD BAD BAD - conda internals
+from conda.core.index import get_index
 from conda.core.subdir_data import SubdirData
 from conda.models.channel import Channel
 from conda_index.index import update_index as _update_index
@@ -57,7 +58,6 @@ from .conda_interface import (
     TemporaryDirectory,
     VersionOrder,
     context,
-    get_index,
     human_bytes,
     url_path,
 )
@@ -226,7 +226,7 @@ def get_build_index(
                     platform=subdir,
                 )
 
-            expanded_channels = {rec.channel for rec in cached_index.values()}
+            expanded_channels = {rec.channel for rec in cached_index}
 
             superchannel = {}
             # we need channeldata.json too, as it is a more reliable source of run_exports data

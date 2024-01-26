@@ -3841,7 +3841,7 @@ def build_tree(
                                     meta,
                                     actions,
                                     "host",
-                                    package_subset=dep,
+                                    package_subset=[dep],
                                     require_files=True,
                                 )
                                 # test that package, using the local channel so that our new

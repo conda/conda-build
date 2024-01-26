@@ -60,6 +60,7 @@ from conda.models.records import PrefixRecord
 from .conda_interface import (
     CondaHTTPError,
     MatchSpec,
+    PackageRecord,
     StringIO,
     TemporaryDirectory,
     VersionOrder,
@@ -75,6 +76,7 @@ from .conda_interface import (
     win_path_to_unix,
 )
 from .conda_interface import rm_rf as _rm_rf
+from .deprecations import deprecated
 from .exceptions import BuildLockError
 
 on_win = sys.platform == "win32"
@@ -1956,13 +1958,11 @@ def match_peer_job(target_matchspec, other_m, this_m=None):
     for any keys that are shared between target_variant and m.config.variant"""
     name, version, build = other_m.name(), other_m.version(), ""
     matchspec_matches = target_matchspec.match(
-        Dist(
+        PackageRecord(
             name=name,
-            dist_name=f"{name}-{version}-{build}",
             version=version,
-            build_string=build,
+            build=build,
             build_number=other_m.build_number(),
-            channel=None,
         )
     )
 
@@ -2110,6 +2110,7 @@ def download_channeldata(channel_url):
     return data
 
 
+@deprecated("24.1.0", "24.3.0")
 def linked_data_no_multichannels(
     prefix: str | os.PathLike | Path,
 ) -> dict[Dist, PrefixRecord]:
@@ -2165,3 +2166,7 @@ def is_conda_pkg(pkg_path: str) -> bool:
     return path.is_file() and (
         any(path.name.endswith(ext) for ext in CONDA_PACKAGE_EXTENSIONS)
     )
+
+
+def package_record_to_requirement(prec: PackageRecord) -> str:
+    return f"{prec.name} {prec.version} {prec.build}"

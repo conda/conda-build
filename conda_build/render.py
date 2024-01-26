@@ -28,17 +28,22 @@ import yaml
 
 from . import environ, exceptions, source, utils
 from .conda_interface import (
+    PackageRecord,
     ProgressiveFetchExtract,
     TemporaryDirectory,
     UnsatisfiableError,
-    execute_actions,
     pkgs_dirs,
     specs_from_url,
 )
+from .environ import LINK_ACTION
 from .exceptions import DependencyNeedsBuildingError
 from .index import get_build_index
 from .metadata import MetaData, combine_top_level_metadata_with_output
-from .utils import CONDA_PACKAGE_EXTENSION_V1, CONDA_PACKAGE_EXTENSION_V2
+from .utils import (
+    CONDA_PACKAGE_EXTENSION_V1,
+    CONDA_PACKAGE_EXTENSION_V2,
+    package_record_to_requirement,
+)
 from .variants import (
     filter_by_key_value,
     get_package_variants,
@@ -86,11 +91,8 @@ def bldpkg_path(m):
 
 
 def actions_to_pins(actions):
-    if "LINK" in actions:
-        return [
-            " ".join(spec.dist_name.split()[0].rsplit("-", 2))
-            for spec in actions["LINK"]
-        ]
+    if LINK_ACTION in actions:
+        return [package_record_to_requirement(prec) for prec in actions[LINK_ACTION]]
     return []
 
 
@@ -340,37 +342,40 @@ def execute_download_actions(m, actions, env, package_subset=None, require_files
 
     # this should be just downloading packages.  We don't need to extract them -
 
-    download_actions = {
-        k: v for k, v in actions.items() if k in ("FETCH", "EXTRACT", "PREFIX")
-    }
-    if "FETCH" in actions or "EXTRACT" in actions:
-        # this is to force the download
-        execute_actions(download_actions, index, verbose=m.config.debug)
+    # NOTE: The following commented execute_actions is defunct
+    # (FETCH/EXTRACT were replaced by PROGRESSIVEFETCHEXTRACT).
+    #
+    # download_actions = {
+    #     k: v for k, v in actions.items() if k in (FETCH, EXTRACT, PREFIX)
+    # }
+    # if FETCH in actions or EXTRACT in actions:
+    #     # this is to force the download
+    #     execute_actions(download_actions, index, verbose=m.config.debug)
 
     pkg_files = {}
 
-    packages = actions.get("LINK", [])
-    package_subset = utils.ensure_list(package_subset)
+    precs = actions.get(LINK_ACTION, [])
+    if isinstance(package_subset, PackageRecord):
+        package_subset = [package_subset]
+    else:
+        package_subset = utils.ensure_list(package_subset)
     selected_packages = set()
     if package_subset:
         for pkg in package_subset:
-            if hasattr(pkg, "name"):
-                if pkg in packages:
-                    selected_packages.add(pkg)
+            if isinstance(pkg, PackageRecord):
+                prec = pkg
+                if prec in precs:
+                    selected_packages.add(prec)
             else:
                 pkg_name = pkg.split()[0]
-                for link_pkg in packages:
-                    if pkg_name == link_pkg.name:
-                        selected_packages.add(link_pkg)
+                for link_prec in precs:
+                    if pkg_name == link_prec.name:
+                        selected_packages.add(link_prec)
                         break
-        packages = selected_packages
+        precs = selected_packages
 
-    for pkg in packages:
-        if hasattr(pkg, "dist_name"):
-            pkg_dist = pkg.dist_name
-        else:
-            pkg = strip_channel(pkg)
-            pkg_dist = pkg.split(" ")[0]
+    for prec in precs:
+        pkg_dist = "-".join((prec.name, prec.version, prec.build))
         pkg_loc = find_pkg_dir_or_file_in_pkgs_dirs(
             pkg_dist, m, files_only=require_files
         )
@@ -379,22 +384,21 @@ def execute_download_actions(m, actions, env, package_subset=None, require_files
         # TODO: this is a vile hack reaching into conda's internals. Replace with
         #    proper conda API when available.
         if not pkg_loc:
-            try:
-                pkg_record = [_ for _ in index if _.dist_name == pkg_dist][0]
-                # the conda 4.4 API uses a single `link_prefs` kwarg
-                # whereas conda 4.3 used `index` and `link_dists` kwargs
-                pfe = ProgressiveFetchExtract(link_prefs=(index[pkg_record],))
-            except TypeError:
-                # TypeError: __init__() got an unexpected keyword argument 'link_prefs'
-                pfe = ProgressiveFetchExtract(link_dists=[pkg], index=index)
+            link_prec = [
+                rec
+                for rec in index
+                if (rec.name, rec.version, rec.build)
+                == (prec.name, prec.version, prec.build)
+            ][0]
+            pfe = ProgressiveFetchExtract(link_prefs=(link_prec,))
             with utils.LoggingContext():
                 pfe.execute()
             for pkg_dir in pkgs_dirs:
-                _loc = join(pkg_dir, index.get(pkg, pkg).fn)
+                _loc = join(pkg_dir, prec.fn)
                 if isfile(_loc):
                     pkg_loc = _loc
                     break
-        pkg_files[pkg] = pkg_loc, pkg_dist
+        pkg_files[prec] = pkg_loc, pkg_dist
 
     return pkg_files
 
@@ -404,27 +408,30 @@ def get_upstream_pins(m: MetaData, actions, env):
     downstream dependency specs.  Return these additional specs."""
     env_specs = m.get_value(f"requirements/{env}", [])
     explicit_specs = [req.split(" ")[0] for req in env_specs] if env_specs else []
-    linked_packages = actions.get("LINK", [])
-    linked_packages = [pkg for pkg in linked_packages if pkg.name in explicit_specs]
+    linked_packages = actions.get(LINK_ACTION, [])
+    linked_packages = [prec for prec in linked_packages if prec.name in explicit_specs]
 
     ignore_pkgs_list = utils.ensure_list(m.get_value("build/ignore_run_exports_from"))
     ignore_list = utils.ensure_list(m.get_value("build/ignore_run_exports"))
     additional_specs = {}
-    for pkg in linked_packages:
-        if any(pkg.name in req.split(" ")[0] for req in ignore_pkgs_list):
+    for prec in linked_packages:
+        if any(prec.name in req.split(" ")[0] for req in ignore_pkgs_list):
             continue
         run_exports = None
         if m.config.use_channeldata:
-            channeldata = utils.download_channeldata(pkg.channel)
+            channeldata = utils.download_channeldata(prec.channel)
             # only use channeldata if requested, channeldata exists and contains
             # a packages key, otherwise use run_exports from the packages themselves
             if "packages" in channeldata:
-                pkg_data = channeldata["packages"].get(pkg.name, {})
-                run_exports = pkg_data.get("run_exports", {}).get(pkg.version, {})
+                pkg_data = channeldata["packages"].get(prec.name, {})
+                run_exports = pkg_data.get("run_exports", {}).get(prec.version, {})
         if run_exports is None:
             loc, dist = execute_download_actions(
-                m, actions, env=env, package_subset=pkg
-            )[pkg]
+                m,
+                actions,
+                env=env,
+                package_subset=[prec],
+            )[prec]
             run_exports = _read_specs_from_package(loc, dist)
         specs = _filter_run_exports(run_exports, ignore_list)
         if specs:
