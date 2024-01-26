@@ -16,10 +16,7 @@ from glob import glob
 from logging import getLogger
 from os.path import join, normpath
 
-from conda.base.constants import (
-    DEFAULTS_CHANNEL_NAME,
-    UNKNOWN_CHANNEL,
-)
+from conda.base.constants import DEFAULTS_CHANNEL_NAME, UNKNOWN_CHANNEL
 from conda.common.io import env_vars
 from conda.core.index import LAST_CHANNEL_URLS
 from conda.core.link import PrefixSetup, UnlinkLinkTransaction

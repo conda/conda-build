@@ -86,9 +86,9 @@
 ### Other
 
 * Remove unused Allure test report collection. (#5113)
-* Removed dependency on `conda.plan`. (#5074)
-* Removed almost all dependency on `conda.models.dist`. (#5074)
-* Replaced usage of legacy `conda.models.dist.Dist` by `conda.models.records.PackageRecord`. (#5074)
+* Remove dependency on `conda.plan`. (#5074)
+* Remove almost all dependency on `conda.models.dist`. (#5074)
+* Replace usage of legacy `conda.models.dist.Dist` with `conda.models.records.PackageRecord`. (#5074)
 
 ### Contributors
 
