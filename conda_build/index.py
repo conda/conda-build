@@ -330,6 +330,7 @@ def _delegated_update_index(
 # Everything below is deprecated to maintain API/feature compatibility.
 
 
+@deprecated("24.1.0", "24.3.0")
 def _determine_namespace(info):
     if info.get("namespace"):
         namespace = info["namespace"]
@@ -356,6 +357,7 @@ def _determine_namespace(info):
     return namespace, info.get("name_in_channel", info["name"]), info["name"]
 
 
+@deprecated("24.1.0", "24.3.0")
 def _make_seconds(timestamp):
     timestamp = int(timestamp)
     if timestamp > 253402300799:  # 9999-12-31
@@ -412,6 +414,7 @@ deprecated.constant(
 deprecated.constant("24.1.0", "24.3.0", "CHANNELDATA_FIELDS", _CHANNELDATA_FIELDS)
 
 
+@deprecated("24.1.0", "24.3.0")
 def _clear_newline_chars(record, field_name):
     if field_name in record:
         try:
@@ -472,6 +475,7 @@ def _apply_instructions(subdir, repodata, instructions):
     return repodata
 
 
+@deprecated("24.1.0", "24.3.0")
 def _get_jinja2_environment():
     def _filter_strftime(dt, dt_format):
         if isinstance(dt, Number):
@@ -501,6 +505,7 @@ def _get_jinja2_environment():
     return environment
 
 
+@deprecated("24.1.0", "24.3.0")
 def _maybe_write(path, content, write_newline_end=False, content_is_binary=False):
     # Create the temp file next "path" so that we can use an atomic move, see
     # https://github.com/conda/conda-build/issues/3833
@@ -522,6 +527,7 @@ def _maybe_write(path, content, write_newline_end=False, content_is_binary=False
     return True
 
 
+@deprecated("24.1.0", "24.3.0")
 def _make_build_string(build, build_number):
     build_number_as_string = str(build_number)
     if build.endswith(build_number_as_string):
@@ -531,6 +537,7 @@ def _make_build_string(build, build_number):
     return build_string
 
 
+@deprecated("24.1.0", "24.3.0")
 def _warn_on_missing_dependencies(missing_dependencies, patched_repodata):
     """
     The following dependencies do not exist in the channel and are not declared
@@ -565,6 +572,7 @@ def _warn_on_missing_dependencies(missing_dependencies, patched_repodata):
         log.warn("\n".join(builder))
 
 
+@deprecated("24.1.0", "24.3.0")
 def _cache_post_install_details(paths_cache_path, post_install_cache_path):
     post_install_details_json = {
         "binary_prefix": False,
@@ -603,6 +611,7 @@ def _cache_post_install_details(paths_cache_path, post_install_cache_path):
         json.dump(post_install_details_json, fh)
 
 
+@deprecated("24.1.0", "24.3.0")
 def _cache_recipe(tmpdir, recipe_cache_path):
     recipe_path_search_order = (
         "info/recipe/meta.yaml.rendered",
@@ -632,6 +641,7 @@ def _cache_recipe(tmpdir, recipe_cache_path):
     return recipe_json
 
 
+@deprecated("24.1.0", "24.3.0")
 def _cache_run_exports(tmpdir, run_exports_cache_path):
     run_exports = {}
     try:
@@ -647,6 +657,7 @@ def _cache_run_exports(tmpdir, run_exports_cache_path):
         json.dump(run_exports, fh)
 
 
+@deprecated("24.1.0", "24.3.0")
 def _cache_icon(tmpdir, recipe_json, icon_cache_path):
     # If a conda package contains an icon, also extract and cache that in an .icon/
     # directory.  The icon file name is the name of the package, plus the extension
@@ -663,6 +674,7 @@ def _cache_icon(tmpdir, recipe_json, icon_cache_path):
             utils.move_with_fallback(icon_path, icon_cache_path)
 
 
+@deprecated("24.1.0", "24.3.0")
 def _make_subdir_index_html(channel_name, subdir, repodata_packages, extra_paths):
     environment = _get_jinja2_environment()
     template = environment.get_template("subdir-index.html.j2")
@@ -675,6 +687,7 @@ def _make_subdir_index_html(channel_name, subdir, repodata_packages, extra_paths
     return rendered_html
 
 
+@deprecated("24.1.0", "24.3.0")
 def _make_channeldata_index_html(channel_name, channeldata):
     environment = _get_jinja2_environment()
     template = environment.get_template("channeldata-index.html.j2")
@@ -687,6 +700,7 @@ def _make_channeldata_index_html(channel_name, channeldata):
     return rendered_html
 
 
+@deprecated("24.1.0", "24.3.0")
 def _get_source_repo_git_info(path):
     is_repo = subprocess.check_output(
         ["git", "rev-parse", "--is-inside-work-tree"], cwd=path
@@ -709,12 +723,14 @@ def _get_source_repo_git_info(path):
     return commits
 
 
+@deprecated("24.1.0", "24.3.0")
 def _cache_info_file(tmpdir, info_fn, cache_path):
     info_path = os.path.join(tmpdir, "info", info_fn)
     if os.path.lexists(info_path):
         utils.move_with_fallback(info_path, cache_path)
 
 
+@deprecated("24.1.0", "24.3.0")
 def _alternate_file_extension(fn):
     cache_fn = fn
     for ext in CONDA_PACKAGE_EXTENSIONS:
@@ -723,6 +739,7 @@ def _alternate_file_extension(fn):
     return cache_fn + next(iter(other_ext))
 
 
+@deprecated("24.1.0", "24.3.0")
 def _get_resolve_object(subdir, file_path=None, precs=None, repodata=None):
     packages = {}
     conda_packages = {}
@@ -757,6 +774,7 @@ def _get_resolve_object(subdir, file_path=None, precs=None, repodata=None):
     return r
 
 
+@deprecated("24.1.0", "24.3.0")
 def _get_newest_versions(r, pins={}):
     groups = {}
     for g_name, g_recs in r.groups.items():
@@ -772,6 +790,7 @@ def _get_newest_versions(r, pins={}):
     return [pkg for group in groups.values() for pkg in group]
 
 
+@deprecated("24.1.0", "24.3.0")
 def _add_missing_deps(new_r, original_r):
     """For each package in new_r, if any deps are not satisfiable, backfill them from original_r."""
 
@@ -796,6 +815,7 @@ def _add_missing_deps(new_r, original_r):
     return [pkg for group in expanded_groups.values() for pkg in group]
 
 
+@deprecated("24.1.0", "24.3.0")
 def _add_prev_ver_for_features(new_r, orig_r):
     expanded_groups = copy.deepcopy(new_r.groups)
     for g_name in new_r.groups:
@@ -824,6 +844,7 @@ def _add_prev_ver_for_features(new_r, orig_r):
     return [pkg for group in expanded_groups.values() for pkg in group]
 
 
+@deprecated("24.1.0", "24.3.0")
 def _shard_newest_packages(subdir, r, pins=None):
     """Captures only the newest versions of software in the resolve object.
 
@@ -856,6 +877,7 @@ def _shard_newest_packages(subdir, r, pins=None):
     return set(_add_prev_ver_for_features(new_r, r))
 
 
+@deprecated("24.1.0", "24.3.0")
 def _build_current_repodata(subdir, repodata, pins):
     r = _get_resolve_object(subdir, repodata=repodata)
     keep_pkgs = _shard_newest_packages(subdir, r, pins)
