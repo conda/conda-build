@@ -850,8 +850,7 @@ cached_actions = {}
 last_index_ts = 0
 
 
-@deprecated("24.1.0", "24.3.0", addendum="Use `get_package_records` instead.")
-def get_install_actions(
+def get_package_records(
     prefix,
     specs,
     env,
@@ -998,10 +997,11 @@ def get_install_actions(
         utils.trim_empty_keys(actions)
         cached_actions[(specs, env, subdir, channel_urls, disable_pip)] = actions.copy()
         last_index_ts = index_ts
-    return actions
+    return actions.get(LINK_ACTION, [])
 
 
-def get_package_records(
+@deprecated("24.1.0", "24.3.0", addendum="Use `get_package_records` instead.")
+def get_install_actions(
     prefix,
     specs,
     env,
@@ -1017,7 +1017,7 @@ def get_package_records(
     output_folder=None,
     channel_urls=None,
 ):
-    return get_install_actions(
+    precs = get_package_records(
         prefix=prefix,
         specs=specs,
         env=env,
@@ -1032,7 +1032,8 @@ def get_package_records(
         max_env_retry=max_env_retry,
         output_folder=output_folder,
         channel_urls=channel_urls,
-    ).get(LINK_ACTION, [])
+    )
+    return {PREFIX_ACTION: prefix, LINK_ACTION: precs}
 
 
 @deprecated.argument("24.1.0", "24.3.0", "specs_or_actions", rename="specs_or_precs")
