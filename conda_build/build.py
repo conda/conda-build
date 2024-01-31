@@ -3235,7 +3235,7 @@ def _write_test_run_script(
             tf.write(
                 '"{perl}" "{test_file}"\n'.format(
                     perl=metadata.config.perl_bin(
-                        metadata.config.test_prefix, metadata.config.host_platform
+                        metadata.config.test_prefix, sys.platform
                     ),
                     test_file=join(metadata.config.test_dir, "run_test.pl"),
                 )
