@@ -43,6 +43,7 @@ from .conda_interface import (
     reset_context,
     root_dir,
 )
+from .deprecations import deprecated
 from .exceptions import BuildLockError, DependencyNeedsBuildingError
 from .features import feature_list
 from .index import get_build_index
@@ -849,7 +850,7 @@ cached_actions = {}
 last_index_ts = 0
 
 
-def get_install_actions(
+def get_package_records(
     prefix,
     specs,
     env,
@@ -996,12 +997,49 @@ def get_install_actions(
         utils.trim_empty_keys(actions)
         cached_actions[(specs, env, subdir, channel_urls, disable_pip)] = actions.copy()
         last_index_ts = index_ts
-    return actions
+    return actions.get(LINK_ACTION, [])
 
 
+@deprecated("24.1.0", "24.3.0", addendum="Use `get_package_records` instead.")
+def get_install_actions(
+    prefix,
+    specs,
+    env,
+    retries=0,
+    subdir=None,
+    verbose=True,
+    debug=False,
+    locking=True,
+    bldpkgs_dirs=None,
+    timeout=900,
+    disable_pip=False,
+    max_env_retry=3,
+    output_folder=None,
+    channel_urls=None,
+):
+    precs = get_package_records(
+        prefix=prefix,
+        specs=specs,
+        env=env,
+        retries=retries,
+        subdir=subdir,
+        verbose=verbose,
+        debug=debug,
+        locking=locking,
+        bldpkgs_dirs=bldpkgs_dirs,
+        timeout=timeout,
+        disable_pip=disable_pip,
+        max_env_retry=max_env_retry,
+        output_folder=output_folder,
+        channel_urls=channel_urls,
+    )
+    return {PREFIX_ACTION: prefix, LINK_ACTION: precs}
+
+
+@deprecated.argument("24.1.0", "24.3.0", "specs_or_actions", rename="specs_or_precs")
 def create_env(
     prefix,
-    specs_or_actions,
+    specs_or_precs,
     env,
     config,
     subdir,
@@ -1029,17 +1067,20 @@ def create_env(
         # if os.path.isdir(prefix):
         #     utils.rm_rf(prefix)
 
-        if specs_or_actions:  # Don't waste time if there is nothing to do
+        if specs_or_precs:  # Don't waste time if there is nothing to do
             log.debug("Creating environment in %s", prefix)
-            log.debug(str(specs_or_actions))
+            log.debug(str(specs_or_precs))
 
             if not locks:
                 locks = utils.get_conda_operation_locks(config)
             try:
                 with utils.try_acquire_locks(locks, timeout=config.timeout):
-                    # input is a list - it's specs in MatchSpec format
-                    if not hasattr(specs_or_actions, "keys"):
-                        specs = list(set(specs_or_actions))
+                    # input is a list of specs in MatchSpec format
+                    if not (
+                        hasattr(specs_or_precs, "keys")
+                        or isinstance(specs_or_precs[0], PackageRecord)
+                    ):
+                        specs = list(set(specs_or_precs))
                         actions = get_install_actions(
                             prefix,
                             tuple(specs),
@@ -1056,7 +1097,10 @@ def create_env(
                             channel_urls=tuple(config.channel_urls),
                         )
                     else:
-                        actions = specs_or_actions
+                        if not hasattr(specs_or_precs, "keys"):
+                            actions = {LINK_ACTION: specs_or_precs}
+                        else:
+                            actions = specs_or_precs
                     index, _, _ = get_build_index(
                         subdir=subdir,
                         bldpkgs_dir=config.bldpkgs_dir,
@@ -1068,13 +1112,13 @@ def create_env(
                         timeout=config.timeout,
                     )
                     utils.trim_empty_keys(actions)
-                    _display_actions(actions)
+                    _display_actions(prefix, actions)
                     if utils.on_win:
                         for k, v in os.environ.items():
                             os.environ[k] = str(v)
                     with env_var("CONDA_QUIET", not config.verbose, reset_context):
                         with env_var("CONDA_JSON", not config.verbose, reset_context):
-                            _execute_actions(actions)
+                            _execute_actions(prefix, actions)
             except (
                 SystemExit,
                 PaddingError,
@@ -1134,7 +1178,7 @@ def create_env(
                         )
                         create_env(
                             prefix,
-                            specs_or_actions,
+                            specs_or_precs,
                             config=config,
                             subdir=subdir,
                             env=env,
@@ -1165,7 +1209,7 @@ def create_env(
                         )
                         create_env(
                             prefix,
-                            specs_or_actions,
+                            specs_or_precs,
                             config=config,
                             subdir=subdir,
                             env=env,
@@ -1203,7 +1247,7 @@ def create_env(
                     )
                     create_env(
                         prefix,
-                        specs_or_actions,
+                        specs_or_precs,
                         config=config,
                         subdir=subdir,
                         env=env,
@@ -1312,12 +1356,11 @@ _install_actions = install_actions
 del install_actions
 
 
-def _execute_actions(actions):
+def _execute_actions(prefix, actions):
     # This is copied over from https://github.com/conda/conda/blob/23.11.0/conda/plan.py#L575
     # but reduced to only the functionality actually used within conda-build.
 
-    assert PREFIX_ACTION in actions and actions[PREFIX_ACTION]
-    prefix = actions[PREFIX_ACTION]
+    assert prefix
 
     if LINK_ACTION not in actions:
         log.debug(f"action {LINK_ACTION} not in actions")
@@ -1346,11 +1389,10 @@ def _execute_actions(actions):
     unlink_link_transaction.execute()
 
 
-def _display_actions(actions):
+def _display_actions(prefix, actions):
     # This is copied over from https://github.com/conda/conda/blob/23.11.0/conda/plan.py#L58
     # but reduced to only the functionality actually used within conda-build.
 
-    prefix = actions.get(PREFIX_ACTION)
     builder = ["", "## Package Plan ##\n"]
     if prefix:
         builder.append("  environment location: %s" % prefix)
