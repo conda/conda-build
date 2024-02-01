@@ -60,6 +60,7 @@ from conda.models.records import PrefixRecord
 from .conda_interface import (
     CondaHTTPError,
     MatchSpec,
+    PackageRecord,
     StringIO,
     TemporaryDirectory,
     VersionOrder,
@@ -761,26 +762,6 @@ def get_conda_operation_locks(locking=True, bldpkgs_dirs=None, timeout=900):
         # lock used to generally indicate a conda operation occurring
         locks.append(get_lock("conda-operation", timeout=timeout))
     return locks
-
-
-@deprecated(
-    "3.28.0",
-    "24.1.0",
-    addendum="Use `os.path.relpath` or `pathlib.Path.relative_to` instead.",
-)
-def relative(f, d="lib"):
-    assert not f.startswith("/"), f
-    assert not d.startswith("/"), d
-    d = d.strip("/").split("/")
-    if d == ["."]:
-        d = []
-    f = dirname(f).split("/")
-    if f == [""]:
-        f = []
-    while d and f and d[0] == f[0]:
-        d.pop(0)
-        f.pop(0)
-    return "/".join((([".."] * len(f)) if f else ["."]) + d)
 
 
 # This is the lowest common denominator of the formats supported by our libarchive/python-libarchive-c
@@ -1977,13 +1958,11 @@ def match_peer_job(target_matchspec, other_m, this_m=None):
     for any keys that are shared between target_variant and m.config.variant"""
     name, version, build = other_m.name(), other_m.version(), ""
     matchspec_matches = target_matchspec.match(
-        Dist(
+        PackageRecord(
             name=name,
-            dist_name=f"{name}-{version}-{build}",
             version=version,
-            build_string=build,
+            build=build,
             build_number=other_m.build_number(),
-            channel=None,
         )
     )
 
@@ -2131,6 +2110,7 @@ def download_channeldata(channel_url):
     return data
 
 
+@deprecated("24.1.0", "24.3.0")
 def linked_data_no_multichannels(
     prefix: str | os.PathLike | Path,
 ) -> dict[Dist, PrefixRecord]:
@@ -2188,11 +2168,5 @@ def is_conda_pkg(pkg_path: str) -> bool:
     )
 
 
-@deprecated("3.28.3", "24.1.0")
-def samefile(path1: Path, path2: Path) -> bool:
-    try:
-        return path1.samefile(path2)
-    except (FileNotFoundError, PermissionError):
-        # FileNotFoundError: path doesn't exist
-        # PermissionError: don't have permissions to read path
-        return path1 == path2
+def package_record_to_requirement(prec: PackageRecord) -> str:
+    return f"{prec.name} {prec.version} {prec.build}"

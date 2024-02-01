@@ -13,7 +13,6 @@ from functools import partial
 from pathlib import Path
 from subprocess import PIPE, Popen
 
-from ..deprecations import deprecated
 from ..utils import on_mac, on_win, rec_glob
 from .external import find_executable
 
@@ -21,7 +20,6 @@ from .external import find_executable
 # TODO :: Remove all use of pyldd
 # Currently we verify the output of each against the other
 from .pyldd import DLLfile, EXEfile, elffile, machofile
-from .pyldd import codefile_type as _codefile_type
 from .pyldd import inspect_linkages as inspect_linkages_pyldd
 
 try:
@@ -31,11 +29,6 @@ try:
     have_lief = True
 except ImportError:
     have_lief = False
-
-
-@deprecated("3.28.0", "24.1.0", addendum="Use `isinstance(value, str)` instead.")
-def is_string(s):
-    return isinstance(s, str)
 
 
 # Some functions can operate on either file names
@@ -100,32 +93,6 @@ if have_lief:
 
 else:
     from .pyldd import codefile_class
-
-
-@deprecated(
-    "3.28.0",
-    "24.1.0",
-    addendum="Use `conda_build.os_utils.liefldd.codefile_class` instead.",
-)
-def codefile_type_liefldd(*args, **kwargs) -> str | None:
-    codefile = codefile_class(*args, **kwargs)
-    return codefile.__name__ if codefile else None
-
-
-deprecated.constant(
-    "3.28.0",
-    "24.1.0",
-    "codefile_type_pyldd",
-    _codefile_type,
-    addendum="Use `conda_build.os_utils.pyldd.codefile_class` instead.",
-)
-deprecated.constant(
-    "3.28.0",
-    "24.1.0",
-    "codefile_type",
-    _codefile_type,
-    addendum="Use `conda_build.os_utils.liefldd.codefile_class` instead.",
-)
 
 
 def _trim_sysroot(sysroot):

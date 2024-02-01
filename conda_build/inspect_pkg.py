@@ -6,7 +6,6 @@ import json
 import os
 import sys
 from collections import defaultdict
-from functools import lru_cache
 from itertools import groupby
 from operator import itemgetter
 from os.path import abspath, basename, dirname, exists, join, normcase
@@ -17,13 +16,10 @@ from typing import Iterable, Literal
 from conda.api import Solver
 from conda.core.index import get_index
 from conda.core.prefix_data import PrefixData
-from conda.models.dist import Dist
 from conda.models.records import PrefixRecord
-from conda.resolve import MatchSpec
 
 from . import conda_interface
 from .conda_interface import (
-    linked_data,
     specs_from_args,
 )
 from .deprecations import deprecated
@@ -47,18 +43,6 @@ from .utils import (
 log = get_logger(__name__)
 
 
-@deprecated("3.28.0", "24.1.0")
-@lru_cache(maxsize=None)
-def dist_files(prefix: str | os.PathLike | Path, dist: Dist) -> set[str]:
-    if (prec := PrefixData(str(prefix)).get(dist.name, None)) is None:
-        return set()
-    elif MatchSpec(dist).match(prec):
-        return set(prec["files"])
-    else:
-        return set()
-
-
-@deprecated.argument("3.28.0", "24.1.0", "avoid_canonical_channel_name")
 def which_package(
     path: str | os.PathLike | Path,
     prefix: str | os.PathLike | Path,
@@ -222,11 +206,6 @@ def test_installable(channel: str = "defaults") -> bool:
                     repr(err),
                 )
     return success
-
-
-@deprecated("3.28.0", "24.1.0")
-def _installed(prefix: str | os.PathLike | Path) -> dict[str, Dist]:
-    return {dist.name: dist for dist in linked_data(str(prefix))}
 
 
 def _underlined_text(text):

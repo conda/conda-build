@@ -13,7 +13,6 @@ from typing import Iterable
 from conda.models.records import PrefixRecord
 
 from ..conda_interface import untracked
-from ..deprecations import deprecated
 from ..utils import on_linux, on_mac
 from .macho import otool
 from .pyldd import codefile_class, inspect_linkages, machofile
@@ -106,14 +105,6 @@ def _get_linkages(
 
         linkages[file] = ldd_computed
     return linkages
-
-
-@deprecated("3.28.0", "24.1.0")
-@lru_cache(maxsize=None)
-def get_package_files(
-    prec: PrefixRecord, prefix: str | os.PathLike | Path
-) -> list[str]:
-    return prec["files"]
 
 
 @lru_cache(maxsize=None)
