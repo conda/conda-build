@@ -533,7 +533,8 @@ def execute(args: Sequence[str] | None, return_outputs: Literal[False]) -> int:
 
 
 def execute(
-    args: Sequence[str] | None = None, return_outputs: bool = True
+    args: Sequence[str] | None = None,
+    return_outputs: bool = False,
 ) -> list[str] | int:
     _, parsed = parse_args(args)
     config = get_or_merge_config(None, **parsed.__dict__)
