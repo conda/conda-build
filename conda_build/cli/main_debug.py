@@ -88,7 +88,7 @@ Set up environments and activation scripts to debug your build or test phase.
     return p
 
 
-def execute(args: Sequence[str] | None = None):
+def execute(args: Sequence[str] | None = None) -> int:
     parser = get_parser()
     parsed = parser.parse_args(args)
 
@@ -118,3 +118,5 @@ def execute(args: Sequence[str] | None = None):
             f"Error: conda-debug encountered the following error:\n{e}", file=sys.stderr
         )
         sys.exit(1)
+
+    return 0

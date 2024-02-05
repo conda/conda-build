@@ -137,7 +137,7 @@ def test_slash_in_recipe_arg_keeps_build_id(testing_workdir, testing_config):
         testing_config.croot,
         "--no-anaconda-upload",
     ]
-    outputs = main_build.execute(args)
+    outputs = main_build.execute(args, return_outputs=True)
     data = package_has_file(outputs[0], "binary-has-prefix", refresh_mode="forced")
     assert data
     if hasattr(data, "decode"):
@@ -166,7 +166,7 @@ def test_build_no_build_id(testing_workdir, testing_config):
         "--no-activate",
         "--no-anaconda-upload",
     ]
-    outputs = main_build.execute(args)
+    outputs = main_build.execute(args, return_outputs=True)
     data = package_has_file(outputs[0], "binary-has-prefix", refresh_mode="forced")
     assert data
     if hasattr(data, "decode"):
@@ -207,7 +207,7 @@ def test_build_output_folder(testing_workdir: str, testing_metadata):
         "--output-folder",
         str(out),
     ]
-    output = main_build.execute(args)[0]
+    output = main_build.execute(args, return_outputs=True)[0]
     assert (
         out / testing_metadata.config.host_subdir / os.path.basename(output)
     ).is_file()
@@ -382,7 +382,7 @@ def test_relative_path_croot(conda_build_test_recipe_envvar: str):
     empty_sections = os.path.join(metadata_dir, "empty_with_build_script")
     croot_rel = os.path.join(".", "relative", "path")
     args = ["--no-anaconda-upload", "--croot", croot_rel, empty_sections]
-    outputfile = main_build.execute(args)
+    outputfile = main_build.execute(args, return_outputs=True)
 
     assert len(outputfile) == 1
     assert os.path.isfile(outputfile[0])
@@ -398,7 +398,7 @@ def test_relative_path_test_artifact(conda_build_test_recipe_envvar: str):
 
     # build the package
     args = ["--no-anaconda-upload", "--no-test", "--croot", croot_abs, empty_sections]
-    output_file_abs = main_build.execute(args)
+    output_file_abs = main_build.execute(args, return_outputs=True)
     assert len(output_file_abs) == 1
 
     output_file_rel = os.path.join(
@@ -420,7 +420,7 @@ def test_relative_path_test_recipe(conda_build_test_recipe_envvar: str):
 
     # build the package
     args = ["--no-anaconda-upload", "--no-test", "--croot", croot_abs, empty_sections]
-    output_file_abs = main_build.execute(args)
+    output_file_abs = main_build.execute(args, return_outputs=True)
     assert len(output_file_abs) == 1
 
     # run the test stage with relative croot

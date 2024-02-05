@@ -76,7 +76,7 @@ This works by creating a conda.pth file in site-packages.""",
     return parser, parser.parse_args(args)
 
 
-def execute(args: Sequence[str] | None = None):
+def execute(args: Sequence[str] | None = None) -> int:
     _, parsed = parse_args(args)
     prefix = determine_target_prefix(context, parsed)
     api.develop(
@@ -87,3 +87,5 @@ def execute(args: Sequence[str] | None = None):
         clean=parsed.clean,
         uninstall=parsed.uninstall,
     )
+
+    return 0

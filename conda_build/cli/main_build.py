@@ -11,7 +11,7 @@ from glob import glob
 from itertools import chain
 from os.path import abspath, expanduser, expandvars
 from pathlib import Path
-from typing import Sequence
+from typing import Literal, Sequence, overload
 
 from conda.auxlib.ish import dals
 from conda.common.io import dashlist
@@ -522,7 +522,19 @@ def check_action(recipe, config):
     return api.check(recipe, config=config)
 
 
-def execute(args: Sequence[str] | None = None):
+@overload
+def execute(args: Sequence[str] | None, return_outputs: Literal[True]) -> list[str]:
+    ...
+
+
+@overload
+def execute(args: Sequence[str] | None, return_outputs: Literal[False]) -> int:
+    ...
+
+
+def execute(
+    args: Sequence[str] | None = None, return_outputs: bool = True
+) -> list[str] | int:
     _, parsed = parse_args(args)
     config = get_or_merge_config(None, **parsed.__dict__)
     build.check_external()
@@ -535,14 +547,14 @@ def execute(args: Sequence[str] | None = None):
 
     if "purge" in parsed.recipe:
         build.clean_build(config)
-        return
+        return []
 
     if "purge-all" in parsed.recipe:
         build.clean_build(config)
         config.clean_pkgs()
-        return
+        return []
 
-    outputs = None
+    outputs: list[str] = []
     if parsed.output:
         config.verbose = False
         config.quiet = True
@@ -590,4 +602,5 @@ def execute(args: Sequence[str] | None = None):
 
     if not parsed.output and len(utils.get_build_folders(config.croot)) > 0:
         build.print_build_intermediate_warning(config)
-    return outputs
+
+    return outputs if return_outputs else 0
