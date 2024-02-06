@@ -11,7 +11,7 @@ from glob import glob
 from itertools import chain
 from os.path import abspath, expanduser, expandvars
 from pathlib import Path
-from typing import Literal, Sequence, overload
+from typing import Sequence
 
 from conda.auxlib.ish import dals
 from conda.common.io import dashlist
@@ -522,20 +522,7 @@ def check_action(recipe, config):
     return api.check(recipe, config=config)
 
 
-@overload
-def execute(args: Sequence[str] | None, return_outputs: Literal[True]) -> list[str]:
-    ...
-
-
-@overload
-def execute(args: Sequence[str] | None, return_outputs: Literal[False]) -> int:
-    ...
-
-
-def execute(
-    args: Sequence[str] | None = None,
-    return_outputs: bool = False,
-) -> list[str] | int:
+def execute(args: Sequence[str] | None = None) -> int:
     _, parsed = parse_args(args)
     config = get_or_merge_config(None, **parsed.__dict__)
     build.check_external()
@@ -548,21 +535,20 @@ def execute(
 
     if "purge" in parsed.recipe:
         build.clean_build(config)
-        return []
+        return 0
 
     if "purge-all" in parsed.recipe:
         build.clean_build(config)
         config.clean_pkgs()
-        return []
+        return 0
 
-    outputs: list[str] = []
     if parsed.output:
         config.verbose = False
         config.quiet = True
         config.debug = False
-        outputs = [output_action(recipe, config) for recipe in parsed.recipe]
+        for recipe in parsed.recipe:
+            output_action(recipe, config)
     elif parsed.test:
-        outputs = []
         failed_recipes = []
         recipes = chain.from_iterable(
             glob(abspath(recipe), recursive=True) if "*" in recipe else [recipe]
@@ -584,11 +570,13 @@ def execute(
         else:
             print("All tests passed")
     elif parsed.source:
-        outputs = [source_action(recipe, config) for recipe in parsed.recipe]
+        for recipe in parsed.recipe:
+            source_action(recipe, config)
     elif parsed.check:
-        outputs = [check_action(recipe, config) for recipe in parsed.recipe]
+        for recipe in parsed.recipe:
+            check_action(recipe, config)
     else:
-        outputs = api.build(
+        api.build(
             parsed.recipe,
             post=parsed.post,
             test_run_post=parsed.test_run_post,
@@ -604,4 +592,4 @@ def execute(
     if not parsed.output and len(utils.get_build_folders(config.croot)) > 0:
         build.print_build_intermediate_warning(config)
 
-    return outputs if return_outputs else 0
+    return 0

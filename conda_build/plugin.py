@@ -11,7 +11,7 @@ import conda.plugins
 def build(args: Sequence[str]) -> int:
     from .cli.main_build import execute
 
-    return execute(args, return_outputs=False)
+    return execute(args)
 
 
 def convert(args: Sequence[str]) -> int:
