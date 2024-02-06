@@ -20,7 +20,6 @@ from pathlib import Path
 # make the Config class available in the api namespace
 from .config import DEFAULT_PREFIX_LENGTH as _prefix_length
 from .config import Config, get_channel_urls, get_or_merge_config
-from .deprecations import deprecated
 from .utils import (
     CONDA_PACKAGE_EXTENSIONS,
     LoggingContext,
@@ -521,48 +520,6 @@ def create_metapackage(
         summary=summary,
         config=config,
     )
-
-
-@deprecated("3.25.0", "24.1.0", addendum="Use standalone conda-index.")
-def update_index(
-    dir_paths,
-    config=None,
-    force=False,
-    check_md5=False,
-    remove=False,
-    channel_name=None,
-    subdir=None,
-    threads=None,
-    patch_generator=None,
-    verbose=False,
-    progress=False,
-    hotfix_source_repo=None,
-    current_index_versions=None,
-    **kwargs,
-):
-    import yaml
-
-    from .index import update_index as legacy_update_index
-
-    dir_paths = [os.path.abspath(path) for path in ensure_list(dir_paths)]
-
-    if isinstance(current_index_versions, str):
-        with open(current_index_versions) as f:
-            current_index_versions = yaml.safe_load(f)
-
-    for path in dir_paths:
-        legacy_update_index(
-            path,
-            check_md5=check_md5,
-            channel_name=channel_name,
-            patch_generator=patch_generator,
-            threads=threads,
-            verbose=verbose,
-            progress=progress,
-            subdirs=ensure_list(subdir),
-            current_index_versions=current_index_versions,
-            index_file=kwargs.get("index_file", None),
-        )
 
 
 def debug(

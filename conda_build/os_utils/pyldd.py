@@ -11,7 +11,6 @@ import struct
 import sys
 from pathlib import Path
 
-from ..deprecations import deprecated
 from ..utils import ensure_list, get_logger, on_linux, on_mac, on_win
 
 logging.basicConfig(level=logging.INFO)
@@ -362,21 +361,6 @@ def do_file(file, lc_operation, off_sz, arch, results, *args):
         results.append(do_macho(file, 64, BIG_ENDIAN, lc_operation, *args))
     elif magic == MH_CIGAM_64 and arch in ("any", "x86_64"):
         results.append(do_macho(file, 64, LITTLE_ENDIAN, lc_operation, *args))
-
-
-@deprecated("3.28.0", "24.1.0")
-def mach_o_change(path, arch, what, value):
-    """
-    Replace a given name (what) in any LC_LOAD_DYLIB command found in
-    the given binary with a new name (value), provided it's shorter.
-    """
-
-    assert len(what) >= len(value)
-
-    results = []
-    with open(path, "r+b") as f:
-        do_file(f, replace_lc_load_dylib, offset_size(), arch, results, what, value)
-    return results
 
 
 def mach_o_find_dylibs(ofile, arch, regex=".*"):
@@ -1063,28 +1047,6 @@ def codefile_class(
         return None
 
 
-@deprecated(
-    "3.28.0",
-    "24.1.0",
-    addendum="Use `conda_build.os_utils.pyldd.codefile_class` instead.",
-)
-def is_codefile(path: str | os.PathLike | Path, skip_symlinks: bool = True) -> bool:
-    return bool(codefile_class(path, skip_symlinks=skip_symlinks))
-
-
-@deprecated(
-    "3.28.0",
-    "24.1.0",
-    addendum="Use `conda_build.os_utils.pyldd.codefile_class` instead.",
-)
-def codefile_type(
-    path: str | os.PathLike | Path,
-    skip_symlinks: bool = True,
-) -> str | None:
-    codefile = codefile_class(path, skip_symlinks=skip_symlinks)
-    return codefile.__name__ if codefile else None
-
-
 def _trim_sysroot(sysroot):
     if sysroot:
         while sysroot.endswith("/") or sysroot.endswith("\\"):
@@ -1133,48 +1095,6 @@ def _inspect_linkages_this(filename, sysroot="", arch="native"):
             return cf.uniqueness_key(), [], []
         orig_names, resolved_names, _, _in_sysroot = map(list, zip(*results))
         return cf.uniqueness_key(), orig_names, resolved_names
-
-
-@deprecated("3.28.0", "24.1.0")
-def inspect_rpaths(
-    filename, resolve_dirnames=True, use_os_varnames=True, sysroot="", arch="native"
-):
-    if not os.path.exists(filename):
-        return [], []
-    sysroot = _trim_sysroot(sysroot)
-    arch = _get_arch_if_native(arch)
-    with open(filename, "rb") as f:
-        # TODO :: Problems here:
-        # TODO :: 1. macOS can modify RPATH for children in each .so
-        # TODO :: 2. Linux can identify the program interpreter which can change the initial RPATHs
-        # TODO :: Should '/lib', '/usr/lib' not include (or be?!) `sysroot`(s) instead?
-        cf = codefile(f, arch, ["/lib", "/usr/lib"])
-        if resolve_dirnames:
-            return [
-                _get_resolved_location(
-                    cf,
-                    rpath,
-                    os.path.dirname(filename),
-                    os.path.dirname(filename),
-                    sysroot,
-                )[0]
-                for rpath in cf.rpaths_nontransitive
-            ]
-        else:
-            if use_os_varnames:
-                return [cf.to_os_varnames(rpath) for rpath in cf.rpaths_nontransitive]
-            else:
-                return cf.rpaths_nontransitive
-
-
-@deprecated("3.28.0", "24.1.0")
-def get_runpaths(filename, arch="native"):
-    if not os.path.exists(filename):
-        return []
-    arch = _get_arch_if_native(arch)
-    with open(filename, "rb") as f:
-        cf = codefile(f, arch, ["/lib", "/usr/lib"])
-        return cf.get_runpaths()
 
 
 # TODO :: Consider returning a tree structure or a dict when recurse is True?
@@ -1251,18 +1171,6 @@ def otool(*args):
         )
         return 0
     return 1
-
-
-@deprecated("3.28.0", "24.1.0")
-def otool_sys(*args):
-    import subprocess
-
-    return subprocess.check_output("/usr/bin/otool", args).decode(encoding="ascii")
-
-
-@deprecated("3.28.0", "24.1.0")
-def ldd_sys(*args):
-    return []
 
 
 def ldd(*args):

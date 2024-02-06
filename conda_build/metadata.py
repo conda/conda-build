@@ -20,7 +20,6 @@ from bs4 import UnicodeDammit
 from . import exceptions, utils, variants
 from .conda_interface import MatchSpec, envs_dirs, md5_file
 from .config import Config, get_or_merge_config
-from .deprecations import deprecated
 from .features import feature_list
 from .license_family import ensure_valid_license_family
 from .utils import (
@@ -1457,7 +1456,6 @@ class MetaData:
                     check_field(key_or_dict, section)
         return True
 
-    @deprecated.argument("3.28.0", "24.1.0", "fail_ok")
     def name(self) -> str:
         name = self.get_value("package/name", "")
         if not name and self.final:

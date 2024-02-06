@@ -2308,7 +2308,7 @@ def create_build_envs(m: MetaData, notest):
     m.config._merge_build_host = m.build_is_host
 
     if m.is_cross and not m.build_is_host:
-        host_actions = environ.get_install_actions(
+        host_precs = environ.get_package_records(
             m.config.host_prefix,
             tuple(host_ms_deps),
             "host",
@@ -2325,7 +2325,7 @@ def create_build_envs(m: MetaData, notest):
         )
         environ.create_env(
             m.config.host_prefix,
-            host_actions,
+            host_precs,
             env="host",
             config=m.config,
             subdir=m.config.host_subdir,
@@ -2334,7 +2334,7 @@ def create_build_envs(m: MetaData, notest):
         )
     if m.build_is_host:
         build_ms_deps.extend(host_ms_deps)
-    build_actions = environ.get_install_actions(
+    build_precs = environ.get_package_records(
         m.config.build_prefix,
         tuple(build_ms_deps),
         "build",
@@ -2360,7 +2360,7 @@ def create_build_envs(m: MetaData, notest):
                 *utils.ensure_list(m.get_value("requirements/run", [])),
             ]
             # make sure test deps are available before taking time to create build env
-            environ.get_install_actions(
+            environ.get_package_records(
                 m.config.test_prefix,
                 tuple(test_run_ms_deps),
                 "test",
@@ -2397,7 +2397,7 @@ def create_build_envs(m: MetaData, notest):
     ):
         environ.create_env(
             m.config.build_prefix,
-            build_actions,
+            build_precs,
             env="build",
             config=m.config,
             subdir=m.config.build_subdir,
@@ -2435,8 +2435,8 @@ def build(
         return default_return
 
     log = utils.get_logger(__name__)
-    host_actions = []
-    build_actions = []
+    host_precs = []
+    build_precs = []
     output_metas = []
 
     with utils.path_prepended(m.config.build_prefix):
@@ -2779,7 +2779,7 @@ def build(
                         host_ms_deps = m.ms_depends("host")
                         sub_build_ms_deps = m.ms_depends("build")
                         if m.is_cross and not m.build_is_host:
-                            host_actions = environ.get_install_actions(
+                            host_precs = environ.get_package_records(
                                 m.config.host_prefix,
                                 tuple(host_ms_deps),
                                 "host",
@@ -2796,7 +2796,7 @@ def build(
                             )
                             environ.create_env(
                                 m.config.host_prefix,
-                                host_actions,
+                                host_precs,
                                 env="host",
                                 config=m.config,
                                 subdir=subdir,
@@ -2806,7 +2806,7 @@ def build(
                         else:
                             # When not cross-compiling, the build deps aggregate 'build' and 'host'.
                             sub_build_ms_deps.extend(host_ms_deps)
-                        build_actions = environ.get_install_actions(
+                        build_precs = environ.get_package_records(
                             m.config.build_prefix,
                             tuple(sub_build_ms_deps),
                             "build",
@@ -2823,7 +2823,7 @@ def build(
                         )
                         environ.create_env(
                             m.config.build_prefix,
-                            build_actions,
+                            build_precs,
                             env="build",
                             config=m.config,
                             subdir=m.config.build_subdir,
@@ -3481,7 +3481,7 @@ def test(
     utils.rm_rf(metadata.config.test_prefix)
 
     try:
-        actions = environ.get_install_actions(
+        precs = environ.get_package_records(
             metadata.config.test_prefix,
             tuple(specs),
             "host",
@@ -3523,7 +3523,7 @@ def test(
     with env_var("CONDA_PATH_CONFLICT", conflict_verbosity, reset_context):
         environ.create_env(
             metadata.config.test_prefix,
-            actions,
+            precs,
             config=metadata.config,
             env="host",
             subdir=subdir,
@@ -3819,7 +3819,7 @@ def build_tree(
                                     with TemporaryDirectory(
                                         prefix="_", suffix=r_string
                                     ) as tmpdir:
-                                        actions = environ.get_install_actions(
+                                        precs = environ.get_package_records(
                                             tmpdir,
                                             specs,
                                             env="run",
@@ -3839,9 +3839,9 @@ def build_tree(
                                 # make sure to download that package to the local cache if not there
                                 local_file = execute_download_actions(
                                     meta,
-                                    actions,
+                                    precs,
                                     "host",
-                                    package_subset=dep,
+                                    package_subset=[dep],
                                     require_files=True,
                                 )
                                 # test that package, using the local channel so that our new

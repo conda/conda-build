@@ -32,7 +32,7 @@ from os.path import (
 )
 from pathlib import Path
 from subprocess import CalledProcessError, call, check_output
-from typing import Iterable, Literal
+from typing import Literal
 
 from conda.core.prefix_data import PrefixData
 from conda.models.records import PrefixRecord
@@ -44,7 +44,6 @@ from .conda_interface import (
     md5_file,
     walk_prefix,
 )
-from .deprecations import deprecated
 from .exceptions import OverDependingError, OverLinkingError, RunPathError
 from .inspect_pkg import which_package
 from .metadata import MetaData
@@ -64,7 +63,7 @@ from .os_utils.pyldd import (
     elffile,
     machofile,
 )
-from .utils import linked_data_no_multichannels, on_mac, on_win, prefix_files
+from .utils import on_mac, on_win, prefix_files
 
 filetypes_for_platform = {
     "win": (DLLfile, EXEfile),
@@ -650,26 +649,6 @@ def assert_relative_osx(path, host_prefix, build_prefix):
                 )
 
 
-@deprecated(
-    "3.28.0",
-    "24.1.0",
-    addendum="Use `conda_build.post.get_dsos` and `conda_build.post.get_run_exports` instead.",
-)
-def determine_package_nature(
-    prec: PrefixRecord,
-    prefix: str | os.PathLike | Path,
-    subdir,
-    bldpkgs_dir,
-    output_folder,
-    channel_urls,
-) -> tuple[set[str], tuple[str, ...], bool]:
-    return (
-        get_dsos(prec, prefix),
-        get_run_exports(prec, prefix),
-        prec.name.startswith("lib"),
-    )
-
-
 def get_dsos(prec: PrefixRecord, prefix: str | os.PathLike | Path) -> set[str]:
     return {
         file
@@ -713,10 +692,6 @@ def get_run_exports(
         return ()
 
 
-@deprecated.argument("3.28.0", "24.1.0", "subdir")
-@deprecated.argument("3.28.0", "24.1.0", "bldpkgs_dirs")
-@deprecated.argument("3.28.0", "24.1.0", "output_folder")
-@deprecated.argument("3.28.0", "24.1.0", "channel_urls")
 def library_nature(
     prec: PrefixRecord, prefix: str | os.PathLike | Path
 ) -> Literal[
@@ -770,36 +745,6 @@ def library_nature(
         elif r_files:
             return "interpreted library (R)"
     return "non-library"
-
-
-@deprecated(
-    "3.28.0",
-    "24.1.0",
-    addendum="Query `conda.core.prefix_data.PrefixData` instead.",
-)
-def dists_from_names(names: Iterable[str], prefix: str | os.PathLike | Path):
-    names = utils.ensure_list(names)
-    return [prec for prec in linked_data_no_multichannels(prefix) if prec.name in names]
-
-
-@deprecated(
-    "3.28.0",
-    "24.1.0",
-    addendum="Use `conda.models.records.PrefixRecord` instead.",
-)
-class FakeDist:
-    def __init__(self, name, version, build_number, build_str, channel, files):
-        self.name = name
-        self.quad = [name]
-        self.version = version
-        self.build_number = build_number
-        self.build_string = build_str
-        self.channel = channel
-        self.files = files
-
-    def get(self, name):
-        if name == "files":
-            return self.files
 
 
 # This is really just a small, fixed sysroot and it is rooted at ''. `libcrypto.0.9.8.dylib` should not be in it IMHO.
@@ -1013,23 +958,6 @@ def _map_file_to_package(
                             contains_static_libs[prefix_owners[prefix][rp_po][0]] = True
 
     return prefix_owners, contains_dsos, contains_static_libs, all_lib_exports
-
-
-@deprecated(
-    "3.28.0", "24.1.0", addendum="Use `conda.models.records.PrefixRecord` instead."
-)
-def _get_fake_pkg_dist(pkg_name, pkg_version, build_str, build_number, channel, files):
-    return (
-        FakeDist(
-            pkg_name,
-            str(pkg_version),
-            build_number,
-            build_str,
-            channel,
-            files,
-        ),
-        f"{pkg_name}-{pkg_version}-{build_str}",
-    )
 
 
 def _print_msg(errors, text, verbose):
