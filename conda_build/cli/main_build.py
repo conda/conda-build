@@ -548,7 +548,9 @@ def execute(args: Sequence[str] | None = None) -> int:
         config.debug = False
         for recipe in parsed.recipe:
             output_action(recipe, config)
-    elif parsed.test:
+        return 0
+
+    if parsed.test:
         failed_recipes = []
         recipes = chain.from_iterable(
             glob(abspath(recipe), recursive=True) if "*" in recipe else [recipe]
@@ -589,7 +591,7 @@ def execute(args: Sequence[str] | None = None) -> int:
             cache_dir=parsed.cache_dir,
         )
 
-    if not parsed.output and len(utils.get_build_folders(config.croot)) > 0:
+    if utils.get_build_folders(config.croot):
         build.print_build_intermediate_warning(config)
 
     return 0
