@@ -1,5 +1,17 @@
 [//]: # (current developments)
 
+## 24.1.1 (2024-02-07)
+
+### Bug fixes
+
+* Fix nonzero exitcode on success. (#5167 via #5169)
+
+### Contributors
+
+* @kenodegard
+
+
+
 ## 24.1.0 (2024-01-25)
 
 ### Enhancements
