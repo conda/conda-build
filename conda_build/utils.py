@@ -990,7 +990,7 @@ def get_site_packages(prefix, py_ver):
     return os.path.join(get_stdlib_dir(prefix, py_ver), "site-packages")
 
 
-def get_build_folders(croot):
+def get_build_folders(croot: str | os.PathLike | Path) -> list[str]:
     # remember, glob is not a regex.
     return glob(os.path.join(croot, "*" + "[0-9]" * 10 + "*"), recursive=True)
 

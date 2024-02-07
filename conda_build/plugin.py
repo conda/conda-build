@@ -1,55 +1,59 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
+from typing import Sequence
+
 import conda.plugins
 
 
 # lazy-import to avoid nasty import-time side effects when not using conda-build
-def build(*args, **kwargs):
+def build(args: Sequence[str]) -> int:
     from .cli.main_build import execute
 
-    execute(*args, **kwargs)
+    return execute(args)
 
 
-def convert(*args, **kwargs):
+def convert(args: Sequence[str]) -> int:
     from .cli.main_convert import execute
 
-    execute(*args, **kwargs)
+    return execute(args)
 
 
-def debug(*args, **kwargs):
+def debug(args: Sequence[str]) -> int:
     from .cli.main_debug import execute
 
-    execute(*args, **kwargs)
+    return execute(args)
 
 
-def develop(*args, **kwargs):
+def develop(args: Sequence[str]) -> int:
     from .cli.main_develop import execute
 
-    execute(*args, **kwargs)
+    return execute(args)
 
 
-def inspect(*args, **kwargs):
+def inspect(args: Sequence[str]) -> int:
     from .cli.main_inspect import execute
 
-    execute(*args, **kwargs)
+    return execute(args)
 
 
-def metapackage(*args, **kwargs):
+def metapackage(args: Sequence[str]) -> int:
     from .cli.main_metapackage import execute
 
-    execute(*args, **kwargs)
+    return execute(args)
 
 
-def render(*args, **kwargs):
+def render(args: Sequence[str]) -> int:
     from .cli.main_render import execute
 
-    execute(*args, **kwargs)
+    return execute(args)
 
 
-def skeleton(*args, **kwargs):
+def skeleton(args: Sequence[str]) -> int:
     from .cli.main_skeleton import execute
 
-    execute(*args, **kwargs)
+    return execute(args)
 
 
 @conda.plugins.hookimpl
