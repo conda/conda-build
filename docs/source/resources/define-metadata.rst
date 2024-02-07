@@ -1769,12 +1769,21 @@ to load data from other files. These are ``load_setup_py_data``, ``load_file_reg
       name: foo
       version: {{ version }}
 
-* ``load_file_regex``: Searches a file for a regular expression and returns the
-  first match as a Python ``re.Match object``. For example::
+* ``load_file_regex``: Search a file for a regular expression returning the
+  first match as a Python `re.Match object
+  <https://docs.python.org/3/library/re.html#match-objects>`_.
 
-    {% set readme_heading = load_file_regex(load_file='README.rst', regex_pattern=r'^# (\S+)') %}
+    ``def load_file_regex(load_file, regex_pattern, from_recipe_dir=False) -> re.Match | None:``
+
+    For example::
+
+    {% set version_match = load_file_regex(
+      load_file="conda_package_streaming/__init__.py",
+      regex_pattern='^__version__ = "(.+)"') %}
+    {% set version = version_match[1] %}
+
     package:
-      name: {{ readme_heading.string }}
+      version: {{ version }}
 
 * ``load_file_data``: You can also parse JSON, TOML, or YAML files and load data
   from them. For example you can use this to load poetry configurations from
