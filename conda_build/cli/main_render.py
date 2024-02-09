@@ -14,6 +14,7 @@ from yaml.parser import ParserError
 from .. import __version__, api
 from ..conda_interface import ArgumentParser, add_parser_channels, cc_conda_build
 from ..config import get_channel_urls, get_or_merge_config
+from ..deprecations import deprecated
 from ..utils import LoggingContext
 from ..variants import get_package_variants, set_language_env_vars
 
@@ -189,7 +190,8 @@ def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:
     return parser, parser.parse_args(args)
 
 
-def execute(args: Sequence[str] | None = None, print_results: bool = True):
+@deprecated.argument("24.1.1", "24.3.0", "print_results")
+def execute(args: Sequence[str] | None = None) -> int:
     _, parsed = parse_args(args)
 
     config = get_or_merge_config(None, **parsed.__dict__)
@@ -221,24 +223,23 @@ def execute(args: Sequence[str] | None = None, print_results: bool = True):
             f"Only one will be written to the file you specified ({parsed.file})."
         )
 
-    if print_results:
-        if parsed.output:
-            with LoggingContext(logging.CRITICAL + 1):
-                paths = api.get_output_file_paths(metadata_tuples, config=config)
-                print("\n".join(sorted(paths)))
-            if parsed.file:
-                m = metadata_tuples[-1][0]
-                api.output_yaml(m, parsed.file, suppress_outputs=True)
-        else:
-            logging.basicConfig(level=logging.INFO)
-            for m, _, _ in metadata_tuples:
-                print("--------------")
-                print("Hash contents:")
-                print("--------------")
-                pprint(m.get_hash_contents())
-                print("----------")
-                print("meta.yaml:")
-                print("----------")
-                print(api.output_yaml(m, parsed.file, suppress_outputs=True))
+    if parsed.output:
+        with LoggingContext(logging.CRITICAL + 1):
+            paths = api.get_output_file_paths(metadata_tuples, config=config)
+            print("\n".join(sorted(paths)))
+        if parsed.file:
+            m = metadata_tuples[-1][0]
+            api.output_yaml(m, parsed.file, suppress_outputs=True)
     else:
-        return metadata_tuples
+        logging.basicConfig(level=logging.INFO)
+        for m, _, _ in metadata_tuples:
+            print("--------------")
+            print("Hash contents:")
+            print("--------------")
+            pprint(m.get_hash_contents())
+            print("----------")
+            print("meta.yaml:")
+            print("----------")
+            print(api.output_yaml(m, parsed.file, suppress_outputs=True))
+
+    return 0

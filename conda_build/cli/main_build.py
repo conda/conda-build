@@ -522,7 +522,7 @@ def check_action(recipe, config):
     return api.check(recipe, config=config)
 
 
-def execute(args: Sequence[str] | None = None):
+def execute(args: Sequence[str] | None = None) -> int:
     _, parsed = parse_args(args)
     config = get_or_merge_config(None, **parsed.__dict__)
     build.check_external()
@@ -535,21 +535,22 @@ def execute(args: Sequence[str] | None = None):
 
     if "purge" in parsed.recipe:
         build.clean_build(config)
-        return
+        return 0
 
     if "purge-all" in parsed.recipe:
         build.clean_build(config)
         config.clean_pkgs()
-        return
+        return 0
 
-    outputs = None
     if parsed.output:
         config.verbose = False
         config.quiet = True
         config.debug = False
-        outputs = [output_action(recipe, config) for recipe in parsed.recipe]
-    elif parsed.test:
-        outputs = []
+        for recipe in parsed.recipe:
+            output_action(recipe, config)
+        return 0
+
+    if parsed.test:
         failed_recipes = []
         recipes = chain.from_iterable(
             glob(abspath(recipe), recursive=True) if "*" in recipe else [recipe]
@@ -571,11 +572,13 @@ def execute(args: Sequence[str] | None = None):
         else:
             print("All tests passed")
     elif parsed.source:
-        outputs = [source_action(recipe, config) for recipe in parsed.recipe]
+        for recipe in parsed.recipe:
+            source_action(recipe, config)
     elif parsed.check:
-        outputs = [check_action(recipe, config) for recipe in parsed.recipe]
+        for recipe in parsed.recipe:
+            check_action(recipe, config)
     else:
-        outputs = api.build(
+        api.build(
             parsed.recipe,
             post=parsed.post,
             test_run_post=parsed.test_run_post,
@@ -588,6 +591,7 @@ def execute(args: Sequence[str] | None = None):
             cache_dir=parsed.cache_dir,
         )
 
-    if not parsed.output and len(utils.get_build_folders(config.croot)) > 0:
+    if utils.get_build_folders(config.croot):
         build.print_build_intermediate_warning(config)
-    return outputs
+
+    return 0
