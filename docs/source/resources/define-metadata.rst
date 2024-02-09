@@ -1769,11 +1769,11 @@ to load data from other files. These are ``load_setup_py_data``, ``load_file_reg
       name: foo
       version: {{ version }}
 
-* ``load_file_regex(load_file, regex_pattern, from_recipe_dir=False) -> re.Match | None``: Search a file for a regular expression returning the
+* ``load_file_regex``: Search a file for a regular expression returning the
   first match as a Python `re.Match
   <https://docs.python.org/3/library/re.html#match-objects>`_ object.
 
-  For example::
+  For example, using ``load_file_regex(load_file, regex_pattern, from_recipe_dir=False) -> re.Match | None``::
 
     {% set version_match = load_file_regex(
       load_file="conda_package_streaming/__init__.py",
