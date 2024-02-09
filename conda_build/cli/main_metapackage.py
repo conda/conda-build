@@ -108,7 +108,9 @@ command line with the conda metapackage command.
     return parser, parser.parse_args(args)
 
 
-def execute(args: Sequence[str] | None = None):
+def execute(args: Sequence[str] | None = None) -> int:
     _, args = parse_args(args)
     channel_urls = args.__dict__.get("channel") or args.__dict__.get("channels") or ()
     api.create_metapackage(channel_urls=channel_urls, **args.__dict__)
+
+    return 0

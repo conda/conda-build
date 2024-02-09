@@ -120,7 +120,7 @@ all.""",
     return parser, parser.parse_args(args)
 
 
-def execute(args: Sequence[str] | None = None):
+def execute(args: Sequence[str] | None = None) -> int:
     _, parsed = parse_args(args)
     files = parsed.files
     del parsed.__dict__["files"]
@@ -128,3 +128,5 @@ def execute(args: Sequence[str] | None = None):
     for f in files:
         f = abspath(expanduser(f))
         api.convert(f, **parsed.__dict__)
+
+    return 0

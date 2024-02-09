@@ -184,7 +184,7 @@ Tools for investigating conda channels.
     return parser, parser.parse_args(args)
 
 
-def execute(args: Sequence[str] | None = None):
+def execute(args: Sequence[str] | None = None) -> int:
     parser, parsed = parse_args(args)
 
     if not parsed.subcommand:
@@ -221,3 +221,5 @@ def execute(args: Sequence[str] | None = None):
         pprint(api.inspect_hash_inputs(parsed.packages))
     else:
         parser.error(f"Unrecognized subcommand: {parsed.subcommand}.")
+
+    return 0

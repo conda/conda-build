@@ -46,7 +46,7 @@ options available.
     return parser, parser.parse_args(args)
 
 
-def execute(args: Sequence[str] | None = None):
+def execute(args: Sequence[str] | None = None) -> int:
     parser, parsed = parse_args(args)
     config = Config(**parsed.__dict__)
 
@@ -62,3 +62,5 @@ def execute(args: Sequence[str] | None = None):
         version=parsed.version,
         config=config,
     )
+
+    return 0
