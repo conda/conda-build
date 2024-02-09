@@ -93,7 +93,9 @@ skip_covered = true
 omit = ["conda_build/skeletons/_example_skeleton.py"]
 
 [tool.ruff]
-pycodestyle = {max-line-length = 120}
+target-version = "py38"
+
+[tool.ruff.lint]
 # E, W = pycodestyle errors and warnings
 # F = pyflakes
 # I = isort
@@ -105,7 +107,7 @@ select = ["E", "W", "F", "I", "UP", "ISC"]
 # E722 do not use bare 'except'
 # E731 do not assign a lambda expression, use a def
 ignore = ["E402", "E722", "E731"]
-target-version = "py38"
+pycodestyle = {max-line-length = 120}
 pydocstyle = {convention = "pep257"}
 
 [tool.pytest.ini_options]
