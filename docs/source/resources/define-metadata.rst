@@ -1756,11 +1756,11 @@ retrieve a fully rendered ``meta.yaml``, use the
 Loading data from other files
 -----------------------------
 
-There are several additional functions available to Jinja2 which can be used
+There are several additional functions available to Jinja2, which can be used
 to load data from other files. These are ``load_setup_py_data``, ``load_file_regex``,
 ``load_file_data``, and ``load_str_data``.
 
-* ``load_setup_py_data``: Loads data from a ``setup.py`` file. This can be useful to
+* ``load_setup_py_data``: Load data from a ``setup.py`` file. This can be useful to
   obtain metadata such as the version from a project's ``setup.py`` file. For example::
 
     {% set data = load_setup_py_data() %}
@@ -1783,9 +1783,9 @@ to load data from other files. These are ``load_setup_py_data``, ``load_file_reg
     package:
       version: {{ version }}
 
-* ``load_file_data``: You can also parse JSON, TOML, or YAML files and load data
-  from them. For example you can use this to load poetry configurations from
-  ``pyproject.toml``. This is especially useful as ``setup.py`` is no longer the
+* ``load_file_data``: Parse JSON, TOML, or YAML files and load data
+  from them. For example, you can use this to load poetry configurations from
+  ``pyproject.toml``. This is especially useful, as ``setup.py`` is no longer the
   only standard way to define project metadata (see
   `PEP 517 <https://peps.python.org/pep-0517>`_ and
   `PEP 518 <https://peps.python.org/pep-0518>`_)::
@@ -1796,7 +1796,7 @@ to load data from other files. These are ``load_setup_py_data``, ``load_file_reg
       name: {{ poetry.get('name') }}
       version: {{ poetry.get('version') }}
 
-* ``load_str_data``: Loads and parses data from a string. This is similar to
+* ``load_str_data``: Load and parse data from a string. This is similar to
   ``load_file_data``, but it takes a string instead of a file as an argument.
   This may seem pointless at first, but you can use this to pass more complex
   data structures by environment variables. For example::
