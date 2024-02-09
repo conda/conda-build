@@ -46,7 +46,7 @@ def ensure_binary(
     try:
         return lief.parse(str(file))
     except BaseException:
-        print(f"WARNING: liefldd: failed to ensure_binary({file})")
+        print(f"WARNING: liefldd: failed to ensure_binary({file!r})")
         return None
 
 
