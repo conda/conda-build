@@ -102,8 +102,9 @@ target-version = "py38"
 # UP = pyupgrade
 # ISC = flake8-implicit-str-concat
 # TCH = flake8-type-checking
+# T10 = flake8-debugger
 # see also https://docs.astral.sh/ruff/rules/
-select = ["E", "W", "F", "I", "UP", "ISC", "TCH"]
+select = ["E", "W", "F", "I", "UP", "ISC", "TCH", "T10"]
 # E402 module level import not at top of file
 # E722 do not use bare 'except'
 # E731 do not assign a lambda expression, use a def
