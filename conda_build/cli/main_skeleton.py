@@ -7,12 +7,14 @@ import logging
 import os
 import pkgutil
 import sys
-from argparse import Namespace
-from typing import Sequence
+from typing import TYPE_CHECKING, Sequence
 
 from .. import api
 from ..conda_interface import ArgumentParser
 from ..config import Config
+
+if TYPE_CHECKING:
+    from argparse import Namespace
 
 thisdir = os.path.dirname(os.path.abspath(__file__))
 logging.basicConfig(level=logging.INFO)

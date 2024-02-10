@@ -4,13 +4,15 @@ from __future__ import annotations
 
 import logging
 import sys
-from argparse import ArgumentParser
-from typing import Sequence
+from typing import TYPE_CHECKING, Sequence
 
 from .. import api
 from ..utils import on_win
 from . import validators as valid
 from .main_render import get_render_parser
+
+if TYPE_CHECKING:
+    from argparse import ArgumentParser
 
 logging.basicConfig(level=logging.INFO)
 

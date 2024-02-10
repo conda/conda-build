@@ -41,7 +41,7 @@ from os.path import (
 )
 from pathlib import Path
 from threading import Thread
-from typing import Iterable
+from typing import TYPE_CHECKING, Iterable
 
 import conda_package_handling.api
 import filelock
@@ -55,7 +55,6 @@ from conda.base.constants import (
 )
 from conda.core.prefix_data import PrefixData
 from conda.models.dist import Dist
-from conda.models.records import PrefixRecord
 
 from .conda_interface import (
     CondaHTTPError,
@@ -78,6 +77,9 @@ from .conda_interface import (
 from .conda_interface import rm_rf as _rm_rf
 from .deprecations import deprecated
 from .exceptions import BuildLockError
+
+if TYPE_CHECKING:
+    from conda.models.records import PrefixRecord
 
 on_win = sys.platform == "win32"
 on_mac = sys.platform == "darwin"

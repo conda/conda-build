@@ -2,13 +2,15 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 from conda_build import jinja_context
 from conda_build.utils import HashableDict
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def test_pin_default(testing_metadata, mocker):
