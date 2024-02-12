@@ -107,8 +107,11 @@ else:
     "24.1.0",
     addendum="Use `conda_build.os_utils.liefldd.codefile_class` instead.",
 )
-def codefile_type_liefldd(*args, **kwargs) -> str | None:
-    codefile = codefile_class(*args, **kwargs)
+def codefile_type_liefldd(
+    path: str | os.PathLike | Path,
+    skip_symlinks: bool = True,
+) -> str | None:
+    codefile = codefile_class(path, skip_symlinks=skip_symlinks)
     return codefile.__name__ if codefile else None
 
 
@@ -537,7 +540,8 @@ def inspect_linkages_lief(
                     while tmp_filename:
                         if (
                             not parent_exe_dirname
-                            and codefile_class(tmp_filename) == EXEfile
+                            and codefile_class(tmp_filename, skip_symlinks=True)
+                            == EXEfile
                         ):
                             parent_exe_dirname = os.path.dirname(tmp_filename)
                         tmp_filename = parents_by_filename[tmp_filename]
@@ -633,7 +637,8 @@ def get_linkages(
     result_pyldd = []
     debug = False
     if not have_lief or debug:
-        if codefile_class(filename) not in (DLLfile, EXEfile):
+        codefile = codefile_class(filename, skip_symlinks=True)
+        if codefile not in (DLLfile, EXEfile):
             result_pyldd = inspect_linkages_pyldd(
                 filename,
                 resolve_filenames=resolve_filenames,
@@ -645,7 +650,7 @@ def get_linkages(
                 return result_pyldd
         else:
             print(
-                f"WARNING: failed to get_linkages, codefile_class('{filename}')={codefile_class(filename)}"
+                f"WARNING: failed to get_linkages, codefile_class('{filename}', True)={codefile}"
             )
             return {}
     result_lief = inspect_linkages_lief(

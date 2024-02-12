@@ -374,7 +374,7 @@ def inspect_objects(
         info = []
         for f in obj_files:
             path = join(prefix, f)
-            codefile = codefile_class(path)
+            codefile = codefile_class(path, skip_symlinks=True)
             if codefile == machofile:
                 info.append(
                     {

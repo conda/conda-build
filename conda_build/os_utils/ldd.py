@@ -121,11 +121,17 @@ def get_package_files(
 def get_package_obj_files(
     prec: PrefixRecord, prefix: str | os.PathLike | Path
 ) -> list[str]:
-    return [file for file in prec["files"] if codefile_class(Path(prefix, file))]
+    return [
+        file
+        for file in prec["files"]
+        if codefile_class(Path(prefix, file), skip_symlinks=True)
+    ]
 
 
 @lru_cache(maxsize=None)
 def get_untracked_obj_files(prefix: str | os.PathLike | Path) -> list[str]:
     return [
-        file for file in untracked(str(prefix)) if codefile_class(Path(prefix, file))
+        file
+        for file in untracked(str(prefix))
+        if codefile_class(Path(prefix, file), skip_symlinks=True)
     ]
