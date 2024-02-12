@@ -5,12 +5,12 @@ from __future__ import annotations
 import os
 import subprocess
 import sys
+from typing import TYPE_CHECKING
 
 import pytest
 from conda import __version__ as conda_version
 from conda.base.context import context
 from packaging.version import Version
-from pytest import MonkeyPatch
 
 from conda_build import api
 from conda_build.config import Config
@@ -27,6 +27,9 @@ from conda_build.utils import DEFAULT_SUBDIRS
 from conda_build.variants import DEFAULT_VARIANTS
 
 from .utils import metadata_dir, metadata_path, thisdir
+
+if TYPE_CHECKING:
+    from pytest import MonkeyPatch
 
 
 def test_uses_vcs_in_metadata(testing_workdir, testing_metadata):

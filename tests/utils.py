@@ -6,13 +6,16 @@ import os
 import shlex
 import sys
 from pathlib import Path
-from typing import Generator
+from typing import TYPE_CHECKING
 
 from conda.base.context import context, reset_context
 from conda.common.compat import on_mac
 
 from conda_build.conda_interface import cc_conda_build
 from conda_build.metadata import MetaData
+
+if TYPE_CHECKING:
+    from typing import Generator
 
 tests_path = Path(__file__).parent
 metadata_path = tests_path / "test-recipes" / "metadata"

@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import argparse
 import logging
-from argparse import Namespace
 from pprint import pprint
-from typing import Sequence
+from typing import TYPE_CHECKING
 
 import yaml
 from yaml.parser import ParserError
@@ -17,6 +16,10 @@ from ..config import get_channel_urls, get_or_merge_config
 from ..deprecations import deprecated
 from ..utils import LoggingContext
 from ..variants import get_package_variants, set_language_env_vars
+
+if TYPE_CHECKING:
+    from argparse import Namespace
+    from typing import Sequence
 
 log = logging.getLogger(__name__)
 

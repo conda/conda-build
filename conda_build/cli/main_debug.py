@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import sys
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING
 
 from .. import api
 from ..utils import on_win
@@ -13,6 +13,7 @@ from .main_render import get_render_parser
 
 if TYPE_CHECKING:
     from argparse import ArgumentParser
+    from typing import Sequence
 
 logging.basicConfig(level=logging.INFO)
 

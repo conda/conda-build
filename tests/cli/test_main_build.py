@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pytest
-from pytest import FixtureRequest, MonkeyPatch
 
 from conda_build import api
 from conda_build.cli import main_build, main_render
@@ -25,6 +24,7 @@ from ..utils import metadata_dir
 from ..utils import reset_config as _reset_config
 
 if TYPE_CHECKING:
+    from pytest import FixtureRequest, MonkeyPatch
     from pytest_mock import MockerFixture
 
     from conda_build.metadata import MetaData

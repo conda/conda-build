@@ -7,7 +7,7 @@ import subprocess
 from functools import lru_cache
 from os.path import basename
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING
 
 from ..conda_interface import untracked
 from ..utils import on_linux, on_mac
@@ -16,6 +16,7 @@ from .pyldd import codefile_class, inspect_linkages, machofile
 
 if TYPE_CHECKING:
     import os
+    from typing import Iterable
 
     from conda.models.records import PrefixRecord
 

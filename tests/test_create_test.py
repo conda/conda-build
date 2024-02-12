@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -13,6 +13,9 @@ from conda_build.create_test import (
     create_py_files,
     create_r_files,
 )
+
+if TYPE_CHECKING:
+    from typing import Any
 
 
 @pytest.mark.parametrize(

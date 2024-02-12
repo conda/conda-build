@@ -32,7 +32,7 @@ from os.path import (
 )
 from pathlib import Path
 from subprocess import CalledProcessError, call, check_output
-from typing import TYPE_CHECKING, Literal
+from typing import TYPE_CHECKING
 
 from conda.core.prefix_data import PrefixData
 from conda.models.records import PrefixRecord
@@ -65,6 +65,8 @@ from .os_utils.pyldd import (
 from .utils import on_mac, on_win, prefix_files
 
 if TYPE_CHECKING:
+    from typing import Literal
+
     from .metadata import MetaData
 
 filetypes_for_platform = {

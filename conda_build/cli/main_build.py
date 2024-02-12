@@ -6,23 +6,17 @@ import argparse
 import logging
 import sys
 import warnings
-from argparse import Namespace
 from glob import glob
 from itertools import chain
 from os.path import abspath, expanduser, expandvars
 from pathlib import Path
-from typing import Sequence
+from typing import TYPE_CHECKING
 
 from conda.auxlib.ish import dals
 from conda.common.io import dashlist
 
 from .. import api, build, source, utils
-from ..conda_interface import (
-    ArgumentParser,
-    add_parser_channels,
-    binstar_upload,
-    cc_conda_build,
-)
+from ..conda_interface import add_parser_channels, binstar_upload, cc_conda_build
 from ..config import (
     get_channel_urls,
     get_or_merge_config,
@@ -31,6 +25,12 @@ from ..config import (
 from ..utils import LoggingContext
 from .actions import KeyValueAction
 from .main_render import get_render_parser
+
+if TYPE_CHECKING:
+    from argparse import Namespace
+    from typing import Sequence
+
+    from ..conda_interface import ArgumentParser
 
 
 def parse_args(args: Sequence[str] | None) -> tuple[ArgumentParser, Namespace]:

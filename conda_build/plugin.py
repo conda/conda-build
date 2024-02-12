@@ -2,9 +2,12 @@
 # SPDX-License-Identifier: BSD-3-Clause
 from __future__ import annotations
 
-from typing import Sequence
+from typing import TYPE_CHECKING
 
 import conda.plugins
+
+if TYPE_CHECKING:
+    from typing import Sequence
 
 
 # lazy-import to avoid nasty import-time side effects when not using conda-build

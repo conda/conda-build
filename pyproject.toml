@@ -111,6 +111,7 @@ select = ["E", "W", "F", "I", "UP", "ISC", "TCH", "T10", "FA"]
 # E731 do not assign a lambda expression, use a def
 ignore = ["E402", "E722", "E731"]
 pycodestyle = {max-line-length = 120}
+flake8-type-checking = {exempt-modules = [], strict = true}
 
 [tool.pytest.ini_options]
 minversion = 3.0

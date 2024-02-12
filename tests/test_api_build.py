@@ -29,7 +29,6 @@ from binstar_client.errors import NotFound
 from conda.common.compat import on_linux, on_mac, on_win
 from conda.exceptions import ClobberError, CondaMultiError
 from conda_index.api import update_index
-from pytest import FixtureRequest, MonkeyPatch
 
 from conda_build import __version__, api, exceptions
 from conda_build.conda_interface import (
@@ -71,6 +70,7 @@ from .utils import (
 )
 
 if TYPE_CHECKING:
+    from pytest import FixtureRequest, MonkeyPatch
     from pytest_mock import MockerFixture
 
     from conda_build.metadata import MetaData

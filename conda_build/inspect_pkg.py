@@ -11,7 +11,7 @@ from operator import itemgetter
 from os.path import abspath, basename, dirname, exists, join, normcase
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Iterable, Literal
+from typing import TYPE_CHECKING
 
 from conda.api import Solver
 from conda.core.index import get_index
@@ -39,6 +39,9 @@ from .utils import (
     on_win,
     package_has_file,
 )
+
+if TYPE_CHECKING:
+    from typing import Iterable, Literal
 
 log = get_logger(__name__)
 

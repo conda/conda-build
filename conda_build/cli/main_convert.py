@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import logging
 from os.path import abspath, expanduser
-from typing import TYPE_CHECKING, Sequence
+from typing import TYPE_CHECKING
 
 from .. import api
 from ..conda_interface import ArgumentParser
 
 if TYPE_CHECKING:
     from argparse import Namespace
+    from typing import Sequence
 
 logging.basicConfig(level=logging.INFO)
 
