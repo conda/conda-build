@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import argparse
 import logging
-from argparse import Namespace
-from typing import Sequence
+from typing import TYPE_CHECKING
 
 from .. import api
 from ..conda_interface import ArgumentParser, add_parser_channels, binstar_upload
+
+if TYPE_CHECKING:
+    from argparse import Namespace
+    from typing import Sequence
 
 logging.basicConfig(level=logging.INFO)
 

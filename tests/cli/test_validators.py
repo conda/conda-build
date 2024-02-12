@@ -1,8 +1,9 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import os
 from argparse import ArgumentError
-from typing import Union
 
 import pytest
 
@@ -31,7 +32,7 @@ from conda_build.cli import validators as valid
     ],
 )
 def test_validate_is_conda_pkg_or_recipe_dir(
-    file_or_folder: str, expected: Union[str, bool], is_dir: bool, create: bool, tmpdir
+    file_or_folder: str, expected: str | bool, is_dir: bool, create: bool, tmpdir
 ):
     if create:
         file_or_folder = os.path.join(tmpdir, file_or_folder)

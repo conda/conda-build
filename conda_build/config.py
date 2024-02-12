@@ -13,7 +13,7 @@ import shutil
 import time
 from collections import namedtuple
 from os.path import abspath, expanduser, expandvars, join
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from .conda_interface import (
     binstar_upload,
@@ -32,6 +32,9 @@ from .utils import (
     rm_rf,
 )
 from .variants import get_default_variant
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 invocation_time = ""
 

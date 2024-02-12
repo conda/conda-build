@@ -4,15 +4,18 @@ from __future__ import annotations
 
 import logging
 import sys
-from argparse import Namespace
 from os.path import expanduser
 from pprint import pprint
-from typing import Sequence
+from typing import TYPE_CHECKING
 
 from conda.base.context import context, determine_target_prefix
 
 from .. import api
 from ..conda_interface import ArgumentParser, add_parser_prefix
+
+if TYPE_CHECKING:
+    from argparse import Namespace
+    from typing import Sequence
 
 logging.basicConfig(level=logging.INFO)
 

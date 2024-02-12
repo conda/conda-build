@@ -13,7 +13,7 @@ import warnings
 from collections import OrderedDict
 from functools import lru_cache
 from os.path import isfile, join
-from typing import Literal, overload
+from typing import TYPE_CHECKING, overload
 
 from bs4 import UnicodeDammit
 
@@ -32,6 +32,9 @@ from .utils import (
     insert_variant_versions,
     on_win,
 )
+
+if TYPE_CHECKING:
+    from typing import Literal
 
 try:
     import yaml

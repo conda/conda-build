@@ -18,6 +18,7 @@ from contextlib import nullcontext
 from glob import glob
 from pathlib import Path
 from shutil import which
+from typing import TYPE_CHECKING
 
 # for version
 import conda
@@ -28,8 +29,6 @@ from binstar_client.errors import NotFound
 from conda.common.compat import on_linux, on_mac, on_win
 from conda.exceptions import ClobberError, CondaMultiError
 from conda_index.api import update_index
-from pytest import FixtureRequest, MonkeyPatch
-from pytest_mock import MockerFixture
 
 from conda_build import __version__, api, exceptions
 from conda_build.conda_interface import (
@@ -46,7 +45,6 @@ from conda_build.exceptions import (
     OverDependingError,
     OverLinkingError,
 )
-from conda_build.metadata import MetaData
 from conda_build.os_utils.external import find_executable
 from conda_build.render import finalize_metadata
 from conda_build.utils import (
@@ -70,6 +68,12 @@ from .utils import (
     metadata_path,
     reset_config,
 )
+
+if TYPE_CHECKING:
+    from pytest import FixtureRequest, MonkeyPatch
+    from pytest_mock import MockerFixture
+
+    from conda_build.metadata import MetaData
 
 
 def represent_ordereddict(dumper, data):

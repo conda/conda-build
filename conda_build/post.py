@@ -32,7 +32,7 @@ from os.path import (
 )
 from pathlib import Path
 from subprocess import CalledProcessError, call, check_output
-from typing import Literal
+from typing import TYPE_CHECKING
 
 from conda.core.prefix_data import PrefixData
 from conda.models.records import PrefixRecord
@@ -46,7 +46,6 @@ from .conda_interface import (
 )
 from .exceptions import OverDependingError, OverLinkingError, RunPathError
 from .inspect_pkg import which_package
-from .metadata import MetaData
 from .os_utils import external, macho
 from .os_utils.liefldd import (
     get_exports_memoized,
@@ -64,6 +63,11 @@ from .os_utils.pyldd import (
     machofile,
 )
 from .utils import on_mac, on_win, prefix_files
+
+if TYPE_CHECKING:
+    from typing import Literal
+
+    from .metadata import MetaData
 
 filetypes_for_platform = {
     "win": (DLLfile, EXEfile),

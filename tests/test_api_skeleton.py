@@ -6,12 +6,12 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 import ruamel.yaml
 
 from conda_build import api
-from conda_build.config import Config
 from conda_build.skeletons.pypi import (
     clean_license_name,
     convert_to_flat_list,
@@ -27,6 +27,10 @@ from conda_build.skeletons.pypi import (
 )
 from conda_build.utils import on_win
 from conda_build.version import _parse as parse_version
+
+if TYPE_CHECKING:
+    from conda_build.config import Config
+
 
 SYMPY_URL = (
     "https://files.pythonhosted.org/packages/7d/23/70fa970c07f0960f7543af982d2554be805e1034b9dcee9cb3082ce80f80/sympy-1.10.tar.gz"

@@ -5,10 +5,9 @@ from __future__ import annotations
 import os
 import re
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
-from pytest import FixtureRequest, MonkeyPatch
-from pytest_mock import MockerFixture
 
 from conda_build import api
 from conda_build.cli import main_build, main_render
@@ -18,12 +17,17 @@ from conda_build.config import (
     zstd_compression_level_default,
 )
 from conda_build.exceptions import DependencyNeedsBuildingError
-from conda_build.metadata import MetaData
 from conda_build.os_utils.external import find_executable
 from conda_build.utils import get_build_folders, on_win, package_has_file
 
 from ..utils import metadata_dir
 from ..utils import reset_config as _reset_config
+
+if TYPE_CHECKING:
+    from pytest import FixtureRequest, MonkeyPatch
+    from pytest_mock import MockerFixture
+
+    from conda_build.metadata import MetaData
 
 
 @pytest.mark.sanity

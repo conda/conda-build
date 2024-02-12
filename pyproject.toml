@@ -93,20 +93,25 @@ skip_covered = true
 omit = ["conda_build/skeletons/_example_skeleton.py"]
 
 [tool.ruff]
-pycodestyle = {max-line-length = 120}
+target-version = "py38"
+
+[tool.ruff.lint]
 # E, W = pycodestyle errors and warnings
 # F = pyflakes
 # I = isort
 # UP = pyupgrade
 # ISC = flake8-implicit-str-concat
+# TCH = flake8-type-checking
+# T10 = flake8-debugger
+# FA = flake8-future-annotations
 # see also https://docs.astral.sh/ruff/rules/
-select = ["E", "W", "F", "I", "UP", "ISC"]
+select = ["E", "W", "F", "I", "UP", "ISC", "TCH", "T10", "FA"]
 # E402 module level import not at top of file
 # E722 do not use bare 'except'
 # E731 do not assign a lambda expression, use a def
 ignore = ["E402", "E722", "E731"]
-target-version = "py38"
-pydocstyle = {convention = "pep257"}
+pycodestyle = {max-line-length = 120}
+flake8-type-checking = {exempt-modules = [], strict = true}
 
 [tool.pytest.ini_options]
 minversion = 3.0
