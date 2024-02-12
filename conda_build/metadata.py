@@ -106,6 +106,59 @@ numpy_compatible_re = re.compile(r"pin_\w+\([\'\"]numpy[\'\"]")
 used_vars_cache = {}
 
 
+def _get_package_dependent_selectors(config: Config) -> dict[str, bool]:
+    """Get package-dependent selectors got get_selectors below.
+
+    Derives selectors from the config and variants to be injected
+    into the Jinja environment prior to templating.
+
+    Args:
+        config (Config): The config object
+
+    Returns:
+        dict[str, bool]: Dictionary of selectors for Jinja
+    """
+    defaults = variants.get_default_variant(config)
+    py = config.variant.get("python", defaults["python"])
+    # there are times when python comes in as a tuple
+    if not hasattr(py, "split"):
+        py = py[0]
+    # go from "3.6 *_cython" -> "36"
+    # or from "3.6.9" -> "36"
+    py_major, py_minor, *_ = py.split(" ")[0].split(".")
+    py = int(f"{py_major}{py_minor}")
+    d = dict(
+        py=py,
+        py3k=bool(py_major == "3"),
+        py2k=bool(py_major == "2"),
+        py26=bool(py == 26),
+        py27=bool(py == 27),
+        py33=bool(py == 33),
+        py34=bool(py == 34),
+        py35=bool(py == 35),
+        py36=bool(py == 36),
+    )
+
+    np = config.variant.get("numpy")
+    if not np:
+        np = defaults["numpy"]
+        if config.verbose:
+            utils.get_logger(__name__).warn(
+                "No numpy version specified in conda_build_config.yaml.  "
+                "Falling back to default numpy value of {}".format(defaults["numpy"])
+            )
+    d["np"] = int("".join(np.split(".")[:2]))
+
+    pl = config.variant.get("perl", defaults["perl"])
+    d["pl"] = pl
+
+    lua = config.variant.get("lua", defaults["lua"])
+    d["lua"] = lua
+    d["luajit"] = bool(lua[0] == "2")
+
+    return d
+
+
 def get_selectors(config: Config) -> dict[str, bool]:
     """Aggregates selectors for use in recipe templating.
 
@@ -151,48 +204,9 @@ def get_selectors(config: Config) -> dict[str, bool]:
         if arch == "32":
             d["x86"] = plat.endswith(("-32", "-64"))
 
-    defaults = variants.get_default_variant(config)
-    py = config.variant.get("python", defaults["python"])
-    # there are times when python comes in as a tuple
-    if not hasattr(py, "split"):
-        py = py[0]
-    # go from "3.6 *_cython" -> "36"
-    # or from "3.6.9" -> "36"
-    py_major, py_minor, *_ = py.split(" ")[0].split(".")
-    py = int(f"{py_major}{py_minor}")
-
     d["build_platform"] = config.build_subdir
 
-    d.update(
-        dict(
-            py=py,
-            py3k=bool(py_major == "3"),
-            py2k=bool(py_major == "2"),
-            py26=bool(py == 26),
-            py27=bool(py == 27),
-            py33=bool(py == 33),
-            py34=bool(py == 34),
-            py35=bool(py == 35),
-            py36=bool(py == 36),
-        )
-    )
-
-    np = config.variant.get("numpy")
-    if not np:
-        np = defaults["numpy"]
-        if config.verbose:
-            utils.get_logger(__name__).warn(
-                "No numpy version specified in conda_build_config.yaml.  "
-                "Falling back to default numpy value of {}".format(defaults["numpy"])
-            )
-    d["np"] = int("".join(np.split(".")[:2]))
-
-    pl = config.variant.get("perl", defaults["perl"])
-    d["pl"] = pl
-
-    lua = config.variant.get("lua", defaults["lua"])
-    d["lua"] = lua
-    d["luajit"] = bool(lua[0] == "2")
+    d.update(_get_package_dependent_selectors(config))
 
     for feature, value in feature_list:
         d[feature] = value
