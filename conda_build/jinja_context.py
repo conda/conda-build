@@ -1,5 +1,7 @@
 # Copyright (C) 2014 Anaconda, Inc
 # SPDX-License-Identifier: BSD-3-Clause
+from __future__ import annotations
+
 import datetime
 import json
 import os
@@ -8,7 +10,7 @@ import re
 import time
 from functools import partial
 from io import StringIO, TextIOBase
-from typing import IO, Any, Optional
+from typing import IO, Any
 from warnings import warn
 
 import jinja2
@@ -671,7 +673,7 @@ def _load_data(stream: IO, fmt: str, *args, **kwargs) -> Any:
 
 def load_file_data(
     filename: str,
-    fmt: Optional[str] = None,
+    fmt: str | None = None,
     *args,
     config=None,
     from_recipe_dir=False,

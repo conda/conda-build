@@ -5,6 +5,7 @@ ci:
 # ignore patches/diffs since slight reformatting can break them
 exclude: |
   (?x)^(
+    conda_build/version.py |
     tests/(
       archives |
       index_data |
@@ -47,7 +48,6 @@ repos:
       - id: insert-license
         files: \.py$
         args: [--license-filepath, .github/disclaimer.txt, --no-extra-eol]
-        exclude: ^conda_build/version.py
   - repo: https://github.com/asottile/blacken-docs
     rev: 1.16.0
     hooks:
