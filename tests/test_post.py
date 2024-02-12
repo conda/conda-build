@@ -10,7 +10,13 @@ from pathlib import Path
 import pytest
 
 from conda_build import api, post
-from conda_build.utils import get_site_packages, on_win, package_has_file
+from conda_build.utils import (
+    get_site_packages,
+    on_linux,
+    on_mac,
+    on_win,
+    package_has_file,
+)
 
 from .utils import add_mangling, metadata_dir
 
@@ -148,3 +154,26 @@ def test_menuinst_validation_fails_bad_json(testing_config, caplog, tmp_path):
     assert "Found 'Menu/*.json' files but couldn't validate:" not in captured_text
     assert "not a valid menuinst JSON document" in captured_text
     assert "JSONDecodeError" in captured_text
+
+
+@pytest.mark.skipif(on_win, reason="rpath fixup not done on Windows.")
+def test_rpath_symlink(mocker, testing_config, variants_conda_build_sysroot):
+    if on_linux:
+        func_name = "mk_relative_linux"
+    elif on_mac:
+        func_name = "mk_relative_osx"
+    mk_relative = mocker.patch(
+        f"conda_build.post.{func_name}",
+        side_effect=getattr(post, func_name),
+    )
+    api.build(
+        os.path.join(metadata_dir, "_rpath_symlink"),
+        config=testing_config,
+        variants={
+            "rpaths_patcher": ["patchelf", "LIEF"],
+            **variants_conda_build_sysroot,
+        },
+        activate=True,
+    )
+    # Should only be called on the actual binary, not its symlinks. (once per variant)
+    assert mk_relative.call_count == 2
