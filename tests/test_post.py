@@ -157,7 +157,7 @@ def test_menuinst_validation_fails_bad_json(testing_config, caplog, tmp_path):
 
 
 @pytest.mark.skipif(on_win, reason="rpath fixup not done on Windows.")
-def test_rpath_symlink(mocker, testing_config, variants_conda_build_sysroot):
+def test_rpath_symlink(mocker, testing_config):
     if on_linux:
         func_name = "mk_relative_linux"
     elif on_mac:
@@ -169,10 +169,7 @@ def test_rpath_symlink(mocker, testing_config, variants_conda_build_sysroot):
     api.build(
         os.path.join(metadata_dir, "_rpath_symlink"),
         config=testing_config,
-        variants={
-            "rpaths_patcher": ["patchelf", "LIEF"],
-            **variants_conda_build_sysroot,
-        },
+        variants={"rpaths_patcher": ["patchelf", "LIEF"]},
         activate=True,
     )
     # Should only be called on the actual binary, not its symlinks. (once per variant)
