@@ -119,6 +119,7 @@ html_theme_options = {
     # Navbar icon links
     "navbar_start": ["navbar-logo"],
     "use_edit_page_button": True,
+    "goatcounter_url": "https://docs-conda-io.goatcounter.com/count",
     "icon_links": [
         {
             "name": "GitHub",
@@ -146,6 +147,7 @@ html_context = {
     "github_repo": "conda-build",
     "github_version": "main",
     "doc_path": "docs/source",
+    "goatcounter_dashboard_url": "https://docs-conda-io.goatcounter.com",
 }
 
 html_short_title = "conda-build"

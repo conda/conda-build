@@ -6,7 +6,6 @@ import hashlib
 import json
 import os
 import struct
-import sys
 import threading
 from collections.abc import Hashable
 from fnmatch import fnmatch
@@ -14,14 +13,13 @@ from functools import partial
 from pathlib import Path
 from subprocess import PIPE, Popen
 
-from ..deprecations import deprecated
+from ..utils import on_mac, on_win, rec_glob
 from .external import find_executable
 
 # lief cannot handle files it doesn't know about gracefully
 # TODO :: Remove all use of pyldd
 # Currently we verify the output of each against the other
 from .pyldd import DLLfile, EXEfile, elffile, machofile
-from .pyldd import codefile_type as _codefile_type
 from .pyldd import inspect_linkages as inspect_linkages_pyldd
 
 try:
@@ -31,11 +29,6 @@ try:
     have_lief = True
 except ImportError:
     have_lief = False
-
-
-@deprecated("3.28.0", "24.1.0", addendum="Use `isinstance(value, str)` instead.")
-def is_string(s):
-    return isinstance(s, str)
 
 
 # Some functions can operate on either file names
@@ -100,35 +93,6 @@ if have_lief:
 
 else:
     from .pyldd import codefile_class
-
-
-@deprecated(
-    "3.28.0",
-    "24.1.0",
-    addendum="Use `conda_build.os_utils.liefldd.codefile_class` instead.",
-)
-def codefile_type_liefldd(
-    path: str | os.PathLike | Path,
-    skip_symlinks: bool = True,
-) -> str | None:
-    codefile = codefile_class(path, skip_symlinks=skip_symlinks)
-    return codefile.__name__ if codefile else None
-
-
-deprecated.constant(
-    "3.28.0",
-    "24.1.0",
-    "codefile_type_pyldd",
-    _codefile_type,
-    addendum="Use `conda_build.os_utils.pyldd.codefile_class` instead.",
-)
-deprecated.constant(
-    "3.28.0",
-    "24.1.0",
-    "codefile_type",
-    _codefile_type,
-    addendum="Use `conda_build.os_utils.liefldd.codefile_class` instead.",
-)
 
 
 def _trim_sysroot(sysroot):
@@ -930,12 +894,12 @@ def get_static_lib_exports_nope(file):
 
 def get_static_lib_exports_nm(filename):
     nm_exe = find_executable("nm")
-    if sys.platform == "win32" and not nm_exe:
+    if on_win and not nm_exe:
         nm_exe = "C:\\msys64\\mingw64\\bin\\nm.exe"
     if not nm_exe or not os.path.exists(nm_exe):
         return None
     flags = "-Pg"
-    if sys.platform == "darwin":
+    if on_mac:
         flags = "-PgUj"
     try:
         out, _ = Popen(
@@ -978,8 +942,6 @@ def get_static_lib_exports_dumpbin(filename):
         ]
         results = []
         for p in programs:
-            from conda_build.utils import rec_glob
-
             dumpbin = rec_glob(os.path.join(pfx86, p), ("dumpbin.exe",))
             for result in dumpbin:
                 try:
@@ -991,7 +953,7 @@ def get_static_lib_exports_dumpbin(filename):
                     results.append((result, version))
                 except:
                     pass
-        from conda_build.conda_interface import VersionOrder
+        from ..conda_interface import VersionOrder
 
         results = sorted(results, key=lambda x: VersionOrder(x[1]))
         dumpbin_exe = results[-1][0]
@@ -1049,7 +1011,7 @@ def get_exports(filename, arch="native", enable_static=False):
             os.path.exists(filename)
             and (filename.endswith(".a") or filename.endswith(".lib"))
             and is_archive(filename)
-        ) and sys.platform != "win32":
+        ) and not on_win:
             # syms = os.system('nm -g {}'.filename)
             # on macOS at least:
             # -PgUj is:
@@ -1057,11 +1019,11 @@ def get_exports(filename, arch="native", enable_static=False):
             # g: global (exported) only
             # U: not undefined
             # j: name only
-            if debug_static_archives or sys.platform == "win32":
+            if debug_static_archives or on_win:
                 exports = get_static_lib_exports_externally(filename)
             # Now, our own implementation which does not require nm and can
             # handle .lib files.
-            if sys.platform == "win32":
+            if on_win:
                 # Sorry, LIEF does not handle COFF (only PECOFF) and object files are COFF.
                 exports2 = exports
             else:

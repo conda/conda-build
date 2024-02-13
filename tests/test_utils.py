@@ -79,97 +79,6 @@ def test_disallow_in_tree_merge(testing_workdir):
         utils.merge_tree(testing_workdir, os.path.join(testing_workdir, "subdir"))
 
 
-def test_relative_default():
-    for f, r in [
-        ("bin/python", "../lib"),
-        ("lib/libhdf5.so", "."),
-        ("lib/python2.6/foobar.so", ".."),
-        ("lib/python2.6/lib-dynload/zlib.so", "../.."),
-        ("lib/python2.6/site-packages/pyodbc.so", "../.."),
-        ("lib/python2.6/site-packages/bsdiff4/core.so", "../../.."),
-        ("xyz", "./lib"),
-        ("bin/somedir/cmd", "../../lib"),
-    ]:
-        assert utils.relative(f) == r
-
-
-def test_relative_lib():
-    for f, r in [
-        ("bin/python", "../lib"),
-        ("lib/libhdf5.so", "."),
-        ("lib/python2.6/foobar.so", ".."),
-        ("lib/python2.6/lib-dynload/zlib.so", "../.."),
-        ("lib/python2.6/site-packages/pyodbc.so", "../.."),
-        ("lib/python2.6/site-packages/bsdiff3/core.so", "../../.."),
-        ("xyz", "./lib"),
-        ("bin/somedir/cmd", "../../lib"),
-        ("bin/somedir/somedir2/cmd", "../../../lib"),
-    ]:
-        assert utils.relative(f, "lib") == r
-
-
-def test_relative_subdir():
-    for f, r in [
-        ("lib/libhdf5.so", "./sub"),
-        ("lib/sub/libhdf5.so", "."),
-        ("bin/python", "../lib/sub"),
-        ("bin/somedir/cmd", "../../lib/sub"),
-    ]:
-        assert utils.relative(f, "lib/sub") == r
-
-
-def test_relative_prefix():
-    for f, r in [
-        ("xyz", "."),
-        ("a/xyz", ".."),
-        ("a/b/xyz", "../.."),
-        ("a/b/c/xyz", "../../.."),
-        ("a/b/c/d/xyz", "../../../.."),
-    ]:
-        assert utils.relative(f, ".") == r
-
-
-def test_relative_2():
-    for f, r in [
-        ("a/b/c/d/libhdf5.so", "../.."),
-        ("a/b/c/libhdf5.so", ".."),
-        ("a/b/libhdf5.so", "."),
-        ("a/libhdf5.so", "./b"),
-        ("x/x/libhdf5.so", "../../a/b"),
-        ("x/b/libhdf5.so", "../../a/b"),
-        ("x/libhdf5.so", "../a/b"),
-        ("libhdf5.so", "./a/b"),
-    ]:
-        assert utils.relative(f, "a/b") == r
-
-
-def test_relative_3():
-    for f, r in [
-        ("a/b/c/d/libhdf5.so", ".."),
-        ("a/b/c/libhdf5.so", "."),
-        ("a/b/libhdf5.so", "./c"),
-        ("a/libhdf5.so", "./b/c"),
-        ("libhdf5.so", "./a/b/c"),
-        ("a/b/x/libhdf5.so", "../c"),
-        ("a/x/x/libhdf5.so", "../../b/c"),
-        ("x/x/x/libhdf5.so", "../../../a/b/c"),
-        ("x/x/libhdf5.so", "../../a/b/c"),
-        ("x/libhdf5.so", "../a/b/c"),
-    ]:
-        assert utils.relative(f, "a/b/c") == r
-
-
-def test_relative_4():
-    for f, r in [
-        ("a/b/c/d/libhdf5.so", "."),
-        ("a/b/c/x/libhdf5.so", "../d"),
-        ("a/b/x/x/libhdf5.so", "../../c/d"),
-        ("a/x/x/x/libhdf5.so", "../../../b/c/d"),
-        ("x/x/x/x/libhdf5.so", "../../../../a/b/c/d"),
-    ]:
-        assert utils.relative(f, "a/b/c/d") == r
-
-
 def test_expand_globs(testing_workdir):
     sub_dir = os.path.join(testing_workdir, "sub1")
     os.mkdir(sub_dir)
@@ -274,7 +183,7 @@ def test_logger_config_from_file(testing_workdir, capfd, mocker):
     test_file = os.path.join(testing_workdir, "build_log_config.yaml")
     with open(test_file, "w") as f:
         f.write(
-            """
+            f"""
 version: 1
 formatters:
   simple:
@@ -286,14 +195,14 @@ handlers:
     formatter: simple
     stream: ext://sys.stdout
 loggers:
-  {}:
+  {__name__}:
     level: WARN
     handlers: [console]
     propagate: no
 root:
   level: DEBUG
   handlers: [console]
-""".format(__name__)
+"""
         )
     cc_conda_build = mocker.patch.object(utils, "cc_conda_build")
     cc_conda_build.get.return_value = test_file
