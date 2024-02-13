@@ -159,13 +159,9 @@ def test_menuinst_validation_fails_bad_json(testing_config, caplog, tmp_path):
 @pytest.mark.skipif(on_win, reason="rpath fixup not done on Windows.")
 def test_rpath_symlink(mocker, testing_config):
     if on_linux:
-        func_name = "mk_relative_linux"
+        mk_relative = mocker.spy(post, "mk_relative_linux")
     elif on_mac:
-        func_name = "mk_relative_osx"
-    mk_relative = mocker.patch(
-        f"conda_build.post.{func_name}",
-        side_effect=getattr(post, func_name),
-    )
+        mk_relative = mocker.spy(post, "mk_relative_osx")
     api.build(
         os.path.join(metadata_dir, "_rpath_symlink"),
         config=testing_config,
