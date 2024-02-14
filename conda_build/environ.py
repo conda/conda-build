@@ -48,6 +48,7 @@ from .conda_interface import (
     reset_context,
     root_dir,
 )
+from .config import Config
 from .deprecations import deprecated
 from .exceptions import BuildLockError, DependencyNeedsBuildingError
 from .features import feature_list
@@ -1269,7 +1270,7 @@ def get_pkg_dirs_locks(dirs, config):
     return [utils.get_lock(folder, timeout=config.timeout) for folder in dirs]
 
 
-def clean_pkg_cache(dist, config):
+def clean_pkg_cache(dist: str, config: Config) -> None:
     with utils.LoggingContext(logging.DEBUG if config.debug else logging.WARN):
         locks = get_pkg_dirs_locks([config.bldpkgs_dir] + pkgs_dirs, config)
         with utils.try_acquire_locks(locks, timeout=config.timeout):
